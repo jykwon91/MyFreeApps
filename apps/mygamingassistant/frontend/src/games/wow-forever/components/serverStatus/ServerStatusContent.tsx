@@ -6,8 +6,10 @@
  */
 import { LoadingButton } from "@platform/ui";
 import { OutboundLink } from "@platform/ui/discord-activity";
+import { SERVER_STATUS_COPY } from "@/games/wow-forever/data/serverStatus/serverStatusCopy";
 import type { ServerStatusResponse } from "@/games/wow-forever/types/serverStatus/serverStatusResponse";
 import { relativeTime } from "@/games/wow-forever/lib/serverStatusTime";
+import ServerRulesetList from "./ServerRulesetList";
 import ServerStatusSkeleton from "./ServerStatusSkeleton";
 import SummaryLine from "./SummaryLine";
 
@@ -19,10 +21,6 @@ interface ServerStatusContentProps {
   tick: number;
   blizzardUrl: string;
   onRetry: () => void;
-}
-
-function statusDotClass(online: boolean): string {
-  return online ? "bg-green-500" : "bg-red-500";
 }
 
 export default function ServerStatusContent({
@@ -41,9 +39,7 @@ export default function ServerStatusContent({
   if (isError) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">
-          Couldn&apos;t reach Blizzard&apos;s status page — the servers may still be up.
-        </p>
+        <p className="text-sm text-muted-foreground">{SERVER_STATUS_COPY.unreachable}</p>
         <LoadingButton
           size="sm"
           variant="secondary"
@@ -76,20 +72,7 @@ export default function ServerStatusContent({
         <SummaryLine offlineCount={offlineCount} total={data.rulesets.length} />
       </p>
 
-      <ul className="space-y-2" aria-label="Server rulesets">
-        {data.rulesets.map((ruleset) => (
-          <li key={ruleset.slug} className="flex items-center gap-2 text-sm">
-            <span
-              className={`inline-block h-2.5 w-2.5 rounded-full flex-shrink-0 ${statusDotClass(ruleset.online)}`}
-              aria-hidden
-            />
-            <span className={ruleset.online ? "" : "text-muted-foreground line-through"}>
-              {ruleset.name}
-            </span>
-            <span className="sr-only">{ruleset.online ? "online" : "offline"}</span>
-          </li>
-        ))}
-      </ul>
+      <ServerRulesetList rulesets={data.rulesets} />
 
       {/* tick dependency ensures the relative time refreshes without a refetch */}
       <p className="text-xs text-muted-foreground" aria-live="polite" data-tick={tick}>

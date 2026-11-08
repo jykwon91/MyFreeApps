@@ -17,5 +17,7 @@ ChatToolName = Literal[
     "profession_guide",
     "gold_farming",
     "find_macros",
+    "auction_prices",
+    "server_status",
 ]
 ChatStopReason = Literal["end_turn", "tool_use", "max_tokens", "refusal"]

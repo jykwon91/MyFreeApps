@@ -4,12 +4,11 @@ import AuctionHouseBody from "@/games/wow-forever/components/auctionHouse/Auctio
 import AuctionSearchControls from "@/games/wow-forever/components/auctionHouse/AuctionSearchControls";
 import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
+import { AUCTION_QUERY_PARAM } from "@/games/wow-forever/data/auctionHouse/auctionHouseParams";
 import { DEFAULT_AUCTION_SORT } from "@/games/wow-forever/data/auctionSortOptions";
 import { useDocumentTitle } from "@/games/wow-forever/hooks/useDocumentTitle";
 import { useWowRegion } from "@/games/wow-forever/hooks/useWowRegion";
 import type { AuctionSort } from "@/games/wow-forever/types/auctionSort";
-
-export const QUERY_PARAM = "q";
 
 /** /wow-forever/auction-house — look up any item's auction price. The search lives in `?q=` so a lookup can be shared. */
 export default function WowAuctionHousePage() {
@@ -17,10 +16,10 @@ export default function WowAuctionHousePage() {
   const [params, setParams] = useSearchParams();
   const [region, setRegion] = useWowRegion();
   const [sort, setSort] = useState<AuctionSort>(DEFAULT_AUCTION_SORT);
-  const query = params.get(QUERY_PARAM) ?? "";
+  const query = params.get(AUCTION_QUERY_PARAM) ?? "";
 
   function changeQuery(next: string) {
-    setParams(next ? { [QUERY_PARAM]: next } : {}, { replace: true });
+    setParams(next ? { [AUCTION_QUERY_PARAM]: next } : {}, { replace: true });
   }
 
   return (

@@ -6,6 +6,7 @@
  */
 import { ASK_LIMITS } from "@/games/wow-forever/data/ask/askLimits";
 import { ASK_TOOL } from "@/games/wow-forever/data/ask/askTools";
+import { auctionPricesTool } from "@/games/wow-forever/lib/ask/tools/auctionPricesTool";
 import { findMacrosTool } from "@/games/wow-forever/lib/ask/tools/findMacrosTool";
 import { findRaresTool } from "@/games/wow-forever/lib/ask/tools/findRaresTool";
 import { goldFarmingTool } from "@/games/wow-forever/lib/ask/tools/goldFarmingTool";
@@ -15,15 +16,18 @@ import { professionGuideTool } from "@/games/wow-forever/lib/ask/tools/professio
 import { playerContextTool } from "@/games/wow-forever/lib/ask/tools/playerContextTool";
 import { searchItemsTool } from "@/games/wow-forever/lib/ask/tools/searchItemsTool";
 import { searchNpcsTool } from "@/games/wow-forever/lib/ask/tools/searchNpcsTool";
+import { serverStatusTool } from "@/games/wow-forever/lib/ask/tools/serverStatusTool";
 import {
   checkGoldInput,
   checkItemSearchInput,
   checkMacrosInput,
   checkNoInput,
   checkNpcSearchInput,
+  checkPricesInput,
   checkProfessionInput,
   checkQueryOnlyInput,
   checkRaresInput,
+  checkServerStatusInput,
 } from "@/games/wow-forever/lib/ask/validateAskToolInput";
 import type { AskInputCheck } from "@/games/wow-forever/types/ask/askInputCheck";
 import type { AskToolData } from "@/games/wow-forever/types/ask/askToolData";
@@ -61,6 +65,10 @@ function dispatch(call: ChatToolUseBlock, data: AskToolData): Promise<AskToolOut
       return withInput(checkGoldInput(call.input), (input) => goldFarmingTool(input, data));
     case ASK_TOOL.findMacros:
       return withInput(checkMacrosInput(call.input), (input) => findMacrosTool(input));
+    case ASK_TOOL.auctionPrices:
+      return withInput(checkPricesInput(call.input), (input) => auctionPricesTool(input, data));
+    case ASK_TOOL.serverStatus:
+      return withInput(checkServerStatusInput(call.input), (input) => serverStatusTool(input, data));
     default:
       return Promise.resolve(toolError("unknown tool"));
   }

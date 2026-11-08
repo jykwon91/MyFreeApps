@@ -1,26 +1,31 @@
 /**
  * Tool inputs Claude sent, checked against the same schema the relay gave it
  * (`chat_tool_schema.py`): known keys only, strings within their lengths, the
- * faction, profession, class and sort from their lists, numbers whole and in range. Claude's output is
+ * faction, profession, class, sort and region from their lists, numbers whole and in range. Claude's output is
  * untrusted — a bad input becomes an error result, never a crash.
  */
 import { ASK_FACTION_FILTER, ASK_TOOL_INPUT } from "@/games/wow-forever/data/ask/askTools";
 import { WOW_CLASSES, type WowClassId } from "@/games/wow-forever/data/classes";
 import { PROFESSION_GROUPS, type GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
+import { WOW_REGIONS } from "@/games/wow-forever/data/wowRegions";
 import { FARM_SORT, type FarmSort } from "@/games/wow-forever/gold/goldFarms";
 import type { AskFactionFilter } from "@/games/wow-forever/types/ask/askFactionFilter";
 import type { AskGoldInput } from "@/games/wow-forever/types/ask/askGoldInput";
 import type { AskInputCheck } from "@/games/wow-forever/types/ask/askInputCheck";
 import type { AskMacrosInput } from "@/games/wow-forever/types/ask/askMacrosInput";
 import type { AskNpcSearchInput } from "@/games/wow-forever/types/ask/askNpcSearchInput";
+import type { AskPricesInput } from "@/games/wow-forever/types/ask/askPricesInput";
 import type { AskProfessionInput } from "@/games/wow-forever/types/ask/askProfessionInput";
 import type { AskQueryInput } from "@/games/wow-forever/types/ask/askQueryInput";
 import type { AskRaresInput } from "@/games/wow-forever/types/ask/askRaresInput";
+import type { AskRegionInput } from "@/games/wow-forever/types/ask/askRegionInput";
+import type { WowRegion } from "@/games/wow-forever/types/wowRegion";
 
 const FACTIONS: readonly AskFactionFilter[] = Object.values(ASK_FACTION_FILTER);
 const PROFESSIONS: readonly GuideProfession[] = PROFESSION_GROUPS.flatMap((g) => g.options.map((o) => o.id));
 const CLASS_IDS: readonly WowClassId[] = WOW_CLASSES.map((c) => c.id);
 const FARM_SORTS: readonly FarmSort[] = Object.values(FARM_SORT);
+const REGIONS: readonly WowRegion[] = WOW_REGIONS.map((r) => r.value);
 
 function fail<T>(error: string): AskInputCheck<T> {
   return { ok: false, error };
@@ -145,4 +150,22 @@ export function checkMacrosInput(input: Record<string, unknown>): AskInputCheck<
   const max = limit(input.limit);
   if (max === null) return fail(`limit must be a whole number from 1 to ${ASK_TOOL_INPUT.limitMax}`);
   return { ok: true, value: { classId, query, limit: max } };
+}
+
+const regionError = `region must be one of ${REGIONS.join(", ")}`;
+
+export function checkPricesInput(input: Record<string, unknown>): AskInputCheck<AskPricesInput> {
+  const base = queryInput(input, ["query", "region", "limit"]);
+  if (!base.ok) return base;
+  const region = optional(input.region, (v) => oneOf(v, REGIONS));
+  if (region === undefined) return fail(regionError);
+  return { ok: true, value: { ...base.value, region } };
+}
+
+export function checkServerStatusInput(input: Record<string, unknown>): AskInputCheck<AskRegionInput> {
+  const extra = unknownKey(input, ["region"]);
+  if (extra !== undefined) return fail(`unknown argument: ${extra}`);
+  const region = optional(input.region, (v) => oneOf(v, REGIONS));
+  if (region === undefined) return fail(regionError);
+  return { ok: true, value: { region } };
 }

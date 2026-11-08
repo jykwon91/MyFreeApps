@@ -5,8 +5,10 @@ import MacrosCard from "@/games/wow-forever/components/ask/cards/MacrosCard";
 import NoResultsCard from "@/games/wow-forever/components/ask/cards/NoResultsCard";
 import NpcResultsCard from "@/games/wow-forever/components/ask/cards/NpcResultsCard";
 import PlacesCard from "@/games/wow-forever/components/ask/cards/PlacesCard";
+import PricesCard from "@/games/wow-forever/components/ask/cards/PricesCard";
 import ProfessionCard from "@/games/wow-forever/components/ask/cards/ProfessionCard";
 import RaresCard from "@/games/wow-forever/components/ask/cards/RaresCard";
+import ServerStatusCard from "@/games/wow-forever/components/ask/cards/ServerStatusCard";
 import WhereAreYouCard from "@/games/wow-forever/components/ask/cards/WhereAreYouCard";
 import { ASK_CARD } from "@/games/wow-forever/data/ask/askCardKinds";
 import type { AskCard } from "@/games/wow-forever/types/ask/askCard";
@@ -40,5 +42,9 @@ export default function AskCardView({ card, tools }: AskCardViewProps) {
       return <GoldCard card={card} />;
     case ASK_CARD.macros:
       return <MacrosCard card={card} />;
+    case ASK_CARD.prices:
+      return <PricesCard card={card} />;
+    case ASK_CARD.serverStatus:
+      return <ServerStatusCard card={card} />;
   }
 }

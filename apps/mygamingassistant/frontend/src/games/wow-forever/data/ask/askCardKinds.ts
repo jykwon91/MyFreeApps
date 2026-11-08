@@ -10,4 +10,6 @@ export const ASK_CARD = {
   profession: "profession",
   gold: "gold",
   macros: "macros",
+  prices: "prices",
+  serverStatus: "serverStatus",
 } as const;

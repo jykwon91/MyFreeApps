@@ -3,7 +3,8 @@
  * browser runs Claude's tool call against the site's own map data, the card
  * lists the real nearest trainers, and "Route there" opens the World Map with
  * directions. The guide tools (rares, professions) answer from the site's own
- * data too. Also: the hub's ask box, the rate-limit and daily-cap notices,
+ * data too, and the live tools from the site's own prices and server status
+ * (both mocked here, including when they're old or fail). Also: the hub's ask box, the rate-limit and daily-cap notices,
  * Cancel, the phone layout and the loading skeleton.
  *
  * The relay (`POST /api/wow/chat/turn`) is mocked; every other /api call
@@ -220,6 +221,124 @@ test("how to level Tailoring from 150 → the guide's next steps, with the guide
   await expect(open).toHaveAttribute("href", "/wow-forever/professions?p=tailoring&skill=150");
   await open.click();
   await expect(page).toHaveURL(/\/wow-forever\/professions\?p=tailoring&skill=150/);
+});
+
+const HOUR_MS = 3_600_000;
+
+function priceResponse(hoursOld: number) {
+  return {
+    region: "us",
+    credit: { source: "tsm", name: "TradeSkillMaster", url: "https://www.tradeskillmaster.com" },
+    source_updated_at: new Date(Date.now() - hoursOld * HOUR_MS).toISOString(),
+    fetched_at: new Date().toISOString(),
+    columns: ["item_id", "market_value", "avg_sale_price", "sold_per_day", "name"],
+    items: [
+      [2589, 1234, null, 20239, "Linen Cloth"],
+      [2996, 5000, null, 812, "Bolt of Linen Cloth"],
+    ],
+  };
+}
+
+test("how much is Linen Cloth → the site's auction price, credited, with the Auction house offered", async ({ page }) => {
+  const relay = await mockRelay(page, (body) =>
+    body.ticket ? answer("Linen Cloth sells for 12s 34c.") : toolUse("auction_prices", { query: "Linen Cloth" }),
+  );
+  await page.route((url) => url.pathname === "/api/wow/prices", (route) => route.fulfill({ json: priceResponse(2) }));
+  await page.goto("/wow-forever/ask");
+  await ask(page, "how much is linen cloth selling for");
+  const card = page.getByRole("region", { name: "Auction prices · Americas" });
+  await expect(card).toBeVisible();
+  await expect(page.getByTestId("ask-answer")).toContainText("Linen Cloth sells for 12s 34c.");
+
+  const sent = sentResult<{ region: string; updated: string; note: string | null; results: { name: string; market_value: string }[] }>(relay);
+  expect(sent).toMatchObject({ region: "Americas", updated: "2 hours ago", note: null });
+  expect(sent.results[0]).toMatchObject({ name: "Linen Cloth", market_value: "12s 34c" });
+
+  const rows = card.locator("ul > li");
+  await expect(rows.first()).toContainText("Linen Cloth");
+  await expect(rows.first()).toContainText("12s 34c");
+  await expect(rows.first()).toContainText("20,239 sold a day");
+  await expect(card.getByTestId("price-credit")).toContainText("updated 2 hours ago");
+  await expect(card.getByRole("link", { name: "TradeSkillMaster" })).toBeVisible();
+  await expect(card.getByText(/more than 12 hours old/)).toHaveCount(0);
+  const open = card.getByRole("link", { name: "Open the Auction house" });
+  await expect(open).toHaveAttribute("href", "/wow-forever/auction-house?q=Linen+Cloth");
+  await open.click();
+  await expect(page).toHaveURL(/\/wow-forever\/auction-house\?q=Linen\+Cloth/);
+});
+
+test("old prices are flagged, and prices that don't load are never guessed", async ({ page }) => {
+  let pricesUp = true;
+  const relay = await mockRelay(page, (body) =>
+    body.ticket ? answer("Here's what I found.") : toolUse("auction_prices", { query: "Linen Cloth" }),
+  );
+  await page.route(
+    (url) => url.pathname === "/api/wow/prices",
+    (route) => (pricesUp ? route.fulfill({ json: priceResponse(30) }) : route.fulfill({ status: 503, json: { detail: "down" } })),
+  );
+  await page.goto("/wow-forever/ask");
+  await ask(page, "linen cloth price");
+  const card = page.getByRole("region", { name: "Auction prices · Americas" });
+  await expect(card.getByText(/more than 12 hours old/)).toBeVisible();
+  expect(sentResult<{ note: string }>(relay).note).toMatch(/more than 12 hours old/);
+
+  // A fresh chat, with the prices failing: the card says so, no figures, and Claude gets an error.
+  pricesUp = false;
+  await page.getByRole("button", { name: "New chat" }).click();
+  await page.reload();
+  const before = relay.bodies.length;
+  await ask(page, "linen cloth price");
+  await expect(page.getByText("Couldn't load the auction prices. Ask again in a moment.")).toBeVisible();
+  const failedCard = page.getByRole("region", { name: "Auction prices · Americas" });
+  await expect(failedCard.getByTestId("price-credit")).toHaveCount(0);
+  await expect(failedCard.locator("ul > li")).toHaveCount(0);
+  const result = relay.bodies[before + 1].messages.at(-1)!.content[0] as { is_error?: boolean; content?: string };
+  expect(result.is_error).toBe(true);
+  expect(result.content).toContain("don't guess a price");
+});
+
+test("is the server up → each ruleset; Blizzard unreachable is never called down", async ({ page }) => {
+  let blizzardUp = true;
+  const relay = await mockRelay(page, (body) => (body.ticket ? answer("Checked.") : toolUse("server_status", {})));
+  await page.route(
+    (url) => url.pathname === "/api/wow/server-status",
+    (route) =>
+      blizzardUp
+        ? route.fulfill({
+            json: {
+              region: "us",
+              checked_at: new Date().toISOString(),
+              rulesets: [
+                { name: "Normal", slug: "normal", online: true },
+                { name: "PvP", slug: "pvp", online: false },
+              ],
+            },
+          })
+        : route.fulfill({ status: 502, json: { detail: "Could not reach Blizzard's server status service." } }),
+  );
+  await page.goto("/wow-forever/ask");
+  await ask(page, "is the server up");
+  const card = page.getByRole("region", { name: "Server status · Americas" });
+  await expect(card.getByText("1 of 2 servers offline")).toBeVisible();
+  await expect(card.getByRole("list", { name: "Server rulesets" }).locator("li")).toHaveCount(2);
+  await expect(card.getByText(/^Checked /)).toBeVisible();
+  await expect(card.getByRole("link", { name: "Open Server status" })).toHaveAttribute("href", "/wow-forever/server-status");
+  expect(sentResult<{ rulesets: { name: string; up: boolean }[] }>(relay).rulesets).toEqual([
+    { name: "Normal", up: true },
+    { name: "PvP", up: false },
+  ]);
+
+  blizzardUp = false;
+  await page.getByRole("button", { name: "New chat" }).click();
+  await page.reload();
+  const before = relay.bodies.length;
+  await ask(page, "is the server up");
+  const down = page.getByRole("region", { name: "Server status · Americas" });
+  await expect(down.getByText("Couldn't reach Blizzard's status page — the servers may still be up.")).toBeVisible();
+  await expect(down.getByText(/servers (online|offline)/)).toHaveCount(0);
+  const result = relay.bodies[before + 1].messages.at(-1)!.content[0] as { is_error?: boolean; content?: string };
+  expect(result.is_error).toBe(true);
+  expect(result.content).toContain("don't say the servers are up or down");
 });
 
 test("the hub's ask box opens the page and sends the question once", async ({ page }) => {

@@ -12,6 +12,8 @@ export const ASK_TOOL = {
   professionGuide: "profession_guide",
   goldFarming: "gold_farming",
   findMacros: "find_macros",
+  auctionPrices: "auction_prices",
+  serverStatus: "server_status",
 } as const;
 
 /** `search_npcs`'s `faction` argument. */

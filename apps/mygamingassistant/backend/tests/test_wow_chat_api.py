@@ -185,6 +185,8 @@ async def test_first_message_returns_reply_and_ticket(client: AsyncClient) -> No
         "profession_guide",
         "gold_farming",
         "find_macros",
+        "auction_prices",
+        "server_status",
     ]
     assert kwargs["messages"] == [user_text()]
 

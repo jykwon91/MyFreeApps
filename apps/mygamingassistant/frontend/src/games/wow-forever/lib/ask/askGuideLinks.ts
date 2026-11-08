@@ -3,6 +3,7 @@
  * Map's own `pt:` endpoint) and the guide pages, opened on what was asked.
  */
 import { ASK_GUIDE_PATH } from "@/games/wow-forever/data/ask/askGuidePages";
+import { AUCTION_QUERY_PARAM } from "@/games/wow-forever/data/auctionHouse/auctionHouseParams";
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 import { MACRO_CLASS_PARAM } from "@/games/wow-forever/data/macros/macroClassFilter";
 import { PROFESSION_PARAM, type GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
@@ -59,4 +60,13 @@ export function macrosPageHref(classId: WowClassId | null): string {
   const params = new URLSearchParams();
   if (classId !== null) params.set(MACRO_CLASS_PARAM, classId);
   return withParams(ASK_GUIDE_PATH.macros, params);
+}
+
+/** The Auction house page, searching for what was asked. */
+export function auctionHouseHref(query: string): string {
+  return withParams(ASK_GUIDE_PATH.auctionHouse, new URLSearchParams({ [AUCTION_QUERY_PARAM]: query }));
+}
+
+export function serverStatusHref(): string {
+  return ASK_GUIDE_PATH.serverStatus;
 }
