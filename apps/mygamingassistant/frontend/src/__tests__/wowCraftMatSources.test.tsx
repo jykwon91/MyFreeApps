@@ -18,6 +18,7 @@ import { describeDisenchant, describeSkinning, isGathered, matSummary, soldToYou
 import { shoppingList, shoppingListText } from "@/games/wow-forever/crafting/shoppingList";
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";
 import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/data/sourceDecode";
+import type { VendorPlace } from "@/games/wow-forever/types/recipeVendors/vendorPlace";
 import {
   canFarm,
   describeCommonDrop,
@@ -38,6 +39,7 @@ import { FOOD_SOURCES } from "@/games/wow-forever/data/food/recipeSourceData";
 import type { CraftingFile, CraftingProfession, TrainerSkills } from "@/games/wow-forever/types/crafting";
 
 const SOURCES = createSourceLookup(sourcesJson as unknown as RawSourcesFile);
+const NO_VENDOR_PLACE: VendorPlace = { faction: FACTION.alliance, here: null, zoneById: new Map() };
 const FILES: Record<CraftingProfession, CraftingFile> = {
   tailoring: tailoringJson as unknown as CraftingFile,
   enchanting: enchantingJson as unknown as CraftingFile,
@@ -258,7 +260,7 @@ describe("crafting material sources", () => {
     // Frilled Lichen (249399) is a reagent in Alchemy's Cerulean Dye recipe —
     // id >= 100000, so it is new in Forever and has no source data.
     const FRILLED_LICHEN = 249399;
-    const place = { sources: SOURCES, faction: FACTION.alliance, zoneId: null, level: null, file: FILES.alchemy };
+    const place = { sources: SOURCES, faction: FACTION.alliance, zoneId: null, level: null, vendors: NO_VENDOR_PLACE, file: FILES.alchemy };
     const { queryByRole } = render(
       <MemoryRouter>
         <CraftMatSources itemId={FRILLED_LICHEN} place={place} professionLabel="Alchemy" />
@@ -270,7 +272,7 @@ describe("crafting material sources", () => {
   it("shows no link out for a Classic material with no sources", () => {
     // 9999 is a genuinely unknown Classic item id (< 100000) with no source data.
     const UNKNOWN_CLASSIC_ITEM = 9999;
-    const place = { sources: SOURCES, faction: FACTION.alliance, zoneId: null, level: null, file: FILES.alchemy };
+    const place = { sources: SOURCES, faction: FACTION.alliance, zoneId: null, level: null, vendors: NO_VENDOR_PLACE, file: FILES.alchemy };
     const { queryByRole } = render(
       <MemoryRouter>
         <CraftMatSources itemId={UNKNOWN_CLASSIC_ITEM} place={place} professionLabel="Alchemy" />
@@ -385,7 +387,7 @@ describe("Leatherworking materials", () => {
   });
 
   it("sends you to skin leather you could also make, and to make the hides you cure", () => {
-    const place = { sources: SOURCES, faction: FACTION.alliance, zoneId: null, level: null, file: FILES.leatherworking };
+    const place = { sources: SOURCES, faction: FACTION.alliance, zoneId: null, level: null, vendors: NO_VENDOR_PLACE, file: FILES.leatherworking };
     const light = render(
       <MemoryRouter>
         <CraftMatSources itemId={LIGHT_LEATHER} place={place} professionLabel="Leatherworking" />

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import CraftPricesPanel from "@/games/wow-forever/components/crafting/CraftPricesPanel";
 import CraftRouteHeader from "@/games/wow-forever/components/crafting/CraftRouteHeader";
 import CraftRouteList from "@/games/wow-forever/components/crafting/CraftRouteList";
@@ -7,7 +8,10 @@ import CraftSpecPicker from "@/games/wow-forever/components/crafting/CraftSpecPi
 import CraftSpecRow from "@/games/wow-forever/components/crafting/CraftSpecRow";
 import CraftTransmuteList from "@/games/wow-forever/components/crafting/CraftTransmuteList";
 import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
+import RecipeVendorsSection from "@/games/wow-forever/components/recipeVendors/RecipeVendorsSection";
 import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
+import { craftVendorRecipes, routeTeachingItems, withRoute } from "@/games/wow-forever/lib/recipeVendors/collectVendorRecipes";
+import { useVendorPlace } from "@/games/wow-forever/hooks/useVendorPlace";
 import { currentEntryIndex, totalCrafts } from "@/games/wow-forever/crafting/craftRoute";
 import { routeForSpec } from "@/games/wow-forever/crafting/craftSpecs";
 import { CRAFTING_FEATURES } from "@/games/wow-forever/data/professions/crafting/craftingFeatures";
@@ -27,6 +31,8 @@ interface CraftRouteSectionsProps {
   zoneId: number | null;
   /** The player's level, to rank the mobs they can farm first. Null = not set. */
   level: number | null;
+  /** Map percent in your zone; null = its middle. */
+  position: { x: number; y: number } | null;
   data: CraftingData;
 }
 
@@ -39,19 +45,22 @@ function statusLine(entries: readonly ResolvedRouteEntry[], current: number | nu
   return `Craft ${entry.recipe.name} until ${entry.step.to}.`;
 }
 
-/** The "Leveling route" and "Shopping list" sections, once the recipe data has loaded. */
-export default function CraftRouteSections({ profession, faction, zoneId, level, data }: CraftRouteSectionsProps) {
+/** The "Leveling route", "Recipe vendors" and "Shopping list" sections, once the recipe data has loaded. */
+export default function CraftRouteSections({ profession, faction, zoneId, level, position, data }: CraftRouteSectionsProps) {
   const guide = CRAFTING_GUIDES[profession];
   const features = CRAFTING_FEATURES[profession];
   const [skill, setSkill] = useCraftingSkill(profession);
   const priced = usePricedRoute(profession, data, skill);
   const specs = CRAFTING_SPECS[profession];
   const [spec, setSpec] = useCraftingSpec(profession);
-  const entries = routeForSpec(priced.entries, specs, spec);
+  const entries = useMemo(() => routeForSpec(priced.entries, specs, spec), [priced.entries, specs, spec]);
   const specNames = new Map((data.file.specs ?? []).map((s) => [s.spell, s.name]));
   const current = currentEntryIndex(entries, skill);
   const currentEntry = current === null ? undefined : entries[current];
-  const place = { sources: data.sources, faction, zoneId, level, file: data.file };
+  const vendors = useVendorPlace(faction, zoneId, position);
+  const place = { sources: data.sources, faction, zoneId, level, file: data.file, vendors };
+  const soldRecipes = useMemo(() => craftVendorRecipes(data.file.recipes, data.sources), [data]);
+  const vendorRecipes = useMemo(() => withRoute(soldRecipes, routeTeachingItems(entries)), [soldRecipes, entries]);
   const slots = features.enchantSlots ? { excluded: priced.excludedSlots, onToggle: priced.setSlot } : null;
   return (
     <>
@@ -121,6 +130,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
           <CraftTransmuteList recipes={data.file.recipes} trainerSkills={data.trainerSkills} professionLabel={guide.label} place={place} />
         ) : null}
       </GuideSection>
+      <RecipeVendorsSection recipes={vendorRecipes} place={vendors} />
       <GuideSection id="shopping" title="Shopping list" intro="Everything the route needs, so you can gather or buy it in one go.">
         <CraftShoppingList
           entries={entries}

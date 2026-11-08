@@ -62,6 +62,7 @@ export const COOKING_ROUTE: readonly RouteStep[] = [
       H: "1g from Wulan in Shadowprey Village, Desolace. Needs level 20. Raises your cap to 225.",
     },
     confidence: "unconfirmed",
+    buysBook: true,
   },
   {
     kind: "craft",
@@ -78,6 +79,11 @@ export const COOKING_ROUTE: readonly RouteStep[] = [
     name: "Roast Raptor, Hot Wolf Ribs or Mithril Head Trout",
     materials: "Raptor Flesh, Red Wolf Meat or Raw Mithril Head Trout",
     mats: [{ id: 12184, name: "Raptor Flesh" }, { id: 12203, name: "Red Wolf Meat" }, { id: 8365, name: "Raw Mithril Head Trout" }],
+    recipes: [
+      { id: 12210, name: "Recipe: Roast Raptor" },
+      { id: 13851, name: "Recipe: Hot Wolf Ribs" },
+      { id: 8364, name: "Recipe: Mithril Head Trout" },
+    ],
     source: "Recipe vendors in Booty Bay, Arathi Highlands and Gadgetzan",
     confidence: "unconfirmed",
   },
@@ -104,6 +110,7 @@ export const COOKING_ROUTE: readonly RouteStep[] = [
     name: "Monster Omelet",
     materials: "Giant Egg + Soothing Spices",
     mats: [{ id: 12207, name: "Giant Egg" }, { id: 3713, name: "Soothing Spices" }],
+    recipes: [{ id: 12218, name: "Recipe: Monster Omelet" }],
     source: "Recipe vendors in Tanaris",
     confidence: "unconfirmed",
   },
@@ -113,6 +120,10 @@ export const COOKING_ROUTE: readonly RouteStep[] = [
     name: "Nightfin Soup or Poached Sunscale Salmon",
     materials: "Raw Nightfin Snapper + Refreshing Spring Water, or Raw Sunscale Salmon",
     mats: [{ id: 13759, name: "Raw Nightfin Snapper" }, { id: 159, name: "Refreshing Spring Water" }, { id: 13760, name: "Raw Sunscale Salmon" }],
+    recipes: [
+      { id: 13931, name: "Recipe: Nightfin Soup" },
+      { id: 13932, name: "Recipe: Poached Sunscale Salmon" },
+    ],
     source: "Gikkix in Tanaris",
     note: "Both are fish — cheapest if you fish them yourself.",
     confidence: "unconfirmed",

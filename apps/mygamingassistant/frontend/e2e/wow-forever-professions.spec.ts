@@ -3,7 +3,16 @@
  *
  * Run: npm run test:e2e -- wow-forever-professions
  */
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+/** The page's text without the recipe vendors' Classic list prices (the vendor list and route "Buy … from …" lines) — what's left must carry no auction price. */
+function textWithoutVendorPrices(page: Page): Promise<string> {
+  return page.locator("main").last().evaluate((main) => {
+    const copy = main.cloneNode(true) as HTMLElement;
+    copy.querySelectorAll('#vendors, [data-testid="recipe-buy-line"]').forEach((n) => n.remove());
+    return copy.textContent ?? "";
+  });
+}
 
 // Auction prices are covered with stubbed prices in wow-forever-auction-prices.spec.ts.
 // Here the region has none, so the guides show their routes without costs.
@@ -195,7 +204,7 @@ test("Alchemy shows a hand-picked herb route with no prices, and where each herb
   // No auction prices in this region: no prices panel, no "cheapest" claim, no gold anywhere.
   await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
   await expect(page.getByText(/cheapest/i)).toHaveCount(0);
-  await expect(page.locator("main").last()).not.toContainText(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
+  await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   await expect(route.getByRole("heading", { name: "Transmutes" })).toBeVisible();
   await expect(route.getByTestId("transmutes").getByText("Transmute: Legionite")).toBeVisible();
 
@@ -286,7 +295,7 @@ test("Blacksmithing forks at 200: pick a specialization and the route keeps only
   // No auction prices in this region, so no prices anywhere; bars are smelted from ore.
   await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
   await expect(page.getByText(/cheapest/i)).toHaveCount(0);
-  await expect(page.locator("main").last()).not.toContainText(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
+  await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   const shopping = page.locator("#shopping");
   await shopping.locator("summary").first().click();
   await expect(shopping.getByText(/Don't sell your crafts yet/)).toBeVisible();
@@ -336,7 +345,7 @@ test("Leatherworking forks at 225, and leather points at beasts to skin", async 
   // No auction prices in this region, so no prices anywhere; leather is skinned, with directions to the beasts.
   await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
   await expect(page.getByText(/cheapest/i)).toHaveCount(0);
-  await expect(page.locator("main").last()).not.toContainText(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
+  await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   const shopping = page.locator("#shopping");
   await shopping.locator("summary").first().click();
   await expect(shopping.getByText(/Don't sell your crafts yet/)).toBeVisible();
@@ -407,7 +416,7 @@ test("Engineering says what each item does, forks at 200, and smelts its bars", 
   // No auction prices in this region, so no prices anywhere; bars are smelted from ore.
   await expect(page.getByRole("region", { name: "Prices", exact: true })).toHaveCount(0);
   await expect(page.getByText(/cheapest/i)).toHaveCount(0);
-  await expect(page.locator("main").last()).not.toContainText(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
+  await expect.poll(() => textWithoutVendorPrices(page)).not.toMatch(/\b\d+\s?[gsc]\b|\bgold\b|\bsilver\b/);
   const shopping = page.locator("#shopping");
   await shopping.locator("summary").first().click();
   await expect(shopping.getByText(/Don't sell your crafts yet/)).toBeVisible();

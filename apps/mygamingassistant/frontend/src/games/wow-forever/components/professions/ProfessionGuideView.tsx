@@ -10,11 +10,13 @@ interface ProfessionGuideViewProps {
   faction: PlayerFaction;
   zoneId: number | null;
   level: number | null;
+  /** Map percent in your zone; null = its middle. Sorts recipe vendors by distance. */
+  position: { x: number; y: number } | null;
 }
 
 /** The guide for the picked profession: crafting, gathering or secondary. */
-export default function ProfessionGuideView({ profession, ...player }: ProfessionGuideViewProps) {
-  if (isCraftingProfession(profession)) return <CraftingGuideView profession={profession} {...player} />;
+export default function ProfessionGuideView({ profession, position, ...player }: ProfessionGuideViewProps) {
+  if (isCraftingProfession(profession)) return <CraftingGuideView profession={profession} position={position} {...player} />;
   if (isGatheringProfession(profession)) return <GatheringGuideView profession={profession} {...player} />;
-  return <SecondaryGuideView profession={profession} {...player} />;
+  return <SecondaryGuideView profession={profession} position={position} {...player} />;
 }

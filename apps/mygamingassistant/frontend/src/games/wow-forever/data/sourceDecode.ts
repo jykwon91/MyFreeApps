@@ -11,6 +11,7 @@ import type {
   MobKind,
   ObjectSpot,
   QuestGiver,
+  RankBook,
   QuestSource,
   SkinningSource,
   VendorSpot,
@@ -27,6 +28,8 @@ type Row = readonly SourceCell[];
 
 export interface RawSources {
   vendors?: Row[];
+  /** Copper; only when someone sells it. */
+  price?: number;
   quests?: number[];
   drop?: { world: boolean; levels: number[]; mobs: Row[]; more: number; zones: number[] };
   skinning?: { levels: number[]; zones: number[]; mobs?: Row[] };
@@ -36,6 +39,9 @@ export interface RawSources {
   objectSpots?: Row[];
   containerDrops?: [string, NonNullable<RawSources["drop"]>][];
 }
+
+/** A rank's book as the food file stores it: its sources plus item id and name. */
+export type RawRankBook = RawSources & { id: number; name: string };
 
 export interface RawSourcesFile {
   source: string;
@@ -47,6 +53,8 @@ export interface RawSourcesFile {
   reagents: Record<string, RawSources>;
   /** Item id -> `[minLevel, maxLevel, chance, mostlyFrom, fromBlue]` (the crafting file only). */
   disenchant?: Record<string, Row>;
+  /** A rank's book (Expert Cookbook) by guide — the food file only. */
+  books?: Record<string, RawRankBook>;
 }
 
 export interface SourceLookup {
@@ -58,6 +66,8 @@ export interface SourceLookup {
   reagent(itemId: number): ItemSources;
   /** A quest the file lists (a specialization quest), with its givers. */
   quest(id: number): QuestSource | null;
+  /** The rank's book a guide (cooking / fishing) has to buy, with where it's sold; null when the file has none. */
+  book(guide: string): RankBook | null;
 }
 
 const MOB_KINDS: readonly string[] = Object.values(MOB_KIND);
@@ -173,6 +183,7 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
   function decode(r: RawSources | undefined, itemId: number | null): ItemSources {
     return {
       vendors: (r?.vendors ?? []).map(vendor),
+      price: r?.price ? r.price : null,
       quests: (r?.quests ?? []).map(quest).filter((q): q is QuestSource => q !== null),
       drop: drop(r?.drop),
       skinning: skinning(r?.skinning),
@@ -192,5 +203,9 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
     recipe: (id) => decode(raw.recipes[String(id)], null),
     reagent: (itemId) => decode(raw.reagents[String(itemId)], itemId),
     quest,
+    book: (guide) => {
+      const b = raw.books?.[guide];
+      return b ? { itemId: b.id, name: b.name, sources: decode(b, null) } : null;
+    },
   };
 }

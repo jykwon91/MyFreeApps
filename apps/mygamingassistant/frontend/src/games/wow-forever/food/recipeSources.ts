@@ -40,16 +40,21 @@ export interface VendorSplit {
   other: VendorSpot[];
 }
 
+/** You can buy from your own faction's vendors and from neutral (goblin) ones. */
+export function canBuyFrom(vendorFaction: Faction, faction: PlayerFaction): boolean {
+  return vendorFaction === faction || vendorFaction === FACTION.neutral;
+}
+
 /**
  * Your faction's and neutral vendors first — in your zone first — then the
  * other faction's apart, since you can't buy from them.
  */
 export function splitVendors(vendors: readonly VendorSpot[], faction: PlayerFaction, zoneId: number | null): VendorSplit {
   const rank = (v: VendorSpot) => (v.zoneId === zoneId ? 0 : 2) + (v.faction === faction ? 0 : 1);
-  const yours = vendors.filter((v) => v.faction === faction || v.faction === FACTION.neutral);
+  const yours = vendors.filter((v) => canBuyFrom(v.faction, faction));
   return {
     yours: [...yours].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name)),
-    other: vendors.filter((v) => v.faction !== faction && v.faction !== FACTION.neutral),
+    other: vendors.filter((v) => !canBuyFrom(v.faction, faction)),
   };
 }
 

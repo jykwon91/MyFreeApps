@@ -21,10 +21,12 @@ interface CraftingGuideViewProps {
   zoneId: number | null;
   /** The player's level, to rank the mobs they can farm first. Null = not set. */
   level: number | null;
+  /** Map percent in your zone; null = its middle. */
+  position: { x: number; y: number } | null;
 }
 
-/** A crafting profession: train it, the route to 300 for your skill, the shopping list, and what Forever changed. */
-export default function CraftingGuideView({ profession, faction, zoneId, level }: CraftingGuideViewProps) {
+/** A crafting profession: train it, the route to 300 for your skill, recipe vendors, the shopping list, and what Forever changed. */
+export default function CraftingGuideView({ profession, faction, zoneId, level, position }: CraftingGuideViewProps) {
   const guide = CRAFTING_GUIDES[profession];
   const features = CRAFTING_FEATURES[profession];
   const state = useCraftingData(profession);
@@ -56,7 +58,7 @@ export default function CraftingGuideView({ profession, faction, zoneId, level }
           </Button>
         </AlertBox>
       ) : null}
-      {state.status === "ready" ? <CraftRouteSections profession={profession} faction={faction} zoneId={zoneId} level={level} data={state.data} /> : null}
+      {state.status === "ready" ? <CraftRouteSections profession={profession} faction={faction} zoneId={zoneId} level={level} position={position} data={state.data} /> : null}
 
       <GuideSection id="forever" title="What's different in Forever">
         <ForeverChangesBox changes={guide.forever} />

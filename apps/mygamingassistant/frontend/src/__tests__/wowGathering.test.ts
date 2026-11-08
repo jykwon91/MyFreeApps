@@ -25,6 +25,7 @@ function vein(name: string, count: number, at: MobSpot, level: number): ObjectSp
 function sourcesOf(objectSpots: ObjectSpot[]): ItemSources {
   return {
     vendors: [],
+    price: null,
     quests: [],
     drop: null,
     skinning: null,

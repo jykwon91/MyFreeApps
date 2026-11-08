@@ -1,4 +1,6 @@
+import RouteBuyLines from "@/games/wow-forever/components/professions/RouteBuyLines";
 import RouteMatList, { type MatPlace } from "@/games/wow-forever/components/professions/RouteMatList";
+import type { RouteBuyPlace } from "@/games/wow-forever/types/recipeVendors/routeBuyPlace";
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import { forFaction } from "@/games/wow-forever/lib/forFaction";
 import type { RouteStep } from "@/games/wow-forever/data/professions/professionTypes";
@@ -13,10 +15,12 @@ interface RouteRowProps {
   sourceLabel: string;
   /** Where materials come from; with it, each of a row's `mats` opens to its sources. */
   matPlace?: MatPlace;
+  /** Where the row's recipes / book are sold; with it, a row that buys one gets a "Buy from" line. */
+  buy?: RouteBuyPlace;
 }
 
 /** One route row: a card on phones, a table row from `sm` up. Milestones read as stage breaks. */
-export default function RouteRow({ step, faction, showChip, materialsLabel, sourceLabel, matPlace }: RouteRowProps) {
+export default function RouteRow({ step, faction, showChip, materialsLabel, sourceLabel, matPlace, buy }: RouteRowProps) {
   const chip = showChip && step.confidence === "unconfirmed" ? <ProvenanceBadge provenance={PROVENANCE.unconfirmed} /> : null;
 
   if (step.kind === "milestone") {
@@ -29,6 +33,7 @@ export default function RouteRow({ step, faction, showChip, materialsLabel, sour
             {step.name} {chip}
           </p>
           <p className="text-sm">{forFaction(step.detail, faction)}</p>
+          <RouteBuyLines step={step} buy={buy} />
         </div>
       </li>
     );
@@ -50,10 +55,13 @@ export default function RouteRow({ step, faction, showChip, materialsLabel, sour
         </p>
         <RouteMatList mats={step.mats} matPlace={matPlace} />
       </div>
-      <p className="text-sm">
-        <span className="sm:hidden text-muted-foreground">{sourceLabel}: </span>
-        {forFaction(step.source, faction)}
-      </p>
+      <div className="text-sm space-y-1">
+        <p>
+          <span className="sm:hidden text-muted-foreground">{sourceLabel}: </span>
+          {forFaction(step.source, faction)}
+        </p>
+        <RouteBuyLines step={step} buy={buy} />
+      </div>
     </li>
   );
 }

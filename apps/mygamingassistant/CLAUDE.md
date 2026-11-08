@@ -139,6 +139,20 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   the hand-picked route, costed at auction prices, never called "cheapest".
   Recipes Forever added and no Classic source teaches get a "Source unknown"
   chip and never a Classic trainer (`sourceUnknown`, `learnAt.newInForever`).
+  **Recipe vendors** (every guide but gathering; `components/recipeVendors/`,
+  pure logic in `lib/recipeVendors/`, `wowRecipeVendors.test.ts`): a "Recipe
+  vendors" section (`#vendors`, Classic data badge) lists every vendor-sold
+  recipe grouped by vendor — name · title, place · coords, faction, distance
+  from the World Map's saved zone/position (`zoneToWorld` + `yardsBetween`;
+  other continent = "boat or zeppelin"), price (cmangos `BuyPrice`, written as
+  `price` on a source only when someone sells it), limited stock and
+  `directionsHref`. Your faction + neutral first, the other faction behind a
+  toggle. Route rows whose recipe you buy get a "Buy X from <nearest vendor>"
+  line (`RecipeBuyLines`): crafting rows from `learnAt`, Cooking rows from
+  `CraftStep.recipes` (food ids), and a `buysBook` milestone from the rank
+  book in `recipeSources.json` `books` (`RANK_BOOKS` in `wow_food/build.py`:
+  Expert Cookbook, Expert Fishing). A recipe with no Classic vendor is never
+  given one.
   Herb / ore nodes carry their gathering skill (Forever `Lock` table) in the
   `objectSpots` rows. Each guide has trainers, rank-ups (Artisan Enchanting = Annora in Uldaman), a
   hand-picked route to 300 (`data/professions/crafting/*Route.ts`, joined to

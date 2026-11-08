@@ -124,9 +124,18 @@ export interface ContainerDrop {
   drop: DropSource;
 }
 
+/** A book that unlocks a profession's next rank (Expert Cookbook), and where it's sold. */
+export interface RankBook {
+  itemId: number;
+  name: string;
+  sources: ItemSources;
+}
+
 /** Everything known about where an item comes from. Empty lists / null = not a source. */
 export interface ItemSources {
   vendors: VendorSpot[];
+  /** What the vendors ask, in copper (Classic, before any reputation discount); null when nobody sells it. */
+  price: number | null;
   quests: QuestSource[];
   drop: DropSource | null;
   skinning: SkinningSource | null;

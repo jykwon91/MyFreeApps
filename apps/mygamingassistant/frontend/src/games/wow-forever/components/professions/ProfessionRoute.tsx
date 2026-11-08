@@ -7,6 +7,7 @@ import { CLASSIC_ROUTE_TAG } from "@/games/wow-forever/data/provenance/provenanc
 import type { RouteStep } from "@/games/wow-forever/data/professions/professionTypes";
 import type { ProvenanceTag } from "@/games/wow-forever/types/provenance/provenanceTag";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
+import type { RouteBuyPlace } from "@/games/wow-forever/types/recipeVendors/routeBuyPlace";
 
 interface ProfessionRouteProps {
   steps: readonly RouteStep[];
@@ -18,10 +19,12 @@ interface ProfessionRouteProps {
   matPlace?: MatPlace;
   /** Where every row comes from, tagged once above the list — e.g. a gathering route is all Classic data. */
   routeTag?: ProvenanceTag;
+  /** Where the route's recipes and rank's book are sold — Cooking and Fishing. */
+  buy?: RouteBuyPlace;
 }
 
 /** The leveling route as a list that stacks into cards on phones — no sideways scrolling. */
-export default function ProfessionRoute({ steps, faction, columns, showLegend, matPlace, routeTag }: ProfessionRouteProps) {
+export default function ProfessionRoute({ steps, faction, columns, showLegend, matPlace, routeTag, buy }: ProfessionRouteProps) {
   // When most rows are unconfirmed, a badge on each is noise — one tag above the list says it.
   const unconfirmed = steps.filter((s) => s.confidence === "unconfirmed").length;
   const mostlyUnconfirmed = unconfirmed > steps.length / 2;
@@ -53,6 +56,7 @@ export default function ProfessionRoute({ steps, faction, columns, showLegend, m
               materialsLabel={columns.materials}
               sourceLabel={columns.source}
               matPlace={matPlace}
+              buy={buy}
             />
           ))}
         </ol>

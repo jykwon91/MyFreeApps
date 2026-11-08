@@ -103,7 +103,7 @@ describe("recipe source data", () => {
     expect(barnacled.drop.mobs.length).toBeGreaterThan(0);
   });
   it("has nothing for an unknown item", () => {
-    expect(recipeSourcesFor(1)).toEqual({ vendors: [], quests: [], drop: null, skinning: null, disenchant: null, fishing: [], containers: [], objectSpots: [], containerDrops: [] });
+    expect(recipeSourcesFor(1)).toEqual({ vendors: [], price: null, quests: [], drop: null, skinning: null, disenchant: null, fishing: [], containers: [], objectSpots: [], containerDrops: [] });
   });
   it("explains unknown Classic and Forever items differently", () => {
     expect(unknownSource(250000, "it")).toMatch(/^New in Forever/);
