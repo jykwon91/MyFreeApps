@@ -30,6 +30,7 @@ const WowItemsPage = lazy(() => import("@/games/wow-forever/pages/WowItemsPage")
 const WowRaidPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPage"));
 const WowRaidPlannerPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPlannerPage"));
 const WowSuggestPage = lazy(() => import("@/games/wow-forever/pages/WowSuggestPage"));
+const WowAskPage = lazy(() => import("@/games/wow-forever/pages/WowAskPage"));
 const WowTriagePage = lazy(() => import("@/games/wow-forever/pages/WowTriagePage"));
 
 function withSuspense(page: ReactElement): ReactElement {
@@ -87,6 +88,7 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/downrank", element: withSuggestFooter(<WowDownrankPage />, "class_guides") },
   { path: "/wow-forever/changes", element: withSuggestFooter(<WowChangesPage />, "class_guides") },
   { path: "/wow-forever/server-status", element: withSuggestFooter(<WowServerStatusPage />, "site_app") },
+  { path: "/wow-forever/ask", element: withSuggestFooter(<WowAskPage />, "site_app") },
   // The old Warlock-only page: same macros, now the Warlock filter of the Macros page.
   { path: "/wow-forever/warlock-macros", element: <Navigate to="/wow-forever/macros?class=warlock" replace /> },
   { path: "/wow-forever/gear", element: withSuggestFooter(<WowGearPage />, "gear_upgrades") },

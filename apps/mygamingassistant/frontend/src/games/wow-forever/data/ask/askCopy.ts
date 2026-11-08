@@ -1,0 +1,83 @@
+import { ASK_LIMITS } from "@/games/wow-forever/data/ask/askLimits";
+import { ASK_FAILURE } from "@/games/wow-forever/data/ask/askFailureKinds";
+import { ASK_TOOL } from "@/games/wow-forever/data/ask/askTools";
+import type { AskFailureKind } from "@/games/wow-forever/types/ask/askFailureKind";
+import type { AskToolName } from "@/games/wow-forever/types/ask/askToolName";
+
+/** Every string the "Ask" chat shows. */
+export const ASK_COPY = {
+  title: "Ask",
+  documentTitle: "Ask · WoW Forever",
+  subtitle: "Ask where something is in WoW: Forever — answers come from this site's own map, item and dungeon data.",
+  hubLabel: "Ask about WoW: Forever",
+  hubPlaceholder: "Where's the closest warlock trainer?",
+  hubSubmit: "Ask",
+  composerLabel: "Your question",
+  composerPlaceholder: "Ask where something is…",
+  send: "Send",
+  sending: "Sending…",
+  cancel: "Cancel",
+  emptyHeading: "What do you want to find?",
+  emptyBody: "Try one of these:",
+  thinking: "Thinking…",
+  unfinished: "I couldn't finish looking that up. Try asking again.",
+  checking: "Checking you're human…",
+  stillWorking: "Still working…",
+  newChat: "New chat",
+  chatCleared: "Chat cleared.",
+  undo: "Undo",
+  retry: "Try again",
+  chatFull: "This chat has reached its limit. Start a new chat to ask more.",
+  disabled: "Ask isn't switched on for this site yet.",
+  browserOnly: "Ask needs a quick human check that can't load inside Discord. Open this page in your browser to use it.",
+  loadError: "Couldn't load the map data Ask needs.",
+  locationLabel: "Your location",
+  locationUnset: "Set your location",
+  locationHelp: "Used for \u201cnearest\u201d when you don't say where you are.",
+  factionLabel: "Your faction",
+  whereHeading: "Where are you?",
+  whereBody: "Set your location and ask again — or just say where you are in your question.",
+  routeThere: "Route there",
+  showOnMap: "Show on the World Map",
+  openDungeon: "Open the dungeon page",
+  otherFaction: "None for your faction — these are the other faction's.",
+  fromLabel: "Nearest to",
+  noResults: (query: string): string => `Nothing found for \u201c${query}\u201d.`,
+  counter: (length: number): string => `${length} / ${ASK_LIMITS.questionMaxChars}`,
+  cardMapAlt: (zoneName: string): string => `Map of ${zoneName} with the results marked`,
+  seeAlso: "See also",
+  youMarker: "You",
+  pickRow: "Pick one to route there.",
+  found: (shown: number, total: number): string =>
+    total > shown ? `Nearest ${shown} of ${total}` : `${total} found`,
+  itemsMore: (total: number, shown: number): string => `${total - shown} more match — ask with a fuller name.`,
+  levels: (range: string): string => `Level ${range}`,
+  canEnter: (level: number): string => `Can enter from level ${level}`,
+  bossMatch: (boss: string): string => `${boss} is a boss here.`,
+  bossesHeading: "Bosses",
+  requiredLevel: (level: number): string => `Requires level ${level}`,
+  you: "You",
+  assistant: "Ask",
+  conversation: "Conversation",
+  failure: {
+    [ASK_FAILURE.rateLimited]: "You're asking a lot right now. Try again in a little while.",
+    [ASK_FAILURE.dailyLimit]: "Ask has answered all it can for today. It'll be back tomorrow.",
+    [ASK_FAILURE.busy]: "Ask is busy right now. Try again in a minute.",
+    [ASK_FAILURE.unavailable]: "Ask isn't available right now.",
+    [ASK_FAILURE.humanCheck]: "The human check didn't go through. Try again.",
+    [ASK_FAILURE.chatOver]: "This chat has expired. Start a new chat to keep asking.",
+    [ASK_FAILURE.tooLong]: "That question is too long. Make it shorter and try again.",
+    [ASK_FAILURE.network]: "Couldn't reach the site. Check your connection and try again.",
+    [ASK_FAILURE.failed]: "Something went wrong getting an answer. Try again.",
+  } satisfies Record<AskFailureKind, string>,
+  retryIn: (seconds: number): string => `Try again in ${seconds} s`,
+} as const;
+
+/** The step line while a tool runs. */
+export const ASK_STEP: Readonly<Record<AskToolName, (query: string) => string>> = {
+  [ASK_TOOL.searchNpcs]: (query) => `Searching the map for \u201c${query}\u201d…`,
+  [ASK_TOOL.findPlaces]: (query) => `Looking up \u201c${query}\u201d…`,
+  [ASK_TOOL.searchItems]: (query) => `Searching items for \u201c${query}\u201d…`,
+  [ASK_TOOL.dungeonInfo]: (query) => `Looking up the dungeon \u201c${query}\u201d…`,
+  [ASK_TOOL.playerContext]: () => "Checking your saved character…",
+};

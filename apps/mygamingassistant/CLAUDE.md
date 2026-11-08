@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -925,6 +925,35 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   conversation digest. Limits and error codes: `app/core/wow_chat_limits.py`.
   Tests: `tests/test_wow_chat_api.py`, `test_wow_chat_ticket.py`,
   `test_wow_chat_schemas.py`.
+
+#### "Ask" chat page (`/wow-forever/ask`)
+
+- `pages/WowAskPage.tsx` + `components|hooks|lib|data|types/ask/`. The hub's
+  `HubAskBox` sends to `/wow-forever/ask?q=`; the page sends it once and drops
+  `?q` (replace history). Offered only where the item reader is
+  (`isHumanCheckedFeatureOffered`), browser-only inside the Discord Activity.
+- **Tools run in the browser** (`lib/ask/runAskTool.ts` → `lib/ask/tools/`),
+  reusing the site's own code — never a second search: `searchAllNpcs` +
+  `viewMapSearch` (nearest, `usableBy` faction), `findPlaces` / `bestPlaces`,
+  `searchItems`, `loadDungeons`. Input is checked against the schema
+  (`validateAskToolInput`); results are capped under the relay's 4 KB. "From"
+  comes from the place named in the question, else the saved World Map
+  location (`resolveAskOrigin`); an unknown place is said so, never swapped.
+- Turn loop `lib/ask/askTurnLoop.ts` (pure; question with the human check,
+  tool results with the ticket); state `hooks/ask/useAskChat.ts`: a failed
+  question rolls back and offers Try again (counting down Retry-After),
+  daily cap = no button, expired chat = New chat (Undo for 10 s), Cancel puts
+  the question back in the box. Finished questions persist in sessionStorage
+  (`lib/ask/askStorage.ts`, re-validated on read). Turnstile action `wow-chat`,
+  one token per question (`useAskTurnstile`).
+- Cards (`components/ask/cards/`): NPC results with a mini map and numbered
+  rows; picking a row shows **Route there** =
+  `/wow-forever/map?to=npc:<id>&dir=1`, plus `&from=pt:<zone>,x,y` ONLY when
+  the start came from the player's message (`lib/ask/askLinks.ts`, the World
+  Map's own `formatEndpoint`). Places, items (`ItemNameLink`), dungeon, "Where
+  are you?". Every empty-state example is checked against real data in
+  `wowAskTools.test.ts`. Tests: `src/__tests__/wowAsk*.test.ts(x)`,
+  `e2e/wow-forever-ask.spec.ts` (relay mocked).
 
 #### Food picker (`/wow-forever/food`, "What should I eat?")
 
