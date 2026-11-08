@@ -43,10 +43,10 @@ export default function Integrations() {
   const latestLog = syncLogs[0] ?? null;
   const isSyncing = latestLog?.status === "running";
 
-  const savedLabel = (gmail?.metadata as Record<string, unknown> | null)?.gmail_label;
+  const savedLabel = gmail?.gmail_label ?? "";
   // Track user edits as an override; fall back to the server value before any edit.
   const [labelOverride, setLabelOverride] = useState<string | null>(null);
-  const labelInput = labelOverride ?? (typeof savedLabel === "string" ? savedLabel : "");
+  const labelInput = labelOverride ?? savedLabel;
 
   function setLabelInput(value: string) {
     setLabelOverride(value);
@@ -229,14 +229,14 @@ export default function Integrations() {
                       onClick={handleSaveLabel}
                       isLoading={isSavingLabel}
                       loadingText="Saving..."
-                      disabled={labelInput.trim() === (typeof savedLabel === "string" ? savedLabel : "")}
+                      disabled={labelInput.trim() === savedLabel}
                     >
                       Save
                     </LoadingButton>
                   </div>
                 ) : null}
                 <p className="text-xs text-muted-foreground mt-1">
-                  {typeof savedLabel === "string" && savedLabel
+                  {savedLabel
                     ? `Currently filtering by: "${savedLabel}"`
                     : "Leave empty to sync all emails"}
                 </p>

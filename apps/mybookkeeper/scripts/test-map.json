@@ -283,6 +283,7 @@
         "backend/app/repositories/integrations/",
         "backend/app/schemas/integrations/",
         "backend/app/api/integrations.py",
+        "backend/app/mappers/integration_mapper.py",
         "frontend/src/app/pages/Integrations.tsx",
         "frontend/src/app/features/integrations/",
         "frontend/src/shared/store/integrationsApi.ts",
@@ -295,7 +296,8 @@
         "test_email_discovery_last_synced.py",
         "test_integration_org_scope.py",
         "test_member_removal_gmail.py",
-        "test_integration_org_key_migration.py"
+        "test_integration_org_key_migration.py",
+        "test_gmail_label_filter.py"
       ],
       "frontend_tests": [
         "Integrations.test.tsx",
@@ -304,6 +306,7 @@
       ],
       "e2e_specs": [
         "integrations.spec.ts",
+        "gmail-label-filter.spec.ts",
         "summary-invalidation.spec.ts"
       ]
     },

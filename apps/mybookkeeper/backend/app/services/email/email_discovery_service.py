@@ -9,13 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.context import RequestContext
 from app.db.session import unit_of_work
+from app.mappers.integration_mapper import gmail_label_of
 from app.models.email.bounce_detection_result import BounceDetectionResult
 from app.models.email.discovery_outcome import DiscoveryOutcome
 from app.models.email.email_types import DiscoverResult, EmailSourcesData
 from app.models.email.inbound_email_signals import InboundEmailSignals
 from app.models.email.refreshed_gmail_token import RefreshedGmailToken
 from app.models.integrations.gmail_connection_snapshot import GmailConnectionSnapshot
-from app.core.config import settings
 from app.repositories import document_repo, email_filter_log_repo, email_queue_repo, gmail_skipped_message_repo, integration_repo, sync_log_repo
 from app.services.email.bounce_detector import BounceDetector
 from app.services.email.constants import (
@@ -94,7 +94,7 @@ async def _discover(ctx: RequestContext) -> DiscoveryOutcome:
         filtered_ids = await email_filter_log_repo.get_message_ids(db, org_id)
         processed_ids: set[str] = queued_ids | doc_ids | filtered_ids
 
-        label = settings.gmail_label or None
+        label = gmail_label_of(integration)
         try:
             new_ids, gmail_matches_total = await asyncio.to_thread(
                 list_new_email_ids, service, processed_ids, label=label

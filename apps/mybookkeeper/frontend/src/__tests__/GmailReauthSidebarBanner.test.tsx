@@ -14,7 +14,6 @@ const mockNeedsReauth: Integration = {
   provider: "gmail",
   connected: true,
   last_synced_at: null,
-  metadata: null,
   needs_reauth: true,
 };
 
@@ -22,7 +21,6 @@ const mockHealthy: Integration = {
   provider: "gmail",
   connected: true,
   last_synced_at: "2024-03-15T10:00:00Z",
-  metadata: null,
   needs_reauth: false,
 };
 

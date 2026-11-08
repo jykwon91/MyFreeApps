@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.gmail_label_constants import GMAIL_LABEL_METADATA_KEY
 from app.models.integrations.gmail_connection import GmailConnection
 from app.models.integrations.gmail_sync_target import GmailSyncTarget
 from app.models.integrations.integration import Integration
@@ -137,6 +138,23 @@ def _write_connection(
         metadata = dict(integration.metadata_ or {})
         metadata["scopes"] = scopes
         integration.metadata_ = metadata
+
+
+async def set_gmail_label(
+    db: AsyncSession, organization_id: uuid.UUID, label: str | None,
+) -> Integration | None:
+    """Limit the organization's Gmail syncing to ``label``, or clear the limit. None if Gmail isn't connected."""
+    integration = await _lock_org_gmail(db, organization_id)
+    if integration is None:
+        return None
+    metadata = dict(integration.metadata_ or {})
+    if label:
+        metadata[GMAIL_LABEL_METADATA_KEY] = label
+    else:
+        metadata.pop(GMAIL_LABEL_METADATA_KEY, None)
+    integration.metadata_ = metadata
+    await db.flush()
+    return integration
 
 
 async def upsert_gmail(
