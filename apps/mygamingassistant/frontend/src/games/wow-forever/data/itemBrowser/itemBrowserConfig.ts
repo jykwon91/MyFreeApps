@@ -37,7 +37,7 @@ export const ITEM_LEVEL_MAX = 300;
 
 /** Rows added by each "Show more" — the list never draws all ~9,500 items at once. */
 export const ITEM_BROWSER_PAGE_SIZE = 60;
-/** Most "Show more" pages the URL can ask for (60 � 200 covers every item). */
+/** Most "Show more" pages the URL can ask for (60 × 200 covers every item). */
 export const ITEM_BROWSER_MAX_PAGES = 200;
 /** Rows the skeleton draws while the index loads. */
 export const ITEM_BROWSER_SKELETON_ROWS = 8;

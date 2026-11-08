@@ -80,7 +80,7 @@ function run(items: readonly ItemIndexEntry[], filters: ItemBrowserFilters, toke
 /**
  * The items the filters keep (in index order) and the chip counts. The name
  * search matches every word in any order; one-letter-off matching only runs
- * when no item's name matches exactly (within the level ranges) — names the
+ * when no item's name matches exactly (within the level ranges) â€” names the
  * chips hide still count as matches, so picking a chip never swaps in near misses.
  */
 export function filterItems(items: readonly ItemIndexEntry[], filters: ItemBrowserFilters): ItemFilterResult {
