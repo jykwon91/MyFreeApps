@@ -24,6 +24,11 @@ function renderAt(path: string) {
   );
 }
 
+/** The "train it first" section — rank trainers repeat further down the route. */
+function start() {
+  return within(document.getElementById("start") as HTMLElement);
+}
+
 function route() {
   const section = document.getElementById("route");
   if (!section) throw new Error("no route section");
@@ -37,14 +42,14 @@ describe("Professions page", () => {
     renderAt("/wow-forever/professions");
     expect(screen.getByRole("radio", { name: "Cooking" })).toBeChecked();
     expect(screen.getByRole("heading", { name: /train it first/i })).toBeInTheDocument();
-    expect(screen.getByText("Stephen Ryback")).toBeInTheDocument();
+    expect(start().getByText("Stephen Ryback")).toBeInTheDocument();
     expect(route().getByText("Spiced Wolf Meat")).toBeInTheDocument();
   });
 
   it("opens Fishing from ?p=fishing and falls back to Cooking for anything else", () => {
     const { unmount } = renderAt("/wow-forever/professions?p=fishing");
     expect(screen.getByRole("radio", { name: "Fishing" })).toBeChecked();
-    expect(screen.getByText("Arnold Leland")).toBeInTheDocument();
+    expect(start().getByText("Arnold Leland")).toBeInTheDocument();
     expect(screen.getByText(/You haven't trained Fishing yet/)).toBeInTheDocument();
     unmount();
     renderAt("/wow-forever/professions?p=nonsense");
@@ -59,10 +64,10 @@ describe("Professions page", () => {
 
   it("shows only the chosen faction's trainers and remembers the faction", async () => {
     renderAt("/wow-forever/professions");
-    expect(screen.queryByText("Zamja")).not.toBeInTheDocument();
+    expect(start().queryByText("Zamja")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("radio", { name: "Horde" }));
-    expect(screen.getByText("Zamja")).toBeInTheDocument();
-    expect(screen.queryByText("Stephen Ryback")).not.toBeInTheDocument();
+    expect(start().getByText("Zamja")).toBeInTheDocument();
+    expect(start().queryByText("Stephen Ryback")).not.toBeInTheDocument();
     expect(route().getByText(/from Wulan in Shadowprey Village/)).toBeInTheDocument();
     const book = route().getAllByTestId("recipe-buy-line").filter((li) => li.textContent?.includes("Expert Cookbook"));
     expect(book).toHaveLength(1);

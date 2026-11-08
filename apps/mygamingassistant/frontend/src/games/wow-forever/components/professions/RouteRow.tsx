@@ -1,3 +1,4 @@
+import MilestoneWhere from "@/games/wow-forever/components/professions/MilestoneWhere";
 import RouteBuyLines from "@/games/wow-forever/components/professions/RouteBuyLines";
 import RouteMatList, { type MatPlace } from "@/games/wow-forever/components/professions/RouteMatList";
 import type { RouteBuyPlace } from "@/games/wow-forever/types/recipeVendors/routeBuyPlace";
@@ -17,10 +18,12 @@ interface RouteRowProps {
   matPlace?: MatPlace;
   /** Where the row's recipes / book are sold; with it, a row that buys one gets a "Buy from" line. */
   buy?: RouteBuyPlace;
+  /** The player's World Map zone; a rank trainer there is listed first. Null = not set. */
+  zoneId?: number | null;
 }
 
 /** One route row: a card on phones, a table row from `sm` up. Milestones read as stage breaks. */
-export default function RouteRow({ step, faction, showChip, materialsLabel, sourceLabel, matPlace, buy }: RouteRowProps) {
+export default function RouteRow({ step, faction, showChip, materialsLabel, sourceLabel, matPlace, buy, zoneId = null }: RouteRowProps) {
   const chip = showChip && step.confidence === "unconfirmed" ? <ProvenanceBadge provenance={PROVENANCE.unconfirmed} /> : null;
 
   if (step.kind === "milestone") {
@@ -33,6 +36,7 @@ export default function RouteRow({ step, faction, showChip, materialsLabel, sour
             {step.name} {chip}
           </p>
           <p className="text-sm">{forFaction(step.detail, faction)}</p>
+          <MilestoneWhere step={step} faction={faction} zoneId={zoneId} />
           <RouteBuyLines step={step} buy={buy} />
         </div>
       </li>

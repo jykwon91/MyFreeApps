@@ -10,6 +10,9 @@ import interiorsJson from "@/games/wow-forever/data/worldMap/classic/classicInte
 import { CITY_TRAINERS, TOWN_TRAINERS } from "@/games/wow-forever/data/professions/trainers";
 import { CRAFTING_RANKS, CRAFTING_TRAINERS, type RankTrainers } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
 import type { TrainerNpc } from "@/games/wow-forever/data/professions/professionTypes";
+import { COOKING_ROUTE } from "@/games/wow-forever/data/professions/cooking";
+import { FISHING_ROUTE } from "@/games/wow-forever/data/professions/fishing";
+import { milestoneNpc } from "@/games/wow-forever/lib/milestoneNpc";
 import { GATHERING_GUIDES } from "@/games/wow-forever/data/professions/gathering/gatheringGuides";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { decodeWorldMap } from "@/games/wow-forever/worldMap/decodeWorldMap";
@@ -335,9 +338,9 @@ describe("directions text", () => {
   });
 });
 
-/** The NPCs a rank-up names: its trainers, the book's vendors or the quest's givers. */
+/** The NPCs a rank-up names: everyone who trains it, the book's vendors or the quest's givers. */
 function rankNpcs(trainers: RankTrainers): readonly TrainerNpc[] {
-  if (trainers.kind === "named") return Object.values(trainers.trainers);
+  if (trainers.kind === "list") return Object.values(trainers.trainers).flat();
   if (trainers.kind === "book") return Object.values(trainers.vendors);
   if (trainers.kind === "quest") return Object.values(trainers.givers);
   return [];
@@ -354,6 +357,9 @@ describe("Profession trainers link to the map", () => {
     ...Object.values(CRAFTING_RANKS)
       .flat()
       .flatMap((r) => rankNpcs(r.trainers)),
+    ...[...COOKING_ROUTE, ...FISHING_ROUTE].flatMap((step) =>
+      step.kind === "milestone" ? [milestoneNpc(step, "A"), milestoneNpc(step, "H")].filter((n) => n !== null) : [],
+    ),
   ];
 
   it("gives every rank-up quest from an NPC who offers it on the World Map", () => {

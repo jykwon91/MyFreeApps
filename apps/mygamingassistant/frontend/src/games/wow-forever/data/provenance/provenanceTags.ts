@@ -7,3 +7,6 @@ export const CLASSIC_ROUTE_TAG: ProvenanceTag = { provenance: PROVENANCE.classic
 
 /** A Classic game rule: skill-up colours, the skinning level rule. */
 export const CLASSIC_RULE_TAG: ProvenanceTag = { provenance: PROVENANCE.classic, detail: PROVENANCE_DETAIL.classicRule };
+
+/** Who teaches a profession rank: every Classic trainer for your faction. */
+export const CLASSIC_TRAINERS_TAG: ProvenanceTag = { provenance: PROVENANCE.classic, detail: PROVENANCE_DETAIL.classicTrainers };

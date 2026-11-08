@@ -39,7 +39,7 @@ test("reaches the page from the landing card and leads with training", async ({ 
   await expect(page).toHaveURL(/\/wow-forever\/professions$/);
   await expect(page.getByRole("radio", { name: "Cooking" })).toBeChecked();
   await expect(page.getByRole("heading", { name: /train it first/i })).toBeVisible();
-  await expect(page.getByText("Stephen Ryback")).toBeVisible();
+  await expect(page.locator("#start").getByText("Stephen Ryback")).toBeVisible();
 });
 
 test("switches to Fishing and Horde, and the route follows", async ({ page }) => {
@@ -47,7 +47,7 @@ test("switches to Fishing and Horde, and the route follows", async ({ page }) =>
   await page.getByRole("radio", { name: "Fishing" }).click();
   await expect(page).toHaveURL(/\?p=fishing$/);
   await page.getByRole("radio", { name: "Horde" }).click();
-  await expect(page.getByText("Lumak")).toBeVisible();
+  await expect(page.locator("#start").getByText("Lumak")).toBeVisible();
   await expect(page.getByText("Arnold Leland")).toHaveCount(0);
 
   const route = page.locator("#route");
@@ -423,4 +423,33 @@ test("Engineering says what each item does, forks at 200, and smelts its bars", 
   await shopping.getByRole("radio", { name: "Whole route" }).click();
   await expect(shopping.getByText("Smelt with Mining", { exact: true })).toBeVisible();
   await expect(shopping.getByText(/\d+ Copper Bar \(Mining 1\)/)).toBeVisible();
+});
+
+test("a crafting rank lists every trainer for your faction, each with a map link, and the faction switch changes the list", async ({ page }) => {
+  await page.goto("/wow-forever/professions?p=tailoring");
+  const route = page.locator("#route");
+  const list = route.getByRole("list", { name: "Journeyman Tailoring trainers" });
+  await expect(list.getByRole("listitem")).toHaveCount(3);
+  await expect(list.getByRole("link", { name: /on the map/ })).toHaveCount(3);
+  await expect(list.getByRole("link", { name: /on the map/ }).first()).toHaveAttribute("href", /\/wow-forever\/map\?npc=\d+/);
+  await route.getByRole("button", { name: /Show all \d+ trainers/ }).first().click();
+  expect(await list.getByRole("listitem").count()).toBeGreaterThan(3);
+  await expect(list.getByText("Georgio Bolero")).toBeVisible();
+  await expect(list.getByText("Josef Gregorian")).toHaveCount(0);
+  await expect(route.getByTestId("provenance-badge").first()).toBeVisible();
+
+  await page.getByRole("radio", { name: "Horde" }).click();
+  const hordeList = page.locator("#route").getByRole("list", { name: "Journeyman Tailoring trainers" });
+  await expect(hordeList.getByText("Josef Gregorian")).toBeVisible();
+  await expect(hordeList.getByText("Georgio Bolero")).toHaveCount(0);
+});
+
+test("Cooking's Journeyman step lists its trainers and the Artisan quest giver, with map links", async ({ page }) => {
+  await page.goto("/wow-forever/professions?p=cooking");
+  const route = page.locator("#route");
+  const trainers = route.getByRole("list", { name: "Journeyman cooking trainers" });
+  await expect(trainers.getByRole("link", { name: /on the map/ }).first()).toBeVisible();
+  const quest = route.getByText("Dirge Quikcleave");
+  await expect(quest.first()).toBeVisible();
+  await expect(route.getByRole("link", { name: "Show Dirge Quikcleave on the map" })).toHaveAttribute("href", "/wow-forever/map?npc=8125");
 });

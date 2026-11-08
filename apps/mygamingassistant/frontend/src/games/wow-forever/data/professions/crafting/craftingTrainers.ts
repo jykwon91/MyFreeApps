@@ -1,3 +1,5 @@
+import { listedRankTrainers } from "@/games/wow-forever/data/professions/rankTrainers";
+import type { RankName, RankProfession, RankTrainer } from "@/games/wow-forever/data/professions/rankTrainerTypes";
 import type { Confidence, TrainerNpc } from "@/games/wow-forever/data/professions/professionTypes";
 import { FIRST_AID_RANKS, FIRST_AID_TRAINERS } from "@/games/wow-forever/data/professions/crafting/firstAidTrainers";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
@@ -168,13 +170,12 @@ export const CRAFTING_TRAINERS: Readonly<Record<CraftingProfession, CraftingTrai
 };
 
 /**
- * Where a rank is trained: named trainers per faction, any trainer, somewhere
- * the map can't point to, a book bought from a vendor, or a quest. `trip` is
- * per faction: the errand means changing continent.
+ * Where a rank is trained: everyone who teaches it to each faction (cmangos), a trainer
+ * inside a dungeon, a book bought from a vendor, or a quest. `trip` is per faction: the
+ * errand means changing continent.
  */
 export type RankTrainers =
-  | { kind: "any" }
-  | { kind: "named"; trainers: Readonly<Record<PlayerFaction, TrainerNpc>> }
+  | { kind: "list"; trainers: Readonly<Record<PlayerFaction, readonly RankTrainer[]>> }
   | { kind: "dungeon"; name: string; dungeon: string; dungeonLink: string; detail: string }
   | {
       kind: "book";
@@ -194,7 +195,7 @@ export type RankTrainers =
 export interface CraftingRank {
   /** Skill you must reach to train it. */
   skill: number;
-  name: "Journeyman" | "Expert" | "Artisan";
+  name: RankName;
   /** Character level it needs; absent when nothing gates it (First Aid's Expert book). */
   level?: number;
   /** New skill cap. */
@@ -205,69 +206,44 @@ export interface CraftingRank {
   confidence: Confidence;
 }
 
-// Artisan Blacksmithing: one neutral trainer for both factions (Classic).
-const BRIKK_KEENCRAFT: TrainerNpc = { name: "Brikk Keencraft", npcId: 2836, where: "Booty Bay, Stranglethorn Vale", x: 29.0, y: 75.6 };
-// Artisan Engineering: likewise.
-const BUZZEK_BRACKETSWING: TrainerNpc = { name: "Buzzek Bracketswing", npcId: 8736, where: "Gadgetzan, Tanaris", x: 52.3, y: 27.7 };
+interface RankStep {
+  skill: number;
+  name: RankName;
+  level: number;
+  cap: number;
+  headsUp?: string;
+  confidence: Confidence;
+}
 
-const JOURNEYMAN: CraftingRank = { skill: 50, name: "Journeyman", level: 10, cap: 150, trainers: { kind: "any" }, confidence: "confirmed" };
+const JOURNEYMAN: RankStep = { skill: 50, name: "Journeyman", level: 10, cap: 150, confidence: "confirmed" };
+const EXPERT: RankStep = { skill: 125, name: "Expert", level: 20, cap: 225, confidence: "unconfirmed" };
+const ARTISAN: RankStep = { skill: 200, name: "Artisan", level: 35, cap: 300, confidence: "unconfirmed" };
+
+function listed(profession: RankProfession, step: RankStep): CraftingRank {
+  return {
+    ...step,
+    trainers: { kind: "list", trainers: listedRankTrainers(profession, step.name) },
+  };
+}
 
 /** Rank-ups on the way to 300 (Apprentice, cap 75, comes with learning the profession). */
 export const CRAFTING_RANKS: Readonly<Record<CraftingProfession, readonly CraftingRank[]>> = {
   tailoring: [
-    JOURNEYMAN,
-    {
-      skill: 125,
-      name: "Expert",
-      level: 20,
-      cap: 225,
-      trainers: {
-        kind: "named",
-        trainers: {
-          A: { name: "Georgio Bolero", npcId: 1346, where: "Stormwind City", x: 53.1, y: 81.3 },
-          H: { name: "Josef Gregorian", npcId: 4576, where: "Undercity", x: 70.8, y: 30.7 },
-        },
-      },
+    listed("tailoring", JOURNEYMAN),
+    listed("tailoring", {
+      ...EXPERT,
       headsUp: "Artisan (at 200) is trained far away — Theramore for Alliance, Tarren Mill for Horde.",
-      confidence: "unconfirmed",
-    },
-    {
-      skill: 200,
-      name: "Artisan",
-      level: 35,
-      cap: 300,
-      trainers: {
-        kind: "named",
-        trainers: {
-          A: { name: "Timothy Worthington", npcId: 11052, where: "Theramore Isle, Dustwallow Marsh", x: 66.2, y: 51.8 },
-          H: { name: "Daryl Stack", npcId: 2399, where: "Tarren Mill, Hillsbrad Foothills", x: 63.7, y: 20.8 },
-        },
-      },
-      confidence: "unconfirmed",
-    },
+    }),
+    listed("tailoring", ARTISAN),
   ],
   enchanting: [
-    JOURNEYMAN,
-    {
-      skill: 125,
-      name: "Expert",
-      level: 20,
-      cap: 225,
-      trainers: {
-        kind: "named",
-        trainers: {
-          A: { name: "Kitta Firewind", npcId: 11072, where: "Brackwell Pumpkin Patch, Elwynn Forest", x: 64.9, y: 70.7 },
-          H: { name: "Hgarth", npcId: 11074, where: "Sun Rock Retreat, Stonetalon Mountains", x: 49.2, y: 57.2 },
-        },
-      },
+    listed("enchanting", JOURNEYMAN),
+    listed("enchanting", {
+      ...EXPERT,
       headsUp: "Artisan (at 200) is trained inside the Uldaman dungeon — plan a group or wait until you're about level 45.",
-      confidence: "unconfirmed",
-    },
+    }),
     {
-      skill: 200,
-      name: "Artisan",
-      level: 35,
-      cap: 300,
+      ...ARTISAN,
       trainers: {
         kind: "dungeon",
         name: "Annora",
@@ -275,125 +251,32 @@ export const CRAFTING_RANKS: Readonly<Record<CraftingProfession, readonly Crafti
         dungeonLink: "/wow-forever/map?npc=classic-i-286",
         detail: "She's past mobs in the low 40s — bring a group or come back at about level 45.",
       },
-      confidence: "unconfirmed",
     },
   ],
   alchemy: [
-    JOURNEYMAN,
-    {
-      skill: 125,
-      name: "Expert",
-      level: 20,
-      cap: 225,
-      trainers: {
-        kind: "named",
-        trainers: {
-          A: { name: "Ainethil", npcId: 4160, where: "Darnassus", x: 54.9, y: 24.0 },
-          H: { name: "Doctor Herbert Halsey", npcId: 4611, where: "Undercity", x: 47.8, y: 73.3 },
-        },
-      },
+    listed("alchemy", JOURNEYMAN),
+    listed("alchemy", {
+      ...EXPERT,
       headsUp: "Artisan (at 200) is trained far away — Sardor Isle in Feralas for Alliance, Stonard in Swamp of Sorrows for Horde.",
-      confidence: "unconfirmed",
-    },
-    {
-      skill: 200,
-      name: "Artisan",
-      level: 35,
-      cap: 300,
-      trainers: {
-        kind: "named",
-        trainers: {
-          A: { name: "Kylanna Windwhisper", npcId: 7948, where: "Sardor Isle, Feralas", x: 32.6, y: 43.8 },
-          H: { name: "Rogvar", npcId: 1386, where: "Stonard, Swamp of Sorrows", x: 48.5, y: 55.8 },
-        },
-      },
-      confidence: "unconfirmed",
-    },
+    }),
+    listed("alchemy", ARTISAN),
   ],
   blacksmithing: [
-    JOURNEYMAN,
-    {
-      skill: 125,
-      name: "Expert",
-      level: 20,
-      cap: 225,
-      trainers: {
-        kind: "named",
-        trainers: {
-          A: { name: "Bengus Deepforge", npcId: 4258, where: "Ironforge", x: 52.5, y: 41.5 },
-          H: { name: "Saru Steelfury", npcId: 3355, where: "Orgrimmar", x: 82.3, y: 23.0 },
-        },
-      },
+    listed("blacksmithing", JOURNEYMAN),
+    listed("blacksmithing", {
+      ...EXPERT,
       headsUp: "Artisan (at 200) is trained in one place for both factions — Booty Bay, at the south tip of Stranglethorn Vale.",
-      confidence: "unconfirmed",
-    },
-    {
-      skill: 200,
-      name: "Artisan",
-      level: 35,
-      cap: 300,
-      trainers: { kind: "named", trainers: { A: BRIKK_KEENCRAFT, H: BRIKK_KEENCRAFT } },
-      confidence: "unconfirmed",
-    },
+    }),
+    listed("blacksmithing", ARTISAN),
   ],
-  leatherworking: [
-    JOURNEYMAN,
-    {
-      skill: 125,
-      name: "Expert",
-      level: 20,
-      cap: 225,
-      trainers: {
-        kind: "named",
-        trainers: {
-          A: { name: "Simon Tanner", npcId: 5564, where: "Stormwind City", x: 71.7, y: 63.0 },
-          H: { name: "Karolek", npcId: 3365, where: "Orgrimmar", x: 62.8, y: 44.1 },
-        },
-      },
-      headsUp: "Artisan (at 200) is trained by Telonis in Darnassus (Alliance) or Una in Thunder Bluff (Horde).",
-      confidence: "unconfirmed",
-    },
-    {
-      skill: 200,
-      name: "Artisan",
-      level: 35,
-      cap: 300,
-      trainers: {
-        kind: "named",
-        trainers: {
-          A: { name: "Telonis", npcId: 4212, where: "Darnassus", x: 64.4, y: 21.5 },
-          H: { name: "Una", npcId: 3007, where: "Thunder Bluff", x: 41.5, y: 42.6 },
-        },
-      },
-      confidence: "unconfirmed",
-    },
-  ],
+  leatherworking: [listed("leatherworking", JOURNEYMAN), listed("leatherworking", EXPERT), listed("leatherworking", ARTISAN)],
   engineering: [
-    {
-      skill: 50,
-      name: "Journeyman",
-      level: 10,
-      cap: 150,
-      trainers: { kind: "named", trainers: { A: SPRINGSPINDLE_FIZZLEGEAR, H: ROXXIK } },
-      confidence: "unconfirmed",
-    },
-    {
-      skill: 125,
-      name: "Expert",
-      level: 20,
-      cap: 225,
-      trainers: { kind: "named", trainers: { A: SPRINGSPINDLE_FIZZLEGEAR, H: ROXXIK } },
+    listed("engineering", { ...JOURNEYMAN, confidence: "unconfirmed" }),
+    listed("engineering", {
+      ...EXPERT,
       headsUp: "Artisan (at 200) is trained in one place for both factions — Gadgetzan, in Tanaris.",
-      confidence: "unconfirmed",
-    },
-    {
-      skill: 200,
-      name: "Artisan",
-      level: 35,
-      cap: 300,
-      trainers: { kind: "named", trainers: { A: BUZZEK_BRACKETSWING, H: BUZZEK_BRACKETSWING } },
-      confidence: "unconfirmed",
-    },
+    }),
+    listed("engineering", ARTISAN),
   ],
   firstaid: FIRST_AID_RANKS,
 };

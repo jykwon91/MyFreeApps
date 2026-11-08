@@ -21,10 +21,12 @@ interface ProfessionRouteProps {
   routeTag?: ProvenanceTag;
   /** Where the route's recipes and rank's book are sold — Cooking and Fishing. */
   buy?: RouteBuyPlace;
+  /** The player's World Map zone, so a milestone lists the trainer in it first. */
+  zoneId?: number | null;
 }
 
 /** The leveling route as a list that stacks into cards on phones — no sideways scrolling. */
-export default function ProfessionRoute({ steps, faction, columns, showLegend, matPlace, routeTag, buy }: ProfessionRouteProps) {
+export default function ProfessionRoute({ steps, faction, columns, showLegend, matPlace, routeTag, buy, zoneId }: ProfessionRouteProps) {
   // When most rows are unconfirmed, a badge on each is noise — one tag above the list says it.
   const unconfirmed = steps.filter((s) => s.confidence === "unconfirmed").length;
   const mostlyUnconfirmed = unconfirmed > steps.length / 2;
@@ -57,6 +59,7 @@ export default function ProfessionRoute({ steps, faction, columns, showLegend, m
               sourceLabel={columns.source}
               matPlace={matPlace}
               buy={buy}
+              zoneId={zoneId}
             />
           ))}
         </ol>

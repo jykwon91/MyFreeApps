@@ -27,6 +27,13 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   },
   {
     date: "2026-11-08",
+    title: "Every rank trainer in the profession guides",
+    summary:
+      "Journeyman, Expert and Artisan steps now list every trainer who teaches that rank to your faction, with the one in your zone first, plus a map link for each. Cooking and Fishing steps name the trainers and the Artisan quest giver too.",
+    to: "/wow-forever/professions",
+  },
+  {
+    date: "2026-11-08",
     title: "Quests",
     summary:
       "Browse every quest the WoW Forever client knows: search by name, filter by zone, faction or level, and open any quest to see who gives it, what to do, what you get and which quests come before or after it.",

@@ -23,6 +23,7 @@ export const FISHING_ROUTE: readonly RouteStep[] = [
     skill: "50",
     name: "Learn Journeyman Fishing",
     detail: "Any fishing trainer. Needs level 10. Raises your cap to 150.",
+    teaches: { profession: "fishing", rank: "Journeyman" },
     confidence: "confirmed",
   },
   {
@@ -61,6 +62,7 @@ export const FISHING_ROUTE: readonly RouteStep[] = [
     name: "Artisan quest: Nat Pagle, Angler Extreme",
     detail:
       "From Nat Pagle on his island southwest of Theramore, Dustwallow Marsh. Catch one rare fish each in Feralas, Swamp of Sorrows, Desolace and Stranglethorn. Raises your cap to 300.",
+    npc: { name: "Nat Pagle", npcId: 12919, where: "The Quagmire, Dustwallow Marsh", x: 58.6, y: 60.1 },
     confidence: "unconfirmed",
   },
   {

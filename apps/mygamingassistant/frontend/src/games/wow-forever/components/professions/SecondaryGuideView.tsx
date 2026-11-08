@@ -73,6 +73,7 @@ export default function SecondaryGuideView({ profession, faction, zoneId, level,
           showLegend={profession === PROFESSION.cooking}
           matPlace={matPlace}
           buy={buy}
+          zoneId={zoneId}
         />
         {profession === PROFESSION.fishing ? <FishRecipesList /> : null}
         {profession === PROFESSION.cooking ? <FoodPickerLink /> : null}

@@ -1,3 +1,4 @@
+import type { RankName, RankProfession } from "@/games/wow-forever/data/professions/rankTrainerTypes";
 import type { ConfidenceBasis } from "@/games/wow-forever/types/confidenceBasis";
 import { GATHERING_PROFESSION } from "@/games/wow-forever/types/gathering/gatheringProfession";
 import { SECONDARY_PROFESSION, type SecondaryProfession } from "@/games/wow-forever/types/secondaryProfession";
@@ -42,6 +43,10 @@ export interface MilestoneStep {
   skill: string;
   name: string;
   detail: FactionText;
+  /** Trainers who teach this rank (from the Classic trainer data), listed under the step. */
+  teaches?: { profession: RankProfession; rank: RankName };
+  /** The NPC who sells the book or gives the quest, for the faction (one NPC = both factions). */
+  npc?: TrainerNpc | Readonly<Record<PlayerFaction, TrainerNpc>>;
   confidence: Confidence;
   /** The milestone is buying the rank's book (Expert Cookbook) — it gets a "Buy from" line. */
   buysBook?: true;
