@@ -12,7 +12,19 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "rootDir": "../../..",
+    "outDir": "./node_modules/.tmp/tsconfig-node",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
-  "include": ["vite.config.ts", "postcss.config.js"]
+  "include": [
+    "vite.config.ts",
+    "postcss.config.js",
+    "src/constants/linkPreview.ts",
+    "src/games/registry.ts",
+    "src/types/game.ts",
+    "../../../packages/shared-frontend/src/vite/linkPreview/**/*.ts"
+  ]
 }

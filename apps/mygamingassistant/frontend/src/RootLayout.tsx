@@ -25,6 +25,8 @@ import DiscordActivityShell from "@/components/discord/DiscordActivityShell";
 import { buildNav, PUBLIC_NAV_PATHS } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
+import { useResetDocumentTitle } from "@/hooks/useResetDocumentTitle";
+import { MGA_LINK_PREVIEW } from "@/constants/linkPreview";
 import { useGetCurrentUserQuery } from "@platform/ui/store/userApi";
 import { isTauri } from "@/lib/tauri";
 import { isServeOnly } from "@/lib/serveOnly";
@@ -164,6 +166,8 @@ export default function RootLayout() {
   const [inTauri] = useState(() => isTauri());
   // Fixed for the page: Discord's launch parameters are read once at startup.
   const [inDiscord] = useState(isDiscordActivity);
+
+  useResetDocumentTitle(location.pathname, MGA_LINK_PREVIEW.root.title);
 
   // Update dots ("new since your last visit") on the WoW items; opening a page clears its dot.
   useRecordWowPageVisit(location.pathname);

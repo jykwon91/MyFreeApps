@@ -1,6 +1,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { linkPreviewPlugin } from "../../../packages/shared-frontend/src/vite/linkPreview/linkPreviewPlugin";
+import { MGA_LINK_PREVIEW } from "./src/constants/linkPreview";
 
 const sharedFrontend = path.resolve(
   __dirname,
@@ -8,7 +10,7 @@ const sharedFrontend = path.resolve(
 );
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), linkPreviewPlugin(MGA_LINK_PREVIEW)],
   resolve: {
     // Force a single React instance across the workspace.
     // Mirrors apps/myjobhunter/frontend/vite.config.ts.
