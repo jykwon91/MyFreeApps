@@ -10,7 +10,8 @@ from app.models.documents.document import Document
 from app.models.responses.download_result import DownloadResult
 from app.repositories import document_repo, integration_repo
 from app.services.email.gmail_credentials import persist_refreshed_token
-from app.services.email.gmail_service import get_gmail_service, fetch_email_by_id
+from app.services.email.gmail_service import fetch_email_by_id, get_gmail_service
+from app.services.storage.stored_file import read_stored_file
 
 _RENDERABLE_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
 
@@ -92,7 +93,7 @@ async def get_document_download(
             storage = get_storage()
             if storage is None:
                 raise ValueError("File stored in object storage but MinIO is not configured")
-            file_bytes = storage.download_file(doc.file_storage_key)
+            file_bytes = read_stored_file(storage, doc.file_storage_key)
             media_type = doc.file_mime_type or "application/octet-stream"
             fname = doc.file_name or "file"
             disposition = "inline" if media_type in _RENDERABLE_MIME_TYPES else f"attachment; filename*=UTF-8''{quote(fname)}"

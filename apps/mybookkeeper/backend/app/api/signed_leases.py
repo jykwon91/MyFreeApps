@@ -24,26 +24,23 @@ from fastapi import (
 )
 
 from app.core.context import RequestContext
+from app.core.lease_enums import SIGNED_LEASE_STATUSES
 from app.core.permissions import current_org_member, require_write_access
-from app.services.leases import lease_email_service, lease_extension_service
-from app.services.leases.lease_email_service import (
-    send_extension_addendum_to_tenant,
-    send_lease_to_tenant,
-)
+from app.core.stored_file_constants import MISSING_TEMPLATE_FILE_DETAIL
 from app.schemas.leases.extend_lease_request import ExtendLeaseRequest
+from app.schemas.leases.signed_lease_add_templates_request import (
+    SignedLeaseAddTemplatesRequest,
+)
 from app.schemas.leases.signed_lease_create_request import (
     SignedLeaseCreateRequest,
+)
+from app.schemas.leases.signed_lease_generate_request import (
+    SignedLeaseGenerateRequest,
 )
 from app.schemas.leases.signed_lease_list_response import (
     SignedLeaseListResponse,
 )
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
-from app.schemas.leases.signed_lease_add_templates_request import (
-    SignedLeaseAddTemplatesRequest,
-)
-from app.schemas.leases.signed_lease_generate_request import (
-    SignedLeaseGenerateRequest,
-)
 from app.schemas.leases.signed_lease_template_prefill_request import (
     SignedLeaseTemplatePrefillRequest,
 )
@@ -53,8 +50,17 @@ from app.schemas.leases.signed_lease_template_prefill_response import (
 from app.schemas.leases.signed_lease_update_request import (
     SignedLeaseUpdateRequest,
 )
-from app.services.leases import lease_template_service, signed_lease_service
-from app.core.lease_enums import SIGNED_LEASE_STATUSES
+from app.services.leases import (
+    lease_email_service,
+    lease_extension_service,
+    lease_template_service,
+    signed_lease_service,
+)
+from app.services.leases.lease_email_service import (
+    send_extension_addendum_to_tenant,
+    send_lease_to_tenant,
+)
+from app.services.storage.stored_file import StoredFileMissingError
 
 router = APIRouter(prefix="/signed-leases", tags=["signed-leases"])
 
@@ -308,6 +314,8 @@ async def generate_lease(
         )
     except signed_lease_service.SignedLeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc
+    except StoredFileMissingError as exc:
+        raise HTTPException(status_code=409, detail=MISSING_TEMPLATE_FILE_DETAIL) from exc
     except signed_lease_service.StorageNotConfiguredError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

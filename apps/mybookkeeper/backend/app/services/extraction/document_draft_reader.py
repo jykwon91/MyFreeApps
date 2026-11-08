@@ -23,6 +23,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from app.core.storage import get_storage
+from app.core.stored_file_constants import MISSING_DOCUMENT_FILE_DETAIL
 from app.db.session import unit_of_work
 from app.repositories.documents import document_repo
 from app.services.extraction.extractor_service import (
@@ -30,6 +31,7 @@ from app.services.extraction.extractor_service import (
     extract_text_from_pdf,
     extract_text_from_spreadsheet,
 )
+from app.services.storage.stored_file import StoredFileMissingError, read_stored_file
 
 CONFIDENCE_VALUES = frozenset({"high", "medium", "low"})
 
@@ -148,7 +150,10 @@ async def load_document(
             raise UnreadableDocumentError(
                 "This document is in object storage, which is not configured.",
             )
-        content = storage.download_file(storage_key)
+        try:
+            content = read_stored_file(storage, storage_key)
+        except StoredFileMissingError as exc:
+            raise UnreadableDocumentError(MISSING_DOCUMENT_FILE_DETAIL) from exc
 
     if not content:
         raise UnreadableDocumentError("This document has no file content to read.")

@@ -5,12 +5,18 @@ Financial CRUD (update, approve, bulk-approve) now lives in /transactions.
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.core.stored_file_constants import MISSING_DOCUMENT_FILE_DETAIL
 from app.core.upload_errors import upload_error_status
+from app.models.responses.upload_response import (
+    AcceptUploadResponse,
+    BatchStatusResponse,
+    SingleStatusResponse,
+)
 from app.schemas.common import BulkIdsRequest
 from app.schemas.documents.document import DocumentRead
 from app.schemas.documents.operation_responses import (
@@ -21,9 +27,12 @@ from app.schemas.documents.operation_responses import (
     ReExtractResponse,
     ReplaceFileResponse,
 )
-from app.models.responses.upload_response import AcceptUploadResponse, BatchStatusResponse, SingleStatusResponse
-from app.services.documents import document_query_service, document_service, document_upload_service
-
+from app.services.documents import (
+    document_query_service,
+    document_service,
+    document_upload_service,
+)
+from app.services.storage.stored_file import StoredFileMissingError
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -141,6 +150,8 @@ async def download_document(
 ) -> Response:
     try:
         result = await document_query_service.get_document_download(ctx, document_id)
+    except StoredFileMissingError as exc:
+        raise HTTPException(status_code=404, detail=MISSING_DOCUMENT_FILE_DETAIL) from exc
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     if not result:

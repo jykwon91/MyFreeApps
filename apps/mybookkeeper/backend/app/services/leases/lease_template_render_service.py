@@ -17,6 +17,7 @@ from app.repositories.leases import (
 from app.services.leases.lease_template_placeholder_service import (
     TemplateNotFoundError,
 )
+from app.services.storage.stored_file import read_stored_file
 
 
 async def load_template_source_texts(
@@ -41,5 +42,5 @@ async def load_template_source_texts(
         )
     out: list[tuple[str, str, bytes]] = []
     for f in files:
-        out.append((f.filename, f.content_type, storage.download_file(f.storage_key)))
+        out.append((f.filename, f.content_type, read_stored_file(storage, f.storage_key)))
     return out
