@@ -36,6 +36,18 @@ export default function ClassPageSkeleton() {
           <div className="h-3 w-56 rounded bg-muted animate-pulse" />
         </div>
       </div>
+      {/* Changes vs Classic */}
+      <div className="space-y-3">
+        <div className="h-4 w-36 rounded bg-muted animate-pulse" />
+        {[0, 1].map((group) => (
+          <div key={group} className="space-y-2">
+            <div className="h-3.5 w-28 rounded bg-muted animate-pulse" />
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-3 w-52 rounded bg-muted animate-pulse" />
+            ))}
+          </div>
+        ))}
+      </div>
       {/* Links */}
       <div className="space-y-2">
         {Array.from({ length: 4 }, (_, i) => (

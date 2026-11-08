@@ -5,8 +5,11 @@ import racesJson from "@/games/wow-forever/data/races/races.json";
 import classicRacialsJson from "@/games/wow-forever/data/races/classic/racials.json";
 import { decodeRaces } from "@/games/wow-forever/lib/races/decodeRaces";
 import { racesForClass } from "@/games/wow-forever/lib/classes/classRaces";
+import { classChangesFor } from "@/games/wow-forever/lib/changes/classChangesFor";
 import type { ClassDetailsFile } from "@/games/wow-forever/types/classes/classDetailsFile";
 import type { RacesDataFiles } from "@/games/wow-forever/types/races/racesDataFiles";
+import type { ChangeEntry } from "@/games/wow-forever/types/changes/changeEntry";
+import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 const CLASS_DETAILS = (classDetailsRaw as unknown as ClassDetailsFile).classes;
 const racesFiles = { forever: racesJson, classic: classicRacialsJson } as unknown as RacesDataFiles;
@@ -105,5 +108,54 @@ describe("findClass", () => {
       expect(cls, `should find ${id}`).toBeDefined();
       expect(cls!.id).toBe(id);
     }
+  });
+});
+
+describe("classChangesFor", () => {
+  function makeEntry(classIds: WowClassId[], key = "k"): ChangeEntry {
+    return {
+      key,
+      category: "talents",
+      kind: "changed",
+      name: "Test",
+      summary: "",
+      rows: [],
+      classes: classIds,
+      itemId: null,
+      href: null,
+      icon: null,
+      provenance: { provenance: PROVENANCE.classic },
+      since: null,
+      searchText: "test",
+    };
+  }
+
+  it("returns entries tagged for the given class", () => {
+    const entries: ChangeEntry[] = [
+      makeEntry(["warrior"], "w"),
+      makeEntry(["mage"], "m"),
+      makeEntry(["warrior", "paladin"], "wp"),
+    ];
+    const result = classChangesFor(entries, "warrior");
+    expect(result.map((e) => e.key)).toEqual(["w", "wp"]);
+  });
+
+  it("returns empty when no entries are tagged for the class", () => {
+    const entries: ChangeEntry[] = [makeEntry(["mage"], "m"), makeEntry(["druid"], "d")];
+    expect(classChangesFor(entries, "warrior")).toHaveLength(0);
+  });
+
+  it("returns empty for an empty input", () => {
+    expect(classChangesFor([], "warrior")).toHaveLength(0);
+  });
+
+  it("preserves the input order", () => {
+    const entries: ChangeEntry[] = [
+      makeEntry(["warrior"], "b"),
+      makeEntry(["warrior"], "a"),
+      makeEntry(["warrior"], "c"),
+    ];
+    const result = classChangesFor(entries, "warrior");
+    expect(result.map((e) => e.key)).toEqual(["b", "a", "c"]);
   });
 });

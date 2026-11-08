@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom";
+import ClassChangesLoader from "@/games/wow-forever/components/classes/ClassChangesLoader";
 import ClassNavLinks from "@/games/wow-forever/components/classes/ClassNavLinks";
 import ClassPickerList from "@/games/wow-forever/components/classes/ClassPickerList";
 import ClassProficienciesSection from "@/games/wow-forever/components/classes/ClassProficienciesSection";
@@ -81,6 +82,7 @@ export default function WowClassPage() {
       <ClassRacesLoader classId={wowClass.id} />
 
       {proficiency ? <ClassProficienciesSection proficiency={proficiency} /> : null}
+      <ClassChangesLoader classId={wowClass.id} />
       <ClassNavLinks classId={wowClass.id} wowClass={wowClass} />
     </main>
   );

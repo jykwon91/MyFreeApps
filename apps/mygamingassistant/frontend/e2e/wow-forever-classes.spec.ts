@@ -1,8 +1,8 @@
 /**
  * WoW Forever classes — the nine-class index, the per-class hub page (icon,
- * resource, races, proficiencies, nav links), back-links from spellbook and
- * talents, class links from the race page, an unknown class, and the phone
- * layout.
+ * resource, races, proficiencies, changed-vs-Classic section, nav links),
+ * back-links from spellbook and talents, class links from the race page,
+ * an unknown class, and the phone layout.
  *
  * Run: npx playwright test --config e2e/playwright.config.ts wow-forever-classes
  */
@@ -194,4 +194,70 @@ test("the loading skeleton shows while race data loads, then the section appears
   // After the data loads the skeleton goes away and the races section appears.
   await expect(page.getByTestId("class-page-skeleton")).toHaveCount(0);
   await expect(page.getByTestId("class-races-section")).toBeVisible();
+});
+
+test("the changes section shows talent and spell counts with links to the changes page", async ({ page }) => {
+  await page.goto(WARRIOR);
+  const changesSection = page.getByTestId("class-changes-section");
+  await expect(changesSection).toBeVisible();
+  // Classic data provenance badge.
+  await expect(changesSection.getByTestId("provenance-badge")).toBeVisible();
+  await expect(changesSection.getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "classic");
+
+  // Talents sub-section shows a count and preview links.
+  const talentsSection = page.getByTestId("class-changes-talents");
+  await expect(talentsSection).toBeVisible();
+  await expect(talentsSection).toContainText(/\d+ changed talents/);
+  // At least one talent entry link pointing to the talent calculator.
+  await expect(talentsSection.getByTestId("class-change-entry-link").first()).toHaveAttribute(
+    "href",
+    /\/wow-forever\/talents\/warrior\?talent=/,
+  );
+
+  // Spells sub-section shows a count and preview links.
+  const spellsSection = page.getByTestId("class-changes-spells");
+  await expect(spellsSection).toBeVisible();
+  await expect(spellsSection).toContainText(/\d+ changed class spells/);
+  // Spell entries link to the spellbook (no individual spell deep-link).
+  await expect(spellsSection.getByTestId("class-change-entry-link").first()).toHaveAttribute(
+    "href",
+    /\/wow-forever\/spellbook\/warrior/,
+  );
+});
+
+test("the changes section 'See all' links open the changes page filtered to the class", async ({ page }) => {
+  await page.goto(WARRIOR);
+  const talentsSeeAll = page.getByTestId("class-changes-talents-see-all");
+  await expect(talentsSeeAll).toBeVisible();
+  // Talents is the default category so ?cat= is omitted; ?class=warrior is set.
+  await expect(talentsSeeAll).toHaveAttribute("href", /class=warrior/);
+  await expect(talentsSeeAll).not.toHaveAttribute("href", /cat=talents/);
+
+  const spellsSeeAll = page.getByTestId("class-changes-spells-see-all");
+  await expect(spellsSeeAll).toBeVisible();
+  await expect(spellsSeeAll).toHaveAttribute("href", /cat=spells.*class=warrior|class=warrior.*cat=spells/);
+
+  // Clicking the talents "See all" link navigates to the changes page filtered to warrior.
+  await talentsSeeAll.click();
+  await expect(page).toHaveURL(/\/wow-forever\/changes/);
+  await expect(page).toHaveURL(/class=warrior/);
+});
+
+test("the changes skeleton shows while change data loads, then the section appears", async ({ page }) => {
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(/data\/changes\/classic\/talents\.json/, async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await page.goto(WARRIOR);
+  // The changes skeleton shows while talent data is in flight.
+  const changesSkeleton = page.getByTestId("class-changes-skeleton");
+  await expect(changesSkeleton).toBeVisible();
+  release();
+  // After the data loads the skeleton goes away and the changes section appears.
+  await expect(changesSkeleton).toHaveCount(0);
+  await expect(page.getByTestId("class-changes-section")).toBeVisible();
 });
