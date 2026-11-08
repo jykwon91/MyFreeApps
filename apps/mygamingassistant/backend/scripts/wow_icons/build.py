@@ -3,8 +3,9 @@
     python -m scripts.wow_icons.build --hotfix-cache "<Forever>/_forever_/Cache/ADB/enUS/DBCache.bin"
 
 Reads the generated Professions data (run ``scripts.wow_professions.build``
-first), the gathering guides' node items and the hand-written Cooking guide's
-ingredients, looks each id up in the Forever
+first), the gathering guides' node items, the hand-written Cooking guide's
+ingredients and the dungeon quests' reward items (``scripts.wow_dungeons.build``),
+looks each id up in the Forever
 client tables (pinned build, ``scripts/wow_world_map/sources.py``) and writes
 ``frontend/src/games/wow-forever/data/icons/wowIcons.json``::
 
@@ -40,6 +41,10 @@ CRAFTING_DIR = WOW_DATA_DIR / "professions" / "crafting"
 GATHERING_DIR = WOW_DATA_DIR / "professions" / "gathering"
 ITEMS_FILE = WOW_DATA_DIR / "items" / "items.json"
 COOKING_FILE = WOW_DATA_DIR / "professions" / "cooking.ts"
+DUNGEON_QUEST_FILES = (
+    WOW_DATA_DIR / "dungeons" / "classic" / "dungeonQuests.json",
+    WOW_DATA_DIR / "dungeons" / "dungeonQuestsSeen.json",
+)
 OUT_FILE = WOW_DATA_DIR / "icons" / "wowIcons.json"
 # Hand-written gathering nodes name their item as `itemId: 2447`.
 _NODE_ITEM = re.compile(r"\bitemId:\s*(\d+)")
@@ -75,8 +80,20 @@ def gear_item_ids(path: Path = ITEMS_FILE) -> set[int]:
     return {int(row[0]) for row in json.loads(path.read_text(encoding="utf-8"))["items"]}
 
 
+def dungeon_quest_item_ids(paths: tuple[Path, ...] = DUNGEON_QUEST_FILES) -> set[int]:
+    """The reward items the dungeon pages' Quests sections name (Classic and seen in game)."""
+    ids: set[int] = set()
+    for path in paths:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        columns = doc.get("questColumns") or doc["columns"]
+        at_rewards, at_choices = columns.index("rewards"), columns.index("choices")
+        for row in doc["quests"].values():
+            ids |= {int(item) for item, _ in row[at_rewards] + row[at_choices]}
+    return ids
+
+
 def wanted_ids() -> IconIds:
-    ids = IconIds(items=gathering_item_ids() | cooking_item_ids() | gear_item_ids())
+    ids = IconIds(items=gathering_item_ids() | cooking_item_ids() | gear_item_ids() | dungeon_quest_item_ids())
     for path in sorted(CRAFTING_DIR.glob("*.json")):
         ids.update(crafting_file_ids(json.loads(path.read_text(encoding="utf-8"))))
     return ids

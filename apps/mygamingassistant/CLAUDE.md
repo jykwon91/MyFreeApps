@@ -459,8 +459,27 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     drops: icon, `ItemNameLink` (hover tooltip → item page), slot/type and
     drop chance (Classic data). Raids are left out; Forever-only dungeons have
     no rows yet.
-  - A Quests section goes after "Where it is" as its own `Dungeon` field and
-    component — don't fold quests into the facts.
+  - **Quests** (`components/dungeons/quests/DungeonQuests`, after "Where it
+    is"; `Dungeon.quests`, decoded by `lib/dungeons/decodeDungeonQuests.ts`):
+    the quests for your faction (the World Map's saved faction, a "Quests for"
+    toggle; "N" quests show for both), lowest level first, each a collapsible
+    row: who gives it (out in the world → `questGiverMapHref`, the World Map's
+    own `#view=` share link zoomed on the giver with one read-only quest mark,
+    plus coordinates and `directionsHref`; or "Inside the dungeon" / an item
+    that starts it), the quests before it as an ordered list ending with this
+    one, objectives (an "Inside the dungeon" chip on targets found only
+    there), rewards (`ItemNameLink`, choose-one and also-get) and who takes it
+    back. Badges: the section's "in the Forever game files" note (Game files —
+    every quest is in Forever's `QuestV2`); title, levels, objectives and
+    rewards are "Seen in game" + date when the operator's client cache has the
+    quest, else Classic data; giver, chain and hand-in are always Classic data.
+    A dungeon's quests = filed under one of its areas (`ZoneOrSort` →
+    `dungeon_areas`: AreaTable names "X" / "The X" + `Map.AreaTableID`) or
+    with an objective only found inside (creature / object spawns all on the
+    instance map, or an item every direct dropper of is inside —
+    `quest_places.py`). Repeats (same title, givers by name, objectives,
+    rewards) and quests another listed quest leads on from are dropped.
+    Rewards are only items in `items.json`.
 - Built in the browser from files the World Map already ships
   (`classicDungeons.json`, `classicInteriors.json`, `zones.json`,
   `travel.json` — decoded with the World Map's own `decodeZone` /
@@ -486,6 +505,18 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Every dungeon on the index has a boss list — `test_wow_interiors_generator.py`
   and `wowDungeons.test.ts` fail otherwise (the vitest's
   `NO_BOSS_LIST_EXCEPTIONS` is the only place to excuse one, with a reason).
+- **Quests are GENERATED** by the same build (`wow_dungeons/quests.py`,
+  `quest_places.py`) into `data/dungeons/classic/dungeonQuests.json` (cmangos
+  `quest_template`, quest relations, spawns, loot — GPL) and
+  `data/dungeons/dungeonQuestsSeen.json` (the operator's Forever
+  `Cache/WDB/enUS/questcache.wdb`, read by `quest_cache.py`; the build takes
+  `--quest-cache` / `WOW_FOREVER_QUEST_CACHE` and stops when it's missing;
+  never commit the raw cache). Records the reader can't parse (Forever's
+  profession writs) are skipped; the build stops if one is a dungeon quest.
+  Reward items are in `wanted_ids()` for icons. Tests:
+  `tests/test_wow_dungeon_quests_generator.py`,
+  `src/__tests__/wowDungeonQuests.test.tsx`,
+  `e2e/wow-forever-dungeon-quests.spec.ts`.
 
 #### In-game icons (`GameIcon`)
 

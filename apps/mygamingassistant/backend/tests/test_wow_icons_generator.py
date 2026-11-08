@@ -13,7 +13,15 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from scripts.wow_icons.build import OUT_FILE, cooking_item_ids, gathering_item_ids, gear_item_ids, wanted_ids, write_icon_map
+from scripts.wow_icons.build import (
+    OUT_FILE,
+    cooking_item_ids,
+    dungeon_quest_item_ids,
+    gathering_item_ids,
+    gear_item_ids,
+    wanted_ids,
+    write_icon_map,
+)
 from scripts.wow_icons.ids import (
     IconIds,
     appearance_icon_map,
@@ -130,6 +138,16 @@ def test_gear_items_are_every_row_of_the_item_list(tmp_path: Path) -> None:
     path = tmp_path / "items.json"
     path.write_text(json.dumps({"columns": ["id", "name"], "items": [[11815, "Hand of Justice"], [647, "Destiny"]]}), encoding="utf-8")
     assert gear_item_ids(path) == {11815, 647}
+
+
+def test_dungeon_quest_items_are_the_rewards_classic_and_seen(tmp_path: Path) -> None:
+    classic = tmp_path / "dungeonQuests.json"
+    seen = tmp_path / "dungeonQuestsSeen.json"
+    classic.write_text(json.dumps({"questColumns": ["id", "rewards", "choices"],
+                                   "quests": {"166": [166, [[2000, 1]], [[6087, 1]]]}}), encoding="utf-8")
+    seen.write_text(json.dumps({"columns": ["title", "rewards", "choices"],
+                                "quests": {"166": ["The Defias Brotherhood", [], [[2059, 1]]]}}), encoding="utf-8")
+    assert dungeon_quest_item_ids((classic, seen)) == {2000, 6087, 2059}
 
 
 def test_map_file_puts_one_id_per_line_and_stays_json(tmp_path: Path) -> None:

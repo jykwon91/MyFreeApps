@@ -17,7 +17,9 @@ export function loadDungeons(): Promise<DungeonsData> {
       import("@/games/wow-forever/data/dungeons/lootItems.json"),
       import("@/games/wow-forever/data/dungeons/dungeonFacts.json"),
       import("@/games/wow-forever/data/dungeons/classic/entryRequirements.json"),
-    ]).then(([dungeons, interiors, zones, travel, bossLoot, lootItems, facts, entry]) =>
+      import("@/games/wow-forever/data/dungeons/classic/dungeonQuests.json"),
+      import("@/games/wow-forever/data/dungeons/dungeonQuestsSeen.json"),
+    ]).then(([dungeons, interiors, zones, travel, bossLoot, lootItems, facts, entry, quests, seenQuests]) =>
       decodeDungeons(
         {
           dungeons: dungeons.default,
@@ -26,6 +28,8 @@ export function loadDungeons(): Promise<DungeonsData> {
           lootItems: lootItems.default,
           facts: facts.default,
           entry: entry.default,
+          quests: quests.default,
+          seenQuests: seenQuests.default,
         } as unknown as DungeonDataFiles,
         { zones: zones.default.zones.map(decodeZone), flightNodes: decodeTravel(travel.default).flightNodes },
       ),
