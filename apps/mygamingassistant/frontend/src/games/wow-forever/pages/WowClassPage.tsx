@@ -1,21 +1,18 @@
 import { useParams } from "react-router-dom";
 import ClassNavLinks from "@/games/wow-forever/components/classes/ClassNavLinks";
-import ClassPageSkeleton from "@/games/wow-forever/components/classes/ClassPageSkeleton";
+import ClassPickerList from "@/games/wow-forever/components/classes/ClassPickerList";
 import ClassProficienciesSection from "@/games/wow-forever/components/classes/ClassProficienciesSection";
-import ClassRacesSection from "@/games/wow-forever/components/classes/ClassRacesSection";
+import ClassRacesLoader from "@/games/wow-forever/components/classes/ClassRacesLoader";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
-import { findClass, WOW_CLASSES, type WowClassId } from "@/games/wow-forever/data/classes";
+import { findClass } from "@/games/wow-forever/data/classes";
 import { CLASSES_PATH } from "@/games/wow-forever/data/classes/classesConfig";
 import { CLASS_PROFICIENCIES } from "@/games/wow-forever/data/gear/classProficiencies";
 import { useDocumentTitle } from "@/games/wow-forever/hooks/useDocumentTitle";
-import { useRaces } from "@/games/wow-forever/hooks/useRaces";
-import { racesForClass } from "@/games/wow-forever/lib/classes/classRaces";
 import { fileIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
-import { RACES_STATUS } from "@/games/wow-forever/data/races/racesConfig";
 import type { ClassDetailsFile } from "@/games/wow-forever/types/classes/classDetailsFile";
 import classDetailsRaw from "@/games/wow-forever/data/classes/classDetails.json";
 
@@ -86,37 +83,6 @@ export default function WowClassPage() {
       {proficiency ? <ClassProficienciesSection proficiency={proficiency} /> : null}
       <ClassNavLinks classId={wowClass.id} wowClass={wowClass} />
     </main>
-  );
-}
-
-/** Loads race data and renders the races section or its skeleton. */
-function ClassRacesLoader({ classId }: { classId: WowClassId }) {
-  const state = useRaces();
-  if (state.status === RACES_STATUS.loading) {
-    return <ClassPageSkeleton />;
-  }
-  if (state.status === RACES_STATUS.error) {
-    return null;
-  }
-  const races = racesForClass(classId, state.data.races);
-  return <ClassRacesSection races={races} />;
-}
-
-/** Narrow sub-nav listing all classes when the URL is unknown. */
-function ClassPickerList() {
-  return (
-    <ul className="flex flex-wrap gap-2">
-      {WOW_CLASSES.map((c) => (
-        <li key={c.id}>
-          <a
-            href={`${CLASSES_PATH}/${c.id}`}
-            className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm min-h-[44px] bg-card hover:bg-muted/40 transition-colors"
-          >
-            {c.name}
-          </a>
-        </li>
-      ))}
-    </ul>
   );
 }
 
