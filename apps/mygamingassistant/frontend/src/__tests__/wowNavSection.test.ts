@@ -12,6 +12,7 @@ import { COMPANION_GAMES, WOW_FOREVER_SLUG } from "@/games/registry";
 import { wowForeverRoutes } from "@/games/wow-forever/routes";
 
 const KNOWN_ICON_NAMES = new Set([
+  "Castle",
   "Coins",
   "Hammer",
   "LayoutDashboard",

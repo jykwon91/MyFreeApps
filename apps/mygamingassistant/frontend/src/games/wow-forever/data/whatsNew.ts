@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-07",
+    title: "Dungeon pages",
+    summary:
+      "Open any dungeon to see when you can go (level, group size, keys), where it is (nearest flight path, walking directions, each wing's bosses), its bosses in order and what each boss drops, with drop chances.",
+    to: "/wow-forever/dungeons",
+  },
+  {
+    date: "2026-11-07",
     title: "Satellite view on the World Map",
     summary:
       "Switch a zone or city on the World Map to Satellite to see the real ground from above, the way your minimap shows it, with every marker and route still in place.",

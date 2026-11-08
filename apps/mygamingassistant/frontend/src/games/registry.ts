@@ -45,6 +45,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "The nearest class trainer, flight master, inn or bank for your faction — with step-by-step directions.",
       },
       {
+        path: "/wow-forever/dungeons",
+        title: "Dungeons",
+        iconName: "Castle",
+        description: "Every dungeon's level, where its door is, its bosses in order and what each one drops.",
+      },
+      {
         path: "/wow-forever/professions",
         title: "Professions",
         iconName: "Hammer",
