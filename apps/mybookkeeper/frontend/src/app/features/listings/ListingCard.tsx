@@ -26,7 +26,7 @@ export default function ListingCard({ listing, propertyName }: ListingCardProps)
       className="block border rounded-lg p-4 min-h-[44px] hover:bg-muted/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
     >
       <div className="flex items-start justify-between gap-2 mb-1">
-        <p className="font-medium leading-tight">{listing.title}</p>
+        <p className="font-medium leading-tight truncate">{listing.title}</p>
         <ListingStatusBadge status={listing.status} />
       </div>
       <p className="text-xs text-muted-foreground truncate">{propertyName}</p>

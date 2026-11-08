@@ -1,13 +1,14 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
 import { holdRequests } from "./fixtures/hold-requests";
+import { expectCardsMatchSkeleton, skeletonCardHeight } from "./fixtures/skeleton-card-fit";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
  * Layout E2E for the Listings page.
  *
  * Verifies:
- *   1. The skeleton loader has the same number of rows/cards as the loaded
- *      list (no layout shift).
+ *   1. The skeleton's cards are the size of the loaded cards (no layout
+ *      shift when the list arrives).
  *   2. Mobile (375), tablet (768), desktop (1280) all render the listings
  *      without horizontal overflow.
  *   3. Mobile viewport surfaces the card layout; desktop surfaces the table.
@@ -30,7 +31,7 @@ async function seedListing(api: APIRequestContext, payload: SeedListingPayload):
 const LISTING_COUNT = 3;
 
 test.describe("Listings layout (PR 1.1b)", () => {
-  test("skeleton card count matches loaded card count on mobile", async ({ authedPage: page, api }) => {
+  test("list skeleton cards are the size of the loaded cards on mobile", async ({ authedPage: page, api }) => {
     await page.setViewportSize({ width: 375, height: 800 });
 
     const runId = Date.now();
@@ -39,18 +40,6 @@ test.describe("Listings layout (PR 1.1b)", () => {
     try {
       // Block the listings call so the skeleton stays visible long enough to
       // count its cards.
-      const release = await holdRequests(page, (url) => url.pathname === "/api/listings");
-
-      const navPromise = page.goto("/listings");
-      await expect(page.getByTestId("listings-skeleton")).toBeVisible({ timeout: 5000 });
-
-      // Skeleton's mobile <ul> has `md:hidden` and a fixed slot count.
-      const skeletonMobileList = page.locator('[data-testid="listings-skeleton"] ul.md\\:hidden li');
-      const skeletonCount = await skeletonMobileList.count();
-      expect(skeletonCount).toBeGreaterThan(0);
-
-      // Unblock and let the listings query resolve. Now seed listings out of
-      // band so the loaded page has rows to compare against.
       for (let i = 0; i < LISTING_COUNT; i++) {
         listingIds.push(
           await seedListing(api, {
@@ -60,19 +49,17 @@ test.describe("Listings layout (PR 1.1b)", () => {
           }),
         );
       }
+      const release = await holdRequests(page, (url) => url.pathname === "/api/listings");
+      await page.goto("/listings");
+      await expect(page.getByTestId("listings-skeleton")).toBeVisible({ timeout: 5000 });
+      const skeletonHeight = await skeletonCardHeight(page.locator('[data-testid="listings-skeleton"] ul.md\\:hidden li'));
+
       release();
-      await navPromise;
-      await page.reload();
-      await page.waitForLoadState("networkidle");
-
-      const loadedMobileCards = page.locator('[data-testid="listings-mobile"] li');
-      const loadedCount = await loadedMobileCards.count();
-      expect(loadedCount).toBeGreaterThanOrEqual(LISTING_COUNT);
-
-      // The skeleton's slot count should be reasonable — same order of
-      // magnitude as the loaded list. Skeletons reserve a fixed N (4 by
-      // default) regardless of payload, which prevents post-load shrink.
-      expect(Math.abs(skeletonCount - loadedCount)).toBeLessThanOrEqual(4);
+      await expectCardsMatchSkeleton(
+        page.locator('[data-testid="listings-mobile"] li').filter({ hasText: `E2E Layout Listing ${runId}` }),
+        LISTING_COUNT,
+        skeletonHeight,
+      );
     } finally {
       for (const id of listingIds) await deleteListing(api, id);
       await deleteProperty(api, property.id);

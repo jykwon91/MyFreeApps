@@ -21,14 +21,14 @@ export default function VendorsListSkeleton({ count = 4 }: VendorsListSkeletonPr
       {/* Mobile: card list */}
       <ul className="md:hidden space-y-3">
         {rows.map((i) => (
-          <li key={`m-${i}`} className="border rounded-lg p-4 space-y-2">
-            <div className="flex items-start justify-between gap-2">
+          <li key={`m-${i}`} className="border rounded-lg p-4">
+            <div className="flex items-start justify-between gap-2 mb-1">
               <Skeleton className="h-5 w-40" />
               <Skeleton className="h-5 w-20 rounded-full" />
             </div>
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="h-3 w-20" />
+            <div className="mt-2 flex items-center justify-between">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-20" />
             </div>
           </li>
         ))}
