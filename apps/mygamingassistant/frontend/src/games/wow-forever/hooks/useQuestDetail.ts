@@ -66,31 +66,34 @@ function loadQuestData(questId: number): Promise<LoadResult> {
   });
 }
 
+interface Loaded {
+  questId: number;
+  attempt: number;
+  data: LoadResult | null;
+}
+
 /** Loads the quest detail for a given quest id. */
 export function useQuestDetail(questId: number | null): QuestDetailState {
   const [attempt, setAttempt] = useState(0);
-  const [result, setResult] = useState<{ attempt: number; data: LoadResult | null } | null>(null);
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
   useEffect(() => {
-    if (questId === null) {
-      // No valid id in the URL → not found, not an error.
-      setResult({ attempt, data: { quest: null, dungeonSlug: null } });
-      return;
-    }
+    if (questId === null) return;
     let live = true;
-    setResult(null);
     loadQuestData(questId).then(
-      (data) => live && setResult({ attempt, data }),
-      () => live && setResult({ attempt, data: null }),
+      (data) => live && setLoaded({ questId, attempt, data }),
+      () => live && setLoaded({ questId, attempt, data: null }),
     );
     return () => {
       live = false;
     };
   }, [questId, attempt]);
 
-  if (result === null) return { status: "loading" };
-  if (result.data === null) return { status: "error", retry, retrying: result.attempt !== attempt };
-  if (result.data.quest === null) return { status: "not-found" };
-  return { status: "ready", quest: result.data.quest, dungeonSlug: result.data.dungeonSlug };
+  // No valid id in the URL → not found, not an error.
+  if (questId === null) return { status: "not-found" };
+  if (loaded === null || loaded.questId !== questId) return { status: "loading" };
+  if (loaded.data === null) return { status: "error", retry, retrying: loaded.attempt !== attempt };
+  if (loaded.data.quest === null) return { status: "not-found" };
+  return { status: "ready", quest: loaded.data.quest, dungeonSlug: loaded.data.dungeonSlug };
 }
