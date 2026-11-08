@@ -18,7 +18,7 @@ from __future__ import annotations
 import io
 from dataclasses import dataclass
 
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 # Allowlisted MIME types per RENTALS_PLAN.md §8.6. PDFs are explicitly rejected
 # for photo uploads — they're documents, not photos, and travel a different
@@ -42,8 +42,13 @@ _PIL_FORMAT_TO_MIME: dict[str, str] = {
     "JPEG": "image/jpeg",
     "PNG": "image/png",
     "HEIC": "image/heic",
+    "WEBP": "image/webp",
 }
 _MIME_TO_PIL_FORMAT: dict[str, str] = {v: k for k, v in _PIL_FORMAT_TO_MIME.items()}
+
+# Phones write a second image (depth map, HDR gain map) into many JPEGs, and
+# Pillow opens those as MPO. They are still JPEGs; only the main image is kept.
+_DECODED_FORMAT_ALIASES: dict[str, str] = {"MPO": "JPEG"}
 
 
 class ImageRejected(ValueError):
@@ -119,38 +124,56 @@ def process_image(content: bytes, declared_content_type: str | None = None) -> P
             f"unsupported file type (sniffed={sniffed!r}, declared={declared_content_type!r})",
         )
 
-    # Decode the image (this also validates that the bytes are a real image
-    # and not, say, a polyglot file with a JPEG header glued to a payload).
+    return ProcessedImage(content=strip_metadata(content, sniffed), content_type=sniffed)
+
+
+def strip_metadata(content: bytes, content_type: str) -> bytes:
+    """Decode the image and re-encode it without EXIF / GPS / XMP / ICC metadata.
+
+    Raises ImageRejected when the bytes can't be decoded, decode to a different
+    format than `content_type`, or exceed the pixel cap — callers must reject the
+    upload rather than store the original bytes.
+    """
+    # Decoding also validates that the bytes are a real image and not, say, a
+    # polyglot file with a JPEG header glued to a payload.
     try:
         with Image.open(io.BytesIO(content)) as image:
-            image.load()
+            # Check the size from the header before decoding, so an oversized
+            # image is refused without allocating its pixels.
             pixel_count = image.width * image.height
             if pixel_count > MAX_IMAGE_PIXELS:
                 raise ImageRejected(
                     f"image dimensions exceed {MAX_IMAGE_PIXELS} pixels",
                 )
 
-            pil_format = (image.format or "").upper()
-            expected = _MIME_TO_PIL_FORMAT.get(sniffed)
+            decoded = (image.format or "").upper()
+            pil_format = _DECODED_FORMAT_ALIASES.get(decoded, decoded)
+            expected = _MIME_TO_PIL_FORMAT.get(content_type)
             if expected is None or pil_format != expected:
                 raise ImageRejected(
                     f"sniffed MIME does not match decoded format "
-                    f"(sniffed={sniffed!r}, decoded={pil_format!r})",
+                    f"(sniffed={content_type!r}, decoded={decoded!r})",
                 )
 
-            # Re-encode to drop EXIF + any other metadata chunks. Pillow's
-            # default save() does not copy EXIF, ICC, XMP, or thumbnails
-            # unless the caller explicitly passes them.
+            image.load()
+            # The EXIF block (and its Orientation tag) is dropped below, so
+            # rotate the pixels now or a phone photo is stored sideways.
+            upright = ImageOps.exif_transpose(image)
+
+            # Pillow's default save() does not copy EXIF, ICC, XMP, or
+            # thumbnails unless the caller explicitly passes them.
             buffer = io.BytesIO()
             save_kwargs: dict[str, object] = {"format": pil_format}
             if pil_format == "JPEG":
-                # Preserve quality-mode optimisation. Setting `exif=b""` is
-                # the canonical way to wipe an existing EXIF block.
+                # Setting `exif=b""` is the canonical way to wipe an existing
+                # EXIF block.
                 save_kwargs["quality"] = 90
                 save_kwargs["optimize"] = True
                 save_kwargs["exif"] = b""
-            image.save(buffer, **save_kwargs)
-            return ProcessedImage(content=buffer.getvalue(), content_type=sniffed)
+            elif pil_format == "WEBP":
+                save_kwargs["quality"] = 90
+            upright.save(buffer, **save_kwargs)
+            return buffer.getvalue()
     except UnidentifiedImageError as exc:
         raise ImageRejected(f"cannot decode image: {exc}") from exc
     except ImageRejected:

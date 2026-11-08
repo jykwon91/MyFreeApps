@@ -4,15 +4,14 @@ Orchestration only: tenant scope checks, size/type validation, storage I/O,
 repository writes. No SQL here.
 
 Pipeline for attachment uploads:
-    size cap → content-type sniff (header bytes) → allowlist check →
-    EXIF strip (images only) → MinIO upload → DB insert → presigned URL inject
+    size cap → clean_attachment (type from the bytes, allowlist, photo
+    metadata strip) → MinIO upload → DB insert → presigned URL inject
 
 Mirrors the listing-photo pipeline in listing_photo_service.py but with a
 broader content-type allowlist (images + PDF + plain text).
 """
 from __future__ import annotations
 
-import io
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -22,13 +21,20 @@ from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401
 from app.core.config import settings
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
-from app.repositories.listings import listing_blackout_repo
-from app.repositories.listings import listing_blackout_attachment_repo
+from app.repositories.listings import (
+    listing_blackout_attachment_repo,
+    listing_blackout_repo,
+)
 from app.schemas.listings.blackout_response import BlackoutResponse
 from app.schemas.listings.listing_blackout_attachment_response import (
     ListingBlackoutAttachmentResponse,
 )
 from app.services.listings.attachment_response_builder import attach_presigned_urls
+from app.services.storage.attachment_content import (
+    UnreadableImage,
+    UnsupportedAttachmentType,
+    clean_attachment,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,79 +75,6 @@ class AttachmentTypeRejectedError(ValueError):
 
 
 # ---------------------------------------------------------------------------
-# Content-type sniffing
-# ---------------------------------------------------------------------------
-
-def _sniff_content_type(content: bytes) -> str | None:
-    """Return the sniffed MIME type via header-byte inspection.
-
-    Covers the attachment allowlist only. Returns None if unrecognised.
-    """
-    if len(content) < 8:
-        return None
-
-    # JPEG: FF D8 FF
-    if content[0:3] == b"\xff\xd8\xff":
-        return "image/jpeg"
-
-    # PNG: 89 50 4E 47 0D 0A 1A 0A
-    if content[0:8] == b"\x89PNG\r\n\x1a\n":
-        return "image/png"
-
-    # WebP: RIFF....WEBP
-    if content[0:4] == b"RIFF" and content[8:12] == b"WEBP":
-        return "image/webp"
-
-    # GIF: GIF87a or GIF89a
-    if content[0:6] in (b"GIF87a", b"GIF89a"):
-        return "image/gif"
-
-    # PDF: %PDF
-    if content[0:4] == b"%PDF":
-        return "application/pdf"
-
-    # Plain text: heuristic — if the first 512 bytes are all printable ASCII
-    # or common whitespace, call it text/plain.
-    sample = content[:512]
-    if all(0x09 <= b <= 0x7E or b in (0x0A, 0x0D) for b in sample):
-        return "text/plain"
-
-    return None
-
-
-# ---------------------------------------------------------------------------
-# EXIF strip helper (images only)
-# ---------------------------------------------------------------------------
-
-def _strip_exif_if_image(content: bytes, content_type: str) -> bytes:
-    """Strip EXIF metadata from JPEG/PNG/WebP images via Pillow.
-
-    Non-image types (PDF, plain text) pass through unchanged. Mirrors the
-    approach in services/storage/image_processor.py.
-    """
-    if content_type not in ("image/jpeg", "image/png", "image/webp"):
-        return content
-
-    try:
-        from PIL import Image  # type: ignore[import-untyped]
-
-        with Image.open(io.BytesIO(content)) as img:
-            img.load()
-            buf = io.BytesIO()
-            fmt = img.format or ("JPEG" if content_type == "image/jpeg" else "PNG")
-            save_kwargs: dict[str, object] = {"format": fmt}
-            if fmt == "JPEG":
-                save_kwargs["quality"] = 90
-                save_kwargs["optimize"] = True
-                save_kwargs["exif"] = b""
-            img.save(buf, **save_kwargs)
-            return buf.getvalue()
-    except Exception:  # noqa: BLE001
-        logger.warning("EXIF strip failed — uploading original bytes", exc_info=True)
-        return content
-
-
-# ---------------------------------------------------------------------------
 # Notes update
 # ---------------------------------------------------------------------------
 
@@ -177,7 +110,6 @@ async def upload_attachment(
     blackout_id: uuid.UUID,
     content: bytes,
     filename: str,
-    declared_content_type: str | None,
 ) -> ListingBlackoutAttachmentResponse:
     """Validate, process, and persist a single attachment.
 
@@ -186,7 +118,7 @@ async def upload_attachment(
       2. Size cap — 413 if exceeded.
       3. Content-type sniff (header bytes, not extension).
       4. Allowlist check — 415 if not in allowlist.
-      5. EXIF strip (images only).
+      5. Metadata strip (images only) — 415 if the image can't be re-encoded.
       6. MinIO upload.
       7. DB insert.
       8. Return response with presigned URL.
@@ -210,20 +142,20 @@ async def upload_attachment(
         max_mb = settings.max_blackout_attachment_size_bytes // (1024 * 1024)
         raise AttachmentTooLargeError(f"File exceeds {max_mb}MB limit")
 
-    # 3+4. Content-type sniff + allowlist
-    sniffed = _sniff_content_type(content)
-    if sniffed is None or sniffed not in ALLOWED_ATTACHMENT_MIME_TYPES:
+    # 3-5. Type from the bytes, allowlist, photo metadata strip — fail closed
+    try:
+        cleaned = clean_attachment(content, ALLOWED_ATTACHMENT_MIME_TYPES)
+    except UnsupportedAttachmentType as exc:
         raise AttachmentTypeRejectedError(
-            f"Unsupported file type (sniffed={sniffed!r}). "
+            f"Unsupported file type (sniffed={exc.sniffed!r}). "
             f"Allowed: {_ALLOWED_DISPLAY}"
-        )
-
-    # 5. EXIF strip
-    clean_content = _strip_exif_if_image(content, sniffed)
+        ) from exc
+    except UnreadableImage as exc:
+        raise AttachmentTypeRejectedError("Couldn't read this image") from exc
 
     # 6. MinIO upload
     storage_key = f"blackout-attachments/{blackout_id}/{uuid.uuid4()}"
-    storage.upload_file(storage_key, clean_content, sniffed)
+    storage.upload_file(storage_key, cleaned.content, cleaned.content_type)
 
     # 7. DB insert
     try:
@@ -233,8 +165,8 @@ async def upload_attachment(
                 listing_blackout_id=blackout_id,
                 storage_key=storage_key,
                 filename=filename or f"attachment-{uuid.uuid4().hex}",
-                content_type=sniffed,
-                size_bytes=len(clean_content),
+                content_type=cleaned.content_type,
+                size_bytes=len(cleaned.content),
                 uploaded_by_user_id=user_id,
                 uploaded_at=datetime.now(timezone.utc),
             )

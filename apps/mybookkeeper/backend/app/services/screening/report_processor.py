@@ -18,8 +18,8 @@ Dependencies:
 - ``clamd`` for the ClamAV unix-socket scan. The scan is skipped (with a
   WARNING log) when ``CLAMAV_SOCKET_PATH`` is not set or the socket is
   unreachable — the operator is expected to wire ClamAV up in production.
-- ``Pillow`` for the EXIF strip on image uploads. Already imported through
-  ``services/storage/image_processor.py``.
+- ``services/storage/image_processor.strip_metadata`` for the EXIF strip on
+  image uploads.
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from PIL import Image, UnidentifiedImageError
+from app.services.storage.image_processor import ImageRejected, strip_metadata
 
 if TYPE_CHECKING:  # pragma: no cover — types-only
     pass
@@ -47,9 +47,6 @@ ALLOWED_REPORT_MIME_TYPES: frozenset[str] = frozenset({
 # bump via ``MAX_SCREENING_REPORT_BYTES`` env var if KeyCheck ever ships a
 # large multi-page PDF that exceeds the cap.
 DEFAULT_MAX_REPORT_BYTES: int = 10 * 1024 * 1024
-# Pixel cap on image uploads — same defense against decompression bombs as
-# image_processor.py.
-MAX_IMAGE_PIXELS: int = 12_000 * 12_000
 
 
 def _max_bytes() -> int:
@@ -198,13 +195,6 @@ def _clamav_scan(content: bytes) -> None:
 # Pillow EXIF strip (image uploads only)
 # --------------------------------------------------------------------------- #
 
-_PIL_FORMAT_TO_MIME: dict[str, str] = {
-    "JPEG": "image/jpeg",
-    "PNG": "image/png",
-}
-_MIME_TO_PIL_FORMAT: dict[str, str] = {v: k for k, v in _PIL_FORMAT_TO_MIME.items()}
-
-
 def _strip_image_metadata(content: bytes, mime: str) -> bytes:
     """Re-encode the image so EXIF / XMP / ICC chunks are dropped.
 
@@ -213,34 +203,9 @@ def _strip_image_metadata(content: bytes, mime: str) -> bytes:
     GPS coordinates from a phone screenshot.
     """
     try:
-        with Image.open(io.BytesIO(content)) as image:
-            image.load()
-            pixel_count = image.width * image.height
-            if pixel_count > MAX_IMAGE_PIXELS:
-                raise ReportRejected(
-                    f"image dimensions exceed {MAX_IMAGE_PIXELS} pixels",
-                )
-            pil_format = (image.format or "").upper()
-            expected = _MIME_TO_PIL_FORMAT.get(mime)
-            if expected is None or pil_format != expected:
-                raise ReportRejected(
-                    f"sniffed MIME does not match decoded format "
-                    f"(sniffed={mime!r}, decoded={pil_format!r})",
-                )
-            buffer = io.BytesIO()
-            save_kwargs: dict[str, object] = {"format": pil_format}
-            if pil_format == "JPEG":
-                save_kwargs["quality"] = 90
-                save_kwargs["optimize"] = True
-                save_kwargs["exif"] = b""
-            image.save(buffer, **save_kwargs)
-            return buffer.getvalue()
-    except UnidentifiedImageError as exc:
-        raise ReportRejected(f"cannot decode image: {exc}") from exc
-    except ReportRejected:
-        raise
-    except Exception as exc:  # noqa: BLE001 — PIL throws a wide variety
-        raise ReportRejected(f"image processing failed: {exc}") from exc
+        return strip_metadata(content, mime)
+    except ImageRejected as exc:
+        raise ReportRejected(exc.reason) from exc
 
 
 # --------------------------------------------------------------------------- #

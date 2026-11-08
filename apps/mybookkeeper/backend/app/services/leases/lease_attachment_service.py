@@ -35,7 +35,11 @@ from app.services.leases._lease_helpers import (
 from app.services.leases.attachment_response_builder import (
     attach_presigned_urls_to_attachments,
 )
-from app.services.leases.lease_template_service import DOCX_MIME
+from app.services.storage.attachment_content import (
+    UnreadableImage,
+    UnsupportedAttachmentType,
+    clean_attachment,
+)
 
 from app.core.lease_enums import LEASE_ATTACHMENT_KINDS
 
@@ -49,7 +53,6 @@ async def upload_attachment(
     lease_id: uuid.UUID,
     content: bytes,
     filename: str,
-    declared_content_type: str | None,
     kind: str,
 ) -> SignedLeaseAttachmentResponse:
     storage = get_storage()
@@ -75,32 +78,18 @@ async def upload_attachment(
         max_mb = _settings.max_blackout_attachment_size_bytes // (1024 * 1024)
         raise AttachmentTooLargeError(f"File exceeds {max_mb}MB limit")
 
-    if declared_content_type and declared_content_type in ALLOWED_ATTACHMENT_MIME_TYPES:
-        ct = declared_content_type
-    else:
-        lower = filename.lower()
-        if lower.endswith(".pdf"):
-            ct = "application/pdf"
-        elif lower.endswith(".docx"):
-            ct = DOCX_MIME
-        elif lower.endswith(".jpg") or lower.endswith(".jpeg"):
-            ct = "image/jpeg"
-        elif lower.endswith(".png"):
-            ct = "image/png"
-        elif lower.endswith(".webp"):
-            ct = "image/webp"
-        else:
-            raise AttachmentTypeRejectedError(
-                "Unsupported attachment type. Allowed: pdf, docx, jpg, png, webp",
-            )
-    if ct not in ALLOWED_ATTACHMENT_MIME_TYPES:
+    try:
+        cleaned = clean_attachment(content, ALLOWED_ATTACHMENT_MIME_TYPES)
+    except UnsupportedAttachmentType as exc:
         raise AttachmentTypeRejectedError(
-            f"Unsupported attachment type ({ct}). Allowed: pdf, docx, jpg, png, webp",
-        )
+            "Unsupported attachment type. Allowed: pdf, docx, jpg, png, webp",
+        ) from exc
+    except UnreadableImage as exc:
+        raise AttachmentTypeRejectedError("Couldn't read this image") from exc
 
     attachment_id = uuid.uuid4()
     storage_key = f"signed-leases/{lease_id}/{attachment_id}"
-    storage.upload_file(storage_key, content, ct)
+    storage.upload_file(storage_key, cleaned.content, cleaned.content_type)
 
     try:
         async with unit_of_work() as db:
@@ -109,8 +98,8 @@ async def upload_attachment(
                 lease_id=lease_id,
                 storage_key=storage_key,
                 filename=filename or f"attachment-{attachment_id.hex}",
-                content_type=ct,
-                size_bytes=len(content),
+                content_type=cleaned.content_type,
+                size_bytes=len(cleaned.content),
                 kind=kind,
                 uploaded_by_user_id=user_id,
                 uploaded_at=_dt.datetime.now(_dt.timezone.utc),

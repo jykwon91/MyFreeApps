@@ -426,7 +426,8 @@
         "frontend/src/shared/types/list-load-mode-args.ts",
         "frontend/src/shared/lib/detail-load-mode.ts",
         "frontend/src/shared/types/detail-load-mode.ts",
-        "frontend/src/shared/types/detail-load-mode-args.ts"
+        "frontend/src/shared/types/detail-load-mode-args.ts",
+        "backend/tests/gps_photo.py"
       ],
       "backend_tests": [
         "test_listing_repo.py",
@@ -444,7 +445,11 @@
         "test_channel_sync_service.py",
         "test_calendar_route.py",
         "test_ical_serializer.py",
-        "test_ical_parser.py"
+        "test_ical_parser.py",
+        "test_attachment_content.py",
+        "test_blackout_attachment_metadata.py",
+        "test_lease_insurance_attachment_metadata.py",
+        "test_strip_metadata_phone_photos.py"
       ],
       "frontend_tests": [
         "Listings.test.tsx",
@@ -517,13 +522,15 @@
         "test_calendar_events_route.py",
         "test_calendar_route.py",
         "test_blackout_notes_attachments.py",
+        "test_blackout_attachment_metadata.py",
         "test_input_validation_hardening.py",
         "test_review_queue_routes.py",
         "test_review_queue_service.py",
         "test_review_queue_repo.py",
         "test_blocklist_repo.py",
         "test_on_conflict_targets.py",
-        "test_cleanup_seed_routes.py"
+        "test_cleanup_seed_routes.py",
+        "test_attachment_content.py"
       ],
       "frontend_tests": [
         "Calendar.test.tsx",
@@ -862,7 +869,9 @@
         "test_insurance_policy_prompt_address.py",
         "test_prompt_notes_section.py",
         "test_tdi_rate_filings_client.py",
-        "test_document_draft_reader.py"
+        "test_document_draft_reader.py",
+        "test_attachment_content.py",
+        "test_lease_insurance_attachment_metadata.py"
       ],
       "frontend_tests": [
         "InsuranceExpirationBadge.test.tsx",
@@ -1184,7 +1193,8 @@
         "frontend/src/shared/types/list-load-mode-args.ts",
         "frontend/src/shared/lib/detail-load-mode.ts",
         "frontend/src/shared/types/detail-load-mode.ts",
-        "frontend/src/shared/types/detail-load-mode-args.ts"
+        "frontend/src/shared/types/detail-load-mode-args.ts",
+        "backend/app/api/signed_lease_attachments.py"
       ],
       "backend_tests": [
         "test_lease_renderer.py",
@@ -1197,7 +1207,9 @@
         "test_lease_client_local_date.py",
         "test_signed_lease_multi_template.py",
         "test_signed_lease_seed_routes.py",
-        "test_suggest_placeholders_api.py"
+        "test_suggest_placeholders_api.py",
+        "test_attachment_content.py",
+        "test_lease_insurance_attachment_metadata.py"
       ],
       "frontend_tests": [
         "SignedLeaseStatusBadge.test.tsx",
@@ -1329,6 +1341,7 @@
       ],
       "backend_tests": [
         "test_screening.py",
+        "test_screening_report_image.py",
         "test_screening_result_repo.py",
         "test_input_validation_hardening.py",
         "test_cleanup_seed_routes.py"

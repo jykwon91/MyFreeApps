@@ -40,7 +40,6 @@ async def upload_attachment(
             lease_id=lease_id,
             content=content,
             filename=file.filename or "",
-            declared_content_type=file.content_type,
             kind=kind,
         )
     except signed_lease_service.SignedLeaseNotFoundError as exc:

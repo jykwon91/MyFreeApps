@@ -20,6 +20,7 @@ function eventBar(page: Page, eventId: string): Locator {
  * 1. Add notes → save → reload → assert notes persist.
  * 2. Upload an image attachment → assert preview appears → reload → assert still there.
  * 3. Delete attachment → assert gone.
+ * 4. An image the server can't clean of its metadata is refused, never stored.
  */
 
 interface SeedListingPayload {
@@ -166,5 +167,31 @@ test.describe("Calendar booking notes + attachments", () => {
 
     // Attachment list shows empty state.
     await expect(dialogAfterReload.getByTestId("attachments-empty")).toBeVisible();
+  });
+
+  test("an image that can't be cleaned of its metadata is refused and nothing is stored", async ({
+    authedPage: page,
+    api,
+  }) => {
+    const blackoutId = await seedBooking(api, "Broken", cleanups);
+
+    await page.goto("/calendar?from=2026-06-01&to=2026-07-01&view=timeline");
+    await page.waitForLoadState("networkidle");
+    await eventBar(page, blackoutId).click();
+    const dialog = page.getByTestId("calendar-event-detail");
+    await expect(dialog).toBeVisible();
+
+    // JPEG magic bytes on a body that isn't an image: sniffs as a photo, can't be re-encoded.
+    await dialog.locator("input[type='file']").setInputFiles({
+      name: "broken.jpg",
+      mimeType: "image/jpeg",
+      buffer: Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(400, 0x4d)]),
+    });
+
+    await expect(toasts(page).getByText("broken.jpg: unsupported file type.")).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByTestId("attachments-empty")).toBeVisible();
+    const res = await api.get(`/listings/blackouts/${blackoutId}/attachments`);
+    expect(res.status(), await res.text()).toBe(200);
+    expect(await res.json()).toEqual([]);
   });
 });
