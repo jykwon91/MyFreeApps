@@ -3,6 +3,7 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import { test, expect, type Page } from "./fixtures/auth";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
+import { jpegHasExif } from "./fixtures/jpeg-has-exif";
 
 /**
  * PR 1.2 — Listings CRUD + photo upload behavioural E2E.
@@ -95,9 +96,7 @@ test.describe("Listings CRUD (PR 1.2)", () => {
     authedPage: page,
     api,
   }) => {
-    if (!fs.existsSync(FIXTURE_GPS_PHOTO)) {
-      test.skip(true, "GPS-EXIF fixture missing — run scripts/build-listings-fixtures.py");
-    }
+    expect(jpegHasExif(fs.readFileSync(FIXTURE_GPS_PHOTO)), "the fixture should carry GPS EXIF").toBe(true);
 
     const runId = Date.now();
     const property = await createProperty(api, { name: `E2E Photo Property ${runId}` });
@@ -136,21 +135,18 @@ test.describe("Listings CRUD (PR 1.2)", () => {
         timeout: 10000,
       });
 
-      // Verify the photo persisted via the public API and the resulting
-      // storage key is non-empty (real upload happened).
       const detailRes = await api.get(`/listings/${seedBody.id}`);
       expect(detailRes.ok()).toBeTruthy();
       const detail = (await detailRes.json()) as {
-        photos: Array<{ id: string; storage_key: string }>;
+        photos: Array<{ id: string; storage_key: string; presigned_url: string | null }>;
       };
       expect(detail.photos.length).toBe(1);
-      expect(detail.photos[0].storage_key).toBeTruthy();
+      const { presigned_url: url } = detail.photos[0];
+      expect(url, "the stored photo should have a download URL").toBeTruthy();
 
-      // EXIF leak check — fetch the stored object, decode, verify no GPS.
-      // We do this through the dev's storage URL contract: future PRs ship
-      // signed URLs. For now, the storage_key being a non-empty value is
-      // proof the upload completed; the unit-test side already exercises
-      // the EXIF-strip pipeline against the same image_processor module.
+      const stored = await page.request.get(url!);
+      expect(stored.ok(), `GET stored photo: ${stored.status()}`).toBe(true);
+      expect(jpegHasExif(await stored.body()), "the stored photo still has EXIF").toBe(false);
 
       // Delete the photo and confirm.
       await page.getByTestId("listing-photo-delete-button").click();
