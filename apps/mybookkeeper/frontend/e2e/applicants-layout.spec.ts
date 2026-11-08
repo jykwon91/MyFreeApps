@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
+import { holdRequests } from "./fixtures/hold-requests";
 import { deleteApplicant } from "./fixtures/applicants";
 
 /**
@@ -48,10 +49,7 @@ test.describe("Applicants layout (PR 3.1b)", () => {
     const runId = Date.now();
     const applicantIds: string[] = [];
     try {
-      await page.route("**/api/applicants**", async (route) => {
-        await new Promise((r) => setTimeout(r, 1500));
-        await route.continue();
-      });
+      const releaseList = await holdRequests(page, (url) => url.pathname === "/api/applicants");
 
       const navPromise = page.goto("/applicants");
       await expect(page.getByTestId("applicants-skeleton")).toBeVisible({ timeout: 5000 });
@@ -71,7 +69,7 @@ test.describe("Applicants layout (PR 3.1b)", () => {
           }),
         );
       }
-      await page.unroute("**/api/applicants**");
+      releaseList();
       await navPromise;
       await page.reload();
       await page.waitForLoadState("networkidle");
@@ -161,10 +159,7 @@ test.describe("Applicants layout (PR 3.1b)", () => {
 
     try {
       // Throttle to give the skeleton a chance to render.
-      await page.route(`**/api/applicants/${applicantId}`, async (route) => {
-        await new Promise((r) => setTimeout(r, 1500));
-        await route.continue();
-      });
+      const releaseDetail = await holdRequests(page, (url) => url.pathname === `/api/applicants/${applicantId}`);
 
       const navPromise = page.goto(`/applicants/${applicantId}`);
       // Skeleton renders all the section placeholders.
@@ -185,7 +180,7 @@ test.describe("Applicants layout (PR 3.1b)", () => {
         ).toBeVisible();
       }
 
-      await page.unroute(`**/api/applicants/${applicantId}`);
+      releaseDetail();
       await navPromise;
       await page.waitForLoadState("networkidle");
 
