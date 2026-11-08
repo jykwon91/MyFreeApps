@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/spellbook`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/library`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/spellbook`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -617,6 +617,33 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `items.json`; their ids are in `wanted_ids()` for icons.
   Tests: `tests/test_wow_rares_generator.py`, `src/__tests__/wowRares.test.ts`,
   `e2e/wow-forever-rares.spec.ts`.
+
+#### Library books (`/wow-forever/library`)
+
+- `pages/WowLibraryPage.tsx` + `components|lib|hooks|data|types/library/`:
+  "Turning books in" (who takes the books and how many a reward needs — both
+  "Not known yet", `LIBRARY_UNKNOWN`), each reward quest (link to
+  `/wow-forever/quests/:id`, Seen in game + date, choose-one rewards via
+  `ItemNameLink`), the library cards (Game files) and every book: icon, name,
+  item level (Game files badge), the in-game description, "Where: Not known
+  yet" and a "Found" tick (`mga.wowForever.library.checklist.v1`,
+  `useChecklist`, "Clear found"). Filters live in the URL (`?q&ilvl&hide=1`,
+  replace history, `hooks/useLibraryFilters.ts`, pure
+  `lib/library/libraryFilterParams.ts` + `filterBooks.ts`; an item-level chip
+  counts with the other filters on). No map link until a book's location is
+  known — never guess one, and never fill locations, the turn-in NPC or the
+  book count from a fan site.
+- **Data is GENERATED** — `python -m scripts.wow_library.build --hotfix-cache
+  <DBCache.bin> --quest-cache <questcache.wdb>` (from `backend/`, in
+  `wow_refresh` before the icons build; reads `items.json`) writes
+  `data/library/library.json`: books = every Forever `ItemSparse` row whose
+  description ends "… addition to any library's collection." (40 today),
+  cards = "<city> Library Card" rows, reward quests = quest-cache titles
+  naming the Library (Friend of the Library, 78150) with their rewards. A
+  reward missing from `items.json` stops the run. Book, card and reward ids
+  are in `wanted_ids()` for icons. Tests:
+  `tests/test_wow_library_generator.py`, `src/__tests__/wowLibrary.test.ts`,
+  `e2e/wow-forever-library.spec.ts`.
 
 #### Races (`/wow-forever/races`, `/wow-forever/races/:race`)
 

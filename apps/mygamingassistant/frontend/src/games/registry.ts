@@ -75,6 +75,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Rare and rare elite creatures: where they spawn, what they drop, a /target macro and a list to tick off.",
       },
       {
+        path: "/wow-forever/library",
+        title: "Library books",
+        iconName: "Library",
+        description: "Every collectible library book in the game files, the reward for turning them in and a list of the ones you've found.",
+      },
+      {
         path: "/wow-forever/professions",
         title: "Professions",
         iconName: "Hammer",
