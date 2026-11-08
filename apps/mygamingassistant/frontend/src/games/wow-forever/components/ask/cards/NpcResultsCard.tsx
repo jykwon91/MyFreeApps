@@ -48,7 +48,7 @@ export default function NpcResultsCard({ card }: NpcResultsCardProps) {
       </ol>
       {selected ? (
         <Link
-          to={routeToNpcHref(selected, card.origin)}
+          to={routeToNpcHref(selected, card.origin, card.faction)}
           className="inline-flex min-h-[44px] items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Navigation className="h-4 w-4" aria-hidden />

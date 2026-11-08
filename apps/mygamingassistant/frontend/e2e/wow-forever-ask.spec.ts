@@ -33,13 +33,13 @@ type Reply = (body: TurnBody, n: number) => (route: Route) => Promise<void>;
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) => (route: Route) =>
   route.fulfill({ status, json: body, headers });
 
-function toolUse() {
+function toolUse(extra: Record<string, string> = {}) {
   return json({
     message: {
       role: "assistant",
       content: [
         { type: "text", text: "Let me look that up." },
-        { type: "tool_use", id: "toolu_fixture_1", name: "search_npcs", input: { query: "warlock trainer", from_zone: "Desolace" } },
+        { type: "tool_use", id: "toolu_fixture_1", name: "search_npcs", input: { query: "warlock trainer", from_zone: "Desolace", ...extra } },
       ],
     },
     stop_reason: "tool_use",
@@ -126,10 +126,10 @@ test("ask → the tool runs on real data → pick a trainer → Route there → 
   await expect(card.locator("[data-testid=ask-map-marker].bg-red-600")).toHaveText("1");
   const route = card.getByRole("link", { name: "Route there" });
   const href = await route.getAttribute("href");
-  expect(href).toMatch(/^\/wow-forever\/map\?to=npc%3A[^&]+&from=pt%3A1443%2C50\.0%2C50\.0&dir=1$/);
+  expect(href).toMatch(/^\/wow-forever\/map\?faction=[AH]&to=npc%3A[^&]+&from=pt%3A1443%2C50\.0%2C50\.0&dir=1$/);
 
   await route.click();
-  await expect(page).toHaveURL(/\/wow-forever\/map\?to=npc/);
+  await expect(page).toHaveURL(/\/wow-forever\/map\?faction=[AH]&to=npc/);
   const planner = page.getByRole("region", { name: "Route planner" });
   await expect(planner.getByRole("list", { name: "Directions" })).toBeVisible({ timeout: 20_000 });
   await expect(planner).toContainText(first);
@@ -137,6 +137,25 @@ test("ask → the tool runs on real data → pick a trainer → Route there → 
   // Back returns to the chat, which kept the conversation.
   await page.goBack();
   await expect(page.getByTestId("ask-answer")).toContainText(ANSWER);
+});
+
+test("a Horde search's Route there plans as Horde on the map, without changing the saved faction", async ({ page }) => {
+  await mockRelay(page, (body) => (body.ticket ? answer() : toolUse({ faction: "horde" })));
+  await page.goto("/wow-forever/ask");
+  await ask(page);
+  const card = page.getByRole("region", { name: "warlock trainer" });
+  await expect(card).toBeVisible();
+  await card.locator("ol > li button").first().click();
+  const route = card.getByRole("link", { name: "Route there" });
+  expect(await route.getAttribute("href")).toMatch(/^\/wow-forever\/map\?faction=H&to=/);
+
+  await route.click();
+  await expect(page).toHaveURL(/faction=H/);
+  const planner = page.getByRole("region", { name: "Route planner" });
+  await expect(planner.getByRole("list", { name: "Directions" })).toBeVisible({ timeout: 20_000 });
+  // Planned as Horde for this visit only: the saved faction is untouched.
+  const saved = await page.evaluate(() => window.localStorage.getItem("mga.wowForever.worldMap.player.v1"));
+  expect(saved === null || !saved.includes('"faction":"H"')).toBe(true);
 });
 
 test("the hub's ask box opens the page and sends the question once", async ({ page }) => {

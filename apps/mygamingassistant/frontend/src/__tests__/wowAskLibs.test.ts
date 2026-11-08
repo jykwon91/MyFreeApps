@@ -5,6 +5,7 @@ import { ASK_COPY } from "@/games/wow-forever/data/ask/askCopy";
 import { ASK_FAILURE } from "@/games/wow-forever/data/ask/askFailureKinds";
 import { ASK_STORAGE_KEY } from "@/games/wow-forever/data/ask/askLimits";
 import { ASK_TOOL } from "@/games/wow-forever/data/ask/askTools";
+import { FACTION_PARAM, parseFactionParam } from "@/games/wow-forever/hooks/useFactionOverride";
 import { askFailureFrom } from "@/games/wow-forever/lib/ask/askFailure";
 import { sitePagesMentioned } from "@/games/wow-forever/lib/ask/askFollowUps";
 import {
@@ -20,6 +21,7 @@ import { buildTurns, countQuestions, isChatFull } from "@/games/wow-forever/lib/
 import { levelRange } from "@/games/wow-forever/lib/ask/levelRange";
 import type { AskOrigin } from "@/games/wow-forever/types/ask/askOrigin";
 import type { ChatMessage } from "@/games/wow-forever/types/ask/chatMessage";
+import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { parseEndpoint } from "@/games/wow-forever/worldMap/trip";
 
 const NOW = Date.parse("2026-11-08T12:00:00Z");
@@ -46,15 +48,29 @@ describe("askLinks — Route there uses the World Map's own URL format", () => {
   const saved: AskOrigin = { ...typed, fromMessage: false };
 
   it("carries From only when the place came from the player's message", () => {
-    expect(routeToNpcHref({ poiId: "classic-1803" }, typed)).toBe(
-      "/wow-forever/map?to=npc%3Aclassic-1803&from=pt%3A1443%2C50.0%2C50.0&dir=1",
+    expect(routeToNpcHref({ poiId: "classic-1803" }, typed, FACTION.horde)).toBe(
+      "/wow-forever/map?faction=H&to=npc%3Aclassic-1803&from=pt%3A1443%2C50.0%2C50.0&dir=1",
     );
-    expect(routeToNpcHref({ poiId: "classic-1803" }, saved)).toBe("/wow-forever/map?to=npc%3Aclassic-1803&dir=1");
-    expect(routeToNpcHref({ poiId: "classic-1803" }, null)).toBe("/wow-forever/map?to=npc%3Aclassic-1803&dir=1");
+    expect(routeToNpcHref({ poiId: "classic-1803" }, saved, FACTION.horde)).toBe(
+      "/wow-forever/map?faction=H&to=npc%3Aclassic-1803&dir=1",
+    );
+    expect(routeToNpcHref({ poiId: "classic-1803" }, null, FACTION.horde)).toBe(
+      "/wow-forever/map?faction=H&to=npc%3Aclassic-1803&dir=1",
+    );
+  });
+
+  it("carries the faction the search was planned as, so the map plans the same trip", () => {
+    const alliance = new URL(routeToNpcHref({ poiId: "classic-1803" }, null, FACTION.alliance), "https://example.test");
+    const horde = new URL(routeToNpcHref({ poiId: "classic-1803" }, null, FACTION.horde), "https://example.test");
+    expect(parseFactionParam(alliance.searchParams.get(FACTION_PARAM))).toBe(FACTION.alliance);
+    expect(parseFactionParam(horde.searchParams.get(FACTION_PARAM))).toBe(FACTION.horde);
+    expect(parseFactionParam("N")).toBeNull();
+    expect(parseFactionParam("horde")).toBeNull();
+    expect(parseFactionParam(null)).toBeNull();
   });
 
   it("round-trips through the map's own parser", () => {
-    const href = new URL(routeToNpcHref({ poiId: "classic-1803" }, typed), "https://example.test");
+    const href = new URL(routeToNpcHref({ poiId: "classic-1803" }, typed, FACTION.alliance), "https://example.test");
     expect(parseEndpoint(href.searchParams.get("to") ?? "")).toEqual({ kind: "npc", poiId: "classic-1803" });
     expect(parseEndpoint(href.searchParams.get("from") ?? "")).toEqual({ kind: "point", zoneId: 1443, x: 50, y: 50 });
   });

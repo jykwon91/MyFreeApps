@@ -4,11 +4,13 @@
  * only when the player said where they are in the chat — otherwise the map's
  * "Your location" (their saved spot) is the start, as it would be on the map.
  */
+import { FACTION_PARAM } from "@/games/wow-forever/hooks/useFactionOverride";
 import { MAP_PARAM } from "@/games/wow-forever/hooks/useMapView";
 import { DIR_PARAM, FROM_PARAM, TO_PARAM } from "@/games/wow-forever/hooks/useTrip";
 import type { AskNpcRow } from "@/games/wow-forever/types/ask/askNpcRow";
 import type { AskOrigin } from "@/games/wow-forever/types/ask/askOrigin";
 import type { AskPlaceRow } from "@/games/wow-forever/types/ask/askPlaceRow";
+import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 import { PLACE_KIND } from "@/games/wow-forever/worldMap/places";
 import { ENDPOINT_KIND, formatEndpoint } from "@/games/wow-forever/worldMap/trip";
 
@@ -21,8 +23,10 @@ function mapHref(params: URLSearchParams): string {
   return `${MAP_PATH}?${params.toString()}`;
 }
 
-export function routeToNpcHref(row: Pick<AskNpcRow, "poiId">, origin: AskOrigin | null): string {
+export function routeToNpcHref(row: Pick<AskNpcRow, "poiId">, origin: AskOrigin | null, faction: PlayerFaction): string {
   const params = new URLSearchParams();
+  // The faction the search (and its "Route:" line) used, so the map plans the same trip.
+  params.set(FACTION_PARAM, faction);
   params.set(TO_PARAM, formatEndpoint({ kind: ENDPOINT_KIND.npc, poiId: row.poiId }));
   if (origin?.fromMessage) {
     params.set(FROM_PARAM, formatEndpoint({ kind: ENDPOINT_KIND.point, zoneId: origin.zoneId, x: origin.x, y: origin.y }));

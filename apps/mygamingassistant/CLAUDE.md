@@ -1095,9 +1095,13 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   never grouped and is drawn red.
 - Cards (`components/ask/cards/`): NPC results with a mini map and numbered
   rows; picking a row shows **Route there** =
-  `/wow-forever/map?to=npc:<id>&dir=1`, plus `&from=pt:<zone>,x,y` ONLY when
+  `/wow-forever/map?faction=<A|H>&to=npc:<id>&dir=1`, plus `&from=pt:<zone>,x,y` ONLY when
   the start came from the player's message (`lib/ask/askLinks.ts`, the World
-  Map's own `formatEndpoint`). Places, items (`ItemNameLink`), dungeon, "Where
+  Map's own `formatEndpoint`). `faction` is the faction the search planned its
+  routes as (`AskNpcCard.faction`); the World Map honours `?faction=` for that
+  visit only (`hooks/useFactionOverride.ts`), never writing the saved faction,
+  and picking a faction in the You section drops it. A picked row that shares
+  its spot with a "×N" pin pushes that pin aside (`AskPin.nudged`). Places, items (`ItemNameLink`), dungeon, "Where
   are you?". Every empty-state example is checked against real data in
   `wowAskTools.test.ts`. Tests: `src/__tests__/wowAsk*.test.ts(x)`,
   `e2e/wow-forever-ask.spec.ts` (relay mocked).

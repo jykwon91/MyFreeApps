@@ -13,6 +13,7 @@ import PlayerStrip from "@/games/wow-forever/components/worldMap/PlayerStrip";
 import RoutePlanner from "@/games/wow-forever/components/worldMap/RoutePlanner";
 import WorldMapPanel from "@/games/wow-forever/components/worldMap/WorldMapPanel";
 import WorldMapSkeleton from "@/games/wow-forever/components/worldMap/WorldMapSkeleton";
+import { useFactionOverride } from "@/games/wow-forever/hooks/useFactionOverride";
 import { useFindFilters } from "@/games/wow-forever/hooks/useFindFilters";
 import { useMapLayers } from "@/games/wow-forever/hooks/useMapLayers";
 import { useMapMarks } from "@/games/wow-forever/hooks/useMapMarks";
@@ -37,7 +38,14 @@ const MAP_PANEL_ID = "wm-map-panel";
 export default function WowWorldMapPage() {
   const { status, data, retry, capturesFailed } = useWorldMap();
   const canImport = useIsAuthenticated() && !isReadOnly();
-  const [settings, updateSettings] = usePlayerSettings();
+  const [savedSettings, updateSettings] = usePlayerSettings();
+  // A `?faction=` link (Ask's "Route there") plans as that faction without touching the saved one.
+  const factionOverride = useFactionOverride();
+  const overrideFaction = factionOverride.faction;
+  const settings = useMemo(
+    () => (overrideFaction ? { ...savedSettings, faction: overrideFaction } : savedSettings),
+    [savedSettings, overrideFaction],
+  );
   const find = useFindFilters();
   const mapLayers = useMapLayers();
   const { findFilterId, showAllClasses, includeOtherFaction } = find.filters;
@@ -100,6 +108,7 @@ export default function WowWorldMapPage() {
   /** The strip changing your zone brings the map back to it; browsing the map never changes your zone. */
   function changeSettings(patch: Partial<PlayerSettings>) {
     updateSettings(patch);
+    if (patch.faction !== undefined) factionOverride.clear();
     if (patch.zoneId !== undefined && patch.zoneId !== settings.zoneId) view.followPlayer();
   }
 
