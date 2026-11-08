@@ -1,0 +1,149 @@
+name: MyBookkeeper E2E (real stack)
+
+# Every Playwright spec that talks to a real backend: Postgres, MinIO, the API,
+# the upload worker and the Vite dev server, all on this runner. The suite is
+# too slow to gate every PR (ci-mybookkeeper.yml runs the mocked layout specs
+# for that), so it runs nightly and on demand from the Actions tab.
+on:
+  schedule:
+    - cron: '17 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-mybookkeeper
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    name: e2e-real-stack / mybookkeeper
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mbk
+          POSTGRES_PASSWORD: e2e_only_pw # gitleaks:allow
+          POSTGRES_DB: mbk
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mbk"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql+asyncpg://mbk:e2e_only_pw@127.0.0.1:5432/mbk
+      DATABASE_URL_SYNC: postgresql://mbk:e2e_only_pw@127.0.0.1:5432/mbk
+      ANTHROPIC_API_KEY: sk-ant-placeholder-not-real
+      GOOGLE_CLIENT_ID: placeholder-not-real-google-client
+      GOOGLE_CLIENT_SECRET: placeholder-not-real-google-secret
+      OAUTH_REDIRECT_URI: http://localhost:5173/oauth-callback
+      CORS_ORIGINS: '["http://localhost:5173"]'
+      APP_URL: http://localhost:5173
+      EMAIL_BACKEND: console
+      ENVIRONMENT: development
+      ALLOW_TEST_ADMIN_PROMOTION: 'true'
+      HIBP_ENABLED: 'false'
+      MINIO_ENDPOINT: 127.0.0.1:9000
+      MINIO_ACCESS_KEY: e2eminio
+      MINIO_SECRET_KEY: e2e-only-minio-secret # gitleaks:allow
+      MINIO_BUCKET: mybookkeeper-files
+      MINIO_SECURE: 'false'
+      PYTHONPATH: .:../../../packages/shared-backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Start MinIO
+        # A service container can't pass `server /data`, so run it directly.
+        # Same image as infra/docker-compose.yml.
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER="$MINIO_ACCESS_KEY" -e MINIO_ROOT_PASSWORD="$MINIO_SECRET_KEY" \
+            minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:9000/minio/health/live && exit 0
+            sleep 2
+          done
+          docker logs minio; exit 1
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/mybookkeeper/backend/uv.lock
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Install backend
+        working-directory: apps/mybookkeeper/backend
+        # uv sync puts the venv at backend/.venv, where global-setup.ts
+        # looks for the Python that runs the upload worker.
+        run: |
+          uv sync --frozen
+          uv pip install ../../../packages/shared-backend
+
+      - name: Migrate
+        working-directory: apps/mybookkeeper/backend
+        run: uv run alembic upgrade head
+
+      - name: Start API
+        working-directory: apps/mybookkeeper/backend
+        run: |
+          nohup uv run uvicorn app.main:app --port 8000 > "$RUNNER_TEMP/api.log" 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8000/docs > /dev/null && exit 0
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/api.log"; exit 1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install workspace dependencies
+        # See ci-mybookkeeper.yml for why npm install, not npm ci.
+        run: npm install
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        working-directory: apps/mybookkeeper/frontend
+        timeout-minutes: 4
+        run: npx playwright install --with-deps chromium
+
+      - name: Run real-stack E2E tests
+        working-directory: apps/mybookkeeper/frontend
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report-real-stack
+          path: |
+            apps/mybookkeeper/frontend/playwright-report/
+            apps/mybookkeeper/frontend/test-results/
+          retention-days: 14
+
+      - name: Upload API log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-log-real-stack
+          path: ${{ runner.temp }}/api.log
+          retention-days: 14
