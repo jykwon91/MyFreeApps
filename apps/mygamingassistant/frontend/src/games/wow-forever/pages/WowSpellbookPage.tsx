@@ -1,13 +1,15 @@
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import ClassLinkPicker from "@/games/wow-forever/components/shared/ClassLinkPicker";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import SpellbookClassView from "@/games/wow-forever/components/spellbook/SpellbookClassView";
 import { findClass } from "@/games/wow-forever/data/classes";
+import { CLASSES_PATH } from "@/games/wow-forever/data/classes/classesConfig";
 import { SPELLBOOK_PATH } from "@/games/wow-forever/data/spellbook/spellbookConfig";
 import { useDocumentTitle } from "@/games/wow-forever/hooks/useDocumentTitle";
 
 const PAGE_TITLE = "Spellbook";
+const CLASS_LINK_STYLE = "inline-flex min-h-[44px] items-center text-sm underline underline-offset-2";
 
 /** /wow-forever/spellbook and /wow-forever/spellbook/:class — every spell a class can train in Forever. */
 export default function WowSpellbookPage() {
@@ -24,7 +26,14 @@ export default function WowSpellbookPage() {
         backLabel="Back to WoW Forever"
       />
       <ClassLinkPicker basePath={SPELLBOOK_PATH} current={wowClass?.id ?? null} testId="spellbook-class-picker" />
-      {wowClass ? <SpellbookClassView classId={wowClass.id} /> : null}
+      {wowClass ? (
+        <>
+          <Link to={`${CLASSES_PATH}/${wowClass.id}`} className={CLASS_LINK_STYLE} data-testid="spellbook-class-hub-link">
+            {wowClass.name} class page
+          </Link>
+          <SpellbookClassView classId={wowClass.id} />
+        </>
+      ) : null}
       {!wowClass && classParam ? <EmptyStateNote message={`There's no class called "${classParam}". Pick one above.`} /> : null}
       {!classParam ? <EmptyStateNote message="Pick a class to see its spells." /> : null}
     </main>

@@ -33,6 +33,8 @@ const WowRaidPlannerPage = lazy(() => import("@/games/wow-forever/pages/WowRaidP
 const WowSuggestPage = lazy(() => import("@/games/wow-forever/pages/WowSuggestPage"));
 const WowAskPage = lazy(() => import("@/games/wow-forever/pages/WowAskPage"));
 const WowTriagePage = lazy(() => import("@/games/wow-forever/pages/WowTriagePage"));
+const WowClassesPage = lazy(() => import("@/games/wow-forever/pages/WowClassesPage"));
+const WowClassPage = lazy(() => import("@/games/wow-forever/pages/WowClassPage"));
 
 function withSuspense(page: ReactElement): ReactElement {
   return <Suspense fallback={<WowPageSkeleton />}>{page}</Suspense>;
@@ -86,6 +88,8 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/talents/:class", element: withSuggestFooter(<WowTalentsPage />, "class_guides") },
   { path: "/wow-forever/races", element: withSuggestFooter(<WowRacesPage />, "class_guides") },
   { path: "/wow-forever/races/:race", element: withSuggestFooter(<WowRacesPage />, "class_guides") },
+  { path: "/wow-forever/classes", element: withSuggestFooter(<WowClassesPage />, "class_guides") },
+  { path: "/wow-forever/classes/:class", element: withSuggestFooter(<WowClassPage />, "class_guides") },
   { path: "/wow-forever/spellbook", element: withSuggestFooter(<WowSpellbookPage />, "class_guides") },
   { path: "/wow-forever/spellbook/:class", element: withSuggestFooter(<WowSpellbookPage />, "class_guides") },
   { path: "/wow-forever/downrank", element: withSuggestFooter(<WowDownrankPage />, "class_guides") },

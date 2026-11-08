@@ -41,6 +41,7 @@ from scripts.wow_icons.ids import (
 from scripts.wow_items.forever_items import hotfix_cache_path, load_forever_item_tables
 from scripts.wow_world_map.sources import WAGO_BRANCH, WAGO_BUILD, wago_table
 
+CLASS_DETAILS_FILE = WOW_DATA_DIR / "classes" / "classDetails.json"
 CRAFTING_DIR = WOW_DATA_DIR / "professions" / "crafting"
 GATHERING_DIR = WOW_DATA_DIR / "professions" / "gathering"
 ITEMS_FILE = WOW_DATA_DIR / "items" / "items.json"
@@ -133,10 +134,16 @@ def race_icon_files(path: Path = RACES_FILE) -> set[int]:
     return {r["icon"] for race in races for r in race["racials"] if r["icon"]}
 
 
+def class_icon_files(path: Path = CLASS_DETAILS_FILE) -> set[int]:
+    """The class pages' icons: IconFileDataID from ChrClasses (``scripts.wow_classes.build``)."""
+    classes = json.loads(path.read_text(encoding="utf-8"))["classes"]
+    return {int(detail["icon"]) for detail in classes.values() if detail.get("icon")}
+
+
 def wanted_ids() -> IconIds:
     ids = IconIds(
         items=gathering_item_ids() | cooking_item_ids() | gear_item_ids() | dungeon_quest_item_ids() | rare_drop_item_ids(),
-        files=talent_icon_files() | downrank_icon_files() | spellbook_icon_files() | race_icon_files(),
+        files=talent_icon_files() | downrank_icon_files() | spellbook_icon_files() | race_icon_files() | class_icon_files(),
     )
     for path in sorted(CRAFTING_DIR.glob("*.json")):
         ids.update(crafting_file_ids(json.loads(path.read_text(encoding="utf-8"))))

@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-08",
+    title: "Classes",
+    summary:
+      "Pick any of the nine classes to see its icon, roles, resource type, races (with new-in-Forever combos), armor and weapon proficiencies, and direct links to its spellbook, talents, macros, downrank calculator and what Forever changed.",
+    to: "/wow-forever/classes",
+  },
+  {
+    date: "2026-11-08",
     title: "Spellbook",
     summary:
       "See every spell your class can train in Forever: each rank's learn level, trainer cost and tooltip, which spells are different from Classic, and links to the talent and downrank calculators.",

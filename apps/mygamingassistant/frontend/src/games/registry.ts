@@ -87,6 +87,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Look up what any item sells for: market value, average sale price and how many sell a day, in the US or Europe.",
       },
       {
+        path: "/wow-forever/classes",
+        title: "Classes",
+        iconName: "GraduationCap",
+        description: "Every class's icon, roles, races, proficiencies, spellbook, talents and what Forever changed — all in one place.",
+      },
+      {
         path: "/wow-forever/macros",
         title: "Macros",
         iconName: "Terminal",

@@ -96,7 +96,9 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         ["scripts.wow_rares.build", "--creature-cache", str(creature_cache)],
         # Reads the World Map's zones; its racial icons are in the icon build's wanted ids.
         ["scripts.wow_races.build", *cache],
-        # Reads the Professions, Item, Talent, Downrank, Spellbook, Rares and Races output above. Its images are published last, below.
+        # Class icon file ids and resource types; its icons are in the icon build's wanted ids.
+        ["scripts.wow_classes.build"],
+        # Reads the Professions, Item, Talent, Downrank, Spellbook, Rares, Races and Classes output above. Its images are published last, below.
         ["scripts.wow_icons.build", *cache],
         ["scripts.wow_item_names.build"],
         ["scripts.wow_macros.build"],
