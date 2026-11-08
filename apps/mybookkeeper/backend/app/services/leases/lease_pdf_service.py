@@ -40,13 +40,12 @@ from app.services.leases.renderer import (
     render_md,
     render_pdf_from_text,
 )
+from app.services.storage.stored_file import read_stored_file
 
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Exceptions specific to PDF generation
-# ---------------------------------------------------------------------------
 
 class TemplatesAlreadyLinkedError(ValueError):
     """One or more template_ids are already linked to this lease."""
@@ -177,7 +176,7 @@ async def generate_lease(
     uploaded: list[tuple[str, str, str, int]] = []
     try:
         for f in files:
-            raw = storage.download_file(f.storage_key)
+            raw = read_stored_file(storage, f.storage_key)
             if f.content_type == DOCX_MIME:
                 rendered_bytes, _ = render_docx_bytes_to_pdf(raw, substitutions)
                 out_filename = _swap_extension(f.filename, ".pdf")

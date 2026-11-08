@@ -12,10 +12,20 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+)
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.core.stored_file_constants import MISSING_TEMPLATE_FILE_DETAIL
 from app.schemas.dates.client_local_date import ClientLocalDate
 from app.schemas.leases.generate_defaults_response import (
     GenerateDefaultsResponse,
@@ -45,6 +55,7 @@ from app.schemas.leases.suggest_placeholders_response import (
     SuggestPlaceholdersResponse,
 )
 from app.services.leases import lease_template_service
+from app.services.storage.stored_file import StoredFileMissingError
 
 router = APIRouter(prefix="/lease-templates", tags=["lease-templates"])
 
@@ -271,6 +282,8 @@ async def suggest_placeholders(
         )
     except lease_template_service.TemplateNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Template not found") from exc
+    except StoredFileMissingError as exc:
+        raise HTTPException(status_code=409, detail=MISSING_TEMPLATE_FILE_DETAIL) from exc
     except lease_template_service.StorageNotConfiguredError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
