@@ -1473,7 +1473,8 @@
         "test_tax_validation_service.py",
         "test_tax_validation_p1_p2.py",
         "test_taxpayer_profile.py",
-        "test_schedule_e_report.py"
+        "test_schedule_e_report.py",
+        "test_schedule_e_backfill_migration.py"
       ],
       "frontend_tests": [
         "TaxDocuments.test.tsx",
