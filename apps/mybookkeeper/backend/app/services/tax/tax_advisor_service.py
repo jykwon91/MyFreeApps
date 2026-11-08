@@ -9,6 +9,7 @@ from typing import TypedDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal, unit_of_work
+from app.mappers import tax_advisor_mapper
 from app.models.tax.tax_advisor_generation import TaxAdvisorGeneration
 from app.models.tax.tax_advisor_suggestion import TaxAdvisorSuggestion
 from app.models.tax.tax_return import TaxReturn
@@ -18,10 +19,10 @@ from app.repositories.tax import cost_basis_lot_repo, tax_advisor_repo
 from app.schemas.tax.tax_advisor import (
     TaxAdvisorCachedResponse,
     TaxAdvisorResponse,
-    TaxAdvisorSuggestionRead,
     TaxSuggestion,
 )
 from app.services.tax import tax_validation_service
+from app.services.tax.tax_advisor_persistence import save_advice
 from app.services.extraction.claude_service import _create_with_backoff
 from app.services.extraction.prompts.tax_advisor_prompt import TAX_ADVISOR_PROMPT
 from app.core.tax_constants import SCHEDULE_E_LINE_LABELS
@@ -145,42 +146,15 @@ async def generate_advice(
     advisor_response = _parse_and_validate(raw_text)
 
     async with unit_of_work() as db:
-        await tax_advisor_repo.delete_active_for_return(db, tax_return_id)
-
-        generation = TaxAdvisorGeneration(
-            tax_return_id=tax_return_id,
+        saved_generation, suggestion_models = await save_advice(
+            db,
             organization_id=organization_id,
-            requested_by=user_id,
+            tax_return_id=tax_return_id,
+            user_id=user_id,
+            suggestions=advisor_response.suggestions,
             model_version=MODEL_VERSION,
-            suggestion_count=len(advisor_response.suggestions),
-            raw_response={"suggestions": [s.model_dump() for s in advisor_response.suggestions]},
             input_tokens=input_tokens,
             output_tokens=output_tokens,
-        )
-
-        suggestion_models = [
-            TaxAdvisorSuggestion(
-                tax_return_id=tax_return_id,
-                organization_id=organization_id,
-                generation_id=generation.id,  # will be set in repo
-                suggestion_key=s.id,
-                category=s.category,
-                severity=s.severity,
-                title=s.title,
-                description=s.description,
-                estimated_savings=s.estimated_savings,
-                action=s.action,
-                irs_reference=s.irs_reference,
-                confidence=s.confidence,
-                affected_properties=s.affected_properties,
-                affected_form=s.affected_form,
-                status="active",
-            )
-            for s in advisor_response.suggestions
-        ]
-
-        saved_generation = await tax_advisor_repo.create_generation_with_suggestions(
-            db, generation, suggestion_models
         )
 
     return _map_to_cached_response(saved_generation, suggestion_models)
@@ -206,7 +180,7 @@ async def get_cached_advice(
 
         generation = await tax_advisor_repo.get_latest_generation(db, tax_return_id)
 
-    suggestion_reads = [_map_suggestion_to_read(s) for s in suggestions]
+    suggestion_reads = [tax_advisor_mapper.to_suggestion_read(s) for s in suggestions]
     return TaxAdvisorCachedResponse(
         suggestions=suggestion_reads,
         disclaimer=HARDCODED_DISCLAIMER,
@@ -554,32 +528,12 @@ def _parse_and_validate(raw_response: str) -> TaxAdvisorResponse:
     )
 
 
-def _map_suggestion_to_read(suggestion: TaxAdvisorSuggestion) -> TaxAdvisorSuggestionRead:
-    return TaxAdvisorSuggestionRead(
-        db_id=suggestion.id,
-        status=suggestion.status,
-        status_changed_at=suggestion.status_changed_at,
-        generation_id=suggestion.generation_id,
-        id=suggestion.suggestion_key,
-        category=suggestion.category,
-        severity=suggestion.severity,
-        title=suggestion.title,
-        description=suggestion.description,
-        estimated_savings=suggestion.estimated_savings,
-        action=suggestion.action,
-        irs_reference=suggestion.irs_reference,
-        confidence=suggestion.confidence,
-        affected_properties=suggestion.affected_properties,
-        affected_form=suggestion.affected_form,
-    )
-
-
 def _map_to_cached_response(
     generation: TaxAdvisorGeneration,
     suggestions: list[TaxAdvisorSuggestion],
 ) -> TaxAdvisorCachedResponse:
     return TaxAdvisorCachedResponse(
-        suggestions=[_map_suggestion_to_read(s) for s in suggestions],
+        suggestions=[tax_advisor_mapper.to_suggestion_read(s) for s in suggestions],
         disclaimer=HARDCODED_DISCLAIMER,
         generated_at=generation.created_at,
         model_version=generation.model_version,
