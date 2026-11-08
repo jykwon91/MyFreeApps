@@ -1518,7 +1518,8 @@
         "frontend/src/shared/lib/filter-panel-breakpoint-classes.ts",
         "frontend/src/shared/types/ui/filter-panel-breakpoint.ts",
         "frontend/src/shared/utils/filters-toggle-label.ts",
-        "frontend/src/shared/types/ui/filter-panel-breakpoint-classes.ts"
+        "frontend/src/shared/types/ui/filter-panel-breakpoint-classes.ts",
+        "frontend/src/app/features/reconciliation/"
       ],
       "backend_tests": [
         "test_bank_csv_parser.py",
@@ -1562,7 +1563,11 @@
         "TransactionFormSource.test.tsx",
         "CollapsibleFilters.test.tsx",
         "filtersToggleLabel.test.ts",
-        "Analytics.test.tsx"
+        "Analytics.test.tsx",
+        "Reconciliation.test.tsx",
+        "ReconciliationCompare.test.tsx",
+        "ReconciliationWizardModes.test.tsx",
+        "ReconciliationDelete.test.tsx"
       ],
       "e2e_specs": [
         "transactions.spec.ts",

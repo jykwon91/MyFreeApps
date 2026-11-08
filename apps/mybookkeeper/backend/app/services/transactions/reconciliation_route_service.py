@@ -54,6 +54,17 @@ async def get_discrepancies(
         ))
 
 
+async def delete_source(ctx: RequestContext, source_id: uuid.UUID) -> None:
+    """Delete a 1099 the host entered by mistake. Its matches go with it.
+
+    Raises:
+        LookupError: no such source in the caller's organization.
+    """
+    async with unit_of_work() as db:
+        if not await reconciliation_repo.delete_source(db, source_id, ctx.organization_id):
+            raise LookupError("Reconciliation source not found")
+
+
 async def auto_reconcile(
     ctx: RequestContext, tax_year: int,
 ) -> dict:

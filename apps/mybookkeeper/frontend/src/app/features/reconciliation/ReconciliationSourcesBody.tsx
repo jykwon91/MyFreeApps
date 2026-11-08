@@ -1,13 +1,10 @@
 import { RECONCILIATION_COMPARE_MESSAGES as COMPARE } from "@mybookkeeper/api-client/constants/reconciliationCompare";
-import { formatCurrency } from "@/shared/utils/currency";
-import { formatTag } from "@/shared/utils/tag";
-import { RECONCILIATION_STATUS_STYLES } from "@/shared/lib/constants";
 import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
 import type { ReconciliationSourcesMode } from "@/shared/types/reconciliation/reconciliation-sources-mode";
 import { LoadingButton } from "@platform/ui";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import Skeleton from "@/shared/components/ui/Skeleton";
-import { comparedAmounts } from "./comparedAmounts";
+import ReconciliationSourceRow from "./ReconciliationSourceRow";
 
 export interface ReconciliationSourcesBodyProps {
   mode: ReconciliationSourcesMode;
@@ -66,32 +63,13 @@ export default function ReconciliationSourcesBody({
                   <th className="text-right px-4 py-3 font-medium">Reservation Total</th>
                   <th className="text-right px-4 py-3 font-medium">Discrepancy</th>
                   <th className="text-left px-4 py-3 font-medium">Status</th>
+                  {canWrite && <th className="px-2 py-3"><span className="sr-only">Actions</span></th>}
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {sources.map((source) => {
-                  const amounts = comparedAmounts(source);
-                  return (
-                  <tr key={source.id} className="hover:bg-muted/40">
-                    <td className="px-4 py-3">{formatTag(source.source_type)}</td>
-                    <td className="px-4 py-3">
-                      {source.issuer ?? (source.source_type === "year_end_statement" ? source.document_file_name ?? "—" : "—")}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{source.document_file_name ?? "—"}</td>
-                    <td className="px-4 py-3">{source.property_name ?? "—"}</td>
-                    <td className="px-4 py-3 text-right font-medium">{formatCurrency(source.reported_amount)}</td>
-                    <td className="px-4 py-3 text-right">{amounts.recordsTotal}</td>
-                    <td className={`px-4 py-3 text-right font-medium ${amounts.discrepancyClass}`}>
-                      {amounts.discrepancy}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${RECONCILIATION_STATUS_STYLES[source.status] ?? ""}`}>
-                        {formatTag(source.status)}
-                      </span>
-                    </td>
-                  </tr>
-                  );
-                })}
+                {sources.map((source) => (
+                  <ReconciliationSourceRow key={source.id} source={source} canWrite={canWrite} />
+                ))}
               </tbody>
             </table>
           </div>
