@@ -114,3 +114,14 @@ async def test_pdf_is_stored_unchanged(upload: _Upload) -> None:
     await _upload(pdf, filename="notes.pdf")
 
     assert upload.stored_bytes == pdf
+
+
+@pytest.mark.asyncio
+async def test_a_utf8_text_note_is_stored_so_it_opens_as_utf8(upload: _Upload) -> None:
+    note = "Guest asked for a \u201clate\u201d checkout \u2014 caf\u00e9 keys".encode("utf-8")
+
+    await _upload(note, filename="notes.txt")
+
+    assert upload.stored_bytes == note
+    assert upload.storage.upload_file.call_args.args[2] == "text/plain; charset=utf-8"
+    assert upload.rows[0]["content_type"] == "text/plain"
