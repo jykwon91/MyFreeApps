@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import SourceDocumentsSection from "@/app/features/tax/SourceDocumentsSection";
+import { queryStatus } from "@/test/rtk-query-status";
 import type { SourceDocumentsResponse } from "@mybookkeeper/api-client/types/tax/SourceDocumentsResponse";
 
 const mockSourceDocumentsData: SourceDocumentsResponse = {
@@ -172,15 +174,33 @@ describe("SourceDocumentsSection", () => {
     expect(skeletons.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows error state on failure", () => {
+  it("shows the error with a Retry that refetches when the query fails", async () => {
+    const refetch = vi.fn();
     vi.mocked(useGetSourceDocumentsQuery).mockReturnValue({
       data: undefined,
       isLoading: false,
-      isError: true,
+      refetch,
+      ...queryStatus({ failed: true, fetching: false }),
     } as unknown as ReturnType<typeof useGetSourceDocumentsQuery>);
 
     renderComponent();
-    expect(screen.getByText("I had trouble loading the source documents. Please try refreshing.")).toBeInTheDocument();
+    expect(screen.getByText("I had trouble loading the source documents.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the error up, retrying, while Retry refetches", () => {
+    vi.mocked(useGetSourceDocumentsQuery).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      refetch: vi.fn(),
+      ...queryStatus({ failed: true, fetching: true }),
+    } as unknown as ReturnType<typeof useGetSourceDocumentsQuery>);
+
+    const { container } = renderComponent();
+    expect(screen.getByText("I had trouble loading the source documents.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Retrying/ })).toBeDisabled();
+    expect(container.querySelectorAll(".animate-pulse").length).toBe(0);
   });
 
   it("renders Download buttons for each document", () => {

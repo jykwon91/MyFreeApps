@@ -5,6 +5,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import TaxDocuments from "@/app/pages/TaxDocuments";
+import { queryStatus } from "@/test/rtk-query-status";
 import type { SourceDocumentsResponse } from "@mybookkeeper/api-client/types/tax/SourceDocumentsResponse";
 import type { TaxReturn } from "@mybookkeeper/api-client/types/tax/TaxReturn";
 
@@ -175,17 +176,33 @@ describe("TaxDocuments", () => {
     expect(screen.getByText("No tax documents yet")).toBeInTheDocument();
   });
 
-  it("renders error state on query failure", () => {
+  it("shows the error with a Retry that refetches when the query fails", async () => {
+    const refetch = vi.fn();
     vi.mocked(useListTaxDocumentsQuery).mockReturnValue({
       currentData: undefined,
       isLoading: false,
-      isError: true,
+      refetch,
+      ...queryStatus({ failed: true, fetching: false }),
     } as unknown as ReturnType<typeof useListTaxDocumentsQuery>);
 
     renderPage();
-    expect(
-      screen.getByText("I had trouble loading your tax documents. Please try refreshing."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("I had trouble loading your tax documents.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the error up, retrying, while Retry refetches", () => {
+    vi.mocked(useListTaxDocumentsQuery).mockReturnValue({
+      currentData: undefined,
+      isLoading: false,
+      refetch: vi.fn(),
+      ...queryStatus({ failed: true, fetching: true }),
+    } as unknown as ReturnType<typeof useListTaxDocumentsQuery>);
+
+    const { container } = renderPage();
+    expect(screen.getByText("I had trouble loading your tax documents.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Retrying/ })).toBeDisabled();
+    expect(container.querySelectorAll(".animate-pulse").length).toBe(0);
   });
 
   it("renders year group in accordion layout", () => {
