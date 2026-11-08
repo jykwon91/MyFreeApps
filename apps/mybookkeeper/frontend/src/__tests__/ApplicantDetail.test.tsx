@@ -49,6 +49,7 @@ vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useTransitionApplicantStageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useEndTenancyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateApplicantContractDatesMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdateApplicantContactEmailMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 vi.mock("@/shared/hooks/useOrgRole", () => ({

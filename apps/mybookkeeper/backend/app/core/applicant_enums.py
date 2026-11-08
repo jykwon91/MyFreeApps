@@ -38,6 +38,7 @@ APPLICANT_EVENT_TYPES: tuple[str, ...] = APPLICANT_STAGES + (
     "tenancy_extended",
     "extension_undone",
     "sensitive_revealed",
+    "contact_email_changed",
 )
 
 # Written for the audit trail, never shown on the applicant's history: looking

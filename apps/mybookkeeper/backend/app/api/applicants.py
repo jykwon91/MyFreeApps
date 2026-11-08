@@ -17,16 +17,22 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.core.rate_limit import reveal_limiter
+from app.schemas.applicants.applicant_contact_email_request import (
+    ApplicantContactEmailRequest,
+)
 from app.schemas.applicants.applicant_detail_response import ApplicantDetailResponse
 from app.schemas.applicants.applicant_list_response import ApplicantListResponse
 from app.schemas.applicants.applicant_promote_request import ApplicantPromoteRequest
-from app.schemas.applicants.applicant_sensitive_response import ApplicantSensitiveResponse
+from app.schemas.applicants.applicant_sensitive_response import (
+    ApplicantSensitiveResponse,
+)
 from app.schemas.applicants.applicant_update_request import ApplicantUpdateRequest
 from app.schemas.applicants.stage_transition_request import StageTransitionRequest
 from app.schemas.applicants.tenancy_end_request import TenancyEndRequest
 from app.schemas.applicants.tenant_list_response import TenantListResponse
 from app.schemas.dates.client_local_date import ClientLocalDate
 from app.services.applicants import (
+    applicant_contact_service,
     applicant_contract_service,
     applicant_sensitive_service,
     applicant_service,
@@ -225,6 +231,32 @@ async def update_applicant(
                 "message": str(exc),
             },
         ) from exc
+
+
+@router.patch(
+    "/{applicant_id}/contact-email",
+    response_model=ApplicantDetailResponse,
+)
+async def update_applicant_contact_email(
+    applicant_id: uuid.UUID,
+    payload: ApplicantContactEmailRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> ApplicantDetailResponse:
+    """Add, change or remove the applicant's contact email.
+
+    Errors:
+        404 — applicant not found in the calling tenant.
+        422 — not a valid email, too long, or extra fields sent.
+    """
+    try:
+        return await applicant_contact_service.update_contact_email(
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            applicant_id=applicant_id,
+            contact_email=payload.contact_email,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Applicant not found") from exc
 
 
 @router.patch(

@@ -192,7 +192,7 @@ export default function ExtendLeaseDialog({
         </label>
         {tenantHasEmail ? null : (
           <p className="text-xs text-muted-foreground" data-testid="extend-lease-no-email">
-            The applicant has no email on file. Add one on the applicant page first.
+            The applicant has no email on file. Add one in the Sensitive section of the applicant page first.
           </p>
         )}
 

@@ -349,6 +349,18 @@ async def update_contract_start(
     applicant.updated_at = now
 
 
+async def update_contact_email(
+    db: AsyncSession,
+    *,
+    applicant: Applicant,
+    contact_email: str | None,
+    now: _dt.datetime,
+) -> None:
+    """Set ``contact_email`` on an already-loaded, tenant-scoped Applicant row."""
+    applicant.contact_email = contact_email
+    applicant.updated_at = now
+
+
 async def set_tenancy_ended(
     db: AsyncSession,
     *,

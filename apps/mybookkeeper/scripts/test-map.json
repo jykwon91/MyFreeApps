@@ -693,7 +693,8 @@
         "test_applicant_audit_masking.py",
         "test_applicant_indexes.py",
         "test_applicant_contract_dates_api.py",
-        "test_applicant_contract_service.py"
+        "test_applicant_contract_service.py",
+        "test_applicant_contact_email.py"
       ],
       "frontend_tests": [
         "ApplicantStageBadge.test.tsx",

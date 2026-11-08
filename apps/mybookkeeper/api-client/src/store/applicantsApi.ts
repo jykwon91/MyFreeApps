@@ -1,6 +1,7 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import { APPLICANT_PAGE_SIZE } from "../constants/applicantLabels";
 import { localToday } from "../utils/localToday";
+import type { ApplicantContactEmailRequest } from "../types/applicant/applicant-contact-email-request";
 import type { ApplicantDetailResponse } from "../types/applicant/applicant-detail-response";
 import type { ApplicantSensitive } from "../types/applicant/applicant-sensitive";
 import type { ApplicantListArgs } from "../types/applicant/applicant-list-args";
@@ -26,7 +27,7 @@ import type { TenantListResponse } from "../types/applicant/tenant-list-response
  * Screening (PR 3.3) and video-call notes (PR 3.4) land in subsequent PRs.
  */
 const applicantsApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["Applicant", "Inquiry"],
+  addTagTypes: ["Applicant", "Inquiry", "RentReminder", "SignedLease"],
 }).injectEndpoints({
   endpoints: (builder) => ({
     getApplicants: builder.query<ApplicantListResponse, ApplicantListArgs | void>({
@@ -185,6 +186,24 @@ const applicantsApi = baseApi.enhanceEndpoints({
         { type: "Applicant", id: "LIST" },
       ],
     }),
+    // The tenant's reminder overview and the pending-receipts list both say
+    // whether there's an address to send to, so they refetch too.
+    updateApplicantContactEmail: builder.mutation<
+      ApplicantDetailResponse,
+      { applicantId: string; data: ApplicantContactEmailRequest }
+    >({
+      query: ({ applicantId, data }) => ({
+        url: `/applicants/${applicantId}/contact-email`,
+        method: "PATCH",
+        data,
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "Applicant", id: arg.applicantId },
+        { type: "Applicant", id: "LIST" },
+        { type: "RentReminder", id: arg.applicantId },
+        { type: "SignedLease", id: "RECEIPTS_PENDING" },
+      ],
+    }),
   }),
 });
 
@@ -196,6 +215,7 @@ export const {
   usePromoteFromInquiryMutation,
   useTransitionApplicantStageMutation,
   useUpdateApplicantContractDatesMutation,
+  useUpdateApplicantContactEmailMutation,
   useGetTenantsQuery,
   useListTenantPagesInfiniteQuery,
   useEndTenancyMutation,

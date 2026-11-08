@@ -12,6 +12,7 @@ const NON_STAGE_EVENT_LABELS: Record<string, string> = {
   tenancy_restarted: "Tenancy restarted",
   tenancy_extended: "Lease extended",
   extension_undone: "Extension undone",
+  contact_email_changed: "Contact email updated",
 };
 
 export function applicantEventLabel(eventType: string): string {
