@@ -25,8 +25,9 @@ vi.mock("@/shared/lib/api", () => ({
   default: { post: vi.fn() },
 }));
 
-vi.mock("@/shared/components/ui/TurnstileWidget", () => ({
-  default: () => null,
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
+  TurnstileWidget: () => null,
 }));
 
 import { useGetInviteInfoQuery } from "@mybookkeeper/api-client/store/membersApi";

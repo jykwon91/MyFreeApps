@@ -1,8 +1,7 @@
 import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import api from "@/shared/lib/api";
-import { LoadingButton } from "@platform/ui";
-import TurnstileWidget from "@/shared/components/ui/TurnstileWidget";
+import { LoadingButton, TurnstileWidget } from "@platform/ui";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");

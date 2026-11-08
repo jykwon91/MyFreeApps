@@ -10,8 +10,9 @@ vi.mock("@/shared/lib/api", () => ({
 
 // TurnstileWidget renders null when VITE_TURNSTILE_SITE_KEY is not set,
 // which is the case in the test environment.
-vi.mock("@/shared/components/ui/TurnstileWidget", () => ({
-  default: ({ onVerify }: { onVerify: (t: string) => void }) => (
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
+  TurnstileWidget: ({ onVerify }: { onVerify: (t: string) => void }) => (
     <button type="button" data-testid="turnstile" onClick={() => onVerify("test-token")}>
       Verify
     </button>
