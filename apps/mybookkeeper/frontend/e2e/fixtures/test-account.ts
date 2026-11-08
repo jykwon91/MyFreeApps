@@ -36,6 +36,11 @@ export class TestAccount {
     }
   }
 
+  /** For specs that sign in or confirm through the UI, as the account's owner would. */
+  get password(): string {
+    return PASSWORD;
+  }
+
   get authHeader(): Record<string, string> {
     return { Authorization: `Bearer ${this.token}` };
   }

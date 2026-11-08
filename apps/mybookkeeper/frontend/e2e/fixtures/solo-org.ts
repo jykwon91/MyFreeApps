@@ -12,7 +12,7 @@ type Playwright = PlaywrightWorkerArgs["playwright"];
  */
 export class SoloOrg {
   private constructor(
-    private readonly account: TestAccount,
+    readonly account: TestAccount,
     readonly orgId: string,
     /** Signed in as the owner, scoped to the organization. */
     readonly api: APIRequestContext,
