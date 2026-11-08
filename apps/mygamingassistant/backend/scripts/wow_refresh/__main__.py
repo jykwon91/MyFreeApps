@@ -23,6 +23,7 @@ import urllib.request
 from datetime import UTC, date, datetime
 from pathlib import Path
 
+from scripts.wow_dungeons.quest_cache import QUEST_CACHE_ENV, quest_cache_path
 from scripts.wow_items.forever_items import HOTFIX_CACHE_ENV, hotfix_cache_path
 from scripts.wow_refresh.report import DATA_REFRESH_FILE, render_report
 from scripts.wow_world_map import sources
@@ -65,7 +66,7 @@ def fetch_builds() -> dict[str, list[dict[str, str]]]:
         return json.load(response)
 
 
-def generators(*, art: bool, hotfix_cache: Path) -> list[list[str]]:
+def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path) -> list[list[str]]:
     world_map = ["scripts.wow_world_map.build", "--no-walk"]
     cache = ["--hotfix-cache", str(hotfix_cache)]
     if not art:
@@ -82,6 +83,8 @@ def generators(*, art: bool, hotfix_cache: Path) -> list[list[str]]:
         # Reads the World Map, Professions and Item output above.
         ["scripts.wow_item_pages.build", *cache],
         ["scripts.wow_talents.build", *cache],
+        # Reads the Item and Talent output above (and the World Map's zones).
+        ["scripts.wow_changes.build", *cache, "--quest-cache", str(quest_cache)],
         # Reads the Professions, Item and Talent output above. Its images are published last, below.
         ["scripts.wow_icons.build", *cache],
         ["scripts.wow_item_names.build"],
@@ -101,9 +104,10 @@ def check() -> int:
     return 0 if latest == sources.WAGO_BUILD else EXIT_NEW_BUILD
 
 
-def apply(*, art: bool, hotfix_cache: str | None) -> int:
+def apply(*, art: bool, hotfix_cache: str | None, quest_cache: str | None) -> int:
     # Checked before anything is repinned, so a missing cache stops the run cleanly.
     cache_path = hotfix_cache_path(hotfix_cache)
+    quest_path = quest_cache_path(quest_cache)
     builds = fetch_builds()
     latest = newest_build(builds, sources.WAGO_BRANCH)
     era = newest_build(builds, sources.WAGO_ERA_BRANCH)
@@ -112,7 +116,7 @@ def apply(*, art: bool, hotfix_cache: str | None) -> int:
         encoding="utf-8",
     )
     print(f"pinned Forever {latest}, Classic Era {era}", flush=True)
-    for module in generators(art=art, hotfix_cache=cache_path):
+    for module in generators(art=art, hotfix_cache=cache_path, quest_cache=quest_path):
         print(f"running {' '.join(module)}", flush=True)
         # Each generator imports the pins at start-up, so each needs its own process.
         subprocess.run([sys.executable, "-m", *module], cwd=BACKEND_DIR, check=True)
@@ -133,13 +137,17 @@ def main() -> int:
         "--hotfix-cache",
         help=f"the Forever client's Cache/ADB/enUS/DBCache.bin (default: ${HOTFIX_CACHE_ENV}, else the install path)",
     )
+    apply_parser.add_argument(
+        "--quest-cache",
+        help=f"the Forever client's Cache/WDB/enUS/questcache.wdb (default: ${QUEST_CACHE_ENV}, else the install path)",
+    )
     args = parser.parse_args()
     if args.command == "check":
         return check()
     if args.command == "report":
         print(render_report(APP_DIR))
         return 0
-    return apply(art=args.art, hotfix_cache=args.hotfix_cache)
+    return apply(art=args.art, hotfix_cache=args.hotfix_cache, quest_cache=args.quest_cache)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import {
   Castle,
   Coins,
+  GitCompare,
   Hammer,
   LayoutDashboard,
   Lightbulb,
@@ -18,6 +19,7 @@ import {
 export const FEATURE_ICONS: Readonly<Record<string, LucideIcon>> = {
   Castle,
   Coins,
+  GitCompare,
   Hammer,
   LayoutDashboard,
   Lightbulb,

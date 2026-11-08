@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/talents`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/talents`, `/wow-forever/changes`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -564,6 +564,44 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Tests: `tests/test_wow_talents_generator.py`,
   `tests/test_wow_spell_tooltip.py`, `src/__tests__/wowTalentRules.test.ts`,
   `src/__tests__/wowTalentBuildCode.test.ts`, `e2e/wow-forever-talents.spec.ts`.
+- `?talent=<id>` (`TALENT_PICK_PARAM`, `lib/talents/findTalentPosition.ts`)
+  opens the calculator on that talent's tree with its details showing — the
+  Changes feed links with it. Read once on load; an unknown id is ignored.
+
+#### Changes vs Classic (`/wow-forever/changes`)
+
+- `pages/WowChangesPage.tsx`: one category at a time (Talents / Class spells /
+  Items / Quests / Zones & maps, `data/changes/changeCategories.ts`), a class
+  filter (talents, spells, items only), a search (every word, any order,
+  `worldMap/searchText`) — all in the URL (`?cat&class&q&since`, replace
+  history, `hooks/useChangeFilters.ts` on `useLiveSearchParams`), 50 rows at a
+  time. Each card: icon, name linked to our own page (item page with tooltip,
+  talent calculator `?talent=`, World Map `?m=`; none for spells, map rows or
+  zones not on the World Map), kind chip, the generated sentence, Classic |
+  Forever rows (a table from `sm`, stacked on a phone), and badges: Game files
+  (or Seen in game + date for quests named from the operator's cache) plus
+  Classic data on changed rows. "Only what changed since build X" shows only
+  once `index.json` has a `previousBuild` (after a second refresh); until then
+  a note says so.
+- **Data is GENERATED** — `python -m scripts.wow_changes.build --hotfix-cache
+  <DBCache.bin> --quest-cache <questcache.wdb>` (from `backend/`, in
+  `wow_refresh` after the Items and Talents builds). Every row is a diff of the
+  Forever client (`wowf` + hotfixes) against Classic Era (`wow_classic_era`):
+  talents from the calculator's own output; items from `items.json` (name,
+  quality, ilvl, required level, armor, weapon damage / speed, primary stats —
+  equip-spell stats aren't compared) plus new gear, consumables and recipes;
+  class trainer spells (`SkillLineAbility` × `CLASS_LINES`, tooltip text with
+  tokens filled; a rank with an unfilled token is a gap, never compared);
+  QuestV2 ids not in Classic, named only from the quest cache; UiMap / Map rows
+  not in Classic. Sentences are generated (`wow_changes/describe.py`) — never
+  hand-write one. `index.json` (counts, builds, gaps, shard list) is in the
+  page's chunk; each shard (`items.json`, `itemsNew.json`, `quests.json`,
+  `zones.json`, `classic/talents.json`, `classic/spells.json` — cmangos GPL,
+  keep LICENSE + README) is its own lazy chunk (`data/changes/changeFiles.ts`).
+  Each row's `since` = the build its content first appeared in (`stamp.py`,
+  read from the previous files before they're overwritten). Tests:
+  `tests/test_wow_changes_generator.py`, `src/__tests__/wowChanges.test.ts`,
+  `e2e/wow-forever-changes.spec.ts`.
 
 #### In-game icons (`GameIcon`)
 

@@ -14,6 +14,7 @@ import { wowForeverRoutes } from "@/games/wow-forever/routes";
 const KNOWN_ICON_NAMES = new Set([
   "Castle",
   "Coins",
+  "GitCompare",
   "Hammer",
   "LayoutDashboard",
   "Lightbulb",

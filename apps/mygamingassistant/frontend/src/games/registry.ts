@@ -87,6 +87,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Plan a talent build for any class and level, see what Forever changed from Classic, and share it as a link.",
       },
       {
+        path: "/wow-forever/changes",
+        title: "Changes vs Classic",
+        iconName: "GitCompare",
+        description: "Every talent, class spell, item, quest and zone Forever changed or added, old and new side by side, from the game files.",
+      },
+      {
         path: "/wow-forever/gear",
         title: "Best gear",
         iconName: "Trophy",

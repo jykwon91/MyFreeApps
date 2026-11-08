@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-07",
+    title: "Changes vs Classic",
+    summary:
+      "See every talent, class spell, item, quest and zone Forever changed or added, with the Classic and Forever values side by side, filtered by category, class or a search.",
+    to: "/wow-forever/changes",
+  },
+  {
+    date: "2026-11-07",
     title: "Talent calculator",
     summary:
       "Plan a talent build for any class and level with Forever's own talent text, see where a talent changed from Classic, and share the build as a link.",

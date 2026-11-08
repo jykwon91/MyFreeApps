@@ -60,6 +60,15 @@ and run it again. The game only caches items it has seen, so playing (opening
 vendors, loot, the auction house) is what fills the item list in. A generator failing stops the run: fix the cause or leave
 it for a person, and never hand-edit generated JSON.
 
+The Changes vs Classic feed (`/wow-forever/changes`) comes from `scripts.wow_changes.build`,
+which runs after the talents: it diffs the Forever client against the Classic Era client
+(talents from the talent output, items from `items.json`, class spells, quests, zones and
+maps from the client tables) into `data/changes/`. New quests get a name only from the
+game's quest cache, `D:\World of Warcraft\_forever_\Cache\WDB\enUS\questcache.wdb`
+(`--quest-cache <path>` or `WOW_FOREVER_QUEST_CACHE`; `apply` stops before repinning if
+it's missing). Each row's "since" build is worked out from the files the last run wrote,
+so commit them with the refresh: the page's "Since last build" toggle needs them.
+
 The item pages (`/wow-forever/items/:id`) come from `scripts.wow_item_pages.build`,
 which runs after the item list: 64 shards under `data/items/pages/` (Forever client:
 the item row, bind, vendor price, recipes) and 64 under `data/items/pages/classic/`
