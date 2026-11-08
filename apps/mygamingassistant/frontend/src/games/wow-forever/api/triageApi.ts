@@ -1,12 +1,13 @@
 /**
- * The triage API (`/api/wow/feature-requests/triage/*`) as RTK Query endpoints. Its own `createApi` with
- * its own store (`lib/featureRequests/triage/triageStore.ts`), so the private data lives only inside the
- * triage chunk and Lock can drop all of it with `resetApiState()`. Requests go through `triageRequest`
- * (key header, lock on 404/401, no-store); PATCH and merge send the story's `updated_at` as `If-Match`.
+ * The triage API (`/api/wow/feature-requests/triage/*`, operator only) as endpoints on the app's
+ * `baseApi`, so it shares the signed-in session: signing out resets `baseApi` and drops every cached
+ * triage row with it. Requests go through `triageRequest` (shared axios, no-store, keepalive writes,
+ * Retry-After kept for the undo queue); PATCH and merge send the story's `updated_at` as `If-Match`.
+ * Private rows are not kept once the screen unmounts (`keepUnusedDataFor: 0`).
  */
-import { createApi, type BaseQueryFn } from "@reduxjs/toolkit/query/react";
+import { baseApi } from "@platform/ui";
+import type { RootState } from "@/lib/store";
 import { triageRequest } from "@/games/wow-forever/lib/featureRequests/triage/triageRequest";
-import type { TriageApiError } from "@/games/wow-forever/types/featureRequests/triage/triageApiError";
 import type { TriageInbox } from "@/games/wow-forever/types/featureRequests/triage/triageInbox";
 import type { TriageMarkTriagedResult } from "@/games/wow-forever/types/featureRequests/triage/triageMarkTriagedResult";
 import type { TriageMergeArgs } from "@/games/wow-forever/types/featureRequests/triage/triageMergeArgs";
@@ -21,10 +22,10 @@ const STORIES_TAG = "TriageStories";
 /** A stale If-Match or a conflicting merge: re-read both lists. */
 const REFRESH_ON: ReadonlySet<number> = new Set([409, 412]);
 
-const triageBaseQuery: BaseQueryFn<TriageRequestArgs, unknown, TriageApiError> = async (args) => {
-  const result = await triageRequest<unknown>(args);
+async function run<T>(args: TriageRequestArgs) {
+  const result = await triageRequest<T>(args);
   return result.ok ? { data: result.data } : { error: result.error };
-};
+}
 
 function storyPath(storyId: string): string {
   return `/stories/${encodeURIComponent(storyId)}`;
@@ -35,26 +36,21 @@ function needsRefresh(error: unknown): boolean {
   return typeof status === "number" && REFRESH_ON.has(status);
 }
 
-export const triageApi = createApi({
-  reducerPath: "wowTriageApi",
-  baseQuery: triageBaseQuery,
-  tagTypes: [INBOX_TAG, STORIES_TAG],
+export const triageApi = baseApi.enhanceEndpoints({ addTagTypes: [INBOX_TAG, STORIES_TAG] }).injectEndpoints({
   endpoints: (build) => ({
     getTriageInbox: build.query<TriageInbox, void>({
-      query: () => ({ path: "/inbox", method: "GET" }),
+      queryFn: () => run<TriageInbox>({ path: "/inbox", method: "GET" }),
       providesTags: [INBOX_TAG],
+      keepUnusedDataFor: 0,
     }),
     getTriageStories: build.query<TriageStoryList, void>({
-      query: () => ({ path: "/stories", method: "GET" }),
+      queryFn: () => run<TriageStoryList>({ path: "/stories", method: "GET" }),
       providesTags: [STORIES_TAG],
+      keepUnusedDataFor: 0,
     }),
     patchTriageStory: build.mutation<TriageStory, TriagePatchArgs>({
-      query: ({ story, patch }) => ({
-        path: storyPath(story.id),
-        method: "PATCH",
-        body: patch,
-        ifMatch: story.updated_at,
-      }),
+      queryFn: ({ story, patch }) =>
+        run<TriageStory>({ path: storyPath(story.id), method: "PATCH", body: patch, ifMatch: story.updated_at }),
       async onQueryStarted(_args, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
@@ -76,12 +72,13 @@ export const triageApi = createApi({
       },
     }),
     mergeTriageStory: build.mutation<TriageMergeResult, TriageMergeArgs>({
-      query: ({ story, intoStoryId }) => ({
-        path: `${storyPath(story.id)}/merge`,
-        method: "POST",
-        body: { into_story_id: intoStoryId },
-        ifMatch: story.updated_at,
-      }),
+      queryFn: ({ story, intoStoryId }) =>
+        run<TriageMergeResult>({
+          path: `${storyPath(story.id)}/merge`,
+          method: "POST",
+          body: { into_story_id: intoStoryId },
+          ifMatch: story.updated_at,
+        }),
       async onQueryStarted(_args, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
@@ -92,11 +89,12 @@ export const triageApi = createApi({
       },
     }),
     markSubmissionsTriaged: build.mutation<TriageMarkTriagedResult, string[]>({
-      query: (submissionIds) => ({
-        path: "/submissions/mark-triaged",
-        method: "POST",
-        body: { submission_ids: submissionIds },
-      }),
+      queryFn: (submissionIds) =>
+        run<TriageMarkTriagedResult>({
+          path: "/submissions/mark-triaged",
+          method: "POST",
+          body: { submission_ids: submissionIds },
+        }),
       invalidatesTags: [INBOX_TAG],
     }),
   }),
@@ -104,10 +102,14 @@ export const triageApi = createApi({
 
 export const { useGetTriageInboxQuery, useGetTriageStoriesQuery } = triageApi;
 
-/**
- * The unlock form's check: read the inbox with the typed key (no limit param exists — it is the
- * lightest triage read). Never stores the key and never locks; the caller keeps the key only on success.
- */
-export function verifyTriageKey(candidateKey: string) {
-  return triageRequest<TriageInbox>({ path: "/inbox", method: "GET", candidateKey });
+/** The app store's `api` slice IS this API's slice (one reducer); RTK only types it per tag set. */
+type TriageApiState = Parameters<ReturnType<typeof triageApi.endpoints.getTriageInbox.select>>[0];
+
+/** The cached inbox and story list (undefined when not loaded) — the freshest `updated_at` for If-Match. */
+export function selectCachedTriage(state: RootState): { inbox: TriageInbox | undefined; stories: TriageStoryList | undefined } {
+  const triageState = state as TriageApiState;
+  return {
+    inbox: triageApi.endpoints.getTriageInbox.select()(triageState).data,
+    stories: triageApi.endpoints.getTriageStories.select()(triageState).data,
+  };
 }

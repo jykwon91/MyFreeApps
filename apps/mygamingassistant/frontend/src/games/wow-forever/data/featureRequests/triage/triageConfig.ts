@@ -2,15 +2,8 @@
 
 export const TRIAGE_PAGE_PATH = "/wow-forever/triage";
 
-/** Browser path of the triage API (Caddy / Vite strip `/api`). */
-export const TRIAGE_API_BASE = "/api/wow/feature-requests/triage";
-export const TRIAGE_TOKEN_HEADER = "X-MGA-Triage-Token";
-
-/** What the password manager saves the key under (the hidden username field). */
-export const TRIAGE_KEY_USERNAME = "mga-triage";
-
-/** The key is forgotten after this long without a tap, key press or call. */
-export const TRIAGE_IDLE_LOCK_MS = 15 * 60 * 1000;
+/** The triage API, relative to the shared axios instance's `/api` base. */
+export const TRIAGE_API_BASE = "/wow/feature-requests/triage";
 
 /** How long Approve / Not planned / Hide / a status change wait for Undo before they're sent. */
 export const TRIAGE_UNDO_MS = 6000;

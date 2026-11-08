@@ -1,63 +1,41 @@
 /**
- * Every triage call goes through here: the key in the `X-MGA-Triage-Token` header (never the URL),
- * `If-Match` for writes, `cache: "no-store"`, no cookies, no referrer. A 401, or a 404 the gate sent (a
- * wrong key and a switched-off triage API look the same), means the key was refused — the screen locks at
- * once. A 404 for a story that's gone (`feature_request_not_found`) only reaches an accepted key: no lock.
+ * Every triage call goes through here, on the app's shared axios instance — so the operator's session
+ * (Bearer token) is attached like any other signed-in call, and a 401 signs the screen out (the shared
+ * interceptor clears the token; `TriageAuthGate` sends the operator to /login and back). It uses the fetch
+ * adapter for `cache: "no-store"`, no referrer and `keepalive` on writes, so a write flushed while the tab
+ * closes still reaches the server. PATCH and merge send the story's `updated_at` as `If-Match`.
  */
-import { TRIAGE_API_BASE, TRIAGE_TOKEN_HEADER } from "@/games/wow-forever/data/featureRequests/triage/triageConfig";
-import { getTriageKey, lockTriage, touchTriage } from "@/games/wow-forever/lib/featureRequests/triage/triageKeyStore";
+import { isAxiosError } from "axios";
+import api from "@/lib/api";
+import { TRIAGE_API_BASE } from "@/games/wow-forever/data/featureRequests/triage/triageConfig";
 import { parseRetryAfter } from "@/games/wow-forever/lib/featureRequests/triage/retryAfter";
-import { DETAIL_LOCKED, DETAIL_STORY_NOT_FOUND, triageErrorFrom } from "@/games/wow-forever/lib/featureRequests/triage/triageErrors";
+import { triageErrorFrom } from "@/games/wow-forever/lib/featureRequests/triage/triageErrors";
 import type { TriageRequestArgs } from "@/games/wow-forever/types/featureRequests/triage/triageRequestArgs";
 import type { TriageResult } from "@/games/wow-forever/types/featureRequests/triage/triageResult";
 
-const LOCKING_STATUSES: ReadonlySet<number> = new Set([401, 404]);
+const RETRY_AFTER_HEADER = "retry-after";
 
-function keyWasRefused(status: number, body: unknown): boolean {
-  if (!LOCKING_STATUSES.has(status)) return false;
-  const detail = typeof body === "object" && body !== null ? (body as { detail?: unknown }).detail : undefined;
-  return detail !== DETAIL_STORY_NOT_FOUND;
-}
-
-async function readJson(response: Response): Promise<unknown> {
-  try {
-    return await response.json();
-  } catch {
-    return null;
-  }
+function retryAfterFrom(headers: unknown): number | null {
+  const value = typeof headers === "object" && headers !== null ? (headers as Record<string, unknown>)[RETRY_AFTER_HEADER] : null;
+  return parseRetryAfter(typeof value === "string" ? value : null);
 }
 
 export async function triageRequest<T>(args: TriageRequestArgs): Promise<TriageResult<T>> {
-  const usingStoredKey = args.candidateKey === undefined;
-  const key = args.candidateKey ?? getTriageKey();
-  if (key === null) return { ok: false, error: triageErrorFrom(null, { detail: DETAIL_LOCKED }, null) };
-
-  const headers: Record<string, string> = { Accept: "application/json", [TRIAGE_TOKEN_HEADER]: key };
-  if (args.body !== undefined) headers["Content-Type"] = "application/json";
-  if (args.ifMatch !== undefined) headers["If-Match"] = args.ifMatch;
-
-  let response: Response;
   try {
-    response = await fetch(`${TRIAGE_API_BASE}${args.path}`, {
+    const response = await api.request<T>({
+      url: `${TRIAGE_API_BASE}${args.path}`,
       method: args.method,
-      headers,
-      body: args.body === undefined ? undefined : JSON.stringify(args.body),
-      cache: "no-store",
-      credentials: "omit",
-      referrerPolicy: "no-referrer",
-      // A write flushed while the tab closes still reaches the server.
-      keepalive: args.method !== "GET",
+      data: args.body,
+      headers: args.ifMatch === undefined ? undefined : { "If-Match": args.ifMatch },
+      adapter: "fetch",
+      fetchOptions: { cache: "no-store", referrerPolicy: "no-referrer", keepalive: args.method !== "GET" },
     });
-  } catch {
-    return { ok: false, error: triageErrorFrom(null, null, null) };
+    return { ok: true, data: response.data };
+  } catch (error) {
+    if (!isAxiosError(error) || error.response === undefined) {
+      return { ok: false, error: triageErrorFrom(undefined, null, null) };
+    }
+    const { status, data, headers } = error.response;
+    return { ok: false, error: triageErrorFrom(status, data, retryAfterFrom(headers)) };
   }
-
-  if (response.ok) {
-    if (usingStoredKey) touchTriage();
-    return { ok: true, data: (await readJson(response)) as T };
-  }
-  const body = await readJson(response);
-  if (usingStoredKey && keyWasRefused(response.status, body)) lockTriage("rejected");
-  const retryAfter = parseRetryAfter(response.headers.get("Retry-After"));
-  return { ok: false, error: triageErrorFrom(response.status, body, retryAfter) };
 }

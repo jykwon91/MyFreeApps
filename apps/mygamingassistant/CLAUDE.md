@@ -904,7 +904,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Tests stub the hook with `src/test/auctionPricesStub.ts`; E2E stubs
   `**/wow/prices**` (`e2e/wow-forever-auction-prices.spec.ts`).
 
-#### Feature requests (anonymous; Claude-refined; token-gated triage)
+#### Feature requests (anonymous; Claude-refined; operator-only triage)
 
 - Visitors submit a request in their own words; Claude (Haiku,
   `CLAUDE_FEATURE_REFINER_MODEL`, one forced `record_feature_request` tool call)
@@ -930,27 +930,31 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Votes: no Turnstile (they work in the Discord Activity), 60/h per IP, one per
   browser (`voter_key` = HMAC of the localStorage client id) and ≤3 per network
   (IPv4 / IPv6 /64) per story.
-- Triage: `/api/wow/feature-requests/triage/*`, mounted ONLY when
-  `WOW_FEATURE_TRIAGE_TOKEN` is set (both modes). Auth is the
-  `core/triage_gate.py` middleware (runs before FastAPI parses the body, so a
-  wrong key can't learn the route exists from a 422): wrong/missing
-  `X-MGA-Triage-Token` → 404 identical to an unknown route; 10 failures per IP
-  per 15 min → 429; 240/min when authenticated; `Cache-Control: no-store` on
-  every triage response; audit actor `triage:<label>`. PATCH and merge require
+- Triage: `/api/wow/feature-requests/triage/*`, mounted in BOTH modes, gated
+  at router level by `current_superuser` — the operator's normal sign-in
+  (JWT Bearer; TOTP at login if enrolled). No session → 401, a non-superuser →
+  403. `Cache-Control: no-store` on every triage response; the audit actor is
+  the operator's user id (`changed_by` from the JWT). PATCH and merge require
   `If-Match` = the story's `updated_at` (428 / 400 / 412 `story_changed`).
-  Operator CLI: `python -m scripts.wow_feature_triage` (reads
-  `backend/.env.triage`). Runbook: `docs/wow-forever-feature-triage.md`.
+  Runbook: `docs/wow-forever-feature-triage.md`.
 - Triage screen `/wow-forever/triage` (frontend, own lazy chunk, noindex,
   unlinked): `pages/WowTriagePage.tsx` + `components|lib|hooks|data|types/
-  featureRequests/triage/`. Its own RTK store (`lib/.../triage/triageStore.ts`,
-  `api/triageApi.ts`); every call goes through `triageRequest.ts` (header only,
-  no-store, no cookies). Key in memory only (`triageKeyStore.ts`; 15-min idle
-  lock); a 401 or the gate's 404 locks, `feature_request_not_found` doesn't.
-  Refuses to run framed / in the Discord Activity. Player text is rendered as
-  text nodes in `TriageSubmissionQuote` with hidden characters revealed
+  featureRequests/triage/`. Endpoints are injected into the app's `baseApi`
+  (`api/triageApi.ts`, `keepUnusedDataFor: 0`; Sign out resets `baseApi`, so
+  no private row survives it); every call goes through `triageRequest.ts`
+  (shared axios + Bearer, fetch adapter: no-store, no referrer, keepalive
+  writes). Signed out → `/login` with `state.from` = the triage URL
+  (`TriageAuthGate`); a 401 mid-session clears the session (shared
+  interceptor) and does the same; a 403 says the account isn't the operator.
+  Every Sign out (screen, shell) goes through `signOutAfterSaving`
+  (`lib/auth.ts` + `lib/pendingWrites.ts`), which sends writes still in their
+  undo window before the token is cleared. Refuses to run framed / in the
+  Discord Activity. Player text is rendered as text nodes in
+  `TriageSubmissionQuote` with hidden characters revealed
   (`revealHiddenChars.ts`). Approve / Not planned / Hide are delayed with Undo
   (`useDelayedAction`, flushed on pagehide); Merge confirms and is immediate.
-  Tests: `src/__tests__/wowTriage*.test.ts(x)`, `e2e/wow-forever-triage.spec.ts`.
+  Tests: `src/__tests__/wowTriage*.test.ts(x)`, `e2e/wow-forever-triage.spec.ts`,
+  `e2e/serve-only-operator.spec.ts`.
 - Retention: scheduler job `purge_wow_feature_submissions` (daily) and
   `python -m app.cli purge-wow-feature-submissions`.
 
@@ -1516,7 +1520,7 @@ once on the router. This is the no-bandaid approach (see
 | `/api/wow/items/extract` | POST, both modes (Claude reads an item screenshot/text; Turnstile + per-IP limit + durable daily cap; 503 `item_reader_unavailable` when unconfigured) | — |
 | `/api/wow/feature-requests` | GET board + `/{id}` (public stories only), POST submit (Turnstile + per-IP + inbox guard + daily cap; 503 `feature_requests_unavailable` when unconfigured), POST/DELETE `/{id}/vote` — both modes | — |
 | `/api/wow/chat/turn` | POST, both modes (the "Ask" chat relay: 64 KB body cap, signed ticket, per-IP limits, Turnstile on new messages, durable token budgets; 503 `chat_unavailable` when unconfigured) | — |
-| `/api/wow/feature-requests/triage/*` | — | Token (`X-MGA-Triage-Token`), not a login — mounted only when `WOW_FEATURE_TRIAGE_TOKEN` is set, in BOTH modes. The one operator write surface in serve-only prod |
+| `/api/wow/feature-requests/triage/*` | — | Superuser (`current_superuser`), BOTH modes. The one operator write surface in serve-only prod |
 | `/api/wow/map-captures` | GET, both modes (World Map locations captured in Forever) | POST import (full-auth only; prod gets captures via the committed pack) |
 | `/api/wow/prices` | GET, both modes (auction-house prices by region, refreshed by the scheduler; ETag + 10-min cache) | — |
 | `/api/wow/server-status`, `/api/wow/server-status/history` | GET, both modes (live status from Blizzard, 60-s cache; 7 days of recorded status per ruleset) | — |
@@ -1524,16 +1528,23 @@ once on the router. This is the no-bandaid approach (see
 | `/api/wow/satellite/{build}/{uiMapId}.webp` | GET, both modes (World Map satellite pictures, same service and cache rules as icons) | — |
 | `/api/scheduler/*` | — | All |
 | `/admin/*` | — | All |
-| `/users/me*` | — | All |
-| `/auth/*` login/forgot/reset/verify | Yes | — |
-| `/auth/jwt/logout`, TOTP setup/verify/disable/status | — | Yes |
+| `/users/me*` | — | All (serve-only: `GET /users/me` only) |
+| `/auth/*` login/forgot/reset/verify | Yes (serve-only: `/auth/jwt/login` + `/auth/totp/login` only) | — |
+| `/auth/jwt/logout`, TOTP setup/verify/disable/status | — | Yes (both modes) |
 | `/_test/*` (when `MGA_ENABLE_TEST_HELPERS=1`) | — | `reset-rate-limit`, `seed-lineup` etc. |
 | `/health`, `/version` | Yes | — |
 
-**Serve-only exception:** serve-only prod has no operator login, so it has no
-auth writes — except the triage API, which uses its own shared-secret token
-instead of a session and is absent (404) unless the token is configured. Don't
-add other token-gated routers; extend this one or use full-auth mode.
+**Serve-only exception:** players never sign in to serve-only prod, but the
+operator does — `_mount_serve_only_operator_routes` in `app/main.py` mounts a
+minimal operator surface: JWT + TOTP login (same per-IP throttle, lockout and
+TOTP challenge as full mode, via the shared `_mount_operator_login_routes`),
+logout, `GET /users/me` and the TOTP management routes. No register,
+forgot/reset/verify, or lineup/source write routers. Login needs no Turnstile
+(full mode only puts it on forgot-password). The only operator API on top is
+triage. In the serve-only frontend `/login` is reachable but linked from
+nowhere; signed in, the guest shell stays and adds only Triage, Two-factor
+(`/security`, 2FA only) and Sign out (`ServeOnlyOperatorActions`). Don't add
+write routers to serve-only; use full-auth mode.
 
 The public `GET /api/lineups/{id}` returns 404 on `pending_review` or `hidden`
 lineups so their presigned screenshot URLs don't leak before the operator
@@ -1573,8 +1584,8 @@ public, or empty pages where they expected to see content.
 
 | Var | Required | Notes |
 |---|---|---|
-| `SEED_USER_EMAIL` | Yes (prod) | Operator login email |
-| `SEED_USER_PASSWORD_HASH` | Yes (prod) | bcrypt hash — generate with `python -c "from passlib.hash import bcrypt; print(bcrypt.hash('yourpassword'))"` |
+| `SEED_USER_EMAIL` | Yes (prod, both modes — serve-only too, for triage sign-in) | Operator login email |
+| `SEED_USER_PASSWORD_HASH` | Yes (prod) | bcrypt hash — generate with `python -c "import bcrypt, getpass; print(bcrypt.hashpw(getpass.getpass().encode(), bcrypt.gensalt()).decode())"` (prompts for the password) |
 | `SECRET_KEY` | Yes | JWT signing key — generate with `openssl rand -hex 32` |
 | `ENCRYPTION_KEY` | Yes | Fernet key for PII — generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 | `DATABASE_URL` | Yes | Full async postgres URL |
@@ -1587,7 +1598,6 @@ public, or empty pages where they expected to see content.
 | `WOW_FEATURE_REQUEST_DAILY_CAP` | Optional | Global feature-request Claude calls per UTC day. Default 100; `0` switches submitting off (board + votes still work) |
 | `CLAUDE_FEATURE_REFINER_MODEL` | Optional | Defaults to `claude-haiku-5-5` |
 | `WOW_FEATURE_SUBMIT_RATE_LIMIT_PER_HOUR` / `_PER_DAY`, `WOW_FEATURE_VOTE_RATE_LIMIT_PER_HOUR` | Optional | Per-IP limits. Defaults 5 / 20 / 60 |
-| `WOW_FEATURE_TRIAGE_TOKEN` | Optional | `label:token,…` for the triage API. Empty = not mounted. Malformed or weak → the app refuses to boot. Same token in your local `backend/.env.triage` |
 | `CLAUDE_WOW_CHAT_MODEL` | Optional | "Ask" chat model. Defaults to `claude-haiku-5-5` |
 | `WOW_CHAT_MAX_TOKENS` | Optional | Output cap per chat reply. Default 800 |
 | `WOW_CHAT_DAILY_TOKEN_CAP` / `WOW_CHAT_IP_DAILY_TOKEN_CAP` | Optional | Weighted tokens per UTC day, global / per network (DB-backed). Defaults 2,500,000 / 250,000; `0` switches the chat off |

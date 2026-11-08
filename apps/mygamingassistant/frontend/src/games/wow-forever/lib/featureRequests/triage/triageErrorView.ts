@@ -10,8 +10,9 @@ import type { TriageErrorView } from "@/games/wow-forever/types/featureRequests/
 /** The copy a failed triage write shows, and the form fields it points at. */
 export function triageErrorView(error: unknown): TriageErrorView {
   if (!isTriageApiError(error)) return { message: TRIAGE_COPY.saveFailed, fields: [] };
-  if (error.status === null) return { message: TRIAGE_COPY.network, fields: [] };
+  if (error.status === undefined) return { message: TRIAGE_COPY.network, fields: [] };
   if (rateLimitSeconds(error) !== null) return { message: TRIAGE_COPY.slowDown, fields: [] };
+  if (error.status === 403) return { message: TRIAGE_COPY.notOperator, fields: [] };
   if (error.status === 412 || error.detail === DETAIL_STORY_CHANGED) return { message: TRIAGE_COPY.storyChanged, fields: [] };
   if (error.status === 409) {
     const message = error.detail === DETAIL_MERGE_CONFLICT ? TRIAGE_COPY.mergeConflict : TRIAGE_COPY.statusConflict;
