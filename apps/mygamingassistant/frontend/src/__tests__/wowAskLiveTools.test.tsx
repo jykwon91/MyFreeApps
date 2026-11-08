@@ -120,6 +120,14 @@ describe("auction_prices", () => {
     expect(JSON.parse(out.content).region).toBe("Korea");
   });
 
+  it("links the Auction house at the asked region only when it isn't the saved one", async () => {
+    const loadPrices = vi.fn((region: string) => Promise.resolve({ ...priceList(CLOTH), region }));
+    const saved = await run(ASK_TOOL.auctionPrices, { query: "silk", region: "eu" }, { loadPrices, region: "eu" });
+    expect(cardOf(saved, ASK_CARD.prices).pageHref).toBe("/wow-forever/auction-house?q=silk");
+    const other = await run(ASK_TOOL.auctionPrices, { query: "silk", region: "kr" }, { loadPrices, region: "eu" });
+    expect(cardOf(other, ASK_CARD.prices).pageHref).toBe("/wow-forever/auction-house?q=silk&region=kr");
+  });
+
   it("with no prices for the region, says so and gives no number", async () => {
     const out = await run(ASK_TOOL.auctionPrices, { query: "Linen Cloth", region: "tw" }, prices(priceList([])));
     const result = JSON.parse(out.content);

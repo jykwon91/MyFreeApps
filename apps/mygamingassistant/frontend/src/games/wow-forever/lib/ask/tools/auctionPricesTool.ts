@@ -43,7 +43,7 @@ export async function auctionPricesTool(input: AskPricesInput, data: AskToolData
     total: 0,
     credit: null,
     sourceUpdatedAt: null,
-    pageHref: auctionHouseHref(input.query),
+    pageHref: auctionHouseHref(input.query, region === data.region ? undefined : region),
   };
 
   let response: PriceListResponse;

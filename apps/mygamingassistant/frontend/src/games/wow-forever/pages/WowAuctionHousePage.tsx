@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import AuctionHouseBody from "@/games/wow-forever/components/auctionHouse/AuctionHouseBody";
 import AuctionSearchControls from "@/games/wow-forever/components/auctionHouse/AuctionSearchControls";
 import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
-import { AUCTION_QUERY_PARAM } from "@/games/wow-forever/data/auctionHouse/auctionHouseParams";
+import { AUCTION_QUERY_PARAM, AUCTION_REGION_PARAM } from "@/games/wow-forever/data/auctionHouse/auctionHouseParams";
+import { parseWowRegion } from "@/games/wow-forever/data/wowRegions";
 import { DEFAULT_AUCTION_SORT } from "@/games/wow-forever/data/auctionSortOptions";
 import { useDocumentTitle } from "@/games/wow-forever/hooks/useDocumentTitle";
 import { useWowRegion } from "@/games/wow-forever/hooks/useWowRegion";
@@ -17,6 +18,20 @@ export default function WowAuctionHousePage() {
   const [region, setRegion] = useWowRegion();
   const [sort, setSort] = useState<AuctionSort>(DEFAULT_AUCTION_SORT);
   const query = params.get(AUCTION_QUERY_PARAM) ?? "";
+  const linkedRegion = parseWowRegion(params.get(AUCTION_REGION_PARAM));
+
+  // A link that names a region picks it, like choosing it in the controls; then the URL drops it.
+  useEffect(() => {
+    if (!params.has(AUCTION_REGION_PARAM)) return;
+    if (linkedRegion) setRegion(linkedRegion);
+    setParams(
+      (prev) => {
+        prev.delete(AUCTION_REGION_PARAM);
+        return prev;
+      },
+      { replace: true },
+    );
+  }, [params, linkedRegion, setRegion, setParams]);
 
   function changeQuery(next: string) {
     setParams(next ? { [AUCTION_QUERY_PARAM]: next } : {}, { replace: true });
