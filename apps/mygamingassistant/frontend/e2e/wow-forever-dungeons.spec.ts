@@ -77,6 +77,17 @@ test("a dungeon with wings lists each door with the bosses behind it", async ({ 
   await expect(armory.getByRole("region", { name: "Inside Scarlet Monastery" })).toContainText("Herod");
 });
 
+test("Gnomeregan lists its five bosses in order, with drops and a route inside", async ({ page }) => {
+  await page.goto("/wow-forever/dungeons/gnomeregan");
+  const jump = page.getByRole("navigation", { name: "Bosses" }).getByRole("link");
+  await expect(jump).toHaveText([/Grubbis$/, /Viscous Fallout$/, /Electrocutioner 6000$/, /Crowd Pummeler 9-60$/, /Mekgineer Thermaplugg$/]);
+  await expect(page.locator("#boss-mekgineer-thermaplugg").getByTestId("boss-loot-row").first()).toContainText("%");
+  await expect(page.getByText("The boss list for this dungeon isn't in our data yet.")).toHaveCount(0);
+  const inside = page.getByTestId("dungeon-door").first().getByRole("button", { name: /Inside · bosses & routes/ });
+  await inside.click();
+  await expect(page.getByRole("region", { name: "Inside Gnomeregan" }).first()).toContainText("Mekgineer Thermaplugg");
+});
+
 test("hovering a loot item shows its tooltip; a click opens its item page", async ({ page }) => {
   await page.goto(DEADMINES);
   const row = page.locator("#boss-edwin-vancleef").getByTestId("boss-loot-row").filter({ hasText: "Cape of the Brotherhood" });
