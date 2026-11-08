@@ -26,6 +26,7 @@ const WowDownrankPage = lazy(() => import("@/games/wow-forever/pages/WowDownrank
 const WowChangesPage = lazy(() => import("@/games/wow-forever/pages/WowChangesPage"));
 const WowServerStatusPage = lazy(() => import("@/games/wow-forever/pages/WowServerStatusPage"));
 const WowItemPage = lazy(() => import("@/games/wow-forever/pages/WowItemPage"));
+const WowItemsPage = lazy(() => import("@/games/wow-forever/pages/WowItemsPage"));
 const WowRaidPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPage"));
 const WowRaidPlannerPage = lazy(() => import("@/games/wow-forever/pages/WowRaidPlannerPage"));
 const WowSuggestPage = lazy(() => import("@/games/wow-forever/pages/WowSuggestPage"));
@@ -89,6 +90,7 @@ export const wowForeverRoutes: RouteObject[] = [
   // The old Warlock-only page: same macros, now the Warlock filter of the Macros page.
   { path: "/wow-forever/warlock-macros", element: <Navigate to="/wow-forever/macros?class=warlock" replace /> },
   { path: "/wow-forever/gear", element: withSuggestFooter(<WowGearPage />, "gear_upgrades") },
+  { path: "/wow-forever/items", element: withSuggestFooter(<WowItemsPage />, "gear_upgrades") },
   { path: "/wow-forever/items/:id", element: withSuggestFooter(<WowItemPage />, "gear_upgrades") },
   { path: "/wow-forever/dungeons", element: withSuggestFooter(<WowDungeonsPage />, "dungeons_raids") },
   { path: "/wow-forever/dungeons/:slug", element: withSuggestFooter(<WowDungeonPage />, "dungeons_raids") },

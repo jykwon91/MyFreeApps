@@ -125,6 +125,9 @@ describe("item page links", () => {
       label: "Back to Best gear",
     });
     expect(backFromState({ from: "/wow-forever/compare" })?.label).toBe("Back to Item Compare");
+    expect(backFromState({ from: "/wow-forever/items/19" })?.label).toBe("Back to the last item");
+    expect(backFromState({ from: "/wow-forever/items?q=helm&sort=name" })?.label).toBe("Back to Items");
+    expect(backFromState({ from: "/wow-forever/items" })?.label).toBe("Back to Items");
     expect(backFromState({ from: "https://example.com" })).toBeNull();
     expect(backFromState(null)).toBeNull();
     expect(backFromState("x")).toBeNull();

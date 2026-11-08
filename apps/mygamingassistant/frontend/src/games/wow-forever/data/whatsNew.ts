@@ -6,11 +6,18 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
  *
  * `to` decides which page's update dot the entry lights: its path must be the
  * hub (`/wow-forever`) or a hub tile's path from `games/registry.ts` (a test
- * checks; item pages and triage carry no dot). An entry is remembered as seen by
+ * checks; triage carries no dot, and an item page counts as the Items page). An entry is remembered as seen by
  * its date + title, so retitling one shows its dot again. Write for players:
  * what they can do now, in one sentence.
  */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
+  {
+    date: "2026-11-08",
+    title: "Item browser",
+    summary:
+      "Browse every item the Forever game files have shown so far: search by name, filter by quality, slot, armor or weapon type and level, see what Forever changed or added, and open any item for its tooltip and how to get it.",
+    to: "/wow-forever/items",
+  },
   {
     date: "2026-11-08",
     title: "Races",

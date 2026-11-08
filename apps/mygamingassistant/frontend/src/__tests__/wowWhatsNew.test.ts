@@ -68,7 +68,9 @@ describe("update dots", () => {
     expect(pageForPathname("/wow-forever", WOW_PAGE_PATHS, WOW_HUB_PATH)).toBe("/wow-forever");
     expect(pageForPathname("/wow-forever/", WOW_PAGE_PATHS, WOW_HUB_PATH)).toBe("/wow-forever");
     expect(pageForPathname("/wow-forever/food/123", WOW_PAGE_PATHS, WOW_HUB_PATH)).toBe("/wow-forever/food");
-    expect(pageForPathname("/wow-forever/items/19", WOW_PAGE_PATHS, WOW_HUB_PATH)).toBeNull();
+    // An item page sits under the Items tile, like a food page under the food picker.
+    expect(pageForPathname("/wow-forever/items/19", WOW_PAGE_PATHS, WOW_HUB_PATH)).toBe("/wow-forever/items");
+    expect(pageForPathname("/wow-forever/triage", WOW_PAGE_PATHS, WOW_HUB_PATH)).toBeNull();
     expect(pageForPathname("/wow-forever/gearx", WOW_PAGE_PATHS, WOW_HUB_PATH)).toBeNull();
     expect(pageForPathname("/", WOW_PAGE_PATHS, WOW_HUB_PATH)).toBeNull();
   });
