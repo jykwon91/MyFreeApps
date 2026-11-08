@@ -448,7 +448,8 @@
         "test_ical_parser.py",
         "test_attachment_content.py",
         "test_blackout_attachment_metadata.py",
-        "test_lease_insurance_attachment_metadata.py"
+        "test_lease_insurance_attachment_metadata.py",
+        "test_strip_metadata_phone_photos.py"
       ],
       "frontend_tests": [
         "Listings.test.tsx",

@@ -10,6 +10,9 @@ filename are never trusted, because a photo labelled ``lease.pdf`` would
 otherwise skip the metadata strip and keep the phone's GPS location.
 
 A photo that can't be re-encoded is rejected rather than stored as-is.
+
+PDF and DOCX files are stored as uploaded: a photo embedded inside one keeps
+whatever metadata it had.
 """
 from __future__ import annotations
 
