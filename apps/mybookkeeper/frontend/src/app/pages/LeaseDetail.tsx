@@ -213,7 +213,7 @@ export default function LeaseDetail() {
                     title={
                       tenantHasEmail
                         ? "Email the rendered lease to the tenant"
-                        : "The applicant has no email on file. Add one on the applicant page first."
+                        : "The applicant has no email on file. Add one in the Sensitive section of the applicant page first."
                     }
                     onClick={handleEmailToTenant}
                     data-testid="lease-email-tenant-button"

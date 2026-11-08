@@ -12,6 +12,7 @@ import {
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 import type { SignedLeaseSummary } from "@mybookkeeper/api-client/types/lease/signed-lease-summary";
+import ApplicantContactEmailEditor from "./ApplicantContactEmailEditor";
 import ApplicantStatusControl from "./ApplicantStatusControl";
 import ApplicantTimelineList from "./ApplicantTimelineList";
 import ContractDatesEditor from "./ContractDatesEditor";
@@ -267,21 +268,11 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
               {sensitive?.vehicle_make_model ?? "—"}
             </dd>
           </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Email</dt>
-            <dd data-testid="sensitive-contact-email">
-              {sensitive?.contact_email ? (
-                <a
-                  href={`mailto:${sensitive.contact_email}`}
-                  className="text-primary hover:underline"
-                >
-                  {sensitive.contact_email}
-                </a>
-              ) : (
-                "—"
-              )}
-            </dd>
-          </div>
+          <ApplicantContactEmailEditor
+            applicantId={applicant.id}
+            email={sensitive?.contact_email ?? null}
+            canWrite={canWrite}
+          />
           <div>
             <dt className="text-xs text-muted-foreground">Phone</dt>
             <dd data-testid="sensitive-contact-phone">
