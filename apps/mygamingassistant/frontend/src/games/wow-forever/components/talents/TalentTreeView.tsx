@@ -9,6 +9,7 @@ import { talentCellOffset } from "@/games/wow-forever/lib/talents/talentArrows";
 import { talentBlockMessage } from "@/games/wow-forever/lib/talents/talentBlockMessage";
 import { talentCellState } from "@/games/wow-forever/lib/talents/talentCellState";
 import { nextTalentIndex, talentGridDirection } from "@/games/wow-forever/lib/talents/talentGridNavigation";
+import { isChangedInForever } from "@/games/wow-forever/lib/talents/talentRankLines";
 import { addBlock, treePoints } from "@/games/wow-forever/lib/talents/talentRules";
 import type { TalentBuild } from "@/games/wow-forever/types/talents/talentBuild";
 import type { TalentTree } from "@/games/wow-forever/types/talents/talentTree";
@@ -20,6 +21,8 @@ interface TalentTreeViewProps {
   level: number;
   /** The talent picked in this tree (its details show under the trees), or null. */
   selected: number | null;
+  /** When true: highlight talents whose text changed from Classic Era. */
+  compareMode: boolean;
   onSelect: (talent: number) => void;
   onAdd: (talent: number) => void;
   onRemove: (talent: number) => void;
@@ -30,7 +33,17 @@ interface TalentTreeViewProps {
  * prerequisite arrows. The grid is one Tab stop: arrow keys move between
  * talents, Enter adds a point, Shift+Enter takes one out.
  */
-export default function TalentTreeView({ trees, treeIndex, build, level, selected, onSelect, onAdd, onRemove }: TalentTreeViewProps) {
+export default function TalentTreeView({
+  trees,
+  treeIndex,
+  build,
+  level,
+  selected,
+  compareMode,
+  onSelect,
+  onAdd,
+  onRemove,
+}: TalentTreeViewProps) {
   const tree = trees[treeIndex];
   const ranks = build[treeIndex];
   const [focused, setFocused] = useState(0);
@@ -73,6 +86,9 @@ export default function TalentTreeView({ trees, treeIndex, build, level, selecte
         {tree.talents.map((talent, i) => {
           const block = addBlock(trees, build, treeIndex, i, level);
           const { left, top } = talentCellOffset(talent.tier, talent.column);
+          const compareChanged = compareMode
+            ? isChangedInForever(talent) || talent.classicName
+            : null;
           return (
             <TalentCell
               key={talent.id}
@@ -84,6 +100,7 @@ export default function TalentTreeView({ trees, treeIndex, build, level, selecte
               top={top}
               tabbable={i === focused}
               selected={i === selected}
+              compareChanged={compareChanged}
               buttonRef={(node) => {
                 cells.current[i] = node;
               }}

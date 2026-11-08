@@ -4,7 +4,7 @@ import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBad
 import TalentRankText from "@/games/wow-forever/components/talents/TalentRankText";
 import { fileIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { talentBlockMessage } from "@/games/wow-forever/lib/talents/talentBlockMessage";
-import { talentRankLines } from "@/games/wow-forever/lib/talents/talentRankLines";
+import { allTalentRankLines, talentRankLines, isChangedInForever } from "@/games/wow-forever/lib/talents/talentRankLines";
 import { addBlock, removeBlock } from "@/games/wow-forever/lib/talents/talentRules";
 import type { TalentBuild } from "@/games/wow-forever/types/talents/talentBuild";
 import type { TalentTree } from "@/games/wow-forever/types/talents/talentTree";
@@ -15,17 +15,29 @@ interface TalentDetailsProps {
   level: number;
   treeIndex: number;
   talentIndex: number;
+  compareMode: boolean;
   onAdd: () => void;
   onRemove: () => void;
 }
 
-const CLASSIC_NAME_DETAIL = "No rank of this talent is in the Forever game files yet, so its name is the Classic Era one.";
+const CLASSIC_NAME_DETAIL =
+  "No rank of this talent is in the Forever game files yet, so its name is the Classic Era one.";
 
 /**
  * The picked talent: what each rank does, what it needs, and − / + buttons —
- * the way to change points without right-click or a long press.
+ * the way to change points without right-click or a long press. When
+ * `compareMode` is on, all ranks show with side-by-side Forever/Classic text.
  */
-export default function TalentDetails({ trees, build, level, treeIndex, talentIndex, onAdd, onRemove }: TalentDetailsProps) {
+export default function TalentDetails({
+  trees,
+  build,
+  level,
+  treeIndex,
+  talentIndex,
+  compareMode,
+  onAdd,
+  onRemove,
+}: TalentDetailsProps) {
   const tree = trees[treeIndex];
   const talent = tree.talents[talentIndex];
   const rank = build[treeIndex][talentIndex];
@@ -33,9 +45,16 @@ export default function TalentDetails({ trees, build, level, treeIndex, talentIn
   const remove = removeBlock(trees, build, treeIndex, talentIndex);
   const reason = add && add.kind !== "maxed" ? talentBlockMessage(add, tree) : null;
   const removeReason = remove && remove.kind !== "empty" ? talentBlockMessage(remove, tree) : null;
+  const changed = isChangedInForever(talent);
+  const lines = compareMode ? allTalentRankLines(talent) : talentRankLines(talent, rank);
 
   return (
-    <section aria-label="Picked talent" aria-live="polite" className="rounded-xl border bg-card p-4 space-y-3" data-testid="talent-details">
+    <section
+      aria-label="Picked talent"
+      aria-live="polite"
+      className="rounded-xl border bg-card p-4 space-y-3"
+      data-testid="talent-details"
+    >
       <header className="flex items-start gap-3">
         <GameIcon icon={fileIcon(talent.icon)} size={48} alt="" />
         <div className="min-w-0 flex-1">
@@ -53,6 +72,11 @@ export default function TalentDetails({ trees, build, level, treeIndex, talentIn
             <span className="tabular-nums" data-testid="talent-details-rank">
               rank {rank}/{talent.ranks.length}
             </span>
+            {compareMode && changed ? (
+              <span className="ml-2 rounded-sm bg-indigo-100 px-1.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" data-testid="talent-compare-changed-badge">
+                Changed in Forever
+              </span>
+            ) : null}
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
@@ -76,13 +100,20 @@ export default function TalentDetails({ trees, build, level, treeIndex, talentIn
           </button>
         </div>
       </header>
-      <TalentRankText lines={talentRankLines(talent, rank)} badges />
+      <TalentRankText lines={lines} badges />
       {reason ? (
         <p className="text-sm text-red-600 dark:text-red-400" data-testid="talent-add-blocked">
           {reason}
         </p>
       ) : null}
-      {removeReason ? <p className="text-sm text-muted-foreground">{removeReason}</p> : null}
+      {removeReason ? (
+        <p className="text-sm text-muted-foreground">{removeReason}</p>
+      ) : null}
+      {compareMode && !changed && !talent.classicName ? (
+        <p className="text-xs text-muted-foreground" data-testid="talent-compare-unchanged">
+          Same as Classic Era.
+        </p>
+      ) : null}
     </section>
   );
 }

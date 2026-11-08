@@ -20,6 +20,13 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   },
   {
     date: "2026-11-08",
+    title: "Talent calculator: spend order and Compare to Classic",
+    summary:
+      "The talent calculator now records the order you spend points (level 10, 11, …) and shows it as a shareable list you can undo from the end. Turn on Compare to Classic to see which talents changed from the Classic Era, with side-by-side Forever and Classic text in the detail panel.",
+    to: "/wow-forever/talents",
+  },
+  {
+    date: "2026-11-08",
     title: "Spellbook",
     summary:
       "See every spell your class can train in Forever: each rank's learn level, trainer cost and tooltip, which spells are different from Classic, and links to the talent and downrank calculators.",
