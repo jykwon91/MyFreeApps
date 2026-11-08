@@ -154,6 +154,12 @@ jobs:
       - name: Lint frontend
         run: npm run lint --workspace=mygamingassistant-frontend
 
+      # On a clean checkout, before any build: the build compiles the
+      # tsconfig.node.json project first, so it can't catch a typecheck that
+      # only works once that output exists.
+      - name: Typecheck frontend
+        run: npm run typecheck --workspace=mygamingassistant-frontend
+
   frontend-test:
     name: frontend-test / mygamingassistant
     runs-on: ubuntu-latest
