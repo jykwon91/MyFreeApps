@@ -61,7 +61,10 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_KMS_AUTO_ENCRYPTION: "on"
-      MINIO_KMS_SECRET_KEY: ${MINIO_KMS_SECRET_KEY:-key1:V0VBSyBERVYgS0VZIC0gUkVQTEFDRSBJTiBQUk9EICAgIA==}
+      # Dev/CI fallback only. MinIO needs exactly 32 key bytes; the
+      # minio/minio build accepted this placeholder at 34, the current one
+      # refuses to start.
+      MINIO_KMS_SECRET_KEY: ${MINIO_KMS_SECRET_KEY:-key1:V0VBSyBERVYgS0VZIC0gUkVQTEFDRSBJTiBQUk9EISE=}
       MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_URL:-http://localhost:9001}
     command: server /data --console-address ":9001"
     healthcheck:
