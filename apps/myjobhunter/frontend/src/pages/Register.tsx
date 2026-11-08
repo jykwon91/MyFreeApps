@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Link, useSearchParams, Navigate } from "react-router-dom";
 import {
   AuthPageFooter,
@@ -67,16 +67,6 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
     setTurnstileToken("");
   }, []);
 
-  useEffect(() => {
-    if (registered && token) {
-      try {
-        sessionStorage.setItem(INVITE_TOKEN_STORAGE_KEY, token);
-      } catch {
-        // sessionStorage failure is non-fatal — accept is best-effort
-      }
-    }
-  }, [registered, token]);
-
   if (isLoading) {
     return <CenteredCard title="Checking your invite…" />;
   }
@@ -128,6 +118,11 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
     setIsSubmitting(true);
     try {
       await register(invite!.email, password, turnstileToken);
+      try {
+        sessionStorage.setItem(INVITE_TOKEN_STORAGE_KEY, token);
+      } catch {
+        // sessionStorage failure is non-fatal — accept is best-effort
+      }
       setRegistered(true);
     } catch (err) {
       setSubmitError(describeAuthError(err));
