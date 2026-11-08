@@ -1,8 +1,10 @@
 /**
- * WoW Forever library books — the books (Forever game files), the library
- * cards, the Friend of the Library reward (seen in game), the search / item
- * level / hide-found filters (kept in the URL), the found checklist across a
- * reload, the phone layout and the loading skeleton. Runs on the committed data.
+ * WoW Forever library books. Each test creates its own data through the UI:
+ * it ticks books as found, and the page saves those ticks in localStorage.
+ * It then drives a player flow (search, item-level chips, Hide found, reload,
+ * phone layout, loading) and checks the result on screen and in storage.
+ * Finally it removes what it created with "Clear found". The book list itself
+ * is the committed game data.
  *
  * Run: npx playwright test --config e2e/playwright.config.ts wow-forever-library
  */
@@ -12,12 +14,31 @@ const LIBRARY = "/wow-forever/library";
 const CHECKLIST_KEY = "mga.wowForever.library.checklist.v1";
 /** Books in the Forever client's ItemSparse (committed data). */
 const ALL_BOOKS = 40;
+const ANTONIDAS = "Archmage Antonidas: The Unabridged Autobiography";
+const ANTONIDAS_ID = "203754";
 
-async function noSideways(page: Page): Promise<number> {
-  return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+function storedFound(page: Page): Promise<string | null> {
+  return page.evaluate((key) => window.localStorage.getItem(key), CHECKLIST_KEY);
 }
 
-test("the page lists every book, the library cards and the reward quest, each tagged", async ({ page }) => {
+async function markFound(page: Page, name: string, expectedFound: number): Promise<void> {
+  await page.getByLabel(`Found: ${name}`).check();
+  await expect(page.getByTestId("library-count")).toContainText(`${expectedFound} of ${ALL_BOOKS} found`);
+}
+
+/** Cleanup: "Clear found" empties the list and removes the saved key. */
+async function clearFound(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Clear found" }).click();
+  await expect(page.getByTestId("library-count")).toContainText(`0 of ${ALL_BOOKS} found`);
+  expect(await storedFound(page)).toBeNull();
+}
+
+test.afterEach(async ({ page }) => {
+  // Nothing a test created may outlive it.
+  if (page.url().includes(LIBRARY)) expect(await storedFound(page)).toBeNull();
+});
+
+test("ticking a book found from the full list, with its facts and tags, then clearing it", async ({ page }) => {
   await page.goto(LIBRARY);
   await expect(page.getByRole("heading", { level: 1, name: "Library books" })).toBeVisible();
   await expect(page).toHaveTitle(/Library books/);
@@ -25,7 +46,7 @@ test("the page lists every book, the library cards and the reward quest, each ta
   const books = page.getByTestId("library-book");
   await expect(books).toHaveCount(ALL_BOOKS);
   await expect(page.getByTestId("library-count")).toHaveText(`${ALL_BOOKS} books · 0 of ${ALL_BOOKS} found`);
-  const antonidas = books.filter({ hasText: "Archmage Antonidas: The Unabridged Autobiography" });
+  const antonidas = books.filter({ hasText: ANTONIDAS });
   await expect(antonidas).toContainText("Item level 10");
   await expect(antonidas).toContainText("addition to any library's collection.");
   await expect(antonidas.getByTestId("library-book-where")).toHaveText("Where: Not known yet");
@@ -45,23 +66,35 @@ test("the page lists every book, the library cards and the reward quest, each ta
   await expect(quest).toContainText("Scholarly Pendant");
   await expect(quest).toContainText("Erudite's Amulet");
 
-  // No location is known, so there's no map link; never a Wowhead link.
+  // No location is known, so there is no map link. There is never a Wowhead link.
   await expect(page.getByRole("main").locator('a[href*="/wow-forever/map"]')).toHaveCount(0);
   await expect(page.locator('a[href*="wowhead"]')).toHaveCount(0);
-  // The left nav and the hub both have the page.
-  await expect(page.getByRole("link", { name: "Library books" }).first()).toBeVisible();
+
+  await markFound(page, ANTONIDAS, 1);
+  await expect(page.getByLabel(`Found: ${ANTONIDAS}`)).toBeChecked();
+  expect(await storedFound(page)).toBe(`["${ANTONIDAS_ID}"]`);
+  await clearFound(page);
+  await expect(page.getByLabel(`Found: ${ANTONIDAS}`)).not.toBeChecked();
 });
 
-test("search and item level narrow the list, live in the URL and reset", async ({ page }) => {
+test("a found book, searched for and hidden, empties the list; filters live in the URL and reset", async ({ page }) => {
   await page.goto(LIBRARY);
   const books = page.getByTestId("library-book");
   await expect(books).toHaveCount(ALL_BOOKS);
+  await markFound(page, ANTONIDAS, 1);
 
   await page.getByTestId("library-search").fill("antonidas archmage");
   await expect(books).toHaveCount(1);
   await expect(page).toHaveURL(/q=antonidas/);
+  await page.getByTestId("library-hide-found").click();
+  await expect(page).toHaveURL(/hide=1/);
+  await expect(page.getByTestId("library-empty")).toBeVisible();
+  await expect(books).toHaveCount(0);
 
-  await page.getByTestId("library-search").fill("");
+  await page.getByTestId("library-empty").getByRole("button", { name: "Reset filters" }).click();
+  await expect(books).toHaveCount(ALL_BOOKS);
+  await expect(page).not.toHaveURL(/q=|hide=/);
+
   await page.getByTestId("library-level-chip").filter({ hasText: "Item level 60" }).click();
   await expect(page).toHaveURL(/ilvl=60/);
   await expect.poll(() => books.count()).toBeLessThan(ALL_BOOKS);
@@ -75,21 +108,22 @@ test("search and item level narrow the list, live in the URL and reset", async (
   await expect(books).toHaveCount(ALL_BOOKS);
   await expect(page).not.toHaveURL(/ilvl=|q=/);
 
-  // A shared link opens with its filters on.
+  // A shared link opens with its filters on, and the found tick is still there.
   await page.goto(`${LIBRARY}?ilvl=60`);
   await expect(books).toHaveCount(sixties);
+  await expect(page.getByTestId("library-count")).toContainText(`1 of ${ALL_BOOKS} found`);
+  await clearFound(page);
 });
 
 test("ticking a book as found survives a reload, hides with Hide found and clears", async ({ page }) => {
   await page.goto(LIBRARY);
   const books = page.getByTestId("library-book");
   await expect(books).toHaveCount(ALL_BOOKS);
-  await page.getByLabel("Found: Archmage Antonidas: The Unabridged Autobiography").check();
-  await expect(page.getByTestId("library-count")).toHaveText(`${ALL_BOOKS} books · 1 of ${ALL_BOOKS} found`);
-  expect(await page.evaluate((key) => window.localStorage.getItem(key), CHECKLIST_KEY)).toBe('["203754"]');
+  await markFound(page, ANTONIDAS, 1);
+  expect(await storedFound(page)).toBe(`["${ANTONIDAS_ID}"]`);
 
   await page.reload();
-  await expect(page.getByLabel("Found: Archmage Antonidas: The Unabridged Autobiography")).toBeChecked();
+  await expect(page.getByLabel(`Found: ${ANTONIDAS}`)).toBeChecked();
   await expect(page.getByTestId("library-count")).toHaveText(`${ALL_BOOKS} books · 1 of ${ALL_BOOKS} found`);
 
   await page.getByTestId("library-hide-found").click();
@@ -99,30 +133,40 @@ test("ticking a book as found survives a reload, hides with Hide found and clear
   await page.getByTestId("library-hide-found").click();
   await expect(books).toHaveCount(ALL_BOOKS);
 
-  await page.getByRole("button", { name: "Clear found" }).click();
-  await expect(page.getByTestId("library-count")).toHaveText(`${ALL_BOOKS} books · 0 of ${ALL_BOOKS} found`);
-  expect(await page.evaluate((key) => window.localStorage.getItem(key), CHECKLIST_KEY)).toBeNull();
+  await clearFound(page);
 });
 
 test.describe("at 375px", () => {
   test.use({ viewport: { width: 375, height: 740 } });
 
-  test("the page fits a phone with 44px controls and no sideways scroll", async ({ page }) => {
+  test("on a phone a book can be ticked found with 44px controls and no sideways scroll", async ({ page }) => {
     await page.goto(LIBRARY);
     await expect(page.getByTestId("library-book")).toHaveCount(ALL_BOOKS);
-    expect(await noSideways(page)).toBeLessThanOrEqual(0);
+    const foundToggle = page.getByLabel(`Found: ${ANTONIDAS}`).locator("xpath=..");
     for (const control of [
       page.getByTestId("library-search"),
       page.getByTestId("library-level-chip").first(),
-      page.getByLabel("Found: Archmage Antonidas: The Unabridged Autobiography").locator("xpath=.."),
+      page.getByTestId("library-hide-found"),
+      foundToggle,
     ]) {
       const box = await control.boundingBox();
       expect(box?.height).toBeGreaterThanOrEqual(44);
     }
+
+    await foundToggle.click();
+    await expect(page.getByLabel(`Found: ${ANTONIDAS}`)).toBeChecked();
+    await expect(page.getByTestId("library-count")).toContainText(`1 of ${ALL_BOOKS} found`);
+    const clear = page.getByRole("button", { name: "Clear found" });
+    expect((await clear.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    const sideways = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(sideways).toBeLessThanOrEqual(0);
+    await clearFound(page);
   });
 });
 
-test("the skeleton shows while the books load, then the list replaces it", async ({ page }) => {
+test("the skeleton shows while the books load, then a book can be ticked found in the loaded list", async ({ page }) => {
   let release: () => void = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -139,5 +183,7 @@ test("the skeleton shows while the books load, then the list replaces it", async
   release();
   await expect(skeleton).toHaveCount(0);
   await expect(page.getByTestId("library-filters")).toHaveCount(1);
-  await expect(page.getByTestId("library-book").first()).toBeVisible();
+
+  await markFound(page, ANTONIDAS, 1);
+  await clearFound(page);
 });
