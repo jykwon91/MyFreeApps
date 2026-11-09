@@ -1,5 +1,5 @@
 import { LoadingButton } from "@platform/ui";
-import { useLazyGetMortgageRateWatchQuery } from "@/shared/store/mortgageMarketApi";
+import { useLazyGetMortgageRateWatchQuery } from "@mybookkeeper/api-client/store/mortgageMarketApi";
 import MortgageRateWatchBody from "./MortgageRateWatchBody";
 import { useMortgageRateWatchMode } from "./useMortgageRateWatchMode";
 

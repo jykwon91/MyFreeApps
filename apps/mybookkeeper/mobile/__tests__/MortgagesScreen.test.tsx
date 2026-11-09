@@ -5,15 +5,15 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
-import { Linking } from "react-native";
 import { Provider } from "react-redux";
-import { WEB_BASE_URL } from "../src/constants/api";
 import { MORTGAGE_MESSAGES } from "../src/constants/mortgages";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import MortgageDetailScreen from "../src/features/mortgages/MortgageDetailScreen";
 import { balanceLine, paymentLines, rateFixedLine, sortedMortgages } from "../src/features/mortgages/mortgageDisplay";
 import MortgagesScreen from "../src/features/mortgages/MortgagesScreen";
+import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { maskedNumber } from "../src/lib/maskedNumber";
+import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 
 const mockPush = jest.fn();
@@ -57,8 +57,9 @@ function aLoan(overrides: Partial<Mortgage> = {}): Mortgage {
 type Answer = unknown | "fail" | "gone" | "hold";
 
 function startServer(list: Answer, detail: Answer = aLoan()) {
-  const server = { list, detail };
+  const server = { list, detail, role: "owner" };
   const adapter: AxiosAdapter = async (config) => {
+    if (config.url === "/organizations") return { data: [{ id: "w1", name: "Mine", org_role: server.role }], status: 200, statusText: "OK", headers: {}, config };
     const answer = config.url === "/mortgages" ? server.list : server.detail;
     if (answer === "hold") return new Promise(() => undefined);
     if (answer === "fail") return Promise.reject({ response: { status: 500, data: {} }, config, isAxiosError: true });
@@ -82,7 +83,9 @@ async function show(element: React.ReactElement) {
 }
 
 beforeEach(() => {
+  session.tokenStore.set("token");
   store.dispatch(baseApi.util.resetApiState());
+  store.dispatch(workspaceChosen("w1"));
   mockPush.mockClear();
   mockBack.mockClear();
 });
@@ -194,16 +197,23 @@ describe("MortgagesScreen", () => {
   it("says when there are more than it shows", async () => {
     startServer(aPage([aLoan()], true));
     await show(<MortgagesScreen />);
-    await screen.findByText(MORTGAGE_MESSAGES.moreOnWebsite);
+    await screen.findByText(MORTGAGE_MESSAGES.firstOnly);
   });
 
-  it("points to the website when there are none", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("offers to add the first one when there are none", async () => {
     startServer(aPage([]));
     await show(<MortgagesScreen />);
     await screen.findByText(MORTGAGE_MESSAGES.noneHeading);
-    await fireEvent.press(screen.getByRole("button", { name: "Open on the website" }));
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/mortgages`);
+    await fireEvent.press(screen.getByRole("button", { name: MORTGAGE_MESSAGES.addFirst }));
+    expect(mockPush).toHaveBeenCalledWith("/mortgages/new");
+  });
+
+  it("only says there are none to a viewer", async () => {
+    const server = startServer(aPage([]));
+    server.role = "viewer";
+    await show(<MortgagesScreen />);
+    await screen.findByText(MORTGAGE_MESSAGES.noneBodyViewer);
+    expect(screen.queryByRole("button", { name: MORTGAGE_MESSAGES.addFirst })).toBeNull();
   });
 
   it("offers a retry when the first load fails, and recovers", async () => {

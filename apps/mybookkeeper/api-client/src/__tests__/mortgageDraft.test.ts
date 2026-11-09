@@ -6,9 +6,9 @@
  * anything the reader didn't find has to leave their entry alone.
  */
 import { describe, it, expect } from "vitest";
-import { applyMortgageDraftToForm } from "@/shared/lib/mortgage-draft";
-import { EMPTY_MORTGAGE_FORM } from "@/shared/lib/mortgage-form";
-import type { MortgageDraft } from "@/shared/types/mortgage/mortgage-draft";
+import { applyMortgageDraftToForm } from "../utils/mortgageDraft";
+import { EMPTY_MORTGAGE_FORM } from "../utils/mortgageForm";
+import type { MortgageDraft } from "../types/mortgage/mortgage-draft";
 
 const EMPTY_DRAFT: MortgageDraft = {
   source_document_id: "55555555-5555-5555-5555-555555555555",

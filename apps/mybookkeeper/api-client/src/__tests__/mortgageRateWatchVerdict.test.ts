@@ -12,9 +12,9 @@ import { describe, it, expect } from "vitest";
 import {
   bestByVerdict,
   buildMortgageRateWatchVerdict,
-} from "@/shared/lib/mortgage-rate-watch-verdict";
-import type { MortgageRateWatch } from "@/shared/types/mortgage/mortgage-rate-watch";
-import type { MortgageRefiOutlook } from "@/shared/types/mortgage/mortgage-refi-outlook";
+} from "../utils/mortgageRateWatchVerdict";
+import type { MortgageRateWatch } from "../types/mortgage/mortgage-rate-watch";
+import type { MortgageRefiOutlook } from "../types/mortgage/mortgage-refi-outlook";
 
 function outlook(overrides: Partial<MortgageRefiOutlook> = {}): MortgageRefiOutlook {
   return {

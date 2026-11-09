@@ -30,9 +30,6 @@ vi.mock("@mybookkeeper/api-client/store/mortgagesApi", () => ({
     ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
     refetch: mockRefetch,
   })),
-}));
-
-vi.mock("@/shared/store/mortgagesApi", () => ({
   useCreateMortgageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateMortgageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteMortgageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),

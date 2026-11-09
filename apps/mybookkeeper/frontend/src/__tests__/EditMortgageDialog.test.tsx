@@ -18,7 +18,7 @@ const deleteUnwrap = vi.fn(() => Promise.resolve({}));
 const mockUpdate = vi.fn(() => ({ unwrap: updateUnwrap }));
 const mockDelete = vi.fn(() => ({ unwrap: deleteUnwrap }));
 
-vi.mock("@/shared/store/mortgagesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/mortgagesApi", () => ({
   useUpdateMortgageMutation: vi.fn(() => [mockUpdate, { isLoading: false }]),
   useDeleteMortgageMutation: vi.fn(() => [mockDelete, { isLoading: false }]),
 }));

@@ -14,8 +14,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import MortgageRateWatchSection from "@/app/features/mortgages/MortgageRateWatchSection";
-import type { MortgageRateWatch } from "@/shared/types/mortgage/mortgage-rate-watch";
-import type { MortgageRefiOutlook } from "@/shared/types/mortgage/mortgage-refi-outlook";
+import type { MortgageRateWatch } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-watch";
+import type { MortgageRefiOutlook } from "@mybookkeeper/api-client/types/mortgage/mortgage-refi-outlook";
 
 const mockCheck = vi.fn();
 let mockState: {
@@ -25,7 +25,7 @@ let mockState: {
   isUninitialized: boolean;
 };
 
-vi.mock("@/shared/store/mortgageMarketApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/mortgageMarketApi", () => ({
   useLazyGetMortgageRateWatchQuery: vi.fn(() => [mockCheck, mockState]),
 }));
 

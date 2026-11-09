@@ -12,8 +12,8 @@ import {
   dollarsToCents,
   mortgageToFormValues,
   toMortgagePayload,
-} from "@/shared/lib/mortgage-form";
-import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
+} from "../utils/mortgageForm";
+import type { Mortgage } from "../types/mortgage/mortgage";
 
 const MORTGAGE: Mortgage = {
   id: "11111111-1111-1111-1111-111111111111",

@@ -3,23 +3,22 @@ import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platfo
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { FlatList, Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { MORTGAGE_LIST_LIMIT, MORTGAGE_MESSAGES } from "../../constants/mortgages";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
-import { useOpenLink } from "../inquiries/useOpenLink";
+import { useCanWrite } from "../workspace/useCanWrite";
 import { sortedMortgages } from "./mortgageDisplay";
 import MortgageRow from "./MortgageRow";
 import MortgagesSkeleton from "./MortgagesSkeleton";
 
 export default function MortgagesScreen() {
   const { colors, spacing, fontSize } = useTheme();
-  const openLink = useOpenLink();
+  const canWrite = useCanWrite();
   const { currentData, error, isFetching, refetch } = useGetMortgagesQuery({ limit: MORTGAGE_LIST_LIMIT });
   const { refresh, refreshControl } = useRefresh(async () => {
     await refetch();
   }, error);
   const rows = useMemo(() => sortedMortgages(currentData?.items ?? []), [currentData]);
-  const openWebsite = () => void openLink(`${WEB_BASE_URL}/mortgages`);
+  const addOne = () => router.push("/mortgages/new");
 
   const emptyList = !currentData && isFetching ? (
     <MortgagesSkeleton />
@@ -31,8 +30,8 @@ export default function MortgagesScreen() {
     />
   ) : (
     <EmptyState
-      action={{ label: MORTGAGE_MESSAGES.openWebsite, onPress: openWebsite }}
-      body={MORTGAGE_MESSAGES.noneBody}
+      action={canWrite ? { label: MORTGAGE_MESSAGES.addFirst, onPress: addOne } : undefined}
+      body={canWrite ? MORTGAGE_MESSAGES.noneBody : MORTGAGE_MESSAGES.noneBodyViewer}
       heading={MORTGAGE_MESSAGES.noneHeading}
     />
   );
@@ -41,21 +40,22 @@ export default function MortgagesScreen() {
     <FlatList
       ListEmptyComponent={emptyList}
       ListFooterComponent={
-        rows.length > 0 ? (
-          <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-            <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
-              {currentData?.has_more ? MORTGAGE_MESSAGES.moreOnWebsite : MORTGAGE_MESSAGES.manageOnWebsite}
-            </Text>
-            <LoadingButton onPress={openWebsite} variant="ghost">
-              {MORTGAGE_MESSAGES.openWebsite}
-            </LoadingButton>
-          </View>
+        currentData?.has_more ? (
+          <Text style={{ padding: spacing.lg, fontSize: fontSize.sm, color: colors.mutedForeground }}>{MORTGAGE_MESSAGES.firstOnly}</Text>
         ) : undefined
       }
       ListHeaderComponent={
-        error && rows.length > 0 ? (
-          <View style={{ padding: spacing.lg }}>
-            <Banner message={SHOWING_LAST_LOADED_MESSAGE} />
+        rows.length > 0 ? (
+          <View style={{ gap: spacing.md, padding: spacing.lg }}>
+            {error ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            {canWrite ? (
+              <LoadingButton onPress={addOne} variant="secondary">
+                {MORTGAGE_MESSAGES.add}
+              </LoadingButton>
+            ) : null}
+            <LoadingButton onPress={() => router.push("/mortgages/rates")} variant="secondary">
+              {MORTGAGE_MESSAGES.checkRates}
+            </LoadingButton>
           </View>
         ) : undefined
       }

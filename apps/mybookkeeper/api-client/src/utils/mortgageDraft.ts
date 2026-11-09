@@ -1,7 +1,7 @@
-import type { MortgageDraft } from "@/shared/types/mortgage/mortgage-draft";
-import type { MortgageFormValues } from "@/shared/types/mortgage/mortgage-form-values";
-import { MORTGAGE_RATE_TYPES } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
-import type { MortgageRateType } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
+import type { MortgageDraft } from "../types/mortgage/mortgage-draft";
+import type { MortgageFormValues } from "../types/mortgage/mortgage-form-values";
+import { MORTGAGE_RATE_TYPES } from "../types/mortgage/mortgage-rate-type";
+import type { MortgageRateType } from "../types/mortgage/mortgage-rate-type";
 
 /**
  * Turning a read statement into form state.

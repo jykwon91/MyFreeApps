@@ -1,6 +1,6 @@
-import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
-import type { MortgageFormValues } from "@/shared/types/mortgage/mortgage-form-values";
-import type { MortgageRateType } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
+import type { Mortgage } from "../types/mortgage/mortgage";
+import type { MortgageFormValues } from "../types/mortgage/mortgage-form-values";
+import type { MortgageRateType } from "../types/mortgage/mortgage-rate-type";
 
 /**
  * Conversion between the mortgage form's text state and the API shape.

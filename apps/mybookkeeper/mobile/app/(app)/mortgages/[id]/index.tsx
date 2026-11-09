@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams } from "expo-router";
-import MortgageDetailScreen from "../../../src/features/mortgages/MortgageDetailScreen";
+import MortgageDetailScreen from "../../../../src/features/mortgages/MortgageDetailScreen";
 
 export default function MortgageRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();

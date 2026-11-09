@@ -1,6 +1,6 @@
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
-import { baseApi } from "./baseApi";
-import type { MortgageRateWatch } from "@/shared/types/mortgage/mortgage-rate-watch";
+import { localToday } from "../utils/localToday";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { MortgageRateWatch } from "../types/mortgage/mortgage-rate-watch";
 
 /**
  * RTK Query slice for the mortgage rate check.
@@ -10,7 +10,9 @@ import type { MortgageRateWatch } from "@/shared/types/mortgage/mortgage-rate-wa
  * latency. Tagged under ``Mortgage:RATE_WATCH`` so editing a rate or a balance
  * clears the verdict that was computed from the old figure.
  */
-const mortgageMarketApi = baseApi.injectEndpoints({
+export const mortgageMarketApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["Mortgage"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     getMortgageRateWatch: builder.query<MortgageRateWatch, void>({
       query: () => ({ url: "/mortgage-market/rate-watch", params: { today: localToday() } }),
