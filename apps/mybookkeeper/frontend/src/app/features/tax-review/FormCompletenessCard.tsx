@@ -2,18 +2,13 @@ import { useState, useCallback } from "react";
 import { ChevronDown, ChevronUp, AlertTriangle, CheckCircle } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
+import { completenessLabel, completenessPercent } from "@mybookkeeper/api-client/utils/taxCompleteness";
 import type { FormCompleteness } from "@mybookkeeper/api-client/types/tax/FormCompleteness";
 
 export interface FormCompletenessCardProps {
   form: FormCompleteness;
 }
 
-function completenessLabel(pct: number): string {
-  if (pct === 100) return "Complete";
-  if (pct >= 75) return "Almost there";
-  if (pct >= 50) return "In progress";
-  return "Needs attention";
-}
 
 export default function FormCompletenessCard({ form }: FormCompletenessCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -22,9 +17,7 @@ export default function FormCompletenessCard({ form }: FormCompletenessCardProps
     setExpanded((prev) => !prev);
   }, []);
 
-  const pct = form.total_expected > 0
-    ? Math.round((form.total_filled / form.total_expected) * 100)
-    : 0;
+  const pct = completenessPercent(form);
 
   const isComplete = pct === 100;
   const hasMissing = form.missing_fields.length > 0;

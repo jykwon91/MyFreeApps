@@ -27,7 +27,7 @@ const routes = {
 };
 
 function linkTo(name: string): `/${string}` {
-  return `/${name.replace(/\[\w+\]/, "x1").replace(/\/?index$/, "")}`;
+  return `/${name.replace(/\[\w+\]/g, "x1").replace(/\/?index$/, "")}`;
 }
 
 describe("single copy screens", () => {

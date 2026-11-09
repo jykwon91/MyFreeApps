@@ -2,9 +2,10 @@ import { useState } from "react";
 import { DollarSign, X, CheckCircle2 } from "lucide-react";
 import { formatCurrency } from "@/shared/utils/currency";
 import Badge from "@/shared/components/ui/Badge";
-import type { TaxAdvisorSuggestionRead } from "@/shared/types/tax/tax-advisor";
+import type { TaxAdvisorSuggestionRead } from "@mybookkeeper/api-client/types/tax/TaxAdvisorSuggestionRead";
+import type { SuggestionStatus } from "@mybookkeeper/api-client/types/tax/SuggestionStatus";
 import { SEVERITY_CONFIG, CONFIDENCE_COLOR } from "@/shared/lib/tax-advisor-config";
-import { useUpdateSuggestionStatusMutation } from "@/shared/store/taxReturnsApi";
+import { useUpdateSuggestionStatusMutation } from "@mybookkeeper/api-client/store/taxReturnsApi";
 
 interface SuggestionCardProps {
   suggestion: TaxAdvisorSuggestionRead;
@@ -12,7 +13,7 @@ interface SuggestionCardProps {
 }
 
 export default function SuggestionCard({ suggestion, taxReturnId }: SuggestionCardProps) {
-  const [localStatus, setLocalStatus] = useState<"active" | "dismissed" | "resolved">(
+  const [localStatus, setLocalStatus] = useState<SuggestionStatus>(
     suggestion.status
   );
   const [updateStatus] = useUpdateSuggestionStatusMutation();

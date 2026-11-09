@@ -4,6 +4,7 @@ import { Download, X } from "lucide-react";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatTag } from "@/shared/utils/tag";
 import { downloadFile } from "@/shared/utils/download";
+import { taxReportHeadline, hasW2Income } from "@mybookkeeper/api-client/utils/taxReportTotals";
 import { NON_DEDUCTIBLE_CATEGORIES } from "@mybookkeeper/api-client/constants/taxCategories";
 import { useGetTaxSummaryQuery } from "@mybookkeeper/api-client/store/summaryApi";
 import { useToast } from "@/shared/hooks/useToast";
@@ -85,7 +86,7 @@ export default function TaxReport() {
               <p className="text-sm text-muted-foreground">Rental Revenue</p>
               <p className="text-2xl font-semibold text-green-600 mt-1">{formatCurrency(data.gross_revenue)}</p>
             </Card>
-            {(data.w2_total ?? 0) > 0 && (
+            {hasW2Income(data) && (
               <Card>
                 <p className="text-sm text-muted-foreground">W-2 Income</p>
                 <p className="text-2xl font-semibold text-blue-600 mt-1">{formatCurrency(data.w2_total)}</p>
@@ -97,10 +98,10 @@ export default function TaxReport() {
             </Card>
             <Card>
               <p className="text-sm text-muted-foreground">
-                {(data.w2_total ?? 0) > 0 ? "Total Income" : "Net Taxable Income"}
+                {taxReportHeadline(data).label}
               </p>
               <p className={`text-2xl font-semibold mt-1 ${(data.total_income ?? data.net_taxable_income) >= 0 ? "text-green-600" : "text-red-500"}`}>
-                {formatCurrency((data.w2_total ?? 0) > 0 ? (data.total_income ?? 0) - data.total_deductions : data.net_taxable_income)}
+                {formatCurrency(taxReportHeadline(data).amount)}
               </p>
             </Card>
           </section>

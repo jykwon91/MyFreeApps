@@ -17,7 +17,6 @@ export function bySeverity(results: readonly ValidationResult[]): ValidationResu
   return [...results].sort((a, b) => VALIDATION_SEVERITY_ORDER.indexOf(a.severity) - VALIDATION_SEVERITY_ORDER.indexOf(b.severity));
 }
 
-export function taxReturnWebPath(id: string, formName?: string): string {
-  const path = `/tax-returns/${id}`;
-  return formName ? `${path}?form=${encodeURIComponent(formName)}` : path;
+export function taxReturnWebPath(id: string): string {
+  return `/tax-returns/${id}`;
 }

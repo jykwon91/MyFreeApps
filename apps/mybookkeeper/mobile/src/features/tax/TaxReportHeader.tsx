@@ -1,12 +1,14 @@
 import type { TaxSummaryResponse } from "@mybookkeeper/api-client/types/summary/TaxSummaryResponse";
+import { TAX_REPORT_VIEWS } from "../../constants/taxReport";
 import { Banner, SegmentedControl, useTheme } from "@platform/mobile";
 import { formatCurrency } from "@platform/core/utils/currency";
 import { Text, View } from "react-native";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
-import { TAX_REPORT_MESSAGES as MESSAGES, TAX_REPORT_VIEWS } from "../../constants/taxReport";
+import { TAX_REPORT_MESSAGES as MESSAGES } from "../../constants/taxReport";
 import type { TaxReportView } from "../../types/TaxReportView";
 import PickerField from "../transactions/PickerField";
 import { spokenMoney, spokenSignedMoney } from "../transactions/transactionDisplay";
+import { hasW2Income, taxReportHeadline } from "@mybookkeeper/api-client/utils/taxReportTotals";
 import { hasTaxData, toCents, uncategorizedCents } from "./taxReportDisplay";
 
 interface TaxReportHeaderProps {
@@ -14,6 +16,7 @@ interface TaxReportHeaderProps {
   summary: TaxSummaryResponse | undefined;
   showLastLoaded: boolean;
   view: TaxReportView;
+  views: readonly TaxReportView[];
   onChooseYear: () => void;
   onChangeView: (view: TaxReportView) => void;
 }
@@ -23,6 +26,7 @@ export default function TaxReportHeader({
   summary,
   showLastLoaded,
   view,
+  views,
   onChooseYear,
   onChangeView,
 }: TaxReportHeaderProps) {
@@ -39,7 +43,7 @@ export default function TaxReportHeader({
         <>
           <View
             accessible
-            accessibilityLabel={`${MESSAGES.netIncome}, ${spokenSignedMoney(net)}. ${MESSAGES.revenue} ${spokenMoney(summary.gross_revenue)}. ${MESSAGES.deductions} ${spokenMoney(summary.total_deductions)}. ${MESSAGES.approvedOnly}`}
+            accessibilityLabel={`${MESSAGES.netIncome}, ${spokenSignedMoney(net)}. ${MESSAGES.revenue} ${spokenMoney(summary.gross_revenue)}. ${MESSAGES.deductions} ${spokenMoney(summary.total_deductions)}. ${hasW2Income(summary) ? `${MESSAGES.totalIncomeWithWages} ${spokenMoney(taxReportHeadline(summary).amount)}. ` : ""}${MESSAGES.approvedOnly}`}
             style={{ gap: spacing.xs, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md }}
           >
             <Text style={muted}>{MESSAGES.netIncome}</Text>
@@ -47,12 +51,24 @@ export default function TaxReportHeader({
             <Text style={muted}>
               {MESSAGES.revenue} {formatCurrency(summary.gross_revenue)} · {MESSAGES.deductions} {formatCurrency(summary.total_deductions)}
             </Text>
+            {hasW2Income(summary) ? (
+              <Text style={muted}>
+                {MESSAGES.totalIncomeWithWages} {formatCurrency(taxReportHeadline(summary).amount)}
+              </Text>
+            ) : null}
             <Text style={muted}>{MESSAGES.approvedOnly}</Text>
           </View>
-          <SegmentedControl accessibilityLabel={MESSAGES.viewLabel} onChange={onChangeView} segments={TAX_REPORT_VIEWS} value={view} />
         </>
       ) : null}
-      {summary && summary.w2_total > 0 ? (
+      {summary && views.length > 1 ? (
+        <SegmentedControl
+          accessibilityLabel={MESSAGES.viewLabel}
+          onChange={onChangeView}
+          segments={TAX_REPORT_VIEWS.filter((segment) => views.includes(segment.value))}
+          value={view}
+        />
+      ) : null}
+      {summary && hasW2Income(summary) ? (
         <View accessible accessibilityLabel={`${MESSAGES.wages}, ${spokenMoney(summary.w2_total)}. ${MESSAGES.wagesNote}`} style={{ gap: spacing.xs }}>
           <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>
             {MESSAGES.wages} {formatCurrency(summary.w2_total)}

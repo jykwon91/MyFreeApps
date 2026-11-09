@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
-import { Platform, StyleSheet, Text } from "react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { FlatList, Platform, StyleSheet, Text } from "react-native";
 import OptionSheet from "../components/OptionSheet";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 
@@ -23,6 +23,14 @@ function sheet(onSelect = jest.fn(), onClose = jest.fn()) {
   );
 }
 
+/** Tells every list around the first row that it was laid out, as the screen would. */
+async function layOutList(): Promise<void> {
+  for (let node = screen.getAllByRole("radio")[0].parent; node; node = node.parent) {
+    const onLayout = node.props?.onLayout as ((event: unknown) => void) | undefined;
+    await act(async () => onLayout?.({ nativeEvent: { layout: { x: 0, y: 0, width: 1, height: 1 } } }));
+  }
+}
+
 describe("OptionSheet", () => {
   it("says which option is chosen and reports the one tapped", async () => {
     const onSelect = jest.fn();
@@ -33,6 +41,19 @@ describe("OptionSheet", () => {
 
     await fireEvent.press(screen.getByRole("radio", { name: "Oak St" }));
     expect(onSelect).toHaveBeenCalledWith("oak");
+  });
+
+  it("opens a long list on the current choice, and not at all when it is first", async () => {
+    const scroll = jest.spyOn(FlatList.prototype, "scrollToIndex").mockImplementation(() => undefined);
+    const many = Array.from({ length: 30 }, (_, i) => ({ value: `v${i}`, label: `Option ${i}` }));
+    const { rerender } = await render(<OptionSheet isOpen onClose={jest.fn()} onSelect={jest.fn()} options={many} title="Pick" value="v20" />);
+    await layOutList();
+    expect(scroll).toHaveBeenCalledWith({ index: 20, viewPosition: 0.5, animated: false });
+    scroll.mockClear();
+    await rerender(<OptionSheet isOpen onClose={jest.fn()} onSelect={jest.fn()} options={many} title="Pick" value="v0" />);
+    await layOutList();
+    expect(scroll).not.toHaveBeenCalled();
+    scroll.mockRestore();
   });
 
   it("closes, with rows and a Close button big enough to tap", async () => {

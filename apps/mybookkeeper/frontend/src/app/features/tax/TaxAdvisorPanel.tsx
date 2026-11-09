@@ -1,27 +1,15 @@
 import { Lightbulb, ShieldCheck, Info, RefreshCw } from "lucide-react";
-import { format, parseISO } from "date-fns";
 import {
   useGetAdvisorSuggestionsQuery,
   useGenerateAdvisorSuggestionsMutation,
-} from "@/shared/store/taxReturnsApi";
+} from "@mybookkeeper/api-client/store/taxReturnsApi";
+import { formatAdvisorGeneratedAt } from "@mybookkeeper/api-client/utils/formatAdvisorGeneratedAt";
+import { advisorCtaState, groupSuggestionsBySeverity } from "@mybookkeeper/api-client/utils/taxAdvisorView";
+import { TAX_ADVISOR_CTA_MESSAGES } from "@mybookkeeper/api-client/constants/taxAdvisor";
 import { LoadingButton, isNotFound } from "@platform/ui";
-import { SEVERITY_ORDER, SEVERITY_CONFIG } from "@/shared/lib/tax-advisor-config";
+import { SEVERITY_CONFIG } from "@/shared/lib/tax-advisor-config";
 import SuggestionCard from "@/app/features/tax/SuggestionCard";
 import TaxAdvisorPanelSkeleton from "@/app/features/tax/TaxAdvisorPanelSkeleton";
-
-type AdvisorCtaState = "rate-limited" | "error" | "idle";
-
-function resolveAdvisorCtaState(is429: boolean, hasError: boolean): AdvisorCtaState {
-  if (is429) return "rate-limited";
-  if (hasError) return "error";
-  return "idle";
-}
-
-const ADVISOR_CTA_MESSAGE: Record<AdvisorCtaState, string> = {
-  "rate-limited": "I've already reviewed this return several times today. Check back tomorrow.",
-  "error": "I ran into a problem reviewing your tax data. Want me to try again?",
-  "idle": "I can review your tax return and suggest ways to save money or fix potential issues.",
-};
 
 export interface TaxAdvisorPanelProps {
   taxReturnId: string;
@@ -69,15 +57,14 @@ export default function TaxAdvisorPanel({ taxReturnId, formCount }: TaxAdvisorPa
   const noCachedSuggestions = !cached || isNotFound(cacheError);
 
   if (noCachedSuggestions) {
-    const is429 = generateError && "status" in generateError && generateError.status === 429;
-    const ctaState = resolveAdvisorCtaState(!!is429, !!generateError);
+    const ctaState = advisorCtaState(generateError);
     return (
       <div className="border rounded-lg p-6 text-center">
         <Lightbulb className="h-8 w-8 mx-auto mb-3 text-yellow-500" />
         <p className="text-sm text-muted-foreground mb-4">
-          {ADVISOR_CTA_MESSAGE[ctaState]}
+          {TAX_ADVISOR_CTA_MESSAGES[ctaState]}
         </p>
-        {ctaState !== "rate-limited" && (
+        {ctaState !== "rate-limited" && ctaState !== "demo" && (
           <LoadingButton onClick={handleGenerate} isLoading={isGenerating} loadingText="Reviewing...">
             Get Tax Advice
           </LoadingButton>
@@ -109,17 +96,10 @@ export default function TaxAdvisorPanel({ taxReturnId, formCount }: TaxAdvisorPa
     );
   }
 
-  const activesuggestions = cached.suggestions.filter((s) => s.status !== "dismissed");
-
-  const grouped = SEVERITY_ORDER
-    .map((severity) => ({
-      severity,
-      items: activesuggestions.filter((s) => s.severity === severity),
-    }))
-    .filter((g) => g.items.length > 0);
+  const grouped = groupSuggestionsBySeverity(cached.suggestions);
 
   const generatedAt = cached.generated_at
-    ? format(parseISO(cached.generated_at), "MMM d, yyyy 'at' h:mm a")
+    ? formatAdvisorGeneratedAt(cached.generated_at)
     : null;
 
   return (

@@ -20,6 +20,13 @@ export default function OptionSheet<Value extends string>({
 }: OptionSheetProps<Value>) {
   const { colors, spacing, fontSize } = useTheme();
   const wasOpen = useRef(isOpen);
+  const list = useRef<FlatList<(typeof options)[number]>>(null);
+  const selectedIndex = options.findIndex((option) => option.value === value);
+
+  // A long list opens on the current choice instead of making the person scroll to it.
+  function showSelected(): void {
+    if (selectedIndex > 0) list.current?.scrollToIndex({ index: selectedIndex, viewPosition: 0.5, animated: false });
+  }
 
   // Only iOS tells a Modal it has finished closing. Android has nothing to wait for.
   useEffect(() => {
@@ -58,6 +65,9 @@ export default function OptionSheet<Value extends string>({
           accessibilityRole="radiogroup"
           data={options}
           keyExtractor={(option) => option.value}
+          onLayout={showSelected}
+          onScrollToIndexFailed={({ index, averageItemLength }) => list.current?.scrollToOffset({ offset: index * averageItemLength, animated: false })}
+          ref={list}
           renderItem={({ item }) => (
             <OptionRow isSelected={item.value === value} label={item.label} onPress={() => onSelect(item.value)} />
           )}

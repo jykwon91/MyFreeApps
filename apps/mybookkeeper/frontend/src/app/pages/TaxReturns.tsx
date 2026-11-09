@@ -2,17 +2,18 @@ import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getYear, format, parseISO } from "date-fns";
 import { Plus, FileText, RefreshCw, X } from "lucide-react";
-import { useListTaxReturnsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
-import {
-  useCreateTaxReturnMutation,
-} from "@/shared/store/taxReturnsApi";
+import { useListTaxReturnsQuery, useCreateTaxReturnMutation } from "@mybookkeeper/api-client/store/taxReturnsApi";
+import { FILING_STATUSES, DEFAULT_FILING_STATUS } from "@mybookkeeper/api-client/constants/taxFilingStatuses";
+import { taxReturnYearChoices } from "@mybookkeeper/api-client/utils/taxReturnYearChoices";
 import { useToast } from "@/shared/hooks/useToast";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { Button, LoadingButton, AlertBox } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 import Card from "@/shared/components/ui/Card";
 import Select from "@/shared/components/ui/Select";
-import { STATUS_BADGE, FILING_STATUSES } from "@/shared/lib/tax-return-config";
+import { STATUS_BADGE } from "@/shared/lib/tax-return-config";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
 import TaxReturnsListSkeleton from "@/app/features/tax/TaxReturnsListSkeleton";
 import { useDismissable } from "@/shared/hooks/useDismissable";
 import { hasHttpStatus } from "@/shared/utils/http-status";
@@ -21,13 +22,14 @@ export default function TaxReturns() {
   const navigate = useNavigate();
   const { showError, showSuccess } = useToast();
   const currentYear = getYear(new Date());
+  const canCreate = useIsOrgAdmin();
 
   const { dismissed: infoDismissed, dismiss: dismissInfo } = useDismissable("tax-returns-info-dismissed");
   const [showCreate, setShowCreate] = useState(false);
   const [newYear, setNewYear] = useState(currentYear);
-  const [newFilingStatus, setNewFilingStatus] = useState("single");
+  const [newFilingStatus, setNewFilingStatus] = useState<string>(DEFAULT_FILING_STATUS);
 
-  const { data: returns = [], isLoading } = useListTaxReturnsQuery();
+  const { data: returns = [], isLoading, isError, isFetching, refetch } = useListTaxReturnsQuery();
   const [createReturn, { isLoading: isCreating }] = useCreateTaxReturnMutation();
 
   const handleCreate = useCallback(async () => {
@@ -52,10 +54,12 @@ export default function TaxReturns() {
       <SectionHeader
         title="Tax Returns"
         actions={
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus size={14} className="mr-1.5" />
-            New Return
-          </Button>
+          canCreate ? (
+            <Button size="sm" onClick={() => setShowCreate(true)}>
+              <Plus size={14} className="mr-1.5" />
+              New Return
+            </Button>
+          ) : undefined
         }
       />
 
@@ -74,14 +78,14 @@ export default function TaxReturns() {
         </AlertBox>
       )}
 
-      {showCreate ? (
+      {showCreate && canCreate ? (
         <Card className="max-w-md">
           <h2 className="text-base font-medium mb-4">Create Tax Return</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">Tax Year</label>
               <Select value={newYear} onChange={(e) => setNewYear(Number(e.target.value))}>
-                {[currentYear, currentYear - 1, currentYear - 2, currentYear - 3].map((y) => (
+                {taxReturnYearChoices().map((y) => (
                   <option key={y} value={y}>{y}</option>
                 ))}
               </Select>
@@ -108,6 +112,12 @@ export default function TaxReturns() {
 
       {isLoading ? (
         <TaxReturnsListSkeleton />
+      ) : isError && returns.length === 0 ? (
+        <LoadErrorAlert
+          message="I couldn't load your tax returns. Want me to try again?"
+          isRetrying={isFetching}
+          onRetry={() => refetch()}
+        />
       ) : sortedReturns.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <FileText className="h-12 w-12 mx-auto mb-3 opacity-40" />

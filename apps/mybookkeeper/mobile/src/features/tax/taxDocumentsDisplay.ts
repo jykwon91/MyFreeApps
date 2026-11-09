@@ -1,6 +1,7 @@
 import type { ChecklistItem } from "@mybookkeeper/api-client/types/tax/ChecklistItem";
 import type { SourceDocumentsResponse } from "@mybookkeeper/api-client/types/tax/SourceDocumentsResponse";
 import type { TaxSourceDocument } from "@mybookkeeper/api-client/types/tax/TaxSourceDocument";
+import { groupTaxDocumentsByType, groupTaxDocumentsByYear } from "@mybookkeeper/api-client/utils/taxDocumentGroups";
 import { compareFormTypes } from "@mybookkeeper/api-client/utils/compareFormTypes";
 import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import { TAX_DOCUMENTS_MESSAGES as MESSAGES } from "../../constants/taxDocuments";
@@ -24,19 +25,19 @@ export function taxDocumentRowKey(row: TaxDocumentRow): string {
  * Only what's missing comes from the checklist. "Received" can be wrong: the server
  * accepts any document of the same form, whoever issued it, so the list of documents
  * is what shows what I have.
+ * With every year shown, the received documents are split by year too.
  */
-export function taxDocumentSections({ documents, checklist }: SourceDocumentsResponse): TaxDocumentSection[] {
+export function taxDocumentSections({ documents, checklist }: SourceDocumentsResponse, showYears = false): TaxDocumentSection[] {
   const missing = checklist
     .filter((item) => item.status === "missing")
     .sort((a, b) => compareFormTypes(a.expected_type, b.expected_type) || missingLabel(a).localeCompare(missingLabel(b)));
 
-  const forms = [...new Set(documents.map((document) => document.document_type))].sort(compareFormTypes);
-  const received = forms.map((form) => ({
-    title: getFormLabel(form),
-    data: documents
-      .filter((document) => document.document_type === form)
-      .sort((a, b) => taxDocumentName(a).localeCompare(taxDocumentName(b))),
-  }));
+  const byName = (docs: readonly TaxSourceDocument[]) => [...docs].sort((a, b) => taxDocumentName(a).localeCompare(taxDocumentName(b)));
+  const received: TaxDocumentSection[] = showYears
+    ? groupTaxDocumentsByYear(documents).flatMap(({ year, types }) =>
+        types.map(({ type, docs }) => ({ title: MESSAGES.yearForm(year, getFormLabel(type)), data: byName(docs) })),
+      )
+    : groupTaxDocumentsByType(documents).map(({ type, docs }) => ({ title: getFormLabel(type), data: byName(docs) }));
 
   return missing.length > 0 ? [{ title: MESSAGES.stillWaiting, data: missing }, ...received] : received;
 }

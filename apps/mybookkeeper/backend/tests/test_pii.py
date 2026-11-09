@@ -100,12 +100,12 @@ class TestMaskTokens:
 
 _WEB_CONFIG = (
     Path(__file__).resolve().parents[2]
-    / "frontend" / "src" / "shared" / "lib" / "tax-form-config.tsx"
+    / "api-client" / "src" / "constants" / "taxFormFields.ts"
 )
 
 
 def test_web_pii_fields_match_backend() -> None:
     source = _WEB_CONFIG.read_text()
-    block = re.search(r"PII_FIELDS\s*=\s*new Set\(\[(.*?)\]\)", source, re.S)
+    block = re.search(r"PII_FIELDS[^=]*=\s*new Set\(\[(.*?)\]\)", source, re.S)
     assert block is not None
     assert set(re.findall(r'"([a-z_]+)"', block.group(1))) == set(PII_FIELD_IDS)

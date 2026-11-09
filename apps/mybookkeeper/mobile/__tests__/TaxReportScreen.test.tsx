@@ -156,6 +156,30 @@ describe("TaxReportScreen", () => {
     expect(screen.getByText("$15,999.90")).toBeTruthy();
   });
 
+  const W2 = {
+    employer: "Acme", ein: "12-3456789", wages: 50000, federal_withheld: 6000, social_security_wages: 50000,
+    social_security_withheld: 3100, medicare_wages: 50000, medicare_withheld: 725, state_wages: 50000, state_withheld: 1200,
+  };
+
+  it("shows total income with wages, and the W-2 employers with what was withheld", async () => {
+    serve(aSummary({ w2_income: [W2, { ...W2, employer: null, ein: null, wages: 1000, federal_withheld: 0, state_withheld: 0 }], w2_total: 51000, total_income: 75000 }));
+    await show();
+    expect(await screen.findByText(new RegExp(MESSAGES.totalIncomeWithWages))).toBeTruthy();
+    await fireEvent.press(screen.getByRole("tab", { name: "W-2" }));
+    expect(await screen.findByText("Acme")).toBeTruthy();
+    expect(screen.getByText(MESSAGES.ein("12-3456789"))).toBeTruthy();
+    expect(screen.getByText(MESSAGES.withheld("$6,000.00", "$1,200.00"))).toBeTruthy();
+    expect(screen.getByText(MESSAGES.unknownEmployer)).toBeTruthy();
+    expect(screen.queryByText("Mortgage Principal")).toBeNull();
+  });
+
+  it("offers no W-2 view for a year without W-2s", async () => {
+    serve();
+    await show();
+    await screen.findByText("Mortgage Principal");
+    expect(screen.queryByRole("tab", { name: "W-2" })).toBeNull();
+  });
+
   it("switches to properties", async () => {
     serve();
     await show();

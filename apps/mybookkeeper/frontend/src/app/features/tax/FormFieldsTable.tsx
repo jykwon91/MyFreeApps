@@ -1,22 +1,19 @@
 import { useState, useCallback } from "react";
 import { Pencil, FileText } from "lucide-react";
-import { formatCurrency } from "@/shared/utils/currency";
 import Badge from "@/shared/components/ui/Badge";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
-import type { TaxFormField, FieldValueType, SourceType } from "@/shared/types/tax/tax-form";
-import { VALIDATION_ICONS, SOURCE_BADGES, PII_FIELDS, SSN_REGEX, MASK_TOKEN_REGEX } from "@/shared/lib/tax-form-config";
-
-type FieldSourceMode = "calculated" | "overridden" | "sourced";
-
-function resolveFieldSourceMode(field: TaxFormField): FieldSourceMode {
-  if (field.is_calculated) return "calculated";
-  if (field.is_overridden) return "overridden";
-  return "sourced";
-}
+import type { TaxFormField } from "@mybookkeeper/api-client/types/tax/TaxFormField";
+import type { SourceType } from "@mybookkeeper/api-client/types/tax/SourceType";
+import type { TaxFieldOverrideValue } from "@mybookkeeper/api-client/types/tax/TaxFieldOverrideValue";
+import type { FieldOverrideProblems } from "@mybookkeeper/api-client/types/tax/FieldOverrideProblems";
+import { formatTaxFieldValue } from "@mybookkeeper/api-client/utils/formatTaxFieldValue";
+import { taxFieldSourceMode } from "@mybookkeeper/api-client/utils/taxFieldSourceMode";
+import { parseTaxFieldOverride, taxFieldEditText, taxFieldOverrideProblems } from "@mybookkeeper/api-client/utils/taxFieldOverride";
+import { VALIDATION_ICONS, SOURCE_BADGES } from "@/shared/lib/tax-form-config";
 
 function resolveFieldSourceBadge(
-  mode: FieldSourceMode,
+  mode: ReturnType<typeof taxFieldSourceMode>,
   fallback: { label: string; color: BadgeColor },
 ): { label: string; color: BadgeColor } {
   switch (mode) {
@@ -32,41 +29,29 @@ export interface FormFieldsTableProps {
   sourceType: SourceType;
   documentId?: string | null;
   /** Resolves true when the server accepted the override. */
-  onOverride: (fieldId: string, value: number | string | boolean | null, reason: string, fieldType: FieldValueType) => Promise<boolean>;
+  onOverride: (fieldId: string, override: TaxFieldOverrideValue, reason: string) => Promise<boolean>;
   isSaving: boolean;
+  canOverride: boolean;
 }
 
-function maskPii(fieldId: string, value: string): string {
-  if (PII_FIELDS.has(fieldId)) {
-    return value.length >= 4 ? "***" + value.slice(-4) : "****";
-  }
-  return value.replace(SSN_REGEX, (m) => "***-**-" + m.slice(-4));
-}
-
-function formatFieldValue(field: TaxFormField): string {
-  if (field.value == null) return "\u2014";
-  if (field.type === "numeric") return maskPii(field.field_id, formatCurrency(field.value as number));
-  if (field.type === "boolean") return field.value ? "Yes" : "No";
-  return maskPii(field.field_id, String(field.value));
-}
-
-export default function FormFieldsTable({ fields, instanceLabel, sourceType, documentId, onOverride, isSaving }: FormFieldsTableProps) {
+export default function FormFieldsTable({ fields, instanceLabel, sourceType, documentId, onOverride, isSaving, canOverride }: FormFieldsTableProps) {
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [editReason, setEditReason] = useState("");
+  const [problems, setProblems] = useState<FieldOverrideProblems>({});
   const [showDocViewer, setShowDocViewer] = useState(false);
 
   const badge = SOURCE_BADGES[sourceType];
 
   const startEdit = useCallback((field: TaxFormField) => {
     setEditingFieldId(field.id);
-    // The API returns PII masked ("***1234"); never offer that as the edit value.
-    const isMasked = PII_FIELDS.has(field.field_id) || MASK_TOKEN_REGEX.test(String(field.value));
-    setEditValue(field.value != null && !isMasked ? String(field.value) : "");
+    setEditValue(taxFieldEditText(field));
     setEditReason("");
+    setProblems({});
   }, []);
 
   const cancelEdit = useCallback(() => {
+    setProblems({});
     setEditingFieldId(null);
     setEditValue("");
     setEditReason("");
@@ -74,20 +59,19 @@ export default function FormFieldsTable({ fields, instanceLabel, sourceType, doc
 
   const saveEdit = useCallback(async (field: TaxFormField) => {
     if (!editReason.trim()) return;
-    // A blank text or number is sent as null, which the server treats as an explicit clear.
-    let parsedValue: number | string | boolean | null;
-    if (field.type === "numeric") {
-      parsedValue = editValue === "" ? null : parseFloat(editValue);
-    } else if (field.type === "boolean") {
-      parsedValue = editValue.trim() === "" ? null : editValue.toLowerCase() === "true" || editValue === "1";
-    } else {
-      parsedValue = editValue || null;
+    // A blank box is sent as null, which the server treats as an explicit clear; unreadable or hidden values are pointed out.
+    const found = taxFieldOverrideProblems(field.type, editValue, editReason, true);
+    const parsed = parseTaxFieldOverride(field.type, editValue, true);
+    if (found.number || !parsed) {
+      setProblems({ number: found.number });
+      return;
     }
-    const saved = await onOverride(field.id, parsedValue, editReason.trim(), field.type);
-    if (!saved) return;
+    // The editor stays open until the server accepts, so a rejected value can be corrected.
+    if (!(await onOverride(field.id, parsed, editReason.trim()))) return;
     setEditingFieldId(null);
     setEditValue("");
     setEditReason("");
+    setProblems({});
   }, [editValue, editReason, onOverride]);
 
   return (
@@ -122,7 +106,7 @@ export default function FormFieldsTable({ fields, instanceLabel, sourceType, doc
           {fields.map((field) => {
             const isEditing = editingFieldId === field.id;
 
-            const fieldSourceMode = resolveFieldSourceMode(field);
+            const fieldSourceMode = taxFieldSourceMode(field);
             const fieldSourceBadge = resolveFieldSourceBadge(fieldSourceMode, badge);
             return (
               <tr
@@ -139,12 +123,14 @@ export default function FormFieldsTable({ fields, instanceLabel, sourceType, doc
                   {isEditing ? (
                     <div className="space-y-2">
                       <input
-                        type={field.type === "numeric" ? "number" : "text"}
+                        type="text"
+                        inputMode={field.type === "numeric" ? "decimal" : undefined}
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
                         className="border rounded px-2 py-1 text-sm w-full text-right"
                         autoFocus
                       />
+                      {problems.number ? <p className="text-xs text-red-600 text-right">{problems.number}</p> : null}
                       <input
                         type="text"
                         value={editReason}
@@ -174,7 +160,7 @@ export default function FormFieldsTable({ fields, instanceLabel, sourceType, doc
                       </div>
                     </div>
                   ) : (
-                    <span className="font-medium">{formatFieldValue(field)}</span>
+                    <span className="font-medium">{formatTaxFieldValue(field)}</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-center">
@@ -184,7 +170,7 @@ export default function FormFieldsTable({ fields, instanceLabel, sourceType, doc
                   {VALIDATION_ICONS[field.validation_status]}
                 </td>
                 <td className="px-4 py-3 text-center">
-                  {!isEditing ? (
+                  {!isEditing && canOverride ? (
                     <button
                       onClick={() => startEdit(field)}
                       className="text-muted-foreground hover:text-foreground"

@@ -92,7 +92,7 @@ routes:
   /tax-returns:
     screen: (app)/tax-returns/index
   /tax-returns/:id:
-    screen: (app)/tax-returns/[id]
+    screen: (app)/tax-returns/[id]/index
   /tax-review:
     screen: (app)/tax/review
   /tenants:

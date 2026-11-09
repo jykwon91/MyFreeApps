@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Eye, Download, FileText } from "lucide-react";
 import { downloadDocument } from "@/shared/utils/downloadDocument";
-import { compareFormTypes } from "@mybookkeeper/api-client/utils/compareFormTypes";
+import { groupTaxDocumentsByType } from "@mybookkeeper/api-client/utils/taxDocumentGroups";
 import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import Badge from "@/shared/components/ui/Badge";
 import type { TaxSourceDocument } from "@mybookkeeper/api-client/types/tax/TaxSourceDocument";
@@ -15,15 +15,7 @@ export default function ReceivedDocumentsGrouped({
   documents,
   onViewDocument,
 }: ReceivedDocumentsGroupedProps) {
-  const grouped = useMemo(() => {
-    const groups = new Map<string, TaxSourceDocument[]>();
-    for (const doc of documents) {
-      const type = doc.document_type;
-      if (!groups.has(type)) groups.set(type, []);
-      groups.get(type)!.push(doc);
-    }
-    return [...groups.entries()].sort((a, b) => compareFormTypes(a[0], b[0]));
-  }, [documents]);
+  const grouped = useMemo(() => groupTaxDocumentsByType(documents), [documents]);
 
   if (documents.length === 0) {
     return (
@@ -41,7 +33,7 @@ export default function ReceivedDocumentsGrouped({
         <span className="text-sm font-medium">Received Documents ({documents.length})</span>
       </div>
       <div className="divide-y">
-        {grouped.map(([formType, docs]) => (
+        {grouped.map(({ type: formType, docs }) => (
           <div key={formType}>
             <div className="px-3 py-2 bg-muted/30 flex items-center gap-2">
               <Badge label={getFormLabel(formType)} color="blue" />

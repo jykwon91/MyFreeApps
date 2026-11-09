@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import * as Accordion from "@radix-ui/react-accordion";
 import { ChevronRight, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
-import { compareFormTypes } from "@mybookkeeper/api-client/utils/compareFormTypes";
+import { groupTaxDocumentsByYear } from "@mybookkeeper/api-client/utils/taxDocumentGroups";
 import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import FormTypeGroup from "@/app/features/tax/FormTypeGroup";
 import type { TaxSourceDocument } from "@mybookkeeper/api-client/types/tax/TaxSourceDocument";
@@ -16,36 +16,7 @@ export default function TaxDocumentsAccordion({
   documents,
   onViewDocument,
 }: TaxDocumentsAccordionProps) {
-  const grouped = useMemo(() => {
-    const byYear = new Map<number, Map<string, TaxSourceDocument[]>>();
-    for (const doc of documents) {
-      if (!byYear.has(doc.tax_year)) {
-        byYear.set(doc.tax_year, new Map());
-      }
-      const byType = byYear.get(doc.tax_year)!;
-      if (!byType.has(doc.document_type)) {
-        byType.set(doc.document_type, []);
-      }
-      byType.get(doc.document_type)!.push(doc);
-    }
-
-    // Sort years descending
-    const sortedYears = [...byYear.keys()].sort((a, b) => b - a);
-
-    return sortedYears.map((year) => {
-      const byType = byYear.get(year)!;
-      const sortedTypes = [...byType.keys()].sort(compareFormTypes);
-      return {
-        year,
-        types: sortedTypes.map((type) => ({
-          type,
-          docs: byType.get(type)!.slice().sort((a, b) =>
-            (a.issuer_name ?? "").localeCompare(b.issuer_name ?? ""),
-          ),
-        })),
-      };
-    });
-  }, [documents]);
+  const grouped = useMemo(() => groupTaxDocumentsByYear(documents), [documents]);
 
   const mostRecentYear = grouped[0]?.year;
 

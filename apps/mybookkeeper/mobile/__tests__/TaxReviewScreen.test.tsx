@@ -180,12 +180,27 @@ describe("TaxReviewScreen", () => {
     expect(await screen.findByText(MESSAGES.nothingToPointOut)).toBeTruthy();
   });
 
-  it("never shows raw field names, percentages or the server's summary", async () => {
+  it("shows the summary and how much of each form was found, but keeps raw field names for the form's own screen", async () => {
     serve();
     await show();
     await screen.findByText("Schedule E · 123 Main St");
-    expect(screen.queryByText(/line_|%|complete/i)).toBeNull();
-    expect(screen.queryByText("I have 1 rental property.")).toBeNull();
+    expect(screen.getByText("I have 1 rental property.")).toBeTruthy();
+    expect(screen.getByText(`Needs attention \u00b7 ${MESSAGES.filled(1, 16)}`)).toBeTruthy();
+    expect(screen.queryByText(/line_/)).toBeNull();
+  });
+
+  it("opens a form's details from its row", async () => {
+    serve(aReview({ forms: [aForm({ instance_label: "9 Oak Ave & Co" })] }));
+    await show();
+    await fireEvent.press(await screen.findByLabelText(new RegExp(MESSAGES.filled(1, 16))));
+    expect(mockPush).toHaveBeenLastCalledWith("/tax/review-form?year=2025&form=schedule_e&instance=9%20Oak%20Ave%20%26%20Co&copy=0");
+  });
+
+  it("leaves the summary off when there isn't one", async () => {
+    serve(aReview({ summary: "" }));
+    await show();
+    await screen.findByText("Schedule E · 123 Main St");
+    expect(screen.queryByText(MESSAGES.summaryTitle)).toBeNull();
   });
 
   it("opens the tax return, and sends adding a document to the camera", async () => {

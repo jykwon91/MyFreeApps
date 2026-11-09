@@ -1,0 +1,15 @@
+export const TAX_RETURN_CREATE_MESSAGES = {
+  title: "New tax return",
+  headerBackTitle: "Tax Returns",
+  newReturn: "New return",
+  year: "Tax year",
+  yearHint: "Chooses the year this return covers",
+  filingStatus: "Filing status",
+  filingStatusHint: "Chooses how you file",
+  create: "Create tax return",
+  creating: "Creating...",
+  created: (year: number) => `Tax return for ${year} created.`,
+  viewOnlyHeading: "Only owners and admins can start a tax return.",
+  viewOnlyBody: "Ask the workspace owner to change your access.",
+  alreadyHave: (year: number) => `You already have a ${year} tax return.`,
+} as const;
