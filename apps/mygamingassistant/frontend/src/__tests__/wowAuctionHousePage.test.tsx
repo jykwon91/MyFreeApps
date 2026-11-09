@@ -181,3 +181,75 @@ describe("Auction house page", () => {
     expect(failed.refetch).toHaveBeenCalled();
   });
 });
+
+describe("Auction house page: profession and recipe filters", () => {
+  // Runed Copper Rod (spell 7421): 1 Copper Rod + 1 Mote of Magic -> 1 Runed Copper Rod.
+  const CRAFTING_ITEMS: PriceListResponse["items"] = [
+    ...ITEMS,
+    [6217, 150, 140, 20, 4, "Copper Rod"],
+    [247786, 250, 240, 600, 30, "Mote of Magic"],
+    [6218, 1000, 900, 3, 2, "Runed Copper Rod"],
+  ];
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    usePricesQuery.mockReset();
+    answerPerFaction(CRAFTING_ITEMS);
+  });
+
+  it("narrows the list to a profession's materials and keeps it in the URL", async () => {
+    renderPage();
+    await userEvent.selectOptions(screen.getByTestId("auction-profession"), "enchanting");
+    expect(screen.getByTestId("search")).toHaveTextContent("prof=enchanting");
+    expect(await screen.findByTestId("auction-results-note")).toHaveTextContent(/Enchanting materials on sale · \d+ more have no auctions right now/);
+    const names = rows().map((r) => r.firstElementChild?.textContent);
+    expect(names).toContain("Mote of Magic");
+    expect(names).not.toContain("Linen Cloth");
+  });
+
+  it("prices one recipe: each material, the total, what it sells for and the difference", async () => {
+    renderPage("/wow-forever/auction-house?prof=enchanting");
+    await userEvent.type(await screen.findByTestId("recipe-finder"), "copper rod");
+    await userEvent.click(screen.getByRole("button", { name: "Runed Copper Rod (5)" }));
+    expect(screen.getByTestId("search")).toHaveTextContent("recipe=7421");
+
+    const panel = await screen.findByTestId("recipe-panel");
+    expect(within(panel).getByRole("heading", { name: "Runed Copper Rod" })).toBeInTheDocument();
+    expect(panel).toHaveTextContent("Makes 1 × Runed Copper Rod");
+    const materials = within(panel).getAllByTestId("recipe-material");
+    expect(materials.map((m) => m.firstElementChild?.textContent)).toEqual(["Copper Rod", "Mote of Magic"]);
+    expect(within(materials[1]).getByTestId("recipe-each")).toHaveTextContent("2s 50c");
+    expect(within(materials[1]).getByTestId("recipe-on-sale")).toHaveTextContent("600 in 30 auctions");
+    expect(screen.getByTestId("recipe-materials-cost")).toHaveTextContent("4s");
+    expect(screen.getByTestId("recipe-sells-for")).toHaveTextContent("10s each");
+    expect(screen.getByTestId("recipe-profit")).toHaveTextContent("+6s");
+    expect(screen.queryByRole("searchbox", { name: "Search items" })).toBeNull();
+
+    await userEvent.click(screen.getByTestId("recipe-back"));
+    expect(screen.getByTestId("search")).not.toHaveTextContent("recipe=");
+    expect(await screen.findByTestId("recipe-finder")).toBeInTheDocument();
+  });
+
+  it("says 'at least' when a material has no auctions, and no difference", async () => {
+    answerPerFaction(CRAFTING_ITEMS.filter(([id]) => id !== 6217));
+    renderPage("/wow-forever/auction-house?prof=enchanting&recipe=7421");
+    const panel = await screen.findByTestId("recipe-panel");
+    expect(within(within(panel).getAllByTestId("recipe-material")[0]).getByTestId("recipe-on-sale")).toHaveTextContent("No auctions");
+    expect(screen.getByTestId("recipe-materials-cost")).toHaveTextContent("at least 2s 50c (1 material with no auctions not counted)");
+    expect(screen.queryByTestId("recipe-profit")).toBeNull();
+  });
+
+  it("says when a linked recipe isn't found, with the way back", async () => {
+    renderPage("/wow-forever/auction-house?prof=enchanting&recipe=999999");
+    expect(await screen.findByText("That Enchanting recipe wasn't found. Pick another from the list.")).toBeInTheDocument();
+    expect(screen.getByTestId("recipe-back")).toHaveTextContent("All Enchanting materials");
+  });
+
+  it("drops the recipe when the profession changes", async () => {
+    renderPage("/wow-forever/auction-house?prof=enchanting&recipe=7421");
+    await screen.findByTestId("recipe-panel");
+    await userEvent.selectOptions(screen.getByTestId("auction-profession"), "tailoring");
+    expect(screen.getByTestId("search")).toHaveTextContent("prof=tailoring");
+    expect(screen.getByTestId("search")).not.toHaveTextContent("recipe=");
+  });
+});

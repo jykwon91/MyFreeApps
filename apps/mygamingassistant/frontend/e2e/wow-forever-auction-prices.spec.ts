@@ -17,6 +17,8 @@
  *   - a food page: buy or cook, ingredient prices, the recipe's price
  *   - the food picker sums up each pick
  *   - prices that fail to load leave the route usable, with a retry
+ *   - the Auction house page narrows to one profession's materials, and prices one recipe
+ *     (each material, the total, what it sells for, the difference) from its link
  *   - nothing scrolls sideways at 375px
  *
  * Run: npm run test:e2e -- wow-forever-auction-prices
@@ -254,10 +256,49 @@ test("an auction house with no prices yet says so plainly", async ({ page }) => 
   await expect(page.getByTestId("auction-row")).toHaveCount(0);
 });
 
+/** Runed Copper Rod (spell 7421) = 1 Copper Rod + 1 Mote of Magic. */
+const ROD_RECIPE_ROWS: Row[] = [
+  [6217, 150, "Copper Rod"],
+  [247786, 250, "Mote of Magic"],
+  [6218, 1000, "Runed Copper Rod"],
+  [2589, 10, "Linen Cloth"],
+];
+
+test("the Auction house page narrows to a profession's materials and prices one recipe", async ({ page }) => {
+  await stubPrices(page, ROD_RECIPE_ROWS);
+  await page.goto("/wow-forever/auction-house");
+  await page.getByTestId("auction-profession").selectOption("enchanting");
+  await expect(page).toHaveURL(/prof=enchanting/);
+  await expect(page.getByTestId("auction-results-note")).toContainText(/^2 Enchanting materials on sale · \d+ more have no auctions right now$/);
+  await expect(page.getByTestId("auction-row").filter({ hasText: "Linen Cloth" })).toHaveCount(0);
+
+  await page.getByTestId("recipe-finder").fill("runed copper");
+  await page.getByRole("button", { name: "Runed Copper Rod (5)" }).click();
+  await expect(page).toHaveURL(/recipe=7421/);
+  const panel = page.getByTestId("recipe-panel");
+  await expect(panel.getByRole("heading", { name: "Runed Copper Rod" })).toBeVisible();
+  await expect(panel.getByTestId("recipe-material")).toHaveCount(2);
+  await expect(page.getByTestId("recipe-materials-cost")).toContainText("4s");
+  await expect(page.getByTestId("recipe-sells-for")).toContainText("10s each");
+  await expect(page.getByTestId("recipe-profit")).toContainText("+6s");
+
+  await page.goBack();
+  await expect(page.getByTestId("recipe-finder")).toBeVisible();
+  await page.goForward();
+  await page.getByTestId("recipe-back").click();
+  await expect(page).not.toHaveURL(/recipe=/);
+});
+
 test("priced pages never scroll sideways on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await stubPrices(page, [...craftingRows(), ...FOOD_ROWS]);
-  for (const path of ["/wow-forever/professions?p=tailoring&skill=150", "/wow-forever/professions?p=enchanting", "/wow-forever/food/6890"]) {
+  for (const path of [
+    "/wow-forever/professions?p=tailoring&skill=150",
+    "/wow-forever/professions?p=enchanting",
+    "/wow-forever/food/6890",
+    "/wow-forever/auction-house?prof=enchanting",
+    "/wow-forever/auction-house?prof=enchanting&recipe=7421",
+  ]) {
     await page.goto(path);
     await expect(page.getByTestId("price-credit").first()).toBeVisible();
     await expectNoSidewaysScroll(page);
