@@ -1,11 +1,7 @@
-import { endOfMonth, endOfQuarter, format, startOfMonth, startOfQuarter, startOfYear, subMonths, subQuarters, subYears } from "date-fns";
+import { endOfMonth, endOfQuarter, startOfMonth, startOfQuarter, startOfYear, subMonths, subQuarters, subYears } from "date-fns";
 import type { RangePreset } from "../types/analytics/range-preset";
 import type { PropertyPnLRange } from "../types/attribution/property-pnl-range";
-
-/** A day in the person's own time zone. Going through UTC could move it to the neighbouring day. */
-function isoDay(date: Date): string {
-  return format(date, "yyyy-MM-dd");
-}
+import { isoDay } from "./isoDay";
 
 /** The preset's dates. The "this" ones run from the start of the period up to and including today; the "last" ones are whole periods. */
 export function propertyPnlRange(preset: RangePreset, today: Date): PropertyPnLRange {

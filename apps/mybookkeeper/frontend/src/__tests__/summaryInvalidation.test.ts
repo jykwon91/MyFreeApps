@@ -12,7 +12,7 @@ import "@mybookkeeper/api-client/store/summaryApi";
 // "succeed" without a network. The baseQuery calls `api({ url, method, ... })`.
 vi.mock("@platform/core/lib/api", () => {
   const fn = vi.fn(async ({ url }: { url: string }) => {
-    if (url === "/summary") return { data: { revenue: 0, expenses: 0, profit: 0, by_month: [], by_property: [], by_property_month: [], by_category: {}, by_month_expense: [] } };
+    if (url === "/summary") return { data: { revenue: 0, expenses: 0, profit: 0, by_month: [], by_property: [], by_property_month: [], by_category: {}, by_month_expense: [], by_month_revenue: [] } };
     return { data: { id: "stub", status: "ok" } };
   });
   return { default: fn };

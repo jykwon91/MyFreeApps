@@ -1,12 +1,9 @@
-import { EXPENSE_CATEGORY_LIST, REVENUE_CATEGORIES } from "@mybookkeeper/api-client/constants/transactionCategories";
+import { EXPENSE_CATEGORY_SET, REVENUE_CATEGORY_SET } from "@mybookkeeper/api-client/constants/summaryCategorySets";
 import type { MonthExpenseSummary } from "@mybookkeeper/api-client/types/summary/MonthExpenseSummary";
 import type { MonthSummary } from "@mybookkeeper/api-client/types/summary/MonthSummary";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
 import type { CategoryGroup } from "../../types/CategoryGroup";
 import type { CategoryTotal } from "../../types/CategoryTotal";
-
-const REVENUE: ReadonlySet<string> = new Set(REVENUE_CATEGORIES);
-const EXPENSES: ReadonlySet<string> = new Set(EXPENSE_CATEGORY_LIST);
 
 function ranked(entries: [string, number][]): CategoryTotal[] {
   return entries
@@ -18,11 +15,12 @@ function ranked(entries: [string, number][]): CategoryTotal[] {
 /** Every category with money in it, income, expenses and anything else apart, each biggest first. */
 export function categoryGroups(byCategory: Readonly<Record<string, number>>): CategoryGroup[] {
   const entries = Object.entries(byCategory);
-  return [
-    { heading: MESSAGES.income, rows: ranked(entries.filter(([category]) => REVENUE.has(category))) },
-    { heading: MESSAGES.expenses, rows: ranked(entries.filter(([category]) => EXPENSES.has(category))) },
-    { heading: MESSAGES.other, rows: ranked(entries.filter(([category]) => !REVENUE.has(category) && !EXPENSES.has(category))) },
-  ].filter((group) => group.rows.length > 0);
+  const groups: CategoryGroup[] = [
+    { kind: "income", heading: MESSAGES.income, rows: ranked(entries.filter(([category]) => REVENUE_CATEGORY_SET.has(category))) },
+    { kind: "expenses", heading: MESSAGES.expenses, rows: ranked(entries.filter(([category]) => EXPENSE_CATEGORY_SET.has(category))) },
+    { kind: "other", heading: MESSAGES.other, rows: ranked(entries.filter(([category]) => !REVENUE_CATEGORY_SET.has(category) && !EXPENSE_CATEGORY_SET.has(category))) },
+  ];
+  return groups.filter((group) => group.rows.length > 0);
 }
 
 /** The expense categories with money in one month, biggest first. */

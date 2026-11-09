@@ -1,5 +1,5 @@
 import { changeFigures } from "@mybookkeeper/api-client/utils/comparePeriods";
-import { Banner, LoadingButton, SegmentedControl, useTheme } from "@platform/mobile";
+import { Banner, SegmentedControl, useTheme } from "@platform/mobile";
 import { formatCurrency } from "@platform/core/utils/currency";
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
@@ -8,9 +8,11 @@ import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import type { UtilityCostRow } from "../../types/UtilityCostRow";
 import type { UtilityGranularity } from "../../types/UtilityGranularity";
 import ChangeNote from "../analyticsControls/ChangeNote";
+import ComparisonNotice from "../analyticsControls/ComparisonNotice";
 import HomeLinkRow from "../home/HomeLinkRow";
 import { spokenMoney } from "../transactions/transactionDisplay";
 import UtilityCostRowView from "./UtilityCostRowView";
+import { totalCents } from "./utilityCostsDisplay";
 
 interface UtilityCostsHeaderProps {
   controls: ReactNode;
@@ -18,11 +20,13 @@ interface UtilityCostsHeaderProps {
   propertiesFailed: boolean;
   showLastLoaded: boolean;
   rows: readonly UtilityCostRow[] | null;
-  totalCents: number;
+  /** Everything the rows add up to, in cents. */
+  seenCents: number;
   /** The earlier stretch's rows, or null when not comparing or they haven't loaded. */
   previousRows: readonly UtilityCostRow[] | null;
   againstLabel: string;
   comparisonFailed: boolean;
+  isComparisonLoading: boolean;
   range: string;
   onChangeGranularity: (granularity: UtilityGranularity) => void;
   onSeeBills: () => void;
@@ -35,18 +39,19 @@ export default function UtilityCostsHeader({
   propertiesFailed,
   showLastLoaded,
   rows,
-  totalCents,
+  seenCents,
   previousRows,
   againstLabel,
   comparisonFailed,
+  isComparisonLoading,
   range,
   onChangeGranularity,
   onSeeBills,
   onRetryComparison,
 }: UtilityCostsHeaderProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const dollars = totalCents / 100;
-  const previousTotal = previousRows ? previousRows.reduce((sum, row) => sum + row.cents, 0) : null;
+  const dollars = seenCents / 100;
+  const previousTotal = previousRows ? totalCents(previousRows) : null;
   const sectionTitle = { fontSize: fontSize.md, fontWeight: "600", color: colors.foreground } as const;
   return (
     <View style={{ gap: spacing.md, padding: spacing.lg }}>
@@ -54,20 +59,11 @@ export default function UtilityCostsHeader({
       {controls}
       <SegmentedControl accessibilityLabel={MESSAGES.granularityLabel} onChange={onChangeGranularity} segments={UTILITY_GRANULARITIES} value={granularity} />
       {propertiesFailed ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.propertiesFailed}</Text> : null}
-      {comparisonFailed ? (
-        <>
-          <Text accessibilityRole="alert" style={{ fontSize: fontSize.md, color: colors.foreground }}>
-            {MESSAGES.comparisonFailed}
-          </Text>
-          <LoadingButton onPress={onRetryComparison} variant="secondary">
-            {MESSAGES.retryComparison}
-          </LoadingButton>
-        </>
-      ) : null}
+      <ComparisonNotice failedMessage={MESSAGES.comparisonFailed} hasFailed={comparisonFailed} isLoading={isComparisonLoading} onRetry={onRetryComparison} />
       {rows && rows.length > 0 ? (
         <>
-          <View accessible accessibilityLabel={`I've seen ${spokenMoney(dollars)} in utilities, ${range}. ${MESSAGES.approvedOnly}`} style={{ gap: spacing.xs }}>
-            <Text style={{ fontSize: fontSize.xl, fontWeight: "700", color: colors.foreground }}>I've seen {formatCurrency(dollars)} in utilities</Text>
+          <View accessible accessibilityLabel={`${MESSAGES.seenInUtilitiesSpoken(spokenMoney(dollars), range)} ${MESSAGES.approvedOnly}`} style={{ gap: spacing.xs }}>
+            <Text style={{ fontSize: fontSize.xl, fontWeight: "700", color: colors.foreground }}>{MESSAGES.seenInUtilities(formatCurrency(dollars))}</Text>
             <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{range}</Text>
             <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.approvedOnly}</Text>
           </View>
@@ -82,7 +78,7 @@ export default function UtilityCostsHeader({
               key={row.subCategory}
               previousCents={previousRows ? (previousRows.find((candidate) => candidate.subCategory === row.subCategory)?.cents ?? 0) : null}
               row={row}
-              totalCents={totalCents}
+              totalCents={seenCents}
             />
           ))}
           <Text accessibilityRole="header" style={sectionTitle}>

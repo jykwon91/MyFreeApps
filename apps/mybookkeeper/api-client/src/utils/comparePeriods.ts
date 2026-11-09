@@ -1,12 +1,8 @@
-import { addDays, differenceInCalendarDays, differenceInCalendarMonths, endOfMonth, format, isSameDay, parseISO, startOfMonth, subMonths, subYears } from "date-fns";
+import { addDays, differenceInCalendarDays, differenceInCalendarMonths, endOfMonth, isSameDay, parseISO, startOfMonth, subMonths, subYears } from "date-fns";
 import type { ChangeFigures } from "../types/analytics/change-figures";
 import type { CompareMode } from "../types/analytics/compare-mode";
 import type { PropertyPnLRange } from "../types/attribution/property-pnl-range";
-
-/** A day in the person's own time zone. Going through UTC could move it to the neighbouring day. */
-function isoDay(date: Date): string {
-  return format(date, "yyyy-MM-dd");
-}
+import { isoDay } from "./isoDay";
 
 function isWholeMonths(start: Date, end: Date): boolean {
   return isSameDay(start, startOfMonth(start)) && isSameDay(end, endOfMonth(end));
@@ -20,7 +16,11 @@ function isWholeMonths(start: Date, end: Date): boolean {
 export function comparisonRange(range: PropertyPnLRange, mode: Exclude<CompareMode, "none">): PropertyPnLRange {
   const start = parseISO(range.since);
   const end = parseISO(range.until);
-  if (mode === "previous_year") return { since: isoDay(subYears(start, 1)), until: isoDay(subYears(end, 1)) };
+  if (mode === "previous_year") {
+    // A whole-month range keeps its shape: February 2025 is set against all of February 2024, leap day included.
+    const yearBefore = subYears(end, 1);
+    return { since: isoDay(subYears(start, 1)), until: isoDay(isWholeMonths(start, end) ? endOfMonth(yearBefore) : yearBefore) };
+  }
   if (isSameDay(start, startOfMonth(start))) {
     const months = differenceInCalendarMonths(end, start) + 1;
     const before = subMonths(end, months);

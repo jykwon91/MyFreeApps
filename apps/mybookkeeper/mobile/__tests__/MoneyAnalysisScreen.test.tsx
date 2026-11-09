@@ -3,8 +3,9 @@ import type { SummaryResponse } from "@mybookkeeper/api-client/types/summary/sum
 import { propertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
+import { StyleSheet } from "react-native";
 import { Provider } from "react-redux";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../src/constants/moneyAnalysis";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
@@ -41,12 +42,16 @@ function aSummary(overrides: Partial<SummaryResponse> = {}): SummaryResponse {
       { month: "2026-09", utilities: 100 },
       { month: "2026-10", maintenance: 300 },
     ],
+    by_month_revenue: [
+      { month: "2026-09", rental_revenue: 400 },
+      { month: "2026-10", rental_revenue: 600 },
+    ],
     by_property_month: [{ property_id: "p1", name: "Elm St", months: [{ month: "2026-10", revenue: 700, expenses: 300, profit: 400 }] }],
     ...overrides,
   };
 }
 
-const NOTHING: SummaryResponse = { revenue: 0, expenses: 0, profit: 0, by_category: {}, by_property: [], by_month: [], by_month_expense: [], by_property_month: [] };
+const NOTHING: SummaryResponse = { revenue: 0, expenses: 0, profit: 0, by_category: {}, by_property: [], by_month: [], by_month_expense: [], by_month_revenue: [], by_property_month: [] };
 
 interface Read {
   start?: string;
@@ -60,6 +65,9 @@ interface Server {
   failFor?: (read: Read) => boolean;
   status?: number;
   never: boolean;
+  /** Never answers the reads this matches. */
+  hangFor?: (read: Read) => boolean;
+  yearsStatus?: number;
 }
 
 function serve(answer: (read: Read) => SummaryResponse = () => aSummary()): Server {
@@ -72,11 +80,12 @@ function serve(answer: (read: Read) => SummaryResponse = () => aSummary()): Serv
     };
     const url = config.url ?? "";
     if (url === "/properties") return respond(200, [{ id: "p1", name: "Elm St" }, { id: "p2", name: "Oak Ave" }]);
-    if (url.startsWith("/summary/years")) return respond(200, [2026, 2025]);
+    if (url.startsWith("/summary/years")) return server.yearsStatus ? respond(server.yearsStatus, {}) : respond(200, [2026, 2025]);
     if (server.never) return new Promise(() => undefined);
     const query = new URLSearchParams(url.split("?")[1] ?? "");
     const read: Read = { start: query.get("start_date") ?? undefined, end: query.get("end_date") ?? undefined, propertyIds: query.getAll("property_ids") };
     server.reads.push(read);
+    if (server.hangFor?.(read)) return new Promise(() => undefined);
     if (server.status || server.failFor?.(read)) return respond(server.status ?? 500, {});
     return respond(200, server.answer(read));
   };
@@ -104,6 +113,10 @@ async function chooseCompare(label: string): Promise<void> {
 }
 
 const LAST_YEAR = "2025-01-01";
+
+async function openCategories(): Promise<void> {
+  await fireEvent.press(screen.getByRole("button", { name: `${MESSAGES.categories}, ${MESSAGES.allCategories}` }));
+}
 
 beforeEach(() => {
   store.dispatch(baseApi.util.resetApiState());
@@ -276,10 +289,6 @@ describe("MoneyAnalysisScreen", () => {
   });
 
   describe("category filter", () => {
-    async function openCategories(): Promise<void> {
-      await fireEvent.press(screen.getByRole("button", { name: `${MESSAGES.categories}, ${MESSAGES.allCategories}` }));
-    }
-
     it("counts only expenses when asked, without asking the server again", async () => {
       const server = serve();
       await show();
@@ -291,6 +300,17 @@ describe("MoneyAnalysisScreen", () => {
       expect(await screen.findByText("\u2212$400.00")).toBeTruthy();
       expect(server.reads.length).toBe(reads);
       expect(screen.getByRole("button", { name: `${MESSAGES.categories}, ${MESSAGES.expensesOnly}` })).toBeTruthy();
+    });
+
+    it("keeps each month in step with the total when only some categories are on", async () => {
+      serve();
+      await show();
+      await screen.findByText(MESSAGES.approvedOnly);
+      await openCategories();
+      await fireEvent.press(await screen.findByText(MESSAGES.incomeOnly));
+      await fireEvent.press(screen.getByRole("button", { name: "Done" }));
+      await screen.findByRole("button", { name: /^September 2026, net 400 dollars/ });
+      expect(screen.getByRole("button", { name: /^October 2026, net 600 dollars/ })).toBeTruthy();
     });
 
     it("keeps just one category with Only", async () => {
@@ -317,7 +337,72 @@ describe("MoneyAnalysisScreen", () => {
     });
   });
 
+  describe("figures a screen reader reaches", () => {
+    it("reads each change as its own item beside the figure, not hidden inside a labelled button", async () => {
+      serve((read) => (read.start === LAST_YEAR ? aSummary({ revenue: 800, expenses: 500, profit: 300 }) : aSummary()));
+      await show();
+      await screen.findByText(MESSAGES.approvedOnly);
+      await chooseCompare("The same dates last year");
+      await screen.findByText("+$200.00 (+25%) · Before: $800.00");
+      const revenue = screen.getByRole("button", { name: "Revenue, 1,000 dollars" });
+      expect(within(revenue).queryByTestId("change-note")).toBeNull();
+      expect(screen.getAllByLabelText(/Up 200 dollars, 25 percent against the same dates last year\. Before: \$800\.00/).length).toBeGreaterThan(0);
+      const average = screen.getByLabelText(/^Revenue, .* a month$/);
+      expect(within(average).queryByTestId("change-note")).toBeNull();
+    });
+
+    it("shows the comparison as loading, then settles", async () => {
+      const server = serve();
+      await show();
+      await screen.findByText(MESSAGES.approvedOnly);
+      server.hangFor = (read) => read.start === LAST_YEAR;
+      await chooseCompare("The same dates last year");
+      expect(await screen.findByText(MESSAGES.loadingComparison)).toBeTruthy();
+    });
+
+    it("says when the years won't load and tries again, rather than quietly dropping the year choices", async () => {
+      const server = serve();
+      server.yearsStatus = 500;
+      await show();
+      expect(await screen.findByText(MESSAGES.yearsFailed)).toBeTruthy();
+      server.yearsStatus = undefined;
+      await fireEvent.press(screen.getByRole("button", { name: MESSAGES.retryYears }));
+      await waitFor(() => expect(screen.queryByText(MESSAGES.yearsFailed)).toBeNull());
+    });
+
+    it("shows deposits and other uncategorised money in a neutral colour, not the expense colour", async () => {
+      serve(() => aSummary({ by_category: { rental_revenue: 1000, maintenance: 300, security_deposit: 200 } }));
+      await show();
+      await screen.findByText(MESSAGES.approvedOnly);
+      const color = (category: string) => StyleSheet.flatten(screen.getByTestId(`category-bar-${category}`).props.style).backgroundColor;
+      expect(color("security_deposit")).not.toBe(color("maintenance"));
+      expect(color("security_deposit")).not.toBe(color("rental_revenue"));
+    });
+  });
+
   describe("the transactions behind a number", () => {
+    it("carries the categories left on into the revenue and expenses figures", async () => {
+      serve();
+      await show();
+      await screen.findByText(MESSAGES.approvedOnly);
+      await openCategories();
+      await fireEvent.press(await screen.findByRole("button", { name: `${MESSAGES.only} Maintenance` }));
+      await fireEvent.press(screen.getByRole("button", { name: "Done" }));
+      await fireEvent.press((await screen.findAllByRole("button", { name: "Expenses, 300 dollars" }))[0]);
+      const link = new URL(`http://x${mockNavigate.mock.calls.at(-1)?.[0]}`);
+      expect([link.searchParams.get("type"), link.searchParams.get("categories")]).toEqual(["expenses", "maintenance"]);
+    });
+
+    it("stops the current month at today and starts a month where the dates start", async () => {
+      serve(() => aSummary({ by_month: [{ month: "2026-11", revenue: 50, expenses: 0, profit: 50 }], by_month_revenue: [{ month: "2026-11", rental_revenue: 50 }], by_month_expense: [] }));
+      await show();
+      await screen.findByText(MESSAGES.approvedOnly);
+      await fireEvent.press(screen.getByRole("button", { name: /^November 2026, net/ }));
+      await fireEvent.press(screen.getByRole("button", { name: "Revenue, 50 dollars" }));
+      const link = new URL(`http://x${mockNavigate.mock.calls.at(-1)?.[0]}`);
+      expect([link.searchParams.get("from"), link.searchParams.get("to")]).toEqual(["2026-11-01", "2026-11-09"]);
+    });
+
     it("opens revenue and expenses over the dates and properties looked at", async () => {
       serve();
       await show();

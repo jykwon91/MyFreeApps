@@ -1,29 +1,13 @@
-import type { CompareMode } from "@mybookkeeper/api-client/types/analytics/compare-mode";
 import { COMPARE_MODES } from "@mybookkeeper/api-client/constants/analyticsRanges";
-import { OptionSheet, useTheme } from "@platform/mobile";
-import { useState, type ReactNode } from "react";
-import { View } from "react-native";
+import { LoadingButton, OptionSheet, useTheme } from "@platform/mobile";
+import { useState } from "react";
+import { Text, View } from "react-native";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
-import type { AnalysisChoice } from "../../types/AnalysisChoice";
-import type { AnalysisSelection } from "../../types/AnalysisSelection";
+import type { AnalysisControlsProps } from "../../types/AnalysisControlsProps";
 import PickerField from "../transactions/PickerField";
 import AnalysisPeriodSheet from "./AnalysisPeriodSheet";
 import { selectionDates, selectionName } from "./analysisPeriod";
 import PropertyMultiSheet from "./PropertyMultiSheet";
-
-interface AnalysisControlsProps {
-  choices: readonly AnalysisChoice[];
-  selection: AnalysisSelection;
-  onSelection: (selection: AnalysisSelection) => void;
-  compare: CompareMode;
-  onCompare: (mode: CompareMode) => void;
-  properties: readonly { id: string; name: string }[];
-  propertyIds: readonly string[];
-  onPropertyIds: (ids: string[]) => void;
-  today: Date;
-  /** More pickers of the screen's own, shown under these. */
-  children?: ReactNode;
-}
 
 function propertiesValue(properties: readonly { id: string; name: string }[], ids: readonly string[]): string {
   if (ids.length === 0) return MESSAGES.allProperties;
@@ -32,14 +16,22 @@ function propertiesValue(properties: readonly { id: string; name: string }[], id
 }
 
 /** Period, compare and property pickers; each opens its own sheet so the numbers keep the screen. */
-export default function AnalysisControls({ choices, selection, onSelection, compare, onCompare, properties, propertyIds, onPropertyIds, today, children }: AnalysisControlsProps) {
-  const { spacing } = useTheme();
+export default function AnalysisControls({ choices, selection, onSelection, compare, onCompare, properties, propertyIds, onPropertyIds, maxProperties, yearsFailed, onRetryYears, today, children }: AnalysisControlsProps) {
+  const { spacing, colors, fontSize } = useTheme();
   const [openSheet, setOpenSheet] = useState<"period" | "compare" | "properties" | null>(null);
   const canCompare = selection.range !== null;
   const compareLabel = COMPARE_MODES.find((mode) => mode.key === compare)?.label ?? "";
 
   return (
     <View style={{ gap: spacing.md }}>
+      {yearsFailed && onRetryYears ? (
+        <>
+          <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.foreground }}>{MESSAGES.yearsFailed}</Text>
+          <LoadingButton onPress={onRetryYears} variant="secondary">
+            {MESSAGES.retryYears}
+          </LoadingButton>
+        </>
+      ) : null}
       <PickerField hint={MESSAGES.periodHint} label={MESSAGES.period} onPress={() => setOpenSheet("period")} value={`${selectionName(selection, choices)}, ${selectionDates(selection)}`} />
       <PickerField disabled={!canCompare} hint={MESSAGES.compareHint} label={MESSAGES.compare} onPress={() => setOpenSheet("compare")} value={canCompare ? compareLabel : MESSAGES.compareNeedsDates} />
       {properties.length > 1 ? (
@@ -69,7 +61,7 @@ export default function AnalysisControls({ choices, selection, onSelection, comp
         title={MESSAGES.compareSheetTitle}
         value={compare}
       />
-      <PropertyMultiSheet isOpen={openSheet === "properties"} onChange={onPropertyIds} onClose={() => setOpenSheet(null)} properties={properties} selectedIds={propertyIds} />
+      <PropertyMultiSheet isOpen={openSheet === "properties"} maxSelected={maxProperties} onChange={onPropertyIds} onClose={() => setOpenSheet(null)} properties={properties} selectedIds={propertyIds} />
     </View>
   );
 }

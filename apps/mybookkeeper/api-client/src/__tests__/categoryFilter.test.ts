@@ -17,6 +17,7 @@ const SUMMARY: SummaryResponse = {
   by_property: [{ property_id: "p1", name: "Oak", revenue: 1000, expenses: 300, profit: 700 }],
   by_month: [{ month: "2026-01", revenue: 1000, expenses: 300, profit: 700 }],
   by_month_expense: [{ month: "2026-01", maintenance: 200, utilities: 100 }],
+  by_month_revenue: [{ month: "2026-01", rental_revenue: 1000 }],
   by_property_month: [],
 };
 
@@ -65,6 +66,27 @@ describe("filterSummaryByCategories", () => {
   it("keeps revenue by month when an income category is chosen", () => {
     const filtered = filterSummaryByCategories(SUMMARY, new Set(["rental_revenue"]));
     expect(filtered.by_month).toEqual([{ month: "2026-01", revenue: 1000, expenses: 0, profit: 1000 }]);
+  });
+
+  it("builds each month from the chosen revenue categories, so the months always add up to the total", () => {
+    const summary: SummaryResponse = {
+      ...SUMMARY,
+      revenue: 1500,
+      by_category: { rental_revenue: 1000, cleaning_fee_revenue: 500 },
+      by_month: [
+        { month: "2026-01", revenue: 900, expenses: 0, profit: 900 },
+        { month: "2026-02", revenue: 600, expenses: 0, profit: 600 },
+      ],
+      by_month_expense: [],
+      by_month_revenue: [
+        { month: "2026-01", rental_revenue: 700, cleaning_fee_revenue: 200 },
+        { month: "2026-02", rental_revenue: 300, cleaning_fee_revenue: 300 },
+      ],
+    };
+    const filtered = filterSummaryByCategories(summary, new Set(["rental_revenue"]));
+    expect(filtered.by_month.map((row) => row.revenue)).toEqual([700, 300]);
+    expect(filtered.by_month.reduce((sum, row) => sum + row.revenue, 0)).toBe(filtered.revenue);
+    expect(filtered.by_month_revenue).toEqual([{ month: "2026-01", rental_revenue: 700 }, { month: "2026-02", rental_revenue: 300 }]);
   });
 
   it("leaves the property sections alone and counts a deposit as neither income nor expense", () => {

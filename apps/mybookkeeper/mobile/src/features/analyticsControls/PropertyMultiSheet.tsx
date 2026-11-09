@@ -8,12 +8,18 @@ interface PropertyMultiSheetProps {
   selectedIds: readonly string[];
   onChange: (ids: string[]) => void;
   onClose: () => void;
+  /** The most that can be chosen at once, when the numbers behind the screen can't take more. */
+  maxSelected?: number;
 }
 
 /** Each tap counts straight away, so the choice shows in the numbers behind the sheet. */
-export default function PropertyMultiSheet({ isOpen, properties, selectedIds, onChange, onClose }: PropertyMultiSheetProps) {
+export default function PropertyMultiSheet({ isOpen, properties, selectedIds, onChange, onClose, maxSelected }: PropertyMultiSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const toggle = (id: string) => onChange(selectedIds.includes(id) ? selectedIds.filter((chosen) => chosen !== id) : [...selectedIds, id]);
+  const isAtLimit = maxSelected !== undefined && selectedIds.length >= maxSelected;
+  const toggle = (id: string) => {
+    if (selectedIds.includes(id)) onChange(selectedIds.filter((chosen) => chosen !== id));
+    else if (!isAtLimit) onChange([...selectedIds, id]);
+  };
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={isOpen}>
@@ -26,6 +32,11 @@ export default function PropertyMultiSheet({ isOpen, properties, selectedIds, on
             <Text style={{ fontSize: fontSize.md, color: colors.primary }}>{MESSAGES.done}</Text>
           </Pressable>
         </View>
+        {isAtLimit ? (
+          <Text accessibilityLiveRegion="polite" accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.foreground, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }}>
+            {MESSAGES.propertyLimit(maxSelected)}
+          </Text>
+        ) : null}
         <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
           {properties.map((property) => (
             <OptionRow isSelected={selectedIds.includes(property.id)} key={property.id} kind="checkbox" label={property.name} onPress={() => toggle(property.id)} />

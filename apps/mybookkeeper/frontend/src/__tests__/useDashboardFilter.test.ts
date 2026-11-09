@@ -25,6 +25,10 @@ const mockSummary: SummaryResponse = {
     { month: "2025-01", utilities: 600, maintenance: 400, insurance: 500 },
     { month: "2025-02", utilities: 600, maintenance: 400, insurance: 500 },
   ],
+  by_month_revenue: [
+    { month: "2025-01", rental_revenue: 2500 },
+    { month: "2025-02", rental_revenue: 2500 },
+  ],
   by_property_month: [],
 };
 
@@ -213,6 +217,21 @@ describe("useDashboardFilter", () => {
       expect(month.revenue).toBeGreaterThanOrEqual(0);
       expect(month.profit).toBe(month.revenue);
     }
+  });
+
+  it("keeps each month's revenue equal to the total when only income is on, and drops it when income is off", () => {
+    const { result } = renderHook(() => useDashboardFilter(mockSummary));
+
+    act(() => {
+      result.current.setPreset("income");
+    });
+    const incomeMonths = result.current.filteredSummary?.by_month ?? [];
+    expect(incomeMonths.reduce((sum, month) => sum + month.revenue, 0)).toBe(result.current.filteredSummary?.revenue);
+
+    act(() => {
+      result.current.selectOnly("maintenance");
+    });
+    expect((result.current.filteredSummary?.by_month ?? []).every((month) => month.revenue === 0)).toBe(true);
   });
 
   it("filters by_month_expense to only selected expense categories", () => {

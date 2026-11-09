@@ -36,7 +36,8 @@ function monthDate(period: string): Date {
   return dateFromIso(`${period}-01`);
 }
 
-const QUARTER_PATTERN = /^(\d{4})-Q([1-4])$/;
+/** A quarter's period name, such as "2026-Q2". Months are "2026-04". */
+export const QUARTER_PATTERN = /^(\d{4})-Q([1-4])$/;
 
 export function monthLabel(period: string): string {
   const quarter = QUARTER_PATTERN.exec(period);

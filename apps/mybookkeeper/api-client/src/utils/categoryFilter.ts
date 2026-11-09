@@ -1,11 +1,13 @@
+import { EXPENSE_CATEGORY_SET, REVENUE_CATEGORY_SET } from "../constants/summaryCategorySets";
 import { EXPENSE_CATEGORY_LIST, REVENUE_CATEGORIES } from "../constants/transactionCategories";
 import type { CategoryPreset } from "../types/analytics/category-preset";
 import type { MonthExpenseSummary } from "../types/summary/MonthExpenseSummary";
+import type { MonthRevenueSummary } from "../types/summary/MonthRevenueSummary";
 import type { MonthSummary } from "../types/summary/MonthSummary";
 import type { SummaryResponse } from "../types/summary/summary";
 
-const REVENUE: ReadonlySet<string> = new Set(REVENUE_CATEGORIES);
-const EXPENSES: ReadonlySet<string> = new Set(EXPENSE_CATEGORY_LIST);
+const REVENUE = REVENUE_CATEGORY_SET;
+const EXPENSES = EXPENSE_CATEGORY_SET;
 
 /** Security deposits count as neither, but they can still be shown or hidden. */
 export const ALL_SUMMARY_CATEGORIES: ReadonlySet<string> = new Set([...REVENUE_CATEGORIES, "security_deposit", ...EXPENSE_CATEGORY_LIST]);
@@ -45,10 +47,33 @@ export function toggleCategory(selected: ReadonlySet<string>, category: string):
   return next;
 }
 
+/** What the selected categories add up to in one month's row. */
+function selectedTotal(row: MonthExpenseSummary | MonthRevenueSummary | undefined, selected: ReadonlySet<string>): number {
+  let total = 0;
+  for (const [key, value] of Object.entries(row ?? {})) {
+    if (key !== "month" && selected.has(key) && typeof value === "number") total += value;
+  }
+  return total;
+}
+
+function keepExpenses(row: MonthExpenseSummary, selected: ReadonlySet<string>): MonthExpenseSummary {
+  const kept: MonthExpenseSummary = { ...row };
+  for (const category of EXPENSE_CATEGORY_LIST) {
+    if (!selected.has(category)) delete kept[category];
+  }
+  return kept;
+}
+
+function keepRevenue(row: MonthRevenueSummary, selected: ReadonlySet<string>): MonthRevenueSummary {
+  const kept: MonthRevenueSummary = { ...row };
+  for (const category of REVENUE_CATEGORIES) {
+    if (!selected.has(category)) delete kept[category];
+  }
+  return kept;
+}
+
 /** The summary as if only these categories existed. Property sections keep their totals. */
 export function filterSummaryByCategories(summary: SummaryResponse, selected: ReadonlySet<string>): SummaryResponse {
-  const includesRevenue = [...selected].some((category) => REVENUE.has(category));
-
   const byCategory: Record<string, number> = {};
   let revenue = 0;
   let expenses = 0;
@@ -59,21 +84,9 @@ export function filterSummaryByCategories(summary: SummaryResponse, selected: Re
     else if (EXPENSES.has(category)) expenses += amount;
   }
 
-  const byMonthExpense: MonthExpenseSummary[] = summary.by_month_expense.map((row) => {
-    const kept: Record<string, number | string> = { month: row.month };
-    for (const [key, value] of Object.entries(row)) {
-      if (key !== "month" && selected.has(key) && typeof value === "number") kept[key] = value;
-    }
-    return kept as unknown as MonthExpenseSummary;
-  });
-
   const byMonth: MonthSummary[] = summary.by_month.map((row) => {
-    const expenseRow = summary.by_month_expense.find((candidate) => candidate.month === row.month);
-    let monthExpenses = 0;
-    for (const [key, value] of Object.entries(expenseRow ?? {})) {
-      if (key !== "month" && selected.has(key) && typeof value === "number") monthExpenses += value;
-    }
-    const monthRevenue = includesRevenue ? row.revenue : 0;
+    const monthRevenue = selectedTotal(summary.by_month_revenue.find((candidate) => candidate.month === row.month), selected);
+    const monthExpenses = selectedTotal(summary.by_month_expense.find((candidate) => candidate.month === row.month), selected);
     return { month: row.month, revenue: monthRevenue, expenses: monthExpenses, profit: monthRevenue - monthExpenses };
   });
 
@@ -83,7 +96,8 @@ export function filterSummaryByCategories(summary: SummaryResponse, selected: Re
     profit: revenue - expenses,
     by_category: byCategory,
     by_month: byMonth,
-    by_month_expense: byMonthExpense,
+    by_month_expense: summary.by_month_expense.map((row) => keepExpenses(row, selected)),
+    by_month_revenue: summary.by_month_revenue.map((row) => keepRevenue(row, selected)),
     by_property: summary.by_property,
     by_property_month: summary.by_property_month,
   };

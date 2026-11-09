@@ -113,9 +113,10 @@ export default function Dashboard() {
 
   const handleDrillDown = useCallback(
     (filter: DrillDownFilter) => {
-      setDrillDown({ ...filter, propertyIds: activePropertyIds });
+      const categories = isFiltered && filter.type ? [...filterState.selectedCategories] : undefined;
+      setDrillDown({ ...filter, propertyIds: activePropertyIds, categories });
     },
-    [activePropertyIds],
+    [activePropertyIds, isFiltered, filterState.selectedCategories],
   );
 
   const handleCategoryClick = useCallback(

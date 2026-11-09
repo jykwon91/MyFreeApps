@@ -5,11 +5,12 @@ import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { Provider } from "react-redux";
+import { MAX_UTILITY_TREND_PROPERTIES } from "@mybookkeeper/api-client/constants/utilityTrendLimits";
 import { UTILITY_COSTS_MESSAGES as MESSAGES } from "../src/constants/analytics";
 import { MONEY_ANALYSIS_MESSAGES as ANALYSIS } from "../src/constants/moneyAnalysis";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { barPercent, totalCents, utilityLabel, utilityRows } from "../src/features/analytics/utilityCostsDisplay";
-import { isCurrentPeriod, periodBounds, periodRows, spanOf } from "../src/features/analytics/utilityPeriods";
+import { isCurrentPeriod, periodBounds, periodBoundsWithin, periodRows, quarterlyTrends, spanOf } from "../src/features/analytics/utilityPeriods";
 import UtilityCostsScreen from "../src/features/analytics/UtilityCostsScreen";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { store } from "../src/lib/store";
@@ -46,6 +47,9 @@ interface Server {
   /** What to answer a read with, by what it asked for; the plain list when unset. */
   answer?: (params: Record<string, unknown>) => UtilityTrendPoint[];
   failFor?: (params: Record<string, unknown>) => boolean;
+  /** Never answers the reads this matches. */
+  hangFor?: (params: Record<string, unknown>) => boolean;
+  yearsStatus?: number;
 }
 
 function serve(trends: UtilityTrendPoint[], properties = [{ id: "p1", name: "Elm St" }, { id: "p2", name: "Oak Ave" }]): Server {
@@ -57,10 +61,11 @@ function serve(trends: UtilityTrendPoint[], properties = [{ id: "p1", name: "Elm
       return response;
     };
     if (config.url === "/properties") return server.propertiesStatus ? respond(server.propertiesStatus, {}) : respond(200, properties);
-    if (config.url === "/summary/years") return respond(200, [NOW.getFullYear(), NOW.getFullYear() - 1]);
+    if (config.url === "/summary/years") return server.yearsStatus ? respond(server.yearsStatus, {}) : respond(200, [NOW.getFullYear(), NOW.getFullYear() - 1]);
     if (server.never) return new Promise(() => undefined);
     if (server.dead) throw Object.assign(new Error("Network Error"), { isAxiosError: true, config });
     server.reads.push(config.params as Record<string, unknown>);
+    if (server.hangFor?.(config.params as Record<string, unknown>)) return new Promise(() => undefined);
     if (server.status || server.failFor?.(config.params as Record<string, unknown>)) return respond(server.status ?? 500, {});
     return respond(200, { trends: server.answer ? server.answer(config.params as Record<string, unknown>) : server.trends, summary: {}, total_spend: 0 });
   };
@@ -123,8 +128,26 @@ describe("utilityCostsDisplay", () => {
   });
 
   it("groups by quarter, across a year boundary, with empty quarters kept", () => {
-    const quarters = periodRows([aPoint({ period: "2025-Q4", total: 10 }), aPoint({ period: "2026-Q2", total: 20 })], { startDate: "2025-11-01", endDate: "2026-05-20" }, "quarterly");
+    const quarters = periodRows([aPoint({ period: "2025-12", total: 10 }), aPoint({ period: "2026-05", total: 20 })], { startDate: "2025-11-01", endDate: "2026-05-20" }, "quarterly");
     expect(quarters.map((quarter) => [quarter.period, quarter.cents])).toEqual([["2026-Q2", 2000], ["2026-Q1", 0], ["2025-Q4", 1000]]);
+  });
+
+  it("builds a quarter from its months, utility by utility", () => {
+    const quarters = quarterlyTrends([
+      aPoint({ period: "2026-01", total: 10 }),
+      aPoint({ period: "2026-03", total: 5 }),
+      aPoint({ period: "2026-03", sub_category: "gas", total: 7 }),
+      aPoint({ period: "2026-04", total: 1 }),
+    ]);
+    expect(quarters.map((point) => [point.period, point.sub_category, point.total]).sort()).toEqual([["2026-Q1", "gas", 7], ["2026-Q1", "water", 15], ["2026-Q2", "water", 1]]);
+  });
+
+  it("cuts a period to the dates being looked at", () => {
+    expect(periodBoundsWithin("2026-11", { startDate: "2026-01-01", endDate: "2026-11-09" })).toEqual({ startDate: "2026-11-01", endDate: "2026-11-09" });
+    expect(periodBoundsWithin("2026-03", { startDate: "2026-03-15", endDate: "2026-12-31" })).toEqual({ startDate: "2026-03-15", endDate: "2026-03-31" });
+    expect(periodBoundsWithin("2025-Q4", { startDate: "2025-11-01", endDate: "2026-05-20" })).toEqual({ startDate: "2025-11-01", endDate: "2025-12-31" });
+    expect(periodBoundsWithin("2026-Q2", { startDate: "2025-11-01", endDate: "2026-05-20" })).toEqual({ startDate: "2026-04-01", endDate: "2026-05-20" });
+    expect(periodBoundsWithin("2026-03", null)).toEqual({ startDate: "2026-03-01", endDate: "2026-03-31" });
   });
 
   it("knows the days a month or a quarter covers", () => {
@@ -180,6 +203,7 @@ describe("UtilityCostsScreen", () => {
     await show();
     await screen.findByText(/I've seen/);
     expect(server.reads[0]).toMatchObject({ granularity: "monthly", end_date: expect.any(String) });
+
     expect(server.reads[0].property_ids).toBeUndefined();
 
     await choosePeriod("Last year");
@@ -208,13 +232,58 @@ describe("UtilityCostsScreen", () => {
   });
 
   it("groups by quarter when asked, with quarters as the rows", async () => {
-    const server = serve([aPoint({ period: `${NOW.getFullYear()}-Q${Math.floor(NOW.getMonth() / 3) + 1}`, total: 90 })]);
+    const server = serve([aPoint({ total: 90 })]);
     await show();
     await screen.findByText(/I've seen/);
+    const readsBefore = server.reads.length;
     await fireEvent.press(screen.getByRole("tab", { name: "By quarter" }));
-    await waitFor(() => expect(server.reads.at(-1)?.granularity).toBe("quarterly"));
     expect(await screen.findByText(new RegExp(`Q${Math.floor(NOW.getMonth() / 3) + 1} ${NOW.getFullYear()}`))).toBeTruthy();
     expect(screen.getAllByText("By quarter")).toHaveLength(2);
+    expect(server.reads).toHaveLength(readsBefore);
+  });
+
+  it("builds the quarters from months without asking again for each switch", async () => {
+    const server = serve([aPoint({ total: 90 })]);
+    await show();
+    await screen.findByText(/I've seen/);
+    const readsBefore = server.reads.length;
+    await fireEvent.press(screen.getByRole("tab", { name: "By quarter" }));
+    await fireEvent.press(screen.getByRole("tab", { name: "By month" }));
+    await fireEvent.press(screen.getByRole("tab", { name: "By quarter" }));
+    expect(server.reads).toHaveLength(readsBefore);
+    expect(server.reads.every((read) => read.granularity === "monthly")).toBe(true);
+  });
+
+  it("limits the property choice to what the server accepts, and says so", async () => {
+    const many = Array.from({ length: MAX_UTILITY_TREND_PROPERTIES + 1 }, (_, index) => ({ id: `q${index}`, name: `House ${index}` }));
+    const server = serve([aPoint()], many);
+    await show();
+    await screen.findByText(/I've seen/);
+    await fireEvent.press(screen.getByRole("button", { name: `${ANALYSIS.properties}, ${ANALYSIS.allProperties}` }));
+    for (const property of many.slice(0, MAX_UTILITY_TREND_PROPERTIES)) await fireEvent.press(await screen.findByText(property.name));
+    expect(await screen.findByText(ANALYSIS.propertyLimit(MAX_UTILITY_TREND_PROPERTIES))).toBeTruthy();
+    await fireEvent.press(screen.getByText(`House ${MAX_UTILITY_TREND_PROPERTIES}`));
+    await waitFor(() => expect(String(server.reads.at(-1)?.property_ids).split(",")).toHaveLength(MAX_UTILITY_TREND_PROPERTIES));
+    expect(String(server.reads.at(-1)?.property_ids)).not.toContain(`q${MAX_UTILITY_TREND_PROPERTIES}`);
+  });
+
+  it("says when the years won't load and tries them again, instead of quietly dropping the year choices", async () => {
+    const server = serve([aPoint()]);
+    server.yearsStatus = 500;
+    await show();
+    expect(await screen.findByText(ANALYSIS.yearsFailed)).toBeTruthy();
+    server.yearsStatus = undefined;
+    await fireEvent.press(screen.getByRole("button", { name: ANALYSIS.retryYears }));
+    await waitFor(() => expect(screen.queryByText(ANALYSIS.yearsFailed)).toBeNull());
+  });
+
+  it("shows the comparison as loading while the earlier stretch is on its way", async () => {
+    const server = serve([aPoint()]);
+    await show();
+    await screen.findByText(/I've seen/);
+    server.hangFor = (params) => String(params.start_date) < `${NOW.getFullYear() - 1}-06-01`;
+    await chooseCompare("The same dates last year");
+    expect(await screen.findByText(ANALYSIS.loadingComparison)).toBeTruthy();
   });
 
   it("sets the costs against the same dates last year, with the move in dollars and percent", async () => {
@@ -265,6 +334,8 @@ describe("UtilityCostsScreen", () => {
     const link = String(mockNavigate.mock.calls.at(-1)?.[0]);
     expect(link).toContain("category=utilities");
     expect(link).toContain(`from=${THIS_PERIOD}-01`);
+    const today = `${NOW.getFullYear()}-${String(NOW.getMonth() + 1).padStart(2, "0")}-${String(NOW.getDate()).padStart(2, "0")}`;
+    expect(link).toContain(`to=${today}`);
   });
 
   it("hides the property choice when there's only one property", async () => {

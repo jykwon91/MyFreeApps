@@ -679,6 +679,7 @@ class TestSummaryTypeAliases:
             "by_property": [{"property_id": "abc", "name": "Prop A", "revenue": 5000.0, "expenses": 700.0, "profit": 4300.0}],
             "by_month": [{"month": "2025-01", "revenue": 5000.0, "expenses": 700.0, "profit": 4300.0}],
             "by_month_expense": [{"month": "2025-01", "maintenance": 700.0}],
+            "by_month_revenue": [{"month": "2025-01", "rental_revenue": 5000.0}],
             "by_property_month": [{"property_id": "abc", "name": "Prop A", "months": [{"month": "2025-01", "revenue": 5000.0, "expenses": 700.0, "profit": 4300.0}]}],
         }
         assert sample["revenue"] == 5000.0
@@ -1028,3 +1029,42 @@ class TestTaxSummaryDeductions:
         assert summary["by_category"]["mortgage_principal"] == 200.00
         assert summary["by_property"][0]["expenses"] == 300.00
         assert summary["by_property"][0]["net_income"] == 700.00
+
+
+class TestSummaryRevenueByMonth:
+    @pytest.mark.anyio
+    async def test_by_month_revenue_splits_revenue_categories_per_month(self) -> None:
+        month_rows = [
+            SimpleNamespace(year=2025, month=1, tag="rental_revenue", total=Decimal("900.00")),
+            SimpleNamespace(year=2025, month=1, tag="cleaning_fee_revenue", total=Decimal("100.00")),
+            SimpleNamespace(year=2025, month=1, tag="maintenance", total=Decimal("50.00")),
+            SimpleNamespace(year=2025, month=2, tag="rental_revenue", total=Decimal("700.00")),
+        ]
+        ctx = _ctx(uuid.uuid4(), uuid.uuid4())
+
+        with (
+            patch("app.services.transactions.summary_service.AsyncSessionLocal", return_value=AsyncMock()),
+            patch(
+                "app.services.transactions.summary_service.summary_repo.txn_sum_by_category",
+                new=AsyncMock(return_value=[]),
+            ),
+            patch(
+                "app.services.transactions.summary_service.summary_repo.txn_sum_by_property_and_category",
+                new=AsyncMock(return_value=[]),
+            ),
+            patch(
+                "app.services.transactions.summary_service.summary_repo.txn_sum_by_month_and_category",
+                new=AsyncMock(return_value=month_rows),
+            ),
+            patch(
+                "app.services.transactions.summary_service.summary_repo.txn_sum_by_property_month_and_category",
+                new=AsyncMock(return_value=[]),
+            ),
+        ):
+            summary = await summary_service.get_summary(ctx)
+
+        assert summary["by_month_revenue"] == [
+            {"month": "2025-01", "rental_revenue": 900.0, "cleaning_fee_revenue": 100.0},
+            {"month": "2025-02", "rental_revenue": 700.0},
+        ]
+        assert summary["by_month_expense"] == [{"month": "2025-01", "maintenance": 50.0}]

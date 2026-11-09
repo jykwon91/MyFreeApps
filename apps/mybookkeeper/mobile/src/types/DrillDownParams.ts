@@ -4,6 +4,7 @@ export interface DrillDownParams extends Record<string, string> {
   category: string;
   property: string;
   properties: string;
+  categories: string;
   type: string;
   from: string;
   to: string;

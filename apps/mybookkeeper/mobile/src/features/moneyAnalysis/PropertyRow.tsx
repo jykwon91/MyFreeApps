@@ -63,8 +63,8 @@ export default function PropertyRow({ property, previous, isComparing, monthly, 
               {monthsNewestFirst(monthly.months).map((month) => (
                 <View key={month.month}>
                   <Text style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground, paddingTop: spacing.sm }}>{monthName(month.month, "long")}</Text>
-                  <HomeLinkRow detail={formatCurrency(month.revenue)} label={MESSAGES.revenue} onPress={() => router.navigate(drillDownLink(propertyMonthDrillDown(property.property_id, name, month.month, "revenue")))} />
-                  <HomeLinkRow detail={formatCurrency(month.expenses)} label={MESSAGES.expenses} onPress={() => router.navigate(drillDownLink(propertyMonthDrillDown(property.property_id, name, month.month, "expenses")))} />
+                  <HomeLinkRow detail={formatCurrency(month.revenue)} label={MESSAGES.revenue} onPress={() => router.navigate(drillDownLink(propertyMonthDrillDown(property.property_id, name, month.month, "revenue", scope)))} />
+                  <HomeLinkRow detail={formatCurrency(month.expenses)} label={MESSAGES.expenses} onPress={() => router.navigate(drillDownLink(propertyMonthDrillDown(property.property_id, name, month.month, "expenses", scope)))} />
                 </View>
               ))}
             </View>

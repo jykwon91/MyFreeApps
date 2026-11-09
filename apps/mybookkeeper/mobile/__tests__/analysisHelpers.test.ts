@@ -1,7 +1,7 @@
 import type { SummaryResponse } from "@mybookkeeper/api-client/types/summary/summary";
-import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../src/constants/moneyAnalysis";
+import { CHANGE_MESSAGES, MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../src/constants/moneyAnalysis";
 import { analysisChoices, currentSelection, selectionComparison, selectionDates, selectionFor, selectionName, summaryDates } from "../src/features/analyticsControls/analysisPeriod";
-import { changeIsGood, changeText, NO_CHANGE_TEXT, spokenChange } from "../src/features/analyticsControls/changeDisplay";
+import { changeIsGood, changeText, spokenChange } from "../src/features/analyticsControls/changeDisplay";
 import { drillDownFilterFromParams, drillDownLink } from "../src/features/drillDown/drillDownLink";
 import { categoriesValue } from "../src/features/moneyAnalysis/categoryFilterDisplay";
 import { categoryGroups, isEmptySummary, monthExpenseRows, monthsNewestFirst } from "../src/features/moneyAnalysis/moneyAnalysisDisplay";
@@ -65,7 +65,7 @@ describe("changeDisplay", () => {
   });
 
   it("says no change for a cent-level residue", () => {
-    expect(changeText({ delta: 0.001, percent: 0 })).toBe(NO_CHANGE_TEXT);
+    expect(changeText({ delta: 0.001, percent: 0 })).toBe(CHANGE_MESSAGES.noChange);
     expect(changeIsGood({ delta: 0, percent: 0 }, true)).toBeNull();
   });
 
@@ -87,7 +87,7 @@ describe("drill-down links", () => {
 
   it("leaves out what is not set, and ignores a type it does not know", () => {
     const filter = drillDownFilterFromParams({ label: "x", type: "bogus", category: "", from: "" });
-    expect(filter).toEqual({ label: "x", category: undefined, propertyId: undefined, propertyIds: undefined, type: undefined, startDate: undefined, endDate: undefined });
+    expect(filter).toEqual({ label: "x", category: undefined, propertyId: undefined, propertyIds: undefined, categories: undefined, type: undefined, startDate: undefined, endDate: undefined });
   });
 
   it("builds each drill-down over the dates and properties the numbers were added up over", () => {
@@ -97,13 +97,31 @@ describe("drill-down links", () => {
     expect(propertyDrillDown("p1", "Elm St", scope)).toEqual({ propertyId: "p1", label: "Elm St", startDate: "2026-01-01", endDate: "2026-11-09" });
     expect(monthDrillDown("2026-02", "revenue", scope)).toMatchObject({ type: "revenue", startDate: "2026-02-01", endDate: "2026-02-28", propertyIds: ["p2"] });
     expect(monthDrillDown("2026-02", { category: "utilities" }, scope)).toMatchObject({ category: "utilities", startDate: "2026-02-01", endDate: "2026-02-28" });
-    expect(propertyMonthDrillDown("p1", "Elm St", "2026-02", "expenses")).toMatchObject({ propertyId: "p1", type: "expenses", startDate: "2026-02-01", endDate: "2026-02-28" });
+    expect(propertyMonthDrillDown("p1", "Elm St", "2026-02", "expenses", scope)).toMatchObject({ propertyId: "p1", type: "expenses", startDate: "2026-02-01", endDate: "2026-02-28" });
+  });
+
+  it("stops the current month at the end of the range, and starts a month where the range starts", () => {
+    const toDate = { startDate: "2026-01-01", endDate: "2026-11-09" };
+    expect(monthDrillDown("2026-11", "revenue", toDate)).toMatchObject({ startDate: "2026-11-01", endDate: "2026-11-09" });
+    expect(monthDrillDown("2026-11", { category: "utilities" }, toDate)).toMatchObject({ endDate: "2026-11-09" });
+    const fromMid = { startDate: "2026-03-15", endDate: "2026-06-30" };
+    expect(monthDrillDown("2026-03", "expenses", fromMid)).toMatchObject({ startDate: "2026-03-15", endDate: "2026-03-31" });
+    expect(propertyMonthDrillDown("p1", "Elm St", "2026-03", "revenue", fromMid)).toMatchObject({ startDate: "2026-03-15", endDate: "2026-03-31" });
+  });
+
+  it("carries the categories left on into a revenue or expenses figure, and into a month of it", () => {
+    const scope = { startDate: "2026-01-01", endDate: "2026-11-09", categories: ["maintenance"] };
+    expect(kindDrillDown("expenses", scope).categories).toEqual(["maintenance"]);
+    expect(monthDrillDown("2026-02", "expenses", scope).categories).toEqual(["maintenance"]);
+    const url = new URL(`http://x${drillDownLink(kindDrillDown("expenses", scope))}`);
+    expect(drillDownFilterFromParams(Object.fromEntries(url.searchParams.entries())).categories).toEqual(["maintenance"]);
   });
 });
 
 describe("moneyAnalysisDisplay", () => {
   it("splits categories into income, expenses and other, each biggest first, leaving out zeros", () => {
     const groups = categoryGroups({ rental_revenue: 900, cleaning_fee_revenue: 100, maintenance: 50, utilities: 300, taxes: 0, mystery: 7 });
+    expect(groups.map((group) => group.kind)).toEqual(["income", "expenses", "other"]);
     expect(groups.map((group) => [group.heading, group.rows.map((row) => row.category)])).toEqual([
       [MESSAGES.income, ["rental_revenue", "cleaning_fee_revenue"]],
       [MESSAGES.expenses, ["utilities", "maintenance"]],
@@ -121,7 +139,7 @@ describe("moneyAnalysisDisplay", () => {
   });
 
   it("knows an empty summary from one with a single figure", () => {
-    const empty: SummaryResponse = { revenue: 0, expenses: 0, profit: 0, by_category: {}, by_property: [], by_month: [], by_month_expense: [], by_property_month: [] };
+    const empty: SummaryResponse = { revenue: 0, expenses: 0, profit: 0, by_category: {}, by_property: [], by_month: [], by_month_expense: [], by_month_revenue: [], by_property_month: [] };
     expect(isEmptySummary(empty)).toBe(true);
     expect(isEmptySummary({ ...empty, by_category: { maintenance: 1 } })).toBe(false);
   });

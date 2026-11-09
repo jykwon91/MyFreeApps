@@ -30,6 +30,10 @@ describe("comparisonRange, the same dates last year", () => {
     expect(comparisonRange({ since: "2026-03-01", until: "2026-03-31" }, "previous_year")).toEqual({ since: "2025-03-01", until: "2025-03-31" });
   });
 
+  it("sets a February without the leap day against all of the leap February before it", () => {
+    expect(comparisonRange({ since: "2025-02-01", until: "2025-02-28" }, "previous_year")).toEqual({ since: "2024-02-01", until: "2024-02-29" });
+  });
+
   it("keeps a leap day on the last day of February", () => {
     expect(comparisonRange({ since: "2024-02-01", until: "2024-02-29" }, "previous_year")).toEqual({ since: "2023-02-01", until: "2023-02-28" });
   });

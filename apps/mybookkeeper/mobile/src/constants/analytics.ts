@@ -5,6 +5,12 @@ export const UTILITY_GRANULARITIES: readonly { value: UtilityGranularity; label:
   { value: "quarterly", label: "By quarter" },
 ];
 
+/** The period the utility costs screen opens on, and the one its "show everything" button returns to. */
+export const UTILITY_DEFAULT_PERIOD = "last_12_months";
+
+/** The category the approved utility bills are filed under. */
+export const UTILITIES_CATEGORY = "utilities";
+
 export const UTILITY_COSTS_SKELETON_UTILITIES = [0, 1, 2, 3] as const;
 export const UTILITY_COSTS_SKELETON_MONTHS = [0, 1, 2, 3, 4, 5] as const;
 
@@ -23,6 +29,8 @@ export const UTILITY_COSTS_MESSAGES = {
   granularityLabel: "How to group the bills",
   propertiesFailed: "I couldn't load your properties, so I'm counting all of them. Pull down to try again.",
   approvedOnly: "I only count bills you've approved.",
+  seenInUtilities: (amount: string) => `I've seen ${amount} in utilities`,
+  seenInUtilitiesSpoken: (amount: string, range: string) => `I've seen ${amount} in utilities, ${range}.`,
   byUtility: "By utility",
   byPeriod: { monthly: "By month", quarterly: "By quarter" },
   seeBills: "See the bills",

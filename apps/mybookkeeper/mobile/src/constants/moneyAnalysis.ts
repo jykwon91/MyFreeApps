@@ -57,6 +57,24 @@ export const MONEY_ANALYSIS_MESSAGES = {
   utilityCosts: "Utility costs",
   propertyPnl: "Property P&L",
   moreTools: "More ways to look",
+  allTime: "All time",
+  everyDate: "Every date",
+  loadingComparison: "Loading the earlier stretch",
+  yearsFailed: "I couldn't load which years you have, so only the usual periods are here.",
+  retryYears: "Try again to load the years",
+  propertyLimit: (limit: number) => `I can look at up to ${limit} properties at a time here. Turn one off to choose another.`,
+  monthDrillLabel: (what: string, month: string) => `${what} \u2014 ${month}`,
+  propertyMonthDrillLabel: (property: string, what: string, month: string) => `${property} ${what} \u2014 ${month}`,
+} as const;
+
+/** The words that say how a number moved against the earlier stretch. */
+export const CHANGE_MESSAGES = {
+  noBaseline: "Nothing to compare with before",
+  noChange: "No change",
+  up: "Up",
+  down: "Down",
+  percentWord: "percent",
+  before: (amount: string) => `Before: ${amount}`,
 } as const;
 
 /** How a change reads aloud: "Up $5 against the period before". */
@@ -75,6 +93,5 @@ export const DRILL_DOWN_MESSAGES = {
   tryAgain: "Try again",
   noneHeading: "No approved transactions here.",
   noneBody: "The number you tapped may include something that has changed since. Pull down to refresh.",
-  mightBeMore: "That's the most I can load at once, so there may be more than this.",
   count: (count: number) => `${count} ${count === 1 ? "transaction" : "transactions"}`,
 } as const;

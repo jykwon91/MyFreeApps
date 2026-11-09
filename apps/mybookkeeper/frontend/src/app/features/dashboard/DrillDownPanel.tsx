@@ -2,12 +2,13 @@ import { useMemo, useRef, useState } from "react";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { drillDownListParams, drillDownTotal, filterDrillDownTransactions } from "@mybookkeeper/api-client/utils/drillDown";
+import { drillDownListParams, drillDownTotal, filterDrillDownTransactions, isDrillDownTruncated } from "@mybookkeeper/api-client/utils/drillDown";
 import { useToast } from "@/shared/hooks/useToast";
 import { formatCurrency } from "@/shared/utils/currency";
 import { Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
 import type { DrillDownFilter } from "@mybookkeeper/api-client/types/analytics/drill-down-filter";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import { DRILL_DOWN_TRUNCATED_MESSAGE } from "@mybookkeeper/api-client/constants/transactionPaging";
 import { useDrillDownBodyMode } from "./useDrillDownBodyMode";
 import DrillDownPanelBody from "./DrillDownPanelBody";
 import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
@@ -32,6 +33,7 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
   );
 
   const total = drillDownTotal(transactions);
+  const truncated = isDrillDownTruncated(allTransactions);
 
   const mode = useDrillDownBodyMode({
     selectedTxn,
@@ -81,6 +83,12 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
         </div>
         <PanelCloseButton onClose={close} />
       </header>
+
+      {truncated && !selectedTxn ? (
+        <p role="status" className="px-5 py-2 text-xs bg-muted text-muted-foreground border-b">
+          {DRILL_DOWN_TRUNCATED_MESSAGE}
+        </p>
+      ) : null}
 
       {/* Content: dispatched to sub-components via mode */}
       <DrillDownPanelBody

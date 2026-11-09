@@ -16,11 +16,11 @@ export function analysisChoices(today: Date, dataYears: readonly number[] | unde
   return [
     ...ANALYTICS_RANGE_PRESETS.map((preset) => ({ key: preset.key, label: preset.label, range: propertyPnlRange(preset.key, today) })),
     ...dashboardYears(dataYears, today.getFullYear()).map((year) => ({ key: `year_${year}` as const, label: String(year), range: calendarYearRange(year) })),
-    { key: "all_time", label: "All time", range: null },
+    { key: "all_time", label: MESSAGES.allTime, range: null },
   ];
 }
 
-export function choiceSelection(choice: AnalysisChoice): AnalysisSelection {
+function choiceSelection(choice: AnalysisChoice): AnalysisSelection {
   return { key: choice.key, range: choice.range };
 }
 
@@ -44,7 +44,7 @@ export function selectionName(selection: AnalysisSelection, choices: readonly An
 }
 
 export function selectionDates(selection: AnalysisSelection): string {
-  return selection.range ? customRangeLabel(selection.range.since, selection.range.until) : "Every date";
+  return selection.range ? customRangeLabel(selection.range.since, selection.range.until) : MESSAGES.everyDate;
 }
 
 /** The query's dates. Undefined for all time, which the server reads as no limit. */

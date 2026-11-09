@@ -1,7 +1,7 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { TRANSACTION_LIST_LIMIT } from "@mybookkeeper/api-client/constants/transactionPaging";
-import { drillDownListParams, drillDownTotal, filterDrillDownTransactions } from "@mybookkeeper/api-client/utils/drillDown";
+import { DRILL_DOWN_TRUNCATED_MESSAGE } from "@mybookkeeper/api-client/constants/transactionPaging";
+import { drillDownListParams, drillDownTotal, filterDrillDownTransactions, isDrillDownTruncated } from "@mybookkeeper/api-client/utils/drillDown";
 import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
 import { formatCurrency } from "@platform/core/utils/currency";
 import { router, useLocalSearchParams } from "expo-router";
@@ -20,7 +20,7 @@ export default function DrillDownScreen() {
   const { colors, spacing, fontSize } = useTheme();
   const params = useLocalSearchParams<Partial<DrillDownParams>>();
   const filter = useMemo(() => drillDownFilterFromParams(params), [params]);
-  const query = useMemo(() => ({ ...drillDownListParams(filter), limit: TRANSACTION_LIST_LIMIT }), [filter]);
+  const query = useMemo(() => drillDownListParams(filter), [filter]);
   const { currentData, error, isFetching, refetch } = useListTransactionsQuery(query);
   const { data: properties = [] } = useGetPropertiesQuery();
   const { refresh, refreshControl } = useRefresh(async () => {
@@ -51,7 +51,7 @@ export default function DrillDownScreen() {
               {MESSAGES.count(transactions.length)} · {formatCurrency(total)}
             </Text>
           ) : null}
-          {currentData && currentData.length >= TRANSACTION_LIST_LIMIT ? <Banner message={MESSAGES.mightBeMore} /> : null}
+          {currentData && isDrillDownTruncated(currentData) ? <Banner message={DRILL_DOWN_TRUNCATED_MESSAGE} /> : null}
         </View>
       }
       contentInsetAdjustmentBehavior="automatic"

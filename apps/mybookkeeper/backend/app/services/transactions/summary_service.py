@@ -109,6 +109,19 @@ async def get_summary(
         for key, cats in sorted(expense_by_month.items())
     ]
 
+    # Revenue per category per month, so a category filter can rebuild the
+    # monthly figures from what is selected instead of keeping all revenue.
+    revenue_by_month: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    for row in month_rows:
+        if row.tag in REVENUE_TAGS:
+            key = f"{int(row.year)}-{int(row.month):02d}"
+            revenue_by_month[key][row.tag] += float(row.total)
+
+    by_month_revenue = [
+        {"month": key, **cats}
+        for key, cats in sorted(revenue_by_month.items())
+    ]
+
     prop_monthly: dict[str, dict[str, str | None | dict[str, dict[str, float]]]] = defaultdict(
         lambda: {"name": None, "months": defaultdict(lambda: {"revenue": 0.0, "expenses": 0.0})}
     )
@@ -144,6 +157,7 @@ async def get_summary(
         "by_property": by_property,
         "by_month": by_month,
         "by_month_expense": by_month_expense,
+        "by_month_revenue": by_month_revenue,
         "by_property_month": by_property_month,
     }
 

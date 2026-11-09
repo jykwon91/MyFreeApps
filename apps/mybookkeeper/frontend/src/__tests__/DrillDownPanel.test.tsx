@@ -242,9 +242,9 @@ describe("DrillDownPanel", () => {
 
   it("combines type and propertyIds filtering", () => {
     const txns = [
-      makeTxn({ vendor: "Revenue Co", property_id: "prop-1", transaction_type: "income" }),
-      makeTxn({ vendor: "Expense Co", property_id: "prop-1", transaction_type: "expense" }),
-      makeTxn({ vendor: "Other Revenue", property_id: "prop-2", transaction_type: "income" }),
+      makeTxn({ vendor: "Revenue Co", property_id: "prop-1", transaction_type: "income", category: "rental_revenue" }),
+      makeTxn({ vendor: "Expense Co", property_id: "prop-1", transaction_type: "expense", category: "maintenance" }),
+      makeTxn({ vendor: "Other Revenue", property_id: "prop-2", transaction_type: "income", category: "rental_revenue" }),
     ];
     setupMocks(txns);
 
@@ -264,5 +264,43 @@ describe("DrillDownPanel", () => {
     expect(screen.queryByText("Expense Co")).not.toBeInTheDocument();
     expect(screen.queryByText("Other Revenue")).not.toBeInTheDocument();
     expect(screen.getByText(/1 transaction\b/)).toBeInTheDocument();
+  });
+
+  it("asks the server for the most rows and the summary's own rules", () => {
+    setupMocks([makeTxn()]);
+
+    render(
+      <Provider store={store}>
+        <DrillDownPanel filter={{ label: "Revenue", type: "revenue" }} onClose={vi.fn()} />
+      </Provider>,
+    );
+
+    expect(useListTransactionsQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 5000, summary_kind: "revenue", active_properties_only: true, status: "approved" }),
+    );
+  });
+
+  it("warns that there may be more when the list reached the server's limit", () => {
+    setupMocks(Array.from({ length: 5000 }, () => makeTxn()));
+
+    render(
+      <Provider store={store}>
+        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
+      </Provider>,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent(/most I can load at once/);
+  });
+
+  it("does not warn for a short list", () => {
+    setupMocks([makeTxn()]);
+
+    render(
+      <Provider store={store}>
+        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
+      </Provider>,
+    );
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });

@@ -30,6 +30,7 @@ class SummaryResponse(BaseModel):
     by_property: list[PropertySummary]
     by_month: list[MonthSummary]
     by_month_expense: list[dict[str, float | str]]
+    by_month_revenue: list[dict[str, float | str]]
     by_property_month: list[PropertyMonthSummary]
 
 

@@ -2,7 +2,7 @@ import type { TransactionExportFormat } from "../types/transaction/TransactionEx
 import type { TransactionListParams } from "../types/transaction/TransactionListParams";
 import { queryString } from "./queryString";
 
-type ExportQuery = Record<Exclude<keyof TransactionListParams, "limit">, string | undefined>;
+type ExportQuery = Record<Exclude<keyof TransactionListParams, "limit" | "summary_kind" | "active_properties_only">, string | undefined>;
 
 /** The export reads the same filters as the list, so a filter added to the list can't be left out here. */
 export function transactionExportPath(format: TransactionExportFormat, filters: TransactionListParams): string {
