@@ -3,7 +3,8 @@
 Covers the four guarantees of the active-only fix:
 
 a. ``mark_missing_as_expired`` sets ``expired_at`` on a previously-seen
-   posting that disappears from a successful, non-empty fetch.
+   posting that disappears from a successful, non-empty fetch — only for the
+   saved search that fetched it, never another saved search's postings.
 b. The guard: ``mark_missing_as_expired`` is a no-op on an empty seen-set
    (the service skips the call entirely on empty/failed cycles; this test
    asserts the repository's own defensive backstop too).
@@ -25,6 +26,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.discovery.discovered_job import DiscoveredJob
+from app.models.discovery.discovery_fetch import DiscoveryFetch
 from app.models.discovery.discovery_source import DiscoverySource
 from app.repositories.discovery import discovery_repository
 from app.services.discovery import discovery_fetch_service
@@ -39,12 +41,26 @@ def _uid(user: dict) -> uuid.UUID:
 
 
 async def _make_source(
-    db: AsyncSession, user_id: uuid.UUID, *, source: str = "jsearch",
+    db: AsyncSession, user_id: uuid.UUID, *, source: str = "jsearch", name: str = "",
 ) -> DiscoverySource:
-    src = DiscoverySource(user_id=user_id, source=source, config={})
+    src = DiscoverySource(user_id=user_id, source=source, name=name, config={})
     db.add(src)
     await db.flush()
     return src
+
+
+async def _make_fetch(db: AsyncSession, src: DiscoverySource) -> DiscoveryFetch:
+    """A completed fetch of ``src`` — the saved search that 'saw' a job."""
+    fetch = DiscoveryFetch(
+        user_id=src.user_id,
+        discovery_source_id=src.id,
+        source=src.source,
+        started_at=_now(),
+        status="success",
+    )
+    db.add(fetch)
+    await db.flush()
+    return fetch
 
 
 async def _make_job(
@@ -53,6 +69,7 @@ async def _make_job(
     *,
     source: str = "jsearch",
     external_id: str,
+    fetch: DiscoveryFetch | None = None,
     expired_at: datetime | None = None,
     source_expires_at: datetime | None = None,
     dismissed_at: datetime | None = None,
@@ -62,6 +79,7 @@ async def _make_job(
         user_id=user_id,
         source=source,
         source_external_id=external_id,
+        fetch_id=fetch.id if fetch is not None else None,
         title="Senior Backend Engineer",
         company_name="Acme",
         remote_type="remote",
@@ -86,14 +104,15 @@ async def test_mark_missing_expires_vanished_posting(
 ):
     user = await user_factory()
     uid = _uid(user)
-    await _make_source(db, uid)
+    src = await _make_source(db, uid)
+    fetch = await _make_fetch(db, src)
 
-    kept = await _make_job(db, uid, external_id="still-here")
-    gone = await _make_job(db, uid, external_id="vanished")
+    kept = await _make_job(db, uid, external_id="still-here", fetch=fetch)
+    gone = await _make_job(db, uid, external_id="vanished", fetch=fetch)
 
     # This fetch returned only "still-here" → "vanished" should expire.
     count = await discovery_repository.mark_missing_as_expired(
-        db, user_id=uid, source="jsearch", seen_external_ids=["still-here"],
+        db, user_id=uid, discovery_source_id=src.id, seen_external_ids=["still-here"],
     )
 
     await db.refresh(kept)
@@ -110,17 +129,20 @@ async def test_mark_missing_is_source_scoped(db: AsyncSession, user_factory):
     source's fetch (greenhouse fetch can't expire a jsearch row)."""
     user = await user_factory()
     uid = _uid(user)
+    js_fetch = await _make_fetch(db, await _make_source(db, uid, source="jsearch"))
+    gh_src = await _make_source(db, uid, source="greenhouse")
+    gh_fetch = await _make_fetch(db, gh_src)
 
     jsearch_job = await _make_job(
-        db, uid, source="jsearch", external_id="js-1",
+        db, uid, source="jsearch", external_id="js-1", fetch=js_fetch,
     )
     gh_job = await _make_job(
-        db, uid, source="greenhouse", external_id="gh-1",
+        db, uid, source="greenhouse", external_id="gh-1", fetch=gh_fetch,
     )
 
     # A greenhouse fetch that returned nothing matching gh-1's id.
     count = await discovery_repository.mark_missing_as_expired(
-        db, user_id=uid, source="greenhouse", seen_external_ids=["gh-2"],
+        db, user_id=uid, discovery_source_id=gh_src.id, seen_external_ids=["gh-2"],
     )
 
     await db.refresh(jsearch_job)
@@ -133,6 +155,35 @@ async def test_mark_missing_is_source_scoped(db: AsyncSession, user_factory):
 
 
 @pytest.mark.asyncio
+async def test_mark_missing_is_saved_search_scoped(db: AsyncSession, user_factory):
+    """Two saved searches on the SAME source: refreshing one must not expire
+    the other's postings just because its fetch didn't return them."""
+    user = await user_factory()
+    uid = _uid(user)
+    search_a = await _make_source(db, uid, name="Backend")
+    search_b = await _make_source(db, uid, name="Frontend")
+    job_a = await _make_job(
+        db, uid, external_id="a-1", fetch=await _make_fetch(db, search_a),
+    )
+    job_b = await _make_job(
+        db, uid, external_id="b-1", fetch=await _make_fetch(db, search_b),
+    )
+
+    # Search B's fetch returned only a new posting: b-1 vanished, a-1 was
+    # never B's to judge.
+    count = await discovery_repository.mark_missing_as_expired(
+        db, user_id=uid, discovery_source_id=search_b.id, seen_external_ids=["b-2"],
+    )
+
+    await db.refresh(job_a)
+    await db.refresh(job_b)
+
+    assert count == 1
+    assert job_b.expired_at is not None
+    assert job_a.expired_at is None
+
+
+@pytest.mark.asyncio
 async def test_mark_missing_does_not_rechurn_already_expired(
     db: AsyncSession, user_factory,
 ):
@@ -141,12 +192,14 @@ async def test_mark_missing_does_not_rechurn_already_expired(
     user = await user_factory()
     uid = _uid(user)
     original = _now() - timedelta(days=3)
+    src = await _make_source(db, uid)
     already = await _make_job(
-        db, uid, external_id="old", expired_at=original,
+        db, uid, external_id="old", fetch=await _make_fetch(db, src),
+        expired_at=original,
     )
 
     count = await discovery_repository.mark_missing_as_expired(
-        db, user_id=uid, source="jsearch", seen_external_ids=["something-else"],
+        db, user_id=uid, discovery_source_id=src.id, seen_external_ids=["something-else"],
     )
 
     await db.refresh(already)
@@ -164,11 +217,13 @@ async def test_mark_missing_empty_set_is_noop(db: AsyncSession, user_factory):
     """Empty seen-set must NOT mass-expire the inbox — repository backstop."""
     user = await user_factory()
     uid = _uid(user)
-    a = await _make_job(db, uid, external_id="a")
-    b = await _make_job(db, uid, external_id="b")
+    src = await _make_source(db, uid)
+    fetch = await _make_fetch(db, src)
+    a = await _make_job(db, uid, external_id="a", fetch=fetch)
+    b = await _make_job(db, uid, external_id="b", fetch=fetch)
 
     count = await discovery_repository.mark_missing_as_expired(
-        db, user_id=uid, source="jsearch", seen_external_ids=[],
+        db, user_id=uid, discovery_source_id=src.id, seen_external_ids=[],
     )
 
     await db.refresh(a)
@@ -283,7 +338,9 @@ async def test_fetch_empty_cycle_does_not_expire_inbox(
     user = await user_factory()
     uid = _uid(user)
     src = await _make_source(db, uid, source="jsearch")
-    existing = await _make_job(db, uid, external_id="pre-existing")
+    existing = await _make_job(
+        db, uid, external_id="pre-existing", fetch=await _make_fetch(db, src),
+    )
 
     async def _empty_adapter(_config: dict) -> list[dict]:
         return []
@@ -309,7 +366,9 @@ async def test_fetch_nonempty_cycle_expires_vanished(
     user = await user_factory()
     uid = _uid(user)
     src = await _make_source(db, uid, source="jsearch")
-    vanished = await _make_job(db, uid, external_id="will-vanish")
+    vanished = await _make_job(
+        db, uid, external_id="will-vanish", fetch=await _make_fetch(db, src),
+    )
 
     async def _adapter(_config: dict) -> list[dict]:
         return [

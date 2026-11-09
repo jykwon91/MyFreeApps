@@ -413,7 +413,7 @@ async def fetch_source(
         expired_count = await discovery_repository.mark_missing_as_expired(
             db,
             user_id=user_id,
-            source=source.source,
+            discovery_source_id=source.id,
             seen_external_ids=seen_external_ids,
         )
         if expired_count:

@@ -337,26 +337,25 @@ async def mark_missing_as_expired(
     db: AsyncSession,
     *,
     user_id: uuid.UUID,
-    source: str,
+    discovery_source_id: uuid.UUID,
     seen_external_ids: list[str],
 ) -> int:
     """Mark previously-active postings that vanished from this fetch as expired.
 
-    Given the full set of ``source_external_id`` values a fetch returned for
-    ``(user_id, source)``, set ``expired_at = now()`` on every still-active row
-    for that pair whose id is NOT in the returned set. "Active" means
-    ``expired_at IS NULL`` — already-expired rows are left untouched so we
-    don't churn their timestamp.
+    Given the ``source_external_id`` values one saved search's fetch returned,
+    set ``expired_at = now()`` on every active row that search last fetched
+    (``fetch_id`` is one of its fetches) whose id is NOT in the set. Another
+    saved search's rows are never touched, even of the same source. "Active"
+    is ``expired_at IS NULL``; expired rows keep their original timestamp.
 
     Returns the number of rows newly marked expired (for audit logging).
 
     CRITICAL: the caller MUST only invoke this after a fetch that genuinely
-    succeeded AND returned a non-empty result set. Calling it on an empty or
-    failed cycle would mark the entire ``(user_id, source)`` inbox expired,
-    because every active id would be "missing" from an empty returned set.
-    This function does not re-check that guard — it trusts the caller — so the
-    guard lives in ``discovery_fetch_service.fetch_source`` where success and
-    non-emptiness are known.
+    succeeded AND returned a non-empty result set. On an empty or failed cycle
+    every active row of the search would be "missing" and get expired. This
+    function trusts the caller, so the guard lives in
+    ``discovery_fetch_service.fetch_source`` where success and non-emptiness
+    are known.
     """
     if not seen_external_ids:
         # Defensive backstop for the caller's guard: never mass-expire on an
@@ -369,7 +368,8 @@ async def mark_missing_as_expired(
         update(DiscoveredJob)
         .where(
             DiscoveredJob.user_id == user_id,
-            DiscoveredJob.source == source,
+            DiscoveredJob.fetch_id.in_(select(DiscoveryFetch.id).where(
+                DiscoveryFetch.discovery_source_id == discovery_source_id)),
             DiscoveredJob.expired_at.is_(None),
             DiscoveredJob.source_external_id.notin_(seen_external_ids),
         )
