@@ -14,9 +14,10 @@ import { store } from "../src/lib/store";
 import { holdWrites } from "../test-support/holdWrites";
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 const mockPreventRemove = { active: false };
 jest.mock("expo-router", () => ({
-  router: { back: () => mockBack(), canGoBack: () => true, replace: jest.fn() },
+  router: { back: () => mockBack(), canGoBack: () => true, push: (path: string) => mockPush(path), replace: jest.fn() },
   usePreventRemove: (active: boolean) => {
     mockPreventRemove.active = active;
   },
@@ -59,13 +60,17 @@ interface Request {
   data?: unknown;
 }
 
-function startServer({ role = "owner", write = 200 }: { role?: string; write?: number | "offline" } = {}) {
+function startServer({
+  role = "owner",
+  write = 200,
+  properties = [{ id: "pr1", name: "Oak Street" }],
+}: { role?: string; write?: number | "offline"; properties?: { id: string; name: string }[] } = {}) {
   const requests: Request[] = [];
   const adapter: AxiosAdapter = async (config) => {
     requests.push(config);
     const ok = (data: unknown) => ({ data, status: 200, statusText: "OK", headers: {}, config });
     if (config.url === "/organizations") return ok([{ id: "w1", name: "Mine", org_role: role }]);
-    if (config.method?.toLowerCase() === "get") return config.url === "/properties" ? ok([{ id: "pr1", name: "Oak Street" }]) : ok(loan);
+    if (config.method?.toLowerCase() === "get") return config.url === "/properties" ? ok(properties) : ok(loan);
     if (write === "offline") return Promise.reject(new Error("Network Error"));
     if (write !== 200) return Promise.reject({ response: { status: write, data: { detail: "raw server text" } }, config, isAxiosError: true });
     return ok(loan);
@@ -171,6 +176,14 @@ describe("adding a mortgage", () => {
     startServer({ role: "viewer" });
     await show(<MortgageFormScreen />);
     expect(await screen.findByText(MESSAGES.viewOnlyHeading)).toBeTruthy();
+  });
+
+  it("sends someone with no property to add one on the phone", async () => {
+    startServer({ properties: [] });
+    await show(<MortgageFormScreen />);
+    expect(await screen.findByText(MESSAGES.noProperties)).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.addProperty }));
+    expect(mockPush).toHaveBeenCalledWith("/properties/new");
   });
 
   it("asks for the property before sending anything", async () => {
