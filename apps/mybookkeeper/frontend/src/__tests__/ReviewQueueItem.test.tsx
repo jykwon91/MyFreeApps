@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import ReviewQueueItem from "@/app/features/calendar/ReviewQueueItem";
-import type { ReviewQueueItem as ReviewQueueItemType } from "@/shared/types/calendar/review-queue-item";
+import type { ReviewQueueItem as ReviewQueueItemType } from "@mybookkeeper/api-client/types/calendar/review-queue-item";
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -60,7 +60,7 @@ vi.mock("@/shared/hooks/useToast", () => ({
   })),
 }));
 
-vi.mock("@/shared/store/calendarApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/calendarApi", () => ({
   useResolveQueueItemMutation: vi.fn(() => [
     mockResolve,
     { isLoading: false },
@@ -92,7 +92,7 @@ import {
   useResolveQueueItemMutation,
   useIgnoreQueueItemMutation,
   useDismissQueueItemMutation,
-} from "@/shared/store/calendarApi";
+} from "@mybookkeeper/api-client/store/calendarApi";
 
 function renderItem(item = mockItem) {
   return render(

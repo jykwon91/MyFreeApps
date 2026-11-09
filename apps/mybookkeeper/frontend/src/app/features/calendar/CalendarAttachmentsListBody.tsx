@@ -1,4 +1,4 @@
-import type { ListingBlackoutAttachment } from "@/shared/types/listing/listing-blackout-attachment";
+import type { ListingBlackoutAttachment } from "@mybookkeeper/api-client/types/calendar/listing-blackout-attachment";
 import type { CalendarAttachmentsMode } from "@/shared/types/calendar/calendar-attachments-mode";
 import CalendarEventAttachmentCard from "@/app/features/calendar/CalendarEventAttachmentCard";
 import CalendarEventAttachmentsSkeleton from "@/app/features/calendar/CalendarEventAttachmentsSkeleton";

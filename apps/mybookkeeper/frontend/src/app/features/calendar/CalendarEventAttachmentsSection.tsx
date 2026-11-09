@@ -5,21 +5,11 @@ import {
   useDeleteBlackoutAttachmentMutation,
   useGetBlackoutAttachmentsQuery,
   useUploadBlackoutAttachmentMutation,
-} from "@/shared/store/calendarApi";
-import type { ListingBlackoutAttachment } from "@/shared/types/listing/listing-blackout-attachment";
+} from "@mybookkeeper/api-client/store/calendarApi";
+import { BLACKOUT_ATTACHMENT_MAX_BYTES, BLACKOUT_ATTACHMENT_MIME_TYPES } from "@mybookkeeper/api-client/constants/blackoutAttachments";
+import type { ListingBlackoutAttachment } from "@mybookkeeper/api-client/types/calendar/listing-blackout-attachment";
 import { useCalendarAttachmentsMode } from "./useCalendarAttachmentsMode";
 import CalendarAttachmentsListBody from "./CalendarAttachmentsListBody";
-
-// Maximum attachment file size (client-side pre-check) — matches the backend cap.
-const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
-const ALLOWED_MIME = [
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "image/gif",
-  "application/pdf",
-  "text/plain",
-];
 
 export interface CalendarEventAttachmentsSectionProps {
   blackoutId: string;
@@ -36,8 +26,8 @@ export default function CalendarEventAttachmentsSection({ blackoutId }: Calendar
   const attachmentsMode = useCalendarAttachmentsMode({ isLoading, attachments });
 
   function validateFile(file: File): string | null {
-    if (file.size > MAX_ATTACHMENT_BYTES) return `${file.name} exceeds 25MB`;
-    if (!ALLOWED_MIME.includes(file.type) && file.type !== "") {
+    if (file.size > BLACKOUT_ATTACHMENT_MAX_BYTES) return `${file.name} exceeds 25MB`;
+    if (!BLACKOUT_ATTACHMENT_MIME_TYPES.includes(file.type) && file.type !== "") {
       return `${file.name}: unsupported file type`;
     }
     return null;
@@ -51,7 +41,9 @@ export default function CalendarEventAttachmentsSection({ blackoutId }: Calendar
         continue;
       }
       try {
-        await uploadAttachment({ blackoutId, file }).unwrap();
+        const form = new FormData();
+        form.append("file", file);
+        await uploadAttachment({ blackoutId, form }).unwrap();
         showSuccess(`${file.name} uploaded.`);
       } catch (e: unknown) {
         const status = (e as { status?: number }).status;

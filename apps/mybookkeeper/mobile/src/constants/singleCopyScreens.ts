@@ -7,6 +7,7 @@ export const SINGLE_COPY_SCREENS = [
   "analytics/index",
   "applicants/[id]",
   "calendar/index",
+  "calendar/review",
   "camera",
   "delete-account",
   "documents/[id]",

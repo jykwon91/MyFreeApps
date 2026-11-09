@@ -13,7 +13,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { configureStore } from "@reduxjs/toolkit";
 import { baseApi } from "@/shared/store/baseApi";
-import * as calendarApi from "@/shared/store/calendarApi";
+import * as calendarApi from "@mybookkeeper/api-client/store/calendarApi";
 import CalendarMonthGrid from "@/app/features/calendar/CalendarMonthGrid";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 

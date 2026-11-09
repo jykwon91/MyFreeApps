@@ -1,26 +1,20 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import type { ReviewQueueItem as ReviewQueueItemType } from "@/shared/types/calendar/review-queue-item";
+import type { ReviewQueueItem as ReviewQueueItemType } from "@mybookkeeper/api-client/types/calendar/review-queue-item";
 import { LoadingButton } from "@platform/ui";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import {
   useResolveQueueItemMutation,
   useIgnoreQueueItemMutation,
   useDismissQueueItemMutation,
-} from "@/shared/store/calendarApi";
+} from "@mybookkeeper/api-client/store/calendarApi";
+import { reviewQueueChannelLabel } from "@mybookkeeper/api-client/constants/reviewQueueChannels";
 import ReviewQueueChannelBadge from "@/app/features/calendar/ReviewQueueChannelBadge";
 import { useToast } from "@/shared/hooks/useToast";
 
 export interface ReviewQueueItemProps {
   item: ReviewQueueItemType;
 }
-
-const CHANNEL_LABELS: Record<string, string> = {
-  airbnb: "Airbnb",
-  furnished_finder: "Furnished Finder",
-  booking_com: "Booking.com",
-  vrbo: "Vrbo",
-};
 
 function formatDate(isoDate: string | null): string {
   if (!isoDate) return "—";
@@ -62,7 +56,7 @@ export default function ReviewQueueItem({ item }: ReviewQueueItemProps) {
   const { showSuccess, showError } = useToast();
 
   const payload = item.parsed_payload;
-  const channelLabel = CHANNEL_LABELS[item.source_channel] ?? item.source_channel;
+  const channelLabel = reviewQueueChannelLabel(item.source_channel);
   const hasDateRange = payload.check_in || payload.check_out;
 
   async function handleResolve() {

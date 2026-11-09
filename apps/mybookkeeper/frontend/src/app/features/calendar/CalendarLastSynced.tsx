@@ -1,4 +1,4 @@
-import { lastSyncedAt, relativeTime } from "@/app/features/calendar/calendar-utils";
+import { lastSyncedAt, relativeTime } from "@mybookkeeper/api-client/utils/calendarSync";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 
 export interface CalendarLastSyncedProps {

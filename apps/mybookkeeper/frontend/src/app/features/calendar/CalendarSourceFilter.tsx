@@ -1,8 +1,9 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronDown } from "lucide-react";
 import { getSourceLabel } from "@mybookkeeper/api-client/constants/calendarSources";
-import { CALENDAR_FILTER_SOURCES, getSourceColor } from "@/shared/lib/calendar-constants";
-import type { CalendarSource } from "@/shared/types/calendar/calendar-source";
+import { CALENDAR_FILTER_SOURCES } from "@mybookkeeper/api-client/constants/calendarFilterSources";
+import { getSourceColor } from "@/shared/lib/calendar-constants";
+import type { CalendarSource } from "@mybookkeeper/api-client/types/calendar/calendar-source";
 
 export interface CalendarSourceFilterProps {
   selectedSources: readonly string[];

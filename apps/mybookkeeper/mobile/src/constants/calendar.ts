@@ -1,4 +1,3 @@
-export const CALENDAR_ALL_PROPERTIES = "all";
 export const CALENDAR_LISTINGS_CHECK = { limit: 1, offset: 0 };
 export const CALENDAR_OPEN_RETRY_LIMIT = 5;
 export const CALENDAR_OPEN_RETRY_MS = 100;
@@ -15,8 +14,8 @@ export const CALENDAR_MESSAGES = {
   noListingsHeading: "I don't see any listings yet.",
   noListingsBody: "Add one on the website and I'll show its bookings here.",
   openWebsite: "Open on the website",
-  allProperties: "All properties",
-  chooseProperty: "Choose a property",
+  reviewQueue: "Review queue",
+  reviewBookings: "Review",
   today: "Today",
   openLease: "Open lease",
   close: "Close",
