@@ -29,3 +29,19 @@ export function daysBetween(fromIso: string, toIso: string): number {
 export function fullDateLabel(iso: string): string {
   return dateFromIso(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
+
+/** A "YYYY-MM" month, as the API reports it, from its first day to its last. */
+export function monthBounds(month: string): { start_date: string; end_date: string } {
+  const first = dateFromIso(`${month}-01`);
+  return { start_date: isoFromDate(first), end_date: isoFromDate(new Date(first.getFullYear(), first.getMonth() + 1, 0)) };
+}
+
+/** A "YYYY-MM" month moved by whole months. */
+export function addMonths(month: string, by: number): string {
+  return shiftMonth(`${month}-01`, by).slice(0, 7);
+}
+
+/** "Mar" under a chart, "March 2026" in a sentence. */
+export function monthName(month: string, format: "short" | "long"): string {
+  return dateFromIso(`${month}-01`).toLocaleDateString("en-US", format === "short" ? { month: "short" } : { month: "long", year: "numeric" });
+}

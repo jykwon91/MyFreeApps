@@ -1,16 +1,16 @@
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { baseApi } from "./baseApi";
-import type { InsuranceBenchmark } from "@/shared/types/insurance/insurance-benchmark";
+import type { InsuranceBenchmark } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark";
 import type { InsuranceBenchmarkUpsertRequest } from "@/shared/types/insurance/insurance-benchmark-upsert-request";
-import type { InsurancePremiumComparison } from "@/shared/types/insurance/insurance-premium-comparison";
 
 /**
- * RTK Query slice for the insurance benchmark and the comparison it drives.
+ * RTK Query slice for the insurance benchmark. The premium comparison it drives
+ * is served by the api-client's ``insurancePoliciesApi``.
  *
  * The benchmark is a singleton per organization, so there is no id in any of
  * these routes and one cache entry covers the whole slice.
  *
- * The comparison is tagged ``InsurancePolicy:COMPARISON`` rather than under
+ * That comparison is tagged ``InsurancePolicy:COMPARISON`` rather than under
  * this slice's own tag because it is derived from *both* sides — editing a
  * policy's premium must refresh it just as recording a new benchmark does.
  * Benchmark mutations invalidate both tags for that reason.
@@ -20,14 +20,6 @@ const insuranceBenchmarksApi = baseApi.injectEndpoints({
     getInsuranceBenchmark: builder.query<InsuranceBenchmark | null, void>({
       query: () => ({ url: "/insurance-benchmarks", params: { today: localToday() } }),
       providesTags: [{ type: "InsuranceBenchmark", id: "CURRENT" }],
-    }),
-
-    getInsurancePremiumComparison: builder.query<InsurancePremiumComparison, void>({
-      query: () => ({
-        url: "/insurance-policies/premium-comparison",
-        params: { today: localToday() },
-      }),
-      providesTags: [{ type: "InsurancePolicy", id: "COMPARISON" }],
     }),
 
     upsertInsuranceBenchmark: builder.mutation<
@@ -56,7 +48,6 @@ const insuranceBenchmarksApi = baseApi.injectEndpoints({
 
 export const {
   useGetInsuranceBenchmarkQuery,
-  useGetInsurancePremiumComparisonQuery,
   useUpsertInsuranceBenchmarkMutation,
   useDeleteInsuranceBenchmarkMutation,
 } = insuranceBenchmarksApi;

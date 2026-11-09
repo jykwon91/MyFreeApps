@@ -1,7 +1,7 @@
 import { nextToReview } from "../src/features/transactions/nextToReview";
 import { displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, spokenAmount, spokenMoney } from "../src/features/transactions/transactionDisplay";
 import { amountError, categoryChoices, changedFields, selectableProperties, toEditValues } from "../src/features/transactions/transactionEditValues";
-import { activeFilterCount, filtersFromParams, periodRange, reviewLink, reviewQueueParams, toListParams } from "../src/features/transactions/transactionFilters";
+import { activeFilterCount, filtersFromParams, filtersToParams, periodRange, reviewLink, reviewQueueParams, toListParams, transactionsLink } from "../src/features/transactions/transactionFilters";
 import { approveFailureMessage, othersUpdatedSentence, saveFailureMessage } from "../src/features/transactions/transactionMessages";
 import { NO_FILTERS, UNASSIGNED_PROPERTY } from "../src/constants/transactionFilters";
 import { aProperty, aTransaction } from "../test-support/transactionsServer";
@@ -83,6 +83,27 @@ describe("filters", () => {
 
   it("carries only what's set into a review link", () => {
     expect(reviewLink("t1", { ...NO_FILTERS, view: "review", vendor: " " })).toBe("/transactions/t1?review=1");
+  });
+
+  it("lists a month from a link instead of the period", () => {
+    expect(toListParams({ ...NO_FILTERS, period: "lastYear", month: "2026-02", approvedOnly: true }, today)).toEqual({
+      start_date: "2026-02-01",
+      end_date: "2026-02-28",
+      status: "approved",
+    });
+    expect(activeFilterCount({ ...NO_FILTERS, month: "2026-02" })).toBe(1);
+    expect(activeFilterCount({ ...NO_FILTERS, period: "thisYear", month: "2026-02" })).toBe(1);
+  });
+
+  it("takes a month from a link only when it's a real one", () => {
+    expect(filtersFromParams({ month: "2026-03" }).month).toBe("2026-03");
+    expect(filtersFromParams({ month: "2026-13" }).month).toBeNull();
+    expect(filtersFromParams({ month: "March" }).month).toBeNull();
+  });
+
+  it("round-trips a month through a link", () => {
+    expect(transactionsLink({ ...NO_FILTERS, month: "2026-03" })).toContain("&month=2026-03&");
+    expect(filtersFromParams(filtersToParams({ ...NO_FILTERS, month: "2026-03" }))).toEqual({ ...NO_FILTERS, month: "2026-03" });
   });
 
   it("counts filters but not the view", () => {

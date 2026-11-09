@@ -6,7 +6,7 @@ import {
   useDeleteInsuranceBenchmarkMutation,
   useUpsertInsuranceBenchmarkMutation,
 } from "@/shared/store/insuranceBenchmarksApi";
-import type { InsuranceBenchmark } from "@/shared/types/insurance/insurance-benchmark";
+import type { InsuranceBenchmark } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark";
 
 interface UseInsuranceBenchmarkFormArgs {
   existing: InsuranceBenchmark | null | undefined;

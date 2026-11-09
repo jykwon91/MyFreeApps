@@ -4,6 +4,7 @@ import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useTheme } from "@platform/
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { TRANSACTION_PERIODS, TRANSACTION_TYPES, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
+import { monthName } from "../../lib/localDate";
 import type { TransactionFilters } from "../../types/TransactionFilters";
 import { categoryLabel } from "./transactionDisplay";
 
@@ -62,12 +63,20 @@ export default function TransactionFilterSheet({
         <ScrollView>
           {draft.view === "review" ? null : (
             <Section title="Period">
+              {/* A month comes from a link, such as a bar on Home, so it's offered only when it was applied. */}
+              {filters.month ? (
+                <OptionRow
+                  isSelected={draft.month === filters.month}
+                  label={monthName(filters.month, "long")}
+                  onPress={() => update({ month: filters.month })}
+                />
+              ) : null}
               {TRANSACTION_PERIODS.map((option) => (
                 <OptionRow
-                  isSelected={draft.period === option.value}
+                  isSelected={draft.month === null && draft.period === option.value}
                   key={option.value}
                   label={option.label}
-                  onPress={() => update({ period: option.value })}
+                  onPress={() => update({ period: option.value, month: null })}
                 />
               ))}
             </Section>
@@ -113,7 +122,7 @@ export default function TransactionFilterSheet({
         </ScrollView>
         <View style={{ flexDirection: "row", gap: spacing.sm, padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border }}>
           <LoadingButton
-            onPress={() => update({ period: "all", type: null, propertyId: null, category: null })}
+            onPress={() => update({ period: "all", month: null, type: null, propertyId: null, category: null })}
             style={{ flex: 1 }}
             variant="secondary"
           >

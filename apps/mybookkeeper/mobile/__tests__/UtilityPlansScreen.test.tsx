@@ -16,6 +16,7 @@ import { planChip, planFacts, planTermNote, sortedPlans } from "../src/features/
 import UtilityPlanDetailScreen from "../src/features/utilityPlans/UtilityPlanDetailScreen";
 import UtilityPlansScreen from "../src/features/utilityPlans/UtilityPlansScreen";
 import { store } from "../src/lib/store";
+import { aUtilityPlanSummary } from "../test-support/aUtilityPlanSummary";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -27,29 +28,9 @@ jest.mock("expo-router", () => ({
 
 const originalAdapter = api.defaults.adapter;
 
-function aSummary(overrides: Partial<UtilityPlanSummary> = {}): UtilityPlanSummary {
-  return {
-    id: "u1",
-    property_id: "pr1",
-    property_name: "Oak Street",
-    service_type: "electricity",
-    provider_name: "Reliant",
-    plan_name: "Secure 12",
-    rate_type: "fixed",
-    avg_price_cents_per_kwh_at_1000: "13.9000",
-    term_end_date: "2099-06-30",
-    days_until_term_end: 9000,
-    renewal_status: "active",
-    is_current: true,
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-01T00:00:00Z",
-    ...overrides,
-  };
-}
-
 function aPlan(overrides: Partial<UtilityPlanDetail> = {}): UtilityPlanDetail {
   return {
-    ...aSummary(),
+    ...aUtilityPlanSummary(),
     user_id: "o",
     organization_id: "o",
     account_number: "1234564944",
@@ -132,44 +113,44 @@ afterEach(() => {
 describe("planChip", () => {
   const today = "2026-03-10";
   it("counts from the phone's date, not the server's", () => {
-    expect(planChip(aSummary({ term_end_date: "2026-03-19", days_until_term_end: 10 }), today)).toBe("Ends in 9 days");
-    expect(planChip(aSummary({ renewal_status: "expired", term_end_date: "2026-03-10", days_until_term_end: -1 }), today)).toBe("Ends today");
-    expect(planChip(aSummary({ renewal_status: "expiring_soon", term_end_date: "2026-03-09", days_until_term_end: 0 }), today)).toBe("Lapsed 1 day ago");
+    expect(planChip(aUtilityPlanSummary({ term_end_date: "2026-03-19", days_until_term_end: 10 }), today)).toBe("Ends in 9 days");
+    expect(planChip(aUtilityPlanSummary({ renewal_status: "expired", term_end_date: "2026-03-10", days_until_term_end: -1 }), today)).toBe("Ends today");
+    expect(planChip(aUtilityPlanSummary({ renewal_status: "expiring_soon", term_end_date: "2026-03-09", days_until_term_end: 0 }), today)).toBe("Lapsed 1 day ago");
   });
 
   it("warns as soon as the window opens, even on an answer loaded before it did", () => {
-    expect(planChip(aSummary({ renewal_status: "active", term_end_date: "2026-04-24" }), today)).toBe("Ends in 45 days");
-    expect(planChip(aSummary({ renewal_status: "active", term_end_date: "2026-04-25" }), today)).toBeNull();
+    expect(planChip(aUtilityPlanSummary({ renewal_status: "active", term_end_date: "2026-04-24" }), today)).toBe("Ends in 45 days");
+    expect(planChip(aUtilityPlanSummary({ renewal_status: "active", term_end_date: "2026-04-25" }), today)).toBeNull();
   });
 
   it("stays quiet on a plan with nothing to act on", () => {
-    expect(planChip(aSummary({ term_end_date: "2099-06-30" }), today)).toBeNull();
-    expect(planChip(aSummary({ term_end_date: null }), today)).toBeNull();
-    expect(planChip(aSummary({ rate_type: "regulated", term_end_date: "2026-03-01" }), today)).toBeNull();
+    expect(planChip(aUtilityPlanSummary({ term_end_date: "2099-06-30" }), today)).toBeNull();
+    expect(planChip(aUtilityPlanSummary({ term_end_date: null }), today)).toBeNull();
+    expect(planChip(aUtilityPlanSummary({ rate_type: "regulated", term_end_date: "2026-03-01" }), today)).toBeNull();
   });
 
   it("never calls a past plan lapsed", () => {
-    expect(planChip(aSummary({ is_current: false, renewal_status: "expired", term_end_date: "2025-01-01" }), today)).toBe("Past plan");
+    expect(planChip(aUtilityPlanSummary({ is_current: false, renewal_status: "expired", term_end_date: "2025-01-01" }), today)).toBe("Past plan");
   });
 });
 
 describe("sortedPlans", () => {
   it("puts what needs attention first and past plans last", () => {
     const sorted = sortedPlans([
-      aSummary({ id: "past", is_current: false, term_end_date: "2020-01-01" }),
-      aSummary({ id: "none", term_end_date: null }),
-      aSummary({ id: "active", term_end_date: "2027-01-01" }),
-      aSummary({ id: "later", term_end_date: "2026-04-20" }),
-      aSummary({ id: "soon", term_end_date: "2026-04-01" }),
-      aSummary({ id: "lapsed", term_end_date: "2026-01-01" }),
+      aUtilityPlanSummary({ id: "past", is_current: false, term_end_date: "2020-01-01" }),
+      aUtilityPlanSummary({ id: "none", term_end_date: null }),
+      aUtilityPlanSummary({ id: "active", term_end_date: "2027-01-01" }),
+      aUtilityPlanSummary({ id: "later", term_end_date: "2026-04-20" }),
+      aUtilityPlanSummary({ id: "soon", term_end_date: "2026-04-01" }),
+      aUtilityPlanSummary({ id: "lapsed", term_end_date: "2026-01-01" }),
     ], "2026-03-10");
     expect(sorted.map((plan) => plan.id)).toEqual(["lapsed", "soon", "later", "active", "none", "past"]);
   });
 
   it("sorts by the same date the chip counts from", () => {
     const sorted = sortedPlans([
-      aSummary({ id: "today", renewal_status: "expired", term_end_date: "2026-03-10" }),
-      aSummary({ id: "lapsed", renewal_status: "expiring_soon", term_end_date: "2026-03-09" }),
+      aUtilityPlanSummary({ id: "today", renewal_status: "expired", term_end_date: "2026-03-10" }),
+      aUtilityPlanSummary({ id: "lapsed", renewal_status: "expiring_soon", term_end_date: "2026-03-09" }),
     ], "2026-03-10");
     expect(sorted.map((plan) => plan.id)).toEqual(["lapsed", "today"]);
   });
@@ -177,13 +158,13 @@ describe("sortedPlans", () => {
 
 describe("planTermNote", () => {
   it("only says there's no term when that's true", () => {
-    expect(planTermNote(aSummary({ rate_type: "regulated", term_end_date: null }))).toBe(UTILITY_PLAN_MESSAGES.noFixedTerm);
-    expect(planTermNote(aSummary({ term_end_date: null }))).toBe("No term end recorded");
+    expect(planTermNote(aUtilityPlanSummary({ rate_type: "regulated", term_end_date: null }))).toBe(UTILITY_PLAN_MESSAGES.noFixedTerm);
+    expect(planTermNote(aUtilityPlanSummary({ term_end_date: null }))).toBe("No term end recorded");
   });
 
   it("stays out of the way when the date is there or the plan is over", () => {
-    expect(planTermNote(aSummary({ rate_type: "regulated", term_end_date: "2027-06-30" }))).toBeNull();
-    expect(planTermNote(aSummary({ is_current: false, term_end_date: null }))).toBeNull();
+    expect(planTermNote(aUtilityPlanSummary({ rate_type: "regulated", term_end_date: "2027-06-30" }))).toBeNull();
+    expect(planTermNote(aUtilityPlanSummary({ is_current: false, term_end_date: null }))).toBeNull();
   });
 });
 
@@ -238,7 +219,7 @@ describe("UtilityPlansScreen", () => {
   });
 
   it("opens a plan, and never shows an account number", async () => {
-    startServer(aPage([aSummary()]));
+    startServer(aPage([aUtilityPlanSummary()]));
     await show(<UtilityPlansScreen />);
     await screen.findByText("Oak Street · Electricity");
     expect(screen.getByText("Reliant · Secure 12")).toBeTruthy();
@@ -249,7 +230,7 @@ describe("UtilityPlansScreen", () => {
   });
 
   it("says when there are more than it shows", async () => {
-    startServer(aPage([aSummary()], true));
+    startServer(aPage([aUtilityPlanSummary()], true));
     await show(<UtilityPlansScreen />);
     await screen.findByText(UTILITY_PLAN_MESSAGES.moreOnWebsite);
   });
@@ -268,13 +249,13 @@ describe("UtilityPlansScreen", () => {
     await show(<UtilityPlansScreen />);
     await screen.findByText(UTILITY_PLAN_MESSAGES.couldntLoadList);
     expect(screen.queryByText(UTILITY_PLAN_MESSAGES.noneHeading)).toBeNull();
-    server.list = aPage([aSummary()]);
+    server.list = aPage([aUtilityPlanSummary()]);
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     await screen.findByText("Oak Street · Electricity");
   });
 
   it("keeps what it had and says so when a pull to refresh fails", async () => {
-    const server = startServer(aPage([aSummary()]));
+    const server = startServer(aPage([aUtilityPlanSummary()]));
     await show(<UtilityPlansScreen />);
     await screen.findByText("Oak Street · Electricity");
     server.list = "fail";

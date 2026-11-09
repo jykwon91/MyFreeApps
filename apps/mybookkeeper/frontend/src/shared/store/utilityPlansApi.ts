@@ -3,39 +3,22 @@ import { baseApi } from "./baseApi";
 import type { UtilityPlanCreateRequest } from "@/shared/types/utility/utility-plan-create-request";
 import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
 import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
-import type { UtilityPlanRenewalAlert } from "@/shared/types/utility/utility-plan-renewal-alert";
 import type { UtilityPlanUpdateRequest } from "@/shared/types/utility/utility-plan-update-request";
 
 /**
- * The website's writes and renewal alerts for Utility Plans. The list and single
- * plan reads are in the api-client, shared with the phone.
+ * The website's writes for Utility Plans. The reads, including the renewal
+ * alerts and rate comparison, are in the api-client, shared with the phone.
  *
  * Tag strategy mirrors insurancePoliciesApi: per-id ``UtilityPlan:{id}`` plus
  * a shared ``UtilityPlan:LIST``. Every mutation also invalidates
  * ``UtilityPlan:ALERTS`` and ``UtilityPlan:COMPARISON`` — both dashboard cards
  * are derived from the same rows, so editing a term end date or a rate must
  * refresh them or the operator keeps seeing a warning they already dealt with.
- * ``COMPARISON`` is served by ``marketRateBenchmarksApi`` but tagged here
- * because it is invalidated from both sides.
+ * Both are served by the api-client's ``utilityPlansApi``; ``COMPARISON`` is
+ * also invalidated by ``marketRateBenchmarksApi``.
  */
 const utilityPlansApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getUtilityPlanRenewalAlerts: builder.query<
-      UtilityPlanRenewalAlert,
-      { window_days?: number } | void
-    >({
-      query: (args) => ({
-        url: "/utility-plans/renewal-alerts",
-        params: {
-          today: localToday(),
-          ...(args?.window_days !== undefined
-            ? { window_days: args.window_days }
-            : {}),
-        },
-      }),
-      providesTags: [{ type: "UtilityPlan", id: "ALERTS" }],
-    }),
-
     createUtilityPlan: builder.mutation<
       UtilityPlanDetail,
       Omit<UtilityPlanCreateRequest, "today">
@@ -119,7 +102,6 @@ const utilityPlansApi = baseApi.injectEndpoints({
 });
 
 export const {
-  useGetUtilityPlanRenewalAlertsQuery,
   useCreateUtilityPlanMutation,
   useExtractUtilityPlanMutation,
   useExtractUtilityPlanFromUploadMutation,

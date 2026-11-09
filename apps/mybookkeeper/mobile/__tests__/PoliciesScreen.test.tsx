@@ -18,6 +18,7 @@ import { expiryLabel, policyTerm, sortedPolicies } from "../src/features/insuran
 import PolicyDetailScreen from "../src/features/insurance/PolicyDetailScreen";
 import { isoFromDate } from "../src/lib/localDate";
 import { store } from "../src/lib/store";
+import { aInsurancePolicySummary } from "../test-support/aInsurancePolicySummary";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -29,30 +30,6 @@ jest.mock("expo-router", () => ({
 jest.mock("../src/features/documents/openDocumentFile", () => ({ openAttachmentFile: jest.fn() }));
 
 const originalAdapter = api.defaults.adapter;
-const FAR_OFF = "2099-06-30";
-
-function aSummary(overrides: Partial<InsurancePolicySummary> = {}): InsurancePolicySummary {
-  return {
-    id: "p1",
-    property_id: "pr1",
-    property_name: "Oak Street",
-    policy_name: "Landlord policy",
-    carrier: "Acme Mutual",
-    effective_date: "2099-01-01",
-    expiration_date: FAR_OFF,
-    coverage_amount_cents: 50_000_000,
-    premium_cents: 11_200,
-    premium_frequency: "monthly",
-    fees_and_taxes_cents: null,
-    deductible_cents: 250_000,
-    wind_hail_deductible_pct: "2.00",
-    annual_premium_cents: 134_400,
-    annual_total_cents: 134_400,
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-01T00:00:00Z",
-    ...overrides,
-  };
-}
 
 function aFile(overrides: Partial<InsurancePolicyAttachment> = {}): InsurancePolicyAttachment {
   return {
@@ -73,7 +50,7 @@ function aFile(overrides: Partial<InsurancePolicyAttachment> = {}): InsurancePol
 
 function aPolicy(overrides: Partial<InsurancePolicyDetail> = {}): InsurancePolicyDetail {
   return {
-    ...aSummary(),
+    ...aInsurancePolicySummary(),
     user_id: "u1",
     organization_id: "o1",
     source_document_id: null,
@@ -145,7 +122,7 @@ describe("expiryLabel", () => {
 
 describe("sortedPolicies", () => {
   it("puts what runs out first on top, then no date, then the most recently expired", () => {
-    const named = (policy_name: string, expiration_date: string | null) => aSummary({ id: policy_name, policy_name, expiration_date });
+    const named = (policy_name: string, expiration_date: string | null) => aInsurancePolicySummary({ id: policy_name, policy_name, expiration_date });
     const sorted = sortedPolicies(
       [named("older expired", "2026-01-01"), named("no date", null), named("later", "2026-12-01"), named("recent expired", "2026-03-01"), named("soon", "2026-04-01"), named("today", "2026-03-10")],
       "2026-03-10",
@@ -172,7 +149,7 @@ describe("PoliciesScreen", () => {
 
   it("opens a policy, and marks only one that's running out", async () => {
     const soon = isoFromDate(new Date(Date.now() + 10 * 86_400_000));
-    startServer(aPage([aSummary(), aSummary({ id: "p2", policy_name: "Flood", expiration_date: soon })]));
+    startServer(aPage([aInsurancePolicySummary(), aInsurancePolicySummary({ id: "p2", policy_name: "Flood", expiration_date: soon })]));
     await show(<PoliciesScreen />);
     await screen.findByText("Flood");
     expect(screen.getAllByText(/^Expires in \d+ days$/)).toHaveLength(1);
@@ -181,7 +158,7 @@ describe("PoliciesScreen", () => {
   });
 
   it("says when there are more than it shows", async () => {
-    startServer(aPage([aSummary()], true));
+    startServer(aPage([aInsurancePolicySummary()], true));
     await show(<PoliciesScreen />);
     await screen.findByText(INSURANCE_MESSAGES.moreOnWebsite);
   });
@@ -199,13 +176,13 @@ describe("PoliciesScreen", () => {
     const server = startServer("fail");
     await show(<PoliciesScreen />);
     await screen.findByText(INSURANCE_MESSAGES.couldntLoadList);
-    server.list = aPage([aSummary()]);
+    server.list = aPage([aInsurancePolicySummary()]);
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     await screen.findByText("Landlord policy");
   });
 
   it("keeps what it had and says so when a pull to refresh fails", async () => {
-    const server = startServer(aPage([aSummary()]));
+    const server = startServer(aPage([aInsurancePolicySummary()]));
     await show(<PoliciesScreen />);
     await screen.findByText("Landlord policy");
     server.list = "fail";

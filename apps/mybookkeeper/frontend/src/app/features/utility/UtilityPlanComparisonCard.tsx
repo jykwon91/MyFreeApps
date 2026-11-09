@@ -1,9 +1,7 @@
 import { Link } from "react-router-dom";
 import Card from "@/shared/components/ui/Card";
-import {
-  useGetMarketRateBenchmarksQuery,
-  useGetUtilityPlanRateComparisonQuery,
-} from "@/shared/store/marketRateBenchmarksApi";
+import { useGetUtilityPlanRateComparisonQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
+import { useGetMarketRateBenchmarksQuery } from "@/shared/store/marketRateBenchmarksApi";
 import UtilityPlanComparisonRow from "./UtilityPlanComparisonRow";
 import UtilityPlanComparisonCardSkeleton from "./UtilityPlanComparisonCardSkeleton";
 import UtilityPlanNotComparedRow from "./UtilityPlanNotComparedRow";

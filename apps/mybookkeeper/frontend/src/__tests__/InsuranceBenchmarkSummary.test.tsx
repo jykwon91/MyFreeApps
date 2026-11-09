@@ -11,7 +11,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import InsuranceBenchmarkSummary from "@/app/features/insurance/InsuranceBenchmarkSummary";
-import type { InsuranceBenchmark } from "@/shared/types/insurance/insurance-benchmark";
+import type { InsuranceBenchmark } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 

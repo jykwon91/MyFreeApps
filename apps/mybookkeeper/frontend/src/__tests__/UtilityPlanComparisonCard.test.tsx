@@ -17,8 +17,8 @@ import { store } from "@/shared/store";
 import { queryStatus } from "@/test/rtk-query-status";
 import UtilityPlanComparisonCard from "@/app/features/utility/UtilityPlanComparisonCard";
 import type { MarketRateBenchmark } from "@/shared/types/utility/market-rate-benchmark";
-import type { UtilityPlanRateComparison } from "@/shared/types/utility/utility-plan-rate-comparison";
-import type { UtilityPlanRateComparisonRow } from "@/shared/types/utility/utility-plan-rate-comparison-row";
+import type { UtilityPlanRateComparison } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-comparison";
+import type { UtilityPlanRateComparisonRow } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-comparison-row";
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -42,12 +42,6 @@ let mockPlansFetching = false;
 // ``*Error`` means the query has failed; ``*Fetching`` means a request is in
 // flight. Together they give the retry-in-progress shape RTK really produces.
 vi.mock("@/shared/store/marketRateBenchmarksApi", () => ({
-  useGetUtilityPlanRateComparisonQuery: vi.fn(() => ({
-    data: mockComparison,
-    isLoading: mockComparisonLoading,
-    ...queryStatus({ failed: mockComparisonError, fetching: mockComparisonFetching }),
-    refetch: mockRefetch,
-  })),
   useGetMarketRateBenchmarksQuery: vi.fn(() => ({
     data: mockBenchmarks,
     isLoading: mockBenchmarksLoading,
@@ -57,6 +51,12 @@ vi.mock("@/shared/store/marketRateBenchmarksApi", () => ({
 }));
 
 vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
+  useGetUtilityPlanRateComparisonQuery: vi.fn(() => ({
+    data: mockComparison,
+    isLoading: mockComparisonLoading,
+    ...queryStatus({ failed: mockComparisonError, fetching: mockComparisonFetching }),
+    refetch: mockRefetch,
+  })),
   useGetUtilityPlansQuery: vi.fn(() => ({
     data: { items: [], total: mockPlanTotal, has_more: false },
     isLoading: mockPlansLoading,

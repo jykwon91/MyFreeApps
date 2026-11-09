@@ -1,5 +1,5 @@
-import { INSURANCE_BENCHMARK_STATUS_LABELS } from "@/shared/types/insurance/insurance-benchmark-status";
-import type { InsurancePremiumComparisonRow as ComparisonRow } from "@/shared/types/insurance/insurance-premium-comparison-row";
+import { INSURANCE_BENCHMARK_STATUS_LABELS } from "@mybookkeeper/api-client/constants/insuranceBenchmarkLabels";
+import type { InsurancePremiumComparisonRow as ComparisonRow } from "@mybookkeeper/api-client/types/insurance/insurance-premium-comparison-row";
 
 export interface InsurancePremiumNotComparedRowProps {
   row: ComparisonRow;

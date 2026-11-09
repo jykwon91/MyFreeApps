@@ -10,13 +10,3 @@ export type InsuranceBenchmarkStatus =
   | "not_comparable"
   | "at_or_below_market"
   | "above_market";
-
-export const INSURANCE_BENCHMARK_STATUS_LABELS: Record<
-  InsuranceBenchmarkStatus,
-  string
-> = {
-  no_benchmark: "No market premium recorded",
-  not_comparable: "Missing premium or coverage",
-  at_or_below_market: "At or below market",
-  above_market: "Above market",
-};

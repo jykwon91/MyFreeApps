@@ -14,7 +14,7 @@ import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import { queryStatus } from "@/test/rtk-query-status";
 import UtilityPlanRenewalAlertCard from "@/app/features/utility/UtilityPlanRenewalAlertCard";
-import type { UtilityPlanRenewalAlert } from "@/shared/types/utility/utility-plan-renewal-alert";
+import type { UtilityPlanRenewalAlert } from "@mybookkeeper/api-client/types/utility/utility-plan-renewal-alert";
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -30,16 +30,13 @@ let mockAlertsFetching = false;
 let mockPlanTotal = 0;
 let mockPlansLoading = false;
 
-vi.mock("@/shared/store/utilityPlansApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
   useGetUtilityPlanRenewalAlertsQuery: vi.fn(() => ({
     data: mockAlerts,
     isLoading: mockAlertsLoading,
     ...queryStatus({ failed: mockAlertsError, fetching: mockAlertsFetching }),
     refetch: mockRefetch,
   })),
-}));
-
-vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
   useGetUtilityPlansQuery: vi.fn(() => ({
     data: { items: [], total: mockPlanTotal, has_more: false },
     isLoading: mockPlansLoading,
