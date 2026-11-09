@@ -3,6 +3,7 @@ import { formatCurrency } from "@platform/core/utils/currency";
 import { Pressable, Text, View } from "react-native";
 import { UTILITY_COSTS_MESSAGES as MESSAGES } from "../../constants/analytics";
 import type { UtilityCostMonth } from "../../types/UtilityCostMonth";
+import HomeLinkRow from "../home/HomeLinkRow";
 import { spokenMoney } from "../transactions/transactionDisplay";
 import UtilityCostBar from "./UtilityCostBar";
 import { barPercent, monthLabel, spokenMonth } from "./utilityCostsDisplay";
@@ -13,9 +14,10 @@ interface UtilityCostMonthRowProps {
   isPartial: boolean;
   isExpanded: boolean;
   onToggle: () => void;
+  onSeeBills: () => void;
 }
 
-export default function UtilityCostMonthRow({ month, largestCents, isPartial, isExpanded, onToggle }: UtilityCostMonthRowProps) {
+export default function UtilityCostMonthRow({ month, largestCents, isPartial, isExpanded, onToggle, onSeeBills }: UtilityCostMonthRowProps) {
   const { colors, spacing, fontSize } = useTheme();
   const dollars = month.cents / 100;
   const hasBills = month.utilities.length > 0;
@@ -48,6 +50,7 @@ export default function UtilityCostMonthRow({ month, largestCents, isPartial, is
       <Pressable accessibilityLabel={spoken} accessibilityRole="button" accessibilityState={{ expanded: isExpanded }} onPress={onToggle} style={rowStyle}>
         {body}
       </Pressable>
+      {isExpanded ? <HomeLinkRow label={MESSAGES.periodBills(monthLabel(month.period))} onPress={onSeeBills} /> : null}
       {isExpanded
         ? month.utilities.map((utility) => (
             <View

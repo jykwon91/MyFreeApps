@@ -54,7 +54,10 @@
         "frontend/src/shared/lib/filter-panel-breakpoint-classes.ts",
         "frontend/src/shared/types/ui/filter-panel-breakpoint.ts",
         "frontend/src/shared/utils/filters-toggle-label.ts",
-        "frontend/src/shared/types/ui/filter-panel-breakpoint-classes.ts"
+        "frontend/src/shared/types/ui/filter-panel-breakpoint-classes.ts",
+        "mobile/src/features/analytics/",
+        "mobile/src/constants/analytics.ts",
+        "mobile/src/types/UtilityGranularity.ts"
       ],
       "backend_tests": [
         "test_utility_trends.py"
@@ -1593,7 +1596,25 @@
         "mobile/src/types/ReconciliationDetailBodyProps.ts",
         "mobile/src/features/transactions/TransactionTenantLink.tsx",
         "mobile/src/features/transactions/useAttributeTenant.ts",
-        "mobile/src/constants/transactionTenantLink.ts"
+        "mobile/src/constants/transactionTenantLink.ts",
+        "api-client/src/utils/categoryFilter.ts",
+        "api-client/src/utils/comparePeriods.ts",
+        "api-client/src/utils/dashboardYears.ts",
+        "api-client/src/utils/drillDown.ts",
+        "api-client/src/utils/summaryAverages.ts",
+        "api-client/src/types/summary/",
+        "api-client/src/constants/unassignedProperty.ts",
+        "api-client/src/constants/analyticsRanges.ts",
+        "mobile/src/features/moneyAnalysis/",
+        "mobile/src/features/analyticsControls/",
+        "mobile/src/features/drillDown/",
+        "mobile/src/constants/moneyAnalysis.ts",
+        "mobile/src/types/AnalysisChoice.ts",
+        "mobile/src/types/AnalysisPeriodKey.ts",
+        "mobile/src/types/AnalysisScope.ts",
+        "mobile/src/types/AnalysisSelection.ts",
+        "mobile/src/types/CategoryGroup.ts",
+        "mobile/src/types/DrillDownParams.ts"
       ],
       "backend_tests": [
         "test_bank_csv_parser.py",

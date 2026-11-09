@@ -23,3 +23,5 @@ export const EXPENSE_CATEGORY_LIST = [
 ] as const;
 
 export const INCOME_CATEGORIES = ["rental_revenue", "cleaning_fee_revenue", "business_income", "uncategorized"] as const;
+
+export const REVENUE_CATEGORIES = ["rental_revenue", "cleaning_fee_revenue", "business_income"] as const;

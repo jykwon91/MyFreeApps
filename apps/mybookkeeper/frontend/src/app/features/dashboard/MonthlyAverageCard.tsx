@@ -1,5 +1,6 @@
 import { formatCurrency } from "@/shared/utils/currency";
 import Card from "@/shared/components/ui/Card";
+import { monthlyAverage } from "@mybookkeeper/api-client/utils/summaryAverages";
 import type { MonthSummary } from "@mybookkeeper/api-client/types/summary/MonthSummary";
 
 export interface MonthlyAverageCardProps {
@@ -7,19 +8,11 @@ export interface MonthlyAverageCardProps {
 }
 
 export default function MonthlyAverageCard({ byMonth }: MonthlyAverageCardProps) {
-  const activeMonths = byMonth.filter(
-    (m) => m.revenue !== 0 || m.expenses !== 0,
-  );
-  const count = activeMonths.length;
+  const average = monthlyAverage(byMonth);
 
-  if (count === 0) return null;
+  if (!average) return null;
 
-  const avgRevenue =
-    activeMonths.reduce((sum, m) => sum + m.revenue, 0) / count;
-  const avgExpenses =
-    activeMonths.reduce((sum, m) => sum + m.expenses, 0) / count;
-  const avgProfit =
-    activeMonths.reduce((sum, m) => sum + m.profit, 0) / count;
+  const { months: count, revenue: avgRevenue, expenses: avgExpenses, profit: avgProfit } = average;
 
   return (
     <Card>

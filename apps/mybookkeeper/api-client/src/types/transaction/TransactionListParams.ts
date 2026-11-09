@@ -11,4 +11,5 @@ export interface TransactionListParams {
   start_date?: string;
   end_date?: string;
   tax_year?: number;
+  limit?: number;
 }

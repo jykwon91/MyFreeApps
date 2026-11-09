@@ -1,12 +1,9 @@
-import type { UtilityCostsPreset } from "../types/UtilityCostsPreset";
+import type { UtilityGranularity } from "../types/UtilityGranularity";
 
-export const UTILITY_COSTS_PRESETS: readonly { value: UtilityCostsPreset; label: string }[] = [
-  { value: "last12", label: "Last 12 months" },
-  { value: "thisYear", label: "This year" },
-  { value: "lastYear", label: "Last year" },
+export const UTILITY_GRANULARITIES: readonly { value: UtilityGranularity; label: string }[] = [
+  { value: "monthly", label: "By month" },
+  { value: "quarterly", label: "By quarter" },
 ];
-
-export const ALL_PROPERTIES = "all";
 
 export const UTILITY_COSTS_SKELETON_UTILITIES = [0, 1, 2, 3] as const;
 export const UTILITY_COSTS_SKELETON_MONTHS = [0, 1, 2, 3, 4, 5] as const;
@@ -23,14 +20,16 @@ export const UTILITY_LABELS: Readonly<Record<string, string>> = {
 
 export const UTILITY_COSTS_MESSAGES = {
   loading: "Loading your utility costs",
-  rangeLabel: "Time range",
-  property: "Property",
-  propertyHint: "Choose which property's bills to count",
-  allProperties: "All properties",
+  granularityLabel: "How to group the bills",
   propertiesFailed: "I couldn't load your properties, so I'm counting all of them. Pull down to try again.",
   approvedOnly: "I only count bills you've approved.",
   byUtility: "By utility",
-  byMonth: "By month",
+  byPeriod: { monthly: "By month", quarterly: "By quarter" },
+  seeBills: "See the bills",
+  seeBillsHint: "Opens the approved utility bills behind these numbers",
+  billsTitle: "Utility bills",
+  periodBills: (label: string) => `Bills for ${label}`,
+  periodBillsFor: (label: string) => `Utility bills, ${label}`,
   soFar: "so far",
   noBills: "No bills",
   couldntLoad: "I couldn't load your utility costs. Want me to try again?",
@@ -43,4 +42,8 @@ export const UTILITY_COSTS_MESSAGES = {
   noneInRangeHeading: "I don't see any approved utility bills in this range",
   noneInRangeBody: "They might be in a different range, under another property, or still waiting for your approval.",
   showDefault: "Show all properties for the last 12 months",
+  comparisonFailed: "I couldn't load the earlier stretch, so I can't show how these costs moved.",
+  retryComparison: "Try the comparison again",
+  title: "Utility costs",
+  backTitle: "More",
 } as const;

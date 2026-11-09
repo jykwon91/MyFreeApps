@@ -4,7 +4,7 @@ import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import DrillDownPanel from "@/app/features/dashboard/DrillDownPanel";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
-import type { DrillDownFilter } from "@/shared/types/dashboard/drill-down-filter";
+import type { DrillDownFilter } from "@mybookkeeper/api-client/types/analytics/drill-down-filter";
 
 vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
   useListTransactionsQuery: vi.fn(),

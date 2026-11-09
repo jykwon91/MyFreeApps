@@ -2,13 +2,14 @@ import type { Role } from "@/shared/types/user/role";
 import type { EmailQueueStatus } from "@mybookkeeper/api-client/types/integration/email-queue-status";
 import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
+import { REVENUE_CATEGORIES } from "@mybookkeeper/api-client/constants/transactionCategories";
 
 // Sentinel property_id used by the dashboard summary for transactions with no
 // property assignment (e.g. unattributed Airbnb payouts). Must stay in sync
 // with the backend's app/core/property_constants.py::UNASSIGNED_PROPERTY_ID.
 // When drilling into this bucket, query /transactions with `unassigned=true`
 // instead of a (non-UUID) property_id.
-export const UNASSIGNED_PROPERTY_ID = "unassigned";
+export { UNASSIGNED_PROPERTY_ID } from "@mybookkeeper/api-client/constants/unassignedProperty";
 
 export const TAG_OPTIONS = [
   "rental_revenue",
@@ -38,7 +39,7 @@ export const TAG_OPTIONS = [
   "education_training",
 ] as const;
 
-export const REVENUE_TAGS = new Set(["rental_revenue", "cleaning_fee_revenue", "business_income"]);
+export const REVENUE_TAGS = new Set<string>(REVENUE_CATEGORIES);
 export const NEUTRAL_TAGS = new Set(["security_deposit"]);
 export const EXPENSE_TAGS = new Set([
   "channel_fee", "cleaning_expense", "maintenance", "management_fee",
