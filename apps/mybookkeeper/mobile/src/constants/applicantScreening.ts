@@ -10,6 +10,7 @@ export const SCREENING_MESSAGES = {
   upload: "Upload a result",
   uploadAnother: "Upload another result",
   opening: "Opening…",
+  learnMore: "Learn more",
   uploaded: "Saved the screening result.",
   uploadFailed: "I couldn't upload that. Want me to try again?",
   tooBig: "That file is too big. Try a smaller PDF or a lower-resolution photo.",
@@ -38,4 +39,8 @@ export function openedProviderMessage(provider: string): string {
 
 export function couldntOpenProviderMessage(provider: string): string {
   return `I couldn't open ${provider}. Want me to try again?`;
+}
+
+export function learnMoreLabel(provider: string): string {
+  return `Learn more about ${provider}`;
 }

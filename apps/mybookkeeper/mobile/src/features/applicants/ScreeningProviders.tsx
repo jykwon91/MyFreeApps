@@ -3,12 +3,14 @@ import type { ScreeningProviderInfo } from "@mybookkeeper/api-client/types/appli
 import { Banner, LoadingButton, Skeleton, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Linking, Text, View } from "react-native";
-import { couldntOpenProviderMessage, openedProviderMessage, SCREENING_MESSAGES } from "../../constants/applicantScreening";
+import { couldntOpenProviderMessage, learnMoreLabel, openedProviderMessage, SCREENING_MESSAGES } from "../../constants/applicantScreening";
+import { useOpenLink } from "../inquiries/useOpenLink";
 
 export default function ScreeningProviders({ applicantId }: { applicantId: string }) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
   const { data, error, isLoading, refetch } = useGetScreeningProvidersQuery(applicantId);
+  const openLink = useOpenLink();
   const [fetchRedirect] = useLazyGetScreeningRedirectQuery();
   const [openingName, setOpeningName] = useState<string | null>(null);
   const [opened, setOpened] = useState<string | null>(null);
@@ -55,6 +57,9 @@ export default function ScreeningProviders({ applicantId }: { applicantId: strin
             variant="secondary"
           >
             {`Open ${provider.label}`}
+          </LoadingButton>
+          <LoadingButton accessibilityHint="Opens in your browser" accessibilityLabel={learnMoreLabel(provider.label)} onPress={() => void openLink(provider.external_url)} variant="ghost">
+            {SCREENING_MESSAGES.learnMore}
           </LoadingButton>
         </View>
       ))}

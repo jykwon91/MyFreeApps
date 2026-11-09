@@ -6,12 +6,15 @@ import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { RENT_MESSAGES, waivedBecause } from "../../constants/rent";
 import InquiryChip from "../inquiries/InquiryChip";
+import RentChargeActions from "./RentChargeActions";
 import RentChargeApplication from "./RentChargeApplication";
 import { chargeAmountText, chargeSpokenLabel, chargeTitle } from "./rentDisplay";
+import RentWaiveSheet from "./RentWaiveSheet";
 
-export default function RentChargeRow({ charge }: { charge: RentCharge }) {
+export default function RentChargeRow({ applicantId, canWrite, charge }: { applicantId: string; canWrite: boolean; charge: RentCharge }) {
   const { colors, spacing, fontSize } = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isWaiving, setIsWaiving] = useState(false);
   const mutedText = { fontSize: fontSize.sm, color: colors.mutedForeground };
   const note = proratedNote(charge.full_amount);
 
@@ -41,8 +44,10 @@ export default function RentChargeRow({ charge }: { charge: RentCharge }) {
           {charge.applications.map((application) => (
             <RentChargeApplication application={application} key={`${application.transaction_id}-${application.paid_on}`} />
           ))}
+          {canWrite ? <RentChargeActions applicantId={applicantId} charge={charge} onWaive={() => setIsWaiving(true)} /> : null}
         </View>
       ) : null}
+      {isWaiving ? <RentWaiveSheet applicantId={applicantId} charge={charge} onClose={() => setIsWaiving(false)} /> : null}
     </View>
   );
 }

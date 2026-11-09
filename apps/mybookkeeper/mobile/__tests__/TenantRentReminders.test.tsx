@@ -7,7 +7,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
-import { Alert, Linking } from "react-native";
+import { Alert } from "react-native";
 import { Provider } from "react-redux";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import {
@@ -22,6 +22,7 @@ import {
   sentEmail,
   textOnlyWent,
 } from "../src/constants/rentReminders";
+import { REMINDER_SETUP_MESSAGES } from "../src/constants/rentReminderSetup";
 import { dueLine, sendMoment, sendOutcome, sendReadiness } from "../src/features/rent/rentReminderDisplay";
 import TenantRentReminders from "../src/features/rent/TenantRentReminders";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -142,15 +143,14 @@ describe("what the section shows", () => {
     await renderReminders(startServer({ overview: aReminderOverview({ plan: null }), ledger: aRentLedger({ schedules: [] }) }));
 
     expect(await screen.findByText(REMINDER_MESSAGES.needsSchedule)).toBeTruthy();
-    expect(screen.getByText(REMINDER_MESSAGES.setUpOnWebsite)).toBeTruthy();
+    expect(screen.getByText(REMINDER_SETUP_MESSAGES.setUp)).toBeTruthy();
   });
 
-  it("offers to turn reminders on from the website when there's no plan", async () => {
-    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined as never);
+  it("offers to set reminders up when there's no plan", async () => {
     await renderReminders(startServer({ overview: aReminderOverview({ plan: null }) }));
 
-    await fireEvent.press(await screen.findByText(REMINDER_MESSAGES.turnOnOnWebsite));
-    await waitFor(() => expect(open).toHaveBeenCalledWith(expect.stringContaining("/applicants/a1")));
+    await fireEvent.press(await screen.findByText(REMINDER_SETUP_MESSAGES.setUp));
+    expect(await screen.findByRole("header", { name: REMINDER_SETUP_MESSAGES.titleNew })).toBeTruthy();
   });
 
   it("says when a paused plan can't send, and offers no Send", async () => {
@@ -191,7 +191,7 @@ describe("what the section shows", () => {
 
     await screen.findByText("$300.00 due Sun, Nov 3");
     expect(screen.queryByText(SEND_BUTTON)).toBeNull();
-    expect(screen.queryByText(REMINDER_MESSAGES.openWebsite)).toBeNull();
+    expect(screen.queryByText(REMINDER_SETUP_MESSAGES.edit)).toBeNull();
   });
 
   it("offers Try again when the section can't load", async () => {

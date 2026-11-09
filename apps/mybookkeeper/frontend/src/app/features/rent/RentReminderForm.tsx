@@ -1,6 +1,6 @@
 import { Button, LoadingButton } from "@platform/ui";
 import { RENT_INPUT_CLASS } from "./rent-input-class";
-import { MAX_SEND_DAYS_BEFORE, SEND_TIME_MAX, SEND_TIME_MIN } from "./rent-reminder-labels";
+import { MAX_SEND_DAYS_BEFORE, SEND_TIME_MAX, SEND_TIME_MIN } from "@mybookkeeper/api-client/constants/rentReminderDefaults";
 import RentReminderChannelFields from "./RentReminderChannelFields";
 import RentReminderFrequencyChoice from "./RentReminderFrequencyChoice";
 import { useRentReminderForm } from "./useRentReminderForm";
