@@ -1,6 +1,6 @@
-import { annualCostCents } from "@/shared/lib/offer-stats";
-import { formatOfferRate, formatWholeDollars } from "@/shared/lib/utility-offer-format";
-import type { UtilityOfferGroup } from "@/shared/types/utility/utility-offer-group";
+import { annualCostCents } from "@mybookkeeper/api-client/utils/offerStats";
+import { formatOfferRate, formatWholeDollars } from "@mybookkeeper/api-client/utils/utilityOfferFormat";
+import type { UtilityOfferGroup } from "@mybookkeeper/api-client/types/utility/utility-offer-group";
 import EquippedPlanFigure from "./EquippedPlanFigure";
 
 export interface EquippedPlanCardProps {

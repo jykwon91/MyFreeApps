@@ -14,7 +14,7 @@ import { Provider } from "react-redux";
 import { showError } from "@platform/ui";
 import { store } from "@/shared/store";
 import MarketRateBenchmarkDialog from "@/app/features/utility/MarketRateBenchmarkDialog";
-import type { MarketRateBenchmark } from "@/shared/types/utility/market-rate-benchmark";
+import type { MarketRateBenchmark } from "@mybookkeeper/api-client/types/utility/market-rate-benchmark";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -22,7 +22,7 @@ const mockUpsert = vi.fn();
 const mockDelete = vi.fn();
 let mockBenchmarks: MarketRateBenchmark[] = [];
 
-vi.mock("@/shared/store/marketRateBenchmarksApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/marketRateBenchmarksApi", () => ({
   useGetMarketRateBenchmarksQuery: vi.fn(() => ({
     data: mockBenchmarks,
     isLoading: false,

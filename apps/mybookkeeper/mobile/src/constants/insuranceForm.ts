@@ -1,4 +1,6 @@
 import type { InsuranceAttachmentKind } from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
+import type { PropertyChoiceMessages } from "../types/PropertyChoiceMessages";
+import { documentReaderMessages } from "./documentReader";
 
 export const POLICY_NAME_MAX_LENGTH = 255;
 export const POLICY_NOTES_MAX_LENGTH = 5000;
@@ -9,14 +11,14 @@ export const POLICY_FORM_MESSAGES = {
   addTitle: "New policy",
   editTitle: "Edit policy",
   property: "Property",
-  chooseProperty: "Choose a property",
+  propertySheetTitle: "Choose a property",
+  propertyNone: "Choose a property",
   propertyRequired: "Choose which property this covers.",
-  noPropertiesHeading: "Add a property first.",
-  noPropertiesBody: "A policy covers one of your properties, and you don't have any yet.",
+  noProperties: "A policy covers one of your properties, and you don't have any yet.",
   addProperty: "Add a property",
-  tryAgain: "Try again",
-  tryAgainOffer: "Want me to try again?",
-  couldntLoadProperties: "I couldn't load your properties.",
+  propertiesLoading: "Loading your properties",
+  propertiesFailed: "I couldn't load your properties.",
+  propertiesRetry: "Try again",
   policyName: "Policy name",
   policyNamePlaceholder: "e.g. Landlord insurance, 123 Main St",
   policyNameRequired: "Give the policy a name.",
@@ -47,10 +49,6 @@ export const POLICY_FORM_MESSAGES = {
   saving: "Saving…",
   added: "Policy added.",
   updated: "Policy updated.",
-  discardTitle: "Discard your changes?",
-  discardBody: "I haven't saved them yet.",
-  keepEditing: "Keep editing",
-  discard: "Discard",
   saveOffline: "I can't reach the server, so I couldn't save that. Your details are still here.",
   saveUnsure: "I lost the connection before I heard back, so the policy may have saved. Check your policies before you try again.",
   saveUnsureEdit: "I lost the connection before I heard back, so the change may have saved. Check the policy before you try again.",
@@ -59,22 +57,14 @@ export const POLICY_FORM_MESSAGES = {
   saveFailed: "I couldn't save that. Want to try again?",
 } as const;
 
-export const POLICY_READER_MESSAGES = {
-  heading: "Start from a document",
+export const POLICY_PROPERTY_MESSAGES: PropertyChoiceMessages = POLICY_FORM_MESSAGES;
+
+export const POLICY_READER_MESSAGES = documentReaderMessages({
+  title: "Start from a document",
   hint: "Add your declarations page, a renewal notice or the policy itself and I'll fill in what I can.",
   takePhoto: "Take a photo",
-  fromDocuments: "Use a document I've already uploaded",
-  documentsTitle: "Your documents",
-  noDocuments: "You haven't uploaded any documents yet.",
-  reading: "Reading…",
-  tryAgain: "Try reading it again",
-  startOver: "Choose a different document",
-  readFrom: "Filled in from",
-  readNotAllowed: "You have view-only access, so I can't read documents.",
-  offline: "I can't reach the server, so I couldn't read that. Want to try again?",
-  otherTerms: "Other terms from the document",
-  myNotes: "My notes on this document",
-} as const;
+  target: "policy",
+});
 
 export const POLICY_ATTACHMENT_MESSAGES = {
   addFile: "Add a document",

@@ -34,9 +34,6 @@ vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
     ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
     refetch: mockRefetch,
   })),
-}));
-
-vi.mock("@/shared/store/utilityPlansApi", () => ({
   useUpdateUtilityPlanMutation: vi.fn(() => [mockUpdate, { isLoading: false }]),
 }));
 

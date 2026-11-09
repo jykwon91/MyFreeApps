@@ -1,7 +1,6 @@
-import { readDocumentErrorMessage } from "@mybookkeeper/api-client/utils/documentReadErrors";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { INSURANCE_MESSAGES } from "../../constants/insurance";
-import { POLICY_ATTACHMENT_MESSAGES, POLICY_FORM_MESSAGES, POLICY_READER_MESSAGES } from "../../constants/insuranceForm";
+import { POLICY_ATTACHMENT_MESSAGES, POLICY_FORM_MESSAGES } from "../../constants/insuranceForm";
 
 /**
  * A new policy that never got an answer, or failed on the server, may have saved anyway.
@@ -43,13 +42,6 @@ export function policyDeleteFailure(error: unknown): string {
     default:
       return INSURANCE_MESSAGES.deleteFailed;
   }
-}
-
-export function policyReadFailure(error: unknown): string {
-  const status = httpStatus(error);
-  if (status === undefined) return POLICY_READER_MESSAGES.offline;
-  if (status === 403) return POLICY_READER_MESSAGES.readNotAllowed;
-  return readDocumentErrorMessage(status);
 }
 
 export function attachmentUploadFailure(error: unknown): string {

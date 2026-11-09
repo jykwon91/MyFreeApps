@@ -2,9 +2,9 @@ import {
   toUtilityPlanFields,
   toUtilityPlanFormValues,
   validateUtilityPlanForm,
-} from "@/shared/lib/utility-plan-form";
+} from "@mybookkeeper/api-client/utils/utilityPlanForm";
 import { showError, showSuccess } from "@platform/ui";
-import { useUpdateUtilityPlanMutation } from "@/shared/store/utilityPlansApi";
+import { useUpdateUtilityPlanMutation } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
 import UtilityPlanFormActions from "./UtilityPlanFormActions";
 import UtilityPlanFormFields from "./UtilityPlanFormFields";

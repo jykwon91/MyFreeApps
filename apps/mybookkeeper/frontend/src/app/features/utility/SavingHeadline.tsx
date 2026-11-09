@@ -1,4 +1,5 @@
-import { formatWholeDollars } from "@/shared/lib/utility-offer-format";
+import { formatWholeDollars } from "@mybookkeeper/api-client/utils/utilityOfferFormat";
+import { savingBarPercent } from "@mybookkeeper/api-client/utils/offerStats";
 
 export interface SavingHeadlineProps {
   savingCents: number | null;
@@ -6,12 +7,6 @@ export interface SavingHeadlineProps {
   maxSavingCents: number;
   /** True when the figure only holds inside a narrow band of usage. */
   isConditional: boolean;
-}
-
-function barPercent(savingCents: number, maxSavingCents: number): number {
-  if (maxSavingCents <= 0) return 0;
-  // A floor so the weakest offer still draws something to compare against.
-  return Math.max(6, Math.round((savingCents / maxSavingCents) * 100));
 }
 
 /**
@@ -54,7 +49,7 @@ export default function SavingHeadline({
       <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
         <div
           className={`h-full rounded-full ${barTone}`}
-          style={{ width: `${barPercent(savingCents, maxSavingCents)}%` }}
+          style={{ width: `${savingBarPercent(savingCents, maxSavingCents)}%` }}
         />
       </div>
     </div>

@@ -209,6 +209,20 @@ describe("adding a mortgage", () => {
     expect(JSON.parse(String(post?.data))).toMatchObject({ property_id: "pr1", interest_rate: "6.5", rate_type: "fixed" });
   });
 
+  it("keeps the fields locked while the screen slides away after the add", async () => {
+    startServer();
+    await show(<MortgageFormScreen />);
+    await fireEvent.press(await screen.findByLabelText(/^Property/));
+    await fireEvent.press(await screen.findByRole("radio", { name: "Oak Street" }));
+    await fireEvent.changeText(screen.getByLabelText(MESSAGES.rate), "6.5");
+    await fireEvent.press(screen.getByRole("radio", { name: "Fixed for the life of the loan" }));
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveNew }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(screen.getByLabelText(MESSAGES.rate).props.editable).toBe(false);
+    await fireEvent.press(screen.getByLabelText(/^Property/));
+    expect(screen.queryByRole("radio", { name: "Oak Street" })).toBeNull();
+  });
+
   it("warns that a failed create may have saved", async () => {
     startServer({ write: 500 });
     await show(<MortgageFormScreen />);

@@ -7,14 +7,15 @@ import { mortgageFormProblems } from "@mybookkeeper/api-client/utils/mortgageFor
 import { Banner, LoadingButton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
-import { MORTGAGE_FORM_MESSAGES as MESSAGES } from "../../constants/mortgageForm";
+import { MORTGAGE_FORM_MESSAGES as MESSAGES, MORTGAGE_STATEMENT_MESSAGES, MORTGAGE_STATEMENT_PHOTO_NAME } from "../../constants/mortgageForm";
 import { useConfirmLeave } from "../../lib/useConfirmLeave";
+import DocumentDraftNotices from "../documentReader/DocumentDraftNotices";
+import DocumentReader from "../documentReader/DocumentReader";
+import PropertyChoiceField from "../properties/PropertyChoiceField";
 import TransactionFact from "../transactions/TransactionFact";
-import MortgageDraftNotices from "./MortgageDraftNotices";
 import MortgageFormFields from "./MortgageFormFields";
-import { sameFormValues } from "./mortgageFormState";
-import MortgagePropertyField from "./MortgagePropertyField";
-import MortgageStatementReader from "./MortgageStatementReader";
+import { sameFormValues } from "../../lib/sameFormValues";
+import { useMortgageReaders } from "./useMortgageReaders";
 import { useSaveMortgage } from "./useSaveMortgage";
 
 /** Adds a loan, or changes `original`. Values live here so a reload can't overwrite typing. */
@@ -24,6 +25,7 @@ export default function MortgageForm({ original }: { original: Mortgage | null }
   const [propertyId, setPropertyId] = useState("");
   const [draft, setDraft] = useState<MortgageDraft | null>(null);
   const [hasTried, setHasTried] = useState(false);
+  const readers = useMortgageReaders();
   const { save, isBusy, isLeaving, failure } = useSaveMortgage(original);
 
   const problems = mortgageFormProblems(values);
@@ -54,19 +56,22 @@ export default function MortgageForm({ original }: { original: Mortgage | null }
           <TransactionFact label={MESSAGES.property} value={original.property_name ?? ""} />
         ) : (
           <>
-            <MortgageStatementReader
-              isDisabled={isBusy}
+            <DocumentReader
+              isDisabled={isBusy || isLeaving}
+              messages={MORTGAGE_STATEMENT_MESSAGES}
+              photoName={MORTGAGE_STATEMENT_PHOTO_NAME}
+              readers={readers}
               onRead={(read) => {
                 setDraft(read);
                 setValues((current) => applyMortgageDraftToForm(current, read));
               }}
             />
-            {draft ? <MortgageDraftNotices draft={draft} /> : null}
-            <MortgagePropertyField disabled={isBusy} error={hasTried && needsProperty ? MESSAGES.propertyRequired : undefined} onChange={setPropertyId} value={propertyId} />
+            {draft ? <DocumentDraftNotices draft={draft} messages={MORTGAGE_STATEMENT_MESSAGES} /> : null}
+            <PropertyChoiceField messages={MESSAGES} disabled={isBusy || isLeaving} error={hasTried && needsProperty ? MESSAGES.propertyRequired : undefined} onChange={setPropertyId} value={propertyId} />
           </>
         )}
         <MortgageFormFields
-          isBusy={isBusy}
+          isBusy={isBusy || isLeaving}
           onChange={(field, value) => setValues((current) => ({ ...current, [field]: value }))}
           problems={hasTried ? problems : {}}
           values={values}

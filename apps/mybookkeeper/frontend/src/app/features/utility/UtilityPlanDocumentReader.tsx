@@ -2,9 +2,9 @@ import DocumentReaderCard from "@/app/features/documents/DocumentReaderCard";
 import {
   useExtractUtilityPlanFromUploadMutation,
   useExtractUtilityPlanMutation,
-} from "@/shared/store/utilityPlansApi";
+} from "@mybookkeeper/api-client/store/utilityPlansApi";
 import type { DocumentSource } from "@/shared/types/document/document-source";
-import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
+import type { UtilityPlanDraft } from "@mybookkeeper/api-client/types/utility/utility-plan-draft";
 import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 
 export interface UtilityPlanDocumentReaderProps {
@@ -27,11 +27,13 @@ export default function UtilityPlanDocumentReader({
     useExtractUtilityPlanFromUploadMutation();
 
   async function read(source: DocumentSource) {
-    onRead(
-      source.kind === "file"
-        ? await extractUpload(source.file).unwrap()
-        : await extractPlan({ document_id: source.documentId }).unwrap(),
-    );
+    if (source.kind === "file") {
+      const form = new FormData();
+      form.append("file", source.file);
+      onRead(await extractUpload(form).unwrap());
+      return;
+    }
+    onRead(await extractPlan({ document_id: source.documentId }).unwrap());
   }
 
   return (

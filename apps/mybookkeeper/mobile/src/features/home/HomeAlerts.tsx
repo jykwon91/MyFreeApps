@@ -2,7 +2,7 @@ import { useGetInsurancePremiumComparisonQuery } from "@mybookkeeper/api-client/
 import { useGetUtilityPlanRateComparisonQuery, useGetUtilityPlanRenewalAlertsQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import { MIN_TOUCH_TARGET, Skeleton } from "@platform/mobile";
 import { router } from "expo-router";
-import { INSURANCE_LINK, UTILITY_PLANS_LINK } from "../../constants/home";
+import { INSURANCE_LINK, UTILITY_RATE_CHECK_LINK, UTILITY_RENEWALS_LINK } from "../../constants/home";
 import HomeCard from "./HomeCard";
 import { alertsFailedMessage, insurancePremiumsAlertLabel, renewalAlertLabel, utilityRatesAlertLabel } from "./homeDisplay";
 import HomeLinkRow from "./HomeLinkRow";
@@ -44,9 +44,9 @@ export default function HomeAlerts() {
   return (
     <HomeCard testID="home-alerts">
       {renewals.data && renewalCount > 0 ? (
-        <HomeLinkRow label={renewalAlertLabel(renewals.data)} onPress={() => router.navigate(UTILITY_PLANS_LINK)} />
+        <HomeLinkRow label={renewalAlertLabel(renewals.data)} onPress={() => router.navigate(UTILITY_RENEWALS_LINK)} />
       ) : null}
-      {utilityRateCount > 0 ? <HomeLinkRow label={utilityRatesAlertLabel(utilityRateCount)} onPress={() => router.navigate(UTILITY_PLANS_LINK)} /> : null}
+      {utilityRateCount > 0 ? <HomeLinkRow label={utilityRatesAlertLabel(utilityRateCount)} onPress={() => router.navigate(UTILITY_RATE_CHECK_LINK)} /> : null}
       {premiumCount > 0 ? <HomeLinkRow label={insurancePremiumsAlertLabel(premiumCount)} onPress={() => router.navigate(INSURANCE_LINK)} /> : null}
       {failedMessage ? <HomeSectionError message={failedMessage} onRetry={retry} /> : null}
     </HomeCard>

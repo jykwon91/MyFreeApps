@@ -5,8 +5,8 @@ import {
   formatOfferRate,
   formatProviderRating,
   formatTerm,
-} from "@/shared/lib/utility-offer-format";
-import type { UtilityOffer } from "@/shared/types/utility/utility-offer";
+} from "@mybookkeeper/api-client/utils/utilityOfferFormat";
+import type { UtilityOffer } from "@mybookkeeper/api-client/types/utility/utility-offer";
 
 export interface TimeOfUseOfferRowProps {
   offer: UtilityOffer;

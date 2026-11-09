@@ -1,7 +1,7 @@
 import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 import UtilityPlanFormActions from "./UtilityPlanFormActions";
 import { useMarketRateBenchmarkForm } from "./useMarketRateBenchmarkForm";
-import type { MarketRateBenchmark } from "@/shared/types/utility/market-rate-benchmark";
+import type { MarketRateBenchmark } from "@mybookkeeper/api-client/types/utility/market-rate-benchmark";
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 
 export interface MarketRateBenchmarkFormProps {

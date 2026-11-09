@@ -45,9 +45,6 @@ vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
     isFetching: false,
     refetch: vi.fn(),
   })),
-}));
-
-vi.mock("@/shared/store/utilityPlansApi", () => ({
   useDeleteUtilityPlanMutation: vi.fn(() => [
     vi.fn(() => ({ unwrap: mockDeleteUnwrap })),
     { isLoading: false },

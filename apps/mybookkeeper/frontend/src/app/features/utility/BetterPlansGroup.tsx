@@ -1,9 +1,9 @@
 import EquippedPlanCard from "@/app/features/utility/EquippedPlanCard";
 import OfferTierCard from "@/app/features/utility/OfferTierCard";
 import TimeOfUseOffers from "@/app/features/utility/TimeOfUseOffers";
-import { bestSavingCents } from "@/shared/lib/offer-stats";
-import { buildOfferTiers } from "@/shared/lib/offer-tiers";
-import type { UtilityOfferGroup } from "@/shared/types/utility/utility-offer-group";
+import { bestSavingCents } from "@mybookkeeper/api-client/utils/offerStats";
+import { buildOfferTiers } from "@mybookkeeper/api-client/utils/offerTiers";
+import type { UtilityOfferGroup } from "@mybookkeeper/api-client/types/utility/utility-offer-group";
 
 export interface BetterPlansGroupProps {
   group: UtilityOfferGroup;

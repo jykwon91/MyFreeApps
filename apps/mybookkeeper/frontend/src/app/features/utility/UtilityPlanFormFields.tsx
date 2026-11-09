@@ -1,13 +1,6 @@
 import { FormField } from "@platform/ui";
-import {
-  UTILITY_PLAN_RATE_TYPES,
-  UTILITY_PLAN_RATE_TYPE_HINTS,
-  UTILITY_PLAN_RATE_TYPE_LABELS,
-} from "@mybookkeeper/api-client/types/utility/utility-plan-rate-type";
-import {
-  UTILITY_SERVICE_TYPES,
-  UTILITY_SERVICE_TYPE_LABELS,
-} from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import { UTILITY_PLAN_RATE_TYPES, UTILITY_PLAN_RATE_TYPE_HINTS, UTILITY_PLAN_RATE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityPlanRateTypes";
+import { UTILITY_SERVICE_TYPES, UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
 import type { UtilityPlanRateType } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-type";
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import type { UtilityPlanFormState } from "./useUtilityPlanForm";

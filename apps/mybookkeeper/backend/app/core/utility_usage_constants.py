@@ -9,7 +9,7 @@ because no row recorded how many kWh the money bought.
 ``USAGE_UNITS`` is enforced in the DB by ``CheckConstraint`` (String + CHECK,
 never the SQLAlchemy ``Enum`` type, per the monorepo schema conventions) and is
 mirrored as a TypeScript union in
-``frontend/src/shared/types/utility/utility-usage-unit.ts`` — a value added here
+``api-client/src/types/transaction/UsageUnit.ts`` — a value added here
 MUST be added there in the same PR.
 
 Units are stored exactly as the bill states them rather than normalized on the

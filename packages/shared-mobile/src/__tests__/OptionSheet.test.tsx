@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import { Platform, StyleSheet } from "react-native";
+import { Platform, StyleSheet, Text } from "react-native";
 import OptionSheet from "../components/OptionSheet";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 
@@ -53,6 +53,14 @@ describe("OptionSheet", () => {
       <OptionSheet emptyText="Add a property on the website first." isOpen onClose={jest.fn()} onSelect={jest.fn()} options={[]} title="Property" value={null} />,
     );
     expect(screen.getByText("Add a property on the website first.")).toBeTruthy();
+  });
+
+  it("shows the given content in place of the empty text while the options aren't there yet", async () => {
+    await render(
+      <OptionSheet emptyContent={<Text>Still loading</Text>} emptyText="Nothing here." isOpen onClose={jest.fn()} onSelect={jest.fn()} options={[]} title="Property" value={null} />,
+    );
+    expect(screen.getByText("Still loading")).toBeTruthy();
+    expect(screen.queryByText("Nothing here.")).toBeNull();
   });
 
   describe("onClosed", () => {

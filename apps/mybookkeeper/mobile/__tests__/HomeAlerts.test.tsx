@@ -34,9 +34,9 @@ describe("Home alerts", () => {
     server.premiumComparison = policiesAboveMarket(1);
     await renderHome();
     await fireEvent.press(await screen.findByRole("button", { name: "1 utility plan has lapsed" }));
-    expect(mockNavigate).toHaveBeenLastCalledWith("/utility-plans");
+    expect(mockNavigate).toHaveBeenLastCalledWith("/utility-plans/renewals");
     await fireEvent.press(screen.getByRole("button", { name: "2 utility plans priced above market" }));
-    expect(mockNavigate).toHaveBeenLastCalledWith("/utility-plans");
+    expect(mockNavigate).toHaveBeenLastCalledWith("/utility-plans/rate-check");
     await fireEvent.press(screen.getByRole("button", { name: "1 insurance policy priced above market" }));
     expect(mockNavigate).toHaveBeenLastCalledWith("/insurance");
   });

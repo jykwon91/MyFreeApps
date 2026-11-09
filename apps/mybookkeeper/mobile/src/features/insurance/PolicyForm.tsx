@@ -1,51 +1,47 @@
 import { useCreateInsurancePolicyMutation, useUpdateInsurancePolicyMutation } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
-import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
 import type { InsurancePolicyDraft } from "@mybookkeeper/api-client/types/insurance/insurance-policy-draft";
 import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/insurancePolicyDraft";
 import { EMPTY_POLICY_FORM, policyToFormValues, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
-import { Banner, EmptyState, LoadingButton, OptionSheet, useTheme, useToast } from "@platform/mobile";
+import { INSURANCE_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/insuranceUploads";
+import { Banner, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
-import { POLICY_FORM_MESSAGES } from "../../constants/insuranceForm";
-import { useConfirmLeave } from "../../lib/useConfirmLeave";
+import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { POLICY_FORM_MESSAGES, POLICY_PHOTO_NAME, POLICY_PROPERTY_MESSAGES, POLICY_READER_MESSAGES } from "../../constants/insuranceForm";
+import { sameFormValues } from "../../lib/sameFormValues";
+import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import type { PolicyFormErrors } from "../../types/PolicyFormErrors";
 import { useFormSubmit } from "../shell/useFormSubmit";
+import DocumentDraftNotices from "../documentReader/DocumentDraftNotices";
+import DocumentReader from "../documentReader/DocumentReader";
+import PropertyChoiceField from "../properties/PropertyChoiceField";
 import PickerField from "../transactions/PickerField";
-import PolicyDocumentReader from "./PolicyDocumentReader";
-import PolicyDraftNotices from "./PolicyDraftNotices";
 import { policyAddFailure, policyEditFailure } from "./policyFailure";
 import PolicyFormFields from "./PolicyFormFields";
 import { policyFormErrors } from "./policyFormErrors";
-import PoliciesSkeleton from "./PoliciesSkeleton";
+import { useInsurancePolicyReaders } from "./useInsurancePolicyReaders";
 
 /** Adds a policy, or edits `policy` when it is given. The property can't change once a policy exists. */
 export default function PolicyForm({ policy }: { policy?: InsurancePolicyDetail }) {
   const { spacing } = useTheme();
   const { showToast } = useToast();
-  const { data: properties, isLoading: isLoadingProperties, isError: couldntLoadProperties, refetch } = useGetPropertiesQuery();
   const [createPolicy] = useCreateInsurancePolicyMutation();
   const [updatePolicy] = useUpdateInsurancePolicyMutation();
+  const readers = useInsurancePolicyReaders();
   const { isBusy, failure, clearFailure, submit } = useFormSubmit();
   const [initial] = useState(() => (policy ? policyToFormValues(policy) : EMPTY_POLICY_FORM));
   const [values, setValues] = useState<InsurancePolicyFormValues>(initial);
   const [propertyId, setPropertyId] = useState(policy?.property_id ?? "");
   const [draft, setDraft] = useState<InsurancePolicyDraft | null>(null);
   const [errors, setErrors] = useState<PolicyFormErrors>({});
-  const [isPropertyOpen, setIsPropertyOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
 
-  const isDirty = JSON.stringify(values) !== JSON.stringify(initial) || (!policy && propertyId !== "");
+  const isDirty = !sameFormValues(values, initial) || (!policy && propertyId !== "");
+  const locked = isBusy || isLeaving;
 
-  useConfirmLeave(isDirty && !isLeaving, (leave) => {
-    if (isBusy) return;
-    Alert.alert(POLICY_FORM_MESSAGES.discardTitle, POLICY_FORM_MESSAGES.discardBody, [
-      { text: POLICY_FORM_MESSAGES.keepEditing, style: "cancel" },
-      { text: POLICY_FORM_MESSAGES.discard, style: "destructive", onPress: leave },
-    ]);
-  });
+  useDiscardPrompt(isDirty && !isLeaving, isBusy);
 
   // Leaving waits a render, or the discard prompt still sees the unsaved changes.
   useEffect(() => {
@@ -82,52 +78,37 @@ export default function PolicyForm({ policy }: { policy?: InsurancePolicyDetail 
     setIsLeaving(true);
   }
 
-  if (!policy && isLoadingProperties) return <PoliciesSkeleton />;
-  if (!policy && couldntLoadProperties) {
-    return <EmptyState action={{ label: POLICY_FORM_MESSAGES.tryAgain, onPress: () => void refetch() }} body={POLICY_FORM_MESSAGES.tryAgainOffer} heading={POLICY_FORM_MESSAGES.couldntLoadProperties} />;
-  }
-  if (!policy && properties?.length === 0) {
-    return (
-      <EmptyState
-        action={{ label: POLICY_FORM_MESSAGES.addProperty, onPress: () => router.push("/properties/new") }}
-        body={POLICY_FORM_MESSAGES.noPropertiesBody}
-        heading={POLICY_FORM_MESSAGES.noPropertiesHeading}
-      />
-    );
-  }
-
-  const propertyName = policy?.property_name ?? properties?.find((property) => property.id === propertyId)?.name;
-
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
-        {policy ? null : <PolicyDocumentReader isDisabled={isBusy} onRead={read} />}
-        {draft ? <PolicyDraftNotices draft={draft} /> : null}
         {policy ? (
-          <PickerField disabled label={POLICY_FORM_MESSAGES.property} onPress={() => undefined} value={propertyName ?? ""} />
+          <PickerField disabled label={POLICY_FORM_MESSAGES.property} onPress={() => undefined} value={policy.property_name ?? ""} />
         ) : (
           <>
-            <PickerField label={POLICY_FORM_MESSAGES.property} onPress={() => setIsPropertyOpen(true)} value={propertyName ?? POLICY_FORM_MESSAGES.chooseProperty} />
-            {errors.propertyId ? <Banner message={errors.propertyId} /> : null}
+            <DocumentReader
+              fileTypes={INSURANCE_UPLOAD_MIME_TYPES}
+              isDisabled={locked}
+              messages={POLICY_READER_MESSAGES}
+              onRead={read}
+              photoName={POLICY_PHOTO_NAME}
+              readers={readers}
+            />
+            {draft ? <DocumentDraftNotices draft={draft} messages={POLICY_READER_MESSAGES} /> : null}
+            <PropertyChoiceField
+              disabled={locked}
+              error={errors.propertyId}
+              messages={POLICY_PROPERTY_MESSAGES}
+              onChange={setPropertyId}
+              value={propertyId}
+            />
           </>
         )}
         <PolicyFormFields errors={errors} onChange={(next) => { clearFailure(); change(next); }} values={values} />
-        <LoadingButton disabled={isBusy} isLoading={isBusy} loadingText={POLICY_FORM_MESSAGES.saving} onPress={() => void save()}>
+        <LoadingButton disabled={locked} isLoading={isBusy} loadingText={POLICY_FORM_MESSAGES.saving} onPress={() => void save()}>
           {policy ? POLICY_FORM_MESSAGES.saveChanges : POLICY_FORM_MESSAGES.save}
         </LoadingButton>
       </ScrollView>
-      <OptionSheet
-        isOpen={isPropertyOpen}
-        onClose={() => setIsPropertyOpen(false)}
-        onSelect={(id) => {
-          setIsPropertyOpen(false);
-          setPropertyId(id);
-        }}
-        options={(properties ?? []).map((property) => ({ value: property.id, label: property.name }))}
-        title={POLICY_FORM_MESSAGES.chooseProperty}
-        value={propertyId === "" ? null : propertyId}
-      />
     </KeyboardAvoidingView>
   );
 }

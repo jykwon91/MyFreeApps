@@ -1,15 +1,9 @@
-import type { OfferVerdict } from "@/shared/types/utility/offer-verdict";
+import { OFFER_VERDICT_LABELS } from "@mybookkeeper/api-client/constants/offerVerdictLabels";
+import type { OfferVerdict } from "@mybookkeeper/api-client/types/utility/offer-verdict";
 
 export interface OfferVerdictBadgeProps {
   verdict: OfferVerdict;
 }
-
-const LABEL: Record<OfferVerdict, string> = {
-  major: "Big upgrade",
-  solid: "Upgrade",
-  slight: "Slight upgrade",
-  conditional: "Conditional",
-};
 
 const TONE: Record<OfferVerdict, string> = {
   major: "bg-green-100 text-green-900 dark:bg-green-900/40 dark:text-green-100",
@@ -31,7 +25,7 @@ export default function OfferVerdictBadge({ verdict }: OfferVerdictBadgeProps) {
     <span
       className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${TONE[verdict]}`}
     >
-      {LABEL[verdict]}
+      {OFFER_VERDICT_LABELS[verdict]}
     </span>
   );
 }

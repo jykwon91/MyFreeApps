@@ -1,12 +1,10 @@
 import type { MortgageFormProblem } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-problem";
+import { documentReaderMessages } from "./documentReader";
 import type { MortgageRateType } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
 
 export const MORTGAGE_NOTES_MAX_LENGTH = 5000;
 export const MORTGAGE_TEXT_MAX_LENGTH = 255;
 export const MORTGAGE_STATEMENT_PHOTO_NAME = "mortgage-statement.jpg";
-
-/** What the statement reader accepts, matching the website. */
-export const MORTGAGE_STATEMENT_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 
 export const MORTGAGE_RATE_TYPE_LABELS: Record<MortgageRateType, string> = {
   fixed: "Fixed for the life of the loan",
@@ -36,7 +34,8 @@ export const MORTGAGE_FORM_MESSAGES = {
   noProperties: "You need a property before you can add a loan.",
   addProperty: "Add a property",
   propertiesLoading: "Loading your properties",
-  propertiesFailed: "I couldn't load your properties. Pull down on the previous screen and try again.",
+  propertiesFailed: "I couldn't load your properties.",
+  propertiesRetry: "Try again",
   lender: "Lender",
   lenderHint: "For example Chase.",
   rate: "Interest rate (%)",
@@ -78,38 +77,9 @@ export const MORTGAGE_FORM_MESSAGES = {
   demo: "This is a demo workspace, so I can't save changes here.",
 } as const;
 
-export const MORTGAGE_STATEMENT_MESSAGES = {
+export const MORTGAGE_STATEMENT_MESSAGES = documentReaderMessages({
   title: "Read it off a statement",
   hint: "Take a photo of your latest monthly mortgage statement, or choose a PDF or photo. I'll fill in what I can find.",
   takePhoto: "Take a photo of the statement",
-  fromLibrary: "Use a document I've already uploaded",
-  librarySheetTitle: "Pick a document to read",
-  libraryEmpty: "You haven't uploaded any documents yet.",
-  untitled: "Untitled document",
-  reading: "Reading...",
-  tryAgain: "Try reading it again",
-  neverMind: "Never mind",
-  readDone: (name: string) => `I read ${name}. Check each figure before you save.`,
-  tooBig: "That file's too big for me. I can take up to 10MB, so try a smaller scan or a lower resolution photo.",
-  wrongType: "I can't read that kind of file. A PDF or a photo (JPG, PNG or WEBP) works best.",
-  tooMany: "That's as many documents as I can read today. Try again tomorrow, or fill in the loan by hand.",
-  unreadable: "I couldn't read that one. Try another file, or fill in the loan by hand.",
-  gone: "I can't find that document anymore. Try another one.",
-  viewOnly: "You have view-only access, so I can't read documents for you.",
-  storageDown: "I can't store files right now. Try again in a little while, or fill in the loan by hand.",
-  lostConnection: "I couldn't reach the server. Check your connection and try again.",
-  somethingWrong: "Something went wrong on my end. Try again, or fill in the loan by hand.",
-  confidence: {
-    high: "I read these straight off the document.",
-    medium: "Some of these I had to interpret, so it's worth a look before you save.",
-    low: "I wasn't very sure about this one. Please check every field.",
-  },
-  otherTerms: "Other terms from the document",
-  myNotes: "My notes on this document",
-  moreSummary: (terms: number, hasNotes: boolean): string => {
-    const found = `I noticed ${terms} more term${terms === 1 ? "" : "s"} on the document`;
-    if (terms > 0 && hasNotes) return `${found}, plus some notes I jotted down.`;
-    if (terms > 0) return `${found}.`;
-    return "I also jotted down some notes about this document.";
-  },
-} as const;
+  target: "loan",
+});

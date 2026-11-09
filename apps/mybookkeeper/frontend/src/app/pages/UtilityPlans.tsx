@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button, ConfirmDialog, showError, showSuccess } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { useGetUtilityPlansQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-import { useDeleteUtilityPlanMutation } from "@/shared/store/utilityPlansApi";
+import { useDeleteUtilityPlanMutation } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import AddUtilityPlanDialog from "@/app/features/utility/AddUtilityPlanDialog";
 import BetterPlansSection from "@/app/features/utility/BetterPlansSection";
 import MarketRateBenchmarkDialog from "@/app/features/utility/MarketRateBenchmarkDialog";
