@@ -1,12 +1,3 @@
-export interface ReviewQueueItem {
-  id: string;
-  email_message_id: string;
-  source_channel: string;
-  parsed_payload: ReviewQueuePayload;
-  status: "pending" | "resolved" | "ignored";
-  created_at: string;
-}
-
 /** Fields extracted from the booking email — never raw email body text. */
 export interface ReviewQueuePayload {
   source_channel: string | null;

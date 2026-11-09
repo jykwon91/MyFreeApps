@@ -1,4 +1,3 @@
-import type { CalendarSource } from "@/shared/types/calendar/calendar-source";
 import type { CalendarView } from "@/shared/types/calendar/calendar-view";
 
 /**
@@ -132,18 +131,3 @@ export const CALENDAR_UNKNOWN_SOURCE_COLOR = "#94a3b8";
 export function getSourceColor(source: string): string {
   return CALENDAR_SOURCE_COLORS[source] ?? CALENDAR_UNKNOWN_SOURCE_COLOR;
 }
-
-/**
- * Sources we surface in the filter dropdown. Includes every known
- * source even if no events match it today — the dropdown is a planning
- * tool, not a result filter, and stays stable across windows.
- */
-export const CALENDAR_FILTER_SOURCES: readonly CalendarSource[] = [
-  "airbnb",
-  "vrbo",
-  "furnished_finder",
-  "rotating_room",
-  "direct",
-  "manual",
-  "lease",
-];

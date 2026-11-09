@@ -121,5 +121,5 @@ export function emptyMonthHeading(month: string): string {
 
 export function reviewQueueMessage(count: number): string {
   const subject = count === 1 ? "1 booking needs" : `${count} bookings need`;
-  return `${subject} your review. I can't show ${count === 1 ? "it" : "them"} on your phone yet.`;
+  return `${subject} your review.`;
 }

@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import ReviewQueueDrawer from "@/app/features/calendar/ReviewQueueDrawer";
-import type { ReviewQueueItem } from "@/shared/types/calendar/review-queue-item";
+import type { ReviewQueueItem } from "@mybookkeeper/api-client/types/calendar/review-queue-item";
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -48,7 +48,7 @@ const mockItems: ReviewQueueItem[] = [
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock("@/shared/store/calendarApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/calendarApi", () => ({
   useGetReviewQueueQuery: vi.fn(() => ({
     data: mockItems,
     isLoading: false,
@@ -66,7 +66,7 @@ vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   })),
 }));
 
-import { useGetReviewQueueQuery } from "@/shared/store/calendarApi";
+import { useGetReviewQueueQuery } from "@mybookkeeper/api-client/store/calendarApi";
 
 function renderDrawer(isOpen = true) {
   return render(

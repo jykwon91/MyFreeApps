@@ -2,47 +2,51 @@ import { useGetCalendarEventsQuery, useGetReviewQueueCountQuery } from "@mybookk
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
-import { Banner, LoadingButton, OptionSheet, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { SectionList, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
-import { CALENDAR_ALL_PROPERTIES, CALENDAR_LISTINGS_CHECK, CALENDAR_MESSAGES } from "../../constants/calendar";
+import { CALENDAR_LISTINGS_CHECK, CALENDAR_MESSAGES } from "../../constants/calendar";
+import { FILTER_MESSAGES } from "../../constants/calendarFilters";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { isoFromDate, monthOf, shiftMonth } from "../../lib/localDate";
 import { useToday } from "../../lib/useToday";
+import type { CalendarFilters } from "../../types/CalendarFilters";
 import type { CalendarSection } from "../../types/CalendarSection";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import { bookingCount, calendarSections, monthTitle, reviewQueueMessage, sectionToOpenAt } from "./calendarDisplay";
+import { filterSummary, hasCalendarFilters, NO_CALENDAR_FILTERS, withKnownProperties } from "./calendarFilters";
 import CalendarEmptyList from "./CalendarEmptyList";
 import CalendarEventRow from "./CalendarEventRow";
 import CalendarEventSheet from "./CalendarEventSheet";
+import CalendarFilterSheet from "./CalendarFilterSheet";
+import CalendarJumpSheet from "./CalendarJumpSheet";
+import CalendarLastSynced from "./CalendarLastSynced";
 import CalendarMonthNav from "./CalendarMonthNav";
 import CalendarSectionHeader from "./CalendarSectionHeader";
 import { useOpenAtSection } from "./useOpenAtSection";
 
 export default function CalendarScreen() {
   const { spacing } = useTheme();
-  const openLink = useOpenLink();
   const todayDate = useToday();
   const today = isoFromDate(todayDate);
   const thisMonth = monthOf(todayDate);
   const [month, setMonth] = useState(thisMonth);
   const [hasChangedMonth, setHasChangedMonth] = useState(false);
-  const [chosenPropertyId, setChosenPropertyId] = useState(CALENDAR_ALL_PROPERTIES);
-  const [isPropertySheetOpen, setIsPropertySheetOpen] = useState(false);
+  const [chosenFilters, setChosenFilters] = useState<CalendarFilters>(NO_CALENDAR_FILTERS);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isJumpOpen, setIsJumpOpen] = useState(false);
   const [shownEvent, setShownEvent] = useState<CalendarEvent | null>(null);
   const [isEventOpen, setIsEventOpen] = useState(false);
   const leaseToOpen = useRef<string | null>(null);
   const list = useRef<SectionList<CalendarEvent, CalendarSection>>(null);
 
   const { data: properties = [] } = useGetPropertiesQuery();
-  // A property that's gone can't stay chosen: its filter button goes with it, leaving no way out.
-  const propertyId = properties.some((property) => property.id === chosenPropertyId) ? chosenPropertyId : CALENDAR_ALL_PROPERTIES;
+  const filters = useMemo(() => withKnownProperties(chosenFilters, properties.map((property) => property.id)), [chosenFilters, properties]);
   const { currentData, error, isFetching, refetch } = useGetCalendarEventsQuery({
     from: month,
     to: shiftMonth(month, 1),
-    property_ids: propertyId === CALENDAR_ALL_PROPERTIES ? [] : [propertyId],
+    property_ids: filters.propertyIds,
+    sources: filters.sources,
   });
   const { refresh, refreshControl } = useRefresh(async () => {
     await refetch();
@@ -64,11 +68,10 @@ export default function CalendarScreen() {
     setMonth(next);
   }
 
-  const propertyOptions = useMemo(
-    () => [{ value: CALENDAR_ALL_PROPERTIES, label: CALENDAR_MESSAGES.allProperties }, ...properties.map((property) => ({ value: property.id, label: property.name }))],
-    [properties],
-  );
-  const propertyLabel = propertyOptions.find((option) => option.value === propertyId)?.label ?? CALENDAR_MESSAGES.allProperties;
+  const filterLabel = filterSummary(filters, properties);
+  const hasFilters = hasCalendarFilters(filters);
+  // The list refreshes after notes or files change, and the open sheet should show the new booking, not the one tapped.
+  const openEvent = (shownEvent && currentData?.find((event) => event.id === shownEvent.id && event.source === shownEvent.source)) ?? shownEvent;
 
   const openLeaseAfterClosing = useCallback(() => {
     const leaseId = leaseToOpen.current;
@@ -82,9 +85,11 @@ export default function CalendarScreen() {
         ListEmptyComponent={
           <CalendarEmptyList
             hasFailed={hasFailed}
+            hasFilters={hasFilters}
             hasNoListings={listings?.total === 0}
             isLoading={isFetching && !currentData}
             month={month}
+            onClearFilters={() => setChosenFilters(NO_CALENDAR_FILTERS)}
             onRetry={refresh}
           />
         }
@@ -94,25 +99,29 @@ export default function CalendarScreen() {
               isThisMonth={month === thisMonth}
               month={month}
               onChange={changeMonth}
+              onJump={() => setIsJumpOpen(true)}
               onToday={() => changeMonth(thisMonth)}
             />
+            <CalendarLastSynced events={currentData ?? []} />
             {reviewCount > 0 ? (
               <Banner
-                actions={[{ label: CALENDAR_MESSAGES.openWebsite, onPress: () => void openLink(`${WEB_BASE_URL}/calendar`) }]}
+                actions={[{ label: CALENDAR_MESSAGES.reviewBookings, onPress: () => router.push("/calendar/review") }]}
                 message={reviewQueueMessage(reviewCount)}
                 tone="success"
               />
-            ) : null}
-            {error && currentData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
-            {properties.length > 1 ? (
-              <LoadingButton
-                accessibilityLabel={`Filter by property, currently ${propertyLabel}`}
-                onPress={() => setIsPropertySheetOpen(true)}
-                variant="secondary"
-              >
-                {propertyLabel}
+            ) : (
+              <LoadingButton onPress={() => router.push("/calendar/review")} variant="ghost">
+                {CALENDAR_MESSAGES.reviewQueue}
               </LoadingButton>
-            ) : null}
+            )}
+            {error && currentData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <LoadingButton
+              accessibilityLabel={`${FILTER_MESSAGES.button}, currently ${hasFilters ? filterLabel : "none"}`}
+              onPress={() => setIsFilterOpen(true)}
+              variant="secondary"
+            >
+              {filterLabel}
+            </LoadingButton>
           </View>
         }
         contentInsetAdjustmentBehavior="automatic"
@@ -136,19 +145,16 @@ export default function CalendarScreen() {
         sections={sections}
         stickySectionHeadersEnabled={false}
       />
-      <OptionSheet
-        isOpen={isPropertySheetOpen}
-        onClose={() => setIsPropertySheetOpen(false)}
-        onSelect={(value) => {
-          setChosenPropertyId(value);
-          setIsPropertySheetOpen(false);
-        }}
-        options={propertyOptions}
-        title={CALENDAR_MESSAGES.chooseProperty}
-        value={propertyId}
+      <CalendarFilterSheet
+        filters={filters}
+        isOpen={isFilterOpen}
+        onChange={setChosenFilters}
+        onClose={() => setIsFilterOpen(false)}
+        properties={properties}
       />
+      <CalendarJumpSheet isOpen={isJumpOpen} month={month} onClose={() => setIsJumpOpen(false)} onJump={changeMonth} thisMonth={thisMonth} />
       <CalendarEventSheet
-        event={shownEvent}
+        event={openEvent}
         isOpen={isEventOpen}
         onClose={() => setIsEventOpen(false)}
         onClosed={openLeaseAfterClosing}

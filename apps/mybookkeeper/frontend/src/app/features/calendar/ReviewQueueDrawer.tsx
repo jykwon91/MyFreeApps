@@ -2,7 +2,7 @@ import { X } from "lucide-react";
 import ReviewQueueItem from "@/app/features/calendar/ReviewQueueItem";
 import ReviewQueueSkeleton from "@/app/features/calendar/ReviewQueueSkeleton";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import { useGetReviewQueueQuery } from "@/shared/store/calendarApi";
+import { useGetReviewQueueQuery } from "@mybookkeeper/api-client/store/calendarApi";
 
 export interface ReviewQueueDrawerProps {
   isOpen: boolean;

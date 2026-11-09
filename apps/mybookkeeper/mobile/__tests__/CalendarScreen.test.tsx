@@ -1,12 +1,11 @@
 import { calendarApi } from "@mybookkeeper/api-client/store/calendarApi";
-import { propertiesApi } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
-import { AccessibilityInfo, Linking, Platform } from "react-native";
+import { AccessibilityInfo, Platform } from "react-native";
 import { Provider } from "react-redux";
 import {
   calendarSections,
@@ -29,6 +28,16 @@ const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
   useFocusEffect: () => undefined,
   router: { push: (path: string) => mockPush(path) },
+}));
+
+const mockModal: { onDismiss?: () => void } = {};
+
+jest.mock("react-native/Libraries/Modal/Modal", () => ({
+  __esModule: true,
+  default: ({ visible, onDismiss, children }: { visible: boolean; onDismiss?: () => void; children: unknown }) => {
+    if (onDismiss) mockModal.onDismiss = onDismiss;
+    return visible ? children : null;
+  },
 }));
 
 const originalAdapter = api.defaults.adapter;
@@ -219,7 +228,7 @@ describe("CalendarScreen", () => {
     await act(async () => {
       await store.dispatch(
         calendarApi.endpoints.getCalendarEvents.initiate(
-          { from: THIS_MONTH, to: shiftMonth(THIS_MONTH, 1), property_ids: [] },
+          { from: THIS_MONTH, to: shiftMonth(THIS_MONTH, 1), property_ids: [], sources: [] },
           { forceRefetch: true },
         ),
       );
@@ -244,45 +253,6 @@ describe("CalendarScreen", () => {
     announce.mockRestore();
   });
 
-  it("filters by property, and hides the filter with only one", async () => {
-    const twoProperties = [{ id: "p1", name: "Elm House" }, { id: "p2", name: "Oak Flat" }];
-    const server = startServer({ properties: twoProperties });
-    await renderScreen();
-    const filter = await screen.findByRole("button", { name: "Filter by property, currently All properties" });
-    await fireEvent.press(filter);
-    await fireEvent.press(await screen.findByText("Oak Flat"));
-    await waitFor(() => expect(server.requests.at(-1)!.params.property_ids).toBe("p2"));
-    expect(await screen.findByRole("button", { name: "Filter by property, currently Oak Flat" })).toBeTruthy();
-  });
-
-  it("has no filter with a single property", async () => {
-    startServer({ properties: [{ id: "p1", name: "Elm House" }] });
-    await renderScreen();
-    await act(async () => {
-      await store.dispatch(propertiesApi.endpoints.getProperties.initiate());
-    });
-    expect(screen.queryByRole("button", { name: /Filter by property/ })).toBeNull();
-  });
-
-  it("stops filtering by a property that's gone, since its filter goes with it", async () => {
-    const server = startServer({
-      properties: [{ id: "p1", name: "Elm House" }, { id: "p2", name: "Oak Flat" }],
-      events: [anEvent({ starts_on: THIS_MONTH, ends_on: shiftMonth(THIS_MONTH, 1) })],
-    });
-    await renderScreen();
-    await screen.findByText("Maple Room");
-    server.events = [];
-    await fireEvent.press(await screen.findByRole("button", { name: /Filter by property/ }));
-    await fireEvent.press(await screen.findByText("Oak Flat"));
-    await screen.findByText(/Nothing booked/);
-    server.properties = [{ id: "p1", name: "Elm House" }];
-    await act(async () => {
-      await store.dispatch(propertiesApi.endpoints.getProperties.initiate(undefined, { forceRefetch: true }));
-    });
-    await screen.findByText("Maple Room");
-    expect(screen.queryByRole("button", { name: /Filter by property/ })).toBeNull();
-  });
-
   it("offers a retry when the first load fails, and recovers", async () => {
     const server = startServer({ events: "fail" });
     await renderScreen();
@@ -305,23 +275,13 @@ describe("CalendarScreen", () => {
     expect(screen.queryByText("I don't see any listings yet.")).toBeNull();
   });
 
-  it("points to the website for bookings waiting on review", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
-    startServer({ reviewCount: 2 });
-    await renderScreen();
-    await screen.findByText("2 bookings need your review. I can't show them on your phone yet.");
-    await fireEvent.press(screen.getByRole("button", { name: "Open on the website" }));
-    expect(openURL).toHaveBeenCalledWith(expect.stringContaining("/calendar"));
-    openURL.mockRestore();
-  });
-
   it("shows a booking's details and notes, with no lease to open", async () => {
     startServer({ events: [anEvent({ starts_on: THIS_MONTH, ends_on: shiftMonth(THIS_MONTH, 1), host_notes: "Late arrival" })] });
     await renderScreen();
     await fireEvent.press(await screen.findByRole("button", { name: /^Maple Room/ }));
     await screen.findByText("Late arrival");
     expect(screen.getAllByText("Elm House · Airbnb")).toHaveLength(2);
-    expect(screen.getByText(/^Last synced Nov 1, 2026$/)).toBeTruthy();
+    expect(screen.getByText(/^Last synced Nov 1, 2026 \(/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Open lease" })).toBeNull();
   });
 
@@ -354,12 +314,17 @@ describe("CalendarScreen", () => {
 
 describe("CalendarEventSheet", () => {
   it("on iPhone, says it has closed only when the sheet has finished going", async () => {
+    startServer();
     const onClosed = jest.fn();
     const sheet = (isOpen: boolean) => (
-      <CalendarEventSheet event={aLeaseEvent()} isOpen={isOpen} onClose={jest.fn()} onClosed={onClosed} onOpenLease={jest.fn()} />
+      <Provider store={store}>
+        <ToastProvider bottomOffset={0}>
+          <CalendarEventSheet event={aLeaseEvent()} isOpen={isOpen} onClose={jest.fn()} onClosed={onClosed} onOpenLease={jest.fn()} />
+        </ToastProvider>
+      </Provider>
     );
     await render(sheet(true));
-    const dismissed = screen.root!.props.onDismiss as () => void;
+    const dismissed = mockModal.onDismiss as () => void;
     await screen.rerender(sheet(false));
     expect(onClosed).not.toHaveBeenCalled();
     dismissed();

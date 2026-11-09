@@ -12,11 +12,12 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { configureStore } from "@reduxjs/toolkit";
 import { baseApi } from "@/shared/store/baseApi";
-import * as calendarApi from "@/shared/store/calendarApi";
+import * as calendarApi from "@mybookkeeper/api-client/store/calendarApi";
 import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";
 import CalendarEventBar from "@/app/features/calendar/CalendarEventBar";
 import { getSourceLabel, isReadOnlySource } from "@mybookkeeper/api-client/constants/calendarSources";
-import { CALENDAR_FILTER_SOURCES, getSourceColor } from "@/shared/lib/calendar-constants";
+import { CALENDAR_FILTER_SOURCES } from "@mybookkeeper/api-client/constants/calendarFilterSources";
+import { getSourceColor } from "@/shared/lib/calendar-constants";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 
 function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {

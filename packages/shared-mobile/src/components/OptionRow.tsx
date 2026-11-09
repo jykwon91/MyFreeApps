@@ -3,12 +3,12 @@ import { OPTION_SHEET_ROW_HEIGHT } from "../constants/optionSheet";
 import { useTheme } from "../theme/useTheme";
 import type { OptionRowProps } from "../types/OptionRowProps";
 
-export default function OptionRow({ label, isSelected, onPress }: OptionRowProps) {
+export default function OptionRow({ label, isSelected, onPress, kind = "radio" }: OptionRowProps) {
   const { colors, spacing, fontSize } = useTheme();
   return (
     <Pressable
       accessibilityLabel={label}
-      accessibilityRole="radio"
+      accessibilityRole={kind}
       accessibilityState={{ checked: isSelected }}
       onPress={onPress}
       style={({ pressed }) => ({

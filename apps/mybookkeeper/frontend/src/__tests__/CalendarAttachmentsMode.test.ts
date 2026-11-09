@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { useCalendarAttachmentsMode } from "@/app/features/calendar/useCalendarAttachmentsMode";
-import type { ListingBlackoutAttachment } from "@/shared/types/listing/listing-blackout-attachment";
+import type { ListingBlackoutAttachment } from "@mybookkeeper/api-client/types/calendar/listing-blackout-attachment";
 
 const ATTACHMENT: ListingBlackoutAttachment = {
   id: "att1",

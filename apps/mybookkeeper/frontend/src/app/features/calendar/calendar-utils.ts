@@ -139,16 +139,6 @@ export function groupByProperty(rows: readonly ListingRow[]): PropertyGroup[] {
   return Array.from(groups.values());
 }
 
-/** Most recent `updated_at` across the events, or null when empty. */
-export function lastSyncedAt(events: readonly CalendarEvent[]): string | null {
-  if (events.length === 0) return null;
-  let max = events[0].updated_at;
-  for (const e of events) {
-    if (e.updated_at > max) max = e.updated_at;
-  }
-  return max;
-}
-
 /** Format an ISO date as a long month/year label (e.g. "May 2026"). */
 export function formatMonthYear(iso: string): string {
   const d = parseIsoDate(iso);
@@ -190,19 +180,4 @@ export function firstOfMonth(year: number, monthZeroIndexed: number): string {
 export function daysInMonth(year: number, monthZeroIndexed: number): number {
   // Day 0 of next month = last day of this month.
   return new Date(Date.UTC(year, monthZeroIndexed + 1, 0)).getUTCDate();
-}
-
-/** Human-friendly relative time ("2 minutes ago", "3 hours ago"). */
-export function relativeTime(iso: string, now: Date = new Date()): string {
-  const then = new Date(iso);
-  const seconds = Math.floor((now.getTime() - then.getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
-  const months = Math.floor(days / 30);
-  return `${months} month${months === 1 ? "" : "s"} ago`;
 }

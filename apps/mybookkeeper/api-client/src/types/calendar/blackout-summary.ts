@@ -6,9 +6,3 @@ export interface BlackoutSummary {
   ends_on: string;
   source: string;
 }
-
-/** Response shape for POST /calendar/review-queue/{id}/resolve (Phase 2b). */
-export interface ResolveQueueItemResponse {
-  queue_item_id: string;
-  blackout: BlackoutSummary;
-}

@@ -2,8 +2,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import {
   daysBetween,
   formatWindowLabel,
-  relativeTime,
 } from "@/app/features/calendar/calendar-utils";
+import { relativeTime } from "@mybookkeeper/api-client/utils/calendarSync";
 import { CALENDAR_UNASSIGNED_LISTING_LABEL, getSourceLabel, isReadOnlySource } from "@mybookkeeper/api-client/constants/calendarSources";
 import { getSourceColor } from "@/shared/lib/calendar-constants";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";

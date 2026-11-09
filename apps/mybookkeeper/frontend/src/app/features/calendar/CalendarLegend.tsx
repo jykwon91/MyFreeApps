@@ -1,5 +1,6 @@
 import { getSourceLabel } from "@mybookkeeper/api-client/constants/calendarSources";
-import { CALENDAR_FILTER_SOURCES, getSourceColor } from "@/shared/lib/calendar-constants";
+import { CALENDAR_FILTER_SOURCES } from "@mybookkeeper/api-client/constants/calendarFilterSources";
+import { getSourceColor } from "@/shared/lib/calendar-constants";
 
 /**
  * Compact legend showing each known source's color.

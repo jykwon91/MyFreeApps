@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { showError, showSuccess } from "@platform/ui";
-import { useUpdateBlackoutMutation } from "@/shared/store/calendarApi";
+import { useUpdateBlackoutMutation } from "@mybookkeeper/api-client/store/calendarApi";
 
 // Debounce delay for saving notes on blur (ms).
 const NOTES_SAVE_DELAY_MS = 600;

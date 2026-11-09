@@ -1,0 +1,52 @@
+import { BLACKOUT_ATTACHMENT_MIME_TYPES } from "@mybookkeeper/api-client/constants/blackoutAttachments";
+
+export const CALENDAR_NOTES_MAX_LENGTH = 10_000;
+export const CALENDAR_ATTACHMENT_SKELETON_ROWS = ["a", "b"];
+export const CALENDAR_ATTACHMENT_FILE_TYPES: readonly string[] = BLACKOUT_ATTACHMENT_MIME_TYPES;
+export const CALENDAR_ATTACHMENT_PHOTO_NAME = "booking-photo.jpg";
+
+export const EVENT_MESSAGES = {
+  source: "Source",
+  fromChannel: "From channel",
+  channelId: "Channel ID",
+  noGuestDetails: "This channel doesn't share guest details, only the dates. Add the guest's name and contact info in the notes.",
+  leaseNote: "These dates come from a signed lease, so they aren't editable here.",
+  notes: "Booking notes",
+  notesLabel: "Guest name, confirmation code, contact info",
+  noNotes: "No notes yet.",
+  saveNotes: "Save notes",
+  savingNotes: "Saving…",
+  notesSaved: "Notes saved.",
+  notesFailed: "I couldn't save the notes. Want to try again?",
+  notesGone: "I can't find that booking anymore. Pull down to refresh the calendar.",
+  saveNotesTitle: "Save your notes?",
+  saveNotesBody: "I haven't saved them yet.",
+  keepEditing: "Keep editing",
+  discard: "Discard",
+  save: "Save",
+  attachments: "Attachments",
+  noAttachments: "No attachments yet.",
+  addFile: "Add a file",
+  uploadFile: "Upload file",
+  uploading: "Uploading…",
+  cancel: "Cancel",
+  uploaded: "File added.",
+  uploadTooBig: "That file is over 25 MB. Pick a smaller one.",
+  uploadBadType: "I can only take photos, PDFs, and text files.",
+  uploadStorageDown: "File storage isn't available right now. Try again in a little while.",
+  uploadFailed: "I couldn't upload that file. Want to try again?",
+  attachmentsFailed: "I couldn't load the attachments.",
+  retry: "Try again",
+  open: "Open",
+  opening: "Opening…",
+  couldntOpen: "I couldn't open that file. Want to try again?",
+  fileMissing: "File missing",
+  remove: "Remove",
+  removing: "Removing…",
+  removeTitle: "Remove this file?",
+  removeBody: "It will be gone from this booking.",
+  removed: "File removed.",
+  removeFailed: "I couldn't remove that file. Want to try again?",
+  attachmentGone: "That file is already gone.",
+  notAllowed: "You have view-only access.",
+} as const;
