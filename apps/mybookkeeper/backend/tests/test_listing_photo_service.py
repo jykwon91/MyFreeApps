@@ -9,18 +9,20 @@ from __future__ import annotations
 
 import io
 import uuid
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
 from PIL import Image
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.listings.listing import Listing
 from app.models.organization.organization import Organization
 from app.models.properties.property import Property
 from app.models.user.user import User
-from app.repositories import listing_photo_repo
+from app.repositories import listing_photo_repo, listing_repo
 from app.services.listings import listing_photo_service
 from app.services.storage.image_processor import ImageRejected
 
@@ -392,3 +394,152 @@ class TestUpdatePhoto:
 
         assert updated.caption == "Front view"
         assert updated.display_order == 5
+
+class TestReorderPhotos:
+    async def _three_photos(self, db: AsyncSession, user: User, org: Organization):
+        listing = await _seed_listing_with_property(db, org, user)
+        await db.commit()
+        with patch(
+            "app.services.listings.listing_photo_service.get_storage",
+            return_value=_FakeStorage(),
+        ), patch(
+            "app.services.listings.listing_photo_service.unit_of_work",
+            lambda: _wrap_uow(db),
+        ):
+            uploaded = await listing_photo_service.upload_photos(
+                org.id, user.id, listing.id,
+                [(_build_jpeg(width=10 + i), f"{i}.jpg", "image/jpeg") for i in range(3)],
+            )
+            await db.commit()
+        return listing, [p.id for p in uploaded]
+
+    @pytest.mark.asyncio
+    async def test_gives_each_photo_a_distinct_position_in_the_order_given(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        listing, (a, b, c) = await self._three_photos(db, test_user, test_org)
+        with patch(
+            "app.services.listings.listing_photo_service.unit_of_work",
+            lambda: _wrap_uow(db),
+        ):
+            result = await listing_photo_service.reorder_photos(
+                test_org.id, test_user.id, listing.id, [c, a, b],
+            )
+        await db.commit()
+
+        assert [(p.id, p.display_order) for p in result] == [(c, 0), (a, 1), (b, 2)]
+        stored = await listing_photo_repo.list_by_listing(db, listing.id)
+        assert [p.id for p in stored] == [c, a, b]
+        assert [p.display_order for p in stored] == [0, 1, 2]
+
+    @pytest.mark.asyncio
+    async def test_photos_not_listed_follow_in_their_current_order(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        listing, (a, b, c) = await self._three_photos(db, test_user, test_org)
+        with patch(
+            "app.services.listings.listing_photo_service.unit_of_work",
+            lambda: _wrap_uow(db),
+        ):
+            await listing_photo_service.reorder_photos(
+                test_org.id, test_user.id, listing.id, [c],
+            )
+        await db.commit()
+
+        stored = await listing_photo_repo.list_by_listing(db, listing.id)
+        assert [p.id for p in stored] == [c, a, b]
+        assert [p.display_order for p in stored] == [0, 1, 2]
+
+    @pytest.mark.asyncio
+    async def test_an_unknown_photo_changes_nothing(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        listing, (a, b, c) = await self._three_photos(db, test_user, test_org)
+        with patch(
+            "app.services.listings.listing_photo_service.unit_of_work",
+            lambda: _wrap_uow(db),
+        ):
+            with pytest.raises(listing_photo_service.StalePhotoOrderError):
+                await listing_photo_service.reorder_photos(
+                    test_org.id, test_user.id, listing.id, [c, uuid.uuid4(), a],
+                )
+
+        stored = await listing_photo_repo.list_by_listing(db, listing.id)
+        assert [p.id for p in stored] == [a, b, c]
+        assert [p.display_order for p in stored] == [0, 1, 2]
+
+    @pytest.mark.asyncio
+    async def test_listing_in_other_org_not_found(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        listing, (a, _b, _c) = await self._three_photos(db, test_user, test_org)
+        with patch(
+            "app.services.listings.listing_photo_service.unit_of_work",
+            lambda: _wrap_uow(db),
+        ):
+            with pytest.raises(listing_photo_service.ListingNotFoundError):
+                await listing_photo_service.reorder_photos(
+                    uuid.uuid4(), test_user.id, listing.id, [a],
+                )
+
+    @pytest.mark.asyncio
+    async def test_a_photo_of_another_listing_in_the_org_is_stale_and_changes_nothing(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        listing, (a, b, _c) = await self._three_photos(db, test_user, test_org)
+        other = await _seed_listing_with_property(db, test_org, test_user)
+        foreign = await listing_photo_repo.create(
+            db, listing_id=other.id, storage_key="other.jpg", caption=None, display_order=0,
+        )
+        await db.commit()
+        with patch(
+            "app.services.listings.listing_photo_service.unit_of_work",
+            lambda: _wrap_uow(db),
+        ):
+            with pytest.raises(listing_photo_service.StalePhotoOrderError):
+                await listing_photo_service.reorder_photos(
+                    test_org.id, test_user.id, listing.id, [foreign.id, a, b],
+                )
+
+        assert [p.display_order for p in await listing_photo_repo.list_by_listing(db, listing.id)] == [0, 1, 2]
+        untouched = await listing_photo_repo.list_by_listing(db, other.id)
+        assert [(p.id, p.display_order) for p in untouched] == [(foreign.id, 0)]
+
+    @pytest.mark.asyncio
+    async def test_a_soft_deleted_listing_is_not_found(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        listing, (a, _b, _c) = await self._three_photos(db, test_user, test_org)
+        listing.deleted_at = datetime.now(timezone.utc)
+        await db.commit()
+        with patch(
+            "app.services.listings.listing_photo_service.unit_of_work",
+            lambda: _wrap_uow(db),
+        ):
+            with pytest.raises(listing_photo_service.ListingNotFoundError):
+                await listing_photo_service.reorder_photos(
+                    test_org.id, test_user.id, listing.id, [a],
+                )
+
+
+class _StopQuery(Exception):
+    pass
+
+
+class _CapturingDb:
+    def __init__(self) -> None:
+        self.sql = ""
+
+    async def execute(self, query):
+        self.sql = str(query.compile(dialect=postgresql.dialect()))
+        raise _StopQuery
+
+
+class TestListingLock:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(("flag", "locked"), [(False, False), (True, True)])
+    async def test_for_update_adds_a_row_lock_and_defaults_to_none(self, flag: bool, locked: bool) -> None:
+        db = _CapturingDb()
+        with pytest.raises(_StopQuery):
+            await listing_repo.get_by_id(db, uuid.uuid4(), uuid.uuid4(), for_update=flag)  # type: ignore[arg-type]
+        assert ("FOR UPDATE" in db.sql) is locked

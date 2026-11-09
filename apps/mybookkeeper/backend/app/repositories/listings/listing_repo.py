@@ -40,15 +40,23 @@ async def get_by_id(
     db: AsyncSession,
     listing_id: uuid.UUID,
     organization_id: uuid.UUID,
+    *,
+    for_update: bool = False,
 ) -> Listing | None:
-    """Return the listing iff it exists, is not soft-deleted, and belongs to the given org."""
-    result = await db.execute(
-        select(Listing).where(
-            Listing.id == listing_id,
-            Listing.organization_id == organization_id,
-            Listing.deleted_at.is_(None),
-        )
+    """Return the listing iff it exists, is not soft-deleted, and belongs to the given org.
+
+    ``for_update=True`` locks the listing row until the transaction ends, so
+    writers that must not interleave (photo upload, reorder, delete) run one at
+    a time per listing. SQLite ignores FOR UPDATE; Postgres honours it.
+    """
+    query = select(Listing).where(
+        Listing.id == listing_id,
+        Listing.organization_id == organization_id,
+        Listing.deleted_at.is_(None),
     )
+    if for_update:
+        query = query.with_for_update()
+    result = await db.execute(query)
     return result.scalar_one_or_none()
 
 

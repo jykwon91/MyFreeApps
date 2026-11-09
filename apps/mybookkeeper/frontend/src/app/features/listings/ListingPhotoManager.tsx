@@ -16,12 +16,22 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { Upload } from "lucide-react";
+import { useDispatch } from "react-redux";
 import { LoadingButton, ConfirmDialog, showError, showSuccess } from "@platform/ui";
 import {
+  listingsApi,
   useDeleteListingPhotoMutation,
-  useUpdateListingPhotoMutation,
+  useReorderListingPhotosMutation,
   useUploadListingPhotosMutation,
-} from "@/shared/store/listingsApi";
+} from "@mybookkeeper/api-client/store/listingsApi";
+import {
+  LISTING_PHOTO_HEIC_EXTENSION,
+  LISTING_PHOTO_MAX_BYTES,
+  LISTING_PHOTO_MAX_MB,
+  LISTING_PHOTO_MIME_TYPES,
+} from "@mybookkeeper/api-client/constants/listingPhotos";
+import { writeFailure } from "@mybookkeeper/api-client/utils/writeFailure";
+import { sortPhotos } from "@mybookkeeper/api-client/utils/listingPhotoOrder";
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 import type { PhotoLightboxTarget } from "@/shared/types/listing/photo-lightbox-target";
 import ListingPhotoCard from "@/app/features/listings/ListingPhotoCard";
@@ -39,20 +49,17 @@ export interface ListingPhotoManagerProps {
   canWrite: boolean;
 }
 
-const MAX_BYTES = 10 * 1024 * 1024;
-const ALLOWED_MIME = ["image/jpeg", "image/png", "image/heic"];
-
 function clientSideValidate(files: File[]): { valid: File[]; rejected: string[] } {
   const valid: File[] = [];
   const rejected: string[] = [];
   for (const f of files) {
-    if (f.size > MAX_BYTES) {
-      rejected.push(`${f.name} is over 10MB`);
+    if (f.size > LISTING_PHOTO_MAX_BYTES) {
+      rejected.push(`${f.name} is over ${LISTING_PHOTO_MAX_MB}MB`);
       continue;
     }
     // Some browsers don't set content-type for HEIC; fall back to extension check.
-    const isHeicByExt = /\.(heic|heif)$/i.test(f.name);
-    if (!ALLOWED_MIME.includes(f.type) && !isHeicByExt) {
+    const isHeicByExt = LISTING_PHOTO_HEIC_EXTENSION.test(f.name);
+    if (!LISTING_PHOTO_MIME_TYPES.includes(f.type) && !isHeicByExt) {
       rejected.push(`${f.name} is not a supported image type`);
       continue;
     }
@@ -68,8 +75,9 @@ export default function ListingPhotoManager({
   canWrite,
 }: ListingPhotoManagerProps) {
   const [uploadPhotos, { isLoading: isUploading }] = useUploadListingPhotosMutation();
+  const dispatch = useDispatch();
   const [deletePhoto] = useDeleteListingPhotoMutation();
-  const [updatePhoto] = useUpdateListingPhotoMutation();
+  const [reorderPhotos] = useReorderListingPhotosMutation();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [orderedIds, setOrderedIds] = useState<string[] | null>(null);
@@ -91,7 +99,7 @@ export default function ListingPhotoManager({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const sortedPhotos = [...photos].sort((a, b) => a.display_order - b.display_order);
+  const sortedPhotos = sortPhotos(photos);
   const displayIds = orderedIds ?? sortedPhotos.map((p) => p.id);
   const photosById = new Map(sortedPhotos.map((p) => [p.id, p]));
 
@@ -106,7 +114,9 @@ export default function ListingPhotoManager({
     }
     if (valid.length === 0) return;
     try {
-      await uploadPhotos({ listingId, files: valid }).unwrap();
+      const form = new FormData();
+      for (const file of valid) form.append("files", file);
+      await uploadPhotos({ listingId, form }).unwrap();
       showSuccess(
         valid.length === 1 ? "Photo uploaded." : `${valid.length} photos uploaded.`,
       );
@@ -134,13 +144,15 @@ export default function ListingPhotoManager({
     let failedCount = 0;
     for (const photoId of ids) {
       try {
-        await deletePhoto({ listingId, photoId }).unwrap();
+        await deletePhoto({ listingId, photoId, refresh: false }).unwrap();
       } catch {
         failedCount++;
         showError(`I couldn't remove photo ${photoId}. Stopped after the first failure.`);
         break;
       }
     }
+    // The listing is read once for the whole batch, not after every photo.
+    dispatch(listingsApi.util.invalidateTags([{ type: "Listing", id: listingId }]));
     setIsBulkDeleting(false);
     if (failedCount === 0) {
       showSuccess(ids.length === 1 ? "Photo removed." : `${ids.length} photos removed.`);
@@ -176,20 +188,17 @@ export default function ListingPhotoManager({
     const newOrder = arrayMove(displayIds, oldIndex, newIndex);
     setOrderedIds(newOrder);
 
-    // Persist the new ordering. Each photo whose position changed gets its
-    // display_order rewritten to the new index. We fire one PATCH per moved
-    // photo — the small-N case (<20 photos per listing) keeps this cheap.
+    // One request sets the whole order, so a failure can't leave it half-applied.
     try {
-      await Promise.all(
-        newOrder.map((photoId, index) => {
-          const current = photosById.get(photoId);
-          if (!current) return Promise.resolve();
-          if (current.display_order === index) return Promise.resolve();
-          return updatePhoto({ listingId, photoId, display_order: index }).unwrap();
-        }),
-      );
-    } catch {
-      showError("I couldn't save the new order. Reverting.");
+      await reorderPhotos({ listingId, photoIds: newOrder }).unwrap();
+    } catch (error) {
+      if (writeFailure(error) === "conflict") {
+        // The list this order was made from is out of date: show what is there now.
+        dispatch(listingsApi.util.invalidateTags([{ type: "Listing", id: listingId }]));
+        showError(LISTING_MESSAGES.photoOrderStale);
+      } else {
+        showError("I couldn't save the new order. Reverting.");
+      }
       setOrderedIds(null);
     }
   }

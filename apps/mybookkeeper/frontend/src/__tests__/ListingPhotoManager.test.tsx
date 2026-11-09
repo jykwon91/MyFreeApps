@@ -9,12 +9,14 @@ import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listin
 
 const uploadMock = vi.fn(() => ({ unwrap: () => Promise.resolve([]) }));
 const deleteMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
-const updateMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
+const reorderMock = vi.fn(() => ({ unwrap: () => Promise.resolve([]) }));
+const invalidateTagsMock = vi.fn((tags: unknown) => ({ type: "invalidate", tags }));
 
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
+  listingsApi: { util: { invalidateTags: (tags: unknown) => invalidateTagsMock(tags) } },
   useUploadListingPhotosMutation: vi.fn(() => [uploadMock, { isLoading: false }]),
   useDeleteListingPhotoMutation: vi.fn(() => [deleteMock, { isLoading: false }]),
-  useUpdateListingPhotoMutation: vi.fn(() => [updateMock, { isLoading: false }]),
+  useReorderListingPhotosMutation: vi.fn(() => [reorderMock, { isLoading: false }]),
 }));
 
 function renderManager(photos: ListingPhoto[] = [], canWrite = true) {
@@ -31,7 +33,8 @@ describe("ListingPhotoManager", () => {
   beforeEach(() => {
     uploadMock.mockClear();
     deleteMock.mockClear();
-    updateMock.mockClear();
+    reorderMock.mockClear();
+    invalidateTagsMock.mockClear();
   });
 
   it("renders the empty state when no photos exist", () => {
@@ -84,10 +87,11 @@ describe("ListingPhotoManager", () => {
     await user.upload(fileInput, file);
 
     expect(uploadMock).toHaveBeenCalledTimes(1);
-    const arg = (uploadMock.mock.calls[0] as unknown as [{ listingId: string; files: File[] }])[0];
+    const arg = (uploadMock.mock.calls[0] as unknown as [{ listingId: string; form: FormData }])[0];
+    const files = arg.form.getAll("files") as File[];
     expect(arg.listingId).toBe("listing-1");
-    expect(arg.files).toHaveLength(1);
-    expect(arg.files[0].name).toBe("test.jpg");
+    expect(files).toHaveLength(1);
+    expect(files[0].name).toBe("test.jpg");
   });
 
   it("rejects oversized files client-side and does not call upload", async () => {
@@ -196,6 +200,11 @@ describe("ListingPhotoManager", () => {
     await user.click(screen.getByRole("button", { name: /Delete 2 photos/i }));
 
     expect(deleteMock).toHaveBeenCalledTimes(2);
+    expect(deleteMock).toHaveBeenCalledWith({ listingId: "listing-1", photoId: "p1", refresh: false });
+    expect(deleteMock).toHaveBeenCalledWith({ listingId: "listing-1", photoId: "p2", refresh: false });
+    // The listing is refreshed once for the batch, not once per photo.
+    expect(invalidateTagsMock).toHaveBeenCalledTimes(1);
+    expect(invalidateTagsMock).toHaveBeenCalledWith([{ type: "Listing", id: "listing-1" }]);
   });
 
   it("Clear button hides the toolbar", async () => {

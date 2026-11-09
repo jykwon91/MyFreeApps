@@ -7,9 +7,11 @@ from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.core.context import RequestContext
+from app.core.listing_constants import LISTING_PHOTO_ORDER_MAX_IDS
 from app.core.permissions import current_org_member, require_write_access
 from app.main import app
 from app.models.organization.organization_member import OrgRole
@@ -17,6 +19,7 @@ from app.schemas.listings.listing_list_response import ListingListResponse
 from app.schemas.listings.listing_photo_response import ListingPhotoResponse
 from app.schemas.listings.listing_response import ListingResponse
 from app.schemas.listings.listing_summary import ListingSummary
+from app.services.listings.listing_photo_service import ListingNotFoundError, StalePhotoOrderError
 
 
 class TestListingsListEndpoint:
@@ -507,8 +510,6 @@ class TestListingPhotoUploadEndpoint:
     async def test_returns_404_when_listing_not_found(self) -> None:
         from PIL import Image
         import io as _io
-        from app.services.listings.listing_photo_service import ListingNotFoundError
-
         org_id = uuid.uuid4()
         user_id = uuid.uuid4()
         listing_id = uuid.uuid4()
@@ -618,6 +619,73 @@ class TestListingPhotoPatchEndpoint:
         body = response.json()
         assert body["caption"] == "renamed"
         assert body["display_order"] == 2
+
+
+class TestListingPhotoOrderEndpoint:
+    def _call(self, listing_id, body, **patch_kwargs):
+        org_id = uuid.uuid4()
+        user_id = uuid.uuid4()
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.listings.listing_photo_service.reorder_photos",
+                **patch_kwargs,
+            ) as service:
+                response = TestClient(app).put(f"/listings/{listing_id}/photos/order", json=body)
+        finally:
+            app.dependency_overrides.clear()
+        return response, service
+
+    def test_returns_the_photos_in_their_new_order(self) -> None:
+        listing_id, first, second = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+        photos = [
+            ListingPhotoResponse(
+                id=photo_id, listing_id=listing_id, storage_key="x", display_order=index,
+                created_at=datetime.now(timezone.utc),
+            )
+            for index, photo_id in enumerate([second, first])
+        ]
+        response, service = self._call(
+            listing_id, {"photo_ids": [str(second), str(first)]}, return_value=photos,
+        )
+        assert response.status_code == 200
+        assert [p["id"] for p in response.json()] == [str(second), str(first)]
+        assert service.call_args.args[3] == [second, first]
+
+    def test_404_when_the_listing_or_a_photo_is_missing(self) -> None:
+        response, _ = self._call(
+            uuid.uuid4(), {"photo_ids": [str(uuid.uuid4())]}, side_effect=ListingNotFoundError("nope"),
+        )
+        assert response.status_code == 404
+
+    def test_409_when_a_photo_is_not_on_the_listing(self) -> None:
+        response, _ = self._call(
+            uuid.uuid4(), {"photo_ids": [str(uuid.uuid4())]}, side_effect=StalePhotoOrderError("stale"),
+        )
+        assert response.status_code == 409
+
+    def test_422_for_too_many_ids(self) -> None:
+        ids = [str(uuid.uuid4()) for _ in range(LISTING_PHOTO_ORDER_MAX_IDS + 1)]
+        assert self._call(uuid.uuid4(), {"photo_ids": ids}, return_value=[])[0].status_code == 422
+
+    def test_422_for_an_empty_or_repeating_list(self) -> None:
+        same = str(uuid.uuid4())
+        assert self._call(uuid.uuid4(), {"photo_ids": []}, return_value=[])[0].status_code == 422
+        assert self._call(uuid.uuid4(), {"photo_ids": [same, same]}, return_value=[])[0].status_code == 422
+
+    def test_a_viewer_is_refused(self) -> None:
+        def refuse():
+            raise HTTPException(status_code=403, detail="read only")
+
+        app.dependency_overrides[require_write_access] = refuse
+        try:
+            response = TestClient(app).put(
+                f"/listings/{uuid.uuid4()}/photos/order", json={"photo_ids": [str(uuid.uuid4())]},
+            )
+        finally:
+            app.dependency_overrides.clear()
+        assert response.status_code == 403
 
 
 class TestListingPhotoDeleteEndpoint:

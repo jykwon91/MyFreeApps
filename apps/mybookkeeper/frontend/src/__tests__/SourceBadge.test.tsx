@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import SourceBadge from "@/shared/components/ui/SourceBadge";
 import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
-import { LISTING_SOURCES, LISTING_SOURCE_LABELS } from "@/shared/lib/listing-labels";
+import { LISTING_SOURCES, LISTING_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 
 describe("SourceBadge", () => {
   it("renders the full label for each source by default", () => {

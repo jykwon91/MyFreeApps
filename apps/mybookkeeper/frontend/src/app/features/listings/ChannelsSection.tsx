@@ -8,8 +8,8 @@ import {
   useDeleteChannelListingMutation,
   useGetChannelsQuery,
   useGetListingChannelsQuery,
-} from "@/shared/store/listingsApi";
-import type { ChannelListing } from "@/shared/types/listing/channel-listing";
+} from "@mybookkeeper/api-client/store/listingsApi";
+import type { ChannelListing } from "@mybookkeeper/api-client/types/listing/channel-listing";
 import ChannelListingsBody from "./ChannelListingsBody";
 import ChannelListingFormModal from "./ChannelListingFormModal";
 import type { ChannelListingFormTarget } from "@/shared/types/listing/channel-listing-form-target";

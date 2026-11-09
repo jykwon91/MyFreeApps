@@ -1,3 +1,4 @@
+import { EXTERNAL_ID_FORM_PROBLEMS } from "@mybookkeeper/api-client/constants/externalIdForm";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -16,7 +17,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showSuccess: (msg: string) => showSuccessMock(msg),
 }));
 
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useCreateListingExternalIdMutation: vi.fn(() => [
     createMutationMock,
     { isLoading: false },
@@ -66,6 +67,15 @@ describe("ExternalIdForm — create mode", () => {
     ).toBeInTheDocument();
     expect(createMutationMock).not.toHaveBeenCalled();
     expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it("rejects a URL that is not an http or https address, with the shared copy", async () => {
+    render(<ExternalIdForm listingId="listing-1" linkedSources={[]} onSuccess={vi.fn()} onCancel={() => {}} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByTestId("external-id-form-external-url"), "ff.example/12");
+    await user.click(screen.getByTestId("external-id-form-submit"));
+    expect(screen.getByTestId("external-id-form-validation-error")).toHaveTextContent(EXTERNAL_ID_FORM_PROBLEMS.urlInvalid);
+    expect(createMutationMock).not.toHaveBeenCalled();
   });
 
   it("submits the create mutation on valid input", async () => {

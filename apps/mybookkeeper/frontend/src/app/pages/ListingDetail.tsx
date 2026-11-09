@@ -4,7 +4,7 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import Markdown from "@/shared/components/ui/Markdown";
 import { Button, showError, showSuccess } from "@platform/ui";
-import { useDeleteListingMutation } from "@/shared/store/listingsApi";
+import { useDeleteListingMutation } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { LISTING_ROOM_TYPE_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";

@@ -60,13 +60,13 @@ const mockProperties: Property[] = [
 const deleteListingMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
 
 import { queryStatus } from "@/test/rtk-query-status";
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useCreateListingMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateListingMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteListingMutation: vi.fn(() => [deleteListingMock, { isLoading: false }]),
   useUploadListingPhotosMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteListingPhotoMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-  useUpdateListingPhotoMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useReorderListingPhotosMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useCreateListingExternalIdMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
   useUpdateListingExternalIdMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
   useDeleteListingExternalIdMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
@@ -75,12 +75,10 @@ vi.mock("@/shared/store/listingsApi", () => ({
   useCreateListingChannelMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
   useUpdateChannelListingMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
   useDeleteChannelListingMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
-}));
-
-vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useGetListingByIdQuery: vi.fn(),
   useGetListingsQuery: vi.fn(() => ({ ...queryData({ items: [], total: 0, has_more: false }), isLoading: false })),
 }));
+
 
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ ...queryData(mockProperties), isLoading: false })),

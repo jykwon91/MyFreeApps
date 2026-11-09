@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ChannelsSection from "@/app/features/listings/ChannelsSection";
-import type { ChannelListing } from "@/shared/types/listing/channel-listing";
-import type { Channel } from "@/shared/types/listing/channel";
+import type { ChannelListing } from "@mybookkeeper/api-client/types/listing/channel-listing";
+import type { Channel } from "@mybookkeeper/api-client/types/listing/channel";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 import { queryStatus } from "@/test/rtk-query-status";
 
@@ -30,7 +30,7 @@ let mockChannelsFetching = false;
 const refetchChannelListings = vi.fn();
 const refetchChannels = vi.fn();
 
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useGetChannelsQuery: vi.fn(() => ({
     data: mockChannelsFailed ? undefined : mockChannels,
     ...queryStatus({ failed: mockChannelsFailed, fetching: mockChannelsFetching }),

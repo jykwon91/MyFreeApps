@@ -1,4 +1,5 @@
 export const LISTING_MESSAGES = {
+  photoOrderStale: "The photos changed on another device. I've refreshed them, so try the move again.",
   viewOnlyNote: "View only. Ask a workspace admin to change this listing.",
   noListings:
     "No listings yet. Create your first one to start tracking inquiries from Furnished Finder, Travel Nurse Housing, and direct contacts.",

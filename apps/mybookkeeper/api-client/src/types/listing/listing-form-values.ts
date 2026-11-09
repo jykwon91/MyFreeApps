@@ -1,5 +1,5 @@
-import type { ListingRoomType } from "@mybookkeeper/api-client/types/listing/listing-room-type";
-import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
+import type { ListingRoomType } from "./listing-room-type";
+import type { ListingStatus } from "./listing-status";
 
 /**
  * Shape of the React Hook Form values for ListingForm.

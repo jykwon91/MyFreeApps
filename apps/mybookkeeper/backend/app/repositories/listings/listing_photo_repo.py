@@ -123,3 +123,27 @@ async def delete_by_id(
         )
     )
     return photo
+
+
+async def apply_order(
+    db: AsyncSession,
+    listing_id: uuid.UUID,
+    ordered_ids: list[uuid.UUID],
+) -> list[ListingPhoto] | None:
+    """Give the listed photos positions 0..n-1 in the order given.
+
+    Photos of the listing that aren't listed (uploaded since the caller last
+    looked) follow in their current order, so every photo ends up with its own
+    position. Returns None, changing nothing, if an id isn't a photo of the
+    listing. The caller's transaction makes the whole reorder atomic.
+    """
+    current = await list_by_listing(db, listing_id)
+    by_id = {photo.id: photo for photo in current}
+    if any(photo_id not in by_id for photo_id in ordered_ids):
+        return None
+    listed = set(ordered_ids)
+    final = [by_id[photo_id] for photo_id in ordered_ids] + [p for p in current if p.id not in listed]
+    for position, photo in enumerate(final):
+        photo.display_order = position
+    await db.flush()
+    return final

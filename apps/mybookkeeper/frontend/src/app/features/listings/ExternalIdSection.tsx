@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Button, showError, showSuccess } from "@platform/ui";
-import { LISTING_SOURCES, LISTING_SOURCE_LABELS } from "@/shared/lib/listing-labels";
+import { LISTING_SOURCES, LISTING_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
-import { useDeleteListingExternalIdMutation } from "@/shared/store/listingsApi";
+import { useDeleteListingExternalIdMutation } from "@mybookkeeper/api-client/store/listingsApi";
 import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
 import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
 import ExternalIdForm from "./ExternalIdForm";

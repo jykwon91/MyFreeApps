@@ -5,9 +5,19 @@ import CopyField from "@/shared/components/ui/CopyField";
 import {
   useCreateListingChannelMutation,
   useUpdateChannelListingMutation,
-} from "@/shared/store/listingsApi";
-import type { Channel } from "@/shared/types/listing/channel";
-import type { ChannelListing } from "@/shared/types/listing/channel-listing";
+} from "@mybookkeeper/api-client/store/listingsApi";
+import {
+  CHANNEL_EXTERNAL_ID_MAX_LENGTH,
+  CHANNEL_EXTERNAL_URL_MAX_LENGTH,
+  CHANNEL_ICAL_URL_MAX_LENGTH,
+} from "@mybookkeeper/api-client/constants/channelListingForm";
+import type { Channel } from "@mybookkeeper/api-client/types/listing/channel";
+import type { ChannelListing } from "@mybookkeeper/api-client/types/listing/channel-listing";
+import {
+  channelListingFormProblems,
+  channelListingToCreateRequest,
+  channelListingToUpdateRequest,
+} from "@mybookkeeper/api-client/utils/channelListingForm";
 
 export interface ChannelListingFormModalProps {
   open: boolean;
@@ -75,37 +85,27 @@ export default function ChannelListingFormModal({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
-    const trimmedExternalUrl = externalUrl.trim();
-    if (trimmedExternalUrl === "") {
-      setValidationError("Channel URL is required — that's the link to your listing on the channel.");
+    const values = { channel_id: channelId, external_url: externalUrl, external_id: externalId, ical_import_url: icalImportUrl };
+    const problems = channelListingFormProblems(values);
+    const problem = problems.external_url ?? problems.ical_import_url;
+    if (problem) {
+      setValidationError(problem);
       return;
     }
     setValidationError(null);
-
-    const trimmedExternalId = externalId.trim();
-    const trimmedIcalUrl = icalImportUrl.trim();
 
     try {
       if (isEdit && existing) {
         await updateChannel({
           listingId,
           channelListingId: existing.id,
-          data: {
-            external_url: trimmedExternalUrl,
-            external_id: trimmedExternalId === "" ? null : trimmedExternalId,
-            ical_import_url: trimmedIcalUrl === "" ? null : trimmedIcalUrl,
-          },
+          data: channelListingToUpdateRequest(values),
         }).unwrap();
         showSuccess("Channel link updated.");
       } else {
         await createChannel({
           listingId,
-          data: {
-            channel_id: channelId,
-            external_url: trimmedExternalUrl,
-            external_id: trimmedExternalId === "" ? null : trimmedExternalId,
-            ical_import_url: trimmedIcalUrl === "" ? null : trimmedIcalUrl,
-          },
+          data: channelListingToCreateRequest(values),
         }).unwrap();
         showSuccess("Channel added. Copy the outbound iCal URL into the channel's import-calendar field next.");
       }
@@ -136,7 +136,7 @@ export default function ChannelListingFormModal({
               : "Connect this listing to a booking channel. MBK will sync calendars in both directions."}
           </Dialog.Description>
 
-          <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+          <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-3">
             <FormField label="Channel" required>
               {(field) => (
                 <>
@@ -176,7 +176,7 @@ export default function ChannelListingFormModal({
                   value={externalUrl}
                   onChange={(e) => setExternalUrl(e.target.value)}
                   placeholder="https://..."
-                  maxLength={500}
+                  maxLength={CHANNEL_EXTERNAL_URL_MAX_LENGTH}
                   data-testid="channel-listing-form-external-url"
                   className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
                   {...field}
@@ -191,7 +191,7 @@ export default function ChannelListingFormModal({
                   value={externalId}
                   onChange={(e) => setExternalId(e.target.value)}
                   placeholder="e.g. 12345 or AB-123"
-                  maxLength={120}
+                  maxLength={CHANNEL_EXTERNAL_ID_MAX_LENGTH}
                   data-testid="channel-listing-form-external-id"
                   className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
                   {...field}
@@ -208,7 +208,7 @@ export default function ChannelListingFormModal({
                       value={icalImportUrl}
                       onChange={(e) => setIcalImportUrl(e.target.value)}
                       placeholder="https://.../calendar.ics"
-                      maxLength={1000}
+                      maxLength={CHANNEL_ICAL_URL_MAX_LENGTH}
                       data-testid="channel-listing-form-ical-import-url"
                       className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
                       {...field}

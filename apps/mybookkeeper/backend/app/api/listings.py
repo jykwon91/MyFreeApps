@@ -23,6 +23,7 @@ from app.schemas.listings.listing_external_id_update_request import (
     ListingExternalIdUpdateRequest,
 )
 from app.schemas.listings.listing_list_response import ListingListResponse
+from app.schemas.listings.listing_photo_order_request import ListingPhotoOrderRequest
 from app.schemas.listings.listing_photo_response import ListingPhotoResponse
 from app.schemas.listings.listing_photo_update_request import ListingPhotoUpdateRequest
 from app.schemas.listings.listing_response import ListingResponse
@@ -148,6 +149,30 @@ async def upload_photos(
         # 413 (payload too large) for size; 415 for everything else.
         status = 413 if "MB" in exc.reason else 415
         raise HTTPException(status_code=status, detail=exc.reason) from exc
+
+
+@router.put(
+    "/{listing_id}/photos/order",
+    response_model=list[ListingPhotoResponse],
+)
+async def reorder_photos(
+    listing_id: uuid.UUID,
+    payload: ListingPhotoOrderRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> list[ListingPhotoResponse]:
+    """Set the photo order in one transaction: the first id becomes the cover.
+
+    Photos left out of the list follow in their current order. 409 when an id
+    isn't a photo of this listing: the caller's list is stale and should refetch.
+    """
+    try:
+        return await listing_photo_service.reorder_photos(
+            ctx.organization_id, ctx.user_id, listing_id, payload.photo_ids,
+        )
+    except listing_photo_service.ListingNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except listing_photo_service.StalePhotoOrderError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.patch(

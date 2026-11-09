@@ -2,8 +2,8 @@ import { AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import {
   deriveImportStatus,
   formatLastImportedAt,
-} from "@/shared/lib/channel-labels";
-import type { ChannelListing } from "@/shared/types/listing/channel-listing";
+} from "@mybookkeeper/api-client/utils/channelImport";
+import type { ChannelListing } from "@mybookkeeper/api-client/types/listing/channel-listing";
 
 export interface ChannelImportStatusBadgeProps {
   channelListing: ChannelListing;

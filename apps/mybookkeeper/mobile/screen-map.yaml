@@ -50,7 +50,7 @@ routes:
   /listings:
     screen: (app)/listings/index
   /listings/:listingId:
-    screen: (app)/listings/[id]
+    screen: (app)/listings/[id]/index
   /login:
     screen: sign-in
   /members:

@@ -1,8 +1,9 @@
+import { CHANNEL_LISTING_FORM_PROBLEMS } from "@mybookkeeper/api-client/constants/channelListingForm";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ChannelListingFormModal from "@/app/features/listings/ChannelListingFormModal";
-import type { Channel } from "@/shared/types/listing/channel";
+import type { Channel } from "@mybookkeeper/api-client/types/listing/channel";
 
 const createMutationMock = vi.fn();
 const updateMutationMock = vi.fn();
@@ -15,7 +16,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showSuccess: (msg: string) => showSuccessMock(msg),
 }));
 
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useCreateListingChannelMutation: vi.fn(() => [
     createMutationMock,
     { isLoading: false },
@@ -67,6 +68,19 @@ describe("ChannelListingFormModal (create mode)", () => {
     expect(
       screen.getByTestId("channel-listing-form-validation-error"),
     ).toBeInTheDocument();
+  });
+
+  it("rejects a listing URL or calendar feed that is not a web address, with the shared copy", async () => {
+    render(<ChannelListingFormModal open listingId="listing-1" availableChannels={[airbnb]} onClose={vi.fn()} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByTestId("channel-listing-form-external-url"), "nope");
+    await user.click(screen.getByTestId("channel-listing-form-submit"));
+    expect(screen.getByTestId("channel-listing-form-validation-error")).toHaveTextContent(CHANNEL_LISTING_FORM_PROBLEMS.urlInvalid);
+    await user.clear(screen.getByTestId("channel-listing-form-external-url"));
+    await user.type(screen.getByTestId("channel-listing-form-external-url"), "https://air.example/1");
+    await user.type(screen.getByTestId("channel-listing-form-ical-import-url"), "also nope");
+    await user.click(screen.getByTestId("channel-listing-form-submit"));
+    expect(screen.getByTestId("channel-listing-form-validation-error")).toHaveTextContent(CHANNEL_LISTING_FORM_PROBLEMS.icalInvalid);
   });
 
   it("calls create mutation with the entered fields and closes on success", async () => {

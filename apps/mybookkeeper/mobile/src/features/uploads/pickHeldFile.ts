@@ -6,7 +6,7 @@ import { preparePhoto } from "../capture/preparePhoto";
 import { discardFile } from "../capture/uploadQueueFiles";
 import { holdFile } from "./heldFile";
 
-async function holdPhoto(asset: ImagePicker.ImagePickerAsset, name: string): Promise<FileForUpload> {
+export async function holdPhoto(asset: ImagePicker.ImagePickerAsset, name: string): Promise<FileForUpload> {
   try {
     const prepared = await preparePhoto(asset.uri, asset.width, asset.height);
     return { uri: holdFile(prepared, name), name, mimeType: "image/jpeg" };

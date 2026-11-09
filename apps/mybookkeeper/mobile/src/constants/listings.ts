@@ -13,7 +13,9 @@ export const LISTING_MESSAGES = {
   tryAgain: "Try again",
   back: "Back",
   noneHeading: "You don't have any listings yet.",
-  noneBody: "You can add one on the website.",
+  noneBody: "Add a room or unit, and I'll keep its rates, photos and links here.",
+  noneViewOnlyBody: "Someone with edit access can add them.",
+  add: "New listing",
   openWebsite: "Open on the website",
   clearFilter: "Clear filter",
   tryAnotherStatus: "Try another status, or see them all.",
@@ -40,5 +42,31 @@ export const LISTING_MESSAGES = {
   notAssigned: "Not assigned",
   yes: "Yes",
   no: "No",
-  onTheWebsite: "Photos, channels and editing are on the website.",
+  copyLink: "Copy link",
+  linkCopied: "Link copied.",
+  copyFailed: "I couldn't copy that.",
+  property: "Property",
+  edit: "Edit listing",
+  changeStatus: "Change status",
+  chooseNewStatus: "Set the listing's status",
+  statusChanged: "Status changed.",
+  delete: "Delete listing",
+  deleting: "Deleting…",
+  deleted: "Listing deleted.",
+  alreadyDeleted: "That listing was already deleted.",
+  deleteBody: "This removes the listing from your list, along with its photos and links. You can't undo it in the app.",
+  photos: "Photos",
+  externalLinks: "Other sites",
+  channels: "Channels",
+  noPhotos: "No photos yet",
+  noLinks: "Not linked anywhere",
+  couldntCount: "Couldn't load",
 } as const;
+
+export function deleteListingTitle(title: string): string {
+  return `Delete ${title}?`;
+}
+
+export function countText(count: number, one: string, many: string): string {
+  return count === 1 ? `1 ${one}` : `${count} ${many}`;
+}

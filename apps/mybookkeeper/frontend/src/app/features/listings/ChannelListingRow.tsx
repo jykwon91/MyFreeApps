@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Check, Copy, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { Button, showSuccess } from "@platform/ui";
-import type { ChannelListing } from "@/shared/types/listing/channel-listing";
+import type { ChannelListing } from "@mybookkeeper/api-client/types/listing/channel-listing";
 import ChannelImportStatusBadge from "./ChannelImportStatusBadge";
 
 export interface ChannelListingRowProps {
