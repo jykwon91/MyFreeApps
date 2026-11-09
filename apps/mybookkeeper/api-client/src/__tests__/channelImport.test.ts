@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   deriveImportStatus,
   formatLastImportedAt,
-} from "@/shared/lib/channel-labels";
-import type { ChannelListing } from "@/shared/types/listing/channel-listing";
+} from "../utils/channelImport";
+import type { ChannelListing } from "../types/listing/channel-listing";
 
 const baseChannelListing: ChannelListing = {
   id: "cl-1",

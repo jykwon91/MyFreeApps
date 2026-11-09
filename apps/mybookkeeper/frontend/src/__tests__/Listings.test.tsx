@@ -74,19 +74,17 @@ const defaultPropertiesState = {
 
 const createListingMock = vi.fn(() => ({ unwrap: () => Promise.resolve(mockListings[0]) }));
 
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useCreateListingMutation: vi.fn(() => [createListingMock, { isLoading: false }]),
   useUpdateListingMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteListingMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUploadListingPhotosMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteListingPhotoMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateListingPhotoMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-}));
-
-vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useGetListingsQuery: vi.fn(() => defaultListingsState),
   useGetListingByIdQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
 }));
+
 
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => defaultPropertiesState),

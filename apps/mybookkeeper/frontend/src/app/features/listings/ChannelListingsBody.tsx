@@ -2,7 +2,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@platform/ui";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
-import type { ChannelListing } from "@/shared/types/listing/channel-listing";
+import type { ChannelListing } from "@mybookkeeper/api-client/types/listing/channel-listing";
 import ChannelListingRow from "./ChannelListingRow";
 
 export interface ChannelListingsBodyProps {

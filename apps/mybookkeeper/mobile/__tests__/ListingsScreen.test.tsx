@@ -175,13 +175,12 @@ describe("ListingsScreen", () => {
     await screen.findByRole("button", { name: "Garden room, Active, $1,200 a month" });
   });
 
-  it("points to the website when there are no listings", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("tells a viewer who can add listings when there are none", async () => {
     startServer();
     await show(<ListingsScreen />);
     await screen.findByText("You don't have any listings yet.");
-    await fireEvent.press(screen.getByRole("button", { name: "Open on the website" }));
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/listings`);
+    expect(screen.getByText("Someone with edit access can add them.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "New listing" })).toBeNull();
   });
 
   it("filters by status, says when nothing matches, and clears", async () => {
@@ -306,7 +305,7 @@ describe("ListingDetailScreen", () => {
     expect(screen.getByText("Garden room")).toBeTruthy();
   });
 
-  it("sends editing to the website", async () => {
+  it("still offers the website", async () => {
     const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
     startServer();
     await show(<ListingDetailScreen id="l1" />);

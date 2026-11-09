@@ -1,7 +1,7 @@
 import { ExternalLink, Pencil, Trash2 } from "lucide-react";
 import SourceBadge from "@/shared/components/ui/SourceBadge";
 import { Button } from "@platform/ui";
-import { LISTING_SOURCE_LABELS } from "@/shared/lib/listing-labels";
+import { LISTING_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
 
 export interface ExternalIdRowProps {

@@ -3,16 +3,19 @@ import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
 import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
 import Markdown from "@/shared/components/ui/Markdown";
-import { LISTING_ROOM_TYPES } from "@/shared/lib/listing-labels";
-import { LISTING_ROOM_TYPE_LABELS, LISTING_STATUSES, LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
+import { LISTING_ROOM_TYPES, LISTING_ROOM_TYPE_LABELS, LISTING_STATUSES, LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import {
   useCreateListingMutation,
   useUpdateListingMutation,
-} from "@/shared/store/listingsApi";
-import type { ListingCreateRequest } from "@/shared/types/listing/listing-create-request";
-import type { ListingFormValues } from "@/shared/types/listing/listing-form-values";
+} from "@mybookkeeper/api-client/store/listingsApi";
+import type { ListingFormValues } from "@mybookkeeper/api-client/types/listing/listing-form-values";
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
-import type { ListingUpdateRequest } from "@/shared/types/listing/listing-update-request";
+import {
+  EMPTY_LISTING_FORM,
+  formValuesToCreateRequest,
+  formValuesToUpdateRequest,
+  listingToFormValues,
+} from "@mybookkeeper/api-client/utils/listingForm";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
 export interface ListingFormProps {
@@ -21,101 +24,6 @@ export interface ListingFormProps {
   onClose: () => void;
   onCreated?: (listing: ListingResponse) => void;
   onUpdated?: (listing: ListingResponse) => void;
-}
-
-const EMPTY_DEFAULTS: ListingFormValues = {
-  property_id: "",
-  title: "",
-  description: "",
-  monthly_rate: "",
-  weekly_rate: "",
-  nightly_rate: "",
-  min_stay_days: "",
-  max_stay_days: "",
-  room_type: "private_room",
-  private_bath: false,
-  parking_assigned: false,
-  furnished: true,
-  status: "draft",
-  amenities: "",
-  pets_on_premises: false,
-  large_dog_disclosure: "",
-};
-
-function listingToFormValues(listing: ListingResponse): ListingFormValues {
-  return {
-    property_id: listing.property_id,
-    title: listing.title,
-    description: listing.description ?? "",
-    monthly_rate: String(listing.monthly_rate ?? ""),
-    weekly_rate: listing.weekly_rate ? String(listing.weekly_rate) : "",
-    nightly_rate: listing.nightly_rate ? String(listing.nightly_rate) : "",
-    min_stay_days: listing.min_stay_days != null ? String(listing.min_stay_days) : "",
-    max_stay_days: listing.max_stay_days != null ? String(listing.max_stay_days) : "",
-    room_type: listing.room_type,
-    private_bath: listing.private_bath,
-    parking_assigned: listing.parking_assigned,
-    furnished: listing.furnished,
-    status: listing.status,
-    amenities: (listing.amenities ?? []).join(", "),
-    pets_on_premises: listing.pets_on_premises,
-    large_dog_disclosure: listing.large_dog_disclosure ?? "",
-  };
-}
-
-function formValuesToCreateRequest(values: ListingFormValues): ListingCreateRequest {
-  return {
-    property_id: values.property_id,
-    title: values.title.trim(),
-    description: values.description.trim() || null,
-    monthly_rate: values.monthly_rate.trim(),
-    weekly_rate: values.weekly_rate.trim() || null,
-    nightly_rate: values.nightly_rate.trim() || null,
-    min_stay_days: values.min_stay_days ? Number(values.min_stay_days) : null,
-    max_stay_days: values.max_stay_days ? Number(values.max_stay_days) : null,
-    room_type: values.room_type,
-    private_bath: values.private_bath,
-    parking_assigned: values.parking_assigned,
-    furnished: values.furnished,
-    status: values.status,
-    amenities: parseAmenities(values.amenities),
-    pets_on_premises: values.pets_on_premises,
-    large_dog_disclosure: values.large_dog_disclosure.trim() || null,
-  };
-}
-
-function parseAmenities(raw: string): string[] {
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-function formValuesToUpdateRequest(
-  values: ListingFormValues,
-  dirty: Partial<Record<keyof ListingFormValues, boolean>>,
-): ListingUpdateRequest {
-  const out: ListingUpdateRequest = {};
-  if (dirty.property_id) out.property_id = values.property_id;
-  if (dirty.title) out.title = values.title.trim();
-  if (dirty.description) out.description = values.description.trim() || null;
-  if (dirty.monthly_rate) out.monthly_rate = values.monthly_rate.trim();
-  if (dirty.weekly_rate) out.weekly_rate = values.weekly_rate.trim() || null;
-  if (dirty.nightly_rate) out.nightly_rate = values.nightly_rate.trim() || null;
-  if (dirty.min_stay_days)
-    out.min_stay_days = values.min_stay_days ? Number(values.min_stay_days) : null;
-  if (dirty.max_stay_days)
-    out.max_stay_days = values.max_stay_days ? Number(values.max_stay_days) : null;
-  if (dirty.room_type) out.room_type = values.room_type;
-  if (dirty.private_bath) out.private_bath = values.private_bath;
-  if (dirty.parking_assigned) out.parking_assigned = values.parking_assigned;
-  if (dirty.furnished) out.furnished = values.furnished;
-  if (dirty.status) out.status = values.status;
-  if (dirty.amenities) out.amenities = parseAmenities(values.amenities);
-  if (dirty.pets_on_premises) out.pets_on_premises = values.pets_on_premises;
-  if (dirty.large_dog_disclosure)
-    out.large_dog_disclosure = values.large_dog_disclosure.trim() || null;
-  return out;
 }
 
 export default function ListingForm({
@@ -129,7 +37,7 @@ export default function ListingForm({
   const [updateListing, { isLoading: isUpdating }] = useUpdateListingMutation();
 
   const defaults = useMemo<ListingFormValues>(
-    () => (listing ? listingToFormValues(listing) : EMPTY_DEFAULTS),
+    () => (listing ? listingToFormValues(listing) : EMPTY_LISTING_FORM),
     [listing],
   );
 

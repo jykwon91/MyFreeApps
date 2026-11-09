@@ -6,11 +6,10 @@ import { Banner, EmptyState, LoadingButton, OptionSheet, useRefresh, useTheme } 
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { ALL_STATUSES_OPTION, LISTING_MESSAGES } from "../../constants/listings";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { uniqueById } from "../../lib/uniqueById";
-import { useOpenLink } from "../inquiries/useOpenLink";
+import { useCanWrite } from "../workspace/useCanWrite";
 import LoadMoreFailed from "../shell/LoadMoreFailed";
 import { noListingsWithStatus, statusFilterLabel } from "./listingDisplay";
 import ListingRow from "./ListingRow";
@@ -24,7 +23,7 @@ const STATUS_OPTIONS = [
 
 export default function ListingsScreen() {
   const { spacing } = useTheme();
-  const openLink = useOpenLink();
+  const canWrite = useCanWrite();
   const [status, setStatus] = useState<ListingStatus | null>(null);
   const [isStatusSheetOpen, setIsStatusSheetOpen] = useState(false);
   const [listThatFailedToLoadMore, setListThatFailedToLoadMore] = useState<string | null>(null);
@@ -45,6 +44,8 @@ export default function ListingsScreen() {
     setListThatFailedToLoadMore(result.isError ? listKey : null);
   }
 
+  const addListing = () => router.push("/listings/new");
+
   const emptyList = !currentData && isFetching ? (
     <ListingsSkeleton />
   ) : error ? (
@@ -61,8 +62,8 @@ export default function ListingsScreen() {
     />
   ) : (
     <EmptyState
-      action={{ label: LISTING_MESSAGES.openWebsite, onPress: () => void openLink(`${WEB_BASE_URL}/listings`) }}
-      body={LISTING_MESSAGES.noneBody}
+      action={canWrite ? { label: LISTING_MESSAGES.add, onPress: addListing } : undefined}
+      body={canWrite ? LISTING_MESSAGES.noneBody : LISTING_MESSAGES.noneViewOnlyBody}
       heading={LISTING_MESSAGES.noneHeading}
     />
   );
@@ -81,6 +82,7 @@ export default function ListingsScreen() {
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
             {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            {canWrite && rows.length > 0 ? <LoadingButton onPress={addListing}>{LISTING_MESSAGES.add}</LoadingButton> : null}
             <LoadingButton onPress={() => setIsStatusSheetOpen(true)} variant="secondary">
               {statusFilterLabel(status)}
             </LoadingButton>

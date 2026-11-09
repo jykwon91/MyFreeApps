@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ChannelListingFormModal from "@/app/features/listings/ChannelListingFormModal";
-import type { Channel } from "@/shared/types/listing/channel";
+import type { Channel } from "@mybookkeeper/api-client/types/listing/channel";
 
 const createMutationMock = vi.fn();
 const updateMutationMock = vi.fn();
@@ -15,7 +15,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showSuccess: (msg: string) => showSuccessMock(msg),
 }));
 
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useCreateListingChannelMutation: vi.fn(() => [
     createMutationMock,
     { isLoading: false },

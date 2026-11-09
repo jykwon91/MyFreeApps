@@ -21,7 +21,14 @@ import {
   useDeleteListingPhotoMutation,
   useUpdateListingPhotoMutation,
   useUploadListingPhotosMutation,
-} from "@/shared/store/listingsApi";
+} from "@mybookkeeper/api-client/store/listingsApi";
+import {
+  LISTING_PHOTO_HEIC_EXTENSION,
+  LISTING_PHOTO_MAX_BYTES,
+  LISTING_PHOTO_MAX_MB,
+  LISTING_PHOTO_MIME_TYPES,
+} from "@mybookkeeper/api-client/constants/listingPhotos";
+import { photoOrderChanges, sortPhotos } from "@mybookkeeper/api-client/utils/listingPhotoOrder";
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 import type { PhotoLightboxTarget } from "@/shared/types/listing/photo-lightbox-target";
 import ListingPhotoCard from "@/app/features/listings/ListingPhotoCard";
@@ -39,20 +46,17 @@ export interface ListingPhotoManagerProps {
   canWrite: boolean;
 }
 
-const MAX_BYTES = 10 * 1024 * 1024;
-const ALLOWED_MIME = ["image/jpeg", "image/png", "image/heic"];
-
 function clientSideValidate(files: File[]): { valid: File[]; rejected: string[] } {
   const valid: File[] = [];
   const rejected: string[] = [];
   for (const f of files) {
-    if (f.size > MAX_BYTES) {
-      rejected.push(`${f.name} is over 10MB`);
+    if (f.size > LISTING_PHOTO_MAX_BYTES) {
+      rejected.push(`${f.name} is over ${LISTING_PHOTO_MAX_MB}MB`);
       continue;
     }
     // Some browsers don't set content-type for HEIC; fall back to extension check.
-    const isHeicByExt = /\.(heic|heif)$/i.test(f.name);
-    if (!ALLOWED_MIME.includes(f.type) && !isHeicByExt) {
+    const isHeicByExt = LISTING_PHOTO_HEIC_EXTENSION.test(f.name);
+    if (!LISTING_PHOTO_MIME_TYPES.includes(f.type) && !isHeicByExt) {
       rejected.push(`${f.name} is not a supported image type`);
       continue;
     }
@@ -91,7 +95,7 @@ export default function ListingPhotoManager({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const sortedPhotos = [...photos].sort((a, b) => a.display_order - b.display_order);
+  const sortedPhotos = sortPhotos(photos);
   const displayIds = orderedIds ?? sortedPhotos.map((p) => p.id);
   const photosById = new Map(sortedPhotos.map((p) => [p.id, p]));
 
@@ -106,7 +110,9 @@ export default function ListingPhotoManager({
     }
     if (valid.length === 0) return;
     try {
-      await uploadPhotos({ listingId, files: valid }).unwrap();
+      const form = new FormData();
+      for (const file of valid) form.append("files", file);
+      await uploadPhotos({ listingId, form }).unwrap();
       showSuccess(
         valid.length === 1 ? "Photo uploaded." : `${valid.length} photos uploaded.`,
       );
@@ -181,12 +187,9 @@ export default function ListingPhotoManager({
     // photo — the small-N case (<20 photos per listing) keeps this cheap.
     try {
       await Promise.all(
-        newOrder.map((photoId, index) => {
-          const current = photosById.get(photoId);
-          if (!current) return Promise.resolve();
-          if (current.display_order === index) return Promise.resolve();
-          return updatePhoto({ listingId, photoId, display_order: index }).unwrap();
-        }),
+        photoOrderChanges(newOrder, sortedPhotos).map(({ photoId, displayOrder }) =>
+          updatePhoto({ listingId, photoId, display_order: displayOrder }).unwrap(),
+        ),
       );
     } catch {
       showError("I couldn't save the new order. Reverting.");

@@ -36,7 +36,7 @@ const updateMock = vi.fn(() => ({
     } as unknown as ListingResponse),
 }));
 
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useCreateListingMutation: vi.fn(() => [createMock, { isLoading: false }]),
   useUpdateListingMutation: vi.fn(() => [updateMock, { isLoading: false }]),
 }));

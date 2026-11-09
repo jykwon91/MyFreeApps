@@ -5,9 +5,9 @@ import CopyField from "@/shared/components/ui/CopyField";
 import {
   useCreateListingChannelMutation,
   useUpdateChannelListingMutation,
-} from "@/shared/store/listingsApi";
-import type { Channel } from "@/shared/types/listing/channel";
-import type { ChannelListing } from "@/shared/types/listing/channel-listing";
+} from "@mybookkeeper/api-client/store/listingsApi";
+import type { Channel } from "@mybookkeeper/api-client/types/listing/channel";
+import type { ChannelListing } from "@mybookkeeper/api-client/types/listing/channel-listing";
 
 export interface ChannelListingFormModalProps {
   open: boolean;

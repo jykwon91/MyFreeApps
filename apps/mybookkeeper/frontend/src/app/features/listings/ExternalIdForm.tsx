@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { Button, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
-import { LISTING_SOURCES, LISTING_SOURCE_LABELS } from "@/shared/lib/listing-labels";
+import { LISTING_SOURCES, LISTING_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import {
   useCreateListingExternalIdMutation,
   useUpdateListingExternalIdMutation,
-} from "@/shared/store/listingsApi";
-import {
-  EXTERNAL_ID_SOURCE_HINTS,
-  ExternalIdRequestErrorShape,
-} from "@/shared/lib/external-id-form";
+} from "@mybookkeeper/api-client/store/listingsApi";
+import { EXTERNAL_ID_SOURCE_HINTS } from "@mybookkeeper/api-client/constants/externalIdForm";
+import type { ExternalIdRequestErrorShape } from "@mybookkeeper/api-client/types/listing/external-id-request-error-shape";
 import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
 import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
 

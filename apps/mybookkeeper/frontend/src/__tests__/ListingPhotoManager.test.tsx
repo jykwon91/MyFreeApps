@@ -11,7 +11,7 @@ const uploadMock = vi.fn(() => ({ unwrap: () => Promise.resolve([]) }));
 const deleteMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
 const updateMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
 
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useUploadListingPhotosMutation: vi.fn(() => [uploadMock, { isLoading: false }]),
   useDeleteListingPhotoMutation: vi.fn(() => [deleteMock, { isLoading: false }]),
   useUpdateListingPhotoMutation: vi.fn(() => [updateMock, { isLoading: false }]),
@@ -84,10 +84,11 @@ describe("ListingPhotoManager", () => {
     await user.upload(fileInput, file);
 
     expect(uploadMock).toHaveBeenCalledTimes(1);
-    const arg = (uploadMock.mock.calls[0] as unknown as [{ listingId: string; files: File[] }])[0];
+    const arg = (uploadMock.mock.calls[0] as unknown as [{ listingId: string; form: FormData }])[0];
+    const files = arg.form.getAll("files") as File[];
     expect(arg.listingId).toBe("listing-1");
-    expect(arg.files).toHaveLength(1);
-    expect(arg.files[0].name).toBe("test.jpg");
+    expect(files).toHaveLength(1);
+    expect(files[0].name).toBe("test.jpg");
   });
 
   it("rejects oversized files client-side and does not call upload", async () => {

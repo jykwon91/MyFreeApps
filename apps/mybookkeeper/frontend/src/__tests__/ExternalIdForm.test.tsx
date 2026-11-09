@@ -16,7 +16,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showSuccess: (msg: string) => showSuccessMock(msg),
 }));
 
-vi.mock("@/shared/store/listingsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useCreateListingExternalIdMutation: vi.fn(() => [
     createMutationMock,
     { isLoading: false },
