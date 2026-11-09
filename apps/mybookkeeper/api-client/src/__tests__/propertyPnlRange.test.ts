@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activePropertyPnlPreset, isValidPropertyPnlRange, propertyPnlRange } from "../utils/propertyPnlRange";
+import { activePropertyPnlPreset, calendarYearRange, isValidPropertyPnlRange, propertyPnlRange } from "../utils/propertyPnlRange";
 
 const PRESETS = ["this_month", "this_quarter", "ytd"] as const;
 const today = new Date(2026, 4, 17);
@@ -45,5 +45,30 @@ describe("isValidPropertyPnlRange", () => {
     expect(isValidPropertyPnlRange({ since: "2026-01-01", until: "2026-01-01" })).toBe(true);
     expect(isValidPropertyPnlRange({ since: "2026-02-01", until: "2026-01-01" })).toBe(false);
     expect(isValidPropertyPnlRange({ since: "", until: "2026-01-01" })).toBe(false);
+  });
+});
+
+describe("propertyPnlRange, the longer presets", () => {
+  it("runs last month from its first day to its last", () => {
+    expect(propertyPnlRange("last_month", today)).toEqual({ since: "2026-04-01", until: "2026-04-30" });
+    expect(propertyPnlRange("last_month", new Date(2026, 0, 15))).toEqual({ since: "2025-12-01", until: "2025-12-31" });
+    expect(propertyPnlRange("last_month", new Date(2024, 2, 31))).toEqual({ since: "2024-02-01", until: "2024-02-29" });
+  });
+
+  it("runs last quarter across the year end", () => {
+    expect(propertyPnlRange("last_quarter", today)).toEqual({ since: "2026-01-01", until: "2026-03-31" });
+    expect(propertyPnlRange("last_quarter", new Date(2026, 1, 3))).toEqual({ since: "2025-10-01", until: "2025-12-31" });
+  });
+
+  it("runs the last 12 months from the first of the month twelve back, through today", () => {
+    expect(propertyPnlRange("last_12_months", today)).toEqual({ since: "2025-06-01", until: "2026-05-17" });
+  });
+
+  it("runs last year whole", () => {
+    expect(propertyPnlRange("last_year", today)).toEqual({ since: "2025-01-01", until: "2025-12-31" });
+  });
+
+  it("gives a calendar year whole, finished or not", () => {
+    expect(calendarYearRange(2027)).toEqual({ since: "2027-01-01", until: "2027-12-31" });
   });
 });

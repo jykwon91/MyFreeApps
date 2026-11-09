@@ -35,7 +35,7 @@ def _build_txn_filters(
     return filters
 
 
-def _txn_active_property_filter() -> list:
+def txn_active_property_filter() -> list:
     """Filter transactions to active properties or within activity periods.
 
     A transaction with no property at all (e.g. an unattributed Airbnb payout)
@@ -76,7 +76,7 @@ async def distinct_transaction_years(
         select(extract("year", Transaction.transaction_date).label("year"))
         .select_from(Transaction)
         .outerjoin(Property, Transaction.property_id == Property.id)
-        .where(and_(*filters, *_txn_active_property_filter()))
+        .where(and_(*filters, *txn_active_property_filter()))
         .group_by("year")
         .order_by("year")
     )
@@ -106,7 +106,7 @@ async def txn_sum_by_category(
         )
         .select_from(Transaction)
         .outerjoin(Property, Transaction.property_id == Property.id)
-        .where(and_(*filters, *_txn_active_property_filter()))
+        .where(and_(*filters, *txn_active_property_filter()))
         .group_by(Transaction.category)
     )
     return result.all()
@@ -134,7 +134,7 @@ async def txn_sum_by_property_and_category(
         )
         .select_from(Transaction)
         .outerjoin(Property, Transaction.property_id == Property.id)
-        .where(and_(*filters, *_txn_active_property_filter()))
+        .where(and_(*filters, *txn_active_property_filter()))
         .group_by(Transaction.property_id, Property.name, Transaction.category)
     )
     return result.all()
@@ -160,7 +160,7 @@ async def txn_sum_by_month_and_category(
         )
         .select_from(Transaction)
         .outerjoin(Property, Transaction.property_id == Property.id)
-        .where(and_(*filters, *_txn_active_property_filter()))
+        .where(and_(*filters, *txn_active_property_filter()))
         .group_by("year", "month", Transaction.category)
         .order_by("year", "month")
     )
@@ -189,7 +189,7 @@ async def txn_sum_by_property_month_and_category(
         )
         .select_from(Transaction)
         .outerjoin(Property, Transaction.property_id == Property.id)
-        .where(and_(*filters, *_txn_active_property_filter()))
+        .where(and_(*filters, *txn_active_property_filter()))
         .group_by(Transaction.property_id, Property.name, "year", "month", Transaction.category)
         .order_by(Transaction.property_id, "year", "month")
     )

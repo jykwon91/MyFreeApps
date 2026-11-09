@@ -17,7 +17,7 @@ import DashboardFilterBar from "@/app/features/dashboard/DashboardFilterBar";
 import DashboardHeaderSubtitle from "@/app/features/dashboard/DashboardHeaderSubtitle";
 import DashboardHeaderActions from "@/app/features/dashboard/DashboardHeaderActions";
 import { useDashboardHeaderMode } from "@/app/features/dashboard/useDashboardHeaderMode";
-import type { DrillDownFilter } from "@/shared/types/dashboard/drill-down-filter";
+import type { DrillDownFilter } from "@mybookkeeper/api-client/types/analytics/drill-down-filter";
 import type { DateRange } from "@/shared/types/dashboard/date-range";
 import DrillDownPanel from "@/app/features/dashboard/DrillDownPanel";
 import CategoryChart from "@/app/features/dashboard/CategoryChart";
@@ -27,16 +27,14 @@ import Card from "@/shared/components/ui/Card";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import PropertyPnLGrid from "@/app/features/attribution/PropertyPnLGrid";
 import PnLDateRangeSelector from "@/app/features/attribution/PnLDateRangeSelector";
-import { propertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
+import { calendarYearRange, propertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
 import UtilityPlanRenewalAlertCard from "@/app/features/utility/UtilityPlanRenewalAlertCard";
 import UtilityPlanComparisonCard from "@/app/features/utility/UtilityPlanComparisonCard";
 import InsurancePremiumComparisonCard from "@/app/features/insurance/InsurancePremiumComparisonCard";
 
 function yearToDateRange(year: number): DateRange {
-  return {
-    startDate: `${year}-01-01`,
-    endDate: `${year}-12-31`,
-  };
+  const { since, until } = calendarYearRange(year);
+  return { startDate: since, endDate: until };
 }
 
 export default function Dashboard() {
@@ -115,9 +113,10 @@ export default function Dashboard() {
 
   const handleDrillDown = useCallback(
     (filter: DrillDownFilter) => {
-      setDrillDown({ ...filter, propertyIds: activePropertyIds });
+      const categories = isFiltered && filter.type ? [...filterState.selectedCategories] : undefined;
+      setDrillDown({ ...filter, propertyIds: activePropertyIds, categories });
     },
-    [activePropertyIds],
+    [activePropertyIds, isFiltered, filterState.selectedCategories],
   );
 
   const handleCategoryClick = useCallback(

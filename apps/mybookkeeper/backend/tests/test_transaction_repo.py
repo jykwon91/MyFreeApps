@@ -215,6 +215,51 @@ class TestListFiltered:
         assert len(results) == 0
 
 
+class TestListFilteredSummaryRules:
+    @pytest.mark.asyncio
+    async def test_summary_kind_keeps_only_that_kinds_categories(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        rent = _make_transaction(
+            test_org.id, test_user.id, category="rental_revenue", transaction_type="income",
+        )
+        deposit = _make_transaction(
+            test_org.id, test_user.id, category="security_deposit", transaction_type="income",
+        )
+        repair = _make_transaction(test_org.id, test_user.id, category="maintenance")
+        for t in (rent, deposit, repair):
+            await transaction_repo.create(db, t)
+        await db.commit()
+
+        revenue = await transaction_repo.list_filtered(db, test_org.id, summary_kind="revenue")
+        expenses = await transaction_repo.list_filtered(db, test_org.id, summary_kind="expenses")
+
+        assert {t.id for t in revenue} == {rent.id}
+        assert {t.id for t in expenses} == {repair.id}
+
+    @pytest.mark.asyncio
+    async def test_active_properties_only_matches_the_summary_gate(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        active = await _create_property(db, test_org.id, test_user.id, "Active")
+        inactive = await _create_property(db, test_org.id, test_user.id, "Inactive")
+        inactive.is_active = False
+        on_active = _make_transaction(test_org.id, test_user.id, property_id=active.id)
+        on_inactive = _make_transaction(test_org.id, test_user.id, property_id=inactive.id)
+        unassigned = _make_transaction(test_org.id, test_user.id)
+        for t in (on_active, on_inactive, unassigned):
+            await transaction_repo.create(db, t)
+        await db.commit()
+
+        everything = await transaction_repo.list_filtered(db, test_org.id)
+        gated = await transaction_repo.list_filtered(
+            db, test_org.id, active_properties_only=True,
+        )
+
+        assert {t.id for t in everything} == {on_active.id, on_inactive.id, unassigned.id}
+        assert {t.id for t in gated} == {on_active.id, unassigned.id}
+
+
 class TestBulkApprove:
     @pytest.mark.asyncio
     async def test_approves_eligible(

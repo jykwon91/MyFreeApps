@@ -57,6 +57,14 @@ describe("HomeScreen", () => {
     expect(screen.getByLabelText(/net minus 200 dollars/)).toBeTruthy();
   });
 
+  it("leads on to the full analysis, where any dates can be picked and compared", async () => {
+    const server = startTransactionServer([]);
+    server.summary = { revenue: 10, expenses: 0, profit: 10, by_property: [] };
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Explore all your numbers" }));
+    expect(mockNavigate).toHaveBeenLastCalledWith("/analytics/money");
+  });
+
   it("asks for the year's numbers when switched, without showing the month's meanwhile", async () => {
     const server = startTransactionServer([]);
     server.summary = { revenue: 10, expenses: 0, profit: 10, by_property: [] };

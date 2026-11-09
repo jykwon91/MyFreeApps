@@ -9,13 +9,14 @@ import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { ALL_DOCUMENTS } from "../../constants/documents";
-import { HOME_PERIODS, HOME_RECEIPTS_ARGS, type HomePeriod } from "../../constants/home";
+import { HOME_PERIODS, HOME_RECEIPTS_ARGS, MONEY_ANALYSIS_LINK, type HomePeriod } from "../../constants/home";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useToday } from "../../lib/useToday";
 import { periodRange } from "../transactions/transactionFilters";
 import { useCanWrite } from "../workspace/useCanWrite";
 import HomeAlerts from "./HomeAlerts";
 import HomeCard from "./HomeCard";
+import HomeLinkRow from "./HomeLinkRow";
 import { numbersFailedMessage, periodHasMonths } from "./homeDisplay";
 import HomeSectionError from "./HomeSectionError";
 import MonthlyChart from "./MonthlyChart";
@@ -97,6 +98,7 @@ export default function HomeScreen() {
               <MonthlyChart byMonth={summary.currentData.by_month} />
               <PropertyTotals period={period} properties={summary.currentData.by_property} />
               <WhereItWent byCategory={summary.currentData.by_category} period={period} />
+              <HomeLinkRow label="Explore all your numbers" onPress={() => router.navigate(MONEY_ANALYSIS_LINK)} />
             </>
           ) : summary.isFetching ? (
             <>

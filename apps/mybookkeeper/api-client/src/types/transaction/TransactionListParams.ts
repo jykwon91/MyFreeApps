@@ -11,4 +11,9 @@ export interface TransactionListParams {
   start_date?: string;
   end_date?: string;
   tax_year?: number;
+  /** Only the categories the dashboard summary adds up as revenue, or as expenses. */
+  summary_kind?: "revenue" | "expenses";
+  /** Leave out rows of inactive properties, as the dashboard summary does. */
+  active_properties_only?: boolean;
+  limit?: number;
 }

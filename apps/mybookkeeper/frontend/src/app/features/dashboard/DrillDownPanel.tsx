@@ -2,12 +2,13 @@ import { useMemo, useRef, useState } from "react";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { UNASSIGNED_PROPERTY_ID } from "@/shared/lib/constants";
+import { drillDownListParams, drillDownTotal, filterDrillDownTransactions, isDrillDownTruncated } from "@mybookkeeper/api-client/utils/drillDown";
 import { useToast } from "@/shared/hooks/useToast";
 import { formatCurrency } from "@/shared/utils/currency";
 import { Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
-import type { DrillDownFilter } from "@/shared/types/dashboard/drill-down-filter";
+import type { DrillDownFilter } from "@mybookkeeper/api-client/types/analytics/drill-down-filter";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import { DRILL_DOWN_TRUNCATED_MESSAGE } from "@mybookkeeper/api-client/constants/transactionPaging";
 import { useDrillDownBodyMode } from "./useDrillDownBodyMode";
 import DrillDownPanelBody from "./DrillDownPanelBody";
 import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
@@ -22,38 +23,17 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
   const transactionPanelRef = useRef<TransactionPanelHandle>(null);
 
-  const isUnassigned = filter.propertyId === UNASSIGNED_PROPERTY_ID;
-
-  const { data: allTransactions = [], isLoading } = useListTransactionsQuery({
-    category: filter.category,
-    property_id: isUnassigned ? undefined : filter.propertyId,
-    unassigned: isUnassigned ? true : undefined,
-    start_date: filter.startDate,
-    end_date: filter.endDate,
-    status: "approved",
-  });
+  const { data: allTransactions = [], isLoading } = useListTransactionsQuery(drillDownListParams(filter));
 
   const { data: properties = [] } = useGetPropertiesQuery();
 
-  const transactions = useMemo(() => {
-    let filtered = allTransactions;
-    if (filter.type) {
-      const txnType = filter.type === "revenue" ? "income" : "expense";
-      filtered = filtered.filter((txn) => txn.transaction_type === txnType);
-    }
-    // The Unassigned bucket is, by definition, transactions with no property —
-    // applying a property-id allowlist would always zero it out.
-    if (!isUnassigned && filter.propertyIds?.length) {
-      const ids = new Set(filter.propertyIds);
-      filtered = filtered.filter((txn) => !!txn.property_id && ids.has(txn.property_id));
-    }
-    return filtered;
-  }, [allTransactions, filter.type, filter.propertyIds, isUnassigned]);
+  const transactions = useMemo(
+    () => filterDrillDownTransactions(allTransactions, filter),
+    [allTransactions, filter],
+  );
 
-  const total = transactions.reduce((sum, txn) => {
-    const amt = typeof txn.amount === "string" ? parseFloat(txn.amount) || 0 : txn.amount;
-    return sum + amt;
-  }, 0);
+  const total = drillDownTotal(transactions);
+  const truncated = isDrillDownTruncated(allTransactions);
 
   const mode = useDrillDownBodyMode({
     selectedTxn,
@@ -103,6 +83,12 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
         </div>
         <PanelCloseButton onClose={close} />
       </header>
+
+      {truncated && !selectedTxn ? (
+        <p role="status" className="px-5 py-2 text-xs bg-muted text-muted-foreground border-b">
+          {DRILL_DOWN_TRUNCATED_MESSAGE}
+        </p>
+      ) : null}
 
       {/* Content: dispatched to sub-components via mode */}
       <DrillDownPanelBody

@@ -29,6 +29,10 @@ const mockSummaryWithData: SummaryResponse = {
     { month: "2025-01", maintenance: 1000 },
     { month: "2025-02", maintenance: 1000 },
   ],
+  by_month_revenue: [
+    { month: "2025-01", rental_revenue: 2500 },
+    { month: "2025-02", rental_revenue: 2500 },
+  ],
   by_property_month: [],
 };
 
@@ -40,6 +44,7 @@ const mockEmptySummary: SummaryResponse = {
   by_property: [],
   by_month: [],
   by_month_expense: [],
+  by_month_revenue: [],
   by_property_month: [],
 };
 

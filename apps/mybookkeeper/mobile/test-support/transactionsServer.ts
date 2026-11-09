@@ -69,6 +69,7 @@ const EMPTY_SUMMARY: SummaryResponse = {
   by_property: [],
   by_month: [],
   by_month_expense: [],
+  by_month_revenue: [],
   by_property_month: [],
 };
 
