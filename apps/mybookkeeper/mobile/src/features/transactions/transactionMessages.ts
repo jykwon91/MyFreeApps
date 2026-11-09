@@ -34,3 +34,29 @@ export function othersUpdatedSentence(result: TransactionUpdateResult, vendor: s
   const who = vendor ? `${vendor} ` : "";
   return ` I also updated ${count} other ${who}${count === 1 ? "transaction" : "transactions"}.`;
 }
+
+export function createFailureMessage(error: unknown): string {
+  switch (httpStatus(error)) {
+    case undefined:
+      return "I can't reach the server, so I couldn't add that. Your details are still here.";
+    case 403:
+      return "You have read-only access, so I can't add transactions.";
+    default:
+      return "I couldn't add that. Want to try again?";
+  }
+}
+
+export function bulkApproveFailureMessage(error: unknown): string {
+  switch (httpStatus(error)) {
+    case undefined:
+      return "I can't reach the server, so I couldn't approve those. They're still selected.";
+    case 403:
+      return "You have read-only access, so I can't change these.";
+    default:
+      return "I couldn't approve those. Want to try again?";
+  }
+}
+
+export function bulkApprovedMessage(approved: number, skipped: number): string {
+  return `${approved} approved${skipped > 0 ? `, ${skipped} skipped` : ""}`;
+}

@@ -4,9 +4,21 @@ import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useTheme } from "@platform/
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { TRANSACTION_PERIODS, TRANSACTION_TYPES, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
-import { monthName } from "../../lib/localDate";
+import { isoFromDate, monthName } from "../../lib/localDate";
 import type { TransactionFilters } from "../../types/TransactionFilters";
+import CustomRangeFields from "./CustomRangeFields";
 import { categoryLabel } from "./transactionDisplay";
+
+/** Picking "Custom range" starts from the first of this month to today, or from the range already chosen. */
+function customRangeStart(draft: TransactionFilters): Partial<TransactionFilters> {
+  const today = new Date();
+  return {
+    period: "custom",
+    month: null,
+    startDate: draft.startDate ?? isoFromDate(new Date(today.getFullYear(), today.getMonth(), 1)),
+    endDate: draft.endDate ?? isoFromDate(today),
+  };
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -76,9 +88,21 @@ export default function TransactionFilterSheet({
                   isSelected={draft.month === null && draft.period === option.value}
                   key={option.value}
                   label={option.label}
-                  onPress={() => update({ period: option.value, month: null })}
+                  onPress={() => update({ period: option.value, month: null, startDate: null, endDate: null })}
                 />
               ))}
+              <OptionRow
+                isSelected={draft.month === null && draft.period === "custom"}
+                label="Custom range"
+                onPress={() => update(customRangeStart(draft))}
+              />
+              {draft.month === null && draft.period === "custom" && draft.startDate && draft.endDate ? (
+                <CustomRangeFields
+                  endDate={draft.endDate}
+                  onChange={({ startDate, endDate }) => update({ startDate, endDate })}
+                  startDate={draft.startDate}
+                />
+              ) : null}
             </Section>
           )}
           <Section title="Type">
@@ -122,7 +146,7 @@ export default function TransactionFilterSheet({
         </ScrollView>
         <View style={{ flexDirection: "row", gap: spacing.sm, padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border }}>
           <LoadingButton
-            onPress={() => update({ period: "all", month: null, type: null, propertyId: null, category: null })}
+            onPress={() => update({ period: "all", month: null, startDate: null, endDate: null, type: null, propertyId: null, category: null })}
             style={{ flex: 1 }}
             variant="secondary"
           >

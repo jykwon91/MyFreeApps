@@ -6,6 +6,8 @@ export interface MoneyParams extends Record<string, string> {
   view: string;
   period: string;
   month: string;
+  from: string;
+  to: string;
   type: string;
   property: string;
   category: string;

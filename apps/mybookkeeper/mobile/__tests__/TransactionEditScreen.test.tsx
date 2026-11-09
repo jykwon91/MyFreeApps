@@ -22,6 +22,11 @@ jest.mock("expo-router", () => ({
   },
 }));
 
+jest.mock("@react-native-community/datetimepicker", () => {
+  const { View } = jest.requireActual("react-native");
+  return { __esModule: true, default: View, DateTimePickerAndroid: { open: jest.fn() } };
+});
+
 const originalAdapter = api.defaults.adapter;
 
 beforeEach(() => {
@@ -180,5 +185,73 @@ describe("TransactionEditScreen", () => {
     await renderScreen();
     await fireEvent.press(await screen.findByLabelText("Property, Old Place"));
     expect(await screen.findByRole("radio", { name: "Old Place" })).toBeTruthy();
+  });
+
+  describe("changing the date", () => {
+    async function pickDate(date: Date) {
+      await fireEvent.press(await screen.findByLabelText(/^Date, /));
+      await act(async () => screen.getByTestId("date-picker").props.onChange({ type: "set" }, date));
+    }
+
+    function answerTaxYearPrompt(buttonText: string) {
+      return jest.spyOn(Alert, "alert").mockImplementation((_title, _message, buttons) => {
+        buttons?.find((button) => button.text === buttonText)?.onPress?.();
+      });
+    }
+
+    it("sends just the date, with no question, when the year stays the same", async () => {
+      const server = startTransactionServer([aTransaction()]);
+      const alert = jest.spyOn(Alert, "alert");
+      alert.mockClear();
+      await renderScreen();
+      await pickDate(new Date(2026, 5, 2));
+      await fireEvent.press(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(mockBack).toHaveBeenCalled());
+      expect(lastPatch(server)).toEqual({ transaction_date: "2026-06-02" });
+      expect(alert).not.toHaveBeenCalled();
+    });
+
+    it("asks which tax year it belongs to when the date moves to another year, and moves it on request", async () => {
+      const server = startTransactionServer([aTransaction()]);
+      const alert = answerTaxYearPrompt("Move to 2025");
+      await renderScreen();
+      await pickDate(new Date(2025, 11, 31));
+      await fireEvent.press(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(mockBack).toHaveBeenCalled());
+      expect(alert.mock.calls[0]?.[0]).toBe("Move it to tax year 2025?");
+      expect(alert.mock.calls[0]?.[1]).toContain("filed under tax year 2026");
+      expect(lastPatch(server)).toEqual({ transaction_date: "2025-12-31", tax_year: 2025 });
+    });
+
+    it("can keep the old tax year", async () => {
+      const server = startTransactionServer([aTransaction()]);
+      answerTaxYearPrompt("Keep 2026");
+      await renderScreen();
+      await pickDate(new Date(2025, 11, 31));
+      await fireEvent.press(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(mockBack).toHaveBeenCalled());
+      expect(lastPatch(server)).toEqual({ transaction_date: "2025-12-31" });
+    });
+
+    it("saves nothing when the question is backed out of", async () => {
+      const server = startTransactionServer([aTransaction()]);
+      answerTaxYearPrompt("Keep editing");
+      await renderScreen();
+      await pickDate(new Date(2025, 11, 31));
+      await fireEvent.press(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeTruthy());
+      expect(server.requests.some((request) => request.method === "patch")).toBe(false);
+      expect(mockBack).not.toHaveBeenCalled();
+    });
+
+    it("asks again for a row whose tax year already differs from its date", async () => {
+      const server = startTransactionServer([aTransaction({ transaction_date: "2026-01-02", tax_year: 2025 })]);
+      answerTaxYearPrompt("Move to 2026");
+      await renderScreen();
+      await pickDate(new Date(2026, 0, 5));
+      await fireEvent.press(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(mockBack).toHaveBeenCalled());
+      expect(lastPatch(server)).toEqual({ transaction_date: "2026-01-05", tax_year: 2026 });
+    });
   });
 });

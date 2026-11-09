@@ -7,6 +7,9 @@ export interface TransactionFilters {
   period: TransactionPeriod;
   /** One "YYYY-MM" month, which takes the place of the period while set. */
   month: string | null;
+  /** The two days of a custom range, "YYYY-MM-DD", both set while the period is "custom". */
+  startDate: string | null;
+  endDate: string | null;
   type: TransactionType | null;
   /** A property's id, or UNASSIGNED_PROPERTY for rows with none. */
   propertyId: string | null;

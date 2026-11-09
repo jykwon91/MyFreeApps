@@ -1,8 +1,12 @@
+import { CHANNEL_OPTIONS } from "../src/constants/transactionCreateOptions";
+import { isBulkApprovable } from "../src/features/transactions/bulkApprovable";
+import { otherTaxYear, taxYearOf } from "../src/features/transactions/taxYear";
+import { blankCreateValues, choiceLabel, createAmountError, createPayload } from "../src/features/transactions/transactionCreateValues";
 import { nextToReview } from "../src/features/transactions/nextToReview";
 import { displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, spokenAmount, spokenMoney } from "../src/features/transactions/transactionDisplay";
 import { amountError, categoryChoices, changedFields, selectableProperties, toEditValues } from "../src/features/transactions/transactionEditValues";
 import { activeFilterCount, filtersFromParams, filtersToParams, periodRange, reviewLink, reviewQueueParams, toListParams, transactionsLink } from "../src/features/transactions/transactionFilters";
-import { approveFailureMessage, othersUpdatedSentence, saveFailureMessage } from "../src/features/transactions/transactionMessages";
+import { approveFailureMessage, bulkApprovedMessage, othersUpdatedSentence, saveFailureMessage } from "../src/features/transactions/transactionMessages";
 import { NO_FILTERS, UNASSIGNED_PROPERTY } from "../src/constants/transactionFilters";
 import { aProperty, aTransaction } from "../test-support/transactionsServer";
 
@@ -199,5 +203,105 @@ describe("messages", () => {
     expect(othersUpdatedSentence({ retroactive_count: 0 } as never, "Acme")).toBe("");
     expect(othersUpdatedSentence({ retroactive_count: 1 } as never, "Acme")).toBe(" I also updated 1 other Acme transaction.");
     expect(othersUpdatedSentence({ retroactive_count: 3 } as never, null)).toBe(" I also updated 3 other transactions.");
+  });
+});
+
+describe("a custom date range", () => {
+  const custom = { ...NO_FILTERS, period: "custom" as const, startDate: "2026-02-10", endDate: "2026-03-05" };
+
+  it("asks the server for exactly those two days", () => {
+    expect(toListParams(custom, new Date(2026, 5, 1))).toEqual({ start_date: "2026-02-10", end_date: "2026-03-05" });
+  });
+
+  it("goes into the address and comes back out", () => {
+    const params = filtersToParams(custom);
+    expect(params).toMatchObject({ period: "custom", from: "2026-02-10", to: "2026-03-05" });
+    expect(filtersFromParams(params)).toEqual(custom);
+    expect(transactionsLink(custom)).toContain("from=2026-02-10");
+  });
+
+  it("leaves the days out of the address for any other period", () => {
+    expect(filtersToParams({ ...NO_FILTERS, period: "thisYear", startDate: "2026-02-10", endDate: "2026-03-05" })).toMatchObject({ from: "", to: "" });
+  });
+
+  it.each([
+    ["a missing end", { period: "custom", from: "2026-02-10" }],
+    ["a bad day", { period: "custom", from: "2026-02-31x", to: "2026-03-05" }],
+    ["an end before the start", { period: "custom", from: "2026-03-05", to: "2026-02-10" }],
+    ["days without the period", { from: "2026-02-10", to: "2026-03-05" }],
+  ])("falls back to all time for %s", (_name, params) => {
+    expect(filtersFromParams(params)).toMatchObject({ period: "all", startDate: null, endDate: null });
+  });
+
+  it("counts as one filter, and a month link still wins", () => {
+    expect(activeFilterCount(custom)).toBe(1);
+    expect(toListParams({ ...custom, month: "2026-04" }, new Date(2026, 5, 1))).toEqual({ start_date: "2026-04-01", end_date: "2026-04-30" });
+  });
+
+  it("is ignored while looking at what's waiting for review", () => {
+    expect(toListParams({ ...custom, view: "review" }, new Date(2026, 5, 1))).toEqual({ to_review: true });
+  });
+});
+
+describe("tax years", () => {
+  it("only asks when the date's year isn't the one it's filed under", () => {
+    expect(otherTaxYear("2026-12-31", aTransaction())).toBeNull();
+    expect(otherTaxYear("2027-01-01", aTransaction())).toBe(2027);
+    expect(otherTaxYear("2026-01-02", aTransaction({ tax_year: 2025 }))).toBe(2026);
+  });
+
+  it("reads the year from the date without time zones", () => {
+    expect(taxYearOf("2025-12-31")).toBe(2025);
+  });
+});
+
+describe("adding by hand", () => {
+  it("opens on today as an expense", () => {
+    expect(blankCreateValues(new Date(2026, 6, 4))).toMatchObject({ date: "2026-07-04", type: "expense", category: "maintenance", propertyId: null, taxRelevant: false });
+  });
+
+  it("sends what the website sends", () => {
+    const values = { ...blankCreateValues(new Date(2026, 6, 4)), amount: " 12.50 ", vendor: " Acme ", channel: "airbnb" };
+    expect(createPayload(values)).toEqual({
+      transaction_date: "2026-07-04",
+      tax_year: 2026,
+      vendor: "Acme",
+      description: null,
+      amount: "12.50",
+      transaction_type: "expense",
+      category: "maintenance",
+      property_id: null,
+      tax_relevant: false,
+      channel: "airbnb",
+      payment_method: null,
+      is_manual: true,
+    });
+  });
+
+  it("wants an amount above zero in dollars and cents", () => {
+    const blank = blankCreateValues(new Date());
+    expect(createAmountError(blank)).toBe("Enter an amount above $0.");
+    expect(createAmountError({ ...blank, amount: "1.234" })).toBe("Use dollars and cents, like 84.20.");
+    expect(createAmountError({ ...blank, amount: "84.20" })).toBeUndefined();
+  });
+
+  it("names the choice, and None for nothing", () => {
+    expect(choiceLabel(CHANNEL_OPTIONS, "booking.com")).toBe("Booking.Com");
+    expect(choiceLabel(CHANNEL_OPTIONS, "")).toBe("None");
+  });
+});
+
+describe("bulk approve", () => {
+  it("follows the website: waiting for review, and a property", () => {
+    expect(isBulkApprovable(aTransaction({ status: "pending" }))).toBe(true);
+    expect(isBulkApprovable(aTransaction({ status: "unverified" }))).toBe(true);
+    expect(isBulkApprovable(aTransaction({ status: "pending", property_id: null }))).toBe(false);
+    expect(isBulkApprovable(aTransaction({ status: "approved" }))).toBe(false);
+    expect(isBulkApprovable(aTransaction({ status: "duplicate" }))).toBe(false);
+  });
+
+  it("words the result like the website", () => {
+    expect(bulkApprovedMessage(3, 0)).toBe("3 approved");
+    expect(bulkApprovedMessage(2, 1)).toBe("2 approved, 1 skipped");
   });
 });

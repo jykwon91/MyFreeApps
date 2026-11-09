@@ -4,6 +4,8 @@ import type { TransactionPeriod } from "../types/TransactionPeriod";
 import type { TransactionView } from "../types/TransactionView";
 
 export const UNASSIGNED_PROPERTY = "unassigned";
+/** A day as the API writes it, "YYYY-MM-DD". */
+export const DAY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 export const SEARCH_DEBOUNCE_MS = 300;
 /** A month as the API writes it, "YYYY-MM". */
 export const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -12,6 +14,8 @@ export const NO_FILTERS: TransactionFilters = {
   view: "all",
   period: "all",
   month: null,
+  startDate: null,
+  endDate: null,
   type: null,
   propertyId: null,
   category: null,

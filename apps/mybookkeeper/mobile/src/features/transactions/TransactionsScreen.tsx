@@ -3,7 +3,7 @@ import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/properties
 import { useListTransactionPagesInfiniteQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { Banner, EmptyState, LoadingButton, SearchField, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { NO_FILTERS, TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
@@ -11,10 +11,14 @@ import type { TransactionFilters } from "../../types/TransactionFilters";
 import { monthName } from "../../lib/localDate";
 import { useToday } from "../../lib/useToday";
 import { useCanWrite } from "../workspace/useCanWrite";
-import { categoryLabel, propertyLabel } from "./transactionDisplay";
+import { categoryLabel, customRangeLabel, propertyLabel } from "./transactionDisplay";
+import BulkApproveBar from "./BulkApproveBar";
+import { isBulkApprovable } from "./bulkApprovable";
 import TransactionFilterSheet from "./TransactionFilterSheet";
 import { activeFilterCount, reviewLink, toListParams } from "./transactionFilters";
 import TransactionRow from "./TransactionRow";
+import { useBulkApprove } from "./useBulkApprove";
+import { useTransactionSelection } from "./useTransactionSelection";
 import { useVendorSearch } from "./useVendorSearch";
 import TransactionsSkeleton, { TransactionSkeletonRow } from "./TransactionsSkeleton";
 
@@ -33,6 +37,9 @@ export default function TransactionsScreen({
   const { search, changeSearch, clearSearch } = useVendorSearch(filters.vendor, onVendorChange);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [listThatFailedToLoadMore, setListThatFailedToLoadMore] = useState<string | null>(null);
+
+  const selection = useTransactionSelection();
+  const bulk = useBulkApprove();
 
   const params = useMemo(() => toListParams(filters, today), [filters, today]);
   const {
@@ -53,6 +60,10 @@ export default function TransactionsScreen({
     await refetch();
   }, error);
 
+  // Ticks belong to the list they were made in.
+  const { cancel: cancelSelection } = selection;
+  useEffect(() => cancelSelection(), [listKey, cancelSelection]);
+
   const propertyNames = useMemo(() => new Map(properties.map((property) => [property.id, property.name])), [properties]);
   const rows = useMemo(() => currentData?.pages.flat() ?? [], [currentData]);
 
@@ -66,13 +77,22 @@ export default function TransactionsScreen({
       ? null
       : filters.month
         ? monthName(filters.month, "long")
-        : filters.period !== "all"
-          ? TRANSACTION_PERIODS.find((option) => option.value === filters.period)?.label
-          : null,
+        : filters.period === "custom" && filters.startDate && filters.endDate
+          ? customRangeLabel(filters.startDate, filters.endDate)
+          : filters.period !== "all"
+            ? TRANSACTION_PERIODS.find((option) => option.value === filters.period)?.label
+            : null,
     filters.approvedOnly && filters.view !== "review" ? "Approved" : null,
   ]
     .filter(Boolean)
     .join(" · ");
+
+  const selectedRows = useMemo(() => rows.filter((row) => selection.selected?.has(row.id)), [rows, selection.selected]);
+  const approvableIds = selectedRows.filter(isBulkApprovable).map((row) => row.id);
+
+  async function approveSelected(): Promise<void> {
+    if (await bulk.approve(approvableIds)) selection.cancel();
+  }
 
   async function loadMore(): Promise<void> {
     const result = await fetchNextPage();
@@ -140,13 +160,37 @@ export default function TransactionsScreen({
               segments={TRANSACTION_VIEWS}
               value={filters.view}
             />
-            <LoadingButton
-              accessibilityLabel={filterCount > 0 ? `Filters, ${filterCount} on` : "Filters"}
-              onPress={() => setIsFilterSheetOpen(true)}
-              variant="secondary"
-            >
-              {filterCount > 0 ? `Filters (${filterCount})` : "Filters"}
-            </LoadingButton>
+            {canWrite && !selection.isSelecting ? (
+              <LoadingButton accessibilityLabel="Add a transaction by hand" onPress={() => router.push("/transactions/new")}>
+                Add transaction
+              </LoadingButton>
+            ) : null}
+            <View style={{ flexDirection: "row", gap: spacing.sm }}>
+              <LoadingButton
+                accessibilityLabel={filterCount > 0 ? `Filters, ${filterCount} on` : "Filters"}
+                onPress={() => setIsFilterSheetOpen(true)}
+                style={{ flex: 1 }}
+                variant="secondary"
+              >
+                {filterCount > 0 ? `Filters (${filterCount})` : "Filters"}
+              </LoadingButton>
+              {canWrite && rows.length > 0 ? (
+                selection.isSelecting ? (
+                  <LoadingButton
+                    accessibilityLabel="Select all the transactions shown"
+                    onPress={() => selection.selectAll(rows.map((row) => row.id))}
+                    style={{ flex: 1 }}
+                    variant="secondary"
+                  >
+                    Select all
+                  </LoadingButton>
+                ) : (
+                  <LoadingButton accessibilityLabel="Select several transactions" onPress={() => selection.start()} style={{ flex: 1 }} variant="secondary">
+                    Select
+                  </LoadingButton>
+                )
+              ) : null}
+            </View>
             {summary ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
                 <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.sm, color: colors.mutedForeground }}>
@@ -160,6 +204,7 @@ export default function TransactionsScreen({
           </View>
         }
         data={rows}
+        extraData={selection.selected}
         keyExtractor={(transaction) => transaction.id}
         keyboardShouldPersistTaps="handled"
         onEndReached={() => {
@@ -169,13 +214,27 @@ export default function TransactionsScreen({
         refreshControl={refreshControl}
         renderItem={({ item }) => (
           <TransactionRow
-            onPress={() => router.push(filters.view === "review" ? reviewLink(item.id, filters) : `/transactions/${item.id}`)}
+            isSelected={selection.selected ? selection.selected.has(item.id) : undefined}
+            onLongPress={canWrite ? () => selection.start(item.id) : undefined}
+            onPress={() => {
+              if (selection.isSelecting) selection.toggle(item.id);
+              else router.push(filters.view === "review" ? reviewLink(item.id, filters) : `/transactions/${item.id}`);
+            }}
             propertyName={item.property_id ? (propertyNames.get(item.property_id) ?? null) : null}
             transaction={item}
           />
         )}
         testID="transactions-list"
       />
+      {selection.isSelecting ? (
+        <BulkApproveBar
+          approvableCount={approvableIds.length}
+          isApproving={bulk.isApproving}
+          onApprove={approveSelected}
+          onCancel={selection.cancel}
+          selectedCount={selectedRows.length}
+        />
+      ) : null}
       {isFilterSheetOpen ? (
         <TransactionFilterSheet
           filters={filters}

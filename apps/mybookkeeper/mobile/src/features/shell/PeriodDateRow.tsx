@@ -1,5 +1,5 @@
 import { fullDateLabel } from "../../lib/localDate";
-import DatePicker from "../shell/DatePicker";
+import DatePicker from "./DatePicker";
 import PickerField from "../transactions/PickerField";
 
 interface PeriodDateRowProps {

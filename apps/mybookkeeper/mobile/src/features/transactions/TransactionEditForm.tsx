@@ -9,7 +9,10 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text } from "react-n
 import { DEFAULT_CATEGORY, NO_PROPERTY_OPTION } from "../../constants/transactionEdit";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
 import type { TransactionEditValues } from "../../types/TransactionEditValues";
+import PeriodDateRow from "../shell/PeriodDateRow";
 import PickerField from "./PickerField";
+import { confirmTaxYearChange } from "./confirmTaxYearChange";
+import { otherTaxYear } from "./taxYear";
 import { categoryLabel, isReviewable, propertyLabel } from "./transactionDisplay";
 import { amountError, categoryChoices, categoryFitsType, changedFields, selectableProperties, toEditValues } from "./transactionEditValues";
 import { othersUpdatedSentence, saveFailureMessage } from "./transactionMessages";
@@ -26,6 +29,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
   const [savingAction, setSavingAction] = useState<"approve" | "save" | null>(null);
   const [categoryWasReset, setCategoryWasReset] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [isDateOpen, setIsDateOpen] = useState(false);
 
   const changes = changedFields(values, original);
   const isDirty = Object.keys(changes).length > 0;
@@ -64,11 +68,15 @@ export default function TransactionEditForm({ original }: { original: Transactio
       setShowAmountError(true);
       return;
     }
-    const data: Partial<Transaction> = approve ? { ...changes, status: "approved" } : changes;
-    if (Object.keys(data).length === 0) {
+    const approval: Partial<Transaction> = approve ? { ...changes, status: "approved" } : changes;
+    if (Object.keys(approval).length === 0) {
       setIsLeaving(true);
       return;
     }
+    const newTaxYear = changes.transaction_date ? otherTaxYear(changes.transaction_date, original) : null;
+    const choice = newTaxYear === null ? "keep" : await confirmTaxYearChange(original.tax_year, newTaxYear);
+    if (choice === "cancel") return;
+    const data: Partial<Transaction> = choice === "move" && newTaxYear !== null ? { ...approval, tax_year: newTaxYear } : approval;
     setSavingAction(approve ? "approve" : "save");
     try {
       const result = await updateTransaction({ id: original.id, data }).unwrap();
@@ -106,6 +114,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
         keyboardShouldPersistTaps="handled"
       >
         {original.status === "approved" ? <Banner message="This one is approved, so changes show up in your totals right away." /> : null}
+        <PeriodDateRow isOpen={isDateOpen} label="Date" onChange={(date) => update({ date })} onToggle={() => setIsDateOpen((open) => !open)} value={values.date} />
         <FormField label="Vendor" onChangeText={(vendorText) => update({ vendor: vendorText })} value={values.vendor} />
         <FormField
           error={amountProblem}

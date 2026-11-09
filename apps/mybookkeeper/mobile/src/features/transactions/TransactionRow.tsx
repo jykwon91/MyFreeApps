@@ -8,11 +8,18 @@ export default function TransactionRow({
   transaction,
   propertyName,
   onPress,
+  onLongPress,
+  isSelected,
 }: {
   transaction: Transaction;
   propertyName: string | null;
   onPress: () => void;
+  /** Starts picking several, from this one. Not offered to someone who can't change anything. */
+  onLongPress?: () => void;
+  /** Set while picking several: the row then ticks on and off instead of opening. */
+  isSelected?: boolean;
 }) {
+  const isPicking = isSelected !== undefined;
   const { colors, spacing, fontSize } = useTheme();
   const details = [shortDate(transaction.transaction_date), categoryLabel(transaction.category), propertyName]
     .filter(Boolean)
@@ -21,7 +28,10 @@ export default function TransactionRow({
   return (
     <Pressable
       accessibilityLabel={rowAccessibilityLabel(transaction, propertyName)}
-      accessibilityRole="button"
+      accessibilityHint={onLongPress && !isPicking ? "Press and hold to select several" : undefined}
+      accessibilityRole={isPicking ? "checkbox" : "button"}
+      accessibilityState={isPicking ? { checked: isSelected } : undefined}
+      onLongPress={isPicking ? undefined : onLongPress}
       onPress={onPress}
       style={({ pressed }) => ({
         minHeight: MIN_TOUCH_TARGET,
@@ -34,6 +44,11 @@ export default function TransactionRow({
       })}
     >
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
+        {isPicking ? (
+          <Text accessibilityElementsHidden importantForAccessibility="no" style={{ fontSize: fontSize.md, color: isSelected ? colors.primary : colors.mutedForeground }}>
+            {isSelected ? "☑" : "☐"}
+          </Text>
+        ) : null}
         <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
           {transactionName(transaction)}
         </Text>
