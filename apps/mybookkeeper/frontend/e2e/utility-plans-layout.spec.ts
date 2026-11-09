@@ -202,15 +202,16 @@ test.describe("Utility Plans layout", () => {
       const skeletonHeight = (await skeleton.boundingBox())!.height;
       expect(await hasHorizontalOverflow(page), "overflow while loading").toBe(false);
 
-      // The real form replaces it without the dialog jumping. The threshold is
-      // generous — the promise is "no visible jolt", not pixel equality.
+      // The real form replaces it without the dialog jumping. The skeleton
+      // mirrors the form row for row; the slack is the rate hint, one line in
+      // the skeleton and one or two in the form depending on its text.
       const form = page.getByTestId("utility-plan-provider-input");
       await expect(form).toBeVisible({ timeout: 15000 });
       const loadedHeight = (await page
         .getByTestId("edit-utility-plan-dialog")
         .locator("form")
         .boundingBox())!.height;
-      expect(Math.abs(loadedHeight - skeletonHeight)).toBeLessThan(160);
+      expect(Math.abs(loadedHeight - skeletonHeight)).toBeLessThanOrEqual(24);
       expect(await hasHorizontalOverflow(page), "overflow when loaded").toBe(false);
     } finally {
       if (planId) await api.delete(`/utility-plans/${planId}`).catch(() => {});
