@@ -36,7 +36,7 @@ export default function LeaseFileRow({ leaseId, file, isOpening, isDisabled, onO
       ) : (
         <Text style={{ fontSize: fontSize.sm, color: colors.destructive }}>{LEASE_MESSAGES.fileMissing}</Text>
       )}
-      {canWrite ? <LeaseFileActions file={file} isDisabled={isOpening} leaseId={leaseId} /> : null}
+      {canWrite ? <LeaseFileActions file={file} isDisabled={isOpening || isDisabled} leaseId={leaseId} /> : null}
     </View>
   );
 }

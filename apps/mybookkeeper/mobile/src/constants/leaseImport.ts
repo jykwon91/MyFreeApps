@@ -1,3 +1,4 @@
+import { LEASE_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { LeaseImportProblems } from "@mybookkeeper/api-client/types/lease/lease-import-problems";
 
 /** The website lists the first hundred applicants and listings too. */
@@ -35,7 +36,7 @@ export const LEASE_IMPORT_MESSAGES = {
   needTenant: "Choose who signed it.",
   needFiles: "Add at least one file.",
   endsBeforeStarts: "The end date can't be before the start date.",
-  notesTooLong: "Notes can be at most 2000 characters.",
+  notesTooLong: `Notes can be at most ${LEASE_NOTES_MAX_LENGTH} characters.`,
   tooBig: "One of those files is too big. Try a smaller PDF or a lower-resolution photo.",
   badFile: "I can't read one of those files. Use a PDF, Word file, JPEG, PNG or WebP.",
   storageDown: "I can't save files right now. Try again in a bit.",
@@ -55,4 +56,8 @@ export const LEASE_IMPORT_PROBLEM_MESSAGES: { [Key in keyof LeaseImportProblems]
 
 export function leaseImported(count: number): string {
   return `Lease imported with ${count} ${count === 1 ? "file" : "files"}.`;
+}
+
+export function notesLeft(count: number): string {
+  return `${count} ${count === 1 ? "character" : "characters"} left`;
 }

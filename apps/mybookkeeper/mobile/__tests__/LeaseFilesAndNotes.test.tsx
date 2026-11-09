@@ -162,6 +162,21 @@ describe("changing what a file is", () => {
   });
 });
 
+describe("while a file is being opened", () => {
+  it("holds every file's change and remove buttons until it's open", async () => {
+    const server = startLeaseWritesServer({ lease: aLease({ attachments: [aFile(), NOTICE] }) });
+    await renderScreen();
+    await screen.findByRole("button", { name: "Open notice.pdf" });
+    await roleKnown(server);
+    const answer = api.defaults.adapter as (config: unknown) => Promise<unknown>;
+    api.defaults.adapter = ((config: { url?: string }) => (config.url === "/signed-leases/l1" ? new Promise(() => undefined) : answer(config))) as typeof api.defaults.adapter;
+    await fireEvent.press(screen.getByRole("button", { name: "Open notice.pdf" }));
+    for (const name of ["Remove signed.pdf", "Remove notice.pdf", "Change the type of signed.pdf"]) {
+      expect(screen.getByRole("button", { name }).props.accessibilityState?.disabled).toBe(true);
+    }
+  });
+});
+
 describe("removing a file", () => {
   it("asks first, then deletes it and takes it off the page", async () => {
     const server = startLeaseWritesServer({ lease: aLease({ attachments: [aFile(), NOTICE] }) });
@@ -260,11 +275,18 @@ describe("the lease's notes", () => {
     expect(await screen.findByText("No notes yet.")).toBeTruthy();
   });
 
-  it("stops typing at what the server accepts", async () => {
-    startLeaseWritesServer();
+  it("loads and saves notes longer than 2000 characters whole, since the server has no limit on them", async () => {
+    const long = `${"a".repeat(2400)}END`;
+    const server = startLeaseWritesServer({ lease: aLease({ notes: long }) });
     await renderScreen();
-    await fireEvent.press(await screen.findByRole("button", { name: "Add notes" }));
-    expect(screen.getByLabelText("Anything to remember about this lease").props.maxLength).toBe(2000);
+    await fireEvent.press(await screen.findByRole("button", { name: "Edit notes" }));
+    const field = screen.getByLabelText("Anything to remember about this lease");
+    expect(field.props.maxLength).toBeUndefined();
+    expect(field.props.value).toBe(long);
+    await fireEvent.changeText(field, `${long} and more`);
+    await fireEvent.press(screen.getByRole("button", { name: "Save notes" }));
+    await screen.findByText("Notes saved.");
+    expect(JSON.parse(String(lastRequest(server, "patch", "/signed-leases/l1")?.data))).toEqual({ notes: `${long} and more` });
   });
 
   it("shows it's working and sends one save however many times it's tapped", async () => {

@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { PLACEHOLDER_PROBLEM_MESSAGES } from "../../constants/placeholderProblems";
 import { draftMade, leaseFor, NEW_LEASE_MESSAGES as MESSAGES, PROVENANCE_CAPTIONS, usedIn } from "../../constants/newLease";
 import { useConfirmLeave } from "../../lib/useConfirmLeave";
 import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
@@ -121,8 +122,8 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
   }
 
   function fieldProblem(field: MergedPlaceholder): string | undefined {
-    if (missing.includes(field)) return MESSAGES.required;
-    return unreadable.includes(field) ? MESSAGES.notANumber : undefined;
+    if (missing.includes(field)) return PLACEHOLDER_PROBLEM_MESSAGES.required;
+    return unreadable.includes(field) ? PLACEHOLDER_PROBLEM_MESSAGES.not_a_number : undefined;
   }
 
   function captionFor(field: MergedPlaceholder): string | null {

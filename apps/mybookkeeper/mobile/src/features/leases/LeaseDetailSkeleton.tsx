@@ -17,6 +17,17 @@ export default function LeaseDetailSkeleton() {
         <Skeleton height={20} width="85%" />
         <Skeleton height={14} width="35%" />
       </View>
+      <Skeleton height={44} width="100%" />
+      <View style={{ gap: spacing.sm }}>
+        <Skeleton height={16} width="20%" />
+        <Skeleton height={20} width="30%" />
+        <Skeleton height={44} width="100%" />
+      </View>
+      <View style={{ gap: spacing.sm }}>
+        <Skeleton height={16} width="20%" />
+        <Skeleton height={20} width="75%" />
+        <Skeleton height={44} width="100%" />
+      </View>
       {FILES.map((file) => (
         <View key={file} style={{ gap: spacing.sm }}>
           <Skeleton height={20} width="70%" />

@@ -164,6 +164,26 @@ describe("importing a signed lease", () => {
     expect((await screen.findByLabelText(MESSAGES.notes)).props.maxLength).toBe(2000);
   });
 
+  it("locks the dates while importing", async () => {
+    startLeaseWritesServer();
+    await openImport();
+    await chooseApplicant("Dana Reed");
+    await addFile("lease.pdf");
+    holdWrites();
+    await importLease();
+    for (const name of ["Choose lease starts", "Choose lease ends"]) {
+      expect(screen.getByRole("button", { name }).props.accessibilityState?.disabled).toBe(true);
+    }
+  });
+
+  it("counts the characters left in the notes", async () => {
+    startLeaseWritesServer();
+    await openImport();
+    expect(await screen.findByText("2000 characters left")).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText(MESSAGES.notes), "x".repeat(1999));
+    expect(screen.getByText("1 character left")).toBeTruthy();
+  });
+
   it("removes a file I chose", async () => {
     startLeaseWritesServer();
     await openImport();

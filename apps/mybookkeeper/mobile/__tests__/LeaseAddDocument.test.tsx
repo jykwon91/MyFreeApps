@@ -10,6 +10,7 @@ import { LEASE_DOCUMENT_MESSAGES as MESSAGES } from "../src/constants/leaseDocum
 import AddDocumentPickScreen from "../src/features/leases/AddDocumentPickScreen";
 import AddDocumentValuesScreen from "../src/features/leases/AddDocumentValuesScreen";
 import { addDocumentDetailsPath, addDocumentPath, templateIdsFromParam } from "../src/features/leases/addDocumentFlow";
+import { PLACEHOLDER_PROBLEM_MESSAGES } from "../src/constants/placeholderProblems";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { makeStore } from "../src/lib/store";
@@ -160,6 +161,17 @@ describe("picking which templates to make documents from", () => {
   });
 });
 
+describe("for someone who can only read", () => {
+  it("shows no form and never asks the server what the documents need", async () => {
+    const server = startLeaseWritesServer({ role: "viewer", prefill: [aPrefillItem("Tenant name")] });
+    await openValues();
+    await roleKnown(server);
+    expect(await screen.findByText(MESSAGES.viewOnly)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: MESSAGES.make })).toBeNull();
+    expect(lastRequest(server, "post", "/template-prefill")).toBeUndefined();
+  });
+});
+
 describe("filling in what the documents need", () => {
   const items = [
     aPrefillItem("Tenant name", { required: true, value: "Dana Reed", provenance: "applicant" }),
@@ -218,8 +230,8 @@ describe("filling in what the documents need", () => {
     await fireEvent.changeText(await screen.findByDisplayValue("Dana Reed"), "   ");
     await fireEvent.changeText(screen.getByLabelText("Rent"), "about 1600");
     await make();
-    expect(screen.getByText(MESSAGES.required)).toBeTruthy();
-    expect(screen.getByText(MESSAGES.notANumber)).toBeTruthy();
+    expect(screen.getByText(PLACEHOLDER_PROBLEM_MESSAGES.required)).toBeTruthy();
+    expect(screen.getByText(PLACEHOLDER_PROBLEM_MESSAGES.not_a_number)).toBeTruthy();
     expect(lastRequest(server, "post", "/templates")).toBeUndefined();
 
     await fireEvent.changeText(screen.getByLabelText("Tenant name, required"), "Dana");
@@ -294,7 +306,22 @@ describe("filling in what the documents need", () => {
     startLeaseWritesServer({ prefill: items });
     holdWrites();
     await openValues();
-    expect(screen.getByLabelText(MESSAGES.loadingFields)).toBeTruthy();
+    expect(await screen.findByLabelText(MESSAGES.loadingFields)).toBeTruthy();
+  });
+
+  it("blocks going back while the documents are being made, even if nothing was edited", async () => {
+    const server = startLeaseWritesServer({ prefill: [aPrefillItem("Tenant name", { value: "Dana" })] });
+    await openValues();
+    await screen.findByDisplayValue("Dana");
+    holdWrites();
+    await make();
+    expect(screen.getByText(MESSAGES.making)).toBeTruthy();
+    await act(async () => {
+      router.back();
+    });
+    expect(screen.queryByText("lease-page-l1")).toBeNull();
+    expect(screen.getByText(MESSAGES.making)).toBeTruthy();
+    expect(server.requests.filter((request) => request.url?.endsWith("/templates") && request.method === "post")).toHaveLength(0);
   });
 
   it("leaves freely when nothing was changed, and asks before throwing away my edits", async () => {

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { documentsMade, LEASE_DOCUMENT_MESSAGES as MESSAGES, prefillCaption } from "../../constants/leaseDocuments";
+import { PLACEHOLDER_PROBLEM_MESSAGES } from "../../constants/placeholderProblems";
 import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { useWrite } from "../../lib/useWrite";
 import type { PlaceholderEdits } from "../../types/PlaceholderEdits";
@@ -35,7 +36,7 @@ export default function AddDocumentForm({ leaseId, templateIds, isRemake, items 
   const problems = prefillProblems(items, documentValues(items, edits));
   const locked = write.isBusy || isLeaving;
 
-  useDiscardPrompt(documentValuesChanged(items, edits) && !isLeaving, write.isBusy);
+  useDiscardPrompt((documentValuesChanged(items, edits) || write.isBusy) && !isLeaving, write.isBusy);
 
   async function make(): Promise<void> {
     setHasTried(true);
@@ -63,7 +64,7 @@ export default function AddDocumentForm({ leaseId, templateIds, isRemake, items 
           return (
             <PlaceholderField
               caption={isEdited || !provenance ? null : prefillCaption(provenance)}
-              error={hasTried && problem ? (problem === "required" ? MESSAGES.required : MESSAGES.notANumber) : undefined}
+              error={hasTried && problem ? (PLACEHOLDER_PROBLEM_MESSAGES[problem]) : undefined}
               inputType={item.input_type}
               isDisabled={locked}
               key={item.key}

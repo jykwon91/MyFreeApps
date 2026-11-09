@@ -4,7 +4,7 @@ import { EMPTY_LEASE_IMPORT_FORM, leaseImportProblems } from "@mybookkeeper/api-
 import { Banner, EmptyState, FormField, LoadingButton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
-import { LEASE_IMPORT_MESSAGES as MESSAGES, LEASE_IMPORT_PROBLEM_MESSAGES } from "../../constants/leaseImport";
+import { LEASE_IMPORT_MESSAGES as MESSAGES, LEASE_IMPORT_PROBLEM_MESSAGES, notesLeft } from "../../constants/leaseImport";
 import { LEASE_FILE_TYPES } from "../../constants/leases";
 import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import OptionalDateField from "../shell/OptionalDateField";
@@ -55,8 +55,8 @@ export default function LeaseImportScreen() {
         {banner ? <Banner message={banner} /> : null}
         <LeaseApplicantField disabled={locked} error={problemFor("applicantId")} onChange={(applicantId) => edit("applicantId", applicantId)} value={values.applicantId} />
         <LeaseListingField disabled={locked} onChange={(listingId) => edit("listingId", listingId)} value={values.listingId} />
-        <OptionalDateField label={MESSAGES.startsOn} onChange={(iso) => edit("startsOn", iso ?? "")} startsAt={new Date()} value={values.startsOn || null} />
-        <OptionalDateField error={problemFor("endsOn")} label={MESSAGES.endsOn} onChange={(iso) => edit("endsOn", iso ?? "")} startsAt={new Date()} value={values.endsOn || null} />
+        <OptionalDateField disabled={locked} label={MESSAGES.startsOn} onChange={(iso) => edit("startsOn", iso ?? "")} startsAt={new Date()} value={values.startsOn || null} />
+        <OptionalDateField disabled={locked} error={problemFor("endsOn")} label={MESSAGES.endsOn} onChange={(iso) => edit("endsOn", iso ?? "")} startsAt={new Date()} value={values.endsOn || null} />
         <FormField
           editable={!locked}
           error={problemFor("notes")}
@@ -68,6 +68,9 @@ export default function LeaseImportScreen() {
           placeholder={MESSAGES.notesPlaceholder}
           value={values.notes}
         />
+        <Text style={{ fontSize: fontSize.xs, color: values.notes.length > LEASE_NOTES_MAX_LENGTH ? colors.destructiveText : colors.mutedForeground, marginTop: -spacing.md }}>
+          {notesLeft(LEASE_NOTES_MAX_LENGTH - values.notes.length)}
+        </Text>
         <Text accessibilityRole="header" style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
           {MESSAGES.files}
         </Text>

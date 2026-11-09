@@ -1,30 +1,15 @@
-import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { EmptyState } from "@platform/mobile";
-import { router } from "expo-router";
 import { LEASE_DOCUMENT_MESSAGES as MESSAGES } from "../../constants/leaseDocuments";
-import NewLeaseDetailsSkeleton from "../newLease/NewLeaseDetailsSkeleton";
-import AddDocumentForm from "./AddDocumentForm";
-import { usePrefillDocuments } from "./usePrefillDocuments";
+import { useCanWrite } from "../workspace/useCanWrite";
+import AddDocumentPrefilled from "./AddDocumentPrefilled";
 
 interface AddDocumentValuesScreenProps {
   leaseId: string;
   templateIds: readonly string[];
 }
 
-/** Asks the server what the chosen documents need, then lets the host fill in the rest. */
+/** The fill-in step. Someone who can only read gets nothing, and the server is never asked what to fill. */
 export default function AddDocumentValuesScreen({ leaseId, templateIds }: AddDocumentValuesScreenProps) {
-  const { currentData: lease } = useGetSignedLeaseByIdQuery(leaseId);
-  // Picking one that is already on the lease makes it again, and the toast says so.
-  const isRemake = lease?.templates.some((template) => templateIds.includes(template.id)) ?? false;
-  const { state, retry } = usePrefillDocuments(leaseId, templateIds);
-
-  if (state.status === "loading") return <NewLeaseDetailsSkeleton label={MESSAGES.loadingFields} />;
-  if (state.status === "failed") {
-    return state.isGone ? (
-      <EmptyState action={{ label: MESSAGES.goBack, onPress: () => router.back() }} body={MESSAGES.goneBody} heading={MESSAGES.goneHeading} />
-    ) : (
-      <EmptyState action={{ label: MESSAGES.tryAgain, onPress: retry }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoadFields} />
-    );
-  }
-  return <AddDocumentForm isRemake={isRemake} items={state.items} leaseId={leaseId} templateIds={templateIds} />;
+  if (!useCanWrite()) return <EmptyState body={MESSAGES.viewOnly} heading={MESSAGES.pickTitle} />;
+  return <AddDocumentPrefilled leaseId={leaseId} templateIds={templateIds} />;
 }

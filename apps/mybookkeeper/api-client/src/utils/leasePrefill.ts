@@ -17,13 +17,6 @@ export function prefillItemsToAsk(items: readonly SignedLeaseTemplatePrefillItem
   return items.filter((item) => item.input_type !== "signature");
 }
 
-/** The labels of required fields still blank, in form order. */
-export function missingPrefillLabels(items: readonly SignedLeaseTemplatePrefillItem[], values: Readonly<Record<string, string>>): string[] {
-  return prefillItemsToAsk(items)
-    .filter((item) => item.required && (values[item.key] ?? "").trim() === "")
-    .map((item) => item.display_label);
-}
-
 /** What is wrong with each field, by key. A blank optional field is fine; a number that can't be read never is. */
 export function prefillProblems(
   items: readonly SignedLeaseTemplatePrefillItem[],

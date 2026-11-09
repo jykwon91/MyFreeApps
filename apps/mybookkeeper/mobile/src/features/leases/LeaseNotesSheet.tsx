@@ -1,5 +1,4 @@
 import { useUpdateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { LEASE_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/leaseLabels";
 import { FormField, FormSheet, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { LEASE_DETAIL_MESSAGES as MESSAGES } from "../../constants/leaseDetails";
@@ -48,7 +47,6 @@ export default function LeaseNotesSheet({ leaseId, notes, onClose }: LeaseNotesS
         editable={!write.isBusy}
         inputStyle={{ minHeight: NOTES_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
         label={MESSAGES.notesLabel}
-        maxLength={LEASE_NOTES_MAX_LENGTH}
         multiline
         onChangeText={setText}
         placeholder={MESSAGES.notesPlaceholder}

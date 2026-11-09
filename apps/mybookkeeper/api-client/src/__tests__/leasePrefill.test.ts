@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SignedLeaseTemplatePrefillItem } from "../types/lease/signed-lease-template-prefill";
-import { missingPrefillLabels, prefillItemsToAsk, prefillProblems, prefillProvenanceLabel, SAVED_ON_LEASE_LABEL } from "../utils/leasePrefill";
+import { prefillItemsToAsk, prefillProblems, prefillProvenanceLabel, SAVED_ON_LEASE_LABEL } from "../utils/leasePrefill";
 
 function anItem(overrides: Partial<SignedLeaseTemplatePrefillItem> = {}): SignedLeaseTemplatePrefillItem {
   return { key: "rent", display_label: "Monthly rent", input_type: "number", required: true, value: "", provenance: null, is_from_existing_values: false, ...overrides };
@@ -26,11 +26,6 @@ describe("what the form asks for", () => {
 
   it("never asks for a signature", () => {
     expect(prefillItemsToAsk(items).map((item) => item.key)).toEqual(["rent", "note"]);
-  });
-
-  it("lists blank required fields by label", () => {
-    expect(missingPrefillLabels(items, { rent: "  ", note: "" })).toEqual(["Monthly rent"]);
-    expect(missingPrefillLabels(items, { rent: "1500" })).toEqual([]);
   });
 
   it("flags a missing required field and a number that can't be read, each on its own field", () => {

@@ -4,6 +4,9 @@ import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { LEASE_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/leaseLabels";
+import type { LeaseImportFormValues } from "@mybookkeeper/api-client/types/lease/lease-import-form-values";
+import { leaseImportProblems } from "@mybookkeeper/api-client/utils/leaseImportForm";
+import { LEASE_IMPORT_PROBLEM_MESSAGES } from "@/shared/lib/lease-labels";
 import { leaseImportForm } from "@/shared/lib/lease-upload-form";
 import { useImportSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 
@@ -35,7 +38,9 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isValid = applicantId.trim() !== "" && files.length > 0;
+  const values: LeaseImportFormValues = { applicantId, listingId, startsOn, endsOn, notes };
+  const problems = leaseImportProblems(values, files.length);
+  const isValid = Object.keys(problems).length === 0;
   const notesRemaining = LEASE_NOTES_MAX_LENGTH - notes.length;
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -54,15 +59,7 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
     if (!isValid) return;
 
     try {
-      const result = await importLease(leaseImportForm({
-        applicant_id: applicantId,
-        listing_id: listingId || undefined,
-        starts_on: startsOn || undefined,
-        ends_on: endsOn || undefined,
-        notes: notes || undefined,
-        status: "signed",
-        files,
-      })).unwrap();
+      const result = await importLease(leaseImportForm(values, files)).unwrap();
 
       const count = result.attachments.length;
       showSuccess(
@@ -183,6 +180,11 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
                   className="w-full px-3 py-2 text-sm border rounded-md min-h-[44px]"
                   data-testid="import-ends-on"
                 />
+                {problems.endsOn ? (
+                  <p role="alert" className="text-xs text-destructive" data-testid="import-ends-on-error">
+                    {LEASE_IMPORT_PROBLEM_MESSAGES[problems.endsOn]}
+                  </p>
+                ) : null}
               </div>
             </div>
 

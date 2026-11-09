@@ -58,8 +58,8 @@ export function leaseCountdown(status: SignedLeaseStatus, endsOn: string | null,
 }
 
 /**
- * Generating the document is website-only, and a draft's values lock once it leaves draft. Marking
- * one generated from the phone would lock it with no document, so a draft offers no moves here.
+ * A draft's values lock once it leaves draft, and its files are made with the lease page's "make
+ * the files" button. Moving a draft by status would lock it with no document, so it offers no moves.
  */
 export function leaseStatusMoves(status: SignedLeaseStatus): readonly SignedLeaseStatus[] {
   if (status === "draft") return [];

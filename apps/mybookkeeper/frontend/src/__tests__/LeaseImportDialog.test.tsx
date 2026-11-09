@@ -197,6 +197,44 @@ describe("LeaseImportDialog", () => {
     });
   });
 
+  it("won't take an end date before the start date, and says why on the field", () => {
+    renderDialog();
+    fireEvent.change(screen.getByTestId("import-applicant-select"), { target: { value: "app-1" } });
+    fireEvent.change(screen.getByTestId("import-file-input"), { target: { files: [makeFile("lease.pdf")] } });
+    fireEvent.change(screen.getByTestId("import-starts-on"), { target: { value: "2026-06-01" } });
+    fireEvent.change(screen.getByTestId("import-ends-on"), { target: { value: "2026-05-01" } });
+
+    expect(screen.getByTestId("import-ends-on-error")).toHaveTextContent("can't be before");
+    expect(screen.getByTestId("import-submit")).toBeDisabled();
+    fireEvent.change(screen.getByTestId("import-ends-on"), { target: { value: "2026-06-02" } });
+    expect(screen.queryByTestId("import-ends-on-error")).toBeNull();
+    expect(screen.getByTestId("import-submit")).not.toBeDisabled();
+  });
+
+  it("sends trimmed notes and the dates", async () => {
+    mockImportMutation.mockImplementation(() => ({
+      unwrap: vi.fn().mockResolvedValue({ id: "lease-1", attachments: [], kind: "imported", status: "signed", templates: [] }),
+    }));
+    renderDialog();
+    fireEvent.change(screen.getByTestId("import-applicant-select"), { target: { value: "app-1" } });
+    fireEvent.change(screen.getByTestId("import-file-input"), { target: { files: [makeFile("lease.pdf")] } });
+    fireEvent.change(screen.getByTestId("import-starts-on"), { target: { value: "2026-06-01" } });
+    fireEvent.change(screen.getByTestId("import-notes"), { target: { value: "  kitchen table " } });
+    fireEvent.submit(screen.getByTestId("lease-import-form"));
+
+    await waitFor(() => expect(mockImportMutation).toHaveBeenCalledOnce());
+    const form = mockImportMutation.mock.calls[0][0] as FormData;
+    expect(form.get("notes")).toBe("kitchen table");
+    expect(form.get("starts_on")).toBe("2026-06-01");
+    expect(form.get("ends_on")).toBeNull();
+  });
+
+  it("keeps the characters-left counter", () => {
+    renderDialog();
+    fireEvent.change(screen.getByTestId("import-notes"), { target: { value: "x".repeat(30) } });
+    expect(screen.getByText("1970")).toBeInTheDocument();
+  });
+
   it("calls onClose when cancel is clicked", () => {
     const onClose = vi.fn();
     renderDialog(onClose);

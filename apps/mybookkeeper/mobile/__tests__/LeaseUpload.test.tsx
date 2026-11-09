@@ -186,7 +186,7 @@ describe("adding a file to a lease", () => {
     expect(formValue(server.uploads[0].data, "kind")).toBe("notice");
   });
 
-  it("works the type out from each file's name when the host leaves it to the app, as the website does", async () => {
+  it("works the type out from each file's name, and makes the first the signed lease when none looks like one, as the website does", async () => {
     const server = startServer([aFile()]);
     await renderScreen();
     await fireEvent.press(await screen.findByRole("button", { name: "Add a file" }));
@@ -198,7 +198,7 @@ describe("adding a file to a lease", () => {
     }
     await fireEvent.press(screen.getByRole("button", ADD));
     await screen.findByText("Added 3 files.");
-    expect(server.uploads.map((upload) => formValue(upload.data, "kind"))).toEqual(["move_in_inspection", "insurance_proof", "signed_addendum"]);
+    expect(server.uploads.map((upload) => formValue(upload.data, "kind"))).toEqual(["signed_lease", "insurance_proof", "signed_addendum"]);
     expect(heldFiles()).toHaveLength(0);
   });
 

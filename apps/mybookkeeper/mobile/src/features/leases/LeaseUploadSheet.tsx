@@ -1,7 +1,7 @@
 import { LEASE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
 import { useUploadSignedLeaseAttachmentMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
-import { inferKindFromFilename } from "@mybookkeeper/api-client/utils/inferAttachmentKind";
+import { inferKindsForFiles } from "@mybookkeeper/api-client/utils/inferAttachmentKind";
 import { Banner, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Modal, ScrollView, Text, View } from "react-native";
@@ -42,13 +42,14 @@ export default function LeaseUploadSheet({ leaseId, initialKind, onClose }: Leas
     isSubmitting.current = true;
     setIsUploading(true);
     setFailure(null);
+    const kinds = kind ? files.map(() => kind) : inferKindsForFiles(files.map((file) => file.name));
     let added = 0;
     let lastName = "";
     try {
-      for (const file of files) {
+      for (const [index, file] of files.entries()) {
         const form = new FormData();
         form.append("file", filePart(file));
-        form.append("kind", kind ?? inferKindFromFilename(file.name));
+        form.append("kind", kinds[index]);
         await upload({ leaseId, form }).unwrap();
         drop(file.uri);
         added += 1;

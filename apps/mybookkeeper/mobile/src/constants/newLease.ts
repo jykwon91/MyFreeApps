@@ -40,8 +40,6 @@ export const NEW_LEASE_MESSAGES = {
   seeEarlier: "See the earlier lease",
   followsEarlier: "I'm making a new lease to follow the earlier one.",
   nothingToFill: "There's nothing for me to fill in. I'll make the draft as is.",
-  required: "I need this one.",
-  notANumber: "That isn't a number I can read. Use digits, like 1500 or 1,500.50.",
   workedOut: "Worked out when the files are made:",
   needMoreAnswers: "I need a few more answers.",
   createDraft: "Create draft lease",

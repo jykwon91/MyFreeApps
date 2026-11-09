@@ -16,6 +16,7 @@ import ApplicantPickerScreen from "../src/features/newLease/ApplicantPickerScree
 import { flowFromParams, nextPath, templatesPath } from "../src/features/newLease/newLeaseFlow";
 import NewLeaseDetailsScreen from "../src/features/newLease/NewLeaseDetailsScreen";
 import TemplatePickerScreen from "../src/features/newLease/TemplatePickerScreen";
+import { PLACEHOLDER_PROBLEM_MESSAGES } from "../src/constants/placeholderProblems";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { makeStore, store } from "../src/lib/store";
@@ -359,7 +360,7 @@ describe("what goes in the lease", () => {
     await openDetails();
     await fireEvent.changeText(await screen.findByDisplayValue("Dana Reed"), "   ");
     await pressCreate();
-    expect(screen.getByText(MESSAGES.required)).toBeTruthy();
+    expect(screen.getByText(PLACEHOLDER_PROBLEM_MESSAGES.required)).toBeTruthy();
     expect(screen.getByText(MESSAGES.needMoreAnswers)).toBeTruthy();
     expect(server.creates).toHaveLength(0);
   });
@@ -368,7 +369,7 @@ describe("what goes in the lease", () => {
     const server = startServer({ fields: [aField("Start", { type: "date", required: true })] });
     await openDetails();
     await pressCreate();
-    expect(screen.getByText(MESSAGES.required)).toBeTruthy();
+    expect(screen.getByText(PLACEHOLDER_PROBLEM_MESSAGES.required)).toBeTruthy();
     expect(server.creates).toHaveLength(0);
   });
 
@@ -377,7 +378,7 @@ describe("what goes in the lease", () => {
     await openDetails();
     await fireEvent.changeText(await screen.findByLabelText("Deposit"), "one thousand");
     await pressCreate();
-    expect(screen.getAllByText(MESSAGES.notANumber)).toHaveLength(1);
+    expect(screen.getAllByText(PLACEHOLDER_PROBLEM_MESSAGES.not_a_number)).toHaveLength(1);
     expect(screen.getByText(MESSAGES.needMoreAnswers)).toBeTruthy();
     expect(server.creates).toHaveLength(0);
 
@@ -485,7 +486,7 @@ it("pulls the fields again when a template changed after they loaded", async () 
   server.fields = [...server.fields, aField("Pets", { required: true })];
   await pressCreate();
   expect(await screen.findByText(MESSAGES.changedSince)).toBeTruthy();
-  expect(await screen.findByText(MESSAGES.required)).toBeTruthy();
+  expect(await screen.findByText(PLACEHOLDER_PROBLEM_MESSAGES.required)).toBeTruthy();
   expect(server.defaultsReads).toHaveLength(2);
 });
 
