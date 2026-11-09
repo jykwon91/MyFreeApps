@@ -48,10 +48,6 @@ class TaxFormField(Base):
             "confidence IS NULL OR confidence IN ('high', 'medium', 'low')",
             name="chk_tff_confidence",
         ),
-        CheckConstraint(
-            "value_numeric IS NOT NULL OR value_text IS NOT NULL OR value_boolean IS NOT NULL",
-            name="chk_tff_has_value",
-        ),
     )
 
     form_instance = relationship("TaxFormInstance", back_populates="fields")

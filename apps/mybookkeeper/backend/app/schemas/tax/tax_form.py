@@ -2,7 +2,15 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from typing import Annotated, Self
+
+from pydantic import BaseModel, StringConstraints, model_validator
+
+OverrideReason = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255),
+]
+
+VALUE_KEYS = frozenset({"value_numeric", "value_text", "value_boolean"})
 
 
 class TaxFormFieldSourceRead(BaseModel):
@@ -56,7 +64,19 @@ class TaxFormInstanceRead(BaseModel):
 
 
 class TaxFormFieldUpdate(BaseModel):
+    """Override a field. A value key that is sent as null clears that column;
+    a key that is not sent leaves the column untouched."""
+
     value_numeric: Decimal | None = None
     value_text: str | None = None
     value_boolean: bool | None = None
-    override_reason: str | None = None
+    override_reason: OverrideReason
+
+    @model_validator(mode="after")
+    def _require_a_value_key(self) -> Self:
+        if not self.model_fields_set & VALUE_KEYS:
+            raise ValueError(
+                "Send at least one of value_numeric, value_text, value_boolean "
+                "(null clears the value)"
+            )
+        return self

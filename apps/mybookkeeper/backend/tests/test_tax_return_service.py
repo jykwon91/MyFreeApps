@@ -238,7 +238,7 @@ class TestOverrideField:
         with patch("app.services.tax.tax_return_service.AsyncSessionLocal", _fake), patch("app.services.tax.tax_return_service.unit_of_work", _fake):
             result = await tax_return_service.override_field(
                 ctx, tr.id, field.id,
-                value_numeric=Decimal("45000.00"),
+                values={"value_numeric": Decimal("45000.00")},
                 override_reason="Manual correction",
             )
 
@@ -292,7 +292,8 @@ class TestOverrideField:
             with pytest.raises(LookupError, match="does not belong"):
                 await tax_return_service.override_field(
                     ctx, tr1.id, field.id,
-                    value_numeric=Decimal("2000.00"),
+                    values={"value_numeric": Decimal("2000.00")},
+                    override_reason="Wrong return",
                 )
 
     @pytest.mark.asyncio
@@ -334,7 +335,7 @@ class TestOverrideField:
         with patch("app.services.tax.tax_return_service.AsyncSessionLocal", _fake), patch("app.services.tax.tax_return_service.unit_of_work", _fake):
             result = await tax_return_service.override_field(
                 ctx, tr.id, field.id,
-                value_boolean=True,
+                values={"value_boolean": True},
                 override_reason="Corrected activity type",
             )
 
@@ -437,3 +438,46 @@ class TestGetFormInstancesPiiMasking:
         assert f["label"] == "Recipient Tin"
         # Value should be masked since recipient_tin is a PII field
         assert f["value"] == "***6789"
+
+
+class TestFieldDeclaredType:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("form_name", "field_id", "expected"),
+        [
+            ("w2", "box_1", "numeric"),
+            ("w2", "box_14", "text"),
+            ("w2", "box_13_retirement", "boolean"),
+            ("schedule_e", "line_3", "text"),
+        ],
+    )
+    async def test_empty_field_reports_declared_type(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+        form_name: str, field_id: str, expected: str,
+    ) -> None:
+        ctx = _make_ctx(test_org, test_user)
+        tr = TaxReturn(id=uuid.uuid4(), organization_id=test_org.id, tax_year=2025)
+        db.add(tr)
+        await db.flush()
+        inst = TaxFormInstance(
+            id=uuid.uuid4(), tax_return_id=tr.id, form_name=form_name,
+            source_type="extracted",
+        )
+        db.add(inst)
+        await db.flush()
+        db.add(TaxFormField(
+            id=uuid.uuid4(), form_instance_id=inst.id, field_id=field_id,
+            field_label=field_id,
+        ))
+        await db.commit()
+
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        with patch("app.services.tax.tax_return_service.AsyncSessionLocal", _fake):
+            result = await tax_return_service.get_form_instances(ctx, tr.id, form_name)
+
+        field = result["instances"][0]["fields"][0]
+        assert field["value"] is None
+        assert field["type"] == expected

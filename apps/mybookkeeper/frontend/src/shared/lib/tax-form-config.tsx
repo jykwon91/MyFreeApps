@@ -16,7 +16,8 @@ export const SOURCE_BADGES: Record<SourceType, { label: string; color: BadgeColo
 };
 
 export const PII_FIELDS = new Set([
-  "recipient_tin", "payer_tin", "ssn", "account_number", "recipient_ssn",
+  "recipient_tin", "payer_tin", "ssn", "social_security_number", "account_number",
+  "recipient_ssn", "payer_ssn", "issuer_ein",
 ]);
 
 export const SSN_REGEX = /\b\d{3}-\d{2}-\d{4}\b/g;

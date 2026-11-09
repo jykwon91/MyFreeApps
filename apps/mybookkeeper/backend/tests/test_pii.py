@@ -1,7 +1,7 @@
 """Tests for PII masking utility."""
 import pytest
 
-from app.core.pii import PII_FIELD_IDS, mask_pii
+from app.core.pii import PII_FIELD_IDS, is_masked_pii, mask_pii
 
 
 class TestMaskPiiKnownFields:
@@ -64,3 +64,17 @@ class TestMaskPiiUnknownFields:
 
     def test_does_not_mask_integer(self) -> None:
         assert mask_pii("line_3", 100) == 100
+
+
+class TestIsMaskedPii:
+    @pytest.mark.parametrize("field_id", sorted(PII_FIELD_IDS))
+    def test_detects_own_mask_output(self, field_id: str) -> None:
+        assert is_masked_pii(field_id, str(mask_pii(field_id, "123456789")))
+        assert is_masked_pii(field_id, str(mask_pii(field_id, "12")))
+
+    def test_real_pii_value_is_not_masked(self) -> None:
+        assert not is_masked_pii("ssn", "123-45-6789")
+        assert not is_masked_pii("recipient_tin", "123456789")
+
+    def test_non_pii_field_is_never_masked(self) -> None:
+        assert not is_masked_pii("box_14", "***1234")

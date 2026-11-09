@@ -59,7 +59,8 @@ export default function FormFieldsTable({ fields, instanceLabel, sourceType, doc
 
   const startEdit = useCallback((field: TaxFormField) => {
     setEditingFieldId(field.id);
-    setEditValue(field.value != null ? String(field.value) : "");
+    // The API returns PII masked ("***1234"); never offer that as the edit value.
+    setEditValue(field.value != null && !PII_FIELDS.has(field.field_id) ? String(field.value) : "");
     setEditReason("");
   }, []);
 
@@ -71,6 +72,7 @@ export default function FormFieldsTable({ fields, instanceLabel, sourceType, doc
 
   const saveEdit = useCallback((field: TaxFormField) => {
     if (!editReason.trim()) return;
+    // A blank text or number is sent as null, which the server treats as an explicit clear.
     let parsedValue: number | string | boolean | null;
     if (field.type === "numeric") {
       parsedValue = editValue === "" ? null : parseFloat(editValue);

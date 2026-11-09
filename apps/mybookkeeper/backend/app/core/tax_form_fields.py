@@ -1,6 +1,7 @@
 """Field definitions for each IRS tax form type.
 
-Each entry maps form_name -> list of (field_id, field_label) pairs.
+Each entry maps form_name -> list of (field_id, field_label) pairs; field types
+are declared below (declared_field_type).
 Used by the extraction service to create TaxFormField rows and by the
 Claude prompt to know which boxes to extract.
 """
@@ -213,3 +214,47 @@ TAX_SOURCE_FORM_TYPES: set[str] = {
     "w2", "1099_int", "1099_div", "1099_b", "1099_k",
     "1099_misc", "1099_nec", "1099_r", "1098", "k1", "1095_a",
 }
+
+FIELD_TYPE_NUMERIC = "numeric"
+FIELD_TYPE_TEXT = "text"
+FIELD_TYPE_BOOLEAN = "boolean"
+
+# Fields of TAX_FORM_FIELD_DEFINITIONS that are not money/count boxes.
+# Every other defined field is numeric.
+_TEXT_FIELD_IDS: dict[str, frozenset[str]] = {
+    "w2": frozenset({
+        "box_12a", "box_12b", "box_12c", "box_12d", "box_14",
+        "box_15_state", "box_20",
+    }),
+    "1099_b": frozenset({"box_1a", "box_1b", "box_1c", "box_2", "box_6"}),
+    "1099_k": frozenset({"box_2", "box_6", "box_7"}),
+    "1099_nec": frozenset({"box_6"}),
+    "1099_misc": frozenset({"box_16"}),
+    "1099_r": frozenset({"box_7", "box_11", "box_15"}),
+    "1098": frozenset({"box_3", "box_8", "box_10", "box_11"}),
+    "k1": frozenset({"box_16", "box_17", "box_18", "box_20", "box_21"}),
+    "1095_a": frozenset({
+        "box_1", "box_2", "box_3", "box_7", "box_8",
+        "box_11a", "box_11b", "box_11c",
+    }),
+}
+_BOOLEAN_FIELD_IDS: dict[str, frozenset[str]] = {
+    "w2": frozenset({"box_13_statutory", "box_13_retirement", "box_13_sick_pay"}),
+    "1099_b": frozenset({"box_5"}),
+    "1099_nec": frozenset({"box_2"}),
+    "1099_misc": frozenset({"box_9"}),
+    "1099_r": frozenset({"box_2b_taxable_not_determined", "box_2b_total_distribution"}),
+    "1098": frozenset({"box_7"}),
+}
+
+
+def declared_field_type(form_name: str, field_id: str) -> str | None:
+    """The type a field is declared as, or None when the form defines no such field
+    (computed forms, free-form extracted keys)."""
+    if field_id not in {fid for fid, _ in TAX_FORM_FIELD_DEFINITIONS.get(form_name, [])}:
+        return None
+    if field_id in _TEXT_FIELD_IDS.get(form_name, frozenset()):
+        return FIELD_TYPE_TEXT
+    if field_id in _BOOLEAN_FIELD_IDS.get(form_name, frozenset()):
+        return FIELD_TYPE_BOOLEAN
+    return FIELD_TYPE_NUMERIC

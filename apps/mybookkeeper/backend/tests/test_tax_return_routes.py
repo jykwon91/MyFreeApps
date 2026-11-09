@@ -304,6 +304,174 @@ class TestOverrideField:
         assert float(data["value_numeric"]) == 45000.0
 
 
+async def _make_field(
+    db: AsyncSession, org: Organization, *, form_name: str, field_id: str, **values: object,
+) -> tuple[TaxReturn, TaxFormField]:
+    tr = TaxReturn(id=uuid.uuid4(), organization_id=org.id, tax_year=2025)
+    db.add(tr)
+    await db.flush()
+    inst = TaxFormInstance(
+        id=uuid.uuid4(), tax_return_id=tr.id, form_name=form_name, source_type="extracted",
+    )
+    db.add(inst)
+    await db.flush()
+    field = TaxFormField(
+        id=uuid.uuid4(), form_instance_id=inst.id, field_id=field_id,
+        field_label=field_id, **values,
+    )
+    db.add(field)
+    await db.commit()
+    return tr, field
+
+
+class TestOverrideFieldContract:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("form_name", "field_id", "column", "initial"),
+        [
+            ("w2", "box_1", "value_numeric", Decimal("100.00")),
+            ("w2", "box_14", "value_text", "note"),
+            ("w2", "box_13_retirement", "value_boolean", True),
+        ],
+    )
+    async def test_explicit_null_clears_each_column_type(
+        self, client: AsyncClient, db: AsyncSession, org: Organization,
+        form_name: str, field_id: str, column: str, initial: object,
+    ) -> None:
+        tr, field = await _make_field(
+            db, org, form_name=form_name, field_id=field_id, **{column: initial},
+        )
+        resp = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{field.id}",
+            json={column: None, "override_reason": "Not on the form"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data[column] is None
+        assert data["is_overridden"] is True
+        await db.commit()
+        await db.refresh(field)
+        assert getattr(field, column) is None
+
+    @pytest.mark.asyncio
+    async def test_unsent_columns_are_left_unchanged(
+        self, client: AsyncClient, db: AsyncSession, org: Organization,
+    ) -> None:
+        tr, field = await _make_field(
+            db, org, form_name="schedule_e", field_id="line_3",
+            value_numeric=Decimal("10.00"), value_text="keep me",
+        )
+        resp = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{field.id}",
+            json={"value_numeric": 20, "override_reason": "Fix"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert float(data["value_numeric"]) == 20.0
+        assert data["value_text"] == "keep me"
+
+    @pytest.mark.asyncio
+    async def test_no_value_key_is_rejected(
+        self, client: AsyncClient, db: AsyncSession, org: Organization,
+    ) -> None:
+        tr, field = await _make_field(
+            db, org, form_name="w2", field_id="box_1", value_numeric=Decimal("1.00"),
+        )
+        resp = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{field.id}", json={"override_reason": "Fix"},
+        )
+        assert resp.status_code == 422
+        await db.refresh(field)
+        assert field.is_overridden is False
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("field_id", ["recipient_tin", "ssn", "account_number", "issuer_ein"])
+    async def test_masked_value_rejected_for_pii_field(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, field_id: str,
+    ) -> None:
+        tr, field = await _make_field(
+            db, org, form_name="1099_int", field_id=field_id, value_text="123456789",
+        )
+        resp = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{field.id}",
+            json={"value_text": "***6789", "override_reason": "Echoed"},
+        )
+        assert resp.status_code == 422
+        assert "masked" in resp.json()["detail"]
+        await db.refresh(field)
+        assert field.value_text == "123456789"
+        assert field.is_overridden is False
+
+    @pytest.mark.asyncio
+    async def test_full_value_accepted_for_pii_field(
+        self, client: AsyncClient, db: AsyncSession, org: Organization,
+    ) -> None:
+        tr, field = await _make_field(
+            db, org, form_name="1099_int", field_id="recipient_tin", value_text="123456789",
+        )
+        resp = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{field.id}",
+            json={"value_text": "987654321", "override_reason": "Typo"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["value_text"] == "987654321"
+
+    @pytest.mark.asyncio
+    async def test_masked_looking_text_allowed_for_non_pii_field(
+        self, client: AsyncClient, db: AsyncSession, org: Organization,
+    ) -> None:
+        tr, field = await _make_field(
+            db, org, form_name="w2", field_id="box_14", value_text="old",
+        )
+        resp = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{field.id}",
+            json={"value_text": "***1234", "override_reason": "Literal note"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["value_text"] == "***1234"
+
+    @pytest.mark.asyncio
+    async def test_wrong_column_for_declared_type_rejected(
+        self, client: AsyncClient, db: AsyncSession, org: Organization,
+    ) -> None:
+        tr, field = await _make_field(db, org, form_name="w2", field_id="box_1")
+        resp = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{field.id}",
+            json={"value_text": "12,000", "override_reason": "Typed"},
+        )
+        assert resp.status_code == 422
+        assert "value_numeric" in resp.json()["detail"]
+        await db.refresh(field)
+        assert field.value_text is None
+        assert field.is_overridden is False
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("reason", ["", "   "])
+    async def test_blank_reason_rejected(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, reason: str,
+    ) -> None:
+        tr, field = await _make_field(
+            db, org, form_name="w2", field_id="box_1", value_numeric=Decimal("1.00"),
+        )
+        resp = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{field.id}",
+            json={"value_numeric": 2, "override_reason": reason},
+        )
+        assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_missing_reason_rejected(
+        self, client: AsyncClient, db: AsyncSession, org: Organization,
+    ) -> None:
+        tr, field = await _make_field(
+            db, org, form_name="w2", field_id="box_1", value_numeric=Decimal("1.00"),
+        )
+        resp = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{field.id}", json={"value_numeric": 2},
+        )
+        assert resp.status_code == 422
+
+
 class TestValidation:
     @pytest.mark.asyncio
     async def test_returns_validation_results(

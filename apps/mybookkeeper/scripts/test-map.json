@@ -1539,7 +1539,8 @@
         "TaxReturnDetail.test.tsx",
         "CompletenessChecklist.test.tsx",
         "ReceivedDocumentsGrouped.test.tsx",
-        "SuggestionCard.test.tsx"
+        "SuggestionCard.test.tsx",
+        "FormFieldsTable.test.tsx"
       ],
       "e2e_specs": [
         "tax.spec.ts",

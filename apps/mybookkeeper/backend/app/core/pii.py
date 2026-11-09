@@ -15,6 +15,14 @@ PII_FIELD_IDS = frozenset({
     "issuer_ein",
 })
 
+# Shape produced by mask_pii for PII_FIELD_IDS: "***" + last 4, or "****".
+_MASKED_PII_PATTERN = re.compile(r"^\*{3}.{4}$|^\*{4}$")
+
+
+def is_masked_pii(field_id: str, value: str) -> bool:
+    """True when value is a masked rendering of a PII field, not a real value."""
+    return field_id in PII_FIELD_IDS and _MASKED_PII_PATTERN.match(value) is not None
+
 
 def mask_pii(field_id: str, value: object) -> object:
     """Mask PII values before sending to the frontend.
