@@ -5,7 +5,7 @@ import Badge from "@/shared/components/ui/Badge";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import type { TaxFormField, FieldValueType, SourceType } from "@/shared/types/tax/tax-form";
-import { VALIDATION_ICONS, SOURCE_BADGES, PII_FIELDS, SSN_REGEX } from "@/shared/lib/tax-form-config";
+import { VALIDATION_ICONS, SOURCE_BADGES, PII_FIELDS, SSN_REGEX, MASK_TOKEN_REGEX } from "@/shared/lib/tax-form-config";
 
 type FieldSourceMode = "calculated" | "overridden" | "sourced";
 
@@ -31,7 +31,8 @@ export interface FormFieldsTableProps {
   instanceLabel: string | null;
   sourceType: SourceType;
   documentId?: string | null;
-  onOverride: (fieldId: string, value: number | string | boolean | null, reason: string, fieldType: FieldValueType) => void;
+  /** Resolves true when the server accepted the override. */
+  onOverride: (fieldId: string, value: number | string | boolean | null, reason: string, fieldType: FieldValueType) => Promise<boolean>;
   isSaving: boolean;
 }
 
@@ -59,7 +60,9 @@ export default function FormFieldsTable({ fields, instanceLabel, sourceType, doc
 
   const startEdit = useCallback((field: TaxFormField) => {
     setEditingFieldId(field.id);
-    setEditValue(field.value != null ? String(field.value) : "");
+    // The API returns PII masked ("***1234"); never offer that as the edit value.
+    const isMasked = PII_FIELDS.has(field.field_id) || MASK_TOKEN_REGEX.test(String(field.value));
+    setEditValue(field.value != null && !isMasked ? String(field.value) : "");
     setEditReason("");
   }, []);
 
@@ -69,17 +72,19 @@ export default function FormFieldsTable({ fields, instanceLabel, sourceType, doc
     setEditReason("");
   }, []);
 
-  const saveEdit = useCallback((field: TaxFormField) => {
+  const saveEdit = useCallback(async (field: TaxFormField) => {
     if (!editReason.trim()) return;
+    // A blank text or number is sent as null, which the server treats as an explicit clear.
     let parsedValue: number | string | boolean | null;
     if (field.type === "numeric") {
       parsedValue = editValue === "" ? null : parseFloat(editValue);
     } else if (field.type === "boolean") {
-      parsedValue = editValue.toLowerCase() === "true" || editValue === "1";
+      parsedValue = editValue.trim() === "" ? null : editValue.toLowerCase() === "true" || editValue === "1";
     } else {
       parsedValue = editValue || null;
     }
-    onOverride(field.id, parsedValue, editReason.trim(), field.type);
+    const saved = await onOverride(field.id, parsedValue, editReason.trim(), field.type);
+    if (!saved) return;
     setEditingFieldId(null);
     setEditValue("");
     setEditReason("");

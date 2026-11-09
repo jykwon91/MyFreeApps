@@ -1,4 +1,18 @@
 """Tax form mapper — normalizes Claude's varied tax form output to internal format."""
+from decimal import Decimal
+from typing import NamedTuple
+
+from app.core.parsers import to_decimal, to_text
+from app.core.pii import PII_FIELD_IDS
+
+
+class FieldValueColumns(NamedTuple):
+    """The three TaxFormField value columns; a field holds one at most."""
+
+    numeric: Decimal | None = None
+    text: str | None = None
+    boolean: bool | None = None
+
 
 FORM_TYPE_MAP: dict[str, str] = {
     "1099-misc": "1099_misc", "1099-nec": "1099_nec", "1099-k": "1099_k",
@@ -55,3 +69,21 @@ def build_tax_form_data(doc_data: dict) -> dict | None:
         "issuer_ein": doc_data.get("payer_ein") or doc_data.get("issuer_ein"),
         "fields": fields,
     }
+
+
+def columns_for_extracted_value(field_id: str, raw: object) -> FieldValueColumns:
+    """Pick the column an extracted value is stored in.
+
+    PII ids are always text (leading zeros survive, no Numeric overflow).
+    A bool is checked before any decimal parse so a ticked checkbox is not 1.
+    """
+    if raw is None:
+        return FieldValueColumns()
+    if field_id in PII_FIELD_IDS:
+        return FieldValueColumns(text=to_text(raw))
+    if isinstance(raw, bool):
+        return FieldValueColumns(boolean=raw)
+    numeric = to_decimal(raw)
+    if numeric is not None:
+        return FieldValueColumns(numeric=numeric)
+    return FieldValueColumns(text=to_text(raw))

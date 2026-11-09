@@ -12,7 +12,7 @@ from app.schemas.tax.discrepancy_scan import DiscrepancyScanResult
 from app.schemas.tax.document_checklist import DocumentChecklist
 from app.schemas.tax.tax_advisor import TaxAdvisorCachedResponse, SuggestionStatusUpdate
 from app.schemas.tax.source_document import SourceDocumentsResponse
-from app.schemas.tax.tax_form import TaxFormFieldRead, TaxFormFieldUpdate
+from app.schemas.tax.tax_form import VALUE_KEYS, TaxFormFieldRead, TaxFormFieldUpdate
 from app.schemas.tax.tax_return import TaxReturnCreate, TaxReturnRead
 from app.schemas.tax.tax_return_responses import (
     FormInstancesResponse,
@@ -29,6 +29,7 @@ from app.services.tax import (
     tax_validation_service,
 )
 from app.services.tax.tax_advisor_service import RateLimitExceeded
+from app.services.tax.tax_return_service import InvalidFieldOverrideError
 
 router = APIRouter(prefix="/tax-returns", tags=["tax-returns"])
 
@@ -152,13 +153,13 @@ async def override_field(
     try:
         return await tax_return_service.override_field(
             ctx, return_id, field_id,
-            value_numeric=body.value_numeric,
-            value_text=body.value_text,
-            value_boolean=body.value_boolean,
+            values=body.model_dump(include=body.model_fields_set & VALUE_KEYS),
             override_reason=body.override_reason,
         )
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except InvalidFieldOverrideError as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 @router.delete("/{return_id}/instances/{instance_id}", status_code=204)

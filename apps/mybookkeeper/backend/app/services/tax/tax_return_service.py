@@ -1,13 +1,25 @@
 """Tax return CRUD and field operations."""
 import logging
 import uuid
+from collections.abc import Mapping
 from decimal import Decimal
-
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.context import RequestContext
-from app.core.pii import mask_pii
+from app.core.pii import (
+    PII_FIELD_IDS,
+    has_mask_token,
+    has_pii_pattern,
+    is_masked_pii,
+    mask_pii,
+)
+from app.core.tax_form_fields import (
+    FIELD_TYPE_BOOLEAN,
+    FIELD_TYPE_NUMERIC,
+    FIELD_TYPE_TEXT,
+    declared_field_type,
+)
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.tax.tax_form_field import TaxFormField
 from app.models.tax.tax_return import TaxReturn
@@ -16,6 +28,7 @@ from app.repositories import (
     tax_form_repo,
     tax_return_repo,
 )
+from app.schemas.tax.tax_form import VALUE_KEYS
 from app.schemas.tax.source_document import (
     ChecklistItem,
     SourceDocumentsResponse,
@@ -24,6 +37,75 @@ from app.schemas.tax.source_document import (
 from app.services.tax import tax_checklist
 
 logger = logging.getLogger(__name__)
+
+class InvalidFieldOverrideError(ValueError):
+    """The override cannot be applied to this field without corrupting it."""
+
+
+def _stored_field_type(field: TaxFormField) -> str | None:
+    if field.value_numeric is not None:
+        return FIELD_TYPE_NUMERIC
+    if field.value_boolean is not None:
+        return FIELD_TYPE_BOOLEAN
+    if field.value_text is not None:
+        return FIELD_TYPE_TEXT
+    return None
+
+
+def _resolve_field_type(form_name: str, field: TaxFormField) -> str:
+    """PII is always text, then the declared hint, then the stored value, then text."""
+    if field.field_id in PII_FIELD_IDS:
+        return FIELD_TYPE_TEXT
+    return (
+        declared_field_type(form_name, field.field_id)
+        or _stored_field_type(field)
+        or FIELD_TYPE_TEXT
+    )
+
+
+def _read_value(field: TaxFormField, field_type: str) -> float | str | bool | None:
+    """The declared type's column first, then any column that is set, so rows
+    saved with the value in the wrong column still show it."""
+    by_type: dict[str, float | str | bool | None] = {
+        FIELD_TYPE_NUMERIC: None if field.value_numeric is None else float(field.value_numeric),
+        FIELD_TYPE_BOOLEAN: field.value_boolean,
+        FIELD_TYPE_TEXT: field.value_text,
+    }
+    if by_type[field_type] is not None:
+        return by_type[field_type]
+    for candidate in by_type.values():
+        if candidate is not None:
+            return candidate
+    return None
+
+
+def _validate_override_values(
+    field: TaxFormField, values: Mapping[str, object],
+) -> None:
+    unknown = set(values) - VALUE_KEYS
+    if unknown:
+        raise InvalidFieldOverrideError(f"Unknown value key: {sorted(unknown)[0]}")
+    if sum(value is not None for value in values.values()) > 1:
+        raise InvalidFieldOverrideError("Send a value in only one column")
+    text = values.get("value_text")
+    if not isinstance(text, str):
+        return
+    if is_masked_pii(field.field_id, text):
+        raise InvalidFieldOverrideError(
+            f"{field.field_id} is a masked value; enter the full value"
+        )
+    if has_mask_token(text) and field.value_text and has_pii_pattern(field.value_text):
+        raise InvalidFieldOverrideError(
+            f"{field.field_id} contains a masked SSN/TIN; enter the full value"
+        )
+
+
+def _override_target(values: Mapping[str, object]) -> tuple[str | None, object]:
+    """The column to hold the new value, or None to clear the field."""
+    for key, value in values.items():
+        if value is not None:
+            return key, value
+    return None, None
 
 
 async def list_returns(ctx: RequestContext) -> list[TaxReturn]:
@@ -104,13 +186,8 @@ async def get_form_instances(
         for inst in instances:
             fields = []
             for f in inst.fields:
-                value = f.value_numeric if f.value_numeric is not None else f.value_text
-                if value is None:
-                    value = f.value_boolean
-                field_type = "numeric" if f.value_numeric is not None else (
-                    "boolean" if f.value_boolean is not None else "text"
-                )
-                resolved_value = float(f.value_numeric) if f.value_numeric is not None else value
+                field_type = _resolve_field_type(form_name, f)
+                resolved_value = _read_value(f, field_type)
                 label = (
                     f.field_label
                     if f.field_label != f.field_id
@@ -150,12 +227,14 @@ async def override_field(
     return_id: uuid.UUID,
     field_id: uuid.UUID,
     *,
-    value_numeric: Decimal | None = None,
-    value_text: str | None = None,
-    value_boolean: bool | None = None,
-    override_reason: str | None = None,
+    values: Mapping[str, Decimal | str | bool | None],
+    override_reason: str,
 ) -> TaxFormField:
-    """Manual override of a computed field value."""
+    """Manual override of a computed field value.
+
+    `values` holds only the value keys the client sent. A key present with
+    None clears that column; a key absent leaves it unchanged.
+    """
     async with unit_of_work() as db:
         tax_return = await tax_return_repo.get_by_id(
             db, return_id, ctx.organization_id,
@@ -169,17 +248,12 @@ async def override_field(
         if field.form_instance.tax_return_id != return_id:
             raise LookupError("Field does not belong to this tax return")
 
-        if value_numeric is not None:
-            field.value_numeric = value_numeric
-        if value_text is not None:
-            field.value_text = value_text
-        if value_boolean is not None:
-            field.value_boolean = value_boolean
-        field.is_overridden = True
-        if override_reason:
-            field.override_reason = override_reason
-
-        return field
+        _validate_override_values(field, values)
+        column, value = _override_target(values)
+        return await tax_form_repo.apply_override(
+            db, field, column=column, value=value,
+            reason=override_reason, user_id=ctx.user_id,
+        )
 
 
 # Mapping of form type -> the field_id that represents the "key amount"

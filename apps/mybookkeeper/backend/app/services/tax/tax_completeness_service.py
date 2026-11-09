@@ -99,7 +99,7 @@ def _generate_highlights(
     elif form_name == "w2":
         if "box_1" in with_amount:
             highlights.append(f"Wages reported from {instance_label or 'this W-2'}.")
-        if "box_12a" in without_amount and "box_12b" in without_amount:
+        if "box_12a_code" in without_amount and "box_12b_code" in without_amount:
             highlights.append("No Box 12 codes found — check for retirement contributions.")
 
     elif form_name == "1098":

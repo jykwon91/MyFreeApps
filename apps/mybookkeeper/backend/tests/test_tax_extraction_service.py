@@ -411,3 +411,68 @@ class TestProcessTaxDocument:
         assert len(fields) == 1
         assert fields[0].field_id == "custom_field"
         assert fields[0].field_label == "custom_field"
+
+
+async def _extract(
+    db: AsyncSession, org: Organization, form: str, fields: dict[str, object],
+) -> dict:
+    instance = await process_tax_document(
+        db,
+        organization_id=org.id,
+        document_id=uuid.uuid4(),
+        extraction_id=uuid.uuid4(),
+        document_type=form,
+        tax_form_data={"issuer_name": "Payer", "tax_year": 2025, "fields": fields},
+    )
+    return {f.field_id: f for f in await tax_form_repo.get_fields(db, instance.id)}
+
+
+class TestExtractionColumnChoice:
+    @pytest.mark.asyncio
+    async def test_checkbox_is_stored_as_bool_not_one(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        fields = await _extract(
+            db, test_org, "w2", {"box_13_retirement": True, "box_13_sick_pay": False},
+        )
+        assert fields["box_13_retirement"].value_boolean is True
+        assert fields["box_13_retirement"].value_numeric is None
+        assert fields["box_13_sick_pay"].value_boolean is False
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "field_id",
+        ["recipient_tin", "employee_ssn", "employer_ein", "lender_tin", "issuer_tin", "account_number"],
+    )
+    async def test_pii_is_text_with_leading_zero(
+        self, db: AsyncSession, test_user: User, test_org: Organization, field_id: str,
+    ) -> None:
+        fields = await _extract(db, test_org, "1099_int", {field_id: "012345678"})
+        assert fields[field_id].value_text == "012345678"
+        assert fields[field_id].value_numeric is None
+
+    @pytest.mark.asyncio
+    async def test_numeric_pii_is_stored_as_text(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        fields = await _extract(db, test_org, "1099_int", {"recipient_tin": 123456789})
+        assert fields["recipient_tin"].value_text == "123456789"
+        assert fields["recipient_tin"].value_numeric is None
+
+    @pytest.mark.asyncio
+    async def test_structured_value_is_stored_as_json(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        fields = await _extract(db, test_org, "w2", {"box_14": {"a": 1}})
+        assert fields["box_14"].value_text == '{"a": 1}'
+
+    @pytest.mark.asyncio
+    async def test_other_values_keep_inference(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        fields = await _extract(
+            db, test_org, "1099_r", {"box_1": "1500.50", "box_7": "7", "box_8": "note"},
+        )
+        assert fields["box_1"].value_numeric == Decimal("1500.50")
+        assert fields["box_7"].value_numeric == Decimal("7")
+        assert fields["box_8"].value_text == "note"

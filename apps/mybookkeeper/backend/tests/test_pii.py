@@ -1,7 +1,10 @@
 """Tests for PII masking utility."""
 import pytest
 
-from app.core.pii import PII_FIELD_IDS, mask_pii
+import re
+from pathlib import Path
+
+from app.core.pii import PII_FIELD_IDS, has_mask_token, has_pii_pattern, is_masked_pii, mask_pii
 
 
 class TestMaskPiiKnownFields:
@@ -64,3 +67,45 @@ class TestMaskPiiUnknownFields:
 
     def test_does_not_mask_integer(self) -> None:
         assert mask_pii("line_3", 100) == 100
+
+
+class TestIsMaskedPii:
+    @pytest.mark.parametrize("field_id", sorted(PII_FIELD_IDS))
+    def test_detects_own_mask_output(self, field_id: str) -> None:
+        assert is_masked_pii(field_id, str(mask_pii(field_id, "123456789")))
+        assert is_masked_pii(field_id, str(mask_pii(field_id, "12")))
+
+    def test_real_pii_value_is_not_masked(self) -> None:
+        assert not is_masked_pii("ssn", "123-45-6789")
+        assert not is_masked_pii("recipient_tin", "123456789")
+
+    def test_non_pii_field_is_never_masked(self) -> None:
+        assert not is_masked_pii("box_14", "***1234")
+
+
+class TestMaskTokens:
+    def test_detects_tokens_mask_pii_writes_in_free_text(self) -> None:
+        masked = str(mask_pii("box_14", "SSN 123-45-6789 and TIN 123456789"))
+        assert has_mask_token(masked)
+
+    def test_plain_text_has_no_mask_token(self) -> None:
+        assert not has_mask_token("Spouse SSN 123-45-6789")
+        assert not has_mask_token("12 *** 34")
+
+    def test_has_pii_pattern(self) -> None:
+        assert has_pii_pattern("SSN 123-45-6789")
+        assert has_pii_pattern("TIN 123456789")
+        assert not has_pii_pattern("TX")
+
+
+_WEB_CONFIG = (
+    Path(__file__).resolve().parents[2]
+    / "frontend" / "src" / "shared" / "lib" / "tax-form-config.tsx"
+)
+
+
+def test_web_pii_fields_match_backend() -> None:
+    source = _WEB_CONFIG.read_text()
+    block = re.search(r"PII_FIELDS\s*=\s*new Set\(\[(.*?)\]\)", source, re.S)
+    assert block is not None
+    assert set(re.findall(r'"([a-z_]+)"', block.group(1))) == set(PII_FIELD_IDS)

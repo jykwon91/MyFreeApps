@@ -15,8 +15,14 @@ export const SOURCE_BADGES: Record<SourceType, { label: string; color: BadgeColo
   manual: { label: "Manual", color: "orange" },
 };
 
+// Must equal PII_FIELD_IDS in backend/app/core/pii.py (enforced by test_pii.py).
 export const PII_FIELDS = new Set([
-  "recipient_tin", "payer_tin", "ssn", "account_number", "recipient_ssn",
+  "recipient_tin", "payer_tin", "ssn", "social_security_number", "account_number",
+  "recipient_ssn", "payer_ssn", "issuer_ein", "employee_ssn", "employer_ein",
+  "payer_ein", "lender_tin", "borrower_tin", "issuer_tin",
 ]);
 
 export const SSN_REGEX = /\b\d{3}-\d{2}-\d{4}\b/g;
+
+// Tokens the backend writes when it masks an SSN/TIN ("***-**-1234", "*****1234", "***1234").
+export const MASK_TOKEN_REGEX = /\*{3,}/;
