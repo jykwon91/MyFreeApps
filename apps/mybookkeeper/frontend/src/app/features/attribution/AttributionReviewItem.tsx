@@ -4,10 +4,10 @@ import { LoadingButton, showError, showSuccess } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
 import type { AttributionReviewItem as ReviewItemType } from "@mybookkeeper/api-client/types/attribution/attribution-review-item";
 import {
+  useAttributeTransactionManuallyMutation,
   useConfirmAttributionReviewMutation,
   useRejectAttributionReviewMutation,
 } from "@mybookkeeper/api-client/store/attributionApi";
-import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";

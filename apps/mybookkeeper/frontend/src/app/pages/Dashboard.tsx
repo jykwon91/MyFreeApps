@@ -27,18 +27,10 @@ import Card from "@/shared/components/ui/Card";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import PropertyPnLGrid from "@/app/features/attribution/PropertyPnLGrid";
 import PnLDateRangeSelector from "@/app/features/attribution/PnLDateRangeSelector";
+import { propertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
 import UtilityPlanRenewalAlertCard from "@/app/features/utility/UtilityPlanRenewalAlertCard";
 import UtilityPlanComparisonCard from "@/app/features/utility/UtilityPlanComparisonCard";
 import InsurancePremiumComparisonCard from "@/app/features/insurance/InsurancePremiumComparisonCard";
-
-function getThisMonthRange(): { since: string; until: string } {
-  const now = new Date();
-  const since = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString()
-    .slice(0, 10);
-  const until = now.toISOString().slice(0, 10);
-  return { since, until };
-}
 
 function yearToDateRange(year: number): DateRange {
   return {
@@ -52,7 +44,7 @@ export default function Dashboard() {
   const [manualDateRange, setManualDateRange] = useState<DateRange | undefined>();
   const [drillDown, setDrillDown] = useState<DrillDownFilter | null>(null);
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
-  const [pnlDateRange, setPnlDateRange] = useState(getThisMonthRange);
+  const [pnlDateRange, setPnlDateRange] = useState(() => propertyPnlRange("this_month", new Date()));
 
   const [selectedYear, setSelectedYear] = useSelectedYear();
 

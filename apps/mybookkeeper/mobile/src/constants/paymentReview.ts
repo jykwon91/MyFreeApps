@@ -1,5 +1,4 @@
 export const PAYMENT_REVIEW_SKELETON_ROWS = ["a", "b", "c"];
-export const TENANT_PICKER_LIMIT = 100;
 
 /** What the server says, word for word. `test_payment_review_details_match_phone.py` keeps these true. */
 export const PAYMENT_REVIEW_SERVER_DETAILS = {
@@ -18,7 +17,6 @@ export const PAYMENT_REVIEW_MESSAGES = {
   noneBody: "When I can't match a payment to a tenant or property, it shows up here.",
   viewOnly: "You have view-only access, so you can look but not change these.",
   someone: "Someone",
-  thisTenant: "this tenant",
   thisProperty: "this property",
   noTenantGuess: "I couldn't match this to a tenant.",
   noPropertyGuess: "I couldn't tell which property this payout is for.",
@@ -34,11 +32,6 @@ export const PAYMENT_REVIEW_MESSAGES = {
   skipBody: "I'll stop asking about it. It stays in your transactions.",
   skipped: "Skipped. The payment is still in your transactions.",
   link: "Link",
-  tenantSheetTitle: "Who sent this?",
-  tenantsLoading: "I'm loading your tenants.",
-  tenantsFailed: "I couldn't load your tenants. Close this and try again.",
-  noTenants: "You don't have any tenants with a signed lease yet. Add one on the website, then come back.",
-  moreTenants: "I'm showing the first 100. The rest are on the website.",
   propertySheetTitle: "Which property is this for?",
   propertiesLoading: "I'm loading your properties.",
   propertiesFailed: "I couldn't load your properties. Close this and try again.",

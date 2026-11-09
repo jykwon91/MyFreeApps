@@ -1,4 +1,6 @@
 import { RECONCILIATION_COMPARE_MESSAGES as MESSAGES } from "../constants/reconciliationCompare";
+import { httpStatus } from "./httpStatus";
+import type { DiscrepancyTone } from "../types/reconciliation/discrepancy-tone";
 import type { AutoReconcileResult } from "../types/reconciliation/auto-reconcile-result";
 import type { ReconciliationSource } from "../types/reconciliation/reconciliation-source";
 
@@ -16,8 +18,7 @@ export function compareResultMessage(result: AutoReconcileResult): string {
 }
 
 export function compareFailureMessage(error: unknown): string {
-  const status = typeof error === "object" && error !== null && "status" in error ? error.status : undefined;
-  switch (status) {
+  switch (httpStatus(error)) {
     case undefined:
       return MESSAGES.compareUnreachable;
     case 403:
@@ -25,4 +26,16 @@ export function compareFailureMessage(error: unknown): string {
     default:
       return MESSAGES.compareFailed;
   }
+}
+
+/** What a comparison tells the person, and whether it found any income to compare. */
+export function compareOutcome(taxYear: number, result: AutoReconcileResult): { message: string; variant: "success" | "error" } {
+  const foundIncome = result.auto_matched + result.discrepancies > 0;
+  return { message: `${taxYear}: ${compareResultMessage(result)}`, variant: foundIncome ? "success" : "error" };
+}
+
+/** A form that hasn't been compared has no gap to show, and one that has is clear only at exactly zero. */
+export function discrepancyTone(source: ReconciliationSource): DiscrepancyTone {
+  if (!hasBeenCompared(source)) return "notCompared";
+  return parseFloat(source.discrepancy) === 0 ? "clear" : "differs";
 }

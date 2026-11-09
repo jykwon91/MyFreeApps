@@ -12,6 +12,7 @@ import { Alert } from "react-native";
 import { Provider } from "react-redux";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES, PAYMENT_REVIEW_SERVER_DETAILS as DETAILS } from "../src/constants/paymentReview";
+import { TENANT_PICKER_MESSAGES } from "../src/constants/tenantPicker";
 import { confirmActionLabel, isPayout, moreWaitingLine, pickActionLabel, proposedTarget, queueCountLine, rowLabel, skipActionLabel } from "../src/features/paymentReview/paymentReviewDisplay";
 import { reviewFailureMessage, wasAlreadyHandled } from "../src/features/paymentReview/paymentReviewFailure";
 import PaymentReviewScreen from "../src/features/paymentReview/PaymentReviewScreen";
@@ -400,7 +401,7 @@ describe("picking someone else", () => {
 
     await fireEvent.press(screen.getByText(MESSAGES.someoneElse));
     await settle();
-    expect(screen.getByText(MESSAGES.tenantSheetTitle)).toBeTruthy();
+    expect(screen.getByText(TENANT_PICKER_MESSAGES.title)).toBeTruthy();
     expect(screen.getByText("$1,200.00 from Jane S. on Mar 3.")).toBeTruthy();
     expect(screen.getByText("Past Person (ended)")).toBeTruthy();
 
@@ -453,8 +454,8 @@ describe("picking someone else", () => {
     await fireEvent.press(screen.getByText(MESSAGES.someoneElse));
     await settle();
 
-    expect(screen.getByText(MESSAGES.tenantsFailed)).toBeTruthy();
-    expect(screen.queryByText(MESSAGES.noTenants)).toBeNull();
+    expect(screen.getByText(TENANT_PICKER_MESSAGES.failed)).toBeTruthy();
+    expect(screen.queryByText(TENANT_PICKER_MESSAGES.none)).toBeNull();
   });
 
   it("books a picked property without asking, and leaves out inactive ones", async () => {
@@ -559,7 +560,7 @@ describe("display helpers", () => {
   });
 
   it("names an unnamed tenant plainly", () => {
-    expect(proposedTarget(aRow({ proposed_applicant: { id: "a1", legal_name: null } }))?.name).toBe(MESSAGES.thisTenant);
+    expect(proposedTarget(aRow({ proposed_applicant: { id: "a1", legal_name: null } }))?.name).toBe(TENANT_PICKER_MESSAGES.thisTenant);
   });
 
   it("reads the whole payment to a screen reader", () => {

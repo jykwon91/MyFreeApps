@@ -1,65 +1,28 @@
 import { useState } from "react";
 import { Calendar } from "lucide-react";
 import { Button } from "@platform/ui";
-
-type Preset = "this_month" | "this_quarter" | "ytd" | "custom";
-
-interface DateRange {
-  since: string;
-  until: string;
-}
+import { PROPERTY_PNL_PRESETS } from "@mybookkeeper/api-client/constants/propertyPnl";
+import type { PropertyPnLPreset } from "@mybookkeeper/api-client/types/attribution/property-pnl-preset";
+import type { PropertyPnLRange } from "@mybookkeeper/api-client/types/attribution/property-pnl-range";
+import { isValidPropertyPnlRange, propertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
 
 export interface PnLDateRangeSelectorProps {
-  value: DateRange;
-  onChange: (range: DateRange) => void;
+  value: PropertyPnLRange;
+  onChange: (range: PropertyPnLRange) => void;
 }
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function startOf(preset: Exclude<Preset, "custom">): DateRange {
-  const now = new Date();
-  const until = today();
-
-  if (preset === "this_month") {
-    const since = new Date(now.getFullYear(), now.getMonth(), 1)
-      .toISOString()
-      .slice(0, 10);
-    return { since, until };
-  }
-
-  if (preset === "this_quarter") {
-    const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
-    const since = new Date(now.getFullYear(), quarterStartMonth, 1)
-      .toISOString()
-      .slice(0, 10);
-    return { since, until };
-  }
-
-  // ytd
-  const since = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
-  return { since, until };
-}
-
-const PRESETS: { key: Exclude<Preset, "custom">; label: string }[] = [
-  { key: "this_month", label: "This month" },
-  { key: "this_quarter", label: "This quarter" },
-  { key: "ytd", label: "YTD" },
-];
 
 export default function PnLDateRangeSelector({ value, onChange }: PnLDateRangeSelectorProps) {
   const [showCustom, setShowCustom] = useState(false);
   const [customSince, setCustomSince] = useState(value.since);
   const [customUntil, setCustomUntil] = useState(value.until);
 
-  const handlePreset = (preset: Exclude<Preset, "custom">) => {
+  const handlePreset = (preset: PropertyPnLPreset) => {
     setShowCustom(false);
-    onChange(startOf(preset));
+    onChange(propertyPnlRange(preset, new Date()));
   };
 
   const handleCustomApply = () => {
-    if (customSince && customUntil && customSince <= customUntil) {
+    if (isValidPropertyPnlRange({ since: customSince, until: customUntil })) {
       onChange({ since: customSince, until: customUntil });
       setShowCustom(false);
     }
@@ -67,10 +30,10 @@ export default function PnLDateRangeSelector({ value, onChange }: PnLDateRangeSe
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {PRESETS.map(({ key, label }) => (
+      {PROPERTY_PNL_PRESETS.map(({ key, label }) => (
         <Button
           key={key}
-          variant={!showCustom && value.since === startOf(key).since ? "primary" : "secondary"}
+          variant={!showCustom && value.since === propertyPnlRange(key, new Date()).since ? "primary" : "secondary"}
           size="sm"
           onClick={() => handlePreset(key)}
         >
@@ -101,7 +64,7 @@ export default function PnLDateRangeSelector({ value, onChange }: PnLDateRangeSe
             type="date"
             value={customUntil}
             min={customSince}
-            max={today()}
+            max={propertyPnlRange("this_month", new Date()).until}
             onChange={(e) => setCustomUntil(e.target.value)}
             className="border rounded px-2 py-1 text-sm bg-background min-h-[44px]"
             aria-label="End date"
@@ -110,7 +73,7 @@ export default function PnLDateRangeSelector({ value, onChange }: PnLDateRangeSe
             variant="primary"
             size="sm"
             onClick={handleCustomApply}
-            disabled={!customSince || !customUntil || customSince > customUntil}
+            disabled={!isValidPropertyPnlRange({ since: customSince, until: customUntil })}
           >
             Apply
           </Button>

@@ -6,7 +6,8 @@ import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconc
 import { hasBeenCompared } from "@mybookkeeper/api-client/utils/reconciliationCompare";
 import { formatCurrency } from "@platform/core/utils/currency";
 import { LoadingButton, useTheme } from "@platform/mobile";
-import { Text, View } from "react-native";
+import { router } from "expo-router";
+import { Pressable, Text, View } from "react-native";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import InquiryChip from "../inquiries/InquiryChip";
 import { differenceLine, rowLabel, sourceTitle, statusWord } from "./reconciliationDisplay";
@@ -15,15 +16,22 @@ import { useDeleteReconciliationSource } from "./useDeleteReconciliationSource";
 interface ReconciliationRowProps {
   source: ReconciliationSource;
   canWrite: boolean;
+  year: number;
 }
 
-export default function ReconciliationRow({ source, canWrite }: ReconciliationRowProps) {
+export default function ReconciliationRow({ source, canWrite, year }: ReconciliationRowProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { isDeleting, askToDelete } = useDeleteReconciliationSource(source);
   const difference = differenceLine(source);
   return (
     <View style={{ gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-      <View accessible accessibilityLabel={rowLabel(source)} style={{ gap: spacing.xs }}>
+      <Pressable
+        accessibilityHint={MESSAGES.openHint}
+        accessibilityLabel={rowLabel(source)}
+        accessibilityRole="button"
+        onPress={() => router.push(`/reconciliation/${source.id}?year=${year}`)}
+        style={{ gap: spacing.xs }}
+      >
         <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
           {sourceTitle(source)}
         </Text>
@@ -36,7 +44,7 @@ export default function ReconciliationRow({ source, canWrite }: ReconciliationRo
         ) : null}
         {difference ? <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{difference}</Text> : null}
         <InquiryChip label={statusWord(source.status)} />
-      </View>
+      </Pressable>
       {canWrite ? (
         <LoadingButton
           accessibilityHint={DELETE.hint}

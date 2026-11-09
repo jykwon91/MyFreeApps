@@ -70,9 +70,6 @@ vi.mock("@mybookkeeper/api-client/store/attributionApi", () => ({
   useGetAttributionReviewQueueQuery: vi.fn(),
   useConfirmAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useRejectAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-}));
-
-vi.mock("@/shared/store/attributionApi", () => ({
   useAttributeTransactionManuallyMutation: vi.fn(() => [
     vi.fn(() => ({ unwrap: () => Promise.resolve({ ok: true, transaction_id: "txn-2" }) })),
     { isLoading: false },

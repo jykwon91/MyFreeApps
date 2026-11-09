@@ -18,7 +18,8 @@ import { UserCheck } from "lucide-react";
 import { LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
-import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
+import { useAttributeTransactionManuallyMutation } from "@mybookkeeper/api-client/store/attributionApi";
+import { attributionSourceLabel } from "@mybookkeeper/api-client/constants/attributionLabels";
 import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";
 
 export interface AttributeTenantPickerProps {
@@ -100,11 +101,7 @@ export default function AttributeTenantPicker({
       </div>
       {isAlreadyAttributed && currentAttributionSource && (
         <p className="text-[11px] text-muted-foreground">
-          Currently linked
-          {currentAttributionSource === "auto_exact" && " (auto — exact match)"}
-          {currentAttributionSource === "auto_fuzzy_confirmed" && " (auto — fuzzy confirmed)"}
-          {currentAttributionSource === "auto_alias" && " (auto — remembered payer)"}
-          {currentAttributionSource === "manual" && " (manual)"}
+          Currently linked ({attributionSourceLabel(currentAttributionSource)})
         </p>
       )}
     </div>

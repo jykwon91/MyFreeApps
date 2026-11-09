@@ -24,6 +24,7 @@ export const MORE_MENU: readonly MoreMenuGroup[] = [
   {
     title: "Money tools",
     items: [
+      { label: "Property P&L", screen: "/property-pnl" },
       { label: "Reconciliation", screen: "/reconciliation" },
       { label: "Vendors", screen: "/vendors" },
       { label: "Utility costs", screen: "/analytics" },

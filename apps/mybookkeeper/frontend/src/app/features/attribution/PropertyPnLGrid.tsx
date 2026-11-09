@@ -1,7 +1,7 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
 import Card from "@/shared/components/ui/Card";
 import { formatCurrency } from "@/shared/utils/currency";
-import { useGetPropertyPnlQuery } from "@/shared/store/attributionApi";
+import { useGetPropertyPnlQuery } from "@mybookkeeper/api-client/store/attributionApi";
 import PropertyPnLCard from "./PropertyPnLCard";
 
 export interface PropertyPnLGridProps {

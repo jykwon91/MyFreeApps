@@ -61,6 +61,19 @@ describe("TransactionDetailScreen", () => {
     expect(await screen.findByText("Oak Street")).toBeTruthy();
   });
 
+  it("offers to link income to a tenant", async () => {
+    startTransactionServer([aTransaction({ id: "t1", transaction_type: "income" })]);
+    await renderScreen("t1");
+    expect(await screen.findByText("Not linked to a tenant")).toBeTruthy();
+  });
+
+  it("doesn't ask who paid an expense", async () => {
+    startTransactionServer([aTransaction({ id: "t1", transaction_type: "expense" })]);
+    await renderScreen("t1");
+    await screen.findByText("Home Depot");
+    expect(screen.queryByText("Not linked to a tenant")).toBeNull();
+  });
+
   it("approves one that has a property", async () => {
     const server = startTransactionServer([WAITING]);
     await renderScreen();

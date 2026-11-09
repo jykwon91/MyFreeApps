@@ -1,5 +1,4 @@
 import { useId, useState } from "react";
-import { getYear } from "date-fns";
 import { Link } from "react-router-dom";
 import { STEPS } from "@/shared/lib/reconciliation-config";
 import {
@@ -10,8 +9,12 @@ import {
 import Select from "@/shared/components/ui/Select";
 import { LoadingButton } from "@platform/ui";
 import Card from "@/shared/components/ui/Card";
-import { useReconciliationSourcesMode } from "./useReconciliationSourcesMode";
-import { useReconciliationDiscrepanciesMode } from "./useReconciliationDiscrepanciesMode";
+import {
+  RECONCILIATION_DEFAULT_SOURCE_TYPE,
+  RECONCILIATION_SOURCE_TYPES,
+} from "@mybookkeeper/api-client/constants/reconciliationSourceTypes";
+import { reconciliationDiscrepanciesMode, reconciliationSourcesMode } from "@mybookkeeper/api-client/utils/reconciliationModes";
+import { reconciliationTaxYears } from "@mybookkeeper/api-client/utils/reconciliationTaxYears";
 import { useCompareWithRecords } from "./useCompareWithRecords";
 import ReconciliationSourcesBody from "./ReconciliationSourcesBody";
 import ReconciliationDiscrepanciesBody from "./ReconciliationDiscrepanciesBody";
@@ -23,8 +26,8 @@ export interface ReconciliationWizardProps {
 }
 
 export default function ReconciliationWizard({ onToast, canWrite = true }: ReconciliationWizardProps) {
-  const currentYear = getYear(new Date());
-  const [taxYear, setTaxYear] = useState(currentYear - 1);
+  const [taxYears] = useState(() => reconciliationTaxYears(new Date()));
+  const [taxYear, setTaxYear] = useState(taxYears[0]);
   const [step, setStep] = useState(0);
   const fieldId = useId();
 
@@ -40,12 +43,12 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
   const discrepanciesLoading = discrepanciesFetching && !currentDiscrepancies;
   const { compare, isComparing } = useCompareWithRecords(taxYear, onToast);
 
-  const [sourceType, setSourceType] = useState("1099_k");
+  const [sourceType, setSourceType] = useState(RECONCILIATION_DEFAULT_SOURCE_TYPE);
   const [issuer, setIssuer] = useState("");
   const [reportedAmount, setReportedAmount] = useState("");
 
-  const sourcesMode = useReconciliationSourcesMode({ isLoading: sourcesLoading, sources });
-  const discrepanciesMode = useReconciliationDiscrepanciesMode({ isLoading: discrepanciesLoading || sourcesLoading, count: discrepancies.length });
+  const sourcesMode = reconciliationSourcesMode(sourcesLoading, sources.length);
+  const discrepanciesMode = reconciliationDiscrepanciesMode(discrepanciesLoading || sourcesLoading, discrepancies.length);
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
@@ -76,7 +79,7 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
           aria-label="Tax year"
           className="text-xs py-1.5"
         >
-          {[currentYear - 1, currentYear - 2, currentYear - 3].map((y) => (
+          {taxYears.map((y) => (
             <option key={y} value={y}>{y}</option>
           ))}
         </Select>
@@ -123,10 +126,9 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
                   <div>
                     <label htmlFor={`${fieldId}-type`} className="block text-sm font-medium mb-1">Source Type</label>
                     <Select id={`${fieldId}-type`} value={sourceType} onChange={(e) => setSourceType(e.target.value)}>
-                      <option value="1099_k">1099-K</option>
-                      <option value="1099_misc">1099-MISC</option>
-                      <option value="1099_nec">1099-NEC</option>
-                      <option value="year_end_statement">Year-End Statement</option>
+                      {RECONCILIATION_SOURCE_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>{type.label}</option>
+                      ))}
                     </Select>
                   </div>
                   <div>

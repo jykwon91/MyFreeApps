@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RECONCILIATION_COMPARE_MESSAGES as MESSAGES } from "../constants/reconciliationCompare";
 import type { ReconciliationSource } from "../types/reconciliation/reconciliation-source";
-import { compareFailureMessage, compareResultMessage, hasBeenCompared } from "../utils/reconciliationCompare";
+import { compareFailureMessage, compareOutcome, compareResultMessage, discrepancyTone, hasBeenCompared } from "../utils/reconciliationCompare";
 
 describe("hasBeenCompared", () => {
   it.each([
@@ -35,5 +35,35 @@ describe("compareFailureMessage", () => {
     [null, MESSAGES.compareUnreachable],
   ])("%j", (error, message) => {
     expect(compareFailureMessage(error)).toBe(message);
+  });
+});
+
+describe("compareOutcome", () => {
+  it("names the year and calls it a success when income was found", () => {
+    expect(compareOutcome(2025, { sources_checked: 2, auto_matched: 1, discrepancies: 1 })).toEqual({
+      message: "2025: 1 matched, 1 differs.",
+      variant: "success",
+    });
+  });
+
+  it("is not a success when nothing could be compared", () => {
+    expect(compareOutcome(2025, { sources_checked: 2, auto_matched: 0, discrepancies: 0 })).toEqual({
+      message: `2025: ${MESSAGES.nothingFound}`,
+      variant: "error",
+    });
+  });
+});
+
+describe("discrepancyTone", () => {
+  const source = (status: string, discrepancy: string) => ({ status, discrepancy }) as ReconciliationSource;
+
+  it("shows no gap for a form that was never compared", () => {
+    expect(discrepancyTone(source("unmatched", "12000.00"))).toBe("notCompared");
+  });
+
+  it("is clear only at exactly zero", () => {
+    expect(discrepancyTone(source("matched", "0.00"))).toBe("clear");
+    expect(discrepancyTone(source("partial", "500.00"))).toBe("differs");
+    expect(discrepancyTone(source("partial", "-0.01"))).toBe("differs");
   });
 });

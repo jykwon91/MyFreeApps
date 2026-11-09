@@ -6,14 +6,10 @@ import type { AttributionReviewItem } from "@mybookkeeper/api-client/types/attri
 import { useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES } from "../../constants/paymentReview";
+import type { TenantChoice } from "../../types/TenantChoice";
 import { askOnce } from "../leases/askOnce";
 import { linkExplanation, linkQuestion, propertyBookedMessage, tenantLinkedMessage } from "./paymentReviewDisplay";
 import { reviewFailureMessage, wasAlreadyHandled } from "./paymentReviewFailure";
-
-interface PaymentReviewTarget {
-  id: string;
-  name: string;
-}
 
 export function usePaymentReviewActions(item: AttributionReviewItem) {
   const { showToast } = useToast();
@@ -35,16 +31,16 @@ export function usePaymentReviewActions(item: AttributionReviewItem) {
     }
   }
 
-  function linkTenant(tenant: PaymentReviewTarget): Promise<void> {
+  function linkTenant(tenant: TenantChoice): Promise<void> {
     return run(() => confirmReview({ review_id: item.id, applicant_id: tenant.id }), tenantLinkedMessage(item, tenant.name));
   }
 
-  function bookProperty(property: PaymentReviewTarget): Promise<void> {
+  function bookProperty(property: TenantChoice): Promise<void> {
     return run(() => confirmReview({ review_id: item.id, property_id: property.id }), propertyBookedMessage(property.name));
   }
 
   /** A long list is easy to mis-tap, and a wrong link keeps matching that payer's later payments. */
-  function askToLinkTenant(tenant: PaymentReviewTarget): void {
+  function askToLinkTenant(tenant: TenantChoice): void {
     askOnce(asking, linkQuestion(tenant.name), linkExplanation(item), { text: MESSAGES.link, onPress: () => void linkTenant(tenant) });
   }
 

@@ -7,7 +7,7 @@ import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPi
 vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
   useGetTenantsQuery: vi.fn(),
 }));
-vi.mock("@/shared/store/attributionApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/attributionApi", () => ({
   useAttributeTransactionManuallyMutation: vi.fn(),
 }));
 vi.mock("@platform/ui", async (importOriginal) => ({
@@ -18,7 +18,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
-import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
+import { useAttributeTransactionManuallyMutation } from "@mybookkeeper/api-client/store/attributionApi";
 import { showSuccess } from "@platform/ui";
 
 const resolvedUnwrap = () => ({ unwrap: () => Promise.resolve({ ok: true }) });

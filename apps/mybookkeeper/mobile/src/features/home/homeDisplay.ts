@@ -30,12 +30,17 @@ export function receiptsWaiting(count: number): string {
   return `${counted(count, "rent receipt", "rent receipts")} waiting to send`;
 }
 
-export function waitingFailedMessage(failed: { transactions: boolean; documents: boolean; receipts: boolean }): string | null {
-  const failures = [failed.transactions, failed.documents, failed.receipts].filter(Boolean).length;
+export function paymentsWaiting(count: number): string {
+  return `${counted(count, "payment", "payments")} to match to a tenant`;
+}
+
+export function waitingFailedMessage(failed: { transactions: boolean; documents: boolean; receipts: boolean; payments: boolean }): string | null {
+  const failures = [failed.transactions, failed.documents, failed.receipts, failed.payments].filter(Boolean).length;
   if (failures > 1) return "I couldn't check what's waiting for you.";
   if (failed.transactions) return "I couldn't check your transactions.";
   if (failed.documents) return "I couldn't check your documents.";
   if (failed.receipts) return "I couldn't check your rent receipts.";
+  if (failed.payments) return "I couldn't check your payments to match.";
   return null;
 }
 

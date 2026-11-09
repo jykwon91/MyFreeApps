@@ -5,7 +5,8 @@ import { useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { askOnce } from "../leases/askOnce";
 
-export function useDeleteReconciliationSource(source: ReconciliationSource) {
+/** `onDeleted` lets a screen about this one form leave once it is gone. */
+export function useDeleteReconciliationSource(source: ReconciliationSource, onDeleted?: () => void) {
   const { showToast } = useToast();
   const [deleteSource, { isLoading: isDeleting }] = useDeleteReconciliationSourceMutation();
   const asking = useRef(false);
@@ -14,6 +15,7 @@ export function useDeleteReconciliationSource(source: ReconciliationSource) {
     try {
       await deleteSource(source.id).unwrap();
       showToast(DELETE.deleted);
+      onDeleted?.();
     } catch {
       showToast(DELETE.failed, "error");
     }

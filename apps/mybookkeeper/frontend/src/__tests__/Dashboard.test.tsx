@@ -54,7 +54,7 @@ vi.mock("@mybookkeeper/api-client/store/summaryApi", () => ({
   })),
 }));
 
-vi.mock("@/shared/store/attributionApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/attributionApi", () => ({
   useGetPropertyPnlQuery: vi.fn(() => ({
     data: {
       since: "2026-05-01",
