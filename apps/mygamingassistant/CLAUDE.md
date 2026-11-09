@@ -1029,6 +1029,18 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   auctions), what the made item sells for, and the difference (`craftProfit`,
   only when everything is priced; enchants make no item). An unknown `?recipe`
   says "wasn't found"; an invalid `?prof` is ignored.
+- MGA Prices addon (`frontend/addon/MGAPrices/`, Interface 16001; inside the
+  frontend so the caddy image's build context has it): item tooltips show the
+  player's faction house price (×stack on a bag stack, cheapest · on sale),
+  every house while Shift is held; soulbound items with no price stay quiet;
+  warns once prices are a day old; `/mgaprices` prints what's loaded. Addons
+  can't go online, so the Auction house page's folded "Get these prices in your
+  game tooltips" card (`PricesAddonCard`, `hooks/useDownloadPricesAddon.ts`)
+  fetches all three houses and zips the addon (fflate, `lib/auctionHouse/pricesAddonZip.ts`)
+  with a generated `Data.lua` (`lib/auctionHouse/addonPriceLua.ts`:
+  `items[id] = {market, cheapest, on sale}`); the repo's `Data.lua` is an empty
+  stand-in. `src/__tests__/wowPricesAddon.test.ts` runs the real Lua under
+  fengari against WoW stubs (`src/test/addonLua/`). Refresh = download again.
 - Material prices fill in automatically (`CraftPriceField` shows the price as
   its value, labelled "Auction house"). An item with no auction price is
   worked out in `crafting/derivedPrices.ts` — an essence from the other half of

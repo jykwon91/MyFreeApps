@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-09",
+    title: "Auction prices in your game tooltips",
+    summary:
+      "Download the MGA Prices addon from the Auction house page and mouse over any item in game to see what it sells for on your faction's auction house, the whole stack's worth, or every house while you hold Shift. Download it again to refresh the prices.",
+    to: "/wow-forever/auction-house",
+  },
+  {
+    date: "2026-11-09",
     title: "Auction house: a profession's materials and a recipe's cost",
     summary:
       "Pick a profession on the Auction house page to see only its materials (Enchanting shows dusts, essences and rods, not cloth), then pick one of its recipes to see what each material costs, the total for one craft, what the item sells for and the difference.",

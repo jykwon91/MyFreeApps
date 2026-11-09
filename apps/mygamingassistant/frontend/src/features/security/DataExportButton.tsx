@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 import { LoadingButton, showError, showSuccess } from "@platform/ui";
 import api from "@/lib/api";
+import { downloadBlob } from "@/lib/downloadBlob";
 
 const EXPORT_ENDPOINT = "/users/me/export";
 const FILENAME_PREFIX = "mygamingassistant-export";
@@ -24,16 +25,11 @@ export default function DataExportButton() {
       const blob = new Blob([response.data as BlobPart], {
         type: "application/json",
       });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
       const timestamp = new Date()
         .toISOString()
         .replace(/[:.]/g, "-")
         .slice(0, 19);
-      link.href = url;
-      link.download = `${FILENAME_PREFIX}-${timestamp}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `${FILENAME_PREFIX}-${timestamp}.json`);
       showSuccess("Your data export is downloading.");
     } catch {
       showError("Failed to export your data. Please try again.");

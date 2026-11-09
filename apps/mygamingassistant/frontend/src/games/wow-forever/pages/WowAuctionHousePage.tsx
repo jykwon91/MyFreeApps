@@ -5,6 +5,7 @@ import AuctionHouseBody from "@/games/wow-forever/components/auctionHouse/Auctio
 import AuctionProfessionSelect from "@/games/wow-forever/components/auctionHouse/AuctionProfessionSelect";
 import AuctionReadyBody from "@/games/wow-forever/components/auctionHouse/AuctionReadyBody";
 import AuctionSearchControls from "@/games/wow-forever/components/auctionHouse/AuctionSearchControls";
+import PricesAddonCard from "@/games/wow-forever/components/auctionHouse/PricesAddonCard";
 import ProfessionAuction from "@/games/wow-forever/components/auctionHouse/ProfessionAuction";
 import PriceStatus from "@/games/wow-forever/components/prices/PriceStatus";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
@@ -51,6 +52,7 @@ export default function WowAuctionHousePage() {
       />
       <AuctionFactionSwitch value={house} onChange={setHouse} />
       <PriceStatus faction={house} withoutPrices="no prices to show" hideError />
+      <PricesAddonCard />
       <AuctionProfessionSelect value={filter.profession} onChange={filter.setProfession} />
       {filter.profession ? (
         <ProfessionAuction
