@@ -4,4 +4,6 @@ export interface SegmentedControlProps<Value extends string> {
   onChange: (value: Value) => void;
   /** What the group is choosing between, for screen readers. */
   accessibilityLabel: string;
+  /** Dims the group and ignores presses, for while the choice is being saved. */
+  disabled?: boolean;
 }

@@ -45,7 +45,8 @@ jest.mock("expo-image-manipulator", () => ({
   ImageManipulator: {
     manipulate: () => ({
       resize: (size: object) => mockResize(size),
-      renderAsync: async () => ({ saveAsync: async () => ({ uri: "doc:/prepared.jpg" }) }),
+      release: jest.fn(),
+      renderAsync: async () => ({ saveAsync: async () => ({ uri: "doc:/prepared.jpg" }), release: jest.fn() }),
     }),
   },
 }));

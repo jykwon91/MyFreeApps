@@ -4,7 +4,8 @@ import { moveId, sortPhotos } from "@mybookkeeper/api-client/utils/listingPhotoO
 import { Banner, EmptyState, LoadingButton, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Alert, Text, View } from "react-native";
-import { LISTING_PHOTO_MESSAGES as MESSAGES, preparingProgress, removeManyBody, removeManyTitle, selectedCount, uploadProgress } from "../../constants/listingPhotos";
+import { preparingProgress } from "../../constants/uploads";
+import { LISTING_PHOTO_MESSAGES as MESSAGES, removeManyBody, removeManyTitle, selectedCount, uploadProgress } from "../../constants/listingPhotos";
 import { askOnce } from "../../lib/askOnce";
 import { useConfirmLeave } from "../../lib/useConfirmLeave";
 import { useCanWrite } from "../workspace/useCanWrite";

@@ -9,11 +9,12 @@ from app.models.welcome_manuals.welcome_manual_section_field import (
 )
 
 # Columns mutable via PATCH. ``section_id`` is immutable post-create — moving a
-# field between sections is not a supported flow.
+# field between sections is not a supported flow. ``display_order`` is NOT here:
+# it's only reassigned by the atomic reorder (display_order_repo), so a PATCH
+# can never create duplicate positions.
 _UPDATABLE_COLUMNS: frozenset[str] = frozenset({
     "label",
     "value",
-    "display_order",
 })
 
 

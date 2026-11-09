@@ -5,7 +5,7 @@ import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { LoadingButton } from "@platform/ui";
 import { useGetWelcomeManualsQuery } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { WELCOME_MANUAL_PAGE_SIZE } from "@/shared/lib/welcome-manual-constants";
+import { WELCOME_MANUAL_PAGE_SIZE } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";
 import WelcomeManualsListBody from "@/app/features/welcome-manuals/WelcomeManualsListBody";
 import WelcomeManualCreateDialog from "@/app/features/welcome-manuals/WelcomeManualCreateDialog";

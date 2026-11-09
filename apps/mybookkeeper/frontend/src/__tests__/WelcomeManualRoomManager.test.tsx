@@ -15,10 +15,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import WelcomeManualRoomManager from "@/app/features/welcome-manuals/WelcomeManualRoomManager";
-import {
-  NEW_ROOM_DEFAULT_NAME,
-  WELCOME_MANUAL_MAX_ROOMS,
-} from "@/shared/lib/welcome-manual-constants";
+import { WELCOME_MANUAL_MAX_ROOMS } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { NEW_ROOM_DEFAULT_NAME } from "@/shared/lib/welcome-manual-constants";
 import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
 
 const createRoomMock = vi.fn();
@@ -31,7 +29,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showSuccess: vi.fn(),
 }));
 
-vi.mock("@/shared/store/welcomeManualsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/welcomeManualsApi", () => ({
   useCreateRoomMutation: vi.fn(() => [createRoomMock, { isLoading: false }]),
   useUpdateRoomMutation: vi.fn(() => [updateRoomMock, { isLoading: false }]),
   useDeleteRoomMutation: vi.fn(() => [deleteRoomMock, { isLoading: false }]),

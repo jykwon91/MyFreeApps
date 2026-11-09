@@ -32,4 +32,13 @@ describe("SegmentedControl", () => {
     const style = StyleSheet.flatten(screen.getByRole("tab", { name: "One" }).props.style);
     expect(style.minHeight).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   });
+
+  it("ignores presses and says so to a screen reader while disabled", async () => {
+    const onChange = jest.fn();
+    await render(<SegmentedControl accessibilityLabel="Pick" disabled onChange={onChange} segments={SEGMENTS} value="one" />);
+    const tab = screen.getByRole("tab", { name: "Two" });
+    expect(tab.props.accessibilityState).toMatchObject({ disabled: true });
+    fireEvent.press(tab);
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

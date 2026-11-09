@@ -5,7 +5,8 @@ import {
   useEnableWelcomeManualShareMutation,
   useUpdateWelcomeManualShareMutation,
   useRevokeWelcomeManualShareMutation,
-} from "@/shared/store/welcomeManualsApi";
+} from "@mybookkeeper/api-client/store/welcomeManualsApi";
+import { shareUrl } from "@mybookkeeper/api-client/utils/welcomeManualShare";
 
 export interface WelcomeManualShareCardProps {
   manualId: string;
@@ -28,7 +29,7 @@ export default function WelcomeManualShareCard({
   const [updateShare, { isLoading: isRegenerating }] = useUpdateWelcomeManualShareMutation();
   const [revokeShare, { isLoading: isRevoking }] = useRevokeWelcomeManualShareMutation();
 
-  const shareUrl = shareToken ? `${window.location.origin}/guide/${shareToken}` : null;
+  const guestUrl = shareToken ? shareUrl(window.location.origin, shareToken) : null;
 
   async function copyToClipboard(value: string, label: string) {
     try {
@@ -99,7 +100,7 @@ export default function WelcomeManualShareCard({
           <div className="flex items-stretch gap-2 flex-wrap">
             <input
               readOnly
-              value={shareUrl ?? ""}
+              value={guestUrl ?? ""}
               className="flex-1 min-w-0 border rounded-md px-3 py-2 text-sm bg-muted/40 font-mono"
               aria-label="Share link URL"
               data-testid="share-link-url-input"
@@ -108,7 +109,7 @@ export default function WelcomeManualShareCard({
               variant="secondary"
               size="sm"
               isLoading={false}
-              onClick={() => void copyToClipboard(shareUrl ?? "", "Link")}
+              onClick={() => void copyToClipboard(guestUrl ?? "", "Link")}
               data-testid="copy-share-link-button"
             >
               <Copy className="h-4 w-4 mr-1" aria-hidden="true" />

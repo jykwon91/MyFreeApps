@@ -23,7 +23,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showSuccess: vi.fn(),
 }));
 
-vi.mock("@/shared/store/welcomeManualsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/welcomeManualsApi", () => ({
   useEnableWelcomeManualShareMutation: () => [enableShareMock, { isLoading: false }],
   useUpdateWelcomeManualShareMutation: () => [updateShareMock, { isLoading: false }],
   useRevokeWelcomeManualShareMutation: () => [revokeShareMock, { isLoading: false }],

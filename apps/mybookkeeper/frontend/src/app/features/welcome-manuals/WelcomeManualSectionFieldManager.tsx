@@ -17,17 +17,17 @@ import {
 } from "@dnd-kit/sortable";
 import { Plus } from "lucide-react";
 import { LoadingButton, ConfirmDialog, showError, showSuccess } from "@platform/ui";
-import {
-  MAX_FIELDS_PER_SECTION,
-  NEW_FIELD_DEFAULT_LABEL,
-} from "@/shared/lib/welcome-manual-constants";
+import { MAX_FIELDS_PER_SECTION } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { NEW_FIELD_DEFAULT_LABEL } from "@/shared/lib/welcome-manual-constants";
 import {
   useCreateSectionFieldMutation,
   useDeleteSectionFieldMutation,
+  useReorderSectionFieldsMutation,
   useUpdateSectionFieldMutation,
-} from "@/shared/store/welcomeManualsApi";
+} from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import type { WelcomeManualSectionFieldResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-field-response";
 import WelcomeManualSectionFieldCard from "./WelcomeManualSectionFieldCard";
+import { reorderFailureMessage } from "./reorder-failure-message";
 
 export interface WelcomeManualSectionFieldManagerProps {
   manualId: string;
@@ -43,6 +43,7 @@ export default function WelcomeManualSectionFieldManager({
   const [createField, { isLoading: isAdding }] = useCreateSectionFieldMutation();
   const [deleteField] = useDeleteSectionFieldMutation();
   const [updateField] = useUpdateSectionFieldMutation();
+  const [reorderFields] = useReorderSectionFieldsMutation();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [orderedIds, setOrderedIds] = useState<string[] | null>(null);
 
@@ -87,7 +88,7 @@ export default function WelcomeManualSectionFieldManager({
     changes: { label?: string; value?: string | null },
   ) {
     try {
-      await updateField({ manualId, sectionId, fieldId, ...changes }).unwrap();
+      await updateField({ manualId, sectionId, fieldId, data: changes }).unwrap();
     } catch {
       showError("I couldn't save that field. Want to try again?");
     }
@@ -104,20 +105,10 @@ export default function WelcomeManualSectionFieldManager({
     const newOrder = arrayMove(displayIds, oldIndex, newIndex);
     setOrderedIds(newOrder);
 
-    // There's no bulk-order endpoint for section fields — fire one PATCH per
-    // field whose display_order changed. Small-N per section keeps this cheap,
-    // mirroring the image manager.
     try {
-      await Promise.all(
-        newOrder.map((fieldId, index) => {
-          const current = fieldsById.get(fieldId);
-          if (!current) return Promise.resolve();
-          if (current.display_order === index) return Promise.resolve();
-          return updateField({ manualId, sectionId, fieldId, display_order: index }).unwrap();
-        }),
-      );
-    } catch {
-      showError("I couldn't save the new order. Reverting.");
+      await reorderFields({ manualId, sectionId, fieldIds: newOrder }).unwrap();
+    } catch (err) {
+      showError(reorderFailureMessage(err));
       setOrderedIds(null);
     }
   }

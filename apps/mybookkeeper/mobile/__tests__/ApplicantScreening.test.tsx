@@ -27,6 +27,7 @@ function photoRendersFine(): void {
       prepared.write("jpeg");
       return { uri: prepared.uri };
     },
+    release: jest.fn(),
   }));
 }
 
@@ -43,6 +44,7 @@ jest.mock("expo-image-manipulator", () => ({
   ImageManipulator: {
     manipulate: () => ({
       resize: jest.fn(),
+      release: jest.fn(),
       renderAsync: async () => mockRender(),
     }),
   },

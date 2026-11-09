@@ -1,10 +1,10 @@
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
 import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
-import { useCreateWelcomeManualMutation } from "@/shared/store/welcomeManualsApi";
+import { useCreateWelcomeManualMutation } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
-import type { WelcomeManualCreateFormValues } from "@/shared/types/welcome-manual/welcome-manual-create-form-values";
-import type { WelcomeManualCreateRequest } from "@/shared/types/welcome-manual/welcome-manual-create-request";
+import type { WelcomeManualCreateFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-create-form-values";
+import { manualCreateRequest } from "@mybookkeeper/api-client/utils/welcomeManualRequests";
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 
 export interface WelcomeManualCreateDialogProps {
@@ -18,14 +18,6 @@ const DEFAULTS: WelcomeManualCreateFormValues = {
   property_id: "",
   seed_default_sections: true,
 };
-
-function formValuesToCreateRequest(values: WelcomeManualCreateFormValues): WelcomeManualCreateRequest {
-  return {
-    title: values.title.trim(),
-    property_id: values.property_id || null,
-    seed_default_sections: values.seed_default_sections,
-  };
-}
 
 export default function WelcomeManualCreateDialog({
   properties,
@@ -41,7 +33,7 @@ export default function WelcomeManualCreateDialog({
 
   async function onSubmit(values: WelcomeManualCreateFormValues) {
     try {
-      const created = await createManual(formValuesToCreateRequest(values)).unwrap();
+      const created = await createManual(manualCreateRequest(values)).unwrap();
       showSuccess("Welcome manual created.");
       onCreated(created);
     } catch {

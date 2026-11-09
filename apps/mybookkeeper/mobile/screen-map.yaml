@@ -121,5 +121,8 @@ routes:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /welcome-manuals:
     screen: (app)/welcome-manuals/index
+  # Adding is (app)/welcome-manuals/new. A manual opens as a short summary with a row
+  # for each part: sections (and in them label and value pairs and photos), rooms,
+  # where to eat, share, preview and email. The web page has all of it on one screen.
   /welcome-manuals/:manualId:
-    screen: (app)/welcome-manuals/[id]
+    screen: (app)/welcome-manuals/[id]/index

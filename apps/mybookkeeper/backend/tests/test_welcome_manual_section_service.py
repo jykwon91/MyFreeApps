@@ -174,6 +174,37 @@ class TestReorder:
                 )
 
     @pytest.mark.asyncio
+    async def test_reorder_rejects_a_duplicated_id_even_when_the_length_matches(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual = await _make_manual(db, test_org, test_user)
+        a = await welcome_manual_section_repo.create(db, manual_id=manual.id, title="A", body=None, display_order=0)
+        await welcome_manual_section_repo.create(db, manual_id=manual.id, title="B", body=None, display_order=1)
+        await db.commit()
+        with _patch_uow(db):
+            with pytest.raises(welcome_manual_section_service.InvalidReorderError):
+                await welcome_manual_section_service.reorder_sections(
+                    test_org.id, test_user.id, manual.id, [a.id, a.id],
+                )
+
+    @pytest.mark.asyncio
+    async def test_reorder_rejects_a_section_of_another_manual(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual = await _make_manual(db, test_org, test_user)
+        other = await _make_manual(db, test_org, test_user)
+        a = await welcome_manual_section_repo.create(db, manual_id=manual.id, title="A", body=None, display_order=0)
+        foreign = await welcome_manual_section_repo.create(db, manual_id=other.id, title="F", body=None, display_order=0)
+        await db.commit()
+        with _patch_uow(db):
+            with pytest.raises(welcome_manual_section_service.InvalidReorderError):
+                await welcome_manual_section_service.reorder_sections(
+                    test_org.id, test_user.id, manual.id, [foreign.id],
+                )
+            with pytest.raises(welcome_manual_section_service.InvalidReorderError):
+                await welcome_manual_section_service.reorder_sections(
+                    test_org.id, test_user.id, manual.id, [a.id, foreign.id],
+                )
+        persisted = await welcome_manual_section_repo.get_by_id(db, foreign.id, other.id)
+        assert persisted is not None and persisted.display_order == 0
+
+    @pytest.mark.asyncio
     async def test_reorder_manual_not_found(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
         with _patch_uow(db):
             with pytest.raises(welcome_manual_section_service.ManualNotFoundError):

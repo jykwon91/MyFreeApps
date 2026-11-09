@@ -36,9 +36,6 @@ vi.mock("@mybookkeeper/api-client/store/welcomeManualsApi", () => ({
     ...queryStatus({ failed: mockIsError, fetching: false }),
     refetch: mockRefetch,
   })),
-}));
-
-vi.mock("@/shared/store/welcomeManualsApi", () => ({
   useCreateWelcomeManualMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 

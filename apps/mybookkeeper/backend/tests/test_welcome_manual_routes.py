@@ -363,7 +363,7 @@ class TestSections:
         assert len(response.json()) == 2
 
     @pytest.mark.asyncio
-    async def test_reorder_invalid_400(self) -> None:
+    async def test_reorder_stale_409(self) -> None:
         org_id, user_id, manual_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
         _override_auth(org_id, user_id)
         try:
@@ -378,4 +378,4 @@ class TestSections:
                 )
         finally:
             app.dependency_overrides.clear()
-        assert response.status_code == 400
+        assert response.status_code == 409

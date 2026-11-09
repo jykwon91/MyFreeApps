@@ -82,7 +82,7 @@ class TestUpdateDelete:
         )
         assert updated is not None
         assert updated.caption == "Router is here"
-        assert updated.display_order == 3
+        assert updated.display_order == 0  # only the atomic reorder moves a row
         assert updated.storage_key == "k"  # immutable
         assert updated.section_id == section.id  # immutable
 

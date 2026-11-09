@@ -2,7 +2,8 @@ import { useState } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
 import type { DragEndEvent } from "@dnd-kit/core";
 import { showError } from "@platform/ui";
-import { useReorderSectionsMutation } from "@/shared/store/welcomeManualsApi";
+import { useReorderSectionsMutation } from "@mybookkeeper/api-client/store/welcomeManualsApi";
+import { reorderFailureMessage } from "./reorder-failure-message";
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 
 export interface UseWelcomeManualSectionOrderArgs {
@@ -51,8 +52,8 @@ export function useWelcomeManualSectionOrder({
       await reorderSections({ manualId, sectionIds: newOrder }).unwrap();
       // Let the refetched manual (from tag invalidation) re-drive the order.
       setLocalOrder(null);
-    } catch {
-      showError("I couldn't save the new order. Reverting.");
+    } catch (err) {
+      showError(reorderFailureMessage(err));
       setLocalOrder(null);
     }
   }

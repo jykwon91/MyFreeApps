@@ -4,12 +4,13 @@ import { mimeTypeFor } from "../../lib/mimeTypeFor";
 import type { FileForUpload } from "../../types/FileForUpload";
 import { preparePhoto } from "../capture/preparePhoto";
 import { discardFile } from "../capture/uploadQueueFiles";
-import { holdFile } from "./heldFile";
+import { heldFileSize, holdFile } from "./heldFile";
 
 export async function holdPhoto(asset: ImagePicker.ImagePickerAsset, name: string): Promise<FileForUpload> {
   try {
     const prepared = await preparePhoto(asset.uri, asset.width, asset.height);
-    return { uri: holdFile(prepared, name), name, mimeType: "image/jpeg" };
+    const uri = holdFile(prepared, name);
+    return { uri, name, mimeType: "image/jpeg", size: heldFileSize(uri) };
   } finally {
     // The picker's own copy can still hold where the photo was taken.
     discardFile(asset.uri);

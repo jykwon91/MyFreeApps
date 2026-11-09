@@ -19,6 +19,7 @@ import WelcomeManualDetail from "@/app/pages/WelcomeManualDetail";
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
+import { WELCOME_MANUAL_MAX_SECTIONS } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import { queryStatus } from "@/test/rtk-query-status";
 import { queryData } from "@/test/rtk-query-data";
 
@@ -40,9 +41,8 @@ vi.mock("@mybookkeeper/api-client/store/welcomeManualsApi", () => ({
     ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
     refetch: vi.fn(),
   })),
-}));
-
-vi.mock("@/shared/store/welcomeManualsApi", () => ({
+  useReorderSectionFieldsMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useReorderSectionImagesMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useCreateSectionMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteWelcomeManualMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useEnableWelcomeManualShareMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -176,6 +176,22 @@ describe("WelcomeManualDetail", () => {
     renderDetail();
     expect(screen.getByTestId("email-welcome-manual-button")).not.toBeDisabled();
     expect(screen.getByTestId("welcome-manual-sections")).toBeInTheDocument();
+  });
+
+  it("disables Add section and shows the limit note at the section cap", () => {
+    mockManual = makeManual(
+      Array.from({ length: WELCOME_MANUAL_MAX_SECTIONS }, (_, i) => makeSection(`sec-${i}`, { display_order: i })),
+    );
+    renderDetail();
+    expect(screen.getByTestId("add-welcome-manual-section-button")).toBeDisabled();
+    expect(screen.getByTestId("welcome-manual-sections-cap-note")).toBeInTheDocument();
+  });
+
+  it("keeps Add section enabled below the section cap", () => {
+    mockManual = makeManual([makeSection("sec-1")]);
+    renderDetail();
+    expect(screen.getByTestId("add-welcome-manual-section-button")).not.toBeDisabled();
+    expect(screen.queryByTestId("welcome-manual-sections-cap-note")).not.toBeInTheDocument();
   });
 
   it("renders a guest preview panel beside the editor", () => {

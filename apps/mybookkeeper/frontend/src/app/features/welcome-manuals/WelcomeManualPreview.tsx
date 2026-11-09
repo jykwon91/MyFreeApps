@@ -1,6 +1,7 @@
 import Markdown from "@/shared/components/ui/Markdown";
 import type { WelcomeManualPlaceResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-response";
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
+import { previewFields } from "@mybookkeeper/api-client/utils/welcomeManualPreview";
 import WelcomeManualPlaceDirectory from "./WelcomeManualPlaceDirectory";
 
 export interface WelcomeManualPreviewProps {
@@ -56,9 +57,7 @@ export default function WelcomeManualPreview({
 
             {section.fields.length > 0 ? (
               <dl className="grid gap-2 sm:grid-cols-2" data-testid="welcome-manual-preview-fields">
-                {section.fields
-                  .filter((field) => field.label.trim() !== "" || (field.value ?? "").trim() !== "")
-                  .map((field) => (
+                {previewFields(section.fields).map((field) => (
                     <div key={field.id} data-testid="welcome-manual-preview-field">
                       <dt className="text-xs font-semibold text-muted-foreground">
                         {field.label}

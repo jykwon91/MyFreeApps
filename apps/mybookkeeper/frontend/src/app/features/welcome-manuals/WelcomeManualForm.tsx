@@ -3,11 +3,11 @@ import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
 import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
 import Markdown from "@/shared/components/ui/Markdown";
-import { useUpdateWelcomeManualMutation } from "@/shared/store/welcomeManualsApi";
+import { useUpdateWelcomeManualMutation } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
-import type { WelcomeManualFormValues } from "@/shared/types/welcome-manual/welcome-manual-form-values";
+import type { WelcomeManualFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-form-values";
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
-import type { WelcomeManualUpdateRequest } from "@/shared/types/welcome-manual/welcome-manual-update-request";
+import { manualUpdateRequest } from "@mybookkeeper/api-client/utils/welcomeManualRequests";
 
 export interface WelcomeManualFormProps {
   manual: WelcomeManualResponse;
@@ -22,17 +22,6 @@ function manualToFormValues(manual: WelcomeManualResponse): WelcomeManualFormVal
     intro_text: manual.intro_text ?? "",
     property_id: manual.property_id ?? "",
   };
-}
-
-function formValuesToUpdateRequest(
-  values: WelcomeManualFormValues,
-  dirty: Partial<Record<keyof WelcomeManualFormValues, boolean>>,
-): WelcomeManualUpdateRequest {
-  const out: WelcomeManualUpdateRequest = {};
-  if (dirty.title) out.title = values.title.trim();
-  if (dirty.intro_text) out.intro_text = values.intro_text.trim() || null;
-  if (dirty.property_id) out.property_id = values.property_id || null;
-  return out;
 }
 
 export default function WelcomeManualForm({
@@ -60,7 +49,7 @@ export default function WelcomeManualForm({
   const watchIntro = watch("intro_text");
 
   async function onSubmit(values: WelcomeManualFormValues) {
-    const payload = formValuesToUpdateRequest(values, dirtyFields);
+    const payload = manualUpdateRequest(values, dirtyFields);
     if (Object.keys(payload).length === 0) {
       onClose();
       return;
