@@ -1,6 +1,7 @@
 import uuid
 from collections.abc import Sequence
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -102,25 +103,31 @@ async def get_fields(
     return result.scalars().all()
 
 
-async def update_field(
+VALUE_COLUMNS = ("value_numeric", "value_text", "value_boolean")
+
+
+async def apply_override(
     db: AsyncSession,
     field: TaxFormField,
     *,
-    value_numeric: float | None = None,
-    value_text: str | None = None,
-    value_boolean: bool | None = None,
-    override_reason: str | None = None,
+    column: str | None,
+    value: Decimal | str | bool | None,
+    reason: str,
+    user_id: uuid.UUID,
 ) -> TaxFormField:
-    if value_numeric is not None:
-        field.value_numeric = value_numeric
-    if value_text is not None:
-        field.value_text = value_text
-    if value_boolean is not None:
-        field.value_boolean = value_boolean
-    if override_reason is not None:
-        field.override_reason = override_reason
+    """Hold `value` in `column` only; column=None clears the field."""
+    if column is not None and column not in VALUE_COLUMNS:
+        raise ValueError(f"Unknown value column: {column}")
+    for name in VALUE_COLUMNS:
+        setattr(field, name, None)
+    if column is not None:
+        setattr(field, column, value)
+    now = datetime.now(timezone.utc)
     field.is_overridden = True
-    field.updated_at = datetime.now(timezone.utc)
+    field.override_reason = reason
+    field.overridden_by = user_id
+    field.overridden_at = now
+    field.updated_at = now
     await db.flush()
     return field
 

@@ -9,6 +9,7 @@ Create Date: 2026-11-09 00:00:00.000000
 """
 from collections.abc import Sequence
 
+import sqlalchemy as sa
 from alembic import op
 
 revision: str = "taxfieldempty261109"
@@ -22,10 +23,16 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(
-        "DELETE FROM tax_form_fields WHERE value_numeric IS NULL "
+    empty = op.get_bind().execute(sa.text(
+        "SELECT COUNT(*) FROM tax_form_fields WHERE value_numeric IS NULL "
         "AND value_text IS NULL AND value_boolean IS NULL"
-    )
+    )).scalar_one()
+    if empty:
+        raise RuntimeError(
+            f"Cannot restore chk_tff_has_value: {empty} tax_form_fields rows have no "
+            "value (cleared overrides). Give them a value or delete them deliberately, "
+            "then downgrade again."
+        )
     op.create_check_constraint(
         "chk_tff_has_value",
         "tax_form_fields",

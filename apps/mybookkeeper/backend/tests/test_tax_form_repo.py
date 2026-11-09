@@ -153,29 +153,57 @@ class TestGetFields:
         assert ids == ["box_1", "box_2"]
 
 
-class TestUpdateField:
-    @pytest.mark.asyncio
-    async def test_updates_and_marks_overridden(
-        self, db: AsyncSession, test_user: User, test_org: Organization
-    ) -> None:
+class TestApplyOverride:
+    async def _field(self, db: AsyncSession, test_org: Organization) -> TaxFormField:
         tr = await _create_return(db, test_org.id)
         instance = await _create_instance(db, tr.id)
-        field = await tax_form_repo.create_field(
+        return await tax_form_repo.create_field(
             db,
             TaxFormField(
                 form_instance_id=instance.id,
                 field_id="box_1",
                 field_label="Wages",
                 value_numeric=Decimal("75000.00"),
+                value_text="stale",
             ),
         )
-        assert field.is_overridden is False
 
-        updated = await tax_form_repo.update_field(
-            db, field, value_numeric=80000.00, override_reason="Corrected"
+    @pytest.mark.asyncio
+    async def test_sets_one_column_nulls_others_and_records_who(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        field = await self._field(db, test_org)
+        updated = await tax_form_repo.apply_override(
+            db, field, column="value_numeric", value=Decimal("80000.00"),
+            reason="Corrected", user_id=test_user.id,
         )
+        assert updated.value_numeric == Decimal("80000.00")
+        assert updated.value_text is None
         assert updated.is_overridden is True
         assert updated.override_reason == "Corrected"
+        assert updated.overridden_by == test_user.id
+        assert updated.overridden_at is not None
+
+    @pytest.mark.asyncio
+    async def test_no_column_clears_every_value(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        field = await self._field(db, test_org)
+        updated = await tax_form_repo.apply_override(
+            db, field, column=None, value=None, reason="Cleared", user_id=test_user.id,
+        )
+        assert (updated.value_numeric, updated.value_text, updated.value_boolean) == (None, None, None)
+        assert updated.is_overridden is True
+
+    @pytest.mark.asyncio
+    async def test_rejects_unknown_column(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        field = await self._field(db, test_org)
+        with pytest.raises(ValueError):
+            await tax_form_repo.apply_override(
+                db, field, column="field_id", value="x", reason="r", user_id=test_user.id,
+            )
 
 
 class TestCreateFieldSource:

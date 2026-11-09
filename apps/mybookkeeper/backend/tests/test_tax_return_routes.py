@@ -434,19 +434,90 @@ class TestOverrideFieldContract:
         assert resp.json()["value_text"] == "***1234"
 
     @pytest.mark.asyncio
-    async def test_wrong_column_for_declared_type_rejected(
+    async def test_value_in_other_column_than_hint_is_accepted_and_exclusive(
         self, client: AsyncClient, db: AsyncSession, org: Organization,
     ) -> None:
-        tr, field = await _make_field(db, org, form_name="w2", field_id="box_1")
+        tr, field = await _make_field(
+            db, org, form_name="w2", field_id="box_1", value_numeric=Decimal("5.00"),
+        )
         resp = await client.patch(
             f"/tax-returns/{tr.id}/fields/{field.id}",
-            json={"value_text": "12,000", "override_reason": "Typed"},
+            json={"value_text": "see statement", "override_reason": "Statement only"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["value_text"] == "see statement"
+        assert resp.json()["value_numeric"] is None
+
+    @pytest.mark.asyncio
+    async def test_masked_token_rejected_in_non_pii_text_holding_an_ssn(
+        self, client: AsyncClient, db: AsyncSession, org: Organization,
+    ) -> None:
+        tr, field = await _make_field(
+            db, org, form_name="w2", field_id="box_14", value_text="Spouse SSN 123-45-6789",
+        )
+        resp = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{field.id}",
+            json={"value_text": "Spouse SSN ***-**-6789", "override_reason": "Echoed"},
         )
         assert resp.status_code == 422
-        assert "value_numeric" in resp.json()["detail"]
+        assert "masked" in resp.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_override_records_who_and_when(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        tr, field = await _make_field(
+            db, org, form_name="w2", field_id="box_1", value_numeric=Decimal("5.00"),
+        )
+        await client.patch(
+            f"/tax-returns/{tr.id}/fields/{field.id}",
+            json={"value_numeric": 6, "override_reason": "Fix"},
+        )
+        await db.commit()
         await db.refresh(field)
-        assert field.value_text is None
-        assert field.is_overridden is False
+        assert field.overridden_by == owner.id
+        assert field.overridden_at is not None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "body",
+        [{"value_numeric": 1234567890123}, {"value_numeric": 1.234}, {"value_text": "x" * 501}],
+    )
+    async def test_oversized_value_is_422_not_500(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, body: dict,
+    ) -> None:
+        tr, field = await _make_field(
+            db, org, form_name="w2", field_id="box_1", value_numeric=Decimal("1.00"),
+        )
+        resp = await client.patch(
+            f"/tax-returns/{tr.id}/fields/{field.id}",
+            json={**body, "override_reason": "Too big"},
+        )
+        assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_cleared_computed_field_stays_numeric_and_can_be_re_entered(
+        self, client: AsyncClient, db: AsyncSession, org: Organization,
+    ) -> None:
+        tr, field = await _make_field(
+            db, org, form_name="schedule_e", field_id="line_3",
+            value_numeric=Decimal("100.00"), is_calculated=True,
+        )
+        url = f"/tax-returns/{tr.id}/fields/{field.id}"
+
+        async def shown() -> dict:
+            forms = (await client.get(f"/tax-returns/{tr.id}/forms/schedule_e")).json()
+            return forms["instances"][0]["fields"][0]
+
+        cleared = await client.patch(url, json={"value_numeric": None, "override_reason": "Clear"})
+        assert cleared.status_code == 200
+        assert (await shown())["type"] == "numeric"
+        assert (await shown())["value"] is None
+
+        again = await client.patch(url, json={"value_numeric": 250, "override_reason": "Re-enter"})
+        assert again.status_code == 200
+        assert (await shown())["value"] == 250.0
+        assert (await shown())["type"] == "numeric"
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("reason", ["", "   "])

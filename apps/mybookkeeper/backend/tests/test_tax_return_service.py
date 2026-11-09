@@ -448,7 +448,11 @@ class TestFieldDeclaredType:
             ("w2", "box_1", "numeric"),
             ("w2", "box_14", "text"),
             ("w2", "box_13_retirement", "boolean"),
-            ("schedule_e", "line_3", "text"),
+            ("schedule_e", "line_3", "numeric"),
+            ("1099_misc", "box_9", "numeric"),
+            ("1099_misc", "box_13", "boolean"),
+            ("k1", "box_14", "text"),
+            ("1099_int", "recipient_tin", "text"),
         ],
     )
     async def test_empty_field_reports_declared_type(

@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from typing import Annotated, Self
 
-from pydantic import BaseModel, StringConstraints, model_validator
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 OverrideReason = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255),
@@ -67,8 +67,8 @@ class TaxFormFieldUpdate(BaseModel):
     """Override a field. A value key that is sent as null clears that column;
     a key that is not sent leaves the column untouched."""
 
-    value_numeric: Decimal | None = None
-    value_text: str | None = None
+    value_numeric: Decimal | None = Field(default=None, max_digits=12, decimal_places=2)
+    value_text: str | None = Field(default=None, max_length=500)
     value_boolean: bool | None = None
     override_reason: OverrideReason
 

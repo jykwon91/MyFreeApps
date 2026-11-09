@@ -13,10 +13,29 @@ PII_FIELD_IDS = frozenset({
     "recipient_ssn",
     "payer_ssn",
     "issuer_ein",
+    "employee_ssn",
+    "employer_ein",
+    "payer_ein",
+    "lender_tin",
+    "borrower_tin",
+    "issuer_tin",
 })
 
 # Shape produced by mask_pii for PII_FIELD_IDS: "***" + last 4, or "****".
 _MASKED_PII_PATTERN = re.compile(r"^\*{3}.{4}$|^\*{4}$")
+
+
+# Tokens mask_pii writes inside free text: "***-**-1234" and "*****1234".
+_MASK_TOKEN_PATTERN = re.compile(r"\*\*\*-\*\*-\d{4}|\*{5}\d{4}")
+
+
+def has_pii_pattern(value: str) -> bool:
+    """True when free text holds an SSN/TIN that mask_pii would rewrite."""
+    return _SSN_PATTERN.search(value) is not None or _TIN_PATTERN.search(value) is not None
+
+
+def has_mask_token(value: str) -> bool:
+    return _MASK_TOKEN_PATTERN.search(value) is not None
 
 
 def is_masked_pii(field_id: str, value: str) -> bool:

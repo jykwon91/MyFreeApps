@@ -9,7 +9,7 @@ from app.core.tax_form_fields import TAX_FORM_FIELD_DEFINITIONS, TAX_SOURCE_FORM
 from app.models.tax.tax_form_field import TaxFormField
 from app.models.tax.tax_form_field_source import TaxFormFieldSource
 from app.models.tax.tax_form_instance import TaxFormInstance
-from app.mappers.tax_form_mapper import FieldValueColumns, split_extracted_value
+from app.mappers.tax_form_mapper import FieldValueColumns, columns_for_extracted_value
 from app.repositories import tax_return_repo, tax_form_repo
 
 logger = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ async def process_tax_document(
     raw_fields = tax_form_data.get("fields", {})
     for field_id, raw_value in raw_fields.items():
         label = field_label_map.get(field_id, field_id)
-        columns = split_extracted_value(document_type, field_id, raw_value)
+        columns = columns_for_extracted_value(field_id, raw_value)
         numeric_val, text_val, bool_val = columns
         if columns == FieldValueColumns():
             continue

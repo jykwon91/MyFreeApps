@@ -1,7 +1,7 @@
 """Field definitions for each IRS tax form type.
 
 Each entry maps form_name -> list of (field_id, field_label) pairs; field types
-are declared below (declared_field_type).
+are hinted below (declared_field_type).
 Used by the extraction service to create TaxFormField rows and by the
 Claude prompt to know which boxes to extract.
 """
@@ -18,10 +18,14 @@ TAX_FORM_FIELD_DEFINITIONS: dict[str, list[tuple[str, str]]] = {
         ("box_8", "Allocated tips"),
         ("box_10", "Dependent care benefits"),
         ("box_11", "Nonqualified plans"),
-        ("box_12a", "Box 12a code and amount"),
-        ("box_12b", "Box 12b code and amount"),
-        ("box_12c", "Box 12c code and amount"),
-        ("box_12d", "Box 12d code and amount"),
+        ("box_12a_code", "Box 12a code"),
+        ("box_12a_amount", "Box 12a amount"),
+        ("box_12b_code", "Box 12b code"),
+        ("box_12b_amount", "Box 12b amount"),
+        ("box_12c_code", "Box 12c code"),
+        ("box_12c_amount", "Box 12c amount"),
+        ("box_12d_code", "Box 12d code"),
+        ("box_12d_amount", "Box 12d amount"),
         ("box_13_statutory", "Statutory employee"),
         ("box_13_retirement", "Retirement plan"),
         ("box_13_sick_pay", "Third-party sick pay"),
@@ -78,6 +82,7 @@ TAX_FORM_FIELD_DEFINITIONS: dict[str, list[tuple[str, str]]] = {
         ("box_4", "Federal income tax withheld"),
         ("box_5", "Noncovered security"),
         ("box_6", "Reported to IRS (gross or net)"),
+        ("box_7", "Loss not allowed based on amount in 1d"),
     ],
     "1099_k": [
         ("box_1a", "Gross amount of payment card/third-party network transactions"),
@@ -99,6 +104,18 @@ TAX_FORM_FIELD_DEFINITIONS: dict[str, list[tuple[str, str]]] = {
         ("box_5l", "December"),
         ("box_6", "State"),
         ("box_7", "State ID number"),
+        ("box_7a", "Number of payment transactions (January)"),
+        ("box_7b", "Number of payment transactions (February)"),
+        ("box_7c", "Number of payment transactions (March)"),
+        ("box_7d", "Number of payment transactions (April)"),
+        ("box_7e", "Number of payment transactions (May)"),
+        ("box_7f", "Number of payment transactions (June)"),
+        ("box_7g", "Number of payment transactions (July)"),
+        ("box_7h", "Number of payment transactions (August)"),
+        ("box_7i", "Number of payment transactions (September)"),
+        ("box_7j", "Number of payment transactions (October)"),
+        ("box_7k", "Number of payment transactions (November)"),
+        ("box_7l", "Number of payment transactions (December)"),
         ("box_8", "State income tax withheld"),
     ],
     "1099_nec": [
@@ -116,15 +133,18 @@ TAX_FORM_FIELD_DEFINITIONS: dict[str, list[tuple[str, str]]] = {
         ("box_4", "Federal income tax withheld"),
         ("box_5", "Fishing boat proceeds"),
         ("box_6", "Medical and health care payments"),
+        ("box_7", "Payer made direct sales totaling $5,000 or more"),
         ("box_8", "Substitute payments in lieu of dividends or interest"),
-        ("box_9", "Payer made direct sales totaling $5,000 or more"),
-        ("box_10", "Crop insurance proceeds"),
-        ("box_11", "Foreign tax paid"),
-        ("box_12", "Excess golden parachute payments"),
-        ("box_13", "Nonqualified deferred compensation"),
-        ("box_15", "State tax withheld"),
-        ("box_16", "State/Payer's state no."),
-        ("box_17", "State income"),
+        ("box_9", "Crop insurance proceeds"),
+        ("box_10", "Gross proceeds paid to an attorney"),
+        ("box_11", "Fish purchased for resale"),
+        ("box_12", "Section 409A deferrals"),
+        ("box_13", "FATCA filing requirement"),
+        ("box_14", "Excess golden parachute payments"),
+        ("box_15", "Nonqualified deferred compensation"),
+        ("box_16", "State tax withheld"),
+        ("box_17", "State/Payer's state no."),
+        ("box_18", "State income"),
     ],
     "1099_r": [
         ("box_1", "Gross distribution"),
@@ -155,7 +175,7 @@ TAX_FORM_FIELD_DEFINITIONS: dict[str, list[tuple[str, str]]] = {
         ("box_7", "Is the address of the property different from payer's address"),
         ("box_8", "Address of property securing the mortgage"),
         ("box_9", "Number of mortgaged properties"),
-        ("box_10", "Other"),
+        ("box_10", "Number of mortgaged properties (as extracted)"),
         ("box_11", "Mortgage acquisition date"),
     ],
     "k1": [
@@ -219,20 +239,28 @@ FIELD_TYPE_NUMERIC = "numeric"
 FIELD_TYPE_TEXT = "text"
 FIELD_TYPE_BOOLEAN = "boolean"
 
+# Forms recompute writes; every field on them is a computed amount.
+COMPUTED_FORM_TYPES: frozenset[str] = frozenset({
+    "1040", "schedule_1", "schedule_c", "schedule_e", "schedule_se", "form_4562",
+})
+
 # Fields of TAX_FORM_FIELD_DEFINITIONS that are not money/count boxes.
 # Every other defined field is numeric.
 _TEXT_FIELD_IDS: dict[str, frozenset[str]] = {
     "w2": frozenset({
-        "box_12a", "box_12b", "box_12c", "box_12d", "box_14",
-        "box_15_state", "box_20",
+        "box_12a_code", "box_12b_code", "box_12c_code", "box_12d_code",
+        "box_14", "box_15_state", "box_20",
     }),
     "1099_b": frozenset({"box_1a", "box_1b", "box_1c", "box_2", "box_6"}),
     "1099_k": frozenset({"box_2", "box_6", "box_7"}),
     "1099_nec": frozenset({"box_6"}),
-    "1099_misc": frozenset({"box_16"}),
+    "1099_misc": frozenset({"box_17"}),
     "1099_r": frozenset({"box_7", "box_11", "box_15"}),
-    "1098": frozenset({"box_3", "box_8", "box_10", "box_11"}),
-    "k1": frozenset({"box_16", "box_17", "box_18", "box_20", "box_21"}),
+    "1098": frozenset({"box_3", "box_8", "box_11"}),
+    "k1": frozenset({
+        "box_11", "box_13", "box_14", "box_15", "box_16", "box_17", "box_18",
+        "box_19", "box_20", "box_21",
+    }),
     "1095_a": frozenset({
         "box_1", "box_2", "box_3", "box_7", "box_8",
         "box_11a", "box_11b", "box_11c",
@@ -242,15 +270,18 @@ _BOOLEAN_FIELD_IDS: dict[str, frozenset[str]] = {
     "w2": frozenset({"box_13_statutory", "box_13_retirement", "box_13_sick_pay"}),
     "1099_b": frozenset({"box_5"}),
     "1099_nec": frozenset({"box_2"}),
-    "1099_misc": frozenset({"box_9"}),
+    "1099_misc": frozenset({"box_7", "box_13"}),
     "1099_r": frozenset({"box_2b_taxable_not_determined", "box_2b_total_distribution"}),
     "1098": frozenset({"box_7"}),
 }
 
 
 def declared_field_type(form_name: str, field_id: str) -> str | None:
-    """The type a field is declared as, or None when the form defines no such field
-    (computed forms, free-form extracted keys)."""
+    """A hint for what a field holds: which input to show, and the type an empty
+    field reports. Extraction still stores whatever it reads. None when the form
+    declares no such field."""
+    if form_name in COMPUTED_FORM_TYPES:
+        return FIELD_TYPE_NUMERIC
     if field_id not in {fid for fid, _ in TAX_FORM_FIELD_DEFINITIONS.get(form_name, [])}:
         return None
     if field_id in _TEXT_FIELD_IDS.get(form_name, frozenset()):

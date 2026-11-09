@@ -1,17 +1,9 @@
 """Tax form mapper — normalizes Claude's varied tax form output to internal format."""
-import logging
 from decimal import Decimal
 from typing import NamedTuple
 
-from app.core.parsers import safe_decimal
-from app.core.tax_form_fields import (
-    FIELD_TYPE_BOOLEAN,
-    FIELD_TYPE_NUMERIC,
-    FIELD_TYPE_TEXT,
-    declared_field_type,
-)
-
-logger = logging.getLogger(__name__)
+from app.core.parsers import to_decimal, to_text
+from app.core.pii import PII_FIELD_IDS
 
 
 class FieldValueColumns(NamedTuple):
@@ -20,6 +12,7 @@ class FieldValueColumns(NamedTuple):
     numeric: Decimal | None = None
     text: str | None = None
     boolean: bool | None = None
+
 
 FORM_TYPE_MAP: dict[str, str] = {
     "1099-misc": "1099_misc", "1099-nec": "1099_nec", "1099-k": "1099_k",
@@ -78,75 +71,19 @@ def build_tax_form_data(doc_data: dict) -> dict | None:
     }
 
 
-def parse_amount(raw: object) -> Decimal | None:
-    """Parse a money/count value, tolerating "$1,234.00" and "(1,234.00)"."""
-    if raw is None or isinstance(raw, bool):
-        return None
-    if not isinstance(raw, str):
-        return safe_decimal(str(raw))
-    cleaned = raw.strip().replace("$", "").replace(",", "").replace(" ", "")
-    if cleaned.startswith("(") and cleaned.endswith(")"):
-        cleaned = "-" + cleaned[1:-1]
-    return safe_decimal(cleaned)
+def columns_for_extracted_value(field_id: str, raw: object) -> FieldValueColumns:
+    """Pick the column an extracted value is stored in.
 
-
-def split_extracted_value(
-    form_name: str, field_id: str, raw: object,
-) -> FieldValueColumns:
-    """Choose the column an extracted value belongs in.
-
-    A declared field keeps its value in its own type's column. A value that
-    cannot be parsed as the declared type is kept as text and logged, never
-    dropped. Undeclared fields keep the legacy inference.
+    PII ids are always text (leading zeros survive, no Numeric overflow).
+    A bool is checked before any decimal parse so a ticked checkbox is not 1.
     """
     if raw is None:
         return FieldValueColumns()
-    declared = declared_field_type(form_name, field_id)
-    if declared == FIELD_TYPE_TEXT:
-        return FieldValueColumns(text=str(raw))
-    if declared == FIELD_TYPE_NUMERIC:
-        amount = parse_amount(raw)
-        if amount is not None:
-            return FieldValueColumns(numeric=amount)
-        logger.warning(
-            "Unparseable value for numeric field %s.%s; kept as text", form_name, field_id,
-        )
-        return FieldValueColumns(text=str(raw))
-    if declared == FIELD_TYPE_BOOLEAN:
-        if isinstance(raw, bool):
-            return FieldValueColumns(boolean=raw)
-        logger.warning(
-            "Non-boolean value for boolean field %s.%s; kept as text", form_name, field_id,
-        )
-        return FieldValueColumns(text=str(raw))
-
-    numeric = safe_decimal(raw)  # type: ignore[arg-type]
-    if numeric is not None:
-        return FieldValueColumns(numeric=numeric)
+    if field_id in PII_FIELD_IDS:
+        return FieldValueColumns(text=to_text(raw))
     if isinstance(raw, bool):
         return FieldValueColumns(boolean=raw)
-    return FieldValueColumns(text=str(raw))
-
-
-def _format_decimal(value: Decimal) -> str:
-    return str(int(value)) if value == value.to_integral_value() else format(value.normalize(), "f")
-
-
-def relocate_legacy_value(
-    form_name: str, field_id: str, current: FieldValueColumns,
-) -> FieldValueColumns | None:
-    """Where a legacy row's value belongs, or None when it is fine as is.
-
-    Only a lone value in the wrong column moves, and only when it converts
-    cleanly. Rows holding several columns are ambiguous and left alone.
-    """
-    declared = declared_field_type(form_name, field_id)
-    if declared == FIELD_TYPE_TEXT and current.numeric is not None:
-        if current.text is None and current.boolean is None:
-            return FieldValueColumns(text=_format_decimal(current.numeric))
-    if declared == FIELD_TYPE_NUMERIC and current.text is not None:
-        if current.numeric is None and current.boolean is None:
-            amount = parse_amount(current.text)
-            if amount is not None:
-                return FieldValueColumns(numeric=amount)
-    return None
+    numeric = to_decimal(raw)
+    if numeric is not None:
+        return FieldValueColumns(numeric=numeric)
+    return FieldValueColumns(text=to_text(raw))

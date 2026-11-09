@@ -1533,7 +1533,8 @@
         "test_taxpayer_profile.py",
         "test_schedule_e_report.py",
         "test_schedule_e_backfill_migration.py",
-        "test_tax_legacy_value_migration.py"
+        "test_tax_field_empty_migration.py",
+        "test_core_parsers.py"
       ],
       "frontend_tests": [
         "TaxDocuments.test.tsx",
@@ -1541,7 +1542,8 @@
         "CompletenessChecklist.test.tsx",
         "ReceivedDocumentsGrouped.test.tsx",
         "SuggestionCard.test.tsx",
-        "FormFieldsTable.test.tsx"
+        "FormFieldsTable.test.tsx",
+        "api-validation-detail.test.ts"
       ],
       "e2e_specs": [
         "tax.spec.ts",

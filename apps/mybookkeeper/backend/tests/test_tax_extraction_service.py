@@ -427,47 +427,52 @@ async def _extract(
     return {f.field_id: f for f in await tax_form_repo.get_fields(db, instance.id)}
 
 
-class TestExtractionStoresDeclaredColumn:
+class TestExtractionColumnChoice:
     @pytest.mark.asyncio
-    async def test_text_box_keeps_digits_as_text(
+    async def test_checkbox_is_stored_as_bool_not_one(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
         fields = await _extract(
-            db, test_org, "1099_r", {"box_7": "7", "box_11": "2019", "box_1": 100},
+            db, test_org, "w2", {"box_13_retirement": True, "box_13_sick_pay": False},
         )
-        assert fields["box_7"].value_text == "7"
-        assert fields["box_7"].value_numeric is None
-        assert fields["box_11"].value_text == "2019"
-        assert fields["box_1"].value_numeric == Decimal("100")
-
-    @pytest.mark.asyncio
-    async def test_numeric_box_parses_currency_string(
-        self, db: AsyncSession, test_user: User, test_org: Organization,
-    ) -> None:
-        fields = await _extract(db, test_org, "w2", {"box_1": "$1,234.00"})
-        assert fields["box_1"].value_numeric == Decimal("1234.00")
-        assert fields["box_1"].value_text is None
-
-    @pytest.mark.asyncio
-    async def test_unparseable_numeric_box_is_kept_as_text(
-        self, db: AsyncSession, test_user: User, test_org: Organization,
-    ) -> None:
-        fields = await _extract(db, test_org, "w2", {"box_1": "see statement"})
-        assert fields["box_1"].value_text == "see statement"
-        assert fields["box_1"].value_numeric is None
-
-    @pytest.mark.asyncio
-    async def test_boolean_box_stores_the_bool(
-        self, db: AsyncSession, test_user: User, test_org: Organization,
-    ) -> None:
-        fields = await _extract(db, test_org, "w2", {"box_13_retirement": True})
         assert fields["box_13_retirement"].value_boolean is True
         assert fields["box_13_retirement"].value_numeric is None
+        assert fields["box_13_sick_pay"].value_boolean is False
 
     @pytest.mark.asyncio
-    async def test_undeclared_field_keeps_inference(
+    @pytest.mark.parametrize(
+        "field_id",
+        ["recipient_tin", "employee_ssn", "employer_ein", "lender_tin", "issuer_tin", "account_number"],
+    )
+    async def test_pii_is_text_with_leading_zero(
+        self, db: AsyncSession, test_user: User, test_org: Organization, field_id: str,
+    ) -> None:
+        fields = await _extract(db, test_org, "1099_int", {field_id: "012345678"})
+        assert fields[field_id].value_text == "012345678"
+        assert fields[field_id].value_numeric is None
+
+    @pytest.mark.asyncio
+    async def test_numeric_pii_is_stored_as_text(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
-        fields = await _extract(db, test_org, "w2", {"custom_amount": "42", "custom_note": "hi"})
-        assert fields["custom_amount"].value_numeric == Decimal("42")
-        assert fields["custom_note"].value_text == "hi"
+        fields = await _extract(db, test_org, "1099_int", {"recipient_tin": 123456789})
+        assert fields["recipient_tin"].value_text == "123456789"
+        assert fields["recipient_tin"].value_numeric is None
+
+    @pytest.mark.asyncio
+    async def test_structured_value_is_stored_as_json(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        fields = await _extract(db, test_org, "w2", {"box_14": {"a": 1}})
+        assert fields["box_14"].value_text == '{"a": 1}'
+
+    @pytest.mark.asyncio
+    async def test_other_values_keep_inference(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        fields = await _extract(
+            db, test_org, "1099_r", {"box_1": "1500.50", "box_7": "7", "box_8": "note"},
+        )
+        assert fields["box_1"].value_numeric == Decimal("1500.50")
+        assert fields["box_7"].value_numeric == Decimal("7")
+        assert fields["box_8"].value_text == "note"

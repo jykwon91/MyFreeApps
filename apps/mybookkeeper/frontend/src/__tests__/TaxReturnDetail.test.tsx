@@ -12,6 +12,10 @@ import type { FormWithFields } from "@/shared/types/tax/tax-form";
 import { queryData } from "@/test/rtk-query-data";
 import { queryStatus } from "@/test/rtk-query-status";
 
+const toast = vi.hoisted(() => ({ showError: vi.fn(), showSuccess: vi.fn() }));
+
+vi.mock("@/shared/hooks/useToast", () => ({ useToast: () => toast }));
+
 const mockTaxReturn: TaxReturn = {
   id: "tr-1",
   organization_id: "org-1",
@@ -77,7 +81,8 @@ import {
   useGetTaxReturnQuery,
   useGetValidationQuery,
 } from "@mybookkeeper/api-client/store/taxReturnsApi";
-import { useGetFormFieldsQuery } from "@/shared/store/taxReturnsApi";
+import { useGetFormFieldsQuery, useOverrideFieldMutation } from "@/shared/store/taxReturnsApi";
+import { fireEvent, waitFor } from "@testing-library/react";
 
 const refetch = vi.fn();
 
@@ -330,5 +335,36 @@ describe("TaxReturnDetail", () => {
 
     expect(screen.getByText("Rental income seems low")).toBeInTheDocument();
     expect(screen.getByText("Total does not match")).toBeInTheDocument();
+  });
+
+  it("shows the server's reason when an override is rejected and keeps the editor open", async () => {
+    const reject = vi.fn(() => ({
+      unwrap: () => Promise.reject({ data: { detail: "recipient_tin is a masked value; enter the full value" } }),
+    }));
+    vi.mocked(useOverrideFieldMutation).mockReturnValue(
+      [reject, { isLoading: false }] as unknown as ReturnType<typeof useOverrideFieldMutation>,
+    );
+    mockForm({
+      form_name: "1099_int",
+      instances: [{
+        instance_id: "i1", instance_label: "Bank", property_id: null, source_type: "extracted",
+        document_id: null, issuer_name: "Bank",
+        fields: [{
+          id: "f1", field_id: "box_1", label: "Interest income", value: 10, type: "numeric",
+          is_calculated: false, is_overridden: false, validation_status: "unvalidated",
+          validation_message: null, confidence: null,
+        }],
+      }],
+    } as unknown as FormWithFields);
+
+    renderWithRoute("tr-1", "?form=1099_int");
+    fireEvent.click(screen.getByTitle("Override value"));
+    fireEvent.change(screen.getByPlaceholderText("Reason for override..."), { target: { value: "Fix" } });
+    fireEvent.click(screen.getByText("Save"));
+
+    await waitFor(() => expect(toast.showError).toHaveBeenCalledWith(
+      "recipient_tin is a masked value; enter the full value",
+    ));
+    expect(screen.getByPlaceholderText("Reason for override...")).toHaveValue("Fix");
   });
 });

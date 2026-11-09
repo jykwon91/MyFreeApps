@@ -22,6 +22,7 @@ import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
 import type { FieldValueType } from "@/shared/types/tax/tax-form";
 import { STATUS_BADGE } from "@/shared/lib/tax-return-config";
 import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
+import { getApiValidationDetail } from "@/shared/lib/api-validation-detail";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function TaxReturnDetail() {
@@ -57,13 +58,15 @@ export default function TaxReturnDetail() {
     }
   }, [id, recompute, showSuccess, showError]);
 
-  const handleOverride = useCallback(async (fieldId: string, value: number | string | boolean | null, reason: string, fieldType: FieldValueType) => {
-    if (!id) return;
+  const handleOverride = useCallback(async (fieldId: string, value: number | string | boolean | null, reason: string, fieldType: FieldValueType): Promise<boolean> => {
+    if (!id) return false;
     try {
       await overrideField({ return_id: id, field_id: fieldId, value, override_reason: reason, field_type: fieldType }).unwrap();
       showSuccess("Override saved");
-    } catch {
-      showError("I couldn't save that override. Please try again.");
+      return true;
+    } catch (err) {
+      showError(getApiValidationDetail(err, "I couldn't save that override. Please try again."));
+      return false;
     }
   }, [id, overrideField, showSuccess, showError]);
 
