@@ -9,7 +9,9 @@ Isolation strategy:
   user's JWT bearer token.
 """
 import asyncio
+import os
 import sys
+from pathlib import Path
 
 # On Windows, asyncpg is incompatible with the default ProactorEventLoop
 # policy when connections are reused across event loops (the situation that
@@ -41,6 +43,37 @@ from app.main import app
 # See platform_shared.testing.factories._install_fast_password_helper for
 # the full rationale and safety notes.
 from platform_shared.testing.factories import make_api_user_factory
+from tests.ci_shards import ALL_SHARDS, SHARD_ENV_VAR, shard_for
+
+
+# ---------------------------------------------------------------------------
+# CI sharding — see tests/ci_shards.py.
+#
+# With ``MJH_TEST_SHARD`` unset (a local run) every file is collected. With it
+# set, only the files assigned to that shard are; every unlisted file belongs
+# to the catch-all shard, so no test file can fall outside CI.
+# ---------------------------------------------------------------------------
+
+_TESTS_DIR = Path(__file__).parent
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    shard = os.environ.get(SHARD_ENV_VAR)
+    if shard is not None and shard not in ALL_SHARDS:
+        raise pytest.UsageError(
+            f"{SHARD_ENV_VAR}={shard!r} is not a shard in tests/ci_shards.py "
+            f"(known: {', '.join(sorted(ALL_SHARDS))})",
+        )
+
+
+def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool | None:
+    shard = os.environ.get(SHARD_ENV_VAR)
+    if shard is None or not collection_path.is_relative_to(_TESTS_DIR):
+        return None
+    if not collection_path.name.startswith("test_") or collection_path.suffix != ".py":
+        return None
+    test_file = collection_path.relative_to(_TESTS_DIR).as_posix()
+    return True if shard_for(test_file) != shard else None
 
 
 # ---------------------------------------------------------------------------
