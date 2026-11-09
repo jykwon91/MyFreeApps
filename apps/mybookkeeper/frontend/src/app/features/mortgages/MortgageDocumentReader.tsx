@@ -2,9 +2,9 @@ import DocumentReaderCard from "@/app/features/documents/DocumentReaderCard";
 import {
   useExtractMortgageFromUploadMutation,
   useExtractMortgageMutation,
-} from "@/shared/store/mortgagesApi";
+} from "@mybookkeeper/api-client/store/mortgagesApi";
 import type { DocumentSource } from "@/shared/types/document/document-source";
-import type { MortgageDraft } from "@/shared/types/mortgage/mortgage-draft";
+import type { MortgageDraft } from "@mybookkeeper/api-client/types/mortgage/mortgage-draft";
 import { MORTGAGE_INPUT_CLASS } from "./mortgage-input-class";
 
 export interface MortgageDocumentReaderProps {
@@ -28,11 +28,13 @@ export default function MortgageDocumentReader({
     useExtractMortgageFromUploadMutation();
 
   async function read(source: DocumentSource) {
-    onRead(
-      source.kind === "file"
-        ? await extractUpload(source.file).unwrap()
-        : await extractMortgage({ document_id: source.documentId }).unwrap(),
-    );
+    if (source.kind === "file") {
+      const form = new FormData();
+      form.append("file", source.file);
+      onRead(await extractUpload(form).unwrap());
+      return;
+    }
+    onRead(await extractMortgage({ document_id: source.documentId }).unwrap());
   }
 
   return (

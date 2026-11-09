@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Button, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
-import { applyMortgageDraftToForm } from "@/shared/lib/mortgage-draft";
-import { EMPTY_MORTGAGE_FORM, toMortgagePayload } from "@/shared/lib/mortgage-form";
-import { useCreateMortgageMutation } from "@/shared/store/mortgagesApi";
+import { applyMortgageDraftToForm } from "@mybookkeeper/api-client/utils/mortgageDraft";
+import { EMPTY_MORTGAGE_FORM, toMortgagePayload } from "@mybookkeeper/api-client/utils/mortgageForm";
+import { useCreateMortgageMutation } from "@mybookkeeper/api-client/store/mortgagesApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import type { MortgageDraft } from "@/shared/types/mortgage/mortgage-draft";
-import type { MortgageFormValues } from "@/shared/types/mortgage/mortgage-form-values";
+import type { MortgageDraft } from "@mybookkeeper/api-client/types/mortgage/mortgage-draft";
+import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
 import MortgageDocumentReader from "./MortgageDocumentReader";
 import MortgageDraftNotices from "./MortgageDraftNotices";
 import MortgageFormFields from "./MortgageFormFields";

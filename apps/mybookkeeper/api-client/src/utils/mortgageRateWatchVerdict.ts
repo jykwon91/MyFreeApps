@@ -3,10 +3,10 @@ import {
   formatMoneyBand,
   formatRateBand,
   formatRatePct,
-} from "@mybookkeeper/api-client/utils/mortgageFormat";
-import type { MortgageRateWatch } from "@/shared/types/mortgage/mortgage-rate-watch";
-import type { MortgageRateWatchVerdict } from "@/shared/types/mortgage/mortgage-rate-watch-verdict";
-import type { MortgageRefiOutlook } from "@/shared/types/mortgage/mortgage-refi-outlook";
+} from "./mortgageFormat";
+import type { MortgageRateWatch } from "../types/mortgage/mortgage-rate-watch";
+import type { MortgageRateWatchVerdict } from "../types/mortgage/mortgage-rate-watch-verdict";
+import type { MortgageRefiOutlook } from "../types/mortgage/mortgage-refi-outlook";
 
 /**
  * Reduce the whole rate-watch payload to the sentence it leads with.

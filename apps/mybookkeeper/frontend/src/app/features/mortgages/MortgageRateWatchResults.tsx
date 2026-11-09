@@ -1,7 +1,7 @@
 import { AlertBox } from "@platform/ui";
-import { formatLoanDate, formatRatePct } from "@mybookkeeper/api-client/utils/mortgageFormat";
-import { buildMortgageRateWatchVerdict } from "@/shared/lib/mortgage-rate-watch-verdict";
-import type { MortgageRateWatch } from "@/shared/types/mortgage/mortgage-rate-watch";
+import { mortgageScopeSummary, mortgageSurveyLine } from "@mybookkeeper/api-client/utils/mortgageRateWatchSummary";
+import { buildMortgageRateWatchVerdict } from "@mybookkeeper/api-client/utils/mortgageRateWatchVerdict";
+import type { MortgageRateWatch } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-watch";
 import MortgageOutlookCard from "./MortgageOutlookCard";
 import MortgageRateWatchVerdictBanner from "./MortgageRateWatchVerdictBanner";
 
@@ -9,19 +9,6 @@ export interface MortgageRateWatchResultsProps {
   data: MortgageRateWatch;
   /** Re-runs the check after a blocker on a card has been cleared. */
   onRecheck: () => void;
-}
-
-/** How many of the listed loans were actually compared, stated plainly. */
-function scopeSummary(total: number, checked: number): string {
-  if (total === checked) {
-    return `Compared ${checked === 1 ? "your loan" : `all ${checked} of your loans`} against this week's averages.`;
-  }
-  const skipped = total - checked;
-  return (
-    `Compared ${checked} of your ${total} loans against this week's averages. ` +
-    `The other ${skipped === 1 ? "one says" : `${skipped} say`} below why ` +
-    `${skipped === 1 ? "it" : "they"} couldn't be.`
-  );
 }
 
 /**
@@ -40,6 +27,7 @@ export default function MortgageRateWatchResults({
   onRecheck,
 }: MortgageRateWatchResultsProps) {
   const verdict = buildMortgageRateWatchVerdict(data);
+  const surveyLine = mortgageSurveyLine(data);
 
   return (
     <div className="space-y-4" data-testid="mortgage-rate-watch-results">
@@ -55,7 +43,7 @@ export default function MortgageRateWatchResults({
             className="text-sm text-muted-foreground"
             data-testid="mortgage-rate-watch-scope"
           >
-            {scopeSummary(data.outlooks.length, data.checked_mortgage_count)}
+            {mortgageScopeSummary(data.outlooks.length, data.checked_mortgage_count)}
           </p>
 
           <ul className="space-y-3">
@@ -70,19 +58,12 @@ export default function MortgageRateWatchResults({
         </>
       ) : null}
 
-      {data.survey_observed_on ? (
+      {surveyLine ? (
         <p
           className="text-xs text-muted-foreground"
           data-testid="mortgage-rate-watch-survey"
         >
-          Freddie Mac&apos;s weekly survey for{" "}
-          {formatLoanDate(data.survey_observed_on)}:{" "}
-          {formatRatePct(data.survey_30_year_pct)} on a 30-year fixed,{" "}
-          {formatRatePct(data.survey_15_year_pct)} on a 15-year. That survey
-          measures owner-occupied homes, so a loan on a rental or a second home
-          is compared against it plus 0.4 to 0.85 points — roughly what the
-          agencies charge for the difference. None of this is a quote; only a
-          lender can give you one.
+          {surveyLine}
         </p>
       ) : null}
     </div>

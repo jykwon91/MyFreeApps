@@ -1,9 +1,7 @@
 import { formatRatePct } from "@mybookkeeper/api-client/utils/mortgageFormat";
-import {
-  MORTGAGE_VERDICT_BORDER,
-  MORTGAGE_VERDICT_HEADLINE,
-} from "@/shared/lib/mortgage-verdict-labels";
-import type { MortgageRefiOutlook } from "@/shared/types/mortgage/mortgage-refi-outlook";
+import { MORTGAGE_VERDICT_HEADLINE } from "@mybookkeeper/api-client/constants/mortgageVerdictLabels";
+import { MORTGAGE_VERDICT_BORDER } from "@/shared/lib/mortgage-verdict-labels";
+import type { MortgageRefiOutlook } from "@mybookkeeper/api-client/types/mortgage/mortgage-refi-outlook";
 import MortgageOutlookNumbers from "./MortgageOutlookNumbers";
 import PropertyOccupancyFixer from "./PropertyOccupancyFixer";
 

@@ -1,5 +1,5 @@
 import { FormField } from "@platform/ui";
-import type { MortgageFormValues } from "@/shared/types/mortgage/mortgage-form-values";
+import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
 import { MORTGAGE_INPUT_CLASS } from "./mortgage-input-class";
 
 export interface MortgageFormFieldsProps {

@@ -4,13 +4,13 @@ import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import {
   mortgageToFormValues,
   toMortgagePayload,
-} from "@/shared/lib/mortgage-form";
+} from "@mybookkeeper/api-client/utils/mortgageForm";
 import {
   useDeleteMortgageMutation,
   useUpdateMortgageMutation,
-} from "@/shared/store/mortgagesApi";
+} from "@mybookkeeper/api-client/store/mortgagesApi";
 import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
-import type { MortgageFormValues } from "@/shared/types/mortgage/mortgage-form-values";
+import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
 import MortgageFormFields from "./MortgageFormFields";
 
 export interface EditMortgageDialogProps {

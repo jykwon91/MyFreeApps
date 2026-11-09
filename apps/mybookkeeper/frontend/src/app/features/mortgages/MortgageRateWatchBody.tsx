@@ -1,4 +1,4 @@
-import type { MortgageRateWatch } from "@/shared/types/mortgage/mortgage-rate-watch";
+import type { MortgageRateWatch } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-watch";
 import type { MortgageRateWatchMode } from "@/shared/types/mortgage/mortgage-rate-watch-mode";
 import MortgageRateWatchResults from "./MortgageRateWatchResults";
 import MortgageRateWatchSkeleton from "./MortgageRateWatchSkeleton";

@@ -1,28 +1,30 @@
 import { useGetMortgageByIdQuery } from "@mybookkeeper/api-client/store/mortgagesApi";
 import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
+import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { MORTGAGE_MESSAGES } from "../../constants/mortgages";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useTodayIso } from "../../lib/useTodayIso";
 import InquiryChip from "../inquiries/InquiryChip";
-import { useOpenLink } from "../inquiries/useOpenLink";
+import { useCanWrite } from "../workspace/useCanWrite";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import MortgageDetailSkeleton from "./MortgageDetailSkeleton";
 import { mortgageTitle, rateFixedLine } from "./mortgageDisplay";
 import MortgageFacts from "./MortgageFacts";
+import RemoveMortgageButton from "./RemoveMortgageButton";
 
 export default function MortgageDetailScreen({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
-  const openLink = useOpenLink();
+  const canWrite = useCanWrite();
+  const [isRemoved, setIsRemoved] = useState(false);
   const todayIso = useTodayIso();
   const { currentData: mortgage, error, isFetching, refetch } = useGetMortgageByIdQuery(id);
   const { refresh, refreshControl } = useRefresh(async () => {
     await refetch();
   }, error);
 
-  if (!mortgage && (isFetching || !error)) return <MortgageDetailSkeleton />;
+  if (isRemoved || (!mortgage && (isFetching || !error))) return <MortgageDetailSkeleton />;
   if (!mortgage) {
     const isGone = httpStatus(error) === 404;
     return (
@@ -53,10 +55,17 @@ export default function MortgageDetailScreen({ id }: { id: string }) {
       </View>
       <MortgageFacts mortgage={mortgage} />
       <View style={{ gap: spacing.sm }}>
-        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MORTGAGE_MESSAGES.manageOnWebsite}</Text>
-        <LoadingButton onPress={() => void openLink(`${WEB_BASE_URL}/mortgages`)} variant="ghost">
-          {MORTGAGE_MESSAGES.openWebsite}
+        <LoadingButton onPress={() => router.push("/mortgages/rates")} variant="secondary">
+          {MORTGAGE_MESSAGES.checkRates}
         </LoadingButton>
+        {canWrite ? (
+          <>
+            <LoadingButton onPress={() => router.push(`/mortgages/${id}/edit`)} variant="secondary">
+              {MORTGAGE_MESSAGES.edit}
+            </LoadingButton>
+            <RemoveMortgageButton mortgageId={id} onRemoved={() => setIsRemoved(true)} title={mortgageTitle(mortgage)} />
+          </>
+        ) : null}
       </View>
     </ScrollView>
   );

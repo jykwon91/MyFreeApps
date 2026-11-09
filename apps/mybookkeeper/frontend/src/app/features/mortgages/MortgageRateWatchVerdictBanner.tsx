@@ -1,4 +1,4 @@
-import type { MortgageRateWatchVerdict } from "@/shared/types/mortgage/mortgage-rate-watch-verdict";
+import type { MortgageRateWatchVerdict } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-watch-verdict";
 
 export interface MortgageRateWatchVerdictBannerProps {
   verdict: MortgageRateWatchVerdict;

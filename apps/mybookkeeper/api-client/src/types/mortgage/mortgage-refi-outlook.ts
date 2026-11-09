@@ -1,4 +1,4 @@
-import type { MortgageRateType } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
+import type { MortgageRateType } from "./mortgage-rate-type";
 import type { MortgageRefiVerdict } from "./mortgage-refi-verdict";
 
 /**
