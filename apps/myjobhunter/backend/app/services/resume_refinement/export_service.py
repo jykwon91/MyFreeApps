@@ -27,6 +27,9 @@ logger = logging.getLogger(__name__)
 
 ExportFormat = Literal["docx", "pdf"]
 
+# The only resource scheme a resume PDF may load (see ``_pdf_url_fetcher``).
+_PDF_ALLOWED_PROTOCOLS = ("data",)
+
 # Default print stylesheet for the PDF path. Single-column, generous
 # margins, ATS-friendly font fallbacks. Kept inline so the pipeline
 # is fully self-contained — no static assets to ship.
@@ -155,8 +158,8 @@ async def _markdown_to_pdf(markdown: str) -> bytes:
     return await asyncio.to_thread(_html_to_pdf_bytes, html)
 
 
-def _pdf_url_fetcher(url: str):
-    """Block every external / local resource fetch during PDF rendering.
+def _pdf_url_fetcher():
+    """A fetcher that blocks every external / local resource during PDF rendering.
 
     WeasyPrint's default fetcher resolves ``file://`` (local file read),
     ``http(s)://`` (SSRF to internal services / cloud metadata) and more. The
@@ -164,14 +167,12 @@ def _pdf_url_fetcher(url: str):
     ``<embed src="file:///etc/passwd">`` or ``![](http://169.254.169.254/…)``
     would make the *server* fetch it and embed the result in the returned PDF.
     A resume never needs to pull a remote or local resource, so only inline
-    ``data:`` URIs are permitted; everything else raises.
+    ``data:`` URIs are permitted. WeasyPrint skips a refused resource with a
+    warning and carries on rendering.
     """
-    if not url.startswith("data:"):
-        raise ValueError(f"blocked non-data resource during resume export: {url!r}")
+    from weasyprint import URLFetcher
 
-    from weasyprint import default_url_fetcher
-
-    return default_url_fetcher(url)
+    return URLFetcher(allowed_protocols=_PDF_ALLOWED_PROTOCOLS)
 
 
 def _html_to_pdf_bytes(html: str) -> bytes:
@@ -180,7 +181,7 @@ def _html_to_pdf_bytes(html: str) -> bytes:
     from weasyprint import CSS, HTML
 
     buffer = io.BytesIO()
-    HTML(string=html, url_fetcher=_pdf_url_fetcher).write_pdf(
+    HTML(string=html, url_fetcher=_pdf_url_fetcher()).write_pdf(
         target=buffer, stylesheets=[CSS(string=_PDF_CSS)]
     )
     return buffer.getvalue()

@@ -17,6 +17,13 @@ from app.services.resume_refinement import export_service
 class TestPdfUrlFetcherBlocksSSRF:
     """The authoritative control: only ``data:`` URIs may be fetched."""
 
+    @pytest.fixture(autouse=True)
+    def _needs_weasyprint(self):
+        try:
+            import weasyprint  # noqa: F401
+        except Exception as exc:  # OSError when pango/cairo are absent locally
+            pytest.skip(f"weasyprint unavailable: {exc}")
+
     @pytest.mark.parametrize(
         "url",
         [
@@ -28,23 +35,27 @@ class TestPdfUrlFetcherBlocksSSRF:
             "https://attacker.example/pixel.png",  # exfil / tracking
             "ftp://host/secret",
             "gopher://host/_",
-            "",  # empty -> not data: -> blocked
+            "",  # not a URI -> blocked
         ],
     )
     def test_non_data_urls_are_blocked(self, url):
         with pytest.raises(ValueError):
-            export_service._pdf_url_fetcher(url)
+            export_service._pdf_url_fetcher().fetch(url)
 
-    def test_data_uri_is_allowed(self, monkeypatch):
-        try:
-            import weasyprint
-        except Exception as exc:  # OSError when native libs are absent (local win)
-            pytest.skip(f"weasyprint unavailable: {exc}")
-        sentinel = {"string": b"payload"}
-        monkeypatch.setattr(
-            weasyprint, "default_url_fetcher", lambda u: sentinel
+    def test_data_uri_is_allowed(self):
+        response = export_service._pdf_url_fetcher().fetch("data:text/plain,hi")
+        assert response.read() == b"hi"
+
+    def test_a_blocked_resource_is_skipped_and_the_pdf_still_renders(self):
+        pixel = (
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
+            "AAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
         )
-        assert export_service._pdf_url_fetcher("data:text/plain,hi") is sentinel
+        html = (
+            f'<p>Jane Doe</p><img src="{pixel}">'
+            '<img src="file:///etc/passwd"><img src="http://127.0.0.1:1/x.png">'
+        )
+        assert export_service._html_to_pdf_bytes(html).startswith(b"%PDF")
 
 
 @pytest.mark.skipif(
