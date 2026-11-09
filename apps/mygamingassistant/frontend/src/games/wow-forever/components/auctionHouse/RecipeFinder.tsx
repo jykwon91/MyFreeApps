@@ -22,7 +22,7 @@ export default function RecipeFinder({ options, professionLabel, onPick }: Recip
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={`Find a ${professionLabel} recipe, e.g. "rod"`}
+          placeholder={`Search ${professionLabel} recipes by name`}
           aria-controls={listId}
           className="min-h-[44px] rounded-md border bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           data-testid="recipe-finder"
