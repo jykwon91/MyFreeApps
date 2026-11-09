@@ -63,3 +63,11 @@ export async function pull(): Promise<void> {
     await screen.getByTestId("home-screen").props.refreshControl.props.onRefresh();
   });
 }
+
+/** Answers one request with a fixed body, as the server would, until the returned function is called. */
+export function answerRequest(url: string, body: unknown): () => void {
+  return answerWith(
+    (requested) => requested === url,
+    (config) => Promise.resolve({ data: body, status: 200, statusText: "", headers: {}, config }),
+  );
+}

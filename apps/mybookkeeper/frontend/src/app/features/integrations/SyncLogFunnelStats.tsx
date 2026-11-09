@@ -1,5 +1,5 @@
-import type { SyncLog } from "@/shared/types/integration/sync-log";
-import type { SyncLogFunnelMode } from "@/shared/types/integration/sync-log-funnel-mode";
+import type { SyncLog } from "@mybookkeeper/api-client/types/integration/sync-log";
+import type { SyncLogFunnelMode } from "@mybookkeeper/api-client/types/integration/sync-log-funnel-mode";
 
 export interface SyncLogFunnelStatsProps {
   mode: SyncLogFunnelMode;

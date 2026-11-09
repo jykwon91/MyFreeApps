@@ -1,7 +1,8 @@
 import type { ReceiptGmailState } from "@mybookkeeper/api-client/types/lease/receipt-gmail-state";
 import { Banner } from "@platform/mobile";
 import { WEB_BASE_URL } from "../../constants/api";
-import { INTEGRATIONS_WEB_PATH, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
+import { INTEGRATIONS_WEB_PATH } from "../../constants/integrations";
+import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import { useOpenLink } from "../inquiries/useOpenLink";
 import { gmailMessage } from "./receiptDisplay";
 

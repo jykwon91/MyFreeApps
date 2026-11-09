@@ -7,7 +7,7 @@ import { useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES } from "../../constants/paymentReview";
 import type { TenantChoice } from "../../types/TenantChoice";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 import { linkExplanation, linkQuestion, propertyBookedMessage, tenantLinkedMessage } from "./paymentReviewDisplay";
 import { reviewFailureMessage, wasAlreadyHandled } from "./paymentReviewFailure";
 

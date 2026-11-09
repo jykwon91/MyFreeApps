@@ -7,7 +7,7 @@ import { type RefreshControlProps, ScrollView, Text, View } from "react-native";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { DELETE_PROPERTY_BODY, deletePropertyTitle, PROPERTY_MESSAGES } from "../../constants/properties";
 import InquiryChip from "../inquiries/InquiryChip";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 import TransactionFact from "../transactions/TransactionFact";
 import { activityPeriodText, needsClassification } from "./propertyDisplay";
 import { usePropertyActions } from "./usePropertyActions";

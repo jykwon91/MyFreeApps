@@ -1,14 +1,16 @@
 import { useGetAttributionReviewQueueQuery } from "@mybookkeeper/api-client/store/attributionApi";
+import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import { useGetDuplicatesQuery, useGetTransactionReviewCountQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { Skeleton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
 import { DUPLICATES_LINK } from "../../constants/duplicates";
-import { DOCUMENTS_NEEDING_A_LOOK_LINK, HOME_PAYMENT_REVIEW_ARGS, HOME_RECEIPTS_ARGS, PAYMENT_REVIEW_LINK, RECEIPTS_LINK } from "../../constants/home";
+import { DOCUMENTS_NEEDING_A_LOOK_LINK, GMAIL_REAUTH_WAITING, HOME_PAYMENT_REVIEW_ARGS, HOME_RECEIPTS_ARGS, INTEGRATIONS_LINK, PAYMENT_REVIEW_LINK, RECEIPTS_LINK } from "../../constants/home";
 import { NO_FILTERS } from "../../constants/transactionFilters";
 import { duplicateCountLine } from "../duplicates/duplicateDisplay";
 import { needsALook } from "../documents/documentDisplay";
+import { gmailConnection, gmailIntegration } from "../integrations/gmailConnection";
 import { useDocumentsWithPolling } from "../documents/useDocumentsWithPolling";
 import { transactionsLink } from "../transactions/transactionFilters";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -30,6 +32,10 @@ export default function WaitingCard() {
   const payments = useGetAttributionReviewQueueQuery(HOME_PAYMENT_REVIEW_ARGS, { skip: !canWrite });
 
   const paymentCount = canWrite ? payments.data?.pending_count : 0;
+  // Like duplicates, only worth a row when there is one. A viewer can't reconnect Gmail, so they aren't waiting on it.
+  const integrations = useGetIntegrationsQuery(undefined, { skip: !canWrite });
+  const needsReauth = canWrite && gmailConnection(gmailIntegration(integrations.data)) === "reauth";
+
   const transactionCount = reviewCount.data?.count;
   const documentCount = documents.data?.filter(needsALook).length;
   const receiptCount = canWrite ? receipts.data?.pending_count : 0;
@@ -42,7 +48,14 @@ export default function WaitingCard() {
   });
 
   async function retry(): Promise<void> {
-    await Promise.all([reviewCount.refetch(), documents.refetch(), duplicates.refetch(), canWrite ? payments.refetch() : undefined, canWrite ? receipts.refetch() : undefined]);
+    await Promise.all([
+      reviewCount.refetch(),
+      documents.refetch(),
+      duplicates.refetch(),
+      canWrite ? payments.refetch() : undefined,
+      canWrite ? receipts.refetch() : undefined,
+      canWrite ? integrations.refetch() : undefined,
+    ]);
   }
 
   return (
@@ -55,7 +68,7 @@ export default function WaitingCard() {
           <Skeleton height={20} width="60%" />
           <Skeleton height={20} width="50%" />
         </View>
-      ) : transactionCount === 0 && documentCount === 0 && receiptCount === 0 && paymentCount === 0 && duplicateCount === 0 ? (
+      ) : transactionCount === 0 && documentCount === 0 && receiptCount === 0 && paymentCount === 0 && duplicateCount === 0 && !needsReauth ? (
         <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>You're all caught up.</Text>
       ) : (
         <View style={{ gap: spacing.sm }}>
@@ -71,6 +84,7 @@ export default function WaitingCard() {
           {receiptCount ? <HomeLinkRow label={receiptsWaiting(receiptCount)} onPress={() => router.navigate(RECEIPTS_LINK)} /> : null}
           {paymentCount ? <HomeLinkRow label={paymentsWaiting(paymentCount)} onPress={() => router.navigate(PAYMENT_REVIEW_LINK)} /> : null}
           {duplicateCount ? <HomeLinkRow label={duplicateCountLine(duplicateCount)} onPress={() => router.navigate(DUPLICATES_LINK)} /> : null}
+          {needsReauth ? <HomeLinkRow label={GMAIL_REAUTH_WAITING} onPress={() => router.navigate(INTEGRATIONS_LINK)} /> : null}
           {failedMessage ? <HomeSectionError message={failedMessage} onRetry={retry} /> : null}
         </View>
       )}

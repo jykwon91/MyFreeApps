@@ -3,7 +3,7 @@ import { LoadingButton, ProgressBar, cn } from "@platform/ui";
 import type { BatchStatusResponse } from "@mybookkeeper/api-client/types/document/BatchStatusResponse";
 import { FILE_STATUSES } from "@/shared/types/document/file-status";
 import type { UploadState } from "@/shared/types/document/upload-state";
-import { progressPercent } from "@/shared/utils/progress-percent";
+import { progressPercent } from "@mybookkeeper/api-client/utils/progressPercent";
 
 export interface UploadStatusCardProps {
   upload: UploadState | null;

@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { TENANT_LINK_FAILURE, TENANT_LINK_MESSAGES as MESSAGES } from "../../constants/transactionTenantLink";
 import type { TenantChoice } from "../../types/TenantChoice";
 import { useWrite } from "../../lib/useWrite";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 
 /** Links one income transaction to a tenant, after asking once. */
 export function useAttributeTenant(transactionId: string) {

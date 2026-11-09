@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import type { ReceiptSendFailure } from "../../types/ReceiptSendFailure";
 import type { ReceiptSendValues } from "../../types/ReceiptSendValues";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 import { blockerMessage, gmailMessage, sendExplanation, sendQuestion, sentMessage } from "./receiptDisplay";
 import { sendFailure } from "./receiptFailure";
 import { useDropReceipt } from "./useDropReceipt";

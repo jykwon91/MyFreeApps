@@ -28,3 +28,18 @@ export function deleteFailureCopy(noun: string): WriteFailureCopy {
     other: tryAgain,
   };
 }
+
+/** For a button that does something on the server. `doing` reads after "couldn't", like "start the sync". */
+export function actionFailureCopy(doing: string, overrides: Partial<WriteFailureCopy> = {}): WriteFailureCopy {
+  const tryAgain = `I couldn't ${doing}. Want to try again?`;
+  return {
+    noResponse: `I can't reach the server, so I couldn't ${doing}.`,
+    viewOnly: "You have view-only access, so I can't do that.",
+    gone: `I couldn't ${doing} because it's no longer there. Pull down to refresh.`,
+    conflict: `I couldn't ${doing} because it's already in progress. Pull down to refresh.`,
+    invalid: tryAgain,
+    serverError: tryAgain,
+    other: tryAgain,
+    ...overrides,
+  };
+}

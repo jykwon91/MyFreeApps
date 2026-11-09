@@ -14,7 +14,7 @@ import { useRef, useState } from "react";
 import { Text } from "react-native";
 import { RENT_MANAGE_MESSAGES, scheduleFixedTerms } from "../../constants/rentManage";
 import { dateFromIso } from "../../lib/localDate";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 import OptionalDateField from "../shell/OptionalDateField";
 import { useFormSubmit } from "../shell/useFormSubmit";
 import { confirmDiscard } from "../uploads/confirmDiscard";

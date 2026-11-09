@@ -1,5 +1,7 @@
+import { progressPercent } from "@mybookkeeper/api-client/utils/progressPercent";
+
 export default function ProgressBar({ done, total }: { done: number; total: number }) {
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const pct = Math.round(progressPercent(done, total));
   return (
     <div className="flex items-center gap-3 mt-2">
       <div className="flex-1 h-1.5 bg-blue-200 rounded-full overflow-hidden">

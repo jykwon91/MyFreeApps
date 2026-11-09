@@ -180,7 +180,7 @@
         "frontend/src/app/features/documents/",
         "frontend/src/shared/store/documentUploadSlice.ts",
         "frontend/src/shared/utils/upload-outcome.ts",
-        "frontend/src/shared/utils/progress-percent.ts",
+        "api-client/src/utils/progressPercent.ts",
         "frontend/src/shared/types/document/",
         "api-client/src/types/document/"
       ],
@@ -202,7 +202,6 @@
         "DocumentStatusBadge.test.tsx",
         "UploadStatusCard.test.tsx",
         "documentUploadSlice.test.ts",
-        "progress-percent.test.ts",
         "DocumentsSkeleton.test.tsx"
       ],
       "e2e_specs": [
@@ -292,10 +291,40 @@
         "backend/app/mappers/integration_mapper.py",
         "frontend/src/app/pages/Integrations.tsx",
         "frontend/src/app/features/integrations/",
-        "frontend/src/shared/store/integrationsApi.ts",
         "api-client/src/store/integrationsApi.ts",
         "api-client/src/types/integration/",
-        "frontend/src/shared/hooks/useInvalidateOnExtractionComplete.ts"
+        "api-client/src/constants/emailDerivedTags.ts",
+        "api-client/src/utils/emailQueue.ts",
+        "api-client/src/utils/observeExtraction.ts",
+        "api-client/src/utils/progressPercent.ts",
+        "api-client/src/utils/syncLogFunnelMode.ts",
+        "api-client/src/utils/syncStatusLabel.ts",
+        "frontend/src/shared/utils/sync-status.ts",
+        "mobile/app/(app)/integrations/",
+        "mobile/src/features/integrations/",
+        "mobile/src/constants/integrations.ts",
+        "mobile/src/lib/useScreenFocused.ts",
+        "mobile/src/utils/shortDateTime.ts",
+        "api-client/src/hooks/useInvalidateOnExtractionComplete.ts",
+        "api-client/src/constants/syncPolling.ts",
+        "api-client/src/utils/syncPollInterval.ts",
+        "frontend/src/shared/hooks/useGmailSyncWatcher.ts",
+        "mobile/src/types/GmailConnection.ts",
+        "mobile/src/types/IntegrationAction.ts",
+        "mobile/src/types/IntegrationActions.ts",
+        "mobile/src/types/IntegrationCancelAction.ts",
+        "mobile/src/types/IntegrationsData.ts",
+        "mobile/src/types/QueueItemActions.ts",
+        "mobile/src/types/FunnelRow.ts",
+        "mobile/src/lib/askOnce.ts",
+        "mobile/src/lib/confirmDiscard.ts",
+        "mobile/src/features/home/WaitingCard.tsx",
+        "mobile/test-support/integrationsServer.ts",
+        "mobile/test-support/FakeIntegrationsServer.ts",
+        "mobile/test-support/IntegrationsFailure.ts",
+        "mobile/test-support/IntegrationsRoute.ts",
+        "mobile/test-support/applyIntegrationsWrite.ts",
+        "mobile/test-support/renderScreen.tsx"
       ],
       "backend_tests": [
         "test_gmail_auth_expired.py",
@@ -309,7 +338,8 @@
       "frontend_tests": [
         "Integrations.test.tsx",
         "useInvalidateOnExtractionComplete.test.ts",
-        "summaryInvalidation.test.ts"
+        "summaryInvalidation.test.ts",
+        "syncCacheInvalidation.test.ts"
       ],
       "e2e_specs": [
         "integrations.spec.ts",

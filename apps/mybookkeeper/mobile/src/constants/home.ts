@@ -10,6 +10,8 @@ export const HOME_PERIODS: readonly { value: HomePeriod; label: string }[] = [
 export const PROPERTIES_SHOWN_AT_FIRST = 5;
 export const DOCUMENTS_NEEDING_A_LOOK_LINK = "/money?segment=documents&filter=needsALook";
 export const RECEIPTS_LINK = "/receipts";
+export const INTEGRATIONS_LINK = "/integrations";
+export const GMAIL_REAUTH_WAITING = "Gmail needs you to sign in again";
 /** Home only needs the count, which comes with any page. */
 export const HOME_RECEIPTS_ARGS = { limit: 1 };
 export const PAYMENT_REVIEW_LINK = "/payment-review";

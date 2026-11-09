@@ -4,7 +4,6 @@ import type { ReceiptSendBlocker } from "@mybookkeeper/api-client/types/lease/re
 /** One load covers every open receipt the server will return, so a deep link finds its row. */
 export const RECEIPTS_LIMIT = 500;
 export const RECEIPTS_SKELETON_ROWS = ["a", "b", "c"];
-export const INTEGRATIONS_WEB_PATH = "/integrations";
 /** The first option in the payment method sheet. The send endpoint takes it as no method. */
 export const NO_PAYMENT_METHOD = "";
 

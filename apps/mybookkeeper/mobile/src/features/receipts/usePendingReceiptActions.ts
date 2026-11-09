@@ -3,7 +3,7 @@ import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pendin
 import { useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 import { dismissFailure } from "./receiptFailure";
 import { useDropReceipt } from "./useDropReceipt";
 

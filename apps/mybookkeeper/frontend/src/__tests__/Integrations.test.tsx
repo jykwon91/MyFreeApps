@@ -6,7 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Integrations from "@/app/pages/Integrations";
 import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
-import type { SyncLog } from "@/shared/types/integration/sync-log";
+import type { SyncLog } from "@mybookkeeper/api-client/types/integration/sync-log";
 
 const mockGmailIntegration: Integration = {
   provider: "gmail",
@@ -46,7 +46,8 @@ const mockRunningSyncLog: SyncLog = {
   completed_at: null,
 };
 
-vi.mock("@/shared/store/integrationsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
+  useGetIntegrationsQuery: vi.fn(() => ({ data: [], isLoading: false, refetch: vi.fn() })),
   useConnectGmailMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDisconnectGmailMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useSyncGmailMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -60,10 +61,6 @@ vi.mock("@/shared/store/integrationsApi", () => ({
   useUpdateGmailLabelMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
-vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
-  useGetIntegrationsQuery: vi.fn(() => ({ data: [], isLoading: false, refetch: vi.fn() })),
-}));
-
 vi.mock("@/shared/hooks/useToast", () => ({
   useToast: () => ({ showSuccess: vi.fn(), showError: vi.fn() }),
 }));
@@ -72,8 +69,7 @@ vi.mock("@/shared/hooks/useOrgRole", () => ({
   useCanWrite: vi.fn(() => true),
 }));
 
-import { useGetSyncLogsQuery, useGetEmailQueueQuery, useDisconnectGmailMutation } from "@/shared/store/integrationsApi";
-import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
+import { useGetSyncLogsQuery, useGetEmailQueueQuery, useDisconnectGmailMutation, useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -494,7 +490,7 @@ describe("Integrations — needs_reauth state", () => {
     const unwrapMock = vi.fn().mockResolvedValue({ auth_url: "https://accounts.google.com/o/oauth2/auth" });
     const connectMock = vi.fn(() => ({ unwrap: unwrapMock }));
 
-    const { useConnectGmailMutation } = await import("@/shared/store/integrationsApi");
+    const { useConnectGmailMutation } = await import("@mybookkeeper/api-client/store/integrationsApi");
     vi.mocked(useConnectGmailMutation).mockReturnValue([
       connectMock,
       { isLoading: false, reset: vi.fn() },

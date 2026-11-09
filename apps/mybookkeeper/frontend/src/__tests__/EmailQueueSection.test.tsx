@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import EmailQueueSection from "@/app/features/integrations/EmailQueueSection";
-import type { EmailQueueItem } from "@/shared/types/integration/email-queue";
+import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
 
 function makeMutationFn() {
   const fn = vi.fn(() => ({ unwrap: () => Promise.resolve({ count: 0, id: "", status: "" }) }));
@@ -14,7 +14,7 @@ const mockDismissItem = makeMutationFn();
 const mockRetryItem = makeMutationFn();
 const mockRetryAllFailed = makeMutationFn();
 
-vi.mock("@/shared/store/integrationsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/integrationsApi", () => ({
   useGetEmailQueueQuery: vi.fn(),
   useExtractAllMutation: vi.fn(),
   useDismissQueueItemMutation: vi.fn(),
@@ -28,7 +28,7 @@ import {
   useDismissQueueItemMutation,
   useRetryQueueItemMutation,
   useRetryAllFailedMutation,
-} from "@/shared/store/integrationsApi";
+} from "@mybookkeeper/api-client/store/integrationsApi";
 
 function makeItem(overrides: Partial<EmailQueueItem> = {}): EmailQueueItem {
   return {

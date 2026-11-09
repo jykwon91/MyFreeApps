@@ -1,13 +1,14 @@
 import { useCallback, useState } from "react";
-import type { SyncLog } from "@/shared/types/integration/sync-log";
-import type { EmailQueueItem } from "@/shared/types/integration/email-queue";
+import type { SyncLog } from "@mybookkeeper/api-client/types/integration/sync-log";
+import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
 import { formatDate, timeAgo } from "@/shared/utils/date";
-import { getStatusColor, getStatusLabel } from "@/shared/utils/sync-status";
+import { getStatusLabel } from "@mybookkeeper/api-client/utils/syncStatusLabel";
+import { getStatusColor } from "@/shared/utils/sync-status";
 import Spinner from "@/shared/components/icons/Spinner";
 import ChevronDown from "@/shared/components/icons/ChevronDown";
 import ProgressBar from "./ProgressBar";
 import QueueItem from "./QueueItem";
-import { useSyncLogFunnelMode } from "./useSyncLogFunnelMode";
+import { syncLogFunnelMode } from "@mybookkeeper/api-client/utils/syncLogFunnelMode";
 import SyncLogFunnelStats from "./SyncLogFunnelStats";
 
 export interface SyncLogRowProps {
@@ -34,7 +35,7 @@ export default function SyncLogRow({
 
   const statusColor = getStatusColor(log.status);
   const statusLabel = getStatusLabel(log);
-  const funnelMode = useSyncLogFunnelMode(log);
+  const funnelMode = syncLogFunnelMode(log);
   const handleRetry = useCallback((id: string) => onRetryItem?.(id), [onRetryItem]);
   const handleDismiss = useCallback((id: string) => onDismissItem?.(id), [onDismissItem]);
 
