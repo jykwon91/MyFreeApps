@@ -176,6 +176,7 @@ import {
   useBulkApproveTransactionsMutation,
 } from "@mybookkeeper/api-client/store/transactionsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import { downloadFile } from "@/shared/utils/download";
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(
@@ -227,6 +228,17 @@ describe("Transactions", () => {
 
     expect(screen.getByText("Export CSV")).toBeInTheDocument();
     expect(screen.getByText("Export PDF")).toBeInTheDocument();
+  });
+
+  it("exports with the same filters the list is showing", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Transactions />);
+
+    await user.type(screen.getByLabelText("Filter by vendor"), "Depot");
+    await user.click(screen.getByText("Export"));
+    await user.click(screen.getByText("Export CSV"));
+
+    expect(downloadFile).toHaveBeenCalledWith("/exports/transactions/csv?vendor=Depot", "transactions.csv");
   });
 
   it("renders transaction data in the table", () => {

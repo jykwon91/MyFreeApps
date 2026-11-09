@@ -19,7 +19,6 @@ import { isBulkApprovable } from "./bulkApprovable";
 import TransactionFilterSheet from "./TransactionFilterSheet";
 import { activeFilterCount, reviewLink, toListParams } from "./transactionFilters";
 import TransactionRow from "./TransactionRow";
-import { notAppliedToExport } from "./transactionExport";
 import { useBulkApprove } from "./useBulkApprove";
 import { useShareTransactionExport } from "./useShareTransactionExport";
 import { useTransactionSelection } from "./useTransactionSelection";
@@ -253,7 +252,7 @@ export default function TransactionsScreen({
         />
       ) : null}
       <OptionSheet
-        description={[EXPORT_MESSAGES.description, notAppliedToExport(params)].filter(Boolean).join(" ")}
+        description={EXPORT_MESSAGES.description}
         isOpen={isExportSheetOpen}
         onClose={() => setIsExportSheetOpen(false)}
         onSelect={(format) => {

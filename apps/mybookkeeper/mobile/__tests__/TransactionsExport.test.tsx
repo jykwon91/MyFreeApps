@@ -99,11 +99,15 @@ describe("exporting transactions from the Money tab", () => {
     expect(jest.mocked(Sharing.shareAsync).mock.calls[0]?.[1]).toMatchObject({ mimeType: "application/pdf" });
   });
 
-  it("says which narrowing an export doesn't apply", async () => {
+  it("sends the vendor search and the review list too, so nothing the list narrows by is dropped", async () => {
     startTransactionServer([aTransaction()]);
     await renderScreen({ ...NO_FILTERS, view: "review", vendor: "Home" });
     await openSheet();
-    expect(screen.getByText("Exports what the filters show. Not applied to exports: the vendor search, the review list.")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("radio", { name: "CSV spreadsheet" }));
+    await waitFor(() => expect(Sharing.shareAsync).toHaveBeenCalledTimes(1));
+    expect(fakeDownloads()[0]).toMatch(/\/exports\/transactions\/csv\?.*to_review=true/);
+    expect(fakeDownloads()[0]).toMatch(/[?&]vendor=Home(&|$)/);
+    expect(screen.queryByText(/Not applied/)).toBeNull();
   });
 
   it("renews the sign-in first, since the download skips the API client", async () => {

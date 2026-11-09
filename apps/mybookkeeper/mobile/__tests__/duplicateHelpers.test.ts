@@ -9,7 +9,7 @@ import {
   duplicateStatusLabel,
   mergedTagCount,
 } from "../src/features/duplicates/duplicateDisplay";
-import { exportFailureMessage, exportFileName, notAppliedToExport } from "../src/features/transactions/transactionExport";
+import { exportFailureMessage, exportFileName } from "../src/features/transactions/transactionExport";
 import { aDuplicatePair, aDuplicateSide } from "../test-support/aDuplicatePair";
 import { aProperty } from "../test-support/transactionsServer";
 
@@ -80,12 +80,6 @@ describe("transaction export", () => {
   it("names the file by its format", () => {
     expect(exportFileName("csv")).toBe("transactions.csv");
     expect(exportFileName("pdf")).toBe("transactions.pdf");
-  });
-
-  it("lists only the narrowing the server doesn't read", () => {
-    expect(notAppliedToExport({ property_id: "p1", start_date: "2026-01-01" })).toBeNull();
-    expect(notAppliedToExport({ vendor: "x", unassigned: true })).toBe("Not applied to exports: the vendor search, no property.");
-    expect(notAppliedToExport({ to_review: true })).toBe("Not applied to exports: the review list.");
   });
 
   it("tells a rate limit from any other failure", () => {

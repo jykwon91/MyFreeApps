@@ -4,7 +4,6 @@ import io
 import uuid
 from collections import defaultdict
 from collections.abc import Iterable
-from datetime import date
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape
@@ -17,6 +16,7 @@ from app.core.tags import NON_DEDUCTIBLE_TAGS
 from app.core.tax_constants import SCHEDULE_E_EXPORT_LABELS
 from app.db.session import AsyncSessionLocal
 from app.repositories import property_repo, transaction_repo
+from app.schemas.transactions.transaction_filters import TransactionFilters
 from app.services.transactions.schedule_e_row import ScheduleERow
 from app.services.transactions.summary_service import get_tax_summary
 
@@ -28,21 +28,12 @@ CSV_HEADERS = [
 
 async def export_transactions_csv(
     ctx: RequestContext,
-    *,
-    property_id: uuid.UUID | None = None,
-    status: str | None = None,
-    transaction_type: str | None = None,
-    category: str | None = None,
-    start_date: date | None = None,
-    end_date: date | None = None,
-    tax_year: int | None = None,
+    filters: TransactionFilters | None = None,
 ) -> bytes:
     async with AsyncSessionLocal() as db:
         transactions = await transaction_repo.list_filtered(
             db, ctx.organization_id,
-            property_id=property_id, status=status,
-            transaction_type=transaction_type, category=category,
-            start_date=start_date, end_date=end_date, tax_year=tax_year,
+            **(filters or TransactionFilters()).model_dump(),
         )
         prop_names = await property_repo.get_name_map(db, ctx.organization_id)
 
@@ -75,21 +66,12 @@ def _build_pdf_buffer() -> tuple[io.BytesIO, SimpleDocTemplate]:
 
 async def export_transactions_pdf(
     ctx: RequestContext,
-    *,
-    property_id: uuid.UUID | None = None,
-    status: str | None = None,
-    transaction_type: str | None = None,
-    category: str | None = None,
-    start_date: date | None = None,
-    end_date: date | None = None,
-    tax_year: int | None = None,
+    filters: TransactionFilters | None = None,
 ) -> bytes:
     async with AsyncSessionLocal() as db:
         transactions = await transaction_repo.list_filtered(
             db, ctx.organization_id,
-            property_id=property_id, status=status,
-            transaction_type=transaction_type, category=category,
-            start_date=start_date, end_date=end_date, tax_year=tax_year,
+            **(filters or TransactionFilters()).model_dump(),
         )
         prop_names = await property_repo.get_name_map(db, ctx.organization_id)
     styles = getSampleStyleSheet()

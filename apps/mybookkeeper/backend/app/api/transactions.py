@@ -1,6 +1,5 @@
 import uuid
-from datetime import date
-from typing import Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -17,6 +16,7 @@ from app.schemas.transactions.operation_responses import (
 )
 from app.schemas.transactions.review_count import TransactionReviewCount
 from app.schemas.transactions.transaction import ScheduleELineItem, TransactionCreate, TransactionRead, TransactionUpdate, TransactionUpdateResponse
+from app.schemas.transactions.transaction_filters import TransactionFilters
 from app.services.transactions import transaction_service
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
@@ -24,37 +24,12 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 
 @router.get("", response_model=list[TransactionRead])
 async def list_transactions(
-    property_id: Optional[uuid.UUID] = None,
-    unassigned: bool = False,
-    applicant_id: Optional[uuid.UUID] = None,
-    status: Optional[str] = None,
-    to_review: bool = False,
-    transaction_type: Optional[str] = None,
-    category: Optional[str] = None,
-    vendor: Optional[str] = None,
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
-    tax_year: Optional[int] = None,
+    filters: Annotated[TransactionFilters, Depends()],
     limit: int = Query(default=1000, le=5000),
     offset: int = 0,
     ctx: RequestContext = Depends(current_org_member),
 ) -> list[TransactionRead]:
-    return await transaction_service.list_transactions(
-        ctx,
-        property_id=property_id,
-        unassigned=unassigned,
-        applicant_id=applicant_id,
-        status=status,
-        to_review=to_review,
-        transaction_type=transaction_type,
-        category=category,
-        vendor=vendor,
-        start_date=start_date,
-        end_date=end_date,
-        tax_year=tax_year,
-        limit=limit,
-        offset=offset,
-    )
+    return await transaction_service.list_transactions(ctx, filters, limit=limit, offset=offset)
 
 
 @router.get("/review-count", response_model=TransactionReviewCount)
