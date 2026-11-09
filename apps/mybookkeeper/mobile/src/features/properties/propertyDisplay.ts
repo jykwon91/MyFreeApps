@@ -1,5 +1,7 @@
 import { CLASSIFICATION_LABELS, TYPE_LABELS } from "@mybookkeeper/api-client/constants/propertyLabels";
+import type { ActivityPeriod } from "@mybookkeeper/api-client/types/property/ActivityPeriod";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
+import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import { PROPERTY_MESSAGES } from "../../constants/properties";
 
 export function needsClassification(property: Property): boolean {
@@ -27,4 +29,8 @@ export function propertySpokenLabel(property: Property): string {
 
 export function classifyPrompt(count: number): string {
   return count === 1 ? "1 property needs classifying." : `${count} properties need classifying.`;
+}
+
+export function activityPeriodText(period: ActivityPeriod): string {
+  return `${formatLongDate(period.active_from)} to ${formatLongDate(period.active_until)}`;
 }

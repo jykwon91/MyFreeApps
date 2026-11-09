@@ -1,4 +1,4 @@
-import type { AddressFields } from "@/shared/types/property/address-fields";
+import type { AddressFields } from "@mybookkeeper/api-client/types/property/AddressFields";
 import { FormField } from "@platform/ui";
 
 export interface AddressInputsProps {

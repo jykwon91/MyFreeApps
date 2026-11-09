@@ -9,9 +9,8 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { Linking, Platform } from "react-native";
 import { Provider } from "react-redux";
-import { WEB_BASE_URL } from "../src/constants/api";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
-import { VENDOR_MESSAGES } from "../src/constants/vendors";
+import { VENDOR_FILTER_MESSAGES, VENDOR_MESSAGES } from "../src/constants/vendors";
 import { directionsUrl } from "../src/features/vendors/vendorDisplay";
 import VendorDetailScreen from "../src/features/vendors/VendorDetailScreen";
 import VendorsScreen from "../src/features/vendors/VendorsScreen";
@@ -66,6 +65,7 @@ interface Server {
 function startServer(list: Answer, detail: Answer = aVendor()): Server {
   const server: Server = { list, detail, listRequests: [] };
   const adapter: AxiosAdapter = async (config) => {
+    if (config.url === "/organizations") return { data: [], status: 200, statusText: "OK", headers: {}, config };
     const isList = config.url === "/vendors";
     if (isList) server.listRequests.push(config);
     const answer = isList ? server.list : server.detail;
@@ -131,42 +131,58 @@ describe("VendorsScreen", () => {
     expect(screen.queryByText("Call")).toBeNull();
   });
 
-  it("filters by category, and offers a way out when nobody matches", async () => {
+  it("filters by category in a sheet, and offers a way out when nobody matches", async () => {
     const server = startServer(aPage([aSummary()]));
     await show(<VendorsScreen />);
     await screen.findByText("Reliable Plumbing");
     server.list = aPage([]);
-    await fireEvent.press(screen.getByRole("button", { name: "Category: All categories" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Filters" }));
     await fireEvent.press(await screen.findByText("HVAC"));
-    await screen.findByText("You don't have any vendors under HVAC.");
+    await fireEvent.press(screen.getByRole("button", { name: VENDOR_FILTER_MESSAGES.done }));
+    await screen.findByText(VENDOR_MESSAGES.noMatches);
     expect(server.listRequests.at(-1)?.params).toMatchObject({ category: "hvac", limit: VENDOR_PAGE_SIZE, offset: 0 });
     server.list = aPage([aSummary()]);
-    await fireEvent.press(screen.getByRole("button", { name: "Clear filter" }));
+    await fireEvent.press(screen.getByRole("button", { name: VENDOR_MESSAGES.clearFilters }));
     await screen.findByText("Reliable Plumbing");
-    expect(screen.getByRole("button", { name: "Category: All categories" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Filters" })).toBeTruthy();
   });
 
-  it("loads the next page at the end of the list and points to the website after the last", async () => {
+  it("filters to preferred vendors, and says so on the button", async () => {
+    const server = startServer(aPage([aSummary()]));
+    await show(<VendorsScreen />);
+    await screen.findByText("Reliable Plumbing");
+    await fireEvent.press(screen.getByRole("button", { name: "Filters" }));
+    await fireEvent(screen.getByLabelText(VENDOR_FILTER_MESSAGES.preferredOnly), "valueChange", true);
+    await fireEvent.press(screen.getByRole("button", { name: VENDOR_FILTER_MESSAGES.done }));
+    await waitFor(() => expect(server.listRequests.at(-1)?.params).toMatchObject({ preferred: true }));
+    expect(screen.getByRole("button", { name: "Filters: Preferred" })).toBeTruthy();
+  });
+
+  it("combines the category and preferred filters, and clears both from the sheet", async () => {
+    const server = startServer(aPage([aSummary()]));
+    await show(<VendorsScreen />);
+    await screen.findByText("Reliable Plumbing");
+    await fireEvent.press(screen.getByRole("button", { name: "Filters" }));
+    await fireEvent.press(await screen.findByRole("radio", { name: "Plumber" }));
+    await fireEvent(screen.getByLabelText(VENDOR_FILTER_MESSAGES.preferredOnly), "valueChange", true);
+    await fireEvent.press(screen.getByRole("button", { name: VENDOR_FILTER_MESSAGES.done }));
+    await waitFor(() => expect(server.listRequests.at(-1)?.params).toMatchObject({ category: "plumber", preferred: true }));
+    expect(screen.getByRole("button", { name: "Filters: Plumber, Preferred" })).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Filters: Plumber, Preferred" }));
+    await fireEvent.press(await screen.findByRole("button", { name: VENDOR_FILTER_MESSAGES.clear }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Filters" })).toBeTruthy());
+  });
+
+  it("loads the next page at the end of the list", async () => {
     const server = startServer(aPage([aSummary()], true));
     await show(<VendorsScreen />);
     await screen.findByText("Reliable Plumbing");
-    expect(screen.queryByText("Adding and changing vendors is on the website.")).toBeNull();
     server.list = aPage([aSummary({ id: "v2", name: "Bright Electric", category: "electrician" })]);
     await act(async () => {
       await screen.getByTestId("vendors-list").props.onEndReached();
     });
     await screen.findByText("Bright Electric");
     expect(server.listRequests.at(-1)?.params).toMatchObject({ offset: VENDOR_PAGE_SIZE });
-    expect(screen.getByText("Adding and changing vendors is on the website.")).toBeTruthy();
-  });
-
-  it("points to the website when there are none", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
-    startServer(aPage([]));
-    await show(<VendorsScreen />);
-    await screen.findByText("You don't have any vendors yet.");
-    await fireEvent.press(screen.getByRole("button", { name: "Open on the website" }));
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/vendors`);
   });
 
   it("keeps saying there are none during a reload", async () => {

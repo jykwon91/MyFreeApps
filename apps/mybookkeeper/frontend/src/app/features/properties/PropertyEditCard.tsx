@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useUpdatePropertyMutation } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
-import type { PropertyForm } from "@/shared/types/property/property-form";
+import type { PropertyForm } from "@mybookkeeper/api-client/types/property/PropertyForm";
 import type { PropertyClassification } from "@mybookkeeper/api-client/types/property/PropertyClassification";
 import { CLASSIFICATION_OPTIONS } from "@/shared/lib/property-labels";
 import { useToast } from "@/shared/hooks/useToast";
@@ -9,7 +9,7 @@ import { extractErrorMessage } from "@platform/ui";
 import { Button, FormField, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";
-import { fromProperty, toAddress, addressComplete } from "./propertyForm";
+import { fromProperty, toAddress, addressComplete } from "@mybookkeeper/api-client/utils/propertyForm";
 import AddressInputs from "./AddressInputs";
 
 export interface PropertyEditCardProps {

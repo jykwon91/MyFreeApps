@@ -1,24 +1,24 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
-import { FlatList, Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
+import { router } from "expo-router";
+import { FlatList, View } from "react-native";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { PROPERTY_MESSAGES } from "../../constants/properties";
-import { useOpenLink } from "../inquiries/useOpenLink";
+import { useCanWrite } from "../workspace/useCanWrite";
 import PropertiesSkeleton from "./PropertiesSkeleton";
 import { classifyPrompt, needsClassification } from "./propertyDisplay";
 import PropertyRow from "./PropertyRow";
 
 export default function PropertiesScreen() {
-  const { colors, spacing, fontSize } = useTheme();
-  const openLink = useOpenLink();
+  const { spacing } = useTheme();
+  const canWrite = useCanWrite();
   const { currentData, error, isFetching, refetch } = useGetPropertiesQuery();
   const { refresh, refreshControl } = useRefresh(async () => {
     await refetch();
   }, error);
   const properties = currentData ?? [];
-  const waiting = properties.filter(needsClassification).length;
-  const openWebsite = () => void openLink(`${WEB_BASE_URL}/properties`);
+  const waiting = properties.filter(needsClassification);
+  const addProperty = () => router.push("/properties/new");
 
   const emptyList = !currentData && isFetching ? (
     <PropertiesSkeleton />
@@ -30,37 +30,33 @@ export default function PropertiesScreen() {
     />
   ) : (
     <EmptyState
-      action={{ label: PROPERTY_MESSAGES.openWebsite, onPress: openWebsite }}
-      body={PROPERTY_MESSAGES.noneBody}
+      action={canWrite ? { label: PROPERTY_MESSAGES.add, onPress: addProperty } : undefined}
+      body={canWrite ? PROPERTY_MESSAGES.noneBody : PROPERTY_MESSAGES.noneViewOnlyBody}
       heading={PROPERTY_MESSAGES.noneHeading}
     />
   );
 
-  const hasHeader = (error && properties.length > 0) || waiting > 0;
+  const showsAdd = canWrite && properties.length > 0;
+  const hasHeader = (error && properties.length > 0) || waiting.length > 0 || showsAdd;
 
   return (
     <FlatList
       ListEmptyComponent={emptyList}
-      ListFooterComponent={
-        properties.length > 0 ? (
-          <View style={{ gap: spacing.sm, padding: spacing.lg }}>
-            <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{PROPERTY_MESSAGES.manageOnWebsite}</Text>
-            <LoadingButton onPress={openWebsite} variant="ghost">
-              {PROPERTY_MESSAGES.openWebsite}
-            </LoadingButton>
-          </View>
-        ) : undefined
-      }
       ListHeaderComponent={
         hasHeader ? (
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
             {error && properties.length > 0 ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
-            {waiting > 0 ? (
+            {waiting.length > 0 ? (
               <Banner
-                actions={[{ label: PROPERTY_MESSAGES.classifyOnWebsite, onPress: openWebsite }]}
-                message={classifyPrompt(waiting)}
+                actions={canWrite ? [{ label: PROPERTY_MESSAGES.classify, onPress: () => router.push(`/properties/${waiting[0].id}/edit`) }] : undefined}
+                message={classifyPrompt(waiting.length)}
                 tone="success"
               />
+            ) : null}
+            {showsAdd ? (
+              <LoadingButton onPress={addProperty} variant="secondary">
+                {PROPERTY_MESSAGES.add}
+              </LoadingButton>
             ) : null}
           </View>
         ) : undefined
@@ -70,7 +66,7 @@ export default function PropertiesScreen() {
       keyExtractor={(property) => property.id}
       refreshControl={refreshControl}
       testID="properties-list"
-      renderItem={({ item }) => <PropertyRow property={item} />}
+      renderItem={({ item }) => <PropertyRow onPress={() => router.push(`/properties/${item.id}`)} property={item} />}
     />
   );
 }

@@ -1,23 +1,33 @@
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
-import { useTheme } from "@platform/mobile";
-import { Text, View } from "react-native";
+import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Pressable, Text, View } from "react-native";
 import { PROPERTY_MESSAGES } from "../../constants/properties";
 import InquiryChip from "../inquiries/InquiryChip";
 import { needsClassification, propertySpokenLabel, propertyUse } from "./propertyDisplay";
 
 interface PropertyRowProps {
   property: Property;
+  onPress: () => void;
 }
 
-export default function PropertyRow({ property }: PropertyRowProps) {
+export default function PropertyRow({ property, onPress }: PropertyRowProps) {
   const { colors, spacing, fontSize } = useTheme();
   const use = propertyUse(property);
   const isWaiting = needsClassification(property);
   return (
-    <View
-      accessible
+    <Pressable
       accessibilityLabel={propertySpokenLabel(property)}
-      style={{ gap: spacing.xs, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border }}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => ({
+        minHeight: MIN_TOUCH_TARGET,
+        gap: spacing.xs,
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        backgroundColor: pressed ? colors.muted : colors.background,
+      })}
     >
       <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {property.name}
@@ -34,6 +44,6 @@ export default function PropertyRow({ property }: PropertyRowProps) {
           {isWaiting ? <InquiryChip label={PROPERTY_MESSAGES.needsClassification} /> : null}
         </View>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
