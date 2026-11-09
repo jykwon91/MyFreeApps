@@ -3,6 +3,8 @@ import * as Sharing from "expo-sharing";
 
 const PDF_MIME_TYPE = "application/pdf";
 const PDF_UTI = "com.adobe.pdf";
+const CSV_MIME_TYPE = "text/csv";
+const CSV_UTI = "public.comma-separated-values-text";
 
 function documentFiles(): Directory {
   return new Directory(Paths.cache, "documents");
@@ -26,9 +28,10 @@ export async function openAttachmentFile(url: string, file: { id: string; filena
   await openCopy(url, `${file.id}${extension}`, { idempotent: true }, { mimeType: file.content_type });
 }
 
-/** A report the server builds on request. Its name is the year and form, so it says nothing private. */
+/** A report the server builds on request, a PDF or a CSV by its name. It's removed once shared. */
 export async function shareExportFile(url: string, fileName: string, headers: Record<string, string>): Promise<void> {
-  await openCopy(url, fileName, { headers, idempotent: true }, { mimeType: PDF_MIME_TYPE, UTI: PDF_UTI });
+  const isCsv = fileName.toLowerCase().endsWith(".csv");
+  await openCopy(url, fileName, { headers, idempotent: true }, isCsv ? { mimeType: CSV_MIME_TYPE, UTI: CSV_UTI } : { mimeType: PDF_MIME_TYPE, UTI: PDF_UTI });
 }
 
 async function openCopy(

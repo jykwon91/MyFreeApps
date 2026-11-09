@@ -3,11 +3,8 @@ import { format, parseISO } from "date-fns";
 import { formatTag } from "@/shared/utils/tag";
 import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
-import {
-  MERGEABLE_FIELDS,
-  getRawValue,
-  type MergeableField,
-} from "@/app/features/transactions/merge-defaults";
+import { differingFields } from "@mybookkeeper/api-client/utils/mergeDefaults";
+import type { MergeableField } from "@mybookkeeper/api-client/types/transaction/MergeableField";
 import { useMergeFieldPickerMode } from "./useMergeFieldPickerMode";
 import MergeFieldPickerBody from "./MergeFieldPickerBody";
 
@@ -58,13 +55,7 @@ export default function MergeFieldPicker({
   const allTags = [...new Set([...(txnA.tags ?? []), ...(txnB.tags ?? [])])];
 
   // Build rows — skip fields where both values are identical or both null
-  const visibleFields = MERGEABLE_FIELDS.filter((field) => {
-    const rawA = getRawValue(field, txnA);
-    const rawB = getRawValue(field, txnB);
-    if (rawA === null && rawB === null) return false;
-    if (rawA === rawB) return false;
-    return true;
-  });
+  const visibleFields = differingFields(txnA, txnB);
 
   const mode = useMergeFieldPickerMode({ visibleFields });
 

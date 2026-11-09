@@ -1,6 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
-import { FIELD_LABELS, type MergeableField } from "@/app/features/transactions/merge-defaults";
+import { FIELD_LABELS } from "@mybookkeeper/api-client/constants/mergeableTransactionFields";
+import type { MergeableField } from "@mybookkeeper/api-client/types/transaction/MergeableField";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 
 interface MergeFieldRowProps {

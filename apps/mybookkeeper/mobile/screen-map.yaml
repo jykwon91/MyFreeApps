@@ -99,9 +99,10 @@ routes:
     screen: (app)/applicants/[id]
   /terms:
     not_on_mobile: Opens on the website.
-  # On the website only: duplicates, bulk delete, import and export, and vendor rules.
-  # Adding by hand is (app)/transactions/new, and bulk approve and a custom date range
-  # are on the Money tab.
+  # On the website only: bulk delete, import, and vendor rules. Adding by hand is
+  # (app)/transactions/new; bulk approve, a custom date range and export are on the
+  # Money tab; the duplicates tab is (app)/duplicates/index, opened from the Money tab
+  # and Home.
   /transactions:
     screen: (app)/(tabs)/money
   /user-activity:

@@ -1,40 +1,19 @@
-import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
-import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
-
-export type MergeableField =
-  | "transaction_date"
-  | "vendor"
-  | "description"
-  | "amount"
-  | "category"
-  | "property_id"
-  | "payment_method"
-  | "channel";
-
-export const MERGEABLE_FIELDS: MergeableField[] = [
-  "transaction_date",
-  "vendor",
-  "description",
-  "amount",
-  "category",
-  "property_id",
-  "payment_method",
-  "channel",
-];
-
-export const FIELD_LABELS: Record<MergeableField, string> = {
-  transaction_date: "Date",
-  vendor: "Vendor",
-  description: "Description",
-  amount: "Amount",
-  category: "Category",
-  property_id: "Property",
-  payment_method: "Payment Method",
-  channel: "Channel",
-};
+import { MERGEABLE_FIELDS } from "../constants/mergeableTransactionFields";
+import type { DuplicateTransaction } from "../types/transaction/DuplicateTransaction";
+import type { MergeableField } from "../types/transaction/MergeableField";
+import type { MergeFieldSide } from "../types/transaction/MergeFieldSide";
 
 export function getRawValue(field: MergeableField, txn: DuplicateTransaction): string | null {
   return txn[field] as string | null;
+}
+
+/** The fields the two sides disagree on: the only ones worth choosing between. */
+export function differingFields(txnA: DuplicateTransaction, txnB: DuplicateTransaction): MergeableField[] {
+  return MERGEABLE_FIELDS.filter((field) => {
+    const rawA = getRawValue(field, txnA);
+    const rawB = getRawValue(field, txnB);
+    return !(rawA === null && rawB === null) && rawA !== rawB;
+  });
 }
 
 export function computeDefaults(

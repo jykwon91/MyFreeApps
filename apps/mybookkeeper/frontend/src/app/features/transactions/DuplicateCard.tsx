@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { X, ArrowRight, AlertTriangle, AlertCircle, CheckCircle, GitMerge, ChevronUp } from "lucide-react";
 import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
-import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 import Badge from "@/shared/components/ui/Badge";
 import { LoadingButton } from "@platform/ui";
@@ -9,7 +8,9 @@ import TransactionSide from "@/app/features/transactions/TransactionSide";
 import MergeFieldPicker from "@/app/features/transactions/MergeFieldPicker";
 import MergePreview from "@/app/features/transactions/MergePreview";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
-import { computeDefaults, computeSurvivingId, type MergeableField } from "@/app/features/transactions/merge-defaults";
+import { computeDefaults, computeSurvivingId } from "@mybookkeeper/api-client/utils/mergeDefaults";
+import { duplicateConfidenceLabel, duplicateHeadline, duplicateSourceLabel } from "@mybookkeeper/api-client/utils/duplicatePairLabels";
+import type { MergeableField } from "@mybookkeeper/api-client/types/transaction/MergeableField";
 
 export interface DuplicateCardProps {
   pair: DuplicatePair;
@@ -23,26 +24,17 @@ export interface DuplicateCardProps {
   onDismiss: (ids: string[]) => Promise<void>;
 }
 
-function getSourceLabel(txn: DuplicateTransaction): string {
-  if (txn.source_file_name) {
-    const ext = txn.source_file_name.split(".").pop()?.toLowerCase();
-    if (ext === "pdf") return "Invoice/PDF";
-    if (ext === "csv" || ext === "xlsx") return "Bank import";
-  }
-  if (txn.is_manual) return "Manual entry";
-  return "Document";
-}
-
 function getConfidenceConfig(
   confidence: string,
 ): { icon: React.ReactNode; label: string; color: "green" | "yellow" | "orange" } {
+  const label = duplicateConfidenceLabel(confidence);
   switch (confidence) {
     case "high":
-      return { icon: <CheckCircle size={14} />, label: "High confidence", color: "green" };
+      return { icon: <CheckCircle size={14} />, label, color: "green" };
     case "medium":
-      return { icon: <AlertTriangle size={14} />, label: "Medium confidence", color: "yellow" };
+      return { icon: <AlertTriangle size={14} />, label, color: "yellow" };
     default:
-      return { icon: <AlertCircle size={14} />, label: "Low confidence", color: "orange" };
+      return { icon: <AlertCircle size={14} />, label, color: "orange" };
   }
 }
 
@@ -54,8 +46,8 @@ export default function DuplicateCard({ pair, propertyMap, onMerge, onDismiss }:
   const defaults = computeDefaults(pair.transaction_a, pair.transaction_b);
   const [selections, setSelections] = useState<Record<MergeableField, MergeFieldSide>>(defaults);
 
-  const labelA = getSourceLabel(pair.transaction_a);
-  const labelB = getSourceLabel(pair.transaction_b);
+  const labelA = duplicateSourceLabel(pair.transaction_a);
+  const labelB = duplicateSourceLabel(pair.transaction_b);
   const confidenceConfig = getConfidenceConfig(pair.confidence ?? "medium");
 
   const survivingSide = computeSurvivingId(pair.transaction_a, pair.transaction_b);
@@ -107,9 +99,7 @@ export default function DuplicateCard({ pair, propertyMap, onMerge, onDismiss }:
         <div className="flex items-center gap-1.5 text-sm">
           {confidenceConfig.icon}
           <span className="font-medium">
-            {pair.date_diff_days === 0
-              ? "Same amount, same date"
-              : `Same amount, ${pair.date_diff_days} day${pair.date_diff_days === 1 ? "" : "s"} apart`}
+            {duplicateHeadline(pair)}
           </span>
         </div>
         <Badge label={confidenceConfig.label} color={confidenceConfig.color} />

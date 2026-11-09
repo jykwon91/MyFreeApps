@@ -2,12 +2,9 @@ import { format, parseISO } from "date-fns";
 import { formatTag } from "@/shared/utils/tag";
 import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
-import {
-  MERGEABLE_FIELDS,
-  FIELD_LABELS,
-  getRawValue,
-  type MergeableField,
-} from "@/app/features/transactions/merge-defaults";
+import { FIELD_LABELS } from "@mybookkeeper/api-client/constants/mergeableTransactionFields";
+import { differingFields } from "@mybookkeeper/api-client/utils/mergeDefaults";
+import type { MergeableField } from "@mybookkeeper/api-client/types/transaction/MergeableField";
 
 function formatResolvedValue(
   field: MergeableField,
@@ -39,13 +36,7 @@ export interface MergePreviewProps {
 
 export default function MergePreview({ txnA, txnB, selections, propertyMap }: MergePreviewProps) {
   // Only show fields that have a conflict (were selectable)
-  const conflictedFields = MERGEABLE_FIELDS.filter((field) => {
-    const rawA = getRawValue(field, txnA);
-    const rawB = getRawValue(field, txnB);
-    if (rawA === null && rawB === null) return false;
-    if (rawA === rawB) return false;
-    return true;
-  });
+  const conflictedFields = differingFields(txnA, txnB);
 
   if (conflictedFields.length === 0) return null;
 

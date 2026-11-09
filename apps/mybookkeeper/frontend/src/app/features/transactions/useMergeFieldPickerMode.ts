@@ -1,5 +1,5 @@
 import type { MergeFieldPickerMode } from "@/shared/types/transaction/merge-field-picker-mode";
-import type { MergeableField } from "./merge-defaults";
+import type { MergeableField } from "@mybookkeeper/api-client/types/transaction/MergeableField";
 
 interface UseMergeFieldPickerModeArgs {
   visibleFields: readonly MergeableField[];

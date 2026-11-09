@@ -22,6 +22,7 @@ import type { Transaction } from "@mybookkeeper/api-client/types/transaction/tra
 import type { Tab } from "@/shared/types/transaction/transaction-tab";
 import type { Filters } from "@/shared/types/transaction/transaction-filters";
 import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
+import { transactionExportPath } from "@mybookkeeper/api-client/utils/transactionExportPath";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 
 export interface TransactionPageState {
@@ -211,35 +212,21 @@ export function useTransactionPageState(): TransactionPageState {
     [bulkDelete, showSuccess, showError],
   );
 
-  const buildExportParams = useCallback(() => {
-    const params = new URLSearchParams();
-    if (filters.property_id) params.set("property_id", filters.property_id);
-    if (filters.status) params.set("status", filters.status);
-    if (filters.transaction_type) params.set("transaction_type", filters.transaction_type);
-    if (filters.category) params.set("category", filters.category);
-    if (filters.vendor) params.set("vendor", filters.vendor);
-    if (filters.start_date) params.set("start_date", filters.start_date);
-    if (filters.end_date) params.set("end_date", filters.end_date);
-    return params.toString();
-  }, [filters]);
-
   const handleExportCSV = useCallback(async () => {
     try {
-      const qs = buildExportParams();
-      await downloadFile(`/exports/transactions/csv${qs ? `?${qs}` : ""}`, "transactions.csv");
+      await downloadFile(transactionExportPath("csv", filters), "transactions.csv");
     } catch {
       showError("Failed to export CSV");
     }
-  }, [buildExportParams, showError]);
+  }, [filters, showError]);
 
   const handleExportPDF = useCallback(async () => {
     try {
-      const qs = buildExportParams();
-      await downloadFile(`/exports/transactions/pdf${qs ? `?${qs}` : ""}`, "transactions.pdf");
+      await downloadFile(transactionExportPath("pdf", filters), "transactions.pdf");
     } catch {
       showError("Failed to export PDF");
     }
-  }, [buildExportParams, showError]);
+  }, [filters, showError]);
 
   const handleVendorLearned = useCallback(
     (vendor: string, category: string, retroactiveCount: number) => {

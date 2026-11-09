@@ -4,9 +4,9 @@ import { useDeleteTransactionMutation, useGetTransactionQuery } from "@mybookkee
 import { Banner, EmptyState, LoadingButton, OptionSheet, Skeleton, useRefresh, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Alert, Linking, ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { WEB_BASE_URL } from "../../constants/api";
+import { DUPLICATES_LINK } from "../../constants/duplicates";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { selectableProperties } from "./transactionEditValues";
 import { categoryLabel, displayAmount, isMoneyIn, isReviewable, spokenDate, propertyLabel, spokenAmount, spokenKind, statusLabel, transactionName } from "./transactionDisplay";
@@ -112,8 +112,8 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
 
         {isDuplicate ? (
           <Banner
-            actions={[{ label: "Open on the website", onPress: () => void Linking.openURL(`${WEB_BASE_URL}/transactions`) }]}
-            message="I think this is a duplicate of another transaction. It's easier to sort out on the website."
+            actions={[{ label: "Review duplicates", onPress: () => router.push(DUPLICATES_LINK) }]}
+            message="I think this is a duplicate of another transaction. Compare them to merge or keep one."
           />
         ) : (
           <TransactionFact
