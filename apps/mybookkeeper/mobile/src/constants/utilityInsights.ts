@@ -10,7 +10,12 @@ export const UTILITY_RENEWAL_MESSAGES = {
 } as const;
 
 export const UTILITY_RATE_CHECK_MESSAGES = {
-  noBenchmark: "No market rate recorded yet, so nothing is being checked against your plans.",
+  noPlansHeading: "No utility plans to check",
+  noPlansBody: "Add a utility plan and I'll check its rate against the market.",
+  addPlan: "Add a plan",
+  noBenchmarkHeading: "No market rate recorded yet",
+  noBenchmark: "Nothing is being checked against your plans until one is recorded.",
+  noBenchmarkViewOnly: "Nothing is being checked against your plans. Ask the owner to record one.",
   recordRate: "Record a market rate",
   allClearHeading: "All clear",
   allClear: (gapPct: number) => `No plan is priced more than ${gapPct}% above the market rate you recorded.`,

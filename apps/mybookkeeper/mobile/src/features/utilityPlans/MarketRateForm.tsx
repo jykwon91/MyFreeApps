@@ -1,6 +1,7 @@
 import type { MarketRateBenchmark } from "@mybookkeeper/api-client/types/utility/market-rate-benchmark";
 import type { MarketRateFormValues } from "@mybookkeeper/api-client/types/utility/market-rate-form-values";
-import { UTILITY_SERVICE_TYPE_LABELS, type UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
+import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import { isFlatService, isMarketRateFigureValid, marketRateToFormValues } from "@mybookkeeper/api-client/utils/marketRateForm";
 import { Banner, FormField, LoadingButton, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
@@ -26,6 +27,7 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
   const asking = useRef(false);
   const { save, remove, isSaving, isRemoving, isLeaving, failure } = useSaveMarketRate(serviceType, existing === undefined);
   const isBusy = isSaving || isRemoving;
+  const locked = isBusy || isLeaving;
   const flat = isFlatService(serviceType);
   const isFigureValid = isMarketRateFigureValid(values.figure);
   const set = (field: keyof MarketRateFormValues, value: string) => setValues((current) => ({ ...current, [field]: value }));
@@ -43,7 +45,7 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
       <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <FormField
-          editable={!isBusy}
+          editable={!locked}
           error={hasTried && !isFigureValid ? MESSAGES.figureRequired : undefined}
           hint={flat ? MESSAGES.figureFlatHint : MESSAGES.figureMeteredHint}
           keyboardType="decimal-pad"
@@ -53,25 +55,25 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
           value={values.figure}
         />
         <FormField
-          editable={!isBusy}
+          editable={!locked}
           hint={MESSAGES.sourceHint}
           label={MESSAGES.source}
           maxLength={MARKET_RATE_SOURCE_MAX_LENGTH}
           onChangeText={(text) => set("source", text)}
           value={values.source}
         />
-        <OptionalDateField label={MESSAGES.observedOn} maximumDate={new Date()} onChange={(iso) => set("observedOn", iso ?? "")} required startsAt={new Date()} value={values.observedOn || null} />
-        <FormField editable={!isBusy} label={MESSAGES.notes} multiline onChangeText={(text) => set("notes", text)} value={values.notes} />
-        <LoadingButton disabled={isBusy || isLeaving} isLoading={isSaving} loadingText={MESSAGES.saving} onPress={submit}>
+        <OptionalDateField disabled={locked} label={MESSAGES.observedOn} maximumDate={new Date()} onChange={(iso) => set("observedOn", iso ?? "")} required startsAt={new Date()} value={values.observedOn || null} />
+        <FormField editable={!locked} label={MESSAGES.notes} multiline onChangeText={(text) => set("notes", text)} value={values.notes} />
+        <LoadingButton disabled={locked} isLoading={isSaving} loadingText={MESSAGES.saving} onPress={submit}>
           {MESSAGES.save}
         </LoadingButton>
         {existing ? (
           <LoadingButton
-            disabled={isBusy || isLeaving}
+            disabled={locked}
             isLoading={isRemoving}
             loadingText={MESSAGES.removing}
             onPress={() =>
-              askOnce(asking, MESSAGES.removeTitle(UTILITY_SERVICE_TYPE_LABELS[serviceType]), MESSAGES.removeBody, { text: "Remove", style: "destructive", onPress: () => void remove() })
+              askOnce(asking, MESSAGES.removeTitle(UTILITY_SERVICE_TYPE_LABELS[serviceType]), MESSAGES.removeBody, { text: MESSAGES.confirmRemove, style: "destructive", onPress: () => void remove() })
             }
             variant="destructive"
           >

@@ -10,8 +10,9 @@ interface UtilityPlanDateFieldProps {
   onChange: UtilityPlanFieldChange;
   problems: UtilityPlanFormProblems;
   today: Date;
+  isBusy: boolean;
 }
 
-export default function UtilityPlanDateField({ field, label, values, onChange, problems, today }: UtilityPlanDateFieldProps) {
-  return <OptionalDateField error={problems[field]} label={label} onChange={(iso) => onChange(field, iso ?? "")} startsAt={today} value={values[field] || null} />;
+export default function UtilityPlanDateField({ field, label, values, onChange, problems, today, isBusy }: UtilityPlanDateFieldProps) {
+  return <OptionalDateField disabled={isBusy} error={problems[field]} label={label} onChange={(iso) => onChange(field, iso ?? "")} startsAt={today} value={values[field] || null} />;
 }

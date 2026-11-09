@@ -6,6 +6,7 @@ import { dateFromIso, fullDateLabel, isoFromDate } from "../../lib/localDate";
 
 /** Blank stays blank: a date only counts once it's been picked, so nothing wrong gets saved by accident. */
 export default function OptionalDateField({
+  disabled = false,
   error,
   label,
   maximumDate,
@@ -14,6 +15,8 @@ export default function OptionalDateField({
   startsAt,
   value,
 }: {
+  /** Locks the buttons and closes the picker, for while the form is saving or leaving. */
+  disabled?: boolean;
   error?: string;
   label: string;
   maximumDate?: Date;
@@ -52,12 +55,13 @@ export default function OptionalDateField({
       </Text>
       <Text style={{ fontSize: fontSize.md, color: value ? colors.foreground : colors.mutedForeground }}>{value ? fullDateLabel(value) : "Not set"}</Text>
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
-        <LoadingButton accessibilityLabel={`${isPicking ? "Done choosing" : value ? "Change" : "Choose"} ${label.toLowerCase()}`} onPress={pick} style={{ flex: 1 }} variant="secondary">
+        <LoadingButton accessibilityLabel={`${isPicking ? "Done choosing" : value ? "Change" : "Choose"} ${label.toLowerCase()}`} disabled={disabled} onPress={pick} style={{ flex: 1 }} variant="secondary">
           {isPicking ? "Done" : value ? "Change" : "Choose"}
         </LoadingButton>
         {value ? (
           <LoadingButton
             accessibilityLabel={`Clear ${label.toLowerCase()}`}
+            disabled={disabled}
             onPress={() => {
               setIsPicking(false);
               onChange(null);
@@ -69,7 +73,7 @@ export default function OptionalDateField({
           </LoadingButton>
         ) : null}
       </View>
-      {isPicking ? (
+      {isPicking && !disabled ? (
         <DateTimePicker
           accessibilityLabel={label}
           display="spinner"

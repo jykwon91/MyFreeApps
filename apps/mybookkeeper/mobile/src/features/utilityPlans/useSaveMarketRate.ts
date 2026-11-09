@@ -3,6 +3,7 @@ import type { MarketRateFormValues } from "@mybookkeeper/api-client/types/utilit
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import { toMarketRateUpsert } from "@mybookkeeper/api-client/utils/marketRateForm";
 import { useToast } from "@platform/mobile";
+import { useState } from "react";
 import { MARKET_RATE_MESSAGES as MESSAGES } from "../../constants/marketRates";
 import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useWrite } from "../../lib/useWrite";
@@ -15,25 +16,28 @@ export function useSaveMarketRate(serviceType: UtilityServiceType, isNew: boolea
   const { showToast } = useToast();
   const [upsert] = useUpsertMarketRateBenchmarkMutation();
   const [deleteRate] = useDeleteMarketRateBenchmarkMutation();
-  const saving = useWrite();
-  const removing = useWrite();
+  // One write for both actions, so the failure shown is always the latest one, never a stale save error.
+  const write = useWrite();
+  const [action, setAction] = useState<"save" | "remove">("save");
   const { isLeaving, leave } = useLeaveWhenSaved("/utility-plans/market-rates");
   const saveCopy = saveFailureCopy("market rate", "market rates", isNew);
 
   async function save(values: MarketRateFormValues): Promise<void> {
-    const result = await saving.run(() => upsert({ serviceType, data: toMarketRateUpsert(serviceType, values) }).unwrap(), { staysLocked: true });
+    setAction("save");
+    const result = await write.run(() => upsert({ serviceType, data: toMarketRateUpsert(serviceType, values) }).unwrap(), { staysLocked: true });
     if (result !== "done") return;
     showToast(MESSAGES.saved);
     leave();
   }
 
   async function remove(): Promise<void> {
-    const result = await removing.run(() => deleteRate(serviceType).unwrap(), { staysLocked: true });
+    setAction("remove");
+    const result = await write.run(() => deleteRate(serviceType).unwrap(), { staysLocked: true });
     if (result !== "done" && result !== "gone") return;
     showToast(result === "done" ? MESSAGES.removed : MESSAGES.alreadyRemoved);
     leave();
   }
 
-  const failure = saving.failure ? saveCopy[saving.failure] : removing.failure && removing.failure !== "gone" ? REMOVE_COPY[removing.failure] : null;
-  return { save, remove, isSaving: saving.isBusy, isRemoving: removing.isBusy, isLeaving, failure };
+  const failure = !write.failure ? null : action === "save" ? saveCopy[write.failure] : write.failure === "gone" ? null : REMOVE_COPY[write.failure];
+  return { save, remove, isSaving: write.isBusy && action === "save", isRemoving: write.isBusy && action === "remove", isLeaving, failure };
 }

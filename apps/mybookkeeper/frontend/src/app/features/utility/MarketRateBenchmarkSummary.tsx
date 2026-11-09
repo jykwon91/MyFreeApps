@@ -1,7 +1,7 @@
 import { formatPlanDate } from "@mybookkeeper/api-client/utils/utilityPlanFormat";
 import { describeBenchmarkFigure } from "@mybookkeeper/api-client/utils/marketRateForm";
 import { useGetMarketRateBenchmarksQuery } from "@mybookkeeper/api-client/store/marketRateBenchmarksApi";
-import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
 
 export interface MarketRateBenchmarkSummaryProps {
   onEdit: () => void;

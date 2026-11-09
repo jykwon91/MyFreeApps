@@ -5,6 +5,9 @@ export interface DocumentReaderMessages {
   fromLibrary: string;
   librarySheetTitle: string;
   libraryEmpty: string;
+  libraryLoading: string;
+  libraryFailed: string;
+  libraryRetry: string;
   untitled: string;
   reading: string;
   tryAgain: string;

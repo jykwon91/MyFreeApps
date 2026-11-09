@@ -27,6 +27,7 @@ export const MARKET_RATE_MESSAGES = {
   saving: "Saving...",
   saved: "Market rate saved.",
   remove: "Remove rate",
+  confirmRemove: "Remove",
   removing: "Removing...",
   removeTitle: (service: string) => `Remove the ${service} rate?`,
   removeBody: "Plans for this service won't be checked for overpaying until you record another.",

@@ -1,6 +1,7 @@
 import { describeBenchmarkFigure } from "@mybookkeeper/api-client/utils/marketRateForm";
 import type { MarketRateBenchmark } from "@mybookkeeper/api-client/types/utility/market-rate-benchmark";
-import { UTILITY_SERVICE_TYPE_LABELS, type UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
+import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
 import { MARKET_RATE_MESSAGES as MESSAGES } from "../../constants/marketRates";

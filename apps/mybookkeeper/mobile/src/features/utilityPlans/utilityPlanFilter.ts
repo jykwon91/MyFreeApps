@@ -1,5 +1,5 @@
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
-import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
 import { UTILITY_PLAN_MESSAGES as MESSAGES } from "../../constants/utilityPlans";
 import type { UtilityPlanFilter } from "../../types/UtilityPlanFilter";
 import { renewalStatusOn } from "./utilityPlanDisplay";

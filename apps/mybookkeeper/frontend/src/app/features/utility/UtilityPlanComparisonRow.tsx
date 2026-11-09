@@ -1,6 +1,6 @@
 import { formatBenchmarkGap } from "@mybookkeeper/api-client/utils/benchmarkFormat";
 import { formatComparisonFigure } from "@mybookkeeper/api-client/utils/utilityPlanFormat";
-import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
 import type { UtilityPlanRateComparisonRow } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-comparison-row";
 
 export interface UtilityPlanComparisonRowProps {

@@ -57,7 +57,7 @@ export default function MortgageForm({ original }: { original: Mortgage | null }
         ) : (
           <>
             <DocumentReader
-              isDisabled={isBusy}
+              isDisabled={isBusy || isLeaving}
               messages={MORTGAGE_STATEMENT_MESSAGES}
               photoName={MORTGAGE_STATEMENT_PHOTO_NAME}
               readers={readers}
@@ -67,11 +67,11 @@ export default function MortgageForm({ original }: { original: Mortgage | null }
               }}
             />
             {draft ? <DocumentDraftNotices draft={draft} messages={MORTGAGE_STATEMENT_MESSAGES} /> : null}
-            <PropertyChoiceField messages={MESSAGES} disabled={isBusy} error={hasTried && needsProperty ? MESSAGES.propertyRequired : undefined} onChange={setPropertyId} value={propertyId} />
+            <PropertyChoiceField messages={MESSAGES} disabled={isBusy || isLeaving} error={hasTried && needsProperty ? MESSAGES.propertyRequired : undefined} onChange={setPropertyId} value={propertyId} />
           </>
         )}
         <MortgageFormFields
-          isBusy={isBusy}
+          isBusy={isBusy || isLeaving}
           onChange={(field, value) => setValues((current) => ({ ...current, [field]: value }))}
           problems={hasTried ? problems : {}}
           values={values}

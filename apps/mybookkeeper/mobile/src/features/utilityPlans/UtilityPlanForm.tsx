@@ -1,7 +1,8 @@
 import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
 import type { UtilityPlanDraft } from "@mybookkeeper/api-client/types/utility/utility-plan-draft";
 import type { UtilityPlanFormValues } from "@mybookkeeper/api-client/types/utility/utility-plan-form-values";
-import { UTILITY_SERVICE_TYPES, UTILITY_SERVICE_TYPE_LABELS, type UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import { UTILITY_SERVICE_TYPES, UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
+import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/utilityPlanDraft";
 import { EMPTY_UTILITY_PLAN_FORM, toUtilityPlanFormValues, utilityPlanFormProblems } from "@mybookkeeper/api-client/utils/utilityPlanForm";
 import { Banner, LoadingButton, OptionSheet, useTheme } from "@platform/mobile";

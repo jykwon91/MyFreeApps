@@ -15,6 +15,7 @@ export default function OptionSheet<Value extends string>({
   onSelect,
   onClose,
   emptyText,
+  emptyContent,
   onClosed,
 }: OptionSheetProps<Value>) {
   const { colors, spacing, fontSize } = useTheme();
@@ -48,7 +49,9 @@ export default function OptionSheet<Value extends string>({
         ) : null}
         <FlatList
           ListEmptyComponent={
-            emptyText ? (
+            emptyContent ? (
+              <>{emptyContent}</>
+            ) : emptyText ? (
               <Text style={{ padding: spacing.lg, fontSize: fontSize.md, color: colors.mutedForeground }}>{emptyText}</Text>
             ) : undefined
           }

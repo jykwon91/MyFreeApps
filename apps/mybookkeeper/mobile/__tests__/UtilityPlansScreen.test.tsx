@@ -245,6 +245,27 @@ describe("UtilityPlansScreen", () => {
     expect(mockPush).toHaveBeenLastCalledWith("/utility-plans/market-rates");
   });
 
+  it("leaves renewals and the rate check out of the glance when there are no plans to look at", async () => {
+    startUtilityServer({ list: aPage([]) });
+    await show(<UtilityPlansScreen />);
+    await screen.findByText(UTILITY_PLAN_MESSAGES.noneHeading);
+    expect(screen.queryByRole("button", { name: /^Renewals/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Rate check/ })).toBeNull();
+    expect(screen.queryByText(UTILITY_PLAN_MESSAGES.glanceClear)).toBeNull();
+    expect(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.glanceBetterPlans })).toBeTruthy();
+  });
+
+  it("says no rate is recorded, not all clear, when nothing was checked against", async () => {
+    startUtilityServer({
+      list: aPage([aUtilityPlanSummary()]),
+      comparison: { material_gap_pct: 10, above_market: [], not_compared: [], total_above_market: 0, has_stale_benchmark: false },
+      benchmarks: [],
+    });
+    await show(<UtilityPlansScreen />);
+    expect(await screen.findByRole("button", { name: `Rate check, ${UTILITY_PLAN_MESSAGES.glanceNoRate}` })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: `Rate check, ${UTILITY_PLAN_MESSAGES.glanceClear}` })).toBeNull();
+  });
+
   it("narrows by service from the filter sheet, and says when nothing matches", async () => {
     startServer(aPage([aUtilityPlanSummary(), aUtilityPlanSummary({ id: "u2", service_type: "water", provider_name: "City" })]));
     await show(<UtilityPlansScreen />);

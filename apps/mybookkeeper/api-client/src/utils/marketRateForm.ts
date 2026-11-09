@@ -1,3 +1,4 @@
+import { NO_RATE, PER_MONTH_SUFFIX } from "../constants/rateDisplay";
 import type { MarketRateBenchmark } from "../types/utility/market-rate-benchmark";
 import type { MarketRateBenchmarkUpsertRequest } from "../types/utility/market-rate-benchmark-upsert-request";
 import type { MarketRateFormValues } from "../types/utility/market-rate-form-values";
@@ -17,7 +18,7 @@ export function isFlatService(serviceType: UtilityServiceType): boolean {
  */
 export function describeBenchmarkFigure(benchmark: MarketRateBenchmark): string {
   if (isFlatService(benchmark.service_type)) {
-    return benchmark.monthly_cents === null ? "—" : `${formatCents(benchmark.monthly_cents)}/mo`;
+    return benchmark.monthly_cents === null ? NO_RATE : `${formatCents(benchmark.monthly_cents)}${PER_MONTH_SUFFIX}`;
   }
   return formatCentsPerKwh(benchmark.rate_cents_per_kwh);
 }

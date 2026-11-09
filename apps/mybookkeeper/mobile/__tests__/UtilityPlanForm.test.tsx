@@ -1,3 +1,4 @@
+import { UTILITY_PLAN_FORM_PROBLEMS } from "@mybookkeeper/api-client/constants/utilityPlanForm";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
@@ -137,6 +138,29 @@ describe("adding a utility plan", () => {
     expect(mockBack).not.toHaveBeenCalled();
   });
 
+  it("says the property is gone, not the plan, when the add finds nothing", async () => {
+    startUtilityServer({ write: 404 });
+    await show(<UtilityPlanFormScreen />);
+    await pickOakStreet();
+    await fireEvent.changeText(screen.getByLabelText(new RegExp(`^${MESSAGES.provider}`)), "Reliant");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveNew }));
+    expect(await screen.findByText(MESSAGES.goneProperty)).toBeTruthy();
+    expect(screen.queryByText(/can't find that utility plan/)).toBeNull();
+  });
+
+  it("locks the date buttons while the plan is saving", async () => {
+    startUtilityServer();
+    holdWrites();
+    await show(<UtilityPlanFormScreen />);
+    await pickOakStreet();
+    await fireEvent.changeText(screen.getByLabelText(new RegExp(`^${MESSAGES.provider}`)), "Reliant");
+    expect(screen.getByRole("button", { name: /choose service start/i })).toBeEnabled();
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveNew }));
+    await screen.findByText(MESSAGES.saving);
+    expect(screen.getByRole("button", { name: /choose service start/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /choose term ends/i })).toBeDisabled();
+  });
+
   it("asks for the bill credit details once the switch is on", async () => {
     const server = startUtilityServer();
     await show(<UtilityPlanFormScreen />);
@@ -179,6 +203,18 @@ describe("editing a utility plan", () => {
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
     expect(JSON.parse(String(writesTo(server, "patch")[0].data))).toMatchObject({ provider_name: "Direct Energy" });
     expect(await screen.findByText(MESSAGES.updated)).toBeTruthy();
+  });
+
+  it("will not send an unreadable fee, which would wipe the stored one", async () => {
+    const server = startUtilityServer({ detail: aUtilityPlanDetail({ early_termination_fee_cents: 15000 }) });
+    await show(<UtilityPlanEditScreen id="u1" />);
+    const fee = await screen.findByLabelText(new RegExp(`^${MESSAGES.earlyTerminationFee.replace(/[()$]/g, "\\$&")}`));
+    expect(fee.props.value).toBe("150.00");
+    await fireEvent.changeText(fee, "1.50.");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
+    expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.notDollars)).toBeTruthy();
+    expect(writesTo(server, "patch")).toHaveLength(0);
+    expect(mockBack).not.toHaveBeenCalled();
   });
 
   it.each([

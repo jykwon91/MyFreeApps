@@ -1,8 +1,8 @@
 import type { UtilityPlanDraft } from "../types/utility/utility-plan-draft";
 import type { UtilityPlanFormValues } from "../types/utility/utility-plan-form-values";
-import { UTILITY_PLAN_RATE_TYPES } from "../types/utility/utility-plan-rate-type";
+import { UTILITY_PLAN_RATE_TYPES } from "../constants/utilityPlanRateTypes";
 import type { UtilityPlanRateType } from "../types/utility/utility-plan-rate-type";
-import { UTILITY_SERVICE_TYPES } from "../types/utility/utility-service-type";
+import { UTILITY_SERVICE_TYPES } from "../constants/utilityServiceTypes";
 import type { UtilityServiceType } from "../types/utility/utility-service-type";
 
 /**

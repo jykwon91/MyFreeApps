@@ -28,7 +28,7 @@ export default function UtilityPlanActions({ planId, title, onRemoved }: Utility
         disabled={isRemoving}
         isLoading={isRemoving}
         loadingText={MESSAGES.removing}
-        onPress={() => askOnce(asking, `${MESSAGES.remove}: ${title}?`, MESSAGES.removeBody, { text: "Remove", style: "destructive", onPress: () => void remove() })}
+        onPress={() => askOnce(asking, `${MESSAGES.remove}: ${title}?`, MESSAGES.removeBody, { text: MESSAGES.confirmRemove, style: "destructive", onPress: () => void remove() })}
         variant="destructive"
       >
         {MESSAGES.remove}

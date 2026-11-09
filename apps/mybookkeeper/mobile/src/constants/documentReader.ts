@@ -12,6 +12,9 @@ export function documentReaderMessages({ title, hint, takePhoto, target }: Docum
     fromLibrary: "Use a document I've already uploaded",
     librarySheetTitle: "Pick a document to read",
     libraryEmpty: "You haven't uploaded any documents yet.",
+    libraryLoading: "Loading your documents",
+    libraryFailed: "I couldn't load your documents. Check your connection and try again.",
+    libraryRetry: "Try again",
     untitled: "Untitled document",
     reading: "Reading...",
     tryAgain: "Try reading it again",
@@ -41,3 +44,5 @@ export function documentReaderMessages({ title, hint, takePhoto, target }: Docum
     },
   };
 }
+
+export const DOCUMENT_LIBRARY_SKELETON_ROWS: readonly number[] = [0, 1, 2, 3, 4];

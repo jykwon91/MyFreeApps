@@ -4,12 +4,10 @@ import type { PropertyChoiceMessages } from "../types/PropertyChoiceMessages";
 export const UTILITY_PLAN_PHOTO_NAME = "utility-plan.jpg";
 export const UTILITY_PLAN_TEXT_MAX_LENGTH = 255;
 export const UTILITY_PLAN_ACCOUNT_MAX_LENGTH = 100;
-export const UTILITY_PLAN_TERM_MONTHS_MAX = 600;
 
 export const UTILITY_PLAN_FORM_MESSAGES = {
-  titleNew: "Add utility plan",
-  titleEdit: "Edit utility plan",
-  loadingForm: "Loading this plan",
+  titleNew: "Add plan",
+  titleEdit: "Edit plan",
   viewOnlyHeading: "You have view-only access.",
   viewOnlyBody: "Ask the owner if you need to add or change utility plans.",
   property: "Property",
@@ -53,7 +51,7 @@ export const UTILITY_PLAN_FORM_MESSAGES = {
   saving: "Saving...",
   added: "Utility plan added.",
   updated: "Utility plan updated.",
-  gone: "That plan is gone, so I can't save changes to it.",
+  goneProperty: "That property is gone, so I can't add a plan to it.",
 } as const;
 
 export const UTILITY_PLAN_PROPERTY_MESSAGES: PropertyChoiceMessages = UTILITY_PLAN_FORM_MESSAGES;

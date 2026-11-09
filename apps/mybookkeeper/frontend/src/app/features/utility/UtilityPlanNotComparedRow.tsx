@@ -1,5 +1,5 @@
 import { UTILITY_PLAN_BENCHMARK_STATUS_LABELS } from "@mybookkeeper/api-client/constants/utilityPlanBenchmarkLabels";
-import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
 import type { UtilityPlanRateComparisonRow } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-comparison-row";
 
 export interface UtilityPlanNotComparedRowProps {

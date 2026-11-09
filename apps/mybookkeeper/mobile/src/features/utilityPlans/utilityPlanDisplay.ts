@@ -1,8 +1,8 @@
 import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
-import { UTILITY_PLAN_RATE_TYPE_LABELS } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-type";
+import { UTILITY_PLAN_RATE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityPlanRateTypes";
 import type { UtilityPlanRenewalStatus } from "@mybookkeeper/api-client/types/utility/utility-plan-renewal-status";
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
-import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
 import { formatMonths } from "@mybookkeeper/api-client/utils/mortgageFormat";
 import { formatCents, formatCentsPerKwh, formatRenewalCountdown } from "@mybookkeeper/api-client/utils/utilityPlanFormat";
 import { EXPIRING_SOON_DAYS, UTILITY_PLAN_MESSAGES as MESSAGES } from "../../constants/utilityPlans";
@@ -27,7 +27,7 @@ export function planProvider(plan: Pick<UtilityPlanSummary, "provider_name" | "p
 
 export function planPriceLine(plan: Pick<UtilityPlanSummary, "rate_type" | "avg_price_cents_per_kwh_at_1000">): string {
   const rateType = UTILITY_PLAN_RATE_TYPE_LABELS[plan.rate_type];
-  return plan.avg_price_cents_per_kwh_at_1000 ? `${rateType} · ${formatCentsPerKwh(plan.avg_price_cents_per_kwh_at_1000)} at 1,000 kWh` : rateType;
+  return plan.avg_price_cents_per_kwh_at_1000 ? `${rateType} · ${formatCentsPerKwh(plan.avg_price_cents_per_kwh_at_1000)} ${MESSAGES.atThousandKwh}` : rateType;
 }
 
 /**
@@ -75,19 +75,19 @@ export function planRowLabel(plan: UtilityPlanSummary, todayIso: string): string
 }
 
 function monthly(cents: number): string {
-  return `${formatCents(cents)}/mo`;
+  return `${formatCents(cents)}${MESSAGES.perMonth}`;
 }
 
 function billCredit(plan: UtilityPlanDetail): string | null {
   if (!plan.has_bill_credit || plan.bill_credit_amount_cents === null) return null;
   const amount = formatCents(plan.bill_credit_amount_cents);
-  return plan.bill_credit_threshold_kwh === null ? amount : `${amount} at ${plan.bill_credit_threshold_kwh.toLocaleString("en-US")} kWh`;
+  return plan.bill_credit_threshold_kwh === null ? amount : MESSAGES.creditAtKwh(amount, plan.bill_credit_threshold_kwh.toLocaleString("en-US"));
 }
 
 function minimumUsageFee(plan: UtilityPlanDetail): string | null {
   if (plan.min_usage_fee_cents === null) return null;
   const amount = formatCents(plan.min_usage_fee_cents);
-  return plan.min_usage_threshold_kwh === null ? amount : `${amount} under ${plan.min_usage_threshold_kwh.toLocaleString("en-US")} kWh`;
+  return plan.min_usage_threshold_kwh === null ? amount : MESSAGES.feeUnderKwh(amount, plan.min_usage_threshold_kwh.toLocaleString("en-US"));
 }
 
 /** What the plan has recorded, in the order someone on a call with the provider would look for it. */
@@ -105,9 +105,9 @@ export function planFacts(plan: UtilityPlanDetail): UtilityPlanFact[] {
     { label: MESSAGES.minimumUsageFee, value: minimumUsageFee(plan) },
     { label: MESSAGES.afterPromo, value: plan.post_promo_monthly_cents === null ? null : monthly(plan.post_promo_monthly_cents) },
     { label: MESSAGES.equipmentFee, value: plan.equipment_fee_monthly_cents === null ? null : monthly(plan.equipment_fee_monthly_cents) },
-    { label: MESSAGES.download, value: plan.download_mbps === null ? null : `${plan.download_mbps} Mbps` },
-    { label: MESSAGES.upload, value: plan.upload_mbps === null ? null : `${plan.upload_mbps} Mbps` },
-    { label: MESSAGES.dataCap, value: plan.data_cap_gb === null ? null : `${plan.data_cap_gb} GB` },
+    { label: MESSAGES.download, value: plan.download_mbps === null ? null : MESSAGES.mbps(plan.download_mbps) },
+    { label: MESSAGES.upload, value: plan.upload_mbps === null ? null : MESSAGES.mbps(plan.upload_mbps) },
+    { label: MESSAGES.dataCap, value: plan.data_cap_gb === null ? null : MESSAGES.gigabytes(plan.data_cap_gb) },
   ];
   return facts.filter((fact): fact is UtilityPlanFact => Boolean(fact.value));
 }

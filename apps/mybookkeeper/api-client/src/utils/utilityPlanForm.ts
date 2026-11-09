@@ -1,6 +1,11 @@
 import type { UtilityPlanDetail } from "../types/utility/utility-plan-detail";
 import type { UtilityPlanFieldsPayload } from "../types/utility/utility-plan-fields-payload";
-import { UTILITY_PLAN_FORM_PROBLEMS } from "../constants/utilityPlanForm";
+import {
+  UTILITY_PLAN_FORM_PROBLEMS,
+  UTILITY_PLAN_RATE_MAX_DECIMALS,
+  UTILITY_PLAN_TERM_MONTHS_MAX,
+  UTILITY_PLAN_TERM_MONTHS_MIN,
+} from "../constants/utilityPlanForm";
 import type { UtilityPlanFormProblems } from "../types/utility/utility-plan-form-problems";
 import type { UtilityPlanFormValues } from "../types/utility/utility-plan-form-values";
 
@@ -155,17 +160,60 @@ export function toUtilityPlanFields(
   };
 }
 
+const DOLLAR_FIELDS = ["monthlyBase", "etf", "minUsageFee", "postPromoMonthly", "equipmentFeeMonthly"] as const;
+const RATE_FIELDS = ["energyCharge", "tduCharge", "avgPrice"] as const;
+const WHOLE_NUMBER_FIELDS = ["minUsageThreshold", "downloadMbps", "uploadMbps", "dataCapGb"] as const;
+const POSITIVE_ONLY_FIELDS = ["downloadMbps", "uploadMbps", "dataCapGb"] as const;
+
+const DECIMAL = /^\d+(\.\d+)?$/;
+const WHOLE = /^\d+$/;
+
+/** A filled field the payload would silently turn into null, wiping what was stored. */
+function isUnreadableDecimal(value: string): boolean {
+  const text = value.trim();
+  return text !== "" && !DECIMAL.test(text);
+}
+
+function hasTooManyDecimals(value: string): boolean {
+  const decimals = value.trim().split(".")[1];
+  return decimals !== undefined && decimals.length > UTILITY_PLAN_RATE_MAX_DECIMALS;
+}
+
+function isUnreadableWhole(value: string): boolean {
+  const text = value.trim();
+  return text !== "" && !WHOLE.test(text);
+}
+
 /**
  * Every problem the form has, keyed by the field to point at. The backend rejects
  * the same shapes; catching them here points at the field instead of costing a
- * round trip. Keys come in the order a person would fix them.
+ * round trip. A filled field that can't be read as a number is a problem, not a
+ * blank: the payload would otherwise send null and wipe the stored value.
  */
 export function utilityPlanFormProblems(values: UtilityPlanFormValues): UtilityPlanFormProblems {
   const problems: UtilityPlanFormProblems = {};
   if (!values.providerName.trim()) problems.providerName = UTILITY_PLAN_FORM_PROBLEMS.providerRequired;
+  for (const field of RATE_FIELDS) {
+    if (isUnreadableDecimal(values[field]) || hasTooManyDecimals(values[field])) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.notRate;
+  }
+  for (const field of DOLLAR_FIELDS) {
+    if (isUnreadableDecimal(values[field])) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.notDollars;
+  }
+  if (isUnreadableWhole(values.termMonths)) {
+    problems.termMonths = UTILITY_PLAN_FORM_PROBLEMS.notWholeNumber;
+  } else if (values.termMonths.trim() !== "") {
+    const months = Number(values.termMonths);
+    if (months < UTILITY_PLAN_TERM_MONTHS_MIN || months > UTILITY_PLAN_TERM_MONTHS_MAX) problems.termMonths = UTILITY_PLAN_FORM_PROBLEMS.termOutOfRange;
+  }
+  // The credit pair is dropped from the payload when its toggle is off, so only a claimed credit is checked.
   if (values.hasBillCredit) {
     if (values.billCreditAmount.trim() === "") problems.billCreditAmount = UTILITY_PLAN_FORM_PROBLEMS.billCreditIncomplete;
+    else if (isUnreadableDecimal(values.billCreditAmount)) problems.billCreditAmount = UTILITY_PLAN_FORM_PROBLEMS.notDollars;
     if (values.billCreditThreshold.trim() === "") problems.billCreditThreshold = UTILITY_PLAN_FORM_PROBLEMS.billCreditIncomplete;
+    else if (isUnreadableWhole(values.billCreditThreshold)) problems.billCreditThreshold = UTILITY_PLAN_FORM_PROBLEMS.notWholeNumber;
+  }
+  for (const field of WHOLE_NUMBER_FIELDS) {
+    if (isUnreadableWhole(values[field])) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.notWholeNumber;
   }
   // A price step with no date is one the renewal alert cannot announce, so the
   // table rejects it outright (``chk_utility_plan_post_promo_needs_term_end``).
@@ -175,7 +223,7 @@ export function utilityPlanFormProblems(values: UtilityPlanFormValues): UtilityP
   // Zero is not a speed or a cap — it means "not recorded", which blank
   // already says. The table keeps the two distinct by rejecting zero.
   for (const field of POSITIVE_ONLY_FIELDS) {
-    if (isNotPositive(values[field])) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.notPositive;
+    if (!problems[field] && isNotPositive(values[field])) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.notPositive;
   }
   return problems;
 }
@@ -184,8 +232,6 @@ export function utilityPlanFormProblems(values: UtilityPlanFormValues): UtilityP
 export function validateUtilityPlanForm(values: UtilityPlanFormValues): string | null {
   return Object.values(utilityPlanFormProblems(values))[0] ?? null;
 }
-
-const POSITIVE_ONLY_FIELDS = ["downloadMbps", "uploadMbps", "dataCapGb"] as const;
 
 /** True for a filled-in field that parses to zero or less. Blank is fine. */
 function isNotPositive(value: string): boolean {

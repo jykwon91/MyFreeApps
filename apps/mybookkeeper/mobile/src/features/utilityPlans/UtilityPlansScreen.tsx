@@ -60,7 +60,7 @@ export default function UtilityPlansScreen() {
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
             {error && allRows.length > 0 ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
             {canWrite && allRows.length > 0 ? <LoadingButton onPress={addPlan}>{MESSAGES.add}</LoadingButton> : null}
-            <UtilityPlansGlance />
+            <UtilityPlansGlance hasPlans={allRows.length > 0} />
             <LoadingButton onPress={() => setIsFilterSheetOpen(true)} variant="secondary">
               {filterLabel(filter)}
             </LoadingButton>

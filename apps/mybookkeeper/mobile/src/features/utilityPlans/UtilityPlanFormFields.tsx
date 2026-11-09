@@ -1,5 +1,5 @@
-import { UTILITY_PLAN_RATE_TYPES, UTILITY_PLAN_RATE_TYPE_HINTS, UTILITY_PLAN_RATE_TYPE_LABELS } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-type";
-import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import { UTILITY_PLAN_RATE_TYPES, UTILITY_PLAN_RATE_TYPE_HINTS, UTILITY_PLAN_RATE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityPlanRateTypes";
+import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
 import { OptionRow, PickerField, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import {
@@ -52,8 +52,8 @@ export default function UtilityPlanFormFields({ onPickService, ...fields }: Util
       <UtilityPlanTextField {...money} field="monthlyBase" label={MESSAGES.monthlyBase} />
 
       <UtilityPlanTextField {...fields} field="termMonths" keyboardType="number-pad" label={MESSAGES.termMonths} />
-      <UtilityPlanDateField field="serviceStartDate" label={MESSAGES.serviceStart} onChange={onChange} problems={problems} today={today} values={values} />
-      <UtilityPlanDateField field="termEndDate" label={MESSAGES.termEnds} onChange={onChange} problems={problems} today={today} values={values} />
+      <UtilityPlanDateField field="serviceStartDate" label={MESSAGES.serviceStart} onChange={onChange} problems={problems} isBusy={isBusy} today={today} values={values} />
+      <UtilityPlanDateField field="termEndDate" label={MESSAGES.termEnds} onChange={onChange} problems={problems} isBusy={isBusy} today={today} values={values} />
       <UtilityPlanTextField {...money} field="etf" label={MESSAGES.earlyTerminationFee} />
 
       <UtilityPlanUsageFields {...fields} />

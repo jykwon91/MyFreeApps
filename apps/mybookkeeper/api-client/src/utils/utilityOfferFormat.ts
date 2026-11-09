@@ -1,7 +1,7 @@
 /**
  * Display formatting for market offers.
  *
- * Kept apart from `utility-plan-format` because these describe an offer the
+ * Kept apart from `utilityPlanFormat` because these describe an offer the
  * operator does not hold yet — the vocabulary is "would save", not "is paying".
  */
 

@@ -10,7 +10,7 @@ notification says this happened, so the overpay is silent and open-ended.
 ``SERVICE_TYPES`` and ``RATE_TYPES`` are enforced in the DB by
 ``CheckConstraint`` (String + CHECK, never the SQLAlchemy ``Enum`` type, per
 the monorepo schema conventions). Both are mirrored as TypeScript unions in
-``frontend/src/shared/types/utility/`` — a value added here MUST be added there
+``api-client/src/types/utility/`` — a value added here MUST be added there
 in the same PR.
 """
 
@@ -64,7 +64,7 @@ EXPIRING_SOON_DAYS = 45
 # Derived, never stored — computed from rate_type + term_end_date + today by
 # ``utility_plan_service.renewal_status`` so it can never drift from the dates
 # it describes. Mirrored as a TS union in
-# ``frontend/src/shared/types/utility/utility-plan-renewal-status.ts``.
+# ``api-client/src/types/utility/utility-plan-renewal-status.ts``.
 #   not_applicable — no term to lapse (regulated, or no end date recorded)
 #   active         — term ends beyond the alert window
 #   expiring_soon  — term ends within EXPIRING_SOON_DAYS; act now

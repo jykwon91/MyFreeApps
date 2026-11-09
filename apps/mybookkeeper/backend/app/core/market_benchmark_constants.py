@@ -14,7 +14,7 @@ demanded a complete cost model would never fire, because the model would never
 be complete.
 
 ``BENCHMARK_STATUSES`` is mirrored as a TypeScript union in
-``frontend/src/shared/types/utility/utility-plan-benchmark-status.ts`` — a value
+``api-client/src/types/utility/utility-plan-benchmark-status.ts`` — a value
 added here MUST be added there in the same PR.
 """
 from app.core.utility_plan_constants import SERVICE_TYPE_INTERNET

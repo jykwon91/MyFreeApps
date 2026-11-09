@@ -1,5 +1,6 @@
 import { useGetMarketRateBenchmarksQuery } from "@mybookkeeper/api-client/store/marketRateBenchmarksApi";
-import { UTILITY_SERVICE_TYPES, type UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
+import { UTILITY_SERVICE_TYPES } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
+import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import { EmptyState } from "@platform/mobile";
 import { router } from "expo-router";
 import { MARKET_RATE_MESSAGES as MESSAGES } from "../../constants/marketRates";

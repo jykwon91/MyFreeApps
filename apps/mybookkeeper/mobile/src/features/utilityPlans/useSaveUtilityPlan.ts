@@ -22,7 +22,10 @@ export function useSaveUtilityPlan(original: UtilityPlanDetail | null) {
   const [updatePlan] = useUpdateUtilityPlanMutation();
   const write = useWrite();
   const { isLeaving, leave } = useLeaveWhenSaved("/utility-plans");
-  const copy = saveFailureCopy("utility plan", "utility plans", original === null);
+  const isNew = original === null;
+  const copy = saveFailureCopy("utility plan", "utility plans", isNew);
+  // On an add the 404 is the property, not the plan.
+  const failureCopy = isNew ? { ...copy, gone: MESSAGES.goneProperty } : copy;
 
   async function save({ values, propertyId, sourceDocumentId }: SaveTarget): Promise<void> {
     const fields = toUtilityPlanFields(values);
@@ -38,5 +41,5 @@ export function useSaveUtilityPlan(original: UtilityPlanDetail | null) {
     leave();
   }
 
-  return { save, isBusy: write.isBusy, isLeaving, failure: write.failure ? copy[write.failure] : null };
+  return { save, isBusy: write.isBusy, isLeaving, failure: write.failure ? failureCopy[write.failure] : null };
 }

@@ -1,18 +1,14 @@
-import type { MarketRateBenchmark } from "@mybookkeeper/api-client/types/utility/market-rate-benchmark";
 import type { UtilityPlanRateComparisonRow } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-comparison-row";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import type { ReactElement } from "react";
-import { Alert, Linking } from "react-native";
+import { Linking } from "react-native";
 import { Provider } from "react-redux";
-import { MARKET_RATE_MESSAGES } from "../src/constants/marketRates";
 import { UTILITY_OFFER_MESSAGES } from "../src/constants/utilityOffers";
 import { UTILITY_RATE_CHECK_MESSAGES, UTILITY_RENEWAL_MESSAGES } from "../src/constants/utilityInsights";
 import BetterPlansScreen from "../src/features/utilityPlans/BetterPlansScreen";
-import MarketRateFormScreen from "../src/features/utilityPlans/MarketRateFormScreen";
-import MarketRatesScreen from "../src/features/utilityPlans/MarketRatesScreen";
 import UtilityRateCheckScreen from "../src/features/utilityPlans/UtilityRateCheckScreen";
 import UtilityRenewalsScreen from "../src/features/utilityPlans/UtilityRenewalsScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -20,7 +16,8 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aUtilityOffer, aUtilityOfferGroup } from "../test-support/aUtilityOffer";
 import { aUtilityPlanSummary } from "../test-support/aUtilityPlanSummary";
-import { startUtilityServer, writesTo } from "../test-support/utilityPlansServer";
+import { aBenchmark } from "../test-support/aMarketRateBenchmark";
+import { startUtilityServer } from "../test-support/utilityPlansServer";
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
@@ -37,6 +34,10 @@ jest.mock("@react-native-community/datetimepicker", () => {
 });
 
 const originalAdapter = api.defaults.adapter;
+const TRACKED_AND_RECORDED = {
+  list: { items: [aUtilityPlanSummary()], total: 1, has_more: false },
+  benchmarks: [aBenchmark()],
+};
 
 beforeEach(() => {
   session.tokenStore.set("token");
@@ -57,22 +58,6 @@ async function show(element: ReactElement) {
       <ToastProvider bottomOffset={0}>{element}</ToastProvider>
     </Provider>,
   );
-}
-
-function aBenchmark(overrides: Partial<MarketRateBenchmark> = {}): MarketRateBenchmark {
-  return {
-    id: "b1",
-    service_type: "electricity",
-    rate_cents_per_kwh: "11.0000",
-    monthly_cents: null,
-    source: "Power to Choose",
-    observed_on: "2026-01-05",
-    notes: null,
-    is_stale: false,
-    created_at: "2026-01-05T00:00:00Z",
-    updated_at: "2026-01-05T00:00:00Z",
-    ...overrides,
-  };
 }
 
 function aRow(overrides: Partial<UtilityPlanRateComparisonRow> = {}): UtilityPlanRateComparisonRow {
@@ -129,6 +114,7 @@ describe("UtilityRenewalsScreen", () => {
 describe("UtilityRateCheckScreen", () => {
   it("shows plans priced above the market with the gap and both figures", async () => {
     startUtilityServer({
+      ...TRACKED_AND_RECORDED,
       comparison: { material_gap_pct: 10, above_market: [aRow()], not_compared: [], total_above_market: 1, has_stale_benchmark: false },
     });
     await show(<UtilityRateCheckScreen />);
@@ -140,6 +126,7 @@ describe("UtilityRateCheckScreen", () => {
 
   it("says when a recorded rate is old", async () => {
     startUtilityServer({
+      ...TRACKED_AND_RECORDED,
       comparison: { material_gap_pct: 10, above_market: [aRow({ benchmark_is_stale: true })], not_compared: [], total_above_market: 1, has_stale_benchmark: true },
     });
     await show(<UtilityRateCheckScreen />);
@@ -149,6 +136,7 @@ describe("UtilityRateCheckScreen", () => {
 
   it("lists plans that couldn't be checked with the reason", async () => {
     startUtilityServer({
+      ...TRACKED_AND_RECORDED,
       comparison: {
         material_gap_pct: 10,
         above_market: [],
@@ -164,150 +152,56 @@ describe("UtilityRateCheckScreen", () => {
     expect(screen.getByText("4% below market")).toBeTruthy();
   });
 
-  it("sends someone with no recorded rate to record one", async () => {
+  it("sends a writer with no recorded rate to record one, and never says all clear", async () => {
     startUtilityServer({
+      list: TRACKED_AND_RECORDED.list,
+      benchmarks: [],
       comparison: { material_gap_pct: 10, above_market: [], not_compared: [aRow({ status: "no_benchmark", gap_pct: null })], total_above_market: 0, has_stale_benchmark: false },
     });
     await show(<UtilityRateCheckScreen />);
     await screen.findByText(UTILITY_RATE_CHECK_MESSAGES.noBenchmark);
+    expect(screen.queryByText(UTILITY_RATE_CHECK_MESSAGES.allClearHeading)).toBeNull();
     await fireEvent.press(screen.getByRole("button", { name: UTILITY_RATE_CHECK_MESSAGES.recordRate }));
     expect(mockPush).toHaveBeenCalledWith("/utility-plans/market-rates");
+  });
+
+  it("does not offer a viewer the chance to record a rate", async () => {
+    startUtilityServer({ role: "viewer", list: TRACKED_AND_RECORDED.list, benchmarks: [] });
+    await show(<UtilityRateCheckScreen />);
+    await screen.findByText(UTILITY_RATE_CHECK_MESSAGES.noBenchmarkViewOnly);
+    expect(screen.queryByRole("button", { name: UTILITY_RATE_CHECK_MESSAGES.recordRate })).toBeNull();
+  });
+
+  it("keys the no-rate state off the recorded rates, not the plan rows", async () => {
+    startUtilityServer({
+      ...TRACKED_AND_RECORDED,
+      benchmarks: [],
+      comparison: { material_gap_pct: 10, above_market: [], not_compared: [], total_above_market: 0, has_stale_benchmark: false },
+    });
+    await show(<UtilityRateCheckScreen />);
+    expect(await screen.findByText(UTILITY_RATE_CHECK_MESSAGES.noBenchmarkHeading)).toBeTruthy();
+  });
+
+  it("says there is nothing to check, rather than all clear, when no plans are tracked", async () => {
+    startUtilityServer({ benchmarks: [aBenchmark()] });
+    await show(<UtilityRateCheckScreen />);
+    await screen.findByText(UTILITY_RATE_CHECK_MESSAGES.noPlansHeading);
+    expect(screen.queryByText(UTILITY_RATE_CHECK_MESSAGES.allClearHeading)).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: UTILITY_RATE_CHECK_MESSAGES.addPlan }));
+    expect(mockPush).toHaveBeenCalledWith("/utility-plans/new");
+  });
+
+  it("does not read a failed list of recorded rates as none recorded", async () => {
+    startUtilityServer({ list: TRACKED_AND_RECORDED.list, benchmarks: "fail" });
+    await show(<UtilityRateCheckScreen />);
+    expect(await screen.findByText(UTILITY_RATE_CHECK_MESSAGES.couldntLoad)).toBeTruthy();
+    expect(screen.queryByText(UTILITY_RATE_CHECK_MESSAGES.noBenchmarkHeading)).toBeNull();
   });
 
   it("offers a retry when it couldn't load", async () => {
     startUtilityServer({ comparison: "fail" });
     await show(<UtilityRateCheckScreen />);
     expect(await screen.findByText(UTILITY_RATE_CHECK_MESSAGES.couldntLoad)).toBeTruthy();
-  });
-});
-
-describe("MarketRatesScreen", () => {
-  it("shows every service with its recorded rate, or that none is", async () => {
-    startUtilityServer({ benchmarks: [aBenchmark(), aBenchmark({ id: "b2", service_type: "internet", rate_cents_per_kwh: null, monthly_cents: 6999, is_stale: true })] });
-    await show(<MarketRatesScreen />);
-    await screen.findByText("11¢/kWh");
-    expect(screen.getByText("$69.99/mo")).toBeTruthy();
-    expect(screen.getAllByText(MARKET_RATE_MESSAGES.notRecorded)).toHaveLength(2);
-    expect(screen.getByText(/worth rechecking/)).toBeTruthy();
-  });
-
-  it("opens the form for the service a writer taps", async () => {
-    startUtilityServer({ benchmarks: [aBenchmark()] });
-    await show(<MarketRatesScreen />);
-    await fireEvent.press(await screen.findByRole("button", { name: /^Water/ }));
-    expect(mockPush).toHaveBeenCalledWith("/utility-plans/market-rates/water");
-  });
-
-  it("lets a viewer look but not edit", async () => {
-    startUtilityServer({ role: "viewer", benchmarks: [aBenchmark()] });
-    await show(<MarketRatesScreen />);
-    await screen.findByText("11¢/kWh");
-    expect(screen.queryByRole("button", { name: /^Electricity/ })).toBeNull();
-  });
-
-  it("offers a retry when it couldn't load", async () => {
-    startUtilityServer({ benchmarks: "fail" });
-    await show(<MarketRatesScreen />);
-    expect(await screen.findByText(MARKET_RATE_MESSAGES.couldntLoad)).toBeTruthy();
-  });
-});
-
-describe("MarketRateFormScreen", () => {
-  it("tells a viewer they cannot record a rate", async () => {
-    startUtilityServer({ role: "viewer" });
-    await show(<MarketRateFormScreen serviceType="electricity" />);
-    expect(await screen.findByText(MARKET_RATE_MESSAGES.viewOnlyHeading)).toBeTruthy();
-  });
-
-  it("does not know a service it was not given", async () => {
-    startUtilityServer();
-    await show(<MarketRateFormScreen serviceType="steam" />);
-    expect(await screen.findByText(MARKET_RATE_MESSAGES.unknownService)).toBeTruthy();
-  });
-
-  it("asks for a rate above zero before sending anything", async () => {
-    const server = startUtilityServer();
-    await show(<MarketRateFormScreen serviceType="electricity" />);
-    await fireEvent.press(await screen.findByRole("button", { name: MARKET_RATE_MESSAGES.save }));
-    expect(await screen.findByText(MARKET_RATE_MESSAGES.figureRequired)).toBeTruthy();
-    expect(writesTo(server, "put")).toHaveLength(0);
-  });
-
-  it("saves a metered rate as typed, says so, and leaves", async () => {
-    const server = startUtilityServer();
-    await show(<MarketRateFormScreen serviceType="electricity" />);
-    await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MARKET_RATE_MESSAGES.figureMetered.replace(/[()/]/g, "\\$&")}`)), "11.25");
-    await fireEvent.changeText(screen.getByLabelText(new RegExp(`^${MARKET_RATE_MESSAGES.source}`)), "  Power to Choose ");
-    await fireEvent.press(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.save }));
-    await waitFor(() => expect(mockBack).toHaveBeenCalled());
-    const put = writesTo(server, "put")[0];
-    expect(put.url).toBe("/market-rate-benchmarks/electricity");
-    expect(JSON.parse(String(put.data))).toMatchObject({ rate_cents_per_kwh: "11.25", source: "Power to Choose", notes: null });
-    expect(JSON.parse(String(put.data))).not.toHaveProperty("monthly_cents");
-    expect(await screen.findByText(MARKET_RATE_MESSAGES.saved)).toBeTruthy();
-  });
-
-  it("saves internet as whole cents a month", async () => {
-    const server = startUtilityServer();
-    await show(<MarketRateFormScreen serviceType="internet" />);
-    await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MARKET_RATE_MESSAGES.figureFlat.replace(/[()$]/g, "\\$&")}`)), "69.99");
-    await fireEvent.press(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.save }));
-    await waitFor(() => expect(mockBack).toHaveBeenCalled());
-    const body = JSON.parse(String(writesTo(server, "put")[0].data));
-    expect(body.monthly_cents).toBe(6999);
-    expect(body).not.toHaveProperty("rate_cents_per_kwh");
-  });
-
-  it("opens on the rate already recorded and offers to remove it", async () => {
-    startUtilityServer({ benchmarks: [aBenchmark()] });
-    await show(<MarketRateFormScreen serviceType="electricity" />);
-    const figure = await screen.findByLabelText(new RegExp(`^${MARKET_RATE_MESSAGES.figureMetered.replace(/[()/]/g, "\\$&")}`));
-    expect(figure.props.value).toBe("11.0000");
-    expect(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.remove })).toBeTruthy();
-  });
-
-  it("offers no remove when nothing is recorded", async () => {
-    startUtilityServer();
-    await show(<MarketRateFormScreen serviceType="water" />);
-    await screen.findByRole("button", { name: MARKET_RATE_MESSAGES.save });
-    expect(screen.queryByRole("button", { name: MARKET_RATE_MESSAGES.remove })).toBeNull();
-  });
-
-  it("asks before removing, then removes and leaves", async () => {
-    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
-    const server = startUtilityServer({ benchmarks: [aBenchmark()] });
-    await show(<MarketRateFormScreen serviceType="electricity" />);
-    await fireEvent.press(await screen.findByRole("button", { name: MARKET_RATE_MESSAGES.remove }));
-    expect(writesTo(server, "delete")).toHaveLength(0);
-    await (alert.mock.calls[0][2] ?? []).find((button) => button.text === "Remove")?.onPress?.();
-    await waitFor(() => expect(mockBack).toHaveBeenCalled());
-    expect(writesTo(server, "delete")[0].url).toBe("/market-rate-benchmarks/electricity");
-    expect(await screen.findByText(MARKET_RATE_MESSAGES.removed)).toBeTruthy();
-  });
-
-  it("guards leaving once something changed", async () => {
-    startUtilityServer();
-    await show(<MarketRateFormScreen serviceType="electricity" />);
-    const figure = await screen.findByLabelText(new RegExp(`^${MARKET_RATE_MESSAGES.figureMetered.replace(/[()/]/g, "\\$&")}`));
-    expect(mockPreventRemove.active).toBe(false);
-    await fireEvent.changeText(figure, "11");
-    expect(mockPreventRemove.active).toBe(true);
-  });
-
-  it.each([
-    [403, "You have view-only access, so I can't save this."],
-    [422, "Something in there isn't right. Check the fields and try again."],
-    [500, "I couldn't save that. Want to try again?"],
-  ] as const)("keeps the typing and shows fixed copy for %s", async (write, copy) => {
-    startUtilityServer({ benchmarks: [aBenchmark()], write });
-    await show(<MarketRateFormScreen serviceType="electricity" />);
-    const label = new RegExp(`^${MARKET_RATE_MESSAGES.figureMetered.replace(/[()/]/g, "\\$&")}`);
-    await fireEvent.changeText(await screen.findByLabelText(label), "12");
-    await fireEvent.press(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.save }));
-    expect(await screen.findByText(copy)).toBeTruthy();
-    expect(screen.queryByText(/raw server text/)).toBeNull();
-    expect(screen.getByLabelText(label).props.value).toBe("12");
-    expect(mockBack).not.toHaveBeenCalled();
   });
 });
 
