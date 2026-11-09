@@ -13,7 +13,7 @@ export default function MarketPremiumSummary({ benchmark }: { benchmark: Insuran
     <View accessible style={{ gap: spacing.xs }}>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MARKET_MESSAGES.comparingAgainst}</Text>
       <Text style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
-        {`${formatAnnualPremium(benchmark.annual_premium_cents)} on ${formatPolicyMoney(benchmark.coverage_amount_cents)} ${MARKET_MESSAGES.coverageWord}`}
+        {MARKET_MESSAGES.premiumOnCoverage(formatAnnualPremium(benchmark.annual_premium_cents), formatPolicyMoney(benchmark.coverage_amount_cents))}
       </Text>
       <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{formatCoverageRate(benchmark.rate_cents_per_1000_coverage)}</Text>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{origin}</Text>

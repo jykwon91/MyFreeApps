@@ -103,12 +103,30 @@ describe("adding a policy", () => {
     await screen.findByLabelText("Property, Choose a property");
   });
 
-  it("doesn't offer a retired property", async () => {
+  it("offers every property, a retired one too, as the website does", async () => {
     startInsuranceServer({ properties: [aProperty(), aProperty({ id: "old", name: "Old Place", is_active: false })] });
     await renderInsurance(<NewPolicyScreen />);
     await fireEvent.press(await screen.findByLabelText("Property, Choose a property"));
     await screen.findByRole("radio", { name: "Oak Street" });
-    expect(screen.queryByRole("radio", { name: "Old Place" })).toBeNull();
+    expect(screen.getByRole("radio", { name: "Old Place" })).toBeTruthy();
+  });
+
+  it("with only retired properties, still lets the host pick one rather than showing the empty state", async () => {
+    startInsuranceServer({ properties: [aProperty({ id: "old", name: "Old Place", is_active: false })] });
+    await renderInsurance(<NewPolicyScreen />);
+    await fireEvent.press(await screen.findByLabelText("Property, Choose a property"));
+    expect(await screen.findByRole("radio", { name: "Old Place" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Add a property" })).toBeNull();
+  });
+
+  it("asks how often a premium is billed instead of dropping it, and sends nothing", async () => {
+    const server = startInsuranceServer({ policies: [] });
+    await renderInsurance(<NewPolicyScreen />);
+    await fillAdd();
+    await fireEvent.changeText(screen.getByLabelText("Premium (USD)"), "112");
+    await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
+    expect(await screen.findByText("Choose how often this premium is billed.")).toBeTruthy();
+    expect(lastInsuranceWrite(server)).toBeNull();
   });
 
   it("is closed to a viewer", async () => {

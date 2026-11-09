@@ -2,13 +2,6 @@ import type { InsuranceAttachmentKind } from "@mybookkeeper/api-client/types/ins
 
 export const POLICY_NAME_MAX_LENGTH = 255;
 export const POLICY_NOTES_MAX_LENGTH = 5000;
-export const POLICY_FILE_TYPES = [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-] as const;
 export const POLICY_PHOTO_NAME = "policy.jpg";
 export const DEFAULT_ATTACHMENT_KIND: InsuranceAttachmentKind = "policy_document";
 
@@ -58,7 +51,6 @@ export const POLICY_FORM_MESSAGES = {
   discardBody: "I haven't saved them yet.",
   keepEditing: "Keep editing",
   discard: "Discard",
-  notAllowed: "You have view-only access, so I can't change policies.",
   saveOffline: "I can't reach the server, so I couldn't save that. Your details are still here.",
   saveUnsure: "I lost the connection before I heard back, so the policy may have saved. Check your policies before you try again.",
   saveUnsureEdit: "I lost the connection before I heard back, so the change may have saved. Check the policy before you try again.",
@@ -70,9 +62,7 @@ export const POLICY_FORM_MESSAGES = {
 export const POLICY_READER_MESSAGES = {
   heading: "Start from a document",
   hint: "Add your declarations page, a renewal notice or the policy itself and I'll fill in what I can.",
-  chooseFile: "Choose a file",
   takePhoto: "Take a photo",
-  fromLibrary: "Photo library",
   fromDocuments: "Use a document I've already uploaded",
   documentsTitle: "Your documents",
   noDocuments: "You haven't uploaded any documents yet.",
@@ -98,7 +88,6 @@ export const POLICY_ATTACHMENT_MESSAGES = {
   removed: "Document removed.",
   removeTitle: "Remove this document?",
   removeBody: "It's deleted from this policy for good.",
-  opening: "Opening…",
   notAllowed: "You have view-only access, so I can't change documents.",
   tooBig: "That file's too big. I can take up to 10MB.",
   badType: "I can't take that kind of file. A PDF, Word document or photo works.",

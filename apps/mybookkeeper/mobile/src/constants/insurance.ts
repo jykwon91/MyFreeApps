@@ -4,6 +4,14 @@ export const EXPIRES_SOON_DAYS = 90;
 export const EXPIRING_FILTER_DAYS = 30;
 export const POLICY_SKELETON_ROWS = ["a", "b", "c", "d", "e"];
 
+export const EXPIRY_MESSAGES = {
+  expiredDaysAgo: (days: number) => `Expired ${days} days ago`,
+  expiredYesterday: "Expired yesterday",
+  expiresToday: "Expires today",
+  expiresTomorrow: "Expires tomorrow",
+  expiresInDays: (days: number) => `Expires in ${days} days`,
+} as const;
+
 export const INSURANCE_MESSAGES = {
   loadingList: "Loading your insurance policies",
   loadingOne: "Loading this policy",
@@ -35,7 +43,6 @@ export const INSURANCE_MESSAGES = {
   filterTitle: "Which policies",
   filterAll: "All policies",
   filterExpiring: "Running out in 30 days",
-  filterDone: "Done",
   moreThanShown: `I'm showing the first ${POLICY_LIST_LIMIT} policies. Use the filter to narrow the list.`,
   policyNumber: "Policy number",
   coverage: "Coverage",
@@ -44,8 +51,6 @@ export const INSURANCE_MESSAGES = {
   annualPremium: "Premium per year",
   feesAndTaxes: "Fees and taxes",
   annualTotal: "Total per year",
-  effective: "Starts",
-  expires: "Ends",
   term: "Term",
   notes: "Notes",
   documents: "Documents",
@@ -55,10 +60,8 @@ export const INSURANCE_MESSAGES = {
   fileMissing: "I can't find this file. Try uploading it again.",
   marketPremium: "Market premium",
   rateWatch: "Check for rate increases",
-  rateWatchBlurb: "I'll look up what Texas carriers have filed and match it to your policies.",
   premiumCheck: "Premium check",
   checkedAgainst: "Not checked",
-  marketPremiumBlurb: "What a similar policy costs today. I measure yours against it.",
   aboveMarket: "Paying above market",
   noBenchmark: "I haven't got a market premium yet, so I'm not checking your policies against anything.",
   noBenchmarkAction: "Record a market premium",
@@ -67,6 +70,7 @@ export const INSURANCE_MESSAGES = {
   staleAbove: "These use a market premium recorded a while ago. Worth checking again before you act on it.",
   recordedAWhileAgo: "recorded a while ago",
   couldntCompare: "I couldn't compare your premiums to the market.",
+  payingVsMarket: (paying: string, market: string) => `Paying ${paying}, market ${market}`,
   billedPremium: "Premium as billed",
   deleteBody: "I'll delete this policy and every document attached to it. This can't be undone.",
 } as const;

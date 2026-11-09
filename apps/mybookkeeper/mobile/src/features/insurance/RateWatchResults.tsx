@@ -15,7 +15,7 @@ export default function RateWatchResults({ data }: { data: InsuranceMarketWatch 
   const { colors, spacing, radius, fontSize } = useTheme();
   const verdict = buildRateWatchVerdict(data);
   const action = buildRateWatchAction(data);
-  const deadline = action?.renewalDate ? ` before ${formatFilingDate(action.renewalDate)}` : "";
+  const deadline = action?.renewalDate ? RATE_WATCH_MESSAGES.beforeDate(formatFilingDate(action.renewalDate)) : "";
   return (
     <View style={{ gap: spacing.lg }} testID="rate-watch-results">
       {data.feed_unavailable_reason ? <Banner message={data.feed_unavailable_reason} /> : null}

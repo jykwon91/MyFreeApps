@@ -97,7 +97,6 @@ export default function PolicyForm({ policy }: { policy?: InsurancePolicyDetail 
   }
 
   const propertyName = policy?.property_name ?? properties?.find((property) => property.id === propertyId)?.name;
-  const choosable = (properties ?? []).filter((property) => property.is_active);
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
@@ -125,7 +124,7 @@ export default function PolicyForm({ policy }: { policy?: InsurancePolicyDetail 
           setIsPropertyOpen(false);
           setPropertyId(id);
         }}
-        options={choosable.map((property) => ({ value: property.id, label: property.name }))}
+        options={(properties ?? []).map((property) => ({ value: property.id, label: property.name }))}
         title={POLICY_FORM_MESSAGES.chooseProperty}
         value={propertyId === "" ? null : propertyId}
       />

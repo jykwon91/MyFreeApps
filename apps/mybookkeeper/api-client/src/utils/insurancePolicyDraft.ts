@@ -1,6 +1,6 @@
 import type { InsurancePolicyDraft } from "../types/insurance/insurance-policy-draft";
 import type { InsurancePolicyFormValues } from "../types/insurance/insurance-policy-form-values";
-import { INSURANCE_PREMIUM_FREQUENCIES } from "../types/insurance/insurance-premium-frequency";
+import { INSURANCE_PREMIUM_FREQUENCIES } from "../constants/insurancePremiumFrequencies";
 import type { InsurancePremiumFrequency } from "../types/insurance/insurance-premium-frequency";
 
 /**

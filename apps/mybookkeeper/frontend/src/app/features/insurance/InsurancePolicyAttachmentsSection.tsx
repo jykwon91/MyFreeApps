@@ -2,11 +2,8 @@ import { useRef, useState } from "react";
 import { Loader2, Upload } from "lucide-react";
 import { showError, showSuccess } from "@platform/ui";
 import { INSURANCE_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/insuranceUploads";
-import {
-  INSURANCE_ATTACHMENT_KINDS,
-  INSURANCE_ATTACHMENT_KIND_LABELS,
-  type InsuranceAttachmentKind,
-} from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
+import { INSURANCE_ATTACHMENT_KINDS, INSURANCE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants/insuranceAttachmentKinds";
+import type { InsuranceAttachmentKind } from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
 import {
   useDeleteInsurancePolicyAttachmentMutation,
   useUploadInsurancePolicyAttachmentMutation,

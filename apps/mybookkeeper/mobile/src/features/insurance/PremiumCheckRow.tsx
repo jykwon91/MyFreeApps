@@ -16,7 +16,7 @@ export default function PremiumCheckRow({ row }: { row: InsurancePremiumComparis
       <Text style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>{policy.policy_name}</Text>
       {place ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{place}</Text> : null}
       <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>
-        {`Paying ${formatCoverageRate(row.policy_rate_cents_per_1000)}, market ${formatCoverageRate(row.benchmark_rate_cents_per_1000)}`}
+        {INSURANCE_MESSAGES.payingVsMarket(formatCoverageRate(row.policy_rate_cents_per_1000), formatCoverageRate(row.benchmark_rate_cents_per_1000))}
         {row.benchmark_is_stale ? ` (${INSURANCE_MESSAGES.recordedAWhileAgo})` : ""}
       </Text>
       <InquiryChip label={formatBenchmarkGap(row.gap_pct)} />

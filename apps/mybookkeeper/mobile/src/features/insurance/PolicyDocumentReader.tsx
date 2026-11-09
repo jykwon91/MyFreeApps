@@ -1,9 +1,10 @@
+import { INSURANCE_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/insuranceUploads";
 import type { InsurancePolicyDraft } from "@mybookkeeper/api-client/types/insurance/insurance-policy-draft";
 import { Banner, LoadingButton, OptionSheet, useTheme } from "@platform/mobile";
 import { useGetDocumentsQuery } from "@mybookkeeper/api-client/store/documentsApi";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { POLICY_FILE_TYPES, POLICY_PHOTO_NAME, POLICY_READER_MESSAGES } from "../../constants/insuranceForm";
+import { POLICY_PHOTO_NAME, POLICY_READER_MESSAGES } from "../../constants/insuranceForm";
 import { documentName } from "../documents/documentDisplay";
 import HeldFileButtons from "../uploads/HeldFileButtons";
 import { useHeldFile } from "../uploads/useHeldFile";
@@ -63,7 +64,7 @@ export default function PolicyDocumentReader({ onRead, isDisabled }: PolicyDocum
         <>
           <HeldFileButtons
             file={file}
-            fileTypes={POLICY_FILE_TYPES}
+            fileTypes={INSURANCE_UPLOAD_MIME_TYPES}
             isDisabled={isBusy}
             isPicking={isPicking}
             onPick={(from) => void pickAndRead(from)}

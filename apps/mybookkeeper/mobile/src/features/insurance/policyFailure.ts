@@ -10,7 +10,7 @@ import { POLICY_ATTACHMENT_MESSAGES, POLICY_FORM_MESSAGES, POLICY_READER_MESSAGE
 export function policyAddFailure(error: unknown): string {
   const status = httpStatus(error);
   if (status === undefined || status >= 500) return POLICY_FORM_MESSAGES.saveUnsure;
-  if (status === 403) return POLICY_FORM_MESSAGES.notAllowed;
+  if (status === 403) return INSURANCE_MESSAGES.notAllowed;
   if (status === 404) return POLICY_FORM_MESSAGES.saveGone;
   if (status === 422) return POLICY_FORM_MESSAGES.saveRejected;
   return POLICY_FORM_MESSAGES.saveFailed;
@@ -22,7 +22,7 @@ export function policyEditFailure(error: unknown): string {
     case undefined:
       return POLICY_FORM_MESSAGES.saveOffline;
     case 403:
-      return POLICY_FORM_MESSAGES.notAllowed;
+      return INSURANCE_MESSAGES.notAllowed;
     case 404:
       return POLICY_FORM_MESSAGES.saveGone;
     case 422:

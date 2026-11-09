@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Button, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/insurancePolicyDraft";
-import { EMPTY_POLICY_FORM, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
+import { EMPTY_POLICY_FORM, isPremiumBilledMissing, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
+import { PREMIUM_BILLED_REQUIRED_MESSAGE } from "@mybookkeeper/api-client/constants/insurancePolicyForm";
 import { useCreateInsurancePolicyMutation } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { InsurancePolicyDraft } from "@mybookkeeper/api-client/types/insurance/insurance-policy-draft";
@@ -28,6 +29,8 @@ export default function AddInsurancePolicyDialog({
   const [propertyId, setPropertyId] = useState("");
   const [draft, setDraft] = useState<InsurancePolicyDraft | null>(null);
 
+  const [showBilledError, setShowBilledError] = useState(false);
+
   function handleChange<K extends keyof InsurancePolicyFormValues>(
     field: K,
     value: InsurancePolicyFormValues[K],
@@ -48,6 +51,10 @@ export default function AddInsurancePolicyDialog({
     }
     if (!values.policyName.trim()) {
       showError("Policy name is required.");
+      return;
+    }
+    if (isPremiumBilledMissing(values)) {
+      setShowBilledError(true);
       return;
     }
 
@@ -97,7 +104,11 @@ export default function AddInsurancePolicyDialog({
           )}
         </FormField>
 
-        <InsurancePolicyFormFields values={values} onChange={handleChange} />
+        <InsurancePolicyFormFields
+          values={values}
+          onChange={handleChange}
+          billedError={showBilledError && isPremiumBilledMissing(values) ? PREMIUM_BILLED_REQUIRED_MESSAGE : null}
+        />
 
         <div className="flex gap-3 pt-2 justify-end">
           <Button type="button" variant="secondary" size="md" onClick={onClose}>

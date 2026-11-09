@@ -1,9 +1,7 @@
 import { useEffect } from "react";
 import { Download, Trash2 } from "lucide-react";
-import {
-  INSURANCE_ATTACHMENT_KIND_LABELS,
-  type InsuranceAttachmentKind,
-} from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
+import { INSURANCE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants/insuranceAttachmentKinds";
+import type { InsuranceAttachmentKind } from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
 import type { InsurancePolicyAttachment } from "@mybookkeeper/api-client/types/insurance/insurance-policy-attachment";
 import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 

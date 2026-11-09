@@ -46,11 +46,23 @@ function textOrNull(value: string): string | null {
 }
 
 /**
+ * True when a premium is entered but not how often it is billed.
+ *
+ * The one place that decides this, so the add and edit forms on the web and the
+ * phone can't disagree. A monthly premium read as annual understates the yearly
+ * cost by 12x, so the form must be stopped and the person asked, never guessed for.
+ */
+export function isPremiumBilledMissing(values: InsurancePolicyFormValues): boolean {
+  const cents = dollarsToCents(values.premiumDollars);
+  return cents !== null && cents > 0 && values.premiumFrequency === "";
+}
+
+/**
  * The premium pair, or nulls.
  *
- * The backend rejects a half-set pair, so a frequency chosen without an amount
- * is dropped here rather than posted to fail — the picker defaults to a value
- * and a user who never touches the amount did not intend to record a premium.
+ * The backend rejects a half-set pair. A frequency left on with no amount is
+ * dropped, since there is no premium to bill. An amount with no frequency never
+ * reaches here: ``isPremiumBilledMissing`` stops the form first.
  */
 function premiumPair(values: InsurancePolicyFormValues): {
   premium_cents: number | null;

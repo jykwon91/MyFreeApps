@@ -42,6 +42,12 @@ describe("policyFormErrors", () => {
     expect(policyFormErrors({ ...VALID, windHailPct: "-1" }, "pr1")).toHaveProperty("windHailPct");
   });
 
+  it("flags a premium with no billing period, and clears it once one is chosen", () => {
+    expect(policyFormErrors({ ...VALID, premiumDollars: "1200" }, "pr1")).toHaveProperty("premiumFrequency");
+    expect(policyFormErrors({ ...VALID, premiumDollars: "1200", premiumFrequency: "monthly" }, "pr1")).toEqual({});
+    expect(policyFormErrors({ ...VALID, premiumFrequency: "monthly" }, "pr1")).toEqual({});
+  });
+
   it("flags an end date before the start date, but not equal dates", () => {
     expect(policyFormErrors({ ...VALID, effectiveDate: "2026-02-01", expirationDate: "2026-01-01" }, "pr1")).toHaveProperty("expirationDate");
     expect(policyFormErrors({ ...VALID, effectiveDate: "2026-01-01", expirationDate: "2026-01-01" }, "pr1")).toEqual({});

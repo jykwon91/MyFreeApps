@@ -1,7 +1,8 @@
 import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
 import { FREQUENCY_LABEL } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
-import { INSURANCE_PREMIUM_FREQUENCIES, type InsurancePremiumFrequency } from "@mybookkeeper/api-client/types/insurance/insurance-premium-frequency";
-import { FormField, OptionSheet, useTheme } from "@platform/mobile";
+import { INSURANCE_PREMIUM_FREQUENCIES } from "@mybookkeeper/api-client/constants/insurancePremiumFrequencies";
+import type { InsurancePremiumFrequency } from "@mybookkeeper/api-client/types/insurance/insurance-premium-frequency";
+import { Banner, FormField, OptionSheet, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { POLICY_FORM_MESSAGES, POLICY_NAME_MAX_LENGTH, POLICY_NOTES_MAX_LENGTH } from "../../constants/insuranceForm";
@@ -49,6 +50,7 @@ export default function PolicyFormFields({ values, errors, onChange }: PolicyFor
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{POLICY_FORM_MESSAGES.costBlurb}</Text>
         <FormField error={errors.premiumDollars} keyboardType="decimal-pad" label={POLICY_FORM_MESSAGES.premium} onChangeText={(premiumDollars) => onChange({ premiumDollars })} value={values.premiumDollars} />
         <PickerField hint={POLICY_FORM_MESSAGES.billedHint} label={POLICY_FORM_MESSAGES.billed} onPress={() => setIsBilledOpen(true)} value={billed} />
+        {errors.premiumFrequency ? <Banner message={errors.premiumFrequency} /> : null}
         <FormField
           error={errors.feesAndTaxesDollars}
           hint={POLICY_FORM_MESSAGES.feesAndTaxesHint}

@@ -9,7 +9,7 @@ export const MARKET_MESSAGES = {
   record: "Record a market premium",
   update: "Update the market premium",
   comparingAgainst: "Comparing against",
-  coverageWord: "of dwelling coverage",
+  premiumOnCoverage: (premium: string, coverage: string) => `${premium} on ${coverage} of dwelling coverage`,
   stale: "Worth rechecking",
   seen: "Seen",
   premium: "Annual premium (USD)",

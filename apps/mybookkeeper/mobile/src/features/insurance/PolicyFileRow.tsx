@@ -1,4 +1,4 @@
-import { INSURANCE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
+import { INSURANCE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants/insuranceAttachmentKinds";
 import type { InsurancePolicyAttachment } from "@mybookkeeper/api-client/types/insurance/insurance-policy-attachment";
 import { LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";

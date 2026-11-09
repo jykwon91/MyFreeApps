@@ -3,7 +3,7 @@
  *
  * Every field is a string because that is what an ``<input>`` holds; the
  * conversion to the API's cents-and-nulls shape happens in one place,
- * ``shared/lib/insurance-policy-form.ts``.
+ * ``api-client/src/utils/insurancePolicyForm.ts``.
  */
 export interface InsurancePolicyFormValues {
   policyName: string;

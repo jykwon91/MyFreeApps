@@ -4,6 +4,7 @@ export interface PolicyFormErrors {
   policyName?: string;
   coverageDollars?: string;
   premiumDollars?: string;
+  premiumFrequency?: string;
   feesAndTaxesDollars?: string;
   deductibleDollars?: string;
   windHailPct?: string;

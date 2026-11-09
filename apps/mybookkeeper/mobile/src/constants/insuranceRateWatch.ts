@@ -22,6 +22,7 @@ export const RATE_WATCH_MESSAGES = {
   raisingBlurb: "Filed an increase that hasn't reached renewals yet.",
   unnamedProgram: "Unnamed program",
   renewalsFrom: "renewals from",
+  beforeDate: (date: string) => ` before ${date}`,
   caveat:
     "Filings come from the Texas Department of Insurance. Every figure here is a statewide average across a carrier's whole book, not a quote for your property. Your own renewal also moves with your coverage amount and claims history.",
 } as const;

@@ -1,4 +1,6 @@
 import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
+import { PREMIUM_BILLED_REQUIRED_MESSAGE } from "@mybookkeeper/api-client/constants/insurancePolicyForm";
+import { isPremiumBilledMissing } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
 import { POLICY_FORM_MESSAGES } from "../../constants/insuranceForm";
 import type { PolicyFormErrors } from "../../types/PolicyFormErrors";
 
@@ -17,6 +19,7 @@ export function policyFormErrors(values: InsurancePolicyFormValues, propertyId: 
   for (const field of money) {
     if (isNegativeOrUnreadable(values[field])) errors[field] = POLICY_FORM_MESSAGES.amountInvalid;
   }
+  if (isPremiumBilledMissing(values)) errors.premiumFrequency = PREMIUM_BILLED_REQUIRED_MESSAGE;
   const windHail = values.windHailPct.trim();
   if (windHail !== "" && (isNegativeOrUnreadable(windHail) || Number(windHail) > 100)) {
     errors.windHailPct = POLICY_FORM_MESSAGES.windHailInvalid;
