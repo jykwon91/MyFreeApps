@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { Text } from "react-native";
 import { emailingLease, emailLeaseLabel, emailLeaseTitle, LEASE_MESSAGES, noEmailForLease } from "../../constants/leases";
 import { isMissingTenantEmail } from "./extendLeaseFailure";
-import { askOnce } from "./askOnce";
+import { askOnce } from "../../lib/askOnce";
 import { emailLeaseFailure } from "./emailLeaseFailure";
 
 interface EmailLeaseButtonProps {

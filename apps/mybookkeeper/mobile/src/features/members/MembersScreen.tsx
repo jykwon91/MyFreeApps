@@ -11,7 +11,7 @@ import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useToday } from "../../lib/useToday";
 import type { Workspace } from "../../types/Workspace";
 import { isServerAnswer } from "../../utils/isServerAnswer";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useListWorkspacesQuery } from "../workspace/workspaceApi";
 import InviteSheet from "./InviteSheet";

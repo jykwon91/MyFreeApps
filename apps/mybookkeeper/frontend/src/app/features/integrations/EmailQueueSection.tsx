@@ -5,10 +5,10 @@ import {
   useDismissQueueItemMutation,
   useRetryQueueItemMutation,
   useRetryAllFailedMutation,
-} from "@/shared/store/integrationsApi";
+} from "@mybookkeeper/api-client/store/integrationsApi";
 import { POLLING_OPTIONS, EMPTY_QUEUE } from "@/shared/lib/constants";
 import { extractErrorMessage } from "@platform/ui";
-import { computeStatusCounts, groupBySession } from "@/shared/utils/email-queue";
+import { computeStatusCounts, groupBySession } from "@mybookkeeper/api-client/utils/emailQueue";
 import { timeAgo } from "@/shared/utils/date";
 import { useToast } from "@/shared/hooks/useToast";
 import { Button, LoadingButton } from "@platform/ui";

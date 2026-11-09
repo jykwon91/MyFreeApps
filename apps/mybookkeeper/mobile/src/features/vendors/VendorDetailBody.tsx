@@ -9,7 +9,7 @@ import { DELETE_VENDOR_BODY, deleteVendorTitle, VENDOR_MESSAGES } from "../../co
 import InquiryChip from "../inquiries/InquiryChip";
 import InquiryContact from "../inquiries/InquiryContact";
 import { useOpenLink } from "../inquiries/useOpenLink";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 import TransactionFact from "../transactions/TransactionFact";
 import { directionsUrl, hourlyRateText, lastUsedText } from "./vendorDisplay";
 import { useVendorActions } from "./useVendorActions";

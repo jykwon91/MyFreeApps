@@ -4,9 +4,9 @@ import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { createElement, type ReactNode } from "react";
 import { baseApi } from "@/shared/store/baseApi";
-import { EMAIL_DERIVED_TAGS } from "@/shared/store/emailDerivedTags";
-import { useInvalidateOnExtractionComplete } from "@/shared/hooks/useInvalidateOnExtractionComplete";
-import type { EmailQueueItem } from "@/shared/types/integration/email-queue";
+import { EMAIL_DERIVED_TAGS } from "@mybookkeeper/api-client/constants/emailDerivedTags";
+import { useInvalidateOnExtractionComplete } from "@mybookkeeper/api-client/hooks/useInvalidateOnExtractionComplete";
+import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
 
 function buildTestStore() {
   return configureStore({

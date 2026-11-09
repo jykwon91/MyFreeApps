@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import type { EmailQueueItem } from "@/shared/types/integration/email-queue";
+import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
 import { STATUS_BADGE } from "@/shared/lib/constants";
 import Badge from "@/shared/components/ui/Badge";
 import Spinner from "@/shared/components/icons/Spinner";

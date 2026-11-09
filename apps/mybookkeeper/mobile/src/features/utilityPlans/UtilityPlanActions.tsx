@@ -3,7 +3,7 @@ import { router } from "expo-router";
 import { useRef } from "react";
 import { View } from "react-native";
 import { UTILITY_PLAN_MESSAGES as MESSAGES } from "../../constants/utilityPlans";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 import { useRemoveUtilityPlan } from "./useRemoveUtilityPlan";
 
 interface UtilityPlanActionsProps {

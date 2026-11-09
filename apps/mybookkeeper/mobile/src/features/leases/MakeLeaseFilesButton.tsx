@@ -4,7 +4,7 @@ import { LoadingButton, useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { MAKE_AND_EMAIL_BODY, makeAndEmailTitle, NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { askOnce } from "./askOnce";
+import { askOnce } from "../../lib/askOnce";
 import { leaseEmailsOnGenerate } from "./leaseDisplay";
 
 export default function MakeLeaseFilesButton({ lease }: { lease: SignedLeaseDetail }) {

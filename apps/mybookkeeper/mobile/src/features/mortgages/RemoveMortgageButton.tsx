@@ -2,7 +2,7 @@ import { useDeleteMortgageMutation } from "@mybookkeeper/api-client/store/mortga
 import { LoadingButton, useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { MORTGAGE_MESSAGES as MESSAGES } from "../../constants/mortgages";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 import { leaveToMortgages } from "./mortgageNavigation";
 import { mortgageRemoveFailure } from "./mortgageRemoveFailure";
 

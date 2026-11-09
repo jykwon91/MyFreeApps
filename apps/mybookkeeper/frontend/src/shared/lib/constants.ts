@@ -1,6 +1,6 @@
 import type { Role } from "@/shared/types/user/role";
-import type { EmailQueueStatus } from "@/shared/types/integration/email-queue";
-import type { EmailQueueItem } from "@/shared/types/integration/email-queue";
+import type { EmailQueueStatus } from "@mybookkeeper/api-client/types/integration/email-queue-status";
+import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 
 // Sentinel property_id used by the dashboard summary for transactions with no

@@ -2,7 +2,7 @@ import { useArchiveReplyTemplate } from "@mybookkeeper/api-client/hooks/useArchi
 import { LoadingButton, useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { ARCHIVE_FAILURE_MESSAGES, archiveTemplateTitle, REPLY_TEMPLATE_MESSAGES as MESSAGES } from "../../constants/replyTemplates";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 import { leaveToList } from "./replyTemplateNavigation";
 
 interface ArchiveReplyTemplateButtonProps {

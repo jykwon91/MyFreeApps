@@ -4,7 +4,7 @@ import { LoadingButton, useTheme } from "@platform/mobile";
 import { useRef } from "react";
 import { Text, View } from "react-native";
 import { confirmTitle, goesBy, REMINDER_MESSAGES, sendNowLabel } from "../../constants/rentReminders";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 import { channelWords, dueLine, firstNameOf } from "./rentReminderDisplay";
 
 interface RentReminderSendButtonProps {

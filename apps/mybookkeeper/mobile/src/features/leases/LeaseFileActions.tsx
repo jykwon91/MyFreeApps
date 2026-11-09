@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import { View } from "react-native";
 import { changeTypeLabel, LEASE_FILE_KIND_CHOICES, LEASE_FILE_MESSAGES, removeLabel, removeTitle } from "../../constants/leaseFiles";
 import type { LeaseFileAction } from "../../types/LeaseFileAction";
-import { askOnce } from "./askOnce";
+import { askOnce } from "../../lib/askOnce";
 import { useLeaseFileActions } from "./useLeaseFileActions";
 
 const KIND_OPTIONS = LEASE_FILE_KIND_CHOICES.map((kind) => ({ value: kind, label: LEASE_ATTACHMENT_KIND_LABELS[kind] }));

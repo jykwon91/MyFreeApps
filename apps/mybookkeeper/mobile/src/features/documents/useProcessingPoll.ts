@@ -1,18 +1,11 @@
-import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { POLL_GIVE_UP_MS, POLL_INTERVAL_MS } from "../../constants/documents";
+import { useScreenFocused } from "../../lib/useScreenFocused";
 
 /** Polls while the screen is showing something still being read, for a limited time. */
 export function useProcessingPoll(isProcessing: boolean): { pollingInterval: number; gaveUp: boolean } {
-  const [isFocused, setIsFocused] = useState(false);
+  const isFocused = useScreenFocused();
   const [gaveUp, setGaveUp] = useState(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      setIsFocused(true);
-      return () => setIsFocused(false);
-    }, []),
-  );
 
   useEffect(() => {
     if (!isProcessing || !isFocused) return;

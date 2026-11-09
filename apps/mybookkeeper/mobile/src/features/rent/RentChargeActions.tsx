@@ -4,7 +4,7 @@ import { LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { chargeActionLabel, RENT_MANAGE_MESSAGES } from "../../constants/rentManage";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 import { chargeTitle } from "./rentDisplay";
 import { rentWriteFailure } from "./rentWriteFailure";
 

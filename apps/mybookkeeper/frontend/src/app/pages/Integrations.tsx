@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
-import { useConnectGmailMutation, useDisconnectGmailMutation, useSyncGmailMutation, useGetSyncLogsQuery, useCancelGmailSyncMutation, useGetEmailQueueQuery, useExtractAllMutation, useDismissQueueItemMutation, useRetryQueueItemMutation, useRetryAllFailedMutation, useUpdateGmailLabelMutation } from "@/shared/store/integrationsApi";
-import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
-import type { EmailQueueItem } from "@/shared/types/integration/email-queue";
+import { useConnectGmailMutation, useDisconnectGmailMutation, useSyncGmailMutation, useGetSyncLogsQuery, useCancelGmailSyncMutation, useGetEmailQueueQuery, useExtractAllMutation, useDismissQueueItemMutation, useRetryQueueItemMutation, useRetryAllFailedMutation, useUpdateGmailLabelMutation, useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
+import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
 import { POLLING_OPTIONS, EMPTY_QUEUE } from "@/shared/lib/constants";
 import { timeAgo } from "@/shared/utils/date";
 import { extractErrorMessage, AlertBox } from "@platform/ui";
-import { groupBySession } from "@/shared/utils/email-queue";
+import { groupBySession } from "@mybookkeeper/api-client/utils/emailQueue";
 import { useToast } from "@/shared/hooks/useToast";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import IntegrationsSkeleton from "@/app/features/integrations/IntegrationsSkeleton";

@@ -3,7 +3,7 @@ import { useDeleteReconciliationSourceMutation } from "@mybookkeeper/api-client/
 import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
 import { useToast } from "@platform/mobile";
 import { useRef } from "react";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 
 /** `onDeleted` lets a screen about this one form leave once it is gone. */
 export function useDeleteReconciliationSource(source: ReconciliationSource, onDeleted?: () => void) {

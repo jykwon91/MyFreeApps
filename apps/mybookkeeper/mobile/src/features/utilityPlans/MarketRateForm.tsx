@@ -9,7 +9,7 @@ import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { MARKET_RATE_MESSAGES as MESSAGES, MARKET_RATE_SOURCE_MAX_LENGTH } from "../../constants/marketRates";
 import { sameFormValues } from "../../lib/sameFormValues";
 import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
-import { askOnce } from "../leases/askOnce";
+import { askOnce } from "../../lib/askOnce";
 import OptionalDateField from "../shell/OptionalDateField";
 import { useSaveMarketRate } from "./useSaveMarketRate";
 

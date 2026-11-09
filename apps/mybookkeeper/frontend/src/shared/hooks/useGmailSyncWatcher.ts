@@ -1,11 +1,8 @@
 import { useAppSelector } from "@/shared/store/hooks";
-import { integrationsApi, useGetEmailQueueQuery } from "@/shared/store/integrationsApi";
-import { useInvalidateOnExtractionComplete } from "@/shared/hooks/useInvalidateOnExtractionComplete";
+import { useInvalidateOnExtractionComplete } from "@mybookkeeper/api-client/hooks/useInvalidateOnExtractionComplete";
+import { integrationsApi, useGetEmailQueueQuery } from "@mybookkeeper/api-client/store/integrationsApi";
+import { syncPollInterval } from "@mybookkeeper/api-client/utils/syncPollInterval";
 import { EMPTY_QUEUE } from "@/shared/lib/constants";
-
-/** Poll fast while extraction work is in flight, slowly while the queue is idle. */
-const ACTIVE_INTERVAL_MS = 5_000;
-const IDLE_INTERVAL_MS = 60_000;
 
 /** Hoisted so the selector identity is stable across renders. */
 const selectEmailQueue = integrationsApi.endpoints.getEmailQueue.select();
@@ -31,12 +28,8 @@ export function useGmailSyncWatcher(): void {
   // Deriving it from this hook's own result instead would need the value one
   // render before it exists.
   const cached = useAppSelector(selectEmailQueue).data ?? EMPTY_QUEUE;
-  const hasActiveWork = cached.some(
-    (item) => item.status === "extracting" || item.status === "fetched",
-  );
-
   const { data: queue = EMPTY_QUEUE } = useGetEmailQueueQuery(undefined, {
-    pollingInterval: hasActiveWork ? ACTIVE_INTERVAL_MS : IDLE_INTERVAL_MS,
+    pollingInterval: syncPollInterval(undefined, cached),
     skipPollingIfUnfocused: true,
   });
 

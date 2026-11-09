@@ -4,7 +4,7 @@ import { baseApi } from "@/shared/store/baseApi";
 // Side-effect imports: register endpoints on the shared baseApi instance.
 import "@mybookkeeper/api-client/store/documentsApi";
 import { documentUploadForm } from "@/shared/lib/document-upload-form";
-import "@/shared/store/integrationsApi";
+import "@mybookkeeper/api-client/store/integrationsApi";
 import "@mybookkeeper/api-client/store/transactionsApi";
 import "@mybookkeeper/api-client/store/summaryApi";
 
