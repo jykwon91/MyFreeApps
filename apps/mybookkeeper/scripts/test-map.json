@@ -1045,6 +1045,7 @@
         "backend/app/services/properties/utility_offer_service.py",
         "api-client/src/store/utilityOffersApi.ts",
         "api-client/src/utils/betterPlansMode.ts",
+        "api-client/src/utils/utilityOfferFormat.ts",
         "api-client/src/utils/offerStats.ts",
         "api-client/src/utils/offerTiers.ts",
         "backend/app/services/extraction/document_draft_reader.py",
@@ -1066,6 +1067,7 @@
         "api-client/src/constants/utilityPlanUpload.ts",
         "api-client/src/constants/utilityServiceTypes.ts",
         "api-client/src/constants/utilityPlanRateTypes.ts",
+        "api-client/src/constants/rateDisplay.ts",
         "mobile/src/features/utilityPlans/"
       ],
       "backend_tests": [
