@@ -95,10 +95,14 @@ describe("adding a policy", () => {
     expect(mockPush).toHaveBeenCalledWith("/properties/new");
   });
 
-  it("says so when the properties won't load", async () => {
-    startInsuranceServer({ failures: { "GET /properties": 500 } });
+  it("offers a retry when the properties won't load, and lists them once it works", async () => {
+    const server = startInsuranceServer({ failures: { "GET /properties": 500 } });
     await renderInsurance(<NewPolicyScreen />);
     expect(await screen.findByText(POLICY_FORM_MESSAGES.propertiesFailed)).toBeTruthy();
+    delete server.failures["GET /properties"];
+    await fireEvent.press(screen.getByRole("button", { name: POLICY_FORM_MESSAGES.propertiesRetry }));
+    await fireEvent.press(await screen.findByLabelText("Property *, Choose a property"));
+    expect(await screen.findByRole("radio", { name: "Oak Street" })).toBeTruthy();
   });
 
   it("offers every property, a retired one too, as the website does", async () => {

@@ -16,7 +16,7 @@ interface PropertyChoiceFieldProps {
 
 export default function PropertyChoiceField({ messages: MESSAGES, value, onChange, error, disabled }: PropertyChoiceFieldProps) {
   const { colors, fontSize, spacing } = useTheme();
-  const { data, error: loadError, isLoading } = useGetPropertiesQuery();
+  const { data, error: loadError, isLoading, isFetching, refetch } = useGetPropertiesQuery();
   const [isPicking, setIsPicking] = useState(false);
   const options = useMemo(
     () => [...(data ?? [])].sort((a, b) => a.name.localeCompare(b.name)).map((property) => ({ value: property.id, label: property.name })),
@@ -31,7 +31,14 @@ export default function PropertyChoiceField({ messages: MESSAGES, value, onChang
     );
   }
   if (loadError) {
-    return <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.propertiesFailed}</Text>;
+    return (
+      <View style={{ gap: spacing.sm }}>
+        <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.propertiesFailed}</Text>
+        <LoadingButton isLoading={isFetching} onPress={() => void refetch()} variant="secondary">
+          {MESSAGES.propertiesRetry}
+        </LoadingButton>
+      </View>
+    );
   }
   if (options.length === 0) {
     return (
