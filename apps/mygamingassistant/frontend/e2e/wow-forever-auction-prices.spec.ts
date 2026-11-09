@@ -19,11 +19,13 @@
  *   - prices that fail to load leave the route usable, with a retry
  *   - the Auction house page narrows to one profession's materials, and prices one recipe
  *     (each material, the total, what it sells for, the difference) from its link
+ *   - "Download the addon" zips MGA Prices with every house's prices in Data.lua
  *   - nothing scrolls sideways at 375px
  *
  * Run: npm run test:e2e -- wow-forever-auction-prices
  */
 import { readFileSync } from "node:fs";
+import { strFromU8, unzipSync } from "fflate";
 import { test, expect, type Page } from "@playwright/test";
 
 const PRICES = "**/wow/prices**";
@@ -287,6 +289,26 @@ test("the Auction house page narrows to a profession's materials and prices one 
   await page.goForward();
   await page.getByTestId("recipe-back").click();
   await expect(page).not.toHaveURL(/recipe=/);
+});
+
+test("the Auction house page downloads the MGA Prices addon with every house's prices inside", async ({ page }) => {
+  const asked: string[] = [];
+  await stubFactionPrices(page, (faction) => BLUE_PEARL_BY_FACTION[faction] ?? [], asked);
+  await page.goto("/wow-forever/auction-house");
+  const card = page.getByTestId("prices-addon");
+  await card.getByText("Get these prices in your game tooltips").click();
+  await expect(card).toContainText(String.raw`World of Warcraft\_forever_\Interface\AddOns`);
+  const [download] = await Promise.all([page.waitForEvent("download"), card.getByTestId("prices-addon-download").click()]);
+  expect(download.suggestedFilename()).toBe("MGAPrices.zip");
+  const files = unzipSync(readFileSync(await download.path()));
+  const data = strFromU8(files["MGAPrices/Data.lua"]);
+  expect(data).toContain("alliance = {");
+  expect(data).toContain("[4611] = {3300, 3300, 20},");
+  expect(data).toContain("[4611] = {3495, 3495, 20},");
+  expect(data).toContain("[4611] = {5349, 5349, 20},");
+  expect(files["MGAPrices/MGAPrices.toc"]).toBeDefined();
+  expect(asked).toEqual(expect.arrayContaining(["pvp/alliance", "pvp/horde", "pvp/neutral"]));
+  await expect(page.getByText("MGA Prices is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
 });
 
 test("priced pages never scroll sideways on a phone", async ({ page }) => {
