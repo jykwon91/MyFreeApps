@@ -3,7 +3,7 @@ import ItemNameLink from "@/games/wow-forever/components/itemPages/ItemNameLink"
 import PriceCreditLine from "@/games/wow-forever/components/prices/PriceCreditLine";
 import { ASK_COPY } from "@/games/wow-forever/data/ask/askCopy";
 import { ASK_LIVE } from "@/games/wow-forever/data/ask/askLiveStates";
-import { PRICE_FACTION_LABEL } from "@/games/wow-forever/data/priceFactions";
+import { priceHouseLabel } from "@/games/wow-forever/prices/priceHouseLabel";
 import type { AskPricesCard } from "@/games/wow-forever/types/ask/askPricesCard";
 
 interface PricesCardProps {
@@ -16,7 +16,7 @@ interface PricesCardProps {
  * when there are none or they didn't load.
  */
 export default function PricesCard({ card }: PricesCardProps) {
-  const heading = ASK_COPY.pricesHeading(PRICE_FACTION_LABEL[card.faction]);
+  const heading = ASK_COPY.pricesHeading(priceHouseLabel(card.house));
   return (
     <section aria-label={heading} className="space-y-2 rounded-xl border bg-card p-3">
       <h3 className="text-sm font-semibold">{heading}</h3>
@@ -39,7 +39,7 @@ export default function PricesCard({ card }: PricesCardProps) {
       ) : null}
       {card.state === ASK_LIVE.error ? null : (
         <div className="text-xs text-muted-foreground" data-testid="price-credit">
-          <PriceCreditLine faction={card.faction} sourceUpdatedAt={card.sourceUpdatedAt} hasPrices={card.state === ASK_LIVE.ready} />
+          <PriceCreditLine house={card.house}sourceUpdatedAt={card.sourceUpdatedAt} hasPrices={card.state === ASK_LIVE.ready} />
         </div>
       )}
       <AskCardLink to={card.pageHref}>{ASK_COPY.openAuctionHouse}</AskCardLink>

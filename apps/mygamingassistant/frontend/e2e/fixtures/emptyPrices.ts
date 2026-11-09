@@ -11,6 +11,7 @@ export async function stubEmptyPrices(page: Page): Promise<void> {
     return route.fulfill({
       json: {
         region: "us",
+        server: "pvp",
         faction,
         source_updated_at: null,
         fetched_at: null,

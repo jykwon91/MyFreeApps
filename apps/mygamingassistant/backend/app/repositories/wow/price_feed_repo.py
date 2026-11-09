@@ -1,4 +1,4 @@
-"""WowPriceFeed repository — one row per (game, region, faction).
+"""WowPriceFeed repository — one row per (game, region, auction house).
 
 Standalone functions like the other MGA repositories. The caller owns the
 transaction; these only flush.
@@ -18,36 +18,38 @@ from app.models.wow.price_feed import WowPriceFeed
 _LOCK_NAMESPACE = zlib.crc32(b"mga.wow_price_feed") & 0x7FFFFFFF
 
 
-async def get(db: AsyncSession, game_id: uuid.UUID, region: str, faction: str) -> WowPriceFeed | None:
+async def get(db: AsyncSession, game_id: uuid.UUID, region: str, house_id: int) -> WowPriceFeed | None:
     result = await db.execute(
         select(WowPriceFeed).where(
             WowPriceFeed.game_id == game_id,
             WowPriceFeed.region == region,
-            WowPriceFeed.faction == faction,
+            WowPriceFeed.house_id == house_id,
         )
     )
     return result.scalar_one_or_none()
 
 
-async def get_or_create(db: AsyncSession, game_id: uuid.UUID, region: str, faction: str) -> WowPriceFeed:
-    """The feed row, inserted on first use. Safe when two workers race."""
+async def get_or_create(
+    db: AsyncSession, game_id: uuid.UUID, region: str, house_id: int, faction: str,
+) -> WowPriceFeed:
+    """The house's feed row, inserted on first use. Safe when two workers race."""
     await db.execute(
         insert(WowPriceFeed)
-        .values(game_id=game_id, region=region, faction=faction)
+        .values(game_id=game_id, region=region, house_id=house_id, faction=faction)
         .on_conflict_do_nothing(constraint="uq_wowpricefeed_key")
     )
-    feed = await get(db, game_id, region, faction)
+    feed = await get(db, game_id, region, house_id)
     if feed is None:
-        raise RuntimeError(f"price feed {region}/{faction} missing right after insert")
+        raise RuntimeError(f"price feed {region}/house {house_id} missing right after insert")
     return feed
 
 
 async def try_refresh_lock(db: AsyncSession, game_id: uuid.UUID) -> bool:
     """Take the game's price-refresh lock for the rest of the transaction.
 
-    One refresh reads every house for every faction, so the lock is per game.
-    False when another worker holds it — that worker is already refreshing,
-    so this one can skip. Released automatically on commit / rollback.
+    One refresh reads every mapped house, so the lock is per game. False
+    when another worker holds it — that worker is already refreshing, so
+    this one can skip. Released automatically on commit / rollback.
     """
     key = zlib.crc32(game_id.bytes) & 0x7FFFFFFF
     result = await db.execute(

@@ -6,6 +6,7 @@ Usage:
     python -m app.cli import-wow-captures [pack.json]
     python -m app.cli export-wow-captures [pack.json]
     python -m app.cli refresh-wow-prices
+    python -m app.cli wow-house-prices <item id>
     python -m app.cli record-wow-server-status
     python -m app.cli backfill-clips
     python -m app.cli backfill-technique
@@ -22,6 +23,8 @@ import sys
 from pathlib import Path
 
 from app.services.wow.feature_requests.feature_retention_service import purge_feature_request_data
+from app.services.wow.prices.house_price_survey import survey_item
+from app.services.wow.prices.price_fetch_error import PriceFetchError
 from app.services.wow.server_status.record_outcome import OUTCOME_FAILED as STATUS_OUTCOME_FAILED
 from app.services.wow.server_status.server_status_history_service import record_all as record_server_status
 
@@ -364,17 +367,37 @@ def _run_discord_sync_emojis() -> int:
 
 
 async def _run_refresh_wow_prices() -> int:
-    """Pull WoW Forever US auction-house prices from Blizzard now, per faction (the scheduler does it every few hours)."""
+    """Pull WoW Forever US auction-house prices from Blizzard now, per mapped house (the scheduler does it every few hours)."""
     from app.services.wow.prices.feed_refresh import OUTCOME_FAILED
     from app.services.wow.prices.price_refresh_service import refresh_all
 
     outcomes = await refresh_all()
     for o in outcomes:
-        print(f"  {o.region}/{o.faction}: {o.outcome} — {o.item_count} items")
+        print(f"  {o.label}: {o.outcome} — {o.item_count} items")
     if not outcomes:
         print("Nothing refreshed — run load-fixtures first.")
         return 1
     return 1 if any(o.outcome == OUTCOME_FAILED for o in outcomes) else 0
+
+
+async def _run_wow_house_prices(item_id: int) -> int:
+    """One item in every Blizzard auction house — compare with an in-game price to map a server."""
+    try:
+        quotes = await survey_item(item_id)
+    except PriceFetchError as exc:
+        print(f"wow-house-prices: Blizzard refused: {exc.summary()}")
+        return 1
+    for q in quotes:
+        where = f"house {q.house_id} {q.faction:<8} {q.server or 'unmapped':<9}"
+        if q.error:
+            print(f"  {where} could not be read: {q.error}")
+        elif q.price is None:
+            print(f"  {where} none listed")
+        else:
+            p = q.price
+            print(f"  {where} cheapest {p.min_buyout / 100:.2f}s  market {p.market_value / 100:.2f}s  "
+                  f"{p.quantity} in {p.listing_count} auctions")
+    return 0
 
 
 async def _run_record_wow_server_status() -> int:
@@ -415,6 +438,8 @@ def main() -> None:
         print(f"Wrote {asyncio.run(export_pack(pack_path))} World Map capture(s) to the pack.")
     elif command == "refresh-wow-prices":
         sys.exit(asyncio.run(_run_refresh_wow_prices()))
+    elif command == "wow-house-prices" and len(sys.argv) > 2 and sys.argv[2].isdigit():
+        sys.exit(asyncio.run(_run_wow_house_prices(int(sys.argv[2]))))
     elif command == "record-wow-server-status":
         sys.exit(asyncio.run(_run_record_wow_server_status()))
     elif command == "backfill-clips":
@@ -444,6 +469,7 @@ def main() -> None:
         print("  import-wow-captures [pack] — mirror the World Map capture pack into the database")
         print("  export-wow-captures [pack] — write stored World Map captures to the pack (local)")
         print("  refresh-wow-prices     — pull WoW Forever US auction-house prices now")
+        print("  wow-house-prices <item id> — one item in every auction house (to map a server)")
         print("  record-wow-server-status — record WoW Forever server status changes now")
         print("  backfill-clips         — generate clips for accepted lineups missing one")
         print("  backfill-technique     — name throw-technique for accepted lineups missing one")

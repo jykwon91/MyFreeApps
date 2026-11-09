@@ -72,8 +72,8 @@ describe("auction prices on a crafting guide", () => {
     expect(routeSection().getByText(/^Estimated cost to reach skill \d+: ~/)).toBeInTheDocument();
     expect(routeSection().getByText(/^Priced \d+ of \d+ materials automatically\.$/)).toBeInTheDocument();
     const credit = screen.getByTestId("price-credit");
-    expect(credit).toHaveTextContent(/Prices from Blizzard \(Alliance AH, US\) · updated/);
-    expect(usePricesQuery).toHaveBeenLastCalledWith("alliance");
+    expect(credit).toHaveTextContent(/Prices from Blizzard \(PvP · Alliance AH, US\) · updated/);
+    expect(usePricesQuery).toHaveBeenLastCalledWith({ server: "pvp", faction: "alliance" });
 
     await userEvent.click(screen.getByRole("checkbox", { name: "Use default route" }));
     expect(routeSection().getByText("Default route")).toBeInTheDocument();

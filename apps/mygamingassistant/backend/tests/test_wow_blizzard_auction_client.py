@@ -1,9 +1,10 @@
-"""The Blizzard auction-house client and the per-faction fetch, against a fake Blizzard.
+"""The Blizzard auction-house client and the per-house fetch, against a fake Blizzard.
 
 Covers: the token request, the house index by name, Last-Modified, Blizzard's
 error codes (API ``type`` and OAuth ``error``) captured on the error, network
-failures, missing credentials, pooling every house of a faction, and a
-faction failing as a whole when one of its houses does.
+failures, missing credentials, each mapped house kept apart (never pooled
+with its faction's other houses), one failing house failing only itself, and
+a mapped house the index lists under another faction or not at all.
 """
 from __future__ import annotations
 
@@ -18,7 +19,8 @@ import pytest
 from app.services.wow.prices.auction_house import AuctionHouse
 from app.services.wow.prices.blizzard_auction_client import BlizzardAuctionClient
 from app.services.wow.prices.blizzard_price_fetch import fetch_with_client
-from app.services.wow.prices.faction_prices import FactionPrices
+from app.services.wow.prices.house_prices import HousePrices
+from app.services.wow.prices.mapped_house import MappedHouse
 from app.services.wow.prices.price_fetch_error import PriceFetchError
 
 CLIENT_ID = "test-client-id"
@@ -143,58 +145,79 @@ def test_missing_credentials_fail_before_any_request() -> None:
     with pytest.raises(PriceFetchError, match="BLIZZARD_CLIENT_ID / BLIZZARD_CLIENT_SECRET are not set"):
         BlizzardAuctionClient("", CLIENT_SECRET)
 
-
 # ---------------------------------------------------------------------------
-# fetch_with_client — pooling per faction
+# fetch_with_client — one set per mapped house, never pooled
 # ---------------------------------------------------------------------------
 
-async def test_a_faction_pools_every_one_of_its_houses() -> None:
+PVP = [
+    MappedHouse("pvp", "alliance", 110),
+    MappedHouse("pvp", "horde", 113),
+    MappedHouse("pvp", "neutral", 116),
+]
+
+
+async def test_each_house_is_its_own_market_and_other_houses_are_never_read() -> None:
     answers = {
-        # Commodities on two Alliance realms, and a non-stackable on one.
-        "110/commodities": _json({"auctions": [_commodity(4611, 3985, 2)]}, last_modified=OLDER_SNAPSHOT),
-        "111/commodities": _json({"auctions": [_commodity(4611, 3299, 3)]}),
-        "111": _json({"auctions": [{"id": 5, "item": {"id": 4611}, "buyout": 6000, "quantity": 2}]}),
-        "113/commodities": _json({"auctions": [_commodity(4611, 4875, 1)]}),
+        # The PvP Alliance house: commodities plus a non-stackable listing.
+        "110/commodities": _json({"auctions": [_commodity(4611, 3980, 2)]}, last_modified=OLDER_SNAPSHOT),
+        "110": _json({"auctions": [{"id": 5, "item": {"id": 4611}, "buyout": 8000, "quantity": 2}]}),
+        # Another Alliance house, much cheaper — a different server's market.
+        "111/commodities": _json({"auctions": [_commodity(4611, 3100, 50)]}),
+        "113/commodities": _json({"auctions": [_commodity(4611, 6300, 1)]}),
     }
-    async with _client(_blizzard(answers)) as client:
-        results = await fetch_with_client(client)
+    asked: list[str] = []
 
-    alliance = results["alliance"]
-    assert isinstance(alliance, FactionPrices)
+    def handle(request: httpx.Request) -> httpx.Response:
+        asked.append(request.url.path)
+        return _blizzard(answers)(request)
+
+    async with _client(handle) as client:
+        results = await fetch_with_client(client, PVP)
+
+    alliance = results[110]
+    assert isinstance(alliance, HousePrices)
     [pearl] = alliance.prices
-    assert (pearl.min_buyout, pearl.quantity, pearl.listing_count) == (3000, 7, 3)
-    # The newest snapshot of the faction's houses.
+    # House 111's 31s pearls never reach house 110's price.
+    assert (pearl.min_buyout, pearl.quantity, pearl.listing_count) == (3980, 4, 2)
+    # The newer of the house's two answers.
     assert alliance.snapshot_at == datetime(2026, 11, 9, 17, 16, 22, tzinfo=timezone.utc)
-    horde = results["horde"]
-    assert isinstance(horde, FactionPrices)
-    assert [(p.item_id, p.min_buyout) for p in horde.prices] == [(4611, 4875)]
-    neutral = results["neutral"]
-    assert isinstance(neutral, FactionPrices) and neutral.prices == []
+    horde = results[113]
+    assert isinstance(horde, HousePrices)
+    assert [(p.item_id, p.min_buyout) for p in horde.prices] == [(4611, 6300)]
+    neutral = results[116]
+    assert isinstance(neutral, HousePrices) and neutral.prices == []
+    assert set(results) == {110, 113, 116}
+    assert not any("/111" in path for path in asked)
 
 
-async def test_one_failing_house_fails_only_its_faction() -> None:
+async def test_one_failing_house_fails_only_itself() -> None:
     answers = {
-        "111": _json({"code": 503, "type": "BLZWEBAPI00000503", "detail": "Service Unavailable"}, status=503),
+        "110": _json({"code": 503, "type": "BLZWEBAPI00000503", "detail": "Service Unavailable"}, status=503),
         "113/commodities": _json({"auctions": [_commodity(2589, 22, 10)]}),
     }
     async with _client(_blizzard(answers)) as client:
-        results = await fetch_with_client(client)
+        results = await fetch_with_client(client, PVP)
 
-    failed = results["alliance"]
+    failed = results[110]
     assert isinstance(failed, PriceFetchError)
     assert (failed.status_code, failed.code) == (503, "BLZWEBAPI00000503")
-    assert isinstance(results["horde"], FactionPrices)
-    assert isinstance(results["neutral"], FactionPrices)
+    assert isinstance(results[113], HousePrices)
+    assert isinstance(results[116], HousePrices)
 
 
-async def test_a_faction_with_no_house_in_the_index_is_an_error() -> None:
+async def test_a_mapped_house_the_index_lists_under_another_faction_or_not_at_all_is_refused() -> None:
     def handle(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("/auctions/"):
-            return _json({"auctions": [{"id": 110, "name": "Alliance Auction House"}]})
+            return _json({"auctions": [
+                {"id": 110, "name": "Alliance Auction House"},
+                {"id": 113, "name": "Alliance Auction House"},
+            ]})
         return _blizzard()(request)
 
     async with _client(handle) as client:
-        results = await fetch_with_client(client)
-    assert isinstance(results["alliance"], FactionPrices)
-    horde = results["horde"]
-    assert isinstance(horde, PriceFetchError) and "no horde auction house" in horde.reason
+        results = await fetch_with_client(client, PVP)
+    assert isinstance(results[110], HousePrices)
+    renamed = results[113]
+    assert isinstance(renamed, PriceFetchError) and "lists it as alliance" in renamed.reason
+    missing = results[116]
+    assert isinstance(missing, PriceFetchError) and "lists it as missing" in missing.reason

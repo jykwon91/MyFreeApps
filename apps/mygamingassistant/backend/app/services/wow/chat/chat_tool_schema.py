@@ -29,7 +29,7 @@ from app.core.wow_chat_enums import (
     TOOL_SEARCH_NPCS,
     TOOL_SERVER_STATUS,
 )
-from app.core.wow_prices import PRICE_FACTIONS
+from app.core.wow_prices import PRICE_FACTIONS, PRICE_SERVERS
 from app.core.wow_server_status import SERVER_STATUS_REGIONS
 
 QUERY_MAX_CHARS = 80
@@ -226,7 +226,7 @@ CHAT_TOOLS: list[dict[str, Any]] = [
     {
         "name": TOOL_AUCTION_PRICES,
         "description": (
-            "What items cost on a faction's US auction house now (Blizzard's live listings), "
+            "What items cost on one server's US auction house for a faction now (Blizzard's live listings), "
             "by name. Returns each match's market value, cheapest listing, how many are on "
             "sale, how old the prices are, or that there are none."
         ),
@@ -240,6 +240,11 @@ CHAT_TOOLS: list[dict[str, Any]] = [
                         "Whose auction house: leave out for the player's own faction. "
                         "'neutral' = the Blackwater (goblin) auction house."
                     ),
+                },
+                "server": {
+                    "type": "string",
+                    "enum": list(PRICE_SERVERS),
+                    "description": "Which server's auction houses: leave out for the default (PvP).",
                 },
                 "limit": _limit(),
             },

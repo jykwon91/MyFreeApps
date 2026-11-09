@@ -63,8 +63,11 @@ export function macrosPageHref(classId: WowClassId | null): string {
   return withParams(ASK_GUIDE_PATH.macros, params);
 }
 
-/** The Auction house page, searching for what was asked. */
-/** The Auction house page on the same house the answer came from. */
+/**
+ * The Auction house page searching for what was asked, on the same faction's
+ * house. No server in the link: only one server is mapped, so the page has no
+ * server choice to carry.
+ */
 export function auctionHouseHref(query: string, faction: PriceFaction): string {
   const params = new URLSearchParams({ [AUCTION_QUERY_PARAM]: query, [AUCTION_HOUSE_PARAM]: faction });
   return withParams(ASK_GUIDE_PATH.auctionHouse, params);

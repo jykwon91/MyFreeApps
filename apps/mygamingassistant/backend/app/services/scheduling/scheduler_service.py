@@ -387,7 +387,7 @@ async def _run_refresh_wow_prices() -> None:
         return
     logger.info(
         "scheduler_service: refresh_wow_prices: %s",
-        ", ".join(f"{o.region}/{o.faction}={o.outcome}({o.item_count})" for o in outcomes) or "nothing refreshed",
+        ", ".join(f"{o.label}={o.outcome}({o.item_count})" for o in outcomes) or "nothing refreshed",
     )
 
 async def _run_record_server_status() -> None:

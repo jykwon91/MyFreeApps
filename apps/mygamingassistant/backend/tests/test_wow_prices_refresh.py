@@ -1,16 +1,19 @@
 """WoW Forever auction-house prices — the scheduled refresh and GET /api/wow/prices.
 
 Covers:
-  - a refresh stores one set per faction; a second replaces it (items no
-    longer listed are deleted)
-  - a failed faction keeps its old prices and records Blizzard's code; the
-    other factions still update
-  - a faction whose houses suddenly list nothing keeps its old prices
+  - a refresh stores one set per mapped house (the PvP server's Alliance,
+    Horde and Blackwater houses); a second replaces it (items no longer
+    listed are deleted)
+  - a failed house keeps its old prices and records Blizzard's code; the
+    other houses still update
+  - a house that suddenly lists nothing keeps its old prices
   - a refresh another worker is running is skipped before fetching
-  - a crash rolls back and reports every faction failed
-  - the endpoint: public in both modes, compact columns, per-faction, ETag /
-    304, an unknown faction is a 422, no prices yet is an empty list
-  - the database rejects an unknown faction and a cheapest above the market value
+  - a crash rolls back and reports every house failed
+  - the endpoint: public in both modes, compact columns, one house per
+    server + faction (PvP + Alliance by default), ETag / 304, an unmapped
+    server or unknown faction is a 422, no prices yet is an empty list
+  - the database rejects an unknown faction, a non-positive house id, a
+    second feed for one house, and a cheapest above the market value
 """
 from __future__ import annotations
 
@@ -23,15 +26,15 @@ from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.wow_prices import PRICE_FACTIONS, WOW_FOREVER_GAME_SLUG
+from app.core.wow_prices import PRICE_FACTIONS, PRICE_SERVER_HOUSES, WOW_FOREVER_GAME_SLUG
 from app.models.game.game import Game
 from app.models.wow.price_feed import WowPriceFeed
 from app.repositories.game.game_repo import get_game_by_slug
 from app.repositories.wow import item_price_repo, price_feed_repo
 from app.services.wow.prices import price_refresh_service
 from app.services.wow.prices.auction_item_price import AuctionItemPrice
-from app.services.wow.prices.blizzard_price_fetch import FactionResults
-from app.services.wow.prices.faction_prices import FactionPrices
+from app.services.wow.prices.blizzard_price_fetch import HouseResults
+from app.services.wow.prices.house_prices import HousePrices
 from app.services.wow.prices.feed_refresh import OUTCOME_EMPTY, OUTCOME_FAILED, OUTCOME_LOCKED, OUTCOME_UPDATED
 from app.services.wow.prices.price_fetch_error import PriceFetchError
 from app.services.wow.prices.price_row_mapper import to_price_rows
@@ -40,6 +43,7 @@ URL = "/api/wow/prices"
 SNAPSHOT = datetime(2026, 11, 9, 17, 16, 22, tzinfo=timezone.utc)
 NOW = datetime(2026, 11, 9, 18, 0, tzinfo=timezone.utc)
 LATER = NOW + timedelta(hours=3)
+PVP = PRICE_SERVER_HOUSES["pvp"]
 
 
 def _price(item_id: int, market_value: int, min_buyout: int, quantity: int = 10, listings: int = 2) -> AuctionItemPrice:
@@ -55,23 +59,23 @@ DUST = _price(10940, 60, 55)
 PYRITE = _price(249391, 104, 100)
 
 
-def _set(*prices: AuctionItemPrice, snapshot: datetime = SNAPSHOT) -> FactionPrices:
-    return FactionPrices(prices=list(prices), snapshot_at=snapshot)
+def _set(*prices: AuctionItemPrice, snapshot: datetime = SNAPSHOT) -> HousePrices:
+    return HousePrices(prices=list(prices), snapshot_at=snapshot)
 
 
 class FakeBlizzard:
-    """A stand-in for the Blizzard fetch: each faction's scripted result, empty for the rest."""
+    """A stand-in for the Blizzard fetch: each PvP house's scripted result (by faction), empty for the rest."""
 
-    def __init__(self, results: dict[str, FactionPrices | PriceFetchError]) -> None:
+    def __init__(self, results: dict[str, HousePrices | PriceFetchError]) -> None:
         self._results = results
         self.calls = 0
 
-    async def __call__(self) -> FactionResults:
+    async def __call__(self) -> HouseResults:
         self.calls += 1
-        return {faction: self._results.get(faction, _set()) for faction in PRICE_FACTIONS}
+        return {PVP[faction]: self._results.get(faction, _set()) for faction in PRICE_FACTIONS}
 
 
-def _fetch(**results: FactionPrices | PriceFetchError) -> FakeBlizzard:
+def _fetch(**results: HousePrices | PriceFetchError) -> FakeBlizzard:
     return FakeBlizzard(results)
 
 
@@ -88,8 +92,9 @@ async def wow_game(db: AsyncSession) -> Game:
 
 
 async def _stored(db: AsyncSession, game: Game, faction: str) -> dict[int, tuple[int, int, int, int]]:
-    feed = await price_feed_repo.get(db, game.id, "us", faction)
+    feed = await price_feed_repo.get(db, game.id, "us", PVP[faction])
     assert feed is not None
+    assert feed.faction == faction
     return {
         r.item_id: (r.market_value, r.min_buyout, r.quantity, r.listing_count)
         for r in await item_price_repo.list_for_feed(db, feed.id)
@@ -100,18 +105,20 @@ async def _stored(db: AsyncSession, game: Game, faction: str) -> dict[int, tuple
 # refresh_all
 # ---------------------------------------------------------------------------
 
-async def test_a_refresh_stores_one_set_per_faction(bound_unit_of_work: AsyncSession, wow_game: Game) -> None:
+async def test_a_refresh_stores_one_set_per_mapped_house(bound_unit_of_work: AsyncSession, wow_game: Game) -> None:
     outcomes = await price_refresh_service.refresh_all(
         _fetch(alliance=_set(LINEN, PEARL_ALLIANCE), horde=_set(PEARL_HORDE)), now=NOW,
     )
 
-    assert [(o.region, o.faction, o.outcome, o.item_count) for o in outcomes] == [
-        ("us", "alliance", OUTCOME_UPDATED, 2), ("us", "horde", OUTCOME_UPDATED, 1), ("us", "neutral", OUTCOME_EMPTY, 0),
+    assert [(o.label, o.outcome, o.item_count) for o in outcomes] == [
+        ("us/pvp/alliance (house 110)", OUTCOME_UPDATED, 2),
+        ("us/pvp/horde (house 113)", OUTCOME_UPDATED, 1),
+        ("us/pvp/neutral (house 116)", OUTCOME_EMPTY, 0),
     ]
     db = bound_unit_of_work
     assert await _stored(db, wow_game, "alliance") == {2589: (28, 24, 23_980, 910), 4611: (3300, 3000, 601, 98)}
     assert await _stored(db, wow_game, "horde") == {4611: (3495, 2999, 982, 154)}
-    feed = await price_feed_repo.get(db, wow_game.id, "us", "alliance")
+    feed = await price_feed_repo.get(db, wow_game.id, "us", PVP["alliance"])
     assert feed.source_updated_at == SNAPSHOT and feed.fetched_at == NOW and feed.item_count == 2
     assert feed.last_error is None
 
@@ -124,33 +131,33 @@ async def test_a_second_refresh_replaces_the_set(bound_unit_of_work: AsyncSessio
     assert await _stored(bound_unit_of_work, wow_game, "alliance") == {4611: (3100, 2900, 10, 2), 10940: (60, 55, 10, 2)}
 
 
-async def test_a_failed_faction_keeps_its_prices_and_records_the_code(
+async def test_a_failed_house_keeps_its_prices_and_records_the_code(
     bound_unit_of_work: AsyncSession, wow_game: Game, caplog: pytest.LogCaptureFixture,
 ) -> None:
     await price_refresh_service.refresh_all(_fetch(alliance=_set(LINEN), horde=_set(PEARL_HORDE)), now=NOW)
     error = PriceFetchError("Service Unavailable", status_code=503, code="BLZWEBAPI00000503")
     outcomes = await price_refresh_service.refresh_all(_fetch(alliance=error, horde=_set(DUST)), now=LATER)
 
-    assert [(o.faction, o.outcome, o.item_count) for o in outcomes][:2] == [
+    assert [(o.house.faction, o.outcome, o.item_count) for o in outcomes][:2] == [
         ("alliance", OUTCOME_FAILED, 1), ("horde", OUTCOME_UPDATED, 1),
     ]
     db = bound_unit_of_work
     assert await _stored(db, wow_game, "alliance") == {2589: (28, 24, 23_980, 910)}
     assert await _stored(db, wow_game, "horde") == {10940: (60, 55, 10, 2)}
-    feed = await price_feed_repo.get(db, wow_game.id, "us", "alliance")
+    feed = await price_feed_repo.get(db, wow_game.id, "us", PVP["alliance"])
     assert feed.last_error == "HTTP 503 BLZWEBAPI00000503: Service Unavailable"
     assert feed.last_error_at == LATER and feed.checked_at == LATER and feed.fetched_at == NOW
     assert "status=503 code=BLZWEBAPI00000503" in caplog.text
 
 
-async def test_houses_listing_nothing_never_wipe_stored_prices(bound_unit_of_work: AsyncSession, wow_game: Game) -> None:
+async def test_a_house_listing_nothing_never_wipes_stored_prices(bound_unit_of_work: AsyncSession, wow_game: Game) -> None:
     await price_refresh_service.refresh_all(_fetch(alliance=_set(LINEN)), now=NOW)
     outcomes = await price_refresh_service.refresh_all(_fetch(alliance=_set()), now=LATER)
 
     assert (outcomes[0].outcome, outcomes[0].item_count) == (OUTCOME_EMPTY, 1)
     assert await _stored(bound_unit_of_work, wow_game, "alliance") == {2589: (28, 24, 23_980, 910)}
-    feed = await price_feed_repo.get(bound_unit_of_work, wow_game.id, "us", "alliance")
-    assert feed.last_error == "Blizzard's houses listed nothing"
+    feed = await price_feed_repo.get(bound_unit_of_work, wow_game.id, "us", PVP["alliance"])
+    assert feed.last_error == "Blizzard's house listed nothing"
 
 
 async def test_a_refresh_another_worker_is_running_is_skipped_before_fetching(
@@ -166,12 +173,12 @@ async def test_a_refresh_another_worker_is_running_is_skipped_before_fetching(
     assert fetch.calls == 0
 
 
-async def test_a_crash_reports_every_faction_failed(bound_unit_of_work: AsyncSession, wow_game: Game) -> None:
-    async def broken() -> FactionResults:
+async def test_a_crash_reports_every_house_failed(bound_unit_of_work: AsyncSession, wow_game: Game) -> None:
+    async def broken() -> HouseResults:
         raise RuntimeError("boom")
 
     outcomes = await price_refresh_service.refresh_all(broken, now=NOW)
-    assert [(o.faction, o.outcome) for o in outcomes] == [(f, OUTCOME_FAILED) for f in PRICE_FACTIONS]
+    assert [(o.house.house_id, o.outcome) for o in outcomes] == [(PVP[f], OUTCOME_FAILED) for f in PRICE_FACTIONS]
 
 
 async def test_no_game_refreshes_nothing(bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -191,11 +198,28 @@ async def test_no_game_refreshes_nothing(bound_unit_of_work: AsyncSession, monke
 async def test_an_unknown_faction_is_rejected_by_the_database(db: AsyncSession, wow_game: Game) -> None:
     with pytest.raises(IntegrityError, match="ck_wowpricefeed_faction"):
         async with db.begin_nested():
-            await price_feed_repo.get_or_create(db, wow_game.id, "us", "goblin")
+            await price_feed_repo.get_or_create(db, wow_game.id, "us", 110, "goblin")
+
+
+async def test_a_non_positive_house_id_is_rejected_by_the_database(db: AsyncSession, wow_game: Game) -> None:
+    with pytest.raises(IntegrityError, match="ck_wowpricefeed_house_id"):
+        async with db.begin_nested():
+            await price_feed_repo.get_or_create(db, wow_game.id, "us", 0, "alliance")
+
+
+async def test_one_house_has_one_feed(db: AsyncSession, wow_game: Game) -> None:
+    first = await price_feed_repo.get_or_create(db, wow_game.id, "us", 110, "alliance")
+    again = await price_feed_repo.get_or_create(db, wow_game.id, "us", 110, "alliance")
+    other = await price_feed_repo.get_or_create(db, wow_game.id, "us", 111, "alliance")
+    assert first.id == again.id and other.id != first.id
+    with pytest.raises(IntegrityError, match="uq_wowpricefeed_key"):
+        async with db.begin_nested():
+            db.add(WowPriceFeed(game_id=wow_game.id, region="us", house_id=110, faction="alliance"))
+            await db.flush()
 
 
 async def test_a_cheapest_above_the_market_value_is_rejected(db: AsyncSession, wow_game: Game) -> None:
-    feed = await price_feed_repo.get_or_create(db, wow_game.id, "us", "alliance")
+    feed = await price_feed_repo.get_or_create(db, wow_game.id, "us", 110, "alliance")
     with pytest.raises(IntegrityError, match="ck_wowitemprice_min_buyout"):
         async with db.begin_nested():
             await item_price_repo.upsert_many(db, to_price_rows(feed.id, [_price(2589, 20, 30)], NOW))
@@ -205,17 +229,17 @@ async def test_a_cheapest_above_the_market_value_is_rejected(db: AsyncSession, w
 # GET /api/wow/prices
 # ---------------------------------------------------------------------------
 
-async def _refresh(**results: FactionPrices | PriceFetchError) -> None:
+async def _refresh(**results: HousePrices | PriceFetchError) -> None:
     await price_refresh_service.refresh_all(_fetch(**results), now=NOW)
 
 
-async def test_endpoint_serves_compact_rows_for_alliance_by_default(client: AsyncClient, wow_game: Game) -> None:
+async def test_endpoint_serves_the_pvp_alliance_house_by_default(client: AsyncClient, wow_game: Game) -> None:
     await _refresh(alliance=_set(LINEN, PEARL_ALLIANCE), horde=_set(PEARL_HORDE))
 
     resp = await client.get(URL)
     assert resp.status_code == 200
     body = resp.json()
-    assert (body["region"], body["faction"]) == ("us", "alliance")
+    assert (body["region"], body["server"], body["faction"]) == ("us", "pvp", "alliance")
     assert "credit" not in body
     assert body["columns"] == ["item_id", "market_value", "min_buyout", "quantity", "listings", "name"]
     assert body["items"] == [[2589, 28, 24, 23_980, 910, "Linen Cloth"], [4611, 3300, 3000, 601, 98, "Blue Pearl"]]
@@ -227,11 +251,12 @@ async def test_endpoint_serves_compact_rows_for_alliance_by_default(client: Asyn
     assert again.status_code == 304
 
 
-async def test_each_faction_gets_its_own_prices_and_etag(client: AsyncClient, wow_game: Game) -> None:
+async def test_each_house_gets_its_own_prices_and_etag(client: AsyncClient, wow_game: Game) -> None:
     await _refresh(alliance=_set(PEARL_ALLIANCE), horde=_set(PEARL_HORDE))
 
-    alliance = await client.get(URL, params={"faction": "alliance"})
-    horde = await client.get(URL, params={"faction": "horde"})
+    alliance = await client.get(URL, params={"server": "pvp", "faction": "alliance"})
+    horde = await client.get(URL, params={"server": "pvp", "faction": "horde"})
+    assert alliance.json()["items"] == [[4611, 3300, 3000, 601, 98, "Blue Pearl"]]
     assert horde.json()["faction"] == "horde"
     assert horde.json()["items"] == [[4611, 3495, 2999, 982, 154, "Blue Pearl"]]
     assert alliance.headers["etag"] != horde.headers["etag"]
@@ -265,6 +290,11 @@ async def test_no_prices_yet_is_an_empty_list(client: AsyncClient, wow_game: Gam
 
 async def test_an_unknown_faction_is_a_422(client: AsyncClient, wow_game: Game) -> None:
     resp = await client.get(URL, params={"faction": "goblin"})
+    assert resp.status_code == 422
+
+
+async def test_an_unmapped_server_is_a_422(client: AsyncClient, wow_game: Game) -> None:
+    resp = await client.get(URL, params={"server": "pve"})
     assert resp.status_code == 422
 
 

@@ -4,9 +4,10 @@
  * The prices are filled by the backend's scheduled Blizzard refresh (or
  * `python -m app.cli refresh-wow-prices`), never by a user, so this suite is
  * read-only: it checks the public contract the pages rely on — one price list
- * per faction (Alliance by default), the columnar rows, the ETag round trip
- * and that it is US only. The page flows that use these prices stub this
- * endpoint in their own specs.
+ * per auction house (a mapped server's house for one faction; the PvP server's
+ * Alliance house by default — houses are never pooled), the columnar rows, the
+ * ETag round trip, that an unmapped server is refused and that it is US only.
+ * The page flows that use these prices stub this endpoint in their own specs.
  *
  * Prereqs: backend on BACKEND_URL (default :8004) with fixtures loaded. Rows
  * are checked when a refresh has run; with none yet the list is empty.
@@ -24,13 +25,14 @@ test.describe("WoW Forever prices API", () => {
     test.skip(!health?.ok(), `backend not reachable at ${BACKEND_URL}`);
   });
 
-  test("serves the Alliance prices by default, then a 304 for the same set", async ({ request }) => {
+  test("serves the PvP server's Alliance house by default, then a 304 for the same set", async ({ request }) => {
     const resp = await request.get(PRICES_URL);
     expect(resp.status()).toBe(200);
     expect(resp.headers()["cache-control"]).toBe("public, max-age=600");
 
     const body = await resp.json();
     expect(body.region).toBe("us");
+    expect(body.server).toBe("pvp");
     expect(body.faction).toBe("alliance");
     expect(body).not.toHaveProperty("credit");
     expect(body.columns).toEqual(COLUMNS);
@@ -57,12 +59,13 @@ test.describe("WoW Forever prices API", () => {
     expect(again.status()).toBe(304);
   });
 
-  test("each faction has its own price list, with its own ETag", async ({ request }) => {
+  test("each of the PvP server's houses has its own price list, with its own ETag", async ({ request }) => {
     const etags = new Set<string>();
     for (const faction of FACTIONS) {
-      const resp = await request.get(PRICES_URL, { params: { faction } });
+      const resp = await request.get(PRICES_URL, { params: { server: "pvp", faction } });
       expect(resp.status()).toBe(200);
       const body = await resp.json();
+      expect(body.server).toBe("pvp");
       expect(body.faction).toBe(faction);
       expect(body.region).toBe("us");
       etags.add(resp.headers()["etag"]);
@@ -70,8 +73,9 @@ test.describe("WoW Forever prices API", () => {
     expect(etags.size).toBe(FACTIONS.length);
   });
 
-  test("an unknown faction is refused, and an old ?region= link still gets US prices", async ({ request }) => {
+  test("an unknown faction or an unmapped server is refused, and an old ?region= link still gets US prices", async ({ request }) => {
     expect((await request.get(PRICES_URL, { params: { faction: "pirates" } })).status()).toBe(422);
+    expect((await request.get(PRICES_URL, { params: { server: "pve" } })).status()).toBe(422);
     const resp = await request.get(PRICES_URL, { params: { region: "eu" } });
     expect(resp.status()).toBe(200);
     expect((await resp.json()).region).toBe("us");

@@ -1,6 +1,10 @@
-"""WowPriceFeed — the refresh state of one (game, region, faction) price set.
+"""WowPriceFeed — the refresh state of one auction house's price set.
 
-One row per faction the scheduler pulls from Blizzard's auction houses. It
+One row per Blizzard auction house the scheduler pulls (the mapped houses in
+``PRICE_SERVER_HOUSES``). Each house is its own server market, so the key is
+(game, region, house_id); ``faction`` is the faction Blizzard's index names
+the house for. Which server a house belongs to is NOT stored — it lives only
+in the mapping, so mapping another server needs no migration. It
 carries when Blizzard took the snapshot the stored prices come from, when we
 last downloaded them, and the last failure — so a feed that keeps failing is
 visible in the DB and the API never presents old prices as fresh.
@@ -32,7 +36,9 @@ class WowPriceFeed(Base):
         CheckConstraint(f"region IN {sql_in_list(PRICE_REGIONS)}", name="ck_wowpricefeed_region"),
         CheckConstraint(f"faction IN {sql_in_list(PRICE_FACTIONS)}", name="ck_wowpricefeed_faction"),
         CheckConstraint("item_count >= 0", name="ck_wowpricefeed_item_count"),
-        UniqueConstraint("game_id", "region", "faction", name="uq_wowpricefeed_key"),
+        CheckConstraint("house_id > 0", name="ck_wowpricefeed_house_id"),
+        # Its index serves every read: one house's feed.
+        UniqueConstraint("game_id", "region", "house_id", name="uq_wowpricefeed_key"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -45,6 +51,8 @@ class WowPriceFeed(Base):
         UUID(as_uuid=True), ForeignKey("game.id", ondelete="CASCADE"), nullable=False,
     )
     region: Mapped[str] = mapped_column(String(4), nullable=False)
+    # Blizzard's auction-house id (110, 113, ...) — the house alone is the market.
+    house_id: Mapped[int] = mapped_column(Integer, nullable=False)
     faction: Mapped[str] = mapped_column(String(10), nullable=False)
     # When Blizzard took the snapshot behind the stored prices (the newest
     # house's Last-Modified). NULL until a download carried any prices.

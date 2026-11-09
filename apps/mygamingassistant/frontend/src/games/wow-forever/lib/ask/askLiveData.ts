@@ -4,14 +4,14 @@
  */
 import { wowPricesApi } from "@/games/wow-forever/api/wowPricesApi";
 import { wowServerStatusApi } from "@/games/wow-forever/api/wowServerStatusApi";
-import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
+import type { PriceHouse } from "@/games/wow-forever/types/priceHouse";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
 import type { ServerStatusResponse } from "@/games/wow-forever/types/serverStatus/serverStatusResponse";
 import type { WowRegion } from "@/games/wow-forever/types/wowRegion";
 import { store } from "@/lib/store";
 
-export async function fetchAskPrices(faction: PriceFaction): Promise<PriceListResponse> {
-  const request = store.dispatch(wowPricesApi.endpoints.getWowPrices.initiate(faction));
+export async function fetchAskPrices(house: PriceHouse): Promise<PriceListResponse> {
+  const request = store.dispatch(wowPricesApi.endpoints.getWowPrices.initiate(house));
   try {
     return await request.unwrap();
   } finally {

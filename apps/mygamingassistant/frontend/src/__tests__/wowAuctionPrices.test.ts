@@ -27,6 +27,7 @@ describe("mapPriceList", () => {
   it("reads rows by column name, in copper", () => {
     const response: PriceListResponse = {
       region: "us",
+    server: "pvp",
       faction: "horde",
       source_updated_at: "2026-11-05T14:49:31Z",
       fetched_at: "2026-11-06T09:00:00Z",
@@ -36,6 +37,7 @@ describe("mapPriceList", () => {
     };
     const prices = mapPriceList(response);
     expect(prices.faction).toBe("horde");
+    expect(prices.server).toBe("pvp");
     expect(prices.sourceUpdatedAt).toBe("2026-11-05T14:49:31Z");
     expect(prices.byId.get(2589)).toEqual({
       itemId: 2589,

@@ -1,10 +1,10 @@
-"""WowItemPrice — one item's auction-house figures for one faction's price feed.
+"""WowItemPrice — one item's figures in one auction house's price feed.
 
 Written only by the scheduled price refresh (``app/services/wow/prices/``); read
 by the public ``GET /api/wow/prices``. Public game data, so no user FK.
 
-A price belongs to a ``WowPriceFeed`` — one (game, region, faction) — so the
-full key is (game, region, faction, item) with each part stored once.
+A price belongs to a ``WowPriceFeed`` — one (game, region, house) — so the
+full key is (game, region, house, item) with each part stored once.
 ``ON DELETE CASCADE``: a feed's prices mean nothing without the feed.
 
 Only aggregates of the listings are kept, never the listings themselves.

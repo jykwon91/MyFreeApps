@@ -6,6 +6,7 @@ import WowAuctionHousePage from "@/games/wow-forever/pages/WowAuctionHousePage";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { REGION_STORAGE_KEY } from "@/games/wow-forever/hooks/useWowRegion";
 import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
+import type { PriceHouse } from "@/games/wow-forever/types/priceHouse";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
 import { PRICE_COLUMNS, pricesFailed, pricesLoading, pricesReady } from "@/test/auctionPricesStub";
 
@@ -15,6 +16,7 @@ vi.mock("@/games/wow-forever/api/wowPricesApi", () => ({ useGetWowPricesQuery: u
 function response(items: PriceListResponse["items"], faction: PriceFaction = "alliance"): PriceListResponse {
   return {
     region: "us",
+    server: "pvp",
     faction,
     source_updated_at: items.length ? new Date(Date.now() - 2 * 3_600_000).toISOString() : null,
     fetched_at: null,
@@ -32,7 +34,7 @@ const ITEMS: PriceListResponse["items"] = [
 
 /** Each faction answers with its own copy of the list, so a test can see which one was asked for. */
 function answerPerFaction(items: PriceListResponse["items"] = ITEMS) {
-  usePricesQuery.mockImplementation((faction: PriceFaction) => pricesReady(response(items, faction)));
+  usePricesQuery.mockImplementation(({ faction }: PriceHouse) => pricesReady(response(items, faction)));
 }
 
 function Search() {
@@ -74,41 +76,41 @@ describe("Auction house page", () => {
     expect(within(silk).getByTestId("auction-cheapest")).toHaveTextContent("45s");
     expect(within(silk).getByTestId("auction-on-sale")).toHaveTextContent("12 in 1 auction");
     expect(within(silk).queryByRole("link")).toBeNull();
-    expect(screen.getByTestId("price-credit")).toHaveTextContent("Prices from Blizzard (Alliance AH, US) · updated 2 hours ago");
+    expect(screen.getByTestId("price-credit")).toHaveTextContent("Prices from Blizzard (PvP · Alliance AH, US) · updated 2 hours ago");
   });
 
   it("uses the saved faction's auction house", () => {
     saveFaction("H");
     answerPerFaction();
     renderPage();
-    expect(usePricesQuery).toHaveBeenLastCalledWith("horde");
+    expect(usePricesQuery).toHaveBeenLastCalledWith({ server: "pvp", faction: "horde" });
     expect(screen.getByRole("radio", { name: "Horde" })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByTestId("price-credit")).toHaveTextContent("(Horde AH, US)");
+    expect(screen.getByTestId("price-credit")).toHaveTextContent("(PvP · Horde AH, US)");
   });
 
   it("switching to Horde saves it as your faction; Blackwater stays in the URL only", async () => {
     answerPerFaction();
     renderPage("/wow-forever/auction-house?q=cloth");
     await userEvent.click(screen.getByRole("radio", { name: "Horde" }));
-    expect(usePricesQuery).toHaveBeenLastCalledWith("horde");
+    expect(usePricesQuery).toHaveBeenLastCalledWith({ server: "pvp", faction: "horde" });
     expect(JSON.parse(window.localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY) ?? "{}").faction).toBe("H");
     expect(screen.getByTestId("search")).toHaveTextContent("?q=cloth");
 
     await userEvent.click(screen.getByRole("radio", { name: "Blackwater" }));
-    expect(usePricesQuery).toHaveBeenLastCalledWith("neutral");
+    expect(usePricesQuery).toHaveBeenLastCalledWith({ server: "pvp", faction: "neutral" });
     expect(screen.getByTestId("search")).toHaveTextContent("house=neutral");
     expect(JSON.parse(window.localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY) ?? "{}").faction).toBe("H");
-    expect(screen.getByTestId("price-credit")).toHaveTextContent("(Blackwater AH, US)");
+    expect(screen.getByTestId("price-credit")).toHaveTextContent("(PvP · Blackwater AH, US)");
 
     await userEvent.click(screen.getByRole("radio", { name: "Alliance" }));
-    expect(usePricesQuery).toHaveBeenLastCalledWith("alliance");
+    expect(usePricesQuery).toHaveBeenLastCalledWith({ server: "pvp", faction: "alliance" });
     expect(screen.getByTestId("search")).not.toHaveTextContent("house=");
   });
 
   it("opens on ?house= (an Ask link) without changing the saved faction", () => {
     answerPerFaction();
     renderPage("/wow-forever/auction-house?q=wool&house=neutral");
-    expect(usePricesQuery).toHaveBeenLastCalledWith("neutral");
+    expect(usePricesQuery).toHaveBeenLastCalledWith({ server: "pvp", faction: "neutral" });
     expect(window.localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY)).toBeNull();
     expect(rows()).toHaveLength(1);
   });
@@ -116,7 +118,7 @@ describe("Auction house page", () => {
   it("ignores a ?house= that isn't an auction house", () => {
     answerPerFaction();
     renderPage("/wow-forever/auction-house?house=goblins");
-    expect(usePricesQuery).toHaveBeenLastCalledWith("alliance");
+    expect(usePricesQuery).toHaveBeenLastCalledWith({ server: "pvp", faction: "alliance" });
   });
 
   it("filters as you type and keeps the search in the URL", async () => {
@@ -145,15 +147,15 @@ describe("Auction house page", () => {
     answerPerFaction();
     renderPage();
     expect(screen.queryByRole("radiogroup", { name: "Region" })).toBeNull();
-    expect(usePricesQuery).toHaveBeenLastCalledWith("alliance");
+    expect(usePricesQuery).toHaveBeenLastCalledWith({ server: "pvp", faction: "alliance" });
     expect(screen.getByTestId("price-credit")).toHaveTextContent("US)");
   });
 
   it("says when that auction house has no prices yet", () => {
     answerPerFaction([]);
     renderPage();
-    expect(screen.getByText("No Alliance auction prices yet.")).toBeInTheDocument();
-    expect(screen.getByTestId("price-credit")).toHaveTextContent("No Alliance auction prices yet.");
+    expect(screen.getByText("No PvP · Alliance auction prices yet.")).toBeInTheDocument();
+    expect(screen.getByTestId("price-credit")).toHaveTextContent("No PvP · Alliance auction prices yet.");
     expect(screen.queryByTestId("auction-results")).toBeNull();
   });
 

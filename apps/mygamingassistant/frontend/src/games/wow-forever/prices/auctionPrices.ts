@@ -50,6 +50,7 @@ export function mapPriceList(response: PriceListResponse): AuctionPrices {
     if (price.name && !byName.has(nameKey(price.name))) byName.set(nameKey(price.name), price);
   }
   return {
+    server: response.server,
     faction: response.faction,
     sourceUpdatedAt: response.source_updated_at,
     byId,

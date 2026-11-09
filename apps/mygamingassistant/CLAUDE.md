@@ -230,25 +230,41 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   "N gold/silver" in them; the farm cards' cloth / leather values come from
   auction prices only. Class tips follow the saved World Map class; the page's Class picker saves to it. Its checklist has its own
   key (`mga.wowForever.gold.checklist.v1`).
-- **Auction-house prices** (`GET /api/wow/prices?faction=alliance|horde|neutral`,
-  public, both modes; no faction = Alliance, an unknown one = 422) are the
-  real in-game auction houses, **per faction**, from Blizzard's Game Data API
-  — the only price source (migration 0052 dropped the old one and emptied the
-  tables). **US only** (operator decision 2026-11-08): no region param, an old
-  `?region=` is ignored. Flow (`app/services/wow/prices/`, constants in
+- **Auction-house prices** (`GET /api/wow/prices?server=pvp&faction=alliance|horde|neutral`,
+  public, both modes; no server = `pvp`, no faction = Alliance, an unmapped
+  server or unknown faction = 422) are the real in-game auction houses, **one
+  house at a time**, from Blizzard's Game Data API — the only price source
+  (migration 0052 dropped the old one and emptied the tables). **US only**
+  (operator decision 2026-11-08): no region param, an old `?region=` is
+  ignored. Flow (`app/services/wow/prices/`, constants in
   `app/core/wow_prices.py`): a client-credentials token
   (`BLIZZARD_CLIENT_ID` / `BLIZZARD_CLIENT_SECRET` — never log them) → the
   ruleset's auction-house index (`namespace=dynamic-forever-us`, every
-  ruleset lists the same houses) → each house's listings + `/commodities`.
-  Houses are per realm; a house's name gives its faction
-  (`HOUSE_NAME_FACTIONS`, Blackwater = `neutral`) and a faction's prices
-  **pool all its houses** — so a figure can sit below what one realm's house
-  shows. Only aggregates are stored, per item: `market_value` = the unit price
+  ruleset lists the same houses; a house's name gives its faction,
+  `HOUSE_NAME_FACTIONS`, Blackwater = `neutral`) → each **mapped** house's
+  listings + `/commodities`. **Each house is its own server market — never
+  pool houses** (Blue Pearl was ~31s on one Alliance house and ~40s on
+  another). The index comes in triples (alliance, horde, neutral):
+  110/113/116, 111/114/117, 112/115/118, 119/120/121, 123/124/125, with no
+  server names. `PRICE_SERVER_HOUSES` maps a server to its triple — only
+  `pvp` → 110/113/116 is mapped (verified in game 2026-11-09: Blue Pearl
+  ~40s, Stonescale Eel ~4s on PvP Alliance). The other triples are
+  **UNMAPPED**: never fetch, serve or label them on a guess. **To map a
+  server:** the operator reads an item's price on that server in game, runs
+  `python -m app.cli wow-house-prices <item id>` (e.g. 4611 Blue Pearl,
+  13422 Stonescale Eel — it lists every house's cheapest listing and 10%
+  value, mapped or not), picks the triple that matches, then adds the key
+  to `PRICE_SERVER_HOUSES` and `PriceServer` (backend) and to
+  `PRICE_SERVERS` / `PRICE_SERVER_LABEL` / `PriceServer` (frontend
+  `data/priceServers.ts`, `types/priceServer.ts`). No migration: the feed
+  is keyed by house id. Once two servers are mapped, add a server picker.
+  Only aggregates are stored, per item: `market_value` = the unit price
   below which the cheapest 10% of the listed units sit
   (`MARKET_VALUE_QUANTILE`; one troll listing can't move it — **the price to
   show**), `min_buyout`, `quantity`, `listing_count`. Tables `wow_price_feed`
-  (one per game × region × faction: `source_updated_at` = Blizzard's newest
-  snapshot, `fetched_at`, last error) and `wow_item_price` (copper). The
+  (one per game × region × `house_id`, with its `faction`:
+  `source_updated_at` = Blizzard's snapshot of that house, `fetched_at`,
+  last error) and `wow_item_price` (copper). The
   scheduler job `refresh_wow_prices` runs every
   `WOW_PRICE_REFRESH_INTERVAL_HOURS` (default 3) and once at boot, with a
   switch of its own (`WOW_PRICE_REFRESH_ENABLED`, default true) — serve-only
@@ -256,15 +272,16 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (sync, download cleanup, raid reminders), never the prices. Production with
   it on refuses to boot without the Blizzard credentials
   (`check_blizzard_prices_configured`). A refresh is all-or-nothing per
-  faction: a failed call or a faction that suddenly has no listings keeps the
+  house: a failed call, a house that suddenly has no listings, or a mapped
+  house the index lists under another faction (or not at all) keeps the
   stored set, records the error on the feed and logs a WARNING with
   Blizzard's HTTP status and error code. Two API workers both run the job — a
   per-game advisory lock makes one skip. `python -m app.cli refresh-wow-prices`
   does it by hand. The response is columnar (`columns` = `item_id`,
-  `market_value`, `min_buyout`, `quantity`, `listings`, `name`) with a
-  per-faction ETag and `max-age=600`. No rows = no prices yet, never "free".
-  Any page showing a price says whose house it is: "Prices from Blizzard
-  (<faction> AH, US) · updated X".
+  `market_value`, `min_buyout`, `quantity`, `listings`, `name`), carries
+  `server` + `faction`, with a per-house ETag and `max-age=600`. No rows =
+  no prices yet, never "free". Any page showing a price says whose house it
+  is: "Prices from Blizzard (PvP · Alliance AH, US) · updated X".
 - **Macros** (`/wow-forever/macros`, `pages/WowMacrosPage.tsx`): how-to, then "Hover-cast macros
   (mouseover)" (three templates in `data/macros/macroTemplates.ts`, filled live
   from a "Your spell name" box by `lib/macros/macroTemplates.ts`; empty =
@@ -975,16 +992,21 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   cook?") and the gold farm cards. Columnar response in copper, mapped once by
   `prices/auctionPrices.ts`. An item the source lacks reads "no auction price",
   never 0.
-- **Whose house:** prices follow the player's saved faction
-  (`usePlayerSettings`, the World Map's `faction`: A → `alliance`, H →
-  `horde`; `prices/priceFaction.ts`). `useAuctionPrices(faction?)` reads
-  RTK Query's `currentData`, so a faction switch never shows the old
-  faction's prices. Blackwater (`neutral`) is picked only on the Auction
-  house page and lives only in its URL.
+- **Whose house:** a server's house for one faction (`PriceHouse`, the RTK
+  query arg `{ server, faction }`). The server is `DEFAULT_PRICE_SERVER`
+  (`pvp`, the only mapped one — `data/priceServers.ts`); there is no server
+  picker and no server in any URL until a second server is mapped. The
+  faction follows the player's saved faction (`usePlayerSettings`, the World
+  Map's `faction`: A → `alliance`, H → `horde`; `prices/priceFaction.ts`).
+  `useAuctionPrices(faction?, server?)` reads RTK Query's `currentData`, so a
+  house switch never shows the old house's prices. Blackwater (`neutral`) is
+  picked only on the Auction house page and lives only in its URL. Every
+  surface names the house with `priceHouseLabel` ("PvP · Alliance").
 - Every priced surface shows `PriceStatus`: a skeleton, then the credit
-  ("Prices from Blizzard (Alliance AH, US) · updated X ago", plus "these may
-  be out of date" past `PRICE_STALE_HOURS`), "No <faction> auction prices
-  yet …" when the house has none, or "Couldn't load prices — …" with a retry.
+  ("Prices from Blizzard (PvP · Alliance AH, US) · updated X ago", plus
+  "these may be out of date" past `PRICE_STALE_HOURS`), "No PvP · Alliance
+  auction prices yet …" when the house has none, or "Couldn't load prices —
+  …" with a retry.
   Prices are US only: there is no price region select, and prices never read
   the server status region (`hooks/useWowRegion.ts`,
   `mga.wowForever.serverStatus.region.v1`, which only server status uses).
@@ -1007,7 +1029,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Typed prices are optional overrides (`mga.wowForever.professions.priceOverrides.v2`,
   priced professions only); the pre-auction key `...prices.v1` is removed on read.
 - Tests stub the hook with `src/test/auctionPricesStub.ts`; E2E stubs
-  `**/wow/prices**` per faction (`e2e/wow-forever-auction-prices.spec.ts`;
+  `**/wow/prices**` per house (`e2e/wow-forever-auction-prices.spec.ts`;
   specs that only need "no prices yet" use `e2e/fixtures/emptyPrices.ts`).
   `e2e/wow-forever-prices-api.spec.ts` checks the live endpoint.
 
@@ -1078,8 +1100,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `/api/wow/server-status` — and sends the results back. Tool
   definitions go out on every turn: `test_wow_chat_schemas.py` caps their size
   and checks the profession / class / sort / region enums against
-  `wow_chat_enums.py`, `SERVER_STATUS_REGIONS` and `PRICE_FACTIONS`
-  (`auction_prices` takes an optional `faction`, no region: prices are US only).
+  `wow_chat_enums.py`, `SERVER_STATUS_REGIONS`, `PRICE_FACTIONS` and
+  `PRICE_SERVERS` (`auction_prices` takes an optional `faction` and
+  `server`, default `pvp`; no region: prices are US only).
   Nothing is stored; logs carry codes and counts, never message text.
 - Gating order: `BodySizeCapMiddleware` (413 `chat_body_too_large` > 64 KB,
   before parsing) → availability (503 `chat_unavailable`, same rule as the item
@@ -1115,8 +1138,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   over `ALL_MACROS` (the card shows the macro text; Claude only gets titles).
   Rares, gold farms and crafting data load on first use. The live tools call
   the pages' own RTK Query endpoints outside React (`lib/ask/askLiveData.ts`,
-  same cache): `auction_prices` (US only; the player's faction's houses
-  unless Claude passes `faction`) = `mapPriceList` + the Auction house
+  same cache): `auction_prices` (US only; the PvP server's house for the
+  player's faction unless Claude passes `faction` / `server`) = `mapPriceList` + the Auction house
   search, exact name first (`askPriceMatches`), whose house it is, market
   value and cheapest only as formatted, units on sale, how old the prices are
   and a "more than 12 hours old" note (`pricesAreOld`, `PRICE_STALE_HOURS`);
@@ -1158,7 +1181,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   are you?". Rares and gold farm spots share `AskSpotsPicker` (mini map,
   numbered rows, Route there = `to=pt:<zone>,x,y`, rares also "Show on the
   World Map" = `rareMapHref`); profession steps; macros reuse `MacroCard` (Copy
-  button); prices (`PricesCard`, "Auction prices · <faction> AH": rows + the
+  button); prices (`PricesCard`, "Auction prices · PvP · Alliance AH": rows + the
   Blizzard credit via `PriceCreditLine`, shared with `PriceCredit`, with its
   old-price warning; "Open the Auction house" carries `?house=`; "Couldn't
   load" with no figures) and server status (`ServerStatusCard`: `SummaryLine` +
@@ -1679,7 +1702,7 @@ once on the router. This is the no-bandaid approach (see
 | `/api/wow/chat/turn` | POST, both modes (the "Ask" chat relay: 64 KB body cap, signed ticket, per-IP limits, Turnstile on new messages, durable token budgets; 503 `chat_unavailable` when unconfigured) | — |
 | `/api/wow/feature-requests/triage/*` | — | Superuser (`current_superuser`), BOTH modes. The one operator write surface in serve-only prod |
 | `/api/wow/map-captures` | GET, both modes (World Map locations captured in Forever) | POST import (full-auth only; prod gets captures via the committed pack) |
-| `/api/wow/prices` | GET, both modes (US auction-house prices from Blizzard, `?faction=alliance\|horde\|neutral`, default Alliance; refreshed by the scheduler; ETag + 10-min cache) | — |
+| `/api/wow/prices` | GET, both modes (one US auction house's prices from Blizzard, `?server=pvp&faction=alliance\|horde\|neutral`, default PvP · Alliance; only mapped servers; refreshed by the scheduler; per-house ETag + 10-min cache) | — |
 | `/api/wow/server-status`, `/api/wow/server-status/history` | GET, both modes (live status from Blizzard, 60-s cache; 7 days of recorded status per ruleset) | — |
 | `/api/wow/icons/{build}/{fdid}.webp` | GET, both modes (in-game icons streamed from object storage; year-long immutable cache, 404 + no-store when unpublished) | — |
 | `/api/wow/satellite/{build}/{uiMapId}.webp` | GET, both modes (World Map satellite pictures, same service and cache rules as icons) | — |

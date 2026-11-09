@@ -1,8 +1,9 @@
-"""``GET /api/wow/prices?faction=`` — one faction's US auction-house prices.
+"""``GET /api/wow/prices?server=&faction=`` — one auction house's US prices.
 
-Columnar to keep it small: ``columns`` names the positions of each ``items``
-row, like the generated gold-farm JSON. Prices are copper per unit, pooled
-over every house of the faction:
+One server's house for one faction (``PRICE_SERVER_HOUSES``); houses are
+never pooled. Columnar to keep it small: ``columns`` names the positions of
+each ``items`` row, like the generated gold-farm JSON. Prices are copper per
+unit, over that house's listings:
 
 * ``market_value`` — the price to show: the unit price below which the
   cheapest 10% of the listed units sit (one troll listing can't move it);
@@ -16,7 +17,7 @@ from typing import Final
 
 from pydantic import BaseModel
 
-from app.core.wow_prices import PriceFaction
+from app.core.wow_prices import PriceFaction, PriceServer
 
 PRICE_LIST_COLUMNS: Final = ("item_id", "market_value", "min_buyout", "quantity", "listings", "name")
 
@@ -26,8 +27,9 @@ PriceRow = tuple[int, int, int, int, int, str]
 class WowPriceList(BaseModel):
     # Always "us" — the one region prices are kept for.
     region: str
+    server: PriceServer
     faction: PriceFaction
-    # Blizzard's newest house snapshot behind these prices ("updated 1 hour ago"). None = no prices yet.
+    # When Blizzard took the house's snapshot behind these prices ("updated 1 hour ago"). None = no prices yet.
     source_updated_at: datetime | None
     # When we last stored a new set.
     fetched_at: datetime | None

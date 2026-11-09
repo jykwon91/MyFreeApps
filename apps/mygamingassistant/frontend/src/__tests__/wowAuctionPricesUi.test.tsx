@@ -11,7 +11,7 @@ import { goldFarms } from "@/games/wow-forever/gold/goldFarmsData";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { REGION_STORAGE_KEY } from "@/games/wow-forever/hooks/useWowRegion";
 import { mapPriceList } from "@/games/wow-forever/prices/auctionPrices";
-import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
+import type { PriceHouse } from "@/games/wow-forever/types/priceHouse";
 import { priceList, pricesLoading, pricesReady } from "@/test/auctionPricesStub";
 
 const usePricesQuery = vi.hoisted(() => vi.fn());
@@ -43,7 +43,7 @@ describe("Buy or cook?", () => {
     expect(within(prices).getByText("Buy Smoked Bear Meat at the auction house").nextSibling).toHaveTextContent("~1s 50c");
     expect(within(prices).getByText("Cheaper to cook: saves ~1s 10c on each one.")).toBeInTheDocument();
     expect(within(prices).getByText("The recipe (Recipe: Smoked Bear Meat)").nextSibling).toHaveTextContent("~25s");
-    expect(screen.getByTestId("price-credit")).toHaveTextContent("Prices from Blizzard (Alliance AH, US) · updated");
+    expect(screen.getByTestId("price-credit")).toHaveTextContent("Prices from Blizzard (PvP · Alliance AH, US) · updated");
   });
 
   it("labels what has no auction price and gives no verdict", () => {
@@ -99,7 +99,7 @@ describe("whose prices: your faction's, US only", () => {
   beforeEach(() => {
     window.localStorage.clear();
     usePricesQuery.mockReset();
-    usePricesQuery.mockImplementation((faction: PriceFaction) => pricesReady(priceList([[2589, 28, "Linen Cloth"]], undefined, faction)));
+    usePricesQuery.mockImplementation(({ faction }: PriceHouse) => pricesReady(priceList([[2589, 28, "Linen Cloth"]], undefined, faction)));
   });
 
   function saveFaction(faction: "A" | "H") {
@@ -111,27 +111,27 @@ describe("whose prices: your faction's, US only", () => {
 
   it("credits Blizzard and the Alliance house by default, with no region picker", () => {
     render(<PriceStatus withoutPrices="showing routes without prices" />);
-    expect(screen.getByTestId("price-credit")).toHaveTextContent(/^Prices from Blizzard \(Alliance AH, US\) · updated /);
+    expect(screen.getByTestId("price-credit")).toHaveTextContent(/^Prices from Blizzard \(PvP · Alliance AH, US\) · updated /);
     expect(screen.queryByRole("combobox", { name: "Region" })).toBeNull();
-    expect(usePricesQuery).toHaveBeenLastCalledWith("alliance");
+    expect(usePricesQuery).toHaveBeenLastCalledWith({ server: "pvp", faction: "alliance" });
   });
 
   it("follows the saved faction, and ignores the server status region", () => {
     saveFaction("H");
     window.localStorage.setItem(REGION_STORAGE_KEY, JSON.stringify("eu"));
     render(<PriceStatus withoutPrices="showing routes without prices" />);
-    expect(usePricesQuery).toHaveBeenLastCalledWith("horde");
-    expect(screen.getByTestId("price-credit")).toHaveTextContent("(Horde AH, US)");
+    expect(usePricesQuery).toHaveBeenLastCalledWith({ server: "pvp", faction: "horde" });
+    expect(screen.getByTestId("price-credit")).toHaveTextContent("(PvP · Horde AH, US)");
   });
 
   it("says plainly when that house has no prices yet", () => {
-    usePricesQuery.mockImplementation((faction: PriceFaction) => pricesReady(priceList([], undefined, faction)));
+    usePricesQuery.mockImplementation(({ faction }: PriceHouse) => pricesReady(priceList([], undefined, faction)));
     render(<PriceStatus withoutPrices="showing routes without prices" />);
-    expect(screen.getByTestId("price-credit")).toHaveTextContent(/^No Alliance auction prices yet\./);
+    expect(screen.getByTestId("price-credit")).toHaveTextContent(/^No PvP · Alliance auction prices yet\./);
   });
 
   it("warns about old prices", () => {
-    usePricesQuery.mockImplementation((faction: PriceFaction) =>
+    usePricesQuery.mockImplementation(({ faction }: PriceHouse) =>
       pricesReady(priceList([[2589, 28, "Linen Cloth"]], "2020-01-01T00:00:00Z", faction)),
     );
     render(<PriceStatus withoutPrices="showing routes without prices" />);

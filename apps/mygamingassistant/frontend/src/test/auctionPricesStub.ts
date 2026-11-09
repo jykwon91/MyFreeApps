@@ -24,6 +24,7 @@ export function priceList(
 ): PriceListResponse {
   return {
     region: "us",
+    server: "pvp",
     faction,
     source_updated_at: rows.length ? updatedAt : null,
     fetched_at: rows.length ? updatedAt : null,

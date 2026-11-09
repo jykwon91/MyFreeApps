@@ -1,8 +1,9 @@
 """Fold auction listings into per-item figures, one listing at a time.
 
-A faction's houses list ~500k auctions between them. They're folded as they
-arrive — per item, units listed at each unit price plus a listing count — so
-no house's rows are kept once read and nothing raw reaches the database.
+One aggregator folds ONE auction house (its listings + commodities); houses
+are never folded together. Listings are folded as they arrive — per item,
+units listed at each unit price plus a listing count — so no rows are kept
+once read and nothing raw reaches the database.
 """
 from __future__ import annotations
 

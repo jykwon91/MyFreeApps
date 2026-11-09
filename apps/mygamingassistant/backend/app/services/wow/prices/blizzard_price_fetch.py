@@ -1,14 +1,15 @@
-"""Read every WoW Forever auction house and pool the listings per faction.
+"""Read each mapped WoW Forever auction house, one price set per house.
 
-Blizzard lists one house per realm and faction (Alliance / Horde / the
-neutral Blackwater house) and doesn't say which realm a house belongs to, so
-each faction's houses are pooled into one region-wide set. Houses are read
-one at a time (each answer is up to ~10 MB) and folded into the faction's
-aggregator as they arrive, so only one house's rows are in memory at once.
+Every Blizzard house is its own server market, so houses are never pooled:
+each mapped house (``PRICE_SERVER_HOUSES``) gets its own aggregator over its
+commodities and item listings. A house is read one answer at a time (each is
+up to ~10 MB) and folded as it arrives, so only one answer's rows are in
+memory at once.
 
-A faction is all or nothing: if any of its houses fails, the faction gets
-the error and its stored prices stay — a set built from half the houses
-would quietly show the wrong cheapest price.
+A house is all or nothing: if either of its answers fails, the house gets
+the error and its stored prices stay. A mapped house the index no longer
+lists, or lists under another faction, is refused — the mapping is wrong or
+Blizzard renumbered the houses, and serving it would show another market.
 """
 from __future__ import annotations
 
@@ -16,18 +17,19 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime
 
 from app.core.config import settings
-from app.core.wow_prices import PRICE_FACTIONS
 from app.services.wow.prices.auction_aggregator import AuctionAggregator
 from app.services.wow.prices.auction_listing import AuctionListing
 from app.services.wow.prices.auction_listing_parser import commodity_listing, item_listing
 from app.services.wow.prices.blizzard_auction_client import BlizzardAuctionClient
-from app.services.wow.prices.faction_prices import FactionPrices
 from app.services.wow.prices.house_auctions import HouseAuctions
+from app.services.wow.prices.house_prices import HousePrices
+from app.services.wow.prices.mapped_house import MappedHouse
 from app.services.wow.prices.price_fetch_error import PriceFetchError
+from app.services.wow.prices.price_houses import mapped_houses
 
-
-FactionResults = dict[str, FactionPrices | PriceFetchError]
-PriceFetch = Callable[[], Awaitable[FactionResults]]
+# House id -> its prices, or the error that stopped it.
+HouseResults = dict[int, HousePrices | PriceFetchError]
+PriceFetch = Callable[[], Awaitable[HouseResults]]
 
 
 def _fold(aggregator: AuctionAggregator, answer: HouseAuctions, *, commodities: bool) -> None:
@@ -38,41 +40,45 @@ def _fold(aggregator: AuctionAggregator, answer: HouseAuctions, *, commodities: 
             aggregator.add(listing)
 
 
-async def _faction_prices(client: BlizzardAuctionClient, house_ids: list[int]) -> FactionPrices:
+async def read_house_prices(client: BlizzardAuctionClient, house_id: int) -> HousePrices:
+    """One house's prices over its commodities and item listings."""
     aggregator = AuctionAggregator()
-    snapshots: list[datetime] = []
-    for house_id in house_ids:
-        for commodities in (True, False):
-            answer = await client.house_auctions(house_id, commodities=commodities)
-            _fold(aggregator, answer, commodities=commodities)
-            if answer.snapshot_at is not None:
-                snapshots.append(answer.snapshot_at)
-    if not snapshots:
-        raise PriceFetchError("no house answer carried a Last-Modified time")
-    return FactionPrices(prices=aggregator.prices(), snapshot_at=max(snapshots))
+    snapshot_at: datetime | None = None
+    for commodities in (True, False):
+        answer = await client.house_auctions(house_id, commodities=commodities)
+        _fold(aggregator, answer, commodities=commodities)
+        if answer.snapshot_at is not None and (snapshot_at is None or answer.snapshot_at > snapshot_at):
+            snapshot_at = answer.snapshot_at
+    if snapshot_at is None:
+        raise PriceFetchError(f"house {house_id}: no answer carried a Last-Modified time")
+    return HousePrices(prices=aggregator.prices(), snapshot_at=snapshot_at)
 
 
-async def fetch_with_client(client: BlizzardAuctionClient) -> FactionResults:
-    """Every faction's pooled prices, or the error that stopped it."""
-    houses = await client.houses()
-    results: FactionResults = {}
-    for faction in PRICE_FACTIONS:
-        house_ids = [house.id for house in houses if house.faction == faction]
-        if not house_ids:
-            results[faction] = PriceFetchError(f"Blizzard lists no {faction} auction house")
+async def fetch_with_client(client: BlizzardAuctionClient, houses: list[MappedHouse]) -> HouseResults:
+    """Each mapped house's prices, or the error that stopped it."""
+    listed = {house.id: house.faction for house in await client.houses()}
+    results: HouseResults = {}
+    for house in houses:
+        listed_faction = listed.get(house.house_id)
+        if listed_faction != house.faction:
+            results[house.house_id] = PriceFetchError(
+                f"house {house.house_id} is mapped as {house.server} {house.faction} but Blizzard's index "
+                f"lists it as {listed_faction or 'missing'}",
+            )
             continue
         try:
-            results[faction] = await _faction_prices(client, house_ids)
+            results[house.house_id] = await read_house_prices(client, house.house_id)
         except PriceFetchError as exc:
-            results[faction] = exc
+            results[house.house_id] = exc
     return results
 
 
-async def fetch_faction_prices() -> FactionResults:
-    """Take a token and read every house. Any failure before the houses (no
-    credentials, a refused token, the index) is every faction's error."""
+async def fetch_house_prices() -> HouseResults:
+    """Take a token and read every mapped house. Any failure before the houses
+    (no credentials, a refused token, the index) is every house's error."""
+    houses = mapped_houses()
     try:
         async with BlizzardAuctionClient(settings.blizzard_client_id, settings.blizzard_client_secret) as client:
-            return await fetch_with_client(client)
+            return await fetch_with_client(client, houses)
     except PriceFetchError as exc:
-        return {faction: exc for faction in PRICE_FACTIONS}
+        return {house.house_id: exc for house in houses}
