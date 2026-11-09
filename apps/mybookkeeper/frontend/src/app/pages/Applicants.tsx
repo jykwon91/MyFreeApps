@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { APPLICANT_PAGE_SIZE, APPLICANT_STAGES } from "@mybookkeeper/api-client/constants/applicantLabels";
@@ -8,6 +7,7 @@ import ApplicantStageFilter from "@/app/features/applicants/ApplicantStageFilter
 import ApplicantsListBody from "@/app/features/applicants/ApplicantsListBody";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { useLiveSearchParams } from "@platform/ui";
 
 const STAGE_PARAM = "stage";
 
@@ -19,7 +19,7 @@ function parseStageParam(value: string | null): ApplicantStage | null {
 }
 
 export default function Applicants() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useLiveSearchParams();
   const stage = parseStageParam(searchParams.get(STAGE_PARAM));
   const [pageCount, setPageCount] = useState(1);
 
@@ -47,13 +47,18 @@ export default function Applicants() {
   });
 
   function handleFilterChange(next: ApplicantStage | null) {
-    const params = new URLSearchParams(searchParams);
-    if (next) {
-      params.set(STAGE_PARAM, next);
-    } else {
-      params.delete(STAGE_PARAM);
-    }
-    setSearchParams(params, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next) {
+          params.set(STAGE_PARAM, next);
+        } else {
+          params.delete(STAGE_PARAM);
+        }
+        return params;
+      },
+      { replace: true },
+    );
     setPageCount(1);
   }
 

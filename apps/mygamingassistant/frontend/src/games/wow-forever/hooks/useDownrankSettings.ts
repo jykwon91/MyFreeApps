@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
 import { parsePlayerSettings, PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { parseDownrankSettings, writeDownrankSettings, type DownrankFallback } from "@/games/wow-forever/lib/downrank/downrankParams";
 import { readStored } from "@/games/wow-forever/lib/safeLocalStorage";
 import type { DownrankFamily } from "@/games/wow-forever/types/downrank/downrankFamily";
 import type { DownrankSettings } from "@/games/wow-forever/types/downrank/downrankSettings";
+import { useLiveSearchParams } from "@platform/ui";
 
 function readFallback(): DownrankFallback {
   const player = readStored(PLAYER_SETTINGS_STORAGE_KEY, parsePlayerSettings, null);

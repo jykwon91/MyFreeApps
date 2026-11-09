@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { FACTION, type PlayerFaction } from "@/games/wow-forever/types/worldMap";
+import { useLiveSearchParams } from "@platform/ui";
 
 /** `?faction=H` — plan and search as this faction for this visit, without changing your saved one. */
 export const FACTION_PARAM = "faction";

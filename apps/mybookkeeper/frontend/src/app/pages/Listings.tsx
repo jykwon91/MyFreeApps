@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { LoadingButton } from "@platform/ui";
+import { LoadingButton, useLiveSearchParams } from "@platform/ui";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { LISTING_PAGE_SIZE, LISTING_STATUSES } from "@mybookkeeper/api-client/constants/listingLabels";
@@ -23,7 +22,7 @@ function parseStatusParam(value: string | null): ListingStatus | null {
 }
 
 export default function Listings() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useLiveSearchParams();
   const status = parseStatusParam(searchParams.get(STATUS_PARAM));
   const [pageCount, setPageCount] = useState(1);
   const [showForm, setShowForm] = useState(false);
@@ -53,13 +52,18 @@ export default function Listings() {
   }, [properties]);
 
   function handleFilterChange(next: ListingStatus | null) {
-    const params = new URLSearchParams(searchParams);
-    if (next) {
-      params.set(STATUS_PARAM, next);
-    } else {
-      params.delete(STATUS_PARAM);
-    }
-    setSearchParams(params, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next) {
+          params.set(STATUS_PARAM, next);
+        } else {
+          params.delete(STATUS_PARAM);
+        }
+        return params;
+      },
+      { replace: true },
+    );
     setPageCount(1);
   }
 

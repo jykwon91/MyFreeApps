@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from "react";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import {
   DEFAULT_ITEM_FILTERS,
   parseItemBrowserQuery,
@@ -7,6 +6,7 @@ import {
 } from "@/games/wow-forever/lib/itemBrowser/itemBrowserParams";
 import type { ItemBrowserFilters } from "@/games/wow-forever/types/itemBrowser/itemBrowserFilters";
 import type { ItemBrowserQuery } from "@/games/wow-forever/types/itemBrowser/itemBrowserQuery";
+import { useLiveSearchParams } from "@platform/ui";
 
 /**
  * The item browser's search, filters, sort, view and "Show more" pages, read from

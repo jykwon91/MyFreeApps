@@ -1,10 +1,10 @@
 import { useCallback } from "react";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { MAX_CRAFT_SKILL, parseSkill } from "@/games/wow-forever/crafting/craftRoute";
 import { isCraftingProfession, isGatheringProfession } from "@/games/wow-forever/lib/guideProfession";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import type { GatheringProfession } from "@/games/wow-forever/types/gathering/gatheringProfession";
+import { useLiveSearchParams } from "@platform/ui";
 
 export const CRAFT_SKILL_STORAGE_KEY = "mga.wowForever.professions.skill.v1";
 export const SKILL_PARAM = "skill";

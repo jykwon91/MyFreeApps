@@ -480,7 +480,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   fold behind one "Filters (n)" button.
 - Everything is the URL (`?q&quality&class&slot&type&change&rmin&rmax&imin&imax&sort&dir&view&pages`,
   replace history, defaults left out; `hooks/useItemBrowserQuery.ts` on
-  `useLiveSearchParams`, pure `lib/itemBrowser/itemBrowserParams.ts`).
+  `useLiveSearchParams` (`@platform/ui`), pure `lib/itemBrowser/itemBrowserParams.ts`).
   Filtering / chip counts are `lib/itemBrowser/filterItems.ts` (a chip counts
   with every other group applied but not its own), sorting `sortItems.ts`
   (ties by name, then id). Rows link through `ItemNameLink` (tooltip; the item
@@ -754,7 +754,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   prerequisites need their ranks (same-row and diagonal ones exist); a point
   can't come out while a dependent or a lower row needs it. Grid / arrow
   geometry is `data/talents/talentGridLayout.ts` + `lib/talents/talentArrows.ts`.
-- **The build is the URL** (`hooks/useTalentBuild.ts`, `useLiveSearchParams`,
+- **The build is the URL** (`hooks/useTalentBuild.ts`, `useLiveSearchParams` (`@platform/ui`),
   every change replaces history): `?b=1-<tree1>-<tree2>-<tree3>` — one digit
   per talent in the file's order (tier, then column), trailing zeros dropped
   (`lib/talents/talentBuildCode.ts`) — and `?lvl=` (omitted at 60). Decoding is
@@ -794,7 +794,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Items / Quests / Zones & maps, `data/changes/changeCategories.ts`), a class
   filter (talents, spells, items only), a search (every word, any order,
   `worldMap/searchText`) — all in the URL (`?cat&class&q&since`, replace
-  history, `hooks/useChangeFilters.ts` on `useLiveSearchParams`), 50 rows at a
+  history, `hooks/useChangeFilters.ts` on `useLiveSearchParams` (`@platform/ui`)), 50 rows at a
   time. Each card: icon, name linked to our own page (item page with tooltip,
   talent calculator `?talent=`, World Map `?m=`; none for spells, map rows or
   zones not on the World Map), kind chip, the generated sentence, Classic |
@@ -883,7 +883,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `fullBonusUntil`. Per second = amount / max(cast, 1.5 s), or / duration for
   a tick-only spell. Chain Heal = first target; Prayer of Healing = per target.
 - Settings are the URL (`?spell&lvl&bonus&tal&mana&p20`, replace history,
-  `hooks/useDownrankSettings.ts` on `useLiveSearchParams`); spell and level are
+  `hooks/useDownrankSettings.ts` on `useLiveSearchParams` (`@platform/ui`)); spell and level are
   always written so a shared link means the same thing. With no URL the World
   Map's saved class / level fill in (a class with no family → Priest); never
   written back.

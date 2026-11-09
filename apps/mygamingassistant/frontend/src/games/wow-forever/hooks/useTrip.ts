@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from "react";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { MAP_PARAM } from "@/games/wow-forever/hooks/useMapView";
 import {
   ENDPOINT_KIND,
@@ -9,6 +8,7 @@ import {
   type Endpoint,
   type TripStart,
 } from "@/games/wow-forever/worldMap/trip";
+import { useLiveSearchParams } from "@platform/ui";
 
 /** `?to=npc:5482` — where the trip goes. */
 export const TO_PARAM = "to";

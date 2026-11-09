@@ -1,11 +1,11 @@
 import { useCallback, useMemo } from "react";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import {
   DEFAULT_SPELLBOOK_FILTERS,
   parseSpellbookFilters,
   writeSpellbookFilters,
 } from "@/games/wow-forever/lib/spellbook/spellbookFilterParams";
 import type { SpellbookFilters } from "@/games/wow-forever/types/spellbook/spellbookFilters";
+import { useLiveSearchParams } from "@platform/ui";
 
 /** The spellbook's filters, read from and written to the URL (each change replaces history). */
 export function useSpellbookFilters(): {

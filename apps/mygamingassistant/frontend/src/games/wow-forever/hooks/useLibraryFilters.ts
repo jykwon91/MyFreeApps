@@ -1,11 +1,11 @@
 import { useCallback, useMemo } from "react";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import {
   DEFAULT_LIBRARY_FILTERS,
   parseLibraryFilters,
   writeLibraryFilters,
 } from "@/games/wow-forever/lib/library/libraryFilterParams";
 import type { LibraryFilters } from "@/games/wow-forever/types/library/libraryFilters";
+import { useLiveSearchParams } from "@platform/ui";
 
 /** The book list's filters, read from and written to the URL (each change replaces history). */
 export function useLibraryFilters(): {

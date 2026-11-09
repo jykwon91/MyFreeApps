@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
 import type { YearOption } from "@/shared/types/dashboard/year-option";
+import { useLiveSearchParams } from "@platform/ui";
 
 const STORAGE_KEY = "mbk:selectedYear";
 const CURRENT_YEAR = new Date().getFullYear();
@@ -32,7 +32,7 @@ function writeToStorage(year: YearOption): void {
 }
 
 export function useSelectedYear(): [YearOption, (year: YearOption) => void] {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useLiveSearchParams();
 
   const urlRaw = searchParams.get("year");
   const fromUrl = parseYearOption(urlRaw);

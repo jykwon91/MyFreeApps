@@ -1,10 +1,10 @@
 import { useCallback } from "react";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { parseSpec } from "@/games/wow-forever/crafting/craftSpecs";
 import { CRAFTING_SPECS } from "@/games/wow-forever/data/professions/crafting/craftingSpecs";
 import { isCraftingProfession } from "@/games/wow-forever/lib/guideProfession";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
+import { useLiveSearchParams } from "@platform/ui";
 
 export const CRAFT_SPEC_STORAGE_KEY = "mga.wowForever.professions.spec.v1";
 export const SPEC_PARAM = "spec";

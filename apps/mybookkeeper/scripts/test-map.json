@@ -61,6 +61,7 @@
       ],
       "frontend_tests": [
         "Analytics.test.tsx",
+        "UtilityTrendsDateRange.test.tsx",
         "CollapsibleFilters.test.tsx",
         "filtersToggleLabel.test.ts",
         "TransactionFilterBar.test.tsx"
@@ -1565,6 +1566,7 @@
         "CollapsibleFilters.test.tsx",
         "filtersToggleLabel.test.ts",
         "Analytics.test.tsx",
+        "UtilityTrendsDateRange.test.tsx",
         "Reconciliation.test.tsx",
         "ReconciliationCompare.test.tsx",
         "ReconciliationWizardModes.test.tsx",
