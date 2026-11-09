@@ -284,12 +284,12 @@ async def upsert_postings(
     if not postings:
         return (0, 0)
 
-    new_count = 0
-    updated_count = 0
+    new_count = updated_count = 0
 
     for raw in postings:
-        # Build the row dict — defensive copy, override with fetch_id.
-        payload = {**raw, "user_id": user_id, "fetch_id": fetch_id}
+        now = datetime.now(timezone.utc)  # one value for both: is_new compares them
+        payload = {**raw, "user_id": user_id, "fetch_id": fetch_id,
+                   "created_at": now, "updated_at": now}
 
         stmt = pg_insert(DiscoveredJob.__table__).values(**payload)
         stmt = stmt.on_conflict_do_update(
