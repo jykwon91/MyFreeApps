@@ -1,4 +1,4 @@
-import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
+import type { LeaseAttachmentKind } from "../types/lease/lease-attachment-kind";
 
 /**
  * Infers a lease attachment kind from a filename.

@@ -44,7 +44,7 @@ routes:
   /leases:
     screen: (app)/leases/index
   /leases/:leaseId:
-    screen: (app)/leases/[id]
+    screen: (app)/leases/[id]/index
   /leases/new:
     screen: (app)/leases/new/index
   /listings:

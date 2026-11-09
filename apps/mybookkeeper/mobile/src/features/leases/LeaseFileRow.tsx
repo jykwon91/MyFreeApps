@@ -2,17 +2,21 @@ import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease
 import { LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { LEASE_MESSAGES } from "../../constants/leases";
+import { useCanWrite } from "../workspace/useCanWrite";
 import { leaseFileLine } from "./leaseDisplay";
+import LeaseFileActions from "./LeaseFileActions";
 
 interface LeaseFileRowProps {
+  leaseId: string;
   file: SignedLeaseAttachment;
   isOpening: boolean;
   isDisabled: boolean;
   onOpen: () => void;
 }
 
-export default function LeaseFileRow({ file, isOpening, isDisabled, onOpen }: LeaseFileRowProps) {
+export default function LeaseFileRow({ leaseId, file, isOpening, isDisabled, onOpen }: LeaseFileRowProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const canWrite = useCanWrite();
   return (
     <View style={{ gap: spacing.sm }}>
       <View style={{ gap: spacing.xs }}>
@@ -32,6 +36,7 @@ export default function LeaseFileRow({ file, isOpening, isDisabled, onOpen }: Le
       ) : (
         <Text style={{ fontSize: fontSize.sm, color: colors.destructive }}>{LEASE_MESSAGES.fileMissing}</Text>
       )}
+      {canWrite ? <LeaseFileActions file={file} isDisabled={isOpening || isDisabled} leaseId={leaseId} /> : null}
     </View>
   );
 }

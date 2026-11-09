@@ -9,7 +9,7 @@ import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import LeaseAttachmentDropzone from "@/app/features/leases/LeaseAttachmentDropzone";
 import LeaseAttachmentRow from "@/app/features/leases/LeaseAttachmentRow";
-import { attachmentBacksExtension } from "./attachmentBacksExtension";
+import { attachmentBacksExtension } from "@mybookkeeper/api-client/utils/attachmentBacksExtension";
 
 export interface LeaseAttachmentsSectionProps {
   leaseId: string;

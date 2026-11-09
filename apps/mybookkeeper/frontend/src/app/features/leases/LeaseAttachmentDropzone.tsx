@@ -8,7 +8,7 @@ import {
 import { LEASE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
 import { leaseAttachmentForm } from "@/shared/lib/lease-upload-form";
 import { useUploadSignedLeaseAttachmentMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { inferKindsForFiles } from "@/shared/lib/infer-attachment-kind";
+import { inferKindsForFiles } from "@mybookkeeper/api-client/utils/inferAttachmentKind";
 
 const ALLOWED_MIME = [
   "application/pdf",

@@ -173,18 +173,72 @@ describe("adding a file to a lease", () => {
     expect(heldFiles()).toHaveLength(0);
   });
 
-  it("asks what the file is when the host didn't say", async () => {
+  it("lets the host say what the file is when they didn't start from the signed copy", async () => {
     const server = startServer([aFile()]);
     await renderScreen();
     expect(await screen.findByRole("button", { name: "Open signed.pdf" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Add the signed copy" })).toBeNull();
     await fireEvent.press(screen.getByRole("button", { name: "Add a file" }));
     await chooseFile();
-    expect(screen.getByRole("button", ADD)).toBeDisabled();
     await fireEvent.press(screen.getByRole("radio", { name: "Notice" }));
     await fireEvent.press(screen.getByRole("button", ADD));
     await screen.findByText("Added paper.pdf.");
     expect(formValue(server.uploads[0].data, "kind")).toBe("notice");
+  });
+
+  it("works the type out from each file's name, and makes the first the signed lease when none looks like one, as the website does", async () => {
+    const server = startServer([aFile()]);
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Add a file" }));
+    expect(screen.getByRole("radio", { name: "Pick for me, from the file's name" })).toBeTruthy();
+    for (const name of ["Move-in inspection.pdf", "Renters insurance.pdf", "Pet addendum.pdf"]) {
+      pickedPdf(name);
+      await fireEvent.press(screen.getByRole("button", { name: "Choose a file" }));
+      await screen.findByText(name);
+    }
+    await fireEvent.press(screen.getByRole("button", ADD));
+    await screen.findByText("Added 3 files.");
+    expect(server.uploads.map((upload) => formValue(upload.data, "kind"))).toEqual(["signed_lease", "insurance_proof", "signed_addendum"]);
+    expect(heldFiles()).toHaveLength(0);
+  });
+
+  it("keeps only what didn't go up when one of several files fails, so a retry doesn't send twice", async () => {
+    const server = startServer();
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Add a file" }));
+    for (const name of ["one.pdf", "two.pdf"]) {
+      pickedPdf(name);
+      await fireEvent.press(screen.getByRole("button", { name: "Choose a file" }));
+      await screen.findByText(name);
+    }
+    const original = api.defaults.adapter as AxiosAdapter;
+    let calls = 0;
+    api.defaults.adapter = (config) => {
+      if (config.url === "/signed-leases/l1/attachments" && ++calls === 2) {
+        return Promise.reject(Object.assign(new Error("failed"), { isAxiosError: true, config, response: { data: {}, status: 503, statusText: "", headers: {}, config } }));
+      }
+      return original(config);
+    };
+    await fireEvent.press(screen.getByRole("button", ADD));
+    expect(await screen.findByText("I couldn't save the file just now. It's still here, so try again in a bit.")).toBeTruthy();
+    expect(await screen.findByText("Added one.pdf.")).toBeTruthy();
+    expect(heldFiles()).toHaveLength(1);
+    expect(heldFiles()[0]).toContain("two.pdf");
+
+    await fireEvent.press(screen.getByRole("button", ADD));
+    await screen.findByText("Added two.pdf.");
+    expect(server.uploads.map((upload) => formParts(upload.data).find((part) => part.fieldName === "file")?.name)).toEqual(["one.pdf", "two.pdf"]);
+  });
+
+  it("takes a chosen file back out before it's sent", async () => {
+    startServer();
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Add the signed copy" }));
+    await chooseFile();
+    await fireEvent.press(screen.getByRole("button", { name: "Remove paper.pdf" }));
+    expect(screen.queryByText("paper.pdf")).toBeNull();
+    expect(screen.getByRole("button", ADD)).toBeDisabled();
+    expect(heldFiles()).toHaveLength(0);
   });
 
   it("doesn't offer files the app makes itself", async () => {
@@ -262,7 +316,7 @@ describe("adding a file to a lease", () => {
     replacement.write("pdf");
     jest.mocked(DocumentPicker.getDocumentAsync).mockClear();
     jest.mocked(DocumentPicker.getDocumentAsync).mockReturnValue(new Promise((resolve) => { finish = resolve; }));
-    const choose = screen.getByRole("button", { name: "Choose a different file" });
+    const choose = screen.getByRole("button", { name: "Choose a file" });
     await fireEvent.press(choose);
     expect(screen.getByRole("button", ADD)).toBeDisabled();
     await fireEvent.press(choose);
@@ -271,8 +325,8 @@ describe("adding a file to a lease", () => {
     await act(async () => finish({ canceled: false, assets: [{ uri: replacement.uri, name: "second.pdf", mimeType: "application/pdf" }] } as DocumentPicker.DocumentPickerResult));
     await screen.findByText("second.pdf");
     expect(screen.getByRole("button", ADD)).toBeEnabled();
-    expect(heldFiles()).toHaveLength(1);
-    expect(heldFiles()[0]).toContain("second.pdf");
+    expect(heldFiles()).toHaveLength(2);
+    expect(heldFiles().some((uri) => uri.includes("second.pdf"))).toBe(true);
   });
 
   it("works out the type when the picker doesn't say", async () => {

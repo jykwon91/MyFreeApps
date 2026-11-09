@@ -9,6 +9,7 @@ import {
 } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import type { SignedLeaseTemplatePrefillItem } from "@mybookkeeper/api-client/types/lease/signed-lease-template-prefill";
+import { prefillProblems } from "@mybookkeeper/api-client/utils/leasePrefill";
 import LeaseAddTemplatePickStep from "./LeaseAddTemplatePickStep";
 import LeaseAddTemplateValuesStep from "./LeaseAddTemplateValuesStep";
 
@@ -49,6 +50,7 @@ export default function LeaseAddTemplateModal({
 }: LeaseAddTemplateModalProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [valuesState, setValuesState] = useState<ValuesFormState | null>(null);
+  const [hasTried, setHasTried] = useState(false);
 
   const [addTemplates, { isLoading: isAdding }] =
     useAddSignedLeaseTemplatesMutation();
@@ -99,18 +101,8 @@ export default function LeaseAddTemplateModal({
   async function handleGenerate() {
     if (!valuesState) return;
 
-    const missingRequired = valuesState.items
-      .filter((it) => it.required && it.input_type !== "signature")
-      .filter((it) => (valuesState.values[it.key] ?? "").trim() === "")
-      .map((it) => it.display_label);
-    if (missingRequired.length > 0) {
-      showError(
-        `Please fill in: ${missingRequired.slice(0, 3).join(", ")}${
-          missingRequired.length > 3 ? "..." : ""
-        }`,
-      );
-      return;
-    }
+    setHasTried(true);
+    if (Object.keys(prefillProblems(valuesState.items, valuesState.values)).length > 0) return;
 
     const anyAlreadyLinked = selectedIds.some((id) => linkedSet.has(id));
 
@@ -151,6 +143,7 @@ export default function LeaseAddTemplateModal({
             <LeaseAddTemplateValuesStep
               items={valuesState.items}
               values={valuesState.values}
+              problems={hasTried ? prefillProblems(valuesState.items, valuesState.values) : {}}
               onValueChange={handleValueChange}
               isAdding={isAdding}
               onBack={() => setValuesState(null)}

@@ -151,7 +151,7 @@ describe("extending a lease", () => {
     it.each(["draft", "generated", "sent", "ended", "terminated"] as SignedLeaseStatus[])("doesn't offer it on a %s lease", async (status) => {
       startServer(aLease({ status, latest_extension: anExtension() }));
       await renderScreen();
-      await screen.findByRole("button", { name: "Manage on the website" });
+      await screen.findByRole("button", { name: "Add a document" });
       expect(screen.queryByRole("button", EXTEND)).toBeNull();
       expect(screen.queryByRole("button", UNDO)).toBeNull();
     });
@@ -159,7 +159,7 @@ describe("extending a lease", () => {
     it("doesn't offer it without an end date to extend from", async () => {
       startServer(aLease({ ends_on: null }));
       await renderScreen();
-      await screen.findByRole("button", { name: "Manage on the website" });
+      await screen.findByRole("button", { name: "Add a document" });
       expect(screen.queryByRole("button", EXTEND)).toBeNull();
     });
 

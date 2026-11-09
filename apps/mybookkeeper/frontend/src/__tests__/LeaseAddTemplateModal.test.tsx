@@ -376,12 +376,38 @@ describe("LeaseAddTemplateModal", () => {
       expect(screen.getByTestId("addendum-input-NEW LEASE END DATE")).toBeInTheDocument(),
     );
     // NEW LEASE END DATE is required and empty — clicking Generate must
-    // surface a validation error and NOT call the mutation.
+    // flag it on its own field and NOT call the mutation.
     fireEvent.click(screen.getByTestId("lease-add-template-confirm"));
-    await waitFor(() =>
-      expect(showErrorMock).toHaveBeenCalled(),
-    );
+    expect(await screen.findByTestId("addendum-error-NEW LEASE END DATE")).toHaveTextContent("required");
     expect(addTemplatesMock).not.toHaveBeenCalled();
+  });
+
+  it("flags a number it can't read on its own field, never sends it, and sends once fixed", async () => {
+    canWriteValue = true;
+    mockLease = buildLease();
+    prefillMock.mockReturnValue({
+      unwrap: () =>
+        Promise.resolve({
+          items: [
+            { key: "RENT", display_label: "Rent", input_type: "number", required: false, value: "about 1500", provenance: null, is_from_existing_values: false },
+          ],
+        }),
+    });
+    renderDetail();
+    fireEvent.click(screen.getByTestId("lease-add-template-button"));
+    await waitFor(() => expect(screen.getByTestId("add-template-checkbox-tpl-new")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("add-template-checkbox-tpl-new"));
+    fireEvent.click(screen.getByTestId("lease-add-template-continue"));
+    await waitFor(() => expect(screen.getByTestId("addendum-input-RENT")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId("lease-add-template-confirm"));
+    expect(await screen.findByTestId("addendum-error-RENT")).toHaveTextContent("isn't a number");
+    expect(addTemplatesMock).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByTestId("addendum-input-RENT"), { target: { value: "1,500.50" } });
+    fireEvent.click(screen.getByTestId("lease-add-template-confirm"));
+    await waitFor(() => expect(addTemplatesMock).toHaveBeenCalledOnce());
+    expect(addTemplatesMock.mock.calls[0][0].values).toEqual({ RENT: "1,500.50" });
   });
 
   it("shows success toast and closes modal on successful add", async () => {

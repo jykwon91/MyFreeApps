@@ -10,4 +10,9 @@ export const UPLOAD_MESSAGES = {
   chooseFile: "Choose a file",
   chooseDifferentFile: "Choose a different file",
   photoLibrary: "Photo library",
+  removeFile: "Remove",
 } as const;
+
+export function removeHeldFileLabel(name: string): string {
+  return `Remove ${name}`;
+}

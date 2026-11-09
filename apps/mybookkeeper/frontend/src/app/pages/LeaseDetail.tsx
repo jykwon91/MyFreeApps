@@ -24,6 +24,7 @@ import {
   useUpdateSignedLeaseMutation,
 } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
+import { leaseValueText } from "@mybookkeeper/api-client/utils/leasePlaceholderValue";
 import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge";
 import SignedLeaseStatusPicker from "@/app/features/leases/SignedLeaseStatusPicker";
 import ExtendLeaseDialog from "@/app/features/leases/ExtendLeaseDialog";
@@ -389,7 +390,7 @@ export default function LeaseDetail() {
                     <p className="text-xs uppercase text-muted-foreground font-mono">
                       [{key}]
                     </p>
-                    <p className="mt-1">{String(value ?? "—")}</p>
+                    <p className="mt-1">{leaseValueText(value)}</p>
                   </div>
                 ))}
               </div>

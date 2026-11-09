@@ -1,5 +1,6 @@
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useGetLeaseTemplatesQuery, useGetMultiGenerateDefaultsQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
+import { askedFields, computedFields } from "@mybookkeeper/api-client/utils/leasePlaceholders";
 import { EmptyState, useRefresh } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
@@ -27,7 +28,8 @@ export default function NewLeaseDetailsScreen({ flow }: { flow: NewLeaseFlow }) 
       <NewLeaseForm
         applicantId={applicantId}
         applicantName={applicantName(applicant.currentData.legal_name)}
-        fields={defaults.currentData.placeholders}
+        computed={computedFields(defaults.currentData.placeholders)}
+        fields={askedFields(defaults.currentData.placeholders)}
         flow={flow}
         onOutOfDate={() => void defaults.refetch()}
         templateNames={templateNames}

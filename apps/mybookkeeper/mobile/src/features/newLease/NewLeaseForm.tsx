@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { PLACEHOLDER_PROBLEM_MESSAGES } from "../../constants/placeholderProblems";
 import { draftMade, leaseFor, NEW_LEASE_MESSAGES as MESSAGES, PROVENANCE_CAPTIONS, usedIn } from "../../constants/newLease";
 import { useConfirmLeave } from "../../lib/useConfirmLeave";
 import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
@@ -12,7 +13,7 @@ import { leaseConflictCode } from "../leases/leaseConflictCode";
 import { isOutOfDateForm, newLeaseFailure } from "./newLeaseFailure";
 import PlaceholderField from "./PlaceholderField";
 import type { PlaceholderEdits } from "../../types/PlaceholderEdits";
-import { hasChanges, leaseValues, missingRequired, placeholderValue } from "./placeholderValues";
+import { hasChanges, leaseValues, missingRequired, placeholderValue, unreadableNumbers } from "./placeholderValues";
 import { useLeaveNewLeaseFlow } from "./useLeaveNewLeaseFlow";
 
 interface NewLeaseFormProps {
@@ -20,12 +21,14 @@ interface NewLeaseFormProps {
   applicantId: string;
   applicantName: string;
   fields: readonly MergedPlaceholder[];
+  /** Worked out when the files are made, so not asked for. */
+  computed: readonly MergedPlaceholder[];
   templateNames: Readonly<Record<string, string>>;
   /** Pulls the fields again, for when a template changed after they loaded. */
   onOutOfDate: () => void;
 }
 
-export default function NewLeaseForm({ flow, applicantId, applicantName, fields, templateNames, onOutOfDate }: NewLeaseFormProps) {
+export default function NewLeaseForm({ flow, applicantId, applicantName, fields, computed, templateNames, onOutOfDate }: NewLeaseFormProps) {
   const { colors, spacing, fontSize } = useTheme();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
@@ -42,6 +45,8 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
   const fieldTops = useRef<Record<string, number>>({});
   const isDirty = hasChanges(fields, edits);
   const missing = missingRequired(fields, edits);
+  const unreadable = unreadableNumbers(fields, edits);
+  const problems = fields.filter((field) => missing.includes(field) || unreadable.includes(field));
 
   const isBusy = isLoading || isFindingNewer;
   useConfirmLeave((isDirty || isBusy) && !leaveTo, (leave) => {
@@ -82,10 +87,10 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
     // Once it's made, a tap before the screen goes would make another.
     if (isSubmitting.current || leaveTo) return;
     Keyboard.dismiss();
-    if (missing.length > 0) {
+    if (problems.length > 0) {
       setShowMissing(true);
       setFailure(MESSAGES.needMoreAnswers);
-      scroller.current?.scrollTo({ y: fieldTops.current[missing[0].placeholder.key] ?? 0 });
+      scroller.current?.scrollTo({ y: fieldTops.current[problems[0].placeholder.key] ?? 0 });
       return;
     }
     isSubmitting.current = true;
@@ -114,6 +119,11 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
     } finally {
       isSubmitting.current = false;
     }
+  }
+
+  function fieldProblem(field: MergedPlaceholder): string | undefined {
+    if (missing.includes(field)) return PLACEHOLDER_PROBLEM_MESSAGES.required;
+    return unreadable.includes(field) ? PLACEHOLDER_PROBLEM_MESSAGES.not_a_number : undefined;
   }
 
   function captionFor(field: MergedPlaceholder): string | null {
@@ -155,15 +165,20 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
             >
               <PlaceholderField
                 caption={captionFor(field)}
-                error={showMissing && missing.includes(field) ? MESSAGES.required : undefined}
+                error={showMissing ? fieldProblem(field) : undefined}
                 isDisabled={isBusy}
                 onChange={(value) => setEdits((current) => ({ ...current, [key]: value }))}
-                placeholder={field.placeholder}
+                inputType={field.placeholder.input_type}
+                label={field.placeholder.display_label}
+                required={field.placeholder.required}
                 value={placeholderValue(field, edits)}
               />
             </View>
           );
         })}
+        {computed.length > 0 ? (
+          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`${MESSAGES.workedOut} ${computed.map((field) => field.placeholder.display_label).join(", ")}`}</Text>
+        ) : null}
         {isDirty ? (
           <LoadingButton disabled={isBusy} onPress={confirmReset} variant="ghost">
             {MESSAGES.reset}

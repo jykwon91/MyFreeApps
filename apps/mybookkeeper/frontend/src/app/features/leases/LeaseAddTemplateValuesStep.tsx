@@ -1,11 +1,14 @@
 import { ArrowLeft, Plus } from "lucide-react";
 import { Button, LoadingButton } from "@platform/ui";
-import { PREFILL_PROVENANCE_LABELS } from "@/shared/lib/lease-labels";
+import { prefillProvenanceLabel } from "@mybookkeeper/api-client/utils/leasePrefill";
+import type { LeasePrefillProblem } from "@mybookkeeper/api-client/types/lease/lease-prefill-problem";
+import { LEASE_PREFILL_PROBLEM_MESSAGES } from "@/shared/lib/lease-labels";
 import type { SignedLeaseTemplatePrefillItem } from "@mybookkeeper/api-client/types/lease/signed-lease-template-prefill";
 
 export interface LeaseAddTemplateValuesStepProps {
   items: SignedLeaseTemplatePrefillItem[];
   values: Record<string, string>;
+  problems: Record<string, LeasePrefillProblem>;
   onValueChange: (key: string, value: string) => void;
   isAdding: boolean;
   onBack: () => void;
@@ -20,12 +23,6 @@ function inputTypeAttr(t: string): string {
   return "text";
 }
 
-function provenanceLabelFor(item: SignedLeaseTemplatePrefillItem): string | null {
-  if (item.is_from_existing_values) return "saved on lease";
-  if (!item.provenance) return null;
-  return PREFILL_PROVENANCE_LABELS[item.provenance] ?? null;
-}
-
 /**
  * Step 2 of the Add Document modal: fill in placeholder values. Items are
  * pre-populated by the prefill endpoint where possible (applicant /
@@ -36,6 +33,7 @@ function provenanceLabelFor(item: SignedLeaseTemplatePrefillItem): string | null
 export default function LeaseAddTemplateValuesStep({
   items,
   values,
+  problems,
   onValueChange,
   isAdding,
   onBack,
@@ -56,7 +54,7 @@ export default function LeaseAddTemplateValuesStep({
         >
           {items.map((item) => {
             const value = values[item.key] ?? "";
-            const provenanceLabel = provenanceLabelFor(item);
+            const provenanceLabel = prefillProvenanceLabel(item);
             return (
               <li key={item.key} className="flex flex-col gap-1">
                 <label
@@ -83,7 +81,13 @@ export default function LeaseAddTemplateValuesStep({
                   className="px-3 py-2 text-sm border rounded-md bg-background"
                   data-testid={`addendum-input-${item.key}`}
                   placeholder={item.required ? "Required" : "Optional"}
+                  aria-invalid={problems[item.key] ? true : undefined}
                 />
+                {problems[item.key] ? (
+                  <p role="alert" className="text-xs text-destructive" data-testid={`addendum-error-${item.key}`}>
+                    {LEASE_PREFILL_PROBLEM_MESSAGES[problems[item.key]]}
+                  </p>
+                ) : null}
               </li>
             );
           })}

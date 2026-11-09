@@ -41,3 +41,20 @@ export const LEASE_ATTACHMENT_KIND_LABELS: Record<LeaseAttachmentKind, string> =
 };
 
 export const LEASE_PAGE_SIZE = 25;
+
+/** The server refuses longer notes on an imported lease. */
+export const LEASE_NOTES_MAX_LENGTH = 2000;
+
+/**
+ * Where a value on the add-a-document form came from. Mirrors the backend
+ * ``ProvenanceLabel`` type in ``default_source_resolver.py``. A source not listed
+ * here gets no label.
+ */
+export const PREFILL_PROVENANCE_LABELS: Record<string, string> = {
+  applicant: "from applicant",
+  inquiry: "from inquiry",
+  lease: "from lease",
+  property: "from property",
+  user: "from your profile",
+  today: "today's date",
+};

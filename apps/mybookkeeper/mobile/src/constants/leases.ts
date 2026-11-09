@@ -28,7 +28,6 @@ export const LEASE_MESSAGES = {
   noneHeading: "No leases yet",
   noneBody: "Make one from a template. Its dates and files show up here.",
   noneBodyViewer: "Leases show up here with their dates and files.",
-  manageOnWebsite: "Manage on the website",
   section: "Leases",
   term: "Term",
   noDates: "No dates yet",
@@ -37,6 +36,8 @@ export const LEASE_MESSAGES = {
   addSignedCopy: "Add the signed copy",
   addFile: "Add a file",
   fileKind: "What is it?",
+  autoKind: "Pick for me, from the file's name",
+  noFilesYet: "No files chosen yet.",
   takePhoto: "Take a photo of the paper copy",
   saveFile: "Add file",
   uploading: "Uploading…",
@@ -123,6 +124,10 @@ export const EXTENSION_NOTE_MAX_LENGTH = 2000;
 
 export function addedFile(name: string): string {
   return `Added ${name}.`;
+}
+
+export function addedFiles(count: number): string {
+  return `Added ${count} files.`;
 }
 
 export function markAs(label: string): string {
