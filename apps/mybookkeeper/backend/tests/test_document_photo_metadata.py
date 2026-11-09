@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.context import RequestContext
@@ -159,6 +160,9 @@ async def test_replacing_a_documents_file_with_a_photo_drops_its_location(
 ) -> None:
     result = await accept_upload(ctx, _PDF, "receipt.pdf", "application/pdf")
     document_id = uuid.UUID(str(result["document_id"]))
+    # An upload is still queued for extraction; a file can only be replaced once it is read.
+    await db.execute(update(Document).where(Document.id == document_id).values(status="completed"))
+    await db.commit()
 
     await replace_file(ctx, document_id, photo_with_gps("JPEG"), "receipt.jpg", "image/jpeg")
 

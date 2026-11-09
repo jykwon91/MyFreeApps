@@ -81,6 +81,7 @@ class InvalidUtilityPlanError(ValueError):
 
 async def _assert_source_document_is_ours(
     db: Any, *, organization_id: uuid.UUID, payload: dict[str, Any],
+    current_document_id: uuid.UUID | None = None,
 ) -> None:
     """Reject a ``source_document_id`` belonging to another organization.
 
@@ -94,6 +95,7 @@ async def _assert_source_document_is_ours(
         return
     if not await owns_document(
         db, organization_id=organization_id, document_id=document_id,
+        current_document_id=current_document_id,
     ):
         raise InvalidUtilityPlanError("source_document_id does not name a document")
 
@@ -352,6 +354,7 @@ async def update_plan(
 
         await _assert_source_document_is_ours(
             db, organization_id=organization_id, payload=payload,
+            current_document_id=existing.source_document_id,
         )
 
         try:

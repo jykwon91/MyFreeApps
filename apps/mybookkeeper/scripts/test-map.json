@@ -187,7 +187,10 @@
         "frontend/src/shared/utils/upload-outcome.ts",
         "api-client/src/utils/progressPercent.ts",
         "frontend/src/shared/types/document/",
-        "api-client/src/types/document/"
+        "api-client/src/types/document/",
+        "backend/app/core/document_constants.py",
+        "backend/app/mappers/document_delete_mapper.py",
+        "backend/app/services/storage/stored_file_cleanup.py"
       ],
       "backend_tests": [
         "test_document_checklist_service.py",
@@ -198,7 +201,9 @@
         "test_stored_file_missing.py",
         "test_batch_status_counts.py",
         "test_source_documents.py",
-        "test_dual_write.py"
+        "test_dual_write.py",
+        "test_document_delete.py",
+        "test_document_extraction_deleted_mid_read.py"
       ],
       "frontend_tests": [
         "DocumentUploadZone.test.tsx",

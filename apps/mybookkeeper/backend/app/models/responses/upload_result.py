@@ -22,3 +22,5 @@ class UploadResult:
     created: list[Document] = field(default_factory=list)
     skipped: int = 0
     reconciliation: list[ReconciliationItem] | None = None
+    # The document was deleted (or settled) while it was being read; nothing was saved.
+    discarded: bool = False

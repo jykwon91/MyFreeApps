@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 import anthropic
 import sqlalchemy.exc
 
-from app.core.config import settings
+from app.core.document_constants import EXTRACTION_TIMEOUT_SECONDS
 from app.db.session import AsyncSessionLocal
 from app.repositories import document_repo, system_event_repo
 from app.services.extraction.document_extraction_service import process_document
@@ -22,7 +22,6 @@ from app.services.system.event_service import record_event
 logger = logging.getLogger(__name__)
 
 POLL_INTERVAL_SECONDS = 2
-EXTRACTION_TIMEOUT_SECONDS = settings.claude_timeout_seconds + 30  # worker timeout > Claude API timeout
 MAX_CONCURRENT_USERS = 5
 MAX_RETRIES = 3
 
@@ -80,10 +79,13 @@ async def process_one_for_user(user_id: uuid.UUID) -> bool:
         logger.info("Processing document %s for user %s (%s, retry=%d)", doc_id, user_id, doc.file_name, retry_count)
 
     try:
-        await asyncio.wait_for(
+        result = await asyncio.wait_for(
             process_document(doc_id),
             timeout=EXTRACTION_TIMEOUT_SECONDS,
         )
+        if result.discarded:
+            logger.info("Discarded extraction of document %s (deleted or settled mid-read)", doc_id)
+            return True
         logger.info("Completed document %s", doc_id)
         # Auto-resolve any previous failure events for this document
         try:

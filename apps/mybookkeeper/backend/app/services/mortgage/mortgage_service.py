@@ -41,11 +41,13 @@ async def _assert_property_is_ours(
 
 async def _assert_source_document_is_ours(
     db, *, organization_id: uuid.UUID, document_id: uuid.UUID | None,
+    current_document_id: uuid.UUID | None = None,
 ) -> None:
     if document_id is None:
         return
     if not await owns_document(
         db, organization_id=organization_id, document_id=document_id,
+        current_document_id=current_document_id,
     ):
         raise InvalidMortgageError("source_document_id does not name a document")
 
@@ -194,6 +196,7 @@ async def update_mortgage(
                 db,
                 organization_id=organization_id,
                 document_id=fields["source_document_id"],
+                current_document_id=mortgage.source_document_id,
             )
 
         # The patch is checked against what the row WOULD become, not against

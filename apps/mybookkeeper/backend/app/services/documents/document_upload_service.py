@@ -13,6 +13,7 @@ from app.services.extraction.extractor_service import (
     detect_file_type,
     extract_zip_files,
 )
+from app.services.storage.stored_file_cleanup import delete_stored_files
 from app.services.storage.attachment_content import (
     UnreadableImage,
     strip_photo_metadata,
@@ -84,6 +85,26 @@ async def accept_upload(
     if file_type != "zip":
         content = await clean_document_file(content, filename)
 
+    stale_storage_keys: list[str] = []
+    result = await _save_placeholder_documents(
+        ctx, content, filename, content_type, file_type, property_id,
+        reference_only, stale_storage_keys,
+    )
+    await delete_stored_files(stale_storage_keys)
+    return result
+
+
+async def _save_placeholder_documents(
+    ctx: RequestContext,
+    content: bytes,
+    filename: str,
+    content_type: str,
+    file_type: str,
+    property_id: uuid.UUID | None,
+    reference_only: bool,
+    stale_storage_keys: list[str],
+) -> dict[str, str | int | None]:
+    """Insert the placeholder rows; collects the stored files of replaced failed uploads."""
     async with unit_of_work() as db:
         today_count = await usage_log_repo.count_today(db, ctx.organization_id)
 
@@ -139,9 +160,11 @@ async def accept_upload(
 
         # Delete any failed document with the same hash or filename to avoid duplicates on re-upload
         if existing and existing.status == "failed":
-            await document_repo.delete(db, existing)
+            replaced = [existing]
         else:
-            await document_repo.delete_failed_by_name(db, ctx.organization_id, filename)
+            replaced = list(await document_repo.list_failed_by_name_for_update(db, ctx.organization_id, filename))
+        await document_repo.soft_delete_by_user(db, [d.id for d in replaced])
+        stale_storage_keys.extend(d.file_storage_key for d in replaced if d.file_storage_key)
 
         stored_content, storage_key = _store_file(ctx.organization_id, filename, content, content_type)
         doc = Document(

@@ -42,7 +42,7 @@ async def test_leaves_out_documents_the_user_deleted(db: AsyncSession, test_user
     deleted = _doc(test_org, test_user, batch_id, "failed")
     db.add_all([kept, deleted])
     await db.commit()
-    await document_repo.bulk_delete(db, [deleted.id], test_org.id)
+    await document_repo.soft_delete_duplicate(db, deleted)
     await db.commit()
 
     counts = await document_repo.get_batch_status_counts(db, test_org.id, batch_id)
