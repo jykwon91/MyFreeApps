@@ -23,10 +23,9 @@ export default defineConfig({
   reporter: "html",
   use: {
     baseURL: frontendURL,
-    // Keeps the trace of every failed attempt, including a first attempt that
-    // passes on retry, so a flaky spec can be diagnosed from the uploaded
-    // e2e/test-results artifact.
-    trace: process.env.CI ? "retain-on-failure" : "on-first-retry",
+    // Tracing every attempt ("retain-on-failure") made the CI suite ~30% slower
+    // and pushed it past globalTimeout, so only retries are traced.
+    trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
   projects: [
