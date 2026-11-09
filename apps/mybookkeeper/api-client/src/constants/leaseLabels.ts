@@ -1,4 +1,5 @@
 import type { LeaseAttachmentKind } from "../types/lease/lease-attachment-kind";
+import type { LeasePlaceholderInputType } from "../types/lease/lease-placeholder-input-type";
 import type { SignedLeaseStatus } from "../types/lease/signed-lease-status";
 
 /** Mirrors the tuples in ``app/core/lease_enums.py``: keep both in sync. */
@@ -58,3 +59,24 @@ export const PREFILL_PROVENANCE_LABELS: Record<string, string> = {
   user: "from your profile",
   today: "today's date",
 };
+
+/** Mirrors ``LEASE_PLACEHOLDER_INPUT_TYPES`` in ``app/core/lease_enums.py``: keep both in sync. */
+export const LEASE_PLACEHOLDER_INPUT_TYPE_LABELS: Record<LeasePlaceholderInputType, string> = {
+  text: "Text",
+  email: "Email",
+  phone: "Phone",
+  date: "Date",
+  number: "Number",
+  computed: "Computed",
+  signature: "Signature",
+};
+
+export const LEASE_PLACEHOLDER_INPUT_TYPES: readonly LeasePlaceholderInputType[] = [
+  "text",
+  "email",
+  "phone",
+  "date",
+  "number",
+  "computed",
+  "signature",
+];

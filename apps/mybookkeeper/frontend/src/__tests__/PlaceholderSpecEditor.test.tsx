@@ -5,10 +5,10 @@ import { store } from "@/shared/store";
 import PlaceholderSpecEditor from "@/app/features/leases/PlaceholderSpecEditor";
 import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
 
-vi.mock("@/shared/store/leaseTemplatesApi", async () => {
+vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", async () => {
   const actual = await vi.importActual<
-    typeof import("@/shared/store/leaseTemplatesApi")
-  >("@/shared/store/leaseTemplatesApi");
+    typeof import("@mybookkeeper/api-client/store/leaseTemplatesApi")
+  >("@mybookkeeper/api-client/store/leaseTemplatesApi");
   return {
     ...actual,
     useUpdateLeasePlaceholderMutation: () => [vi.fn(), { isLoading: false }],

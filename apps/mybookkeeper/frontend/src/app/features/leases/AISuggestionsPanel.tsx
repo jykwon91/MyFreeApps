@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Sparkles, X, ChevronDown, ChevronUp } from "lucide-react";
-import type { SuggestedPlaceholderItem } from "@/shared/types/lease/suggest-placeholders-response";
-import { LEASE_PLACEHOLDER_INPUT_TYPE_LABELS } from "@/shared/lib/lease-labels";
+import type { SuggestedPlaceholderItem } from "@mybookkeeper/api-client/types/lease/suggested-placeholder-item";
+import { LEASE_PLACEHOLDER_INPUT_TYPE_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
+import { splitSuggestions } from "@mybookkeeper/api-client/utils/leaseSuggestions";
 
 export interface AISuggestionsPanelProps {
   suggestions: SuggestedPlaceholderItem[];
@@ -32,10 +33,10 @@ export default function AISuggestionsPanel({
 }: AISuggestionsPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
 
-  const newSuggestions = suggestions.filter(
-    (s) => !templatePlaceholderKeys.has(s.key),
+  const { newKeys, matchedCount: confirmedCount } = splitSuggestions(
+    suggestions,
+    templatePlaceholderKeys,
   );
-  const confirmedCount = suggestions.length - newSuggestions.length;
 
   return (
     <div
@@ -90,7 +91,7 @@ export default function AISuggestionsPanel({
       {!collapsed && suggestions.length > 0 ? (
         <ul className="space-y-1.5" data-testid="ai-suggestions-list">
           {suggestions.map((s) => {
-            const isNew = !templatePlaceholderKeys.has(s.key);
+            const isNew = newKeys.has(s.key);
             return (
               <li
                 key={s.key}

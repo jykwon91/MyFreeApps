@@ -5,9 +5,17 @@ import { LoadingButton, showError, showSuccess } from "@platform/ui";
 import {
   useCreateLeaseTemplateMutation,
   useSuggestPlaceholdersMutation,
-} from "@/shared/store/leaseTemplatesApi";
+} from "@mybookkeeper/api-client/store/leaseTemplatesApi";
+import { LEASE_TEMPLATE_CREATE_COPY } from "@mybookkeeper/api-client/constants/leaseTemplateCreateCopy";
+import {
+  LEASE_TEMPLATE_ACCEPT,
+  LEASE_TEMPLATE_EXTENSIONS_LABEL,
+  LEASE_TEMPLATE_UPLOAD_PROBLEMS,
+} from "@mybookkeeper/api-client/constants/leaseTemplateUpload";
 import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
-import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-placeholders-response";
+import type { SuggestPlaceholdersResponse } from "@mybookkeeper/api-client/types/lease/suggest-placeholders-response";
+import { leaseTemplateFailureMessage } from "@mybookkeeper/api-client/utils/leaseTemplateFailureMessage";
+import { leaseTemplateUploadProblems } from "@mybookkeeper/api-client/utils/leaseTemplateUploadForm";
 
 export interface LeaseTemplateUploadDialogProps {
   open: boolean;
@@ -17,9 +25,6 @@ export interface LeaseTemplateUploadDialogProps {
     aiSuggestions: SuggestPlaceholdersResponse | null,
   ) => void;
 }
-
-const ACCEPTED_TYPES =
-  ".md,.txt,.docx,text/markdown,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 type UploadStep = "form" | "suggesting";
 
@@ -62,29 +67,21 @@ export default function LeaseTemplateUploadDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) {
-      showError("Please name this template.");
+    const problems = leaseTemplateUploadProblems(name, files);
+    const problem = problems.name ?? problems.files;
+    if (problem) {
+      showError(LEASE_TEMPLATE_UPLOAD_PROBLEMS[problem]);
       return;
     }
-    if (files.length === 0) {
-      showError("Please add at least one file.");
-      return;
-    }
+    const form = new FormData();
+    form.append("name", name.trim());
+    if (description.trim()) form.append("description", description.trim());
+    for (const file of files) form.append("files", file);
     let template: LeaseTemplateDetail;
     try {
-      template = await createTemplate({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        files,
-      }).unwrap();
+      template = await createTemplate(form).unwrap();
     } catch (e: unknown) {
-      const status = (e as { status?: number }).status;
-      if (status === 413) showError("One of those files is too large.");
-      else if (status === 415)
-        showError("Unsupported file type. Allowed: .md, .txt, .docx");
-      else if (status === 503)
-        showError("Storage isn't available right now.");
-      else showError("Couldn't create the template. Want to try again?");
+      showError(leaseTemplateFailureMessage(e, LEASE_TEMPLATE_CREATE_COPY).message);
       return;
     }
 
@@ -92,9 +89,7 @@ export default function LeaseTemplateUploadDialog({
     setStep("suggesting");
     let aiSuggestions: SuggestPlaceholdersResponse | null = null;
     try {
-      aiSuggestions = await suggestPlaceholders({
-        templateId: template.id,
-      }).unwrap();
+      aiSuggestions = await suggestPlaceholders(template.id).unwrap();
     } catch {
       // AI suggestion failure is non-fatal — continue with regex placeholders.
     }
@@ -201,7 +196,7 @@ export default function LeaseTemplateUploadDialog({
                       type="file"
                       multiple
                       className="hidden"
-                      accept={ACCEPTED_TYPES}
+                      accept={LEASE_TEMPLATE_ACCEPT}
                       onChange={(e) => {
                         const next = Array.from(e.target.files ?? []);
                         if (next.length > 0)
@@ -212,7 +207,7 @@ export default function LeaseTemplateUploadDialog({
                   </label>
                 </p>
                 <p className="text-xs text-muted-foreground/70 mt-1">
-                  .md, .txt, .docx
+                  {LEASE_TEMPLATE_EXTENSIONS_LABEL}
                 </p>
               </div>
 
