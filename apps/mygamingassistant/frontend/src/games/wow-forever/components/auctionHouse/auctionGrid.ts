@@ -3,3 +3,6 @@ export const AUCTION_ROW_GRID = "grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-[
 
 /** A row's look: a bordered card on a phone, a ruled table row on sm+. */
 export const AUCTION_ROW_LOOK = "rounded-xl border bg-card p-3 sm:rounded-none sm:border-0 sm:border-b sm:bg-transparent sm:py-1";
+
+/** A recipe's material rows: item, need, each, cost, on sale. Cards on a phone. */
+export const RECIPE_ROW_GRID = "grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-[minmax(0,1fr)_4rem_7rem_7rem_9rem]";

@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-09",
+    title: "Auction house: a profession's materials and a recipe's cost",
+    summary:
+      "Pick a profession on the Auction house page to see only its materials (Enchanting shows dusts, essences and rods, not cloth), then pick one of its recipes to see what each material costs, the total for one craft, what the item sells for and the difference.",
+    to: "/wow-forever/auction-house",
+  },
+  {
+    date: "2026-11-09",
     title: "Real auction-house prices from the PvP server",
     summary:
       "Prices now come straight from the in-game auction house of the PvP server, its Alliance, Horde and Blackwater houses each on their own, replacing the old estimate. Each price shows what it really sells for, the cheapest listing and how many are on sale, and every page uses your saved faction (switch it on the Auction house page). Other server types come later.",

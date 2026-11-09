@@ -1,20 +1,23 @@
+import type { ReactNode } from "react";
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
-import AuctionReadyBody from "@/games/wow-forever/components/auctionHouse/AuctionReadyBody";
 import AuctionResultsSkeleton from "@/games/wow-forever/components/auctionHouse/AuctionResultsSkeleton";
+import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
-import type { AuctionSort } from "@/games/wow-forever/types/auctionSort";
+import { priceHouseLabel } from "@/games/wow-forever/prices/priceHouseLabel";
+import type { AuctionPrices } from "@/games/wow-forever/types/auctionPrices";
 import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
 
 interface AuctionHouseBodyProps {
   faction: PriceFaction;
-  query: string;
-  sort: AuctionSort;
+  /** What to show once the house's prices are in (and it has some). */
+  children: (prices: AuctionPrices) => ReactNode;
 }
 
-/** Skeleton while loading, a retry if it failed, the results once the prices are in. */
-export default function AuctionHouseBody({ faction, query, sort }: AuctionHouseBodyProps) {
+/** Skeleton while loading, a retry if it failed, a note when the house has no prices yet, else `children`. */
+export default function AuctionHouseBody({ faction, children }: AuctionHouseBodyProps) {
   const { status, prices, retry, retrying } = useAuctionPrices(faction);
   if (status === "error") return <LoadErrorRetry message="Couldn't load auction prices." onRetry={retry} retrying={retrying} />;
-  if (status === "ready" && prices) return <AuctionReadyBody prices={prices} query={query} sort={sort} />;
-  return <AuctionResultsSkeleton />;
+  if (status !== "ready" || !prices) return <AuctionResultsSkeleton />;
+  if (prices.byId.size === 0) return <EmptyStateNote message={`No ${priceHouseLabel(prices)} auction prices yet.`} />;
+  return <>{children(prices)}</>;
 }

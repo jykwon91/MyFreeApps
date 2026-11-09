@@ -1018,6 +1018,17 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   cheapest, on sale ("23,980 in 910 auctions", `onSaleText`). Filter/sort is
   the pure `prices/auctionSearch.ts` (default "Most on sale"; 50 browse /
   200 search cap).
+- Auction house profession filter (`?prof=<crafting profession>`, replace;
+  `?recipe=<spell id>`, push to set / replace to clear; changing `prof` drops
+  `recipe`; `hooks/useAuctionMaterialFilter.ts`): `AuctionProfessionSelect`
+  narrows the list to that profession's reagents (`ProfessionAuction` loads its
+  crafting JSON; `lib/auctionHouse/professionMaterials.ts` — search caps at 200
+  and counts materials with no auctions). `RecipeFinder` (every typed word,
+  8 matches, labelled with the yellow skill) opens `RecipePricePanel`: each
+  material's market value × count, the total ("at least …" when some have no
+  auctions), what the made item sells for, and the difference (`craftProfit`,
+  only when everything is priced; enchants make no item). An unknown `?recipe`
+  says "wasn't found"; an invalid `?prof` is ignored.
 - Material prices fill in automatically (`CraftPriceField` shows the price as
   its value, labelled "Auction house"). An item with no auction price is
   worked out in `crafting/derivedPrices.ts` — an essence from the other half of

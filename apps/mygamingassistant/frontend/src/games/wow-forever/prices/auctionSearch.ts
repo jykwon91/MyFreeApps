@@ -23,10 +23,11 @@ function matches(item: AuctionPrice, needle: string): boolean {
   return item.name.toLowerCase().includes(needle) || String(item.itemId) === needle;
 }
 
-export function searchAuctionItems(items: Iterable<AuctionPrice>, query: string, sort: AuctionSort): AuctionSearchResult {
+/** `limit` overrides the cap (the browse cap with nothing typed, else the search cap). */
+export function searchAuctionItems(items: Iterable<AuctionPrice>, query: string, sort: AuctionSort, limit?: number): AuctionSearchResult {
   const needle = query.trim().toLowerCase();
   const found = needle ? [...items].filter((item) => matches(item, needle)) : [...items];
   found.sort(COMPARERS[sort]);
-  const limit = needle ? SEARCH_LIMIT : BROWSE_LIMIT;
-  return { items: found.slice(0, limit), total: found.length, capped: found.length > limit };
+  const cap = limit ?? (needle ? SEARCH_LIMIT : BROWSE_LIMIT);
+  return { items: found.slice(0, cap), total: found.length, capped: found.length > cap };
 }
