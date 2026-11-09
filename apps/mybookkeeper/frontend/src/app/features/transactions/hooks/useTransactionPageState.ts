@@ -214,19 +214,19 @@ export function useTransactionPageState(): TransactionPageState {
 
   const handleExportCSV = useCallback(async () => {
     try {
-      await downloadFile(transactionExportPath("csv", filters), "transactions.csv");
+      await downloadFile(transactionExportPath("csv", queryParams), "transactions.csv");
     } catch {
       showError("Failed to export CSV");
     }
-  }, [filters, showError]);
+  }, [queryParams, showError]);
 
   const handleExportPDF = useCallback(async () => {
     try {
-      await downloadFile(transactionExportPath("pdf", filters), "transactions.pdf");
+      await downloadFile(transactionExportPath("pdf", queryParams), "transactions.pdf");
     } catch {
       showError("Failed to export PDF");
     }
-  }, [filters, showError]);
+  }, [queryParams, showError]);
 
   const handleVendorLearned = useCallback(
     (vendor: string, category: string, retroactiveCount: number) => {

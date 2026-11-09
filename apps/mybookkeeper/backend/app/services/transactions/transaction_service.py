@@ -16,6 +16,7 @@ from app.models.transactions.transaction import Transaction
 from app.repositories import transaction_repo
 from app.repositories.tax import tax_return_repo
 from app.schemas.transactions.duplicate import DuplicateMergeOverrides
+from app.schemas.transactions.transaction_filters import TransactionFilters
 from app.services.classification import rule_learning_service
 from app.services.transactions.merge_strategy import MERGEABLE_FIELDS, auto_pick_defaults
 
@@ -53,18 +54,8 @@ UPDATABLE_FIELDS = frozenset({
 
 async def list_transactions(
     ctx: RequestContext,
+    filters: TransactionFilters | None = None,
     *,
-    property_id: uuid.UUID | None = None,
-    unassigned: bool = False,
-    applicant_id: uuid.UUID | None = None,
-    status: str | None = None,
-    to_review: bool = False,
-    transaction_type: str | None = None,
-    category: str | None = None,
-    vendor: str | None = None,
-    start_date: date | None = None,
-    end_date: date | None = None,
-    tax_year: int | None = None,
     limit: int | None = None,
     offset: int | None = None,
 ) -> Sequence[Transaction]:
@@ -72,17 +63,7 @@ async def list_transactions(
         return await transaction_repo.list_filtered(
             db,
             ctx.organization_id,
-            property_id=property_id,
-            unassigned=unassigned,
-            applicant_id=applicant_id,
-            status=status,
-            to_review=to_review,
-            transaction_type=transaction_type,
-            category=category,
-            vendor=vendor,
-            start_date=start_date,
-            end_date=end_date,
-            tax_year=tax_year,
+            **(filters or TransactionFilters()).model_dump(),
             limit=limit,
             offset=offset,
         )

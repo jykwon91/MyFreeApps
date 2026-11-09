@@ -299,6 +299,24 @@ test.describe("Transactions", () => {
     });
   });
 
+  test.describe("Export with a vendor filter", () => {
+    test("Export CSV holds only the vendors the filter shows", async ({ page }) => {
+      await vendorFilter(page).fill("plumber");
+      await expect(rows(page)).toHaveCount(PLUMBERS.length);
+
+      await page.getByRole("button", { name: /export/i }).click();
+      const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        page.getByRole("menuitem", { name: /export csv/i }).click(),
+      ]);
+      const csv = await readFile(await download.path(), "utf8");
+      for (const vendor of PLUMBERS) expect(csv).toContain(vendor);
+      const others = [...SEED.approved, SEED.flagged].filter((t) => !/plumber/i.test(t.vendor));
+      expect(others.length).toBeGreaterThan(0);
+      for (const t of others) expect(csv).not.toContain(t.vendor);
+    });
+  });
+
   test.describe("Toolbar panels", () => {
     test("opens and closes the vendor rules panel", async ({ page }) => {
       await page.getByRole("button", { name: /vendor rules/i }).click();

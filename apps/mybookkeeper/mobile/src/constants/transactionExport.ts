@@ -13,5 +13,4 @@ export const TRANSACTION_EXPORT_MESSAGES = {
   couldntExportPdf: "I couldn't export the PDF. Please try again in a bit.",
   tooMany: "I've made a lot of exports this hour. Try again in a bit.",
   description: "Exports what the filters show.",
-  notApplied: (parts: string) => `Not applied to exports: ${parts}.`,
 } as const;
