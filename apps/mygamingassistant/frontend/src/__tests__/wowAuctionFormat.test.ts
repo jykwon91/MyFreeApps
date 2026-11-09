@@ -1,19 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { itemLabel, soldPerDayText } from "@/games/wow-forever/prices/auctionFormat";
+import { itemLabel, onSaleText, priceOrDash } from "@/games/wow-forever/prices/auctionFormat";
 
-describe("soldPerDayText", () => {
-  it("rounds busy items to whole sales with thousands separators", () => {
-    expect(soldPerDayText(20238.5)).toBe("20,239");
-    expect(soldPerDayText(12.3)).toBe("12");
+describe("onSaleText", () => {
+  it("says how many units in how many auctions, with thousands separators", () => {
+    expect(onSaleText(23980, 910)).toBe("23,980 in 910 auctions");
+    expect(onSaleText(601, 98)).toBe("601 in 98 auctions");
   });
 
-  it("keeps one decimal under 10 a day", () => {
-    expect(soldPerDayText(0.44)).toBe("0.4");
-    expect(soldPerDayText(3)).toBe("3");
+  it("says one auction, not one auctions", () => {
+    expect(onSaleText(1, 1)).toBe("1 in 1 auction");
+    expect(onSaleText(20, 1)).toBe("20 in 1 auction");
   });
+});
 
-  it("shows a dash when unknown", () => {
-    expect(soldPerDayText(null)).toBe("—");
+describe("priceOrDash", () => {
+  it("formats copper and dashes a missing figure", () => {
+    expect(priceOrDash(3300)).toBe("33s");
+    expect(priceOrDash(null)).toBe("—");
   });
 });
 

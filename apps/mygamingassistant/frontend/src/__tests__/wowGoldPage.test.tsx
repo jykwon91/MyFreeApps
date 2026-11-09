@@ -110,7 +110,7 @@ describe("Making gold page", () => {
     renderAt("/wow-forever/gold");
     expect(screen.getByRole("heading", { name: "Making gold" })).toBeInTheDocument();
     expect(screen.getByText(/vendor prices from Classic's loot tables/)).toBeInTheDocument();
-    expect(screen.getByText(/also show auction-house prices, where TradeSkillMaster has one/)).toBeInTheDocument();
+    expect(screen.getByText(/also show your faction.s auction-house price, when someone is selling them/)).toBeInTheDocument();
     expect(screen.queryByText(/aren't listed|economy is brand new/)).not.toBeInTheDocument();
     expect(section("now").getByText("Quest, and loot every mob you kill")).toBeInTheDocument();
     expect(section("farm").getByText(/Enter your level/)).toBeInTheDocument();

@@ -5,23 +5,11 @@
  * Run: npm run test:e2e -- wow-forever-recipe-vendors
  */
 import { test, expect } from "@playwright/test";
+import { stubEmptyPrices } from "./fixtures/emptyPrices";
 
 // No auction prices here — the vendor list doesn't need them.
 test.beforeEach(async ({ page }) => {
-  await page.route("**/wow/prices**", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        region: "us",
-        credit: { source: "tsm", name: "TradeSkillMaster", url: "https://www.tradeskillmaster.com" },
-        source_updated_at: null,
-        fetched_at: null,
-        columns: ["item_id", "market_value", "avg_sale_price", "historical", "sold_per_day", "name"],
-        items: [],
-      }),
-    }),
-  );
+  await stubEmptyPrices(page);
 });
 
 test("Cooking lists recipe vendors for your faction, and Directions opens the World Map", async ({ page }) => {

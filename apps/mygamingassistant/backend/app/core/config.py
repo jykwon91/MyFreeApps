@@ -253,12 +253,20 @@ class Settings(BaseAppSettings):
     # Each pass iterates all active sources sequentially.
     source_sync_interval_hours: int = 6
     # Hours between WoW Forever auction-house price refreshes (also runs once
-    # at boot). TSM's files say max-age=4h; asking every 3h with a conditional
-    # GET keeps prices at most ~3h behind and costs a 304 when nothing changed.
+    # at boot). Blizzard snapshots the houses about hourly; a refresh reads
+    # every house (~30 requests, ~100 MB), so every 3h keeps prices fresh
+    # without hammering the API (its limit is 36,000 requests an hour).
     wow_price_refresh_interval_hours: int = 3
     # WOW_PRICE_REFRESH_ENABLED — independent of SCHEDULER_ENABLED: the public
     # GET /wow/prices is empty without it. Tests and offline dev can turn it off.
+    # When on, BLIZZARD_CLIENT_ID + BLIZZARD_CLIENT_SECRET are required in
+    # production (boot guard); in dev a missing pair fails each refresh with a
+    # WARNING and leaves the stored prices alone.
     wow_price_refresh_enabled: bool = True
+    # Blizzard Game Data API client credentials (develop.battle.net → API
+    # Access), for the auction-house prices. Secrets: never log them.
+    blizzard_client_id: str = ""
+    blizzard_client_secret: str = ""
     # WOW_SERVER_STATUS_RECORDING_ENABLED — independent of SCHEDULER_ENABLED: the
     # server status history (GET /wow/server-status/history) is filled by a
     # 5-minute read-only call to Blizzard's public status page. Serve-only prod

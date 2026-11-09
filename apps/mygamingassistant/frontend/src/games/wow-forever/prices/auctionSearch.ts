@@ -12,9 +12,8 @@ type Compare = (a: AuctionPrice, b: AuctionPrice) => number;
 
 const byName: Compare = (a, b) => a.name.localeCompare(b.name) || a.itemId - b.itemId;
 
-/** Items with no sales figure sort last when ordered by sales. */
 const COMPARERS: Record<AuctionSort, Compare> = {
-  traded: (a, b) => (b.soldPerDay ?? -1) - (a.soldPerDay ?? -1) || byName(a, b),
+  supply: (a, b) => b.quantity - a.quantity || byName(a, b),
   high: (a, b) => b.marketValue - a.marketValue || byName(a, b),
   low: (a, b) => a.marketValue - b.marketValue || byName(a, b),
   name: byName,

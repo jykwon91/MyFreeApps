@@ -1,6 +1,6 @@
 import AuctionFigure from "@/games/wow-forever/components/auctionHouse/AuctionFigure";
 import { AUCTION_ROW_GRID, AUCTION_ROW_LOOK } from "@/games/wow-forever/components/auctionHouse/auctionGrid";
-import { itemLabel, priceOrDash, soldPerDayText } from "@/games/wow-forever/prices/auctionFormat";
+import { itemLabel, onSaleText, priceOrDash } from "@/games/wow-forever/prices/auctionFormat";
 import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
 
 export default function AuctionRow({ item }: { item: AuctionPrice }) {
@@ -10,8 +10,8 @@ export default function AuctionRow({ item }: { item: AuctionPrice }) {
         {itemLabel(item.name, item.itemId)}
       </span>
       <AuctionFigure label="Market value" value={priceOrDash(item.marketValue)} testId="auction-market" />
-      <AuctionFigure label="Avg sale price" value={priceOrDash(item.avgSalePrice)} testId="auction-avg" />
-      <AuctionFigure label="Sold per day" value={soldPerDayText(item.soldPerDay)} testId="auction-sold" />
+      <AuctionFigure label="Cheapest" value={priceOrDash(item.minBuyout)} testId="auction-cheapest" />
+      <AuctionFigure label="On sale" value={onSaleText(item.quantity, item.listings)} testId="auction-on-sale" />
     </li>
   );
 }

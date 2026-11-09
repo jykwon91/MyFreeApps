@@ -1,10 +1,10 @@
 import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
-import type { PriceCredit } from "@/games/wow-forever/types/priceCredit";
+import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
 
-/** The US auction-house prices, ready to look up. */
+/** One faction's US auction-house prices, ready to look up. */
 export interface AuctionPrices {
-  credit: PriceCredit;
-  /** ISO time; null when there are no prices yet. */
+  faction: PriceFaction;
+  /** ISO time of Blizzard's newest house snapshot; null when there are no prices yet. */
   sourceUpdatedAt: string | null;
   byId: ReadonlyMap<number, AuctionPrice>;
   /** Lower-cased name. For data that names items but has no ids (the gold farms' cloth and leather). */

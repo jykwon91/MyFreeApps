@@ -4,6 +4,7 @@
  * Run: npm run test:e2e -- wow-forever-professions
  */
 import { test, expect, type Page } from "@playwright/test";
+import { stubEmptyPrices } from "./fixtures/emptyPrices";
 
 /** The page's text without the recipe vendors' Classic list prices (the vendor list and route "Buy … from …" lines) — what's left must carry no auction price. */
 function textWithoutVendorPrices(page: Page): Promise<string> {
@@ -17,20 +18,7 @@ function textWithoutVendorPrices(page: Page): Promise<string> {
 // Auction prices are covered with stubbed prices in wow-forever-auction-prices.spec.ts.
 // Here the region has none, so the guides show their routes without costs.
 test.beforeEach(async ({ page }) => {
-  await page.route("**/wow/prices**", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        region: "us",
-        credit: { source: "tsm", name: "TradeSkillMaster", url: "https://www.tradeskillmaster.com" },
-        source_updated_at: null,
-        fetched_at: null,
-        columns: ["item_id", "market_value", "avg_sale_price", "historical", "sold_per_day", "name"],
-        items: [],
-      }),
-    }),
-  );
+  await stubEmptyPrices(page);
 });
 
 test("reaches the page from the landing card and leads with training", async ({ page }) => {

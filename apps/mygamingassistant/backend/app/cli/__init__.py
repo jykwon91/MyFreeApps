@@ -364,13 +364,13 @@ def _run_discord_sync_emojis() -> int:
 
 
 async def _run_refresh_wow_prices() -> int:
-    """Pull WoW Forever US auction-house prices now (the scheduler does it every few hours)."""
+    """Pull WoW Forever US auction-house prices from Blizzard now, per faction (the scheduler does it every few hours)."""
     from app.services.wow.prices.feed_refresh import OUTCOME_FAILED
     from app.services.wow.prices.price_refresh_service import refresh_all
 
     outcomes = await refresh_all()
     for o in outcomes:
-        print(f"  {o.source}/{o.region}: {o.outcome} — {o.item_count} items")
+        print(f"  {o.region}/{o.faction}: {o.outcome} — {o.item_count} items")
     if not outcomes:
         print("Nothing refreshed — run load-fixtures first.")
         return 1

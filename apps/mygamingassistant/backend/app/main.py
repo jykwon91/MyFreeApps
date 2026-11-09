@@ -55,6 +55,7 @@ from app.api import (
 # See apps/mygamingassistant/CLAUDE.md → Authentication Model.
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
+from app.core.blizzard_prices_guard import check_blizzard_prices_configured
 from app.core.config import Settings, settings
 from app.core.media_public_base_url_guard import check_media_public_base_url_resolvable
 from app.core.permissions import current_admin, current_strict_superuser
@@ -110,6 +111,7 @@ async def _on_startup() -> None:
       - production + ENABLE_CLASSIFIER=true: ANTHROPIC_API_KEY required.
       - production + DISCORD_ENABLED=true: DISCORD_APPLICATION_ID,
         DISCORD_PUBLIC_KEY, DISCORD_BOT_TOKEN required.
+      - production + WOW_PRICE_REFRESH_ENABLED=true: BLIZZARD_CLIENT_ID/SECRET required.
       - development: missing/invalid vars log WARNING and seed/classifier
         are skipped.
     """
@@ -141,6 +143,7 @@ async def _on_startup() -> None:
             "— classifier will log warnings and skip calls in non-production environment."
         )
 
+    check_blizzard_prices_configured()
     _start_scheduler()
 
 

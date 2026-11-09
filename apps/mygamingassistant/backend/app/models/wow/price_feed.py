@@ -1,10 +1,9 @@
-"""WowPriceFeed — the refresh state of one (game, region, ruleset, source) price feed.
+"""WowPriceFeed — the refresh state of one (game, region, faction) price set.
 
-One row per feed the scheduler pulls. It carries what the next request needs
-for a conditional GET (``etag`` / ``last_modified``), when the prices were
-computed by the source and when we last downloaded them, and the last failure —
-so a feed that keeps failing is visible in the DB and the API never presents
-old prices as fresh.
+One row per faction the scheduler pulls from Blizzard's auction houses. It
+carries when Blizzard took the snapshot the stored prices come from, when we
+last downloaded them, and the last failure — so a feed that keeps failing is
+visible in the DB and the API never presents old prices as fresh.
 """
 import uuid
 from datetime import datetime, timezone
@@ -22,7 +21,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.wow_prices import PRICE_REGIONS, PRICE_SOURCES
+from app.core.wow_prices import PRICE_FACTIONS, PRICE_REGIONS
 from app.db.base import Base
 from app.db.sql_in_list import sql_in_list
 
@@ -31,13 +30,9 @@ class WowPriceFeed(Base):
     __tablename__ = "wow_price_feed"
     __table_args__ = (
         CheckConstraint(f"region IN {sql_in_list(PRICE_REGIONS)}", name="ck_wowpricefeed_region"),
-        CheckConstraint(f"source IN {sql_in_list(PRICE_SOURCES)}", name="ck_wowpricefeed_source"),
+        CheckConstraint(f"faction IN {sql_in_list(PRICE_FACTIONS)}", name="ck_wowpricefeed_faction"),
         CheckConstraint("item_count >= 0", name="ck_wowpricefeed_item_count"),
-        UniqueConstraint(
-            "game_id", "region", "ruleset", "source",
-            name="uq_wowpricefeed_key",
-            postgresql_nulls_not_distinct=True,
-        ),
+        UniqueConstraint("game_id", "region", "faction", name="uq_wowpricefeed_key"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -50,15 +45,11 @@ class WowPriceFeed(Base):
         UUID(as_uuid=True), ForeignKey("game.id", ondelete="CASCADE"), nullable=False,
     )
     region: Mapped[str] = mapped_column(String(4), nullable=False)
-    ruleset: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
-    source: Mapped[str] = mapped_column(String(20), nullable=False)
-    # Validators from the last 200, sent back as If-None-Match / If-Modified-Since.
-    etag: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
-    last_modified: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    # Newest per-item time the source stamped on the stored prices. NULL until
-    # a download carried any prices.
+    faction: Mapped[str] = mapped_column(String(10), nullable=False)
+    # When Blizzard took the snapshot behind the stored prices (the newest
+    # house's Last-Modified). NULL until a download carried any prices.
     source_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    # Last download that replaced the stored prices (a 304 doesn't move it).
+    # Last download that replaced the stored prices.
     fetched_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     # Last time we asked at all, whatever the answer.
     checked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

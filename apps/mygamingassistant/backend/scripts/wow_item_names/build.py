@@ -6,8 +6,8 @@ Usage (from ``apps/mygamingassistant/backend``)::
 
 Writes ``backend/data/wow/item_names.json``: every tradeable item's name from
 the Forever client's ``ItemSparse`` (the build pinned in sources.py). The price
-API (``app/services/wow/prices/client_item_names.py``) uses it for items
-TradeSkillMaster lists with no name — Forever's new items (ids 190000+).
+API (``app/services/wow/prices/client_item_names.py``) names every priced
+item from it — Blizzard's auction data carries item ids only.
 
 Game data © Blizzard Entertainment, accessed via wago.tools DB2 export.
 """

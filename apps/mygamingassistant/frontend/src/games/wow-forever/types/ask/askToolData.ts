@@ -4,6 +4,7 @@ import type { PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings
 import type { AskProfessionRoute } from "@/games/wow-forever/types/ask/askProfessionRoute";
 import type { ClientItemList } from "@/games/wow-forever/types/clientItemList";
 import type { DungeonsData } from "@/games/wow-forever/types/dungeons/dungeonsData";
+import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
 import type { RaresData } from "@/games/wow-forever/types/rares/raresData";
 import type { ServerStatusResponse } from "@/games/wow-forever/types/serverStatus/serverStatusResponse";
@@ -28,7 +29,7 @@ export interface AskToolData {
   loadGoldFarms: () => Promise<readonly GoldFarm[]>;
   loadProfessionRoute: (profession: GuideProfession) => Promise<AskProfessionRoute>;
   /** The live data: same endpoints and cache as the Auction house and Server status pages. */
-  loadPrices: () => Promise<PriceListResponse>;
+  loadPrices: (faction: PriceFaction) => Promise<PriceListResponse>;
   loadServerStatus: (region: WowRegion) => Promise<ServerStatusResponse>;
   player: PlayerSettings;
   /** The player's saved server status region. */

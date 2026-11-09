@@ -3,7 +3,7 @@
  * Map's own `pt:` endpoint) and the guide pages, opened on what was asked.
  */
 import { ASK_GUIDE_PATH } from "@/games/wow-forever/data/ask/askGuidePages";
-import { AUCTION_QUERY_PARAM } from "@/games/wow-forever/data/auctionHouse/auctionHouseParams";
+import { AUCTION_HOUSE_PARAM, AUCTION_QUERY_PARAM } from "@/games/wow-forever/data/auctionHouse/auctionHouseParams";
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 import { MACRO_CLASS_PARAM } from "@/games/wow-forever/data/macros/macroClassFilter";
 import { PROFESSION_PARAM, type GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
@@ -13,6 +13,7 @@ import { SKILL_PARAM } from "@/games/wow-forever/hooks/useCraftingSkill";
 import { DIR_PARAM, FROM_PARAM, TO_PARAM } from "@/games/wow-forever/hooks/useTrip";
 import { DEFAULT_RARE_FILTERS, writeRareFilters } from "@/games/wow-forever/lib/rares/rareFilterParams";
 import type { AskOrigin } from "@/games/wow-forever/types/ask/askOrigin";
+import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
 import { ENDPOINT_KIND, formatEndpoint } from "@/games/wow-forever/worldMap/trip";
 
 const MAP_PATH = "/wow-forever/map";
@@ -63,8 +64,9 @@ export function macrosPageHref(classId: WowClassId | null): string {
 }
 
 /** The Auction house page, searching for what was asked. */
-export function auctionHouseHref(query: string): string {
-  const params = new URLSearchParams({ [AUCTION_QUERY_PARAM]: query });
+/** The Auction house page on the same house the answer came from. */
+export function auctionHouseHref(query: string, faction: PriceFaction): string {
+  const params = new URLSearchParams({ [AUCTION_QUERY_PARAM]: query, [AUCTION_HOUSE_PARAM]: faction });
   return withParams(ASK_GUIDE_PATH.auctionHouse, params);
 }
 

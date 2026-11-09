@@ -7,8 +7,10 @@
 import { ASK_FACTION_FILTER, ASK_TOOL_INPUT } from "@/games/wow-forever/data/ask/askTools";
 import { WOW_CLASSES, type WowClassId } from "@/games/wow-forever/data/classes";
 import { PROFESSION_GROUPS, type GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
+import { PRICE_FACTIONS } from "@/games/wow-forever/data/priceFactions";
 import { WOW_REGIONS } from "@/games/wow-forever/data/wowRegions";
 import { FARM_SORT, type FarmSort } from "@/games/wow-forever/gold/goldFarms";
+import { isPriceFaction } from "@/games/wow-forever/prices/priceFaction";
 import type { AskFactionFilter } from "@/games/wow-forever/types/ask/askFactionFilter";
 import type { AskGoldInput } from "@/games/wow-forever/types/ask/askGoldInput";
 import type { AskInputCheck } from "@/games/wow-forever/types/ask/askInputCheck";
@@ -155,7 +157,11 @@ export function checkMacrosInput(input: Record<string, unknown>): AskInputCheck<
 const regionError = `region must be one of ${REGIONS.join(", ")}`;
 
 export function checkPricesInput(input: Record<string, unknown>): AskInputCheck<AskPricesInput> {
-  return queryInput(input, ["query", "limit"]);
+  const base = queryInput(input, ["query", "limit", "faction"]);
+  if (!base.ok) return base;
+  if (input.faction === undefined) return { ok: true, value: { ...base.value, faction: null } };
+  if (!isPriceFaction(input.faction)) return fail(`faction must be one of ${PRICE_FACTIONS.join(", ")}`);
+  return { ok: true, value: { ...base.value, faction: input.faction } };
 }
 
 export function checkServerStatusInput(input: Record<string, unknown>): AskInputCheck<AskRegionInput> {

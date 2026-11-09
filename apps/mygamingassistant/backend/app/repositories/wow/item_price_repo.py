@@ -16,17 +16,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.item_price import WowItemPrice
 
-# asyncpg caps a statement at 32767 bind parameters; a row binds 11.
-_UPSERT_BATCH = 2000
+# asyncpg caps a statement at 32767 bind parameters; a row binds 8.
+_UPSERT_BATCH = 3000
 
 _UPDATED_COLUMNS = (
-    "name",
     "market_value",
-    "historical",
-    "avg_sale_price",
-    "sale_rate",
-    "sold_per_day",
-    "source_updated_at",
+    "min_buyout",
+    "quantity",
+    "listing_count",
     "fetched_at",
     "updated_at",
 )

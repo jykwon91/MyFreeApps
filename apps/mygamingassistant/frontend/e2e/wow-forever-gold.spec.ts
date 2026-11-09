@@ -19,7 +19,7 @@ test("reaches the page from the landing card", async ({ page }) => {
   await expect(page).toHaveURL(/\/wow-forever\/gold$/);
   await expect(page.getByRole("heading", { name: "Making gold" })).toBeVisible();
   await expect(page.getByText(/vendor prices from Classic's loot tables/)).toBeVisible();
-  await expect(page.getByText(/also show auction-house prices, where TradeSkillMaster has one/)).toBeVisible();
+  await expect(page.getByText(/also show your faction's auction-house price, when someone is selling them/)).toBeVisible();
 });
 
 test("your level picks the plan and lists where to farm, with directions", async ({ page }) => {

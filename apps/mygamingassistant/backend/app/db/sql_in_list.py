@@ -5,7 +5,7 @@ from collections.abc import Iterable
 def sql_in_list(values: Iterable[str]) -> str:
     """``("us", "eu")`` -> ``"('us', 'eu')"``.
 
-    ``f"{values!r}"`` is wrong for a one-value tuple (``('tsm',)`` is not SQL).
+    ``f"{values!r}"`` is wrong for a one-value tuple (``('us',)`` is not SQL).
     Values are code constants, never user input; a quote in one is a bug.
     """
     items = list(values)

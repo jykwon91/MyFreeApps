@@ -5,16 +5,9 @@
  * Run: npx playwright test --config e2e/playwright.config.ts wow-forever-provenance
  */
 import { test, expect, type Page } from "@playwright/test";
+import { stubEmptyPrices } from "./fixtures/emptyPrices";
 
 const PHONE = { width: 375, height: 812 };
-const EMPTY_PRICES = {
-  region: "us",
-  credit: { source: "tsm", name: "TradeSkillMaster", url: "https://www.tradeskillmaster.com" },
-  source_updated_at: null,
-  fetched_at: null,
-  columns: ["item_id", "market_value", "avg_sale_price", "historical", "sold_per_day", "name"],
-  items: [],
-};
 
 const PAGES = [
   { name: "Professions", path: "/wow-forever/professions?p=tailoring" },
@@ -23,10 +16,6 @@ const PAGES = [
   { name: "Making gold", path: "/wow-forever/gold?band=all" },
 ] as const;
 
-async function stubPrices(page: Page) {
-  await page.route("**/wow/prices**", (route) => route.fulfill({ json: EMPTY_PRICES }));
-}
-
 async function expectNoHorizontalOverflow(page: Page) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
@@ -34,7 +23,7 @@ async function expectNoHorizontalOverflow(page: Page) {
 
 for (const { name, path } of PAGES) {
   test(`${name} shows provenance badges and the how-to-read note`, async ({ page }) => {
-    await stubPrices(page);
+    await stubEmptyPrices(page);
     await page.goto(path);
     await expect(page.getByTestId("provenance-badge").first()).toBeVisible();
 
@@ -48,7 +37,7 @@ for (const { name, path } of PAGES) {
   test(`${name} has no horizontal overflow at 375px, and a tap explains a badge`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: PHONE, hasTouch: true, isMobile: true });
     const page = await context.newPage();
-    await stubPrices(page);
+    await stubEmptyPrices(page);
     await page.goto(path);
     const badge = page.getByTestId("provenance-badge").first();
     await expect(badge).toBeVisible();

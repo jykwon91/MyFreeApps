@@ -2,8 +2,10 @@
  * WoW Forever auction-house prices on the pages, with GET /api/wow/prices stubbed.
  *
  * The prices are filled in automatically, so nothing here types a price. It checks:
- *   - Tailoring and Enchanting show a cheapest route with a total, and the TSM (US) credit
- *     with no region picker — prices are US only
+ *   - Tailoring and Enchanting show a cheapest route with a total, and the Blizzard credit
+ *     for your faction's auction house (US) with no region picker — prices are US only
+ *   - the Auction house page switches between Alliance, Horde and Blackwater prices,
+ *     and the faction you pick carries over to the other priced pages
  *   - every priced material shows its price filled in; one nobody sells yet is
  *     worked out from its materials ("From its materials") or says it isn't sold yet
  *   - route lines show what one of each material costs ("50c each")
@@ -21,7 +23,7 @@ import { readFileSync } from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
 
 const PRICES = "**/wow/prices**";
-const COLUMNS = ["item_id", "market_value", "avg_sale_price", "historical", "sold_per_day", "name"];
+const COLUMNS = ["item_id", "market_value", "min_buyout", "quantity", "listings", "name"];
 const UPDATED_AT = "2026-11-06T09:00:00Z";
 const NOW = new Date("2026-11-06T12:00:00Z");
 /** Enchanting materials the stub leaves out: one nothing can price, one worked out from what Blacksmithing makes it with. */
@@ -65,21 +67,28 @@ const FOOD_ROWS: Row[] = [
   [769, 12, "Chunk of Boar Meat"],
 ];
 
+function priceBody(rows: Row[], faction: string) {
+  return {
+    region: "us",
+    faction,
+    source_updated_at: UPDATED_AT,
+    fetched_at: UPDATED_AT,
+    columns: COLUMNS,
+    items: rows.map(([id, value, name]) => [id, value, value, 20, 4, name]),
+  };
+}
+
+/** Serves `rowsFor(faction)` for whichever faction the page asks for. */
+async function stubFactionPrices(page: Page, rowsFor: (faction: string) => Row[], asked: string[] = []) {
+  await page.route(PRICES, (route) => {
+    const faction = new URL(route.request().url()).searchParams.get("faction") ?? "alliance";
+    asked.push(faction);
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(priceBody(rowsFor(faction), faction)) });
+  });
+}
+
 async function stubPrices(page: Page, rows: Row[]) {
-  await page.route(PRICES, (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        region: "us",
-        credit: { source: "tsm", name: "TradeSkillMaster", url: "https://www.tradeskillmaster.com" },
-        source_updated_at: UPDATED_AT,
-        fetched_at: UPDATED_AT,
-        columns: COLUMNS,
-        items: rows.map(([id, value, name]) => [id, value, null, value, null, name]),
-      }),
-    }),
-  );
+  await stubFactionPrices(page, () => rows);
 }
 
 async function expectNoSidewaysScroll(page: Page) {
@@ -96,8 +105,8 @@ test("Tailoring finds the cheapest route at auction prices and totals it, with n
   await page.goto("/wow-forever/professions?p=tailoring");
   const route = page.locator("#route");
   const credit = route.getByTestId("price-credit");
-  await expect(credit).toContainText("Prices from TradeSkillMaster (US) · updated 3 hours ago");
-  await expect(credit.getByRole("link", { name: "TradeSkillMaster" })).toHaveAttribute("href", "https://www.tradeskillmaster.com");
+  await expect(credit).toContainText("Prices from Blizzard (Alliance AH, US) · updated 3 hours ago");
+  await expect(credit.getByRole("link")).toHaveCount(0);
   // US only: no region picker.
   await expect(credit.getByRole("combobox", { name: "Region" })).toHaveCount(0);
   await expect(route.getByText("Cheapest at auction prices")).toBeVisible();
@@ -170,7 +179,7 @@ test("prices that don't load leave the route usable, with a retry", async ({ pag
 test("the Cooking route prices its materials", async ({ page }) => {
   await stubPrices(page, FOOD_ROWS);
   await page.goto("/wow-forever/professions?p=cooking");
-  await expect(page.getByTestId("price-credit").first()).toContainText("Prices from TradeSkillMaster");
+  await expect(page.getByTestId("price-credit").first()).toContainText("Prices from Blizzard (Alliance AH, US)");
   await expect(page.getByTestId("auction-price").first()).toHaveText(/\(~\d+[gsc].* each\)/);
 });
 
@@ -178,7 +187,7 @@ test("a food page says whether to buy or cook, from auction prices", async ({ pa
   await stubPrices(page, FOOD_ROWS);
   await page.goto("/wow-forever/food/6890");
   const section = page.locator("section", { has: page.getByRole("heading", { name: "Buy or cook?" }) });
-  await expect(section.getByTestId("price-credit")).toContainText("Prices from TradeSkillMaster (US) · updated 3 hours ago");
+  await expect(section.getByTestId("price-credit")).toContainText("Prices from Blizzard (Alliance AH, US) · updated 3 hours ago");
   const prices = section.getByTestId("food-prices");
   await expect(prices).toContainText("Ingredients for one cook~40c");
   await expect(prices).toContainText("Buy Smoked Bear Meat at the auction house~1s 50c");
@@ -201,6 +210,45 @@ test("the food picker sums up each pick", async ({ page }) => {
   await page.goto("/wow-forever/food?lvl=20&class=warlock&act=healing&skill=1");
   await expect(page.getByTestId("price-credit")).toBeVisible();
   await expect(page.getByTestId("food-price-line").first()).toContainText(/^Cook .* · Buy /);
+});
+
+const BLUE_PEARL_BY_FACTION: Record<string, Row[]> = {
+  alliance: [[4611, 3300, "Blue Pearl"]],
+  horde: [[4611, 3495, "Blue Pearl"]],
+  neutral: [[4611, 5349, "Blue Pearl"]],
+};
+
+test("the Auction house page switches between each faction's prices, and the pick carries over", async ({ page }) => {
+  const asked: string[] = [];
+  await stubFactionPrices(page, (faction) => BLUE_PEARL_BY_FACTION[faction] ?? [], asked);
+  await page.goto("/wow-forever/auction-house?q=Blue+Pearl");
+  const house = page.getByRole("radiogroup", { name: "Auction house" });
+  const pearl = page.getByTestId("auction-row").filter({ hasText: "Blue Pearl" });
+  await expect(house.getByRole("radio", { name: "Alliance" })).toHaveAttribute("aria-checked", "true");
+  await expect(pearl.getByTestId("auction-market")).toHaveText("33s");
+  await expect(pearl.getByTestId("auction-on-sale")).toHaveText("20 in 4 auctions");
+  await expect(page.getByTestId("price-credit")).toContainText("Prices from Blizzard (Alliance AH, US) · updated 3 hours ago");
+
+  await house.getByRole("radio", { name: "Horde" }).click();
+  await expect(pearl.getByTestId("auction-market")).toHaveText("34s 95c");
+  await expect(page.getByTestId("price-credit")).toContainText("(Horde AH, US)");
+  await expect(page).toHaveURL(/\?q=Blue\+Pearl$/);
+
+  await house.getByRole("radio", { name: "Blackwater" }).click();
+  await expect(pearl.getByTestId("auction-market")).toHaveText("53s 49c");
+  await expect(page).toHaveURL(/house=neutral/);
+  expect(asked).toEqual(expect.arrayContaining(["alliance", "horde", "neutral"]));
+
+  // Horde was saved as your faction; Blackwater lives only in this page's link.
+  await page.goto("/wow-forever/food/6890");
+  await expect(page.getByTestId("price-credit").first()).toContainText("Prices from Blizzard (Horde AH, US)");
+});
+
+test("an auction house with no prices yet says so plainly", async ({ page }) => {
+  await stubFactionPrices(page, () => []);
+  await page.goto("/wow-forever/auction-house");
+  await expect(page.getByTestId("price-credit")).toContainText("No Alliance auction prices yet.");
+  await expect(page.getByTestId("auction-row")).toHaveCount(0);
 });
 
 test("priced pages never scroll sideways on a phone", async ({ page }) => {
