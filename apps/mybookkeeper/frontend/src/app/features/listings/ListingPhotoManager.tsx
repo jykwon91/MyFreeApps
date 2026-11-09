@@ -31,7 +31,7 @@ import {
   LISTING_PHOTO_MIME_TYPES,
 } from "@mybookkeeper/api-client/constants/listingPhotos";
 import { writeFailure } from "@mybookkeeper/api-client/utils/writeFailure";
-import { sortPhotos } from "@mybookkeeper/api-client/utils/listingPhotoOrder";
+import { hasSameIds, sortPhotos } from "@mybookkeeper/api-client/utils/listingPhotoOrder";
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 import type { PhotoLightboxTarget } from "@/shared/types/listing/photo-lightbox-target";
 import ListingPhotoCard from "@/app/features/listings/ListingPhotoCard";
@@ -100,7 +100,9 @@ export default function ListingPhotoManager({
   );
 
   const sortedPhotos = sortPhotos(photos);
-  const displayIds = orderedIds ?? sortedPhotos.map((p) => p.id);
+  const serverIds = sortedPhotos.map((p) => p.id);
+  // A local order is only kept while it still covers exactly the listing's photos (an upload or delete drops it).
+  const displayIds = orderedIds && hasSameIds(orderedIds, serverIds) ? orderedIds : serverIds;
   const photosById = new Map(sortedPhotos.map((p) => [p.id, p]));
 
   const selectedCount = selection.selectedIds.size;

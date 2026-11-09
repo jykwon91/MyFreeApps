@@ -162,8 +162,9 @@ async def reorder_photos(
 ) -> list[ListingPhotoResponse]:
     """Set the photo order in one transaction: the first id becomes the cover.
 
-    Photos left out of the list follow in their current order. 409 when an id
-    isn't a photo of this listing: the caller's list is stale and should refetch.
+    The list must be every photo of the listing exactly once. 409 when it is
+    partial or names a photo not on this listing: the caller's list is stale
+    and should refetch.
     """
     try:
         return await listing_photo_service.reorder_photos(

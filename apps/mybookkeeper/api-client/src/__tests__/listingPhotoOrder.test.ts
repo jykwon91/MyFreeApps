@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ListingPhoto } from "../types/listing/listing-photo";
-import { moveId, sortPhotos } from "../utils/listingPhotoOrder";
+import { hasSameIds, moveId, sortPhotos } from "../utils/listingPhotoOrder";
 
 const photo = (id: string, display_order: number) => ({ id, display_order }) as ListingPhoto;
 
@@ -21,5 +21,16 @@ describe("moveId", () => {
     expect(moveId(["a", "b"], 1, 1)).toEqual(["a", "b"]);
     expect(moveId(["a", "b"], 0, 2)).toEqual(["a", "b"]);
     expect(moveId(["a", "b"], -1, 0)).toEqual(["a", "b"]);
+  });
+});
+
+describe("hasSameIds", () => {
+  it("is true for the same ids in any order", () => {
+    expect(hasSameIds(["a", "b", "c"], ["c", "a", "b"])).toBe(true);
+  });
+  it("is false for a missing, extra or repeated id", () => {
+    expect(hasSameIds(["a", "b"], ["a", "b", "c"])).toBe(false);
+    expect(hasSameIds(["a", "b", "c"], ["a", "b"])).toBe(false);
+    expect(hasSameIds(["a", "a"], ["a", "b"])).toBe(false);
   });
 });

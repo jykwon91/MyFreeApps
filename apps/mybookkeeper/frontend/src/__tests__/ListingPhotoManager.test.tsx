@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
+import type { DragEndEvent } from "@dnd-kit/core";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import ListingPhotoManager from "@/app/features/listings/ListingPhotoManager";
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
+import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 
 const uploadMock = vi.fn(() => ({ unwrap: () => Promise.resolve([]) }));
 const deleteMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
@@ -19,15 +21,49 @@ vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useReorderListingPhotosMutation: vi.fn(() => [reorderMock, { isLoading: false }]),
 }));
 
-function renderManager(photos: ListingPhoto[] = [], canWrite = true) {
-  return render(
+const showErrorMock = vi.fn();
+let dragEnd: ((event: DragEndEvent) => Promise<void>) | undefined;
+
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
+  showError: (message: string) => showErrorMock(message),
+}));
+
+// jsdom has no layout, so a real pointer drag can't resolve a drop target: capture the handler instead.
+vi.mock("@dnd-kit/core", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@dnd-kit/core")>();
+  return {
+    ...actual,
+    DndContext: (props: React.ComponentProps<typeof actual.DndContext>) => {
+      dragEnd = props.onDragEnd as typeof dragEnd;
+      return <actual.DndContext {...props} />;
+    },
+  };
+});
+
+function managerTree(photos: ListingPhoto[], canWrite = true) {
+  return (
     <Provider store={store}>
       <MemoryRouter>
         <ListingPhotoManager canWrite={canWrite} listingId="listing-1" photos={photos} />
       </MemoryRouter>
-    </Provider>,
+    </Provider>
   );
 }
+
+function renderManager(photos: ListingPhoto[] = [], canWrite = true) {
+  return render(managerTree(photos, canWrite));
+}
+
+const photoAt = (id: string, display_order: number): ListingPhoto => ({
+  id, listing_id: "listing-1", storage_key: `k-${id}`,
+  caption: null, display_order, created_at: "2026-01-01T00:00:00Z", presigned_url: null,
+});
+
+const drag = (activeId: string, overId: string) =>
+  act(async () => {
+    await dragEnd?.({ active: { id: activeId }, over: { id: overId } } as DragEndEvent);
+  });
 
 describe("ListingPhotoManager", () => {
   beforeEach(() => {
@@ -35,6 +71,7 @@ describe("ListingPhotoManager", () => {
     deleteMock.mockClear();
     reorderMock.mockClear();
     invalidateTagsMock.mockClear();
+    showErrorMock.mockClear();
   });
 
   it("renders the empty state when no photos exist", () => {
@@ -220,5 +257,28 @@ describe("ListingPhotoManager", () => {
 
     await user.click(screen.getByTestId("photo-clear-selection-button"));
     expect(screen.queryByTestId("photo-selection-toolbar")).not.toBeInTheDocument();
+  });
+
+  describe("reordering", () => {
+    it("sends the full current set of ids after a photo arrives following an earlier reorder", async () => {
+      const { rerender } = renderManager([photoAt("a", 0), photoAt("b", 1)]);
+      await drag("a", "b");
+      expect(reorderMock).toHaveBeenLastCalledWith({ listingId: "listing-1", photoIds: ["b", "a"] });
+
+      // The listing gains a photo (upload or refetch): the local [b, a] order is now incomplete.
+      rerender(managerTree([photoAt("a", 0), photoAt("b", 1), photoAt("c", 2)]));
+      await drag("c", "a");
+
+      expect(reorderMock).toHaveBeenLastCalledWith({ listingId: "listing-1", photoIds: ["c", "a", "b"] });
+    });
+
+    it("refetches and shows the fixed copy on a 409", async () => {
+      reorderMock.mockReturnValueOnce({ unwrap: () => Promise.reject({ status: 409 }) });
+      renderManager([photoAt("a", 0), photoAt("b", 1)]);
+      await drag("a", "b");
+
+      expect(invalidateTagsMock).toHaveBeenCalledWith([{ type: "Listing", id: "listing-1" }]);
+      expect(showErrorMock).toHaveBeenCalledWith(LISTING_MESSAGES.photoOrderStale);
+    });
   });
 });
