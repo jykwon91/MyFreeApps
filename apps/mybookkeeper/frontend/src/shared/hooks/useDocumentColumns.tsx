@@ -1,3 +1,4 @@
+import { documentSourceLabel } from "@mybookkeeper/api-client/utils/documentSourceLabel";
 import { useMemo } from "react";
 import { createColumnHelper } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -6,6 +7,7 @@ import { FileCheck } from "lucide-react";
 import { formatDate, timeAgo } from "@/shared/utils/date";
 import { DOCUMENT_TYPE_LABELS } from "@/shared/lib/constants";
 import type { Document } from "@mybookkeeper/api-client/types/document/document";
+import { matchesChoice } from "@mybookkeeper/api-client/utils/documentListView";
 import StatusBadge from "@/app/features/documents/StatusBadge";
 import DocumentRowActions from "@/app/features/documents/DocumentRowActions";
 import IndeterminateCheckbox from "@/shared/components/ui/IndeterminateCheckbox";
@@ -67,7 +69,7 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<AppTableFe
           </div>
         ),
         filterFn: (row, _columnId, filterValue: string[]) => {
-          return filterValue.includes(row.getValue<string>("status"));
+          return matchesChoice(row.getValue<string>("status"), filterValue);
         },
       }),
       columnHelper.accessor("file_name", {
@@ -98,8 +100,7 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<AppTableFe
           );
         },
         filterFn: (row, _columnId, filterValue: string[]) => {
-          const val = row.getValue<string | null>("document_type") ?? "";
-          return filterValue.includes(val);
+          return matchesChoice(row.getValue<string | null>("document_type"), filterValue);
         },
       }),
       columnHelper.accessor("source", {
@@ -107,11 +108,11 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<AppTableFe
         enableSorting: true,
         cell: ({ getValue }) => (
           <span className="text-xs px-2 py-0.5 rounded bg-muted">
-            {getValue() === "email" ? "Email" : "Upload"}
+            {documentSourceLabel(getValue())}
           </span>
         ),
         filterFn: (row, _columnId, filterValue: string[]) => {
-          return filterValue.includes(row.getValue<string>("source"));
+          return matchesChoice(row.getValue<string>("source"), filterValue);
         },
       }),
       columnHelper.accessor("created_at", {

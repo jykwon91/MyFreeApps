@@ -56,4 +56,24 @@ describe("documentsApi", () => {
       "get /documents",
     ]);
   });
+
+  it("deletes several in one request with the ids in the body, then refetches the list", async () => {
+    const store = makeStore();
+    store.dispatch(endpoints.getDocuments.initiate({}));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await store.dispatch(endpoints.bulkDeleteDocuments.initiate(["d1", "d2"]));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sent.map((config) => `${config.method} ${config.url}`)).toEqual([
+      "get /documents",
+      "post /documents/bulk-delete",
+      "get /documents",
+    ]);
+    expect(JSON.parse(String(sent[1].data))).toEqual({ ids: ["d1", "d2"] });
+  });
+
+  it("marks a document reference-only with a patch", async () => {
+    await makeStore().dispatch(endpoints.toggleEscrowPaid.initiate({ id: "d1", is_escrow_paid: true }));
+    expect(`${sent[0].method} ${sent[0].url}`).toBe("patch /documents/d1/escrow-paid");
+    expect(JSON.parse(String(sent[0].data))).toEqual({ is_escrow_paid: true });
+  });
 });

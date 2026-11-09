@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
@@ -54,6 +54,7 @@ const mockDocuments: Document[] = [
 
 const mockDeleteDocument = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 const mockBulkDelete = vi.fn(() => ({ unwrap: () => Promise.resolve({ deleted: ["d1", "d2"], skipped: [] }) }));
+const mockShowError = vi.fn();
 const mockToggleEscrow = vi.fn(() => ({
   unwrap: () => Promise.resolve({ is_escrow_paid: true, transactions_removed: 0 }),
 }));
@@ -71,6 +72,13 @@ vi.mock('@/shared/hooks/useDocumentColumns', () => ({
   useDocumentColumns: vi.fn(({ onDelete }: { onDelete: (id: string) => void }) => {
     const helper = createColumnHelper<AppTableFeatures, Document>();
     return [
+      helper.display({
+        id: 'select',
+        header: () => null,
+        cell: ({ row }: CellContext<AppTableFeatures, Document, unknown>) => (
+          <input type="checkbox" aria-label={`Select ${row.original.id}`} checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} />
+        ),
+      }),
       helper.accessor('file_name', {
         id: 'file_name',
         header: 'File',
@@ -94,8 +102,11 @@ vi.mock('@/shared/hooks/useDocumentColumns', () => ({
   }),
 }));
 
+// One document per request, so two selected documents take two batches.
+vi.mock('@mybookkeeper/api-client/constants/documentBulkDelete', () => ({ MAX_BULK_DELETE_DOCUMENT_IDS: 1 }));
+
 vi.mock('@/shared/hooks/useToast', () => ({
-  useToast: vi.fn(() => ({ showError: vi.fn(), showSuccess: vi.fn() })),
+  useToast: vi.fn(() => ({ showError: mockShowError, showSuccess: vi.fn() })),
 }));
 
 vi.mock('@/app/features/documents/DocumentUploadZone', () => ({
@@ -242,6 +253,21 @@ describe('Documents', () => {
     await user.click(deleteButtons[0]);
     await user.click(screen.getByText('Cancel'));
     expect(screen.queryByText('Delete document')).not.toBeInTheDocument();
+  });
+
+  it('says exactly what went when a later batch fails, and keeps the failed document selected', async () => {
+    const user = userEvent.setup();
+    mockBulkDelete
+      .mockReturnValueOnce({ unwrap: () => Promise.resolve({ deleted: ['doc-1'], skipped: [] }) })
+      .mockReturnValueOnce({ unwrap: () => Promise.reject(new Error('boom')) });
+    renderWithProviders(<Documents />);
+    await user.click(screen.getByLabelText('Select doc-1'));
+    await user.click(screen.getByLabelText('Select doc-2'));
+    await user.click(screen.getByText('Delete selected'));
+    const deleteButtons = screen.getAllByText('Delete');
+    await user.click(deleteButtons[deleteButtons.length - 1]);
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith("Deleted 1. 1 couldn't be deleted \u2014 try again."));
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
   });
 
   it('does not show bulk action bar when nothing is selected', () => {

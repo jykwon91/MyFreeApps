@@ -11,6 +11,7 @@ import { TRANSACTION_EXPORT_FORMATS, TRANSACTION_EXPORT_MESSAGES as EXPORT_MESSA
 import { NO_FILTERS, TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import type { TransactionFilters } from "../../types/TransactionFilters";
 import { monthName } from "../../lib/localDate";
+import { useRowSelection } from "../../lib/useRowSelection";
 import { useToday } from "../../lib/useToday";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { categoryLabel, customRangeLabel, propertyLabel } from "./transactionDisplay";
@@ -21,7 +22,6 @@ import { activeFilterCount, reviewLink, toListParams } from "./transactionFilter
 import TransactionRow from "./TransactionRow";
 import { useBulkApprove } from "./useBulkApprove";
 import { useShareTransactionExport } from "./useShareTransactionExport";
-import { useTransactionSelection } from "./useTransactionSelection";
 import { useVendorSearch } from "./useVendorSearch";
 import TransactionsSkeleton, { TransactionSkeletonRow } from "./TransactionsSkeleton";
 
@@ -42,7 +42,7 @@ export default function TransactionsScreen({
   const [isExportSheetOpen, setIsExportSheetOpen] = useState(false);
   const [listThatFailedToLoadMore, setListThatFailedToLoadMore] = useState<string | null>(null);
 
-  const selection = useTransactionSelection();
+  const selection = useRowSelection();
   const bulk = useBulkApprove();
 
   const params = useMemo(() => toListParams(filters, today), [filters, today]);
@@ -194,6 +194,7 @@ export default function TransactionsScreen({
                 selection.isSelecting ? (
                   <LoadingButton
                     accessibilityLabel="Select all the transactions shown"
+                    disabled={selectedRows.length === rows.length}
                     onPress={() => selection.selectAll(rows.map((row) => row.id))}
                     style={{ flex: 1 }}
                     variant="secondary"

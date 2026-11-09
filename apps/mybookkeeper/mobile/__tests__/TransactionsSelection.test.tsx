@@ -114,6 +114,15 @@ describe("picking several transactions", () => {
     expect(JSON.parse(String(bulkRequests(server.requests)[0]?.data))).toEqual({ ids: ["a", "b"] });
   });
 
+  it("disables Select all once everything shown is already selected", async () => {
+    startTransactionServer(waiting);
+    await renderScreen();
+    await screen.findByText("Acme");
+    await fireEvent.press(screen.getByRole("button", { name: "Select several transactions" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Select all the transactions shown" }));
+    expect(screen.getByRole("button", { name: "Select all the transactions shown" }).props.accessibilityState).toMatchObject({ disabled: true });
+  });
+
   it("can't approve when none of the selected can be", async () => {
     const server = startTransactionServer(waiting);
     await renderScreen();

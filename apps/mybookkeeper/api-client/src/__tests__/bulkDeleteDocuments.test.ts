@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MAX_BULK_DELETE_DOCUMENT_IDS } from "../constants/documentBulkDelete";
-import { chunkDocumentIds, mergeBulkDeleteResponses } from "../utils/bulkDeleteDocuments";
+import { chunkDocumentIds, mergeBulkDeleteResponses, runBulkDelete } from "../utils/bulkDeleteDocuments";
 
 describe("chunkDocumentIds", () => {
   it("keeps every request within the server cap", () => {
@@ -28,5 +28,37 @@ describe("mergeBulkDeleteResponses", () => {
       deleted: ["a", "c"],
       skipped: [{ id: "b", reason: "being_read" }, { id: "d", reason: "not_found" }],
     });
+  });
+});
+
+describe("runBulkDelete", () => {
+  const MAX = MAX_BULK_DELETE_DOCUMENT_IDS;
+  const ids = Array.from({ length: MAX * 2 + 1 }, (_, i) => `d${i}`);
+
+  it("runs the batches in order and merges what came back", async () => {
+    const send = vi.fn(async (batch: string[]) => ({ deleted: batch, skipped: [] }));
+    const run = await runBulkDelete(ids, send);
+    expect(send.mock.calls.map(([batch]) => batch.length)).toEqual([MAX, MAX, 1]);
+    expect(run).toEqual({ deleted: ids, skipped: [], failedIds: [], error: null });
+  });
+
+  it("keeps what batch 1 deleted when batch 2 fails, and reports batch 2 and the unsent batch 3 as failed", async () => {
+    const boom = new Error("boom");
+    const send = vi
+      .fn<(batch: string[]) => Promise<{ deleted: string[]; skipped: { id: string; reason: "being_read" }[] }>>()
+      .mockImplementationOnce(async (batch) => ({ deleted: batch.slice(1), skipped: [{ id: batch[0], reason: "being_read" }] }))
+      .mockRejectedValueOnce(boom);
+    const run = await runBulkDelete(ids, send);
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(run.deleted).toEqual(ids.slice(1, MAX));
+    expect(run.skipped).toEqual([{ id: "d0", reason: "being_read" }]);
+    expect(run.failedIds).toEqual(ids.slice(MAX));
+    expect(run.error).toBe(boom);
+  });
+
+  it("sends nothing for no ids", async () => {
+    const send = vi.fn();
+    expect(await runBulkDelete([], send)).toEqual({ deleted: [], skipped: [], failedIds: [], error: null });
+    expect(send).not.toHaveBeenCalled();
   });
 });
