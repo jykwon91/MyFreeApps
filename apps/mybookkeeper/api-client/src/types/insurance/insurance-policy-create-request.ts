@@ -1,0 +1,24 @@
+import type { InsurancePremiumFrequency } from "./insurance-premium-frequency";
+
+/**
+ * Request body for POST /insurance-policies.
+ *
+ * Mirrors ``schemas/insurance/insurance_policy_create_request.py``.
+ */
+export interface InsurancePolicyCreateRequest {
+  property_id: string;
+  source_document_id?: string | null;
+  policy_name: string;
+  carrier?: string | null;
+  policy_number?: string | null;
+  effective_date?: string | null;
+  expiration_date?: string | null;
+  coverage_amount_cents?: number | null;
+  premium_cents?: number | null;
+  premium_frequency?: InsurancePremiumFrequency | null;
+  /** Fees, surcharges and taxes for the policy term, not per billing period. */
+  fees_and_taxes_cents?: number | null;
+  deductible_cents?: number | null;
+  wind_hail_deductible_pct?: string | null;
+  notes?: string | null;
+}

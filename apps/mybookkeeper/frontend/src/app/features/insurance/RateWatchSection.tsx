@@ -1,7 +1,7 @@
 import { LoadingButton } from "@platform/ui";
 import RateWatchBody from "@/app/features/insurance/RateWatchBody";
-import { useRateWatchMode } from "@/app/features/insurance/useRateWatchMode";
-import { useLazyGetInsuranceRateWatchQuery } from "@/shared/store/insuranceMarketApi";
+import { resolveRateWatchMode } from "@mybookkeeper/api-client/utils/rateWatchMode";
+import { useLazyGetInsuranceRateWatchQuery } from "@mybookkeeper/api-client/store/insuranceMarketApi";
 
 /**
  * "Is my premium about to go up" — the market side of the insurance feature.
@@ -21,7 +21,7 @@ export default function RateWatchSection() {
   const [check, { data, isFetching, isError, isUninitialized }] =
     useLazyGetInsuranceRateWatchQuery();
 
-  const mode = useRateWatchMode({
+  const mode = resolveRateWatchMode({
     hasChecked: !isUninitialized,
     isFetching,
     isError,

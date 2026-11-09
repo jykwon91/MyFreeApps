@@ -1,25 +1,17 @@
 import { useState } from "react";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
 import { showError, showSuccess } from "@platform/ui";
+import { positiveDollarsToCents } from "@mybookkeeper/api-client/utils/insuranceBenchmarkForm";
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import {
   useDeleteInsuranceBenchmarkMutation,
   useUpsertInsuranceBenchmarkMutation,
-} from "@/shared/store/insuranceBenchmarksApi";
+} from "@mybookkeeper/api-client/store/insuranceBenchmarksApi";
 import type { InsuranceBenchmark } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark";
 
 interface UseInsuranceBenchmarkFormArgs {
   existing: InsuranceBenchmark | null | undefined;
   onSaved: () => void;
-}
-
-/** Dollars typed into an input → integer cents, or null when unusable. */
-function dollarsToCents(value: string): number | null {
-  const trimmed = value.trim();
-  if (trimmed === "") return null;
-  const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed) || parsed <= 0) return null;
-  return Math.round(parsed * 100);
 }
 
 /**
@@ -49,8 +41,8 @@ export function useInsuranceBenchmarkForm({
   const [upsert, { isLoading: isSaving }] = useUpsertInsuranceBenchmarkMutation();
   const [remove, { isLoading: isRemoving }] = useDeleteInsuranceBenchmarkMutation();
 
-  const premiumCents = dollarsToCents(premium);
-  const coverageCents = dollarsToCents(coverage);
+  const premiumCents = positiveDollarsToCents(premium);
+  const coverageCents = positiveDollarsToCents(coverage);
   const isBusy = isSaving || isRemoving;
   const canSubmit =
     premiumCents !== null && coverageCents !== null && observedOn !== "" && !isBusy;

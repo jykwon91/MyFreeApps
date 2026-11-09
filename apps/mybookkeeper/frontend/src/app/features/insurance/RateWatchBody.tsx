@@ -1,7 +1,7 @@
 import RateWatchResults from "@/app/features/insurance/RateWatchResults";
 import RateWatchSkeleton from "@/app/features/insurance/RateWatchSkeleton";
-import type { InsuranceMarketWatch } from "@/shared/types/insurance/insurance-market-watch";
-import type { RateWatchMode } from "@/shared/types/insurance/rate-watch-mode";
+import type { InsuranceMarketWatch } from "@mybookkeeper/api-client/types/insurance/insurance-market-watch";
+import type { RateWatchMode } from "@mybookkeeper/api-client/types/insurance/rate-watch-mode";
 
 export interface RateWatchBodyProps {
   mode: RateWatchMode;

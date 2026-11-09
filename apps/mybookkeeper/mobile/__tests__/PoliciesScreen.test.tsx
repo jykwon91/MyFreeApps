@@ -7,9 +7,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
-import { Linking } from "react-native";
 import { Provider } from "react-redux";
-import { WEB_BASE_URL } from "../src/constants/api";
 import { INSURANCE_MESSAGES } from "../src/constants/insurance";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { openAttachmentFile } from "../src/features/documents/openDocumentFile";
@@ -17,6 +15,7 @@ import PoliciesScreen from "../src/features/insurance/PoliciesScreen";
 import { expiryLabel, policyTerm, sortedPolicies } from "../src/features/insurance/policyDisplay";
 import PolicyDetailScreen from "../src/features/insurance/PolicyDetailScreen";
 import { isoFromDate } from "../src/lib/localDate";
+import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { store } from "../src/lib/store";
 import { aInsurancePolicySummary } from "../test-support/aInsurancePolicySummary";
 
@@ -61,11 +60,27 @@ function aPolicy(overrides: Partial<InsurancePolicyDetail> = {}): InsurancePolic
   };
 }
 
+const NOTHING_TRACKED = {
+  material_gap_pct: 10,
+  benchmark: null,
+  above_market: [],
+  not_compared: [],
+  total_above_market: 0,
+  total_considered: 0,
+  has_stale_benchmark: false,
+};
+
 type Answer = unknown | "fail" | "gone" | "hold";
 
 function startServer(list: Answer, detail: Answer = aPolicy()) {
   const server = { list, detail };
   const adapter: AxiosAdapter = async (config) => {
+    if (config.url === "/organizations") {
+      return { data: [{ id: "w1", name: "Mine", org_role: "owner" }], status: 200, statusText: "OK", headers: {}, config };
+    }
+    if (config.url === "/insurance-policies/premium-comparison") {
+      return { data: { ...NOTHING_TRACKED }, status: 200, statusText: "OK", headers: {}, config };
+    }
     const answer = config.url === "/insurance-policies" ? server.list : server.detail;
     if (answer === "hold") return new Promise(() => undefined);
     if (answer === "fail") return Promise.reject({ response: { status: 500, data: {} }, config, isAxiosError: true });
@@ -90,6 +105,7 @@ async function show(element: React.ReactElement) {
 
 beforeEach(() => {
   store.dispatch(baseApi.util.resetApiState());
+  store.dispatch(workspaceChosen("w1"));
   mockPush.mockClear();
   mockBack.mockClear();
   jest.mocked(openAttachmentFile).mockReset();
@@ -153,23 +169,22 @@ describe("PoliciesScreen", () => {
     await show(<PoliciesScreen />);
     await screen.findByText("Flood");
     expect(screen.getAllByText(/^Expires in \d+ days$/)).toHaveLength(1);
-    await fireEvent.press(screen.getByRole("button", { name: "Landlord policy, Oak Street, Acme Mutual" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Landlord policy, Oak Street, Acme Mutual, $1,344/yr" }));
     expect(mockPush).toHaveBeenCalledWith("/insurance/p1");
   });
 
   it("says when there are more than it shows", async () => {
     startServer(aPage([aInsurancePolicySummary()], true));
     await show(<PoliciesScreen />);
-    await screen.findByText(INSURANCE_MESSAGES.moreOnWebsite);
+    await screen.findByText(INSURANCE_MESSAGES.moreThanShown);
   });
 
-  it("points to the website when there are none", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("sends a writer with no policies to the add screen", async () => {
     startServer(aPage([]));
     await show(<PoliciesScreen />);
     await screen.findByText(INSURANCE_MESSAGES.noneHeading);
-    await fireEvent.press(screen.getByRole("button", { name: "Open on the website" }));
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/insurance-policies`);
+    await fireEvent.press(screen.getAllByRole("button", { name: INSURANCE_MESSAGES.addPolicy })[0]);
+    expect(mockPush).toHaveBeenCalledWith("/insurance/new");
   });
 
   it("offers a retry when the first load fails, and recovers", async () => {
@@ -205,7 +220,7 @@ describe("PolicyDetailScreen", () => {
     startServer(aPage([]));
     await show(<PolicyDetailScreen id="p1" />);
     await screen.findByText("Landlord policy");
-    for (const text of ["Oak Street · Acme Mutual", "HO-123456", "$500,000", "$2,500", "2% of coverage ($10,000.00)", "$1,344/yr", "Agent is Dana", "declarations.pdf", "Policy Document"]) {
+    for (const text of ["Oak Street · Acme Mutual", "HO-123456", "$500,000", "$2,500", "2% of coverage ($10,000.00)", "Agent is Dana", "declarations.pdf", "Policy Document"]) {
       expect(screen.getByText(text)).toBeTruthy();
     }
   });
@@ -213,11 +228,11 @@ describe("PolicyDetailScreen", () => {
   it("leaves out what the policy doesn't have", async () => {
     startServer(aPage([]), aPolicy({
       policy_number: null, coverage_amount_cents: null, deductible_cents: null, wind_hail_deductible_pct: null,
-      annual_premium_cents: null, effective_date: null, expiration_date: null, notes: null, attachments: [], carrier: null, property_name: null,
+      annual_premium_cents: null, annual_total_cents: null, premium_cents: null, fees_and_taxes_cents: null, effective_date: null, expiration_date: null, notes: null, attachments: [], carrier: null, property_name: null,
     }));
     await show(<PolicyDetailScreen id="p1" />);
     await screen.findByText(INSURANCE_MESSAGES.noDocuments);
-    for (const label of ["Policy number", "Coverage", "Deductible", "Wind and hail deductible", "Premium", "Term", "Notes"]) {
+    for (const label of ["Policy number", "Coverage", "Deductible", "Wind and hail deductible", "Premium per year", "Total per year", "Fees and taxes", "Term", "Notes"]) {
       expect(screen.queryByText(label)).toBeNull();
     }
   });

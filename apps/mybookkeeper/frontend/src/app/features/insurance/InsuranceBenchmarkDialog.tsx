@@ -1,6 +1,6 @@
 import InsuranceBenchmarkForm from "./InsuranceBenchmarkForm";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
-import { useGetInsuranceBenchmarkQuery } from "@/shared/store/insuranceBenchmarksApi";
+import { useGetInsuranceBenchmarkQuery } from "@mybookkeeper/api-client/store/insuranceBenchmarksApi";
 
 export interface InsuranceBenchmarkDialogProps {
   onClose: () => void;

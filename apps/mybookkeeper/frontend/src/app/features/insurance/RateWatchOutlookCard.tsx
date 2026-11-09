@@ -4,9 +4,9 @@ import {
   formatFilingDate,
   formatOutlookHeadline,
   formatPremiumDelta,
-} from "@/shared/lib/rate-filing-format";
+} from "@mybookkeeper/api-client/utils/rateFilingFormat";
 import { formatAnnualPremium } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
-import type { InsurancePolicyRateOutlook } from "@/shared/types/insurance/insurance-policy-rate-outlook";
+import type { InsurancePolicyRateOutlook } from "@mybookkeeper/api-client/types/insurance/insurance-policy-rate-outlook";
 
 export interface RateWatchOutlookCardProps {
   outlook: InsurancePolicyRateOutlook;

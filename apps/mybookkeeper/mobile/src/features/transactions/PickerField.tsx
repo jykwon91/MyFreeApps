@@ -1,10 +1,10 @@
 import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
 
-export default function PickerField({ label, value, hint, onPress }: { label: string; value: string; hint?: string; onPress: () => void }) {
+export default function PickerField({ label, value, hint, onPress, disabled = false }: { label: string; value: string; hint?: string; onPress: () => void; disabled?: boolean }) {
   const { colors, spacing, radius, fontSize } = useTheme();
   return (
-    <Pressable accessibilityHint={hint} accessibilityLabel={`${label}, ${value}`} accessibilityRole="button" onPress={onPress} style={{ gap: spacing.xs }}>
+    <Pressable accessibilityState={{ disabled }} disabled={disabled} accessibilityHint={hint} accessibilityLabel={`${label}, ${value}`} accessibilityRole="button" onPress={onPress} style={{ gap: spacing.xs }}>
       <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>{label}</Text>
       <Text
         style={{

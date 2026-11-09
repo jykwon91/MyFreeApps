@@ -1,4 +1,5 @@
 import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
+import { formatAnnualPremium } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
 import { EXPIRES_SOON_DAYS } from "../../constants/insurance";
 import { daysBetween, fullDateLabel } from "../../lib/localDate";
 
@@ -34,7 +35,7 @@ export function policyPlace(policy: { property_name: string | null; carrier: str
 }
 
 export function policyRowLabel(policy: InsurancePolicySummary, todayIso: string): string {
-  return [policy.policy_name, policy.property_name, policy.carrier, expiryLabel(policy.expiration_date, todayIso)]
+  return [policy.policy_name, policy.property_name, policy.carrier, policy.annual_premium_cents === null ? null : formatAnnualPremium(policy.annual_premium_cents), expiryLabel(policy.expiration_date, todayIso)]
     .filter(Boolean)
     .join(", ");
 }

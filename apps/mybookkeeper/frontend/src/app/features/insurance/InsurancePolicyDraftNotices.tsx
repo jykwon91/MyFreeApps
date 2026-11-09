@@ -1,5 +1,5 @@
 import DocumentDraftNotices from "@/app/features/documents/DocumentDraftNotices";
-import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
+import type { InsurancePolicyDraft } from "@mybookkeeper/api-client/types/insurance/insurance-policy-draft";
 
 export interface InsurancePolicyDraftNoticesProps {
   draft: InsurancePolicyDraft;

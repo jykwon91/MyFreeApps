@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Pencil, Trash2 } from "lucide-react";
-import { useDeleteInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
+import { useDeleteInsurancePolicyMutation } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { showError, showSuccess, Button, ConfirmDialog } from "@platform/ui";
 import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";

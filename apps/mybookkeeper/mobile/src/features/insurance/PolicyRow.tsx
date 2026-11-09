@@ -1,4 +1,5 @@
 import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
+import { formatAnnualPremium } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
 import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import InquiryChip from "../inquiries/InquiryChip";
@@ -36,6 +37,9 @@ export default function PolicyRow({ policy, todayIso, onPress }: PolicyRowProps)
         <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {place}
         </Text>
+      ) : null}
+      {policy.annual_premium_cents !== null ? (
+        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{formatAnnualPremium(policy.annual_premium_cents)}</Text>
       ) : null}
       {expiry ? (
         <View style={{ flexDirection: "row" }}>

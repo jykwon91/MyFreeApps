@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Upload } from "lucide-react";
-import { MAX_UPLOAD_MB } from "@/shared/lib/document-read-errors";
+import { MAX_UPLOAD_MB } from "@mybookkeeper/api-client/utils/documentReadErrors";
 
 /** Formats the reader will accept. Matches the backend's content sniff. */
 const ACCEPTED_MIME = [

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
-import { policyToFormValues, toPolicyPayload } from "@/shared/lib/insurance-policy-form";
-import { useUpdateInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
+import { policyToFormValues, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
+import { useUpdateInsurancePolicyMutation } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
-import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
+import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import InsurancePolicyFormFields from "./InsurancePolicyFormFields";
 

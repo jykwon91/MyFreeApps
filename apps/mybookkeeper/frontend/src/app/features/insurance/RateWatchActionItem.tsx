@@ -1,6 +1,6 @@
-import { joinWithAnd } from "@/shared/lib/format-list";
-import { formatFilingDate } from "@/shared/lib/rate-filing-format";
-import type { RateWatchAction } from "@/shared/types/insurance/rate-watch-action";
+import { joinWithAnd } from "@mybookkeeper/api-client/utils/formatList";
+import { formatFilingDate } from "@mybookkeeper/api-client/utils/rateFilingFormat";
+import type { RateWatchAction } from "@mybookkeeper/api-client/types/insurance/rate-watch-action";
 
 export interface RateWatchActionItemProps {
   action: RateWatchAction;

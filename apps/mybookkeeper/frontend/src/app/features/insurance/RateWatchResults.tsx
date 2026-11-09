@@ -3,10 +3,10 @@ import RateWatchActionItem from "@/app/features/insurance/RateWatchActionItem";
 import RateWatchMarketList from "@/app/features/insurance/RateWatchMarketList";
 import RateWatchOutlookCard from "@/app/features/insurance/RateWatchOutlookCard";
 import RateWatchVerdict from "@/app/features/insurance/RateWatchVerdict";
-import { buildRateWatchAction } from "@/shared/lib/rate-watch-action";
-import { buildRateWatchVerdict } from "@/shared/lib/rate-watch-verdict";
-import { formatScopeSummary } from "@/shared/lib/rate-watch-scope";
-import type { InsuranceMarketWatch } from "@/shared/types/insurance/insurance-market-watch";
+import { buildRateWatchAction } from "@mybookkeeper/api-client/utils/rateWatchAction";
+import { buildRateWatchVerdict } from "@mybookkeeper/api-client/utils/rateWatchVerdict";
+import { formatScopeSummary } from "@mybookkeeper/api-client/utils/rateWatchScope";
+import type { InsuranceMarketWatch } from "@mybookkeeper/api-client/types/insurance/insurance-market-watch";
 
 export interface RateWatchResultsProps {
   data: InsuranceMarketWatch;

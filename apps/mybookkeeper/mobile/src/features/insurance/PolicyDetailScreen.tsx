@@ -1,34 +1,44 @@
-import { useGetInsurancePolicyByIdQuery, useLazyGetInsurancePolicyByIdQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
-import type { InsurancePolicyAttachment } from "@mybookkeeper/api-client/types/insurance/insurance-policy-attachment";
-import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
+import { useDeleteInsurancePolicyMutation, useGetInsurancePolicyByIdQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
+import { Banner, EmptyState, LoadingButton, useRefresh, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
-import { ScrollView, Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
+import { useState } from "react";
+import { Alert, ScrollView, Text, View } from "react-native";
 import { INSURANCE_MESSAGES } from "../../constants/insurance";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useTodayIso } from "../../lib/useTodayIso";
-import { useOpenFreshAttachment } from "../documents/useOpenFreshAttachment";
 import InquiryChip from "../inquiries/InquiryChip";
-import { useOpenLink } from "../inquiries/useOpenLink";
+import { useCanWrite } from "../workspace/useCanWrite";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { expiryLabel, policyPlace } from "./policyDisplay";
 import PolicyDetailSkeleton from "./PolicyDetailSkeleton";
 import PolicyFacts from "./PolicyFacts";
-import PolicyFileRow from "./PolicyFileRow";
+import PolicyAttachmentsSection from "./PolicyAttachmentsSection";
+import { policyDeleteFailure } from "./policyFailure";
 
 export default function PolicyDetailScreen({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
-  const openLink = useOpenLink();
+  const { showToast } = useToast();
+  const canWrite = useCanWrite();
+  const [deletePolicy] = useDeleteInsurancePolicyMutation();
+  const [isDeleting, setIsDeleting] = useState(false);
   const todayIso = useTodayIso();
   const { currentData: policy, error, isFetching, refetch } = useGetInsurancePolicyByIdQuery(id);
-  const [fetchPolicy] = useLazyGetInsurancePolicyByIdQuery();
   const { refresh, refreshControl } = useRefresh(async () => {
     await refetch();
   }, error);
-  const { open, openingId } = useOpenFreshAttachment<InsurancePolicyAttachment>(
-    async () => (await fetchPolicy(id).unwrap()).attachments,
-    INSURANCE_MESSAGES.couldntOpen,
-  );
+
+  async function remove(policyId: string): Promise<void> {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await deletePolicy(policyId).unwrap();
+      showToast(INSURANCE_MESSAGES.deleted);
+      router.back();
+    } catch (failure) {
+      showToast(policyDeleteFailure(failure), "error");
+      setIsDeleting(false);
+    }
+  }
 
   if (!policy && (isFetching || !error)) return <PolicyDetailSkeleton />;
   if (!policy) {
@@ -44,7 +54,13 @@ export default function PolicyDetailScreen({ id }: { id: string }) {
 
   const place = policyPlace(policy);
   const expiry = expiryLabel(policy.expiration_date, todayIso);
-  const heading = { fontSize: fontSize.md, fontWeight: "600", color: colors.foreground } as const;
+  const policyId = policy.id;
+  function confirmDelete(): void {
+    Alert.alert(INSURANCE_MESSAGES.deleteTitle, INSURANCE_MESSAGES.deleteBody, [
+      { text: INSURANCE_MESSAGES.keep, style: "cancel" },
+      { text: INSURANCE_MESSAGES.delete, style: "destructive", onPress: () => void remove(policyId) },
+    ]);
+  }
 
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" refreshControl={refreshControl}>
@@ -61,30 +77,17 @@ export default function PolicyDetailScreen({ id }: { id: string }) {
         ) : null}
       </View>
       <PolicyFacts policy={policy} />
-      <View style={{ gap: spacing.md }}>
-        <Text accessibilityRole="header" style={heading}>
-          {INSURANCE_MESSAGES.documents}
-        </Text>
-        {policy.attachments.length === 0 ? (
-          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{INSURANCE_MESSAGES.noDocuments}</Text>
-        ) : (
-          policy.attachments.map((file) => (
-            <PolicyFileRow
-              file={file}
-              isDisabled={openingId !== null}
-              isOpening={openingId === file.id}
-              key={file.id}
-              onOpen={() => void open(file)}
-            />
-          ))
-        )}
-      </View>
-      <View style={{ gap: spacing.sm }}>
-        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{INSURANCE_MESSAGES.manageOnWebsite}</Text>
-        <LoadingButton onPress={() => void openLink(`${WEB_BASE_URL}/insurance-policies/${policy.id}`)} variant="ghost">
-          {INSURANCE_MESSAGES.openWebsite}
-        </LoadingButton>
-      </View>
+      <PolicyAttachmentsSection attachments={policy.attachments} policyId={policy.id} />
+      {canWrite ? (
+        <View style={{ gap: spacing.sm }}>
+          <LoadingButton disabled={isDeleting} onPress={() => router.push(`/insurance/${policy.id}/edit`)} variant="secondary">
+            {INSURANCE_MESSAGES.edit}
+          </LoadingButton>
+          <LoadingButton isLoading={isDeleting} loadingText={INSURANCE_MESSAGES.deleting} onPress={confirmDelete} variant="ghost">
+            {INSURANCE_MESSAGES.delete}
+          </LoadingButton>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }

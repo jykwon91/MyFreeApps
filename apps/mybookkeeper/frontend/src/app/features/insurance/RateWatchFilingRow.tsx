@@ -5,8 +5,8 @@ import {
   formatChangePct,
   formatFilingDate,
   formatFilingStatus,
-} from "@/shared/lib/rate-filing-format";
-import type { InsuranceRateFiling } from "@/shared/types/insurance/insurance-rate-filing";
+} from "@mybookkeeper/api-client/utils/rateFilingFormat";
+import type { InsuranceRateFiling } from "@mybookkeeper/api-client/types/insurance/insurance-rate-filing";
 
 export interface RateWatchFilingRowProps {
   filing: InsuranceRateFiling;

@@ -39,9 +39,6 @@ vi.mock("@mybookkeeper/api-client/store/insurancePoliciesApi", () => ({
     ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
     refetch: mockRefetch,
   })),
-}));
-
-vi.mock("@/shared/store/insurancePoliciesApi", () => ({
   useDeleteInsurancePolicyMutation: vi.fn(() => [deleteMock, { isLoading: mockIsDeleting }]),
   useUpdateInsurancePolicyMutation: vi.fn(() => [updateMock, { isLoading: false }]),
   useUploadInsurancePolicyAttachmentMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),

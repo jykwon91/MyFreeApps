@@ -23,7 +23,7 @@ const mockDelete = vi.fn();
 let mockBenchmark: InsuranceBenchmark | null = null;
 let mockLoading = false;
 
-vi.mock("@/shared/store/insuranceBenchmarksApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/insuranceBenchmarksApi", () => ({
   useGetInsuranceBenchmarkQuery: vi.fn(() => ({
     data: mockBenchmark,
     isLoading: mockLoading,

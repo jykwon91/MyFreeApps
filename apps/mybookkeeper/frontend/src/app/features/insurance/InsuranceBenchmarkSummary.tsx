@@ -4,7 +4,7 @@ import {
   formatCoverageRate,
   formatPolicyMoney,
 } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
-import { useGetInsuranceBenchmarkQuery } from "@/shared/store/insuranceBenchmarksApi";
+import { useGetInsuranceBenchmarkQuery } from "@mybookkeeper/api-client/store/insuranceBenchmarksApi";
 
 export interface InsuranceBenchmarkSummaryProps {
   onEdit: () => void;

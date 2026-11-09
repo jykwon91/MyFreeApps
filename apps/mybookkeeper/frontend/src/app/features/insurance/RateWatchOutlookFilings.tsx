@@ -1,6 +1,6 @@
 import RateWatchFilingDetail from "@/app/features/insurance/RateWatchFilingDetail";
-import { formatFoldSummary } from "@/shared/lib/rate-filing-format";
-import type { InsuranceRateFiling } from "@/shared/types/insurance/insurance-rate-filing";
+import { formatFoldSummary } from "@mybookkeeper/api-client/utils/rateFilingFormat";
+import type { InsuranceRateFiling } from "@mybookkeeper/api-client/types/insurance/insurance-rate-filing";
 
 export interface RateWatchOutlookFilingsProps {
   /** Filings that will actually appear on a bill. */

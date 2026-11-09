@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Button, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
-import { applyDraftToForm } from "@/shared/lib/insurance-policy-draft";
-import { EMPTY_POLICY_FORM, toPolicyPayload } from "@/shared/lib/insurance-policy-form";
-import { useCreateInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
+import { applyDraftToForm } from "@mybookkeeper/api-client/utils/insurancePolicyDraft";
+import { EMPTY_POLICY_FORM, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
+import { useCreateInsurancePolicyMutation } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
-import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
+import type { InsurancePolicyDraft } from "@mybookkeeper/api-client/types/insurance/insurance-policy-draft";
+import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import InsurancePolicyDocumentReader from "./InsurancePolicyDocumentReader";
 import InsurancePolicyDraftNotices from "./InsurancePolicyDraftNotices";

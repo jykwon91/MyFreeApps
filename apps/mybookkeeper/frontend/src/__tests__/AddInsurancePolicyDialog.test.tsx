@@ -13,7 +13,7 @@ import userEvent from "@testing-library/user-event";
 import AddInsurancePolicyDialog from "@/app/features/insurance/AddInsurancePolicyDialog";
 import { FORM_DIALOG_WIDTH_CLASS } from "@/shared/components/ui/form-dialog-width-class";
 import { showError } from "@platform/ui";
-import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
+import type { InsurancePolicyDraft } from "@mybookkeeper/api-client/types/insurance/insurance-policy-draft";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -21,7 +21,7 @@ const mockCreate = vi.fn();
 const mockExtract = vi.fn();
 const mockExtractUpload = vi.fn();
 
-vi.mock("@/shared/store/insurancePoliciesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/insurancePoliciesApi", () => ({
   useCreateInsurancePolicyMutation: vi.fn(() => [mockCreate, { isLoading: false }]),
   useExtractInsurancePolicyMutation: vi.fn(() => [mockExtract, { isLoading: false }]),
   useExtractInsurancePolicyFromUploadMutation: vi.fn(() => [
