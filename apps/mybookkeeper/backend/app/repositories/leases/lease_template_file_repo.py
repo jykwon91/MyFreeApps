@@ -7,6 +7,7 @@ from sqlalchemy import delete as _sa_delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.leases.lease_template_file import LeaseTemplateFile
+from app.schemas.leases.new_template_file import NewTemplateFile
 
 
 async def create(
@@ -30,6 +31,25 @@ async def create(
     db.add(row)
     await db.flush()
     return row
+
+
+async def create_many(
+    db: AsyncSession,
+    *,
+    template_id: uuid.UUID,
+    files: list[NewTemplateFile],
+) -> None:
+    """Create the files in the order given (that order is ``display_order``)."""
+    for index, file in enumerate(files):
+        await create(
+            db,
+            template_id=template_id,
+            filename=file.filename,
+            storage_key=file.storage_key,
+            content_type=file.content_type,
+            size_bytes=file.size_bytes,
+            display_order=index,
+        )
 
 
 async def list_for_template(

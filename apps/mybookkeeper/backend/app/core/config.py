@@ -124,6 +124,7 @@ class Settings(BaseAppSettings):
     run_upload_worker: bool = True
     demo_max_uploads_per_day: int = 5
     max_blackout_attachment_size_bytes: int = 25 * 1024 * 1024  # 25 MB
+    max_lease_template_file_size_bytes: int = 25 * 1024 * 1024  # 25 MB; the mobile app mirrors this
 
     # ------------------------------------------------------------------
     # Analytics

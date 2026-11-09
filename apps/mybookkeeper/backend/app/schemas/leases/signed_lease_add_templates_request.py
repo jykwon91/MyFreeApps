@@ -22,4 +22,5 @@ class SignedLeaseAddTemplatesRequest(BaseModel):
     def require_non_empty(cls, v: list[uuid.UUID]) -> list[uuid.UUID]:
         if not v:
             raise ValueError("template_ids must contain at least one id")
-        return v
+        # Order-preserving dedupe, so a repeated id cannot be linked twice.
+        return list(dict.fromkeys(v))

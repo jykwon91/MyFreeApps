@@ -108,8 +108,8 @@ def _render_patches(db: AsyncSession, render_md: MagicMock):
         patch("app.services.leases.lease_pdf_service.unit_of_work", _fake_uow(db)),
         patch("app.services.leases.lease_lifecycle_service.unit_of_work", _fake_uow(db)),
         patch("app.services.leases.lease_pdf_service.get_storage", return_value=storage),
-        patch("app.services.leases.lease_pdf_service.render_md", render_md),
-        patch("app.services.leases.lease_pdf_service.render_md_text_to_pdf_or_keep", return_value=b"%PDF"),
+        patch("app.services.leases.lease_render_service.render_md", render_md),
+        patch("app.services.leases.lease_render_service.render_md_text_to_pdf_or_keep", return_value=b"%PDF"),
     )
 
 

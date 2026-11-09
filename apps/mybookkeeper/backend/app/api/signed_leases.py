@@ -23,10 +23,10 @@ from fastapi import (
     UploadFile,
 )
 
+from app.api.lease_render_error_mapping import lease_render_errors
 from app.core.context import RequestContext
 from app.core.lease_enums import SIGNED_LEASE_STATUSES
 from app.core.permissions import current_org_member, require_write_access
-from app.core.stored_file_constants import MISSING_TEMPLATE_FILE_DETAIL
 from app.schemas.leases.extend_lease_request import ExtendLeaseRequest
 from app.schemas.leases.signed_lease_add_templates_request import (
     SignedLeaseAddTemplatesRequest,
@@ -60,7 +60,6 @@ from app.services.leases.lease_email_service import (
     send_extension_addendum_to_tenant,
     send_lease_to_tenant,
 )
-from app.services.storage.stored_file import StoredFileMissingError
 
 router = APIRouter(prefix="/signed-leases", tags=["signed-leases"])
 
@@ -282,20 +281,19 @@ async def add_templates_to_lease(
     + attachments refreshed).
     """
     try:
-        return await signed_lease_service.add_templates_and_generate(
-            user_id=ctx.user_id,
-            organization_id=ctx.organization_id,
-            lease_id=lease_id,
-            template_ids=payload.template_ids,
-            today=payload.today,
-            values_override=payload.values,
-        )
+        with lease_render_errors():
+            return await signed_lease_service.add_templates_and_generate(
+                user_id=ctx.user_id,
+                organization_id=ctx.organization_id,
+                lease_id=lease_id,
+                template_ids=payload.template_ids,
+                today=payload.today,
+                values_override=payload.values,
+            )
     except signed_lease_service.SignedLeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc
     except lease_template_service.TemplateNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Template not found") from exc
-    except signed_lease_service.StorageNotConfiguredError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post("/{lease_id}/generate", response_model=SignedLeaseResponse)
@@ -306,18 +304,15 @@ async def generate_lease(
     ctx: RequestContext = Depends(require_write_access),
 ) -> SignedLeaseResponse:
     try:
-        detail, should_auto_email = await signed_lease_service.generate_lease(
-            user_id=ctx.user_id,
-            organization_id=ctx.organization_id,
-            lease_id=lease_id,
-            today=payload.today,
-        )
+        with lease_render_errors():
+            detail, should_auto_email = await signed_lease_service.generate_lease(
+                user_id=ctx.user_id,
+                organization_id=ctx.organization_id,
+                lease_id=lease_id,
+                today=payload.today,
+            )
     except signed_lease_service.SignedLeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc
-    except StoredFileMissingError as exc:
-        raise HTTPException(status_code=409, detail=MISSING_TEMPLATE_FILE_DETAIL) from exc
-    except signed_lease_service.StorageNotConfiguredError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     # Schedule auto-email out-of-band — never blocks the HTTP response.
     # send_lease_to_tenant is fail-soft: skips silently with a logged

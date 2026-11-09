@@ -16,31 +16,28 @@ from app.db.session import unit_of_work
 from app.repositories.leases import (
     lease_template_file_repo,
     lease_template_placeholder_repo,
+    lease_rendered_attachment_repo,
     lease_template_repo,
-    signed_lease_attachment_repo,
     signed_lease_repo,
     signed_lease_template_repo,
 )
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
 from app.services.leases._lease_helpers import (
     SignedLeaseNotFoundError,
-    StorageNotConfiguredError,
     _denormalise_dates,
     _load_resolution_context,
 )
-from app.services.leases.computed import ComputedExprError, evaluate
 from app.services.leases.default_source_resolver import resolve_default_source
 from app.services.leases.lease_lifecycle_service import get_lease
-from app.services.leases.lease_template_service import (
-    DOCX_MIME,
-    TemplateNotFoundError,
+from app.services.leases.lease_render_service import (
+    attachments_present_check,
+    build_substitutions,
+    render_and_upload,
+    render_md_text_to_pdf_or_keep,  # noqa: F401 — re-exported via signed_lease_service
 )
-from app.services.leases.renderer import (
-    render_docx_bytes_to_pdf,
-    render_md,
-    render_pdf_from_text,
-)
-from app.services.storage.stored_file import read_stored_file
+from app.services.leases.lease_template_service import TemplateNotFoundError
+from app.services.leases.lease_write_precheck import lock_lease_and_verify
+from app.services.storage.committed_write_guard import CommittedWriteGuard
 
 logger = logging.getLogger(__name__)
 
@@ -62,16 +59,6 @@ class ImportedLeaseTemplateError(ValueError):
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
-
-def _swap_extension(filename: str, suffix: str) -> str:
-    base = filename.rsplit(".", 1)[0] if "." in filename else filename
-    return f"{base}{suffix}"
-
-
-def render_md_text_to_pdf_or_keep(rendered_md: str) -> bytes:
-    """Render rendered markdown to PDF bytes (low-fidelity, reportlab-based)."""
-    return render_pdf_from_text(rendered_md)
-
 
 # ---------------------------------------------------------------------------
 # Auto-email gate predicate
@@ -125,8 +112,6 @@ async def generate_lease(
     background task; this service stays I/O-pure on the SMTP side.
     """
     storage = get_storage()
-    if storage is None:
-        raise StorageNotConfiguredError("Object storage is not configured")
 
     async with unit_of_work() as db:
         lease = await signed_lease_repo.get(
@@ -159,58 +144,41 @@ async def generate_lease(
                 if p.key not in seen_placeholder_keys:
                     seen_placeholder_keys.add(p.key)
                     placeholders.append(p)
+        lease_values = dict(lease.values or {})
+        read_starts_on, read_ends_on = lease.starts_on, lease.ends_on
+        read_template_ids = {jr.template_id for jr in join_rows}
 
-    substitutions: dict[str, str] = {
-        k: "" if v is None else str(v) for k, v in (lease.values or {}).items()
-    }
-    for p in placeholders:
-        if p.input_type == "computed" and p.computed_expr:
-            try:
-                substitutions[p.key] = evaluate(p.computed_expr, lease.values or {}, today=today)
-            except ComputedExprError as exc:
-                logger.warning(
-                    "Computed placeholder %s failed to evaluate: %s", p.key, exc,
-                )
-                substitutions[p.key] = ""
-
-    uploaded: list[tuple[str, str, str, int]] = []
-    try:
-        for f in files:
-            raw = read_stored_file(storage, f.storage_key)
-            if f.content_type == DOCX_MIME:
-                rendered_bytes, _ = render_docx_bytes_to_pdf(raw, substitutions)
-                out_filename = _swap_extension(f.filename, ".pdf")
-                out_ct = "application/pdf"
-            elif f.content_type in ("text/markdown", "text/plain"):
-                text = raw.decode("utf-8", errors="replace")
-                rendered_md_text = render_md(text, substitutions)
-                rendered_bytes = render_md_text_to_pdf_or_keep(rendered_md_text)
-                out_filename = _swap_extension(f.filename, ".pdf")
-                out_ct = "application/pdf"
-            else:
-                rendered_bytes = raw
-                out_filename = f.filename
-                out_ct = f.content_type
-
-            attachment_id = uuid.uuid4()
-            storage_key = f"signed-leases/{lease_id}/{attachment_id}"
-            storage.upload_file(storage_key, rendered_bytes, out_ct)
-            uploaded.append((storage_key, out_filename, out_ct, len(rendered_bytes)))
-
+    # Generating again replaces the earlier rendered documents (as a regenerate
+    # does) instead of piling up duplicates; they are removed only once the new
+    # ones are committed.
+    substitutions = build_substitutions(lease_values, placeholders, today)
+    rendered = await render_and_upload(storage, lease_id, files, substitutions)
+    keys = [r.storage_key for r in rendered]
+    now = _dt.datetime.now(_dt.timezone.utc)
+    check = attachments_present_check(lease_id, user_id, organization_id, keys)
+    async with CommittedWriteGuard(keys, check) as guard:
         async with unit_of_work() as db:
-            now = _dt.datetime.now(_dt.timezone.utc)
-            for storage_key, out_filename, out_ct, size in uploaded:
-                await signed_lease_attachment_repo.create(
-                    db,
-                    lease_id=lease_id,
-                    storage_key=storage_key,
-                    filename=out_filename,
-                    content_type=out_ct,
-                    size_bytes=size,
-                    kind="rendered_original",
-                    uploaded_by_user_id=user_id,
-                    uploaded_at=now,
-                )
+            await lock_lease_and_verify(
+                db,
+                lease_id=lease_id,
+                user_id=user_id,
+                organization_id=organization_id,
+                rendered_template_ids=read_template_ids,
+                rendered_values=lease_values,
+                rendered_starts_on=read_starts_on,
+                rendered_ends_on=read_ends_on,
+            )
+            superseded = await lease_rendered_attachment_repo.replace_rendered_original(
+                db,
+                lease_id=lease_id,
+                user_id=user_id,
+                organization_id=organization_id,
+                files=rendered,
+                replace_existing=True,
+                uploaded_at=now,
+            )
+            if superseded is None:
+                raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
             await signed_lease_repo.update_lease(
                 db,
                 lease_id=lease_id,
@@ -218,13 +186,8 @@ async def generate_lease(
                 organization_id=organization_id,
                 fields={"status": "generated", "generated_at": now},
             )
-    except Exception:
-        for storage_key, *_ in uploaded:
-            try:
-                storage.delete_file(storage_key)
-            except Exception:  # noqa: BLE001
-                logger.warning("Failed to clean up rendered file %s", storage_key)
-        raise
+            guard.set_superseded(superseded)
+            guard.rows_written()
 
     detail = await get_lease(
         user_id=user_id,
@@ -265,12 +228,14 @@ async def add_templates_and_generate(
     placeholder whose ``default_source`` resolves against the parent lease,
     its applicant, the linked property, or the host user.
 
-    Partial success: if one template's render fails the DB row and MinIO
-    objects for that template are rolled back; others succeed.
+    All-or-nothing: every file is rendered and uploaded before anything is
+    written; if any fails the request fails and the lease is left unchanged.
+    Re-adding an already-linked template regenerates the lease's rendered
+    documents, replacing the earlier ones in one transaction. If the lease's
+    templates, values or dates changed while rendering, nothing is written and
+    ``LeaseChangedDuringRenderError`` is raised.
     """
     storage = get_storage()
-    if storage is None:
-        raise StorageNotConfiguredError("Object storage is not configured")
 
     async with unit_of_work() as db:
         lease = await signed_lease_repo.get(
@@ -296,12 +261,10 @@ async def add_templates_and_generate(
             db, lease_id=lease_id,
         )
         existing_ids = {r.template_id for r in existing_rows}
+        read_values = dict(lease.values or {})
+        read_starts_on, read_ends_on = lease.starts_on, lease.ends_on
         new_template_ids = [tid for tid in template_ids if tid not in existing_ids]
         is_regenerate = any(tid in existing_ids for tid in template_ids)
-
-        max_order = await signed_lease_template_repo.max_display_order_for_lease(
-            db, lease_id=lease_id,
-        )
 
         files_to_render: list = []
         placeholders: list = []
@@ -379,119 +342,80 @@ async def add_templates_and_generate(
                     continue
                 merged_values[k] = str(v)
 
+        fields_to_update: dict[str, Any] = {}
         if merged_values != (lease.values or {}):
             new_start, new_end = _denormalise_dates(merged_values)
-            fields_to_update: dict[str, Any] = {"values": merged_values}
+            fields_to_update["values"] = merged_values
             if new_start is not None and lease.starts_on is None:
                 fields_to_update["starts_on"] = new_start
             if new_end is not None and lease.ends_on is None:
                 fields_to_update["ends_on"] = new_end
-            await signed_lease_repo.update_lease(
+
+    # Nothing is written until every file has rendered and uploaded, so a
+    # failure (a template object that vanished, a render error) leaves the
+    # lease exactly as it was: no half-linked templates, no lost documents.
+    substitutions = build_substitutions(merged_values, placeholders, today)
+    rendered = await render_and_upload(
+        storage, lease_id, [f for f, _ in files_to_render], substitutions,
+    )
+    keys = [r.storage_key for r in rendered]
+    now = _dt.datetime.now(_dt.timezone.utc)
+    check = attachments_present_check(lease_id, user_id, organization_id, keys)
+    async with CommittedWriteGuard(keys, check) as guard:
+        async with unit_of_work() as db:
+            # Lock order is always lease, then template. Nothing locks a template
+            # and then a lease.
+            await lock_lease_and_verify(
                 db,
                 lease_id=lease_id,
                 user_id=user_id,
                 organization_id=organization_id,
-                fields=fields_to_update,
+                rendered_template_ids=existing_ids,
+                rendered_values=read_values,
+                rendered_starts_on=read_starts_on,
+                rendered_ends_on=read_ends_on,
             )
-
-        for order_offset, tid in enumerate(new_template_ids):
-            await signed_lease_template_repo.create(
+            # A template soft-deleted since the read cannot be linked; templates
+            # are locked in a fixed order so concurrent adds cannot deadlock.
+            for tid in sorted(new_template_ids, key=str):
+                locked_template = await lease_template_repo.get(
+                    db,
+                    template_id=tid,
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    for_update=True,
+                )
+                if locked_template is None:
+                    raise TemplateNotFoundError(f"Template {tid} not found")
+            superseded = await lease_rendered_attachment_repo.replace_rendered_original(
                 db,
                 lease_id=lease_id,
-                template_id=tid,
-                display_order=max_order + 1 + order_offset,
+                user_id=user_id,
+                organization_id=organization_id,
+                files=rendered,
+                replace_existing=is_regenerate,
+                uploaded_at=now,
             )
-
-        rendered_keys_to_delete: list[str] = []
-        if is_regenerate:
-            existing_attachments = await signed_lease_attachment_repo.list_by_lease(
-                db, lease_id,
+            if superseded is None:
+                raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+            max_order = await signed_lease_template_repo.max_display_order_for_lease(
+                db, lease_id=lease_id,
             )
-            for att in existing_attachments:
-                if att.kind == "rendered_original":
-                    rendered_keys_to_delete.append(att.storage_key)
-                    await signed_lease_attachment_repo.delete_by_id_scoped_to_lease(
-                        db,
-                        attachment_id=att.id,
-                        lease_id=lease_id,
-                    )
-
-        values_snapshot = dict(merged_values)
-
-    for key in rendered_keys_to_delete:
-        try:
-            storage.delete_file(key)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Failed to delete superseded rendered file %s on regenerate",
-                key, exc_info=True,
-            )
-
-    substitutions: dict[str, str] = {
-        k: "" if v is None else str(v) for k, v in values_snapshot.items()
-    }
-    for p in placeholders:
-        if p.input_type == "computed" and p.computed_expr:
-            try:
-                substitutions[p.key] = evaluate(p.computed_expr, values_snapshot, today=today)
-            except ComputedExprError as exc:
-                logger.warning(
-                    "Computed placeholder %s failed to evaluate: %s", p.key, exc,
+            for tid in new_template_ids:
+                max_order += 1
+                await signed_lease_template_repo.create(
+                    db, lease_id=lease_id, template_id=tid, display_order=max_order,
                 )
-                substitutions[p.key] = ""
-
-    now = _dt.datetime.now(_dt.timezone.utc)
-    for f, tid in files_to_render:
-        uploaded_key: str | None = None
-        try:
-            raw = storage.download_file(f.storage_key)
-            if f.content_type == DOCX_MIME:
-                rendered_bytes, _ = render_docx_bytes_to_pdf(raw, substitutions)
-                out_filename = _swap_extension(f.filename, ".pdf")
-                out_ct = "application/pdf"
-            elif f.content_type in ("text/markdown", "text/plain"):
-                text = raw.decode("utf-8", errors="replace")
-                rendered_md_text = render_md(text, substitutions)
-                rendered_bytes = render_md_text_to_pdf_or_keep(rendered_md_text)
-                out_filename = _swap_extension(f.filename, ".pdf")
-                out_ct = "application/pdf"
-            else:
-                rendered_bytes = raw
-                out_filename = f.filename
-                out_ct = f.content_type
-
-            attachment_id = uuid.uuid4()
-            storage_key = f"signed-leases/{lease_id}/{attachment_id}"
-            storage.upload_file(storage_key, rendered_bytes, out_ct)
-            uploaded_key = storage_key
-
-            async with unit_of_work() as db:
-                await signed_lease_attachment_repo.create(
+            if fields_to_update:
+                await signed_lease_repo.update_lease(
                     db,
                     lease_id=lease_id,
-                    storage_key=storage_key,
-                    filename=out_filename,
-                    content_type=out_ct,
-                    size_bytes=len(rendered_bytes),
-                    kind="rendered_original",
-                    uploaded_by_user_id=user_id,
-                    uploaded_at=now,
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    fields=fields_to_update,
                 )
-        except Exception:  # noqa: BLE001
-            logger.error(
-                "Failed to render/upload file %s for template %s on lease %s",
-                f.filename,
-                tid,
-                lease_id,
-                exc_info=True,
-            )
-            if uploaded_key is not None:
-                try:
-                    storage.delete_file(uploaded_key)
-                except Exception:  # noqa: BLE001
-                    logger.warning(
-                        "Failed to clean up partially-uploaded file %s", uploaded_key,
-                    )
+            guard.set_superseded(superseded)
+            guard.rows_written()
 
     return await get_lease(
         user_id=user_id,

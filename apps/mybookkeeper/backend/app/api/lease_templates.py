@@ -54,10 +54,19 @@ from app.schemas.leases.multi_generate_defaults_response import (
 from app.schemas.leases.suggest_placeholders_response import (
     SuggestPlaceholdersResponse,
 )
-from app.services.leases import lease_template_service
+from app.schemas.leases.template_upload_file import TemplateUploadFile
+from app.services.leases import lease_template_service, lease_template_upload_service
 from app.services.storage.stored_file import StoredFileMissingError
 
 router = APIRouter(prefix="/lease-templates", tags=["lease-templates"])
+
+
+async def _read_upload_files(files: list[UploadFile]) -> list[TemplateUploadFile]:
+    """Read the bodies, after the file count and declared sizes have been checked."""
+    lease_template_upload_service.check_file_count(len(files))
+    for f in files:
+        lease_template_upload_service.check_declared_size(f.filename or "", f.size)
+    return [(f.filename or "", await f.read(), f.content_type) for f in files]
 
 
 @router.post("", response_model=LeaseTemplateResponse, status_code=201)
@@ -67,12 +76,9 @@ async def create_template(
     files: list[UploadFile] = File(...),
     ctx: RequestContext = Depends(require_write_access),
 ) -> LeaseTemplateResponse:
-    payload: list[tuple[str, bytes, str | None]] = []
-    for f in files:
-        content = await f.read()
-        payload.append((f.filename or "", content, f.content_type))
     try:
-        return await lease_template_service.upload_template(
+        payload = await _read_upload_files(files)
+        return await lease_template_upload_service.upload_template(
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
             name=name,
@@ -81,8 +87,18 @@ async def create_template(
         )
     except lease_template_service.TemplateFileTooLargeError as exc:
         raise HTTPException(status_code=413, detail=str(exc)) from exc
+    except lease_template_service.TemplateTooManyFilesError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
     except lease_template_service.TemplateFileTypeRejectedError as exc:
         raise HTTPException(status_code=415, detail=str(exc)) from exc
+    except lease_template_service.TemplateFileUnreadableError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except lease_template_service.TemplateNoFilesError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except lease_template_service.TemplateStorageUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except lease_template_upload_service.TemplateWriteConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except lease_template_service.StorageNotConfiguredError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -297,12 +313,9 @@ async def replace_files(
     files: list[UploadFile] = File(...),
     ctx: RequestContext = Depends(require_write_access),
 ) -> LeaseTemplateResponse:
-    payload: list[tuple[str, bytes, str | None]] = []
-    for f in files:
-        content = await f.read()
-        payload.append((f.filename or "", content, f.content_type))
     try:
-        return await lease_template_service.replace_template_files(
+        payload = await _read_upload_files(files)
+        return await lease_template_upload_service.replace_template_files(
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
             template_id=template_id,
@@ -312,7 +325,17 @@ async def replace_files(
         raise HTTPException(status_code=404, detail="Template not found") from exc
     except lease_template_service.TemplateFileTooLargeError as exc:
         raise HTTPException(status_code=413, detail=str(exc)) from exc
+    except lease_template_service.TemplateTooManyFilesError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
     except lease_template_service.TemplateFileTypeRejectedError as exc:
         raise HTTPException(status_code=415, detail=str(exc)) from exc
+    except lease_template_service.TemplateFileUnreadableError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except lease_template_service.TemplateNoFilesError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except lease_template_service.TemplateStorageUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except lease_template_upload_service.TemplateWriteConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except lease_template_service.StorageNotConfiguredError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

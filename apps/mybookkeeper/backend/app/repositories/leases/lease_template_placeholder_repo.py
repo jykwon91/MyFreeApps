@@ -7,6 +7,7 @@ from sqlalchemy import delete as _sa_delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.leases.lease_template_placeholder import LeaseTemplatePlaceholder
+from app.schemas.leases.placeholder_spec import PlaceholderSpec
 
 
 async def create(
@@ -47,6 +48,46 @@ async def list_for_template(
         .order_by(LeaseTemplatePlaceholder.display_order.asc())
     )
     return list(result.scalars().all())
+
+
+async def list_specs_for_template(
+    db: AsyncSession,
+    *,
+    template_id: uuid.UUID,
+) -> list[PlaceholderSpec]:
+    """The template's placeholders as plain values, safe to hold across a delete."""
+    return [
+        PlaceholderSpec(
+            key=row.key,
+            display_label=row.display_label,
+            input_type=row.input_type,
+            required=row.required,
+            default_source=row.default_source,
+            computed_expr=row.computed_expr,
+            display_order=row.display_order,
+        )
+        for row in await list_for_template(db, template_id=template_id)
+    ]
+
+
+async def create_many(
+    db: AsyncSession,
+    *,
+    template_id: uuid.UUID,
+    specs: list[PlaceholderSpec],
+) -> None:
+    for spec in specs:
+        await create(
+            db,
+            template_id=template_id,
+            key=spec.key,
+            display_label=spec.display_label,
+            input_type=spec.input_type,
+            required=spec.required,
+            default_source=spec.default_source,
+            computed_expr=spec.computed_expr,
+            display_order=spec.display_order,
+        )
 
 
 async def get_by_id_scoped_to_template(

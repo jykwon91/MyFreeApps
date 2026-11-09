@@ -60,7 +60,7 @@ class TestCreateLeaseTemplate:
         app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
         try:
             with patch(
-                "app.api.lease_templates.lease_template_service.upload_template",
+                "app.api.lease_templates.lease_template_upload_service.upload_template",
                 return_value=_ok_template_response(template_id),
             ):
                 client = TestClient(app)
@@ -91,7 +91,7 @@ class TestCreateLeaseTemplate:
         app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
         try:
             with patch(
-                "app.api.lease_templates.lease_template_service.upload_template",
+                "app.api.lease_templates.lease_template_upload_service.upload_template",
                 side_effect=StorageNotConfiguredError("not configured"),
             ):
                 client = TestClient(app)
@@ -114,7 +114,7 @@ class TestCreateLeaseTemplate:
         app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
         try:
             with patch(
-                "app.api.lease_templates.lease_template_service.upload_template",
+                "app.api.lease_templates.lease_template_upload_service.upload_template",
                 side_effect=TemplateFileTooLargeError("too big"),
             ):
                 client = TestClient(app)

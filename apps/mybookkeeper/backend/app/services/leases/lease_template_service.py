@@ -5,24 +5,16 @@ queries. Tenant isolation is via ``(user_id, organization_id)`` per the
 project's existing convention. Tenant scope is checked first on every call —
 cross-tenant access returns the same response shape as a missing row.
 
-Pipeline for ``upload_template``:
-    parse name/desc → upload each file to MinIO → DB insert template +
-    files + extracted placeholders → return detail response.
-
-Pipeline for ``replace_files`` (re-upload to bump version):
-    delete old MinIO objects → insert new files → re-extract placeholders →
-    preserve host edits where keys still match.
+Uploading and replacing template files lives in
+``lease_template_upload_service`` (atomic: storage first, one DB transaction).
 """
 from __future__ import annotations
 
 import datetime
-import logging
 import uuid
 
 from platform_shared.core.storage import StorageNotConfiguredError
 
-from app.core.config import settings
-from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
 from app.repositories.inquiries.inquiry_repo import get_by_applicant_inquiry_id
@@ -47,28 +39,27 @@ from app.services.leases.attachment_response_builder import (
     attach_presigned_urls_to_files,
 )
 from app.services.leases.computed import ComputedExprError, validate_expr
-from app.services.leases.default_source_map import (
-    get_default,
-    guess_display_label,
-)
 from app.services.leases.default_source_resolver import (
     resolve_default_source,
     validate_default_source_spec,
 )
-from app.services.leases.placeholder_extractor import (
-    extract_placeholders_across_files,
+from app.services.leases.exceptions.template_file_unreadable_error import (
+    TemplateFileUnreadableError,
+)
+from app.services.leases.exceptions.template_no_files_error import TemplateNoFilesError
+from app.services.leases.exceptions.template_storage_unavailable_error import (
+    TemplateStorageUnavailableError,
+)
+from app.services.leases.exceptions.template_too_many_files_error import (
+    TemplateTooManyFilesError,
 )
 from app.services.leases.lease_template_placeholder_service import (
     TemplateNotFoundError,
-    extract_text_from_upload as _extract_text_from_upload,
     suggest_ai_placeholders,
 )
 from app.services.leases.lease_template_render_service import (
     load_template_source_texts,
 )
-
-logger = logging.getLogger(__name__)
-
 
 # ---------------------------------------------------------------------------
 # Allowlist for upload content types
@@ -122,7 +113,7 @@ class ApplicantNotFoundError(LookupError):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _normalise_content_type(declared: str | None, filename: str) -> str:
+def normalise_content_type(declared: str | None, filename: str) -> str:
     """Resolve a content type when the upload omits one or sends octet-stream.
 
     DOCX uploads frequently arrive as ``application/octet-stream`` from
@@ -174,110 +165,6 @@ def _build_detail_from_orm(template, files, placeholders) -> LeaseTemplateRespon
         placeholders=placeholder_responses,
         created_at=template.created_at,
         updated_at=template.updated_at,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Upload (POST)
-# ---------------------------------------------------------------------------
-
-async def upload_template(
-    *,
-    user_id: uuid.UUID,
-    organization_id: uuid.UUID,
-    name: str,
-    description: str | None,
-    files: list[tuple[str, bytes, str | None]],
-) -> LeaseTemplateResponse:
-    """Create a new template from an uploaded bundle of files.
-
-    ``files`` is a list of ``(filename, content_bytes, declared_content_type)``.
-    """
-    storage = get_storage()
-    if storage is None:
-        raise StorageNotConfiguredError("Object storage is not configured")
-    if not files:
-        raise TemplateFileTypeRejectedError("At least one file is required")
-
-    # Validate each file (size + type).
-    normalised: list[tuple[str, bytes, str]] = []
-    for filename, content, declared in files:
-        if len(content) > settings.max_blackout_attachment_size_bytes:
-            max_mb = settings.max_blackout_attachment_size_bytes // (1024 * 1024)
-            raise TemplateFileTooLargeError(
-                f"{filename} exceeds {max_mb}MB limit"
-            )
-        ct = _normalise_content_type(declared, filename)
-        if ct not in ALLOWED_TEMPLATE_MIME_TYPES:
-            raise TemplateFileTypeRejectedError(
-                f"{filename}: unsupported file type ({ct}). "
-                "Allowed: .md, .txt, .docx"
-            )
-        normalised.append((filename, content, ct))
-
-    # Insert template row first so we have an ID for storage paths.
-    async with unit_of_work() as db:
-        template = await lease_template_repo.create(
-            db,
-            user_id=user_id,
-            organization_id=organization_id,
-            name=name,
-            description=description,
-        )
-        template_id = template.id
-
-    # Upload files to MinIO and write DB rows + extract placeholders.
-    extracted_texts: list[str] = []
-    uploaded_keys: list[str] = []
-    try:
-        for index, (filename, content, ct) in enumerate(normalised):
-            file_id = uuid.uuid4()
-            storage_key = f"lease-templates/{template_id}/{file_id}"
-            storage.upload_file(storage_key, content, ct)
-            uploaded_keys.append(storage_key)
-
-            async with unit_of_work() as db:
-                await lease_template_file_repo.create(
-                    db,
-                    template_id=template_id,
-                    filename=filename,
-                    storage_key=storage_key,
-                    content_type=ct,
-                    size_bytes=len(content),
-                    display_order=index,
-                )
-
-            extracted_texts.append(_extract_text_from_upload(content, ct))
-
-        # Extract placeholders across all files (deduped, ordered).
-        keys = extract_placeholders_across_files(extracted_texts)
-        async with unit_of_work() as db:
-            for order, key in enumerate(keys):
-                seed = get_default(key)
-                await lease_template_placeholder_repo.create(
-                    db,
-                    template_id=template_id,
-                    key=key,
-                    display_label=guess_display_label(key),
-                    input_type=seed.input_type,
-                    required=True,
-                    default_source=seed.default_source,
-                    computed_expr=seed.computed_expr,
-                    display_order=order,
-                )
-    except Exception:
-        # Cleanup uploaded MinIO objects on partial failure.
-        for key in uploaded_keys:
-            try:
-                storage.delete_file(key)
-            except Exception:  # noqa: BLE001
-                logger.warning("Failed to delete orphan template file %s", key)
-        raise
-
-    return await get_template(
-        user_id=user_id,
-        organization_id=organization_id,
-        template_id=template_id,
     )
 
 
@@ -527,6 +414,11 @@ async def update_template_metadata(
     description: str | None,
 ) -> LeaseTemplateResponse:
     async with unit_of_work() as db:
+        # Locked so this serialises with a concurrent replace of the files.
+        await lease_template_repo.get(
+            db, template_id=template_id, user_id=user_id,
+            organization_id=organization_id, for_update=True,
+        )
         updated = await lease_template_repo.update_metadata(
             db,
             template_id=template_id,
@@ -556,13 +448,14 @@ async def update_placeholder(
     placeholder_id: uuid.UUID,
     fields: dict[str, object],
 ) -> LeaseTemplatePlaceholderResponse:
-    # Tenant scope: confirm the template belongs to caller first.
+    # Tenant scope: confirm the template belongs to caller first; locked so this serialises with a replace.
     async with unit_of_work() as db:
         template = await lease_template_repo.get(
             db,
             template_id=template_id,
             user_id=user_id,
             organization_id=organization_id,
+            for_update=True,
         )
         if template is None:
             raise TemplateNotFoundError(f"Template {template_id} not found")
@@ -634,6 +527,7 @@ async def soft_delete_template(
             template_id=template_id,
             user_id=user_id,
             organization_id=organization_id,
+            for_update=True,
         )
         if template is None:
             raise TemplateNotFoundError(f"Template {template_id} not found")
@@ -653,141 +547,6 @@ async def soft_delete_template(
 
 
 # ---------------------------------------------------------------------------
-# Replace files (re-upload — bumps version, preserves host placeholder edits)
-# ---------------------------------------------------------------------------
-
-async def replace_template_files(
-    *,
-    user_id: uuid.UUID,
-    organization_id: uuid.UUID,
-    template_id: uuid.UUID,
-    files: list[tuple[str, bytes, str | None]],
-) -> LeaseTemplateResponse:
-    storage = get_storage()
-    if storage is None:
-        raise StorageNotConfiguredError("Object storage is not configured")
-
-    async with unit_of_work() as db:
-        template = await lease_template_repo.get(
-            db,
-            template_id=template_id,
-            user_id=user_id,
-            organization_id=organization_id,
-        )
-        if template is None:
-            raise TemplateNotFoundError(f"Template {template_id} not found")
-
-    # Validate uploads.
-    normalised: list[tuple[str, bytes, str]] = []
-    for filename, content, declared in files:
-        if len(content) > settings.max_blackout_attachment_size_bytes:
-            max_mb = settings.max_blackout_attachment_size_bytes // (1024 * 1024)
-            raise TemplateFileTooLargeError(f"{filename} exceeds {max_mb}MB limit")
-        ct = _normalise_content_type(declared, filename)
-        if ct not in ALLOWED_TEMPLATE_MIME_TYPES:
-            raise TemplateFileTypeRejectedError(
-                f"{filename}: unsupported file type"
-            )
-        normalised.append((filename, content, ct))
-
-    # Snapshot existing host placeholder edits so we can restore them.
-    async with unit_of_work() as db:
-        prior = await lease_template_placeholder_repo.list_for_template(
-            db, template_id=template_id,
-        )
-        prior_by_key = {p.key: p for p in prior}
-
-        # Delete old files (from DB; storage cleanup after).
-        old_keys = await lease_template_file_repo.delete_all_for_template(
-            db, template_id=template_id,
-        )
-        # Drop placeholders — re-extract below.
-        await lease_template_placeholder_repo.delete_all_for_template(
-            db, template_id=template_id,
-        )
-
-    # Best-effort storage cleanup of old files.
-    for key in old_keys:
-        try:
-            storage.delete_file(key)
-        except Exception:  # noqa: BLE001
-            logger.warning("Failed to delete old template file %s", key)
-
-    # Upload new files + re-extract.
-    extracted_texts: list[str] = []
-    new_keys: list[str] = []
-    try:
-        for index, (filename, content, ct) in enumerate(normalised):
-            file_id = uuid.uuid4()
-            storage_key = f"lease-templates/{template_id}/{file_id}"
-            storage.upload_file(storage_key, content, ct)
-            new_keys.append(storage_key)
-
-            async with unit_of_work() as db:
-                await lease_template_file_repo.create(
-                    db,
-                    template_id=template_id,
-                    filename=filename,
-                    storage_key=storage_key,
-                    content_type=ct,
-                    size_bytes=len(content),
-                    display_order=index,
-                )
-            extracted_texts.append(_extract_text_from_upload(content, ct))
-
-        keys = extract_placeholders_across_files(extracted_texts)
-        async with unit_of_work() as db:
-            for order, key in enumerate(keys):
-                old = prior_by_key.get(key)
-                if old is not None:
-                    # Preserve host edits.
-                    await lease_template_placeholder_repo.create(
-                        db,
-                        template_id=template_id,
-                        key=key,
-                        display_label=old.display_label,
-                        input_type=old.input_type,
-                        required=old.required,
-                        default_source=old.default_source,
-                        computed_expr=old.computed_expr,
-                        display_order=order,
-                    )
-                else:
-                    seed = get_default(key)
-                    await lease_template_placeholder_repo.create(
-                        db,
-                        template_id=template_id,
-                        key=key,
-                        display_label=guess_display_label(key),
-                        input_type=seed.input_type,
-                        required=True,
-                        default_source=seed.default_source,
-                        computed_expr=seed.computed_expr,
-                        display_order=order,
-                    )
-
-            await lease_template_repo.bump_version(
-                db,
-                template_id=template_id,
-                user_id=user_id,
-                organization_id=organization_id,
-            )
-    except Exception:
-        for key in new_keys:
-            try:
-                storage.delete_file(key)
-            except Exception:  # noqa: BLE001
-                logger.warning("Failed to delete orphan re-uploaded file %s", key)
-        raise
-
-    return await get_template(
-        user_id=user_id,
-        organization_id=organization_id,
-        template_id=template_id,
-    )
-
-
-# ---------------------------------------------------------------------------
 # Back-compat re-exports
 # ---------------------------------------------------------------------------
 # ``suggest_ai_placeholders`` and ``load_template_source_texts`` are imported at
@@ -804,6 +563,10 @@ __all__ = [
     "TemplateNotFoundError",
     "TemplateFileTooLargeError",
     "TemplateFileTypeRejectedError",
+    "TemplateFileUnreadableError",
+    "TemplateNoFilesError",
+    "TemplateStorageUnavailableError",
+    "TemplateTooManyFilesError",
     "TemplateInUseError",
     "InvalidComputedExprError",
     "InvalidDefaultSourceError",
@@ -813,7 +576,6 @@ __all__ = [
     # catch it from this module continue to work without change.
     "StorageNotConfiguredError",
     # CRUD
-    "upload_template",
     "list_templates",
     "get_template",
     "generate_defaults",
@@ -821,7 +583,6 @@ __all__ = [
     "update_template_metadata",
     "update_placeholder",
     "soft_delete_template",
-    "replace_template_files",
     # Moved to focused modules (re-exported for back-compat)
     "load_template_source_texts",
     "suggest_ai_placeholders",

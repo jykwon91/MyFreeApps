@@ -109,6 +109,12 @@ def test_add_templates_request_rejects_empty_list() -> None:
         SignedLeaseAddTemplatesRequest(template_ids=[], today=utc_today())
 
 
+def test_add_templates_request_dedupes_ids_preserving_order() -> None:
+    t1, t2 = uuid.uuid4(), uuid.uuid4()
+    req = SignedLeaseAddTemplatesRequest(template_ids=[t1, t2, t1], today=utc_today())
+    assert req.template_ids == [t1, t2]
+
+
 def test_add_templates_request_accepts_one_or_more_ids() -> None:
     req = SignedLeaseAddTemplatesRequest(template_ids=[uuid.uuid4()], today=utc_today())
     assert len(req.template_ids) == 1
@@ -347,6 +353,7 @@ async def test_regenerate_deletes_old_rendered_attachments(db) -> None:
     storage.upload_file = MagicMock(return_value=None)
     storage.delete_file = MagicMock(return_value=None)
     storage.download_file = MagicMock(return_value=b"")
+    storage.delete_files = MagicMock(return_value=[])
 
     with _patch(
         "app.services.leases.lease_pdf_service.unit_of_work",
@@ -356,6 +363,9 @@ async def test_regenerate_deletes_old_rendered_attachments(db) -> None:
         _make_fake_uow(db),
     ), _patch(
         "app.services.leases.lease_pdf_service.get_storage",
+        return_value=storage,
+    ), _patch(
+        "app.services.storage.stored_file_cleanup.get_storage",
         return_value=storage,
     ):
         await add_templates_and_generate(
@@ -373,7 +383,7 @@ async def test_regenerate_deletes_old_rendered_attachments(db) -> None:
     # The non-rendered attachment is preserved.
     assert preserved_addendum.id in remaining_ids
     # Storage was asked to delete the old rendered object.
-    storage.delete_file.assert_any_call("signed-leases/lease/old-rendered")
+    storage.delete_files.assert_called_once_with(["signed-leases/lease/old-rendered"])
 
 
 @pytest.mark.asyncio
@@ -432,11 +442,11 @@ async def test_add_templates_happy_path_links_and_renders(db) -> None:
             return_value=fake_storage,
         ),
         _patch(
-            "app.services.leases.lease_pdf_service.render_md",
+            "app.services.leases.lease_render_service.render_md",
             return_value="# Hello Alice",
         ),
         _patch(
-            "app.services.leases.lease_pdf_service.render_md_text_to_pdf_or_keep",
+            "app.services.leases.lease_render_service.render_md_text_to_pdf_or_keep",
             return_value=b"%PDF-1.4 fake",
         ),
     ):
