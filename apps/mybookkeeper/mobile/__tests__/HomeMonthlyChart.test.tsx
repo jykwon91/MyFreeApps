@@ -45,7 +45,7 @@ describe("Home monthly chart", () => {
     server.summary = { by_month: SPRING };
     await renderHome();
     await fireEvent.press(await screen.findByRole("button", { name: /April 2026$/ }));
-    expect(mockNavigate).toHaveBeenCalledWith("/money?segment=transactions&view=all&period=all&month=2026-04&type=&property=&category=&vendor=&status=approved");
+    expect(mockNavigate).toHaveBeenCalledWith("/money?segment=transactions&view=all&period=all&month=2026-04&from=&to=&type=&property=&category=&vendor=&status=approved");
   });
 
   it("puts a quiet month back as zero rather than closing the gap", async () => {

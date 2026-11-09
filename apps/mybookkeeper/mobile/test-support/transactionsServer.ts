@@ -12,6 +12,7 @@ export function aTransaction(overrides: Partial<Transaction> = {}): Transaction 
     id: "t1",
     property_id: "p1",
     transaction_date: "2026-03-14",
+    tax_year: 2026,
     vendor: "Home Depot",
     description: "Lumber",
     amount: "84.20",
@@ -131,6 +132,21 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     if (config.url === "/transactions/review-count") {
       return respond({ count: server.transactions.filter((row) => REVIEWABLE.includes(row.status)).length });
     }
+    if (config.url === "/transactions" && config.method === "post") {
+      if (server.failWritesWith !== null) return respond({ detail: "nope" }, server.failWritesWith);
+      const created = aTransaction({ id: `new${server.transactions.length}`, ...(JSON.parse(String(config.data)) as Partial<Transaction>) });
+      server.transactions.unshift(created);
+      return respond(created, 201);
+    }
+    if (config.url === "/transactions/bulk-approve") {
+      if (server.failWritesWith !== null) return respond({ detail: "nope" }, server.failWritesWith);
+      const { ids } = JSON.parse(String(config.data)) as { ids: string[] };
+      const approvable = server.transactions.filter((row) => ids.includes(row.id) && REVIEWABLE.includes(row.status) && row.property_id);
+      approvable.forEach((row) => {
+        row.status = "approved";
+      });
+      return respond({ approved: approvable.length, skipped: ids.length - approvable.length });
+    }
     if (config.url === "/transactions") {
       const params = (config.params ?? {}) as Record<string, string | number | boolean | undefined>;
       const offset = Number(params.offset ?? 0);
@@ -139,6 +155,8 @@ export function startTransactionServer(transactions: Transaction[], properties: 
         (row) =>
           (!params.to_review || REVIEWABLE.includes(row.status)) &&
           (!params.status || row.status === params.status) &&
+          (!params.start_date || row.transaction_date >= String(params.start_date)) &&
+          (!params.end_date || row.transaction_date <= String(params.end_date)) &&
           (!params.vendor || (row.vendor ?? "").toLowerCase().includes(String(params.vendor).toLowerCase())),
       );
       return respond(matches.slice(offset, offset + Number(params.limit ?? 1000)));

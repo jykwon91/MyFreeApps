@@ -8,6 +8,7 @@ const MONEY_PATTERN = /^\d+(\.\d{1,2})?$/;
 
 export function toEditValues(transaction: Transaction): TransactionEditValues {
   return {
+    date: transaction.transaction_date,
     vendor: transaction.vendor ?? "",
     amount: transaction.amount,
     type: transaction.transaction_type,
@@ -49,6 +50,7 @@ export function changedFields(values: TransactionEditValues, original: Transacti
   const changes: Partial<Transaction> = {};
   const vendor = values.vendor.trim();
   const description = values.description.trim();
+  if (values.date !== original.transaction_date) changes.transaction_date = values.date;
   if (vendor !== (original.vendor ?? "")) changes.vendor = vendor || null;
   if (description !== (original.description ?? "")) changes.description = description || null;
   if (!isSameAmount(values.amount, original.amount)) changes.amount = values.amount.trim();

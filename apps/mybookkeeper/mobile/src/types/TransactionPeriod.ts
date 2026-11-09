@@ -1,1 +1,1 @@
-export type TransactionPeriod = "all" | "thisMonth" | "lastMonth" | "thisYear" | "lastYear";
+export type TransactionPeriod = "all" | "thisMonth" | "lastMonth" | "thisYear" | "lastYear" | "custom";

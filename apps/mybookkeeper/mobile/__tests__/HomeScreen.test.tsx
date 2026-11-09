@@ -75,7 +75,7 @@ describe("HomeScreen", () => {
     server.documents = [{ id: "d1", status: "failed" }, { id: "d2", status: "completed" }];
     await renderScreen();
     await fireEvent.press(await screen.findByRole("button", { name: "2 transactions to review" }));
-    expect(mockNavigate).toHaveBeenLastCalledWith("/money?segment=transactions&view=review&period=all&month=&type=&property=&category=&vendor=&status=");
+    expect(mockNavigate).toHaveBeenLastCalledWith("/money?segment=transactions&view=review&period=all&month=&from=&to=&type=&property=&category=&vendor=&status=");
     await fireEvent.press(screen.getByRole("button", { name: "1 document needs a look" }));
     expect(mockNavigate).toHaveBeenLastCalledWith("/money?segment=documents&filter=needsALook");
   });
@@ -138,7 +138,7 @@ describe("HomeScreen", () => {
     };
     await renderScreen();
     await fireEvent.press(await screen.findByLabelText(/^Unassigned, net/));
-    expect(mockNavigate).toHaveBeenCalledWith("/money?segment=transactions&view=all&period=thisMonth&month=&type=&property=unassigned&category=&vendor=&status=approved");
+    expect(mockNavigate).toHaveBeenCalledWith("/money?segment=transactions&view=all&period=thisMonth&month=&from=&to=&type=&property=unassigned&category=&vendor=&status=approved");
   });
 
   it("hides the breakdown for a single property", async () => {

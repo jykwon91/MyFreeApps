@@ -6,7 +6,7 @@ import { ScrollView, type ScrollViewInstance, Text, View } from "react-native";
 import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import type { ReceiptSendValues } from "../../types/ReceiptSendValues";
 import PaymentMethodRow from "./PaymentMethodRow";
-import PeriodDateRow from "./PeriodDateRow";
+import PeriodDateRow from "../shell/PeriodDateRow";
 import ReceiptBlockerBanner from "./ReceiptBlockerBanner";
 import { blockerMessage, endBeforeStartMessage, gmailMessage, guessedPaymentMethod } from "./receiptDisplay";
 import ReceiptGmailBanner from "./ReceiptGmailBanner";

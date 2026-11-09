@@ -52,6 +52,7 @@ export const SINGLE_COPY_SCREENS = [
   "security/turn-on",
   "vendors/[id]",
   "vendors/index",
+  "transactions/new",
   "transactions/[id]/edit",
   "transactions/[id]/index",
 ] as const;

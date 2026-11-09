@@ -2,6 +2,7 @@ import type { Property } from "@mybookkeeper/api-client/types/property/property"
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionStatus } from "@mybookkeeper/api-client/types/transaction/TransactionStatus";
 import { formatCurrency } from "@platform/core/utils/currency";
+import { fullDateLabel } from "../../lib/localDate";
 import { formatTag } from "@platform/core/utils/tag";
 
 const STATUS_LABELS: Record<TransactionStatus, string> = {
@@ -28,6 +29,11 @@ export function transactionName(transaction: Transaction): string {
 export function propertyLabel(propertyId: string | null, properties: readonly Property[]): string {
   if (propertyId === null) return "No property";
   return properties.find((property) => property.id === propertyId)?.name ?? "A property";
+}
+
+/** "Mar 1, 2026 to Mar 31, 2026" */
+export function customRangeLabel(startDate: string, endDate: string): string {
+  return `${fullDateLabel(startDate)} to ${fullDateLabel(endDate)}`;
 }
 
 export function categoryLabel(category: string): string {

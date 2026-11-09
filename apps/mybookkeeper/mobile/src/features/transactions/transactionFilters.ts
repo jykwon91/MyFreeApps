@@ -1,5 +1,5 @@
 import type { TransactionListParams } from "@mybookkeeper/api-client/types/transaction/TransactionListParams";
-import { MONTH_PATTERN, NO_FILTERS, TRANSACTION_PERIODS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
+import { DAY_PATTERN, MONTH_PATTERN, NO_FILTERS, TRANSACTION_PERIODS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import { monthBounds } from "../../lib/localDate";
 import type { MoneyParams } from "../../types/MoneyParams";
 import type { TransactionFilters } from "../../types/TransactionFilters";
@@ -9,6 +9,10 @@ function isoDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function isDay(value: string | undefined): value is string {
+  return value !== undefined && DAY_PATTERN.test(value);
 }
 
 export function periodRange(period: TransactionPeriod, today: Date): { start_date?: string; end_date?: string } {
@@ -24,6 +28,7 @@ export function periodRange(period: TransactionPeriod, today: Date): { start_dat
     case "lastYear":
       return { start_date: `${year - 1}-01-01`, end_date: `${year - 1}-12-31` };
     case "all":
+    case "custom":
       return {};
   }
 }
@@ -35,6 +40,10 @@ export function toListParams(filters: TransactionFilters, today: Date): Transact
     params.to_review = true;
   } else {
     Object.assign(params, filters.month ? monthBounds(filters.month) : periodRange(filters.period, today));
+    if (filters.period === "custom" && filters.startDate && filters.endDate && !filters.month) {
+      params.start_date = filters.startDate;
+      params.end_date = filters.endDate;
+    }
     if (filters.approvedOnly) params.status = "approved";
   }
   if (filters.type) params.transaction_type = filters.type;
@@ -52,10 +61,14 @@ export function activeFilterCount(filters: TransactionFilters): number {
 
 export function filtersFromParams(params: Partial<MoneyParams>): TransactionFilters {
   const period = TRANSACTION_PERIODS.find((option) => option.value === params.period)?.value;
+  const { from, to } = params;
+  const isCustom = params.period === "custom" && isDay(from) && isDay(to) && from <= to;
   return {
     view: params.view === "review" ? "review" : "all",
-    period: period ?? NO_FILTERS.period,
+    period: isCustom ? "custom" : (period ?? NO_FILTERS.period),
     month: params.month && MONTH_PATTERN.test(params.month) ? params.month : null,
+    startDate: isCustom ? from : null,
+    endDate: isCustom ? to : null,
     type: params.type === "income" || params.type === "expense" ? params.type : null,
     propertyId: params.property || null,
     category: params.category || null,
@@ -69,6 +82,8 @@ export function filtersToParams(filters: TransactionFilters): Omit<MoneyParams, 
     view: filters.view,
     period: filters.period,
     month: filters.month ?? "",
+    from: filters.period === "custom" ? (filters.startDate ?? "") : "",
+    to: filters.period === "custom" ? (filters.endDate ?? "") : "",
     type: filters.type ?? "",
     property: filters.propertyId ?? "",
     category: filters.category ?? "",

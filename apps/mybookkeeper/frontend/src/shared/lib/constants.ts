@@ -129,8 +129,8 @@ export const TRANSACTION_CATEGORIES = [
   "uncategorized",
 ] as const;
 
-export const PAYMENT_METHODS = ["check", "credit_card", "bank_transfer", "cash", "platform_payout", "other"] as const;
-export const CHANNELS = ["airbnb", "vrbo", "booking.com", "direct"] as const;
+export { PAYMENT_METHODS } from "@mybookkeeper/api-client/constants/transactionPaymentMethods";
+export { CHANNELS } from "@mybookkeeper/api-client/constants/transactionChannels";
 
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 

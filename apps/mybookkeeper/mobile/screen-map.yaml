@@ -99,8 +99,9 @@ routes:
     screen: (app)/applicants/[id]
   /terms:
     not_on_mobile: Opens on the website.
-  # On the website only: duplicates, bulk actions, import and export, adding by hand,
-  # vendor rules, and changing a date. Editing a date there also moves the tax year.
+  # On the website only: duplicates, bulk delete, import and export, and vendor rules.
+  # Adding by hand is (app)/transactions/new, and bulk approve and a custom date range
+  # are on the Money tab.
   /transactions:
     screen: (app)/(tabs)/money
   /user-activity:

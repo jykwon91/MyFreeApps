@@ -67,11 +67,11 @@ describe("Home where it went", () => {
     await renderHome();
     await fireEvent.press(await screen.findByRole("button", { name: "Utilities, 300 dollars" }));
     expect(mockNavigate).toHaveBeenLastCalledWith(
-      "/money?segment=transactions&view=all&period=thisMonth&month=&type=expense&property=&category=utilities&vendor=&status=approved",
+      "/money?segment=transactions&view=all&period=thisMonth&month=&from=&to=&type=expense&property=&category=utilities&vendor=&status=approved",
     );
     await fireEvent.press(screen.getByRole("button", { name: "See all expenses" }));
     expect(mockNavigate).toHaveBeenLastCalledWith(
-      "/money?segment=transactions&view=all&period=thisMonth&month=&type=expense&property=&category=&vendor=&status=approved",
+      "/money?segment=transactions&view=all&period=thisMonth&month=&from=&to=&type=expense&property=&category=&vendor=&status=approved",
     );
   });
 
