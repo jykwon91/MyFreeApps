@@ -31,6 +31,10 @@ class ListingNotFoundError(LookupError):
     """Raised when the listing the caller scoped against does not exist."""
 
 
+class StalePhotoOrderError(ValueError):
+    """Raised when a new photo order names a photo that isn't on the listing (the caller's list is stale)."""
+
+
 async def upload_photos(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,  # noqa: ARG001 — accepted for audit context
@@ -70,7 +74,7 @@ async def upload_photos(
         processed.append((result.content, result.content_type, safe_name))
 
     async with unit_of_work() as db:
-        listing = await listing_repo.get_by_id(db, listing_id, organization_id)
+        listing = await listing_repo.get_by_id(db, listing_id, organization_id, for_update=True)
         if listing is None:
             raise ListingNotFoundError(f"Listing {listing_id} not found")
 
@@ -122,7 +126,7 @@ async def update_photo(
     Raises ListingNotFoundError when the listing or photo can't be reached.
     """
     async with unit_of_work() as db:
-        listing = await listing_repo.get_by_id(db, listing_id, organization_id)
+        listing = await listing_repo.get_by_id(db, listing_id, organization_id, for_update=True)
         if listing is None:
             raise ListingNotFoundError(f"Listing {listing_id} not found")
         photo = await listing_photo_repo.update(db, photo_id, listing.id, fields)
@@ -140,16 +144,19 @@ async def reorder_photos(
 ) -> list[ListingPhotoResponse]:
     """Put the listing's photos in `photo_ids` order in one transaction.
 
-    Raises ListingNotFoundError when the listing is missing or an id is not
-    one of its photos; nothing is changed in that case.
+    The listing row is locked first, so uploads, deletes and other reorders on
+    it run one at a time. A partial list is fine: photos not named follow in
+    their current order. Raises ListingNotFoundError when the listing is
+    missing, and StalePhotoOrderError when an id is not one of its photos (the
+    caller's list is out of date); nothing is changed in either case.
     """
     async with unit_of_work() as db:
-        listing = await listing_repo.get_by_id(db, listing_id, organization_id)
+        listing = await listing_repo.get_by_id(db, listing_id, organization_id, for_update=True)
         if listing is None:
             raise ListingNotFoundError(f"Listing {listing_id} not found")
         ordered = await listing_photo_repo.apply_order(db, listing.id, photo_ids)
         if ordered is None:
-            raise ListingNotFoundError("Photo not found")
+            raise StalePhotoOrderError("A photo in the new order is no longer on this listing")
         return attach_presigned_urls([ListingPhotoResponse.model_validate(p) for p in ordered])
 
 
@@ -164,7 +171,7 @@ async def delete_photo(
     Raises ListingNotFoundError when the listing or photo can't be reached.
     """
     async with unit_of_work() as db:
-        listing = await listing_repo.get_by_id(db, listing_id, organization_id)
+        listing = await listing_repo.get_by_id(db, listing_id, organization_id, for_update=True)
         if listing is None:
             raise ListingNotFoundError(f"Listing {listing_id} not found")
         deleted = await listing_photo_repo.delete_by_id(db, photo_id, listing.id)

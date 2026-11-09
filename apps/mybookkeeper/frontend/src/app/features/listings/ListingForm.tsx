@@ -189,9 +189,8 @@ export default function ListingForm({
               {(field) => (
                 <>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
+                    type="text"
+                    inputMode="decimal"
                     {...register("monthly_rate")}
                     className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                     data-testid="listing-form-monthly-rate"
@@ -205,9 +204,8 @@ export default function ListingForm({
               {(field) => (
                 <>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   {...register("weekly_rate")}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
@@ -220,9 +218,8 @@ export default function ListingForm({
               {(field) => (
                 <>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   {...register("nightly_rate")}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
@@ -238,8 +235,8 @@ export default function ListingForm({
               {(field) => (
                 <>
                 <input
-                  type="number"
-                  min="0"
+                  type="text"
+                  inputMode="numeric"
                   {...register("min_stay_days")}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
@@ -252,8 +249,8 @@ export default function ListingForm({
               {(field) => (
                 <>
                 <input
-                  type="number"
-                  min="0"
+                  type="text"
+                  inputMode="numeric"
                   {...register("max_stay_days")}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}

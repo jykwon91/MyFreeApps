@@ -325,6 +325,17 @@ describe("working with a photo", () => {
     expect(screen.getByText("Photo 2 of 2")).toBeTruthy();
   });
 
+  it("refreshes and says so in fixed words when the order was made from a stale list", async () => {
+    const server = withTwo();
+    await show(<ListingPhotosScreen id="l1" />);
+    await open("Photo 2 of 2");
+    // Another device removed photo a after this screen loaded it.
+    server.listings[0].photos = [aPhoto("b", 0)];
+    await fireEvent.press(button(MESSAGES.makeCover));
+    await screen.findByText(MESSAGES.orderStale);
+    expect(server.listings[0].photos.map((photo) => photo.id)).toEqual(["b"]);
+  });
+
   it("closes the viewer when the photo it shows is removed elsewhere", async () => {
     const server = withTwo();
     await show(<ListingPhotosScreen id="l1" />);

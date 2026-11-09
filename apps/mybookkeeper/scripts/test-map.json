@@ -474,6 +474,7 @@
         "backend/app/services/listings/",
         "backend/app/schemas/listings/",
         "backend/app/core/listing_enums.py",
+        "backend/app/core/listing_constants.py",
         "backend/app/core/channel_constants.py",
         "backend/app/api/listings.py",
         "backend/app/api/calendar.py",

@@ -32,6 +32,7 @@ export const LISTING_PHOTO_MESSAGES = {
   removedMany: "Photos removed.",
   alreadyRemoved: "That photo was already removed.",
   moved: "Order changed.",
+  orderStale: "The photos changed on another device. I've refreshed them, so try the move again.",
   retry: "Try again",
   discardUpload: "Remove",
   waiting: "Waiting",

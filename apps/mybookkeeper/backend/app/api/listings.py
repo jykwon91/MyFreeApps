@@ -160,13 +160,19 @@ async def reorder_photos(
     payload: ListingPhotoOrderRequest,
     ctx: RequestContext = Depends(require_write_access),
 ) -> list[ListingPhotoResponse]:
-    """Set the photo order in one transaction: the first id becomes the cover."""
+    """Set the photo order in one transaction: the first id becomes the cover.
+
+    Photos left out of the list follow in their current order. 409 when an id
+    isn't a photo of this listing: the caller's list is stale and should refetch.
+    """
     try:
         return await listing_photo_service.reorder_photos(
             ctx.organization_id, ctx.user_id, listing_id, payload.photo_ids,
         )
     except listing_photo_service.ListingNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except listing_photo_service.StalePhotoOrderError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.patch(

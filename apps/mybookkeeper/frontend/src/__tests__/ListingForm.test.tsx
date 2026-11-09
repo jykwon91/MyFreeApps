@@ -94,7 +94,7 @@ describe("ListingForm", () => {
       renderForm();
       expect(screen.getByRole("heading", { name: /new listing/i })).toBeInTheDocument();
       expect(screen.getByTestId("listing-form-title")).toHaveValue("");
-      expect(screen.getByTestId("listing-form-monthly-rate")).toHaveValue(null);
+      expect(screen.getByTestId("listing-form-monthly-rate")).toHaveValue("");
     });
 
     it("requires a title and monthly rate before submit", async () => {
@@ -112,13 +112,26 @@ describe("ListingForm", () => {
       await user.type(screen.getByTestId("listing-form-title"), "Studio");
       await user.selectOptions(screen.getByTestId("listing-form-property"), "prop-1");
       await user.type(screen.getByTestId("listing-form-monthly-rate"), "1899");
-      const [minStay, maxStay] = screen.getAllByRole("spinbutton").slice(-2);
-      await user.type(minStay, "60");
-      await user.type(maxStay, "30");
+      await user.type(screen.getByLabelText("Min stay (days)"), "60");
+      await user.type(screen.getByLabelText("Max stay (days)"), "30");
       await user.type(screen.getByTestId("listing-form-amenities"), "x".repeat(LISTING_AMENITY_MAX_LENGTH + 1));
       await user.click(screen.getByTestId("listing-form-submit"));
       expect(screen.getByText(LISTING_FORM_PROBLEMS.stayOrder)).toBeInTheDocument();
       expect(screen.getByText(LISTING_FORM_PROBLEMS.amenityTooLong)).toBeInTheDocument();
+      expect(createMock).not.toHaveBeenCalled();
+    });
+
+    it("tells the person when a rate or day count can't be read, instead of saving it empty", async () => {
+      const user = userEvent.setup();
+      renderForm();
+      await user.type(screen.getByTestId("listing-form-title"), "Studio");
+      await user.selectOptions(screen.getByTestId("listing-form-property"), "prop-1");
+      await user.type(screen.getByTestId("listing-form-monthly-rate"), "1.2.3");
+      await user.type(screen.getByLabelText("Weekly rate (USD)"), "12,50");
+      await user.type(screen.getByLabelText("Min stay (days)"), "3.5");
+      await user.click(screen.getByTestId("listing-form-submit"));
+      expect(screen.getAllByText(LISTING_FORM_PROBLEMS.rateInvalid)).toHaveLength(2);
+      expect(screen.getByText(LISTING_FORM_PROBLEMS.daysInvalid)).toBeInTheDocument();
       expect(createMock).not.toHaveBeenCalled();
     });
 
@@ -178,7 +191,7 @@ describe("ListingForm", () => {
       renderForm(sampleListing);
       expect(screen.getByRole("heading", { name: /edit listing/i })).toBeInTheDocument();
       expect(screen.getByTestId("listing-form-title")).toHaveValue("Existing Listing");
-      expect(screen.getByTestId("listing-form-monthly-rate")).toHaveValue(1500);
+      expect(screen.getByTestId("listing-form-monthly-rate")).toHaveValue("1500.00");
       expect(screen.getByTestId("listing-form-amenities")).toHaveValue("wifi, parking");
     });
 

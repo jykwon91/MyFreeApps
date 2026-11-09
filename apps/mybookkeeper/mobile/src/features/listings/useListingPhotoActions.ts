@@ -8,7 +8,7 @@ import { useWrite } from "../../lib/useWrite";
 import { actionFailureCopy, deleteFailureCopy } from "../../lib/writeFailureCopy";
 
 const DELETE_COPY = deleteFailureCopy("photo");
-const ORDER_COPY = actionFailureCopy("change the order");
+const ORDER_COPY = actionFailureCopy("change the order", { conflict: MESSAGES.orderStale });
 
 /** Removing and reordering a listing's photos. */
 export function useListingPhotoActions(listing: ListingResponse) {
@@ -61,6 +61,8 @@ export function useListingPhotoActions(listing: ListingResponse) {
     setPartial(null);
     const result = await ordering.run(() => reorderPhotos({ listingId: listing.id, photoIds: orderedIds }).unwrap());
     if (result === "done") showToast(MESSAGES.moved);
+    // Another device added, removed or moved photos: show what is there now.
+    else if (result === "conflict") void refetch();
     return result === "done";
   }
 

@@ -30,6 +30,7 @@ import {
   LISTING_PHOTO_MAX_MB,
   LISTING_PHOTO_MIME_TYPES,
 } from "@mybookkeeper/api-client/constants/listingPhotos";
+import { writeFailure } from "@mybookkeeper/api-client/utils/writeFailure";
 import { sortPhotos } from "@mybookkeeper/api-client/utils/listingPhotoOrder";
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 import type { PhotoLightboxTarget } from "@/shared/types/listing/photo-lightbox-target";
@@ -190,8 +191,14 @@ export default function ListingPhotoManager({
     // One request sets the whole order, so a failure can't leave it half-applied.
     try {
       await reorderPhotos({ listingId, photoIds: newOrder }).unwrap();
-    } catch {
-      showError("I couldn't save the new order. Reverting.");
+    } catch (error) {
+      if (writeFailure(error) === "conflict") {
+        // The list this order was made from is out of date: show what is there now.
+        dispatch(listingsApi.util.invalidateTags([{ type: "Listing", id: listingId }]));
+        showError(LISTING_MESSAGES.photoOrderStale);
+      } else {
+        showError("I couldn't save the new order. Reverting.");
+      }
       setOrderedIds(null);
     }
   }
