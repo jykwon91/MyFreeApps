@@ -265,7 +265,20 @@ test.describe("Lease New page (/leases/new)", () => {
         await page.waitForLoadState("networkidle");
         const submitBtn = page.getByTestId("lease-generate-submit");
         await expect(submitBtn).toBeVisible({ timeout: 10_000 });
+        const createResponse = page.waitForResponse(
+          (resp) =>
+            resp.request().method() === "POST" &&
+            new URL(resp.url()).pathname.endsWith("/signed-leases"),
+        );
         await submitBtn.click();
+
+        // The request body and the server's detail go in the failure message,
+        // so a rejected create can be diagnosed from the run log alone.
+        const created = await createResponse;
+        expect(
+          created.status(),
+          `POST /signed-leases sent ${created.request().postData()} and got ${await created.text()}`,
+        ).toBe(201);
 
         // Should navigate to /leases/<id>.
         await page.waitForURL(/\/leases\/[0-9a-f-]{36}$/, { timeout: 15_000 });
