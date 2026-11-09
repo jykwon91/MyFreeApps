@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from "react";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { parseBoardFilters, withBoardFilters } from "@/games/wow-forever/lib/featureRequests/boardParams";
 import type { BoardFilters } from "@/games/wow-forever/types/featureRequests/boardFilters";
 import type { UpdateBoardFilters } from "@/games/wow-forever/types/featureRequests/updateBoardFilters";
+import { useLiveSearchParams } from "@platform/ui";
 
 /**
  * The board's filters, kept in the URL. Changing a filter replaces the history entry (Back leaves the

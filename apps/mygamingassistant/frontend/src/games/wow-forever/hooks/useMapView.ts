@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import type { WorldMapData } from "@/games/wow-forever/types/worldMap";
+import { useLiveSearchParams } from "@platform/ui";
 
 /** `/wow-forever/map?m=1429` — the map being looked at, so back = zoom out and a view can be linked. */
 export const MAP_PARAM = "m";

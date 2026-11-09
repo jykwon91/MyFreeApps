@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { BrowserRouter, MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
+import { useLiveSearchParams } from "../hooks/useLiveSearchParams";
 
 function BrowserWrapper({ children }: { children: ReactNode }) {
   return <BrowserRouter>{children}</BrowserRouter>;

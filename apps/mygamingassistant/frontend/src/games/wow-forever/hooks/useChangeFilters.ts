@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { parseChangeFilters, writeChangeFilters } from "@/games/wow-forever/lib/changes/changeFilterParams";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import type { ChangeFilters } from "@/games/wow-forever/types/changes/changeFilters";
+import { useLiveSearchParams } from "@platform/ui";
 
 /** The page's filters, read from and written to the URL (each change replaces history). */
 export function useChangeFilters(): [ChangeFilters, (patch: Partial<ChangeFilters>) => void] {

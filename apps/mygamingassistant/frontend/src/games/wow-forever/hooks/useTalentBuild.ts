@@ -5,7 +5,6 @@ import {
   TALENT_LEVEL_PARAM,
   TALENT_ORDER_PARAM,
 } from "@/games/wow-forever/data/talents/talentConfig";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { decodeTalentBuild, decodeTalentLevel, encodeTalentBuild } from "@/games/wow-forever/lib/talents/talentBuildCode";
 import {
   decodeTalentOrder,
@@ -19,6 +18,7 @@ import type { TalentBuild } from "@/games/wow-forever/types/talents/talentBuild"
 import type { TalentBuildState } from "@/games/wow-forever/types/talents/talentBuildState";
 import type { TalentOrderEntry } from "@/games/wow-forever/types/talents/talentOrderEntry";
 import type { TalentTree } from "@/games/wow-forever/types/talents/talentTree";
+import { useLiveSearchParams } from "@platform/ui";
 
 interface ReadBuild {
   build: TalentBuild;

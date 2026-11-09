@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { TRIAGE_SHEET_HISTORY_STATE } from "@/games/wow-forever/data/featureRequests/triage/triageConfig";
 import {
   parseOpenSheet,
@@ -14,6 +13,7 @@ import {
 import type { TriageListFilters } from "@/games/wow-forever/types/featureRequests/triage/triageListFilters";
 import type { TriageOpenSheet } from "@/games/wow-forever/types/featureRequests/triage/triageOpenSheet";
 import type { TriageTab } from "@/games/wow-forever/types/featureRequests/triage/triageTab";
+import { useLiveSearchParams } from "@platform/ui";
 
 function pushedBySheet(state: unknown): boolean {
   return typeof state === "object" && state !== null && (state as Record<string, unknown>)[TRIAGE_SHEET_HISTORY_STATE] === true;

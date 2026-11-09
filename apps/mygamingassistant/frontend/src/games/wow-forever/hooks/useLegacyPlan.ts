@@ -1,11 +1,11 @@
 import { useCallback, useMemo } from "react";
 import { LEGACY_PLAN_PARAM } from "@/games/wow-forever/data/legacy/legacyConfig";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { decodeLegacyPlan, encodeLegacyPlan } from "@/games/wow-forever/lib/legacy/legacyPlanCode";
 import { addRank, emptyPlan, removeRank } from "@/games/wow-forever/lib/legacy/legacyRules";
 import type { LegacyData } from "@/games/wow-forever/types/legacy/legacyData";
 import type { LegacyPlan } from "@/games/wow-forever/types/legacy/legacyPlan";
 import type { LegacyPlanState } from "@/games/wow-forever/types/legacy/legacyPlanState";
+import { useLiveSearchParams } from "@platform/ui";
 
 interface ReadPlan {
   plan: LegacyPlan;

@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { DEFAULT_RACE_FILTERS, parseRaceFilters, writeRaceFilters } from "@/games/wow-forever/lib/races/raceFilterParams";
 import type { RaceFilters } from "@/games/wow-forever/types/races/raceFilters";
+import { useLiveSearchParams } from "@platform/ui";
 
 /** The races page's filters, read from and written to the URL (each change replaces history). */
 export function useRaceFilters(): {

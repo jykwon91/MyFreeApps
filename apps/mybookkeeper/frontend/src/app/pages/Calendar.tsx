@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import { Inbox } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import PropertyMultiSelect from "@/shared/components/PropertyMultiSelect";
@@ -29,6 +28,7 @@ import ReviewQueueDrawer from "@/app/features/calendar/ReviewQueueDrawer";
 import type { CalendarView } from "@/shared/types/calendar/calendar-view";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { useLiveSearchParams } from "@platform/ui";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -50,7 +50,7 @@ function parseCsvOrEmpty(value: string | null): string[] {
 }
 
 export default function Calendar() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useLiveSearchParams();
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const { data: pendingCount = 0 } = useGetReviewQueueCountQuery();
 
@@ -103,18 +103,28 @@ export default function Calendar() {
   const hasNoListings = (listingsEnvelope?.total ?? 0) === 0;
 
   function updateWindow(nextFrom: string, nextTo: string) {
-    const params = new URLSearchParams(searchParams);
-    params.set("from", nextFrom);
-    params.set("to", nextTo);
-    setSearchParams(params, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.set("from", nextFrom);
+        params.set("to", nextTo);
+        return params;
+      },
+      { replace: true },
+    );
   }
 
   /** Month view: `from` is the anchor month and `to` doesn't apply. */
   function updateAnchorMonth(nextAnchorIso: string) {
-    const params = new URLSearchParams(searchParams);
-    params.set("from", startOfMonth(nextAnchorIso));
-    params.delete("to");
-    setSearchParams(params, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.set("from", startOfMonth(nextAnchorIso));
+        params.delete("to");
+        return params;
+      },
+      { replace: true },
+    );
   }
 
   function handleToday() {
@@ -127,38 +137,53 @@ export default function Calendar() {
   }
 
   function handleViewChange(nextView: CalendarView) {
-    const params = new URLSearchParams(searchParams);
-    params.set("view", nextView);
-    if (nextView === "month") {
-      // Land on the month the operator was already looking at.
-      params.set("from", startOfMonth(anchorIso));
-      params.delete("to");
-    } else {
-      // Open the timeline on the same date, at its own default width.
-      params.set("from", anchorIso);
-      params.set("to", addDays(anchorIso, CALENDAR_DEFAULT_WINDOW_DAYS));
-    }
-    setSearchParams(params, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.set("view", nextView);
+        if (nextView === "month") {
+          // Land on the month the operator was already looking at.
+          params.set("from", startOfMonth(anchorIso));
+          params.delete("to");
+        } else {
+          // Open the timeline on the same date, at its own default width.
+          params.set("from", anchorIso);
+          params.set("to", addDays(anchorIso, CALENDAR_DEFAULT_WINDOW_DAYS));
+        }
+        return params;
+      },
+      { replace: true },
+    );
   }
 
   function handlePropertiesChange(ids: string[]) {
-    const params = new URLSearchParams(searchParams);
-    if (ids.length === 0) {
-      params.delete("properties");
-    } else {
-      params.set("properties", ids.join(","));
-    }
-    setSearchParams(params, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (ids.length === 0) {
+          params.delete("properties");
+        } else {
+          params.set("properties", ids.join(","));
+        }
+        return params;
+      },
+      { replace: true },
+    );
   }
 
   function handleSourcesChange(sources: string[]) {
-    const params = new URLSearchParams(searchParams);
-    if (sources.length === 0) {
-      params.delete("sources");
-    } else {
-      params.set("sources", sources.join(","));
-    }
-    setSearchParams(params, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (sources.length === 0) {
+          params.delete("sources");
+        } else {
+          params.set("sources", sources.join(","));
+        }
+        return params;
+      },
+      { replace: true },
+    );
   }
 
   const eventsList = events ?? [];

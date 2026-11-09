@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { DEFAULT_RARE_FILTERS, parseRareFilters, writeRareFilters } from "@/games/wow-forever/lib/rares/rareFilterParams";
 import type { RareFilters } from "@/games/wow-forever/types/rares/rareFilters";
+import { useLiveSearchParams } from "@platform/ui";
 
 /** The rares list's filters, read from and written to the URL (each change replaces history). */
 export function useRareFilters(): {

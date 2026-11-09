@@ -1,8 +1,8 @@
-import { useSearchParams, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { subMonths, format, startOfMonth, endOfMonth } from "date-fns";
 import { useGetUtilityTrendsQuery } from "@mybookkeeper/api-client/store/analyticsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { LoadingButton } from "@platform/ui";
+import { LoadingButton, useLiveSearchParams } from "@platform/ui";
 import AnalyticsSkeleton from "./AnalyticsSkeleton";
 import AnalyticsFilters from "./AnalyticsFilters";
 import UtilityTrendsChart from "./UtilityTrendsChart";
@@ -28,7 +28,7 @@ function formatDisplayDate(dateStr: string): string {
 }
 
 export default function UtilityTrends() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useLiveSearchParams();
 
   const fromDate = searchParams.get("from") ?? getDefaultFrom();
   const toDate = searchParams.get("to") ?? getDefaultTo();

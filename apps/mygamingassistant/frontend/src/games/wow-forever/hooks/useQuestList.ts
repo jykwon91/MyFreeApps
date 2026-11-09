@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
-import { useLiveSearchParams } from "@/games/wow-forever/hooks/useLiveSearchParams";
 import { DEFAULT_QUEST_FILTER, parseQuestFilter, writeQuestFilter } from "@/games/wow-forever/lib/quests/questFilterParams";
 import type { QuestFilter } from "@/games/wow-forever/types/quests/questFilter";
+import { useLiveSearchParams } from "@platform/ui";
 
 const PAGE_PARAM = "pages";
 const DEFAULT_PAGES = 1;

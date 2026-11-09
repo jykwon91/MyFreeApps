@@ -1,6 +1,5 @@
-import { useSearchParams } from "react-router-dom";
 import { X } from "lucide-react";
-import { AlertBox } from "@platform/ui";
+import { AlertBox, useLiveSearchParams } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import UtilityTrends from "@/app/features/analytics/UtilityTrends";
 import { useDismissable } from "@/shared/hooks/useDismissable";
@@ -13,7 +12,7 @@ type TabKey = (typeof TABS)[number]["key"];
 
 export default function Analytics() {
   const { dismissed: infoDismissed, dismiss: dismissInfo } = useDismissable("analytics-info-dismissed");
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useLiveSearchParams();
   const activeTab = (searchParams.get("tab") ?? "utility-trends") as TabKey;
 
   function setTab(tab: TabKey) {

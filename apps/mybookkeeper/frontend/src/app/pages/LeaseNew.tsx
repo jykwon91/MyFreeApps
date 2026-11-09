@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import Skeleton from "@/shared/components/ui/Skeleton";
@@ -12,6 +12,7 @@ import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
+import { useLiveSearchParams } from "@platform/ui";
 
 /**
  * /leases/new — wires the full generate-lease flow:
@@ -28,7 +29,7 @@ import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
  * links from places like the templates list page.
  */
 export default function LeaseNew() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useLiveSearchParams();
 
   const urlTemplateIdsParam = searchParams.get("template_ids");
   const urlSingleTemplateId = searchParams.get("template_id");

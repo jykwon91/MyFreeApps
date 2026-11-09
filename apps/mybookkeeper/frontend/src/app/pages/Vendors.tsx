@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { Button } from "@platform/ui";
+import { Button, useLiveSearchParams } from "@platform/ui";
 import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import {
   VENDOR_CATEGORIES,
@@ -31,7 +30,7 @@ function parsePreferredParam(value: string | null): boolean {
 }
 
 export default function Vendors() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useLiveSearchParams();
   const category = parseCategoryParam(searchParams.get(CATEGORY_PARAM));
   const preferredOnly = parsePreferredParam(searchParams.get(PREFERRED_PARAM));
   const [pageCount, setPageCount] = useState(1);
@@ -62,24 +61,34 @@ export default function Vendors() {
   });
 
   function handleCategoryChange(next: VendorCategory | null) {
-    const params = new URLSearchParams(searchParams);
-    if (next) {
-      params.set(CATEGORY_PARAM, next);
-    } else {
-      params.delete(CATEGORY_PARAM);
-    }
-    setSearchParams(params, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next) {
+          params.set(CATEGORY_PARAM, next);
+        } else {
+          params.delete(CATEGORY_PARAM);
+        }
+        return params;
+      },
+      { replace: true },
+    );
     setPageCount(1);
   }
 
   function handlePreferredChange(next: boolean) {
-    const params = new URLSearchParams(searchParams);
-    if (next) {
-      params.set(PREFERRED_PARAM, "true");
-    } else {
-      params.delete(PREFERRED_PARAM);
-    }
-    setSearchParams(params, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next) {
+          params.set(PREFERRED_PARAM, "true");
+        } else {
+          params.delete(PREFERRED_PARAM);
+        }
+        return params;
+      },
+      { replace: true },
+    );
     setPageCount(1);
   }
 

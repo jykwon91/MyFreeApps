@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { FileText, Plus } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { LoadingButton } from "@platform/ui";
+import { LoadingButton, useLiveSearchParams } from "@platform/ui";
 import { useGetInquiriesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { INQUIRY_STAGES } from "@mybookkeeper/api-client/constants/inquiryLabels";
@@ -48,7 +48,7 @@ function parseSpamParam(value: string | null): InquirySpamStatus | null {
 }
 
 export default function Inquiries() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useLiveSearchParams();
   const stage = parseStageParam(searchParams.get(STAGE_PARAM));
   const spamFilter = parseSpamParam(searchParams.get(SPAM_PARAM));
   const [pageCount, setPageCount] = useState(1);
@@ -92,27 +92,37 @@ export default function Inquiries() {
   }, [listings]);
 
   function handleFilterChange(next: InquiryStage | null) {
-    const params = new URLSearchParams(searchParams);
-    if (next) {
-      params.set(STAGE_PARAM, next);
-    } else {
-      params.delete(STAGE_PARAM);
-    }
-    setSearchParams(params, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next) {
+          params.set(STAGE_PARAM, next);
+        } else {
+          params.delete(STAGE_PARAM);
+        }
+        return params;
+      },
+      { replace: true },
+    );
     setPageCount(1);
   }
 
   function handleSpamFilterChange(next: InquirySpamStatus | null) {
-    const params = new URLSearchParams(searchParams);
-    if (!next) {
-      params.set(SPAM_PARAM, "all");
-    } else if (next === DEFAULT_SPAM_FILTER) {
-      // Default tab — drop the param so the URL stays clean.
-      params.delete(SPAM_PARAM);
-    } else {
-      params.set(SPAM_PARAM, next);
-    }
-    setSearchParams(params, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (!next) {
+          params.set(SPAM_PARAM, "all");
+        } else if (next === DEFAULT_SPAM_FILTER) {
+          // Default tab — drop the param so the URL stays clean.
+          params.delete(SPAM_PARAM);
+        } else {
+          params.set(SPAM_PARAM, next);
+        }
+        return params;
+      },
+      { replace: true },
+    );
     setPageCount(1);
   }
 
