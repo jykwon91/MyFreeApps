@@ -1,8 +1,10 @@
 """Test fixtures for MyJobHunter backend.
 
-Tenant isolation strategy:
+Isolation strategy:
 - Each test function registers fresh users via the API.
-- Users are hard-deleted in cleanup so no test artifacts remain in the DB.
+- The ``db`` fixture empties every table after each test, so committed rows
+  (route handlers, services and ``user_factory`` all commit) never reach the
+  next test.
 - Use `as_user(user)` fixture factory to get an httpx client bearing that
   user's JWT bearer token.
 """
@@ -22,10 +24,16 @@ from typing import Any
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
+from app.db.base import Base
 from app.main import app
 
 # Importing this module installs the fast-password-helper monkeypatch at
@@ -92,6 +100,30 @@ def _disable_discovery_embedding_background(monkeypatch: pytest.MonkeyPatch) -> 
         "refresh_profile_embedding",
         _noop_refresh,
     )
+
+
+# ---------------------------------------------------------------------------
+# Default-disable inbox scoring for the whole test session.
+#
+# POST /discover/sources/{id}/refresh schedules ``score_user_inbox`` as a
+# background task, and it calls Claude for every unscored posting. Unmocked,
+# endpoint tests sent real requests to the Anthropic API with the placeholder
+# key and failed on the 401 that came back.
+#
+# test_discovery_score_service.py exercises the real implementation and
+# restores it with its own autouse fixture.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _disable_discovery_scoring_background(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Replace the inbox-scoring background task with an async no-op."""
+    from app.services.discovery import discovery_score_service
+
+    async def _noop_score(*args: object, **kwargs: object) -> None:
+        return None
+
+    monkeypatch.setattr(discovery_score_service, "score_user_inbox", _noop_score)
 
 
 # ---------------------------------------------------------------------------
@@ -174,18 +206,30 @@ async def db_engine():
 
 
 # ---------------------------------------------------------------------------
-# Per-test DB session (rolls back after each test)
+# Per-test DB session (every table emptied after each test)
 # ---------------------------------------------------------------------------
 
 @pytest_asyncio.fixture(scope="function")
-async def db(db_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Async session wrapped in a transaction rolled back after the test."""
+async def db(db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+    """A session on the test database, emptied when the test ends.
+
+    Mirrors MyBookkeeper's ``db`` fixture. A rollback alone cannot isolate
+    these tests: route handlers, ``user_factory`` and services that open
+    their own ``unit_of_work`` all COMMIT, so rows outlived the test and
+    leaked into later ones (an audit test read another test's audit rows).
+    Closing the session discards anything still uncommitted; deleting from
+    every table afterwards removes what was committed, so each test starts
+    from an empty schema while commits keep their production meaning.
+    """
     session_factory = async_sessionmaker(db_engine, expire_on_commit=False)
-    async with session_factory() as session:
-        # Begin a transaction; all writes inside the test are rolled back.
-        await session.begin()
+    session = session_factory()
+    try:
         yield session
-        await session.rollback()
+    finally:
+        await session.close()
+        async with db_engine.begin() as conn:
+            for table in reversed(Base.metadata.sorted_tables):
+                await conn.execute(table.delete())
 
 
 # ---------------------------------------------------------------------------

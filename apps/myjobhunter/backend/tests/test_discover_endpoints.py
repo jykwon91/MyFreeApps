@@ -366,7 +366,9 @@ async def test_inbox_coverage_counts_scored_vs_total(
         assert before["total_count"] == 2
 
         # Score one row directly, then re-read coverage.
-        rows = await discovery_repository.list_discovered(db, user.id, state="inbox")
+        rows = await discovery_repository.list_discovered(
+            db, uuid.UUID(user["id"]), state="inbox",
+        )
         rows[0].score = 90
         await db.commit()
 

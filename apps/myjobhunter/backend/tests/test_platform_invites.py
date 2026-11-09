@@ -59,8 +59,11 @@ from app.services.platform.invite_token import hash_token
 # ---------------------------------------------------------------------------
 
 
-async def _promote_to_admin(email: str) -> None:
-    """Flip user's role to admin via a fresh engine.
+async def _promote_to_superuser(email: str) -> None:
+    """Make the user a superuser via a fresh engine.
+
+    ``/admin/invites`` is gated on ``is_superuser`` (``current_superuser``
+    in ``app.core.permissions``), not on the ``role`` column.
 
     Required because the in-test transaction (rolled back at teardown)
     can't be observed by ``unit_of_work`` sessions opened inside the
@@ -71,7 +74,7 @@ async def _promote_to_admin(email: str) -> None:
     async with factory() as sess:
         async with sess.begin():
             await sess.execute(
-                text("UPDATE users SET role = 'admin' WHERE email = :email"),
+                text("UPDATE users SET is_superuser = TRUE WHERE email = :email"),
                 {"email": email},
             )
     await engine.dispose()
@@ -188,7 +191,7 @@ async def test_admin_creates_invite_returns_201_without_token(
     compromised-admin session bypass the email step entirely.
     """
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     async with await as_user(admin) as authed:
         resp = await authed.post(
             "/admin/invites", json={"email": "newuser@example.com"},
@@ -218,7 +221,7 @@ async def test_create_invite_persists_only_token_hash(
     the row (a leftover from the pre-hardening migration).
     """
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     async with await as_user(admin) as authed:
         await authed.post(
             "/admin/invites", json={"email": "hashcheck@example.com"},
@@ -258,7 +261,7 @@ async def test_create_invite_lowercases_email(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     async with await as_user(admin) as authed:
         resp = await authed.post(
             "/admin/invites", json={"email": "MixedCase@Example.com"},
@@ -275,7 +278,7 @@ async def test_create_invite_for_existing_user_returns_specific_409(
     email already belongs to a registered account and no action is needed.
     """
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     existing = await user_factory()  # already registered
     async with await as_user(admin) as authed:
         resp = await authed.post(
@@ -293,7 +296,7 @@ async def test_create_invite_duplicate_pending_returns_specific_409(
     to cancel the existing row and re-send rather than creating a duplicate.
     """
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     async with await as_user(admin) as authed:
         first = await authed.post(
             "/admin/invites", json={"email": "dupe@example.com"},
@@ -316,7 +319,7 @@ async def test_list_pending_returns_only_unaccepted(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     async with await as_user(admin) as authed:
         await authed.post("/admin/invites", json={"email": "a@example.com"})
         await authed.post("/admin/invites", json={"email": "b@example.com"})
@@ -334,7 +337,7 @@ async def test_cancel_unaccepted_invite_returns_204(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     async with await as_user(admin) as authed:
         create = await authed.post(
             "/admin/invites", json={"email": "cancelme@example.com"},
@@ -349,7 +352,7 @@ async def test_cancel_unknown_invite_returns_404(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     async with await as_user(admin) as authed:
         resp = await authed.delete(f"/admin/invites/{uuid.uuid4()}")
     assert resp.status_code == 404
@@ -365,7 +368,7 @@ async def test_public_preview_pending(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     async with await as_user(admin) as authed:
         await authed.post(
             "/admin/invites", json={"email": "preview@example.com"},
@@ -395,7 +398,7 @@ async def test_public_preview_expired_invite(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     async with await as_user(admin) as authed:
         create = await authed.post(
             "/admin/invites", json={"email": "expired@example.com"},
@@ -447,7 +450,7 @@ async def test_accept_invite_with_matching_email(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     invitee_email = f"accept-{uuid.uuid4().hex[:8]}@example.com"
     async with await as_user(admin) as authed:
         create = await authed.post(
@@ -470,7 +473,7 @@ async def test_accept_invite_email_mismatch_returns_400(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     async with await as_user(admin) as authed:
         await authed.post(
             "/admin/invites", json={"email": "intended@example.com"},
@@ -489,7 +492,7 @@ async def test_accept_invite_twice_returns_409(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     invitee_email = f"twice-{uuid.uuid4().hex[:8]}@example.com"
     async with await as_user(admin) as authed:
         await authed.post(
@@ -511,7 +514,7 @@ async def test_accept_expired_invite_returns_410(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     invitee_email = f"expired-{uuid.uuid4().hex[:8]}@example.com"
     async with await as_user(admin) as authed:
         create = await authed.post(
@@ -542,7 +545,7 @@ async def test_accept_requires_auth(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     async with await as_user(admin) as authed:
         await authed.post(
             "/admin/invites", json={"email": "needsauth@example.com"},
@@ -558,7 +561,7 @@ async def test_cancel_accepted_invite_returns_409(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     invitee_email = f"acc-cancel-{uuid.uuid4().hex[:8]}@example.com"
     async with await as_user(admin) as authed:
         create = await authed.post(
@@ -594,7 +597,7 @@ async def test_create_invite_audit_log_uses_email_domain_only(
     operator-readable logs.
     """
     admin = await user_factory()
-    await _promote_to_admin(admin["email"])
+    await _promote_to_superuser(admin["email"])
     async with await as_user(admin) as authed:
         await authed.post(
             "/admin/invites", json={"email": "fred@redactme.example.com"},

@@ -354,6 +354,7 @@ class TestApplicationEventResponseNoRawPayload:
             occurred_at="2025-01-01T00:00:00Z",
             source="manual",
             created_at="2025-01-01T00:00:00Z",
+            updated_at="2025-01-01T00:00:00Z",
         )
         dumped = resp.model_dump()
         assert "raw_payload" not in dumped
