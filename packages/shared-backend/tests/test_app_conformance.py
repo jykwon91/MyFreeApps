@@ -1976,11 +1976,22 @@ class TestSharedCoreStaysPlatformNeutral:
     _BROWSER_GLOBAL = re.compile(
         r"(?<![.\w])(window|document|navigator|location|localStorage|sessionStorage|StorageEvent)\b"
     )
-    # Import paths name things too: types/document/document isn't the browser's document.
-    # One pass, so a // inside a string isn't taken for a comment hiding the rest of the line.
+    # Import paths and copy name things too: types/document/document, or "on the document",
+    # isn't the browser's document. One pass, so a // inside a string isn't taken for a
+    # comment hiding the rest of the line. A template literal keeps its ${...} code.
     _STRING_OR_COMMENT = re.compile(
-        r"\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'|/\*.*?\*/|//[^\n]*", re.DOTALL
+        r"\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'|`(?:\\.|\$\{[^{}]*\}|[^`\\])*`"
+        r"|/\*.*?\*/|//[^\n]*",
+        re.DOTALL,
     )
+    _INTERPOLATION = re.compile(r"\$\{([^{}]*)\}")
+
+    def _code_only(self, source: str) -> str:
+        def keep(match: re.Match[str]) -> str:
+            text = match.group(0)
+            return " ".join(self._INTERPOLATION.findall(text)) if text.startswith("`") else ""
+
+        return self._STRING_OR_COMMENT.sub(keep, source)
 
     def _sources(self) -> list[Path]:
         files = []
@@ -1998,9 +2009,23 @@ class TestSharedCoreStaysPlatformNeutral:
                 f"platform-specific part behind configurePlatform()."
             )
 
+    @pytest.mark.parametrize(
+        ("source", "flagged"),
+        [
+            ('const s = `I read it off the document`;', False),
+            ("const s = 'the window seat';", False),
+            ("// window is fine in a comment", False),
+            ("const s = `${window.innerWidth}px`;", True),
+            ("const s = `a`; document.title = s;", True),
+            ("const url = `https://x//${location.host}`;", True),
+        ],
+    )
+    def test_reads_code_not_copy(self, source: str, flagged: bool) -> None:
+        assert (self._BROWSER_GLOBAL.search(self._code_only(source)) is not None) is flagged
+
     def test_uses_no_browser_global(self) -> None:
         for path in self._sources():
-            code = self._STRING_OR_COMMENT.sub("", path.read_text(encoding="utf-8"))
+            code = self._code_only(path.read_text(encoding="utf-8"))
             match = self._BROWSER_GLOBAL.search(code)
             assert match is None, (
                 f"{path.relative_to(_REPO_ROOT)} uses {match.group(1)}. Move it behind "
