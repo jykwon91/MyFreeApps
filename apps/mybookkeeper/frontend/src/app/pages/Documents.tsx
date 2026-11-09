@@ -14,6 +14,9 @@ import {
   useReExtractDocumentMutation,
   useToggleEscrowPaidMutation,
 } from "@mybookkeeper/api-client/store/documentsApi";
+import type { BulkDeleteDocumentsResponse } from "@mybookkeeper/api-client/types/document/BulkDeleteDocumentsResponse";
+import { chunkDocumentIds, mergeBulkDeleteResponses } from "@mybookkeeper/api-client/utils/bulkDeleteDocuments";
+import { errorDetail } from "@mybookkeeper/api-client/utils/errorDetail";
 import { useDocumentColumns } from "@/shared/hooks/useDocumentColumns";
 import { useToast } from "@/shared/hooks/useToast";
 import { useAppSelector } from "@/shared/store/hooks";
@@ -73,8 +76,9 @@ export default function Documents() {
     if (!confirmDeleteId) return;
     try {
       await deleteDocument(confirmDeleteId).unwrap();
-    } catch {
-      showError("Failed to delete document");
+    } catch (err) {
+      const detail = errorDetail(err);
+      showError(typeof detail === "string" ? detail : "Failed to delete document");
     } finally {
       setConfirmDeleteId(null);
     }
@@ -84,8 +88,18 @@ export default function Documents() {
     setConfirmBulkDelete(false);
     const ids = table.getSelectedRowModel().rows.map((r) => r.original.id);
     try {
-      await bulkDelete(ids).unwrap();
+      const responses: BulkDeleteDocumentsResponse[] = [];
+      for (const chunk of chunkDocumentIds(ids)) {
+        responses.push(await bulkDelete(chunk).unwrap());
+      }
+      const result = mergeBulkDeleteResponses(responses);
       setRowSelection({});
+      const skipped = result.skipped.length;
+      if (skipped > 0) {
+        showError(
+          `${skipped} document${skipped > 1 ? "s were" : " was"} not deleted: still being read or already gone`,
+        );
+      }
     } catch {
       showError("Failed to delete documents");
     }

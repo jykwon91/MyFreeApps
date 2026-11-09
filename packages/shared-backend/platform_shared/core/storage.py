@@ -49,6 +49,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from minio import Minio
+from minio.deleteobjects import DeleteObject
 from minio.error import S3Error
 
 logger = logging.getLogger(__name__)
@@ -179,6 +180,29 @@ class StorageClient:
                 exc.code,
                 exc.message,
             )
+
+    def delete_files(self, keys: list[str]) -> list[str]:
+        """Remove many objects in batched requests. Returns the keys that failed.
+
+        Failures are logged, not raised, matching ``delete_file``. The result
+        iterator ``remove_objects`` returns is lazy: nothing is deleted until it
+        is consumed.
+        """
+        if not keys:
+            return []
+        failed: list[str] = []
+        for error in self._client.remove_objects(
+            self._bucket, [DeleteObject(key) for key in keys],
+        ):
+            logger.warning(
+                "MinIO delete_files failed: bucket=%s key=%s code=%s message=%s",
+                self._bucket,
+                error.name,
+                error.code,
+                error.message,
+            )
+            failed.append(error.name)
+        return failed
 
     def head_object(self, key: str) -> dict[str, Any] | None:
         """Return object metadata, or ``None`` if the object does not exist."""

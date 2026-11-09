@@ -53,7 +53,7 @@ const mockDocuments: Document[] = [
 ];
 
 const mockDeleteDocument = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
-const mockBulkDelete = vi.fn(() => ({ unwrap: () => Promise.resolve({ deleted: 2 }) }));
+const mockBulkDelete = vi.fn(() => ({ unwrap: () => Promise.resolve({ deleted: ["d1", "d2"], skipped: [] }) }));
 const mockToggleEscrow = vi.fn(() => ({
   unwrap: () => Promise.resolve({ is_escrow_paid: true, transactions_removed: 0 }),
 }));

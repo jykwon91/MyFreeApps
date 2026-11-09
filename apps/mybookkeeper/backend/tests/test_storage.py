@@ -167,6 +167,29 @@ class TestStorageClientMethods:
         with pytest.raises(ConnectionError, match="network failure"):
             client.delete_file("org/uuid/file.pdf")
 
+    def test_delete_files_removes_every_key_in_one_batched_call(self) -> None:
+        client, mock_minio = self._make_client()
+        mock_minio.remove_objects.return_value = iter([])
+        assert client.delete_files(["a/1.pdf", "b/2.pdf"]) == []
+        bucket, objects = mock_minio.remove_objects.call_args[0]
+        assert bucket == "test-bucket"
+        assert [o.name for o in objects] == ["a/1.pdf", "b/2.pdf"]
+        mock_minio.remove_object.assert_not_called()
+
+    def test_delete_files_returns_and_logs_failed_keys(self) -> None:
+        client, mock_minio = self._make_client()
+        failure = MagicMock()
+        failure.name, failure.code, failure.message = "b/2.pdf", "AccessDenied", "Access Denied."
+        mock_minio.remove_objects.return_value = iter([failure])
+        with patch("platform_shared.core.storage.logger") as mock_logger:
+            assert client.delete_files(["a/1.pdf", "b/2.pdf"]) == ["b/2.pdf"]
+        assert "AccessDenied" in str(mock_logger.warning.call_args)
+
+    def test_delete_files_with_no_keys_makes_no_request(self) -> None:
+        client, mock_minio = self._make_client()
+        assert client.delete_files([]) == []
+        mock_minio.remove_objects.assert_not_called()
+
     def test_generate_presigned_url_delegates_to_minio_with_timedelta(self) -> None:
         client, mock_minio = self._make_client()
         mock_minio.presigned_get_object.return_value = "https://signed-url"

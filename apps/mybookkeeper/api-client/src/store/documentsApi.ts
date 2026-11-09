@@ -1,5 +1,6 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import type { BatchStatusResponse } from "../types/document/BatchStatusResponse";
+import type { BulkDeleteDocumentsResponse } from "../types/document/BulkDeleteDocumentsResponse";
 import type { Document } from "../types/document/document";
 import type { SingleStatusResponse } from "../types/document/SingleStatusResponse";
 import type { UploadResponse } from "../types/document/UploadResponse";
@@ -37,7 +38,7 @@ export const documentsApi = baseApi.enhanceEndpoints({
       query: (id) => ({ url: `/documents/${id}`, method: "DELETE" }),
       invalidatesTags: ["Document", "Summary", "Transaction"],
     }),
-    bulkDeleteDocuments: builder.mutation<{ deleted: number }, string[]>({
+    bulkDeleteDocuments: builder.mutation<BulkDeleteDocumentsResponse, string[]>({
       query: (ids) => ({ url: "/documents/bulk-delete", method: "POST", data: { ids } }),
       invalidatesTags: ["Document", "Summary", "Transaction"],
     }),

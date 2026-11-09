@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 
 from app.core.context import RequestContext
+from app.core.document_constants import DOCUMENT_BEING_READ_DETAIL
 from app.core.permissions import current_org_member, require_write_access
 from app.core.stored_file_constants import MISSING_DOCUMENT_FILE_DETAIL
 from app.core.upload_errors import upload_error_status
@@ -17,10 +18,11 @@ from app.models.responses.upload_response import (
     BatchStatusResponse,
     SingleStatusResponse,
 )
-from app.schemas.common import BulkIdsRequest
+from app.mappers.document_delete_mapper import to_bulk_delete_response
+from app.schemas.documents.bulk_delete_documents_request import BulkDeleteDocumentsRequest
+from app.schemas.documents.bulk_delete_documents_response import BulkDeleteDocumentsResponse
 from app.schemas.documents.document import DocumentRead
 from app.schemas.documents.operation_responses import (
-    BulkDeleteDocumentsResponse,
     CancelBatchResponse,
     EscrowPaidRequest,
     EscrowPaidResponse,
@@ -32,6 +34,7 @@ from app.services.documents import (
     document_service,
     document_upload_service,
 )
+from app.services.documents.document_errors import DocumentBeingReadError
 from app.services.storage.stored_file import StoredFileMissingError
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -120,6 +123,8 @@ async def re_extract_document(
 ) -> ReExtractResponse:
     try:
         found = await document_service.re_extract_document(ctx, document_id)
+    except DocumentBeingReadError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     if not found:
@@ -138,6 +143,8 @@ async def replace_file(
         await document_service.replace_file(
             ctx, document_id, content, file.filename or "", file.content_type or "",
         )
+    except DocumentBeingReadError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     return ReplaceFileResponse(status="ok")
@@ -171,6 +178,8 @@ async def toggle_escrow_paid(
 ) -> EscrowPaidResponse:
     try:
         result = await document_service.set_escrow_paid(ctx, document_id, body.is_escrow_paid)
+    except DocumentBeingReadError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return EscrowPaidResponse(**result)
@@ -181,15 +190,17 @@ async def delete_document(
     document_id: uuid.UUID,
     ctx: RequestContext = Depends(require_write_access),
 ) -> None:
-    deleted = await document_service.delete_document(ctx, document_id)
-    if not deleted:
+    result = await document_service.delete_documents(ctx, [document_id])
+    if result.being_read:
+        raise HTTPException(status_code=409, detail=DOCUMENT_BEING_READ_DETAIL)
+    if not result.deleted:
         raise HTTPException(status_code=404, detail="Document not found")
 
 
 @router.post("/bulk-delete")
 async def bulk_delete(
-    body: BulkIdsRequest,
+    body: BulkDeleteDocumentsRequest,
     ctx: RequestContext = Depends(require_write_access),
 ) -> BulkDeleteDocumentsResponse:
-    count = await document_service.bulk_delete_documents(ctx, body.ids)
-    return BulkDeleteDocumentsResponse(deleted=count)
+    result = await document_service.delete_documents(ctx, body.ids)
+    return to_bulk_delete_response(result)

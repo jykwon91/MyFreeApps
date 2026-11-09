@@ -20,7 +20,3 @@ class ReplaceFileResponse(BaseModel):
 class EscrowPaidResponse(BaseModel):
     is_escrow_paid: bool
     transactions_removed: int
-
-
-class BulkDeleteDocumentsResponse(BaseModel):
-    deleted: int

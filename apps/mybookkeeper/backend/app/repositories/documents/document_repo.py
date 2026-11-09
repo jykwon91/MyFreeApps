@@ -7,7 +7,7 @@ import uuid
 from collections.abc import Sequence
 from datetime import datetime, timezone
 
-from sqlalchemy import or_, select, func, update as sa_update, delete as sa_delete
+from sqlalchemy import Select, or_, select, func, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import undefer
 
@@ -49,52 +49,131 @@ async def list_filtered(
     return result.scalars().all()
 
 
-async def get_by_id(
-    db: AsyncSession, document_id: uuid.UUID, organization_id: uuid.UUID
+async def _first(
+    db: AsyncSession, stmt: Select[tuple[Document]], *, include_deleted: bool, for_update: bool,
 ) -> Document | None:
-    result = await db.execute(
-        select(Document).where(
-            Document.id == document_id,
-            Document.organization_id == organization_id,
-        )
-    )
+    if not include_deleted:
+        stmt = stmt.where(Document.deleted_at.is_(None))
+    if for_update:
+        stmt = stmt.with_for_update()
+    result = await db.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def get_by_id(
+    db: AsyncSession,
+    document_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    *,
+    include_deleted: bool = False,
+    for_update: bool = False,
+) -> Document | None:
+    """Fetch an organization's document. Soft-deleted rows are hidden unless asked for."""
+    stmt = select(Document).where(
+        Document.id == document_id,
+        Document.organization_id == organization_id,
+    )
+    return await _first(db, stmt, include_deleted=include_deleted, for_update=for_update)
 
 
 async def get_by_id_internal(
-    db: AsyncSession, document_id: uuid.UUID
+    db: AsyncSession,
+    document_id: uuid.UUID,
+    *,
+    include_deleted: bool = False,
+    for_update: bool = False,
 ) -> Document | None:
     """Fetch a document without user scoping. For worker/internal use only."""
-    result = await db.execute(
-        select(Document).where(Document.id == document_id)
-    )
-    return result.scalar_one_or_none()
+    stmt = select(Document).where(Document.id == document_id)
+    return await _first(db, stmt, include_deleted=include_deleted, for_update=for_update)
 
 
 async def get_by_id_with_content(
-    db: AsyncSession, document_id: uuid.UUID, organization_id: uuid.UUID
+    db: AsyncSession,
+    document_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    *,
+    include_deleted: bool = False,
+    for_update: bool = False,
 ) -> Document | None:
-    result = await db.execute(
+    stmt = (
         select(Document)
         .options(undefer(Document.file_content))
-        .where(
-            Document.id == document_id,
-            Document.organization_id == organization_id,
-        )
+        .where(Document.id == document_id, Document.organization_id == organization_id)
     )
-    return result.scalar_one_or_none()
+    return await _first(db, stmt, include_deleted=include_deleted, for_update=for_update)
 
 
 async def get_by_id_with_content_internal(
-    db: AsyncSession, document_id: uuid.UUID
+    db: AsyncSession,
+    document_id: uuid.UUID,
+    *,
+    include_deleted: bool = False,
+    for_update: bool = False,
 ) -> Document | None:
-    """Fetch a document with file content without user scoping. For worker/internal use only."""
-    result = await db.execute(
+    """Fetch a document with file content, without user scoping. Worker/internal use only."""
+    stmt = (
         select(Document)
         .options(undefer(Document.file_content))
         .where(Document.id == document_id)
     )
-    return result.scalar_one_or_none()
+    return await _first(db, stmt, include_deleted=include_deleted, for_update=for_update)
+
+
+async def list_active_by_ids_for_update(
+    db: AsyncSession, document_ids: list[uuid.UUID], organization_id: uuid.UUID
+) -> Sequence[Document]:
+    """Lock and return the organization's live documents among ``document_ids``.
+
+    Ordered by id so concurrent callers take their locks in the same order.
+    """
+    result = await db.execute(
+        select(Document)
+        .where(
+            Document.id.in_(document_ids),
+            Document.organization_id == organization_id,
+            Document.deleted_at.is_(None),
+        )
+        .order_by(Document.id)
+        .with_for_update()
+    )
+    return result.scalars().all()
+
+
+async def list_failed_by_name_for_update(
+    db: AsyncSession, organization_id: uuid.UUID, file_name: str
+) -> Sequence[Document]:
+    """Lock the organization's live failed documents with this file name."""
+    result = await db.execute(
+        select(Document)
+        .where(
+            Document.organization_id == organization_id,
+            Document.file_name == file_name,
+            Document.status == "failed",
+            Document.deleted_at.is_(None),
+        )
+        .order_by(Document.id)
+        .with_for_update()
+    )
+    return result.scalars().all()
+
+
+async def list_unfinished_in_batch_for_update(
+    db: AsyncSession, organization_id: uuid.UUID, batch_id: str
+) -> Sequence[Document]:
+    """Lock the live documents in a batch that are queued or claimed for extraction."""
+    result = await db.execute(
+        select(Document)
+        .where(
+            Document.organization_id == organization_id,
+            Document.batch_id == batch_id,
+            Document.status.in_(["processing", "extracting"]),
+            Document.deleted_at.is_(None),
+        )
+        .order_by(Document.id)
+        .with_for_update()
+    )
+    return result.scalars().all()
 
 
 async def list_by_status(
@@ -118,7 +197,19 @@ async def refresh(db: AsyncSession, document: Document) -> None:
     await db.refresh(document)
 
 
-async def delete(db: AsyncSession, document: Document) -> None:
+async def soft_delete_by_user(db: AsyncSession, document_ids: list[uuid.UUID]) -> None:
+    """Soft-delete documents a user removed, dropping any file bytes held in the database."""
+    if not document_ids:
+        return
+    await db.execute(
+        sa_update(Document)
+        .where(Document.id.in_(document_ids))
+        .values(status="deleted", deleted_at=datetime.now(timezone.utc), file_content=None)
+    )
+
+
+async def soft_delete_duplicate(db: AsyncSession, document: Document) -> None:
+    """Hide a redundant upload nothing cites. Keeps its bytes."""
     document.status = "deleted"
     await _soft_delete(db, document)
 
@@ -137,35 +228,6 @@ async def find_by_content_hash(
     return result.scalar_one_or_none()
 
 
-async def delete_failed_by_name(
-    db: AsyncSession, organization_id: uuid.UUID, file_name: str
-) -> int:
-    """Soft-delete failed documents matching the filename so re-uploads replace them."""
-    result = await db.execute(
-        sa_update(Document)
-        .where(
-            Document.organization_id == organization_id,
-            Document.file_name == file_name,
-            Document.status == "failed",
-            Document.deleted_at.is_(None),
-        )
-        .values(status="deleted", deleted_at=datetime.now(timezone.utc))
-    )
-    return result.rowcount  # type: ignore[return-value]
-
-
-async def bulk_delete(
-    db: AsyncSession, document_ids: list[uuid.UUID], organization_id: uuid.UUID
-) -> int:
-    """Soft-delete documents that belong to org. Returns count."""
-    result = await db.execute(
-        sa_update(Document)
-        .where(Document.id.in_(document_ids), Document.organization_id == organization_id)
-        .values(status="deleted", deleted_at=datetime.now(timezone.utc))
-    )
-    return result.rowcount  # type: ignore[return-value]
-
-
 async def claim_next_processing(
     db: AsyncSession, user_id: uuid.UUID | None = None
 ) -> Document | None:
@@ -175,6 +237,7 @@ async def claim_next_processing(
         select(Document)
         .where(
             Document.status == "processing",
+            Document.deleted_at.is_(None),
             or_(Document.next_retry_at.is_(None), Document.next_retry_at <= now),
         )
         .order_by(Document.created_at.asc())
@@ -231,21 +294,6 @@ async def get_batch_status_counts(
         .group_by(Document.status)
     )
     return {row[0]: row[1] for row in result.all()}
-
-
-async def delete_batch_processing(
-    db: AsyncSession, organization_id: uuid.UUID, batch_id: str
-) -> int:
-    """Delete all unprocessed documents in a batch. Returns count deleted."""
-    result = await db.execute(
-        sa_delete(Document)
-        .where(
-            Document.organization_id == organization_id,
-            Document.batch_id == batch_id,
-            Document.status.in_(["processing", "extracting"]),
-        )
-    )
-    return result.rowcount  # type: ignore[return-value]
 
 
 async def get_by_ids(

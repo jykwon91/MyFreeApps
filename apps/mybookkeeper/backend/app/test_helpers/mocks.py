@@ -99,6 +99,9 @@ async def enable_mock_gmail_send(
         def delete_file(self, key: str) -> None:
             pass
 
+        def delete_files(self, keys: list[str]) -> list[str]:
+            return []
+
         def ensure_bucket(self) -> None:
             pass
 

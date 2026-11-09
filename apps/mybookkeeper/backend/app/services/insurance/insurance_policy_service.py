@@ -98,6 +98,7 @@ def _attachment_responses(
 
 async def _assert_source_document_is_ours(
     db, *, organization_id: uuid.UUID, document_id: uuid.UUID | None,
+    current_document_id: uuid.UUID | None = None,
 ) -> None:
     """Reject a ``source_document_id`` belonging to another organization.
 
@@ -108,6 +109,7 @@ async def _assert_source_document_is_ours(
         return
     if not await owns_document(
         db, organization_id=organization_id, document_id=document_id,
+        current_document_id=current_document_id,
     ):
         raise InvalidInsurancePolicyError(
             "source_document_id does not name a document",
@@ -307,6 +309,7 @@ async def update_policy(
             db,
             organization_id=organization_id,
             document_id=fields.get("source_document_id"),
+            current_document_id=existing.source_document_id,
         )
 
         policy = await insurance_policy_repo.update_policy(

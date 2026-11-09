@@ -2,7 +2,9 @@
 import logging
 import uuid
 
-from app.core.context import worker_context
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.context import RequestContext, worker_context
 from app.core.storage import get_storage
 from app.core.tags import schedule_e_line_after_category_change, transaction_type_for_category
 from app.db.session import AsyncSessionLocal, unit_of_work
@@ -50,15 +52,16 @@ def _has_useful_extraction(extraction: dict) -> bool:
 
 async def _load_document_for_extraction(
     document_id: uuid.UUID,
-) -> tuple[bytes, str, str, str, uuid.UUID, uuid.UUID, uuid.UUID | None, bool]:
+) -> tuple[bytes, str, str, str, uuid.UUID, uuid.UUID, uuid.UUID | None, bool] | None:
     """Load document file content for extraction (read-only session).
 
-    Returns (content, filename, content_type, file_type, organization_id, user_id, property_id, is_escrow_paid).
+    Returns (content, filename, content_type, file_type, organization_id, user_id, property_id, is_escrow_paid),
+    or None when the document no longer exists or was deleted.
     """
     async with AsyncSessionLocal() as db:
         doc = await document_repo.get_by_id_with_content_internal(db, document_id)
         if not doc:
-            raise ValueError(f"Document {document_id} not found")
+            return None
 
         content: bytes | None = None
         if doc.file_storage_key:
@@ -114,6 +117,15 @@ async def _run_claude_extraction(
     raise ValueError("Unsupported file type")
 
 
+async def _record_usage(db: AsyncSession, ctx: RequestContext, file_type: str, extraction: dict) -> None:
+    await usage_log_repo.create(
+        db, ctx.organization_id, ctx.user_id, file_type, extraction.get("tokens", 0),
+        input_tokens=extraction.get("input_tokens", 0),
+        output_tokens=extraction.get("output_tokens", 0),
+        model_name=extraction.get("model_name"),
+    )
+
+
 def _apply_mapped_item_to_doc(doc: Document, item: MappedItem) -> None:
     """Mark document as completed after extraction. Financial data lives in transactions."""
     doc.property_id = item.property_id
@@ -148,9 +160,11 @@ def _create_doc_from_item(
 async def process_document(document_id: uuid.UUID) -> UploadResult:
     """Run Claude extraction on a queued document. Called by the upload worker."""
     # Phase 1: Load file content (read-only, short session)
-    content, filename, content_type, file_type, organization_id, user_id, property_id, is_escrow_paid = (
-        await _load_document_for_extraction(document_id)
-    )
+    loaded = await _load_document_for_extraction(document_id)
+    if loaded is None:
+        logger.info("Document %s was deleted before extraction; skipping", document_id)
+        return UploadResult(discarded=True)
+    content, filename, content_type, file_type, organization_id, user_id, property_id, is_escrow_paid = loaded
     ctx = worker_context(organization_id, user_id)
 
     # Escrow-paid documents are reference-only — skip extraction entirely
@@ -192,9 +206,25 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
 
     # Phase 3: Persist results (single atomic transaction)
     async with unit_of_work() as db:
-        doc = await document_repo.get_by_id(db, document_id, ctx.organization_id)
-        if not doc:
-            raise ValueError(f"Document {document_id} not found")
+        # Locked and re-read: the document may have been deleted, or marked
+        # reference-only, while Claude was reading it.
+        doc = await document_repo.get_by_id(
+            db, document_id, ctx.organization_id, for_update=True,
+        )
+        if not doc or doc.is_escrow_paid:
+            # Claude was already paid for, so the usage is recorded either way.
+            await _record_usage(db, ctx, file_type, extraction)
+            if doc:
+                logger.info(
+                    "Document %s was marked reference-only during extraction; discarding results",
+                    document_id,
+                )
+                doc.status = "completed"
+            else:
+                logger.info(
+                    "Document %s was deleted during extraction; discarding results", document_id,
+                )
+            return UploadResult(discarded=True)
 
         ext_confidence = extraction.get("data", [{}])[0].get("confidence") if extraction.get("data") else None
         ext_doc_type = extraction.get("document_type") or (
@@ -216,12 +246,7 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
         if ext_doc_type == "payment_confirmation":
             doc.document_type = "payment_confirmation"
             doc.status = "skipped"
-            await usage_log_repo.create(
-                db, ctx.organization_id, ctx.user_id, file_type, extraction.get("tokens", 0),
-                input_tokens=extraction.get("input_tokens", 0),
-                output_tokens=extraction.get("output_tokens", 0),
-                model_name=extraction.get("model_name"),
-            )
+            await _record_usage(db, ctx, file_type, extraction)
             logger.info("Skipped payment confirmation document %s", document_id)
             return UploadResult()
 
@@ -234,12 +259,7 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
                 ext_record.id,
                 db,
             )
-            await usage_log_repo.create(
-                db, ctx.organization_id, ctx.user_id, file_type, extraction["tokens"],
-                input_tokens=extraction.get("input_tokens", 0),
-                output_tokens=extraction.get("output_tokens", 0),
-                model_name=extraction.get("model_name"),
-            )
+            await _record_usage(db, ctx, file_type, extraction)
             doc.document_type = "year_end_statement"
             doc.status = "completed"
             return UploadResult(reconciliation=reconciliation)
@@ -248,6 +268,7 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
         created: list[Document] = []
         skipped = 0
         first_item = True
+        linked_existing = False
         is_spreadsheet = file_type == "spreadsheet"
 
         for data in extraction["data"]:
@@ -281,6 +302,7 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
                 # Link doc to existing transaction as corroborating
                 if decision.existing_transaction:
                     await resolve_and_link(db, decision, None, document_id, ext_record.id)
+                    linked_existing = True
                 continue
 
             # Assign doc for this item
@@ -348,22 +370,14 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
             doc.status = "failed"
             doc.error_message = "Could not extract any transactions from this document. The file may be empty, unreadable, or in an unsupported format."
 
-        await usage_log_repo.create(
-            db, ctx.organization_id, ctx.user_id, file_type, extraction["tokens"],
-            input_tokens=extraction.get("input_tokens", 0),
-            output_tokens=extraction.get("output_tokens", 0),
-            model_name=extraction.get("model_name"),
-        )
+        await _record_usage(db, ctx, file_type, extraction)
         result = UploadResult(
             created=created,
             skipped=skipped,
         )
 
-        if doc.status == "duplicate":
-            await document_repo.delete(db, doc)
-            logger.info("Deleted duplicate upload document %s", document_id)
-
         # Process tax documents
+        tax_forms_linked = False
         for doc_data in extraction.get("data", []):
             doc_type = doc_data.get("document_type", "")
             tax_form_data = doc_data.get("tax_form_data")
@@ -384,11 +398,23 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
                             document_type=doc_type,
                             tax_form_data=tax_form_data,
                         )
+                    tax_forms_linked = True
                 except Exception:
                     logger.warning(
                         "Failed to process tax document %s as %s",
                         document_id, doc_type, exc_info=True,
                     )
+
+        if doc.status == "duplicate":
+            # Only a document nothing cites is housekeeping. One that produced
+            # transactions, corroborates an existing one, or backs a tax form
+            # stays live: its file is the source for that data.
+            cited = skipped < len(extraction["data"]) or linked_existing or tax_forms_linked
+            if cited:
+                doc.status = "completed"
+            else:
+                await document_repo.soft_delete_duplicate(db, doc)
+                logger.info("Deleted duplicate upload document %s", document_id)
 
         for d in created:
             await document_repo.refresh(db, d)
