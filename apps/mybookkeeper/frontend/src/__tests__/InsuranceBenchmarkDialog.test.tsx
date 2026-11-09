@@ -14,7 +14,7 @@ import { Provider } from "react-redux";
 import { showError } from "@platform/ui";
 import { store } from "@/shared/store";
 import InsuranceBenchmarkDialog from "@/app/features/insurance/InsuranceBenchmarkDialog";
-import type { InsuranceBenchmark } from "@/shared/types/insurance/insurance-benchmark";
+import type { InsuranceBenchmark } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 

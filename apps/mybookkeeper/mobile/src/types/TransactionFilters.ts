@@ -5,6 +5,8 @@ import type { TransactionView } from "./TransactionView";
 export interface TransactionFilters {
   view: TransactionView;
   period: TransactionPeriod;
+  /** One "YYYY-MM" month, which takes the place of the period while set. */
+  month: string | null;
   type: TransactionType | null;
   /** A property's id, or UNASSIGNED_PROPERTY for rows with none. */
   propertyId: string | null;

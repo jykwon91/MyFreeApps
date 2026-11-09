@@ -1,7 +1,9 @@
 import { useGetDocumentsQuery } from "@mybookkeeper/api-client/store/documentsApi";
+import { useGetInsurancePremiumComparisonQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import { useGetSummaryQuery, useGetSummaryYearsQuery } from "@mybookkeeper/api-client/store/summaryApi";
 import { useGetTransactionReviewCountQuery } from "@mybookkeeper/api-client/store/transactionsApi";
+import { useGetUtilityPlanRateComparisonQuery, useGetUtilityPlanRenewalAlertsQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import { Banner, EmptyState, SegmentedControl, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
@@ -12,12 +14,17 @@ import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useToday } from "../../lib/useToday";
 import { periodRange } from "../transactions/transactionFilters";
 import { useCanWrite } from "../workspace/useCanWrite";
+import HomeAlerts from "./HomeAlerts";
 import HomeCard from "./HomeCard";
-import { numbersFailedMessage } from "./homeDisplay";
+import { numbersFailedMessage, periodHasMonths } from "./homeDisplay";
 import HomeSectionError from "./HomeSectionError";
+import MonthlyChart from "./MonthlyChart";
+import MonthlyChartSkeleton from "./MonthlyChartSkeleton";
 import NumbersCard from "./NumbersCard";
 import PropertyTotals from "./PropertyTotals";
 import WaitingCard from "./WaitingCard";
+import WhereItWent from "./WhereItWent";
+import WhereItWentSkeleton from "./WhereItWentSkeleton";
 
 export default function HomeScreen() {
   const { spacing } = useTheme();
@@ -35,16 +42,36 @@ export default function HomeScreen() {
   const reviewCount = useGetTransactionReviewCountQuery();
   const documents = useGetDocumentsQuery(ALL_DOCUMENTS);
   const receipts = useGetPendingReceiptsQuery(HOME_RECEIPTS_ARGS, { skip: !canWrite });
+  const renewals = useGetUtilityPlanRenewalAlertsQuery();
+  const utilityRates = useGetUtilityPlanRateComparisonQuery();
+  const insurancePremiums = useGetInsurancePremiumComparisonQuery();
+  const alerts = [renewals, utilityRates, insurancePremiums];
 
   const { refreshControl } = useRefresh(
     () =>
-      Promise.all([summary.refetch(), years.refetch(), reviewCount.refetch(), documents.refetch(), canWrite ? receipts.refetch() : undefined]),
-    summary.error ?? years.error ?? reviewCount.error ?? documents.error ?? (canWrite ? receipts.error : undefined),
+      Promise.all([
+        summary.refetch(),
+        years.refetch(),
+        reviewCount.refetch(),
+        documents.refetch(),
+        canWrite ? receipts.refetch() : undefined,
+        ...alerts.map((alert) => alert.refetch()),
+      ]),
+    summary.error ??
+      years.error ??
+      reviewCount.error ??
+      documents.error ??
+      (canWrite ? receipts.error : undefined) ??
+      alerts.find((alert) => alert.error)?.error,
   );
 
   const hasNothingYet = years.data?.length === 0 && reviewCount.data?.count === 0 && documents.data?.length === 0;
   const isShowingOldData =
-    (summary.isError && summary.currentData) || (reviewCount.isError && reviewCount.data) || (documents.isError && documents.data) || (receipts.isError && receipts.data);
+    (summary.isError && summary.currentData) ||
+    (reviewCount.isError && reviewCount.data) ||
+    (documents.isError && documents.data) ||
+    (receipts.isError && receipts.data) ||
+    alerts.some((alert) => alert.isError && alert.data);
 
   return (
     <ScrollView
@@ -62,18 +89,25 @@ export default function HomeScreen() {
       ) : (
         <>
           <WaitingCard />
+          <HomeAlerts />
           <SegmentedControl accessibilityLabel="Which period to show" onChange={setPeriod} segments={HOME_PERIODS} value={period} />
           {summary.currentData ? (
             <>
               <NumbersCard period={period} summary={summary.currentData} />
+              <MonthlyChart byMonth={summary.currentData.by_month} />
               <PropertyTotals period={period} properties={summary.currentData.by_property} />
+              <WhereItWent byCategory={summary.currentData.by_category} period={period} />
             </>
           ) : summary.isFetching ? (
-            <View accessibilityLabel="Loading your numbers" accessible style={{ gap: spacing.sm }} testID="home-numbers-skeleton">
-              <Skeleton height={14} width="20%" />
-              <Skeleton height={36} width="55%" />
-              <Skeleton height={44} width="70%" />
-            </View>
+            <>
+              <View accessibilityLabel="Loading your numbers" accessible style={{ gap: spacing.sm }} testID="home-numbers-skeleton">
+                <Skeleton height={14} width="20%" />
+                <Skeleton height={36} width="55%" />
+                <Skeleton height={44} width="70%" />
+              </View>
+              {periodHasMonths(period) ? <MonthlyChartSkeleton /> : null}
+              <WhereItWentSkeleton />
+            </>
           ) : (
             <HomeCard title="Your numbers">
               <HomeSectionError

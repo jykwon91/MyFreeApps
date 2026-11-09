@@ -59,7 +59,6 @@ vi.mock("@/shared/store/utilityPlansApi", () => ({
     { isLoading: false },
   ]),
   useUpdateUtilityPlanMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-  useGetUtilityPlanRenewalAlertsQuery: vi.fn(() => ({ data: undefined })),
 }));
 
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({

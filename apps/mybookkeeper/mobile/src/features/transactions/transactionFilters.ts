@@ -1,5 +1,6 @@
 import type { TransactionListParams } from "@mybookkeeper/api-client/types/transaction/TransactionListParams";
-import { NO_FILTERS, TRANSACTION_PERIODS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
+import { MONTH_PATTERN, NO_FILTERS, TRANSACTION_PERIODS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
+import { monthBounds } from "../../lib/localDate";
 import type { MoneyParams } from "../../types/MoneyParams";
 import type { TransactionFilters } from "../../types/TransactionFilters";
 import type { TransactionPeriod } from "../../types/TransactionPeriod";
@@ -33,7 +34,7 @@ export function toListParams(filters: TransactionFilters, today: Date): Transact
     // Something waiting for review is waiting whatever month it's from.
     params.to_review = true;
   } else {
-    Object.assign(params, periodRange(filters.period, today));
+    Object.assign(params, filters.month ? monthBounds(filters.month) : periodRange(filters.period, today));
     if (filters.approvedOnly) params.status = "approved";
   }
   if (filters.type) params.transaction_type = filters.type;
@@ -46,7 +47,7 @@ export function toListParams(filters: TransactionFilters, today: Date): Transact
 }
 
 export function activeFilterCount(filters: TransactionFilters): number {
-  return [filters.view !== "review" && filters.period !== "all", filters.view !== "review" && filters.approvedOnly, filters.type, filters.propertyId, filters.category].filter(Boolean).length;
+  return [filters.view !== "review" && (filters.period !== "all" || filters.month !== null), filters.view !== "review" && filters.approvedOnly, filters.type, filters.propertyId, filters.category].filter(Boolean).length;
 }
 
 export function filtersFromParams(params: Partial<MoneyParams>): TransactionFilters {
@@ -54,6 +55,7 @@ export function filtersFromParams(params: Partial<MoneyParams>): TransactionFilt
   return {
     view: params.view === "review" ? "review" : "all",
     period: period ?? NO_FILTERS.period,
+    month: params.month && MONTH_PATTERN.test(params.month) ? params.month : null,
     type: params.type === "income" || params.type === "expense" ? params.type : null,
     propertyId: params.property || null,
     category: params.category || null,
@@ -66,6 +68,7 @@ export function filtersToParams(filters: TransactionFilters): Omit<MoneyParams, 
   return {
     view: filters.view,
     period: filters.period,
+    month: filters.month ?? "",
     type: filters.type ?? "",
     property: filters.propertyId ?? "",
     category: filters.category ?? "",

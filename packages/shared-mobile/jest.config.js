@@ -2,6 +2,7 @@ const { transformIgnorePatterns } = require("jest-expo/jest-preset");
 
 module.exports = {
   preset: "jest-expo",
+  setupFiles: ["<rootDir>/jest/animationFrame.js"],
   // The preset turns this on, which would pass a project whose tests all went missing.
   passWithNoTests: false,
   // The first test in each file also pays for loading React Native, which is slow on CI.

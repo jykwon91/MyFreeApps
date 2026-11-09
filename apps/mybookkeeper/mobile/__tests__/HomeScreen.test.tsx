@@ -1,14 +1,10 @@
 import { documentsApi } from "@mybookkeeper/api-client/store/documentsApi";
 import api from "@platform/core/lib/api";
-import { baseApi } from "@platform/core/store/baseApi";
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
-import { Provider } from "react-redux";
+import { act, fireEvent, screen } from "@testing-library/react-native";
 import { ALL_DOCUMENTS } from "../src/constants/documents";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
-import HomeScreen from "../src/features/home/HomeScreen";
-import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
-import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
+import { failRequests, holdRequests, holdSummary, pull, renderHome as renderScreen, resetHome } from "../test-support/homeScreen";
 import { aTransaction, startTransactionServer } from "../test-support/transactionsServer";
 
 const mockNavigate = jest.fn();
@@ -24,42 +20,13 @@ jest.mock("expo-router", () => ({
 const originalAdapter = api.defaults.adapter;
 
 beforeEach(() => {
-  session.tokenStore.set("token");
-  store.dispatch(baseApi.util.resetApiState());
-  store.dispatch(workspaceChosen("w1"));
+  resetHome();
   jest.clearAllMocks();
 });
 
 afterEach(() => {
   api.defaults.adapter = originalAdapter;
 });
-
-async function renderScreen() {
-  await render(
-    <Provider store={store}>
-      <HomeScreen />
-    </Provider>,
-  );
-}
-
-function failRequests(...urls: string[]) {
-  const answer = api.defaults.adapter as (config: { url?: string }) => Promise<unknown>;
-  api.defaults.adapter = ((config: { url?: string }) =>
-    urls.includes(config.url ?? "") ? Promise.reject(Object.assign(new Error("Network Error"), { config })) : answer(config)) as typeof api.defaults.adapter;
-}
-
-/** Leaves a request unanswered, so the screen stays mid-load for it. */
-function holdRequests(...urls: string[]) {
-  const answer = api.defaults.adapter as (config: { url?: string }) => Promise<unknown>;
-  api.defaults.adapter = ((config: { url?: string }) =>
-    urls.includes(config.url ?? "") ? new Promise(() => undefined) : answer(config)) as typeof api.defaults.adapter;
-}
-
-async function pull() {
-  await act(async () => {
-    await screen.getByTestId("home-screen").props.refreshControl.props.onRefresh();
-  });
-}
 
 const aPropertyTotal = (index: number, profit = 100) => ({
   property_id: `p${index}`,
@@ -108,7 +75,7 @@ describe("HomeScreen", () => {
     server.documents = [{ id: "d1", status: "failed" }, { id: "d2", status: "completed" }];
     await renderScreen();
     await fireEvent.press(await screen.findByRole("button", { name: "2 transactions to review" }));
-    expect(mockNavigate).toHaveBeenLastCalledWith("/money?segment=transactions&view=review&period=all&type=&property=&category=&vendor=&status=");
+    expect(mockNavigate).toHaveBeenLastCalledWith("/money?segment=transactions&view=review&period=all&month=&type=&property=&category=&vendor=&status=");
     await fireEvent.press(screen.getByRole("button", { name: "1 document needs a look" }));
     expect(mockNavigate).toHaveBeenLastCalledWith("/money?segment=documents&filter=needsALook");
   });
@@ -171,7 +138,7 @@ describe("HomeScreen", () => {
     };
     await renderScreen();
     await fireEvent.press(await screen.findByLabelText(/^Unassigned, net/));
-    expect(mockNavigate).toHaveBeenCalledWith("/money?segment=transactions&view=all&period=thisMonth&type=&property=unassigned&category=&vendor=&status=approved");
+    expect(mockNavigate).toHaveBeenCalledWith("/money?segment=transactions&view=all&period=thisMonth&month=&type=&property=unassigned&category=&vendor=&status=approved");
   });
 
   it("hides the breakdown for a single property", async () => {
@@ -231,9 +198,7 @@ describe("HomeScreen", () => {
 
   it("shows a skeleton where the numbers go while they load", async () => {
     startTransactionServer([]);
-    const answer = api.defaults.adapter as (config: { url?: string }) => Promise<unknown>;
-    api.defaults.adapter = ((config: { url?: string }) =>
-      config.url?.startsWith("/summary?") ? new Promise(() => undefined) : answer(config)) as typeof api.defaults.adapter;
+    holdSummary();
     await renderScreen();
     expect(await screen.findByTestId("home-numbers-skeleton")).toBeTruthy();
     expect(screen.queryByText("Approved transactions only.")).toBeNull();

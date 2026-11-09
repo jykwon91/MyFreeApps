@@ -1,4 +1,4 @@
-import type { UtilityPlanRateComparisonRow } from "@/shared/types/utility/utility-plan-rate-comparison-row";
+import type { UtilityPlanRateComparisonRow } from "./utility-plan-rate-comparison-row";
 
 /**
  * Dashboard payload for plans priced above the market.

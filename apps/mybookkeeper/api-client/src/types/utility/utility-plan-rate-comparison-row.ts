@@ -1,5 +1,5 @@
-import type { UtilityPlanBenchmarkStatus } from "@/shared/types/utility/utility-plan-benchmark-status";
-import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
+import type { UtilityPlanBenchmarkStatus } from "./utility-plan-benchmark-status";
+import type { UtilityPlanSummary } from "./utility-plan-summary";
 
 /**
  * One plan measured against the market benchmark for its service type.

@@ -8,6 +8,7 @@ import { FlatList, Text, View } from "react-native";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { NO_FILTERS, TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import type { TransactionFilters } from "../../types/TransactionFilters";
+import { monthName } from "../../lib/localDate";
 import { useToday } from "../../lib/useToday";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { categoryLabel, propertyLabel } from "./transactionDisplay";
@@ -61,9 +62,13 @@ export default function TransactionsScreen({
     filters.propertyId === UNASSIGNED_PROPERTY ? "No property" : filters.propertyId ? propertyLabel(filters.propertyId, properties) : null,
     filters.category ? categoryLabel(filters.category) : null,
     filters.type === "income" ? "Income" : filters.type === "expense" ? "Expenses" : null,
-    filters.period !== "all" && filters.view !== "review"
-      ? TRANSACTION_PERIODS.find((option) => option.value === filters.period)?.label
-      : null,
+    filters.view === "review"
+      ? null
+      : filters.month
+        ? monthName(filters.month, "long")
+        : filters.period !== "all"
+          ? TRANSACTION_PERIODS.find((option) => option.value === filters.period)?.label
+          : null,
     filters.approvedOnly && filters.view !== "review" ? "Approved" : null,
   ]
     .filter(Boolean)

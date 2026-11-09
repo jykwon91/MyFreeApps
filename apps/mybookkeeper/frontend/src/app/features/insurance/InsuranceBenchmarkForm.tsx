@@ -1,7 +1,7 @@
 import { Button, LoadingButton } from "@platform/ui";
 import { INSURANCE_POLICY_INPUT_CLASS } from "./insurance-policy-input-class";
 import { useInsuranceBenchmarkForm } from "./useInsuranceBenchmarkForm";
-import type { InsuranceBenchmark } from "@/shared/types/insurance/insurance-benchmark";
+import type { InsuranceBenchmark } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark";
 
 export interface InsuranceBenchmarkFormProps {
   existing: InsuranceBenchmark | null | undefined;

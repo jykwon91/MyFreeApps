@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import Card from "@/shared/components/ui/Card";
-import { useGetInsurancePremiumComparisonQuery } from "@/shared/store/insuranceBenchmarksApi";
+import { useGetInsurancePremiumComparisonQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import InsurancePremiumComparisonRow from "./InsurancePremiumComparisonRow";
 import InsurancePremiumComparisonCardSkeleton from "./InsurancePremiumComparisonCardSkeleton";
 import InsurancePremiumNotComparedRow from "./InsurancePremiumNotComparedRow";

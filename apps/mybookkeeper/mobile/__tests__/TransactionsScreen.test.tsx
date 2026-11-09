@@ -266,4 +266,19 @@ describe("TransactionsScreen", () => {
     expect(await screen.findByText("Lowes")).toBeTruthy();
     expect(screen.queryByText("Approved")).toBeNull();
   });
+
+  it("shows the month a link opened, asks for just that month, and lets a period replace it", async () => {
+    const server = startTransactionServer([aTransaction({ status: "approved" })]);
+    await renderScreen({ ...NO_FILTERS, month: "2026-03", approvedOnly: true });
+    await screen.findByText("Home Depot");
+    expect(screen.getByText(/March 2026/)).toBeTruthy();
+    const params = server.requests.filter((request) => request.url === "/transactions").map((request) => request.params);
+    expect(params).toContainEqual(expect.objectContaining({ start_date: "2026-03-01", end_date: "2026-03-31", status: "approved" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Filters, 2 on" }));
+    expect(screen.getByRole("radio", { name: "March 2026" }).props.accessibilityState).toEqual(expect.objectContaining({ checked: true }));
+    await fireEvent.press(screen.getByRole("radio", { name: "Last year" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Show results" }));
+    await waitFor(() => expect(screen.queryByText(/March 2026/)).toBeNull());
+    expect(screen.getByText(/Last year/)).toBeTruthy();
+  });
 });

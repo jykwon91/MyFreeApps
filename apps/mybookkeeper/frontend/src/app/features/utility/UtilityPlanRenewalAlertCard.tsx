@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import Card from "@/shared/components/ui/Card";
-import { useGetUtilityPlanRenewalAlertsQuery } from "@/shared/store/utilityPlansApi";
+import { useGetUtilityPlanRenewalAlertsQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import UtilityPlanAlertRow from "./UtilityPlanAlertRow";
 import UtilityPlanAlertCardSkeleton from "./UtilityPlanAlertCardSkeleton";
 import { useHasAnyUtilityPlans } from "./useHasAnyUtilityPlans";

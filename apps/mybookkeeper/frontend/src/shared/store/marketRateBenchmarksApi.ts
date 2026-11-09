@@ -2,16 +2,15 @@ import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { baseApi } from "./baseApi";
 import type { MarketRateBenchmark } from "@/shared/types/utility/market-rate-benchmark";
 import type { MarketRateBenchmarkUpsertRequest } from "@/shared/types/utility/market-rate-benchmark-upsert-request";
-import type { UtilityPlanRateComparison } from "@/shared/types/utility/utility-plan-rate-comparison";
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 
 /**
- * RTK Query slice for market rate benchmarks and the comparison they drive.
+ * RTK Query slice for market rate benchmarks.
  *
- * The comparison is tagged ``UtilityPlan:COMPARISON`` rather than under this
- * slice's own tag because it is derived from *both* sides — editing a plan's
- * rate must refresh it just as recording a new benchmark does. Benchmark
- * mutations invalidate both tags for that reason.
+ * The comparison they drive is served by the api-client's ``utilityPlansApi``
+ * and tagged ``UtilityPlan:COMPARISON``, because it is derived from *both*
+ * sides — editing a plan's rate must refresh it just as recording a new
+ * benchmark does. Benchmark mutations invalidate both tags for that reason.
  */
 const marketRateBenchmarksApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -27,11 +26,6 @@ const marketRateBenchmarksApi = baseApi.injectEndpoints({
               { type: "MarketRateBenchmark" as const, id: "LIST" },
             ]
           : [{ type: "MarketRateBenchmark" as const, id: "LIST" }],
-    }),
-
-    getUtilityPlanRateComparison: builder.query<UtilityPlanRateComparison, void>({
-      query: () => ({ url: "/utility-plans/rate-comparison", params: { today: localToday() } }),
-      providesTags: [{ type: "UtilityPlan", id: "COMPARISON" }],
     }),
 
     upsertMarketRateBenchmark: builder.mutation<
@@ -65,7 +59,6 @@ const marketRateBenchmarksApi = baseApi.injectEndpoints({
 
 export const {
   useGetMarketRateBenchmarksQuery,
-  useGetUtilityPlanRateComparisonQuery,
   useUpsertMarketRateBenchmarkMutation,
   useDeleteMarketRateBenchmarkMutation,
 } = marketRateBenchmarksApi;

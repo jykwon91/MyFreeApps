@@ -20,10 +20,10 @@ import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import { queryStatus } from "@/test/rtk-query-status";
 import InsurancePremiumComparisonCard from "@/app/features/insurance/InsurancePremiumComparisonCard";
-import type { InsuranceBenchmark } from "@/shared/types/insurance/insurance-benchmark";
+import type { InsuranceBenchmark } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark";
 import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
-import type { InsurancePremiumComparison } from "@/shared/types/insurance/insurance-premium-comparison";
-import type { InsurancePremiumComparisonRow } from "@/shared/types/insurance/insurance-premium-comparison-row";
+import type { InsurancePremiumComparison } from "@mybookkeeper/api-client/types/insurance/insurance-premium-comparison";
+import type { InsurancePremiumComparisonRow } from "@mybookkeeper/api-client/types/insurance/insurance-premium-comparison-row";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ let mockLoading = false;
 let mockError = false;
 let mockFetching = false;
 
-vi.mock("@/shared/store/insuranceBenchmarksApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/insurancePoliciesApi", () => ({
   useGetInsurancePremiumComparisonQuery: vi.fn(() => ({
     data: mockComparison,
     isLoading: mockLoading,

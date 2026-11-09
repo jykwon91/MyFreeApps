@@ -1,5 +1,5 @@
-import type { InsuranceBenchmark } from "@/shared/types/insurance/insurance-benchmark";
-import type { InsurancePremiumComparisonRow } from "@/shared/types/insurance/insurance-premium-comparison-row";
+import type { InsuranceBenchmark } from "./insurance-benchmark";
+import type { InsurancePremiumComparisonRow } from "./insurance-premium-comparison-row";
 
 /**
  * Dashboard payload for policies priced above the market.

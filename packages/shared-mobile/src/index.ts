@@ -13,6 +13,7 @@ export { default as DeleteAccountScreen } from "./components/DeleteAccountScreen
 export { default as Banner } from "./components/Banner";
 export { default as EmptyState } from "./components/EmptyState";
 export { default as FormField } from "./components/FormField";
+export { default as GroupedBarChart } from "./components/GroupedBarChart";
 export { default as LoadingButton } from "./components/LoadingButton";
 export { default as OptionRow } from "./components/OptionRow";
 export { default as OptionSheet } from "./components/OptionSheet";
@@ -51,6 +52,9 @@ export type { ButtonVariant } from "./types/ButtonVariant";
 export type { EmptyStateAction } from "./types/EmptyStateAction";
 export type { EmptyStateProps } from "./types/EmptyStateProps";
 export type { FormFieldProps } from "./types/FormFieldProps";
+export type { GroupedBarChartGroup } from "./types/GroupedBarChartGroup";
+export type { GroupedBarChartProps } from "./types/GroupedBarChartProps";
+export type { GroupedBarChartSeries } from "./types/GroupedBarChartSeries";
 export type { LoadingButtonProps } from "./types/LoadingButtonProps";
 export type { OptionRowProps } from "./types/OptionRowProps";
 export type { OptionSheetProps } from "./types/OptionSheetProps";

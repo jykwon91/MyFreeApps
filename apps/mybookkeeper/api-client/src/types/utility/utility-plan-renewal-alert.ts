@@ -1,4 +1,4 @@
-import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
+import type { UtilityPlanSummary } from "./utility-plan-summary";
 
 /**
  * Dashboard payload for plans needing attention.

@@ -1,7 +1,10 @@
 import api from "@platform/core/lib/api";
+import type { InsurancePremiumComparison } from "@mybookkeeper/api-client/types/insurance/insurance-premium-comparison";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { SummaryResponse } from "@mybookkeeper/api-client/types/summary/summary";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import type { UtilityPlanRateComparison } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-comparison";
+import type { UtilityPlanRenewalAlert } from "@mybookkeeper/api-client/types/utility/utility-plan-renewal-alert";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 
 export function aTransaction(overrides: Partial<Transaction> = {}): Transaction {
@@ -44,10 +47,45 @@ export interface FakeTransactionServer {
   pendingReceipts: number;
   /** Fails summary requests while set. */
   failSummary: boolean;
+  renewalAlerts: UtilityPlanRenewalAlert;
+  rateComparison: UtilityPlanRateComparison;
+  premiumComparison: InsurancePremiumComparison;
   requests: AxiosRequestConfig[];
 }
 
 const REVIEWABLE = ["pending", "needs_review", "unverified"];
+
+/** What a real summary always carries, so a test only spells out what it's about. */
+const EMPTY_SUMMARY: SummaryResponse = {
+  revenue: 0,
+  expenses: 0,
+  profit: 0,
+  by_category: {},
+  by_property: [],
+  by_month: [],
+  by_month_expense: [],
+  by_property_month: [],
+};
+
+export function noRenewalAlerts(): UtilityPlanRenewalAlert {
+  return { window_days: 45, expired: [], expiring_soon: [], total_needing_attention: 0 };
+}
+
+export function noRateComparison(): UtilityPlanRateComparison {
+  return { material_gap_pct: 10, above_market: [], not_compared: [], total_above_market: 0, has_stale_benchmark: false };
+}
+
+export function noPremiumComparison(): InsurancePremiumComparison {
+  return {
+    material_gap_pct: 15,
+    benchmark: null,
+    above_market: [],
+    not_compared: [],
+    total_above_market: 0,
+    total_considered: 0,
+    has_stale_benchmark: false,
+  };
+}
 
 /** Answers the app's own requests, so a screen test runs through the real API client. */
 export function startTransactionServer(transactions: Transaction[], properties: Property[] = [aProperty()]): FakeTransactionServer {
@@ -64,6 +102,9 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     documents: [],
     pendingReceipts: 0,
     failSummary: false,
+    renewalAlerts: noRenewalAlerts(),
+    rateComparison: noRateComparison(),
+    premiumComparison: noPremiumComparison(),
     requests: [],
   };
   const adapter: AxiosAdapter = (config) => {
@@ -81,7 +122,12 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     if (config.url === "/rent-receipts/pending") {
       return respond({ items: [], total: server.pendingReceipts, pending_count: server.pendingReceipts, gmail_state: "ready" });
     }
-    if (config.url?.startsWith("/summary")) return server.failSummary ? respond({ detail: "nope" }, 500) : respond(server.summary);
+    if (config.url?.startsWith("/summary")) {
+      return server.failSummary ? respond({ detail: "nope" }, 500) : respond({ ...EMPTY_SUMMARY, ...server.summary });
+    }
+    if (config.url === "/utility-plans/renewal-alerts") return respond(server.renewalAlerts);
+    if (config.url === "/utility-plans/rate-comparison") return respond(server.rateComparison);
+    if (config.url === "/insurance-policies/premium-comparison") return respond(server.premiumComparison);
     if (config.url === "/transactions/review-count") {
       return respond({ count: server.transactions.filter((row) => REVIEWABLE.includes(row.status)).length });
     }
