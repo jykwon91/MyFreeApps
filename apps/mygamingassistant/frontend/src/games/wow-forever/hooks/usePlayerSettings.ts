@@ -103,7 +103,14 @@ function updatePlayerSettings(patch: Partial<PlayerSettings>): void {
   }
   writeStored(PLAYER_SETTINGS_STORAGE_KEY, next);
   const raw = readRaw();
-  unsaved = raw === JSON.stringify(next) ? null : { raw, value: next };
+  // Keep `next` itself as the snapshot (not a re-parse of storage), so callers
+  // that compare what they just set by identity (the World Map's position) see it.
+  if (raw === JSON.stringify(next)) {
+    cached = { raw, value: next };
+    unsaved = null;
+  } else {
+    unsaved = { raw, value: next };
+  }
   notify();
 }
 
