@@ -33,7 +33,7 @@ describe("addresses", () => {
 describe("withClassification", () => {
   it("defaults an investment to short-term and clears the type otherwise", () => {
     expect(withClassification(blankForm(), "investment").type).toBe("short_term");
-    expect(withClassification({ ...blankForm(), type: "midterm" }, "investment").type).toBe("midterm");
+    expect(withClassification({ ...blankForm(), type: "long_term" }, "investment").type).toBe("long_term");
     expect(withClassification(fromProperty(property), "primary_residence").type).toBeNull();
   });
 });
@@ -80,6 +80,6 @@ describe("propertyChanges", () => {
   });
 
   it("sends classification together with type", () => {
-    expect(propertyChanges({ ...fromProperty(property), type: "midterm" }, property)).toEqual({ classification: "investment", type: "midterm" });
+    expect(propertyChanges({ ...fromProperty(property), type: "long_term" }, property)).toEqual({ classification: "investment", type: "long_term" });
   });
 });
