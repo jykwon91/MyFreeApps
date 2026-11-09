@@ -1,3 +1,5 @@
+import type { ListingPhotoAddSource } from "../types/ListingPhotoAddSource";
+
 export const LISTING_PHOTO_MESSAGES = {
   heading: "Photos",
   noneHeading: "No photos yet.",
@@ -34,6 +36,7 @@ export const LISTING_PHOTO_MESSAGES = {
   discardUpload: "Remove",
   waiting: "Waiting",
   sending: "Sending",
+  failed: "didn't upload",
   uploadsTitle: "Photos that didn't upload",
   discardTitle: "Leave without uploading?",
   discardBody: "Photos that haven't uploaded yet will be lost.",
@@ -41,6 +44,7 @@ export const LISTING_PHOTO_MESSAGES = {
   stay: "Stay",
   pickFailed: "I couldn't get some of those photos. Want to try again?",
   cameraDenied: "I need camera access for that. You can turn it on in Settings.",
+  caption: "Caption",
   uploadedOne: "Photo added.",
   uploadedMany: "Photos added.",
 } as const;
@@ -86,4 +90,40 @@ export function uploadFailureCopy(status: number | undefined, maxMegabytes: numb
     default:
       return "I couldn't upload that photo. Want to try again?";
   }
+}
+
+/** 0 means no limit: the server has none on how many photos a listing holds. */
+export const LISTING_PHOTO_NO_SELECTION_LIMIT = 0;
+export const LISTING_PHOTO_FILE_NAME = "listing-photo.jpg";
+export const LISTING_PHOTO_GRID_COLUMNS = 3;
+export const LISTING_PHOTO_CAPTION_LINES = 1;
+
+export const LISTING_PHOTO_ADD_OPTIONS: { value: ListingPhotoAddSource; label: string }[] = [
+  { value: "camera", label: LISTING_PHOTO_MESSAGES.takePhoto },
+  { value: "library", label: LISTING_PHOTO_MESSAGES.fromLibrary },
+];
+
+export function preparingProgress(done: number, total: number): string {
+  return `Preparing ${Math.min(done + 1, total)} of ${total}`;
+}
+
+/** "Photo 2" for the upload list: where the photo is among those still to go. */
+export function uploadName(position: number): string {
+  return `photo ${position}`;
+}
+
+export function retryUploadLabel(position: number): string {
+  return `Retry ${uploadName(position)}`;
+}
+
+export function removeUploadLabel(position: number): string {
+  return `Remove ${uploadName(position)}`;
+}
+
+export function uploadStateLabel(position: number, state: string): string {
+  return `Photo ${position}, ${state}`;
+}
+
+export function photoLabel(index: number, total: number, caption: string | null, extras: (string | null)[]): string {
+  return [photoPosition(index, total), caption, ...extras].filter(Boolean).join(", ");
 }

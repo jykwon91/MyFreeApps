@@ -3,6 +3,9 @@ import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
 import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
 import Markdown from "@/shared/components/ui/Markdown";
+import { listingFormResolver } from "@/shared/lib/listing-form-resolver";
+import ListingFormError from "./ListingFormError";
+import { LISTING_TITLE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/listingForm";
 import { LISTING_ROOM_TYPES, LISTING_ROOM_TYPE_LABELS, LISTING_STATUSES, LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import {
   useCreateListingMutation,
@@ -47,7 +50,7 @@ export default function ListingForm({
     reset,
     watch,
     formState: { errors, dirtyFields },
-  } = useForm<ListingFormValues>({ defaultValues: defaults });
+  } = useForm<ListingFormValues>({ defaultValues: defaults, resolver: listingFormResolver });
 
   // Reset the form when the listing prop changes (e.g., switching from create
   // to edit without unmounting).
@@ -115,6 +118,7 @@ export default function ListingForm({
 
         <form
           id="listing-form"
+          noValidate
           onSubmit={handleSubmit(onSubmit)}
           className="flex-1 overflow-y-auto px-5 py-4 space-y-4"
           data-testid="listing-form"
@@ -123,14 +127,13 @@ export default function ListingForm({
             {(field) => (
               <>
                 <input
-                  {...register("title", { required: "Title is required" })}
+                  {...register("title")}
+                  maxLength={LISTING_TITLE_MAX_LENGTH}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   data-testid="listing-form-title"
                   {...field}
                 />
-                {errors.title ? (
-                  <p className="text-xs text-red-600 mt-1">{errors.title.message}</p>
-                ) : null}
+                <ListingFormError message={errors.title?.message} />
               </>
             )}
           </FormField>
@@ -139,7 +142,7 @@ export default function ListingForm({
             {(field) => (
               <>
                 <select
-                  {...register("property_id", { required: "Pick a property" })}
+                  {...register("property_id")}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   data-testid="listing-form-property"
                   {...field}
@@ -151,9 +154,7 @@ export default function ListingForm({
                     </option>
                   ))}
                 </select>
-                {errors.property_id ? (
-                  <p className="text-xs text-red-600 mt-1">{errors.property_id.message}</p>
-                ) : null}
+                <ListingFormError message={errors.property_id?.message} />
               </>
             )}
           </FormField>
@@ -191,25 +192,18 @@ export default function ListingForm({
                     type="number"
                     step="0.01"
                     min="0.01"
-                    {...register("monthly_rate", {
-                      required: "Monthly rate is required",
-                      validate: (v) =>
-                        Number(v) > 0 || "Monthly rate must be greater than 0",
-                    })}
+                    {...register("monthly_rate")}
                     className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                     data-testid="listing-form-monthly-rate"
                     {...field}
                   />
-                  {errors.monthly_rate ? (
-                    <p className="text-xs text-red-600 mt-1">
-                      {errors.monthly_rate.message}
-                    </p>
-                  ) : null}
+                  <ListingFormError message={errors.monthly_rate?.message} />
                 </>
               )}
             </FormField>
             <FormField label="Weekly rate (USD)">
               {(field) => (
+                <>
                 <input
                   type="number"
                   step="0.01"
@@ -218,10 +212,13 @@ export default function ListingForm({
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
                 />
+                <ListingFormError message={errors.weekly_rate?.message} />
+                </>
               )}
             </FormField>
             <FormField label="Nightly rate (USD)">
               {(field) => (
+                <>
                 <input
                   type="number"
                   step="0.01"
@@ -230,6 +227,8 @@ export default function ListingForm({
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
                 />
+                <ListingFormError message={errors.nightly_rate?.message} />
+                </>
               )}
             </FormField>
           </div>
@@ -237,6 +236,7 @@ export default function ListingForm({
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Min stay (days)">
               {(field) => (
+                <>
                 <input
                   type="number"
                   min="0"
@@ -244,10 +244,13 @@ export default function ListingForm({
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
                 />
+                <ListingFormError message={errors.min_stay_days?.message} />
+                </>
               )}
             </FormField>
             <FormField label="Max stay (days)">
               {(field) => (
+                <>
                 <input
                   type="number"
                   min="0"
@@ -255,6 +258,8 @@ export default function ListingForm({
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
                 />
+                <ListingFormError message={errors.max_stay_days?.message} />
+                </>
               )}
             </FormField>
           </div>
@@ -263,7 +268,7 @@ export default function ListingForm({
             <FormField label="Room type" required>
               {(field) => (
                 <select
-                  {...register("room_type", { required: true })}
+                  {...register("room_type")}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   data-testid="listing-form-room-type"
                   {...field}
@@ -311,6 +316,7 @@ export default function ListingForm({
 
           <FormField label="Amenities (comma-separated)">
             {(field) => (
+              <>
               <input
                 {...register("amenities")}
                 placeholder="wifi, washer/dryer, smart lock"
@@ -318,6 +324,8 @@ export default function ListingForm({
                 data-testid="listing-form-amenities"
                 {...field}
               />
+              <ListingFormError message={errors.amenities?.message} />
+              </>
             )}
           </FormField>
 

@@ -1,3 +1,4 @@
+import { listingsApi } from "@mybookkeeper/api-client/store/listingsApi";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as Clipboard from "expo-clipboard";
 import { FORM_MESSAGES } from "../src/constants/forms";
@@ -7,6 +8,7 @@ import ListingCreateScreen from "../src/features/listings/ListingCreateScreen";
 import ListingDetailScreen from "../src/features/listings/ListingDetailScreen";
 import ListingEditScreen from "../src/features/listings/ListingEditScreen";
 import ListingsScreen from "../src/features/listings/ListingsScreen";
+import { store } from "../src/lib/store";
 import { holdWrites } from "../test-support/holdWrites";
 import { aListing, startListingsServer, writesTo } from "../test-support/listingsServer";
 import { mockPreventRemove, mockRouter, pressAlertButton, restoreApi, show, signInToWorkspace } from "../test-support/listingsHarness";
@@ -178,10 +180,22 @@ describe("adding a listing", () => {
   it("drops what can't be part of a rate or a day count as it's typed", async () => {
     startListingsServer();
     await show(<ListingCreateScreen />);
-    await fireEvent.changeText(await screen.findByLabelText("Monthly rate (USD), required"), "12a00.5.55");
+    await fireEvent.changeText(await screen.findByLabelText("Monthly rate (USD), required"), "12a00.555");
     expect(screen.getByLabelText("Monthly rate (USD), required").props.value).toBe("1200.55");
     await fireEvent.changeText(screen.getByLabelText(FORM.minStay), "3x0");
     expect(screen.getByLabelText(FORM.minStay).props.value).toBe("30");
+  });
+
+  it.each([
+    ["1200,50", "1200.50"],
+    ["1.2.3", ""],
+    ["12.345", "12.34"],
+  ])("reads %s as a rate of %s", async (typed, shown) => {
+    startListingsServer();
+    await show(<ListingCreateScreen />);
+    const field = await screen.findByLabelText("Monthly rate (USD), required");
+    await fireEvent.changeText(field, typed);
+    expect(screen.getByLabelText("Monthly rate (USD), required").props.value).toBe(shown);
   });
 
   it("rejects a zero rate and a minimum stay longer than the maximum", async () => {
@@ -230,6 +244,15 @@ describe("adding a listing", () => {
       },
     ]);
     await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
+  });
+
+  it("says the property is gone, not the listing, when adding finds the property deleted", async () => {
+    const server = startListingsServer({ listings: [] });
+    await show(<ListingCreateScreen />);
+    await fillRequired();
+    server.failWrites.push({ match: "/listings", status: 404 });
+    await fireEvent.press(button(FORM.add));
+    await screen.findByText(FORM.propertyGone);
   });
 
   it("shows loading on the button at once, locks the fields, and sends once", async () => {
@@ -292,6 +315,22 @@ describe("changing a listing", () => {
     await fireEvent.press(button(FORM.save));
     await screen.findByText(FORM.saved);
     expect(writesTo(server, "put")).toEqual([{ url: "/listings/l1", body: { title: "Garden suite", weekly_rate: null } }]);
+  });
+
+  it("doesn't send fields it wasn't asked to change when the listing is refetched mid-edit", async () => {
+    const server = startListingsServer({ listings: [aListing({ weekly_rate: "300.00" })] });
+    await show(<ListingEditScreen id="l1" />);
+    await fireEvent.changeText(await screen.findByLabelText("Title, required"), "Garden suite");
+    // Another device changes the weekly rate while this form is open.
+    server.listings[0].weekly_rate = "350.00";
+    await act(async () => {
+      store.dispatch(listingsApi.util.invalidateTags([{ type: "Listing", id: "l1" }]));
+    });
+    await waitFor(() => expect(server.requests.filter((r) => r.method === "get" && r.url === "/listings/l1").length).toBeGreaterThan(1));
+    await fireEvent.press(button(FORM.save));
+    await screen.findByText(FORM.saved);
+    expect(writesTo(server, "put")).toEqual([{ url: "/listings/l1", body: { title: "Garden suite" } }]);
+    expect(server.listings[0].weekly_rate).toBe("350.00");
   });
 
   it("treats 1200 and 1200.00 as the same rate", async () => {

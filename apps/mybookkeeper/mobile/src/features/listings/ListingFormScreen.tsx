@@ -1,4 +1,4 @@
-import { LISTING_ROOM_TYPE_LABELS, LISTING_ROOM_TYPES, LISTING_STATUS_LABELS, LISTING_STATUSES } from "@mybookkeeper/api-client/constants/listingLabels";
+import { LISTING_ROOM_TYPE_LABELS, LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import { LISTING_TITLE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/listingForm";
 import type { ListingFormValues } from "@mybookkeeper/api-client/types/listing/listing-form-values";
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
@@ -8,24 +8,21 @@ import { EMPTY_LISTING_FORM, listingDirtyFields, listingFormProblems, listingToF
 import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
-import { LISTING_FORM_MESSAGES as MESSAGES, LISTING_PROPERTY_CHOICE } from "../../constants/listingForm";
+import { LISTING_FORM_MESSAGES as MESSAGES, LISTING_MULTILINE_MIN_HEIGHT, LISTING_PROPERTY_CHOICE, LISTING_ROOM_OPTIONS, LISTING_STATUS_OPTIONS } from "../../constants/listingForm";
+import type { ListingFormPicking } from "../../types/ListingFormPicking";
 import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import PropertyChoiceField from "../properties/PropertyChoiceField";
 import { daysInput, rateInput } from "./listingInput";
 import { useSaveListing } from "./useSaveListing";
 
-const ROOM_OPTIONS = LISTING_ROOM_TYPES.map((value) => ({ value, label: LISTING_ROOM_TYPE_LABELS[value] }));
-const STATUS_OPTIONS = LISTING_STATUSES.map((value) => ({ value, label: LISTING_STATUS_LABELS[value] }));
-const MULTILINE_MIN_HEIGHT = 96;
-type Picking = "room" | "status" | null;
-
-/** Adds a listing, or changes `original`. What's typed is kept here, so a reload can't overwrite it. */
+/** Adds a listing, or changes `original`. What's typed is kept here, and compared with what the form started from, so a reload can't overwrite or revert it. */
 export default function ListingFormScreen({ original }: { original: ListingResponse | null }) {
   const { spacing } = useTheme();
-  const saved = original ? listingToFormValues(original) : EMPTY_LISTING_FORM;
+  // What the form started from, taken once: a reload of `original` (another device saved) must not read as the person's own edit.
+  const [saved] = useState<ListingFormValues>(() => (original ? listingToFormValues(original) : EMPTY_LISTING_FORM));
   const [values, setValues] = useState<ListingFormValues>(saved);
   const [hasTried, setHasTried] = useState(false);
-  const [picking, setPicking] = useState<Picking>(null);
+  const [picking, setPicking] = useState<ListingFormPicking>(null);
   const { submit, isBusy, isLeaving, failure } = useSaveListing(original);
 
   const problems = listingFormProblems(values);
@@ -42,10 +39,10 @@ export default function ListingFormScreen({ original }: { original: ListingRespo
   function save(): void {
     setHasTried(true);
     if (Object.keys(problems).length > 0) return;
-    void submit(values);
+    void submit(values, saved);
   }
 
-  const multiline = { minHeight: MULTILINE_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" } as const;
+  const multiline = { minHeight: LISTING_MULTILINE_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" } as const;
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
@@ -59,13 +56,13 @@ export default function ListingFormScreen({ original }: { original: ListingRespo
           error={errorFor("monthly_rate")}
           keyboardType="decimal-pad"
           label={MESSAGES.monthlyRate}
-          onChangeText={(text) => edit("monthly_rate", rateInput(text))}
+          onChangeText={(text) => edit("monthly_rate", rateInput(text, values.monthly_rate))}
           placeholder={MESSAGES.rateHint}
           required
           value={values.monthly_rate}
         />
-        <FormField editable={!locked} error={errorFor("weekly_rate")} keyboardType="decimal-pad" label={MESSAGES.weeklyRate} onChangeText={(text) => edit("weekly_rate", rateInput(text))} value={values.weekly_rate} />
-        <FormField editable={!locked} error={errorFor("nightly_rate")} keyboardType="decimal-pad" label={MESSAGES.nightlyRate} onChangeText={(text) => edit("nightly_rate", rateInput(text))} value={values.nightly_rate} />
+        <FormField editable={!locked} error={errorFor("weekly_rate")} keyboardType="decimal-pad" label={MESSAGES.weeklyRate} onChangeText={(text) => edit("weekly_rate", rateInput(text, values.weekly_rate))} value={values.weekly_rate} />
+        <FormField editable={!locked} error={errorFor("nightly_rate")} keyboardType="decimal-pad" label={MESSAGES.nightlyRate} onChangeText={(text) => edit("nightly_rate", rateInput(text, values.nightly_rate))} value={values.nightly_rate} />
         <FormField editable={!locked} error={errorFor("min_stay_days")} keyboardType="number-pad" label={MESSAGES.minStay} onChangeText={(text) => edit("min_stay_days", daysInput(text))} value={values.min_stay_days} />
         <FormField editable={!locked} error={errorFor("max_stay_days")} keyboardType="number-pad" label={MESSAGES.maxStay} onChangeText={(text) => edit("max_stay_days", daysInput(text))} value={values.max_stay_days} />
         <PickerField disabled={locked} label={MESSAGES.roomType} onPress={() => setPicking("room")} valueLabel={LISTING_ROOM_TYPE_LABELS[values.room_type]} />
@@ -89,7 +86,7 @@ export default function ListingFormScreen({ original }: { original: ListingRespo
           setPicking(null);
           edit("room_type", next);
         }}
-        options={ROOM_OPTIONS}
+        options={LISTING_ROOM_OPTIONS}
         title={MESSAGES.chooseRoomType}
         value={values.room_type}
       />
@@ -100,7 +97,7 @@ export default function ListingFormScreen({ original }: { original: ListingRespo
           setPicking(null);
           edit("status", next);
         }}
-        options={STATUS_OPTIONS}
+        options={LISTING_STATUS_OPTIONS}
         title={MESSAGES.chooseStatus}
         value={values.status}
       />

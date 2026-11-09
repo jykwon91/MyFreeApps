@@ -171,6 +171,14 @@ function answerPhoto(row: ListingResponse, method: string, photoId: string | und
     row.photos.push(...made);
     return respond(made, 201);
   }
+  if (method === "put" && photoId === "order") {
+    const ids = (body(config).photo_ids ?? []) as string[];
+    const listed = ids.map((id) => row.photos.find((candidate) => candidate.id === id));
+    if (listed.some((candidate) => !candidate)) return respond({ detail: "Photo not found" }, 404);
+    const rest = row.photos.filter((candidate) => !ids.includes(candidate.id));
+    row.photos = [...(listed as ListingPhoto[]), ...rest].map((candidate, order) => ({ ...candidate, display_order: order }));
+    return respond(row.photos);
+  }
   const photo = row.photos.find((candidate) => candidate.id === photoId);
   if (!photo) return respond({ detail: "Photo not found" }, 404);
   if (method === "delete") {

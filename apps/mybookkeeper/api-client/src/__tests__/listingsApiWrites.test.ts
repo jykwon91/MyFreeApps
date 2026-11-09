@@ -16,7 +16,7 @@ function makeStore() {
   });
 }
 
-type Initiate = { initiate: (arg?: unknown) => Parameters<ReturnType<typeof makeStore>["dispatch"]>[0] };
+type Initiate = { initiate: (arg?: unknown, options?: { subscribe?: boolean }) => Parameters<ReturnType<typeof makeStore>["dispatch"]>[0] };
 const endpoints = baseApi.endpoints as unknown as Record<string, Initiate>;
 
 beforeAll(() => {
@@ -54,9 +54,9 @@ describe("listingsApi writes", () => {
   });
 
   it("updates a listing with PUT and only the given fields", async () => {
-    const request = await send("updateListing", { id: "l1", data: { status: "listed" } });
+    const request = await send("updateListing", { id: "l1", data: { status: "paused" } });
     expect([request.method, request.url]).toEqual(["put", "/listings/l1"]);
-    expect(sentBody(request)).toEqual({ status: "listed" });
+    expect(sentBody(request)).toEqual({ status: "paused" });
   });
 
   it("deletes a listing", async () => {
@@ -82,6 +82,31 @@ describe("listingsApi writes", () => {
   it("deletes a photo", async () => {
     const request = await send("deleteListingPhoto", { listingId: "l1", photoId: "p1" });
     expect([request.method, request.url]).toEqual(["delete", "/listings/l1/photos/p1"]);
+  });
+
+  it("does not refetch the listing after each delete of a batch", async () => {
+    const store = makeStore();
+    await store.dispatch(endpoints.getListingById.initiate("l1", { subscribe: true }));
+    requests.length = 0;
+    await store.dispatch(endpoints.deleteListingPhoto.initiate({ listingId: "l1", photoId: "p1", refresh: false }));
+    await store.dispatch(endpoints.deleteListingPhoto.initiate({ listingId: "l1", photoId: "p2", refresh: false }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(requests.map((r) => r.method)).toEqual(["delete", "delete"]);
+  });
+
+  it("refreshes the listing after a single delete", async () => {
+    const store = makeStore();
+    await store.dispatch(endpoints.getListingById.initiate("l1", { subscribe: true }));
+    requests.length = 0;
+    await store.dispatch(endpoints.deleteListingPhoto.initiate({ listingId: "l1", photoId: "p1" }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(requests.map((r) => r.method)).toEqual(["delete", "get"]);
+  });
+
+  it("sets the whole photo order in one request", async () => {
+    const request = await send("reorderListingPhotos", { listingId: "l1", photoIds: ["c", "a", "b"] });
+    expect([request.method, request.url]).toEqual(["put", "/listings/l1/photos/order"]);
+    expect(sentBody(request)).toEqual({ photo_ids: ["c", "a", "b"] });
   });
 
   it("adds, changes and removes an external link", async () => {

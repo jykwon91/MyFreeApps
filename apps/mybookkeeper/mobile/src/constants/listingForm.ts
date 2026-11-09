@@ -1,3 +1,4 @@
+import { LISTING_ROOM_TYPE_LABELS, LISTING_ROOM_TYPES, LISTING_STATUS_LABELS, LISTING_STATUSES } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { PropertyChoiceMessages } from "../types/PropertyChoiceMessages";
 
 export const LISTING_FORM_MESSAGES = {
@@ -30,7 +31,12 @@ export const LISTING_FORM_MESSAGES = {
   saving: "Saving…",
   added: "Listing created.",
   saved: "Changes saved.",
+  propertyGone: "I can't find that property anymore. It may have been deleted. Choose another one.",
 } as const;
+
+export const LISTING_ROOM_OPTIONS = LISTING_ROOM_TYPES.map((value) => ({ value, label: LISTING_ROOM_TYPE_LABELS[value] }));
+export const LISTING_STATUS_OPTIONS = LISTING_STATUSES.map((value) => ({ value, label: LISTING_STATUS_LABELS[value] }));
+export const LISTING_MULTILINE_MIN_HEIGHT = 96;
 
 export const LISTING_PROPERTY_CHOICE: PropertyChoiceMessages = {
   property: "Property",

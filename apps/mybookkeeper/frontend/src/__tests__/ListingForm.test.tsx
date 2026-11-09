@@ -5,6 +5,7 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import ListingForm from "@/app/features/listings/ListingForm";
+import { LISTING_AMENITY_MAX_LENGTH, LISTING_FORM_PROBLEMS } from "@mybookkeeper/api-client/constants/listingForm";
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 
@@ -100,7 +101,24 @@ describe("ListingForm", () => {
       const user = userEvent.setup();
       renderForm();
       await user.click(screen.getByTestId("listing-form-submit"));
-      expect(screen.getByText(/title is required/i)).toBeInTheDocument();
+      expect(screen.getByText(LISTING_FORM_PROBLEMS.titleRequired)).toBeInTheDocument();
+      expect(screen.getByText(LISTING_FORM_PROBLEMS.monthlyRequired)).toBeInTheDocument();
+      expect(createMock).not.toHaveBeenCalled();
+    });
+
+    it("holds the stay range and the amenities to the same rules as the phone", async () => {
+      const user = userEvent.setup();
+      renderForm();
+      await user.type(screen.getByTestId("listing-form-title"), "Studio");
+      await user.selectOptions(screen.getByTestId("listing-form-property"), "prop-1");
+      await user.type(screen.getByTestId("listing-form-monthly-rate"), "1899");
+      const [minStay, maxStay] = screen.getAllByRole("spinbutton").slice(-2);
+      await user.type(minStay, "60");
+      await user.type(maxStay, "30");
+      await user.type(screen.getByTestId("listing-form-amenities"), "x".repeat(LISTING_AMENITY_MAX_LENGTH + 1));
+      await user.click(screen.getByTestId("listing-form-submit"));
+      expect(screen.getByText(LISTING_FORM_PROBLEMS.stayOrder)).toBeInTheDocument();
+      expect(screen.getByText(LISTING_FORM_PROBLEMS.amenityTooLong)).toBeInTheDocument();
       expect(createMock).not.toHaveBeenCalled();
     });
 

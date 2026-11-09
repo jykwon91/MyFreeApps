@@ -16,10 +16,12 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { Upload } from "lucide-react";
+import { useDispatch } from "react-redux";
 import { LoadingButton, ConfirmDialog, showError, showSuccess } from "@platform/ui";
 import {
+  listingsApi,
   useDeleteListingPhotoMutation,
-  useUpdateListingPhotoMutation,
+  useReorderListingPhotosMutation,
   useUploadListingPhotosMutation,
 } from "@mybookkeeper/api-client/store/listingsApi";
 import {
@@ -28,7 +30,7 @@ import {
   LISTING_PHOTO_MAX_MB,
   LISTING_PHOTO_MIME_TYPES,
 } from "@mybookkeeper/api-client/constants/listingPhotos";
-import { photoOrderChanges, sortPhotos } from "@mybookkeeper/api-client/utils/listingPhotoOrder";
+import { sortPhotos } from "@mybookkeeper/api-client/utils/listingPhotoOrder";
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 import type { PhotoLightboxTarget } from "@/shared/types/listing/photo-lightbox-target";
 import ListingPhotoCard from "@/app/features/listings/ListingPhotoCard";
@@ -72,8 +74,9 @@ export default function ListingPhotoManager({
   canWrite,
 }: ListingPhotoManagerProps) {
   const [uploadPhotos, { isLoading: isUploading }] = useUploadListingPhotosMutation();
+  const dispatch = useDispatch();
   const [deletePhoto] = useDeleteListingPhotoMutation();
-  const [updatePhoto] = useUpdateListingPhotoMutation();
+  const [reorderPhotos] = useReorderListingPhotosMutation();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [orderedIds, setOrderedIds] = useState<string[] | null>(null);
@@ -140,13 +143,15 @@ export default function ListingPhotoManager({
     let failedCount = 0;
     for (const photoId of ids) {
       try {
-        await deletePhoto({ listingId, photoId }).unwrap();
+        await deletePhoto({ listingId, photoId, refresh: false }).unwrap();
       } catch {
         failedCount++;
         showError(`I couldn't remove photo ${photoId}. Stopped after the first failure.`);
         break;
       }
     }
+    // The listing is read once for the whole batch, not after every photo.
+    dispatch(listingsApi.util.invalidateTags([{ type: "Listing", id: listingId }]));
     setIsBulkDeleting(false);
     if (failedCount === 0) {
       showSuccess(ids.length === 1 ? "Photo removed." : `${ids.length} photos removed.`);
@@ -182,15 +187,9 @@ export default function ListingPhotoManager({
     const newOrder = arrayMove(displayIds, oldIndex, newIndex);
     setOrderedIds(newOrder);
 
-    // Persist the new ordering. Each photo whose position changed gets its
-    // display_order rewritten to the new index. We fire one PATCH per moved
-    // photo — the small-N case (<20 photos per listing) keeps this cheap.
+    // One request sets the whole order, so a failure can't leave it half-applied.
     try {
-      await Promise.all(
-        photoOrderChanges(newOrder, sortedPhotos).map(({ photoId, displayOrder }) =>
-          updatePhoto({ listingId, photoId, display_order: displayOrder }).unwrap(),
-        ),
-      );
+      await reorderPhotos({ listingId, photoIds: newOrder }).unwrap();
     } catch {
       showError("I couldn't save the new order. Reverting.");
       setOrderedIds(null);

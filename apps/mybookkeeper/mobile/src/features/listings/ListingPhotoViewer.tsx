@@ -2,7 +2,7 @@ import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listin
 import { Banner, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Image, Modal, ScrollView, Text, useWindowDimensions, View } from "react-native";
-import { LISTING_PHOTO_MESSAGES as MESSAGES, photoPosition } from "../../constants/listingPhotos";
+import { LISTING_PHOTO_MESSAGES as MESSAGES, photoLabel, photoPosition } from "../../constants/listingPhotos";
 import { askOnce } from "../../lib/askOnce";
 import { mimeTypeFor } from "../../lib/mimeTypeFor";
 import { openAttachmentFile } from "../documents/openDocumentFile";
@@ -51,10 +51,11 @@ export default function ListingPhotoViewer({ photos, index, canWrite, isBusy, fa
         </Text>
         {failure ? <Banner message={failure} /> : null}
         {url ? (
-          <Image accessibilityIgnoresInvertColors accessibilityLabel={photoPosition(index, photos.length)} resizeMode="contain" source={{ uri: url }} style={{ width: width - spacing.lg * 2, height: width }} />
+          <Image accessibilityIgnoresInvertColors accessibilityLabel={photoLabel(index, photos.length, photo.caption, [])} resizeMode="contain" source={{ uri: url }} style={{ width: width - spacing.lg * 2, height: width }} />
         ) : (
           <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.unavailableDetail}</Text>
         )}
+        {photo.caption ? <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{photo.caption}</Text> : null}
         <View style={{ flexDirection: "row", gap: spacing.sm }}>
           <View style={{ flex: 1 }}>
             <LoadingButton disabled={index === 0} onPress={() => onIndexChange(index - 1)} variant="secondary">

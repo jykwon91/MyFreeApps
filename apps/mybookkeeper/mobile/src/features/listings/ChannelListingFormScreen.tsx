@@ -6,7 +6,7 @@ import { channelListingFormProblems, channelListingToFormValues, emptyChannelLis
 import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, PickerField, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
-import { LISTING_CHANNEL_MESSAGES as MESSAGES } from "../../constants/listingChannels";
+import { copyOutboundLabel, LISTING_CHANNEL_MESSAGES as MESSAGES } from "../../constants/listingChannels";
 import { useCopyText } from "../../lib/useCopyText";
 import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { useSaveChannelListing } from "./useSaveChannelListing";
@@ -65,7 +65,7 @@ export default function ChannelListingFormScreen({ listingId, available, origina
           label={MESSAGES.externalUrl}
           maxLength={CHANNEL_EXTERNAL_URL_MAX_LENGTH}
           onChangeText={(text) => edit("external_url", text)}
-          placeholder="https://"
+          placeholder={MESSAGES.urlPlaceholder}
           required
           value={values.external_url}
         />
@@ -87,8 +87,8 @@ export default function ChannelListingFormScreen({ listingId, available, origina
         )}
         {original && supportsExport ? (
           <FormField editable={false} hint={MESSAGES.outboundHint} label={MESSAGES.outboundUrl} selectTextOnFocus trailing={
-            <LoadingButton accessibilityLabel={`Copy ${MESSAGES.outboundUrl}`} onPress={() => void copyText(original.ical_export_url, MESSAGES.icalCopied, MESSAGES.copyFailed)} variant="ghost">
-              Copy
+            <LoadingButton accessibilityLabel={copyOutboundLabel()} onPress={() => void copyText(original.ical_export_url, MESSAGES.icalCopied, MESSAGES.copyFailed)} variant="ghost">
+              {MESSAGES.copy}
             </LoadingButton>
           } value={original.ical_export_url} />
         ) : null}

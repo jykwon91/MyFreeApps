@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ListingPhoto } from "../types/listing/listing-photo";
-import { moveId, photoOrderChanges, sortPhotos } from "../utils/listingPhotoOrder";
+import { moveId, sortPhotos } from "../utils/listingPhotoOrder";
 
 const photo = (id: string, display_order: number) => ({ id, display_order }) as ListingPhoto;
 
@@ -21,24 +21,5 @@ describe("moveId", () => {
     expect(moveId(["a", "b"], 1, 1)).toEqual(["a", "b"]);
     expect(moveId(["a", "b"], 0, 2)).toEqual(["a", "b"]);
     expect(moveId(["a", "b"], -1, 0)).toEqual(["a", "b"]);
-  });
-});
-
-describe("photoOrderChanges", () => {
-  it("lists only the photos whose position moved", () => {
-    const photos = [photo("a", 0), photo("b", 1), photo("c", 2)];
-    expect(photoOrderChanges(["c", "a", "b"], photos)).toEqual([
-      { photoId: "c", displayOrder: 0 },
-      { photoId: "a", displayOrder: 1 },
-      { photoId: "b", displayOrder: 2 },
-    ]);
-    expect(photoOrderChanges(["a", "c", "b"], photos)).toEqual([
-      { photoId: "c", displayOrder: 1 },
-      { photoId: "b", displayOrder: 2 },
-    ]);
-    expect(photoOrderChanges(["a", "b", "c"], photos)).toEqual([]);
-  });
-  it("ignores ids that are not photos", () => {
-    expect(photoOrderChanges(["x"], [photo("a", 0)])).toEqual([]);
   });
 });

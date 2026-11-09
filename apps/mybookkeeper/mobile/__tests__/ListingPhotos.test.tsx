@@ -1,10 +1,15 @@
 import "../test-support/reactNativeFormData";
+import { listingsApi } from "@mybookkeeper/api-client/store/listingsApi";
+import { store } from "../src/lib/store";
+import api from "@platform/core/lib/api";
+import type { AxiosAdapter } from "axios";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Sharing from "expo-sharing";
 import { LISTING_PHOTO_MESSAGES as MESSAGES, removeManyTitle } from "../src/constants/listingPhotos";
 import { LISTING_MESSAGES } from "../src/constants/listings";
 import ListingPhotosScreen from "../src/features/listings/ListingPhotosScreen";
+import { preparePhoto } from "../src/features/capture/preparePhoto";
 import { formParts } from "../test-support/applicantsServer";
 import { fakeDownloads, fakeFiles, File, resetFakeFiles } from "../test-support/fakeFileSystem";
 import { aListing, aPhoto, startListingsServer, writesTo } from "../test-support/listingsServer";
@@ -25,6 +30,7 @@ let alertSpy: jest.SpyInstance;
 beforeEach(() => {
   alertSpy = signInToWorkspace();
   resetFakeFiles();
+  jest.mocked(preparePhoto).mockReset().mockImplementation(async (uri: string) => uri);
 });
 afterEach(restoreApi);
 
@@ -106,6 +112,85 @@ describe("adding photos", () => {
     expect(heldFiles()).toHaveLength(0);
   });
 
+  function deferPreparing(count: number): (() => void)[] {
+    const finish: (() => void)[] = [];
+    for (let i = 0; i < count; i += 1) {
+      jest.mocked(preparePhoto).mockImplementationOnce((uri: string) => new Promise<string>((resolve) => finish.push(() => resolve(uri))));
+    }
+    return finish;
+  }
+
+  it("starts sending the first photo while the rest are still being prepared, and says how far along it is", async () => {
+    const server = startListingsServer();
+    const finish = deferPreparing(2);
+    await show(<ListingPhotosScreen id="l1" />);
+    await addFromLibrary(2);
+    await screen.findByText("Preparing 1 of 2");
+    await act(async () => finish[0]());
+    await screen.findByText("Preparing 2 of 2");
+    await waitFor(() => expect(writesTo(server, "post", "/photos")).toHaveLength(1));
+    expect(mockPreventRemove.active).toBe(true);
+    await act(async () => finish[1]());
+    await screen.findByText(MESSAGES.uploadedMany);
+    expect(writesTo(server, "post", "/photos")).toHaveLength(2);
+    expect(screen.queryByText(/^Preparing/)).toBeNull();
+    expect(mockPreventRemove.active).toBe(false);
+  });
+
+  it("guards leaving while photos are being prepared, before any is ready", async () => {
+    startListingsServer();
+    deferPreparing(1);
+    await show(<ListingPhotosScreen id="l1" />);
+    await addFromLibrary(1);
+    await screen.findByText("Preparing 1 of 1");
+    expect(mockPreventRemove.active).toBe(true);
+  });
+
+  it("queues nothing and leaves no files behind when the screen goes away mid-preparing", async () => {
+    const server = startListingsServer();
+    const finish = deferPreparing(2);
+    await show(<ListingPhotosScreen id="l1" />);
+    await addFromLibrary(2);
+    await screen.findByText("Preparing 1 of 2");
+    await screen.unmount();
+    await act(async () => finish[0]());
+    await act(async () => Promise.resolve());
+    expect(writesTo(server, "post", "/photos")).toHaveLength(0);
+    expect(heldFiles()).toHaveLength(0);
+    expect(fakeFiles().filter((uri) => uri.includes("pick"))).toHaveLength(0);
+  });
+
+  it("stops sending the rest of the chain when the screen goes away", async () => {
+    startListingsServer();
+    await show(<ListingPhotosScreen id="l1" />);
+    const answer = api.defaults.adapter as AxiosAdapter;
+    const sent: (() => Promise<unknown>)[] = [];
+    api.defaults.adapter = (config) => {
+      if (config.method?.toLowerCase() !== "post") return answer(config);
+      return new Promise((resolve, reject) => sent.push(() => answer(config).then(resolve, reject)));
+    };
+    await addFromLibrary(3);
+    await waitFor(() => expect(sent).toHaveLength(1));
+    await screen.unmount();
+    // The first one's answer arrives after the screen is gone; the other two must not go.
+    await act(async () => {
+      await sent[0]();
+    });
+    await act(async () => Promise.resolve());
+    expect(sent).toHaveLength(1);
+  });
+
+  it("labels each waiting or failed photo so a button says which one it is for", async () => {
+    const server = startListingsServer();
+    server.uploadStatuses = [415, 415];
+    await show(<ListingPhotosScreen id="l1" />);
+    await addFromLibrary(2);
+    await screen.findByRole("button", { name: "Retry photo 2" });
+    expect(button("Remove photo 1")).toBeTruthy();
+    expect(button("Retry photo 1")).toBeTruthy();
+    expect(button("Remove photo 2")).toBeTruthy();
+  });
+
   it("keeps a photo that failed, says why, and sends it when tried again", async () => {
     const server = startListingsServer();
     server.uploadStatuses = [0, 413];
@@ -114,7 +199,7 @@ describe("adding photos", () => {
     await screen.findByText("That photo is over 10 MB, which is more than a listing can hold.");
     expect(server.listings[0].photos).toHaveLength(1);
     expect(heldFiles()).toHaveLength(1);
-    await fireEvent.press(button(MESSAGES.retry));
+    await fireEvent.press(button("Retry photo 1"));
     await screen.findByText(MESSAGES.uploadedOne);
     expect(server.listings[0].photos).toHaveLength(2);
     expect(screen.queryByText(MESSAGES.uploadsTitle)).toBeNull();
@@ -149,7 +234,7 @@ describe("adding photos", () => {
     server.uploadStatuses = [415];
     await show(<ListingPhotosScreen id="l1" />);
     await addFromLibrary(1);
-    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.discardUpload }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Remove photo 1" }));
     expect(screen.queryByText(MESSAGES.retry)).toBeNull();
     expect(heldFiles()).toHaveLength(0);
   });
@@ -206,37 +291,58 @@ describe("working with a photo", () => {
     expect(button(MESSAGES.next).props.accessibilityState.disabled).toBe(true);
   });
 
-  it("makes a photo the cover by moving it first", async () => {
+  it("makes a photo the cover with one request that sets the whole order", async () => {
     const server = withTwo();
     await show(<ListingPhotosScreen id="l1" />);
     await open("Photo 2 of 2");
     await fireEvent.press(button(MESSAGES.makeCover));
     await screen.findByText(MESSAGES.moved);
-    expect(writesTo(server, "patch")).toEqual([
-      { url: "/listings/l1/photos/b", body: { display_order: 0 } },
-      { url: "/listings/l1/photos/a", body: { display_order: 1 } },
-    ]);
+    expect(writesTo(server, "patch")).toHaveLength(0);
+    expect(writesTo(server, "put")).toEqual([{ url: "/listings/l1/photos/order", body: { photo_ids: ["b", "a"] } }]);
+    expect(server.listings[0].photos.map((photo) => [photo.id, photo.display_order])).toEqual([["b", 0], ["a", 1]]);
     await screen.findByText("Photo 1 of 2");
   });
 
-  it("moves a photo later", async () => {
-    const server = withTwo();
+  it("moves a photo later and keeps showing that same photo", async () => {
+    const server = startListingsServer({ listings: [aListing({ photos: [aPhoto("a", 0, { caption: "Kitchen" }), aPhoto("b", 1)] })] });
     await show(<ListingPhotosScreen id="l1" />);
-    await open("Photo 1 of 2, Cover");
+    await open("Photo 1 of 2, Kitchen, Cover");
     await fireEvent.press(button(MESSAGES.later));
     await screen.findByText(MESSAGES.moved);
-    expect(writesTo(server, "patch")).toHaveLength(2);
-    await screen.findByText("Photo 2 of 2");
+    expect(writesTo(server, "put")).toEqual([{ url: "/listings/l1/photos/order", body: { photo_ids: ["b", "a"] } }]);
+    expect(await screen.findByText("Photo 2 of 2")).toBeTruthy();
+    expect(screen.getAllByText("Kitchen").length).toBeGreaterThan(0);
   });
 
-  it("says so and refreshes when a reorder fails part way", async () => {
+  it("says so and leaves the order alone when a reorder fails", async () => {
     const server = withTwo();
     await show(<ListingPhotosScreen id="l1" />);
     await open("Photo 2 of 2");
-    server.failWrites.push({ match: "/photos/a", status: 500 });
+    server.failWrites.push({ match: "/photos/order", status: 500 });
     await fireEvent.press(button(MESSAGES.makeCover));
     await screen.findByText("I couldn't change the order. Want to try again?");
-    expect(button(MESSAGES.next)).toBeTruthy();
+    expect(server.listings[0].photos.map((photo) => photo.id)).toEqual(["a", "b"]);
+    expect(screen.getByText("Photo 2 of 2")).toBeTruthy();
+  });
+
+  it("closes the viewer when the photo it shows is removed elsewhere", async () => {
+    const server = withTwo();
+    await show(<ListingPhotosScreen id="l1" />);
+    await open("Photo 2 of 2");
+    server.listings[0].photos = [aPhoto("a", 0)];
+    await act(async () => {
+      store.dispatch(listingsApi.util.invalidateTags([{ type: "Listing", id: "l1" }]));
+    });
+    await waitFor(() => expect(screen.queryByText(MESSAGES.close)).toBeNull());
+    expect(screen.getByRole("button", { name: "Photo 1 of 1, Cover" })).toBeTruthy();
+  });
+
+  it("shows a photo's caption in its tile and in the viewer", async () => {
+    startListingsServer({ listings: [aListing({ photos: [aPhoto("a", 0, { caption: "Living room" }), aPhoto("b", 1)] })] });
+    await show(<ListingPhotosScreen id="l1" />);
+    expect(screen.getByText("Living room")).toBeTruthy();
+    await open("Photo 1 of 2, Living room, Cover");
+    expect(screen.getAllByText("Living room")).toHaveLength(2);
   });
 
   it("asks before removing a photo, and says what happens", async () => {
@@ -293,15 +399,48 @@ describe("working with a photo", () => {
     expect(writesTo(server, "delete").map((write) => write.url)).toEqual(["/listings/l1/photos/a", "/listings/l1/photos/c"]);
   });
 
-  it("stops at the first photo it can't remove, and says how many went", async () => {
-    const server = startListingsServer({ listings: [aListing({ photos: [aPhoto("a", 0), aPhoto("b", 1), aPhoto("c", 2)] })] });
-    await show(<ListingPhotosScreen id="l1" />);
+  const selectAll = async () => {
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.select }));
     for (const name of ["Photo 1 of 3, Cover", "Photo 2 of 3", "Photo 3 of 3"]) await fireEvent.press(screen.getByRole("button", { name }));
+  };
+  const threePhotos = () => startListingsServer({ listings: [aListing({ photos: [aPhoto("a", 0), aPhoto("b", 1), aPhoto("c", 2)] })] });
+  const listingReads = (server: ReturnType<typeof startListingsServer>) => server.requests.filter((r) => r.method === "get" && r.url === "/listings/l1").length;
+
+  it("tries every photo when one is already gone, and says they were removed", async () => {
+    const server = threePhotos();
+    await show(<ListingPhotosScreen id="l1" />);
+    await selectAll();
+    server.failWrites.push({ match: "/photos/b", status: 404 });
+    await fireEvent.press(button(MESSAGES.removeSelected));
+    await pressAlertButton(alertSpy, MESSAGES.remove, act);
+    await screen.findByText(MESSAGES.removedMany);
+    expect(writesTo(server, "delete").map((write) => write.url)).toEqual(["/listings/l1/photos/a", "/listings/l1/photos/b", "/listings/l1/photos/c"]);
+    expect(server.listings[0].photos.map((photo) => photo.id)).toEqual(["b"]);
+    expect(screen.queryByText(/couldn't remove/)).toBeNull();
+  });
+
+  it("keeps going past a photo it can't remove, says exactly how many went, and keeps that one selected", async () => {
+    const server = threePhotos();
+    await show(<ListingPhotosScreen id="l1" />);
+    await selectAll();
     server.failWrites.push({ match: "/photos/b", status: 500 });
     await fireEvent.press(button(MESSAGES.removeSelected));
     await pressAlertButton(alertSpy, MESSAGES.remove, act);
-    await screen.findByText("Removed 1 of 3. I couldn't remove the rest. Want to try again?");
-    expect(writesTo(server, "delete")).toHaveLength(2);
+    await screen.findByText("Removed 2 of 3. I couldn't remove the rest. Want to try again?");
+    expect(writesTo(server, "delete")).toHaveLength(3);
+    expect(server.listings[0].photos.map((photo) => photo.id)).toEqual(["b"]);
+    expect(await screen.findByText("1 selected")).toBeTruthy();
   });
+
+  it("reads the listing once for a bulk removal, not once per photo", async () => {
+    const server = threePhotos();
+    await show(<ListingPhotosScreen id="l1" />);
+    await selectAll();
+    const before = listingReads(server);
+    await fireEvent.press(button(MESSAGES.removeSelected));
+    await pressAlertButton(alertSpy, MESSAGES.remove, act);
+    await screen.findByText(MESSAGES.removedMany);
+    await waitFor(() => expect(listingReads(server)).toBe(before + 1));
+  });
+
 });

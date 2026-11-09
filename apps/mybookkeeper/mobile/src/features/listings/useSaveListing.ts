@@ -1,24 +1,25 @@
 import { useCreateListingMutation, useUpdateListingMutation } from "@mybookkeeper/api-client/store/listingsApi";
 import type { ListingFormValues } from "@mybookkeeper/api-client/types/listing/listing-form-values";
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
-import { formValuesToCreateRequest, formValuesToUpdateRequest, listingDirtyFields, listingToFormValues } from "@mybookkeeper/api-client/utils/listingForm";
+import { formValuesToCreateRequest, formValuesToUpdateRequest, listingDirtyFields } from "@mybookkeeper/api-client/utils/listingForm";
 import { useToast } from "@platform/mobile";
 import { LISTING_FORM_MESSAGES } from "../../constants/listingForm";
 import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useWrite } from "../../lib/useWrite";
 import { saveFailureCopy } from "../../lib/writeFailureCopy";
 
-/** Adds a listing, or saves only what changed on `original`, and goes back when it's done. */
+/** Adds a listing, or saves only what changed since the form opened on `original`, and goes back when it's done. */
 export function useSaveListing(original: ListingResponse | null) {
   const { showToast } = useToast();
   const [createListing] = useCreateListingMutation();
   const [updateListing] = useUpdateListingMutation();
   const write = useWrite();
   const { isLeaving, leave } = useLeaveWhenSaved("/listings");
-  const copy = saveFailureCopy("listing", "listings", original === null);
+  // A new listing is refused with 404 only when its property is gone.
+  const copy = { ...saveFailureCopy("listing", "listings", original === null), ...(original === null ? { gone: LISTING_FORM_MESSAGES.propertyGone } : {}) };
 
-  async function submit(values: ListingFormValues): Promise<void> {
-    const dirty = original ? listingDirtyFields(values, listingToFormValues(original)) : null;
+  async function submit(values: ListingFormValues, started: ListingFormValues): Promise<void> {
+    const dirty = original ? listingDirtyFields(values, started) : null;
     if (original && dirty && Object.keys(dirty).length === 0) {
       leave();
       return;

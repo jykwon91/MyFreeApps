@@ -31,6 +31,8 @@ export const LISTING_CHANNEL_MESSAGES = {
   icalImportHint: "Paste it so bookings on that channel come back every 15 minutes.",
   noCalendarFeed: "doesn't offer a calendar feed, so I can only store the link. Bookings won't sync automatically.",
   outboundUrl: "Outbound iCal URL",
+  copy: "Copy",
+  urlPlaceholder: "https://",
   outboundHint: "Paste this into the channel's import-calendar field.",
   addSubmit: "Add channel",
   adding: "Adding…",
@@ -48,4 +50,8 @@ export function removeChannelTitle(name: string): string {
 
 export function syncedText(when: string | null): string {
   return `Synced ${when ?? "recently"}`;
+}
+
+export function copyOutboundLabel(): string {
+  return `${LISTING_CHANNEL_MESSAGES.copy} ${LISTING_CHANNEL_MESSAGES.outboundUrl}`;
 }

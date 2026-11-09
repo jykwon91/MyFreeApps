@@ -10,6 +10,8 @@ import type { ListingExternalId } from "../types/listing/listing-external-id";
 import type { ListingExternalIdCreateRequest } from "../types/listing/listing-external-id-create-request";
 import type { ListingExternalIdUpdateRequest } from "../types/listing/listing-external-id-update-request";
 import type { ListingPhoto } from "../types/listing/listing-photo";
+import type { ListingPhotoDeleteArgs } from "../types/listing/listing-photo-delete-args";
+import type { ListingPhotoOrderArgs } from "../types/listing/listing-photo-order-args";
 import type { ListingPhotoUpdateArgs } from "../types/listing/listing-photo-update-args";
 import type { ListingUpdateRequest } from "../types/listing/listing-update-request";
 import type { ListingListArgs } from "../types/listing/listing-list-args";
@@ -85,8 +87,13 @@ export const listingsApi = baseApi.enhanceEndpoints({
       }),
       invalidatesTags: (_result, _err, arg) => [{ type: "Listing", id: arg.listingId }],
     }),
-    deleteListingPhoto: builder.mutation<void, { listingId: string; photoId: string }>({
+    deleteListingPhoto: builder.mutation<void, ListingPhotoDeleteArgs>({
       query: ({ listingId, photoId }) => ({ url: `/listings/${listingId}/photos/${photoId}`, method: "DELETE" }),
+      invalidatesTags: (_result, _err, arg) => (arg.refresh === false ? [] : [{ type: "Listing", id: arg.listingId }]),
+    }),
+    /** Sets the whole order in one transaction on the server, so it can't be left half-applied. */
+    reorderListingPhotos: builder.mutation<ListingPhoto[], ListingPhotoOrderArgs>({
+      query: ({ listingId, photoIds }) => ({ url: `/listings/${listingId}/photos/order`, method: "PUT", data: { photo_ids: photoIds } }),
       invalidatesTags: (_result, _err, arg) => [{ type: "Listing", id: arg.listingId }],
     }),
     updateListingPhoto: builder.mutation<ListingPhoto, ListingPhotoUpdateArgs>({
@@ -169,6 +176,7 @@ export const {
   useDeleteListingMutation,
   useUploadListingPhotosMutation,
   useDeleteListingPhotoMutation,
+  useReorderListingPhotosMutation,
   useUpdateListingPhotoMutation,
   useCreateListingExternalIdMutation,
   useUpdateListingExternalIdMutation,

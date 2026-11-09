@@ -5,10 +5,11 @@ import {
   useCreateListingExternalIdMutation,
   useUpdateListingExternalIdMutation,
 } from "@mybookkeeper/api-client/store/listingsApi";
-import { EXTERNAL_ID_SOURCE_HINTS } from "@mybookkeeper/api-client/constants/externalIdForm";
+import { EXTERNAL_ID_MAX_LENGTH, EXTERNAL_ID_SOURCE_HINTS, EXTERNAL_URL_MAX_LENGTH } from "@mybookkeeper/api-client/constants/externalIdForm";
 import type { ExternalIdRequestErrorShape } from "@mybookkeeper/api-client/types/listing/external-id-request-error-shape";
 import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
 import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
+import { externalIdFormToRequest, externalIdProblem } from "@mybookkeeper/api-client/utils/externalIdForm";
 
 export interface ExternalIdFormProps {
   listingId: string;
@@ -25,9 +26,10 @@ export interface ExternalIdFormProps {
 /**
  * Create / edit form for a single external-ID linkage.
  *
- * Validation enforced client-side:
+ * Validation is the shared `externalIdProblem` rule set, the same one the phone uses:
  *   1. Source must be selected (create mode only — disabled in edit)
  *   2. At least one of (external_id, external_url) must be non-empty
+ *   3. A URL must be an http(s) address
  * Conflict 409 responses from the server surface as toast banners; the
  * form remains open so the host can correct the input.
  */
@@ -61,40 +63,30 @@ export default function ExternalIdForm({
     useUpdateListingExternalIdMutation();
 
   const isSubmitting = isCreating || isUpdating;
-  const formIsValid = externalId.trim() !== "" || externalUrl.trim() !== "";
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!formIsValid) {
-      setValidationError(
-        "Enter at least an external ID or a URL — a row with neither has nothing to link to.",
-      );
+    const problem = externalIdProblem(externalId, externalUrl);
+    if (problem) {
+      setValidationError(problem);
       return;
     }
     setValidationError(null);
 
-    const trimmedId = externalId.trim();
-    const trimmedUrl = externalUrl.trim();
+    const fields = externalIdFormToRequest(externalId, externalUrl);
 
     try {
       if (isEdit) {
         await updateExternalId({
           listingId,
           externalIdPk: existing.id,
-          data: {
-            external_id: trimmedId === "" ? null : trimmedId,
-            external_url: trimmedUrl === "" ? null : trimmedUrl,
-          },
+          data: fields,
         }).unwrap();
         showSuccess("External link updated.");
       } else {
         await createExternalId({
           listingId,
-          data: {
-            source,
-            external_id: trimmedId === "" ? null : trimmedId,
-            external_url: trimmedUrl === "" ? null : trimmedUrl,
-          },
+          data: { source, ...fields },
         }).unwrap();
         showSuccess("External link added.");
       }
@@ -115,6 +107,7 @@ export default function ExternalIdForm({
   return (
     <form
       onSubmit={handleSubmit}
+      noValidate
       data-testid="external-id-form"
       className="border rounded-lg p-4 space-y-3 bg-muted/30"
     >
@@ -159,7 +152,7 @@ export default function ExternalIdForm({
               value={externalId}
               onChange={(e) => setExternalId(e.target.value)}
               placeholder={EXTERNAL_ID_SOURCE_HINTS[source]}
-              maxLength={100}
+              maxLength={EXTERNAL_ID_MAX_LENGTH}
               data-testid="external-id-form-external-id"
               className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
               {...field}
@@ -178,7 +171,7 @@ export default function ExternalIdForm({
             value={externalUrl}
             onChange={(e) => setExternalUrl(e.target.value)}
             placeholder="https://..."
-            maxLength={500}
+            maxLength={EXTERNAL_URL_MAX_LENGTH}
             data-testid="external-id-form-external-url"
             className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
             {...field}

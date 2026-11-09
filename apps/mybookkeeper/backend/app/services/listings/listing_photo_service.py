@@ -132,6 +132,27 @@ async def update_photo(
         return attach_presigned_urls([response])[0]
 
 
+async def reorder_photos(
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,  # noqa: ARG001 — accepted for audit context
+    listing_id: uuid.UUID,
+    photo_ids: list[uuid.UUID],
+) -> list[ListingPhotoResponse]:
+    """Put the listing's photos in `photo_ids` order in one transaction.
+
+    Raises ListingNotFoundError when the listing is missing or an id is not
+    one of its photos; nothing is changed in that case.
+    """
+    async with unit_of_work() as db:
+        listing = await listing_repo.get_by_id(db, listing_id, organization_id)
+        if listing is None:
+            raise ListingNotFoundError(f"Listing {listing_id} not found")
+        ordered = await listing_photo_repo.apply_order(db, listing.id, photo_ids)
+        if ordered is None:
+            raise ListingNotFoundError("Photo not found")
+        return attach_presigned_urls([ListingPhotoResponse.model_validate(p) for p in ordered])
+
+
 async def delete_photo(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,  # noqa: ARG001 — accepted for audit context

@@ -13,7 +13,7 @@ import { releaseHeldFile } from "../uploads/heldFile";
 const FILES_FIELD = "files";
 
 /**
- * Sends photos one request each, in order. The server refuses a whole request if one photo in it
+ * Sends photos one request each, in order, and stops when the screen goes. The server refuses a whole request if one photo in it
  * is bad, so one at a time is what lets a single failure be retried on its own.
  */
 export function useListingPhotoUploads(listingId: string, onUploaded: (count: number) => void) {
@@ -44,6 +44,8 @@ export function useListingPhotoUploads(listingId: string, onUploaded: (count: nu
   }
 
   async function send(item: ListingPhotoUpload): Promise<void> {
+    // The screen is gone and its files with it: what is still waiting has nothing left to send.
+    if (!isMounted.current) return;
     setStatus(item.key, "sending", null);
     const form = new FormData();
     form.append(FILES_FIELD, filePart(item.file));
@@ -72,6 +74,10 @@ export function useListingPhotoUploads(listingId: string, onUploaded: (count: nu
   }
 
   function add(files: FileForUpload[]): void {
+    if (!isMounted.current) {
+      for (const file of files) releaseHeldFile(file.uri);
+      return;
+    }
     const queued = files.map<ListingPhotoUpload>((file) => ({ key: nanoid(), file, status: "waiting", problem: null }));
     update((current) => [...current, ...queued]);
     enqueue(queued);

@@ -66,7 +66,7 @@ vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
   useDeleteListingMutation: vi.fn(() => [deleteListingMock, { isLoading: false }]),
   useUploadListingPhotosMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteListingPhotoMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-  useUpdateListingPhotoMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useReorderListingPhotosMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useCreateListingExternalIdMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
   useUpdateListingExternalIdMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
   useDeleteListingExternalIdMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
