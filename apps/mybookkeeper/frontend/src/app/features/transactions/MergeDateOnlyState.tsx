@@ -1,7 +1,7 @@
 import { Info } from "lucide-react";
 import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transaction/DuplicateTransaction";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
-import type { MergeableField } from "./merge-defaults";
+import type { MergeableField } from "@mybookkeeper/api-client/types/transaction/MergeableField";
 import MergeFieldRow from "./MergeFieldRow";
 
 export interface MergeDateOnlyStateProps {

@@ -155,11 +155,12 @@ describe("TransactionDetailScreen", () => {
     expect(screen.getByRole("button", { name: "Approve" })).toBeTruthy();
   });
 
-  it("sends duplicates to the website, with nothing to approve, edit or delete", async () => {
+  it("sends duplicates to the duplicates review, with nothing to approve, edit or delete", async () => {
     startTransactionServer([aTransaction({ status: "duplicate" })]);
     await renderScreen();
     expect(await screen.findByText(/duplicate of another transaction/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Open on the website" })).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Review duplicates" }));
+    expect(mockPush).toHaveBeenCalledWith("/duplicates");
     for (const name of ["Approve", "Edit", "Delete"]) expect(screen.queryByRole("button", { name })).toBeNull();
   });
 

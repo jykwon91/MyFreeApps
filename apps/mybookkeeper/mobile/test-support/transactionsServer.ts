@@ -2,6 +2,7 @@ import api from "@platform/core/lib/api";
 import type { InsurancePremiumComparison } from "@mybookkeeper/api-client/types/insurance/insurance-premium-comparison";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { SummaryResponse } from "@mybookkeeper/api-client/types/summary/summary";
+import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { UtilityPlanRateComparison } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-comparison";
 import type { UtilityPlanRenewalAlert } from "@mybookkeeper/api-client/types/utility/utility-plan-renewal-alert";
@@ -51,6 +52,8 @@ export interface FakeTransactionServer {
   renewalAlerts: UtilityPlanRenewalAlert;
   rateComparison: UtilityPlanRateComparison;
   premiumComparison: InsurancePremiumComparison;
+  /** What the duplicates list serves. Resolving one takes it off. */
+  duplicates: DuplicatePair[];
   requests: AxiosRequestConfig[];
 }
 
@@ -106,6 +109,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     renewalAlerts: noRenewalAlerts(),
     rateComparison: noRateComparison(),
     premiumComparison: noPremiumComparison(),
+    duplicates: [],
     requests: [],
   };
   const adapter: AxiosAdapter = (config) => {
@@ -137,6 +141,16 @@ export function startTransactionServer(transactions: Transaction[], properties: 
       const created = aTransaction({ id: `new${server.transactions.length}`, ...(JSON.parse(String(config.data)) as Partial<Transaction>) });
       server.transactions.unshift(created);
       return respond(created, 201);
+    }
+    if (config.url === "/transactions/duplicates") return respond({ pairs: server.duplicates, total: server.duplicates.length });
+    if (config.url?.startsWith("/transactions/duplicates/")) {
+      if (server.failWritesWith !== null) return respond({ detail: "nope" }, server.failWritesWith);
+      const body = JSON.parse(String(config.data)) as { transaction_ids?: string[]; delete_ids?: string[]; transaction_a_id?: string; transaction_b_id?: string };
+      const gone = [...(body.transaction_ids ?? []), ...(body.delete_ids ?? []), ...(body.transaction_a_id ? [body.transaction_a_id, body.transaction_b_id] : [])];
+      server.duplicates = server.duplicates.filter((pair) => !gone.includes(pair.transaction_a.id) && !gone.includes(pair.transaction_b.id));
+      if (config.url.endsWith("/keep")) return respond({ kept: 1, deleted: body.delete_ids?.length ?? 0 });
+      if (config.url.endsWith("/merge")) return respond({ merged: true, surviving_id: "s1" });
+      return respond({ reviewed: body.transaction_ids?.length ?? 0 });
     }
     if (config.url === "/transactions/bulk-approve") {
       if (server.failWritesWith !== null) return respond({ detail: "nope" }, server.failWritesWith);

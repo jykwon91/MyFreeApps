@@ -1,11 +1,13 @@
+import DuplicatesLink from "../duplicates/DuplicatesLink";
 import LoadMoreFailed from "../shell/LoadMoreFailed";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useListTransactionPagesInfiniteQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { Banner, EmptyState, LoadingButton, SearchField, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, OptionSheet, SearchField, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
+import { TRANSACTION_EXPORT_FORMATS, TRANSACTION_EXPORT_MESSAGES as EXPORT_MESSAGES } from "../../constants/transactionExport";
 import { NO_FILTERS, TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import type { TransactionFilters } from "../../types/TransactionFilters";
 import { monthName } from "../../lib/localDate";
@@ -17,7 +19,9 @@ import { isBulkApprovable } from "./bulkApprovable";
 import TransactionFilterSheet from "./TransactionFilterSheet";
 import { activeFilterCount, reviewLink, toListParams } from "./transactionFilters";
 import TransactionRow from "./TransactionRow";
+import { notAppliedToExport } from "./transactionExport";
 import { useBulkApprove } from "./useBulkApprove";
+import { useShareTransactionExport } from "./useShareTransactionExport";
 import { useTransactionSelection } from "./useTransactionSelection";
 import { useVendorSearch } from "./useVendorSearch";
 import TransactionsSkeleton, { TransactionSkeletonRow } from "./TransactionsSkeleton";
@@ -36,6 +40,7 @@ export default function TransactionsScreen({
   const today = useToday();
   const { search, changeSearch, clearSearch } = useVendorSearch(filters.vendor, onVendorChange);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [isExportSheetOpen, setIsExportSheetOpen] = useState(false);
   const [listThatFailedToLoadMore, setListThatFailedToLoadMore] = useState<string | null>(null);
 
   const selection = useTransactionSelection();
@@ -52,7 +57,8 @@ export default function TransactionsScreen({
     isLoading,
     refetch,
   } = useListTransactionPagesInfiniteQuery(params);
-  const { data: properties = [] } = useGetPropertiesQuery();
+  const { data: properties = [], refetch: refetchProperties } = useGetPropertiesQuery();
+  const { exportTransactions, isExporting } = useShareTransactionExport(() => refetchProperties().unwrap());
   const listKey = JSON.stringify(params);
   const loadMoreFailed = listThatFailedToLoadMore === listKey;
   const { refresh, refreshControl } = useRefresh(async () => {
@@ -147,6 +153,7 @@ export default function TransactionsScreen({
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
             {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            <DuplicatesLink />
             <SearchField
               accessibilityLabel="Search transactions by vendor"
               onChangeText={changeSearch}
@@ -173,6 +180,16 @@ export default function TransactionsScreen({
                 variant="secondary"
               >
                 {filterCount > 0 ? `Filters (${filterCount})` : "Filters"}
+              </LoadingButton>
+              <LoadingButton
+                accessibilityLabel="Export the transactions shown"
+                isLoading={isExporting}
+                loadingText={EXPORT_MESSAGES.exporting}
+                onPress={() => setIsExportSheetOpen(true)}
+                style={{ flex: 1 }}
+                variant="secondary"
+              >
+                {EXPORT_MESSAGES.export}
               </LoadingButton>
               {canWrite && rows.length > 0 ? (
                 selection.isSelecting ? (
@@ -235,6 +252,18 @@ export default function TransactionsScreen({
           selectedCount={selectedRows.length}
         />
       ) : null}
+      <OptionSheet
+        description={[EXPORT_MESSAGES.description, notAppliedToExport(params)].filter(Boolean).join(" ")}
+        isOpen={isExportSheetOpen}
+        onClose={() => setIsExportSheetOpen(false)}
+        onSelect={(format) => {
+          setIsExportSheetOpen(false);
+          void exportTransactions(format, params);
+        }}
+        options={TRANSACTION_EXPORT_FORMATS}
+        title={EXPORT_MESSAGES.title}
+        value={null}
+      />
       {isFilterSheetOpen ? (
         <TransactionFilterSheet
           filters={filters}

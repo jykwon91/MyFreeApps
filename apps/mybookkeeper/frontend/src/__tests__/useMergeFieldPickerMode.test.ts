@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { useMergeFieldPickerMode } from "@/app/features/transactions/useMergeFieldPickerMode";
-import type { MergeableField } from "@/app/features/transactions/merge-defaults";
+import type { MergeableField } from "@mybookkeeper/api-client/types/transaction/MergeableField";
 
 describe("useMergeFieldPickerMode", () => {
   it("returns 'no-conflicts' when visibleFields is empty", () => {
