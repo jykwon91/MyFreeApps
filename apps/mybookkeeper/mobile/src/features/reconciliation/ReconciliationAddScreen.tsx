@@ -1,20 +1,25 @@
+import {
+  RECONCILIATION_DEFAULT_SOURCE_TYPE,
+  RECONCILIATION_SOURCE_TYPES,
+} from "@mybookkeeper/api-client/constants/reconciliationSourceTypes";
 import { useUpload1099Mutation } from "@mybookkeeper/api-client/store/reconciliationApi";
 import { Banner, FormField, LoadingButton, OptionSheet, useTheme, useToast } from "@platform/mobile";
+import { Text } from "react-native";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
-import { DEFAULT_SOURCE_TYPE, ISSUER_MAX_LENGTH, RECONCILIATION_MESSAGES as MESSAGES, SOURCE_TYPES } from "../../constants/reconciliation";
+import { DOCUMENTS_LINK, ISSUER_MAX_LENGTH, RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import PickerField from "../transactions/PickerField";
 import { reportedAmountError, sourceTypeLabel } from "./reconciliationDisplay";
 import { addFailureMessage } from "./reconciliationFailure";
 import { useConfirmLeave } from "../../lib/useConfirmLeave";
 
 export default function ReconciliationAddScreen({ year }: { year: number }) {
-  const { spacing } = useTheme();
+  const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
   const [upload1099, { isLoading }] = useUpload1099Mutation();
   const isSending = useRef(false);
-  const [sourceType, setSourceType] = useState(DEFAULT_SOURCE_TYPE);
+  const [sourceType, setSourceType] = useState(RECONCILIATION_DEFAULT_SOURCE_TYPE);
   const [issuer, setIssuer] = useState("");
   const [amount, setAmount] = useState("");
   const [hasTried, setHasTried] = useState(false);
@@ -22,7 +27,7 @@ export default function ReconciliationAddScreen({ year }: { year: number }) {
   const [isChoosingType, setIsChoosingType] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
 
-  const isDirty = sourceType !== DEFAULT_SOURCE_TYPE || issuer !== "" || amount !== "";
+  const isDirty = sourceType !== RECONCILIATION_DEFAULT_SOURCE_TYPE || issuer !== "" || amount !== "";
   const amountProblem = reportedAmountError(amount);
 
   useConfirmLeave(isDirty && !isLeaving, (leave) => {
@@ -78,6 +83,10 @@ export default function ReconciliationAddScreen({ year }: { year: number }) {
         <LoadingButton disabled={isLoading || isLeaving} isLoading={isLoading} loadingText={MESSAGES.adding} onPress={() => void add()}>
           {MESSAGES.add}
         </LoadingButton>
+        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.pdfHint}</Text>
+        <LoadingButton disabled={isLoading || isLeaving} onPress={() => router.push(DOCUMENTS_LINK)} variant="ghost">
+          {MESSAGES.openDocuments}
+        </LoadingButton>
       </ScrollView>
       <OptionSheet
         isOpen={isChoosingType}
@@ -86,7 +95,7 @@ export default function ReconciliationAddScreen({ year }: { year: number }) {
           setIsChoosingType(false);
           setSourceType(chosen);
         }}
-        options={SOURCE_TYPES}
+        options={RECONCILIATION_SOURCE_TYPES}
         title={MESSAGES.type}
         value={sourceType}
       />

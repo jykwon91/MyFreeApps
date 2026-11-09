@@ -5,6 +5,7 @@ import { LoadingButton, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES } from "../../constants/paymentReview";
+import TenantPickerSheet from "../tenants/TenantPickerSheet";
 import { shortDate } from "../transactions/transactionDisplay";
 import {
   confirmActionLabel,
@@ -19,7 +20,6 @@ import {
   suggestionLine,
 } from "./paymentReviewDisplay";
 import PaymentReviewPropertySheet from "./PaymentReviewPropertySheet";
-import PaymentReviewTenantSheet from "./PaymentReviewTenantSheet";
 import { usePaymentReviewActions } from "./usePaymentReviewActions";
 
 interface PaymentReviewRowProps {
@@ -68,7 +68,7 @@ export default function PaymentReviewRow({ item, canWrite }: PaymentReviewRowPro
     else void linkTenant(proposed);
   }
 
-  const Sheet = payout ? PaymentReviewPropertySheet : PaymentReviewTenantSheet;
+  const Sheet = payout ? PaymentReviewPropertySheet : TenantPickerSheet;
 
   return (
     <View style={{ gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>

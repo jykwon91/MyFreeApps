@@ -4,7 +4,7 @@ import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import PropertyPnLGrid from "@/app/features/attribution/PropertyPnLGrid";
-import type { PropertyPnLResponse } from "@/shared/types/attribution/property-pnl";
+import type { PropertyPnLResponse } from "@mybookkeeper/api-client/types/attribution/property-pnl-response";
 
 const emptyPnl: PropertyPnLResponse = {
   since: "2026-01-01",
@@ -44,11 +44,11 @@ const pnlWithData: PropertyPnLResponse = {
   total_net_cents: 320000,
 };
 
-vi.mock("@/shared/store/attributionApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/attributionApi", () => ({
   useGetPropertyPnlQuery: vi.fn(),
 }));
 
-import { useGetPropertyPnlQuery } from "@/shared/store/attributionApi";
+import { useGetPropertyPnlQuery } from "@mybookkeeper/api-client/store/attributionApi";
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(

@@ -1,8 +1,10 @@
 import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
 import type { ReconciliationSourceStatus } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source-status";
-import { hasBeenCompared } from "@mybookkeeper/api-client/utils/reconciliationCompare";
+import { RECONCILIATION_SOURCE_TYPES } from "@mybookkeeper/api-client/constants/reconciliationSourceTypes";
+import { discrepancyTone, hasBeenCompared } from "@mybookkeeper/api-client/utils/reconciliationCompare";
+import { reconciliationTaxYears } from "@mybookkeeper/api-client/utils/reconciliationTaxYears";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { MAX_REPORTED_AMOUNT, RECONCILIATION_MESSAGES as MESSAGES, SOURCE_TYPES, TAX_YEARS_OFFERED } from "../../constants/reconciliation";
+import { MAX_REPORTED_AMOUNT, RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import type { ReconciliationFilter } from "../../types/ReconciliationFilter";
 import { spokenMoney } from "../transactions/transactionDisplay";
 import { moneyInputError } from "../transactions/transactionEditValues";
@@ -14,19 +16,15 @@ const STATUS_WORDS: Record<ReconciliationSourceStatus, string> = {
   confirmed: MESSAGES.confirmed,
 };
 
-export function taxYearChoices(today: Date): number[] {
-  return Array.from({ length: TAX_YEARS_OFFERED }, (_, index) => today.getFullYear() - 1 - index);
-}
-
 /** A deep link can carry anything, so only a year the screen offers is used. */
 export function formYear(param: string | undefined, today: Date): number {
-  const choices = taxYearChoices(today);
+  const choices = reconciliationTaxYears(today);
   const year = Number(param);
   return choices.includes(year) ? year : choices[0];
 }
 
 export function sourceTypeLabel(sourceType: string): string {
-  return SOURCE_TYPES.find((type) => type.value === sourceType)?.label ?? MESSAGES.taxForm;
+  return RECONCILIATION_SOURCE_TYPES.find((type) => type.value === sourceType)?.label ?? MESSAGES.taxForm;
 }
 
 export function sourceTitle(source: ReconciliationSource): string {
@@ -62,6 +60,33 @@ export function rowLabel(source: ReconciliationSource): string {
     parts.push(`${spokenMoney(difference)} ${difference > 0 ? "more" : "less"} on the form`);
   }
   parts.push(statusWord(source.status));
+  return parts.join(", ");
+}
+
+/** The form's total from the person's records, or a dash while nothing has been compared. */
+export function recordsTotalText(source: ReconciliationSource): string {
+  return hasBeenCompared(source) ? formatCurrency(Number(source.matched_amount)) : MESSAGES.notCompared;
+}
+
+/** The gap in words. Only a compared form has one, and exactly zero is "no difference". */
+export function differenceText(source: ReconciliationSource): string {
+  switch (discrepancyTone(source)) {
+    case "notCompared":
+      return MESSAGES.notCompared;
+    case "clear":
+      return MESSAGES.noGap;
+    case "differs":
+      return differenceLine(source) ?? MESSAGES.noGap;
+  }
+}
+
+export function detailLabel(source: ReconciliationSource): string {
+  const parts = [
+    sourceTitle(source).replace(" · ", " "),
+    `${MESSAGES.reported} ${spokenMoney(Number(source.reported_amount))}`,
+    hasBeenCompared(source) ? `${MESSAGES.inMyRecords} ${spokenMoney(Number(source.matched_amount))}` : MESSAGES.notCompareYet,
+    statusWord(source.status),
+  ];
   return parts.join(", ");
 }
 

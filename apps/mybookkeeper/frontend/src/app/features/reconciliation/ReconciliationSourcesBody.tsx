@@ -1,6 +1,6 @@
 import { RECONCILIATION_COMPARE_MESSAGES as COMPARE } from "@mybookkeeper/api-client/constants/reconciliationCompare";
 import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
-import type { ReconciliationSourcesMode } from "@/shared/types/reconciliation/reconciliation-sources-mode";
+import type { ReconciliationSourcesMode } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-sources-mode";
 import { LoadingButton } from "@platform/ui";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import Skeleton from "@/shared/components/ui/Skeleton";

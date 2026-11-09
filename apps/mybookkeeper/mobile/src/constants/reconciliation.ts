@@ -1,17 +1,9 @@
 import { RECONCILIATION_COMPARE_MESSAGES } from "@mybookkeeper/api-client/constants/reconciliationCompare";
 
 export const RECONCILIATION_SKELETON_ROWS = ["a", "b", "c"];
-export const TAX_YEARS_OFFERED = 3;
 export const MAX_REPORTED_AMOUNT = 10_000_000_000;
 export const ISSUER_MAX_LENGTH = 255;
-export const DEFAULT_SOURCE_TYPE = "1099_k";
-
-export const SOURCE_TYPES = [
-  { value: "1099_k", label: "1099-K" },
-  { value: "1099_misc", label: "1099-MISC" },
-  { value: "1099_nec", label: "1099-NEC" },
-  { value: "year_end_statement", label: "Year-End Statement" },
-];
+export const DOCUMENTS_LINK = "/money?segment=documents";
 
 export const RECONCILIATION_MESSAGES = {
   ...RECONCILIATION_COMPARE_MESSAGES,
@@ -20,6 +12,9 @@ export const RECONCILIATION_MESSAGES = {
   checkConnection: "Check your connection and try again.",
   tryAgain: "Try again",
   viewOnly: "You have view-only access, so you can look but not change these.",
+  infoNote:
+    "This compares what Airbnb, VRBO and other platforms reported on your 1099 with the income I've tracked. A gap can mean missing income, double-counting or a platform error, and it can flag you for an audit.",
+  openHint: "Opens the details",
   taxYear: "Tax year",
   taxYearHint: "Shows the 1099s for another year",
   filterLabel: "Which 1099s to show",
@@ -33,6 +28,24 @@ export const RECONCILIATION_MESSAGES = {
   nothingNeedsLook: "Nothing here needs a look.",
   taxForm: "Tax form",
   reported: "Reported",
+  detailTitle: "1099",
+  detailLoading: "Loading this 1099",
+  detailGone: "I can't find that 1099.",
+  detailGoneBody: "It may have been deleted.",
+  back: "Back",
+  fileType: "Type",
+  fileIssuer: "Issuer",
+  fileDocument: "Source document",
+  fileProperty: "Property",
+  fileReported: "1099 amount",
+  fileInRecords: "In my records",
+  fileDifference: "Difference",
+  notCompared: "—",
+  notCompareYet: "Not compared yet. Compare with my records to see the difference.",
+  noGap: "No difference",
+  pdfHint: "Have a 1099 PDF? Upload it in Documents and I'll read the amounts for you.",
+  openDocuments: "Open Documents",
+  openSourceDocument: "Open the source document",
   inMyRecords: "In my records",
   notMatched: "Not matched",
   partlyMatched: "Partly matched",

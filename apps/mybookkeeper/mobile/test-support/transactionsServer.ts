@@ -47,6 +47,7 @@ export interface FakeTransactionServer {
   documents: { id: string; status: string }[];
   /** Rent receipts waiting to send. Only the count is served. */
   pendingReceipts: number;
+  pendingPayments: number;
   /** Fails summary requests while set. */
   failSummary: boolean;
   renewalAlerts: UtilityPlanRenewalAlert;
@@ -105,6 +106,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     summaryYears: [2026],
     documents: [],
     pendingReceipts: 0,
+    pendingPayments: 0,
     failSummary: false,
     renewalAlerts: noRenewalAlerts(),
     rateComparison: noRateComparison(),
@@ -124,6 +126,9 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     if (config.url === "/properties") return respond(server.properties);
     if (config.url === "/documents") return respond(server.documents);
     if (config.url === "/summary/years") return respond(server.summaryYears);
+    if (config.url === "/transactions/attribution-review-queue") {
+      return respond({ items: [], pending_count: server.pendingPayments });
+    }
     if (config.url === "/rent-receipts/pending") {
       return respond({ items: [], total: server.pendingReceipts, pending_count: server.pendingReceipts, gmail_state: "ready" });
     }

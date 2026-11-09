@@ -155,9 +155,6 @@ vi.mock("@mybookkeeper/api-client/store/attributionApi", () => ({
   })),
   useConfirmAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useRejectAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-}));
-
-vi.mock("@/shared/store/attributionApi", () => ({
   useAttributeTransactionManuallyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useGetPropertyPnlQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
 }));

@@ -1,5 +1,5 @@
 import { useAutoReconcileMutation } from "@mybookkeeper/api-client/store/reconciliationApi";
-import { compareFailureMessage, compareResultMessage } from "@mybookkeeper/api-client/utils/reconciliationCompare";
+import { compareFailureMessage, compareOutcome } from "@mybookkeeper/api-client/utils/reconciliationCompare";
 
 export function useCompareWithRecords(
   taxYear: number,
@@ -9,9 +9,8 @@ export function useCompareWithRecords(
 
   async function compare(): Promise<void> {
     try {
-      const result = await autoReconcile({ tax_year: taxYear }).unwrap();
-      const foundIncome = result.auto_matched + result.discrepancies > 0;
-      onToast(`${taxYear}: ${compareResultMessage(result)}`, foundIncome ? "success" : "error");
+      const { message, variant } = compareOutcome(taxYear, await autoReconcile({ tax_year: taxYear }).unwrap());
+      onToast(message, variant);
     } catch (error) {
       onToast(compareFailureMessage(error), "error");
     }

@@ -1,6 +1,7 @@
 import { attributionPayoutLabel } from "@mybookkeeper/api-client/constants/attributionLabels";
 import type { AttributionReviewItem } from "@mybookkeeper/api-client/types/attribution/attribution-review-item";
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES } from "../../constants/paymentReview";
+import { TENANT_PICKER_MESSAGES } from "../../constants/tenantPicker";
 import { spokenDate, spokenMoney } from "../transactions/transactionDisplay";
 
 /** Same test as the website: a payout from a booking site belongs to a property, not a tenant. */
@@ -19,7 +20,7 @@ export function proposedTarget(item: AttributionReviewItem): { id: string; name:
     return item.proposed_property ? { id: item.proposed_property.id, name: item.proposed_property.name } : null;
   }
   return item.proposed_applicant
-    ? { id: item.proposed_applicant.id, name: item.proposed_applicant.legal_name ?? MESSAGES.thisTenant }
+    ? { id: item.proposed_applicant.id, name: item.proposed_applicant.legal_name ?? TENANT_PICKER_MESSAGES.thisTenant }
     : null;
 }
 

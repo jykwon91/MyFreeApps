@@ -2,12 +2,14 @@ import { Building2, TrendingUp, TrendingDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Card from "@/shared/components/ui/Card";
 import { formatCurrency } from "@/shared/utils/currency";
+import { PROPERTY_PNL_CATEGORIES_SHOWN } from "@mybookkeeper/api-client/constants/propertyPnl";
+import type { PropertyPnLRange } from "@mybookkeeper/api-client/types/attribution/property-pnl-range";
 import { formatTag } from "@/shared/utils/tag";
-import type { PropertyPnLEntry } from "@/shared/types/attribution/property-pnl";
+import type { PropertyPnLEntry } from "@mybookkeeper/api-client/types/attribution/property-pnl-entry";
 
 export interface PropertyPnLCardProps {
   entry: PropertyPnLEntry;
-  dateRange: { since: string; until: string };
+  dateRange: PropertyPnLRange;
 }
 
 const centsToAmount = (cents: number) => cents / 100;
@@ -61,15 +63,15 @@ export default function PropertyPnLCard({ entry, dateRange }: PropertyPnLCardPro
 
         {entry.expense_breakdown.length > 0 && (
           <div className="space-y-1">
-            {entry.expense_breakdown.slice(0, 4).map((item) => (
+            {entry.expense_breakdown.slice(0, PROPERTY_PNL_CATEGORIES_SHOWN).map((item) => (
               <div key={item.category} className="flex items-center justify-between text-xs text-muted-foreground">
                 <span className="truncate">{formatTag(item.category)}</span>
                 <span className="shrink-0 ml-2">{formatCurrency(centsToAmount(item.amount_cents))}</span>
               </div>
             ))}
-            {entry.expense_breakdown.length > 4 && (
+            {entry.expense_breakdown.length > PROPERTY_PNL_CATEGORIES_SHOWN && (
               <p className="text-xs text-muted-foreground">
-                +{entry.expense_breakdown.length - 4} more categories
+                +{entry.expense_breakdown.length - PROPERTY_PNL_CATEGORIES_SHOWN} more categories
               </p>
             )}
           </div>

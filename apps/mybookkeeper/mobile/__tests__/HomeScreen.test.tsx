@@ -90,6 +90,24 @@ describe("HomeScreen", () => {
     expect(screen.queryByText("You're all caught up.")).toBeNull();
   });
 
+  it("links payments waiting to be matched to a tenant, asking only for the count", async () => {
+    const server = startTransactionServer([]);
+    server.pendingPayments = 3;
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "3 payments to match to a tenant" }));
+    expect(mockNavigate).toHaveBeenLastCalledWith("/payment-review");
+    expect(server.requests.find((request) => request.url === "/transactions/attribution-review-queue")?.params).toEqual({ limit: 1 });
+    expect(screen.queryByText("You're all caught up.")).toBeNull();
+  });
+
+  it("says when the payments can't be checked, and isn't caught up", async () => {
+    startTransactionServer([]);
+    failRequests("/transactions/attribution-review-queue");
+    await renderScreen();
+    expect(await screen.findByText("I couldn't check your payments to match.")).toBeTruthy();
+    expect(screen.queryByText("You're all caught up.")).toBeNull();
+  });
+
   it("doesn't ask a viewer about receipts they can't send", async () => {
     const server = startTransactionServer([]);
     server.role = "viewer";

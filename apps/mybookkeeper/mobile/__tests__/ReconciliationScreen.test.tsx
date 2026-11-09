@@ -7,6 +7,7 @@ import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-li
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import type { ReactNode } from "react";
 import { Alert } from "react-native";
+import { reconciliationTaxYears } from "@mybookkeeper/api-client/utils/reconciliationTaxYears";
 import { compareFailureMessage, compareResultMessage } from "@mybookkeeper/api-client/utils/reconciliationCompare";
 import { Provider } from "react-redux";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
@@ -18,7 +19,6 @@ import {
   reportedAmountError,
   rowLabel,
   sourceTitle,
-  taxYearChoices,
 } from "../src/features/reconciliation/reconciliationDisplay";
 import { addFailureMessage } from "../src/features/reconciliation/reconciliationFailure";
 import ReconciliationScreen from "../src/features/reconciliation/ReconciliationScreen";
@@ -172,7 +172,7 @@ describe("what a row says", () => {
 
 describe("tax years", () => {
   it("offers last year and the two before it", () => {
-    expect(taxYearChoices(new Date(2026, 0, 1))).toEqual([2025, 2024, 2023]);
+    expect(reconciliationTaxYears(new Date(2026, 0, 1))).toEqual([2025, 2024, 2023]);
   });
 
   it("only takes a year it offers from a link", () => {
@@ -349,7 +349,7 @@ describe("comparing", () => {
     await settle();
 
     expect(server.sent).toEqual([{ url: "/reconciliation/auto-reconcile", body: undefined, params: { tax_year: EARLIER_YEAR } }]);
-    expect(screen.getByText("1 matched, 1 differs.")).toBeTruthy();
+    expect(screen.getByText(`${EARLIER_YEAR}: 1 matched, 1 differs.`)).toBeTruthy();
     expect(server.reads).toEqual([EARLIER_YEAR]);
     expect(screen.getByText("$11,999.00 more on the form")).toBeTruthy();
   });

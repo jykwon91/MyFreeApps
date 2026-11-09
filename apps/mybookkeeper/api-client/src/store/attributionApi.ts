@@ -1,5 +1,8 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import type { AttributeTransactionRequest } from "../types/attribution/attribute-transaction-request";
 import type { AttributionReviewQueueResponse } from "../types/attribution/attribution-review-queue-response";
+import type { PropertyPnLRange } from "../types/attribution/property-pnl-range";
+import type { PropertyPnLResponse } from "../types/attribution/property-pnl-response";
 
 const QUEUE_TAG = { type: "Transaction", id: "ATTRIBUTION_QUEUE" } as const;
 
@@ -70,6 +73,23 @@ export const attributionApi = baseApi.enhanceEndpoints({
       },
       invalidatesTags: [QUEUE_TAG],
     }),
+    attributeTransactionManually: builder.mutation<{ ok: boolean; transaction_id: string }, AttributeTransactionRequest>({
+      query: ({ transaction_id, applicant_id }) => ({
+        url: `/transactions/${transaction_id}/attribute`,
+        method: "POST",
+        data: { applicant_id },
+      }),
+      invalidatesTags: (_result, _err, { transaction_id }) => [
+        { type: "Transaction", id: transaction_id },
+        { type: "Transaction", id: "LIST" },
+        QUEUE_TAG,
+        "Summary",
+      ],
+    }),
+    getPropertyPnl: builder.query<PropertyPnLResponse, PropertyPnLRange>({
+      query: ({ since, until }) => ({ url: "/dashboard/property-pnl", params: { since, until } }),
+      providesTags: ["Summary"],
+    }),
   }),
 });
 
@@ -77,4 +97,6 @@ export const {
   useGetAttributionReviewQueueQuery,
   useConfirmAttributionReviewMutation,
   useRejectAttributionReviewMutation,
+  useAttributeTransactionManuallyMutation,
+  useGetPropertyPnlQuery,
 } = attributionApi;

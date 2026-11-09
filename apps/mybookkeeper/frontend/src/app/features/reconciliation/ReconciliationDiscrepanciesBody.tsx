@@ -2,7 +2,7 @@ import { formatCurrency } from "@/shared/utils/currency";
 import { formatTag } from "@/shared/utils/tag";
 import { RECONCILIATION_STATUS_STYLES } from "@/shared/lib/constants";
 import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
-import type { ReconciliationDiscrepanciesMode } from "@/shared/types/reconciliation/reconciliation-discrepancies-mode";
+import type { ReconciliationDiscrepanciesMode } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-discrepancies-mode";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { comparedAmounts } from "./comparedAmounts";

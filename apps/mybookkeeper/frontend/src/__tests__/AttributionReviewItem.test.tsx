@@ -9,8 +9,6 @@ import type { AttributionReviewItem as ReviewItemType } from "@mybookkeeper/api-
 vi.mock("@mybookkeeper/api-client/store/attributionApi", () => ({
   useConfirmAttributionReviewMutation: vi.fn(),
   useRejectAttributionReviewMutation: vi.fn(),
-}));
-vi.mock("@/shared/store/attributionApi", () => ({
   useAttributeTransactionManuallyMutation: vi.fn(),
 }));
 vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
@@ -26,10 +24,10 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 }));
 
 import {
+  useAttributeTransactionManuallyMutation,
   useConfirmAttributionReviewMutation,
   useRejectAttributionReviewMutation,
 } from "@mybookkeeper/api-client/store/attributionApi";
-import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 

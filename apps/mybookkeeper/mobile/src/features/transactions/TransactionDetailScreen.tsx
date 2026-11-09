@@ -11,6 +11,7 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import { selectableProperties } from "./transactionEditValues";
 import { categoryLabel, displayAmount, isMoneyIn, isReviewable, spokenDate, propertyLabel, spokenAmount, spokenKind, statusLabel, transactionName } from "./transactionDisplay";
 import TransactionFact from "./TransactionFact";
+import TransactionTenantLink from "./TransactionTenantLink";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useApproveTransaction } from "./useApproveTransaction";
 
@@ -126,6 +127,7 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
         <TransactionFact label="Date" value={spokenDate(transaction.transaction_date)} />
         <TransactionFact label="Category" value={categoryLabel(transaction.category)} />
         <TransactionFact label="Property" value={propertyLabel(transaction.property_id, properties)} />
+        {transaction.transaction_type === "income" ? <TransactionTenantLink canWrite={canWrite} transaction={transaction} /> : null}
         {transaction.description ? <TransactionFact label="Description" value={transaction.description} /> : null}
         {transaction.source_document_id ? (
           <LoadingButton

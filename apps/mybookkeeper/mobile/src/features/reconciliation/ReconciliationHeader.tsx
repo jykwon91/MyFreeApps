@@ -37,6 +37,7 @@ export default function ReconciliationHeader({
     <View style={{ gap: spacing.md, padding: spacing.lg }}>
       {showLastLoaded ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
       {canWrite ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.viewOnly}</Text>}
+      <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.infoNote}</Text>
       <PickerField hint={MESSAGES.taxYearHint} label={MESSAGES.taxYear} onPress={onChooseYear} value={String(year)} />
       {totalCount > 0 ? (
         <>
