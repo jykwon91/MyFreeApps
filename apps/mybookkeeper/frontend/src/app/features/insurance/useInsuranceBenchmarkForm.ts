@@ -1,25 +1,17 @@
 import { useState } from "react";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
 import { showError, showSuccess } from "@platform/ui";
+import { benchmarkFormPayload, benchmarkToFormValues } from "@mybookkeeper/api-client/utils/insuranceBenchmarkForm";
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import {
   useDeleteInsuranceBenchmarkMutation,
   useUpsertInsuranceBenchmarkMutation,
-} from "@/shared/store/insuranceBenchmarksApi";
+} from "@mybookkeeper/api-client/store/insuranceBenchmarksApi";
 import type { InsuranceBenchmark } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark";
 
 interface UseInsuranceBenchmarkFormArgs {
   existing: InsuranceBenchmark | null | undefined;
   onSaved: () => void;
-}
-
-/** Dollars typed into an input → integer cents, or null when unusable. */
-function dollarsToCents(value: string): number | null {
-  const trimmed = value.trim();
-  if (trimmed === "") return null;
-  const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed) || parsed <= 0) return null;
-  return Math.round(parsed * 100);
 }
 
 /**
@@ -35,39 +27,27 @@ export function useInsuranceBenchmarkForm({
   existing,
   onSaved,
 }: UseInsuranceBenchmarkFormArgs) {
-  const [premium, setPremium] = useState(() =>
-    existing ? (existing.annual_premium_cents / 100).toFixed(2) : "",
-  );
-  const [coverage, setCoverage] = useState(() =>
-    existing ? (existing.coverage_amount_cents / 100).toFixed(0) : "",
-  );
-  const [regionLabel, setRegionLabel] = useState(existing?.region_label ?? "");
-  const [source, setSource] = useState(existing?.source ?? "");
-  const [observedOn, setObservedOn] = useState(existing?.observed_on ?? localToday());
-  const [notes, setNotes] = useState(existing?.notes ?? "");
+  const [initial] = useState(() => benchmarkToFormValues(existing, localToday()));
+  const [premium, setPremium] = useState(initial.premium);
+  const [coverage, setCoverage] = useState(initial.coverage);
+  const [regionLabel, setRegionLabel] = useState(initial.regionLabel);
+  const [source, setSource] = useState(initial.source);
+  const [observedOn, setObservedOn] = useState(initial.observedOn);
+  const [notes, setNotes] = useState(initial.notes);
 
   const [upsert, { isLoading: isSaving }] = useUpsertInsuranceBenchmarkMutation();
   const [remove, { isLoading: isRemoving }] = useDeleteInsuranceBenchmarkMutation();
 
-  const premiumCents = dollarsToCents(premium);
-  const coverageCents = dollarsToCents(coverage);
+  const payload = benchmarkFormPayload({ premium, coverage, regionLabel, source, observedOn, notes });
   const isBusy = isSaving || isRemoving;
-  const canSubmit =
-    premiumCents !== null && coverageCents !== null && observedOn !== "" && !isBusy;
+  const canSubmit = payload !== null && !isBusy;
   const canRemove = Boolean(existing) && !isBusy;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (premiumCents === null || coverageCents === null || !canSubmit) return;
+    if (payload === null || !canSubmit) return;
     try {
-      await upsert({
-        annual_premium_cents: premiumCents,
-        coverage_amount_cents: coverageCents,
-        region_label: regionLabel.trim() === "" ? null : regionLabel.trim(),
-        source: source.trim() === "" ? null : source.trim(),
-        observed_on: observedOn,
-        notes: notes.trim() === "" ? null : notes.trim(),
-      }).unwrap();
+      await upsert(payload).unwrap();
       showSuccess("Market premium saved.");
       onSaved();
     } catch (err) {

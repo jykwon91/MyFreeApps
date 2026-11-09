@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { LoadingButton, showError } from "@platform/ui";
-import { readDocumentErrorMessage } from "@/shared/lib/document-read-errors";
+import { readDocumentErrorMessage } from "@mybookkeeper/api-client/utils/documentReadErrors";
 import { useGetDocumentsQuery } from "@mybookkeeper/api-client/store/documentsApi";
 import type { DocumentSource } from "@/shared/types/document/document-source";
 import ChosenDocument from "./ChosenDocument";

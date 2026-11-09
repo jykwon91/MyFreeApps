@@ -1,15 +1,13 @@
 import { useRef, useState } from "react";
 import { Loader2, Upload } from "lucide-react";
 import { showError, showSuccess } from "@platform/ui";
-import {
-  INSURANCE_ATTACHMENT_KINDS,
-  INSURANCE_ATTACHMENT_KIND_LABELS,
-  type InsuranceAttachmentKind,
-} from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
+import { INSURANCE_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/insuranceUploads";
+import { INSURANCE_ATTACHMENT_KINDS, INSURANCE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants/insuranceAttachmentKinds";
+import type { InsuranceAttachmentKind } from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
 import {
   useDeleteInsurancePolicyAttachmentMutation,
   useUploadInsurancePolicyAttachmentMutation,
-} from "@/shared/store/insurancePoliciesApi";
+} from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import type { InsurancePolicyAttachment } from "@mybookkeeper/api-client/types/insurance/insurance-policy-attachment";
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import InsurancePolicyAttachmentRow from "@/app/features/insurance/InsurancePolicyAttachmentRow";
@@ -19,14 +17,6 @@ export interface InsurancePolicyAttachmentsSectionProps {
   attachments: InsurancePolicyAttachment[];
   canWrite: boolean;
 }
-
-const ALLOWED_MIME = [
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-];
 
 export default function InsurancePolicyAttachmentsSection({
   policyId,
@@ -45,7 +35,7 @@ export default function InsurancePolicyAttachmentsSection({
 
   async function handleFiles(files: File[]) {
     const validFiles = files.filter((file) => {
-      if (file.type && !ALLOWED_MIME.includes(file.type)) {
+      if (file.type && !INSURANCE_UPLOAD_MIME_TYPES.includes(file.type)) {
         showError(`${file.name}: unsupported file type.`);
         return false;
       }
@@ -56,7 +46,10 @@ export default function InsurancePolicyAttachmentsSection({
 
     for (const file of validFiles) {
       try {
-        await uploadAttachment({ policyId, file, kind: manualKind }).unwrap();
+        const form = new FormData();
+        form.append("file", file);
+        form.append("kind", manualKind);
+        await uploadAttachment({ policyId, form }).unwrap();
         showSuccess(`${file.name} uploaded.`);
       } catch (e: unknown) {
         const status = (e as { status?: number }).status;
@@ -165,7 +158,7 @@ export default function InsurancePolicyAttachmentsSection({
               type="file"
               className="hidden"
               multiple
-              accept={ALLOWED_MIME.join(",")}
+              accept={INSURANCE_UPLOAD_MIME_TYPES.join(",")}
               onChange={(e) => {
                 const files = Array.from(e.target.files ?? []);
                 if (files.length > 0) void handleFiles(files);

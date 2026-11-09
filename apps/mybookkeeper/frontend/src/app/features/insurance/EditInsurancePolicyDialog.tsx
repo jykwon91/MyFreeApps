@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
-import { policyToFormValues, toPolicyPayload } from "@/shared/lib/insurance-policy-form";
-import { useUpdateInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
+import { isPremiumBilledMissing, policyToFormValues, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
+import { PREMIUM_BILLED_REQUIRED_MESSAGE } from "@mybookkeeper/api-client/constants/insurancePolicyForm";
+import { useUpdateInsurancePolicyMutation } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
-import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
+import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import InsurancePolicyFormFields from "./InsurancePolicyFormFields";
 
@@ -28,6 +29,8 @@ export default function EditInsurancePolicyDialog({
     policyToFormValues(policy),
   );
 
+  const [showBilledError, setShowBilledError] = useState(false);
+
   function handleChange<K extends keyof InsurancePolicyFormValues>(
     field: K,
     value: InsurancePolicyFormValues[K],
@@ -39,6 +42,10 @@ export default function EditInsurancePolicyDialog({
     e.preventDefault();
     if (!values.policyName.trim()) {
       showError("Policy name is required.");
+      return;
+    }
+    if (isPremiumBilledMissing(values)) {
+      setShowBilledError(true);
       return;
     }
 
@@ -62,7 +69,11 @@ export default function EditInsurancePolicyDialog({
       width="wide"
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
-        <InsurancePolicyFormFields values={values} onChange={handleChange} />
+        <InsurancePolicyFormFields
+          values={values}
+          onChange={handleChange}
+          billedError={showBilledError && isPremiumBilledMissing(values) ? PREMIUM_BILLED_REQUIRED_MESSAGE : null}
+        />
 
         <div className="flex gap-3 pt-2 justify-end">
           <Button type="button" variant="secondary" size="md" onClick={onClose}>

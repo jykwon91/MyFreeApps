@@ -29,8 +29,9 @@ export function useHeldFile(showFailure: (message: string | null) => void) {
     };
   }, []);
 
-  async function pick(from: HeldFilePick): Promise<void> {
-    if (isPickingNow.current) return;
+  /** Resolves with the file now held, or null when nothing was picked. */
+  async function pick(from: HeldFilePick): Promise<FileForUpload | null> {
+    if (isPickingNow.current) return null;
     isPickingNow.current = true;
     showFailure(null);
     setIsPicking(true);
@@ -42,6 +43,7 @@ export function useHeldFile(showFailure: (message: string | null) => void) {
         releaseHeldFile(picked.uri);
       } else if (picked) {
         hold(picked);
+        return picked;
       }
     } catch {
       showFailure(UPLOAD_MESSAGES.pickFailed);
@@ -49,6 +51,7 @@ export function useHeldFile(showFailure: (message: string | null) => void) {
       isPickingNow.current = false;
       setIsPicking(false);
     }
+    return null;
   }
 
   return { file, isPicking, pick, forget: () => hold(null) };

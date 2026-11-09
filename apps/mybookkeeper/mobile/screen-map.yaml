@@ -32,7 +32,7 @@ routes:
   /insurance-policies:
     screen: (app)/insurance/index
   /insurance-policies/:policyId:
-    screen: (app)/insurance/[id]
+    screen: (app)/insurance/[id]/index
   /integrations:
     not_on_mobile: Connecting Gmail happens on the website; signing in to Google needs a browser. The reply screen links there.
   /invite/:token:

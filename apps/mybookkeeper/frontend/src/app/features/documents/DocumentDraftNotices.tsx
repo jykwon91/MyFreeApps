@@ -1,4 +1,5 @@
 import { AlertBox, type AlertVariant } from "@platform/ui";
+import { CONFIDENCE_NOTE, notesParagraphs, referenceSummary } from "@mybookkeeper/api-client/utils/documentDraftNotices";
 
 /** The three things every draft reports beyond the fields it filled in. */
 export interface DraftNoticeSource {
@@ -15,12 +16,6 @@ export interface DocumentDraftNoticesProps {
   testIdPrefix: string;
 }
 
-const CONFIDENCE_NOTE: Record<string, string> = {
-  high: "I read these straight off the document.",
-  medium: "Some of these I had to interpret — worth a look before you save.",
-  low: "I wasn't very sure about this one. Please check every field.",
-};
-
 /**
  * "Check every field" is a warning, not a note.
  *
@@ -33,23 +28,6 @@ const CONFIDENCE_VARIANT: Record<string, AlertVariant> = {
   medium: "info",
   low: "warning",
 };
-
-/** The document's own paragraphs, kept as paragraphs. */
-function notesParagraphs(notes: string): string[] {
-  return notes
-    .split(/\n\s*\n/)
-    .map((paragraph) => paragraph.trim())
-    .filter((paragraph) => paragraph !== "");
-}
-
-/** What the folded section says about itself while it is still folded. */
-function referenceSummary(termCount: number, hasNotes: boolean): string {
-  const plural = termCount === 1 ? "" : "s";
-  const terms = `I noticed ${termCount} more term${plural} on the document`;
-  if (termCount > 0 && hasNotes) return `${terms}, plus some notes I jotted down.`;
-  if (termCount > 0) return `${terms}.`;
-  return "I also jotted down some notes about this document.";
-}
 
 /**
  * What the reading said beyond the fields it filled in.

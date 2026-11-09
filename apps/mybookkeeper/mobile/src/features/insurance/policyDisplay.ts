@@ -1,16 +1,17 @@
 import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
-import { EXPIRES_SOON_DAYS } from "../../constants/insurance";
+import { formatAnnualPremium } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
+import { EXPIRES_SOON_DAYS, EXPIRY_MESSAGES } from "../../constants/insurance";
 import { daysBetween, fullDateLabel } from "../../lib/localDate";
 
 /** Null while a policy has a good while left, so a chip always means look at this. */
 export function expiryLabel(expirationDate: string | null, todayIso: string): string | null {
   if (!expirationDate) return null;
   const days = daysBetween(todayIso, expirationDate);
-  if (days < -1) return `Expired ${-days} days ago`;
-  if (days === -1) return "Expired yesterday";
-  if (days === 0) return "Expires today";
-  if (days === 1) return "Expires tomorrow";
-  return days <= EXPIRES_SOON_DAYS ? `Expires in ${days} days` : null;
+  if (days < -1) return EXPIRY_MESSAGES.expiredDaysAgo(-days);
+  if (days === -1) return EXPIRY_MESSAGES.expiredYesterday;
+  if (days === 0) return EXPIRY_MESSAGES.expiresToday;
+  if (days === 1) return EXPIRY_MESSAGES.expiresTomorrow;
+  return days <= EXPIRES_SOON_DAYS ? EXPIRY_MESSAGES.expiresInDays(days) : null;
 }
 
 function sortGroup(policy: InsurancePolicySummary, todayIso: string): number {
@@ -34,7 +35,7 @@ export function policyPlace(policy: { property_name: string | null; carrier: str
 }
 
 export function policyRowLabel(policy: InsurancePolicySummary, todayIso: string): string {
-  return [policy.policy_name, policy.property_name, policy.carrier, expiryLabel(policy.expiration_date, todayIso)]
+  return [policy.policy_name, policy.property_name, policy.carrier, policy.annual_premium_cents === null ? null : formatAnnualPremium(policy.annual_premium_cents), expiryLabel(policy.expiration_date, todayIso)]
     .filter(Boolean)
     .join(", ");
 }

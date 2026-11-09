@@ -19,7 +19,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import InsurancePolicyDocumentReader from "@/app/features/insurance/InsurancePolicyDocumentReader";
 import { showError } from "@platform/ui";
-import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
+import type { InsurancePolicyDraft } from "@mybookkeeper/api-client/types/insurance/insurance-policy-draft";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -30,7 +30,7 @@ const mockUseGetDocuments = vi.fn();
 /** Mutable so a test can hold the read open and inspect the in-flight state. */
 const uploadState = vi.hoisted(() => ({ isLoading: false }));
 
-vi.mock("@/shared/store/insurancePoliciesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/insurancePoliciesApi", () => ({
   useExtractInsurancePolicyMutation: vi.fn(() => [mockExtract, { isLoading: false }]),
   useExtractInsurancePolicyFromUploadMutation: vi.fn(() => [
     mockExtractUpload,
@@ -88,7 +88,8 @@ describe("InsurancePolicyDocumentReader — reading a file off the device", () =
     await pickFile(user);
 
     await waitFor(() => expect(onRead).toHaveBeenCalledWith(DRAFT));
-    expect(mockExtractUpload).toHaveBeenCalledWith(DEC_PAGE);
+    const form = mockExtractUpload.mock.calls[0][0] as FormData;
+    expect(form.get("file")).toBe(DEC_PAGE);
     expect(mockExtract).not.toHaveBeenCalled();
   });
 

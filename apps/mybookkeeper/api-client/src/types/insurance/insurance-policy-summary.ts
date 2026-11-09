@@ -6,7 +6,7 @@ import type { InsurancePremiumFrequency } from "./insurance-premium-frequency";
  * Mirrors ``schemas/insurance/insurance_policy_summary.py``.
  *
  * ``wind_hail_deductible_pct`` arrives as a JSON *string* because the backend
- * column is ``Numeric`` — see ``shared/lib/insurance-policy-format.ts``, which
+ * column is ``Numeric`` — see ``api-client/src/utils/insurancePolicyFormat.ts``, which
  * is the only place it is parsed.
  */
 export interface InsurancePolicySummary {

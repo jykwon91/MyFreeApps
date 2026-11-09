@@ -1,6 +1,6 @@
 import RateWatchFilingRow from "@/app/features/insurance/RateWatchFilingRow";
-import { MARKET_GROUP_PREVIEW } from "@/shared/lib/rate-watch-constants";
-import type { InsuranceRateFiling } from "@/shared/types/insurance/insurance-rate-filing";
+import { MARKET_GROUP_PREVIEW } from "@mybookkeeper/api-client/constants/rateWatch";
+import type { InsuranceRateFiling } from "@mybookkeeper/api-client/types/insurance/insurance-rate-filing";
 
 export interface RateWatchMarketGroupProps {
   title: string;

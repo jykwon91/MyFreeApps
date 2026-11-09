@@ -2,9 +2,10 @@ import DocumentReaderCard from "@/app/features/documents/DocumentReaderCard";
 import {
   useExtractInsurancePolicyFromUploadMutation,
   useExtractInsurancePolicyMutation,
-} from "@/shared/store/insurancePoliciesApi";
+} from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import type { DocumentSource } from "@/shared/types/document/document-source";
-import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
+import type { InsurancePolicyDraft } from "@mybookkeeper/api-client/types/insurance/insurance-policy-draft";
+import { documentUploadForm } from "@/shared/lib/document-upload-form";
 import { INSURANCE_POLICY_INPUT_CLASS } from "./insurance-policy-input-class";
 
 export interface InsurancePolicyDocumentReaderProps {
@@ -34,7 +35,7 @@ export default function InsurancePolicyDocumentReader({
   async function read(source: DocumentSource) {
     onRead(
       source.kind === "file"
-        ? await extractUpload(source.file).unwrap()
+        ? await extractUpload(documentUploadForm(source.file)).unwrap()
         : await extractPolicy({ document_id: source.documentId }).unwrap(),
     );
   }

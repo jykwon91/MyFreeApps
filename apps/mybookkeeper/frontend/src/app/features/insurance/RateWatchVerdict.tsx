@@ -1,4 +1,4 @@
-import type { RateWatchVerdict as Verdict } from "@/shared/types/insurance/rate-watch-verdict";
+import type { RateWatchVerdict as Verdict } from "@mybookkeeper/api-client/types/insurance/rate-watch-verdict";
 
 export interface RateWatchVerdictProps {
   verdict: Verdict;

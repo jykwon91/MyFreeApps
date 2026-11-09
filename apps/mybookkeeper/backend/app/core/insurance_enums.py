@@ -6,7 +6,8 @@ tuples are the single source of truth — referenced from both the SQLAlchemy
 model ``CheckConstraint``s and the Alembic migration DDL.
 
 ``PREMIUM_FREQUENCIES`` is mirrored as a TypeScript union in
-``frontend/src/shared/types/insurance/insurance-premium-frequency.ts`` — a value
+``api-client/src/types/insurance/insurance-premium-frequency.ts`` (and its runtime
+list in ``api-client/src/constants/insurancePremiumFrequencies.ts``) — a value
 added here MUST be added there in the same PR.
 """
 from app.core.sql_in_list import sql_in_list

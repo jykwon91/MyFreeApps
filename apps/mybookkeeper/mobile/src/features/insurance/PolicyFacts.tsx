@@ -1,6 +1,7 @@
 import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
 import {
   formatAnnualPremium,
+  formatBilledPremium,
   formatPolicyMoney,
   formatWindHailDeductible,
 } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
@@ -35,8 +36,17 @@ export default function PolicyFacts({ policy }: { policy: InsurancePolicyDetail 
           value={formatWindHailDeductible(policy.wind_hail_deductible_pct, policy.coverage_amount_cents)}
         />
       ) : null}
+      {policy.premium_cents !== null ? (
+        <TransactionFact label={INSURANCE_MESSAGES.billedPremium} value={formatBilledPremium(policy.premium_cents, policy.premium_frequency)} />
+      ) : null}
       {policy.annual_premium_cents !== null ? (
-        <TransactionFact label={INSURANCE_MESSAGES.premium} value={formatAnnualPremium(policy.annual_premium_cents)} />
+        <TransactionFact label={INSURANCE_MESSAGES.annualPremium} value={formatAnnualPremium(policy.annual_premium_cents)} />
+      ) : null}
+      {policy.fees_and_taxes_cents !== null ? (
+        <TransactionFact label={INSURANCE_MESSAGES.feesAndTaxes} value={formatPolicyMoney(policy.fees_and_taxes_cents)} />
+      ) : null}
+      {policy.annual_total_cents !== null ? (
+        <TransactionFact label={INSURANCE_MESSAGES.annualTotal} value={formatAnnualPremium(policy.annual_total_cents)} />
       ) : null}
       {term ? <TransactionFact label={INSURANCE_MESSAGES.term} value={term} /> : null}
       {policy.notes ? <TransactionFact label={INSURANCE_MESSAGES.notes} value={policy.notes} /> : null}

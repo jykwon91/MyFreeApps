@@ -1,17 +1,21 @@
-import { INSURANCE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
+import { INSURANCE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants/insuranceAttachmentKinds";
 import type { InsurancePolicyAttachment } from "@mybookkeeper/api-client/types/insurance/insurance-policy-attachment";
 import { LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { INSURANCE_MESSAGES } from "../../constants/insurance";
+import { POLICY_ATTACHMENT_MESSAGES } from "../../constants/insuranceForm";
 
 interface PolicyFileRowProps {
   file: InsurancePolicyAttachment;
   isOpening: boolean;
+  isRemoving: boolean;
   isDisabled: boolean;
   onOpen: () => void;
+  /** Only given to someone who can change the policy. */
+  onRemove?: () => void;
 }
 
-export default function PolicyFileRow({ file, isOpening, isDisabled, onOpen }: PolicyFileRowProps) {
+export default function PolicyFileRow({ file, isOpening, isRemoving, isDisabled, onOpen, onRemove }: PolicyFileRowProps) {
   const { colors, spacing, fontSize } = useTheme();
   return (
     <View style={{ gap: spacing.sm }}>
@@ -32,6 +36,18 @@ export default function PolicyFileRow({ file, isOpening, isDisabled, onOpen }: P
           {INSURANCE_MESSAGES.open}
         </LoadingButton>
       )}
+      {onRemove ? (
+        <LoadingButton
+          accessibilityLabel={`${POLICY_ATTACHMENT_MESSAGES.remove} ${file.filename}`}
+          disabled={isDisabled}
+          isLoading={isRemoving}
+          loadingText={POLICY_ATTACHMENT_MESSAGES.removing}
+          onPress={onRemove}
+          variant="ghost"
+        >
+          {POLICY_ATTACHMENT_MESSAGES.remove}
+        </LoadingButton>
+      ) : null}
     </View>
   );
 }

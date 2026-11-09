@@ -15,9 +15,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import RateWatchSection from "@/app/features/insurance/RateWatchSection";
-import type { InsuranceMarketWatch } from "@/shared/types/insurance/insurance-market-watch";
-import type { InsurancePolicyRateOutlook } from "@/shared/types/insurance/insurance-policy-rate-outlook";
-import type { InsuranceRateFiling } from "@/shared/types/insurance/insurance-rate-filing";
+import type { InsuranceMarketWatch } from "@mybookkeeper/api-client/types/insurance/insurance-market-watch";
+import type { InsurancePolicyRateOutlook } from "@mybookkeeper/api-client/types/insurance/insurance-policy-rate-outlook";
+import type { InsuranceRateFiling } from "@mybookkeeper/api-client/types/insurance/insurance-rate-filing";
 
 const mockCheck = vi.fn();
 let mockData: InsuranceMarketWatch | undefined;
@@ -25,7 +25,7 @@ let mockFetching = false;
 let mockError = false;
 let mockUninitialized = true;
 
-vi.mock("@/shared/store/insuranceMarketApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/insuranceMarketApi", () => ({
   useLazyGetInsuranceRateWatchQuery: () => [
     mockCheck,
     {

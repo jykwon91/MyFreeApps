@@ -1,8 +1,8 @@
 import { FormField } from "@platform/ui";
 import { INSURANCE_POLICY_INPUT_CLASS } from "./insurance-policy-input-class";
 import { FREQUENCY_LABEL } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
-import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
-import { INSURANCE_PREMIUM_FREQUENCIES } from "@mybookkeeper/api-client/types/insurance/insurance-premium-frequency";
+import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
+import { INSURANCE_PREMIUM_FREQUENCIES } from "@mybookkeeper/api-client/constants/insurancePremiumFrequencies";
 
 export interface InsurancePolicyFormFieldsProps {
   values: InsurancePolicyFormValues;
@@ -10,6 +10,8 @@ export interface InsurancePolicyFormFieldsProps {
     field: K,
     value: InsurancePolicyFormValues[K],
   ) => void;
+  /** Shown under the Billed select when a premium was entered without one. */
+  billedError?: string | null;
 }
 
 /**
@@ -22,6 +24,7 @@ export interface InsurancePolicyFormFieldsProps {
 export default function InsurancePolicyFormFields({
   values,
   onChange,
+  billedError = null,
 }: InsurancePolicyFormFieldsProps) {
   return (
     <>
@@ -158,6 +161,11 @@ export default function InsurancePolicyFormFields({
               </select>
             )}
           </FormField>
+          {billedError ? (
+            <p role="alert" className="text-xs text-destructive sm:col-start-2" data-testid="insurance-premium-billed-error">
+              {billedError}
+            </p>
+          ) : null}
         </div>
 
         {/* Kept out of the premium because only the premium is comparable to a

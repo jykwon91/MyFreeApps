@@ -4,8 +4,8 @@ import { useGetInsurancePremiumComparisonQuery } from "@mybookkeeper/api-client/
 import InsurancePremiumComparisonRow from "./InsurancePremiumComparisonRow";
 import InsurancePremiumComparisonCardSkeleton from "./InsurancePremiumComparisonCardSkeleton";
 import InsurancePremiumNotComparedRow from "./InsurancePremiumNotComparedRow";
-import { useInsuranceComparisonCardMode } from "./useInsuranceComparisonCardMode";
-import { INSURANCE_COMPARISON_CARD_MODES } from "@/shared/types/insurance/insurance-comparison-card-mode";
+import { resolveInsuranceComparisonCardMode } from "@mybookkeeper/api-client/utils/insuranceComparisonCardMode";
+import { INSURANCE_COMPARISON_CARD_MODES } from "@mybookkeeper/api-client/types/insurance/insurance-comparison-card-mode";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { hasFailedQuery, isRetryingFailedQuery, retryFailedQueries } from "@/shared/lib/retry-failed-queries";
 
@@ -29,7 +29,7 @@ export default function InsurancePremiumComparisonCard() {
   const { data, isLoading } = comparison;
   const queries = [comparison];
 
-  const mode = useInsuranceComparisonCardMode({
+  const mode = resolveInsuranceComparisonCardMode({
     isLoading,
     // Held through a retry, which leaves the query with no data yet — read
     // as settled, that would be "no policies tracked" or an all-clear.

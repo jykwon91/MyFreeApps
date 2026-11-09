@@ -1,5 +1,5 @@
 import RateWatchMarketGroup from "@/app/features/insurance/RateWatchMarketGroup";
-import type { InsuranceRateFiling } from "@/shared/types/insurance/insurance-rate-filing";
+import type { InsuranceRateFiling } from "@mybookkeeper/api-client/types/insurance/insurance-rate-filing";
 
 export interface RateWatchMarketListProps {
   rising: InsuranceRateFiling[];

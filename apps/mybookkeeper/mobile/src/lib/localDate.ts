@@ -26,6 +26,12 @@ export function daysBetween(fromIso: string, toIso: string): number {
   return Math.round((dateFromIso(toIso).getTime() - dateFromIso(fromIso).getTime()) / MS_PER_DAY);
 }
 
+/** A date some days on (or before), counted on the calendar so a clock change can't shift it. */
+export function addDays(iso: string, days: number): string {
+  const start = dateFromIso(iso);
+  return isoFromDate(new Date(start.getFullYear(), start.getMonth(), start.getDate() + days));
+}
+
 export function fullDateLabel(iso: string): string {
   return dateFromIso(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }

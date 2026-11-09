@@ -14,7 +14,7 @@ assembled from homes of a different size, which is the only kind of benchmark
 that exists for this market.
 
 ``BENCHMARK_STATUSES`` is mirrored as a TypeScript union in
-``frontend/src/shared/types/insurance/insurance-benchmark-status.ts`` — a value
+``api-client/src/types/insurance/insurance-benchmark-status.ts`` — a value
 added here MUST be added there in the same PR.
 """
 
