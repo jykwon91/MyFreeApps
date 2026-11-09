@@ -6,22 +6,23 @@ import { Banner, EmptyState, LoadingButton, MIN_TOUCH_TARGET, useRefresh, useThe
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
+import { detailsCount, LEASE_DETAIL_MESSAGES } from "../../constants/leaseDetails";
 import { extendedLine, lastEmailed, LEASE_MESSAGES } from "../../constants/leases";
 import { NEW_LEASE_MESSAGES } from "../../constants/newLease";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import { templatesPath } from "../newLease/newLeaseFlow";
+import { addDocumentPath } from "./addDocumentFlow";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
-import { leaseCanHaveSuccessor, leaseCountdown, leaseHasEmailableFile, leaseIsInEffect, leaseNeedsFiles, leaseStatusLabel, leaseTerm, sortLeaseFiles } from "./leaseDisplay";
+import { leaseCanHaveSuccessor, leaseCountdown, leaseHasEmailableFile, leaseDatesLine, leaseIsInEffect, leaseKindLabel, leaseNeedsFiles, leaseStatusLabel, leaseTerm, sortLeaseFiles } from "./leaseDisplay";
 import DeleteLeaseButton from "./DeleteLeaseButton";
 import EmailLeaseButton from "./EmailLeaseButton";
 import LeaseDetailSkeleton from "./LeaseDetailSkeleton";
 import ExtendLeaseSheet from "./ExtendLeaseSheet";
 import LeaseFileRow from "./LeaseFileRow";
+import LeaseNotesSection from "./LeaseNotesSection";
 import LeaseStatusControl from "./LeaseStatusControl";
 import LeaseUploadSheet from "./LeaseUploadSheet";
 import MakeLeaseFilesButton from "./MakeLeaseFilesButton";
@@ -31,7 +32,6 @@ import { useOpenLeaseFile } from "./useOpenLeaseFile";
 export default function LeaseDetailScreen({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
   const canWrite = useCanWrite();
-  const openLink = useOpenLink();
   const { currentData: lease, error, isLoading, refetch } = useGetSignedLeaseByIdQuery(id);
   const { openingId, open } = useOpenLeaseFile(id);
   const { refresh, refreshControl } = useRefresh(refetch, error);
@@ -52,8 +52,10 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
   const { signedCopy, others } = sortLeaseFiles(lease.attachments);
   const mutedText = { fontSize: fontSize.sm, color: colors.mutedForeground };
   const extension = lease.latest_extension;
+  const datesLine = leaseDatesLine(lease);
+  const valueCount = Object.keys(lease.values).length;
   const fileRow = (file: SignedLeaseAttachment) => (
-    <LeaseFileRow file={file} isDisabled={openingId !== null} isOpening={openingId === file.id} key={file.id} onOpen={() => void open(file)} />
+    <LeaseFileRow file={file} leaseId={id} isDisabled={openingId !== null} isOpening={openingId === file.id} key={file.id} onOpen={() => void open(file)} />
   );
 
   return (
@@ -77,7 +79,11 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
               {name}
             </Text>
           </Pressable>
-          <InquiryChip label={leaseStatusLabel(lease.status)} />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
+            <InquiryChip label={leaseStatusLabel(lease.status)} />
+            <InquiryChip label={leaseKindLabel(lease.kind)} />
+          </View>
+          {datesLine ? <Text style={mutedText}>{datesLine}</Text> : null}
           {canWrite ? <LeaseStatusControl leaseId={lease.id} status={lease.status} /> : null}
         </View>
   
@@ -108,6 +114,12 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
           {lease.last_emailed_to_tenant_at ? <Text style={mutedText}>{lastEmailed(formatLongDate(lease.last_emailed_to_tenant_at))}</Text> : null}
         </InquirySection>
   
+        {canWrite ? (
+          <LoadingButton accessibilityHint={LEASE_DETAIL_MESSAGES.addDocumentHint} onPress={() => router.push(addDocumentPath(lease.id))} variant="secondary">
+            {LEASE_DETAIL_MESSAGES.addDocument}
+          </LoadingButton>
+        ) : null}
+
         {others.length > 0 || canWrite ? (
           <InquirySection title={LEASE_MESSAGES.otherFiles}>
             {others.map(fileRow)}
@@ -119,12 +131,17 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
           </InquirySection>
         ) : null}
   
-        {lease.notes?.trim() ? (
-          <InquirySection title={LEASE_MESSAGES.notes}>
-            <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{lease.notes.trim()}</Text>
-          </InquirySection>
-        ) : null}
-  
+        <InquirySection title={LEASE_DETAIL_MESSAGES.detailsTitle}>
+          {valueCount === 0 ? <Text style={mutedText}>{LEASE_DETAIL_MESSAGES.noDetails}</Text> : <Text style={mutedText}>{detailsCount(valueCount)}</Text>}
+          {valueCount > 0 ? (
+            <LoadingButton accessibilityHint={LEASE_DETAIL_MESSAGES.detailsHint} onPress={() => router.push(`/leases/${lease.id}/details`)} variant="secondary">
+              {LEASE_DETAIL_MESSAGES.viewDetails}
+            </LoadingButton>
+          ) : null}
+        </InquirySection>
+
+        <LeaseNotesSection lease={lease} />
+
         {canWrite && leaseCanHaveSuccessor(lease) ? (
           <LoadingButton onPress={() => router.push(templatesPath({ applicantId: lease.applicant_id, parentLeaseId: lease.id }))} variant="secondary">
             {NEW_LEASE_MESSAGES.newLease}
@@ -138,11 +155,6 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
         {lease.successor_lease_id ? (
           <LoadingButton onPress={() => router.push(`/leases/${lease.successor_lease_id}`)} variant="ghost">
             {LEASE_MESSAGES.newerLease}
-          </LoadingButton>
-        ) : null}
-        {canWrite ? (
-          <LoadingButton accessibilityHint="Opens your browser" onPress={() => void openLink(`${WEB_BASE_URL}/leases/${lease.id}`)} variant="secondary">
-            {LEASE_MESSAGES.manageOnWebsite}
           </LoadingButton>
         ) : null}
         {canWrite ? (

@@ -1,6 +1,6 @@
 import { ArrowLeft, Plus } from "lucide-react";
 import { Button, LoadingButton } from "@platform/ui";
-import { PREFILL_PROVENANCE_LABELS } from "@/shared/lib/lease-labels";
+import { prefillProvenanceLabel } from "@mybookkeeper/api-client/utils/leasePrefill";
 import type { SignedLeaseTemplatePrefillItem } from "@mybookkeeper/api-client/types/lease/signed-lease-template-prefill";
 
 export interface LeaseAddTemplateValuesStepProps {
@@ -18,12 +18,6 @@ function inputTypeAttr(t: string): string {
   if (t === "email") return "email";
   if (t === "phone") return "tel";
   return "text";
-}
-
-function provenanceLabelFor(item: SignedLeaseTemplatePrefillItem): string | null {
-  if (item.is_from_existing_values) return "saved on lease";
-  if (!item.provenance) return null;
-  return PREFILL_PROVENANCE_LABELS[item.provenance] ?? null;
 }
 
 /**
@@ -56,7 +50,7 @@ export default function LeaseAddTemplateValuesStep({
         >
           {items.map((item) => {
             const value = values[item.key] ?? "";
-            const provenanceLabel = provenanceLabelFor(item);
+            const provenanceLabel = prefillProvenanceLabel(item);
             return (
               <li key={item.key} className="flex flex-col gap-1">
                 <label

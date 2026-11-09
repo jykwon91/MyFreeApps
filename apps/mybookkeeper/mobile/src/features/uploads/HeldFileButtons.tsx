@@ -4,7 +4,7 @@ import { Text } from "react-native";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
 import type { FileForUpload } from "../../types/FileForUpload";
 import { chooseHeldFile, chooseHeldPhoto, takeHeldPhoto } from "./pickHeldFile";
-import type { HeldFilePick } from "./useHeldFile";
+import type { HeldFilePick } from "./useHeldFiles";
 
 type PickSource = "file" | "camera" | "library";
 

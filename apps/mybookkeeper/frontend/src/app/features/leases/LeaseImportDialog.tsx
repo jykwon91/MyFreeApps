@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
+import { LEASE_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/leaseLabels";
 import { leaseImportForm } from "@/shared/lib/lease-upload-form";
 import { useImportSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 
@@ -35,7 +36,7 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isValid = applicantId.trim() !== "" && files.length > 0;
-  const notesRemaining = 2000 - notes.length;
+  const notesRemaining = LEASE_NOTES_MAX_LENGTH - notes.length;
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(e.target.files ?? []);
@@ -207,7 +208,7 @@ export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
                 id="import-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                maxLength={2000}
+                maxLength={LEASE_NOTES_MAX_LENGTH}
                 rows={3}
                 placeholder="Any context about this lease — signing date, source, etc."
                 className="w-full px-3 py-2 text-sm border rounded-md"

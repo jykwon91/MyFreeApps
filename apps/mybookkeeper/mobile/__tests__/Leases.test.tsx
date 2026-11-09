@@ -1,16 +1,19 @@
 import { LEASE_PAGE_SIZE } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
+import { signedLeasesApi } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import * as Sharing from "expo-sharing";
 import { Linking } from "react-native";
 import { Provider } from "react-redux";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
+import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { leaseCountdown, leaseTerm, sortLeaseFiles } from "../src/features/leases/leaseDisplay";
 import LeaseDetailScreen from "../src/features/leases/LeaseDetailScreen";
+import LeaseValuesScreen from "../src/features/leases/LeaseValuesScreen";
 import LeasesScreen from "../src/features/leases/LeasesScreen";
 import TenantLeases from "../src/features/leases/TenantLeases";
 import MoreRow from "../src/features/more/MoreRow";
@@ -184,14 +187,14 @@ describe("leases", () => {
       expect(leaseTerm(null, null)).toBe("No dates yet");
     });
 
-    it("picks the newest signed copy and leaves receipts out", () => {
+    it("picks the newest signed copy and keeps receipts with the other files", () => {
       const older = aFile({ id: "old", uploaded_at: "2026-01-01T00:00:00Z" });
       const newer = aFile({ id: "new", uploaded_at: "2026-03-01T00:00:00Z" });
       const notice = aFile({ id: "notice", kind: "notice" });
       const receipt = aFile({ id: "receipt", kind: "rent_receipt" });
       const { signedCopy, others } = sortLeaseFiles([older, receipt, notice, newer]);
       expect(signedCopy?.id).toBe("new");
-      expect(others.map((file) => file.id)).toEqual(["notice", "old"]);
+      expect(others.map((file) => file.id)).toEqual(["receipt", "notice", "old"]);
     });
   });
 
@@ -250,6 +253,22 @@ describe("leases", () => {
       server.listFailure = null;
       await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
       expect(await screen.findByText("Dana Reed")).toBeTruthy();
+    });
+
+    it("offers writers a way to import a signed lease", async () => {
+      startServer([aLease()]);
+      await renderIn(<LeasesScreen />);
+      await fireEvent.press(await screen.findByRole("button", { name: "Import a signed lease" }));
+      expect(mockPush).toHaveBeenCalledWith("/leases/import");
+    });
+
+    it("doesn't offer viewers the import", async () => {
+      const server = startServer([aLease()]);
+      server.role = "viewer";
+      await renderIn(<LeasesScreen />);
+      await screen.findByText("Dana Reed");
+      await waitFor(() => expect(server.requests.some((request) => request.url === "/organizations")).toBe(true));
+      expect(screen.queryByRole("button", { name: "Import a signed lease" })).toBeNull();
     });
 
     it("loads the next page", async () => {
@@ -343,12 +362,13 @@ describe("leases", () => {
       expect(mockPush).toHaveBeenCalledWith("/leases/l9");
     });
 
-    it("sends people who can write to the website", async () => {
+    it("no longer sends people to the website to manage a lease", async () => {
       startServer([aLease()]);
       const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
       await renderIn(<LeaseDetailScreen id="l1" />);
-      await fireEvent.press(await screen.findByRole("button", { name: "Manage on the website" }));
-      expect(openURL).toHaveBeenCalledWith(expect.stringContaining("/leases/l1"));
+      await screen.findByRole("button", { name: "Add a document" });
+      expect(screen.queryByRole("button", { name: "Manage on the website" })).toBeNull();
+      expect(openURL).not.toHaveBeenCalled();
     });
 
     it("offers viewers no way to manage it", async () => {
@@ -357,7 +377,8 @@ describe("leases", () => {
       await renderIn(<LeaseDetailScreen id="l1" />);
       await screen.findByText("March 1, 2026 to February 28, 2099");
       await waitFor(() => expect(server.requests.some((request) => request.url === "/organizations")).toBe(true));
-      expect(screen.queryByRole("button", { name: "Manage on the website" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Add a document" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Add notes" })).toBeNull();
     });
 
     it("explains a deleted lease", async () => {
@@ -426,6 +447,64 @@ describe("leases", () => {
       await renderIn(<MoreRow item={{ label: "Vendors", webPath: "/vendors" }} />);
       await fireEvent.press(screen.getByRole("link", { name: "Vendors" }));
       expect(openURL).toHaveBeenCalledWith(expect.stringContaining("/vendors"));
+    });
+  });
+
+  describe("the values page", () => {
+    it("lists every value, spelling out keys and showing structured and empty ones", async () => {
+      startServer([aLease({ values: { tenant_name: "Dana Reed", pets: { dog: 1 }, deposit: null, "[PHONE]": "555-0100" } })]);
+      await renderIn(<LeaseValuesScreen id="l1" />);
+      expect(await screen.findByText("Tenant name")).toBeTruthy();
+      expect(screen.getByText("Dana Reed")).toBeTruthy();
+      expect(screen.getByText("Deposit")).toBeTruthy();
+      expect(screen.getByText("[PHONE]")).toBeTruthy();
+      expect(screen.getByText("555-0100")).toBeTruthy();
+      expect(screen.getByText(/"dog"/)).toBeTruthy();
+    });
+
+    it("says so when nothing is filled in", async () => {
+      startServer([aLease({ values: {} })]);
+      await renderIn(<LeaseValuesScreen id="l1" />);
+      expect(await screen.findByText("No values are filled in on this lease.")).toBeTruthy();
+    });
+
+    it("shows a skeleton while it loads", async () => {
+      startServer([aLease()]);
+      const answer = api.defaults.adapter as AxiosAdapter;
+      api.defaults.adapter = (config) => (config.url === "/signed-leases/l1" ? new Promise(() => undefined) : answer(config));
+      await renderIn(<LeaseValuesScreen id="l1" />);
+      expect(screen.getByLabelText("Loading this lease's details")).toBeTruthy();
+    });
+
+    it("explains a deleted lease", async () => {
+      startServer([]);
+      await renderIn(<LeaseValuesScreen id="gone" />);
+      expect(await screen.findByText("That lease is gone")).toBeTruthy();
+      await fireEvent.press(screen.getByRole("button", { name: "Go back" }));
+      expect(mockBack).toHaveBeenCalled();
+    });
+
+    it("doesn't call a failed load empty, and tries again", async () => {
+      const server = startServer([aLease()]);
+      server.offline = true;
+      await renderIn(<LeaseValuesScreen id="l1" />);
+      expect(await screen.findByRole("button", { name: "Try again" })).toBeTruthy();
+      expect(screen.queryByText("No values are filled in on this lease.")).toBeNull();
+      server.offline = false;
+      await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+      expect(await screen.findByText("[PHONE]")).toBeTruthy();
+    });
+
+    it("keeps showing what it loaded, with a banner, when the connection drops", async () => {
+      const server = startServer([aLease()]);
+      await renderIn(<LeaseValuesScreen id="l1" />);
+      await screen.findByText("[PHONE]");
+      server.offline = true;
+      await act(async () => {
+        await store.dispatch(signedLeasesApi.endpoints.getSignedLeaseById.initiate("l1", { forceRefetch: true }));
+      });
+      expect(await screen.findByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
+      expect(screen.getByText("[PHONE]")).toBeTruthy();
     });
   });
 });

@@ -1,11 +1,12 @@
-import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
 import { FormField, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { PLACEHOLDER_KEYBOARDS } from "../../constants/newLease";
 import OptionalDateField from "../shell/OptionalDateField";
 
 interface PlaceholderFieldProps {
-  placeholder: LeaseTemplatePlaceholder;
+  label: string;
+  inputType: string;
+  required: boolean;
   value: string;
   caption: string | null;
   error?: string;
@@ -13,9 +14,8 @@ interface PlaceholderFieldProps {
   onChange: (value: string) => void;
 }
 
-export default function PlaceholderField({ placeholder, value, caption, error, isDisabled, onChange }: PlaceholderFieldProps) {
+export default function PlaceholderField({ label, inputType: type, required, value, caption, error, isDisabled, onChange }: PlaceholderFieldProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const { display_label: label, input_type: type, required } = placeholder;
   return (
     <View pointerEvents={isDisabled ? "none" : "auto"} style={{ gap: spacing.xs }}>
       {type === "date" ? (

@@ -153,14 +153,14 @@ describe("changing a lease's status", () => {
   it.each(["ended", "terminated"] as const)("has nothing to change once %s", async (status) => {
     startServer(status);
     await renderScreen();
-    await waitFor(() => expect(screen.getByRole("button", { name: "Manage on the website" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Add a document" })).toBeTruthy());
     expect(screen.queryByRole("button", CHANGE)).toBeNull();
   });
 
   it("leaves a draft for the website, where its document gets generated", async () => {
     startServer("draft");
     await renderScreen();
-    await waitFor(() => expect(screen.getByRole("button", { name: "Manage on the website" })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Add a document" })).toBeTruthy());
     expect(screen.queryByRole("button", CHANGE)).toBeNull();
   });
 

@@ -3,6 +3,7 @@ import { Banner, EmptyState, LoadingButton, SegmentedControl, useRefresh, useThe
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
+import { LEASE_IMPORT_MESSAGES } from "../../constants/leaseImport";
 import { LEASE_FILTERS, LEASE_MESSAGES } from "../../constants/leases";
 import { NEW_LEASE_MESSAGES } from "../../constants/newLease";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
@@ -70,6 +71,7 @@ export default function LeasesScreen() {
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
           {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
           {canWrite ? <LoadingButton onPress={() => router.push(templatesPath())} variant="secondary">{NEW_LEASE_MESSAGES.newLease}</LoadingButton> : null}
+          {canWrite ? <LoadingButton onPress={() => router.push("/leases/import")} variant="secondary">{LEASE_IMPORT_MESSAGES.importLease}</LoadingButton> : null}
           <SegmentedControl accessibilityLabel={LEASE_MESSAGES.filterLabel} onChange={setFilter} segments={LEASE_FILTERS} value={filter} />
         </View>
       }

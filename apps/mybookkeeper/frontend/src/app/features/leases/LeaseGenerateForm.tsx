@@ -7,6 +7,7 @@ import { useGetGenerateDefaultsQuery } from "@/shared/store/leaseTemplatesApi";
 import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
 import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
 import type { PlaceholderProvenance } from "@mybookkeeper/api-client/types/lease/placeholder-provenance";
+import { isAskedPlaceholder } from "@mybookkeeper/api-client/utils/leasePlaceholders";
 import PlaceholderInput from "@/app/features/leases/PlaceholderInput";
 
 export interface LeaseGenerateFormProps {
@@ -107,11 +108,7 @@ export default function LeaseGenerateForm({
     if (isMulti) {
       if (!multiDefaults) return [];
       return multiDefaults.placeholders
-        .filter(
-          (m) =>
-            m.placeholder.input_type !== "signature" &&
-            m.placeholder.input_type !== "computed",
-        )
+        .filter((m) => isAskedPlaceholder(m.placeholder))
         .map((m) => ({
           placeholder: m.placeholder,
           templateIds: m.template_ids,
@@ -119,9 +116,7 @@ export default function LeaseGenerateForm({
     }
     if (!template) return [];
     return template.placeholders
-      .filter(
-        (p) => p.input_type !== "signature" && p.input_type !== "computed",
-      )
+      .filter(isAskedPlaceholder)
       .map((p) => ({ placeholder: p, templateIds: [template.id] }));
   }, [isMulti, multiDefaults, template]);
 
@@ -143,11 +138,7 @@ export default function LeaseGenerateForm({
     if (isMulti) {
       if (!multiDefaults) return;
       const flattened = multiDefaults.placeholders
-        .filter(
-          (m) =>
-            m.placeholder.input_type !== "signature" &&
-            m.placeholder.input_type !== "computed",
-        )
+        .filter((m) => isAskedPlaceholder(m.placeholder))
         .map((m) => ({
           key: m.placeholder.key,
           value: m.value,
@@ -192,11 +183,7 @@ export default function LeaseGenerateForm({
     if (isMulti && multiDefaults) {
       applyDefaults(
         multiDefaults.placeholders
-          .filter(
-            (m) =>
-              m.placeholder.input_type !== "signature" &&
-              m.placeholder.input_type !== "computed",
-          )
+          .filter((m) => isAskedPlaceholder(m.placeholder))
           .map((m) => ({
             key: m.placeholder.key,
             value: m.value,

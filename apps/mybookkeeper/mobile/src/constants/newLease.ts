@@ -1,4 +1,3 @@
-import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
 import type { PlaceholderProvenance } from "@mybookkeeper/api-client/types/lease/placeholder-provenance";
 import type { KeyboardTypeOptions } from "react-native";
 
@@ -7,7 +6,8 @@ export const NEW_LEASE_SKELETON_FIELDS = ["a", "b", "c", "d", "e"];
 /** Route names of the flow's screens, for leaving all of them at once. */
 export const NEW_LEASE_SCREEN_PREFIX = "leases/new/";
 
-export const PLACEHOLDER_KEYBOARDS: Partial<Record<LeasePlaceholderInputType, KeyboardTypeOptions>> = {
+/** Keyed by the input type as the server names it; one it doesn't know gets the plain keyboard. */
+export const PLACEHOLDER_KEYBOARDS: Readonly<Record<string, KeyboardTypeOptions | undefined>> = {
   email: "email-address",
   phone: "phone-pad",
   number: "decimal-pad",
@@ -41,6 +41,8 @@ export const NEW_LEASE_MESSAGES = {
   followsEarlier: "I'm making a new lease to follow the earlier one.",
   nothingToFill: "There's nothing for me to fill in. I'll make the draft as is.",
   required: "I need this one.",
+  notANumber: "That isn't a number I can read. Use digits, like 1500 or 1,500.50.",
+  workedOut: "Worked out when the files are made:",
   needMoreAnswers: "I need a few more answers.",
   createDraft: "Create draft lease",
   creatingDraft: "Creating draft…",

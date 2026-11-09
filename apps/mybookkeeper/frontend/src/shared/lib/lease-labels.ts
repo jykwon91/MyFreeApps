@@ -32,21 +32,6 @@ export const LEASE_PLACEHOLDER_INPUT_TYPE_LABELS: Record<
   signature: "Signature",
 };
 
-/**
- * Human-friendly labels for the ``provenance`` field on
- * ``SignedLeaseTemplatePrefillItem``. Mirrors the backend
- * ``ProvenanceLabel`` type in ``default_source_resolver.py``. Unknown
- * values fall through to ``null`` and no chip is rendered.
- */
-export const PREFILL_PROVENANCE_LABELS: Record<string, string> = {
-  applicant: "from applicant",
-  inquiry: "from inquiry",
-  lease: "from lease",
-  property: "from property",
-  user: "from your profile",
-  today: "today's date",
-};
-
 export const LEASE_PLACEHOLDER_INPUT_TYPES: readonly LeasePlaceholderInputType[] = [
   "text",
   "email",

@@ -3,7 +3,9 @@ import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
+import { leaseValueText } from "@mybookkeeper/api-client/utils/leasePlaceholderValue";
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { LEASE_DETAIL_MESSAGES, madeOn, signedOn } from "../../constants/leaseDetails";
 import { LEASE_MESSAGES } from "../../constants/leases";
 
 const DAY_MS = 86_400_000;
@@ -78,19 +80,37 @@ export function leaseFileLine(file: SignedLeaseAttachment): string {
   return `${LEASE_ATTACHMENT_KIND_LABELS[file.kind]}, ${formatLongDate(file.uploaded_at)}`;
 }
 
-/** The newest signed copy, then everything else a host would open. Rent receipts have their own home. */
 /** The same kinds the server attaches, so the button never promises an empty email. */
 export function leaseHasEmailableFile(files: readonly SignedLeaseAttachment[]): boolean {
   return files.some((file) => file.kind === "rendered_original" || file.kind === "signed_lease");
 }
 
+/** The newest signed copy, then every other file, newest first. */
 export function sortLeaseFiles(files: readonly SignedLeaseAttachment[]): {
   signedCopy: SignedLeaseAttachment | null;
   others: SignedLeaseAttachment[];
 } {
-  const newestFirst = files
-    .filter((file) => file.kind !== "rent_receipt")
-    .sort((a, b) => b.uploaded_at.localeCompare(a.uploaded_at));
+  const newestFirst = [...files].sort((a, b) => b.uploaded_at.localeCompare(a.uploaded_at));
   const signedCopy = newestFirst.find((file) => file.kind === "signed_lease") ?? null;
   return { signedCopy, others: newestFirst.filter((file) => file !== signedCopy) };
+}
+
+export function leaseKindLabel(kind: SignedLeaseDetail["kind"]): string {
+  return kind === "imported" ? LEASE_DETAIL_MESSAGES.kindImported : LEASE_DETAIL_MESSAGES.kindGenerated;
+}
+
+/** When it was made and signed, for the lines that have a date. */
+export function leaseDatesLine(lease: Pick<SignedLeaseDetail, "generated_at" | "signed_at">): string | null {
+  const parts = [lease.generated_at ? madeOn(formatLongDate(lease.generated_at)) : null, lease.signed_at ? signedOn(formatLongDate(lease.signed_at)) : null];
+  return parts.filter(Boolean).join(" · ") || null;
+}
+
+/** "tenant_name" reads as "Tenant name". */
+export function leaseValueLabel(key: string): string {
+  const words = key.replace(/[_-]+/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+export function leaseValueRows(values: SignedLeaseDetail["values"]): { key: string; label: string; text: string }[] {
+  return Object.entries(values).map(([key, value]) => ({ key, label: leaseValueLabel(key), text: leaseValueText(value) }));
 }

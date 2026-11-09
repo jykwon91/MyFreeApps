@@ -9,6 +9,7 @@ import {
 } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import type { SignedLeaseTemplatePrefillItem } from "@mybookkeeper/api-client/types/lease/signed-lease-template-prefill";
+import { missingPrefillLabels } from "@mybookkeeper/api-client/utils/leasePrefill";
 import LeaseAddTemplatePickStep from "./LeaseAddTemplatePickStep";
 import LeaseAddTemplateValuesStep from "./LeaseAddTemplateValuesStep";
 
@@ -99,10 +100,7 @@ export default function LeaseAddTemplateModal({
   async function handleGenerate() {
     if (!valuesState) return;
 
-    const missingRequired = valuesState.items
-      .filter((it) => it.required && it.input_type !== "signature")
-      .filter((it) => (valuesState.values[it.key] ?? "").trim() === "")
-      .map((it) => it.display_label);
+    const missingRequired = missingPrefillLabels(valuesState.items, valuesState.values);
     if (missingRequired.length > 0) {
       showError(
         `Please fill in: ${missingRequired.slice(0, 3).join(", ")}${

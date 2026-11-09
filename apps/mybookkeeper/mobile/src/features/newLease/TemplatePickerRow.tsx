@@ -9,9 +9,11 @@ interface TemplatePickerRowProps {
   /** Where it falls in the pick order, from 1. Null when it isn't picked. */
   position: number | null;
   onPress: () => void;
+  /** A line under the counts, such as a warning that picking it makes it again. */
+  note?: string;
 }
 
-export default function TemplatePickerRow({ template, position, onPress }: TemplatePickerRowProps) {
+export default function TemplatePickerRow({ template, position, onPress, note }: TemplatePickerRowProps) {
   const { colors, spacing, fontSize } = useTheme();
   const isSelected = position !== null;
   return (
@@ -39,6 +41,7 @@ export default function TemplatePickerRow({ template, position, onPress }: Templ
         <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {templateCountsLine(template)}
         </Text>
+        {note ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{note}</Text> : null}
       </View>
       {isSelected ? <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.primary }}>{selectedLabel(position)}</Text> : null}
     </Pressable>
