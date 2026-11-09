@@ -12,7 +12,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AddUtilityPlanDialog from "@/app/features/utility/AddUtilityPlanDialog";
 import { showError } from "@platform/ui";
-import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
+import type { UtilityPlanDraft } from "@mybookkeeper/api-client/types/utility/utility-plan-draft";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ const mockCreate = vi.fn();
 const mockExtract = vi.fn();
 const mockExtractUpload = vi.fn();
 
-vi.mock("@/shared/store/utilityPlansApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
   useCreateUtilityPlanMutation: vi.fn(() => [mockCreate, { isLoading: false }]),
   useExtractUtilityPlanMutation: vi.fn(() => [mockExtract, { isLoading: false }]),
   useExtractUtilityPlanFromUploadMutation: vi.fn(() => [

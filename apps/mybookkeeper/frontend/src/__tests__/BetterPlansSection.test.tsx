@@ -16,9 +16,9 @@ import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import BetterPlansSection from "@/app/features/utility/BetterPlansSection";
-import type { UtilityOffer } from "@/shared/types/utility/utility-offer";
-import type { UtilityOfferGroup } from "@/shared/types/utility/utility-offer-group";
-import type { UtilityOfferSearchResponse } from "@/shared/types/utility/utility-offer-search-response";
+import type { UtilityOffer } from "@mybookkeeper/api-client/types/utility/utility-offer";
+import type { UtilityOfferGroup } from "@mybookkeeper/api-client/types/utility/utility-offer-group";
+import type { UtilityOfferSearchResponse } from "@mybookkeeper/api-client/types/utility/utility-offer-search-response";
 
 const mockSearch = vi.fn();
 let mockData: UtilityOfferSearchResponse | undefined;
@@ -26,7 +26,7 @@ let mockFetching = false;
 let mockError = false;
 let mockUninitialized = true;
 
-vi.mock("@/shared/store/utilityOffersApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/utilityOffersApi", () => ({
   useLazyFindBetterUtilityPlansQuery: () => [
     mockSearch,
     {

@@ -1,4 +1,4 @@
-import type { StatDirection } from "@/shared/types/utility/stat-direction";
+import type { StatDirection } from "@mybookkeeper/api-client/types/utility/stat-direction";
 
 export interface StatDeltaProps {
   direction: StatDirection;

@@ -1,5 +1,5 @@
 import DocumentDraftNotices from "@/app/features/documents/DocumentDraftNotices";
-import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
+import type { UtilityPlanDraft } from "@mybookkeeper/api-client/types/utility/utility-plan-draft";
 
 export interface UtilityPlanDraftNoticesProps {
   draft: UtilityPlanDraft;

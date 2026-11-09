@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
-import { EMPTY_UTILITY_PLAN_FORM } from "@/shared/lib/utility-plan-form";
-import type { UtilityPlanFormValues } from "@/shared/types/utility/utility-plan-form-values";
+import { EMPTY_UTILITY_PLAN_FORM } from "@mybookkeeper/api-client/utils/utilityPlanForm";
+import type { UtilityPlanFormValues } from "@mybookkeeper/api-client/types/utility/utility-plan-form-values";
 
 export interface UtilityPlanFormState {
   values: UtilityPlanFormValues;

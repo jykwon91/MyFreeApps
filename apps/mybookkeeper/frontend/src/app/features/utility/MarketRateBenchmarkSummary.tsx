@@ -1,29 +1,10 @@
-import {
-  formatCents,
-  formatCentsPerKwh,
-  formatPlanDate,
-} from "@mybookkeeper/api-client/utils/utilityPlanFormat";
-import { useGetMarketRateBenchmarksQuery } from "@/shared/store/marketRateBenchmarksApi";
+import { formatPlanDate } from "@mybookkeeper/api-client/utils/utilityPlanFormat";
+import { describeBenchmarkFigure } from "@mybookkeeper/api-client/utils/marketRateForm";
+import { useGetMarketRateBenchmarksQuery } from "@mybookkeeper/api-client/store/marketRateBenchmarksApi";
 import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/types/utility/utility-service-type";
-import type { MarketRateBenchmark } from "@/shared/types/utility/market-rate-benchmark";
 
 export interface MarketRateBenchmarkSummaryProps {
   onEdit: () => void;
-}
-
-/**
- * Read from the column the service type is priced in, not from whichever one
- * happens to be populated — the comparison picks its figure the same way, and
- * two sides disagreeing about the unit is how a monthly amount ends up being
- * displayed as a per-kWh rate.
- */
-function describeFigure(benchmark: MarketRateBenchmark): string {
-  if (benchmark.service_type === "internet") {
-    return benchmark.monthly_cents === null
-      ? "—"
-      : `${formatCents(benchmark.monthly_cents)}/mo`;
-  }
-  return formatCentsPerKwh(benchmark.rate_cents_per_kwh);
 }
 
 /**
@@ -79,7 +60,7 @@ export default function MarketRateBenchmarkSummary({
         {benchmarks.map((benchmark) => (
           <li key={benchmark.id} data-testid={`market-rate-${benchmark.service_type}`}>
             {UTILITY_SERVICE_TYPE_LABELS[benchmark.service_type]}:{" "}
-            {describeFigure(benchmark)}
+            {describeBenchmarkFigure(benchmark)}
             {benchmark.source ? ` · ${benchmark.source}` : ""} · seen{" "}
             {formatPlanDate(benchmark.observed_on)}
             {benchmark.is_stale ? (

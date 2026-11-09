@@ -4,9 +4,9 @@ import OfferStatGrid from "@/app/features/utility/OfferStatGrid";
 import OfferVerdictBadge from "@/app/features/utility/OfferVerdictBadge";
 import SavingHeadline from "@/app/features/utility/SavingHeadline";
 import TierProviderPicker from "@/app/features/utility/TierProviderPicker";
-import { buildOfferStats, offerVerdict } from "@/shared/lib/offer-stats";
-import type { OfferTier } from "@/shared/types/utility/offer-tier";
-import type { UtilityOfferGroup } from "@/shared/types/utility/utility-offer-group";
+import { buildOfferStats, offerVerdict } from "@mybookkeeper/api-client/utils/offerStats";
+import type { OfferTier } from "@mybookkeeper/api-client/types/utility/offer-tier";
+import type { UtilityOfferGroup } from "@mybookkeeper/api-client/types/utility/utility-offer-group";
 
 export interface OfferTierCardProps {
   tier: OfferTier;

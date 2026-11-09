@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { FormField, showError, showSuccess } from "@platform/ui";
-import { applyDraftToForm } from "@/shared/lib/utility-plan-draft";
+import { applyDraftToForm } from "@mybookkeeper/api-client/utils/utilityPlanDraft";
 import {
   toUtilityPlanFields,
   validateUtilityPlanForm,
-} from "@/shared/lib/utility-plan-form";
+} from "@mybookkeeper/api-client/utils/utilityPlanForm";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { useCreateUtilityPlanMutation } from "@/shared/store/utilityPlansApi";
-import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
+import { useCreateUtilityPlanMutation } from "@mybookkeeper/api-client/store/utilityPlansApi";
+import type { UtilityPlanDraft } from "@mybookkeeper/api-client/types/utility/utility-plan-draft";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import UtilityPlanDocumentReader from "./UtilityPlanDocumentReader";
 import UtilityPlanDraftNotices from "./UtilityPlanDraftNotices";

@@ -11,7 +11,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import TimeOfUseOffers from "@/app/features/utility/TimeOfUseOffers";
-import type { UtilityOffer } from "@/shared/types/utility/utility-offer";
+import type { UtilityOffer } from "@mybookkeeper/api-client/types/utility/utility-offer";
 
 const PROPERTY_ID = "11111111-1111-1111-1111-111111111111";
 

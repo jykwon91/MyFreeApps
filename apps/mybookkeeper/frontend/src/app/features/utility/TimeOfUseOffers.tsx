@@ -1,5 +1,5 @@
 import TimeOfUseOfferRow from "@/app/features/utility/TimeOfUseOfferRow";
-import type { UtilityOffer } from "@/shared/types/utility/utility-offer";
+import type { UtilityOffer } from "@mybookkeeper/api-client/types/utility/utility-offer";
 
 export interface TimeOfUseOffersProps {
   offers: UtilityOffer[];

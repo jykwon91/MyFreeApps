@@ -35,7 +35,7 @@ export function planPriceLine(plan: Pick<UtilityPlanSummary, "rate_type" | "avg_
  * uses its clock and ages while the app stays open, so it could disagree with
  * the countdown shown beside it.
  */
-function renewalStatusOn(plan: Pick<UtilityPlanSummary, "rate_type" | "term_end_date">, todayIso: string): UtilityPlanRenewalStatus {
+export function renewalStatusOn(plan: Pick<UtilityPlanSummary, "rate_type" | "term_end_date">, todayIso: string): UtilityPlanRenewalStatus {
   if (plan.rate_type === "regulated" || !plan.term_end_date) return "not_applicable";
   const days = daysBetween(todayIso, plan.term_end_date);
   if (days < 0) return "expired";

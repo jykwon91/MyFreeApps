@@ -1,29 +1,31 @@
 import { useGetUtilityPlanByIdQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { UTILITY_PLAN_MESSAGES } from "../../constants/utilityPlans";
 import { useTodayIso } from "../../lib/useTodayIso";
 import InquiryChip from "../inquiries/InquiryChip";
-import { useOpenLink } from "../inquiries/useOpenLink";
+import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import HiddenNumber from "../shell/HiddenNumber";
 import TransactionFact from "../transactions/TransactionFact";
+import { useCanWrite } from "../workspace/useCanWrite";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { planChip, planFacts, planPriceLine, planProvider, planTermNote, planTitle } from "./utilityPlanDisplay";
+import UtilityPlanActions from "./UtilityPlanActions";
 import UtilityPlanDetailSkeleton from "./UtilityPlanDetailSkeleton";
 
 export default function UtilityPlanDetailScreen({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
-  const openLink = useOpenLink();
+  const canWrite = useCanWrite();
+  const { isLeaving, leave } = useLeaveWhenSaved("/utility-plans");
   const todayIso = useTodayIso();
   const { currentData: plan, error, isFetching, refetch } = useGetUtilityPlanByIdQuery(id);
   const { refresh, refreshControl } = useRefresh(async () => {
     await refetch();
   }, error);
 
-  if (!plan && (isFetching || !error)) return <UtilityPlanDetailSkeleton />;
+  if (isLeaving || (!plan && (isFetching || !error))) return <UtilityPlanDetailSkeleton />;
   if (!plan) {
     const isGone = httpStatus(error) === 404;
     return (
@@ -58,12 +60,7 @@ export default function UtilityPlanDetailScreen({ id }: { id: string }) {
         {accountNumber ? <HiddenNumber label={UTILITY_PLAN_MESSAGES.accountNumber} value={accountNumber} /> : null}
         {plan.notes ? <TransactionFact label={UTILITY_PLAN_MESSAGES.notes} value={plan.notes} /> : null}
       </View>
-      <View style={{ gap: spacing.sm }}>
-        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{UTILITY_PLAN_MESSAGES.manageOnWebsite}</Text>
-        <LoadingButton onPress={() => void openLink(`${WEB_BASE_URL}/utility-plans`)} variant="ghost">
-          {UTILITY_PLAN_MESSAGES.openWebsite}
-        </LoadingButton>
-      </View>
+      {canWrite ? <UtilityPlanActions onRemoved={leave} planId={plan.id} title={planTitle(plan)} /> : null}
     </ScrollView>
   );
 }

@@ -19,7 +19,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import UtilityPlanDocumentReader from "@/app/features/utility/UtilityPlanDocumentReader";
 import { showError } from "@platform/ui";
-import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
+import type { UtilityPlanDraft } from "@mybookkeeper/api-client/types/utility/utility-plan-draft";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -30,7 +30,7 @@ const mockUseGetDocuments = vi.fn();
 /** Mutable so a test can hold the read open and inspect the in-flight state. */
 const uploadState = vi.hoisted(() => ({ isLoading: false }));
 
-vi.mock("@/shared/store/utilityPlansApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/utilityPlansApi", () => ({
   useExtractUtilityPlanMutation: vi.fn(() => [mockExtract, { isLoading: false }]),
   useExtractUtilityPlanFromUploadMutation: vi.fn(() => [mockExtractUpload, uploadState]),
 }));
@@ -80,7 +80,8 @@ describe("UtilityPlanDocumentReader — reading a file off the device", () => {
     await pickFile(user);
 
     await waitFor(() => expect(onRead).toHaveBeenCalledWith(DRAFT));
-    expect(mockExtractUpload).toHaveBeenCalledWith(EFL);
+    const sent = mockExtractUpload.mock.calls[0][0] as FormData;
+    expect(sent.get("file")).toBe(EFL);
     expect(mockExtract).not.toHaveBeenCalled();
   });
 

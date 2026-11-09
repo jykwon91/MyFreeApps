@@ -2,7 +2,7 @@ import { MORTGAGE_FORM_MESSAGES, MORTGAGE_STATEMENT_MESSAGES } from "../src/cons
 import { MORTGAGE_MESSAGES } from "../src/constants/mortgages";
 import { mortgageRemoveFailure } from "../src/features/mortgages/mortgageRemoveFailure";
 import { mortgageWriteFailure } from "../src/features/mortgages/mortgageWriteFailure";
-import { statementReadFailure } from "../src/features/mortgages/statementReadFailure";
+import { documentReadFailure } from "../src/features/documentReader/documentReadFailure";
 
 function failed(status?: number, detail: unknown = "raw server text") {
   return status === undefined ? { error: "Network Error" } : { status, data: { detail } };
@@ -28,7 +28,7 @@ describe("mortgageWriteFailure", () => {
   });
 });
 
-describe("statementReadFailure", () => {
+describe("documentReadFailure", () => {
   it.each([
     [undefined, MORTGAGE_STATEMENT_MESSAGES.lostConnection],
     [403, MORTGAGE_STATEMENT_MESSAGES.viewOnly],
@@ -40,7 +40,7 @@ describe("statementReadFailure", () => {
     [503, MORTGAGE_STATEMENT_MESSAGES.storageDown],
     [500, MORTGAGE_STATEMENT_MESSAGES.somethingWrong],
   ])("status %s", (status, expected) => {
-    expect(statementReadFailure(failed(status))).toBe(expected);
+    expect(documentReadFailure(failed(status), MORTGAGE_STATEMENT_MESSAGES)).toBe(expected);
   });
 });
 

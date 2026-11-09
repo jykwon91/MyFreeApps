@@ -1,5 +1,5 @@
 import StatDelta from "@/app/features/utility/StatDelta";
-import type { OfferStat } from "@/shared/types/utility/offer-stat";
+import type { OfferStat } from "@mybookkeeper/api-client/types/utility/offer-stat";
 
 export interface OfferStatGridProps {
   stats: OfferStat[];

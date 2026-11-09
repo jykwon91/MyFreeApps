@@ -2,7 +2,7 @@ import { useState } from "react";
 import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 import MarketRateBenchmarkForm from "./MarketRateBenchmarkForm";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
-import { useGetMarketRateBenchmarksQuery } from "@/shared/store/marketRateBenchmarksApi";
+import { useGetMarketRateBenchmarksQuery } from "@mybookkeeper/api-client/store/marketRateBenchmarksApi";
 import {
   UTILITY_SERVICE_TYPES,
   UTILITY_SERVICE_TYPE_LABELS,

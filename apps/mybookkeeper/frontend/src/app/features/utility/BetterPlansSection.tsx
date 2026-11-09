@@ -1,7 +1,7 @@
 import { LoadingButton } from "@platform/ui";
 import BetterPlansBody from "@/app/features/utility/BetterPlansBody";
-import { useBetterPlansMode } from "@/app/features/utility/useBetterPlansMode";
-import { useLazyFindBetterUtilityPlansQuery } from "@/shared/store/utilityOffersApi";
+import { betterPlansMode } from "@mybookkeeper/api-client/utils/betterPlansMode";
+import { useLazyFindBetterUtilityPlansQuery } from "@mybookkeeper/api-client/store/utilityOffersApi";
 
 /**
  * "Find a better plan" — the market side of the utility feature.
@@ -15,7 +15,7 @@ export default function BetterPlansSection() {
     useLazyFindBetterUtilityPlansQuery();
 
   const groups = data?.groups ?? [];
-  const mode = useBetterPlansMode({
+  const mode = betterPlansMode({
     hasSearched: !isUninitialized,
     isFetching,
     isError,

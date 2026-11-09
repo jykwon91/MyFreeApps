@@ -5,8 +5,14 @@ import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import {
   useDeleteMarketRateBenchmarkMutation,
   useUpsertMarketRateBenchmarkMutation,
-} from "@/shared/store/marketRateBenchmarksApi";
-import type { MarketRateBenchmark } from "@/shared/types/utility/market-rate-benchmark";
+} from "@mybookkeeper/api-client/store/marketRateBenchmarksApi";
+import type { MarketRateBenchmark } from "@mybookkeeper/api-client/types/utility/market-rate-benchmark";
+import {
+  isFlatService,
+  isMarketRateFigureValid,
+  marketRateToFormValues,
+  toMarketRateUpsert,
+} from "@mybookkeeper/api-client/utils/marketRateForm";
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 
 interface UseMarketRateBenchmarkFormArgs {
@@ -28,26 +34,18 @@ export function useMarketRateBenchmarkForm({
   existing,
   onSaved,
 }: UseMarketRateBenchmarkFormArgs) {
-  const isFlat = serviceType === "internet";
+  const isFlat = isFlatService(serviceType);
+  const initial = marketRateToFormValues(serviceType, existing);
 
-  const [figure, setFigure] = useState(() => {
-    if (!existing) return "";
-    if (isFlat) {
-      return existing.monthly_cents === null
-        ? ""
-        : (existing.monthly_cents / 100).toFixed(2);
-    }
-    return existing.rate_cents_per_kwh ?? "";
-  });
-  const [source, setSource] = useState(existing?.source ?? "");
-  const [observedOn, setObservedOn] = useState(existing?.observed_on ?? localToday());
-  const [notes, setNotes] = useState(existing?.notes ?? "");
+  const [figure, setFigure] = useState(initial.figure);
+  const [source, setSource] = useState(initial.source);
+  const [observedOn, setObservedOn] = useState(initial.observedOn);
+  const [notes, setNotes] = useState(initial.notes);
 
   const [upsert, { isLoading: isSaving }] = useUpsertMarketRateBenchmarkMutation();
   const [remove, { isLoading: isRemoving }] = useDeleteMarketRateBenchmarkMutation();
 
-  const parsedFigure = Number(figure);
-  const isFigureValid = figure.trim() !== "" && Number.isFinite(parsedFigure) && parsedFigure > 0;
+  const isFigureValid = isMarketRateFigureValid(figure);
   const isBusy = isSaving || isRemoving;
   const canSubmit = isFigureValid && observedOn !== "" && !isBusy;
   const canRemove = existing !== undefined && !isBusy;
@@ -58,16 +56,7 @@ export function useMarketRateBenchmarkForm({
     try {
       await upsert({
         serviceType,
-        data: {
-          // Exactly one shape — the other stays absent so the backend's
-          // "provide exactly one" rule is satisfied.
-          ...(isFlat
-            ? { monthly_cents: Math.round(parsedFigure * 100) }
-            : { rate_cents_per_kwh: figure.trim() }),
-          source: source.trim() === "" ? null : source.trim(),
-          observed_on: observedOn,
-          notes: notes.trim() === "" ? null : notes.trim(),
-        },
+        data: toMarketRateUpsert(serviceType, { figure, source, observedOn, notes }),
       }).unwrap();
       showSuccess("Market rate saved.");
       onSaved();

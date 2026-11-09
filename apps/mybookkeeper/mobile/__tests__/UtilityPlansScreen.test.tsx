@@ -4,19 +4,21 @@ import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
-import type { AxiosAdapter } from "axios";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { ReactElement } from "react";
-import { AppState, type AppStateStatus, Linking } from "react-native";
+import { AppState, type AppStateStatus } from "react-native";
 import { Provider } from "react-redux";
-import { WEB_BASE_URL } from "../src/constants/api";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { UTILITY_PLAN_MESSAGES } from "../src/constants/utilityPlans";
 import { planChip, planFacts, planTermNote, sortedPlans } from "../src/features/utilityPlans/utilityPlanDisplay";
 import UtilityPlanDetailScreen from "../src/features/utilityPlans/UtilityPlanDetailScreen";
 import UtilityPlansScreen from "../src/features/utilityPlans/UtilityPlansScreen";
+import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
+import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
+import { aUtilityPlanDetail as aPlan } from "../test-support/aUtilityPlanDetail";
 import { aUtilityPlanSummary } from "../test-support/aUtilityPlanSummary";
+import { startUtilityServer } from "../test-support/utilityPlansServer";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -27,34 +29,6 @@ jest.mock("expo-router", () => ({
 }));
 
 const originalAdapter = api.defaults.adapter;
-
-function aPlan(overrides: Partial<UtilityPlanDetail> = {}): UtilityPlanDetail {
-  return {
-    ...aUtilityPlanSummary(),
-    user_id: "o",
-    organization_id: "o",
-    account_number: "1234564944",
-    energy_charge_cents_per_kwh: "8.5000",
-    tdu_charge_cents_per_kwh: "5.3509",
-    monthly_base_charge_cents: 495,
-    term_months: 12,
-    service_start_date: "2026-01-15",
-    early_termination_fee_cents: 15_000,
-    has_bill_credit: true,
-    bill_credit_amount_cents: 10_000,
-    bill_credit_threshold_kwh: 1000,
-    min_usage_fee_cents: 995,
-    min_usage_threshold_kwh: 500,
-    post_promo_monthly_cents: null,
-    equipment_fee_monthly_cents: null,
-    download_mbps: null,
-    upload_mbps: null,
-    data_cap_gb: null,
-    source_document_id: null,
-    notes: "Autopay on",
-    ...overrides,
-  };
-}
 
 const NOTHING_RECORDED: Partial<UtilityPlanDetail> = {
   account_number: null,
@@ -75,16 +49,7 @@ const NOTHING_RECORDED: Partial<UtilityPlanDetail> = {
 };
 
 function startServer(list: unknown, detail: unknown = aPlan()) {
-  const server = { list, detail };
-  const adapter: AxiosAdapter = async (config) => {
-    const answer = config.url === "/utility-plans" ? server.list : server.detail;
-    if (answer === "hold") return new Promise(() => undefined);
-    if (answer === "fail") return Promise.reject({ response: { status: 500, data: {} }, config, isAxiosError: true });
-    if (answer === "gone") return Promise.reject({ response: { status: 404, data: {} }, config, isAxiosError: true });
-    return { data: answer, status: 200, statusText: "OK", headers: {}, config };
-  };
-  api.defaults.adapter = adapter;
-  return server;
+  return startUtilityServer({ list, detail });
 }
 
 function aPage(items: UtilityPlanSummary[], hasMore = false) {
@@ -100,7 +65,9 @@ async function show(element: ReactElement) {
 }
 
 beforeEach(() => {
+  session.tokenStore.set("token");
   store.dispatch(baseApi.util.resetApiState());
+  store.dispatch(workspaceChosen("w1"));
   mockPush.mockClear();
   mockBack.mockClear();
 });
@@ -232,16 +199,78 @@ describe("UtilityPlansScreen", () => {
   it("says when there are more than it shows", async () => {
     startServer(aPage([aUtilityPlanSummary()], true));
     await show(<UtilityPlansScreen />);
-    await screen.findByText(UTILITY_PLAN_MESSAGES.moreOnWebsite);
+    await screen.findByText(UTILITY_PLAN_MESSAGES.showingFirst);
   });
 
-  it("points to the website when there are none", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("invites a writer to add the first plan", async () => {
     startServer(aPage([]));
     await show(<UtilityPlansScreen />);
     await screen.findByText(UTILITY_PLAN_MESSAGES.noneHeading);
-    await fireEvent.press(screen.getByRole("button", { name: "Open on the website" }));
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/utility-plans`);
+    await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.add }));
+    expect(mockPush).toHaveBeenCalledWith("/utility-plans/new");
+  });
+
+  it("offers a writer Add above a list that already has plans", async () => {
+    startServer(aPage([aUtilityPlanSummary()]));
+    await show(<UtilityPlansScreen />);
+    await screen.findByText("Oak Street · Electricity");
+    await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.add }));
+    expect(mockPush).toHaveBeenCalledWith("/utility-plans/new");
+  });
+
+  it("gives a viewer nothing to add and says why", async () => {
+    startUtilityServer({ role: "viewer", list: aPage([]) });
+    await show(<UtilityPlansScreen />);
+    await screen.findByText(UTILITY_PLAN_MESSAGES.noneViewOnlyBody);
+    expect(screen.queryByRole("button", { name: UTILITY_PLAN_MESSAGES.add })).toBeNull();
+  });
+
+  it("shows what needs attention at a glance and opens each drill-down", async () => {
+    startUtilityServer({
+      list: aPage([aUtilityPlanSummary()]),
+      alerts: { window_days: 45, expired: [], expiring_soon: [], total_needing_attention: 2 },
+      comparison: { material_gap_pct: 10, above_market: [], not_compared: [], total_above_market: 1, has_stale_benchmark: false },
+      benchmarks: [{ id: "b1", service_type: "electricity", rate_cents_per_kwh: "11.0000", monthly_cents: null, source: null, observed_on: "2026-01-01", notes: null, is_stale: false, created_at: "", updated_at: "" }],
+    });
+    await show(<UtilityPlansScreen />);
+    await screen.findByText("Oak Street · Electricity");
+    await waitFor(() => expect(screen.getByRole("button", { name: /^Renewals/ })).toBeTruthy());
+    await fireEvent.press(await screen.findByRole("button", { name: "Renewals, 2" }));
+    expect(mockPush).toHaveBeenLastCalledWith("/utility-plans/renewals");
+    await fireEvent.press(await screen.findByRole("button", { name: "Rate check, 1" }));
+    expect(mockPush).toHaveBeenLastCalledWith("/utility-plans/rate-check");
+    await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.glanceBetterPlans }));
+    expect(mockPush).toHaveBeenLastCalledWith("/utility-plans/better");
+    await fireEvent.press(await screen.findByRole("button", { name: "Market rates, 1" }));
+    expect(mockPush).toHaveBeenLastCalledWith("/utility-plans/market-rates");
+  });
+
+  it("narrows by service from the filter sheet, and says when nothing matches", async () => {
+    startServer(aPage([aUtilityPlanSummary(), aUtilityPlanSummary({ id: "u2", service_type: "water", provider_name: "City" })]));
+    await show(<UtilityPlansScreen />);
+    await screen.findByText("Oak Street · Water");
+    await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.filterButton }));
+    await fireEvent.press(await screen.findByRole("radio", { name: "Water" }));
+    await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.filterDone }));
+    expect(screen.queryByText("Oak Street · Electricity")).toBeNull();
+    expect(screen.getByText("Oak Street · Water")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: `${UTILITY_PLAN_MESSAGES.filterButton}: Water` }));
+    await fireEvent.press(await screen.findByRole("radio", { name: "Internet" }));
+    await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.filterDone }));
+    await screen.findByText(UTILITY_PLAN_MESSAGES.noMatches);
+    await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.filterClear }));
+    await screen.findByText("Oak Street · Electricity");
+  });
+
+  it("keeps only the plans that need renewing when asked", async () => {
+    startServer(aPage([aUtilityPlanSummary(), aUtilityPlanSummary({ id: "u2", service_type: "water", term_end_date: "2000-01-01", renewal_status: "expired" })]));
+    await show(<UtilityPlansScreen />);
+    await screen.findByText("Oak Street · Water");
+    await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.filterButton }));
+    await fireEvent(await screen.findByLabelText(UTILITY_PLAN_MESSAGES.needsRenewing), "valueChange", true);
+    await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.filterDone }));
+    expect(screen.queryByText("Oak Street · Electricity")).toBeNull();
+    expect(screen.getByText("Oak Street · Water")).toBeTruthy();
   });
 
   it("offers a retry when the first load fails, and recovers", async () => {
