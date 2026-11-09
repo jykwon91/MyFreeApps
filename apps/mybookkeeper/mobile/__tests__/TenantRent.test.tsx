@@ -6,10 +6,10 @@ import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { router } from "expo-router";
-import { Linking } from "react-native";
 import { Provider } from "react-redux";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { RENT_MESSAGES } from "../src/constants/rent";
+import { RENT_MANAGE_MESSAGES } from "../src/constants/rentManage";
 import TenantRent from "../src/features/rent/TenantRent";
 import { rentNotesByPayment, rentPaymentNote } from "../src/features/rent/rentDisplay";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -189,8 +189,7 @@ describe("the rent section", () => {
 });
 
 describe("when no rent is set up", () => {
-  it("sends someone who can edit to the website", async () => {
-    const opened = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("offers someone who can edit a way to set rent up", async () => {
     const server = startServer(aRentLedger());
     await renderRent();
     await screen.findByText(RENT_MESSAGES.notSetUp);
@@ -199,13 +198,12 @@ describe("when no rent is set up", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    await fireEvent.press(await screen.findByText(RENT_MESSAGES.setUpOnWebsite));
+    await fireEvent.press(await screen.findByText(RENT_MANAGE_MESSAGES.setUp));
 
-    expect(opened).toHaveBeenCalledWith(expect.stringContaining("/applicants/a1"));
-    opened.mockRestore();
+    expect(await screen.findByRole("header", { name: RENT_MANAGE_MESSAGES.scheduleTitleNew })).toBeTruthy();
   });
 
-  it("doesn't offer a view-only person the setup link", async () => {
+  it("doesn't offer a view-only person setup", async () => {
     const server = startServer(aRentLedger(), "viewer");
     await renderRent();
     await screen.findByText(RENT_MESSAGES.notSetUp);
@@ -214,7 +212,7 @@ describe("when no rent is set up", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(screen.queryByText(RENT_MESSAGES.setUpOnWebsite)).toBeNull();
+    expect(screen.queryByText(RENT_MANAGE_MESSAGES.setUp)).toBeNull();
   });
 });
 

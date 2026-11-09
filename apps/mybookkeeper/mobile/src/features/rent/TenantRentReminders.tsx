@@ -2,16 +2,17 @@ import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedger
 import { useGetRentReminderOverviewQuery } from "@mybookkeeper/api-client/store/rentRemindersApi";
 import { describePlan } from "@mybookkeeper/api-client/utils/rentReminderFormat";
 import { LoadingButton, Skeleton, useTheme } from "@platform/mobile";
+import { useState } from "react";
 import { Text, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { REMINDER_MESSAGES } from "../../constants/rentReminders";
+import { REMINDER_SETUP_MESSAGES } from "../../constants/rentReminderSetup";
 import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import { useCanWrite } from "../workspace/useCanWrite";
 import RentReminderHistory from "./RentReminderHistory";
 import RentReminderNext from "./RentReminderNext";
+import RentReminderSheet from "./RentReminderSheet";
 
 interface TenantRentRemindersProps {
   applicantId: string;
@@ -25,9 +26,8 @@ export default function TenantRentReminders({ applicantId, name, hasEnded }: Ten
   const { currentData: overview, error, isFetching, refetch } = useGetRentReminderOverviewQuery(applicantId, { refetchOnFocus: true });
   const { currentData: ledger, isFetching: isLedgerFetching } = useGetRentLedgerQuery({ applicantId });
   const canWrite = useCanWrite();
-  const openLink = useOpenLink();
+  const [isEditing, setIsEditing] = useState(false);
   const mutedText = { fontSize: fontSize.sm, color: colors.mutedForeground };
-  const openWebsite = () => void openLink(`${WEB_BASE_URL}/applicants/${applicantId}`);
 
   if (!overview && isFetching) {
     return (
@@ -75,10 +75,11 @@ export default function TenantRentReminders({ applicantId, name, hasEnded }: Ten
         {error ? <Text style={mutedText}>{SHOWING_LAST_LOADED_MESSAGE}</Text> : null}
         <Text style={mutedText}>{needsSchedule ? REMINDER_MESSAGES.needsSchedule : REMINDER_MESSAGES.notSending}</Text>
         {canWrite ? (
-          <LoadingButton onPress={openWebsite} variant="secondary">
-            {needsSchedule ? REMINDER_MESSAGES.setUpOnWebsite : REMINDER_MESSAGES.turnOnOnWebsite}
+          <LoadingButton onPress={() => setIsEditing(true)} variant="secondary">
+            {REMINDER_SETUP_MESSAGES.setUp}
           </LoadingButton>
         ) : null}
+        {isEditing ? <RentReminderSheet applicantId={applicantId} onClose={() => setIsEditing(false)} overview={overview} /> : null}
       </InquirySection>
     );
   }
@@ -97,13 +98,11 @@ export default function TenantRentReminders({ applicantId, name, hasEnded }: Ten
       <RentReminderNext applicantId={applicantId} isStale={Boolean(error)} name={name} overview={overview} plan={plan} showSend={canWrite && !hasEnded} />
       <RentReminderHistory applicantId={applicantId} />
       {canWrite ? (
-        <>
-          <Text style={mutedText}>{REMINDER_MESSAGES.changeOnWebsite}</Text>
-          <LoadingButton onPress={openWebsite} variant="ghost">
-            {REMINDER_MESSAGES.openWebsite}
-          </LoadingButton>
-        </>
+        <LoadingButton onPress={() => setIsEditing(true)} variant="secondary">
+          {REMINDER_SETUP_MESSAGES.edit}
+        </LoadingButton>
       ) : null}
+      {isEditing ? <RentReminderSheet applicantId={applicantId} onClose={() => setIsEditing(false)} overview={overview} /> : null}
     </InquirySection>
   );
 }

@@ -3,6 +3,7 @@ import { Button, LoadingButton, showError, showSuccess, extractErrorMessage } fr
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import Select from "@/shared/components/ui/Select";
 import { useCreateRentChargeMutation } from "@mybookkeeper/api-client/store/rentLedgerApi";
+import { isPositiveAmount } from "@mybookkeeper/api-client/utils/rentScheduleForm";
 import { RENT_INPUT_CLASS } from "./rent-input-class";
 import { RENT_CHARGE_TYPE_LABEL, RENT_MANUAL_CHARGE_TYPES } from "@mybookkeeper/api-client/constants/rentLabels";
 import type { RentChargeType } from "@mybookkeeper/api-client/types/rent/rent-charge-type";
@@ -30,8 +31,7 @@ export default function RentChargeDialog({
   const [description, setDescription] = useState("");
   const [create, { isLoading }] = useCreateRentChargeMutation();
 
-  const parsed = parseFloat(amount);
-  const canSubmit = Boolean(dueDate) && Number.isFinite(parsed) && parsed > 0;
+  const canSubmit = Boolean(dueDate) && isPositiveAmount(amount);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();

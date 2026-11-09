@@ -7,8 +7,6 @@ export const RENT_MESSAGES = {
   couldntLoadApplied: "I couldn't load how these applied to rent.",
   tryAgain: "Try again",
   notSetUp: "No rent set up yet.",
-  setUpOnWebsiteNote: "Rent is set up on the website.",
-  setUpOnWebsite: "Set up on the website",
   noneDue: "No rent is due right now. The schedule has ended or hasn't started.",
   fullyCovered: "This period is fully covered.",
   periodWaived: "This period was waived.",

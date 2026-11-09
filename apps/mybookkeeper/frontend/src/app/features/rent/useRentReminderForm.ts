@@ -5,15 +5,14 @@ import {
   useUpdateRentReminderPlanMutation,
 } from "@mybookkeeper/api-client/store/rentRemindersApi";
 import {
-  DEFAULT_SEND_DAYS_BEFORE,
-  DEFAULT_SEND_TIME,
-  DEFAULT_TIMEZONE,
-  MAX_SEND_DAYS_BEFORE,
-  SEND_TIME_MAX,
-  SEND_TIME_MIN,
-  SUNDAY,
-} from "./rent-reminder-labels";
-import { toTimeInputValue } from "@mybookkeeper/api-client/utils/rentReminderFormat";
+  canSaveReminder,
+  isDaysBeforeValid,
+  isSendTimeValid,
+  reminderFormValues,
+  reminderPlanRequest,
+  withFrequency,
+} from "@mybookkeeper/api-client/utils/rentReminderForm";
+import type { RentReminderFormValues } from "@mybookkeeper/api-client/types/rent/rent-reminder-form-values";
 import type { RentReminderFrequency } from "@mybookkeeper/api-client/types/rent/rent-reminder-frequency";
 import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 
@@ -38,62 +37,24 @@ export function useRentReminderForm({
   smsAvailable,
   onSaved,
 }: UseRentReminderFormArgs) {
-  const [frequency, setFrequencyState] = useState<RentReminderFrequency>(
-    existing?.frequency ?? "weekly",
+  const [values, setValues] = useState<RentReminderFormValues>(() =>
+    reminderFormValues(existing, smsAvailable),
   );
-  const [dueWeekday, setDueWeekday] = useState<number>(existing?.due_weekday ?? SUNDAY);
-  const [sendDaysBefore, setSendDaysBefore] = useState<string>(
-    String(existing?.send_days_before ?? DEFAULT_SEND_DAYS_BEFORE.weekly),
-  );
-  const [sendTime, setSendTime] = useState(
-    existing ? toTimeInputValue(existing.send_time) : DEFAULT_SEND_TIME,
-  );
-  const [emailEnabled, setEmailEnabled] = useState(existing?.email_enabled ?? true);
-  const [smsEnabled, setSmsEnabled] = useState(
-    (existing?.sms_enabled ?? false) && smsAvailable,
-  );
-  const [paymentInstructions, setPaymentInstructions] = useState(
-    existing?.payment_instructions ?? "",
-  );
-  const [amountOverride, setAmountOverride] = useState(existing?.amount_override ?? "");
-  const [isActive, setIsActive] = useState(existing?.is_active ?? true);
-
   const [create, { isLoading: isCreating }] = useCreateRentReminderPlanMutation();
   const [update, { isLoading: isUpdating }] = useUpdateRentReminderPlanMutation();
 
-  function setFrequency(next: RentReminderFrequency) {
-    setFrequencyState(next);
-    setSendDaysBefore(String(DEFAULT_SEND_DAYS_BEFORE[next]));
-  }
+  const change = <K extends keyof RentReminderFormValues>(key: K) =>
+    (value: RentReminderFormValues[K]) => setValues((current) => ({ ...current, [key]: value }));
 
-  const days = Number(sendDaysBefore);
-  const daysValid =
-    sendDaysBefore !== "" &&
-    Number.isInteger(days) &&
-    days >= 0 &&
-    days <= MAX_SEND_DAYS_BEFORE[frequency];
-  const timeValid = sendTime >= SEND_TIME_MIN && sendTime <= SEND_TIME_MAX;
-  const overrideValid =
-    amountOverride === "" || (Number.isFinite(Number(amountOverride)) && Number(amountOverride) > 0);
-  const hasChannel = emailEnabled || smsEnabled;
-  const canSubmit = daysValid && timeValid && overrideValid && hasChannel;
+  const daysValid = isDaysBeforeValid(values.frequency, values.sendDaysBefore);
+  const timeValid = isSendTimeValid(values.sendTime);
+  const hasChannel = values.emailEnabled || values.smsEnabled;
+  const canSubmit = canSaveReminder(values);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!canSubmit) return;
-    const body = {
-      applicantId,
-      frequency,
-      due_weekday: frequency === "weekly" ? dueWeekday : null,
-      send_days_before: days,
-      send_time: sendTime,
-      timezone: existing?.timezone ?? DEFAULT_TIMEZONE,
-      email_enabled: emailEnabled,
-      sms_enabled: smsEnabled,
-      amount_override: amountOverride === "" ? null : amountOverride,
-      payment_instructions: paymentInstructions.trim() || null,
-      is_active: isActive,
-    };
+    const body = { applicantId, ...reminderPlanRequest(values, existing) };
     try {
       if (existing) {
         await update(body).unwrap();
@@ -109,24 +70,16 @@ export function useRentReminderForm({
   }
 
   return {
-    frequency,
-    setFrequency,
-    dueWeekday,
-    setDueWeekday,
-    sendDaysBefore,
-    setSendDaysBefore,
-    sendTime,
-    setSendTime,
-    emailEnabled,
-    setEmailEnabled,
-    smsEnabled,
-    setSmsEnabled,
-    paymentInstructions,
-    setPaymentInstructions,
-    amountOverride,
-    setAmountOverride,
-    isActive,
-    setIsActive,
+    ...values,
+    setFrequency: (next: RentReminderFrequency) => setValues((current) => withFrequency(current, next)),
+    setDueWeekday: change("dueWeekday"),
+    setSendDaysBefore: change("sendDaysBefore"),
+    setSendTime: change("sendTime"),
+    setEmailEnabled: change("emailEnabled"),
+    setSmsEnabled: change("smsEnabled"),
+    setPaymentInstructions: change("paymentInstructions"),
+    setAmountOverride: change("amountOverride"),
+    setIsActive: change("isActive"),
     daysValid,
     timeValid,
     hasChannel,

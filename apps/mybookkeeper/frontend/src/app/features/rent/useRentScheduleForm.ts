@@ -5,6 +5,7 @@ import {
   useDeleteRentScheduleMutation,
   useUpdateRentScheduleMutation,
 } from "@mybookkeeper/api-client/store/rentLedgerApi";
+import { graceDaysFromText, graceDaysToText, isPositiveAmount } from "@mybookkeeper/api-client/utils/rentScheduleForm";
 import type { RentCadence } from "@mybookkeeper/api-client/types/rent/rent-cadence";
 import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 
@@ -30,21 +31,14 @@ export function useRentScheduleForm({
   const [cadence, setCadence] = useState<RentCadence>(existing?.cadence ?? "monthly");
   const [startDate, setStartDate] = useState(existing?.start_date ?? "");
   const [endDate, setEndDate] = useState(existing?.end_date ?? "");
-  const [graceDays, setGraceDays] = useState(
-    existing?.grace_days === null || existing?.grace_days === undefined
-      ? ""
-      : String(existing.grace_days),
-  );
+  const [graceDays, setGraceDays] = useState(graceDaysToText(existing?.grace_days));
   const [notes, setNotes] = useState(existing?.notes ?? "");
 
   const [create, { isLoading: isCreating }] = useCreateRentScheduleMutation();
   const [update, { isLoading: isUpdating }] = useUpdateRentScheduleMutation();
   const [remove, { isLoading: isRemoving }] = useDeleteRentScheduleMutation();
 
-  const parsedAmount = parseFloat(amount);
-  const canSubmit = existing
-    ? true
-    : Boolean(startDate) && Number.isFinite(parsedAmount) && parsedAmount > 0;
+  const canSubmit = existing ? true : Boolean(startDate) && isPositiveAmount(amount);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -57,7 +51,7 @@ export function useRentScheduleForm({
           // Always sent, so clearing a value reaches the backend as an
           // explicit null rather than being read as "left alone".
           end_date: endDate || null,
-          grace_days: graceDays === "" ? null : Number(graceDays),
+          grace_days: graceDaysFromText(graceDays),
           notes: notes.trim() || null,
         }).unwrap();
         showSuccess("Rent schedule updated.");
@@ -68,7 +62,7 @@ export function useRentScheduleForm({
           cadence,
           start_date: startDate,
           end_date: endDate || null,
-          grace_days: graceDays === "" ? null : Number(graceDays),
+          grace_days: graceDaysFromText(graceDays),
           notes: notes.trim() || null,
         }).unwrap();
         showSuccess("Rent schedule saved.");
