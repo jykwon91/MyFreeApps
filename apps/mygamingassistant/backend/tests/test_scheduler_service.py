@@ -55,7 +55,7 @@ def cleanup_scheduler():
 
 @pytest.fixture(autouse=True)
 def no_price_downloads():
-    """The price job runs at boot; never let it reach TradeSkillMaster from a test."""
+    """The price job runs at boot; never let it reach Blizzard from a test."""
     with patch(
         "app.services.wow.prices.price_refresh_service.refresh_all", new=AsyncMock(return_value=[]),
     ) as refresh:

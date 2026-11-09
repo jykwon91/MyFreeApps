@@ -16,7 +16,7 @@ Scheduled jobs:
                       outbox is claimed with FOR UPDATE SKIP LOCKED.
   refresh_wow_prices — every WOW_PRICE_REFRESH_INTERVAL_HOURS hours (default
                       3) and once at boot. Pulls WoW Forever auction-house
-                      prices (``app/services/wow/prices/``); a per-feed
+                      prices from Blizzard (``app/services/wow/prices/``); a per-game
                       advisory lock keeps two processes from both writing.
   purge_wow_feature_submissions — every 24 hours. WoW feature-request
                       retention (``feature_retention_service``).
@@ -387,7 +387,7 @@ async def _run_refresh_wow_prices() -> None:
         return
     logger.info(
         "scheduler_service: refresh_wow_prices: %s",
-        ", ".join(f"{o.source}/{o.region}={o.outcome}({o.item_count})" for o in outcomes) or "nothing refreshed",
+        ", ".join(f"{o.label}={o.outcome}({o.item_count})" for o in outcomes) or "nothing refreshed",
     )
 
 async def _run_record_server_status() -> None:

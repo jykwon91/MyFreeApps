@@ -1,21 +1,23 @@
 import type { ASK_CARD } from "@/games/wow-forever/data/ask/askCardKinds";
 import type { AskLiveState } from "@/games/wow-forever/types/ask/askLiveState";
 import type { AskPriceRow } from "@/games/wow-forever/types/ask/askPriceRow";
-import type { PriceCredit } from "@/games/wow-forever/types/priceCredit";
+import type { PriceHouse } from "@/games/wow-forever/types/priceHouse";
 
 /**
- * `auction_prices`: the matches' US market values, credited to the
- * source with when it updated them. `none` = no prices yet,
- * `error` = they didn't load (no credit then: nothing came back).
+ * `auction_prices`: the matches' market values on one US auction house (a
+ * server's house for one faction), with when Blizzard listed them.
+ * `none` = no prices yet, `error` = they didn't load (no credit line then:
+ * nothing came back).
  */
 export interface AskPricesCard {
   kind: typeof ASK_CARD.prices;
   query: string;
   state: AskLiveState;
+  /** Whose auction house was asked about. */
+  house: PriceHouse;
   rows: AskPriceRow[];
   total: number;
-  credit: PriceCredit | null;
-  /** ISO time the source worked the prices out; null when unknown. */
+  /** ISO time of Blizzard's snapshot of that house; null when unknown. */
   sourceUpdatedAt: string | null;
   pageHref: string;
 }

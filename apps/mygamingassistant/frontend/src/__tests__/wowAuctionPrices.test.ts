@@ -19,7 +19,7 @@ import {
 } from "@/games/wow-forever/prices/auctionPrices";
 import type { CraftingFile, CraftingProfession, TrainerSkills } from "@/games/wow-forever/types/crafting";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
-import { PRICE_COLUMNS, priceList, TSM_CREDIT } from "@/test/auctionPricesStub";
+import { PRICE_COLUMNS, priceList } from "@/test/auctionPricesStub";
 
 const SILVER = 100;
 
@@ -27,32 +27,41 @@ describe("mapPriceList", () => {
   it("reads rows by column name, in copper", () => {
     const response: PriceListResponse = {
       region: "us",
-      credit: TSM_CREDIT,
+    server: "pvp",
+      faction: "horde",
       source_updated_at: "2026-11-05T14:49:31Z",
       fetched_at: "2026-11-06T09:00:00Z",
       // A column order the server could switch to: the mapper must not care.
-      columns: ["name", "sold_per_day", "item_id", "historical", "avg_sale_price", "market_value"],
-      items: [["Linen Cloth", 7130.1, 2589, 28, 24, 28]],
+      columns: ["name", "listings", "item_id", "quantity", "min_buyout", "market_value"],
+      items: [["Linen Cloth", 910, 2589, 23980, 22, 27]],
     };
     const prices = mapPriceList(response);
-    expect(prices.credit).toEqual(TSM_CREDIT);
+    expect(prices.faction).toBe("horde");
+    expect(prices.server).toBe("pvp");
     expect(prices.sourceUpdatedAt).toBe("2026-11-05T14:49:31Z");
-    expect(prices.byId.get(2589)).toEqual({ itemId: 2589, name: "Linen Cloth", marketValue: 28, avgSalePrice: 24, soldPerDay: 7130.1 });
+    expect(prices.byId.get(2589)).toEqual({
+      itemId: 2589,
+      name: "Linen Cloth",
+      marketValue: 27,
+      minBuyout: 22,
+      quantity: 23980,
+      listings: 910,
+    });
   });
 
-  it("skips rows without an id or a market value; an unknown sale price stays unknown", () => {
+  it("skips rows without an id or a market value; a missing figure falls back, never to a made-up price", () => {
     const prices = mapPriceList({
       ...priceList([]),
       columns: PRICE_COLUMNS,
       items: [
-        [0, 10, null, null, null, "Zero Id"],
-        [100, null, null, null, null, "No Value"],
-        [101, -5, null, null, null, "Negative"],
-        [102, 350, null, 350, null, "Gloves"],
+        [0, 10, 10, 1, 1, "Zero Id"],
+        [100, null, 5, 1, 1, "No Value"],
+        [101, -5, 5, 1, 1, "Negative"],
+        [102, 350, null, null, null, "Gloves"],
       ],
     });
     expect([...prices.byId.keys()]).toEqual([102]);
-    expect(prices.byId.get(102)?.avgSalePrice).toBeNull();
+    expect(prices.byId.get(102)).toMatchObject({ marketValue: 350, minBuyout: 350, quantity: 0, listings: 0 });
   });
 
   it("finds items by id and by name, and gives undefined (never 0) for one it lacks", () => {
@@ -64,7 +73,7 @@ describe("mapPriceList", () => {
     expect(auctionCopperByName(prices, "Wool Cloth")).toBeUndefined();
   });
 
-  it("an empty region has no prices", () => {
+  it("an auction house with nothing listed has no prices", () => {
     const prices = mapPriceList(priceList([]));
     expect(prices.byId.size).toBe(0);
     expect(prices.sourceUpdatedAt).toBeNull();

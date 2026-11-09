@@ -1,14 +1,17 @@
 /**
  * Tool inputs Claude sent, checked against the same schema the relay gave it
  * (`chat_tool_schema.py`): known keys only, strings within their lengths, the
- * faction, profession, class, sort and region from their lists, numbers whole and in range. Claude's output is
+ * faction, price server, profession, class, sort and region from their lists, numbers whole and in range. Claude's output is
  * untrusted — a bad input becomes an error result, never a crash.
  */
 import { ASK_FACTION_FILTER, ASK_TOOL_INPUT } from "@/games/wow-forever/data/ask/askTools";
 import { WOW_CLASSES, type WowClassId } from "@/games/wow-forever/data/classes";
 import { PROFESSION_GROUPS, type GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
+import { PRICE_FACTIONS } from "@/games/wow-forever/data/priceFactions";
+import { PRICE_SERVERS } from "@/games/wow-forever/data/priceServers";
 import { WOW_REGIONS } from "@/games/wow-forever/data/wowRegions";
 import { FARM_SORT, type FarmSort } from "@/games/wow-forever/gold/goldFarms";
+import { isPriceFaction } from "@/games/wow-forever/prices/priceFaction";
 import type { AskFactionFilter } from "@/games/wow-forever/types/ask/askFactionFilter";
 import type { AskGoldInput } from "@/games/wow-forever/types/ask/askGoldInput";
 import type { AskInputCheck } from "@/games/wow-forever/types/ask/askInputCheck";
@@ -155,7 +158,13 @@ export function checkMacrosInput(input: Record<string, unknown>): AskInputCheck<
 const regionError = `region must be one of ${REGIONS.join(", ")}`;
 
 export function checkPricesInput(input: Record<string, unknown>): AskInputCheck<AskPricesInput> {
-  return queryInput(input, ["query", "limit"]);
+  const base = queryInput(input, ["query", "limit", "faction", "server"]);
+  if (!base.ok) return base;
+  const faction = optional(input.faction, (v) => (isPriceFaction(v) ? v : null));
+  if (faction === undefined) return fail(`faction must be one of ${PRICE_FACTIONS.join(", ")}`);
+  const server = optional(input.server, (v) => oneOf(v, PRICE_SERVERS));
+  if (server === undefined) return fail(`server must be one of ${PRICE_SERVERS.join(", ")}`);
+  return { ok: true, value: { ...base.value, faction, server } };
 }
 
 export function checkServerStatusInput(input: Record<string, unknown>): AskInputCheck<AskRegionInput> {

@@ -17,9 +17,11 @@ import type { AskCard } from "@/games/wow-forever/types/ask/askCard";
 import type { AskToolData } from "@/games/wow-forever/types/ask/askToolData";
 import type { AskToolName } from "@/games/wow-forever/types/ask/askToolName";
 import type { AskToolOutcome } from "@/games/wow-forever/types/ask/askToolOutcome";
+import type { PriceHouse } from "@/games/wow-forever/types/priceHouse";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
 import type { ServerStatusResponse } from "@/games/wow-forever/types/serverStatus/serverStatusResponse";
-import { priceList } from "@/test/auctionPricesStub";
+import { FACTION } from "@/games/wow-forever/types/worldMap";
+import { priceList, STUB_QUANTITY } from "@/test/auctionPricesStub";
 import { askToolData } from "./wowAskWorld";
 
 const NOW = Date.parse("2026-11-08T12:00:00Z");
@@ -74,7 +76,7 @@ afterEach(() => {
 });
 
 describe("askPriceMatches", () => {
-  it("puts the item named exactly first, then the rest by sales", () => {
+  it("puts the item named exactly first, then the rest by how many are on sale", () => {
     const list = mapPriceList(priceList(CLOTH));
     const found = askPriceMatches(list.byId.values(), "linen cloth");
     expect(found.items.map((i) => i.name)).toEqual(["Linen Cloth", "Bolt of Linen Cloth"]);
@@ -91,19 +93,21 @@ describe("pricesAreOld", () => {
 });
 
 describe("auction_prices", () => {
-  it("answers with the market value as formatted, US and how old the prices are", async () => {
+  it("answers with the figures as formatted, whose auction house, US and how old the prices are", async () => {
     const out = await run(ASK_TOOL.auctionPrices, { query: "Linen Cloth" }, prices(priceList(CLOTH, TWO_HOURS_AGO)));
     expect(out.isError).toBe(false);
     const result = JSON.parse(out.content);
     expect(result.region).toBe("US");
+    expect(result.auction_house).toBe("PvP · Alliance");
     expect(result.source).toBe(ASK_TOOL_NOTE.pricesSource);
     expect(result.updated).toBe("2 hours ago");
     expect(result.note).toBeNull();
-    expect(result.results[0]).toEqual({ name: "Linen Cloth", market_value: "12s", sold_per_day: null });
+    expect(result.results[0]).toEqual({ name: "Linen Cloth", market_value: "12s", cheapest: "12s", on_sale: STUB_QUANTITY });
     const card = cardOf(out, ASK_CARD.prices);
     expect(card.state).toBe(ASK_LIVE.ready);
-    expect(card.rows[0]).toMatchObject({ itemId: 2589, name: "Linen Cloth", price: "12s" });
-    expect(card.pageHref).toBe("/wow-forever/auction-house?q=Linen+Cloth");
+    expect(card.house).toEqual({ server: "pvp", faction: "alliance" });
+    expect(card.rows[0]).toMatchObject({ itemId: 2589, name: "Linen Cloth", price: "12s", onSale: "40 in 5 auctions" });
+    expect(card.pageHref).toBe("/wow-forever/auction-house?q=Linen+Cloth&house=alliance");
   });
 
   it("says when the prices are old", async () => {
@@ -111,12 +115,33 @@ describe("auction_prices", () => {
     expect(JSON.parse(out.content).note).toBe(ASK_TOOL_NOTE.pricesOld);
   });
 
-  it("always asks for the US prices, whatever region is saved", async () => {
-    const loadPrices = vi.fn(() => Promise.resolve(priceList(CLOTH)));
-    const out = await run(ASK_TOOL.auctionPrices, { query: "silk" }, { loadPrices, region: "eu" });
-    expect(loadPrices).toHaveBeenLastCalledWith();
-    expect(JSON.parse(out.content).region).toBe("US");
-    expect(cardOf(out, ASK_CARD.prices).pageHref).toBe("/wow-forever/auction-house?q=silk");
+  it("asks for the saved faction's house, whatever server status region is saved", async () => {
+    const loadPrices = vi.fn((house: PriceHouse) => Promise.resolve(priceList(CLOTH, TWO_HOURS_AGO, house.faction)));
+    const out = await runAskTool(
+      { type: "tool_use", id: "t", name: ASK_TOOL.auctionPrices, input: { query: "silk" } },
+      askToolData({ faction: FACTION.horde }, { loadPrices, region: "eu" }),
+    );
+    expect(loadPrices).toHaveBeenLastCalledWith({ server: "pvp", faction: "horde" });
+    expect(JSON.parse(out.content)).toMatchObject({ region: "US", auction_house: "PvP · Horde" });
+    expect(cardOf(out, ASK_CARD.prices).pageHref).toBe("/wow-forever/auction-house?q=silk&house=horde");
+  });
+
+  it("asks for the house Claude named instead, Blackwater included", async () => {
+    const loadPrices = vi.fn((house: PriceHouse) => Promise.resolve(priceList(CLOTH, TWO_HOURS_AGO, house.faction)));
+    const out = await run(ASK_TOOL.auctionPrices, { query: "silk", faction: "neutral" }, { loadPrices });
+    expect(loadPrices).toHaveBeenLastCalledWith({ server: "pvp", faction: "neutral" });
+    expect(JSON.parse(out.content).auction_house).toBe("PvP · Blackwater");
+    expect(cardOf(out, ASK_CARD.prices).house.faction).toBe("neutral");
+  });
+
+  it("takes the server Claude named, and the PvP server when it named none", async () => {
+    const loadPrices = vi.fn((house: PriceHouse) => Promise.resolve(priceList(CLOTH, TWO_HOURS_AGO, house.faction)));
+    await run(ASK_TOOL.auctionPrices, { query: "silk", server: "pvp", faction: "horde" }, { loadPrices });
+    expect(loadPrices).toHaveBeenLastCalledWith({ server: "pvp", faction: "horde" });
+    const out = await run(ASK_TOOL.auctionPrices, { query: "silk" }, { loadPrices });
+    expect(cardOf(out, ASK_CARD.prices).house.server).toBe("pvp");
+    // Only one server is mapped, so the Auction house link carries no server.
+    expect(cardOf(out, ASK_CARD.prices).pageHref).not.toContain("server");
   });
 
   it("with no prices yet, says so and gives no number", async () => {
@@ -133,7 +158,7 @@ describe("auction_prices", () => {
     expect(JSON.parse(out.content)).toEqual({ error: ASK_TOOL_NOTE.pricesFailed });
     const card = cardOf(out, ASK_CARD.prices);
     expect(card.state).toBe(ASK_LIVE.error);
-    expect(card.credit).toBeNull();
+    expect(card.sourceUpdatedAt).toBeNull();
   });
 
   it("an item with no auction price is a no-results card, never a guess", async () => {
@@ -143,7 +168,14 @@ describe("auction_prices", () => {
   });
 
   it("rejects a bad input", async () => {
-    for (const input of [{}, { query: "silk", region: "us" }, { query: "silk", realm: "x" }]) {
+    const bad = [
+      {},
+      { query: "silk", region: "us" },
+      { query: "silk", realm: "x" },
+      { query: "silk", faction: "goblin" },
+      { query: "silk", server: "pve" },
+    ];
+    for (const input of bad) {
       const out = await run(ASK_TOOL.auctionPrices, input, prices(priceList(CLOTH)));
       expect(out.isError).toBe(true);
       expect(out.card).toBeNull();
@@ -181,30 +213,29 @@ describe("server_status", () => {
 });
 
 describe("PricesCard", () => {
-  it("shows the prices with TradeSkillMaster's credit and a link to the Auction house", async () => {
+  it("shows the prices with Blizzard's credit for that house and a link to the Auction house", async () => {
     const out = await run(ASK_TOOL.auctionPrices, { query: "Linen Cloth" }, prices(priceList(CLOTH, TWO_HOURS_AGO)));
     inRouter(<PricesCard card={cardOf(out, ASK_CARD.prices)} />);
-    expect(screen.getByRole("region", { name: "Auction prices · US" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Auction prices · PvP · Alliance AH" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Linen Cloth" })).toBeTruthy();
     expect(screen.getByText("12s")).toBeTruthy();
-    expect(screen.getByTestId("price-credit").textContent).toContain("updated 2 hours ago");
-    expect(screen.getByRole("link", { name: "TradeSkillMaster" })).toBeTruthy();
-    expect(screen.queryByText(/more than 12 hours old/)).toBeNull();
+    expect(screen.getAllByText("On sale: 40 in 5 auctions").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("price-credit").textContent).toBe("Prices from Blizzard (PvP · Alliance AH, US) · updated 2 hours ago");
     expect(screen.getByRole("link", { name: "Open the Auction house" }).getAttribute("href")).toBe(
-      "/wow-forever/auction-house?q=Linen+Cloth",
+      "/wow-forever/auction-house?q=Linen+Cloth&house=alliance",
     );
   });
 
   it("warns when the prices are old", async () => {
     const out = await run(ASK_TOOL.auctionPrices, { query: "silk" }, prices(priceList(CLOTH, A_DAY_AGO)));
     inRouter(<PricesCard card={cardOf(out, ASK_CARD.prices)} />);
-    expect(screen.getByText(/more than 12 hours old/)).toBeTruthy();
+    expect(screen.getByTestId("price-credit").textContent).toContain("these may be out of date");
   });
 
   it("says there are no prices yet", async () => {
     const out = await run(ASK_TOOL.auctionPrices, { query: "silk" }, prices(priceList([])));
     inRouter(<PricesCard card={cardOf(out, ASK_CARD.prices)} />);
-    expect(screen.getByText(/No US auction prices yet/)).toBeTruthy();
+    expect(screen.getByText(/No PvP · Alliance auction prices yet/)).toBeTruthy();
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
   });
 

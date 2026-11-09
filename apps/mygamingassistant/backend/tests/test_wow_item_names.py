@@ -22,14 +22,13 @@ def test_tradeable_names_keeps_only_named_items_the_auction_house_can_list() -> 
     assert tradeable_names(rows) == {2589: "Linen Cloth", 12345: "Bind on equip", 249391: "Pyrite"}
 
 
-def test_source_name_wins_and_client_name_fills_blanks() -> None:
+def test_name_for_reads_the_client_name_else_empty() -> None:
     names = ClientItemNames(client_build="1.60.1.70790", names={249391: "Pyrite"})
-    assert names.name_for(2589, "Linen Cloth") == "Linen Cloth"
-    assert names.name_for(249391, "") == "Pyrite"
-    assert names.name_for(999999, "") == ""
+    assert names.name_for(249391) == "Pyrite"
+    assert names.name_for(999999) == ""
 
 
-def test_committed_file_names_forever_items_tsm_leaves_blank() -> None:
+def test_committed_file_names_forever_only_items() -> None:
     # Pinned against the Forever client: a failure means the client changed.
     names = client_item_names()
     assert names.client_build

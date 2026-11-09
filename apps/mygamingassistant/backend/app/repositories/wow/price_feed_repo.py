@@ -1,4 +1,4 @@
-"""WowPriceFeed repository — one row per (game, region, ruleset, source).
+"""WowPriceFeed repository — one row per (game, region, auction house).
 
 Standalone functions like the other MGA repositories. The caller owns the
 transaction; these only flush.
@@ -18,51 +18,44 @@ from app.models.wow.price_feed import WowPriceFeed
 _LOCK_NAMESPACE = zlib.crc32(b"mga.wow_price_feed") & 0x7FFFFFFF
 
 
-async def get(
-    db: AsyncSession, game_id: uuid.UUID, region: str, ruleset: str | None, source: str,
-) -> WowPriceFeed | None:
+async def get(db: AsyncSession, game_id: uuid.UUID, region: str, house_id: int) -> WowPriceFeed | None:
     result = await db.execute(
         select(WowPriceFeed).where(
             WowPriceFeed.game_id == game_id,
             WowPriceFeed.region == region,
-            WowPriceFeed.ruleset.is_(None) if ruleset is None else WowPriceFeed.ruleset == ruleset,
-            WowPriceFeed.source == source,
+            WowPriceFeed.house_id == house_id,
         )
     )
     return result.scalar_one_or_none()
 
 
 async def get_or_create(
-    db: AsyncSession, game_id: uuid.UUID, region: str, ruleset: str | None, source: str,
+    db: AsyncSession, game_id: uuid.UUID, region: str, house_id: int, faction: str,
 ) -> WowPriceFeed:
-    """The feed row, inserted on first use. Safe when two workers race."""
+    """The house's feed row, inserted on first use. Safe when two workers race."""
     await db.execute(
         insert(WowPriceFeed)
-        .values(game_id=game_id, region=region, ruleset=ruleset, source=source)
+        .values(game_id=game_id, region=region, house_id=house_id, faction=faction)
         .on_conflict_do_nothing(constraint="uq_wowpricefeed_key")
     )
-    feed = await get(db, game_id, region, ruleset, source)
+    feed = await get(db, game_id, region, house_id)
     if feed is None:
-        raise RuntimeError(f"price feed {region}/{ruleset}/{source} missing right after insert")
+        raise RuntimeError(f"price feed {region}/house {house_id} missing right after insert")
     return feed
 
 
-async def try_lock(db: AsyncSession, feed_id: uuid.UUID) -> bool:
-    """Take this feed's refresh lock for the rest of the transaction.
+async def try_refresh_lock(db: AsyncSession, game_id: uuid.UUID) -> bool:
+    """Take the game's price-refresh lock for the rest of the transaction.
 
-    False when another worker holds it — that worker is refreshing the same
-    feed, so this one can skip. Released automatically on commit / rollback.
+    One refresh reads every mapped house, so the lock is per game. False
+    when another worker holds it — that worker is already refreshing, so
+    this one can skip. Released automatically on commit / rollback.
     """
-    key = zlib.crc32(feed_id.bytes) & 0x7FFFFFFF
+    key = zlib.crc32(game_id.bytes) & 0x7FFFFFFF
     result = await db.execute(
         text("SELECT pg_try_advisory_xact_lock(:ns, :key)"), {"ns": _LOCK_NAMESPACE, "key": key},
     )
     return bool(result.scalar_one())
-
-
-async def reload(db: AsyncSession, feed: WowPriceFeed) -> None:
-    """Re-read the feed once locked, so its validators are the latest committed ones."""
-    await db.refresh(feed)
 
 
 def update(feed: WowPriceFeed, values: dict[str, object]) -> None:

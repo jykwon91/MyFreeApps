@@ -1,10 +1,10 @@
 /**
  * The prices API's columnar rows → lookups by item id and by name.
  *
- * Every page prices with `marketValue`. On TSM's Forever files it is never 0,
- * while the average sale price is missing for most items and jumps around on
- * thin markets. An item the source doesn't price has no entry, so it reads as
- * "no auction price" and is never treated as free.
+ * Every page prices with `marketValue` (what the cheapest tenth of the units on
+ * sale cost), never the single cheapest listing, which one odd seller can set.
+ * An item nobody is selling has no entry, so it reads as "no auction price"
+ * and is never treated as free.
  */
 import type { EnteredPrices } from "@/games/wow-forever/crafting/matPrices";
 import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
@@ -18,11 +18,6 @@ function intCell(row: readonly Cell[], index: number): number | null {
   return typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null;
 }
 
-function numberCell(row: readonly Cell[], index: number): number | null {
-  const v = index < 0 ? null : row[index];
-  return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null;
-}
-
 export function nameKey(name: string): string {
   return name.trim().toLowerCase();
 }
@@ -32,8 +27,9 @@ export function mapPriceList(response: PriceListResponse): AuctionPrices {
   const col = (name: string) => response.columns.indexOf(name);
   const idAt = col("item_id");
   const valueAt = col("market_value");
-  const avgAt = col("avg_sale_price");
-  const soldAt = col("sold_per_day");
+  const minAt = col("min_buyout");
+  const quantityAt = col("quantity");
+  const listingsAt = col("listings");
   const nameAt = col("name");
   const byId = new Map<number, AuctionPrice>();
   const byName = new Map<string, AuctionPrice>();
@@ -46,14 +42,16 @@ export function mapPriceList(response: PriceListResponse): AuctionPrices {
       itemId,
       name: typeof rawName === "string" ? rawName : "",
       marketValue,
-      avgSalePrice: intCell(row, avgAt),
-      soldPerDay: numberCell(row, soldAt),
+      minBuyout: intCell(row, minAt) ?? marketValue,
+      quantity: intCell(row, quantityAt) ?? 0,
+      listings: intCell(row, listingsAt) ?? 0,
     };
     byId.set(itemId, price);
     if (price.name && !byName.has(nameKey(price.name))) byName.set(nameKey(price.name), price);
   }
   return {
-    credit: response.credit,
+    server: response.server,
+    faction: response.faction,
     sourceUpdatedAt: response.source_updated_at,
     byId,
     byName,

@@ -6,8 +6,8 @@ export default function AuctionHeaderRow() {
     <div className={`${AUCTION_ROW_GRID} hidden border-b py-2 text-xs font-medium text-muted-foreground sm:grid`} aria-hidden>
       <span>Item</span>
       <span>Market value</span>
-      <span>Avg sale price</span>
-      <span>Sold per day</span>
+      <span>Cheapest</span>
+      <span>On sale</span>
     </div>
   );
 }

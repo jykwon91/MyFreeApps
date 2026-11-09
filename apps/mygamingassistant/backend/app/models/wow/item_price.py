@@ -1,28 +1,26 @@
-"""WowItemPrice — one item's auction-house price in one price feed.
+"""WowItemPrice — one item's figures in one auction house's price feed.
 
 Written only by the scheduled price refresh (``app/services/wow/prices/``); read
 by the public ``GET /api/wow/prices``. Public game data, so no user FK.
 
-A price belongs to a ``WowPriceFeed`` — one (game, region, ruleset, source) —
-so the full key is (game, region, ruleset, source, item) with each part stored
-once. ``ON DELETE CASCADE``: a feed's prices mean nothing without the feed.
+A price belongs to a ``WowPriceFeed`` — one (game, region, house) — so the
+full key is (game, region, house, item) with each part stored once.
+``ON DELETE CASCADE``: a feed's prices mean nothing without the feed.
 
-Prices are copper (1g = 100s = 10 000c). ``historical`` / ``avg_sale_price``
-/ ``sale_rate`` / ``sold_per_day`` are NULL when the source has none — TSM
-writes 0 for "no sales seen", which is not a price of 0.
+Only aggregates of the listings are kept, never the listings themselves.
+Prices are copper per unit (1g = 100s = 10 000c). Names aren't stored:
+Blizzard's auction data has none, so the API names items from the Forever
+client (``client_item_names``).
 """
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
 
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
     DateTime,
-    Float,
     ForeignKey,
     Integer,
-    String,
     UniqueConstraint,
     func,
 )
@@ -37,6 +35,9 @@ class WowItemPrice(Base):
     __table_args__ = (
         CheckConstraint("item_id > 0", name="ck_wowitemprice_item_id"),
         CheckConstraint("market_value >= 0", name="ck_wowitemprice_market_value"),
+        CheckConstraint("min_buyout >= 0 AND min_buyout <= market_value", name="ck_wowitemprice_min_buyout"),
+        CheckConstraint("quantity > 0", name="ck_wowitemprice_quantity"),
+        CheckConstraint("listing_count > 0", name="ck_wowitemprice_listing_count"),
         # Its index serves every read: all prices of one feed.
         UniqueConstraint("feed_id", "item_id", name="uq_wowitemprice_feed_item"),
     )
@@ -51,17 +52,15 @@ class WowItemPrice(Base):
         UUID(as_uuid=True), ForeignKey("wow_price_feed.id", ondelete="CASCADE"), nullable=False,
     )
     item_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    # The item name as the source spells it — only for matching items the
-    # frontend knows by name (the gold page's cloth and leather).
-    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    # The price every page shows: a low quantile of the listed units
+    # (MARKET_VALUE_QUANTILE), so one troll listing can't move it.
     market_value: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    historical: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
-    avg_sale_price: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
-    sale_rate: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    sold_per_day: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    # When the source computed this price (TSM's ``updatedAt``) — what "updated
-    # 3 hours ago" means. ``fetched_at`` is the download that wrote this row.
-    source_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # The cheapest unit listed.
+    min_buyout: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    # Units listed, over every listing.
+    quantity: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    listing_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    # The download that wrote this row.
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

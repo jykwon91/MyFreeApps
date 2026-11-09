@@ -1,2 +1,2 @@
-/** How the auction-house lookup orders its results. */
-export type AuctionSort = "traded" | "high" | "low" | "name";
+/** How the auction-house lookup orders items. `supply` = most units on sale first. */
+export type AuctionSort = "supply" | "high" | "low" | "name";

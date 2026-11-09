@@ -8,14 +8,10 @@ export function priceOrDash(copper: number | null): string {
   return copper === null ? NO_FIGURE : formatPrice(copper);
 }
 
-/** Under this many sales a day, one decimal still says something ("0.4"). */
-const WHOLE_SALES_FROM = 10;
-
-/** "20,239", "12" or "0.4" sales a day; a missing figure is a dash. */
-export function soldPerDayText(sold: number | null): string {
-  if (sold === null) return NO_FIGURE;
-  const digits = sold < WHOLE_SALES_FROM ? 1 : 0;
-  return sold.toLocaleString("en-US", { maximumFractionDigits: digits });
+/** "23,980 in 910 auctions", "1 in 1 auction". */
+export function onSaleText(quantity: number, listings: number): string {
+  const auctions = listings === 1 ? "auction" : "auctions";
+  return `${quantity.toLocaleString("en-US")} in ${listings.toLocaleString("en-US")} ${auctions}`;
 }
 
 export function itemLabel(name: string, itemId: number): string {

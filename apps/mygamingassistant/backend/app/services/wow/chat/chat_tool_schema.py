@@ -29,6 +29,7 @@ from app.core.wow_chat_enums import (
     TOOL_SEARCH_NPCS,
     TOOL_SERVER_STATUS,
 )
+from app.core.wow_prices import PRICE_FACTIONS, PRICE_SERVERS
 from app.core.wow_server_status import SERVER_STATUS_REGIONS
 
 QUERY_MAX_CHARS = 80
@@ -225,13 +226,26 @@ CHAT_TOOLS: list[dict[str, Any]] = [
     {
         "name": TOOL_AUCTION_PRICES,
         "description": (
-            "What items sell for on the US auction house now (TradeSkillMaster's market value), "
-            "by name. Returns each match's price, sales a day, how old the prices are, or "
-            "that there are none."
+            "What items cost on one server's US auction house for a faction now (Blizzard's live listings), "
+            "by name. Returns each match's market value, cheapest listing, how many are on "
+            "sale, how old the prices are, or that there are none."
         ),
         "input_schema": _object(
             {
                 "query": _query("An item name or part of one, e.g. 'Linen Cloth'."),
+                "faction": {
+                    "type": "string",
+                    "enum": list(PRICE_FACTIONS),
+                    "description": (
+                        "Whose auction house: leave out for the player's own faction. "
+                        "'neutral' = the Blackwater (goblin) auction house."
+                    ),
+                },
+                "server": {
+                    "type": "string",
+                    "enum": list(PRICE_SERVERS),
+                    "description": "Which server's auction houses: leave out for the default (PvP).",
+                },
                 "limit": _limit(),
             },
             ["query"],
@@ -293,7 +307,7 @@ vendor prices; never call it an auction price.
 
 Prices and server status: use auction_prices for what something sells for and \
 server_status for whether the servers are up. Give a price only as the tool returned it \
-and say it's the US auction-house market value. If the result says the prices \
+and say whose auction house it is (the result says). If the result says the prices \
 are old, missing for that item, or didn't load, say so and never guess a price. \
 If the server status couldn't be checked, say so — never say the servers are up or down.
 

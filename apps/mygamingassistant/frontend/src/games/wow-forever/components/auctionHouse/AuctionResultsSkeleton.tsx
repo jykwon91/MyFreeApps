@@ -13,7 +13,7 @@ export default function AuctionResultsSkeleton() {
             <div className="col-span-2 sm:col-span-1 h-11 w-3/4 rounded bg-muted/40 animate-pulse sm:w-full" />
             <div className="h-6 w-20 self-center rounded bg-muted/40 animate-pulse" />
             <div className="h-6 w-20 self-center rounded bg-muted/40 animate-pulse" />
-            <div className="h-6 w-12 self-center rounded bg-muted/40 animate-pulse" />
+            <div className="h-6 w-28 self-center rounded bg-muted/40 animate-pulse" />
           </li>
         ))}
       </ul>

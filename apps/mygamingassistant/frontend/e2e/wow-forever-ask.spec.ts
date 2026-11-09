@@ -225,46 +225,86 @@ test("how to level Tailoring from 150 → the guide's next steps, with the guide
 
 const HOUR_MS = 3_600_000;
 
-function priceResponse(hoursOld: number) {
+function priceResponse(hoursOld: number, faction = "alliance") {
   return {
     region: "us",
-    credit: { source: "tsm", name: "TradeSkillMaster", url: "https://www.tradeskillmaster.com" },
+    server: "pvp",
+    faction,
     source_updated_at: new Date(Date.now() - hoursOld * HOUR_MS).toISOString(),
     fetched_at: new Date().toISOString(),
-    columns: ["item_id", "market_value", "avg_sale_price", "sold_per_day", "name"],
+    columns: ["item_id", "market_value", "min_buyout", "quantity", "listings", "name"],
     items: [
-      [2589, 1234, null, 20239, "Linen Cloth"],
-      [2996, 5000, null, 812, "Bolt of Linen Cloth"],
+      [2589, 1234, 1100, 20239, 910, "Linen Cloth"],
+      [2996, 5000, 4800, 812, 60, "Bolt of Linen Cloth"],
     ],
   };
 }
 
-test("how much is Linen Cloth → the site's auction price, credited, with the Auction house offered", async ({ page }) => {
+/** Prices for whichever house is asked for, `hoursOld` old; records each "server/faction" asked. */
+async function servePrices(page: Page, hoursOld: number, asked: string[] = []) {
+  await page.route(
+    (url) => url.pathname === "/api/wow/prices",
+    (route) => {
+      const faction = new URL(route.request().url()).searchParams.get("faction") ?? "alliance";
+      asked.push(`${new URL(route.request().url()).searchParams.get("server")}/${faction}`);
+      return route.fulfill({ json: priceResponse(hoursOld, faction) });
+    },
+  );
+}
+
+interface SentPrices {
+  region: string;
+  auction_house: string;
+  updated: string;
+  note: string | null;
+  results: { name: string; market_value: string; cheapest: string; on_sale: number }[];
+}
+
+test("how much is Linen Cloth → your faction's auction price, credited, with the Auction house offered", async ({ page }) => {
   const relay = await mockRelay(page, (body) =>
     body.ticket ? answer("Linen Cloth sells for 12s 34c.") : toolUse("auction_prices", { query: "Linen Cloth" }),
   );
-  await page.route((url) => url.pathname === "/api/wow/prices", (route) => route.fulfill({ json: priceResponse(2) }));
+  const asked: string[] = [];
+  await servePrices(page, 2, asked);
   await page.goto("/wow-forever/ask");
   await ask(page, "how much is linen cloth selling for");
-  const card = page.getByRole("region", { name: "Auction prices · Americas" });
+  const card = page.getByRole("region", { name: "Auction prices · PvP · Alliance AH" });
   await expect(card).toBeVisible();
   await expect(page.getByTestId("ask-answer")).toContainText("Linen Cloth sells for 12s 34c.");
+  expect(asked).toEqual(["pvp/alliance"]);
 
-  const sent = sentResult<{ region: string; updated: string; note: string | null; results: { name: string; market_value: string }[] }>(relay);
-  expect(sent).toMatchObject({ region: "Americas", updated: "2 hours ago", note: null });
-  expect(sent.results[0]).toMatchObject({ name: "Linen Cloth", market_value: "12s 34c" });
+  const sent = sentResult<SentPrices>(relay);
+  expect(sent).toMatchObject({ region: "US", auction_house: "PvP · Alliance", updated: "2 hours ago", note: null });
+  expect(sent.results[0]).toEqual({ name: "Linen Cloth", market_value: "12s 34c", cheapest: "11s", on_sale: 20239 });
 
   const rows = card.locator("ul > li");
   await expect(rows.first()).toContainText("Linen Cloth");
   await expect(rows.first()).toContainText("12s 34c");
-  await expect(rows.first()).toContainText("20,239 sold a day");
-  await expect(card.getByTestId("price-credit")).toContainText("updated 2 hours ago");
-  await expect(card.getByRole("link", { name: "TradeSkillMaster" })).toBeVisible();
-  await expect(card.getByText(/more than 12 hours old/)).toHaveCount(0);
+  await expect(rows.first()).toContainText("On sale: 20,239 in 910 auctions");
+  await expect(card.getByTestId("price-credit")).toContainText("Prices from Blizzard (PvP · Alliance AH, US) · updated 2 hours ago");
+  await expect(card.getByText(/may be out of date/)).toHaveCount(0);
   const open = card.getByRole("link", { name: "Open the Auction house" });
-  await expect(open).toHaveAttribute("href", "/wow-forever/auction-house?q=Linen+Cloth");
+  await expect(open).toHaveAttribute("href", "/wow-forever/auction-house?q=Linen+Cloth&house=alliance");
   await open.click();
   await expect(page).toHaveURL(/\/wow-forever\/auction-house\?q=Linen\+Cloth/);
+  await expect(page.getByRole("radio", { name: "Alliance" })).toHaveAttribute("aria-checked", "true");
+});
+
+test("asking for the Horde price checks the Horde houses, and the link opens them", async ({ page }) => {
+  const relay = await mockRelay(page, (body) =>
+    body.ticket ? answer("On the Horde side it's 12s 34c.") : toolUse("auction_prices", { query: "Linen Cloth", faction: "horde" }),
+  );
+  const asked: string[] = [];
+  await servePrices(page, 1, asked);
+  await page.goto("/wow-forever/ask");
+  await ask(page, "linen cloth price on horde");
+  const card = page.getByRole("region", { name: "Auction prices · PvP · Horde AH" });
+  await expect(card.getByTestId("price-credit")).toContainText("(PvP · Horde AH, US)");
+  expect(asked).toEqual(["pvp/horde"]);
+  expect(sentResult<SentPrices>(relay).auction_house).toBe("PvP · Horde");
+  await card.getByRole("link", { name: "Open the Auction house" }).click();
+  await expect(page).toHaveURL(/house=horde/);
+  await expect(page.getByRole("radio", { name: "Horde" })).toHaveAttribute("aria-checked", "true");
 });
 
 test("old prices are flagged, and prices that don't load are never guessed", async ({ page }) => {
@@ -278,8 +318,8 @@ test("old prices are flagged, and prices that don't load are never guessed", asy
   );
   await page.goto("/wow-forever/ask");
   await ask(page, "linen cloth price");
-  const card = page.getByRole("region", { name: "Auction prices · Americas" });
-  await expect(card.getByText(/more than 12 hours old/)).toBeVisible();
+  const card = page.getByRole("region", { name: "Auction prices · PvP · Alliance AH" });
+  await expect(card.getByTestId("price-credit")).toContainText("these may be out of date");
   expect(sentResult<{ note: string }>(relay).note).toMatch(/more than 12 hours old/);
 
   // A fresh chat, with the prices failing: the card says so, no figures, and Claude gets an error.
@@ -289,7 +329,7 @@ test("old prices are flagged, and prices that don't load are never guessed", asy
   const before = relay.bodies.length;
   await ask(page, "linen cloth price");
   await expect(page.getByText("Couldn't load the auction prices. Ask again in a moment.")).toBeVisible();
-  const failedCard = page.getByRole("region", { name: "Auction prices · Americas" });
+  const failedCard = page.getByRole("region", { name: "Auction prices · PvP · Alliance AH" });
   await expect(failedCard.getByTestId("price-credit")).toHaveCount(0);
   await expect(failedCard.locator("ul > li")).toHaveCount(0);
   const result = relay.bodies[before + 1].messages.at(-1)!.content[0] as { is_error?: boolean; content?: string };

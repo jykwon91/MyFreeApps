@@ -37,8 +37,8 @@ def test_single_head_is_the_latest_revision(script_directory: ScriptDirectory) -
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0051", (
-        f"Expected head 0051 (WoW prices US only), "
+    assert heads[0] == "0052", (
+        f"Expected head 0052 (WoW prices from Blizzard, per house), "
         f"got {heads[0]}."
     )
 

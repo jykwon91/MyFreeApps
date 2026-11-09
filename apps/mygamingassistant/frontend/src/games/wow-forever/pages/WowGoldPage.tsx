@@ -37,7 +37,7 @@ export default function WowGoldPage() {
       />
       <AlertBox variant="info">
         Gold figures are vendor prices from Classic's loot tables — the floor. Cloth and leather on the farm cards
-        also show auction-house prices, where TradeSkillMaster has one. The "Sell" tips are advice, not prices.
+        also show your faction's auction-house price, when someone is selling them. The "Sell" tips are advice, not prices.
       </AlertBox>
       <div className="space-y-1">
         <NumberField

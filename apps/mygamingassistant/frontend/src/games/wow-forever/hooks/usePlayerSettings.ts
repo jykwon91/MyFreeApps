@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { findClass, type WowClassId } from "@/games/wow-forever/data/classes";
 import { MAX_LEVEL, playerLevel } from "@/games/wow-forever/data/levelCap";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
@@ -45,22 +45,76 @@ export function parsePlayerSettings(raw: unknown): PlayerSettings | null {
   return { faction, classId: cls.id, zoneId, level, position };
 }
 
+function readRaw(): string | null {
+  try {
+    return window.localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+interface Snapshot {
+  /** The stored string this value was read from (or couldn't replace). */
+  raw: string | null;
+  value: PlayerSettings;
+}
+
+// One store for every caller, so a change on one part of a page (the auction
+// house's faction switch) reaches every other part (the prices it shows).
+// The snapshot is cached by the stored string, so it stays the same object
+// until storage changes; `unsaved` keeps a change storage refused to save.
+let cached: Snapshot | null = null;
+let unsaved: Snapshot | null = null;
+const listeners = new Set<() => void>();
+
+function notify(): void {
+  listeners.forEach((listener) => listener());
+}
+
+function onStorage(event: StorageEvent): void {
+  if (event.key === null || event.key === PLAYER_SETTINGS_STORAGE_KEY) notify();
+}
+
+function subscribe(listener: () => void): () => void {
+  if (listeners.size === 0) window.addEventListener("storage", onStorage);
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) window.removeEventListener("storage", onStorage);
+  };
+}
+
+function getSnapshot(): PlayerSettings {
+  const raw = readRaw();
+  if (unsaved && unsaved.raw === raw) return unsaved.value;
+  unsaved = null;
+  if (!cached || cached.raw !== raw) {
+    cached = { raw, value: readStored(PLAYER_SETTINGS_STORAGE_KEY, parsePlayerSettings, DEFAULT_PLAYER_SETTINGS) };
+  }
+  return cached.value;
+}
+
+function updatePlayerSettings(patch: Partial<PlayerSettings>): void {
+  const prev = getSnapshot();
+  const next = { ...prev, ...patch };
+  // A new zone means the old position (map percent on the old zone) is meaningless.
+  if (patch.zoneId !== undefined && patch.zoneId !== prev.zoneId && patch.position === undefined) {
+    next.position = null;
+  }
+  writeStored(PLAYER_SETTINGS_STORAGE_KEY, next);
+  const raw = readRaw();
+  // Keep `next` itself as the snapshot (not a re-parse of storage), so callers
+  // that compare what they just set by identity (the World Map's position) see it.
+  if (raw === JSON.stringify(next)) {
+    cached = { raw, value: next };
+    unsaved = null;
+  } else {
+    unsaved = { raw, value: next };
+  }
+  notify();
+}
+
 export function usePlayerSettings(): [PlayerSettings, (patch: Partial<PlayerSettings>) => void] {
-  const [settings, setSettings] = useState<PlayerSettings>(() =>
-    readStored(PLAYER_SETTINGS_STORAGE_KEY, parsePlayerSettings, DEFAULT_PLAYER_SETTINGS),
-  );
-
-  const update = useCallback((patch: Partial<PlayerSettings>) => {
-    setSettings((prev) => {
-      const next = { ...prev, ...patch };
-      // A new zone means the old position (map percent on the old zone) is meaningless.
-      if (patch.zoneId !== undefined && patch.zoneId !== prev.zoneId && patch.position === undefined) {
-        next.position = null;
-      }
-      writeStored(PLAYER_SETTINGS_STORAGE_KEY, next);
-      return next;
-    });
-  }, []);
-
-  return [settings, update];
+  const settings = useSyncExternalStore(subscribe, getSnapshot);
+  return [settings, updatePlayerSettings];
 }
