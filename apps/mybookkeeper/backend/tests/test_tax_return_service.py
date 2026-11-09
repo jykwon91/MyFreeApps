@@ -481,3 +481,44 @@ class TestFieldDeclaredType:
         field = result["instances"][0]["fields"][0]
         assert field["value"] is None
         assert field["type"] == expected
+
+
+class TestLegacyMismatchedRowRead:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("form_name", "field_id", "columns", "expected_value", "expected_type"),
+        [
+            ("1099_r", "box_7", {"value_numeric": Decimal("7.00")}, 7.0, "text"),
+            ("w2", "box_1", {"value_text": "$1,234.00"}, "$1,234.00", "numeric"),
+        ],
+    )
+    async def test_value_in_wrong_column_still_shows(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+        form_name: str, field_id: str, columns: dict, expected_value: object,
+        expected_type: str,
+    ) -> None:
+        ctx = _make_ctx(test_org, test_user)
+        tr = TaxReturn(id=uuid.uuid4(), organization_id=test_org.id, tax_year=2025)
+        db.add(tr)
+        await db.flush()
+        inst = TaxFormInstance(
+            id=uuid.uuid4(), tax_return_id=tr.id, form_name=form_name, source_type="extracted",
+        )
+        db.add(inst)
+        await db.flush()
+        db.add(TaxFormField(
+            id=uuid.uuid4(), form_instance_id=inst.id, field_id=field_id,
+            field_label=field_id, **columns,
+        ))
+        await db.commit()
+
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        with patch("app.services.tax.tax_return_service.AsyncSessionLocal", _fake):
+            result = await tax_return_service.get_form_instances(ctx, tr.id, form_name)
+
+        field = result["instances"][0]["fields"][0]
+        assert field["value"] == expected_value
+        assert field["type"] == expected_type

@@ -62,6 +62,36 @@ def _resolve_field_type(form_name: str, field: TaxFormField) -> str:
     )
 
 
+def _read_value(field: TaxFormField, field_type: str) -> float | str | bool | None:
+    """The declared type's column first, then any column that is set, so rows
+    saved with the value in the wrong column still show it."""
+    by_type: dict[str, float | str | bool | None] = {
+        FIELD_TYPE_NUMERIC: None if field.value_numeric is None else float(field.value_numeric),
+        FIELD_TYPE_BOOLEAN: field.value_boolean,
+        FIELD_TYPE_TEXT: field.value_text,
+    }
+    if by_type[field_type] is not None:
+        return by_type[field_type]
+    for candidate in by_type.values():
+        if candidate is not None:
+            return candidate
+    return None
+
+
+def _apply_override_values(field: TaxFormField, values: Mapping[str, object]) -> None:
+    """A field holds a value in one column only: setting one nulls the others,
+    and an explicit null clears all three."""
+    if any(value is None for value in values.values()):
+        for _, column in _VALUE_COLUMNS.values():
+            setattr(field, column, None)
+    for key, value in values.items():
+        if value is None:
+            continue
+        for _, column in _VALUE_COLUMNS.values():
+            setattr(field, column, None)
+        setattr(field, _VALUE_COLUMNS[key][1], value)
+
+
 def _validate_override_values(
     form_name: str, field: TaxFormField, values: Mapping[str, object],
 ) -> None:
@@ -73,6 +103,8 @@ def _validate_override_values(
                 f"{field.field_id} is a {field_type} field; send value_{field_type}, "
                 f"not {key}"
             )
+    if sum(value is not None for value in values.values()) > 1:
+        raise InvalidFieldOverrideError("Send a value in only one column")
     text = values.get("value_text")
     if isinstance(text, str) and is_masked_pii(field.field_id, text):
         raise InvalidFieldOverrideError(
@@ -160,11 +192,8 @@ async def get_form_instances(
         for inst in instances:
             fields = []
             for f in inst.fields:
-                value = f.value_numeric if f.value_numeric is not None else f.value_text
-                if value is None:
-                    value = f.value_boolean
                 field_type = _resolve_field_type(form_name, f)
-                resolved_value = float(f.value_numeric) if f.value_numeric is not None else value
+                resolved_value = _read_value(f, field_type)
                 label = (
                     f.field_label
                     if f.field_label != f.field_id
@@ -227,8 +256,7 @@ async def override_field(
 
         _validate_override_values(field.form_instance.form_name, field, values)
 
-        for key, value in values.items():
-            setattr(field, _VALUE_COLUMNS[key][1], value)
+        _apply_override_values(field, values)
         field.is_overridden = True
         field.override_reason = override_reason
 

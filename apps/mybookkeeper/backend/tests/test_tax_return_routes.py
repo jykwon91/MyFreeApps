@@ -354,21 +354,24 @@ class TestOverrideFieldContract:
         assert getattr(field, column) is None
 
     @pytest.mark.asyncio
-    async def test_unsent_columns_are_left_unchanged(
+    async def test_override_clears_stale_columns_on_legacy_row(
         self, client: AsyncClient, db: AsyncSession, org: Organization,
     ) -> None:
         tr, field = await _make_field(
-            db, org, form_name="schedule_e", field_id="line_3",
-            value_numeric=Decimal("10.00"), value_text="keep me",
+            db, org, form_name="1099_r", field_id="box_7", value_numeric=Decimal("7.00"),
         )
         resp = await client.patch(
             f"/tax-returns/{tr.id}/fields/{field.id}",
-            json={"value_numeric": 20, "override_reason": "Fix"},
+            json={"value_text": "G", "override_reason": "Wrong code"},
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert float(data["value_numeric"]) == 20.0
-        assert data["value_text"] == "keep me"
+        assert data["value_text"] == "G"
+        assert data["value_numeric"] is None
+        forms = (await client.get(f"/tax-returns/{tr.id}/forms/1099_r")).json()
+        shown = forms["instances"][0]["fields"][0]
+        assert shown["value"] == "G"
+        assert shown["type"] == "text"
 
     @pytest.mark.asyncio
     async def test_no_value_key_is_rejected(

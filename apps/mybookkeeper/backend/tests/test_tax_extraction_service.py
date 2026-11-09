@@ -411,3 +411,63 @@ class TestProcessTaxDocument:
         assert len(fields) == 1
         assert fields[0].field_id == "custom_field"
         assert fields[0].field_label == "custom_field"
+
+
+async def _extract(
+    db: AsyncSession, org: Organization, form: str, fields: dict[str, object],
+) -> dict:
+    instance = await process_tax_document(
+        db,
+        organization_id=org.id,
+        document_id=uuid.uuid4(),
+        extraction_id=uuid.uuid4(),
+        document_type=form,
+        tax_form_data={"issuer_name": "Payer", "tax_year": 2025, "fields": fields},
+    )
+    return {f.field_id: f for f in await tax_form_repo.get_fields(db, instance.id)}
+
+
+class TestExtractionStoresDeclaredColumn:
+    @pytest.mark.asyncio
+    async def test_text_box_keeps_digits_as_text(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        fields = await _extract(
+            db, test_org, "1099_r", {"box_7": "7", "box_11": "2019", "box_1": 100},
+        )
+        assert fields["box_7"].value_text == "7"
+        assert fields["box_7"].value_numeric is None
+        assert fields["box_11"].value_text == "2019"
+        assert fields["box_1"].value_numeric == Decimal("100")
+
+    @pytest.mark.asyncio
+    async def test_numeric_box_parses_currency_string(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        fields = await _extract(db, test_org, "w2", {"box_1": "$1,234.00"})
+        assert fields["box_1"].value_numeric == Decimal("1234.00")
+        assert fields["box_1"].value_text is None
+
+    @pytest.mark.asyncio
+    async def test_unparseable_numeric_box_is_kept_as_text(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        fields = await _extract(db, test_org, "w2", {"box_1": "see statement"})
+        assert fields["box_1"].value_text == "see statement"
+        assert fields["box_1"].value_numeric is None
+
+    @pytest.mark.asyncio
+    async def test_boolean_box_stores_the_bool(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        fields = await _extract(db, test_org, "w2", {"box_13_retirement": True})
+        assert fields["box_13_retirement"].value_boolean is True
+        assert fields["box_13_retirement"].value_numeric is None
+
+    @pytest.mark.asyncio
+    async def test_undeclared_field_keeps_inference(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        fields = await _extract(db, test_org, "w2", {"custom_amount": "42", "custom_note": "hi"})
+        assert fields["custom_amount"].value_numeric == Decimal("42")
+        assert fields["custom_note"].value_text == "hi"
