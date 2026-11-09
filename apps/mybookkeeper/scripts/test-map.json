@@ -190,7 +190,29 @@
         "api-client/src/types/document/",
         "backend/app/core/document_constants.py",
         "backend/app/mappers/document_delete_mapper.py",
-        "backend/app/services/storage/stored_file_cleanup.py"
+        "backend/app/services/storage/stored_file_cleanup.py",
+        "api-client/src/constants/documentListView.ts",
+        "api-client/src/constants/documentReferenceOnly.ts",
+        "api-client/src/utils/documentListView.ts",
+        "api-client/src/utils/bulkDeleteSummary.ts",
+        "api-client/src/utils/escrowToggleMessage.ts",
+        "api-client/src/utils/pruneSelection.ts",
+        "frontend/src/shared/hooks/useDocumentColumns.tsx",
+        "mobile/src/features/documents/",
+        "mobile/src/lib/useRowSelection.ts",
+        "mobile/src/constants/documentBulk.ts",
+        "mobile/src/constants/documentFilters.ts",
+        "mobile/src/constants/documents.ts",
+        "mobile/test-support/documentsServer.ts",
+        "api-client/src/constants/documentFilterOptions.ts",
+        "api-client/src/constants/documentListLimit.ts",
+        "api-client/src/constants/documentSourceLabels.ts",
+        "api-client/src/constants/documentStatusLabels.ts",
+        "api-client/src/utils/documentSourceLabel.ts",
+        "api-client/src/utils/failedDocumentsMessage.ts",
+        "mobile/src/types/DocumentFilter.ts",
+        "mobile/src/types/DocumentFilterSegment.ts",
+        "api-client/src/store/documentsApi.ts"
       ],
       "backend_tests": [
         "test_document_checklist_service.py",
@@ -212,7 +234,9 @@
         "DocumentStatusBadge.test.tsx",
         "UploadStatusCard.test.tsx",
         "documentUploadSlice.test.ts",
-        "DocumentsSkeleton.test.tsx"
+        "DocumentsSkeleton.test.tsx",
+        "useDocumentColumns.test.tsx",
+        "Documents.test.tsx"
       ],
       "e2e_specs": [
         "documents.spec.ts",
@@ -1679,7 +1703,9 @@
         "mobile/src/types/MonthlyAverageCardProps.ts",
         "mobile/src/types/PeriodSheetMessages.ts",
         "mobile/src/types/PeriodSheetProps.ts",
-        "mobile/src/features/money/"
+        "mobile/src/features/money/",
+        "mobile/src/lib/useRowSelection.ts",
+        "api-client/src/utils/pruneSelection.ts"
       ],
       "backend_tests": [
         "test_bank_csv_parser.py",

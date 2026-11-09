@@ -14,13 +14,19 @@ import {
   useReExtractDocumentMutation,
   useToggleEscrowPaidMutation,
 } from "@mybookkeeper/api-client/store/documentsApi";
-import type { BulkDeleteDocumentsResponse } from "@mybookkeeper/api-client/types/document/BulkDeleteDocumentsResponse";
-import { chunkDocumentIds, mergeBulkDeleteResponses } from "@mybookkeeper/api-client/utils/bulkDeleteDocuments";
+import { runBulkDelete } from "@mybookkeeper/api-client/utils/bulkDeleteDocuments";
 import { errorDetail } from "@mybookkeeper/api-client/utils/errorDetail";
 import { useDocumentColumns } from "@/shared/hooks/useDocumentColumns";
 import { useToast } from "@/shared/hooks/useToast";
 import { useAppSelector } from "@/shared/store/hooks";
-import { TYPE_OPTIONS, STATUS_OPTIONS, SOURCE_OPTIONS } from "@/shared/lib/document-config";
+import {
+  DOCUMENT_SOURCE_OPTIONS,
+  DOCUMENT_STATUS_OPTIONS,
+  DOCUMENT_TYPE_OPTIONS,
+} from "@mybookkeeper/api-client/constants/documentFilterOptions";
+import { REFERENCE_ONLY_COPY } from "@mybookkeeper/api-client/constants/documentReferenceOnly";
+import { failedDocumentsMessage } from "@mybookkeeper/api-client/utils/failedDocumentsMessage";
+import { referenceOnlyMarkedMessage } from "@mybookkeeper/api-client/utils/escrowToggleMessage";
 import DocumentUploadZone from "@/app/features/documents/DocumentUploadZone";
 import DocumentsSkeleton from "@/app/features/documents/DocumentsSkeleton";
 import DocumentTable from "@/app/features/documents/DocumentTable";
@@ -87,21 +93,22 @@ export default function Documents() {
   async function handleBulkDelete() {
     setConfirmBulkDelete(false);
     const ids = table.getSelectedRowModel().rows.map((r) => r.original.id);
-    try {
-      const responses: BulkDeleteDocumentsResponse[] = [];
-      for (const chunk of chunkDocumentIds(ids)) {
-        responses.push(await bulkDelete(chunk).unwrap());
-      }
-      const result = mergeBulkDeleteResponses(responses);
-      setRowSelection({});
-      const skipped = result.skipped.length;
-      if (skipped > 0) {
-        showError(
-          `${skipped} document${skipped > 1 ? "s were" : " was"} not deleted: still being read or already gone`,
-        );
-      }
-    } catch {
-      showError("Failed to delete documents");
+    const run = await runBulkDelete(ids, (batch) => bulkDelete(batch).unwrap());
+    // Whatever errored stays selected so it can be retried; the rest of the pick is over.
+    setRowSelection(Object.fromEntries(run.failedIds.map((id) => [id, true])));
+    if (run.failedIds.length > 0) {
+      showError(
+        run.deleted.length > 0
+          ? `Deleted ${run.deleted.length}. ${run.failedIds.length} couldn't be deleted \u2014 try again.`
+          : "Failed to delete documents",
+      );
+      return;
+    }
+    const skipped = run.skipped.length;
+    if (skipped > 0) {
+      showError(
+        `${skipped} document${skipped > 1 ? "s were" : " was"} not deleted: still being read or already gone`,
+      );
     }
   }
 
@@ -113,7 +120,7 @@ export default function Documents() {
       // Disabling escrow-paid — no confirmation needed
       toggleEscrow({ id, is_escrow_paid: false })
         .unwrap()
-        .then(() => showSuccess("Document unmarked as reference-only"))
+        .then(() => showSuccess(REFERENCE_ONLY_COPY.unmarked))
         .catch(() => showError("Failed to update document"));
     }
   }, [toggleEscrow, showSuccess, showError]);
@@ -122,12 +129,7 @@ export default function Documents() {
     if (!confirmEscrowId) return;
     try {
       const result = await toggleEscrow({ id: confirmEscrowId, is_escrow_paid: true }).unwrap();
-      const count = result.transactions_removed;
-      showSuccess(
-        count > 0
-          ? `Marked as reference-only — removed ${count} transaction${count > 1 ? "s" : ""}`
-          : "Marked as reference-only"
-      );
+      showSuccess(referenceOnlyMarkedMessage(result.transactions_removed));
     } catch {
       showError("Failed to update document");
     } finally {
@@ -158,9 +160,9 @@ export default function Documents() {
 
   const filterOptions = useMemo(
     () => ({
-      status: STATUS_OPTIONS,
-      document_type: TYPE_OPTIONS,
-      source: SOURCE_OPTIONS,
+      status: DOCUMENT_STATUS_OPTIONS,
+      document_type: DOCUMENT_TYPE_OPTIONS,
+      source: DOCUMENT_SOURCE_OPTIONS,
     }),
     [],
   );
@@ -213,16 +215,17 @@ export default function Documents() {
       {failedDocs.length > 0 && !failedDismissed && (
         <AlertBox variant="warning" className="flex items-center justify-between gap-3">
           <span>
-            {failedDocs.length === 1
-              ? `I had trouble with ${failedDocs[0].file_name}. Want me to try again?`
-              : `I had trouble with ${failedDocs.length} documents — want to take a look?`}
+            {failedDocumentsMessage(failedDocs.length, failedDocs[0].file_name ?? "this document")}
           </span>
           <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="ghost"
               size="sm"
               className="text-orange-800 dark:text-orange-200 hover:bg-orange-100 dark:hover:bg-orange-900 h-7 px-2"
-              onClick={() => setColumnFilters([{ id: "status", value: ["failed"] }])}
+              onClick={() => {
+                setSearchQuery("");
+                setColumnFilters([{ id: "status", value: ["failed"] }]);
+              }}
             >
               Show failed
             </Button>
@@ -303,9 +306,9 @@ export default function Documents() {
 
       <ConfirmDialog
         open={!!confirmEscrowId}
-        title="Mark as reference-only"
-        description="This document was paid through escrow (e.g., insurance, property taxes). Any transactions created from this document will be removed."
-        confirmLabel="Mark as reference-only"
+        title={REFERENCE_ONLY_COPY.confirmTitle}
+        description={REFERENCE_ONLY_COPY.confirmBody}
+        confirmLabel={REFERENCE_ONLY_COPY.confirmAction}
         isLoading={isTogglingEscrow}
         onConfirm={handleConfirmEscrow}
         onCancel={() => setConfirmEscrowId(null)}

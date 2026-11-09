@@ -1,7 +1,8 @@
+import { pruneSelection } from "@mybookkeeper/api-client/utils/pruneSelection";
 import { useCallback, useState } from "react";
 
 /** Which rows are ticked while picking several. Null means not picking at all. */
-export function useTransactionSelection() {
+export function useRowSelection() {
   const [selected, setSelected] = useState<ReadonlySet<string> | null>(null);
 
   const start = useCallback((id?: string) => setSelected(new Set(id ? [id] : [])), []);
@@ -17,6 +18,11 @@ export function useTransactionSelection() {
     [],
   );
   const selectAll = useCallback((ids: readonly string[]) => setSelected(new Set(ids)), []);
+  /** Drops ticks for rows that are gone, so a refreshed or narrowed list never acts on what can't be seen. */
+  const keepOnly = useCallback(
+    (ids: readonly string[]) => setSelected((current) => (current === null ? current : pruneSelection(current, ids))),
+    [],
+  );
 
-  return { selected, isSelecting: selected !== null, start, cancel, toggle, selectAll };
+  return { selected, isSelecting: selected !== null, start, cancel, toggle, selectAll, keepOnly };
 }

@@ -1,14 +1,19 @@
+import { REFERENCE_ONLY_COPY } from "@mybookkeeper/api-client/constants/documentReferenceOnly";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
+import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import type { AxiosAdapter } from "axios";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
+import { DOCUMENT_ACTION_MESSAGES, DOCUMENT_LIST_MESSAGES } from "../src/constants/documents";
 import DocumentDetailScreen from "../src/features/documents/DocumentDetailScreen";
 import { clearDocumentFiles } from "../src/features/documents/openDocumentFile";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aDocument, startFakeServer } from "../test-support/documentsServer";
+import { holdWrites } from "../test-support/holdWrites";
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
@@ -56,7 +61,9 @@ const originalAdapter = api.defaults.adapter;
 async function renderDetail() {
   await render(
     <Provider store={store}>
-      <DocumentDetailScreen id="d1" />
+      <ToastProvider bottomOffset={0}>
+        <DocumentDetailScreen id="d1" />
+      </ToastProvider>
     </Provider>,
   );
   await screen.findByRole("header");
@@ -152,6 +159,42 @@ describe("DocumentDetailScreen", () => {
     alert.mockRestore();
   });
 
+  it("shows the server's reason when deleting is refused because it is being read", async () => {
+    const server = startFakeServer([aDocument()]);
+    const alert = jest.spyOn(Alert, "alert");
+    await renderDetail();
+    await fireEvent.press(await screen.findByRole("button", { name: "Delete" }));
+    server.failWritesWith = 409;
+    await act(async () => {
+      alert.mock.calls[0][2]?.find((button) => button.style === "destructive")?.onPress?.();
+    });
+    expect(await screen.findByText("nope")).toBeTruthy();
+    expect(mockBack).not.toHaveBeenCalled();
+    alert.mockRestore();
+  });
+
+  it("says a document is already gone when deleting finds nothing, and goes back", async () => {
+    const server = startFakeServer([aDocument()]);
+    const alert = jest.spyOn(Alert, "alert");
+    await renderDetail();
+    await fireEvent.press(await screen.findByRole("button", { name: "Delete" }));
+    server.failWritesWith = 404;
+    await act(async () => {
+      alert.mock.calls[0][2]?.find((button) => button.style === "destructive")?.onPress?.();
+    });
+    expect(await screen.findByText(DOCUMENT_ACTION_MESSAGES.alreadyGone)).toBeTruthy();
+    expect(mockBack).toHaveBeenCalled();
+    alert.mockRestore();
+  });
+
+  it("shows the server's reason when reading again is refused", async () => {
+    const server = startFakeServer([aDocument({ status: "failed" })]);
+    await renderDetail();
+    server.failWritesWith = 409;
+    await fireEvent.press(await screen.findByRole("button", { name: "Try reading it again" }));
+    expect(await screen.findByText("nope")).toBeTruthy();
+  });
+
   it("tries a failed document again and shows why it failed", async () => {
     const server = startFakeServer([aDocument({ status: "failed", error_message: "Blurry" })]);
     await renderDetail();
@@ -187,5 +230,88 @@ describe("DocumentDetailScreen", () => {
     expect(await screen.findByText("I can't find that document.")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Back" }));
     expect(mockBack).toHaveBeenCalled();
+  });
+
+  it("shows a deleted document as deleted, with no file and no actions", async () => {
+    startFakeServer([aDocument({ status: "deleted" })]);
+    await renderDetail();
+    expect(screen.getByText(DOCUMENT_LIST_MESSAGES.deletedStatusLine)).toBeTruthy();
+    expect(screen.getByText(DOCUMENT_LIST_MESSAGES.deletedFileNote)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Mark as reference-only" })).toBeNull();
+  });
+
+  it("offers no delete or reference-only change while a document is being read", async () => {
+    startFakeServer([aDocument({ status: "processing" })]);
+    await renderDetail();
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Mark as reference-only" })).toBeNull();
+  });
+
+  it("marks a document reference-only only after warning that its transactions go", async () => {
+    const server = startFakeServer([aDocument()]);
+    server.transactionsRemoved = 2;
+    const alert = jest.spyOn(Alert, "alert");
+    await renderDetail();
+    await fireEvent.press(await screen.findByRole("button", { name: "Mark as reference-only" }));
+    expect(server.requests.some((request) => request.method === "patch")).toBe(false);
+    const [title, body, buttons] = alert.mock.calls[0];
+    expect(title).toBe(REFERENCE_ONLY_COPY.confirmTitle);
+    expect(body).toBe(REFERENCE_ONLY_COPY.confirmBody);
+    await act(async () => {
+      buttons?.find((button) => button.text === "Mark as reference-only")?.onPress?.();
+    });
+    expect(await screen.findByText("Marked as reference-only \u2014 removed 2 transactions")).toBeTruthy();
+    expect(JSON.parse(String(server.requests.find((request) => request.method === "patch")?.data))).toEqual({ is_escrow_paid: true });
+    expect(await screen.findByText("Reference")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Unmark as reference-only" })).toBeTruthy();
+    alert.mockRestore();
+  });
+
+  it("unmarks a reference-only document without asking", async () => {
+    const server = startFakeServer([aDocument({ is_escrow_paid: true })]);
+    const alert = jest.spyOn(Alert, "alert");
+    await renderDetail();
+    expect(screen.getByText("Reference")).toBeTruthy();
+    await fireEvent.press(await screen.findByRole("button", { name: "Unmark as reference-only" }));
+    expect(await screen.findByText(REFERENCE_ONLY_COPY.unmarked)).toBeTruthy();
+    expect(alert).not.toHaveBeenCalled();
+    expect(JSON.parse(String(server.requests.find((request) => request.method === "patch")?.data))).toEqual({ is_escrow_paid: false });
+    expect(screen.queryByText("Reference")).toBeNull();
+    alert.mockRestore();
+  });
+
+  it("says when marking reference-only fails, and when it can't reach the server", async () => {
+    const server = startFakeServer([aDocument({ is_escrow_paid: true })]);
+    await renderDetail();
+    server.failWritesWith = 500;
+    await fireEvent.press(await screen.findByRole("button", { name: "Unmark as reference-only" }));
+    expect(await screen.findByText("I couldn't update that document. Want to try again?")).toBeTruthy();
+    server.failWritesWith = null;
+    server.offline = true;
+    await fireEvent.press(await screen.findByRole("button", { name: "Unmark as reference-only" }));
+    expect(await screen.findByText("I can't reach the server, so I couldn't update that. Want to try again?")).toBeTruthy();
+  });
+
+  it("shows loading on the reference-only button and sends once", async () => {
+    startFakeServer([aDocument({ is_escrow_paid: true })]);
+    await renderDetail();
+    const writes: string[] = [];
+    holdWrites();
+    const held = api.defaults.adapter as AxiosAdapter;
+    api.defaults.adapter = (config) => {
+      if (config.method === "patch") writes.push(String(config.url));
+      return held(config);
+    };
+    await fireEvent.press(await screen.findByRole("button", { name: "Unmark as reference-only" }));
+    expect(await screen.findByText("Unmarking…")).toBeTruthy();
+    await fireEvent.press(screen.getByText("Unmarking…"));
+    expect(writes).toEqual(["/documents/d1/escrow-paid"]);
+  });
+
+  it("offers a viewer no reference-only change", async () => {
+    startFakeServer([aDocument()], "viewer");
+    await renderDetail();
+    expect(screen.queryByRole("button", { name: "Mark as reference-only" })).toBeNull();
   });
 });

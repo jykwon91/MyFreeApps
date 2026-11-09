@@ -1,9 +1,10 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
+import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { useState } from "react";
 import { Provider } from "react-redux";
-import type { DocumentFilter } from "../src/constants/documentFilters";
+import type { DocumentFilter } from "../src/types/DocumentFilter";
 import DocumentsScreen from "../src/features/documents/DocumentsScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
@@ -32,13 +33,15 @@ function Harness({ initial = "all" }: { initial?: DocumentFilter }) {
 async function renderScreen(initial?: DocumentFilter) {
   await render(
     <Provider store={store}>
-      <Harness initial={initial} />
+      <ToastProvider bottomOffset={0}>
+        <Harness initial={initial} />
+      </ToastProvider>
     </Provider>,
   );
 }
 
 const rowNames = () =>
-  screen.getAllByRole("button").map((row) => row.props.accessibilityLabel).filter(Boolean);
+  screen.getAllByRole("button").map((row) => String(row.props.accessibilityLabel ?? "")).filter((label) => label.includes(", "));
 
 beforeEach(() => {
   session.tokenStore.set("token");
