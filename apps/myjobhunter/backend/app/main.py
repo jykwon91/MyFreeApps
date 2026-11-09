@@ -16,7 +16,7 @@ from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.api.users_router import build_users_router
 
-from app.api import account, admin, admin_invites, applications, companies, demo, discover, documents, health, integrations, job_analysis, profile, resume_refinement, resumes, totp
+from app.api import account, admin, admin_invites, applications, companies, demo, discover, documents, health, integrations, job_analysis, mobile_auth, profile, resume_refinement, resumes, totp
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.permissions import current_admin, current_strict_superuser
@@ -269,6 +269,7 @@ app.include_router(build_transparency_router(settings))
 # because check_account_not_locked consumes a form-encoded
 # OAuth2PasswordRequestForm body and the TOTP login endpoint accepts JSON.
 app.include_router(totp.router)
+app.include_router(mobile_auth.router)
 
 # Test-only helpers — mounted only when MYJOBHUNTER_ENABLE_TEST_HELPERS=1.
 # Used by the E2E suite to put the DB into deterministic states (e.g.
