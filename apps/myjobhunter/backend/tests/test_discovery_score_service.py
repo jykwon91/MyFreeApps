@@ -22,11 +22,25 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.discovery.discovered_job import DiscoveredJob
+from app.services.discovery import discovery_score_service
 from app.services.job_analysis.job_analysis_service import (
     JobAnalysisError,
     PERMANENT_ANTHROPIC_CODES,
     TRANSIENT_ANTHROPIC_CODES,
 )
+
+
+# Bound at import time, before conftest's function-scoped
+# ``_disable_discovery_scoring_background`` replaces it with a no-op.
+_ORIGINAL_SCORE_USER_INBOX = discovery_score_service.score_user_inbox
+
+
+@pytest.fixture(autouse=True)
+def _restore_real_score_user_inbox(monkeypatch: pytest.MonkeyPatch) -> None:
+    """This module tests the real scoring loop, so undo the conftest no-op."""
+    monkeypatch.setattr(
+        discovery_score_service, "score_user_inbox", _ORIGINAL_SCORE_USER_INBOX,
+    )
 
 
 _SCORE_JD_PATH = "app.services.discovery.discovery_score_service.score_jd"

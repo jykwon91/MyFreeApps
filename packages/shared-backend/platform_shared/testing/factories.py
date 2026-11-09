@@ -331,8 +331,16 @@ def make_api_user_factory(
         # Hard-delete so rows don't persist across test sessions.
         # fastapi-users' SQLAlchemyUserDatabase.create() commits during
         # /auth/register, so the user row is persisted regardless of the
-        # test's rolled-back transaction; we explicitly purge via a fresh
-        # engine outside the rolled-back session to keep the test DB clean.
+        # test's rolled-back transaction; we explicitly purge it here.
+        #
+        # Roll the test session back FIRST. This teardown runs before the
+        # app's ``db`` fixture tears down, so the test's transaction is still
+        # open: rows it flushed but never committed (a company, a discovered
+        # job) hold row locks that reference the user. The purge below runs
+        # on another connection, and ``DELETE FROM users`` cascades into those
+        # rows — without the rollback it waits on a lock that only this same
+        # event loop could release, and the test hangs forever.
+        await db.rollback()
         database_url = database_url_getter()
         cleanup_engine = create_async_engine(database_url, poolclass=NullPool)
         cleanup_factory = async_sessionmaker(cleanup_engine, expire_on_commit=False)

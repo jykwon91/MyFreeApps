@@ -151,8 +151,8 @@ uv lock --check
 
 - `pytest` with `asyncio_mode = auto`
 - `conftest.py` provides: `db`, `client`, `user_factory`, `as_user`
-- Every test uses a rolled-back transaction for isolation
-- Hard-delete users in teardown to prevent cross-session contamination
+- The `db` fixture empties every table after each test (mirrors MBK): route handlers,
+  services and `user_factory` all commit, so a rollback alone cannot isolate tests
 - Tenant isolation tests in `test_tenant_isolation.py`
 
 ## Deployment

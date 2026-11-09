@@ -556,27 +556,9 @@ assertions to cover the full rendering path including the applications table and
 2. `DocumentFileCreateInternal` — internal typed container for file metadata. Not exposed to API callers.
 `document_service.py` and `documents.py` route updated. Old `document_create_request.py` file retained for backward compat but no longer used by any route or service. Tests added: 2 API-level rejection tests + 2 unit tests for the new schemas.
 
-### [Backend Tests] test_application_writes.py hangs on 3rd test (timeout in teardown)
+### ~~[Backend Tests] test_application_writes.py hangs on 3rd test (timeout in teardown)~~ RESOLVED
 
-**Severity:** High
-**Effort:** M
-**Location:** `apps/myjobhunter/backend/tests/test_application_writes.py` — 3rd test
-**Discovered:** Phase 3 resume parser worker — `2026-05-04`
-
-**Problem:** Running the full backend test suite hangs during teardown of the 3rd test in
-`test_application_writes.py` with a 60-second timeout in `select.select`. The same timeout
-occurs on both `main` and the worktree branch, confirming it is pre-existing. Likely an
-asyncpg event loop interaction on Windows where a connection pool connection is held open
-by the session-scoped fixture beyond what the event loop can cleanly shut down.
-
-**Recommendation:**
-1. Add `@pytest.mark.timeout(30)` to the hanging test to get faster feedback.
-2. Try `asyncio_default_fixture_loop_scope = "function"` (instead of "session") in
-   `pyproject.toml` to see if shorter event loop lifetimes avoid the hang.
-3. Run the full suite on Linux CI (likely unaffected) to confirm tests pass end-to-end.
-
-**Workaround:** Run individual test files (`pytest tests/test_X.py`) rather than the
-full suite on Windows until this is resolved.
+**Resolved:** 2026-11-09 (branch `fix/mjh-test-isolation`). Not Argon2 (the shared factory already swaps in a fast hasher) and not Windows-specific. `user_factory`'s teardown runs before the `db` fixture's, and it deleted the test users over a second connection while the test's own transaction was still open. When that transaction had flushed rows referencing the user (`_create_company` flushes without committing; a 422 path never commits), `DELETE FROM users` cascaded into them and waited forever on a lock only the same event loop could release. Confirmed on Postgres with `pg_blocking_pids` (`idle in transaction` test session blocking `DELETE FROM users WHERE email = $1`). Fix: `make_api_user_factory` rolls the test session back before purging, and the `db` fixture empties every table after each test so committed rows no longer leak between tests. The file now passes in ~1.5s (21 tests); putting it in a CI shard is the shard-allowlist entry below.
 
 ---
 
