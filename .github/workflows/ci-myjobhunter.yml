@@ -189,6 +189,7 @@ jobs:
             paths: >-
               tests/test_totp_login.py
               tests/test_totp_setup.py
+              tests/test_mobile_auth.py
           - name: refinement
             # Resume refinement + parse suites: pure-function + mocked tests (no
             # DB fixtures, no Argon2 login storm) — runs in seconds.

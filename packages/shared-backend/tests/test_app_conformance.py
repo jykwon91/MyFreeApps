@@ -1366,9 +1366,16 @@ class TestTotpRoutesAreShared:
             "An audit row would copy the secret hashes."
         )
 
-    @pytest.mark.parametrize("app", ["mybookkeeper", "myrecipes"])
+    @pytest.mark.parametrize("app", ["mybookkeeper", "myjobhunter", "myrecipes"])
     def test_apps_with_phone_sign_in_mount_the_routes(self, app: str) -> None:
         assert "app.include_router(mobile_auth.router)" in _read("apps", app, "backend", "app", "main.py")
+
+    @pytest.mark.parametrize("app", ["myjobhunter", "myrecipes"])
+    def test_phone_sign_in_wiring_matches_mybookkeeper(self, app: str) -> None:
+        """The routes come from platform_shared; each app's file only wires its own
+        dependencies in, so the files stay identical."""
+        wiring = ("backend", "app", "api", "mobile_auth.py")
+        assert _read("apps", app, *wiring) == _read("apps", "mybookkeeper", *wiring)
 
     @pytest.mark.parametrize("app", _APPS)
     def test_a_migration_creates_refresh_sessions(self, app: str) -> None:
