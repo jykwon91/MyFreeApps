@@ -14,6 +14,8 @@ interface DocumentReaderProps<TDraft> {
   onRead: (draft: TDraft) => void;
   /** The name a photo taken here is saved under. */
   photoName: string;
+  /** What may be picked; defaults to what every reader accepts. */
+  fileTypes?: readonly string[];
   /** True while the thing being filled in is itself being saved. */
   isDisabled: boolean;
 }
@@ -22,7 +24,7 @@ interface DocumentReaderProps<TDraft> {
  * Fill a form from a document: a photo, a file, or a document already uploaded. What the
  * document is, and what gets read out of it, is up to the caller.
  */
-export default function DocumentReader<TDraft>({ messages: MESSAGES, readers, onRead, photoName, isDisabled }: DocumentReaderProps<TDraft>) {
+export default function DocumentReader<TDraft>({ messages: MESSAGES, readers, onRead, photoName, fileTypes = DOCUMENT_READER_FILE_TYPES, isDisabled }: DocumentReaderProps<TDraft>) {
   const { colors, spacing, radius, fontSize } = useTheme();
   const reader = useReadDocument(readers, MESSAGES, onRead);
   const [isPickingLibrary, setIsPickingLibrary] = useState(false);
@@ -40,7 +42,7 @@ export default function DocumentReader<TDraft>({ messages: MESSAGES, readers, on
       ) : null}
       <HeldFileButtons
         file={reader.file}
-        fileTypes={DOCUMENT_READER_FILE_TYPES}
+        fileTypes={fileTypes}
         isDisabled={isBlocked}
         isPicking={reader.isPicking}
         onPick={(from) => void reader.chooseAndRead(from)}
