@@ -1151,6 +1151,42 @@ class TestWebMobileScreenMap:
         )
 
 
+class TestMobileTypecheckCoversAllCode:
+    """tsc only checks the folders a mobile tsconfig includes. A folder of code left out
+    is checked only through whatever imports it, so a file nothing imports yet can break
+    the build the day something does."""
+
+    @staticmethod
+    def _code_folders(mobile: Path) -> set[str]:
+        return {
+            folder.name
+            for folder in mobile.iterdir()
+            if folder.is_dir()
+            and folder.name not in {"node_modules", ".expo", "assets"}
+            and any(folder.rglob("*.ts*"))
+        }
+
+    @pytest.mark.parametrize(
+        "mobile",
+        [
+            _REPO_ROOT / "infra" / "templates" / "scaffold-mobile",
+            *sorted(
+                _REPO_ROOT / "apps" / app / "mobile"
+                for app in _ALL_APPS
+                if _render.is_mobile_app(yaml.safe_load(_read("apps", app, "app.yaml")))
+            ),
+        ],
+        ids=lambda mobile: str(mobile.relative_to(_REPO_ROOT)),
+    )
+    def test_tsconfig_includes_every_code_folder(self, mobile: Path) -> None:
+        included = set(json.loads((mobile / "tsconfig.json").read_text(encoding="utf-8"))["include"])
+        missing = self._code_folders(mobile) - included
+        assert not missing, (
+            f"{mobile.relative_to(_REPO_ROOT)}/tsconfig.json leaves {sorted(missing)} out of "
+            f"`include`, so tsc never checks a file there that nothing imports."
+        )
+
+
 class TestMobileChecksWorkflow:
     """The reusable workflow is the only thing running the mobile toolchain in CI, and
     dropping a step from it would turn every caller's check quietly weaker."""
