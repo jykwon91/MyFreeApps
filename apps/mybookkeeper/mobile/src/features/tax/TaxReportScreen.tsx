@@ -9,9 +9,10 @@ import type { TaxRow } from "../../types/TaxRow";
 import { useToday } from "../../lib/useToday";
 import { isServerAnswer } from "../../utils/isServerAnswer";
 import { useCanWrite } from "../workspace/useCanWrite";
+import TaxW2RowView from "./TaxW2RowView";
 import TaxCategoryRowView from "./TaxCategoryRowView";
 import TaxPropertyRowView from "./TaxPropertyRowView";
-import { categoryRows, hasTaxData, propertyRows, taxRowKey, taxYears } from "./taxReportDisplay";
+import { availableViews, categoryRows, hasTaxData, propertyRows, taxRowKey, taxYears, w2Rows } from "./taxReportDisplay";
 import TaxReportExports from "./TaxReportExports";
 import TaxReportHeader from "./TaxReportHeader";
 import TaxReportSkeleton from "./TaxReportSkeleton";
@@ -29,16 +30,20 @@ export default function TaxReportScreen() {
   // Here, not in the footer: the footer goes away while another year loads, and a share in progress must not.
   const { sharingId, share } = useShareTaxExport(() => refetch().unwrap());
 
+  const views = useMemo(() => availableViews(currentData), [currentData]);
+  // A year without wages has no wages view to be left on, and one with only wages has no categories.
+  const shownView = views.includes(view) ? view : views[0];
   const rows = useMemo<readonly TaxRow[]>(() => {
     if (!currentData) return [];
-    return view === "categories" ? categoryRows(currentData) : propertyRows(currentData);
-  }, [currentData, view]);
+    if (shownView === "w2") return w2Rows(currentData);
+    return shownView === "categories" ? categoryRows(currentData) : propertyRows(currentData);
+  }, [currentData, shownView]);
   const yearOptions = taxYears(today).map((option) => ({ value: String(option), label: String(option) }));
   const showLastLoaded = Boolean(error) && currentData !== undefined;
   const hasData = currentData !== undefined && hasTaxData(currentData);
 
   function emptyList() {
-    if (hasData) return undefined;
+    if (rows.length > 0) return undefined;
     if (currentData) {
       return (
         <EmptyState
@@ -71,7 +76,8 @@ export default function TaxReportScreen() {
             onChooseYear={() => setIsChoosingYear(true)}
             showLastLoaded={showLastLoaded}
             summary={currentData}
-            view={view}
+            view={shownView}
+            views={views}
             year={year}
           />
         }
@@ -79,9 +85,10 @@ export default function TaxReportScreen() {
         data={rows}
         keyExtractor={taxRowKey}
         refreshControl={refreshControl}
-        renderItem={({ item }) =>
-          "category" in item ? <TaxCategoryRowView row={item} /> : <TaxPropertyRowView row={item} />
-        }
+        renderItem={({ item }) => {
+          if ("category" in item) return <TaxCategoryRowView row={item} />;
+          return "employer" in item ? <TaxW2RowView row={item} /> : <TaxPropertyRowView row={item} />;
+        }}
         testID="tax-report-list"
       />
       <OptionSheet

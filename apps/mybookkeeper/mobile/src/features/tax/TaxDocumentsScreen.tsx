@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { SectionList, Text, View } from "react-native";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
-import { TAX_DOCUMENTS_MESSAGES as MESSAGES } from "../../constants/taxDocuments";
+import { ALL_YEARS, TAX_DOCUMENTS_MESSAGES as MESSAGES } from "../../constants/taxDocuments";
 import { TAX_REPORT_MESSAGES } from "../../constants/taxReport";
 import { useToday } from "../../lib/useToday";
 import type { TaxDocumentRow } from "../../types/TaxDocumentRow";
@@ -22,14 +22,17 @@ export default function TaxDocumentsScreen() {
   const { colors, spacing, fontSize } = useTheme();
   const canWrite = useCanWrite();
   const today = useToday();
-  const [chosenYear, setChosenYear] = useState<number | null>(null);
+  const [chosenYear, setChosenYear] = useState<number | null | "all">(null);
   const [isChoosingYear, setIsChoosingYear] = useState(false);
-  const year = chosenYear ?? today.getFullYear() - 1;
-  const { currentData, error, isFetching, refetch } = useListTaxDocumentsQuery({ tax_year: year });
+  const year = chosenYear === "all" ? null : (chosenYear ?? today.getFullYear() - 1);
+  const { currentData, error, isFetching, refetch } = useListTaxDocumentsQuery(year === null ? undefined : { tax_year: year });
   const { refresh, refreshControl } = useRefresh(refetch, error);
 
-  const sections = useMemo<readonly TaxDocumentSection[]>(() => (currentData ? taxDocumentSections(currentData) : []), [currentData]);
-  const yearOptions = taxYears(today).map((option) => ({ value: String(option), label: String(option) }));
+  const sections = useMemo<readonly TaxDocumentSection[]>(() => (currentData ? taxDocumentSections(currentData, year === null) : []), [currentData, year]);
+  const yearOptions = [{ value: ALL_YEARS, label: MESSAGES.allYears }, ...taxYears(today).map((option) => ({ value: String(option), label: String(option) }))];
+  const checklist = currentData?.checklist ?? [];
+  const missingCount = checklist.filter((item) => item.status === "missing").length;
+  const yearText = year === null ? MESSAGES.allYears : String(year);
   const addDocument = () => router.push("/camera");
 
   function emptyList() {
@@ -62,9 +65,12 @@ export default function TaxDocumentsScreen() {
               hint={TAX_REPORT_MESSAGES.yearHint}
               label={TAX_REPORT_MESSAGES.year}
               onPress={() => setIsChoosingYear(true)}
-              value={String(year)}
+              value={yearText}
             />
             <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.readNote}</Text>
+            {checklist.length > 0 ? (
+              <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.checklistCount(checklist.length - missingCount, missingCount)}</Text>
+            ) : null}
             {error && currentData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
           </View>
         }
@@ -103,11 +109,11 @@ export default function TaxDocumentsScreen() {
         onClose={() => setIsChoosingYear(false)}
         onSelect={(chosen) => {
           setIsChoosingYear(false);
-          setChosenYear(Number(chosen));
+          setChosenYear(chosen === ALL_YEARS ? "all" : Number(chosen));
         }}
         options={yearOptions}
         title={TAX_REPORT_MESSAGES.year}
-        value={String(year)}
+        value={year === null ? ALL_YEARS : String(year)}
       />
     </>
   );

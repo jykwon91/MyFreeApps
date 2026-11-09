@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getApiValidationDetail } from "@/shared/lib/api-validation-detail";
+import { getApiValidationDetail } from "../utils/apiValidationDetail";
 
 const FALLBACK = "fallback";
 

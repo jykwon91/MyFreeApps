@@ -3,9 +3,9 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import SuggestionCard from "@/app/features/tax/SuggestionCard";
-import type { TaxAdvisorSuggestionRead } from "@/shared/types/tax/tax-advisor";
+import type { TaxAdvisorSuggestionRead } from "@mybookkeeper/api-client/types/tax/TaxAdvisorSuggestionRead";
 
-vi.mock("@/shared/store/taxReturnsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/taxReturnsApi", () => ({
   useUpdateSuggestionStatusMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 

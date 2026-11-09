@@ -2,33 +2,38 @@ import { useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { ArrowLeft, RefreshCw } from "lucide-react";
-import { useGetTaxReturnQuery, useGetFormsOverviewQuery, useGetValidationQuery, useRecomputeMutation } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import {
+  useGetTaxReturnQuery,
+  useGetFormsOverviewQuery,
+  useGetValidationQuery,
+  useRecomputeMutation,
   useGetFormFieldsQuery,
   useOverrideFieldMutation,
-} from "@/shared/store/taxReturnsApi";
+} from "@mybookkeeper/api-client/store/taxReturnsApi";
 import { useToast } from "@/shared/hooks/useToast";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { Button, LoadingButton, isNotFound } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 import TaxReturnSkeleton from "@/app/features/tax/TaxReturnSkeleton";
 import FormOverviewGrid from "@/app/features/tax/FormOverviewGrid";
-import { buildFormSummaries } from "@/app/features/tax/form-summaries";
+import { summarizeForms } from "@mybookkeeper/api-client/utils/buildFormSummaries";
 import FormFieldsTable from "@/app/features/tax/FormFieldsTable";
 import ValidationPanel from "@/app/features/tax/ValidationPanel";
 import SourceDocumentsSection from "@/app/features/tax/SourceDocumentsSection";
 import TaxAdvisorPanel from "@/app/features/tax/TaxAdvisorPanel";
 import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
-import type { FieldValueType } from "@/shared/types/tax/tax-form";
+import type { TaxFieldOverrideValue } from "@mybookkeeper/api-client/types/tax/TaxFieldOverrideValue";
+import { getApiValidationDetail } from "@mybookkeeper/api-client/utils/apiValidationDetail";
+import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
 import { STATUS_BADGE } from "@/shared/lib/tax-return-config";
 import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
-import { getApiValidationDetail } from "@/shared/lib/api-validation-detail";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function TaxReturnDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { showError, showSuccess } = useToast();
+  const canManage = useIsOrgAdmin();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedForm = searchParams.get("form");
@@ -58,10 +63,10 @@ export default function TaxReturnDetail() {
     }
   }, [id, recompute, showSuccess, showError]);
 
-  const handleOverride = useCallback(async (fieldId: string, value: number | string | boolean | null, reason: string, fieldType: FieldValueType): Promise<boolean> => {
+  const handleOverride = useCallback(async (fieldId: string, override: TaxFieldOverrideValue, reason: string): Promise<boolean> => {
     if (!id) return false;
     try {
-      await overrideField({ return_id: id, field_id: fieldId, value, override_reason: reason, field_type: fieldType }).unwrap();
+      await overrideField({ return_id: id, field_id: fieldId, override_reason: reason, ...override }).unwrap();
       showSuccess("Override saved");
       return true;
     } catch (err) {
@@ -130,19 +135,7 @@ export default function TaxReturnDetail() {
   const badge = STATUS_BADGE[taxReturn.status];
   const validationResults = validation ?? [];
 
-  // Build form list from actual form instances + any forms with validation results
-  const overviewNames = (formsOverview ?? []).map((f) => f.form_name);
-  const validationNames = validationResults.map((v) => v.form_name);
-  const formNames = [...new Set([...overviewNames, ...validationNames])];
-
-  const instanceCounts: Record<string, number> = {};
-  const fieldCounts: Record<string, number> = {};
-  for (const f of formsOverview ?? []) {
-    instanceCounts[f.form_name] = f.instance_count;
-    fieldCounts[f.form_name] = f.field_count;
-  }
-
-  const formSummaries = buildFormSummaries(formNames, instanceCounts, fieldCounts, validationResults);
+  const formSummaries = summarizeForms(formsOverview ?? [], validationResults);
 
   return (
     <main className="p-4 sm:p-8 space-y-6">
@@ -164,6 +157,7 @@ export default function TaxReturnDetail() {
               {taxReturn.needs_recompute ? (
                 <Badge label="Needs recompute" color="yellow" />
               ) : null}
+              {canManage ? (
               <LoadingButton
                 size="sm"
                 variant="secondary"
@@ -175,6 +169,7 @@ export default function TaxReturnDetail() {
                 <RefreshCw size={14} className="mr-1.5" />
                 Recompute
               </LoadingButton>
+              ) : null}
             </div>
           }
         />
@@ -218,6 +213,7 @@ export default function TaxReturnDetail() {
                   documentId={instance.document_id}
                   onOverride={handleOverride}
                   isSaving={isOverriding}
+                  canOverride={canManage}
                 />
               ))}
             </div>
@@ -241,7 +237,6 @@ export default function TaxReturnDetail() {
             {formsOverview ? (
               <FormOverviewGrid
                 forms={formSummaries}
-                validationResults={validationResults}
                 onFormClick={handleFormClick}
               />
             ) : null}
@@ -273,7 +268,7 @@ export default function TaxReturnDetail() {
             <h2 className="text-lg font-semibold mb-4">AI Tax Advisor</h2>
             {/* Its "no forms yet" note would be wrong if the forms didn't load. */}
             {formsOverview ? (
-              <TaxAdvisorPanel taxReturnId={id!} formCount={formNames.length} />
+              <TaxAdvisorPanel taxReturnId={id!} formCount={formSummaries.length} />
             ) : null}
           </section>
         </>

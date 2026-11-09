@@ -10,6 +10,8 @@ import { TAX_RETURNS_MESSAGES as MESSAGES } from "../src/constants/taxReturns";
 import { byYearNewestFirst, taxReturnTitle } from "../src/features/taxReturns/taxReturnDisplay";
 import TaxReturnsScreen from "../src/features/taxReturns/TaxReturnsScreen";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
+import { useIsAdmin } from "../src/features/workspace/useIsAdmin";
+import { TAX_RETURN_CREATE_MESSAGES } from "../src/constants/taxReturnCreate";
 import { store } from "../src/lib/store";
 
 const mockPush = jest.fn();
@@ -18,6 +20,7 @@ jest.mock("expo-router", () => ({
   router: { push: (path: string) => mockPush(path) },
 }));
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: jest.fn() }));
+jest.mock("../src/features/workspace/useIsAdmin", () => ({ useIsAdmin: jest.fn() }));
 
 const originalAdapter = api.defaults.adapter;
 
@@ -69,6 +72,7 @@ beforeEach(() => {
   store.dispatch(baseApi.util.resetApiState());
   mockPush.mockReset();
   jest.mocked(useCanWrite).mockReturnValue(true);
+  jest.mocked(useIsAdmin).mockReturnValue(false);
 });
 
 afterAll(() => {
@@ -116,6 +120,21 @@ describe("TaxReturnsScreen", () => {
     await show();
     await fireEvent.press(await screen.findByText("2025 tax return"));
     expect(mockPush).toHaveBeenCalledWith("/tax-returns/r1");
+  });
+
+  it("offers an owner or admin a new return, even when there are none yet", async () => {
+    jest.mocked(useIsAdmin).mockReturnValue(true);
+    serve([]);
+    await show();
+    await fireEvent.press(await screen.findByRole("button", { name: TAX_RETURN_CREATE_MESSAGES.newReturn }));
+    expect(mockPush).toHaveBeenCalledWith("/tax-returns/new");
+  });
+
+  it("offers nobody else a new return", async () => {
+    serve();
+    await show();
+    await screen.findByText("2025 tax return");
+    expect(screen.queryByText(TAX_RETURN_CREATE_MESSAGES.newReturn)).toBeNull();
   });
 
   it("offers a writer a way to add a document when there are no returns", async () => {

@@ -25,3 +25,21 @@ export function reviewFormTitle({ form_name, instance_label }: FormCompleteness)
   const isOwnName = instance_label?.toLowerCase() === label.toLowerCase();
   return instance_label && !isOwnName ? `${label} · ${instance_label}` : label;
 }
+
+function isSameCopyGroup(a: FormCompleteness, b: FormCompleteness): boolean {
+  return a.form_name === b.form_name && (a.instance_label ?? "") === (b.instance_label ?? "");
+}
+
+/**
+ * Which of several same-named, same-labelled copies a form is, counting from 0 in list order.
+ * The review carries no id for a copy, so this is what tells two unlabeled copies apart.
+ */
+export function reviewCopyNumber(ordered: readonly FormCompleteness[], form: FormCompleteness): number {
+  return ordered.slice(0, ordered.indexOf(form)).filter((earlier) => isSameCopyGroup(earlier, form)).length;
+}
+
+/** The copy of a form a list row pointed at, found again in a fresh review. */
+export function findReviewForm(forms: readonly FormCompleteness[], formName: string, label: string, copy: number): FormCompleteness | undefined {
+  const target = { form_name: formName, instance_label: label } as FormCompleteness;
+  return reviewFormOrder(forms).filter((candidate) => isSameCopyGroup(candidate, target))[copy];
+}

@@ -43,9 +43,6 @@ const mockNavigate = vi.fn();
 
 vi.mock('@mybookkeeper/api-client/store/taxReturnsApi', () => ({
   useListTaxReturnsQuery: vi.fn(() => ({ data: mockReturns, isLoading: false })),
-}));
-
-vi.mock('@/shared/store/taxReturnsApi', () => ({
   useCreateTaxReturnMutation: vi.fn(() => [mockCreateReturn, { isLoading: false }]),
 }));
 
@@ -59,7 +56,10 @@ vi.mock('@/shared/hooks/useToast', () => ({
   useToast: vi.fn(() => ({ showError: mockShowError, showSuccess: vi.fn() })),
 }));
 
+vi.mock('@/shared/hooks/useOrgRole', () => ({ useIsOrgAdmin: vi.fn(() => true) }));
+
 import { useListTaxReturnsQuery } from '@mybookkeeper/api-client/store/taxReturnsApi';
+import { useIsOrgAdmin } from '@/shared/hooks/useOrgRole';
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(
@@ -71,6 +71,7 @@ function renderWithProviders(ui: React.ReactElement) {
 describe('TaxReturns', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useIsOrgAdmin).mockReturnValue(true);
     localStorage.removeItem('tax-returns-info-dismissed');
     vi.mocked(useListTaxReturnsQuery).mockReturnValue({
       data: mockReturns,
@@ -90,6 +91,36 @@ describe('TaxReturns', () => {
   it('renders New Return button', () => {
     renderWithProviders(<TaxReturns />);
     expect(screen.getByText('New Return')).toBeInTheDocument();
+  });
+
+  it('hides New Return from anyone but an owner or admin', () => {
+    vi.mocked(useIsOrgAdmin).mockReturnValue(false);
+    renderWithProviders(<TaxReturns />);
+    expect(screen.queryByText('New Return')).not.toBeInTheDocument();
+  });
+
+  it('says the list failed to load, with a retry, instead of claiming there are no returns', async () => {
+    const refetch = vi.fn();
+    vi.mocked(useListTaxReturnsQuery).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      isFetching: false,
+      refetch,
+    } as unknown as ReturnType<typeof useListTaxReturnsQuery>);
+    renderWithProviders(<TaxReturns />);
+    expect(screen.queryByText('No tax returns yet')).not.toBeInTheDocument();
+    expect(screen.getByText("I couldn't load your tax returns. Want me to try again?")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it('offers every year the server accepts, newest first', async () => {
+    renderWithProviders(<TaxReturns />);
+    await userEvent.click(screen.getByText('New Return'));
+    const years = screen.getAllByRole('option').map((option) => option.textContent).filter((text) => /^\d{4}$/.test(text ?? ''));
+    expect(years[0]).toBe('2099');
+    expect(years[years.length - 1]).toBe('2020');
   });
 
   it('renders tax return cards sorted by year descending', () => {

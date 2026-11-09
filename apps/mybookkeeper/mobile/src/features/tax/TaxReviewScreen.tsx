@@ -13,12 +13,12 @@ import { isServerAnswer } from "../../utils/isServerAnswer";
 import PickerField from "../transactions/PickerField";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { taxYears } from "./taxReportDisplay";
-import { reviewFormOrder } from "./taxReviewDisplay";
+import { reviewCopyNumber, reviewFormOrder } from "./taxReviewDisplay";
 import TaxReviewFormRow from "./TaxReviewFormRow";
 import TaxReviewSkeleton from "./TaxReviewSkeleton";
 
 export default function TaxReviewScreen() {
-  const { colors, spacing, fontSize } = useTheme();
+  const { colors, spacing, fontSize, radius } = useTheme();
   const canWrite = useCanWrite();
   const today = useToday();
   const [chosenYear, setChosenYear] = useState<number | null>(null);
@@ -73,6 +73,14 @@ export default function TaxReviewScreen() {
             {hasForms && review?.needs_recompute ? <Banner message={MESSAGES.outOfDate} /> : null}
             {review && hasForms ? (
               <>
+                {review.summary ? (
+                  <View accessible style={{ gap: spacing.xs, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.muted }}>
+                    <Text accessibilityRole="header" style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>
+                      {MESSAGES.summaryTitle}
+                    </Text>
+                    <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{review.summary}</Text>
+                  </View>
+                ) : null}
                 <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{MESSAGES.formCount(forms.length, year)}</Text>
                 <LoadingButton onPress={() => router.push(`/tax-returns/${review.tax_return_id}`)} variant="secondary">
                   {MESSAGES.openReturn(year)}
@@ -90,7 +98,14 @@ export default function TaxReviewScreen() {
         data={forms}
         keyExtractor={(form, index) => `${form.form_name}:${form.instance_label ?? ""}:${index}`}
         refreshControl={refreshControl}
-        renderItem={({ item }) => <TaxReviewFormRow form={item} />}
+        renderItem={({ item }) => (
+          <TaxReviewFormRow
+            form={item}
+            onPress={() =>
+              router.push(`/tax/review-form?year=${year}&form=${encodeURIComponent(item.form_name)}&instance=${encodeURIComponent(item.instance_label ?? "")}&copy=${reviewCopyNumber(forms, item)}`)
+            }
+          />
+        )}
         testID="tax-review-list"
       />
       <OptionSheet

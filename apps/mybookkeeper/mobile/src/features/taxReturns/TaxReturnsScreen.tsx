@@ -1,13 +1,15 @@
 import { useListTaxReturnsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import type { TaxReturn } from "@mybookkeeper/api-client/types/tax/TaxReturn";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { FlatList, Text, View } from "react-native";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
+import { TAX_RETURN_CREATE_MESSAGES } from "../../constants/taxReturnCreate";
 import { TAX_RETURNS_MESSAGES as MESSAGES } from "../../constants/taxReturns";
 import { isServerAnswer } from "../../utils/isServerAnswer";
 import { useCanWrite } from "../workspace/useCanWrite";
+import { useIsAdmin } from "../workspace/useIsAdmin";
 import { byYearNewestFirst } from "./taxReturnDisplay";
 import TaxReturnRow from "./TaxReturnRow";
 import TaxReturnsSkeleton from "./TaxReturnsSkeleton";
@@ -15,6 +17,7 @@ import TaxReturnsSkeleton from "./TaxReturnsSkeleton";
 export default function TaxReturnsScreen() {
   const { colors, spacing, fontSize } = useTheme();
   const canWrite = useCanWrite();
+  const isAdmin = useIsAdmin();
   const { currentData, error, isFetching, refetch } = useListTaxReturnsQuery();
   const { refresh, refreshControl } = useRefresh(refetch, error);
   const returns = useMemo(() => byYearNewestFirst(currentData ?? []), [currentData]);
@@ -45,6 +48,11 @@ export default function TaxReturnsScreen() {
       ListHeaderComponent={
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
           <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.note}</Text>
+          {isAdmin ? (
+            <LoadingButton onPress={() => router.push("/tax-returns/new")} variant="secondary">
+              {TAX_RETURN_CREATE_MESSAGES.newReturn}
+            </LoadingButton>
+          ) : null}
           {error && currentData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
         </View>
       }

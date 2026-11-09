@@ -3,6 +3,7 @@ import type { TaxReportView } from "../types/TaxReportView";
 export const TAX_REPORT_VIEWS: readonly { value: TaxReportView; label: string }[] = [
   { value: "categories", label: "Categories" },
   { value: "properties", label: "Properties" },
+  { value: "w2", label: "W-2" },
 ];
 
 export const TAX_YEARS_SHOWN = 3;
@@ -19,6 +20,10 @@ export const TAX_REPORT_MESSAGES = {
   revenue: "Revenue",
   deductions: "Deductions",
   wages: "W-2 wages",
+  totalIncomeWithWages: "Total income with W-2 wages",
+  unknownEmployer: "Unknown employer",
+  withheld: (federal: string, state: string) => `Withheld: federal ${federal}, state ${state}`,
+  ein: (ein: string) => `EIN ${ein}`,
   wagesNote: "Not part of net rental income.",
   approvedOnly: "Only approved, tax-relevant transactions count.",
   notDeductible: "Not deductible",

@@ -5,13 +5,14 @@ import {
   useGetTaxReturnQuery,
   useGetValidationQuery,
 } from "@mybookkeeper/api-client/store/taxReturnsApi";
-import { getFormLabel } from "@mybookkeeper/api-client/utils/taxFormLabel";
+import { summarizeForms } from "@mybookkeeper/api-client/utils/buildFormSummaries";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import { Banner, EmptyState, LoadingButton, WebLink, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
+import { FILING_STATUSES } from "@mybookkeeper/api-client/constants/taxFilingStatuses";
 import { TAX_RETURNS_MESSAGES as MESSAGES } from "../../constants/taxReturns";
 import { isServerAnswer } from "../../utils/isServerAnswer";
 import TaxDocumentRowView from "../tax/TaxDocumentRowView";
@@ -21,6 +22,8 @@ import { useCanWrite } from "../workspace/useCanWrite";
 import { useIsAdmin } from "../workspace/useIsAdmin";
 import { isNotFound } from "@platform/core/utils/isNotFound";
 import { bySeverity, taxReturnTitle, taxReturnWebPath } from "./taxReturnDisplay";
+import TaxAdvisorRow from "./TaxAdvisorRow";
+import TaxFormRow from "./TaxFormRow";
 import TaxReturnSection from "./TaxReturnSection";
 import TaxReturnsSkeleton from "./TaxReturnsSkeleton";
 import { useRecalculate } from "./useRecalculate";
@@ -57,17 +60,18 @@ export default function TaxReturnDetailScreen({ id }: { id: string }) {
   const addDocument = () => router.push("/camera");
   const sections = documents.currentData ? taxDocumentSections(documents.currentData) : [];
   const results = validation.currentData ? bySeverity(validation.currentData) : [];
+  const summaries = forms.currentData ? summarizeForms(forms.currentData, validation.currentData ?? []) : [];
+  const statusLine =
+    current.status === "filed" && current.filed_at ? MESSAGES.filedOn(formatLongDate(current.filed_at)) : TAX_RETURN_STATUS_LABELS[current.status];
+  const filingStatus = FILING_STATUSES.find((option) => option.value === current.filing_status)?.label ?? current.filing_status;
+  const openForm = (formName: string) => router.push(`/tax-returns/${id}/form/${encodeURIComponent(formName)}`);
   const muted = { fontSize: fontSize.sm, color: colors.mutedForeground } as const;
 
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.xl }} refreshControl={refreshControl} testID="tax-return-detail">
       <View style={{ gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
         <Text style={{ fontSize: fontSize.xl, fontWeight: "700", color: colors.foreground }}>{taxReturnTitle(current)}</Text>
-        <Text style={muted}>
-          {current.status === "filed" && current.filed_at
-            ? MESSAGES.filedOn(formatLongDate(current.filed_at))
-            : TAX_RETURN_STATUS_LABELS[current.status]}
-        </Text>
+        <Text style={muted}>{`${statusLine} · ${filingStatus}`}</Text>
         {isStale ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
         {current.needs_recompute ? <Banner message={MESSAGES.outOfDateDetail} /> : null}
         {isAdmin ? (
@@ -92,7 +96,7 @@ export default function TaxReturnDetailScreen({ id }: { id: string }) {
         title={MESSAGES.attention}
       >
         {results.map((result, index) => (
-          <ValidationRow key={`${result.form_name}:${result.field_id ?? ""}:${index}`} result={result} />
+          <ValidationRow key={`${result.form_name}:${result.field_id ?? ""}:${index}`} onPress={() => openForm(result.form_name)} result={result} />
         ))}
       </TaxReturnSection>
 
@@ -117,21 +121,17 @@ export default function TaxReturnDetailScreen({ id }: { id: string }) {
       </TaxReturnSection>
 
       <TaxReturnSection
-        emptyMessage={forms.currentData?.length === 0 ? MESSAGES.noForms : null}
+        emptyMessage={forms.currentData && summaries.length === 0 ? MESSAGES.noForms : null}
         failed={!forms.currentData && !forms.isFetching}
         loading={!forms.currentData && forms.isFetching}
         title={MESSAGES.forms}
       >
-        <View style={{ paddingHorizontal: spacing.lg }}>
-          {forms.currentData?.map((form) => (
-            <WebLink
-              key={form.form_name}
-              label={`${getFormLabel(form.form_name)} · ${MESSAGES.fieldCount(form.field_count)}`}
-              url={`${WEB_BASE_URL}${taxReturnWebPath(id, form.form_name)}`}
-            />
-          ))}
-        </View>
+        {summaries.map((form) => (
+          <TaxFormRow form={form} key={form.form_name} onPress={() => openForm(form.form_name)} />
+        ))}
       </TaxReturnSection>
+
+      <TaxAdvisorRow onPress={() => router.push(`/tax-returns/${id}/advisor`)} returnId={id} />
 
       <View style={{ paddingHorizontal: spacing.lg }}>
         <WebLink label={MESSAGES.webLink} url={`${WEB_BASE_URL}${taxReturnWebPath(id)}`} />

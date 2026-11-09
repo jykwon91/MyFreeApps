@@ -8,13 +8,9 @@ import TaxReturnDetail from "@/app/pages/TaxReturnDetail";
 import type { TaxReturn } from "@mybookkeeper/api-client/types/tax/TaxReturn";
 import type { ValidationResult } from "@mybookkeeper/api-client/types/tax/ValidationResult";
 import type { FormOverviewItem } from "@mybookkeeper/api-client/types/tax/FormOverviewItem";
-import type { FormWithFields } from "@/shared/types/tax/tax-form";
+import type { FormWithFields } from "@mybookkeeper/api-client/types/tax/FormWithFields";
 import { queryData } from "@/test/rtk-query-data";
 import { queryStatus } from "@/test/rtk-query-status";
-
-const toast = vi.hoisted(() => ({ showError: vi.fn(), showSuccess: vi.fn() }));
-
-vi.mock("@/shared/hooks/useToast", () => ({ useToast: () => toast }));
 
 const mockTaxReturn: TaxReturn = {
   id: "tr-1",
@@ -56,6 +52,10 @@ const mockValidationResults: ValidationResult[] = [
   },
 ];
 
+const toast = vi.hoisted(() => ({ showError: vi.fn(), showSuccess: vi.fn() }));
+
+vi.mock("@/shared/hooks/useToast", () => ({ useToast: () => toast }));
+
 vi.mock("@mybookkeeper/api-client/store/taxReturnsApi", () => ({
   useGetTaxReturnQuery: vi.fn(),
   useGetFormsOverviewQuery: vi.fn(),
@@ -66,9 +66,6 @@ vi.mock("@mybookkeeper/api-client/store/taxReturnsApi", () => ({
     isError: false,
   })),
   useRecomputeMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
-}));
-
-vi.mock("@/shared/store/taxReturnsApi", () => ({
   useGetFormFieldsQuery: vi.fn(),
   useOverrideFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useGetAdvisorSuggestionsQuery: vi.fn(() => ({ data: undefined, isLoading: false, error: { status: 404 } })),
@@ -80,9 +77,13 @@ import {
   useGetFormsOverviewQuery,
   useGetTaxReturnQuery,
   useGetValidationQuery,
+  useGetFormFieldsQuery,
+  useOverrideFieldMutation,
 } from "@mybookkeeper/api-client/store/taxReturnsApi";
-import { useGetFormFieldsQuery, useOverrideFieldMutation } from "@/shared/store/taxReturnsApi";
 import { fireEvent, waitFor } from "@testing-library/react";
+
+vi.mock("@/shared/hooks/useOrgRole", () => ({ useIsOrgAdmin: vi.fn(() => true) }));
+import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
 
 const refetch = vi.fn();
 
@@ -135,6 +136,7 @@ function renderWithRoute(id: string = "tr-1", search = "") {
 describe("TaxReturnDetail", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useIsOrgAdmin).mockReturnValue(true);
     mockReturn(mockTaxReturn);
     mockOverview([]);
     mockValidation(mockValidationResults);
@@ -163,6 +165,13 @@ describe("TaxReturnDetail", () => {
     renderWithRoute();
 
     expect(screen.getByText("Recompute")).toBeInTheDocument();
+  });
+
+  it("hides Recompute from anyone but an owner or admin", () => {
+    vi.mocked(useIsOrgAdmin).mockReturnValue(false);
+    renderWithRoute();
+
+    expect(screen.queryByText("Recompute")).not.toBeInTheDocument();
   });
 
   it("renders the Forms section heading", () => {

@@ -4,7 +4,9 @@ import { TAX_REPORT_MESSAGES as MESSAGES, TAX_YEARS_SHOWN, UNASSIGNED_PROPERTY_N
 import type { TaxCategoryRow } from "../../types/TaxCategoryRow";
 import type { TaxExport } from "../../types/TaxExport";
 import type { TaxPropertyRow } from "../../types/TaxPropertyRow";
+import type { TaxReportView } from "../../types/TaxReportView";
 import type { TaxRow } from "../../types/TaxRow";
+import type { TaxW2Row } from "../../types/TaxW2Row";
 import { categoryLabel } from "../transactions/transactionDisplay";
 
 /** Adding zero turns -0 into 0, which would otherwise show as -$0.00. */
@@ -20,6 +22,25 @@ function categoryNote(category: string): string | null {
 
 export function taxRowKey(row: TaxRow): string {
   return "category" in row ? row.category : row.id;
+}
+
+export function w2Rows(summary: TaxSummaryResponse): TaxW2Row[] {
+  return (summary.w2_income ?? []).map((w2, index) => ({
+    id: `${w2.ein ?? w2.employer ?? "w2"}:${index}`,
+    employer: w2.employer ?? MESSAGES.unknownEmployer,
+    ein: w2.ein,
+    wagesCents: toCents(w2.wages),
+    federalWithheldCents: toCents(w2.federal_withheld),
+    stateWithheldCents: toCents(w2.state_withheld),
+  }));
+}
+
+/** The ways to look at this year's report. Wages get their own view only when there are some. */
+export function availableViews(summary: TaxSummaryResponse | undefined): TaxReportView[] {
+  if (!summary) return ["categories"];
+  const views: TaxReportView[] = hasTaxData(summary) ? ["categories", "properties"] : [];
+  if ((summary.w2_income ?? []).length > 0) views.push("w2");
+  return views.length > 0 ? views : ["categories"];
 }
 
 export function taxYears(today: Date): number[] {

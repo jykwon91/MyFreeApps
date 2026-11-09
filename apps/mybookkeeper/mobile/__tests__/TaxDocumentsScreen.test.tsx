@@ -70,7 +70,7 @@ function serve(response: SourceDocumentsResponse = { documents: [aDocument()], c
   const adapter: AxiosAdapter = async (config: AxiosRequestConfig & { url?: string }) => {
     if (server.never) return new Promise(() => undefined);
     if (server.dead) throw Object.assign(new Error("Network Error"), { isAxiosError: true, config });
-    server.reads.push((config.params as { tax_year: number }).tax_year);
+    server.reads.push((config.params as { tax_year: number } | undefined)?.tax_year ?? "all");
     const answer = { data: server.response, status: server.status ?? 200, statusText: "", headers: {}, config } as never;
     if (server.status) throw Object.assign(new Error("refused"), { isAxiosError: true, response: answer, config });
     return answer;
@@ -235,6 +235,39 @@ describe("TaxDocumentsScreen", () => {
     await screen.findByText("Airbnb");
     await chooseYear("2024");
     await waitFor(() => expect(server.reads).toEqual([2025, 2024]));
+  });
+
+  it("shows every year when asked, with the years told apart and no year sent", async () => {
+    const server = serve({
+      documents: [aDocument(), aDocument({ document_id: "d2", form_instance_id: "i2", tax_year: 2024, issuer_name: "Acme", document_type: "w2" })],
+      checklist: [],
+    });
+    await show();
+    await screen.findByText("Airbnb");
+    await chooseYear(MESSAGES.allYears);
+    await waitFor(() => expect(server.reads).toEqual([2025, "all"]));
+    expect(await screen.findByText(MESSAGES.yearForm(2025, "1099-K"))).toBeTruthy();
+    expect(screen.getByText(MESSAGES.yearForm(2024, "W-2"))).toBeTruthy();
+  });
+
+  it("says how many forms I have and how many are still missing", async () => {
+    serve({ documents: [aDocument()], checklist: [anItem(), anItem({ expected_from: "Stripe" }), anItem({ status: "received", document_id: "d1" })] });
+    await show();
+    expect(await screen.findByText(MESSAGES.checklistCount(1, 2))).toBeTruthy();
+  });
+
+  it("shows a form's EIN under its name", async () => {
+    serve({ documents: [aDocument({ issuer_ein: "12-3456789" })], checklist: [] });
+    await show();
+    expect(await screen.findByText(MESSAGES.ein("12-3456789"))).toBeTruthy();
+  });
+
+  it("calls every-year empty by its own words, not a year's", async () => {
+    serve({ documents: [], checklist: [] });
+    await show();
+    await screen.findByText(MESSAGES.noneHeading(2025));
+    await chooseYear(MESSAGES.allYears);
+    expect(await screen.findByText(MESSAGES.noneHeading(null))).toBeTruthy();
   });
 
   it("keeps what's on screen and says so when a refresh fails", async () => {
