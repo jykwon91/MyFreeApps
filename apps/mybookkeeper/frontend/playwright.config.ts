@@ -23,7 +23,10 @@ export default defineConfig({
   reporter: "html",
   use: {
     baseURL: frontendURL,
-    trace: "on-first-retry",
+    // Keeps the trace of every failed attempt, including a first attempt that
+    // passes on retry, so a flaky spec can be diagnosed from the uploaded
+    // e2e/test-results artifact.
+    trace: process.env.CI ? "retain-on-failure" : "on-first-retry",
     screenshot: "only-on-failure",
   },
   projects: [
