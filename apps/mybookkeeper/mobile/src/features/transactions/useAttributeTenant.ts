@@ -2,13 +2,9 @@ import { useAttributeTransactionManuallyMutation } from "@mybookkeeper/api-clien
 import { useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { TENANT_LINK_FAILURE, TENANT_LINK_MESSAGES as MESSAGES } from "../../constants/transactionTenantLink";
+import type { TenantChoice } from "../../types/TenantChoice";
 import { useWrite } from "../../lib/useWrite";
 import { askOnce } from "../leases/askOnce";
-
-interface TenantChoice {
-  id: string;
-  name: string;
-}
 
 /** Links one income transaction to a tenant, after asking once. */
 export function useAttributeTenant(transactionId: string) {

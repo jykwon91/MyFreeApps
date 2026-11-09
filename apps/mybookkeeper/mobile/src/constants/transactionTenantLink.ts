@@ -10,7 +10,7 @@ export const TENANT_LINK_MESSAGES = {
   linking: "Linking…",
   confirmAction: "Link",
   pickerDescription: "Pick the tenant who paid this.",
-  confirmBody: "This payer's later payments will be matched to the same tenant.",
+  confirmBody: "This also approves the payment and marks it as rent income. Later payments from this payer will be matched to the same tenant.",
   linked: "Linked.",
 } as const;
 

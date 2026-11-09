@@ -2,6 +2,7 @@ import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi
 import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";
 import { OptionSheet } from "@platform/mobile";
 import { TENANT_PICKER_LIMIT, TENANT_PICKER_MESSAGES as MESSAGES } from "../../constants/tenantPicker";
+import type { TenantChoice } from "../../types/TenantChoice";
 import { useTodayIso } from "../../lib/useTodayIso";
 
 interface TenantPickerSheetProps {
@@ -9,10 +10,12 @@ interface TenantPickerSheetProps {
   description: string;
   onClose: () => void;
   onClosed: () => void;
-  onPick: (tenant: { id: string; name: string }) => void;
+  onPick: (tenant: TenantChoice) => void;
+  /** The tenant already linked, shown as selected. */
+  selectedId?: string | null;
 }
 
-export default function TenantPickerSheet({ isOpen, description, onClose, onClosed, onPick }: TenantPickerSheetProps) {
+export default function TenantPickerSheet({ isOpen, description, onClose, onClosed, onPick, selectedId = null }: TenantPickerSheetProps) {
   const today = useTodayIso();
   // Ended tenants stay in the list: a final or late payment can arrive after move-out.
   const { currentData, error } = useGetTenantsQuery({ limit: TENANT_PICKER_LIMIT, include_ended: true, today });
@@ -29,7 +32,7 @@ export default function TenantPickerSheet({ isOpen, description, onClose, onClos
       onSelect={(id) => onPick({ id, name: tenants.find((tenant) => tenant.id === id)?.legal_name ?? MESSAGES.thisTenant })}
       options={options}
       title={MESSAGES.title}
-      value={null}
+      value={selectedId}
     />
   );
 }

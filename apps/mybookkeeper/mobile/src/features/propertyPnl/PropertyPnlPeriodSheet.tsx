@@ -1,25 +1,24 @@
 import { PROPERTY_PNL_PRESETS } from "@mybookkeeper/api-client/constants/propertyPnl";
-import type { PropertyPnLRange } from "@mybookkeeper/api-client/types/attribution/property-pnl-range";
 import { isValidPropertyPnlRange, propertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
 import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { PROPERTY_PNL_MESSAGES as MESSAGES } from "../../constants/propertyPnl";
+import type { PropertyPnlSelection } from "../../types/PropertyPnlSelection";
 import CustomRangeFields from "../transactions/CustomRangeFields";
-import { periodName } from "./propertyPnlDisplay";
 
 interface PropertyPnlPeriodSheetProps {
-  range: PropertyPnLRange;
+  selection: PropertyPnlSelection;
   today: Date;
-  onApply: (range: PropertyPnLRange) => void;
+  onApply: (selection: PropertyPnlSelection) => void;
   onClose: () => void;
 }
 
 /** Mounted only while open, so its choice starts from what's applied and Close discards it. */
-export default function PropertyPnlPeriodSheet({ range, today, onApply, onClose }: PropertyPnlPeriodSheetProps) {
+export default function PropertyPnlPeriodSheet({ selection, today, onApply, onClose }: PropertyPnlPeriodSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const [draft, setDraft] = useState(range);
-  const [isCustom, setIsCustom] = useState(periodName(range, today) === MESSAGES.customRange);
+  const [draft, setDraft] = useState(selection);
+  const isCustom = draft.preset === null;
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible>
@@ -39,20 +38,21 @@ export default function PropertyPnlPeriodSheet({ range, today, onApply, onClose 
         <ScrollView>
           {PROPERTY_PNL_PRESETS.map((preset) => (
             <OptionRow
-              isSelected={!isCustom && draft.since === propertyPnlRange(preset.key, today).since}
+              isSelected={draft.preset === preset.key}
               key={preset.key}
               label={preset.label}
-              onPress={() => {
-                setIsCustom(false);
-                setDraft(propertyPnlRange(preset.key, today));
-              }}
+              onPress={() => setDraft({ range: propertyPnlRange(preset.key, today), preset: preset.key })}
             />
           ))}
-          <OptionRow isSelected={isCustom} label={MESSAGES.customRange} onPress={() => setIsCustom(true)} />
-          {isCustom ? <CustomRangeFields endDate={draft.until} onChange={({ startDate, endDate }) => setDraft({ since: startDate, until: endDate })} startDate={draft.since} /> : null}
+          <OptionRow isSelected={isCustom} label={MESSAGES.customRange} onPress={() => setDraft({ ...draft, preset: null })} />
+          {isCustom ? <CustomRangeFields
+              endDate={draft.range.until}
+              onChange={({ startDate, endDate }) => setDraft({ range: { since: startDate, until: endDate }, preset: null })}
+              startDate={draft.range.since}
+            /> : null}
         </ScrollView>
         <View style={{ padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border }}>
-          <LoadingButton disabled={!isValidPropertyPnlRange(draft)} onPress={() => onApply(draft)}>
+          <LoadingButton disabled={!isValidPropertyPnlRange(draft.range)} onPress={() => onApply(draft)}>
             {MESSAGES.showResults}
           </LoadingButton>
         </View>

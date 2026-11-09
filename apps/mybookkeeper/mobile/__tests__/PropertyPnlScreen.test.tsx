@@ -139,6 +139,23 @@ describe("property profit and loss", () => {
     expect(server.asked.at(-1)).toEqual({ since: ytd.since, until: ytd.until });
   });
 
+  it("names the period that was picked, even when another gives the same dates", async () => {
+    serve();
+    await show();
+    await fireEvent.press(screen.getByLabelText(new RegExp(`^${MESSAGES.period}`)));
+    await fireEvent.press(screen.getByRole("radio", { name: "This quarter" }));
+    await fireEvent.press(screen.getByText(MESSAGES.showResults));
+    await settle();
+    expect(screen.getByLabelText(new RegExp(`^${MESSAGES.period}.*This quarter`))).toBeTruthy();
+  });
+
+  it("opens the sheet with the applied period selected", async () => {
+    serve();
+    await show();
+    await fireEvent.press(screen.getByLabelText(new RegExp(`^${MESSAGES.period}`)));
+    expect(screen.getByRole("radio", { name: "This month", checked: true })).toBeTruthy();
+  });
+
   it("throws away a choice that is closed without applying", async () => {
     const server = serve();
     await show();

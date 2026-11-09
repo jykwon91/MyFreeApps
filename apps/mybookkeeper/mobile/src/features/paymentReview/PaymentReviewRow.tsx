@@ -5,6 +5,7 @@ import { LoadingButton, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES } from "../../constants/paymentReview";
+import type { TenantChoice } from "../../types/TenantChoice";
 import TenantPickerSheet from "../tenants/TenantPickerSheet";
 import { shortDate } from "../transactions/transactionDisplay";
 import {
@@ -33,7 +34,7 @@ export default function PaymentReviewRow({ item, canWrite }: PaymentReviewRowPro
   // A sheet loads its list when it first mounts, so a row nobody opens loads nothing.
   const [hasOpenedSheet, setHasOpenedSheet] = useState(false);
   const [isPicking, setIsPicking] = useState(false);
-  const picked = useRef<{ id: string; name: string } | null>(null);
+  const picked = useRef<TenantChoice | null>(null);
   const transaction = item.transaction;
   const payout = isPayout(item);
   const target = proposedTarget(item);
@@ -49,7 +50,7 @@ export default function PaymentReviewRow({ item, canWrite }: PaymentReviewRowPro
     setIsPicking(true);
   }
 
-  function pick(choice: { id: string; name: string }): void {
+  function pick(choice: TenantChoice): void {
     picked.current = choice;
     setIsPicking(false);
   }

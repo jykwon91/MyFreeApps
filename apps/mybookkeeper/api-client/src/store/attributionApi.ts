@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { RECEIPTS_PENDING_TAG } from "../constants/receiptsPendingTag";
 import type { AttributeTransactionRequest } from "../types/attribution/attribute-transaction-request";
 import type { AttributionReviewQueueResponse } from "../types/attribution/attribution-review-queue-response";
 import type { PropertyPnLRange } from "../types/attribution/property-pnl-range";
@@ -16,7 +17,7 @@ function withoutReview(reviewId: string) {
 }
 
 export const attributionApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["Summary", "Transaction"],
+  addTagTypes: ["Summary", "Transaction", "SignedLease"],
 }).injectEndpoints({
   endpoints: (builder) => ({
     getAttributionReviewQueue: builder.query<
@@ -53,6 +54,8 @@ export const attributionApi = baseApi.enhanceEndpoints({
         QUEUE_TAG,
         { type: "Transaction", id: "LIST" },
         { type: "Transaction", id: "REVIEW_COUNT" },
+        // Linking a payment to a tenant leaves a rent receipt waiting to be sent.
+        RECEIPTS_PENDING_TAG,
         ...(result ? [{ type: "Transaction" as const, id: result.transaction_id }] : []),
         "Summary",
       ],
@@ -82,6 +85,9 @@ export const attributionApi = baseApi.enhanceEndpoints({
       invalidatesTags: (_result, _err, { transaction_id }) => [
         { type: "Transaction", id: transaction_id },
         { type: "Transaction", id: "LIST" },
+        // The server approves the payment when it links it, and leaves a rent receipt waiting to be sent.
+        { type: "Transaction", id: "REVIEW_COUNT" },
+        RECEIPTS_PENDING_TAG,
         QUEUE_TAG,
         "Summary",
       ],

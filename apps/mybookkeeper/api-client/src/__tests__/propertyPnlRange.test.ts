@@ -31,6 +31,10 @@ describe("activePropertyPnlPreset", () => {
     expect(activePropertyPnlPreset(propertyPnlRange("ytd", today), PRESETS, today)).toBe("ytd");
   });
 
+  it("needs the end day to match too, so a month-to-date look-alike that stopped early is custom", () => {
+    expect(activePropertyPnlPreset({ since: "2026-05-01", until: "2026-05-10" }, PRESETS, today)).toBeNull();
+  });
+
   it("finds none for a range picked by hand", () => {
     expect(activePropertyPnlPreset({ since: "2026-02-10", until: "2026-03-01" }, PRESETS, today)).toBeNull();
   });

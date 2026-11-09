@@ -1549,7 +1549,17 @@
         "api-client/src/constants/reconciliationSourceTypes.ts",
         "api-client/src/utils/reconciliationCompare.ts",
         "api-client/src/utils/reconciliationModes.ts",
-        "api-client/src/utils/reconciliationTaxYears.ts"
+        "api-client/src/utils/reconciliationTaxYears.ts",
+        "api-client/src/store/reconciliationApi.ts",
+        "api-client/src/constants/reconciliationCompare.ts",
+        "api-client/src/constants/reconciliationDelete.ts",
+        "mobile/src/features/reconciliation/",
+        "mobile/src/constants/reconciliation.ts",
+        "mobile/src/types/ReconciliationFilter.ts",
+        "mobile/src/types/ReconciliationDetailBodyProps.ts",
+        "mobile/src/features/transactions/TransactionTenantLink.tsx",
+        "mobile/src/features/transactions/useAttributeTenant.ts",
+        "mobile/src/constants/transactionTenantLink.ts"
       ],
       "backend_tests": [
         "test_bank_csv_parser.py",
@@ -1631,7 +1641,15 @@
         "frontend/src/app/features/attribution/",
         "frontend/src/app/pages/AttributionReview.tsx",
         "frontend/src/app/features/applicants/TenantPayments.tsx",
-        "frontend/src/app/features/transactions/AttributeTenantPicker.tsx"
+        "frontend/src/app/features/transactions/AttributeTenantPicker.tsx",
+        "api-client/src/constants/receiptsPendingTag.ts",
+        "mobile/src/features/propertyPnl/",
+        "mobile/src/constants/propertyPnl.ts",
+        "mobile/src/types/PropertyPnlSelection.ts",
+        "mobile/src/types/TenantChoice.ts",
+        "mobile/src/features/paymentReview/",
+        "mobile/src/features/tenants/TenantPickerSheet.tsx",
+        "mobile/src/constants/tenantPicker.ts"
       ],
       "backend_tests": [
         "test_attribution_matcher.py",
@@ -1650,7 +1668,9 @@
         "AttributionReviewPanel.test.tsx",
         "AttributionReviewItem.test.tsx",
         "PropertyPnLGrid.test.tsx",
-        "Dashboard.test.tsx"
+        "Dashboard.test.tsx",
+        "AttributeTenantPicker.test.tsx",
+        "AttributionReviewSkeleton.test.tsx"
       ],
       "e2e_specs": [
         "attribution-review.spec.ts"

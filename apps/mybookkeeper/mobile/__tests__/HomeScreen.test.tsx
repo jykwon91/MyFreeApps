@@ -100,6 +100,15 @@ describe("HomeScreen", () => {
     expect(screen.queryByText("You're all caught up.")).toBeNull();
   });
 
+  it("doesn't ask a viewer about payments to match, and calls them caught up", async () => {
+    const server = startTransactionServer([]);
+    server.role = "viewer";
+    server.pendingPayments = 3;
+    await renderScreen();
+    expect(await screen.findByText("You're all caught up.")).toBeTruthy();
+    expect(server.requests.some((request) => request.url === "/transactions/attribution-review-queue")).toBe(false);
+  });
+
   it("says when the payments can't be checked, and isn't caught up", async () => {
     startTransactionServer([]);
     failRequests("/transactions/attribution-review-queue");

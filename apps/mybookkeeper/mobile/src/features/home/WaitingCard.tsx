@@ -26,10 +26,10 @@ export default function WaitingCard() {
   // A viewer can't send receipts, so they aren't waiting on them.
   const canWrite = useCanWrite();
   const receipts = useGetPendingReceiptsQuery(HOME_RECEIPTS_ARGS, { skip: !canWrite });
+  // Matching a payment to a tenant is a write, so a viewer isn't waiting on it either.
+  const payments = useGetAttributionReviewQueueQuery(HOME_PAYMENT_REVIEW_ARGS, { skip: !canWrite });
 
-  const payments = useGetAttributionReviewQueueQuery(HOME_PAYMENT_REVIEW_ARGS);
-
-  const paymentCount = payments.data?.pending_count;
+  const paymentCount = canWrite ? payments.data?.pending_count : 0;
   const transactionCount = reviewCount.data?.count;
   const documentCount = documents.data?.filter(needsALook).length;
   const receiptCount = canWrite ? receipts.data?.pending_count : 0;
@@ -38,18 +38,18 @@ export default function WaitingCard() {
     transactions: reviewCount.isError && !reviewCount.data,
     documents: documents.isError && !documents.data,
     receipts: canWrite && receipts.isError && !receipts.data,
-    payments: payments.isError && !payments.data,
+    payments: canWrite && payments.isError && !payments.data,
   });
 
   async function retry(): Promise<void> {
-    await Promise.all([reviewCount.refetch(), documents.refetch(), duplicates.refetch(), payments.refetch(), canWrite ? receipts.refetch() : undefined]);
+    await Promise.all([reviewCount.refetch(), documents.refetch(), duplicates.refetch(), canWrite ? payments.refetch() : undefined, canWrite ? receipts.refetch() : undefined]);
   }
 
   return (
     <HomeCard title="Waiting for you">
       {(reviewCount.isLoading && documents.isLoading) ||
       (canWrite && receipts.isLoading && !transactionCount && !documentCount) ||
-      (payments.isLoading && !transactionCount && !documentCount && !receiptCount) ||
+      (canWrite && payments.isLoading && !transactionCount && !documentCount && !receiptCount) ||
       (duplicates.isLoading && !transactionCount && !documentCount && !receiptCount && !paymentCount) ? (
         <View accessibilityLabel="Loading what's waiting for you" accessible style={{ gap: spacing.sm }}>
           <Skeleton height={20} width="60%" />

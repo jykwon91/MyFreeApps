@@ -1,4 +1,5 @@
 import { RECONCILIATION_COMPARE_MESSAGES as MESSAGES } from "../constants/reconciliationCompare";
+import { httpStatus } from "./httpStatus";
 import type { DiscrepancyTone } from "../types/reconciliation/discrepancy-tone";
 import type { AutoReconcileResult } from "../types/reconciliation/auto-reconcile-result";
 import type { ReconciliationSource } from "../types/reconciliation/reconciliation-source";
@@ -17,8 +18,7 @@ export function compareResultMessage(result: AutoReconcileResult): string {
 }
 
 export function compareFailureMessage(error: unknown): string {
-  const status = typeof error === "object" && error !== null && "status" in error ? error.status : undefined;
-  switch (status) {
+  switch (httpStatus(error)) {
     case undefined:
       return MESSAGES.compareUnreachable;
     case 403:

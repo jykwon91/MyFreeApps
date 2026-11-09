@@ -1,5 +1,4 @@
 import { useGetPropertyPnlQuery } from "@mybookkeeper/api-client/store/attributionApi";
-import type { PropertyPnLRange } from "@mybookkeeper/api-client/types/attribution/property-pnl-range";
 import { propertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
 import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
 import { useState } from "react";
@@ -7,6 +6,7 @@ import { FlatList, Text, View } from "react-native";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { PROPERTY_PNL_MESSAGES as MESSAGES } from "../../constants/propertyPnl";
 import { useToday } from "../../lib/useToday";
+import type { PropertyPnlSelection } from "../../types/PropertyPnlSelection";
 import PickerField from "../transactions/PickerField";
 import PropertyPnlCard from "./PropertyPnlCard";
 import PropertyPnlPeriodSheet from "./PropertyPnlPeriodSheet";
@@ -17,7 +17,8 @@ import { periodDates, periodName } from "./propertyPnlDisplay";
 export default function PropertyPnlScreen() {
   const { colors, spacing, fontSize } = useTheme();
   const today = useToday();
-  const [range, setRange] = useState<PropertyPnLRange>(() => propertyPnlRange("this_month", new Date()));
+  const [selection, setSelection] = useState<PropertyPnlSelection>(() => ({ range: propertyPnlRange("this_month", new Date()), preset: "this_month" }));
+  const { range, preset } = selection;
   const [isChoosing, setIsChoosing] = useState(false);
   const { currentData, error, isFetching, refetch } = useGetPropertyPnlQuery(range);
   const { refresh, refreshControl } = useRefresh(async () => {
@@ -29,7 +30,7 @@ export default function PropertyPnlScreen() {
   // Loaded and empty is a real answer; no answer and nothing in flight is a failure.
   const emptyList = currentData ? (
     <EmptyState
-      action={{ label: MESSAGES.showYearToDate, onPress: () => setRange(propertyPnlRange("ytd", today)) }}
+      action={{ label: MESSAGES.showYearToDate, onPress: () => setSelection({ range: propertyPnlRange("ytd", today), preset: "ytd" }) }}
       body={MESSAGES.noneBody}
       heading={MESSAGES.noneHeading}
     />
@@ -46,7 +47,7 @@ export default function PropertyPnlScreen() {
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
             {error && currentData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
-            <PickerField hint={MESSAGES.periodHint} label={MESSAGES.period} onPress={() => setIsChoosing(true)} value={`${periodName(range, today)}, ${dates}`} />
+            <PickerField hint={MESSAGES.periodHint} label={MESSAGES.period} onPress={() => setIsChoosing(true)} value={`${periodName(preset)}, ${dates}`} />
             {currentData && properties.length > 0 ? <PropertyPnlTotals dates={dates} totals={currentData} /> : null}
             {currentData && properties.length > 0 ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.approvedOnly}</Text> : null}
           </View>
@@ -62,10 +63,10 @@ export default function PropertyPnlScreen() {
         <PropertyPnlPeriodSheet
           onApply={(chosen) => {
             setIsChoosing(false);
-            setRange(chosen);
+            setSelection(chosen);
           }}
           onClose={() => setIsChoosing(false)}
-          range={range}
+          selection={selection}
           today={today}
         />
       ) : null}

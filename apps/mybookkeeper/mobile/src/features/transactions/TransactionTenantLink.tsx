@@ -4,6 +4,7 @@ import type { Transaction } from "@mybookkeeper/api-client/types/transaction/tra
 import { LoadingButton } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { TENANT_LINK_MESSAGES as MESSAGES } from "../../constants/transactionTenantLink";
+import type { TenantChoice } from "../../types/TenantChoice";
 import TenantPickerSheet from "../tenants/TenantPickerSheet";
 import TransactionFact from "./TransactionFact";
 import { useAttributeTenant } from "./useAttributeTenant";
@@ -21,14 +22,14 @@ export default function TransactionTenantLink({ transaction, canWrite }: Transac
   // A sheet loads its list when it first mounts, so a transaction nobody links loads nothing.
   const [hasOpenedSheet, setHasOpenedSheet] = useState(false);
   const [isPicking, setIsPicking] = useState(false);
-  const picked = useRef<{ id: string; name: string } | null>(null);
+  const picked = useRef<TenantChoice | null>(null);
 
   if (!linkedId && !canWrite) return null;
 
   const source = transaction.attribution_source ? ` (${attributionSourceLabel(transaction.attribution_source)})` : "";
   const value = linkedId ? `${MESSAGES.linkedTo} ${tenant?.legal_name ?? MESSAGES.thisTenant}${source}` : MESSAGES.notLinked;
 
-  function pick(choice: { id: string; name: string }): void {
+  function pick(choice: TenantChoice): void {
     picked.current = choice;
     setIsPicking(false);
   }
@@ -37,7 +38,8 @@ export default function TransactionTenantLink({ transaction, canWrite }: Transac
   function actOnPick(): void {
     const choice = picked.current;
     picked.current = null;
-    if (choice) askToLink(choice);
+    // Linking the tenant that is already linked would only rewrite how it was matched.
+    if (choice && choice.id !== linkedId) askToLink(choice);
   }
 
   return (
@@ -64,6 +66,7 @@ export default function TransactionTenantLink({ transaction, canWrite }: Transac
           onClose={() => setIsPicking(false)}
           onClosed={actOnPick}
           onPick={pick}
+          selectedId={linkedId}
         />
       ) : null}
     </>

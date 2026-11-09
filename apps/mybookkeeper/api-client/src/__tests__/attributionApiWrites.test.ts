@@ -5,6 +5,8 @@ import { configureStore } from "@reduxjs/toolkit";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import "../store/attributionApi";
+import "../store/rentReceiptsApi";
+import "../store/transactionsApi";
 
 const sent: InternalAxiosRequestConfig[] = [];
 
@@ -28,7 +30,11 @@ beforeAll(() => {
   });
   const adapter: AxiosAdapter = (config) => {
     sent.push(config);
-    const data = config.url?.endsWith("/queue") || config.url?.includes("review-queue")
+    const data = config.url === "/transactions/review-count"
+      ? { count: 0 }
+      : config.url === "/rent-receipts/pending"
+        ? { items: [], total: 0, pending_count: 0, gmail_state: "ready" }
+        : config.url?.endsWith("/queue") || config.url?.includes("review-queue")
       ? { items: [], total: 0, pending_count: 0 }
       : { ok: true, transaction_id: "t1" };
     return Promise.resolve({ data, status: 200, statusText: "", headers: {}, config });
@@ -53,6 +59,36 @@ describe("attributeTransactionManually", () => {
       "get /transactions/attribution-review-queue",
     ]);
     expect(JSON.parse(sent[1]?.data as string)).toEqual({ applicant_id: "a1" });
+  });
+});
+
+describe("what linking a payment refreshes", () => {
+  async function urlsRefetchedAfter(mutation: string, arg: unknown): Promise<string[]> {
+    const store = makeStore();
+    store.dispatch(endpoints.getTransactionReviewCount.initiate());
+    store.dispatch(endpoints.getPendingReceipts.initiate());
+    await settle();
+    sent.length = 0;
+    await store.dispatch(endpoints[mutation]!.initiate(arg));
+    await settle();
+    return sent.map((config) => config.url ?? "");
+  }
+
+  it("recounts what's waiting for review and the receipts to send after a manual link", async () => {
+    const urls = await urlsRefetchedAfter("attributeTransactionManually", { transaction_id: "t1", applicant_id: "a1" });
+    expect(urls).toContain("/transactions/review-count");
+    expect(urls).toContain("/rent-receipts/pending");
+  });
+
+  it("recounts the receipts to send after confirming a review", async () => {
+    const urls = await urlsRefetchedAfter("confirmAttributionReview", { review_id: "r1", applicant_id: "a1" });
+    expect(urls).toContain("/rent-receipts/pending");
+    expect(urls).toContain("/transactions/review-count");
+  });
+
+  it("leaves them alone when a review is skipped", async () => {
+    const urls = await urlsRefetchedAfter("rejectAttributionReview", { review_id: "r1" });
+    expect(urls).not.toContain("/rent-receipts/pending");
   });
 });
 

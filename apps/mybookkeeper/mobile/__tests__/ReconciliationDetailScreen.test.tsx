@@ -210,6 +210,14 @@ describe("getting there", () => {
     expect(screen.getByText(MESSAGES.infoNote)).toBeTruthy();
   });
 
+  it("tells a viewer they can't add one, instead of showing a form", async () => {
+    jest.mocked(useCanWrite).mockReturnValue(false);
+    serve([]);
+    await render(<ReconciliationAddScreen year={YEAR} />, { wrapper });
+    expect(screen.getByText("You have view-only access.")).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.pdfHint)).toBeNull();
+  });
+
   it("points a 1099 PDF at Documents", async () => {
     serve([]);
     await render(<ReconciliationAddScreen year={YEAR} />, { wrapper });

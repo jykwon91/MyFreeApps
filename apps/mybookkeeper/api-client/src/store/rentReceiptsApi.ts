@@ -1,11 +1,11 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { RECEIPTS_PENDING_TAG as PENDING_TAG } from "../constants/receiptsPendingTag";
 import type { PendingReceiptListArgs } from "../types/lease/pending-receipt-list-args";
 import type { PendingReceiptListResponse } from "../types/lease/pending-receipt-list-response";
 import type { SendReceiptRequest } from "../types/lease/send-receipt-request";
 import type { SendReceiptResponse } from "../types/lease/send-receipt-response";
 import { localToday } from "../utils/localToday";
 
-const PENDING_TAG = { type: "SignedLease", id: "RECEIPTS_PENDING" } as const;
 
 /** RTK Query slice for rent receipts waiting to be sent. */
 export const rentReceiptsApi = baseApi.enhanceEndpoints({

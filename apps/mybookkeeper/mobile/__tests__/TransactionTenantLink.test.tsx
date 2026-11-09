@@ -176,6 +176,24 @@ describe("linking", () => {
     expect(await screen.findByText(`${MESSAGES.linked} Omar Reyes.`)).toBeTruthy();
   });
 
+  it("says linking also approves and marks it as rent income", async () => {
+    serve();
+    await show(income());
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.link }));
+    await pickTenant("Jane Smith");
+    expect(jest.mocked(Alert.alert).mock.lastCall?.[1]).toMatch(/approves .* rent income/);
+  });
+
+  it("shows the linked tenant as chosen and sends nothing when it is picked again", async () => {
+    const server = serve();
+    await show(income({ applicant_id: "a1", attribution_source: "auto_exact" }));
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.relink }));
+    expect(await screen.findByRole("radio", { name: "Jane Smith", checked: true })).toBeTruthy();
+    await pickTenant("Jane Smith");
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(server.sent).toEqual([]);
+  });
+
   it("sends nothing when the question is cancelled", async () => {
     const server = serve();
     await show(income());
