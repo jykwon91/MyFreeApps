@@ -5,12 +5,12 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
-import { Linking } from "react-native";
 import { Provider } from "react-redux";
-import { WEB_BASE_URL } from "../src/constants/api";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import PropertiesScreen from "../src/features/properties/PropertiesScreen";
 import { store } from "../src/lib/store";
+
+jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn() } }));
 
 const originalAdapter = api.defaults.adapter;
 
@@ -87,14 +87,11 @@ describe("PropertiesScreen", () => {
     expect(screen.getByText("Second Home")).toBeTruthy();
   });
 
-  it("sends a property waiting on classification to the website", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("counts what needs classifying and marks each row", async () => {
     startServer([aProperty({ classification: "unclassified", type: null }), aProperty({ id: "p2", name: "Oak Flat", classification: "unclassified", type: null })]);
     await show();
     await screen.findByText("2 properties need classifying.");
     expect(screen.getAllByText("Needs classification")).toHaveLength(2);
-    await fireEvent.press(screen.getByRole("button", { name: "Classify on the website" }));
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/properties`);
   });
 
   it("says one property, and reads out everything about a row with both chips", async () => {
@@ -116,25 +113,6 @@ describe("PropertiesScreen", () => {
       await refreshControl.props.onRefresh();
     });
     await screen.findByText("Elm Cottage");
-  });
-
-  it("can't change or delete anything from here, only go to the website", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
-    startServer([aProperty()]);
-    await show();
-    await screen.findByText("Elm House");
-    expect(screen.getByText("Adding and changing properties is on the website.")).toBeTruthy();
-    expect(screen.getAllByRole("button")).toHaveLength(1);
-    await fireEvent.press(screen.getByRole("button", { name: "Open on the website" }));
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/properties`);
-    expect(screen.queryByRole("button", { name: /delete|remove|edit|deactivate/i })).toBeNull();
-  });
-
-  it("points to the website when there are none", async () => {
-    startServer([]);
-    await show();
-    await screen.findByText("You don't have any properties yet.");
-    expect(screen.getByRole("button", { name: "Open on the website" })).toBeTruthy();
   });
 
   it("offers a retry when the first load fails, and recovers", async () => {

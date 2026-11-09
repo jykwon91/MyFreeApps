@@ -10,10 +10,14 @@ import {
   useCreateVendorMutation,
   useUpdateVendorMutation,
 } from "@mybookkeeper/api-client/store/vendorsApi";
-import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendor-category";
-import type { VendorCreateRequest } from "@mybookkeeper/api-client/types/vendor/vendor-create-request";
+import type { VendorFormValues } from "@mybookkeeper/api-client/types/vendor/vendor-form-values";
 import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendor-response";
-import type { VendorUpdateRequest } from "@mybookkeeper/api-client/types/vendor/vendor-update-request";
+import {
+  EMPTY_VENDOR_FORM,
+  formValuesToCreateRequest,
+  formValuesToUpdateRequest,
+  vendorToFormValues,
+} from "@mybookkeeper/api-client/utils/vendorForm";
 
 export interface VendorFormProps {
   /** When provided the form is in edit mode; absent = create. */
@@ -21,78 +25,6 @@ export interface VendorFormProps {
   onClose: () => void;
   onCreated?: (vendor: VendorResponse) => void;
   onUpdated?: (vendor: VendorResponse) => void;
-}
-
-interface VendorFormValues {
-  name: string;
-  category: VendorCategory;
-  phone: string;
-  email: string;
-  address: string;
-  hourly_rate: string;
-  flat_rate_notes: string;
-  preferred: boolean;
-  notes: string;
-}
-
-const EMPTY_DEFAULTS: VendorFormValues = {
-  name: "",
-  category: "handyman",
-  phone: "",
-  email: "",
-  address: "",
-  hourly_rate: "",
-  flat_rate_notes: "",
-  preferred: false,
-  notes: "",
-};
-
-function vendorToFormValues(vendor: VendorResponse): VendorFormValues {
-  return {
-    name: vendor.name,
-    category: vendor.category,
-    phone: vendor.phone ?? "",
-    email: vendor.email ?? "",
-    address: vendor.address ?? "",
-    hourly_rate: vendor.hourly_rate ?? "",
-    flat_rate_notes: vendor.flat_rate_notes ?? "",
-    preferred: vendor.preferred,
-    notes: vendor.notes ?? "",
-  };
-}
-
-function formValuesToCreateRequest(
-  values: VendorFormValues,
-): VendorCreateRequest {
-  return {
-    name: values.name.trim(),
-    category: values.category,
-    phone: values.phone.trim() || null,
-    email: values.email.trim() || null,
-    address: values.address.trim() || null,
-    hourly_rate: values.hourly_rate.trim() || null,
-    flat_rate_notes: values.flat_rate_notes.trim() || null,
-    preferred: values.preferred,
-    notes: values.notes.trim() || null,
-  };
-}
-
-function formValuesToUpdateRequest(
-  values: VendorFormValues,
-  dirty: Partial<Record<keyof VendorFormValues, boolean>>,
-): VendorUpdateRequest {
-  const out: VendorUpdateRequest = {};
-  if (dirty.name) out.name = values.name.trim();
-  if (dirty.category) out.category = values.category;
-  if (dirty.phone) out.phone = values.phone.trim() || null;
-  if (dirty.email) out.email = values.email.trim() || null;
-  if (dirty.address) out.address = values.address.trim() || null;
-  if (dirty.hourly_rate) out.hourly_rate = values.hourly_rate.trim() || null;
-  if (dirty.flat_rate_notes)
-    out.flat_rate_notes = values.flat_rate_notes.trim() || null;
-  if (dirty.preferred) out.preferred = values.preferred;
-  if (dirty.notes) out.notes = values.notes.trim() || null;
-  return out;
 }
 
 /**
@@ -114,7 +46,7 @@ export default function VendorForm({
   const [updateVendor, { isLoading: isUpdating }] = useUpdateVendorMutation();
 
   const defaults = useMemo<VendorFormValues>(
-    () => (vendor ? vendorToFormValues(vendor) : EMPTY_DEFAULTS),
+    () => (vendor ? vendorToFormValues(vendor) : EMPTY_VENDOR_FORM),
     [vendor],
   );
 

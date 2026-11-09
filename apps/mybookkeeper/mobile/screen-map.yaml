@@ -65,6 +65,8 @@ routes:
     screen: (app)/payment-review/index
   /privacy:
     not_on_mobile: Opens on the website.
+  # Adding is (app)/properties/new, a property opens (app)/properties/[id]/index, and
+  # changing one is (app)/properties/[id]/edit. The web page has all of these inline.
   /properties:
     screen: (app)/properties/index
   /receipts:
@@ -111,8 +113,10 @@ routes:
     screen: (app)/utility-plans/index
   /vendors:
     screen: (app)/vendors/index
+  # Adding is (app)/vendors/new and changing one is (app)/vendors/[id]/edit, both
+  # opened from these screens. The web page has them as side panels.
   /vendors/:vendorId:
-    screen: (app)/vendors/[id]
+    screen: (app)/vendors/[id]/index
   /verify-email:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /welcome-manuals:
