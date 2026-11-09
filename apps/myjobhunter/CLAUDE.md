@@ -153,6 +153,9 @@ uv lock --check
 - `conftest.py` provides: `db`, `client`, `user_factory`, `as_user`
 - The `db` fixture empties every table after each test (mirrors MBK): route handlers,
   services and `user_factory` all commit, so a rollback alone cannot isolate tests
+- CI runs `pytest tests` once per shard (`MJH_TEST_SHARD`); `tests/ci_shards.py` assigns files,
+  and every unlisted file runs in the catch-all `fast` shard — new test files need no CI edit.
+  `tests/test_ci_shards.py` fails if the workflow and the shard map drift apart
 - Tenant isolation tests in `test_tenant_isolation.py`
 
 ## Deployment
