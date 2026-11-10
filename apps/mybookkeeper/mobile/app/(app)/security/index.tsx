@@ -28,7 +28,8 @@ export default function SecurityRoute() {
         confirmOwner={confirmSecurityChange}
         onTurnOn={() => router.push("/security/turn-on")}
         reloadSignal={reloadSignal}
-        websiteUrl={`${WEB_BASE_URL}/security`}
+        webBaseUrl={WEB_BASE_URL}
+        webPath="/security"
         whatItProtects={WHAT_TWO_STEP_PROTECTS}
       />
     </>

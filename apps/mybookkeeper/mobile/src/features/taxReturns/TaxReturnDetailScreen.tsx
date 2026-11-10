@@ -134,7 +134,7 @@ export default function TaxReturnDetailScreen({ id }: { id: string }) {
       <TaxAdvisorRow onPress={() => router.push(`/tax-returns/${id}/advisor`)} returnId={id} />
 
       <View style={{ paddingHorizontal: spacing.lg }}>
-        <WebLink label={MESSAGES.webLink} url={`${WEB_BASE_URL}${taxReturnWebPath(id)}`} />
+        <WebLink label={MESSAGES.webLink} webBaseUrl={WEB_BASE_URL} webPath={taxReturnWebPath(id)} />
       </View>
     </ScrollView>
   );

@@ -1,7 +1,6 @@
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { LoadingButton, useOpenLink, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { contactLinks } from "./inquiryContactLinks";
-import { useOpenLink } from "./useOpenLink";
 
 export default function InquiryContact({ name, email, phone }: { name: string; email: string | null; phone: string | null }) {
   const { colors, spacing, fontSize } = useTheme();

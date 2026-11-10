@@ -1,14 +1,13 @@
 import { useEndTenancyMutation, useRestartTenancyMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 import { tenancyState } from "@mybookkeeper/api-client/utils/tenancyState";
-import { LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { LoadingButton, useOpenWebsite, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
 import { endedToast, restartedToast, TENANT_MESSAGES } from "../../constants/tenants";
 import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
 import EndTenancySheet from "./EndTenancySheet";
@@ -18,7 +17,7 @@ export default function TenancySection({ applicant }: { applicant: ApplicantDeta
   const { colors, fontSize } = useTheme();
   const { showToast } = useToast();
   const canWrite = useCanWrite();
-  const openLink = useOpenLink();
+  const openWebsite = useOpenWebsite();
   const [endTenancy] = useEndTenancyMutation();
   const [restartTenancy, { isLoading: isRestarting }] = useRestartTenancyMutation();
   const [isEndOpen, setIsEndOpen] = useState(false);
@@ -77,7 +76,7 @@ export default function TenancySection({ applicant }: { applicant: ApplicantDeta
         </LoadingButton>
       ) : null}
       {canWrite && state === "expired" ? (
-        <LoadingButton onPress={() => void openLink(`${WEB_BASE_URL}/tenants/${applicant.id}`)} variant="secondary">
+        <LoadingButton onPress={() => openWebsite(WEB_BASE_URL, `/tenants/${applicant.id}`)} variant="secondary">
           {TENANT_MESSAGES.openLeases}
         </LoadingButton>
       ) : null}

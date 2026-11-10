@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "MyJobHunter",
+    "slug": "myjobhunter",
+    "scheme": "myjobhunter",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "platforms": ["ios", "android"],
+    "ios": {
+      "config": { "usesNonExemptEncryption": false },
+      "bundleIdentifier": "org.myfreeapps.myjobhunter"
+    },
+    "android": {
+      "allowBackup": false,
+      "package": "org.myfreeapps.myjobhunter"
+    },
+    "plugins": ["expo-router"]
+  }
+}

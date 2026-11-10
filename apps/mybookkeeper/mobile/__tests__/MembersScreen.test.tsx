@@ -678,12 +678,12 @@ describe("losing access", () => {
   async function showGated(): Promise<void> {
     await render(
       <Provider store={store}>
-        <WorkspaceGate>
-          <ToastProvider bottomOffset={0}>
+        <ToastProvider bottomOffset={0}>
+          <WorkspaceGate>
             <WorkspaceLostToast />
             <ActiveId />
-          </ToastProvider>
-        </WorkspaceGate>
+          </WorkspaceGate>
+        </ToastProvider>
       </Provider>,
     );
   }

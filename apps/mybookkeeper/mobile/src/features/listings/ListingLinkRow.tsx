@@ -1,13 +1,12 @@
 import { LISTING_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
-import { Banner, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, useOpenLink, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef } from "react";
 import { Text, View } from "react-native";
 import { LISTING_LINK_MESSAGES as MESSAGES, removeLinkTitle } from "../../constants/listingLinks";
 import { askOnce } from "../../lib/askOnce";
 import InquiryChip from "../inquiries/InquiryChip";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import { useListingLinkActions } from "./useListingLinkActions";
 
 interface ListingLinkRowProps {

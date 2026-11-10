@@ -70,7 +70,7 @@ export default function DocumentFileView({ document, refreshDocument, onError }:
           ? "The original email isn't saved, but what I pulled from it is in your transactions."
           : "I can't show this file on the phone."}
       </Text>
-      <WebLink label="Open on the website" url={`${WEB_BASE_URL}/documents`} />
+      <WebLink label="Open on the website" webBaseUrl={WEB_BASE_URL} webPath="/documents" />
     </View>
   );
 }

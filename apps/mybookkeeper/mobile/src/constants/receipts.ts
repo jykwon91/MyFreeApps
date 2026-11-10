@@ -1,5 +1,6 @@
 import { RECEIPT_PAYMENT_METHOD_LABELS } from "@mybookkeeper/api-client/constants/receiptPaymentMethods";
 import type { ReceiptSendBlocker } from "@mybookkeeper/api-client/types/lease/receipt-send-blocker";
+import { LINK_MESSAGES } from "@platform/mobile";
 
 /** One load covers every open receipt the server will return, so a deep link finds its row. */
 export const RECEIPTS_LIMIT = 500;
@@ -41,7 +42,7 @@ export const RECEIPTS_MESSAGES = {
   checkingWithGmail: "I'm still checking with Gmail whether an earlier send went out. Sending again is safe: I won't email it twice.",
   openPaymentReview: "Open Payment Review",
   openWebsite: "Open the website",
-  opensBrowser: "Opens your browser",
+  opensBrowser: LINK_MESSAGES.opensBrowser,
   rentPeriod: "Rent period",
   from: "From",
   to: "To",

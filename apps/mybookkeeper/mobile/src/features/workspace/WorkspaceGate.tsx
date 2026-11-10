@@ -1,7 +1,7 @@
 import { baseApi } from "@platform/core/store/baseApi";
-import { Skeleton, useTheme } from "@platform/mobile";
+import { Skeleton, useOpenWebsite, useTheme } from "@platform/mobile";
 import { type ReactNode, useEffect, useRef } from "react";
-import { AppState, Linking, View } from "react-native";
+import { AppState, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { WEB_BASE_URL } from "../../constants/api";
 import type { AppDispatch, RootState } from "../../lib/store";
@@ -16,6 +16,7 @@ export default function WorkspaceGate({ children }: { children: ReactNode }) {
   const activeId = useSelector((state: RootState) => state.workspace.activeId);
   const dispatch = useDispatch<AppDispatch>();
   const { colors, spacing } = useTheme();
+  const openWebsite = useOpenWebsite();
   const active = data?.find((workspace) => workspace.id === activeId);
   const isActiveKnown = active !== undefined;
   const lastActive = useRef<Workspace | null>(null);
@@ -67,7 +68,7 @@ export default function WorkspaceGate({ children }: { children: ReactNode }) {
   if (data?.length === 0) {
     return (
       <WorkspaceMessage
-        action={{ label: "Open the website", onPress: () => Linking.openURL(WEB_BASE_URL) }}
+        action={{ label: "Open the website", onPress: () => openWebsite(WEB_BASE_URL, "/") }}
         body="You're signed in, but you're not part of a workspace. Ask the owner to invite you, or set one up on the website."
         heading="No workspace yet"
       />

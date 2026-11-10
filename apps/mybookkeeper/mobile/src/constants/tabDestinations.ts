@@ -1,7 +1,8 @@
-import type { MoreMenuGroup } from "../types/MoreMenuGroup";
+import type { MoreMenuGroup } from "@platform/mobile";
+import type { MoreDestination } from "../types/MoreDestination";
 
 /** What the tab bar reaches, so search finds it too. Titles are the tab names. */
-export const TAB_DESTINATIONS: readonly MoreMenuGroup[] = [
+export const TAB_DESTINATIONS: readonly MoreMenuGroup<MoreDestination>[] = [
   { title: "Home", items: [{ label: "Home", screen: "/", keywords: ["today", "alerts", "glance", "dashboard", "triage"] }] },
   {
     title: "Money",

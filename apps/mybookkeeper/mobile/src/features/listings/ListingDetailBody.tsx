@@ -1,7 +1,7 @@
 import { LISTING_STATUS_LABELS, LISTING_STATUSES } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
-import { Banner, LoadingButton, OptionSheet, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, OptionSheet, useOpenWebsite, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { type ReactElement, useMemo, useRef, useState } from "react";
 import { type RefreshControlProps, ScrollView, Text, View } from "react-native";
@@ -11,7 +11,6 @@ import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { askOnce } from "../../lib/askOnce";
 import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
 import InquiryChip from "../inquiries/InquiryChip";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import TransactionFact from "../transactions/TransactionFact";
 import ListingFacts from "./ListingFacts";
 import ListingShareLink from "./ListingShareLink";
@@ -33,7 +32,7 @@ interface ListingDetailBodyProps {
 
 export default function ListingDetailBody({ listing, propertyName, canWrite, hasStaleData, refreshControl, onDeleted }: ListingDetailBodyProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const openLink = useOpenLink();
+  const openWebsite = useOpenWebsite();
   const asking = useRef(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const actions = useListingActions(listing, onDeleted);
@@ -86,7 +85,7 @@ export default function ListingDetailBody({ listing, propertyName, canWrite, has
           </LoadingButton>
         </View>
       ) : null}
-      <LoadingButton onPress={() => void openLink(`${WEB_BASE_URL}/listings/${listing.id}`)} variant="ghost">
+      <LoadingButton onPress={() => openWebsite(WEB_BASE_URL, `/listings/${listing.id}`)} variant="ghost">
         {LISTING_MESSAGES.openWebsite}
       </LoadingButton>
       <OptionSheet<ListingStatus>

@@ -1,5 +1,5 @@
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
-import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, useOpenWebsite, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -9,7 +9,6 @@ import { LEASE_TEMPLATE_LIST_LIMIT } from "../../constants/leaseTemplates";
 import { continueWithTemplates, NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import LeaseTemplatesSkeleton from "../leaseTemplates/LeaseTemplatesSkeleton";
 import MoreOnWebsite from "./MoreOnWebsite";
 import { nextPath } from "./newLeaseFlow";
@@ -18,7 +17,7 @@ import TemplatePickerRow from "./TemplatePickerRow";
 export default function TemplatePickerList({ flow }: { flow: NewLeaseFlow }) {
   const { colors, spacing, fontSize } = useTheme();
   const insets = useSafeAreaInsets();
-  const openLink = useOpenLink();
+  const openWebsite = useOpenWebsite();
   const [picked, setPicked] = useState<string[]>(flow.templateIds);
   const { currentData, error, isFetching, refetch } = useGetLeaseTemplatesQuery({ limit: LEASE_TEMPLATE_LIST_LIMIT });
   const { refresh, refreshControl } = useRefresh(refetch, error);
@@ -35,7 +34,7 @@ export default function TemplatePickerList({ flow }: { flow: NewLeaseFlow }) {
       <EmptyState action={{ label: MESSAGES.tryAgain, onPress: refresh }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoadTemplates} />
     ) : (
       <EmptyState
-        action={{ label: MESSAGES.openWebsite, onPress: () => void openLink(`${WEB_BASE_URL}/lease-templates`) }}
+        action={{ label: MESSAGES.openWebsite, onPress: () => openWebsite(WEB_BASE_URL, "/lease-templates") }}
         body={MESSAGES.noTemplatesBody}
         heading={MESSAGES.noTemplatesHeading}
       />

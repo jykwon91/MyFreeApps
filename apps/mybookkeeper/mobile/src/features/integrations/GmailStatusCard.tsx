@@ -49,7 +49,7 @@ export default function GmailStatusCard({ connection, gmail, runningSync }: Gmai
           {runningSync.emails_total > 0 ? <SyncProgressBar done={runningSync.emails_done} total={runningSync.emails_total} /> : null}
         </View>
       ) : null}
-      {connection !== "connected" ? <WebLink label={MESSAGES.openOnWeb} url={`${WEB_BASE_URL}${INTEGRATIONS_WEB_PATH}`} /> : null}
+      {connection !== "connected" ? <WebLink label={MESSAGES.openOnWeb} webBaseUrl={WEB_BASE_URL} webPath={INTEGRATIONS_WEB_PATH} /> : null}
     </View>
   );
 }

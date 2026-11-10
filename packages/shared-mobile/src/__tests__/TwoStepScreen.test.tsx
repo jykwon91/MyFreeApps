@@ -25,7 +25,7 @@ function serverFailure(httpStatus: number) {
 function open(confirmOwner = jest.fn().mockResolvedValue(OWNER), onTurnOn = jest.fn()) {
   return render(
     <ToastProvider bottomOffset={0}>
-      <TwoStepScreen confirmOwner={confirmOwner} onTurnOn={onTurnOn} websiteUrl="https://x/security" whatItProtects="your books" />
+      <TwoStepScreen confirmOwner={confirmOwner} onTurnOn={onTurnOn} webBaseUrl="https://x" webPath="/security" whatItProtects="your books" />
     </ToastProvider>,
   );
 }
@@ -84,7 +84,7 @@ it("ignores an older answer that arrives after a newer one", async () => {
         confirmOwner={jest.fn()}
         onTurnOn={jest.fn()}
         reloadSignal={1}
-        websiteUrl="https://x/security"
+        webBaseUrl="https://x" webPath="/security"
         whatItProtects="your books"
       />
     </ToastProvider>,
@@ -194,7 +194,7 @@ describe("turning off", () => {
           confirmOwner={jest.fn()}
           onTurnOn={jest.fn()}
           reloadSignal={1}
-          websiteUrl="https://x/security"
+          webBaseUrl="https://x" webPath="/security"
           whatItProtects="your books"
         />
       </ToastProvider>,

@@ -1,12 +1,11 @@
 import type { ChannelListing } from "@mybookkeeper/api-client/types/listing/channel-listing";
-import { Banner, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, useOpenLink, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef } from "react";
 import { Text, View } from "react-native";
 import { LISTING_CHANNEL_MESSAGES as MESSAGES, removeChannelTitle } from "../../constants/listingChannels";
 import { askOnce } from "../../lib/askOnce";
 import { useCopyText } from "../../lib/useCopyText";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import ChannelImportStatus from "./ChannelImportStatus";
 import { useChannelListingActions } from "./useChannelListingActions";
 

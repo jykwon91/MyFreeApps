@@ -1,11 +1,12 @@
-import type { MoreMenuGroup } from "../types/MoreMenuGroup";
+import type { MoreMenuGroup } from "@platform/mobile";
+import type { MoreDestination } from "../types/MoreDestination";
 import { MORE_ACCOUNT_HREF } from "./moreSearch";
 
 /**
  * Screens that are opened from inside another screen, listed so search can jump straight to
  * them. Group titles match the More menu's, so a result reads the same either way.
  */
-export const EXTRA_DESTINATIONS: readonly MoreMenuGroup[] = [
+export const EXTRA_DESTINATIONS: readonly MoreMenuGroup<MoreDestination>[] = [
   {
     title: "Money",
     items: [

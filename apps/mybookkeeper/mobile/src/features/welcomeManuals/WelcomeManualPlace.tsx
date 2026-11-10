@@ -1,8 +1,7 @@
 import type { WelcomeManualPlaceResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-response";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { LoadingButton, useOpenLink, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { WELCOME_MANUAL_MESSAGES } from "../../constants/welcomeManuals";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import { placeLine, placeMapLabel } from "./welcomeManualDisplay";
 
 export default function WelcomeManualPlace({ place }: { place: WelcomeManualPlaceResponse }) {

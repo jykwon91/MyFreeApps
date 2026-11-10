@@ -1,8 +1,7 @@
-import { ToastProvider, useTheme } from "@platform/mobile";
+import { TOAST_CLEARANCE, ToastProvider, useTheme } from "@platform/mobile";
 import { Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SINGLE_COPY_SCREENS } from "../../src/constants/singleCopyScreens";
-import { TOAST_CLEARANCE } from "../../src/constants/toast";
 import { useResumeUploads } from "../../src/features/capture/useResumeUploads";
 import PrivacyCover from "../../src/features/shell/PrivacyCover";
 import WorkspaceGate from "../../src/features/workspace/WorkspaceGate";
@@ -13,8 +12,9 @@ export default function AppLayout() {
   const insets = useSafeAreaInsets();
   useResumeUploads();
   return (
-    <WorkspaceGate>
-      <ToastProvider bottomOffset={insets.bottom + TOAST_CLEARANCE}>
+    // Above the gate, so its own messages, like a link that won't open, can show.
+    <ToastProvider bottomOffset={insets.bottom + TOAST_CLEARANCE}>
+      <WorkspaceGate>
         <WorkspaceLostToast />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
           <Stack.Screen name="(tabs)" options={{ title: "Home" }} />
@@ -23,7 +23,7 @@ export default function AppLayout() {
           ))}
         </Stack>
         <PrivacyCover />
-      </ToastProvider>
-    </WorkspaceGate>
+      </WorkspaceGate>
+    </ToastProvider>
   );
 }

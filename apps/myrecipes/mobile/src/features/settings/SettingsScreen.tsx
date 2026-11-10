@@ -1,24 +1,11 @@
-import {
-  type AccountMessage,
-  LoadingButton,
-  Skeleton,
-  Toast,
-  UnreadableSession,
-  useSession,
-  useTheme,
-} from "@platform/mobile";
-import Constants from "expo-constants";
+import { AccountSettings, AppVersion, LoadingButton, Skeleton, UnreadableSession, useSession, useTheme } from "@platform/mobile";
 import { useRouter } from "expo-router";
-import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import SignedInSettings from "./SignedInSettings";
 
 export default function SettingsScreen() {
   const { colors, spacing, fontSize } = useTheme();
   const { state } = useSession();
   const router = useRouter();
-  const [message, setMessage] = useState<AccountMessage | null>(null);
-  const version = Constants.expoConfig?.version;
 
   const headingStyle = { color: colors.foreground, fontSize: fontSize.lg, fontWeight: "700" } as const;
   const bodyStyle = { color: colors.mutedForeground, fontSize: fontSize.sm } as const;
@@ -37,19 +24,12 @@ export default function SettingsScreen() {
             <LoadingButton onPress={() => router.push("/sign-in")}>Sign in</LoadingButton>
           </View>
         ) : null}
-        {state.status === "signedIn" ? <SignedInSettings key={state.email} onMessage={setMessage} /> : null}
-        {version ? (
-          <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>Version {version}</Text>
+        {state.status === "signedIn" ? (
+          // Keyed so another account starts with its own device list.
+          <AccountSettings appName="MyRecipes" key={state.email} onDeleteAccount={() => router.push("/delete-account")} />
         ) : null}
+        <AppVersion />
       </ScrollView>
-      {message ? (
-        <Toast
-          message={message.message}
-          onDismiss={() => setMessage(null)}
-          style={{ margin: spacing.md }}
-          variant={message.variant}
-        />
-      ) : null}
     </View>
   );
 }

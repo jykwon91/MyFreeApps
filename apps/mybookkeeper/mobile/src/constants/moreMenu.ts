@@ -1,7 +1,8 @@
-import type { MoreMenuGroup } from "../types/MoreMenuGroup";
+import type { MoreMenuGroup } from "@platform/mobile";
+import type { MoreDestination } from "../types/MoreDestination";
 import { PRIVACY_POLICY_PATH } from "./aiPermission";
 
-export const MORE_MENU: readonly MoreMenuGroup[] = [
+export const MORE_MENU: readonly MoreMenuGroup<MoreDestination>[] = [
   {
     title: "Rentals",
     items: [

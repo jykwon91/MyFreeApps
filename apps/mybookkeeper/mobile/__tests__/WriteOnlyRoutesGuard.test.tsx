@@ -1,8 +1,10 @@
+/// <reference types="node" />
 import api from "@platform/core/lib/api";
+import { listRouteFiles } from "@platform/mobile/test-support/listRouteFiles";
 import { act, screen } from "@testing-library/react-native";
+import { join } from "path";
 import { renderScreen, resetSignedInStore } from "../test-support/renderScreen";
 import { serveRole, serveRoleLater } from "../test-support/serveRole";
-import { listRouteFiles } from "../test-support/listRouteFiles";
 import { WRITE_GUARD_EXEMPTIONS, WRITE_ONLY_ROUTES } from "../test-support/writeOnlyRoutes";
 
 jest.mock("expo-router", () => ({
@@ -61,7 +63,8 @@ describe("every create and edit route turns a viewer away itself", () => {
 describe("the list of write-only routes", () => {
   const NAMES_A_WRITE_ROUTE = /(^|\/)(new|edit|import|reply|promote|add|add-document|turn-on|override|camera|capture)(\/|$)/;
   const guarded = new Set(WRITE_ONLY_ROUTES.map((entry) => entry.route));
-  const routeFiles = listRouteFiles();
+  // Every screen file under app/(app), such as "vendors/[id]/edit", leaving out layouts.
+  const routeFiles = listRouteFiles(join(__dirname, "..", "app", "(app)")).filter((route) => !/(^|\/)_layout$/.test(route));
 
   it("names real route files", () => {
     expect([...guarded, ...Object.keys(WRITE_GUARD_EXEMPTIONS)].filter((route) => !routeFiles.includes(route))).toEqual([]);
