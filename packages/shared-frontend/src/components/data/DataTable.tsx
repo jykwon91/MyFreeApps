@@ -1,66 +1,12 @@
-import type { ReactNode } from "react";
-import {
-  useTable,
-  tableFeatures,
-  rowSortingFeature,
-  rowPaginationFeature,
-  createSortedRowModel,
-  flexRender,
-  sortFn_alphanumeric,
-  sortFn_basic,
-  sortFn_datetime,
-  sortFn_text,
-  type ColumnDef as TableColumnDef,
-  type RowData,
-  type SortingState,
-  type PaginationState,
-} from "@tanstack/react-table";
+import { useTable, flexRender, type RowData } from "@tanstack/react-table";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "../../utils/cn";
 import Skeleton from "../ui/Skeleton";
-
-// Sorting and pagination are the only table behaviours this component offers.
-// The built-in comparators are registered by name so `sortFn: "auto"` — the
-// default for every column — resolves the same way it did before v9 made the
-// registry explicit.
-const dataTableFeatures = tableFeatures({
-  rowSortingFeature,
-  rowPaginationFeature,
-  sortedRowModel: createSortedRowModel(),
-  sortFns: {
-    alphanumeric: sortFn_alphanumeric,
-    basic: sortFn_basic,
-    datetime: sortFn_datetime,
-    text: sortFn_text,
-  },
-});
-
-export type DataTableFeatures = typeof dataTableFeatures;
-
-/** A column definition bound to this table's feature set. */
-export type ColumnDef<T extends RowData, TValue = unknown> = TableColumnDef<
-  DataTableFeatures,
-  T,
-  TValue
->;
-
-export type { SortingState, PaginationState };
-
-export interface DataTableProps<T extends RowData> {
-  data: T[];
-  columns: ColumnDef<T>[];
-  loading?: boolean;
-  loadingRowCount?: number;
-  emptyState?: ReactNode;
-  onRowClick?: (row: T) => void;
-  getRowId?: (row: T) => string;
-  className?: string;
-  sorting?: SortingState;
-  onSortingChange?: (s: SortingState) => void;
-  pagination?: PaginationState;
-  onPaginationChange?: (p: PaginationState) => void;
-  pageCount?: number;
-}
+import { useControllableState } from "../../hooks/useControllableState";
+import { DATA_TABLE_FEATURES } from "../../constants/data-table-features";
+import { DATA_TABLE_DEFAULT_PAGINATION } from "../../constants/data-table-default-pagination";
+import type { DataTableFeatures } from "../../types/data-table-features";
+import type { DataTableProps } from "../../types/data-table-props";
 
 export default function DataTable<T extends RowData>({
   data,
@@ -72,35 +18,33 @@ export default function DataTable<T extends RowData>({
   getRowId,
   className,
   sorting,
+  defaultSorting,
   onSortingChange,
   pagination,
   onPaginationChange,
   pageCount,
 }: DataTableProps<T>) {
+  // Sorting and pagination always run through these, so headers sort whether or
+  // not the page passes `sorting`. Handing TanStack `onSortingChange: undefined`
+  // replaced its internal state updater and left uncontrolled headers dead.
+  const [sortingState, setSorting] = useControllableState({
+    value: sorting,
+    defaultValue: defaultSorting ?? [],
+    onChange: onSortingChange,
+  });
+  const [paginationState, setPagination] = useControllableState({
+    value: pagination,
+    defaultValue: DATA_TABLE_DEFAULT_PAGINATION,
+    onChange: onPaginationChange,
+  });
+
   const table = useTable<DataTableFeatures, T>({
-    features: dataTableFeatures,
+    features: DATA_TABLE_FEATURES,
     data,
     columns,
-    state: {
-      ...(sorting !== undefined ? { sorting } : {}),
-      ...(pagination !== undefined ? { pagination } : {}),
-    },
-    onSortingChange: onSortingChange
-      ? (updater) => {
-          const next =
-            typeof updater === "function" ? updater(sorting ?? []) : updater;
-          onSortingChange(next);
-        }
-      : undefined,
-    onPaginationChange: onPaginationChange
-      ? (updater) => {
-          const next =
-            typeof updater === "function"
-              ? updater(pagination ?? { pageIndex: 0, pageSize: 10 })
-              : updater;
-          onPaginationChange(next);
-        }
-      : undefined,
+    state: { sorting: sortingState, pagination: paginationState },
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     getRowId: getRowId ? (row) => getRowId(row) : undefined,
     manualPagination: pageCount !== undefined,
     pageCount: pageCount,

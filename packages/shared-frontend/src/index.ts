@@ -108,7 +108,9 @@ export { withRouteErrorBoundary } from "./components/errors/withRouteErrorBounda
 
 // Data components
 export { default as DataTable } from "./components/data/DataTable";
-export type { DataTableProps, ColumnDef, SortingState, PaginationState } from "./components/data/DataTable";
+export type { DataTableProps } from "./types/data-table-props";
+export type { ColumnDef } from "./types/data-table-column-def";
+export type { SortingState, PaginationState } from "@tanstack/react-table";
 export { default as Pagination } from "./components/data/Pagination";
 export type { PaginationProps } from "./components/data/Pagination";
 

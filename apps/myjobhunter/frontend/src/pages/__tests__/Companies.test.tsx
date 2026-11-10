@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Companies from "@/pages/Companies";
+import { columnValues, sortTableBy } from "@/test-utils/sortTableBy";
 
 // ---------------------------------------------------------------------------
 // Mock RTK Query hooks — all state is controlled per-test via mockReturnValue.
@@ -210,6 +211,72 @@ describe("Companies page", () => {
       expect(
         screen.getByRole("button", { name: /add company/i }),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("sorting", () => {
+    function company(id: string, name: string, industry: string, hqLocation: string) {
+      return {
+        id,
+        user_id: "u1",
+        name,
+        primary_domain: `${id}.example.com`,
+        industry,
+        hq_location: hqLocation,
+        logo_url: null,
+        size_range: null,
+        description: null,
+        external_ref: null,
+        external_source: null,
+        crunchbase_id: null,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      };
+    }
+
+    // The server's order; every sort step below changes it.
+    const items = [
+      company("c1", "Globex", "Energy", "Austin, TX"),
+      company("c2", "Acme Corp", "SaaS", "Chicago, IL"),
+      company("c3", "Initech", "Fintech", "Boston, MA"),
+    ];
+
+    beforeEach(() => {
+      mockUseListCompaniesQuery.mockReturnValue({
+        data: { items, total: items.length },
+        isLoading: false,
+        isError: false,
+        error: undefined,
+      } as unknown as ReturnType<typeof useListCompaniesQuery>);
+    });
+
+    it("shows the server's order with every header unsorted", () => {
+      renderCompanies();
+      expect(columnValues(0)).toEqual(["Globex", "Acme Corp", "Initech"]);
+      for (const header of screen.getAllByRole("columnheader")) {
+        expect(header).toHaveAttribute("aria-sort", "none");
+      }
+    });
+
+    it("sorts by Name when its header is clicked, both ways", () => {
+      renderCompanies();
+
+      sortTableBy(/name/i, "ascending");
+      expect(columnValues(0)).toEqual(["Acme Corp", "Globex", "Initech"]);
+
+      sortTableBy(/name/i, "descending");
+      expect(columnValues(0)).toEqual(["Initech", "Globex", "Acme Corp"]);
+    });
+
+    it("sorts by Industry and by HQ", () => {
+      renderCompanies();
+
+      sortTableBy(/industry/i, "ascending");
+      expect(columnValues(2)).toEqual(["Energy", "Fintech", "SaaS"]);
+      expect(screen.getByRole("columnheader", { name: /name/i })).toHaveAttribute("aria-sort", "none");
+
+      sortTableBy(/hq/i, "descending");
+      expect(columnValues(3)).toEqual(["Chicago, IL", "Boston, MA", "Austin, TX"]);
     });
   });
 });
