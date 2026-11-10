@@ -20,6 +20,7 @@ cents and the costs reflect the fixed constants alone.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Protocol
@@ -83,12 +84,12 @@ async def run_cost_sync(
         + anthropic_cents
     )
 
-    document = transparency_store.load_document(settings) or TransparencyDocument()
+    document = await asyncio.to_thread(transparency_store.load_document, settings) or TransparencyDocument()
     bucket = transparency_store.get_or_create_bucket(document, now)
     bucket.costs_cents = costs_cents
     document.updated_at = now.isoformat()
     transparency_store.prune_old_months(document, now)
-    transparency_store.save_document(settings, document)
+    await asyncio.to_thread(transparency_store.save_document, settings, document)
 
     logger.info(
         "Transparency cost sync: month=%s costs_cents=%d "

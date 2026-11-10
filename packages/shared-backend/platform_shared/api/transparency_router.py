@@ -23,6 +23,7 @@ corrupt → 503 (widget shows "temporarily unavailable"); object missing →
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 
@@ -59,7 +60,7 @@ def build_transparency_router(settings: object) -> APIRouter:
     async def get_transparency() -> TransparencyResponse:
         now = datetime.now(timezone.utc)
         try:
-            document = transparency_store.load_document(settings)  # type: ignore[arg-type]
+            document = await asyncio.to_thread(transparency_store.load_document, settings)  # type: ignore[arg-type]
         except StorageNotConfiguredError:
             # MinIO unconfigured (local dev / before the operator sets it up).
             # Report "not configured" so the widget hides rather than erroring.
@@ -105,10 +106,13 @@ def build_transparency_router(settings: object) -> APIRouter:
 
         now = datetime.now(timezone.utc)
         try:
-            document = transparency_store.load_document(settings) or TransparencyDocument()  # type: ignore[arg-type]
+            document = (
+                await asyncio.to_thread(transparency_store.load_document, settings)  # type: ignore[arg-type]
+                or TransparencyDocument()
+            )
             newly_recorded = kofi_service.record_donation(document, payload, now)
             if newly_recorded:
-                transparency_store.save_document(settings, document)  # type: ignore[arg-type]
+                await asyncio.to_thread(transparency_store.save_document, settings, document)  # type: ignore[arg-type]
         except (StorageNotConfiguredError, S3Error, ValidationError, ValueError) as exc:
             # Surface a 500 so Ko-fi retries — never silently drop a donation.
             logger.error("Ko-fi webhook storage failure: %s", exc)

@@ -22,10 +22,26 @@ env_seed_command: seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-ba
   python3 -m platform_shared.infra.seed_env --app mybookkeeper'
 csp: "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6nSb7wHrV5jmk=' https://us.i.posthog.com https://challenges.cloudflare.com https://*.sentry.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.{$DOMAIN} https:; font-src 'self'; connect-src 'self' https://storage.{$DOMAIN} https://us.i.posthog.com https://*.posthog.com https://challenges.cloudflare.com https://*.sentry.io; frame-src 'self' blob: https://storage.{$DOMAIN} https://us.posthog.com https://challenges.cloudflare.com https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
 workers:
+  # No mem_limit override: both keep the 512m worker default they have always
+  # run under. Raising or lowering it needs a measured peak RSS (extraction of
+  # large PDFs/images is the heavy path), not a guess.
   - name: upload-processor
     command: ["python", "-m", "app.workers.upload_processor_worker"]
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.workers.upload_processor_healthcheck"]
+  # The ONLY process that runs Gmail sync, rent reminders, lease auto-end and
+  # the transparency cost sync. Exactly one replica: never scale this service.
   - name: scheduler
     command: ["python", "-m", "app.workers.scheduler_worker"]
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.workers.scheduler_healthcheck"]
+    # On SIGTERM the worker finishes its current tick before exiting. 60s
+    # covers an hourly reminders tick (DB queries + a few SMS hand-offs) and
+    # the daily cost sync (usually one Anthropic cost-API page, 30s timeout per
+    # request, + one MinIO read and write), which normally take seconds;
+    # compose's 10s default could kill either mid-write. A full Gmail sync can run longer and is killed anyway;
+    # the next full cycle resumes its queue.
+    stop_grace_period: 60s
 # No app-specific post-deploy steps — deploy runs migrate only.
 post_deploy_commands: []
 mobile: true

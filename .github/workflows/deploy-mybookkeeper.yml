@@ -178,6 +178,36 @@ jobs:
               sleep 2
             done
 
+            echo "--- Wait for upload-processor worker health check ---"
+            for i in $(seq 1 30); do
+              STATUS=$(docker inspect --format '{{.State.Health.Status}}' "$(docker compose -f apps/mybookkeeper/docker-compose.yml ps -q upload-processor)" 2>/dev/null || echo missing)
+              if [ "$STATUS" = "healthy" ]; then
+                echo "upload-processor is healthy"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "::error::upload-processor worker not healthy after 30 attempts (status: $STATUS)"
+                docker compose -f apps/mybookkeeper/docker-compose.yml logs upload-processor --tail=50
+                exit 1
+              fi
+              sleep 5
+            done
+
+            echo "--- Wait for scheduler worker health check ---"
+            for i in $(seq 1 30); do
+              STATUS=$(docker inspect --format '{{.State.Health.Status}}' "$(docker compose -f apps/mybookkeeper/docker-compose.yml ps -q scheduler)" 2>/dev/null || echo missing)
+              if [ "$STATUS" = "healthy" ]; then
+                echo "scheduler is healthy"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "::error::scheduler worker not healthy after 30 attempts (status: $STATUS)"
+                docker compose -f apps/mybookkeeper/docker-compose.yml logs scheduler --tail=50
+                exit 1
+              fi
+              sleep 5
+            done
+
             echo "--- Update host Caddyfile ---"
             # Sync the SHARED host Caddyfile (infra/Caddyfile) → /etc/caddy/Caddyfile.
             # Shared with deploy-landing.yml — see infra/sync-host-caddyfile.sh.

@@ -11,6 +11,11 @@ lazily inside the functions that use them, so an app that imports
 installed (same optional-dependency convention as
 ``platform_shared.services.sms_service`` lazily importing ``twilio``).
 
+The parsers are CPU-bound and can take seconds on a large file, so the async
+entry points run them in a worker thread (``asyncio.to_thread``) instead of
+freezing the event loop — which would stall every other request, and a
+worker's heartbeat, for the duration.
+
 ``extract_text_from_spreadsheet`` takes ``max_chars`` as a required
 keyword instead of reading a per-app settings module — the caller
 threads its own configured cap (config stays out of shared code).
@@ -20,6 +25,7 @@ carried over.
 """
 from __future__ import annotations
 
+import asyncio
 import email as email_lib
 import io
 import mimetypes
@@ -32,7 +38,7 @@ MAX_ZIP_DECOMPRESSED_BYTES = 500 * 1024 * 1024  # 500MB
 MAX_ZIP_FILE_BYTES = 20 * 1024 * 1024  # 20MB per file
 
 
-async def extract_text_from_pdf(content: bytes) -> str | None:
+def _pdf_text(content: bytes) -> str | None:
     from pypdf import PdfReader
 
     reader = PdfReader(io.BytesIO(content))
@@ -40,18 +46,14 @@ async def extract_text_from_pdf(content: bytes) -> str | None:
     return text.strip() or None
 
 
-async def extract_text_from_docx(content: bytes) -> str:
+def _docx_text(content: bytes) -> str:
     import mammoth
 
     result = mammoth.extract_raw_text(io.BytesIO(content))
     return result.value.strip()
 
 
-async def extract_text_from_spreadsheet(content: bytes, filename: str, *, max_chars: int) -> str:
-    if filename.endswith(".csv"):
-        text = content.decode("utf-8", errors="replace")
-        return text[:max_chars]
-
+def _workbook_text(content: bytes) -> str:
     import openpyxl
 
     wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
@@ -64,6 +66,21 @@ async def extract_text_from_spreadsheet(content: bytes, filename: str, *, max_ch
         if len(rows) > 500:
             break
     return "\n".join(rows)
+
+
+async def extract_text_from_pdf(content: bytes) -> str | None:
+    return await asyncio.to_thread(_pdf_text, content)
+
+
+async def extract_text_from_docx(content: bytes) -> str:
+    return await asyncio.to_thread(_docx_text, content)
+
+
+async def extract_text_from_spreadsheet(content: bytes, filename: str, *, max_chars: int) -> str:
+    if filename.endswith(".csv"):
+        text = content.decode("utf-8", errors="replace")
+        return text[:max_chars]
+    return await asyncio.to_thread(_workbook_text, content)
 
 
 def detect_file_type(filename: str, content_type: str) -> str:
