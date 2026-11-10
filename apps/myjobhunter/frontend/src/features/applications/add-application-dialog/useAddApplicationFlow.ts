@@ -4,8 +4,11 @@
  * Owns:
  *   - The discriminated-union DialogState (input → processing → review)
  *   - All step-transition logic (runUrlExtract, runTextParse, resolveCompany)
- *   - Submit-time company fallback
+ *   - Starting the save; the save itself (company fallback, one at a time)
+ *     is useApplicationSave's
  *   - The long-running timer that swaps spinner copy at 3 s
+ *   - Abandoning a read on close: reset() aborts it and ends the run, so a
+ *     read that finishes later neither adds a company nor fills the form
  *
  * Does NOT own:
  *   - The react-hook-form instance (stays in the orchestrator so the form
@@ -17,15 +20,11 @@
  * body, error routing) live in @myjobhunter/api-client; the browser's HTML
  * and URL parsers live in dialogHelpers.ts.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { showError, extractErrorMessage } from "@platform/ui";
+import { useCompanyResolver } from "@myjobhunter/api-client/hooks/useCompanyResolver";
+import { useListCompaniesQuery } from "@myjobhunter/api-client/store/companiesApi";
 import {
-  useListCompaniesQuery,
-  useCreateCompanyMutation,
-  useTriggerCompanyResearchMutation,
-} from "@myjobhunter/api-client/store/companiesApi";
-import {
-  useCreateApplicationMutation,
   useExtractJdFromUrlMutation,
   useParseJobDescriptionMutation,
 } from "@myjobhunter/api-client/store/applicationsApi";
@@ -33,24 +32,23 @@ import type { JdParseResponse } from "@myjobhunter/api-client/types/application/
 import type { JdUrlExtractResponse } from "@myjobhunter/api-client/types/application/jd-url-extract-response";
 import { JD_READ_LONG_RUNNING_MS } from "@myjobhunter/api-client/constants/addApplicationForm";
 import type { AddApplicationFormValues } from "@myjobhunter/api-client/types/application/add-application-form-values";
+import type { IsCurrent } from "@myjobhunter/api-client/types/application/company-resolver";
 import type { ExtractedCompanyHints } from "@myjobhunter/api-client/types/application/extracted-company-hints";
 import type { ReviewCompanyState } from "@myjobhunter/api-client/types/application/review-company-state";
 import type { Company } from "@myjobhunter/api-client/types/company";
-import { buildApplicationCreateRequest } from "@myjobhunter/api-client/utils/buildApplicationCreateRequest";
 import { describeExtractError } from "@myjobhunter/api-client/utils/describeExtractError";
-import { findCompanyByName } from "@myjobhunter/api-client/utils/findCompanyByName";
 import { isAuthRequiredError } from "@myjobhunter/api-client/utils/isAuthRequiredError";
 import { isJobPostingUrl } from "@myjobhunter/api-client/utils/isJobPostingUrl";
 import { prefillFromExtract } from "@myjobhunter/api-client/utils/prefillFromExtract";
 import { prefillFromParse } from "@myjobhunter/api-client/utils/prefillFromParse";
-import { readCompanyId } from "@myjobhunter/api-client/utils/readCompanyId";
-import { resolveExtractedCompany } from "@myjobhunter/api-client/utils/resolveExtractedCompany";
 import {
   INITIAL_STATE,
   type DialogInputMode,
   type DialogState,
 } from "../useAddApplicationDialogState";
+import { ADD_APPLICATION_MESSAGES as MESSAGES } from "@/constants/add-application-messages";
 import { domTextContent, urlHostname } from "./dialogHelpers";
+import { useApplicationSave } from "./useApplicationSave";
 
 export interface ApplyPreFillFns {
   /** Called when an extract/parse result arrives. */
@@ -66,7 +64,6 @@ interface UseAddApplicationFlowReturn {
   urlValue: string;
   textValue: string;
   companyNameValue: string;
-  pendingCompanyName: string | null;
   submittedJdText: string;
   /**
    * Persistent "we couldn't read that link" explanation shown on the
@@ -109,11 +106,10 @@ interface UseAddApplicationFlowReturn {
 export function useAddApplicationFlow(
   preFillFns: ApplyPreFillFns,
 ): UseAddApplicationFlowReturn {
+  // Starts loading the companies as the dialog mounts; matching waits for them (useCompanyResolver).
   const { data: companiesData } = useListCompaniesQuery();
-  const [createApplication, { isLoading: creatingApplication }] =
-    useCreateApplicationMutation();
-  const [createCompany] = useCreateCompanyMutation();
-  const [triggerCompanyResearch] = useTriggerCompanyResearchMutation();
+  const { addCompany, resolveReadCompany, companyIdForSave } = useCompanyResolver(urlHostname);
+  const { creatingApplication, save, resetSave } = useApplicationSave(companyIdForSave);
   const [parseJobDescription] = useParseJobDescriptionMutation();
   const [extractJdFromUrl] = useExtractJdFromUrlMutation();
 
@@ -121,26 +117,44 @@ export function useAddApplicationFlow(
   const [urlValue, setUrlValue] = useState("");
   const [textValue, setTextValue] = useState("");
   const [companyNameValue, setCompanyNameValue] = useState("");
-  const [pendingCompanyName, setPendingCompanyName] = useState<string | null>(null);
   const [submittedJdText, setSubmittedJdText] = useState<string>("");
-  // Persistent "we couldn't read that link" explanation. Replaces the
-  // old transient toast, which vanished and left the user on a blank
-  // text tab with no idea why — it looked like the app had broken.
   const [urlBlockedNotice, setUrlBlockedNotice] = useState<string | null>(
     null,
   );
 
+  // Bumped by reset() and on unmount, ending every run begun before it, so
+  // reopening the dialog never revives an old read. Each read keeps its own
+  // check (startRun) rather than a shared "open" flag.
+  const runId = useRef(0);
+  const inFlightRead = useRef<{ abort: () => void } | null>(null);
+
   const companies = companiesData?.items ?? [];
 
+  useEffect(
+    () => () => {
+      runId.current += 1;
+      inFlightRead.current?.abort();
+    },
+    [],
+  );
+
+  function startRun(): IsCurrent {
+    const run = runId.current;
+    return () => runId.current === run;
+  }
+
   // -------------------------------------------------------------------------
-  // Lifecycle — reset everything.
+  // Lifecycle — reset everything, abandoning any read in flight.
   // -------------------------------------------------------------------------
   function reset() {
+    runId.current += 1;
+    inFlightRead.current?.abort();
+    inFlightRead.current = null;
+    resetSave();
     setState(INITIAL_STATE);
     setUrlValue("");
     setTextValue("");
     setCompanyNameValue("");
-    setPendingCompanyName(null);
     setSubmittedJdText("");
     setUrlBlockedNotice(null);
   }
@@ -194,20 +208,16 @@ export function useAddApplicationFlow(
       },
       changingCompany: false,
     });
-    setPendingCompanyName(null);
   }
 
   async function handleCompanyNameCreateOnTheFly(name: string) {
     const trimmed = name.trim();
     if (!trimmed) return;
+    const isCurrent = startRun();
     setCompanyNameValue(trimmed);
     try {
-      const created = await createCompany({ name: trimmed }).unwrap();
-      void triggerCompanyResearch(created.id)
-        .unwrap()
-        .catch((err) => {
-          console.warn("Background company research failed:", err);
-        });
+      const created = await addCompany({ name: trimmed });
+      if (!isCurrent()) return;
       setState({
         kind: "review",
         sourceUrl: null,
@@ -220,10 +230,9 @@ export function useAddApplicationFlow(
         },
         changingCompany: false,
       });
-      setPendingCompanyName(null);
     } catch (err) {
+      if (!isCurrent()) return;
       showError(`Couldn't create company "${trimmed}": ${extractErrorMessage(err)}`);
-      setPendingCompanyName(trimmed);
       setState({
         kind: "review",
         sourceUrl: null,
@@ -238,12 +247,17 @@ export function useAddApplicationFlow(
   // Step 2 — processing.
   // -------------------------------------------------------------------------
   async function runUrlExtract(url: string) {
+    const isCurrent = startRun();
     setUrlBlockedNotice(null);
     setState({ kind: "processing", sourcePath: "url", longRunning: false });
+    const request = extractJdFromUrl({ url });
+    inFlightRead.current = request;
     try {
-      const result = await extractJdFromUrl({ url }).unwrap();
-      await applyExtractResult(result);
+      const result = await request.unwrap();
+      if (!isCurrent()) return;
+      await applyExtractResult(result, isCurrent);
     } catch (err) {
+      if (!isCurrent()) return;
       if (isAuthRequiredError(err)) {
         // Persistent in-context banner on the text tab — NOT a toast.
         // The toast faded and the silent tab-switch read as "broken".
@@ -257,19 +271,28 @@ export function useAddApplicationFlow(
       }
       showError(`Couldn't auto-fill: ${describeExtractError(err)}`);
       setInputMode("url");
+    } finally {
+      if (inFlightRead.current === request) inFlightRead.current = null;
     }
   }
 
   async function runTextParse(text: string) {
+    const isCurrent = startRun();
     setUrlBlockedNotice(null);
     setState({ kind: "processing", sourcePath: "text", longRunning: false });
     setSubmittedJdText(text);
+    const request = parseJobDescription({ jd_text: text });
+    inFlightRead.current = request;
     try {
-      const result = await parseJobDescription({ jd_text: text }).unwrap();
-      await applyParseResult(result, { sourceUrl: null });
+      const result = await request.unwrap();
+      if (!isCurrent()) return;
+      await applyParseResult(result, isCurrent);
     } catch (err) {
+      if (!isCurrent()) return;
       showError(`Couldn't auto-fill: ${extractErrorMessage(err) ?? "AI parsing failed"}`);
       setInputMode("text");
+    } finally {
+      if (inFlightRead.current === request) inFlightRead.current = null;
     }
   }
 
@@ -295,78 +318,47 @@ export function useAddApplicationFlow(
     }
   }
 
-  async function applyParseResult(
-    result: JdParseResponse,
-    { sourceUrl }: { sourceUrl: string | null },
-  ) {
+  // The company is matched first, so a read abandoned meanwhile fills nothing.
+  async function applyParseResult(result: JdParseResponse, isCurrent: IsCurrent) {
+    const company = await resolveCompany(result.company, {}, isCurrent);
+    if (!company) return;
     applyPrefill(prefillFromParse(result));
-
-    const companyState = await resolveCompany(result.company, {});
-    setState({
-      kind: "review",
-      sourceUrl,
-      summary: result.summary,
-      company: companyState,
-      changingCompany: false,
-    });
+    setState({ kind: "review", sourceUrl: null, summary: result.summary, company, changingCompany: false });
   }
 
-  async function applyExtractResult(result: JdUrlExtractResponse) {
+  async function applyExtractResult(result: JdUrlExtractResponse, isCurrent: IsCurrent) {
+    const company = await resolveCompany(
+      result.company,
+      { website: result.company_website, logoUrl: result.company_logo_url },
+      isCurrent,
+    );
+    if (!company) return;
     applyPrefill(prefillFromExtract(result, domTextContent));
-
-    const companyState = await resolveCompany(result.company, {
-      website: result.company_website,
-      logoUrl: result.company_logo_url,
-    });
     setState({
       kind: "review",
       sourceUrl: result.source_url,
       summary: result.summary,
-      company: companyState,
+      company,
       changingCompany: false,
     });
   }
 
+  /** Tracked, added now, or left for saving to retry. Null once the run is stale. */
   async function resolveCompany(
     name: string | null,
-    extras: ExtractedCompanyHints,
-  ): Promise<ReviewCompanyState> {
-    const resolution = resolveExtractedCompany(companies, name, urlHostname, extras);
-    if (resolution.kind === "none") {
-      setPendingCompanyName(null);
-      return { kind: "autoCreateFailed", name: "" };
+    hints: ExtractedCompanyHints,
+    isCurrent: IsCurrent,
+  ): Promise<ReviewCompanyState | null> {
+    const outcome = await resolveReadCompany(name, hints, isCurrent);
+    if (outcome.kind === "stale") return null;
+    if (outcome.kind === "failed" && outcome.reason === "listUnavailable") {
+      showError(MESSAGES.couldntLoadCompanies);
+    } else if (outcome.kind === "failed") {
+      showError(
+        `Couldn't auto-create company "${outcome.company.name}": ${extractErrorMessage(outcome.error)}`,
+      );
     }
-    if (resolution.kind === "existing") {
-      setPendingCompanyName(null);
-      const existing = resolution.company;
-      return {
-        kind: "tracked",
-        companyId: existing.id,
-        name: existing.name,
-        logoUrl: existing.logo_url,
-      };
-    }
-    const trimmed = resolution.request.name;
-    setPendingCompanyName(trimmed);
-
-    try {
-      const created = await createCompany(resolution.request).unwrap();
-      void triggerCompanyResearch(created.id)
-        .unwrap()
-        .catch((err) => {
-          console.warn("Background company research failed:", err);
-        });
-      setPendingCompanyName(null);
-      return {
-        kind: "new",
-        companyId: created.id,
-        name: created.name,
-        logoUrl: created.logo_url,
-      };
-    } catch (err) {
-      showError(`Couldn't auto-create company "${trimmed}": ${extractErrorMessage(err)}`);
-      return { kind: "autoCreateFailed", name: trimmed };
-    }
+    return outcome.company;
   }
 
   // -------------------------------------------------------------------------
@@ -391,20 +383,16 @@ export function useAddApplicationFlow(
       },
       changingCompany: false,
     });
-    setPendingCompanyName(null);
   }
 
   async function handleReviewCreateOnTheFly(name: string) {
     if (state.kind !== "review") return;
     const trimmed = name.trim();
     if (!trimmed) return;
+    const isCurrent = startRun();
     try {
-      const created = await createCompany({ name: trimmed }).unwrap();
-      void triggerCompanyResearch(created.id)
-        .unwrap()
-        .catch((err) => {
-          console.warn("Background company research failed:", err);
-        });
+      const created = await addCompany({ name: trimmed });
+      if (!isCurrent()) return;
       setState({
         ...state,
         company: {
@@ -415,10 +403,9 @@ export function useAddApplicationFlow(
         },
         changingCompany: false,
       });
-      setPendingCompanyName(null);
     } catch (err) {
+      if (!isCurrent()) return;
       showError(`Couldn't create company "${trimmed}": ${extractErrorMessage(err)}`);
-      setPendingCompanyName(trimmed);
       setState({
         ...state,
         company: { kind: "autoCreateFailed", name: trimmed },
@@ -443,43 +430,8 @@ export function useAddApplicationFlow(
       showError("Finish the auto-fill step first.");
       return;
     }
-    let companyId = readCompanyId(state.company);
-
-    if (!companyId && pendingCompanyName) {
-      try {
-        const trimmed = pendingCompanyName.trim();
-        const existing = findCompanyByName(companies, trimmed);
-        if (existing) {
-          companyId = existing.id;
-        } else {
-          const created = await createCompany({ name: trimmed }).unwrap();
-          companyId = created.id;
-        }
-        setPendingCompanyName(null);
-      } catch (err) {
-        showError(
-          `Couldn't auto-create company "${pendingCompanyName}": ${extractErrorMessage(err)}`,
-        );
-        return;
-      }
-    }
-    if (!companyId) {
-      showError("Pick a company before saving the application.");
-      return;
-    }
-
-    try {
-      await createApplication(
-        buildApplicationCreateRequest(values, {
-          companyId,
-          sourceUrl: state.sourceUrl ?? null,
-          jdText: submittedJdText,
-        }),
-      ).unwrap();
-      onSuccess();
-    } catch (err) {
-      showError(`Couldn't create application: ${extractErrorMessage(err)}`);
-    }
+    const { company, sourceUrl } = state;
+    await save({ company, sourceUrl, jdText: submittedJdText, values }, startRun(), onSuccess);
   }
 
   return {
@@ -487,7 +439,6 @@ export function useAddApplicationFlow(
     urlValue,
     textValue,
     companyNameValue,
-    pendingCompanyName,
     submittedJdText,
     urlBlockedNotice,
     companies,

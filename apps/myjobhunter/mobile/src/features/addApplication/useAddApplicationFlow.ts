@@ -5,27 +5,19 @@ import {
   JOB_URL_MAX_LENGTH,
 } from "@myjobhunter/api-client/constants/addApplicationForm";
 import { useCreateApplicationMutation, useExtractJdFromUrlMutation, useParseJobDescriptionMutation } from "@myjobhunter/api-client/store/applicationsApi";
-import {
-  useCreateCompanyMutation,
-  useLazyListCompaniesQuery,
-  useListCompaniesQuery,
-  useTriggerCompanyResearchMutation,
-} from "@myjobhunter/api-client/store/companiesApi";
+import { useCompanyResolver } from "@myjobhunter/api-client/hooks/useCompanyResolver";
+import { useListCompaniesQuery } from "@myjobhunter/api-client/store/companiesApi";
 import type { AddApplicationFormValues } from "@myjobhunter/api-client/types/application/add-application-form-values";
 import type { ExtractedCompanyHints } from "@myjobhunter/api-client/types/application/extracted-company-hints";
 import type { ReviewCompanyState } from "@myjobhunter/api-client/types/application/review-company-state";
 import type { Company } from "@myjobhunter/api-client/types/company";
-import type { CompanyCreateRequest } from "@myjobhunter/api-client/types/company-create-request";
 import { addApplicationFormProblems } from "@myjobhunter/api-client/utils/addApplicationFormProblems";
 import { buildApplicationCreateRequest } from "@myjobhunter/api-client/utils/buildApplicationCreateRequest";
 import { describeExtractError } from "@myjobhunter/api-client/utils/describeExtractError";
-import { findCompanyByName } from "@myjobhunter/api-client/utils/findCompanyByName";
 import { isAuthRequiredError } from "@myjobhunter/api-client/utils/isAuthRequiredError";
 import { isJobPostingUrl } from "@myjobhunter/api-client/utils/isJobPostingUrl";
 import { prefillFromExtract } from "@myjobhunter/api-client/utils/prefillFromExtract";
 import { prefillFromParse } from "@myjobhunter/api-client/utils/prefillFromParse";
-import { readCompanyId } from "@myjobhunter/api-client/utils/readCompanyId";
-import { resolveExtractedCompany } from "@myjobhunter/api-client/utils/resolveExtractedCompany";
 import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import * as Clipboard from "expo-clipboard";
 import { useEffect, useRef, useState } from "react";
@@ -44,13 +36,11 @@ import type { AddApplicationSource } from "../../types/AddApplicationSource";
  */
 export function useAddApplicationFlow() {
   const { showToast } = useToast();
-  // Starts loading the companies as the screen opens; matching waits for them (loadCompanies).
+  // Starts loading the companies as the screen opens; matching waits for them (useCompanyResolver).
   useListCompaniesQuery();
-  const [loadCompanies] = useLazyListCompaniesQuery();
+  const { addCompany, resolveReadCompany, companyIdForSave } = useCompanyResolver(urlHostname);
   const [extractJdFromUrl] = useExtractJdFromUrlMutation();
   const [parseJobDescription] = useParseJobDescriptionMutation();
-  const [createCompany] = useCreateCompanyMutation();
-  const [triggerCompanyResearch] = useTriggerCompanyResearchMutation();
   const [createApplication] = useCreateApplicationMutation();
   const { isLeaving, leave } = useLeaveWhenSaved("/applications");
 
@@ -109,46 +99,14 @@ export function useAddApplicationFlow() {
     setValues({ ...EMPTY_ADD_APPLICATION_FORM, ...next });
   }
 
-  /** A new company starts its background research; a failure there doesn't stop the add. */
-  async function addCompany(request: CompanyCreateRequest): Promise<Company> {
-    const created = await createCompany(request).unwrap();
-    void triggerCompanyResearch(created.id)
-      .unwrap()
-      .catch((error: unknown) => console.warn("Background company research failed:", error));
-    return created;
-  }
-
-  /** Every tracked company, waiting for the list if it hasn't loaded, so one isn't added twice. */
-  async function trackedCompanies(): Promise<Company[]> {
-    return (await loadCompanies(undefined, true).unwrap()).items;
-  }
-
   /** The company a read posting names: tracked, added now, or left to fix. Null once the screen has gone. */
   async function resolveCompany(name: string | null, hints: ExtractedCompanyHints): Promise<ReviewCompanyState | null> {
-    let companies: Company[];
-    try {
-      companies = await trackedCompanies();
-    } catch {
-      if (!isMounted.current) return null;
-      const typed = name?.trim() ?? "";
-      if (typed) setFailure(MESSAGES.couldntAddCompany);
-      return { kind: "autoCreateFailed", name: typed };
+    const outcome = await resolveReadCompany(name, hints, () => isMounted.current);
+    if (outcome.kind === "stale") return null;
+    if (outcome.kind === "failed") {
+      setFailure(outcome.reason === "listUnavailable" ? MESSAGES.couldntLoadCompanies : MESSAGES.couldntAddCompany);
     }
-    if (!isMounted.current) return null;
-    const resolution = resolveExtractedCompany(companies, name, urlHostname, hints);
-    if (resolution.kind === "none") return { kind: "autoCreateFailed", name: "" };
-    if (resolution.kind === "existing") {
-      const { id, name: existingName, logo_url } = resolution.company;
-      return { kind: "tracked", companyId: id, name: existingName, logoUrl: logo_url };
-    }
-    try {
-      const created = await addCompany(resolution.request);
-      return { kind: "new", companyId: created.id, name: created.name, logoUrl: created.logo_url };
-    } catch {
-      if (!isMounted.current) return null;
-      setFailure(MESSAGES.couldntAddCompany);
-      return { kind: "autoCreateFailed", name: resolution.request.name };
-    }
+    return outcome.company;
   }
 
   function linkProblem(url: string): string | null {
@@ -253,18 +211,6 @@ export function useAddApplicationFlow() {
     setValues((current) => ({ ...current, [field]: value }));
   }
 
-  /** The company to save under, adding the one whose auto-add failed if that's what's there. */
-  async function companyIdForSave(company: ReviewCompanyState): Promise<string | null> {
-    const id = readCompanyId(company);
-    if (id || company.kind !== "autoCreateFailed" || !company.name) return id;
-    const tracked = await trackedCompanies();
-    if (!isMounted.current) return null;
-    const existing = findCompanyByName(tracked, company.name);
-    if (existing) return existing.id;
-    const created = await createCompany({ name: company.name }).unwrap();
-    return created.id;
-  }
-
   /** Saving's failures are toasted, as on the website, where the button that was pressed is. */
   function saveFailed(message: string): void {
     showToast(message, "error");
@@ -278,7 +224,7 @@ export function useAddApplicationFlow() {
     try {
       let companyId: string | null;
       try {
-        companyId = await companyIdForSave(review.company);
+        companyId = await companyIdForSave(review.company, () => isMounted.current);
       } catch {
         if (isMounted.current) saveFailed(MESSAGES.couldntAddCompany);
         return;

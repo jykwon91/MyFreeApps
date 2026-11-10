@@ -21,7 +21,6 @@
  */
 import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import { showSuccess } from "@platform/ui";
 import { X } from "lucide-react";
 import type { AddApplicationFormValues } from "@myjobhunter/api-client/types/application/add-application-form-values";
 import { useAddApplicationFlow } from "./add-application-dialog/useAddApplicationFlow";
@@ -71,10 +70,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
   // Submit.
   // -------------------------------------------------------------------------
   const onSubmit: SubmitHandler<AddApplicationFormValues> = async (values) => {
-    await flow.submitApplication(values, () => {
-      showSuccess("Application added");
-      onOpenChange(false);
-    });
+    await flow.submitApplication(values, () => handleOpenChange(false));
   };
 
   // -------------------------------------------------------------------------

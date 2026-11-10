@@ -9,10 +9,11 @@
  * The legacy company `<select>` and the standalone URL field in the
  * form body are GONE. Tests assert on the new shape.
  */
+import { useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { showError } from "@platform/ui";
+import { showError, showSuccess } from "@platform/ui";
 import AddApplicationDialog from "../AddApplicationDialog";
 
 // ---- mocks ----
@@ -25,14 +26,25 @@ import AddApplicationDialog from "../AddApplicationDialog";
 // render as harmless <svg> in jsdom — tests query by text/role, never by
 // icon.
 
-vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
-  useListCompaniesQuery: vi.fn(),
-  useCreateCompanyMutation: vi.fn(),
-  useTriggerCompanyResearchMutation: vi.fn(() => [
-    vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })),
-    { isLoading: false },
-  ]),
-}));
+// The lazy list matching awaits serves what useListCompaniesQuery is set to,
+// unless a test holds it back to play a list that hasn't loaded yet.
+vi.mock("@myjobhunter/api-client/store/companiesApi", () => {
+  const listCompanies = vi.fn();
+  return {
+    useListCompaniesQuery: listCompanies,
+    useLazyListCompaniesQuery: vi.fn(() => [
+      vi.fn(() => ({
+        unwrap: () =>
+          Promise.resolve(listCompanies()?.data ?? { items: [], total: 0 }),
+      })),
+    ]),
+    useCreateCompanyMutation: vi.fn(),
+    useTriggerCompanyResearchMutation: vi.fn(() => [
+      vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })),
+      { isLoading: false },
+    ]),
+  };
+});
 
 vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({
   useCreateApplicationMutation: vi.fn(),
@@ -86,7 +98,13 @@ vi.mock("@platform/ui", async (importOriginal) => {
   };
 });
 
-import { useListCompaniesQuery, useCreateCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
+import {
+  useListCompaniesQuery,
+  useLazyListCompaniesQuery,
+  useCreateCompanyMutation,
+  useTriggerCompanyResearchMutation,
+} from "@myjobhunter/api-client/store/companiesApi";
+import { ADD_APPLICATION_MESSAGES } from "@/constants/add-application-messages";
 import {
   useCreateApplicationMutation,
   useExtractJdFromUrlMutation,
@@ -953,5 +971,334 @@ describe("AddApplicationDialog — removed surfaces", () => {
     expect(
       screen.queryByPlaceholderText("https://..."),
     ).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Races — closing mid-read, and matching before the companies have loaded
+//
+// Regressions: a read still in flight when the dialog closed went on to add
+// its company (POST /companies + research) and wrote its result into the
+// reset form, so reopening showed it. And matching ran against the companies
+// captured when the read began — [] before GET /companies loaded — so a
+// tracked company was added again.
+// ---------------------------------------------------------------------------
+
+function deferred<T>() {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((r) => (resolve = r));
+  return { promise, resolve };
+}
+
+function companyRecord(id: string, name: string) {
+  return {
+    id,
+    user_id: "u1",
+    name,
+    primary_domain: null,
+    logo_url: null,
+    industry: null,
+    size_range: null,
+    hq_location: null,
+    description: null,
+    external_ref: null,
+    external_source: null,
+    crunchbase_id: null,
+    created_at: "",
+    updated_at: "",
+  };
+}
+
+function extractResult(overrides: Record<string, unknown> = {}) {
+  return {
+    title: "Senior Engineer",
+    company: "Pivotal Health",
+    company_website: null,
+    company_logo_url: null,
+    location: "Remote",
+    description_html: null,
+    requirements_text: null,
+    summary: "Stale summary.",
+    source_url: "https://jobs.example.com/x",
+    ...overrides,
+  };
+}
+
+/** A read that answers when the test says, with RTK's abort. */
+function heldRead() {
+  const reply = deferred<unknown>();
+  const abort = vi.fn();
+  const trigger = vi.fn(() => ({ unwrap: () => reply.promise, abort }));
+  return { trigger, abort, answer: reply.resolve };
+}
+
+/** The dialog as Applications.tsx holds it: its own open state, and a way back in. */
+function ControlledDialog() {
+  const [open, setOpen] = useState(true);
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Reopen</button>
+      <AddApplicationDialog open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
+const ROLE_PLACEHOLDER = /senior backend engineer/i;
+const REVIEW_HEADING = /review and adjust before saving/i;
+
+describe("AddApplicationDialog — races", () => {
+  const mockUseLazyListCompaniesQuery = vi.mocked(useLazyListCompaniesQuery);
+  const research = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Back to serving the list mock, not a previous test's held list.
+    mockUseLazyListCompaniesQuery.mockReset();
+    mockUseListCompaniesQuery.mockReturnValue(emptyCompanies);
+    mockUseCreateApplicationMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useCreateApplicationMutation>>(),
+    );
+    mockUseParseJobDescriptionMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useParseJobDescriptionMutation>>(),
+    );
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useExtractJdFromUrlMutation>>(),
+    );
+    vi.mocked(useTriggerCompanyResearchMutation).mockReturnValue(
+      [research, { isLoading: false }] as unknown as ReturnType<typeof useTriggerCompanyResearchMutation>,
+    );
+  });
+
+  function serveExtract(result: Record<string, unknown>) {
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      [
+        vi.fn(() => ({ unwrap: () => Promise.resolve(extractResult(result)) })),
+        { isLoading: false },
+      ] as unknown as ReturnType<typeof useExtractJdFromUrlMutation>,
+    );
+  }
+
+  function serveCreateApp(reply: () => Promise<unknown> = () => Promise.resolve({ id: "app-1" })) {
+    const createApp = vi.fn(() => ({ unwrap: reply }));
+    mockUseCreateApplicationMutation.mockReturnValue(
+      [createApp, { isLoading: false }] as unknown as ReturnType<typeof useCreateApplicationMutation>,
+    );
+    return createApp;
+  }
+
+  async function readLink(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText(/job posting url/i), "https://jobs.example.com/x");
+    await user.click(screen.getByRole("button", { name: /auto-fill/i }));
+  }
+
+  function serveCreateCompany(...replies: Array<() => Promise<unknown>>) {
+    const create = vi.fn();
+    for (const reply of replies) create.mockReturnValueOnce({ unwrap: reply });
+    mockUseCreateCompanyMutation.mockReturnValue(
+      [create, { isLoading: false }] as unknown as ReturnType<typeof useCreateCompanyMutation>,
+    );
+    return create;
+  }
+
+  /** `load` gets RTK's preferCacheValue: true may answer from the cache, false always refetches. */
+  function serveLazyList(load: (preferCacheValue: boolean) => Promise<unknown>) {
+    const trigger = vi.fn((_arg: undefined, preferCacheValue: boolean) => ({
+      unwrap: () => load(preferCacheValue),
+    }));
+    mockUseLazyListCompaniesQuery.mockReturnValue(
+      [trigger] as unknown as ReturnType<typeof useLazyListCompaniesQuery>,
+    );
+    return trigger;
+  }
+
+  it("closing mid-link-read aborts it, adds no company, and leaves the form untouched", async () => {
+    const user = userEvent.setup();
+    const createCompany = serveCreateCompany(() => Promise.resolve(companyRecord("co-x", "Pivotal Health")));
+    const stale = heldRead();
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      [stale.trigger, { isLoading: false }] as unknown as ReturnType<typeof useExtractJdFromUrlMutation>,
+    );
+
+    render(<ControlledDialog />);
+    await user.type(screen.getByLabelText(/job posting url/i), "https://jobs.example.com/x");
+    await user.click(screen.getByRole("button", { name: /auto-fill/i }));
+    await waitFor(() => expect(stale.trigger).toHaveBeenCalled());
+
+    await user.keyboard("{Escape}");
+    expect(stale.abort).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "Reopen" }));
+
+    // The abandoned read answers anyway; nothing may come of it.
+    stale.answer(extractResult());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(createCompany).not.toHaveBeenCalled();
+    expect(screen.getByLabelText(/job posting url/i)).toHaveValue("");
+    expect(screen.queryByText(REVIEW_HEADING)).not.toBeInTheDocument();
+
+    // A fresh read with no title must show an empty role, not the stale one.
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      [
+        vi.fn(() => ({ unwrap: () => Promise.resolve(extractResult({ title: null, company: null, summary: "Fresh summary." })) })),
+        { isLoading: false },
+      ] as unknown as ReturnType<typeof useExtractJdFromUrlMutation>,
+    );
+    await user.type(screen.getByLabelText(/job posting url/i), "https://jobs.example.com/y");
+    await user.click(screen.getByRole("button", { name: /auto-fill/i }));
+    await screen.findByText(REVIEW_HEADING);
+    expect(screen.getByPlaceholderText(ROLE_PLACEHOLDER)).toHaveValue("");
+    expect(screen.queryByText("Stale summary.")).not.toBeInTheDocument();
+    expect(createCompany).not.toHaveBeenCalled();
+  });
+
+  it("closing mid-text-read and reopening doesn't show the stale result", async () => {
+    const user = userEvent.setup();
+    const createCompany = serveCreateCompany(() => Promise.resolve(companyRecord("co-x", "Pivotal Health")));
+    const stale = heldRead();
+    mockUseParseJobDescriptionMutation.mockReturnValue(
+      [stale.trigger, { isLoading: false }] as unknown as ReturnType<typeof useParseJobDescriptionMutation>,
+    );
+
+    render(<ControlledDialog />);
+    await user.click(screen.getByText(/no url\? paste the description text instead/i));
+    await user.type(screen.getByLabelText(/job description text/i), "JD text");
+    await user.click(screen.getByRole("button", { name: /parse with ai/i }));
+    await waitFor(() => expect(stale.trigger).toHaveBeenCalled());
+
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Reopen" }));
+    expect(stale.abort).toHaveBeenCalledTimes(1);
+
+    stale.answer({ title: "Senior Engineer", company: "Pivotal Health", summary: "Stale summary." });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.getByLabelText(/job posting url/i)).toBeInTheDocument();
+    expect(screen.queryByText(REVIEW_HEADING)).not.toBeInTheDocument();
+    expect(createCompany).not.toHaveBeenCalled();
+    expect(showError).not.toHaveBeenCalled();
+  });
+
+  it("waits for the companies to load before matching, and finds the tracked one", async () => {
+    const user = userEvent.setup();
+    // GET /companies hasn't answered: the render-time list is empty.
+    mockUseListCompaniesQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as unknown as ReturnType<typeof useListCompaniesQuery>);
+    const list = deferred<unknown>();
+    serveLazyList(() => list.promise);
+    const createCompany = serveCreateCompany(() => Promise.resolve(companyRecord("co-dup", "Pivotal Health")));
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      [
+        vi.fn(() => ({ unwrap: () => Promise.resolve(extractResult()) })),
+        { isLoading: false },
+      ] as unknown as ReturnType<typeof useExtractJdFromUrlMutation>,
+    );
+
+    renderDialog();
+    await user.type(screen.getByLabelText(/job posting url/i), "https://jobs.example.com/x");
+    await user.click(screen.getByRole("button", { name: /auto-fill/i }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(createCompany).not.toHaveBeenCalled();
+
+    list.resolve({ items: [companyRecord("co-existing", "Pivotal Health")], total: 1 });
+    await screen.findByText(REVIEW_HEADING);
+    expect(screen.getByText(/tracked/i)).toBeInTheDocument();
+    expect(createCompany).not.toHaveBeenCalled();
+  });
+
+  it("the save-time retry refetches the companies, finding one added in another tab, instead of adding a duplicate", async () => {
+    const user = userEvent.setup();
+    // The cache still holds the list from before; only a refetch sees Flaky Co, added in another tab.
+    const cached = { items: [], total: 0 };
+    const fresh = { items: [companyRecord("co-flaky", "Flaky Co")], total: 1 };
+    const loadList = serveLazyList((preferCacheValue) => Promise.resolve(preferCacheValue ? cached : fresh));
+    const createCompany = serveCreateCompany(() => Promise.reject(new Error("server boom")));
+    const createApp = serveCreateApp();
+    serveExtract({ company: "Flaky Co" });
+
+    renderDialog();
+    await readLink(user);
+    await screen.findByText(/needs attention/i);
+    await user.click(screen.getByRole("button", { name: /add application/i }));
+
+    await waitFor(() =>
+      expect(createApp).toHaveBeenCalledWith(expect.objectContaining({ company_id: "co-flaky" })),
+    );
+    expect(createCompany).toHaveBeenCalledTimes(1);
+    expect(loadList.mock.calls.map(([, preferCacheValue]) => preferCacheValue)).toEqual([true, false]);
+  });
+
+  it("a double-clicked Save adds the company once and the application once, and researches the company", async () => {
+    const user = userEvent.setup();
+    // GET /companies fails during the read, so the company is left for saving to add.
+    let listUp = false;
+    serveLazyList(() =>
+      listUp ? Promise.resolve({ items: [], total: 0 }) : Promise.reject(new Error("list down")),
+    );
+    const createCompany = serveCreateCompany(() => Promise.resolve(companyRecord("co-new", "Pivotal Health")));
+    const createApp = serveCreateApp();
+    serveExtract({});
+
+    renderDialog();
+    await readLink(user);
+    await screen.findByText(/needs attention/i);
+    expect(showError).toHaveBeenCalledWith(ADD_APPLICATION_MESSAGES.couldntLoadCompanies);
+    expect(createCompany).not.toHaveBeenCalled();
+
+    listUp = true;
+    await user.dblClick(screen.getByRole("button", { name: /add application/i }));
+
+    await waitFor(() => expect(createApp).toHaveBeenCalledTimes(1));
+    expect(createCompany).toHaveBeenCalledTimes(1);
+    expect(createApp).toHaveBeenCalledWith(expect.objectContaining({ company_id: "co-new" }));
+    expect(research).toHaveBeenCalledWith("co-new");
+  });
+
+  it("a save that lands after the dialog was closed and reopened leaves the reopened dialog alone", async () => {
+    const user = userEvent.setup();
+    serveCreateCompany(() => Promise.resolve(companyRecord("co-new", "Pivotal Health")));
+    const held = deferred<unknown>();
+    const createApp = serveCreateApp(() => held.promise);
+    serveExtract({});
+
+    render(<ControlledDialog />);
+    await readLink(user);
+    await screen.findByText(REVIEW_HEADING);
+    await user.click(screen.getByRole("button", { name: /add application/i }));
+    await waitFor(() => expect(createApp).toHaveBeenCalled());
+
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Reopen" }));
+    held.resolve({ id: "app-1" });
+
+    await waitFor(() => expect(showSuccess).toHaveBeenCalledWith(ADD_APPLICATION_MESSAGES.added));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByLabelText(/job posting url/i)).toHaveValue("");
+  });
+
+  it("reopening after a successful save starts from the link step, not the old review", async () => {
+    const user = userEvent.setup();
+    serveCreateCompany(() => Promise.resolve(companyRecord("co-new", "Pivotal Health")));
+    const createApp = vi.fn(() => ({ unwrap: () => Promise.resolve({ id: "app-1" }) }));
+    mockUseCreateApplicationMutation.mockReturnValue(
+      [createApp, { isLoading: false }] as unknown as ReturnType<typeof useCreateApplicationMutation>,
+    );
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      [
+        vi.fn(() => ({ unwrap: () => Promise.resolve(extractResult()) })),
+        { isLoading: false },
+      ] as unknown as ReturnType<typeof useExtractJdFromUrlMutation>,
+    );
+
+    render(<ControlledDialog />);
+    await user.type(screen.getByLabelText(/job posting url/i), "https://jobs.example.com/x");
+    await user.click(screen.getByRole("button", { name: /auto-fill/i }));
+    await screen.findByText(REVIEW_HEADING);
+    await user.click(screen.getByRole("button", { name: /add application/i }));
+    await waitFor(() => expect(createApp).toHaveBeenCalled());
+
+    await user.click(screen.getByRole("button", { name: "Reopen" }));
+    expect(screen.getByLabelText(/job posting url/i)).toHaveValue("");
+    expect(screen.queryByText(REVIEW_HEADING)).not.toBeInTheDocument();
   });
 });

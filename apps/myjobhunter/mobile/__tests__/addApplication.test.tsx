@@ -319,6 +319,7 @@ describe("from a link", () => {
     const sent = serveAdd({
       "POST /applications/extract-from-url": ok(extracted({ company: "Linear" })),
       "POST /companies": () => (failAdd ? fail(500)() : ok(companyRecord({ id: "co-linear", name: "Linear" }))()),
+      "POST /companies/co-linear/research": ok({}),
     });
     await openAddScreen();
     await readLink();
@@ -331,6 +332,22 @@ describe("from a link", () => {
     await screen.findByText(MESSAGES.added);
     expect(requestsTo(sent, "POST /companies").map(({ body }) => body)).toEqual([{ name: "Linear" }, { name: "Linear" }]);
     expect(requestsTo(sent, "POST /applications")[0]?.body).toMatchObject({ company_id: "co-linear" });
+    // Added at save time, it's researched as one added by the read would be.
+    await waitFor(() => expect(requestsTo(sent, "POST /companies/co-linear/research")).toHaveLength(1));
+  });
+
+  it("says the companies didn't load, not that adding one failed, when GET /companies fails during the read", async () => {
+    const sent = serveAdd({
+      "POST /applications/extract-from-url": ok(extracted({ company: "Linear" })),
+      "GET /companies": fail(500),
+    });
+    await openAddScreen();
+    await readLink();
+
+    expect(await screen.findByText(MESSAGES.companyAddFailed)).toBeTruthy();
+    expect(screen.getByText(MESSAGES.couldntLoadCompanies)).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.couldntAddCompany)).toBeNull();
+    expect(requestsTo(sent, "POST /companies")).toHaveLength(0);
   });
 
   it("asks for a company when the posting didn't name one", async () => {
