@@ -26,6 +26,12 @@ from app.models.jobs.resume_upload_job import ResumeUploadJob
 from app.models.profile.profile import Profile
 from app.models.user.user import User
 from app.repositories.user import account_files_repo
+from platform_shared.testing.account_deletion_schema import (
+    entries_without_reason,
+    foreign_keys_blocking_user_deletion,
+    missing_columns,
+    stored_file_suspects,
+)
 
 
 def _make_user() -> User:
@@ -167,16 +173,56 @@ async def test_a_failed_deletion_removes_no_files(db: AsyncSession, storage: Mag
     storage.delete_file.assert_not_called()
 
 
-def test_every_stored_file_column_is_covered_by_the_cleanup() -> None:
-    columns = {
-        f"{table.name}.{column.name}"
-        for table in Base.metadata.sorted_tables
-        for column in table.columns
-        if column.name.endswith("file_path")
-    }
-    covered = {
+# Look like stored-file references but are not (file_path columns are covered by the cleanup).
+NOT_STORED_FILE_COLUMNS: dict[str, str] = {
+    "application_contacts.linkedin_url": "Link to a LinkedIn profile",
+    "applications.url": "Link to the job posting",
+    "companies.logo_url": "External logo link",
+    "discovered_jobs.source_url": "Link to the job posting",
+    "documents.filename": "Original upload name; the stored key is file_path",
+    "job_analyses.source_url": "Link to the job posting",
+    "research_sources.url": "Link to a web source",
+    "resume_upload_jobs.file_filename": "Original upload name; the stored key is file_path",
+    "screening_answers.question_key": "Identifier of a screening question, not a file",
+}
+
+
+# RESTRICT foreign keys between rows the user's delete cascades to. A new one needs the same
+# look: run the delete against migrated Postgres, then add it here.
+KNOWN_BLOCKING_FOREIGN_KEYS: dict[str, str] = {
+    "applications.company_id": (
+        "Both rows cascade from the user. Deleting a user holding a company and an "
+        "application succeeds on migrated Postgres, though RESTRICT is checked immediately "
+        "so this relies on cascade order"
+    ),
+}
+
+
+def _columns_covered_by_the_cleanup() -> set[str]:
+    return {
         f"{column['expr'].table.name}.{column['expr'].name}"
         for query in account_files_repo._queries(uuid.uuid4())
         for column in query.column_descriptions
     }
-    assert covered == columns
+
+
+def test_every_stored_file_column_is_covered_by_the_cleanup() -> None:
+    covered = _columns_covered_by_the_cleanup()
+    assert missing_columns(Base.metadata, covered) == []
+    suspects = stored_file_suspects(Base.metadata, excused=covered | set(NOT_STORED_FILE_COLUMNS))
+    assert suspects == [], (
+        f"These columns look like stored-file references: {suspects}. If one IS a stored "
+        "file, add it to account_files_repo so account deletion removes the file. If not, "
+        "add table.column to NOT_STORED_FILE_COLUMNS with a reason."
+    )
+
+
+def test_every_excused_stored_file_column_exists_and_has_a_reason() -> None:
+    assert missing_columns(Base.metadata, NOT_STORED_FILE_COLUMNS) == []
+    assert entries_without_reason(NOT_STORED_FILE_COLUMNS) == []
+
+
+def test_foreign_keys_that_can_block_deleting_a_user_have_all_been_checked() -> None:
+    blocking = set(foreign_keys_blocking_user_deletion(Base.metadata, User.__table__.name))
+    assert blocking == set(KNOWN_BLOCKING_FOREIGN_KEYS)
+    assert entries_without_reason(KNOWN_BLOCKING_FOREIGN_KEYS) == []

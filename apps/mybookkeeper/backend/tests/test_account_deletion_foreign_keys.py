@@ -34,20 +34,49 @@ from app.models.inquiries.reply_template import ReplyTemplate
 from app.models.user.user import User
 from app.repositories.user import account_files_repo
 from app.services.user.account_deletion_service import remove_stored_files
+from platform_shared.testing.account_deletion_schema import (
+    entries_without_reason,
+    foreign_keys_blocking_user_deletion,
+    missing_columns,
+    stored_file_suspects,
+)
 
-# Each is checked by Postgres the moment a row goes, so deleting a workspace or
-# a user has to clear these first. A new one needs the same look: run the delete
-# against migrated Postgres, then add it here.
-KNOWN_RESTRICTING_FOREIGN_KEYS = {
-    "channel_listings.channel_id",
-    "insurance_policy_attachments.uploaded_by_user_id",
-    "lease_term_versions.created_by_user_id",
-    "listing_blackout_attachments.uploaded_by_user_id",
-    "organizations.created_by",
-    "screening_results.uploaded_by_user_id",
-    "signed_lease_attachments.uploaded_by_user_id",
-    "signed_lease_templates.template_id",
-    "signed_leases.applicant_id",
+# Foreign keys that can block deleting a user (RESTRICT, or no cascade from outside the
+# delete), each with how the delete gets past it. A new one needs the same look: run the
+# delete against migrated Postgres, then add it here.
+HELD_BY_ANOTHER_WORKSPACE = (
+    "Workspaces the user owns are deleted first; any row left belongs to another workspace "
+    "and holds_shared_records refuses the delete"
+)
+KNOWN_BLOCKING_FOREIGN_KEYS: dict[str, str] = {
+    "insurance_policy_attachments.uploaded_by_user_id": HELD_BY_ANOTHER_WORKSPACE,
+    "lease_term_versions.created_by_user_id": HELD_BY_ANOTHER_WORKSPACE,
+    "listing_blackout_attachments.uploaded_by_user_id": HELD_BY_ANOTHER_WORKSPACE,
+    "screening_results.uploaded_by_user_id": HELD_BY_ANOTHER_WORKSPACE,
+    "signed_lease_attachments.uploaded_by_user_id": HELD_BY_ANOTHER_WORKSPACE,
+    "organizations.created_by": "prepare_deletion deletes the user's workspaces before the user",
+    "signed_leases.applicant_id": (
+        "prepare_deletion hard-deletes the workspace's signed leases before the workspace"
+    ),
+    "signed_lease_templates.template_id": (
+        "Removed with its signed lease when prepare_deletion hard-deletes the workspace's "
+        "signed leases"
+    ),
+}
+
+# Look like stored-file references but are not (storage keys are covered by the cleanup).
+NOT_STORED_FILE_COLUMNS: dict[str, str] = {
+    "channel_listings.external_url": "Link to the listing on another site",
+    "channel_listings.ical_import_url": "External calendar feed address",
+    "email_queue.attachment_filename": "Display name of an attachment, not a stored key",
+    "insurance_policy_attachments.filename": "Original upload name; the stored key is storage_key",
+    "lease_template_files.filename": "Original upload name; the stored key is storage_key",
+    "lease_template_placeholders.key": "Placeholder name inside a template, not a file",
+    "listing_blackout_attachments.filename": "Original upload name; the stored key is storage_key",
+    "listing_external_ids.external_url": "Link to the listing on another site",
+    "signed_lease_attachments.filename": "Original upload name; the stored key is storage_key",
+    "tax_advisor_suggestions.suggestion_key": "Identifier of a suggestion type, not a file",
+    "welcome_manual_places.map_url": "Link to a map page, not a stored file",
 }
 
 
@@ -258,19 +287,28 @@ def test_unreachable_storage_logs_every_key_left_behind(caplog: pytest.LogCaptur
     assert "key=b.pdf" in caplog.text
 
 
-def test_every_stored_file_column_is_covered_by_the_cleanup() -> None:
-    columns = {
-        f"{table.name}.{column.name}"
-        for table in Base.metadata.sorted_tables
-        for column in table.columns
-        if column.name.endswith("storage_key")
-    }
-    covered = {
+def _columns_covered_by_the_cleanup() -> set[str]:
+    return {
         f"{column['expr'].table.name}.{column['expr'].name}"
         for query in account_files_repo._queries([uuid.uuid4()])
         for column in query.column_descriptions
     }
-    assert covered == columns
+
+
+def test_every_stored_file_column_is_covered_by_the_cleanup() -> None:
+    covered = _columns_covered_by_the_cleanup()
+    assert missing_columns(Base.metadata, covered) == []
+    suspects = stored_file_suspects(Base.metadata, excused=covered | set(NOT_STORED_FILE_COLUMNS))
+    assert suspects == [], (
+        f"These columns look like stored-file references: {suspects}. If one IS a stored "
+        "file, add it to account_files_repo so account deletion removes the file. If not, "
+        "add table.column to NOT_STORED_FILE_COLUMNS with a reason."
+    )
+
+
+def test_every_excused_stored_file_column_exists_and_has_a_reason() -> None:
+    assert missing_columns(Base.metadata, NOT_STORED_FILE_COLUMNS) == []
+    assert entries_without_reason(NOT_STORED_FILE_COLUMNS) == []
 
 
 def test_every_table_is_loaded_with_the_models_package() -> None:
@@ -290,15 +328,6 @@ def test_every_table_excused_from_the_shared_records_check_exists() -> None:
 
 
 def test_foreign_keys_that_block_a_delete_have_all_been_checked() -> None:
-    restricting = {
-        f"{table.name}.{fk.parent.name}"
-        for table in Base.metadata.sorted_tables
-        for fk in table.foreign_keys
-        if fk.ondelete in (None, "RESTRICT", "NO ACTION") and _blocks_a_delete(fk)
-    }
-    assert restricting == KNOWN_RESTRICTING_FOREIGN_KEYS
-
-
-def _blocks_a_delete(fk) -> bool:  # type: ignore[no-untyped-def]
-    """Only rows a user's account reaches matter, not global reference tables."""
-    return fk.ondelete == "RESTRICT" or fk.column.table.name == "users"
+    blocking = set(foreign_keys_blocking_user_deletion(Base.metadata, User.__table__.name))
+    assert blocking == set(KNOWN_BLOCKING_FOREIGN_KEYS)
+    assert entries_without_reason(KNOWN_BLOCKING_FOREIGN_KEYS) == []

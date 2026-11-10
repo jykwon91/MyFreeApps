@@ -117,7 +117,9 @@ def _validate_content_length(kind: Kind, content_length: int) -> None:
 # ---------------------------------------------------------------------------
 # Key naming — operator-uploaded edits live under ``edits/`` so they never
 # collide with auto-generated ingestion keys (``pending/<vid>/...``) or the
-# manual-upload-create keys (``<user_id>/<lineup_id>/...``).
+# manual-upload-create keys (``<user_id>/<lineup_id>/...``). The ``<user_id>``
+# prefix only records who uploaded the file; the content is shared library
+# content that outlives the account, so never delete objects by that prefix.
 #
 # A uuid suffix per upload makes each edit a distinct object (no overwrite),
 # so the column always points at the latest while older keys remain available

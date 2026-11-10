@@ -70,6 +70,9 @@ def _screenshot_key(user_id: uuid.UUID, lineup_id: uuid.UUID, slot: str) -> str:
 
     Format: <user_id>/<lineup_id>/<slot>.png
     Slot: "stand" or "aim"
+
+    The ``<user_id>`` prefix only records who uploaded the screenshot; it is shared
+    library content that outlives the account, so never delete by that prefix.
     """
     return f"{user_id}/{lineup_id}/{slot}.png"
 
