@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import SourceFilterChips from "../SourceFilterChips";
-import type { DiscoverySource } from "@/types/discovery/discovery-source";
+import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
 
 function makeSource(overrides: Partial<DiscoverySource> = {}): DiscoverySource {
   return {

@@ -6,8 +6,8 @@ import { X } from "lucide-react";
 import {
   useCreateScreeningAnswerMutation,
   useUpdateScreeningAnswerMutation,
-} from "@/lib/screeningAnswersApi";
-import type { ScreeningAnswer } from "@/types/screening-answer/screening-answer";
+} from "@myjobhunter/api-client/store/screeningAnswersApi";
+import type { ScreeningAnswer } from "@myjobhunter/api-client/types/screening-answer/screening-answer";
 
 const ALLOWED_QUESTION_KEYS = [
   // Non-EEOC

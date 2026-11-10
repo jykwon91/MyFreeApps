@@ -1,4 +1,4 @@
-import type { DismissalReason } from "@/store/discoverApi";
+import type { DismissalReason } from "@myjobhunter/api-client/types/discovery/dismissal-reason";
 
 const DISMISS_REASONS: { value: DismissalReason; label: string }[] = [
   { value: "wrong_stack", label: "Wrong tech stack" },

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Download, FileText, Loader2 } from "lucide-react";
 import { Badge, formatFileSize } from "@platform/ui";
-import type { ResumeUploadJob, ResumeUploadJobStatus } from "@/types/resume-upload-job/resume-upload-job";
+import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
+import type { ResumeUploadJobStatus } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job-status";
 import ResumeJobParsedPanel from "@/features/profile/ResumeJobParsedPanel";
 
 export interface ResumeJobRowProps {

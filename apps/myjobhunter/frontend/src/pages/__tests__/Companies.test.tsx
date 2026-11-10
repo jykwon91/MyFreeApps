@@ -7,7 +7,7 @@ import Companies from "@/pages/Companies";
 // Mock RTK Query hooks — all state is controlled per-test via mockReturnValue.
 // ---------------------------------------------------------------------------
 
-vi.mock("@/lib/companiesApi", () => ({
+vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
   useListCompaniesQuery: vi.fn(),
   useGetCompanyQuery: vi.fn(),
   useCreateCompanyMutation: vi.fn(),
@@ -36,7 +36,7 @@ vi.mock("@platform/ui", async (importOriginal) => {
 import {
   useListCompaniesQuery,
   useCreateCompanyMutation,
-} from "@/lib/companiesApi";
+} from "@myjobhunter/api-client/store/companiesApi";
 
 const mockUseListCompaniesQuery = vi.mocked(useListCompaniesQuery);
 const mockUseCreateCompanyMutation = vi.mocked(useCreateCompanyMutation);

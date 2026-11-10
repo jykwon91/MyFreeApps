@@ -1,7 +1,7 @@
 import { Download } from "lucide-react";
 import { Skeleton } from "@platform/ui";
-import { useGetDocumentDownloadUrlQuery } from "@/lib/documentsApi";
-import type { Document } from "@/types/document/document";
+import { useGetDocumentDownloadUrlQuery } from "@myjobhunter/api-client/store/documentsApi";
+import type { Document } from "@myjobhunter/api-client/types/document/document";
 import { useDocumentViewMode } from "@/features/documents/useDocumentViewMode";
 
 export interface DocumentViewerProps {

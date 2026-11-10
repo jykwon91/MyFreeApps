@@ -6,7 +6,8 @@
  * event card in `EventsSection`.
  */
 import type { ReactNode } from "react";
-import type { InterviewDetails, InterviewType } from "@/types/interview-details";
+import type { InterviewDetails } from "@myjobhunter/api-client/types/interview-details";
+import type { InterviewType } from "@myjobhunter/api-client/types/interview-type";
 
 const TYPE_LABEL: Record<InterviewType, string> = {
   phone: "Phone",

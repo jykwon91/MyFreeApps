@@ -11,7 +11,7 @@ import {
   columnDroppableId,
   columnFromDroppableId,
 } from "../use-kanban-drag-handler";
-import type { KanbanItem } from "@/types/kanban/kanban-item";
+import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
 
 function makeItem(overrides: Partial<KanbanItem> = {}): KanbanItem {
   return {

@@ -10,7 +10,7 @@
  * never appear here — the backend filters them out of the lateral subquery
  * that powers ``latest_event_type``.
  */
-import type { KanbanColumn } from "@/types/kanban/kanban-column";
+import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
 
 const EVENT_TYPE_TO_COLUMN: Record<string, KanbanColumn> = {
   applied: "applied",

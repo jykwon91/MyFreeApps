@@ -19,7 +19,7 @@
  */
 import * as Toast from "@radix-ui/react-toast";
 import { extractErrorMessage, showError } from "@platform/ui";
-import { useUndoDismissDiscoveredJobMutation } from "@/store/discoverApi";
+import { useUndoDismissDiscoveredJobMutation } from "@myjobhunter/api-client/store/discoverApi";
 
 const UNDO_TOAST_DURATION_MS = 5000;
 

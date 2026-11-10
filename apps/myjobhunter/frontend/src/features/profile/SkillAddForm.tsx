@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
-import { useCreateSkillMutation } from "@/lib/skillsApi";
+import { useCreateSkillMutation } from "@myjobhunter/api-client/store/skillsApi";
 
 // ---------------------------------------------------------------------------
 // Skill year options — used by the years-of-experience select.

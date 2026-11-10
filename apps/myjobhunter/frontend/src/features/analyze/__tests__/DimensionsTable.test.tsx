@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import DimensionsTable from "../DimensionsTable";
-import type { JobAnalysisDimension } from "@/types/job-analysis/job-analysis-dimension";
+import type { JobAnalysisDimension } from "@myjobhunter/api-client/types/job-analysis/job-analysis-dimension";
 
 const ALL_FIVE: JobAnalysisDimension[] = [
   { key: "skill_match", status: "strong", rationale: "Python + Postgres covered." },

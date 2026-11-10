@@ -11,19 +11,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DiscoverInboxView from "@/features/discover/DiscoverInboxView";
-import type { DiscoveredJob } from "@/types/discovery/discovered-job";
-import type { DiscoveredJobListResponse } from "@/types/discovery/discovered-job-list-response";
+import type { DiscoveredJob } from "@myjobhunter/api-client/types/discovery/discovered-job";
+import type { DiscoveredJobListResponse } from "@myjobhunter/api-client/types/discovery/discovered-job-list-response";
 
-vi.mock("@/store/discoverApi", () => ({
+vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useListDiscoveredJobsQuery: vi.fn(),
   useListDiscoverySourcesQuery: vi.fn(),
 }));
 
-vi.mock("@/lib/profileApi", () => ({
+vi.mock("@myjobhunter/api-client/store/profileApi", () => ({
   useGetProfileQuery: vi.fn(() => ({ data: undefined })),
 }));
 
-vi.mock("@/lib/skillsApi", () => ({
+vi.mock("@myjobhunter/api-client/store/skillsApi", () => ({
   useListSkillsQuery: vi.fn(() => ({ data: undefined })),
 }));
 
@@ -61,7 +61,7 @@ vi.mock("@/features/discover/DiscoveredJobCard", () => ({
 import {
   useListDiscoveredJobsQuery,
   useListDiscoverySourcesQuery,
-} from "@/store/discoverApi";
+} from "@myjobhunter/api-client/store/discoverApi";
 
 const mockListJobs = vi.mocked(useListDiscoveredJobsQuery);
 const mockListSources = vi.mocked(useListDiscoverySourcesQuery);

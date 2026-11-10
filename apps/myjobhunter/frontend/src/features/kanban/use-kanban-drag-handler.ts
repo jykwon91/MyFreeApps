@@ -17,10 +17,10 @@ import { showError, extractErrorMessage } from "@platform/ui";
 import {
   applicationsApi,
   useTransitionApplicationMutation,
-} from "@/lib/applicationsApi";
+} from "@myjobhunter/api-client/store/applicationsApi";
 import type { AppDispatch } from "@/lib/store";
-import type { KanbanColumn } from "@/types/kanban/kanban-column";
-import type { KanbanItem } from "@/types/kanban/kanban-item";
+import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
+import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
 import { COLUMN_TO_DEFAULT_EVENT_TYPE } from "./kanban-event-types";
 
 const COLUMN_ID_PREFIX = "column-";

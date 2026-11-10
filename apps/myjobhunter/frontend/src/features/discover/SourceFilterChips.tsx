@@ -1,4 +1,4 @@
-import type { DiscoverySource } from "@/types/discovery/discovery-source";
+import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
 
 interface SourceFilterChipsProps {
   sources: DiscoverySource[];

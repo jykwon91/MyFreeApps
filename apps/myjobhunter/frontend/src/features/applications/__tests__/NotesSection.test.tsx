@@ -13,7 +13,7 @@ import userEvent from "@testing-library/user-event";
 
 const updateMock = vi.fn();
 
-vi.mock("@/lib/applicationsApi", () => ({
+vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({
   useUpdateApplicationMutation: () => [updateMock, { isLoading: false }],
 }));
 

@@ -18,7 +18,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import EditSavedSearchDialog from "../EditSavedSearchDialog";
-import type { DiscoverySource } from "@/types/discovery/discovery-source";
+import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -28,7 +28,7 @@ const mockUpdateSource = vi.fn();
 const mockShowError = vi.fn();
 const mockShowSuccess = vi.fn();
 
-vi.mock("@/store/discoverApi", () => ({
+vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useUpdateDiscoverySourceMutation: () => [mockUpdateSource, { isLoading: false }],
 }));
 

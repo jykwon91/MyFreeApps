@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { combineNotes, stripHtml } from "./dialogHelpers";
-import type { JdUrlExtractResponse } from "@/types/application/jd-url-extract-response";
+import type { JdUrlExtractResponse } from "@myjobhunter/api-client/types/application/jd-url-extract-response";
 
 /**
  * `stripHtml` turns an extracted job-description fragment into the plain-text

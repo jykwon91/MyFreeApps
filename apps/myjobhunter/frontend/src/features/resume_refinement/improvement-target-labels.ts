@@ -1,7 +1,5 @@
-import type {
-  ImprovementSeverity,
-  ImprovementType,
-} from "@/types/resume-refinement/improvement-target";
+import type { ImprovementSeverity } from "@myjobhunter/api-client/types/resume-refinement/improvement-severity";
+import type { ImprovementType } from "@myjobhunter/api-client/types/resume-refinement/improvement-type";
 
 /**
  * UI labels for ``ImprovementType`` enum values. Lives in its own

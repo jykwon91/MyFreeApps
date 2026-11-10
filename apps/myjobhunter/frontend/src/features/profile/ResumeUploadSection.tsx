@@ -7,7 +7,7 @@ import {
   useUploadResumeMutation,
   useListResumeJobsQuery,
   useLazyGetResumeDownloadUrlQuery,
-} from "@/lib/resumesApi";
+} from "@myjobhunter/api-client/store/resumesApi";
 
 // Accepted MIME types — must match the backend allowlist in resume_validator.py
 const ACCEPTED_RESUME_TYPES =

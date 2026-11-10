@@ -1,13 +1,13 @@
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { LoadingButton, showError, extractErrorMessage } from "@platform/ui";
-import { useRetryPreparationMutation } from "@/lib/resumeRefinementApi";
+import { useRetryPreparationMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
 import SuggestionProgressBar from "@/features/resume_refinement/SuggestionProgressBar";
 import {
   SEVERITY_BADGE_CLASS,
   SEVERITY_LABEL,
 } from "@/features/resume_refinement/improvement-target-labels";
-import type { ImprovementSeverity } from "@/types/resume-refinement/improvement-target";
-import type { RefinementSession } from "@/types/resume-refinement/refinement-session";
+import type { ImprovementSeverity } from "@myjobhunter/api-client/types/resume-refinement/improvement-severity";
+import type { RefinementSession } from "@myjobhunter/api-client/types/resume-refinement/refinement-session";
 
 const SEVERITY_ORDER: ImprovementSeverity[] = [
   "critical",

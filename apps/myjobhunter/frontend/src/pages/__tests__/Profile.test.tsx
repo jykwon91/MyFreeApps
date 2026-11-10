@@ -35,32 +35,32 @@ vi.mock("@/features/profile/SkillAddForm", () => ({
 // Mock all RTK Query hooks — state controlled per-test via mockReturnValue.
 // ---------------------------------------------------------------------------
 
-vi.mock("@/lib/profileApi", () => ({
+vi.mock("@myjobhunter/api-client/store/profileApi", () => ({
   useGetProfileQuery: vi.fn(),
   useUpdateProfileMutation: vi.fn(),
 }));
 
-vi.mock("@/lib/workHistoryApi", () => ({
+vi.mock("@myjobhunter/api-client/store/workHistoryApi", () => ({
   useListWorkHistoryQuery: vi.fn(),
   useCreateWorkHistoryMutation: vi.fn(),
   useUpdateWorkHistoryMutation: vi.fn(),
   useDeleteWorkHistoryMutation: vi.fn(),
 }));
 
-vi.mock("@/lib/educationApi", () => ({
+vi.mock("@myjobhunter/api-client/store/educationApi", () => ({
   useListEducationQuery: vi.fn(),
   useCreateEducationMutation: vi.fn(),
   useUpdateEducationMutation: vi.fn(),
   useDeleteEducationMutation: vi.fn(),
 }));
 
-vi.mock("@/lib/skillsApi", () => ({
+vi.mock("@myjobhunter/api-client/store/skillsApi", () => ({
   useListSkillsQuery: vi.fn(),
   useCreateSkillMutation: vi.fn(),
   useDeleteSkillMutation: vi.fn(),
 }));
 
-vi.mock("@/lib/screeningAnswersApi", () => ({
+vi.mock("@myjobhunter/api-client/store/screeningAnswersApi", () => ({
   useListScreeningAnswersQuery: vi.fn(),
   useCreateScreeningAnswerMutation: vi.fn(),
   useUpdateScreeningAnswerMutation: vi.fn(),
@@ -102,26 +102,26 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 import {
   useGetProfileQuery,
   useUpdateProfileMutation,
-} from "@/lib/profileApi";
+} from "@myjobhunter/api-client/store/profileApi";
 import {
   useListWorkHistoryQuery,
   useDeleteWorkHistoryMutation,
   useCreateWorkHistoryMutation,
   useUpdateWorkHistoryMutation,
-} from "@/lib/workHistoryApi";
+} from "@myjobhunter/api-client/store/workHistoryApi";
 import {
   useListEducationQuery,
   useDeleteEducationMutation,
   useCreateEducationMutation,
   useUpdateEducationMutation,
-} from "@/lib/educationApi";
-import { useListSkillsQuery, useCreateSkillMutation, useDeleteSkillMutation } from "@/lib/skillsApi";
+} from "@myjobhunter/api-client/store/educationApi";
+import { useListSkillsQuery, useCreateSkillMutation, useDeleteSkillMutation } from "@myjobhunter/api-client/store/skillsApi";
 import {
   useListScreeningAnswersQuery,
   useCreateScreeningAnswerMutation,
   useUpdateScreeningAnswerMutation,
   useDeleteScreeningAnswerMutation,
-} from "@/lib/screeningAnswersApi";
+} from "@myjobhunter/api-client/store/screeningAnswersApi";
 
 const mockGetProfile = vi.mocked(useGetProfileQuery);
 const mockUpdateProfile = vi.mocked(useUpdateProfileMutation);

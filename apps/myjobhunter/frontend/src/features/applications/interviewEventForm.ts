@@ -8,14 +8,10 @@
  * Keeping these in one place ensures the same field names, defaults, and
  * (de)serialisation rules are shared across both surfaces.
  */
-import type {
-  ApplicationEvent,
-  ApplicationEventType,
-} from "@/types/application-event";
-import type {
-  InterviewType,
-  InterviewDetails,
-} from "@/types/interview-details";
+import type { ApplicationEvent } from "@myjobhunter/api-client/types/application-event";
+import type { ApplicationEventType } from "@myjobhunter/api-client/types/application-event-type";
+import type { InterviewType } from "@myjobhunter/api-client/types/interview-type";
+import type { InterviewDetails } from "@myjobhunter/api-client/types/interview-details";
 
 export interface LogEventFormValues {
   event_type: ApplicationEventType;

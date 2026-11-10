@@ -5,9 +5,9 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { baseApi } from "@platform/ui";
-import jobAnalysisReducer from "@/store/jobAnalysisSlice";
+import jobAnalysisReducer from "@myjobhunter/api-client/store/jobAnalysisSlice";
 import Analyze from "@/pages/Analyze";
-import type { JobAnalysis } from "@/types/job-analysis/job-analysis";
+import type { JobAnalysis } from "@myjobhunter/api-client/types/job-analysis/job-analysis";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -20,7 +20,7 @@ import type { JobAnalysis } from "@/types/job-analysis/job-analysis";
 // Real icons render as harmless <svg> in jsdom — tests query by
 // text/role, never by icon.
 
-vi.mock("@/lib/jobAnalysisApi", () => ({
+vi.mock("@myjobhunter/api-client/store/jobAnalysisApi", () => ({
   useAnalyzeJobMutation: vi.fn(),
   useApplyFromAnalysisMutation: vi.fn(),
 }));
@@ -60,7 +60,7 @@ vi.mock("@platform/ui", async (importOriginal) => {
 import {
   useAnalyzeJobMutation,
   useApplyFromAnalysisMutation,
-} from "@/lib/jobAnalysisApi";
+} from "@myjobhunter/api-client/store/jobAnalysisApi";
 
 const mockUseAnalyzeJobMutation = vi.mocked(useAnalyzeJobMutation);
 const mockUseApplyFromAnalysisMutation = vi.mocked(useApplyFromAnalysisMutation);

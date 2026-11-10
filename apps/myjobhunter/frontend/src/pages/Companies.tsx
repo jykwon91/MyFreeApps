@@ -4,9 +4,9 @@ import { Building2, Plus } from "lucide-react";
 import { DataTable, EmptyState, type ColumnDef } from "@platform/ui";
 import CompaniesSkeleton from "@/features/companies/CompaniesSkeleton";
 import AddCompanyDialog from "@/features/companies/AddCompanyDialog";
-import { useListCompaniesQuery } from "@/lib/companiesApi";
+import { useListCompaniesQuery } from "@myjobhunter/api-client/store/companiesApi";
 import { EMPTY_STATES } from "@/constants/empty-states";
-import type { Company } from "@/types/company";
+import type { Company } from "@myjobhunter/api-client/types/company";
 
 const COLUMNS: ColumnDef<Company>[] = [
   {

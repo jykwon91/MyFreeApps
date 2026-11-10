@@ -15,7 +15,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { type UseFormRegister, type FieldErrors } from "react-hook-form";
 import { LoadingButton } from "@platform/ui";
-import type { Company } from "@/types/company";
+import type { Company } from "@myjobhunter/api-client/types/company";
 import type { DialogState, ReviewCompanyState } from "../useAddApplicationDialogState";
 import CompanyCombobox from "../CompanyCombobox";
 import CompanyConfirmationPill from "../CompanyConfirmationPill";

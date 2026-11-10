@@ -6,7 +6,7 @@ import { makeRefinementSession } from "./makeRefinementSession";
 const requestAlternative = vi.fn(() => ({ unwrap: () => new Promise(() => {}) }));
 const idleMutation = () => [vi.fn(), { isLoading: false }];
 
-vi.mock("@/lib/resumeRefinementApi", () => ({
+vi.mock("@myjobhunter/api-client/store/resumeRefinementApi", () => ({
   useAcceptPendingMutation: () => idleMutation(),
   useAcceptFlaggedMutation: () => idleMutation(),
   useSupplyCustomRewriteMutation: () => idleMutation(),

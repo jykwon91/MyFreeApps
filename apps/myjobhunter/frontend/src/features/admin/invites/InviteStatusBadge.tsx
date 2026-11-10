@@ -1,6 +1,6 @@
 import { StatusBadge } from "@platform/ui";
 import type { BadgeTone } from "@platform/ui";
-import { INVITE_STATUS, type InviteStatus } from "@/types/invite/invite-status";
+import { INVITE_STATUS, type InviteStatus } from "@myjobhunter/api-client/types/invite/invite-status";
 
 const STATUS_LABELS: Record<InviteStatus, string> = {
   [INVITE_STATUS.PENDING]: "Pending",

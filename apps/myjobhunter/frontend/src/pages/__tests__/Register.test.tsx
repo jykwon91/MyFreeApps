@@ -16,7 +16,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import Register from "@/pages/Register";
-import { useGetInviteInfoQuery } from "@/store/invitesApi";
+import { useGetInviteInfoQuery } from "@myjobhunter/api-client/store/invitesApi";
 
 // ---------------------------------------------------------------------------
 // Mocks — keep tests pure (no network, no Turnstile widget render).
@@ -26,7 +26,7 @@ vi.mock("@/lib/auth", () => ({
   register: vi.fn(),
 }));
 
-vi.mock("@/store/invitesApi", () => ({
+vi.mock("@myjobhunter/api-client/store/invitesApi", () => ({
   useGetInviteInfoQuery: vi.fn(),
 }));
 

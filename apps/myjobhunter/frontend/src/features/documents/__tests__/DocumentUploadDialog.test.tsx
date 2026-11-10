@@ -17,7 +17,7 @@ import DocumentUploadDialog from "../DocumentUploadDialog";
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock("@/lib/documentsApi", () => ({
+vi.mock("@myjobhunter/api-client/store/documentsApi", () => ({
   useCreateDocumentMutation: vi.fn(),
   useUploadDocumentMutation: vi.fn(),
 }));
@@ -46,7 +46,7 @@ vi.mock("@platform/ui", async (importOriginal) => {
   };
 });
 
-import { useCreateDocumentMutation, useUploadDocumentMutation } from "@/lib/documentsApi";
+import { useCreateDocumentMutation, useUploadDocumentMutation } from "@myjobhunter/api-client/store/documentsApi";
 import { showSuccess } from "@platform/ui";
 
 const mockUseCreateDocumentMutation = vi.mocked(useCreateDocumentMutation);

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
-import { useGetProfileQuery } from "@/lib/profileApi";
-import { useListSkillsQuery } from "@/lib/skillsApi";
-import { useListWorkHistoryQuery } from "@/lib/workHistoryApi";
-import type { Profile } from "@/types/profile/profile";
+import { useGetProfileQuery } from "@myjobhunter/api-client/store/profileApi";
+import { useListSkillsQuery } from "@myjobhunter/api-client/store/skillsApi";
+import { useListWorkHistoryQuery } from "@myjobhunter/api-client/store/workHistoryApi";
+import type { Profile } from "@myjobhunter/api-client/types/profile/profile";
 
 type DatePosted = "all" | "today" | "3days" | "week" | "month";
 type Experience =

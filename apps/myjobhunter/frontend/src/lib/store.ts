@@ -1,6 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { baseApi } from "@platform/ui";
-import jobAnalysisReducer from "@/store/jobAnalysisSlice";
+import jobAnalysisReducer from "@myjobhunter/api-client/store/jobAnalysisSlice";
 
 export const store = configureStore({
   reducer: {

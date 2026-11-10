@@ -3,8 +3,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import { X } from "lucide-react";
-import { useUpdateProfileMutation } from "@/lib/profileApi";
-import type { Profile } from "@/types/profile/profile";
+import { useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileApi";
+import type { Profile } from "@myjobhunter/api-client/types/profile/profile";
 
 interface FormValues {
   summary: string;

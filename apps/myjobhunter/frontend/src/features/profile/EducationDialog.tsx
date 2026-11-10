@@ -3,8 +3,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import { X } from "lucide-react";
-import { useCreateEducationMutation, useUpdateEducationMutation } from "@/lib/educationApi";
-import type { Education } from "@/types/education/education";
+import { useCreateEducationMutation, useUpdateEducationMutation } from "@myjobhunter/api-client/store/educationApi";
+import type { Education } from "@myjobhunter/api-client/types/education/education";
 
 interface FormValues {
   school: string;

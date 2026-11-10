@@ -17,7 +17,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 
 import InviteRow from "../InviteRow";
-import type { Invite } from "@/types/invite/invite";
+import type { Invite } from "@myjobhunter/api-client/types/invite/invite";
 
 const showSuccess = vi.fn();
 const showError = vi.fn();
@@ -35,7 +35,7 @@ vi.mock("@platform/ui", () => ({
     err instanceof Error ? err.message : "unknown error",
 }));
 
-vi.mock("@/store/invitesApi", () => ({
+vi.mock("@myjobhunter/api-client/store/invitesApi", () => ({
   useCancelInviteMutation: () => [
     vi.fn(() => ({ unwrap: cancelInviteUnwrap })),
     { isLoading: isCancelling },

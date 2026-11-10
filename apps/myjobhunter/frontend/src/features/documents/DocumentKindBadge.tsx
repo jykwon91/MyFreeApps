@@ -1,6 +1,6 @@
 import { StatusBadge } from "@platform/ui";
 import type { BadgeTone } from "@platform/ui";
-import type { DocumentKind } from "@/types/document/document-kind";
+import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
 import { DOCUMENT_KIND_LABELS } from "@/features/documents/document-kind-labels";
 
 const KIND_TONES: Record<DocumentKind, BadgeTone> = {

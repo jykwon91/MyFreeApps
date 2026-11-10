@@ -12,8 +12,8 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import LogEventDialog from "@/features/applications/LogEventDialog";
 import EventListItem from "./EventListItem";
-import { useListApplicationEventsQuery } from "@/lib/applicationsApi";
-import type { ApplicationEvent } from "@/types/application-event";
+import { useListApplicationEventsQuery } from "@myjobhunter/api-client/store/applicationsApi";
+import type { ApplicationEvent } from "@myjobhunter/api-client/types/application-event";
 
 interface EventsSectionProps {
   applicationId: string;

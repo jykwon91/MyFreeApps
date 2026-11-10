@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
-import type { Document } from "@/types/document/document";
-import type { DocumentKind } from "@/types/document/document-kind";
+import type { Document } from "@myjobhunter/api-client/types/document/document";
+import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
 import { DOCUMENT_KIND_OPTIONS } from "@/features/documents/document-kind-labels";
-import { useUpdateDocumentMutation } from "@/lib/documentsApi";
+import { useUpdateDocumentMutation } from "@myjobhunter/api-client/store/documentsApi";
 
 export interface DocumentEditDialogProps {
   document: Document;

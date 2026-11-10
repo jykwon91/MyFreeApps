@@ -30,7 +30,7 @@
  */
 import { useMemo, useRef, useState } from "react";
 import { Plus, Building2 } from "lucide-react";
-import type { Company } from "@/types/company";
+import type { Company } from "@myjobhunter/api-client/types/company";
 
 const NO_HIGHLIGHT = -1;
 

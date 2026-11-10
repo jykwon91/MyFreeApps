@@ -6,8 +6,8 @@ import { X } from "lucide-react";
 import {
   useCreateWorkHistoryMutation,
   useUpdateWorkHistoryMutation,
-} from "@/lib/workHistoryApi";
-import type { WorkHistory } from "@/types/work-history/work-history";
+} from "@myjobhunter/api-client/store/workHistoryApi";
+import type { WorkHistory } from "@myjobhunter/api-client/types/work-history/work-history";
 
 interface FormValues {
   company_name: string;

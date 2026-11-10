@@ -1,7 +1,7 @@
 import { useEffect, useId } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { LoadingButton } from "@platform/ui";
-import type { CompanyCreateRequest } from "@/types/company-create-request";
+import type { CompanyCreateRequest } from "@myjobhunter/api-client/types/company-create-request";
 
 export interface CompanyFormValues {
   name: string;

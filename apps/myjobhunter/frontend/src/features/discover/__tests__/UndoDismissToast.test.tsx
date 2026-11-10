@@ -33,7 +33,7 @@ beforeAll(() => {
 
 const mockUndoFn = vi.fn();
 
-vi.mock("@/store/discoverApi", () => ({
+vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useUndoDismissDiscoveredJobMutation: () => [
     mockUndoFn,
     { isLoading: false },

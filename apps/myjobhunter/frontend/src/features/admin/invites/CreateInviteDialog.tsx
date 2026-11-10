@@ -4,7 +4,7 @@ import {
   showError,
   showSuccess,
 } from "@platform/ui";
-import { useCreateInviteMutation } from "@/store/invitesApi";
+import { useCreateInviteMutation } from "@myjobhunter/api-client/store/invitesApi";
 import { extractInviteCreateErrorMessage } from "./inviteErrorMessages";
 
 export interface CreateInviteDialogProps {

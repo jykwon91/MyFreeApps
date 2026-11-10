@@ -22,14 +22,14 @@ import {
   useListCompaniesQuery,
   useCreateCompanyMutation,
   useTriggerCompanyResearchMutation,
-} from "@/lib/companiesApi";
+} from "@myjobhunter/api-client/store/companiesApi";
 import {
   useCreateApplicationMutation,
   useExtractJdFromUrlMutation,
   useParseJobDescriptionMutation,
-} from "@/lib/applicationsApi";
-import type { JdParseResponse } from "@/types/application/jd-parse-response";
-import type { JdUrlExtractResponse } from "@/types/application/jd-url-extract-response";
+} from "@myjobhunter/api-client/store/applicationsApi";
+import type { JdParseResponse } from "@myjobhunter/api-client/types/application/jd-parse-response";
+import type { JdUrlExtractResponse } from "@myjobhunter/api-client/types/application/jd-url-extract-response";
 import { describeExtractError, isAuthRequiredError } from "../jdErrorRouting";
 import {
   INITIAL_STATE,
@@ -38,7 +38,7 @@ import {
   type DialogState,
   type ReviewCompanyState,
 } from "../useAddApplicationDialogState";
-import type { Company } from "@/types/company";
+import type { Company } from "@myjobhunter/api-client/types/company";
 import {
   findCompanyByName,
   readCompanyId,

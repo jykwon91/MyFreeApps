@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { showError, extractErrorMessage } from "@platform/ui";
-import { useNavigateRefinementMutation } from "@/lib/resumeRefinementApi";
-import { NavDirection } from "@/features/resume_refinement/nav-direction";
+import { useNavigateRefinementMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
+import { NavDirection } from "@myjobhunter/api-client/types/resume-refinement/nav-direction";
 
 interface NavigationButtonsProps {
   sessionId: string;

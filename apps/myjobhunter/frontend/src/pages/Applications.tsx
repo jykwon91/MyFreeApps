@@ -4,10 +4,10 @@ import { FilePlus } from "lucide-react";
 import { Badge, DataTable, EmptyState, type ColumnDef, type SortingState } from "@platform/ui";
 import ApplicationsSkeleton from "@/features/applications/ApplicationsSkeleton";
 import AddApplicationDialog from "@/features/applications/AddApplicationDialog";
-import { useListApplicationsQuery } from "@/lib/applicationsApi";
+import { useListApplicationsQuery } from "@myjobhunter/api-client/store/applicationsApi";
 import { formatEventType, getEventTypeColor, getEventTypeSortRank } from "@/lib/event-format";
 import { EMPTY_STATES } from "@/constants/empty-states";
-import type { Application } from "@/types/application";
+import type { Application } from "@myjobhunter/api-client/types/application";
 
 const COLUMNS: ColumnDef<Application>[] = [
   {

@@ -13,9 +13,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { WorkHistory } from "@/types/work-history/work-history";
+import type { WorkHistory } from "@myjobhunter/api-client/types/work-history/work-history";
 
-vi.mock("@/lib/workHistoryApi", () => ({
+vi.mock("@myjobhunter/api-client/store/workHistoryApi", () => ({
   useCreateWorkHistoryMutation: vi.fn(),
   useUpdateWorkHistoryMutation: vi.fn(),
 }));
@@ -43,7 +43,7 @@ import WorkHistoryDialog from "@/features/profile/WorkHistoryDialog";
 import {
   useCreateWorkHistoryMutation,
   useUpdateWorkHistoryMutation,
-} from "@/lib/workHistoryApi";
+} from "@myjobhunter/api-client/store/workHistoryApi";
 
 const mockUseCreate = vi.mocked(useCreateWorkHistoryMutation);
 const mockUseUpdate = vi.mocked(useUpdateWorkHistoryMutation);

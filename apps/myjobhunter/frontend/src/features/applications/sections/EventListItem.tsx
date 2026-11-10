@@ -9,11 +9,9 @@ import {
   eventToFormValues,
   type LogEventFormValues,
 } from "@/features/applications/interviewEventForm";
-import { useUpdateApplicationEventMutation } from "@/lib/applicationsApi";
-import type {
-  ApplicationEvent,
-  ApplicationEventType,
-} from "@/types/application-event";
+import { useUpdateApplicationEventMutation } from "@myjobhunter/api-client/store/applicationsApi";
+import type { ApplicationEvent } from "@myjobhunter/api-client/types/application-event";
+import type { ApplicationEventType } from "@myjobhunter/api-client/types/application-event-type";
 
 const EVENT_LABELS: Record<ApplicationEventType, string> = {
   applied: "Applied",

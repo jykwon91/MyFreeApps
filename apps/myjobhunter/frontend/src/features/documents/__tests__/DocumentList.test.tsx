@@ -19,7 +19,7 @@ import DocumentList from "../DocumentList";
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock("@/lib/documentsApi", () => ({
+vi.mock("@myjobhunter/api-client/store/documentsApi", () => ({
   useListDocumentsQuery: vi.fn(),
   useDeleteDocumentMutation: vi.fn(),
   useGetDocumentDownloadUrlQuery: vi.fn(),
@@ -62,7 +62,7 @@ import {
   useListDocumentsQuery,
   useDeleteDocumentMutation,
   useGetDocumentDownloadUrlQuery,
-} from "@/lib/documentsApi";
+} from "@myjobhunter/api-client/store/documentsApi";
 import { showSuccess } from "@platform/ui";
 
 const mockUseListDocumentsQuery = vi.mocked(useListDocumentsQuery);

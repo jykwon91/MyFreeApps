@@ -7,8 +7,8 @@ import {
 } from "@platform/ui";
 import InviteStatusBadge from "@/features/admin/invites/InviteStatusBadge";
 import { formatInviteDate } from "@/features/admin/invites/formatInviteDate";
-import type { Invite } from "@/types/invite/invite";
-import { useCancelInviteMutation } from "@/store/invitesApi";
+import type { Invite } from "@myjobhunter/api-client/types/invite/invite";
+import { useCancelInviteMutation } from "@myjobhunter/api-client/store/invitesApi";
 
 export interface InviteRowProps {
   invite: Invite;

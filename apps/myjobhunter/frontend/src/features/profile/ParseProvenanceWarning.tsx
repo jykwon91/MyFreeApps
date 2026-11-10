@@ -1,5 +1,5 @@
 import { AlertTriangle } from "lucide-react";
-import type { ParseProvenance } from "@/types/resume-upload-job/resume-upload-job";
+import type { ParseProvenance } from "@myjobhunter/api-client/types/resume-upload-job/parse-provenance";
 
 export interface ParseProvenanceWarningProps {
   provenance: ParseProvenance;

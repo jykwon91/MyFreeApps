@@ -15,13 +15,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ResumeUploadJob } from "@/types/resume-upload-job/resume-upload-job";
+import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
 
 // ---------------------------------------------------------------------------
 // Mock API hooks — declared before component import per Vitest hoisting rules.
 // ---------------------------------------------------------------------------
 
-vi.mock("@/lib/resumesApi", () => ({
+vi.mock("@myjobhunter/api-client/store/resumesApi", () => ({
   useUploadResumeMutation: vi.fn(),
   useListResumeJobsQuery: vi.fn(),
   useLazyGetResumeDownloadUrlQuery: vi.fn(),
@@ -82,7 +82,7 @@ import {
   useUploadResumeMutation,
   useListResumeJobsQuery,
   useLazyGetResumeDownloadUrlQuery,
-} from "@/lib/resumesApi";
+} from "@myjobhunter/api-client/store/resumesApi";
 import { showSuccess, showError } from "@platform/ui";
 import ResumeJobRow from "@/features/profile/ResumeJobRow";
 import ResumeUploadSectionSkeleton from "@/features/profile/ResumeUploadSectionSkeleton";

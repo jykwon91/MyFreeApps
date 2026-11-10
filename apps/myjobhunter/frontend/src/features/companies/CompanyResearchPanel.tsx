@@ -6,7 +6,7 @@
  * rendering to CompanyResearchPanelBody via the useCompanyResearchMode hook.
  */
 import { extractErrorMessage, showError } from "@platform/ui";
-import { useGetCompanyResearchQuery, useTriggerCompanyResearchMutation } from "@/lib/companiesApi";
+import { useGetCompanyResearchQuery, useTriggerCompanyResearchMutation } from "@myjobhunter/api-client/store/companiesApi";
 import {
   useCompanyResearchMode,
 } from "@/features/companies/useCompanyResearchMode";

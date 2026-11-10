@@ -39,6 +39,22 @@ updates:
 
   # npm dependencies for each frontend
   - package-ecosystem: "npm"
+    directory: "/apps/myjobhunter/api-client"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "npm", "myjobhunter"]
+    groups:
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      # Same holds as packages/shared-core, for the same reasons.
+      - dependency-name: "react"
+      - dependency-name: "@types/react"
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "npm"
     directory: "/apps/myjobhunter/frontend"
     schedule:
       interval: "monthly"

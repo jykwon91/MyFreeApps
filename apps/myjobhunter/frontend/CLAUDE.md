@@ -68,8 +68,16 @@ src/
     auth.ts         # signIn / register / signOut helpers
     store.ts        # Redux store with baseApi
 
-  types/            # Per-domain TypeScript types (Phase 2+)
+  types/            # Web-only types (API types live in @myjobhunter/api-client)
 ```
+
+API endpoints (RTK Query slices), their request/response types, and the
+job-analysis Redux slice live in `apps/myjobhunter/api-client`
+(`@myjobhunter/api-client`), shared with the future phone app. Import them as
+`@myjobhunter/api-client/store/<name>Api` and
+`@myjobhunter/api-client/types/<domain>/<file>`. That package must stay
+platform-neutral: no DOM, `window`, `localStorage`, or browser `File`; callers
+build `FormData` for uploads.
 
 ## Nav structure
 
@@ -148,7 +156,7 @@ Workers capped at 50% CPU: `workers: "50%"` in playwright config.
 - **Never reimplement components from @platform/ui.** If a component is missing, stop and report.
 - **No inline component definitions.** Extract to separate files.
 - **Skeletons must mirror loaded layout.** Same columns, same grid, same element counts.
-- **One type/interface per file** in `src/types/`.
+- **One type/interface per file** in `src/types/` (and in the api-client's `src/types/`).
 - **Constants in dedicated files.** Never define nav items or empty-state copy inline in components.
 - **All imports at the top of the file.** Never inline imports.
 - **Toast for feedback.** `showSuccess` / `showError` from `@platform/ui`. Never `alert()`.

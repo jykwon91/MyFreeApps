@@ -4,13 +4,11 @@
  * operator sees it before scanning the per-dimension grid below.
  *
  * Color/tone is keyed off the verdict enum (see VERDICT_BANNER_CLASSES
- * in types/job-analysis/job-analysis-verdict.ts).
+ * in constants/jobAnalysisVerdictBannerClasses.ts).
  */
-import {
-  VERDICT_BANNER_CLASSES,
-  VERDICT_LABELS,
-  type JobAnalysisVerdict,
-} from "@/types/job-analysis/job-analysis-verdict";
+import { VERDICT_BANNER_CLASSES } from "@/constants/jobAnalysisVerdictBannerClasses";
+import { VERDICT_LABELS } from "@myjobhunter/api-client/constants/jobAnalysisVerdictLabels";
+import type { JobAnalysisVerdict } from "@myjobhunter/api-client/types/job-analysis/job-analysis-verdict";
 
 interface VerdictBannerProps {
   verdict: JobAnalysisVerdict;

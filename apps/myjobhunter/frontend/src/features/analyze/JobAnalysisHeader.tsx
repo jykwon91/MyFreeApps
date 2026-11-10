@@ -7,7 +7,7 @@
  * dominant visual element on the page.
  */
 import { ExternalLink } from "lucide-react";
-import type { JobAnalysisExtracted } from "@/types/job-analysis/job-analysis";
+import type { JobAnalysisExtracted } from "@myjobhunter/api-client/types/job-analysis/job-analysis-extracted";
 
 interface JobAnalysisHeaderProps {
   extracted: JobAnalysisExtracted;

@@ -11,7 +11,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import KanbanColumn from "./KanbanColumn";
-import type { KanbanItem } from "@/types/kanban/kanban-item";
+import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
 
 interface ClosedColumnAccordionProps {
   items: KanbanItem[];

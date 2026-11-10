@@ -1,5 +1,5 @@
 import { Pencil, Trash2 } from "lucide-react";
-import type { ScreeningAnswer } from "@/types/screening-answer/screening-answer";
+import type { ScreeningAnswer } from "@myjobhunter/api-client/types/screening-answer/screening-answer";
 
 interface ScreeningAnswerRowProps {
   answer: ScreeningAnswer;

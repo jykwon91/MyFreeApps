@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import DemoUsersTable from "../DemoUsersTable";
-import type { DemoUser } from "@/types/demo/demo-user";
+import type { DemoUser } from "@myjobhunter/api-client/types/demo/demo-user";
 
 vi.mock("lucide-react", () => ({
   Trash2: () => null,

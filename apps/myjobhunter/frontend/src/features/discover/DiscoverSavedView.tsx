@@ -3,7 +3,7 @@ import { EmptyState } from "@platform/ui";
 import { DISCOVER_EMPTY_STATES } from "@/constants/empty-states";
 import DiscoveredJobCard from "@/features/discover/DiscoveredJobCard";
 import DiscoveredJobsSkeleton from "@/features/discover/DiscoveredJobsSkeleton";
-import { useListDiscoveredJobsQuery } from "@/store/discoverApi";
+import { useListDiscoveredJobsQuery } from "@myjobhunter/api-client/store/discoverApi";
 
 export default function DiscoverSavedView() {
   const { data: jobsData, isLoading, isError } = useListDiscoveredJobsQuery({

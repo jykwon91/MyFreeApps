@@ -88,14 +88,14 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 const mockCreateSource = vi.fn();
 const mockUpdateProfile = vi.fn();
 
-vi.mock("@/store/discoverApi", () => ({
+vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useCreateDiscoverySourceMutation: () => [
     mockCreateSource,
     { isLoading: false },
   ],
 }));
 
-vi.mock("@/lib/profileApi", () => ({
+vi.mock("@myjobhunter/api-client/store/profileApi", () => ({
   useUpdateProfileMutation: () => [mockUpdateProfile, { isLoading: false }],
 }));
 

@@ -7,8 +7,8 @@ import SessionPreparingPanel from "@/features/resume_refinement/SessionPreparing
 import ConversationHistory from "@/features/resume_refinement/ConversationHistory";
 import ActiveSessionLayout from "@/features/resume_refinement/ActiveSessionLayout";
 import ResumeRefinementHeader from "@/features/resume_refinement/ResumeRefinementHeader";
-import { useCreateTargetFromLineMutation } from "@/lib/resumeRefinementApi";
-import type { RefinementSession } from "@/types/resume-refinement/refinement-session";
+import { useCreateTargetFromLineMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
+import type { RefinementSession } from "@myjobhunter/api-client/types/resume-refinement/refinement-session";
 
 interface ActiveSessionViewProps {
   session: RefinementSession;

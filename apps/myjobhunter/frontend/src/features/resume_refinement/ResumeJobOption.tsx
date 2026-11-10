@@ -1,4 +1,4 @@
-import type { ResumeUploadJob } from "@/types/resume-upload-job/resume-upload-job";
+import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
 
 interface ResumeJobOptionProps {
   job: ResumeUploadJob;

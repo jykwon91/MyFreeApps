@@ -1,4 +1,4 @@
-import type { ResearchSource } from "@/types/research-source";
+import type { ResearchSource } from "@myjobhunter/api-client/types/research-source";
 
 interface SourcesListProps {
   sources: ResearchSource[];

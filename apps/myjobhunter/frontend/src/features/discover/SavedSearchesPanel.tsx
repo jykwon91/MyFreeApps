@@ -1,6 +1,6 @@
 import SavedSearchesSkeleton from "@/features/discover/SavedSearchesSkeleton";
 import SavedSearchRow from "@/features/discover/SavedSearchRow";
-import { useListDiscoverySourcesQuery } from "@/store/discoverApi";
+import { useListDiscoverySourcesQuery } from "@myjobhunter/api-client/store/discoverApi";
 
 export default function SavedSearchesPanel() {
   const { data: sources, isLoading, isError } = useListDiscoverySourcesQuery();

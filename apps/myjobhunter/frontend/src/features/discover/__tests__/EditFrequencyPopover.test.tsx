@@ -16,7 +16,7 @@ import EditFrequencyPopover from "../EditFrequencyPopover";
 // ---------------------------------------------------------------------------
 const mockUpdateSource = vi.fn();
 
-vi.mock("@/store/discoverApi", () => ({
+vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useUpdateDiscoverySourceMutation: () => [mockUpdateSource, { isLoading: false }],
 }));
 

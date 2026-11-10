@@ -16,7 +16,9 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Badge } from "@platform/ui";
-import type { KanbanItem } from "@/types/kanban/kanban-item";
+import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
+import type { BadgeColor } from "@platform/ui/components/ui/Badge";
+import { colorForVerdict, labelForVerdict } from "./verdictBadge";
 
 interface KanbanCardProps {
   item: KanbanItem;
@@ -41,26 +43,12 @@ function staleBadgeColor(days: number): "gray" | "yellow" | "red" {
   return "gray";
 }
 
-const VERDICT_LABELS: Record<string, string> = {
-  strong_fit: "Strong fit",
-  worth_considering: "Worth considering",
-  stretch: "Stretch",
-  mismatch: "Mismatch",
-};
-
-const VERDICT_COLORS: Record<string, "green" | "blue" | "yellow" | "red"> = {
-  strong_fit: "green",
-  worth_considering: "blue",
-  stretch: "yellow",
-  mismatch: "red",
-};
-
 interface CardBodyProps {
   item: KanbanItem;
   showStaleChip: boolean;
   stageDays: number | null;
   verdictLabel: string | null;
-  verdictColor: "green" | "blue" | "yellow" | "red";
+  verdictColor: BadgeColor;
 }
 
 function CardBody({
@@ -104,8 +92,8 @@ function CardBody({
 function StaticKanbanCard({ item, onSelect }: KanbanCardProps) {
   const stageDays = daysSince(item.stage_entered_at);
   const showStaleChip = stageDays !== null && stageDays >= STALE_VISIBLE_THRESHOLD;
-  const verdictLabel = item.verdict ? VERDICT_LABELS[item.verdict] ?? item.verdict : null;
-  const verdictColor = item.verdict ? VERDICT_COLORS[item.verdict] ?? "blue" : "blue";
+  const verdictLabel = labelForVerdict(item.verdict);
+  const verdictColor = colorForVerdict(item.verdict);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     if (e.key === "Enter" || e.key === " ") {
@@ -148,8 +136,8 @@ function SortableKanbanCard({ item, onSelect }: KanbanCardProps) {
 
   const stageDays = daysSince(item.stage_entered_at);
   const showStaleChip = stageDays !== null && stageDays >= STALE_VISIBLE_THRESHOLD;
-  const verdictLabel = item.verdict ? VERDICT_LABELS[item.verdict] ?? item.verdict : null;
-  const verdictColor = item.verdict ? VERDICT_COLORS[item.verdict] ?? "blue" : "blue";
+  const verdictLabel = labelForVerdict(item.verdict);
+  const verdictColor = colorForVerdict(item.verdict);
 
   function handleClick(e: React.MouseEvent<HTMLDivElement>) {
     // dnd-kit's PointerSensor swallows clicks that began as drags via the

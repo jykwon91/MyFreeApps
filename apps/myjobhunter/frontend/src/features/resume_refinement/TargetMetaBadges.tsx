@@ -3,10 +3,8 @@ import {
   SEVERITY_BADGE_CLASS,
   SEVERITY_LABEL,
 } from "@/features/resume_refinement/improvement-target-labels";
-import type {
-  ImprovementSeverity,
-  ImprovementType,
-} from "@/types/resume-refinement/improvement-target";
+import type { ImprovementSeverity } from "@myjobhunter/api-client/types/resume-refinement/improvement-severity";
+import type { ImprovementType } from "@myjobhunter/api-client/types/resume-refinement/improvement-type";
 
 interface TargetMetaBadgesProps {
   improvementType: ImprovementType;

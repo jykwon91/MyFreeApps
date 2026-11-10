@@ -3,8 +3,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import { X } from "lucide-react";
-import { useLogApplicationEventMutation } from "@/lib/applicationsApi";
-import type { ApplicationEventType } from "@/types/application-event";
+import { useLogApplicationEventMutation } from "@myjobhunter/api-client/store/applicationsApi";
+import type { ApplicationEventType } from "@myjobhunter/api-client/types/application-event-type";
 import InterviewDetailsFields from "./InterviewDetailsFields";
 import {
   buildInterviewDetails,
