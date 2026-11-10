@@ -185,8 +185,11 @@ passlib==1.7.4
     # via mybookkeeper-backend
 pillow==13.0.0
     # via
+    #   pillow-heif
     #   qrcode
     #   reportlab
+pillow-heif==1.8.1
+    # via mybookkeeper-backend
 pluggy==1.6.0
     # via pytest
 proto-plus==1.29.0

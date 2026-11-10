@@ -25,7 +25,11 @@ import re
 import zipfile
 from dataclasses import dataclass
 
-from app.services.storage.image_processor import ImageRejected, strip_metadata
+from app.services.storage.image_processor import (
+    ImageRejected,
+    ProcessedImage,
+    strip_metadata,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -122,21 +126,28 @@ def clean_attachment(content: bytes, allowed: frozenset[str]) -> CleanAttachment
     sniffed = sniff_content_type(content)
     if sniffed is None or sniffed not in allowed:
         raise UnsupportedAttachmentType(sniffed)
-    return CleanAttachment(content=_strip_if_photo(content, sniffed), content_type=sniffed)
+    if sniffed not in METADATA_STRIPPED_MIME_TYPES:
+        return CleanAttachment(content=content, content_type=sniffed)
+    cleaned = _strip_photo(content, sniffed)
+    return CleanAttachment(content=cleaned.content, content_type=cleaned.content_type)
 
 
 def strip_photo_metadata(content: bytes) -> bytes:
     """Return a photo re-encoded without its metadata; any other bytes unchanged.
 
+    The photo types handled here are re-encoded in their own format, so the
+    caller's content type stays valid.
+
     Raises:
         UnreadableImage: a photo that can't be re-encoded without metadata.
     """
-    return _strip_if_photo(content, sniff_content_type(content))
-
-
-def _strip_if_photo(content: bytes, sniffed: str | None) -> bytes:
+    sniffed = sniff_content_type(content)
     if sniffed is None or sniffed not in METADATA_STRIPPED_MIME_TYPES:
         return content
+    return _strip_photo(content, sniffed).content
+
+
+def _strip_photo(content: bytes, sniffed: str) -> ProcessedImage:
     try:
         return strip_metadata(content, sniffed)
     except ImageRejected as exc:

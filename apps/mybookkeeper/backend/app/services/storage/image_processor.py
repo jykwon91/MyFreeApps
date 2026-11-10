@@ -4,11 +4,13 @@ Per RENTALS_PLAN.md §8.6 ("File upload safety"):
 - Type by content sniffing, not extension.
 - Allowlist: image/jpeg, image/png, image/heic.
 - EXIF strip on every image upload via Pillow (avoids leaking host's GPS).
+- HEIC is decoded with pillow-heif and stored as JPEG, because browsers cannot
+  display HEIC. The returned `content_type` is always the stored format.
 
 This module is pure — no I/O, no DB, no network. The caller (route or service)
 runs the byte stream through `process_image` before persisting.
 
-The PIL dependency is already in `pyproject.toml` (transitive via `qrcode[pil]`).
+Pillow is a dependency of `qrcode[pil]`; `pillow-heif` adds the HEIC decoder.
 Content sniffing prefers `python-magic` when libmagic is available; otherwise
 it falls back to a header-bytes sniff covering exactly the allowlisted formats.
 That keeps tests runnable on dev machines without libmagic installed.
@@ -16,9 +18,17 @@ That keeps tests runnable on dev machines without libmagic installed.
 from __future__ import annotations
 
 import io
+import re
 from dataclasses import dataclass
 
 from PIL import Image, ImageOps, UnidentifiedImageError
+from pillow_heif import register_heif_opener
+
+from app.services.storage.image_color import flatten_alpha, to_srgb
+
+# Pillow has no HEIC decoder of its own; this registers pillow-heif's opener
+# so `Image.open` can read HEIC/HEIF (decoded format name "HEIF").
+register_heif_opener()
 
 # Allowlisted MIME types per RENTALS_PLAN.md §8.6. PDFs are explicitly rejected
 # for photo uploads — they're documents, not photos, and travel a different
@@ -41,10 +51,21 @@ MAX_IMAGE_PIXELS: int = 12_000 * 12_000
 _PIL_FORMAT_TO_MIME: dict[str, str] = {
     "JPEG": "image/jpeg",
     "PNG": "image/png",
-    "HEIC": "image/heic",
+    "HEIF": "image/heic",
     "WEBP": "image/webp",
 }
 _MIME_TO_PIL_FORMAT: dict[str, str] = {v: k for k, v in _PIL_FORMAT_TO_MIME.items()}
+
+# Formats that are re-encoded as something else on the way out. Browsers cannot
+# display HEIC, so it is stored as JPEG.
+_OUTPUT_FORMAT: dict[str, str] = {"HEIF": "JPEG"}
+
+_EXTENSION_FOR_MIME: dict[str, str] = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+_FILE_EXTENSION = re.compile(r"\.[A-Za-z0-9]{1,5}$")
 
 # Phones write a second image (depth map, HDR gain map) into many JPEGs, and
 # Pillow opens those as MPO. They are still JPEGs; only the main image is kept.
@@ -99,6 +120,24 @@ def sniff_content_type(content: bytes) -> str | None:
     return None
 
 
+def stored_content_type(sniffed: str) -> str:
+    """Return the MIME type of the bytes `strip_metadata` writes for `sniffed` input."""
+    pil_format = _MIME_TO_PIL_FORMAT[sniffed]
+    return _PIL_FORMAT_TO_MIME[_OUTPUT_FORMAT.get(pil_format, pil_format)]
+
+
+def filename_for_content_type(filename: str, content_type: str) -> str:
+    """Give `filename` the extension of the format actually stored.
+
+    Replaces the final extension (appends one when there is none), so a HEIC
+    upload stored as JPEG gets a `.jpg` storage key instead of keeping `.heic`.
+    """
+    extension = _EXTENSION_FOR_MIME.get(content_type)
+    if extension is None:
+        return filename
+    return _FILE_EXTENSION.sub("", filename) + extension
+
+
 def process_image(content: bytes, declared_content_type: str | None = None) -> ProcessedImage:
     """Validate, sniff, EXIF-strip, and re-encode an uploaded image.
 
@@ -108,7 +147,8 @@ def process_image(content: bytes, declared_content_type: str | None = None) -> P
             used only as a sanity check — the sniffed type wins on disagreement.
 
     Returns:
-        ProcessedImage with the cleaned bytes and the canonical MIME type.
+        ProcessedImage with the cleaned bytes and the MIME type of those
+        bytes. HEIC input comes back as image/jpeg.
 
     Raises:
         ImageRejected: on size, format, or decode failure.
@@ -124,11 +164,15 @@ def process_image(content: bytes, declared_content_type: str | None = None) -> P
             f"unsupported file type (sniffed={sniffed!r}, declared={declared_content_type!r})",
         )
 
-    return ProcessedImage(content=strip_metadata(content, sniffed), content_type=sniffed)
+    return strip_metadata(content, sniffed)
 
 
-def strip_metadata(content: bytes, content_type: str) -> bytes:
+def strip_metadata(content: bytes, content_type: str) -> ProcessedImage:
     """Decode the image and re-encode it without EXIF / GPS / XMP / ICC metadata.
+
+    The output is in the input's format, except HEIC, which is written as JPEG;
+    the returned `content_type` is the format of the returned bytes. Colours are
+    converted to sRGB and the output carries no profile.
 
     Raises ImageRejected when the bytes can't be decoded, decode to a different
     format than `content_type`, or exceed the pixel cap — callers must reject the
@@ -155,25 +199,35 @@ def strip_metadata(content: bytes, content_type: str) -> bytes:
                     f"(sniffed={content_type!r}, decoded={decoded!r})",
                 )
 
+            icc_profile = image.info.get("icc_profile")
             image.load()
             # The EXIF block (and its Orientation tag) is dropped below, so
             # rotate the pixels now or a phone photo is stored sideways.
-            upright = ImageOps.exif_transpose(image)
+            ImageOps.exif_transpose(image, in_place=True)
+            to_srgb(image, icc_profile)
 
-            # Pillow's default save() does not copy EXIF, ICC, XMP, or
-            # thumbnails unless the caller explicitly passes them.
-            buffer = io.BytesIO()
-            save_kwargs: dict[str, object] = {"format": pil_format}
-            if pil_format == "JPEG":
-                # Setting `exif=b""` is the canonical way to wipe an existing
-                # EXIF block.
+            # Pillow writes EXIF, ICC, XMP and similar blocks from `info` for
+            # some formats (PNG iCCP, WebP exif/xmp/icc), so empty it, keeping
+            # only the transparency key a palette image needs.
+            image.info = {k: v for k, v in image.info.items() if k == "transparency"}
+
+            output_format = _OUTPUT_FORMAT.get(pil_format, pil_format)
+            save_kwargs: dict[str, object] = {"format": output_format}
+            if output_format == "JPEG":
+                image = flatten_alpha(image)
                 save_kwargs["quality"] = 90
                 save_kwargs["optimize"] = True
+                # Setting `exif=b""` is the canonical way to wipe an existing
+                # EXIF block.
                 save_kwargs["exif"] = b""
-            elif pil_format == "WEBP":
+            elif output_format == "WEBP":
                 save_kwargs["quality"] = 90
-            upright.save(buffer, **save_kwargs)
-            return buffer.getvalue()
+            buffer = io.BytesIO()
+            image.save(buffer, **save_kwargs)
+            return ProcessedImage(
+                content=buffer.getvalue(),
+                content_type=stored_content_type(content_type),
+            )
     except UnidentifiedImageError as exc:
         raise ImageRejected(f"cannot decode image: {exc}") from exc
     except ImageRejected:
