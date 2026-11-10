@@ -123,7 +123,7 @@ services:
 {%- endif %}
     restart: unless-stopped
     command: {{ w.command | tojson }}
-    mem_limit: 512m
+    mem_limit: {{ w.mem_limit | default("512m") }}
     cpus: 1.0
     pids_limit: 128
     # format: raw (compose >= 2.30) — values are literal, never interpolated.
@@ -153,6 +153,15 @@ services:
     networks:
       - default
       - myfreeapps
+{%- endif %}
+{%- if w.healthcheck is defined %}
+    # The deploy workflow waits for this to report healthy before finishing.
+    healthcheck:
+      test: {{ w.healthcheck.test | tojson }}
+      interval: {{ w.healthcheck.interval }}
+      timeout: {{ w.healthcheck.timeout }}
+      retries: {{ w.healthcheck.retries }}
+      start_period: {{ w.healthcheck.start_period }}
 {%- endif %}
 {% endfor %}
   caddy:

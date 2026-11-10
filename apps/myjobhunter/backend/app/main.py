@@ -29,33 +29,26 @@ from app.core.rate_limit import (
 )
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.db.session import AsyncSessionLocal
-from app.services.discovery import discovery_embedding_service, discovery_scheduler_service
+from app.services.discovery import discovery_embedding_service
 from app.services.discovery.discovery_fetch_reaper import reap_stale_running_fetches
 from app.services.storage.bucket_initializer import ensure_bucket
 
 
 async def _on_startup() -> None:
-    """Run once at backend boot — reap stale fetches, eager-load the
-    embedding model, then start the discovery scheduler.
-
-    Order matters:
+    """Run once at API boot — eager-load the embedding model, then reap
+    stale fetches.
 
     1. Embedding model load — a missing / corrupt fastembed cache fails
-       the lifespan before we touch the DB. The failure mode is then a
-       clean "deploy rollback to previous image" rather than the backend
-       booting in a half-broken state where discovery fetches succeed
-       but the post-fetch embed task crashes for every user.
+       the lifespan before we touch the DB, so the deploy rolls back
+       instead of booting an API whose post-fetch embed task crashes.
     2. Reap stale ``discovery_fetches`` rows from a previous crash so
        the operator's dashboard doesn't show zombie 'running' rows.
-    3. Start the APScheduler + register active sources. If APScheduler
-       cannot reach Postgres for its jobstore, this raises and the
-       lifespan crashes — the deploy rolls back to the previous image
-       and the operator sees a clear error in logs.
 
-    Per rules/no-bandaid-solutions.md: every failure here is fail-loud.
-    No silent fallback (a backend that booted without a scheduler would
-    silently degrade — operator would never know automatic refresh
-    stopped working).
+    The discovery scheduler is NOT started here. This image runs
+    ``uvicorn --workers 2`` and every worker runs this hook, so a
+    scheduler here would fire each job once per worker. It runs in the
+    dedicated ``scheduler`` service instead — see
+    ``app/workers/discovery_scheduler_worker.py``.
     """
     discovery_embedding_service.load_model_eager()
 
@@ -65,23 +58,6 @@ async def _on_startup() -> None:
             logger.info(
                 "discovery_fetch_reaper: reaped %d stale rows on startup", reaped
             )
-
-    # Start the in-process scheduler and register one job per active
-    # discovery_source. See discovery_scheduler_service module docstring
-    # for the architecture rationale + Dramatiq migration triggers.
-    discovery_scheduler_service.start_scheduler(settings)
-    async with AsyncSessionLocal() as db:
-        await discovery_scheduler_service.register_source_jobs(db)
-
-
-async def _on_shutdown() -> None:
-    """Stop the APScheduler cleanly on lifespan teardown.
-
-    ``wait=False`` inside ``shutdown_scheduler`` so a long-running
-    scheduled job doesn't block process exit — the job is re-picked-up
-    on next start because the SQLAlchemyJobStore persists state.
-    """
-    discovery_scheduler_service.shutdown_scheduler()
 
 
 # Used by the deploy workflow's freshness tripwire and by /api/version +
@@ -106,7 +82,6 @@ lifespan = create_app_lifespan(
     init_sentry=init_sentry,
     bucket_init=ensure_bucket,
     on_startup=_on_startup,
-    on_shutdown=_on_shutdown,
 )
 
 

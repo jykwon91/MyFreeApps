@@ -118,6 +118,7 @@ At write time, `is_eeoc` is derived from `is_eeoc(question_key)` — never set b
 ```bash
 source .venv/bin/activate
 uvicorn app.main:app --reload --reload-dir app    # API on :8002
+python -m app.workers.discovery_scheduler_worker  # Discovery scheduler (the only APScheduler process; no reload)
 alembic upgrade head                              # Apply migrations
 alembic revision -m "description"                # New migration
 pytest                                            # Run all tests

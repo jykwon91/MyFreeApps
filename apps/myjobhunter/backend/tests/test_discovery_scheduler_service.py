@@ -1,64 +1,46 @@
-"""Tests for discovery_scheduler_service — APScheduler wiring (PR 5).
+"""Tests for discovery_scheduler_service — APScheduler wiring.
 
-The autouse ``_disable_discovery_scheduler`` fixture in conftest.py
-no-ops the CRUD helpers for every other test. These tests re-patch the
-relevant symbols back to the real implementations so they exercise
-actual scheduler behaviour.
+Real APScheduler is used with a MemoryJobStore (paused, so nothing fires)
+so each test gets an isolated scheduler without touching
+``apscheduler_jobs``. The persistent-jobstore path is covered in
+test_discovery_scheduler_worker.py.
 
-Real APScheduler is used (with MemoryJobStore instead of the production
-SQLAlchemyJobStore) so each test can spin up + tear down an isolated
-scheduler in-process without touching the database.
+The reconcile tests drive the real cross-process path: the API writes
+``discovery_sources`` rows over HTTP, then ``reconcile_source_jobs`` (what
+the scheduler process runs every RECONCILE_INTERVAL_SECONDS) brings the
+scheduler in line.
 """
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 import pytest_asyncio
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 
-from app.services.discovery import discovery_scheduler_service
+from app.models.discovery.discovery_source import DiscoverySource
+from app.services.discovery import discovery_fetch_service, discovery_scheduler_service
 from app.services.discovery.discovery_scheduler_service import (
     SchedulerNotStartedError,
     SchedulerSourceMismatchError,
     _job_id,
     _run_scheduled_fetch,
     add_source_job,
-    register_source_jobs,
+    reconcile_source_jobs,
     remove_source_job,
-    update_source_job,
 )
 
 
 @pytest_asyncio.fixture
 async def real_scheduler(monkeypatch: pytest.MonkeyPatch):
-    """Spin up a real AsyncIOScheduler backed by MemoryJobStore.
-
-    Replaces the module-level ``_scheduler`` directly to bypass the
-    Postgres jobstore (which would require a live DB connection and slow
-    every test). Re-patches the autouse no-op mocks back to the real
-    implementations so this test exercises actual scheduler behaviour.
-
-    AsyncIOScheduler requires a running event loop on ``start``, which
-    is why this fixture is async.
-    """
-    # Restore real implementations (autouse fixture mocked them).
-    monkeypatch.setattr(
-        discovery_scheduler_service, "add_source_job", add_source_job,
-    )
-    monkeypatch.setattr(
-        discovery_scheduler_service, "remove_source_job", remove_source_job,
-    )
-    monkeypatch.setattr(
-        discovery_scheduler_service, "update_source_job", update_source_job,
-    )
-
+    """A real, paused AsyncIOScheduler on a MemoryJobStore."""
     sched = AsyncIOScheduler(
         jobstores={"default": MemoryJobStore()}, timezone="UTC",
     )
-    sched.start(paused=True)  # paused so jobs don't actually fire
+    sched.start(paused=True)
     monkeypatch.setattr(discovery_scheduler_service, "_scheduler", sched)
 
     yield sched
@@ -67,8 +49,29 @@ async def real_scheduler(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(discovery_scheduler_service, "_scheduler", None)
 
 
+def _interval(sched: AsyncIOScheduler, source_id: uuid.UUID) -> timedelta:
+    job = sched.get_job(_job_id(source_id))
+    assert job is not None
+    assert isinstance(job.trigger, IntervalTrigger)
+    return job.trigger.interval
+
+
+async def _create_source(authed, interval: int = 1440, query: str = "test") -> uuid.UUID:
+    resp = await authed.post(
+        "/discover/sources",
+        json={
+            "source": "jsearch",
+            "name": query,
+            "config": {"query": query},
+            "fetch_interval_minutes": interval,
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    return uuid.UUID(resp.json()["id"])
+
+
 # ===========================================================================
-# add_source_job / remove_source_job / update_source_job
+# add_source_job / remove_source_job
 # ===========================================================================
 
 
@@ -82,44 +85,38 @@ async def test_add_source_job_registers(real_scheduler):
     job = real_scheduler.get_job(_job_id(source_id))
     assert job is not None
     assert job.kwargs == {"source_id": source_id, "user_id": user_id}
+    assert _interval(real_scheduler, source_id) == timedelta(minutes=60)
 
 
 @pytest.mark.asyncio
-async def test_add_source_job_is_idempotent(real_scheduler):
+async def test_add_source_job_replaces(real_scheduler):
     source_id = uuid.uuid4()
     user_id = uuid.uuid4()
 
     add_source_job(source_id, user_id, interval_minutes=60)
-    add_source_job(source_id, user_id, interval_minutes=120)  # replace
+    add_source_job(source_id, user_id, interval_minutes=120)
 
-    job = real_scheduler.get_job(_job_id(source_id))
-    assert job is not None
-    # Trigger should reflect the new interval. We can't introspect the
-    # raw minutes directly across APScheduler versions, but the job
-    # being still single confirms replace_existing worked.
-    jobs = real_scheduler.get_jobs()
-    assert len([j for j in jobs if j.id == _job_id(source_id)]) == 1
+    assert [j.id for j in real_scheduler.get_jobs()] == [_job_id(source_id)]
+    assert _interval(real_scheduler, source_id) == timedelta(minutes=120)
 
 
 @pytest.mark.asyncio
-async def test_update_source_job_round_trip(real_scheduler):
+async def test_missed_runs_fire_once_on_recovery(real_scheduler):
+    """An outage at fire time must run the pass once when the scheduler is
+    back, not skip it until the next interval (up to a day)."""
     source_id = uuid.uuid4()
-    user_id = uuid.uuid4()
-
-    add_source_job(source_id, user_id, interval_minutes=60)
-    update_source_job(source_id, user_id, interval_minutes=720)
+    add_source_job(source_id, uuid.uuid4(), interval_minutes=60)
 
     job = real_scheduler.get_job(_job_id(source_id))
-    assert job is not None
+    assert job.misfire_grace_time is None
+    assert job.coalesce is True
+    assert job.max_instances == 1
 
 
 @pytest.mark.asyncio
 async def test_remove_source_job_removes(real_scheduler):
     source_id = uuid.uuid4()
-    user_id = uuid.uuid4()
-
-    add_source_job(source_id, user_id, interval_minutes=60)
-    assert real_scheduler.get_job(_job_id(source_id)) is not None
+    add_source_job(source_id, uuid.uuid4(), interval_minutes=60)
 
     remove_source_job(source_id)
     assert real_scheduler.get_job(_job_id(source_id)) is None
@@ -127,57 +124,176 @@ async def test_remove_source_job_removes(real_scheduler):
 
 @pytest.mark.asyncio
 async def test_remove_source_job_idempotent_when_missing(real_scheduler):
-    # No add — remove should be a no-op, not raise.
     remove_source_job(uuid.uuid4())
 
 
-def test_add_source_job_raises_when_scheduler_not_started(
-    monkeypatch: pytest.MonkeyPatch,
-):
-    """If the scheduler hasn't been started, the CRUD helpers raise."""
-    monkeypatch.setattr(
-        discovery_scheduler_service, "add_source_job", add_source_job,
-    )
+def test_helpers_raise_when_scheduler_not_started(monkeypatch: pytest.MonkeyPatch):
+    """Outside the scheduler process there is no scheduler to talk to."""
     monkeypatch.setattr(discovery_scheduler_service, "_scheduler", None)
 
     with pytest.raises(SchedulerNotStartedError):
         add_source_job(uuid.uuid4(), uuid.uuid4(), interval_minutes=60)
+    with pytest.raises(SchedulerNotStartedError):
+        remove_source_job(uuid.uuid4())
 
 
 # ===========================================================================
-# register_source_jobs — startup sweep
+# reconcile_source_jobs — how API writes reach the scheduler process
 # ===========================================================================
 
 
 @pytest.mark.asyncio
-async def test_register_source_jobs_picks_up_active_sources(
-    real_scheduler,
-    client,  # noqa: ARG001 — pulls in the test DB fixture
-    user_factory,
-    as_user,
-    db,
+async def test_reconcile_adds_job_for_source_created_via_api(
+    real_scheduler, user_factory, as_user, db,
 ):
-    """The startup sweep registers one job per active DiscoverySource.
-
-    Creates a source through the HTTP API (with the scheduler mock
-    bypassed via ``real_scheduler``), then runs ``register_source_jobs``
-    against the test DB and asserts one job was scheduled.
-    """
     user = await user_factory()
     async with await as_user(user) as a:
-        resp = await a.post(
-            "/discover/sources",
-            json={"source": "jsearch", "config": {"query": "test"}},
-        )
-        assert resp.status_code == 201
-        source_id = uuid.UUID(resp.json()["id"])
+        source_id = await _create_source(a, interval=720)
 
-    # ``register_source_jobs`` scans the DB for is_active=True rows.
-    # The test client's rolled-back transaction means we have to use
-    # the same session for the read.
-    count = await register_source_jobs(db)
-    assert count >= 1
+    # The API never touched the scheduler.
+    assert real_scheduler.get_job(_job_id(source_id)) is None
+
+    result = await reconcile_source_jobs(db)
+
+    assert (result.added, result.rescheduled, result.removed) == (1, 0, 0)
+    job = real_scheduler.get_job(_job_id(source_id))
+    assert job is not None
+    assert job.kwargs == {"source_id": source_id, "user_id": uuid.UUID(user["id"])}
+    assert _interval(real_scheduler, source_id) == timedelta(minutes=720)
+
+
+@pytest.mark.asyncio
+async def test_reconcile_leaves_matching_jobs_alone(
+    real_scheduler, user_factory, as_user, db,
+):
+    """An unchanged job keeps its next_run_time — a restart or a second
+    reconcile must not push every fetch back by a full interval."""
+    user = await user_factory()
+    async with await as_user(user) as a:
+        source_id = await _create_source(a)
+
+    await reconcile_source_jobs(db)
+    job_before = real_scheduler.get_job(_job_id(source_id))
+    real_scheduler.modify_job(
+        job_before.id, next_run_time=datetime(2030, 1, 1, tzinfo=timezone.utc),
+    )
+
+    result = await reconcile_source_jobs(db)
+
+    assert not result.changed
+    assert result.active_sources == 1
+    job_after = real_scheduler.get_job(_job_id(source_id))
+    assert job_after.next_run_time == datetime(2030, 1, 1, tzinfo=timezone.utc)
+
+
+@pytest.mark.asyncio
+async def test_reconcile_reschedules_after_interval_patch(
+    real_scheduler, user_factory, as_user, db,
+):
+    user = await user_factory()
+    async with await as_user(user) as a:
+        source_id = await _create_source(a, interval=1440)
+        await reconcile_source_jobs(db)
+
+        resp = await a.patch(
+            f"/discover/sources/{source_id}", json={"fetch_interval_minutes": 120},
+        )
+        assert resp.status_code == 200
+
+    db.expire_all()
+    result = await reconcile_source_jobs(db)
+
+    assert (result.added, result.rescheduled, result.removed) == (0, 1, 0)
+    assert _interval(real_scheduler, source_id) == timedelta(minutes=120)
+
+
+@pytest.mark.asyncio
+async def test_reconcile_replaces_job_whose_owner_changed(
+    real_scheduler, user_factory, as_user, db,
+):
+    """A job whose payload user_id no longer matches the row is replaced,
+    so the job runner never trips SchedulerSourceMismatchError on it."""
+    user = await user_factory()
+    async with await as_user(user) as a:
+        source_id = await _create_source(a)
+    add_source_job(source_id, uuid.uuid4(), interval_minutes=1440)
+
+    result = await reconcile_source_jobs(db)
+
+    assert (result.added, result.rescheduled, result.removed) == (0, 1, 0)
+    job = real_scheduler.get_job(_job_id(source_id))
+    assert job.kwargs["user_id"] == uuid.UUID(user["id"])
+
+
+@pytest.mark.asyncio
+async def test_reconcile_removes_job_after_deactivate(
+    real_scheduler, user_factory, as_user, db,
+):
+    user = await user_factory()
+    async with await as_user(user) as a:
+        source_id = await _create_source(a)
+        await reconcile_source_jobs(db)
+        assert real_scheduler.get_job(_job_id(source_id)) is not None
+
+        resp = await a.delete(f"/discover/sources/{source_id}")
+        assert resp.status_code == 204
+
+    db.expire_all()
+    result = await reconcile_source_jobs(db)
+
+    assert (result.added, result.rescheduled, result.removed) == (0, 0, 1)
+    assert real_scheduler.get_job(_job_id(source_id)) is None
+
+
+@pytest.mark.asyncio
+async def test_reconcile_readds_job_after_reactivate(
+    real_scheduler, user_factory, as_user, db,
+):
+    """PATCH is_active=true used to leave a reactivated source unscheduled."""
+    user = await user_factory()
+    async with await as_user(user) as a:
+        source_id = await _create_source(a)
+        await a.patch(f"/discover/sources/{source_id}", json={"is_active": False})
+        db.expire_all()
+        await reconcile_source_jobs(db)
+        assert real_scheduler.get_job(_job_id(source_id)) is None
+
+        resp = await a.patch(f"/discover/sources/{source_id}", json={"is_active": True})
+        assert resp.status_code == 200
+
+    db.expire_all()
+    result = await reconcile_source_jobs(db)
+
+    assert result.added == 1
     assert real_scheduler.get_job(_job_id(source_id)) is not None
+
+
+@pytest.mark.asyncio
+async def test_reconcile_removes_orphans_and_ignores_foreign_jobs(
+    real_scheduler, db,
+):
+    """A discovery job whose source no longer exists is dropped; jobs
+    without the discovery id prefix are not reconcile's to manage."""
+    orphan = uuid.uuid4()
+    add_source_job(orphan, uuid.uuid4(), interval_minutes=60)
+    real_scheduler.add_job(
+        print, trigger=IntervalTrigger(minutes=5), id="something-else",
+    )
+
+    result = await reconcile_source_jobs(db)
+
+    assert result.removed == 1
+    assert real_scheduler.get_job(_job_id(orphan)) is None
+    assert real_scheduler.get_job("something-else") is not None
+
+
+@pytest.mark.asyncio
+async def test_reconcile_requires_running_scheduler(
+    monkeypatch: pytest.MonkeyPatch, db,
+):
+    monkeypatch.setattr(discovery_scheduler_service, "_scheduler", None)
+    with pytest.raises(SchedulerNotStartedError):
+        await reconcile_source_jobs(db)
 
 
 # ===========================================================================
@@ -231,8 +347,6 @@ async def test_run_scheduled_fetch_user_id_mismatch_raises(
 
     Prevents cross-tenant leakage if scheduler state ever drifts.
     """
-    from app.models.discovery.discovery_source import DiscoverySource
-
     fake_source_id = uuid.uuid4()
     real_user_id = uuid.uuid4()
     payload_user_id = uuid.uuid4()
@@ -273,8 +387,6 @@ async def test_run_scheduled_fetch_inactive_source_skips_and_removes(
     real_scheduler, monkeypatch: pytest.MonkeyPatch,
 ):
     """An inactive source is skipped + the scheduled job is removed."""
-    from app.models.discovery.discovery_source import DiscoverySource
-
     fake_source_id = uuid.uuid4()
     user_id = uuid.uuid4()
 
@@ -307,7 +419,11 @@ async def test_run_scheduled_fetch_inactive_source_skips_and_removes(
         discovery_scheduler_service, "AsyncSessionLocal", _FakeSession,
     )
 
-    # No fetch service is invoked because is_active=False short-circuits.
+    async def _must_not_fetch(*args, **kwargs):
+        raise AssertionError("fetch_source called for an inactive source")
+
+    monkeypatch.setattr(discovery_fetch_service, "fetch_source", _must_not_fetch)
+
     await _run_scheduled_fetch(fake_source_id, user_id)
 
     assert real_scheduler.get_job(_job_id(fake_source_id)) is None

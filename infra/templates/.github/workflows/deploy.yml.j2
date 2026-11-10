@@ -216,6 +216,23 @@ jobs:
               fi
               sleep 2
             done
+{%- for w in workers if w.healthcheck is defined %}
+
+            echo "--- Wait for {{ w.name }} worker health check ---"
+            for i in $(seq 1 30); do
+              STATUS=$(docker inspect --format '{{ '{{' }}.State.Health.Status{{ '}}' }}' "$(docker compose -f apps/{{ app_slug }}/docker-compose.yml ps -q {{ w.name }})" 2>/dev/null || echo missing)
+              if [ "$STATUS" = "healthy" ]; then
+                echo "{{ w.name }} is healthy"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "::error::{{ w.name }} worker not healthy after 30 attempts (status: $STATUS)"
+                docker compose -f apps/{{ app_slug }}/docker-compose.yml logs {{ w.name }} --tail=50
+                exit 1
+              fi
+              sleep 5
+            done
+{%- endfor %}
 
             echo "--- Update host Caddyfile ---"
             # Sync the SHARED host Caddyfile (infra/Caddyfile) → /etc/caddy/Caddyfile.

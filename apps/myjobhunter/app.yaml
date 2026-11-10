@@ -23,6 +23,17 @@ csp: "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86
 workers:
   - name: resume-parser
     command: ["python", "-m", "app.workers.resume_parser_worker"]
+  # The ONLY process that runs the discovery APScheduler (the api's two uvicorn
+  # workers must not — see app/workers/discovery_scheduler_worker.py). Exactly
+  # one replica: never scale this service.
+  - name: scheduler
+    command: ["python", "-m", "app.workers.discovery_scheduler_worker"]
+    # Holds the fastembed MiniLM model + onnxruntime and runs fetch/embed/score.
+    # Measured peak RSS ~425MB (boot + a scheduled pass embedding 50 postings);
+    # 768m leaves ~1.8x headroom. The 512m worker default would be ~83% full.
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.workers.discovery_scheduler_healthcheck"]
 # No app-specific post-deploy steps — deploy runs migrate only.
 post_deploy_commands: []
 mobile: true

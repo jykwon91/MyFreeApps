@@ -1000,6 +1000,59 @@ class TestPostDeployCommands:
         )
 
 
+def _workers_with_healthcheck() -> list[tuple[str, dict]]:
+    pairs: list[tuple[str, dict]] = []
+    for app in _APPS:
+        config = yaml.safe_load(_read("apps", app, "app.yaml"))
+        pairs.extend(
+            (app, w) for w in config.get("workers", []) if "healthcheck" in w
+        )
+    return pairs
+
+
+class TestWorkerHealthchecksGateDeploy:
+    """A worker that declares `healthcheck` in app.yaml must get a compose
+    healthcheck AND a deploy-workflow wait on it.
+
+    Without the deploy wait, a worker that crashes on misconfig just
+    restart-loops (`restart: unless-stopped`) while the deploy reports green —
+    the fail-loud boot guard would be invisible. MJH's discovery scheduler is
+    the first such worker.
+    """
+
+    @pytest.mark.parametrize(
+        ("app", "worker"),
+        _workers_with_healthcheck(),
+        ids=lambda v: v if isinstance(v, str) else v["name"],
+    )
+    def test_compose_and_deploy_wire_the_healthcheck(self, app: str, worker: dict) -> None:
+        compose = yaml.safe_load(_read("apps", app, "docker-compose.yml"))
+        service = compose["services"][worker["name"]]
+        assert service.get("healthcheck", {}).get("test") == worker["healthcheck"]["test"], (
+            f"{app}/docker-compose.yml `{worker['name']}` must carry the healthcheck "
+            f"declared in app.yaml. Re-render."
+        )
+        wf = _read(".github", "workflows", f"deploy-{app}.yml")
+        assert f"Wait for {worker['name']} worker health check" in wf, (
+            f"deploy-{app}.yml must wait for the `{worker['name']}` worker to report "
+            f"healthy, or a crash-looping worker ships unnoticed. Re-render."
+        )
+
+    def test_mjh_runs_the_discovery_scheduler_in_its_own_service(self) -> None:
+        """MJH's api runs 2 uvicorn workers; APScheduler 3.x can't share a
+        jobstore, so the scheduler must live in one dedicated service and the
+        api lifespan must not start one."""
+        compose = yaml.safe_load(_read("apps", "myjobhunter", "docker-compose.yml"))
+        assert compose["services"]["scheduler"]["command"] == [
+            "python", "-m", "app.workers.discovery_scheduler_worker",
+        ]
+        main = _read("apps", "myjobhunter", "backend", "app", "main.py")
+        assert "start_scheduler" not in main, (
+            "apps/myjobhunter/backend/app/main.py must not start the discovery "
+            "scheduler — every uvicorn worker would run its own copy."
+        )
+
+
 # Apps that have intentionally opted OUT of push-triggered automated deploys.
 # Their deploy workflow renders ONLY a `workflow_dispatch:` trigger (manual
 # "Run workflow" button) — no `push: branches: [main]` block — driven by

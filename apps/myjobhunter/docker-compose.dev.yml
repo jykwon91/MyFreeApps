@@ -13,5 +13,14 @@ services:
     volumes:
       - ./backend:/app
 
+  # Same local build + source mount as api, so dev runs local scheduler code.
+  # Restart it after editing backend code — it has no reload.
+  scheduler:
+    build:
+      context: ../..
+      dockerfile: apps/myjobhunter/docker/backend.Dockerfile
+    volumes:
+      - ./backend:/app
+
   caddy:
     profiles: ["disabled"]
