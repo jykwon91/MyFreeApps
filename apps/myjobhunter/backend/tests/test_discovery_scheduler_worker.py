@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pytest
 from apscheduler.jobstores.memory import MemoryJobStore
+from platform_shared.workers.worker_tick_failing_error import WorkerTickFailingError
 from sqlalchemy import create_engine, text
 
 from app.core.config import settings
@@ -30,7 +31,6 @@ from app.services.discovery import discovery_embedding_service, discovery_schedu
 from app.services.discovery.discovery_scheduler_service import _job_id
 from app.schemas.discovery.scheduler_reconcile_result import SchedulerReconcileResult
 from app.workers import discovery_scheduler_healthcheck, discovery_scheduler_worker
-from app.workers.discovery_scheduler_worker import SchedulerReconcileFailingError
 
 _OK = SchedulerReconcileResult(added=0, rescheduled=0, removed=0, active_sources=0)
 
@@ -142,7 +142,7 @@ async def test_repeated_reconcile_failures_exit_the_worker(
 
     calls = _scripted_reconcile(monkeypatch, script)
 
-    with pytest.raises(SchedulerReconcileFailingError):
+    with pytest.raises(WorkerTickFailingError):
         await asyncio.wait_for(
             discovery_scheduler_worker.run_scheduler(asyncio.Event()), timeout=5,
         )
@@ -154,10 +154,10 @@ def test_run_propagates_fatal_errors_so_the_process_exits_non_zero(
     monkeypatch: pytest.MonkeyPatch,
 ):
     async def _failing_main() -> None:
-        raise SchedulerReconcileFailingError("reconcile failed 3 times in a row")
+        raise WorkerTickFailingError("reconcile failed 3 times in a row")
 
     monkeypatch.setattr(discovery_scheduler_worker, "main", _failing_main)
-    with pytest.raises(SchedulerReconcileFailingError):
+    with pytest.raises(WorkerTickFailingError):
         discovery_scheduler_worker.run()
 
 

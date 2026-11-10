@@ -49,7 +49,20 @@ env_seed_command: seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-ba
 # (LF bytes, as CI builds it). Editing that script means regenerating the hash —
 # rules/inline-script-csp-hashes.md; test_discord_activity_framing.py checks it.
 csp: "default-src 'self'; script-src 'self' 'sha256-5ZdhFxrnnX1Ovg0nAtuU78NThCLbXwy2T09p3sU1V7k=' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mga-clips.myfreeapps.org https://*.r2.cloudflarestorage.com; media-src 'self' https://mga-clips.myfreeapps.org https://*.r2.cloudflarestorage.com; font-src 'self'; connect-src 'self' https://challenges.cloudflare.com https://mga-clips.myfreeapps.org https://*.r2.cloudflarestorage.com; frame-src 'self' https://challenges.cloudflare.com https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
-workers: []
+workers:
+  # The ONLY process that runs APScheduler (the api's two uvicorn workers must
+  # not — each ran every job; see app/workers/scheduler_worker.py). Exactly one
+  # replica: never scale this service.
+  - name: scheduler
+    command: ["python", "-m", "app.workers.scheduler_worker"]
+    # Measured: ~150MB RSS at boot; a price refresh holds one house's answer at
+    # a time, and Blizzard's capped worst case (64MB of auctions JSON) peaks at
+    # ~630MB parsed + aggregated, before httpx's copy of the body. Source syncs
+    # (when SCHEDULER_ENABLED) add yt-dlp/ffmpeg children in the same cgroup.
+    # 1024m (the api's limit) leaves ~1.45x over that worst case; 512m would OOM.
+    mem_limit: 1024m
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.workers.scheduler_healthcheck"]
 # Run on EVERY deploy, in-container, AFTER migrate. Both idempotent:
 # load-fixtures upserts the game taxonomy (incl. any new map fixture like
 # de_cache); import-lineups reconciles the public library to the image-baked

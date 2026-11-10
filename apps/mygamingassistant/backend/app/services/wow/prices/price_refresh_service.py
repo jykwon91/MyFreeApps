@@ -14,8 +14,8 @@ house — each house is its own server market, never pooled:
 * a house with nothing listed never wipes a set that has prices (a mapped
   house answering empty is far likelier a Blizzard hiccup than an empty market).
 
-Two API workers both run the scheduler; a per-game advisory lock, taken
-before anything is fetched, makes the second one skip.
+A per-game advisory lock, taken before anything is fetched, makes an
+overlapping run (the scheduler and the CLI at once) skip.
 """
 from __future__ import annotations
 

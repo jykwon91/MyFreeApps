@@ -21,7 +21,7 @@ Then every ``RECONCILE_INTERVAL_SECONDS`` it reconciles jobs with
 healthcheck reads. A reconcile that fails after boot (a DB blip) is logged
 and retried next interval while existing jobs keep firing, without
 advancing the heartbeat. After ``MAX_CONSECUTIVE_RECONCILE_FAILURES`` in a
-row the worker raises ``SchedulerReconcileFailingError`` and exits
+row the worker raises ``WorkerTickFailingError`` and exits
 non-zero: Docker does not restart a merely unhealthy container, but
 ``restart: unless-stopped`` does restart an exited one, and the restart
 re-runs the boot checks.
@@ -32,9 +32,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import signal
 
-from platform_shared.core.logging_safety import install_crlf_safe_logging
+from platform_shared.workers.entrypoint import run_until_signalled, run_worker
+from platform_shared.workers.heartbeat import clear_heartbeat
+from platform_shared.workers.heartbeat_loop import run_heartbeat_loop
 
 from app.core.config import settings
 from app.core.discovery_scheduler_constants import (
@@ -42,7 +43,6 @@ from app.core.discovery_scheduler_constants import (
     MAX_CONSECUTIVE_RECONCILE_FAILURES,
     RECONCILE_INTERVAL_SECONDS,
 )
-from app.core.heartbeat import clear_heartbeat, touch_heartbeat
 from app.core.observability import init_sentry
 from app.db.scheduler_jobstore import build_scheduler_jobstore
 from app.db.session import AsyncSessionLocal, engine
@@ -54,12 +54,8 @@ from app.services.discovery import (
 logger = logging.getLogger(__name__)
 
 
-class SchedulerReconcileFailingError(RuntimeError):
-    """Reconcile failed too many times in a row — exit so Docker restarts us."""
-
-
 async def reconcile_once() -> None:
-    """One reconcile pass in its own session, then a heartbeat."""
+    """One reconcile pass in its own session."""
     async with AsyncSessionLocal() as db:
         result = await discovery_scheduler_service.reconcile_source_jobs(db)
     if result.changed:
@@ -67,14 +63,6 @@ async def reconcile_once() -> None:
             "discovery scheduler reconcile: +%d ~%d -%d (%d active sources)",
             result.added, result.rescheduled, result.removed, result.active_sources,
         )
-    touch_heartbeat(HEARTBEAT_PATH)
-
-
-async def _wait_or_stop(stop: asyncio.Event, timeout: float) -> None:
-    try:
-        await asyncio.wait_for(stop.wait(), timeout=timeout)
-    except TimeoutError:
-        pass
 
 
 async def run_scheduler(stop: asyncio.Event) -> None:
@@ -85,30 +73,14 @@ async def run_scheduler(stop: asyncio.Event) -> None:
     jobstore = build_scheduler_jobstore(settings.database_url_sync)
     discovery_scheduler_service.start_scheduler(jobstore)
     try:
-        await reconcile_once()
-        logger.info(
-            "discovery scheduler running — reconciling every %ds",
-            RECONCILE_INTERVAL_SECONDS,
+        await run_heartbeat_loop(
+            stop,
+            reconcile_once,
+            interval_seconds=RECONCILE_INTERVAL_SECONDS,
+            max_consecutive_failures=MAX_CONSECUTIVE_RECONCILE_FAILURES,
+            heartbeat_path=HEARTBEAT_PATH,
+            label="discovery scheduler",
         )
-        failures = 0
-        while not stop.is_set():
-            await _wait_or_stop(stop, RECONCILE_INTERVAL_SECONDS)
-            if stop.is_set():
-                break
-            try:
-                await reconcile_once()
-            except Exception as exc:  # noqa: BLE001 — bounded retry, then exit
-                failures += 1
-                logger.exception(
-                    "discovery scheduler reconcile failed (%d/%d in a row)",
-                    failures, MAX_CONSECUTIVE_RECONCILE_FAILURES,
-                )
-                if failures >= MAX_CONSECUTIVE_RECONCILE_FAILURES:
-                    raise SchedulerReconcileFailingError(
-                        f"reconcile failed {failures} times in a row",
-                    ) from exc
-            else:
-                failures = 0
     finally:
         discovery_scheduler_service.shutdown_scheduler()
         await engine.dispose()
@@ -116,26 +88,11 @@ async def run_scheduler(stop: asyncio.Event) -> None:
 
 
 async def main() -> None:
-    stop = asyncio.Event()
-    loop = asyncio.get_running_loop()
-    signals = (signal.SIGTERM, signal.SIGINT)
-    for sig in signals:
-        loop.add_signal_handler(sig, stop.set)
-    try:
-        await run_scheduler(stop)
-    finally:
-        for sig in signals:
-            loop.remove_signal_handler(sig)
+    await run_until_signalled(run_scheduler)
 
 
 def run() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%S",
-    )
-    install_crlf_safe_logging()
-    asyncio.run(main())
+    run_worker(main)
 
 
 if __name__ == "__main__":

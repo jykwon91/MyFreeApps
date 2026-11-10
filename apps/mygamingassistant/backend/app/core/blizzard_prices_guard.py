@@ -26,4 +26,4 @@ def check_blizzard_prices_configured() -> None:
     )
     if settings.environment == "production":
         raise BlizzardPricesNotConfiguredError(msg)
-    logger.warning("_on_startup: %s (non-production — continuing)", msg)
+    logger.warning("scheduler boot: %s (non-production — continuing)", msg)

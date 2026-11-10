@@ -15,6 +15,7 @@ refresh can log why. The credentials are never logged or put in an error.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from datetime import datetime
@@ -178,7 +179,14 @@ class BlizzardAuctionClient:
     async def house_auctions(self, house_id: int, *, commodities: bool) -> HouseAuctions:
         path = f"/data/wow/ruleset/{BLIZZARD_RULESET_ID}/auctions/{house_id}"
         response = await self._get(f"{path}/commodities" if commodities else path)
-        rows = self._json(response).get("auctions", [])
+        # Up to BLIZZARD_MAX_BYTES of JSON: parse it off the event loop so the
+        # scheduler's tick and heartbeat keep running meanwhile.
+        rows = await asyncio.to_thread(self._auction_rows, house_id, response)
+        return HouseAuctions(auctions=rows, snapshot_at=_snapshot_time(response))
+
+    @classmethod
+    def _auction_rows(cls, house_id: int, response: httpx.Response) -> list[dict[str, Any]]:
+        rows = cls._json(response).get("auctions", [])
         if not isinstance(rows, list):
             raise PriceFetchError(f"house {house_id} answer has no auctions list", status_code=200)
-        return HouseAuctions(auctions=[r for r in rows if isinstance(r, dict)], snapshot_at=_snapshot_time(response))
+        return [r for r in rows if isinstance(r, dict)]
