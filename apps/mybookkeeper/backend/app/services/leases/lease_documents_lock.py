@@ -5,9 +5,9 @@ emailed to the tenant, or holds a signed copy (any ``signed_lease`` file, or a
 rendered original the tenant signed). From then on the rendered originals and
 signed files are the record of what the tenant was given, so they are not
 re-rendered. A record file is only deleted or relabelled if it was added after
-the lock point (a stamp, or the first signed copy) and has not been emailed
-since, so a mistaken later upload can go; a signature on a locked file cannot
-be cleared or changed.
+the lock point (a stamp, or the first signed copy) and was never itself in a
+tenant email, so a mistaken later upload can go; a signature on a locked file
+cannot be cleared or changed.
 Callers check under the lease row lock.
 """
 from __future__ import annotations
@@ -29,7 +29,16 @@ NEW_ORIGINAL_KIND = "rendered_original"
 
 
 def is_lease_state_locked(lease: SignedLease) -> bool:
-    """Locked by the lease row itself: past generated, or already in the tenant's inbox."""
+    """Locked by the lease row itself: past generated, or already in the tenant's inbox.
+
+    Only the documents email can start on a draft or generated lease, so a
+    stamp here means the documents went out. An extension addendum needs a
+    signed or active lease (``lease_extension_service.EXTENSION_ALLOWED_STATUSES``),
+    and a lease never moves back to draft or generated: status edits only go
+    forward (``_lease_helpers._ALLOWED_TRANSITIONS``), and generating sets
+    ``generated`` only after ``ensure_documents_rerenderable`` found it still
+    draft or generated (``lease_pdf_service`` via ``lease_write_precheck``).
+    """
     return (
         lease.status not in LEASE_DOCUMENT_RERENDER_STATUSES
         or lease.last_emailed_to_tenant_at is not None
@@ -47,8 +56,12 @@ def is_lease_documents_locked(lease: SignedLease, attachments: Sequence[SignedLe
 
 
 def _lock_point(lease: SignedLease, attachments: Sequence[SignedLeaseAttachment]) -> _dt.datetime | None:
-    """The earliest moment the lease's documents became the record: a stamp, or the first signed copy."""
-    stamps = [t for t in (lease.sent_at, lease.signed_at, lease.last_emailed_to_tenant_at) if t is not None]
+    """The earliest moment the lease's documents became the record: a stamp, or the first signed copy.
+
+    Emails are left out: which files a tenant email gave the tenant is recorded
+    on each file (``emailed_to_tenant_at``), not inferred from upload times.
+    """
+    stamps = [t for t in (lease.sent_at, lease.signed_at) if t is not None]
     stamps += [a.uploaded_at for a in attachments if _holds_signed_copy(a)]
     return min(as_utc(t) for t in stamps) if stamps else None
 
@@ -57,10 +70,10 @@ def _locked_through(lease: SignedLease, attachments: Sequence[SignedLeaseAttachm
     """Files uploaded at or before this moment are the record.
 
     That is the lock point, the first signed copy (the record even when the
-    lease was emailed before it arrived), the signing time and the last email.
+    lease was emailed before it arrived) and the signing time.
     """
     first_signed = min((a.uploaded_at for a in attachments if _holds_signed_copy(a)), default=None)
-    moments = [_lock_point(lease, attachments), lease.signed_at, lease.last_emailed_to_tenant_at, first_signed]
+    moments = [_lock_point(lease, attachments), lease.signed_at, first_signed]
     known = [as_utc(m) for m in moments if m is not None]
     return max(known) if known else None
 
@@ -70,9 +83,10 @@ def is_record_file_locked(
 ) -> bool:
     """A record file stays unless it was added after everything that made it the record.
 
-    The first signed copy and everything before it are the record; a later
-    signed copy can still be removed if it was a mistake. An original the
-    tenant signed is always locked.
+    The first signed copy and everything before it are the record, and so is
+    every file a tenant email sent; a later signed copy that was never emailed
+    can still be removed if it was a mistake. An original the tenant signed is
+    always locked.
     """
     if attachment.kind not in LEASE_RECORD_ATTACHMENT_KINDS:
         return False
@@ -80,8 +94,14 @@ def is_record_file_locked(
         return True
     if not is_lease_documents_locked(lease, attachments):
         return False
+    if attachment.emailed_to_tenant_at is not None:
+        return True
     through = _locked_through(lease, attachments)
-    return through is None or as_utc(attachment.uploaded_at) <= through
+    if through is None:
+        # Locked with no moment to go by. Past generated, everything is the
+        # record; locked only by the documents email, the emailed files are.
+        return lease.status not in LEASE_DOCUMENT_RERENDER_STATUSES
+    return as_utc(attachment.uploaded_at) <= through
 
 
 async def lease_documents_locked(db: AsyncSession, lease: SignedLease) -> bool:

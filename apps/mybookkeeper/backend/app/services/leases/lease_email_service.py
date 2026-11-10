@@ -28,7 +28,6 @@ exposed so unit tests can exercise them without touching the database.
 """
 from __future__ import annotations
 
-import datetime as _dt
 import html as html_mod
 import logging
 import uuid
@@ -45,6 +44,8 @@ from app.repositories.leases import (
     signed_lease_repo,
 )
 from app.repositories.listings import listing_repo
+from app.schemas.leases.tenant_email_stamps import TenantEmailStamps
+from app.services.leases.lease_email_stamp import restore_email_stamps, stamp_email_start
 from app.services.leases.lease_filename import friendly_download_filename
 from app.services.system import email_service
 from app.services.system.email_service import EmailAttachment
@@ -206,12 +207,15 @@ async def send_lease_to_tenant(
     failure of the send itself; a failure to stamp the lease raises, since
     nothing may go out that the lease does not know about.
 
-    Before anything is read for sending, stamps
-    ``signed_leases.last_emailed_to_tenant_at`` under the lease row lock. That
-    locks the lease's documents (see ``lease_documents_lock``) and stops the
-    auto-email gate firing again on a Regenerate. The column means "the most
-    recent time a tenant email was started", so it stays set when the send
-    then fails, and the host can always send again.
+    Under the lease row lock, in the transaction that reads the files to send,
+    stamps ``signed_leases.last_emailed_to_tenant_at`` and each sent file's
+    ``emailed_to_tenant_at``. That locks the lease's documents and those files
+    (see ``lease_documents_lock``) and stops the auto-email gate firing again on
+    a Regenerate. The lease column means "the most recent time a tenant email
+    was started", so it stays set when the SMTP send fails (the documents may
+    have gone out), and the host can always send again. If an attachment can't
+    be fetched nothing was sent, so the stamps this email wrote are put back
+    (see ``lease_email_stamp.restore_email_stamps``).
     """
     return await _send_to_tenant(
         lease_id=lease_id,
@@ -232,8 +236,10 @@ async def send_extension_addendum_to_tenant(
 ) -> bool:
     """Send one extension's addendum, and nothing else, to the tenant.
 
-    Same best-effort contract and stamp as ``send_lease_to_tenant``. A tenant
-    already holds the lease; an earlier addendum would state an old end date.
+    Same best-effort contract and stamps as ``send_lease_to_tenant``; only the
+    addendum is stamped as emailed, so the lease's own files keep whatever lock
+    they had. A tenant already holds the lease; an earlier addendum would state
+    an old end date.
     """
     return await _send_to_tenant(
         lease_id=lease_id,
@@ -243,16 +249,6 @@ async def send_extension_addendum_to_tenant(
         subject_for=build_extension_subject,
         body_for=build_extension_body_html,
     )
-
-
-async def _restore_email_stamp(
-    *, user_id: uuid.UUID, organization_id: uuid.UUID, lease_id: uuid.UUID, stamp: _dt.datetime | None,
-) -> None:
-    async with unit_of_work() as db:
-        await signed_lease_repo.update_lease(
-            db, lease_id=lease_id, user_id=user_id, organization_id=organization_id,
-            fields={"last_emailed_to_tenant_at": stamp},
-        )
 
 
 async def _send_to_tenant(
@@ -265,11 +261,14 @@ async def _send_to_tenant(
     body_for: Callable[..., str],
 ) -> bool:
     # One transaction locks the lease, reads what will be sent and, when there
-    # is something to send, stamps ``last_emailed_to_tenant_at``. The stamp is
-    # what locks the lease's documents, so a regenerate that read the lease
-    # earlier is refused at its own write: what is read here is what the tenant
-    # gets. The lease stays locked even if the send then fails, because the
-    # documents may have reached the tenant; the host can always send again.
+    # is something to send, stamps the lease and exactly the files being sent
+    # (``lease_email_stamp``). The stamps are what lock the lease's documents,
+    # so a regenerate that read the lease earlier is refused at its own write:
+    # what is read here is what the tenant gets. The stamps stay if the SMTP
+    # send fails, because the documents may have reached the tenant; the host
+    # can always send again. A failed fetch means nothing went out, so the
+    # stamps are put back unless a later email has stamped over them.
+    previous: TenantEmailStamps | None = None
     async with unit_of_work() as db:
         # Generating a lease queues this with no check first, and whoever is trying
         # a demo account can type a real person's address.
@@ -320,14 +319,9 @@ async def _send_to_tenant(
         storage = get_storage()
 
         skip = _skip_reason(contact_email, eligible, storage)
-        previous_stamp = lease.last_emailed_to_tenant_at
         if skip is None:
-            await signed_lease_repo.update_lease(
-                db,
-                lease_id=lease_id,
-                user_id=user_id,
-                organization_id=organization_id,
-                fields={"last_emailed_to_tenant_at": _dt.datetime.now(_dt.timezone.utc)},
+            previous = await stamp_email_start(
+                db, lease=lease, files=eligible, user_id=user_id, organization_id=organization_id,
             )
 
     if skip is not None:
@@ -354,20 +348,9 @@ async def _send_to_tenant(
                 "lease_email.fetch_failed lease_id=%s storage_key=%s",
                 lease_id, a.storage_key, exc_info=True,
             )
-            # Nothing was sent, so the stamp that locked the documents goes back.
-            await _restore_email_stamp(
-                user_id=user_id, organization_id=organization_id, lease_id=lease_id, stamp=previous_stamp,
-            )
-            await record_event(
-                organization_id,
-                "lease_email_skipped",
-                "warning",
-                "Tenant email skipped: could not fetch one of the attachments.",
-                {
-                    "lease_id": str(lease_id),
-                    "reason": "attachment_fetch_failed",
-                    "storage_key": a.storage_key,
-                },
+            await _give_up_after_fetch_failure(
+                lease_id=lease_id, user_id=user_id, organization_id=organization_id,
+                storage_key=a.storage_key, previous=previous,
             )
             return False
         email_attachments.append(
@@ -413,6 +396,37 @@ async def _send_to_tenant(
         },
     )
     return True
+
+
+async def _give_up_after_fetch_failure(
+    *,
+    lease_id: uuid.UUID,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    storage_key: str,
+    previous: TenantEmailStamps | None,
+) -> None:
+    """Record the skip, then put back the stamps that locked the documents: nothing was sent."""
+    await record_event(
+        organization_id,
+        "lease_email_skipped",
+        "warning",
+        "Tenant email skipped: could not fetch one of the attachments.",
+        {"lease_id": str(lease_id), "reason": "attachment_fetch_failed", "storage_key": storage_key},
+    )
+    if previous is None:
+        return
+    try:
+        async with unit_of_work() as db:
+            await restore_email_stamps(
+                db, lease_id=lease_id, user_id=user_id, organization_id=organization_id, previous=previous,
+            )
+    except Exception:
+        logger.error(
+            "lease_email.restore_failed lease_id=%s attachment_ids=%s",
+            lease_id, [str(i) for i in previous.files_emailed_at], exc_info=True,
+        )
+        raise
 
 
 class _Skip(NamedTuple):
