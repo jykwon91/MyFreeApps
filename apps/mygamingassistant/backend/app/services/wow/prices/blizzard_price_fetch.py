@@ -13,6 +13,7 @@ Blizzard renumbered the houses, and serving it would show another market.
 """
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 
@@ -46,12 +47,13 @@ async def read_house_prices(client: BlizzardAuctionClient, house_id: int) -> Hou
     snapshot_at: datetime | None = None
     for commodities in (True, False):
         answer = await client.house_auctions(house_id, commodities=commodities)
-        _fold(aggregator, answer, commodities=commodities)
+        # Hundreds of thousands of listings: fold them off the event loop.
+        await asyncio.to_thread(_fold, aggregator, answer, commodities=commodities)
         if answer.snapshot_at is not None and (snapshot_at is None or answer.snapshot_at > snapshot_at):
             snapshot_at = answer.snapshot_at
     if snapshot_at is None:
         raise PriceFetchError(f"house {house_id}: no answer carried a Last-Modified time")
-    return HousePrices(prices=aggregator.prices(), snapshot_at=snapshot_at)
+    return HousePrices(prices=await asyncio.to_thread(aggregator.prices), snapshot_at=snapshot_at)
 
 
 async def fetch_with_client(client: BlizzardAuctionClient, houses: list[MappedHouse]) -> HouseResults:

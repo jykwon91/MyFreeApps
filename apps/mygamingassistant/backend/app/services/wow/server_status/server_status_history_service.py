@@ -8,8 +8,8 @@ and by ``python -m app.cli record-wow-server-status``. Per region:
   60-second cache is shared, so a visitor and the recorder never double up);
 * a failed call stores nothing — the history shows a gap, never "down" — and
   is logged at WARNING with Blizzard's error details;
-* inside one transaction, a per-region advisory lock (two API workers both run
-  the scheduler) then only the rulesets whose status changed, or whose newest
+* inside one transaction, a per-region advisory lock (so an overlapping run,
+  the scheduler and the CLI at once, skips) then only the rulesets whose status changed, or whose newest
   row is a checkpoint interval old, get a row.
 """
 from __future__ import annotations

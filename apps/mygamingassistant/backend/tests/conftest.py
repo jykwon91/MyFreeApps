@@ -156,6 +156,8 @@ _UOW_CONSUMERS = (
     "app.services.game.fixture_loader",
     "app.services.game.lineup_package_service",
     "app.services.game.source_service",
+    "app.services.scheduling.scheduler_control_service",
+    "app.services.scheduling.scheduler_sync_service",
     "app.services.user.seed_user_service",
     "app.services.user.totp_service",
     "app.services.wow.chat.chat_quota",

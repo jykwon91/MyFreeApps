@@ -4,6 +4,9 @@
 from app.models.user.user import User  # noqa: F401
 from app.models.user.refresh_session import RefreshSession  # noqa: F401
 
+# The scheduler process's job table (status + run requests from the API)
+from app.models.system.scheduler_job import SchedulerJob  # noqa: F401
+
 # Game domain — taxonomy first, then dependent tables
 from app.models.game.game import Game  # noqa: F401
 from app.models.game.agent import Agent  # noqa: F401

@@ -37,8 +37,8 @@ def test_single_head_is_the_latest_revision(script_directory: ScriptDirectory) -
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0052", (
-        f"Expected head 0052 (WoW prices from Blizzard, per house), "
+    assert heads[0] == "0053", (
+        f"Expected head 0053 (scheduler_job), "
         f"got {heads[0]}."
     )
 
@@ -345,3 +345,12 @@ def test_0051_down_revision_points_at_0050(
     rev = script_directory.get_revision("0051")
     assert rev is not None
     assert rev.down_revision == "0050"
+
+
+def test_0053_down_revision_points_at_0052(
+    script_directory: ScriptDirectory,
+) -> None:
+    """0053 (scheduler_job) must chain directly off 0052 (WoW prices per house)."""
+    rev = script_directory.get_revision("0053")
+    assert rev is not None
+    assert rev.down_revision == "0052"

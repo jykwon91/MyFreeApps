@@ -1038,18 +1038,28 @@ class TestWorkerHealthchecksGateDeploy:
             f"healthy, or a crash-looping worker ships unnoticed. Re-render."
         )
 
-    def test_mjh_runs_the_discovery_scheduler_in_its_own_service(self) -> None:
-        """MJH's api runs 2 uvicorn workers; APScheduler 3.x can't share a
-        jobstore, so the scheduler must live in one dedicated service and the
-        api lifespan must not start one."""
-        compose = yaml.safe_load(_read("apps", "myjobhunter", "docker-compose.yml"))
-        assert compose["services"]["scheduler"]["command"] == [
-            "python", "-m", "app.workers.discovery_scheduler_worker",
-        ]
-        main = _read("apps", "myjobhunter", "backend", "app", "main.py")
+    @pytest.mark.parametrize(
+        ("app", "worker_module"),
+        [
+            ("myjobhunter", "app.workers.discovery_scheduler_worker"),
+            ("mygamingassistant", "app.workers.scheduler_worker"),
+        ],
+    )
+    def test_apscheduler_runs_only_in_its_own_service(self, app: str, worker_module: str) -> None:
+        """These apis run 2 uvicorn workers, and a scheduler started in the
+        lifespan runs once per worker (every job twice). The scheduler must
+        live in one dedicated, healthchecked service and the api lifespan must
+        not start one."""
+        compose = yaml.safe_load(_read("apps", app, "docker-compose.yml"))
+        scheduler = compose["services"]["scheduler"]
+        assert scheduler["command"] == ["python", "-m", worker_module]
+        assert "healthcheck" in scheduler, (
+            f"apps/{app}: the scheduler service needs a healthcheck so the deploy gates on it."
+        )
+        main = _read("apps", app, "backend", "app", "main.py")
         assert "start_scheduler" not in main, (
-            "apps/myjobhunter/backend/app/main.py must not start the discovery "
-            "scheduler — every uvicorn worker would run its own copy."
+            f"apps/{app}/backend/app/main.py must not start a scheduler — "
+            "every uvicorn worker would run its own copy."
         )
 
 

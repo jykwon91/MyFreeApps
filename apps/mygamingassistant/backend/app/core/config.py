@@ -246,8 +246,9 @@ class Settings(BaseAppSettings):
     # SCHEDULER_ENABLED turns the source jobs on/off: YouTube source sync,
     # download cleanup and the Discord raid reminders. Serve-only prod sets it
     # false so it never re-syncs sources. The WoW price refresh has its own
-    # switch below, so prices keep refreshing with it off. In production, if
-    # the scheduler fails to start, the lifespan fails loudly.
+    # switch below, so prices keep refreshing with it off. The scheduler runs
+    # only in the ``scheduler`` service (app/workers/scheduler_worker.py);
+    # if it fails to boot, that container exits and the deploy fails.
     scheduler_enabled: bool = True
     # Interval in hours between full source sync passes.
     # Each pass iterates all active sources sequentially.

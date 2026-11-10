@@ -55,7 +55,6 @@ from app.api import (
 # See apps/mygamingassistant/CLAUDE.md → Authentication Model.
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
-from app.core.blizzard_prices_guard import check_blizzard_prices_configured
 from app.core.config import Settings, settings
 from app.core.media_public_base_url_guard import check_media_public_base_url_resolvable
 from app.core.permissions import current_admin, current_strict_superuser
@@ -96,10 +95,6 @@ class ClassifierNotConfiguredError(RuntimeError):
     """Raised at startup when ENABLE_CLASSIFIER=true but ANTHROPIC_API_KEY is missing."""
 
 
-class SchedulerStartupError(RuntimeError):
-    """Raised at startup when the scheduler fails to start."""
-
-
 async def _on_startup() -> None:
     """MGA-specific startup: seed the single operator user + classifier boot guard.
 
@@ -111,9 +106,13 @@ async def _on_startup() -> None:
       - production + ENABLE_CLASSIFIER=true: ANTHROPIC_API_KEY required.
       - production + DISCORD_ENABLED=true: DISCORD_APPLICATION_ID,
         DISCORD_PUBLIC_KEY, DISCORD_BOT_TOKEN required.
-      - production + WOW_PRICE_REFRESH_ENABLED=true: BLIZZARD_CLIENT_ID/SECRET required.
       - development: missing/invalid vars log WARNING and seed/classifier
         are skipped.
+
+    APScheduler is NOT started here: this image runs ``uvicorn --workers 2``
+    and every worker runs this hook, so each job would run once per worker.
+    It runs in the dedicated ``scheduler`` service (app/workers/scheduler_worker.py),
+    which also owns the prices boot guard.
     """
     # Both modes: serve-only prod keeps an operator-only sign-in (feature-request
     # triage), so the operator account must exist there too.
@@ -143,34 +142,6 @@ async def _on_startup() -> None:
             "— classifier will log warnings and skip calls in non-production environment."
         )
 
-    check_blizzard_prices_configured()
-    _start_scheduler()
-
-
-def _start_scheduler() -> None:
-    """Start APScheduler. It always runs the retention purges; the source jobs,
-    the WoW price refresh and the server status recorder each follow their own switch."""
-    if not settings.scheduler_enabled:
-        logger.warning(
-            "_on_startup: SCHEDULER_ENABLED=false — automatic source syncs and Discord raid "
-            "reminders are disabled. Use POST /api/scheduler/trigger/sync_all_sources for "
-            "manual syncs, or set SCHEDULER_ENABLED=true to re-enable.",
-        )
-    from app.services.scheduling.scheduler_service import start_scheduler
-    try:
-        start_scheduler(
-            sync_interval_hours=settings.source_sync_interval_hours,
-            price_refresh_interval_hours=settings.wow_price_refresh_interval_hours,
-            source_jobs=settings.scheduler_enabled,
-            price_refresh=settings.wow_price_refresh_enabled,
-            server_status_recording=settings.wow_server_status_recording_enabled,
-        )
-    except Exception as exc:
-        if settings.environment == "production":
-            raise SchedulerStartupError(f"The scheduler failed to start: {exc}.") from exc
-        logger.warning(
-            "_on_startup: the scheduler failed to start (non-production — continuing): %s", str(exc),
-        )
 
 
 async def _seed_operator_if_configured() -> None:
@@ -220,12 +191,6 @@ async def _seed_operator_if_configured() -> None:
         return
 
     await seed_operator_user(email, hashed_password)
-
-
-async def _on_shutdown() -> None:
-    """MGA-specific shutdown: stop the APScheduler."""
-    from app.services.scheduling.scheduler_service import shutdown_scheduler
-    shutdown_scheduler()
 
 
 def _mount_public_routes(app: FastAPI) -> None:
@@ -395,7 +360,6 @@ def create_app(settings: Settings = settings) -> FastAPI:
         turnstile_required=turnstile_required,
         email_required=email_required,
         on_startup=_on_startup,
-        on_shutdown=_on_shutdown,
     )
 
     app = FastAPI(

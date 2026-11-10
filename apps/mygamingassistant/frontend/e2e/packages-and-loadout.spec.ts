@@ -229,25 +229,27 @@ test.describe("Scheduler admin endpoints", () => {
     }
   });
 
-  test("POST /api/scheduler/trigger with unknown job_id returns 400", async ({ request }) => {
+  test("POST /api/scheduler/trigger with unknown job_id returns 404", async ({ request }) => {
     const token = await getAuthToken(request);
 
     const resp = await request.post(`${BACKEND_URL}/api/scheduler/trigger/not_a_real_job`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    expect(resp.status()).toBe(400);
+    expect(resp.status()).toBe(404);
     const body = await resp.json() as { detail: string };
     expect(body.detail).toContain("Unknown job");
   });
 
-  test("POST /api/scheduler/trigger/sync_all_sources returns 200 or 409", async ({ request }) => {
+  test("POST /api/scheduler/trigger/sync_all_sources returns 200, 404 or 503", async ({ request }) => {
     const token = await getAuthToken(request);
 
     const resp = await request.post(
       `${BACKEND_URL}/api/scheduler/trigger/sync_all_sources`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
-    // 200 = triggered successfully; 409 = job not found in scheduler (disabled mode)
-    expect([200, 409]).toContain(resp.status());
+    // 200 = the scheduler will start it (or run it again once its current run
+    // finishes); 404 = its switch is off (SCHEDULER_ENABLED=false); 503 = the
+    // scheduler service is not running (no fresh report in scheduler_job).
+    expect([200, 404, 503]).toContain(resp.status());
   });
 });

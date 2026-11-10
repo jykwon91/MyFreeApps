@@ -1,10 +1,9 @@
 """Raid notification worker — drains the ``wow_raid_notification`` outbox.
 
-Runs every 60 seconds from the in-process APScheduler
-(``app/services/scheduling/scheduler_service.py``) and is a no-op when
-``DISCORD_ENABLED`` is false.  Production runs two uvicorn workers, so two
-schedulers tick concurrently; correctness comes from the outbox, not from
-the scheduler:
+Runs every 60 seconds from APScheduler in the single ``scheduler`` service
+(``app/workers/scheduler_worker.py``) and is registered only when
+``DISCORD_ENABLED`` is true.  Correctness comes from the outbox, not from
+the scheduler, so a slow tick or a restart mid-claim is safe:
 
 * **One claim per transaction.**  ``claim_due(limit=1)`` takes a row with
   ``FOR UPDATE SKIP LOCKED``, stamps ``claimed_at`` and commits.  The other

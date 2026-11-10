@@ -12,23 +12,16 @@ from __future__ import annotations
 
 import sys
 
+from platform_shared.workers.heartbeat_healthcheck import check_heartbeat
+
 from app.core.discovery_scheduler_constants import (
     HEARTBEAT_MAX_AGE_SECONDS,
     HEARTBEAT_PATH,
 )
-from app.core.heartbeat import heartbeat_age_seconds
 
 
 def main() -> int:
-    age = heartbeat_age_seconds(HEARTBEAT_PATH)
-    if age is None:
-        print(f"unhealthy: no heartbeat at {HEARTBEAT_PATH}")
-        return 1
-    if age > HEARTBEAT_MAX_AGE_SECONDS:
-        print(f"unhealthy: heartbeat is {age:.0f}s old (max {HEARTBEAT_MAX_AGE_SECONDS}s)")
-        return 1
-    print(f"healthy: heartbeat {age:.0f}s old")
-    return 0
+    return check_heartbeat(HEARTBEAT_PATH, HEARTBEAT_MAX_AGE_SECONDS)
 
 
 if __name__ == "__main__":

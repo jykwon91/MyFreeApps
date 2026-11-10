@@ -4,10 +4,12 @@ Covers: the token request, the house index by name, Last-Modified, Blizzard's
 error codes (API ``type`` and OAuth ``error``) captured on the error, network
 failures, missing credentials, each mapped house kept apart (never pooled
 with its faction's other houses), one failing house failing only itself, and
-a mapped house the index lists under another faction or not at all.
+a mapped house the index lists under another faction or not at all, and the
+CPU-heavy parse + fold running off the event loop.
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 from collections.abc import Callable
@@ -221,3 +223,22 @@ async def test_a_mapped_house_the_index_lists_under_another_faction_or_not_at_al
     assert isinstance(renamed, PriceFetchError) and "lists it as alliance" in renamed.reason
     missing = results[116]
     assert isinstance(missing, PriceFetchError) and "lists it as missing" in missing.reason
+
+
+async def test_the_parse_and_the_fold_run_off_the_event_loop(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A house answer can be 64MB of JSON: parsing and folding it on the loop
+    would stall the scheduler's tick and heartbeat for seconds."""
+    offloaded: list[str] = []
+    real_to_thread = asyncio.to_thread
+
+    async def _to_thread(func: Callable[..., object], /, *args: object, **kwargs: object) -> object:
+        offloaded.append(func.__name__)
+        return await real_to_thread(func, *args, **kwargs)
+
+    monkeypatch.setattr(asyncio, "to_thread", _to_thread)
+    answers = {"110/commodities": _json({"auctions": [_commodity(4611, 3980, 2)]})}
+    async with _client(_blizzard(answers)) as client:
+        results = await fetch_with_client(client, [MappedHouse("pvp", "alliance", 110)])
+
+    assert isinstance(results[110], HousePrices)
+    assert offloaded == ["_auction_rows", "_fold", "_auction_rows", "_fold", "prices"]

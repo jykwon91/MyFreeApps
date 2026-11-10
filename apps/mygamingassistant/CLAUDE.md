@@ -275,8 +275,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   house: a failed call, a house that suddenly has no listings, or a mapped
   house the index lists under another faction (or not at all) keeps the
   stored set, records the error on the feed and logs a WARNING with
-  Blizzard's HTTP status and error code. Two API workers both run the job — a
-  per-game advisory lock makes one skip. `python -m app.cli refresh-wow-prices`
+  Blizzard's HTTP status and error code. A per-game advisory lock makes an
+  overlapping run (scheduler + CLI) skip. `python -m app.cli refresh-wow-prices`
   does it by hand. The response is columnar (`columns` = `item_id`,
   `market_value`, `min_buyout`, `quantity`, `listings`, `name`), carries
   `server` + `faction`, with a per-house ETag and `max-age=600`. No rows =
@@ -941,8 +941,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   prod like the prices job. A row is written only on a ruleset's first
   sighting, a status change, or as an hourly checkpoint
   (`CHECKPOINT_INTERVAL`); a failed Blizzard call stores nothing and logs a
-  WARNING with Blizzard's error (a gap, never "down"). Two API workers both
-  run it — a per-region advisory lock makes one skip. Retention 90 days
+  WARNING with Blizzard's error (a gap, never "down"). A per-region advisory
+  lock makes an overlapping run skip. Retention 90 days
   (`purge_wow_server_status_history`, daily, always on). By hand:
   `python -m app.cli record-wow-server-status`. Constants:
   `app/core/wow_server_status.py`.
@@ -1646,6 +1646,7 @@ This is idempotent — re-running is safe (upserts by slug).
 ```bash
 source .venv/bin/activate
 uvicorn app.main:app --reload --reload-dir app --port 8004
+python -m app.workers.scheduler_worker   # the scheduled jobs (the API never runs them)
 alembic upgrade head
 alembic revision -m "description"
 pytest
@@ -1830,8 +1831,18 @@ public, or empty pages where they expected to see content.
 | `WOW_CHAT_DAILY_TOKEN_CAP` / `WOW_CHAT_IP_DAILY_TOKEN_CAP` | Optional | Weighted tokens per UTC day, global / per network (DB-backed). Defaults 2,500,000 / 250,000; `0` switches the chat off |
 | `WOW_CHAT_TURN_RATE_LIMIT_PER_HOUR` / `_PER_DAY`, `WOW_CHAT_CONTINUATION_RATE_LIMIT_PER_HOUR` | Optional | Per-IP limits. Defaults 20 / 60 / 60 |
 | `WOW_PRICE_REFRESH_ENABLED` | Optional | Default `true`. Refreshes the auction-house prices from Blizzard every `WOW_PRICE_REFRESH_INTERVAL_HOURS` (default 3) and at boot — also in serve-only prod, whatever `SCHEDULER_ENABLED` says. `false` stops refreshing; `GET /api/wow/prices` keeps serving what's stored |
-| `BLIZZARD_CLIENT_ID` / `BLIZZARD_CLIENT_SECRET` | Yes (prod, when `WOW_PRICE_REFRESH_ENABLED=true`) | Blizzard Game Data API client (develop.battle.net → API Access). Production refuses to boot without them while the price refresh is on. Secrets — never log or paste them |
+| `BLIZZARD_CLIENT_ID` / `BLIZZARD_CLIENT_SECRET` | Yes (prod, when `WOW_PRICE_REFRESH_ENABLED=true`) | Blizzard Game Data API client (develop.battle.net → API Access). The `scheduler` container refuses to boot without them while the price refresh is on. Secrets — never log or paste them |
 | `WOW_SERVER_STATUS_RECORDING_ENABLED` | Optional | Default `true`. Records realm status every 5 min for the server status page's history (also in serve-only prod). `false` stops recording; the page keeps showing what's stored |
+
+**Scheduler:** APScheduler runs ONLY in the one-replica `scheduler` compose service
+(`python -m app.workers.scheduler_worker`). The API runs `uvicorn --workers 2` and never
+starts one — a scheduler per worker ran every job twice. The worker writes each job's
+next run to `scheduler_job` every 15 s (`GET /api/scheduler/status` reads it; a report
+older than 45 s means "not running") and starts runs the API asked for
+(`POST /api/scheduler/trigger/{job_id}` sets `run_requested_at`). A restart resumes each
+job's cadence from that table, so frequent deploys never postpone the daily purges.
+Healthcheck: `python -m app.workers.scheduler_healthcheck` (heartbeat file age); the
+deploy waits for it. Three failed ticks in a row exit the process and Docker restarts it.
 
 **After first deploy:**
 ```bash
