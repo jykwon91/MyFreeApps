@@ -1,13 +1,14 @@
 """Schema for the text-only document creation route (POST /documents JSON body)."""
 import uuid
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
+from app.core.document_limits import DOCUMENT_TITLE_MAX_LEN
 from app.schemas.documents.document_kind import DocumentKindLiteral
 
 
 class DocumentTextCreateRequest(BaseModel):
-    title: str
+    title: str = Field(max_length=DOCUMENT_TITLE_MAX_LEN)
     kind: DocumentKindLiteral
     application_id: uuid.UUID | None = None
     body: str

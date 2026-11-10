@@ -22,6 +22,11 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.document_limits import (
+    DOCUMENT_CONTENT_TYPE_MAX_LEN,
+    DOCUMENT_FILENAME_MAX_LEN,
+    DOCUMENT_TITLE_MAX_LEN,
+)
 from app.db.base import Base
 
 
@@ -46,7 +51,7 @@ class Document(Base):
     )
 
     # Human-readable title (e.g. "Cover letter for Acme SWE role").
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    title: Mapped[str] = mapped_column(String(DOCUMENT_TITLE_MAX_LEN), nullable=False)
 
     # Canonical document kind — enforced via CheckConstraint.
     kind: Mapped[str] = mapped_column(String(30), nullable=False)
@@ -58,10 +63,10 @@ class Document(Base):
     file_path: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Display filename (original upload name, not the object key).
-    filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    filename: Mapped[str | None] = mapped_column(String(DOCUMENT_FILENAME_MAX_LEN), nullable=True)
 
     # MIME type of the uploaded file.
-    content_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    content_type: Mapped[str | None] = mapped_column(String(DOCUMENT_CONTENT_TYPE_MAX_LEN), nullable=True)
 
     # File size in bytes (populated alongside file_path).
     size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
