@@ -9,6 +9,8 @@
  *   - With no rules, the panel shows its empty state and "0 rules total".
  *   - With rules, it lists each one (pattern, category, times used) and the
  *     footer count matches.
+ *   - Delete: the confirm dialog shows loading until the request finishes, and a
+ *     403 shows the view-only toast.
  */
 import { test, expect, type Page } from "@playwright/test";
 import { json } from "./fixtures/mockResponse";
@@ -65,4 +67,38 @@ test("lists every rule and counts them in the footer", async ({ page }) => {
   await expect(rows.nth(1)).toContainText("City Water");
   await expect(rows.nth(1)).toContainText("Utilities");
   await expect(panel.getByText("2 rules total")).toBeVisible();
+});
+
+const RULE_ID = "00000000-0000-0000-0000-0000000000c1";
+
+test("the confirm dialog shows loading until the delete finishes", async ({ page }) => {
+  const panel = await openPanel(page, [rule(RULE_ID, "Home Depot", "maintenance", 4)]);
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route(`**/api/classification-rules/${RULE_ID}`, async (route) => {
+    await gate;
+    await route.fulfill({ status: 204 });
+  });
+
+  await panel.getByRole("button", { name: "Delete rule for Home Depot" }).click();
+  const dialog = page.getByRole("dialog").filter({ hasText: "Delete classification rule" });
+  await dialog.getByRole("button", { name: "Delete", exact: true }).click();
+
+  await expect(dialog.getByText(/processing/i)).toBeVisible();
+  release();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText("Rule deleted.", { exact: true })).toBeVisible();
+});
+
+test("a 403 on delete shows the view-only message", async ({ page }) => {
+  const panel = await openPanel(page, [rule(RULE_ID, "Home Depot", "maintenance", 4)]);
+  await page.route(`**/api/classification-rules/${RULE_ID}`, (route) =>
+    route.fulfill(json({ detail: "Forbidden" }, 403)),
+  );
+
+  await panel.getByRole("button", { name: "Delete rule for Home Depot" }).click();
+  await page.getByRole("dialog").filter({ hasText: "Delete classification rule" }).getByRole("button", { name: "Delete", exact: true }).click();
+
+  await expect(page.getByText("You have view-only access, so I can't delete rules.", { exact: true })).toBeVisible();
+  await expect(panel.locator("tbody tr")).toHaveCount(1);
 });
