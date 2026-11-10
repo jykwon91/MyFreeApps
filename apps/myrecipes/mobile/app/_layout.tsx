@@ -1,4 +1,4 @@
-import { SessionProvider, TOAST_CLEARANCE, ToastProvider, useTheme } from "@platform/mobile";
+import { SessionProvider, TOAST_CLEARANCE, ToastProvider, useStackScreenOptions } from "@platform/mobile";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,7 +15,7 @@ showCookTimerAlertsInForeground();
 export const unstable_settings = { anchor: "(tabs)" };
 
 export default function RootLayout() {
-  const { colors } = useTheme();
+  const stackOptions = useStackScreenOptions();
   const insets = useSafeAreaInsets();
   useCookTimerAlertTaps();
 
@@ -24,13 +24,7 @@ export default function RootLayout() {
       <SessionProvider session={session}>
         <ToastProvider bottomOffset={insets.bottom + TOAST_CLEARANCE}>
           <StatusBar style="auto" />
-          <Stack
-            screenOptions={{
-              headerStyle: { backgroundColor: colors.card },
-              headerTintColor: colors.foreground,
-              contentStyle: { backgroundColor: colors.background },
-            }}
-          >
+          <Stack screenOptions={stackOptions}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="delete-account" options={{ title: "Delete account", headerBackTitle: "Settings" }} />
             <Stack.Screen name="sign-in" options={{ presentation: "modal", title: "" }} />
