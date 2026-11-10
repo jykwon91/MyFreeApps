@@ -27,7 +27,7 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, literal_column, select
+from sqlalchemy import delete, func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -100,6 +100,22 @@ async def get_by_id(
         stmt = stmt.where(Application.deleted_at.is_(None))
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def count_for_company_including_deleted(
+    db: AsyncSession, company_id: uuid.UUID, user_id: uuid.UUID,
+) -> int:
+    """Count every application linked to the company, soft-deleted rows included.
+
+    Soft-deleted rows still hold the ``applications.company_id`` RESTRICT FK,
+    so they must be counted when deciding whether a company can be removed.
+    """
+    result = await db.execute(
+        select(func.count())
+        .select_from(Application)
+        .where(Application.company_id == company_id, Application.user_id == user_id)
+    )
+    return int(result.scalar_one())
 
 
 async def list_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[Application]:

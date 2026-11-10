@@ -5,6 +5,7 @@ import CompanyDetailSkeleton from "@/features/companies/CompanyDetailSkeleton";
 import CompanyResearchPanel from "@/features/companies/CompanyResearchPanel";
 import { useGetCompanyQuery, useDeleteCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
 import { useListApplicationsQuery } from "@myjobhunter/api-client/store/applicationsApi";
+import { isCompanyHasApplicationsError } from "@myjobhunter/api-client/utils/isCompanyHasApplicationsError";
 import type { Application } from "@myjobhunter/api-client/types/application";
 
 const APPLICATION_COLUMNS: ColumnDef<Application>[] = [
@@ -35,6 +36,8 @@ const APPLICATION_COLUMNS: ColumnDef<Application>[] = [
   },
 ];
 
+const DELETE_BLOCKED_HINT = "This company has applications, so it can't be deleted.";
+
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -55,7 +58,11 @@ export default function CompanyDetail() {
       showSuccess(`"${company.name}" deleted`);
       navigate("/companies");
     } catch (err) {
-      showError(`Couldn't delete: ${extractErrorMessage(err)}`);
+      showError(
+        isCompanyHasApplicationsError(err)
+          ? err.data.detail.message
+          : `Couldn't delete: ${extractErrorMessage(err)}`,
+      );
     }
   }
 
@@ -91,6 +98,7 @@ export default function CompanyDetail() {
   // Backend filters by ?company_id= so this list already contains only
   // applications for this company. No client-side filter needed.
   const applicationsForCompany = applicationsData?.items ?? [];
+  const hasApplications = applicationsForCompany.length > 0;
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
@@ -121,14 +129,20 @@ export default function CompanyDetail() {
             {company.size_range ? <Badge label={company.size_range} color="gray" /> : null}
           </div>
         </div>
-        <button
-          onClick={handleDelete}
-          disabled={deleting}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-md hover:bg-destructive/10 text-destructive disabled:opacity-50 shrink-0"
-        >
-          <Trash2 size={14} />
-          Delete
-        </button>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <button
+            onClick={handleDelete}
+            disabled={deleting || hasApplications}
+            title={hasApplications ? DELETE_BLOCKED_HINT : undefined}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-md hover:bg-destructive/10 text-destructive disabled:opacity-50 shrink-0"
+          >
+            <Trash2 size={14} />
+            {deleting ? "Deleting..." : "Delete"}
+          </button>
+          {hasApplications ? (
+            <p className="text-xs text-muted-foreground max-w-48 text-right">{DELETE_BLOCKED_HINT}</p>
+          ) : null}
+        </div>
       </header>
 
       <section className="border rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">

@@ -52,7 +52,13 @@ class Company(Base):
     )
 
     research: Mapped["CompanyResearch | None"] = relationship("CompanyResearch", back_populates="company", uselist=False, cascade="all, delete-orphan")
-    applications: Mapped[list["Application"]] = relationship("Application", back_populates="company")
+    applications: Mapped[list["Application"]] = relationship(
+        "Application",
+        back_populates="company",
+        # applications.company_id is ON DELETE RESTRICT: let the database enforce it
+        # instead of the ORM trying to NULL the (non-null) FK on delete.
+        passive_deletes="all",
+    )
 
     __table_args__ = (
         CheckConstraint(

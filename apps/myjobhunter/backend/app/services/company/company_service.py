@@ -21,9 +21,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company.company import Company
 from app.models.company.company_research import CompanyResearch
+from app.repositories.application import application_repository
 from app.repositories.company import company_repository, company_research_repository
 from app.schemas.company.company_create_request import CompanyCreateRequest
 from app.schemas.company.company_update_request import CompanyUpdateRequest
+
+
+APPLICATIONS_COMPANY_FK_NAME = "applications_company_id_fkey"
 
 
 class DuplicatePrimaryDomainError(ValueError):
@@ -32,6 +36,19 @@ class DuplicatePrimaryDomainError(ValueError):
     The ``companies`` table has a UNIQUE constraint on ``(user_id, lower(primary_domain))``.
     Subclasses ``ValueError`` so the route handler can map it to HTTP 409.
     """
+
+
+class CompanyHasApplicationsError(Exception):
+    """Raised when deleting a company that still has applications.
+
+    ``applications.company_id`` is ON DELETE RESTRICT (applications must keep
+    their company), so such a company cannot be removed. ``application_count``
+    includes soft-deleted applications, which still hold the FK.
+    """
+
+    def __init__(self, application_count: int) -> None:
+        super().__init__(f"Company still has {application_count} application(s).")
+        self.application_count = application_count
 
 
 async def list_companies(
@@ -150,14 +167,44 @@ async def delete_company(
     Returns ``True`` if a row was found and deleted, ``False`` if the company
     does not exist or belongs to another user.
 
+    Raises ``CompanyHasApplicationsError`` when any application (soft-deleted
+    included) still references the company. The check runs under a row lock on
+    the company so a concurrently created application cannot slip in; an
+    ``IntegrityError`` on the applications FK at delete time is mapped to the
+    same error as a backstop.
+
     Commits at the end so the write survives the request lifecycle.
     """
-    company = await company_repository.get_by_id(db, company_id, user_id)
+    company = await company_repository.get_by_id_for_update(db, company_id, user_id)
     if company is None:
         return False
-    await company_repository.delete(db, company)
-    await db.commit()
+    application_count = await application_repository.count_for_company_including_deleted(
+        db, company_id, user_id,
+    )
+    if application_count > 0:
+        await db.rollback()
+        raise CompanyHasApplicationsError(application_count)
+    try:
+        await company_repository.delete(db, company)
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        if not _is_applications_fk_violation(exc):
+            raise
+        raise CompanyHasApplicationsError(
+            await application_repository.count_for_company_including_deleted(
+                db, company_id, user_id,
+            ),
+        ) from exc
     return True
+
+
+def _is_applications_fk_violation(exc: IntegrityError) -> bool:
+    """True iff ``exc`` is the ``applications.company_id`` foreign-key violation."""
+    # SQLAlchemy's asyncpg adapter wraps the driver error; the original
+    # asyncpg exception (carrying ``constraint_name``) is its ``__cause__``.
+    driver_error = getattr(exc.orig, "__cause__", None) or exc.orig
+    return getattr(driver_error, "constraint_name", None) == APPLICATIONS_COMPANY_FK_NAME
 
 
 async def get_company_research(

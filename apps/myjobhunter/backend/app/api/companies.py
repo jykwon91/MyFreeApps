@@ -40,7 +40,10 @@ from app.schemas.company.company_response import CompanyResponse
 from app.schemas.company.company_update_request import CompanyUpdateRequest
 from app.services.company import company_service
 from app.services.company import company_research_service
-from app.services.company.company_service import DuplicatePrimaryDomainError
+from app.services.company.company_service import (
+    CompanyHasApplicationsError,
+    DuplicatePrimaryDomainError,
+)
 from app.services.integrations.tavily_service import TavilyNotConfiguredError
 
 router = APIRouter()
@@ -136,10 +139,27 @@ async def delete_company(
     """Hard-delete a Company.
 
     Returns 404 if the company does not exist or belongs to another user.
-    Associated records (linked applications, research) are cascade-deleted
-    by the database.
+    Returns 409 ``{"code": "COMPANY_HAS_APPLICATIONS", "message", "application_count"}``
+    when applications (soft-deleted ones included) still reference the company —
+    ``applications.company_id`` is ON DELETE RESTRICT, so applications keep their
+    company. Only the company's research records are cascade-deleted.
     """
-    deleted = await company_service.delete_company(db, user.id, company_id)
+    try:
+        deleted = await company_service.delete_company(db, user.id, company_id)
+    except CompanyHasApplicationsError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "COMPANY_HAS_APPLICATIONS",
+                "message": (
+                    f"This company still has {exc.application_count} "
+                    f"application{'' if exc.application_count == 1 else 's'} "
+                    "linked to it (including any archived or deleted), so it "
+                    "can't be deleted."
+                ),
+                "application_count": exc.application_count,
+            },
+        ) from exc
     if not deleted:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
     return Response(status_code=204)
