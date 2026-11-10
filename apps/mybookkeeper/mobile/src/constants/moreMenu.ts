@@ -27,6 +27,7 @@ export const MORE_MENU: readonly MoreMenuGroup[] = [
       { label: "Property P&L", screen: "/property-pnl" },
       { label: "Reconciliation", screen: "/reconciliation" },
       { label: "Vendors", screen: "/vendors" },
+      { label: "Vendor rules", screen: "/vendor-rules" },
       { label: "Money analysis", screen: "/analytics/money" },
       { label: "Utility costs", screen: "/analytics" },
       { label: "Insurance", screen: "/insurance" },

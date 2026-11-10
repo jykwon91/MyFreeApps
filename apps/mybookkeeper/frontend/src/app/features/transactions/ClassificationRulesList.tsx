@@ -1,6 +1,6 @@
 import { Trash2 } from "lucide-react";
 import { formatTag } from "@/shared/utils/tag";
-import type { ClassificationRule } from "@/shared/types/classification-rule/classification-rule";
+import type { ClassificationRule } from "@mybookkeeper/api-client/types/classification-rule/classification-rule";
 
 export interface ClassificationRulesListProps {
   rules: readonly ClassificationRule[];

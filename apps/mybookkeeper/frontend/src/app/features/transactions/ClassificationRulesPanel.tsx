@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import {
   useListClassificationRulesQuery,
   useDeleteClassificationRuleMutation,
-} from "@/shared/store/classificationRulesApi";
+} from "@mybookkeeper/api-client/store/classificationRulesApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { Panel, PanelTitle } from "@platform/ui";
 import { ConfirmDialog } from "@platform/ui";

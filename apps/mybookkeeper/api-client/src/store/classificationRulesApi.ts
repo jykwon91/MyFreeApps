@@ -1,7 +1,13 @@
-import { baseApi } from "./baseApi";
-import type { ClassificationRule } from "@/shared/types/classification-rule/classification-rule";
+import { baseApi } from "@platform/core/store/baseApi";
+import type { ClassificationRule } from "../types/classification-rule/classification-rule";
 
-const classificationRulesApi = baseApi.injectEndpoints({
+/**
+ * Vendor (classification) rules. Reads are open to any member; delete is owner/admin only.
+ * There is no update endpoint. Delete invalidates the whole ``ClassificationRule`` tag.
+ */
+export const classificationRulesApi = baseApi.enhanceEndpoints({
+  addTagTypes: ["ClassificationRule"],
+}).injectEndpoints({
   endpoints: (builder) => ({
     listClassificationRules: builder.query<ClassificationRule[], void>({
       query: () => ({ url: "/classification-rules" }),
@@ -9,10 +15,6 @@ const classificationRulesApi = baseApi.injectEndpoints({
         result
           ? [...result.map((r) => ({ type: "ClassificationRule" as const, id: r.id })), { type: "ClassificationRule", id: "LIST" }]
           : [{ type: "ClassificationRule", id: "LIST" }],
-    }),
-    createClassificationRule: builder.mutation<ClassificationRule, { match_type: string; match_pattern: string; category: string; match_context?: string; property_id?: string; activity_id?: string }>({
-      query: (data) => ({ url: "/classification-rules", method: "POST", data }),
-      invalidatesTags: ["ClassificationRule"],
     }),
     deleteClassificationRule: builder.mutation<void, string>({
       query: (id) => ({ url: `/classification-rules/${id}`, method: "DELETE" }),
@@ -23,6 +25,5 @@ const classificationRulesApi = baseApi.injectEndpoints({
 
 export const {
   useListClassificationRulesQuery,
-  useCreateClassificationRuleMutation,
   useDeleteClassificationRuleMutation,
 } = classificationRulesApi;
