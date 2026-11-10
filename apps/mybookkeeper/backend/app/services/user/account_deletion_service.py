@@ -1,5 +1,4 @@
 """What MyBookkeeper has to clear before a user's row can be deleted."""
-import logging
 from collections.abc import Callable
 from functools import partial
 
@@ -15,23 +14,12 @@ from app.repositories import organization_repo, user_repo
 from app.repositories.leases import signed_lease_repo
 from app.repositories.user import account_files_repo
 from platform_shared.services.account_deletion import AccountDeletionBlockedError
-
-logger = logging.getLogger(__name__)
+from platform_shared.services.stored_file_removal import remove_stored_files as platform_remove_stored_files
 
 
 def remove_stored_files(storage_keys: list[str]) -> None:
-    """Delete an account's stored files once its rows are gone.
-
-    The account can't come back by now, so one failure mustn't stop the rest.
-    Anything left is logged by key, which is all that's needed to remove it. The
-    keys are only in memory, so a restart before this runs leaves files with no
-    record of them.
-    """
-    for key in storage_keys:
-        try:
-            get_storage().delete_file(key)
-        except Exception:
-            logger.exception("Stored file left behind after account deletion: key=%s", key)
+    """Delete an account's stored files once its rows are gone."""
+    platform_remove_stored_files(get_storage, storage_keys)
 
 
 async def prepare_deletion(db: AsyncSession, user: User) -> Callable[[], None]:

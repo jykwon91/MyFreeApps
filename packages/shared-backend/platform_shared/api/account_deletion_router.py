@@ -118,6 +118,9 @@ def build_account_deletion_router(
 
         try:
             async with unit_of_work_factory() as txn_db:
+                # Serialise concurrent deletes of one account, so the second
+                # one can't collect keys the first has already removed.
+                await txn_db.get(type(current_user), current_user.id, with_for_update=True)
                 after_commit = await prepare_deletion(txn_db, current_user) if prepare_deletion else None
                 await delete_account(txn_db, current_user)
         except AccountDeletionBlockedError as exc:
