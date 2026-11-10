@@ -19,8 +19,10 @@ from unittest.mock import MagicMock
 import pytest
 from sqlalchemy.dialects import postgresql
 
-from app.repositories import welcome_manual_repo, welcome_manual_section_repo
+from app.repositories import welcome_manual_repo, welcome_manual_room_repo, welcome_manual_section_repo
 from app.services.welcome_manuals import (
+    welcome_manual_place_service as places,
+    welcome_manual_room_service as rooms,
     welcome_manual_section_field_service as fields,
     welcome_manual_section_image_service as images,
     welcome_manual_section_service as sections,
@@ -45,7 +47,7 @@ class _RecordingDb:
         if len(self.sql) >= self._allowed:
             raise _Stop
         self.sql.append(str(query.compile(dialect=postgresql.dialect())))
-        row = SimpleNamespace(id=MANUAL if len(self.sql) == 1 else SECTION)
+        row = SimpleNamespace(id=MANUAL if len(self.sql) == 1 else SECTION, manual_id=MANUAL)
         result = MagicMock()
         result.scalar_one_or_none.return_value = row
         return result
@@ -95,6 +97,79 @@ SECTION_LOCKED = {
     "reorder_images": (images, lambda: images.reorder_images(ORG, USER, MANUAL, SECTION, [ROW])),
     "delete_image": (images, lambda: images.delete_image(ORG, USER, MANUAL, SECTION, ROW)),
 }
+
+
+# Room and place writes lock the manual before reading the cap count / max order.
+ROOM_PLACE_LOCKED = {
+    "add_room": (rooms, lambda: rooms.add_room(ORG, USER, MANUAL, name="n"), "welcome_manual_rooms"),
+    "reorder_rooms": (rooms, lambda: rooms.reorder_rooms(ORG, USER, MANUAL, [ROW]), None),
+    "delete_room": (rooms, lambda: rooms.delete_room(ORG, USER, MANUAL, ROW), None),
+    "update_room": (rooms, lambda: rooms.update_room(ORG, USER, MANUAL, ROW, {"name": "n"}), None),
+    "update_place": (places, lambda: places.update_place(ORG, USER, MANUAL, ROW, {"name": "n"}), None),
+    "delete_place": (places, lambda: places.delete_place(ORG, USER, MANUAL, ROW), None),
+    "add_place": (
+        places,
+        lambda: places.add_place(ORG, USER, MANUAL, "n", "c", None, None, None),
+        "welcome_manual_places",
+    ),
+}
+
+
+@pytest.mark.parametrize("name", ROOM_PLACE_LOCKED)
+@pytest.mark.asyncio
+async def test_room_and_place_writes_lock_the_manual_first(name: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    module, call, _ = ROOM_PLACE_LOCKED[name]
+    sql = await _run(monkeypatch, module, call, statements=1)
+    assert "welcome_manuals" in sql[0] and _locks(sql[0]), f"{name} must lock the manual row"
+
+
+@pytest.mark.parametrize("name", ["add_room", "add_place"])
+@pytest.mark.asyncio
+async def test_add_locks_the_manual_before_the_cap_count(name: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    module, call, table = ROOM_PLACE_LOCKED[name]
+    sql = await _run(monkeypatch, module, call, statements=2)
+    assert _locks(sql[0]) and "welcome_manuals" in sql[0]
+    assert table in sql[1] and not _locks(sql[1])
+
+
+@pytest.mark.asyncio
+async def test_delete_room_locks_manual_then_room_then_its_sections(monkeypatch: pytest.MonkeyPatch) -> None:
+    module, call, _ = ROOM_PLACE_LOCKED["delete_room"]
+    sql = await _run(monkeypatch, module, call, statements=3)
+    assert "welcome_manuals" in sql[0] and _locks(sql[0])
+    assert "welcome_manual_rooms" in sql[1] and _locks(sql[1])
+    assert "welcome_manual_sections" in sql[2] and _locks(sql[2])
+
+
+@pytest.mark.asyncio
+async def test_room_repo_get_by_id_locks_only_when_asked() -> None:
+    for flag in (False, True):
+        db = _CapturingDb()
+        with pytest.raises(_Stop):
+            await welcome_manual_room_repo.get_by_id(db, uuid.uuid4(), uuid.uuid4(), for_update=flag)  # type: ignore[arg-type]
+        assert _locks(db.sql) is flag
+
+
+@pytest.mark.asyncio
+async def test_update_section_into_a_room_locks_manual_then_section(monkeypatch: pytest.MonkeyPatch) -> None:
+    sql = await _run(
+        monkeypatch, sections,
+        lambda: sections.update_section(ORG, USER, MANUAL, SECTION, {"room_id": ROW}),
+        statements=3,
+    )
+    assert "welcome_manuals" in sql[0] and _locks(sql[0])
+    assert "welcome_manuals" in sql[1] and not _locks(sql[1])
+    assert "welcome_manual_sections" in sql[2] and _locks(sql[2])
+
+
+@pytest.mark.asyncio
+async def test_update_section_without_room_change_leaves_the_manual_unlocked(monkeypatch: pytest.MonkeyPatch) -> None:
+    sql = await _run(
+        monkeypatch, sections,
+        lambda: sections.update_section(ORG, USER, MANUAL, SECTION, {"title": "x"}),
+        statements=2,
+    )
+    assert not _locks(sql[0]) and _locks(sql[1])
 
 
 @pytest.mark.parametrize("name", MANUAL_LOCKED)

@@ -34,14 +34,21 @@ async def get_by_id(
     db: AsyncSession,
     room_id: uuid.UUID,
     manual_id: uuid.UUID,
+    *,
+    for_update: bool = False,
 ) -> WelcomeManualRoom | None:
-    """Return the room iff it exists and belongs to the given manual."""
-    result = await db.execute(
-        select(WelcomeManualRoom).where(
-            WelcomeManualRoom.id == room_id,
-            WelcomeManualRoom.manual_id == manual_id,
-        )
+    """Return the room iff it exists and belongs to the given manual.
+
+    ``for_update=True`` locks the room row until the transaction ends.
+    SQLite ignores FOR UPDATE; Postgres honours it.
+    """
+    query = select(WelcomeManualRoom).where(
+        WelcomeManualRoom.id == room_id,
+        WelcomeManualRoom.manual_id == manual_id,
     )
+    if for_update:
+        query = query.with_for_update()
+    result = await db.execute(query)
     return result.scalar_one_or_none()
 
 

@@ -36,6 +36,25 @@ async def list_by_manual(
     return list(result.scalars().all())
 
 
+async def lock_by_room(
+    db: AsyncSession,
+    manual_id: uuid.UUID,
+    room_id: uuid.UUID,
+) -> list[WelcomeManualSection]:
+    """Return the room's own sections, each locked FOR UPDATE (in id order, so
+    two lockers can't deadlock) until the transaction ends."""
+    result = await db.execute(
+        select(WelcomeManualSection)
+        .where(
+            WelcomeManualSection.manual_id == manual_id,
+            WelcomeManualSection.room_id == room_id,
+        )
+        .order_by(WelcomeManualSection.id)
+        .with_for_update()
+    )
+    return list(result.scalars().all())
+
+
 async def list_for_room(
     db: AsyncSession,
     manual_id: uuid.UUID,

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import uuid
 from contextlib import asynccontextmanager
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.welcome_manual_constants import WELCOME_MANUAL_MAX_ROOMS
 from app.models.organization.organization import Organization
 from app.models.user.user import User
-from app.repositories.welcome_manuals import welcome_manual_repo, welcome_manual_room_repo
+from app.repositories.welcome_manuals import (
+    welcome_manual_repo,
+    welcome_manual_room_repo,
+    welcome_manual_section_image_repo,
+    welcome_manual_section_repo,
+)
 from app.services.welcome_manuals import welcome_manual_room_service
 
 
@@ -148,6 +153,86 @@ class TestDeleteRoom:
             await welcome_manual_room_service.delete_room(
                 test_org.id, test_user.id, manual.id, uuid.uuid4(),
             )
+
+
+async def _seed_room_with_image(db: AsyncSession, manual_id: uuid.UUID, room_id: uuid.UUID | None, key: str, order: int) -> None:
+    section = await welcome_manual_section_repo.create(
+        db, manual_id=manual_id, title="S", body=None, display_order=order, room_id=room_id,
+    )
+    await welcome_manual_section_image_repo.create(
+        db, section_id=section.id, storage_key=key, caption=None, display_order=0,
+    )
+
+
+class TestDeleteRoomKeyCollection:
+    @pytest.mark.asyncio
+    async def test_keys_are_collected_under_the_section_lock_and_swept_after_commit(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        manual = await _make_manual(db, test_org, test_user)
+        room = await welcome_manual_room_repo.create(
+            db, manual_id=manual.id, name="A", display_order=0,
+        )
+        other = await welcome_manual_room_repo.create(
+            db, manual_id=manual.id, name="B", display_order=1,
+        )
+        await _seed_room_with_image(db, manual.id, room.id, "k/mine.jpg", 0)
+        await _seed_room_with_image(db, manual.id, None, "k/shared.jpg", 1)
+        await _seed_room_with_image(db, manual.id, other.id, "k/other.jpg", 2)
+        await db.commit()
+
+        events: list[str] = []
+        real_lock = welcome_manual_section_repo.lock_by_room
+        real_list = welcome_manual_section_image_repo.list_by_section_ids
+
+        async def _lock(*args, **kwargs):
+            events.append("lock_sections")
+            return await real_lock(*args, **kwargs)
+
+        async def _list(*args, **kwargs):
+            events.append("collect_keys")
+            return await real_list(*args, **kwargs)
+
+        async def _sweep(keys: list[str]) -> None:
+            events.append(f"delete:{sorted(keys)}")
+
+        @asynccontextmanager
+        async def _uow():
+            yield db
+            events.append("commit")
+
+        with (
+            patch("app.services.welcome_manuals.welcome_manual_room_service.unit_of_work", _uow),
+            patch.object(welcome_manual_section_repo, "lock_by_room", _lock),
+            patch.object(welcome_manual_section_image_repo, "list_by_section_ids", _list),
+            patch("app.services.welcome_manuals.welcome_manual_room_service.delete_stored_files", _sweep),
+        ):
+            await welcome_manual_room_service.delete_room(
+                test_org.id, test_user.id, manual.id, room.id,
+            )
+        assert events == ["lock_sections", "collect_keys", "commit", "delete:['k/mine.jpg']"]
+
+    @pytest.mark.asyncio
+    async def test_an_error_inside_the_transaction_skips_the_sweep(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        manual = await _make_manual(db, test_org, test_user)
+        room = await welcome_manual_room_repo.create(
+            db, manual_id=manual.id, name="A", display_order=0,
+        )
+        await _seed_room_with_image(db, manual.id, room.id, "k/mine.jpg", 0)
+        await db.commit()
+        sweep = AsyncMock()
+        with (
+            _patch_uow(db),
+            patch("app.services.welcome_manuals.welcome_manual_room_service.delete_stored_files", sweep),
+            patch.object(welcome_manual_room_repo, "delete_by_id", AsyncMock(side_effect=RuntimeError("boom"))),
+            pytest.raises(RuntimeError),
+        ):
+            await welcome_manual_room_service.delete_room(
+                test_org.id, test_user.id, manual.id, room.id,
+            )
+        sweep.assert_not_called()
 
 
 class TestReorderRooms:

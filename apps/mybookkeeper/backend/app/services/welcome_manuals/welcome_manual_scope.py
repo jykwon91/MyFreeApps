@@ -18,6 +18,10 @@ class ManualNotFoundError(LookupError):
     """The parent manual doesn't exist / is soft-deleted / is out of org."""
 
 
+class RoomNotFoundError(LookupError):
+    """The room doesn't exist or belongs to a different manual."""
+
+
 class SectionNotFoundError(LookupError):
     """The section doesn't exist or belongs to a different manual."""
 
