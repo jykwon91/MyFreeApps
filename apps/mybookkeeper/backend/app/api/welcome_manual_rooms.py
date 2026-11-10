@@ -77,7 +77,8 @@ async def reorder_rooms(
     except welcome_manual_room_service.ManualNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
     except welcome_manual_room_service.InvalidRoomReorderError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        # A list that no longer matches the manual's rooms is a stale client.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.patch(

@@ -14,18 +14,15 @@ import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrate
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import Markdown from "@/shared/components/ui/Markdown";
 import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
-import {
-  NEW_SECTION_DEFAULT_TITLE,
-  SHARED_ROOM_OPTION,
-  WELCOME_MANUAL_VIEW_MODE,
-  type WelcomeManualViewMode,
-} from "@/shared/lib/welcome-manual-constants";
+import { SHARED_ROOM_OPTION, WELCOME_MANUAL_MAX_SECTIONS } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { NEW_SECTION_DEFAULT_TITLE, WELCOME_MANUAL_VIEW_MODE, type WelcomeManualViewMode } from "@/shared/lib/welcome-manual-constants";
 import {
   useCreateSectionMutation,
   useDeleteWelcomeManualMutation,
-} from "@/shared/store/welcomeManualsApi";
+} from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import { useGetWelcomeManualByIdQuery } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
+import { sectionsForScope } from "@mybookkeeper/api-client/utils/welcomeManualScope";
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 import WelcomeManualDetailSkeleton from "@/app/features/welcome-manuals/WelcomeManualDetailSkeleton";
 import WelcomeManualSectionCard from "@/app/features/welcome-manuals/WelcomeManualSectionCard";
@@ -71,6 +68,7 @@ export default function WelcomeManualDetail() {
   const { data: properties = [] } = useGetPropertiesQuery();
 
   const sections = manual?.sections ?? [];
+  const atSectionCap = sections.length >= WELCOME_MANUAL_MAX_SECTIONS;
   const sortedSections = [...sections].sort((a, b) => a.display_order - b.display_order);
   const rooms = [...(manual?.rooms ?? [])].sort((a, b) => a.display_order - b.display_order);
 
@@ -82,9 +80,7 @@ export default function WelcomeManualDetail() {
 
   // Mirrors the backend's `list_for_room`: shared sections always, plus the
   // selected room's own. The share link only ever carries the shared ones.
-  const previewSections = sortedSections.filter(
-    (section) => !section.room_id || section.room_id === previewScope,
-  );
+  const previewSections = sectionsForScope(sortedSections, previewScope);
   const property = manual?.property_id
     ? properties.find((p) => p.id === manual.property_id)
     : undefined;
@@ -326,9 +322,15 @@ export default function WelcomeManualDetail() {
                     No sections yet. Add one to start building this guide.
                   </p>
                 )}
+                {atSectionCap ? (
+                  <p className="text-sm text-muted-foreground" data-testid="welcome-manual-sections-cap-note">
+                    {`You've reached the ${WELCOME_MANUAL_MAX_SECTIONS}-section limit for this guide.`}
+                  </p>
+                ) : null}
                 <LoadingButton
                   variant="primary"
                   onClick={() => void handleAddSection()}
+                  disabled={atSectionCap}
                   isLoading={isAddingSection}
                   loadingText="Adding..."
                   data-testid="add-welcome-manual-section-button"

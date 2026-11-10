@@ -19,7 +19,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DndContext } from "@dnd-kit/core";
 import WelcomeManualSectionCard from "@/app/features/welcome-manuals/WelcomeManualSectionCard";
-import { SHARED_ROOM_OPTION } from "@/shared/lib/welcome-manual-constants";
+import { SHARED_ROOM_OPTION } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 
@@ -33,7 +33,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 }));
 
 // Image + field managers hit these but we only assert section editing here.
-vi.mock("@/shared/store/welcomeManualsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/welcomeManualsApi", () => ({
   useUpdateSectionMutation: vi.fn(() => [updateSectionMock, { isLoading: false }]),
   useDeleteSectionMutation: vi.fn(() => [deleteSectionMock, { isLoading: false }]),
   useUploadSectionImagesMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -42,6 +42,8 @@ vi.mock("@/shared/store/welcomeManualsApi", () => ({
   useCreateSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useReorderSectionFieldsMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useReorderSectionImagesMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 function makeSection(overrides: Partial<WelcomeManualSectionResponse>): WelcomeManualSectionResponse {

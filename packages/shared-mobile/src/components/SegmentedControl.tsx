@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from "react-native";
+import { DISABLED_OPACITY } from "../constants/loadingButton";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import type { SegmentedControlProps } from "../types/SegmentedControlProps";
@@ -8,6 +9,7 @@ export default function SegmentedControl<Value extends string>({
   value,
   onChange,
   accessibilityLabel,
+  disabled = false,
 }: SegmentedControlProps<Value>) {
   const { colors, spacing, radius, fontSize } = useTheme();
 
@@ -22,7 +24,8 @@ export default function SegmentedControl<Value extends string>({
         return (
           <Pressable
             accessibilityRole="tab"
-            accessibilityState={{ selected: isSelected }}
+            accessibilityState={{ selected: isSelected, disabled }}
+            disabled={disabled}
             key={segment.value}
             onPress={() => onChange(segment.value)}
             style={{
@@ -32,6 +35,7 @@ export default function SegmentedControl<Value extends string>({
               justifyContent: "center",
               borderRadius: radius.md,
               backgroundColor: isSelected ? colors.card : "transparent",
+              opacity: disabled ? DISABLED_OPACITY : 1,
             }}
           >
             <Text

@@ -1,34 +1,30 @@
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
+import { previewFields } from "@mybookkeeper/api-client/utils/welcomeManualPreview";
 import { useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
-import InquiryChip from "../inquiries/InquiryChip";
 import TransactionFact from "../transactions/TransactionFact";
-import { photosLine } from "./welcomeManualDisplay";
+import WelcomeManualPhoto from "./WelcomeManualPhoto";
 
-interface WelcomeManualSectionProps {
-  section: WelcomeManualSectionResponse;
-  roomName: string | null;
-}
-
-export default function WelcomeManualSection({ section, roomName }: WelcomeManualSectionProps) {
+/** One section as a guest reads it: its text, its label and value pairs and its photos. */
+export default function WelcomeManualSection({ section }: { section: WelcomeManualSectionResponse }) {
   const { colors, spacing, fontSize } = useTheme();
-  const photos = photosLine(section.images.length);
   return (
     <View style={{ gap: spacing.sm }}>
       <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
         {section.title}
       </Text>
-      {roomName ? <InquiryChip label={roomName} /> : null}
-      {section.fields.map((field) =>
-        field.value ? <TransactionFact key={field.id} label={field.label} selectable value={field.value} /> : null,
-      )}
       {section.body ? (
         <Text selectable style={{ fontSize: fontSize.md, color: colors.foreground }}>
           {plainFromMarkdown(section.body)}
         </Text>
       ) : null}
-      {photos ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{photos}</Text> : null}
+      {previewFields(section.fields).map((field) => (
+        <TransactionFact key={field.id} label={field.label} selectable value={field.value ?? ""} />
+      ))}
+      {section.images.map((image) => (
+        <WelcomeManualPhoto image={image} key={image.id} size="full" />
+      ))}
     </View>
   );
 }

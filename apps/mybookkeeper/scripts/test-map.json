@@ -516,15 +516,17 @@
         "mobile/src/constants/listingPhotos.ts",
         "frontend/src/shared/lib/listing-form-resolver.ts",
         "mobile/src/types/ListingFormPicking.ts",
-        "mobile/src/types/ListingPhotoAddSource.ts",
-        "mobile/src/types/ListingPhotoPreparing.ts",
         "mobile/src/types/ListingPhotoBatch.ts",
         "mobile/src/types/ListingPhotoUpload.ts",
         "mobile/src/types/ListingPhotoUploadStatus.ts",
         "mobile/src/lib/useCopyText.ts",
         "mobile/src/features/uploads/pickHeldFile.ts",
         "mobile/test-support/listingsServer.ts",
-        "mobile/test-support/listingsHarness.tsx"
+        "mobile/test-support/listingsHarness.tsx",
+        "mobile/src/types/HeldPhotoSource.ts",
+        "mobile/src/types/PhotoPreparing.ts",
+        "mobile/src/features/uploads/useHeldPhotoPicker.ts",
+        "mobile/src/features/uploads/chooseLibraryAssets.ts"
       ],
       "backend_tests": [
         "test_listing_repo.py",
@@ -1216,6 +1218,8 @@
         "backend/app/services/welcome_manuals/",
         "backend/app/schemas/welcome_manuals/",
         "backend/app/api/welcome_manuals.py",
+        "backend/app/api/welcome_manual_section_images.py",
+        "backend/app/api/welcome_manual_section_fields.py",
         "backend/app/api/welcome_manual_places.py",
         "backend/app/api/welcome_manual_rooms.py",
         "backend/app/core/welcome_manual_constants.py",
@@ -1227,7 +1231,6 @@
         "frontend/src/app/pages/WelcomeManualDetail.tsx",
         "frontend/src/app/pages/PublicWelcomeManual.tsx",
         "frontend/src/app/features/welcome-manuals/",
-        "frontend/src/shared/store/welcomeManualsApi.ts",
         "frontend/src/shared/types/welcome-manual/",
         "frontend/src/shared/lib/welcome-manual-constants.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
@@ -1235,7 +1238,24 @@
         "frontend/src/shared/types/list-load-mode-args.ts",
         "frontend/src/shared/lib/detail-load-mode.ts",
         "frontend/src/shared/types/detail-load-mode.ts",
-        "frontend/src/shared/types/detail-load-mode-args.ts"
+        "frontend/src/shared/types/detail-load-mode-args.ts",
+        "api-client/src/store/welcomeManualsApi.ts",
+        "api-client/src/types/welcome-manual/",
+        "api-client/src/constants/welcomeManualLimits.ts",
+        "api-client/src/utils/welcomeManualProblems.ts",
+        "api-client/src/utils/welcomeManualRequests.ts",
+        "api-client/src/utils/welcomeManualScope.ts",
+        "api-client/src/utils/welcomeManualImageValidation.ts",
+        "mobile/src/features/welcomeManuals/",
+        "mobile/src/constants/welcomeManualForms.ts",
+        "mobile/src/constants/welcomeManualFailures.ts",
+        "mobile/app/(app)/welcome-manuals/",
+        "api-client/src/utils/welcomeManualDirty.ts",
+        "api-client/src/utils/welcomeManualFormat.ts",
+        "api-client/src/utils/welcomeManualReorder.ts",
+        "api-client/src/utils/welcomeManualShare.ts",
+        "api-client/src/utils/welcomeManualPlaces.ts",
+        "api-client/src/utils/welcomeManualPreview.ts"
       ],
       "backend_tests": [
         "test_welcome_manual_image_routes.py",
@@ -1252,7 +1272,12 @@
         "test_welcome_manual_room_service.py",
         "test_welcome_manual_section_repo.py",
         "test_welcome_manual_section_service.py",
-        "test_welcome_manual_share_service.py"
+        "test_welcome_manual_share_service.py",
+        "test_welcome_manual_reorder_routes.py",
+        "test_welcome_manual_routes.py",
+        "test_welcome_manual_section_image_service.py",
+        "test_welcome_manual_row_locks.py",
+        "test_welcome_manual_reorder_access.py"
       ],
       "frontend_tests": [
         "WelcomeManualDetail.test.tsx",
@@ -1266,13 +1291,16 @@
         "WelcomeManualPreview.test.tsx",
         "WelcomeManualCreateDialog.test.tsx",
         "list-load-mode.test.ts",
-        "detail-load-mode.test.ts"
+        "detail-load-mode.test.ts",
+        "WelcomeManualReorderFailure.test.tsx",
+        "WelcomeManualSectionImageManager.test.tsx"
       ],
       "e2e_specs": [
         "mocked/welcome-manuals-layout-mock.spec.ts",
         "welcome-manual-rooms.spec.ts",
         "welcome-manuals-layout.spec.ts",
-        "mocked/list-pages-retry-mock.spec.ts"
+        "mocked/list-pages-retry-mock.spec.ts",
+        "welcome-manual-reorder.spec.ts"
       ]
     },
     "leases": {

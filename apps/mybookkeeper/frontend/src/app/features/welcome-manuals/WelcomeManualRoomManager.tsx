@@ -1,15 +1,13 @@
 import { useState } from "react";
 import { DoorOpen, Plus, X } from "lucide-react";
 import { LoadingButton, ConfirmDialog, showError, showSuccess } from "@platform/ui";
-import {
-  NEW_ROOM_DEFAULT_NAME,
-  WELCOME_MANUAL_MAX_ROOMS,
-} from "@/shared/lib/welcome-manual-constants";
+import { WELCOME_MANUAL_MAX_ROOMS } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { NEW_ROOM_DEFAULT_NAME } from "@/shared/lib/welcome-manual-constants";
 import {
   useCreateRoomMutation,
   useDeleteRoomMutation,
   useUpdateRoomMutation,
-} from "@/shared/store/welcomeManualsApi";
+} from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
 
 export interface WelcomeManualRoomManagerProps {

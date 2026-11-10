@@ -1,15 +1,15 @@
+import { placeCuisines } from "@mybookkeeper/api-client/utils/welcomeManualPlaces";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { LoadingButton, ConfirmDialog, showError, showSuccess } from "@platform/ui";
-import {
-  NEW_PLACE_DEFAULT_NAME,
-  WELCOME_MANUAL_MAX_PLACES,
-} from "@/shared/lib/welcome-manual-constants";
+import { WELCOME_MANUAL_MAX_PLACES } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { NEW_PLACE_DEFAULT_NAME } from "@/shared/lib/welcome-manual-constants";
 import {
   useCreatePlaceMutation,
   useDeletePlaceMutation,
   useUpdatePlaceMutation,
-} from "@/shared/store/welcomeManualsApi";
+} from "@mybookkeeper/api-client/store/welcomeManualsApi";
+import type { WelcomeManualPlaceUpdateRequest } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-update-request";
 import type { WelcomeManualPlaceResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-response";
 import WelcomeManualPlaceCard from "./WelcomeManualPlaceCard";
 
@@ -29,9 +29,7 @@ export default function WelcomeManualPlaceManager({
 
   const sortedPlaces = [...places].sort((a, b) => a.display_order - b.display_order);
   const atCap = sortedPlaces.length >= WELCOME_MANUAL_MAX_PLACES;
-  const cuisineOptions = Array.from(
-    new Set(sortedPlaces.map((p) => p.cuisine).filter((c) => c.trim() !== "")),
-  ).sort();
+  const cuisineOptions = placeCuisines(sortedPlaces).filter((c) => c.trim() !== "");
 
   async function handleAdd() {
     if (atCap) return;
@@ -59,16 +57,10 @@ export default function WelcomeManualPlaceManager({
 
   async function handlePlaceSave(
     placeId: string,
-    changes: {
-      name?: string;
-      cuisine?: string;
-      price_tier?: "$" | "$$" | "$$$" | null;
-      note?: string | null;
-      map_url?: string | null;
-    },
+    changes: WelcomeManualPlaceUpdateRequest,
   ) {
     try {
-      await updatePlace({ manualId, placeId, ...changes }).unwrap();
+      await updatePlace({ manualId, placeId, data: changes }).unwrap();
     } catch {
       showError("I couldn't save that place. Want to try again?");
     }

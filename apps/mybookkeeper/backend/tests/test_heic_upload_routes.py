@@ -108,7 +108,8 @@ def test_welcome_manual_section_heic_upload_is_stored_as_jpeg(auth: None) -> Non
 
     with patch(f"{_MANUAL_SERVICE}.get_storage", return_value=storage), \
             patch(f"{_MANUAL_SERVICE}.unit_of_work", _fake_uow), \
-            patch(f"{_MANUAL_SERVICE}._load_section", AsyncMock(return_value=SimpleNamespace(id=section_id))), \
+            patch(f"{_MANUAL_SERVICE}.load_section_for_update", AsyncMock(return_value=SimpleNamespace(id=section_id))), \
+            patch(f"{_MANUAL_SERVICE}.welcome_manual_section_image_repo.list_by_section", AsyncMock(return_value=[])), \
             patch(f"{_MANUAL_SERVICE}.welcome_manual_section_image_repo.next_display_order", AsyncMock(return_value=0)), \
             patch(f"{_MANUAL_SERVICE}.welcome_manual_section_image_repo.create", create), \
             patch(f"{_MANUAL_SERVICE}.attach_presigned_urls", lambda rows: rows):

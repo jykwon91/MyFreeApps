@@ -4,14 +4,12 @@ import { CSS } from "@dnd-kit/utilities";
 import { DoorOpen, GripVertical, Trash2 } from "lucide-react";
 import { ConfirmDialog, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import Markdown from "@/shared/components/ui/Markdown";
-import {
-  NEW_SECTION_DEFAULT_TITLE,
-  SHARED_ROOM_OPTION,
-} from "@/shared/lib/welcome-manual-constants";
+import { SHARED_ROOM_OPTION } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { NEW_SECTION_DEFAULT_TITLE } from "@/shared/lib/welcome-manual-constants";
 import {
   useDeleteSectionMutation,
   useUpdateSectionMutation,
-} from "@/shared/store/welcomeManualsApi";
+} from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 import WelcomeManualSectionFieldManager from "./WelcomeManualSectionFieldManager";

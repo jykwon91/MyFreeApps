@@ -8,10 +8,19 @@ import { PHOTO_JPEG_QUALITY, PHOTO_LONGEST_SIDE } from "../../constants/capture"
  */
 export async function preparePhoto(uri: string, width: number, height: number): Promise<string> {
   const context = ImageManipulator.manipulate(uri);
-  if (Math.max(width, height) > PHOTO_LONGEST_SIDE) {
-    context.resize(width >= height ? { width: PHOTO_LONGEST_SIDE } : { height: PHOTO_LONGEST_SIDE });
+  try {
+    if (Math.max(width, height) > PHOTO_LONGEST_SIDE) {
+      context.resize(width >= height ? { width: PHOTO_LONGEST_SIDE } : { height: PHOTO_LONGEST_SIDE });
+    }
+    const image = await context.renderAsync();
+    try {
+      const saved = await image.saveAsync({ format: SaveFormat.JPEG, compress: PHOTO_JPEG_QUALITY });
+      return saved.uri;
+    } finally {
+      // Both hold native memory until they are let go.
+      image.release();
+    }
+  } finally {
+    context.release();
   }
-  const image = await context.renderAsync();
-  const saved = await image.saveAsync({ format: SaveFormat.JPEG, compress: PHOTO_JPEG_QUALITY });
-  return saved.uri;
 }

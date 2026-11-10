@@ -147,3 +147,76 @@ class TestUpdateDelete:
                 await welcome_manual_section_field_service.delete_field(
                     test_org.id, test_user.id, manual.id, section.id, field.id,
                 )
+
+
+class TestReorder:
+    @pytest.mark.asyncio
+    async def test_reorders_fields_in_one_write(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual, section = await _make_section(db, test_org, test_user)
+        a = await welcome_manual_section_field_repo.create(db, section_id=section.id, label="A", value=None, display_order=0)
+        b = await welcome_manual_section_field_repo.create(db, section_id=section.id, label="B", value=None, display_order=1)
+        c = await welcome_manual_section_field_repo.create(db, section_id=section.id, label="C", value=None, display_order=2)
+        await db.commit()
+        with _patch_uow(db):
+            result = await welcome_manual_section_field_service.reorder_fields(
+                test_org.id, test_user.id, manual.id, section.id, [c.id, a.id, b.id],
+            )
+        assert [f.label for f in result] == ["C", "A", "B"]
+        assert [f.display_order for f in result] == [0, 1, 2]
+        persisted = await welcome_manual_section_field_repo.list_by_section(db, section.id)
+        assert [f.label for f in persisted] == ["C", "A", "B"]
+
+    @pytest.mark.asyncio
+    async def test_rejects_a_partial_set(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual, section = await _make_section(db, test_org, test_user)
+        a = await welcome_manual_section_field_repo.create(db, section_id=section.id, label="A", value=None, display_order=0)
+        await welcome_manual_section_field_repo.create(db, section_id=section.id, label="B", value=None, display_order=1)
+        await db.commit()
+        with _patch_uow(db):
+            with pytest.raises(welcome_manual_section_field_service.InvalidFieldReorderError):
+                await welcome_manual_section_field_service.reorder_fields(
+                    test_org.id, test_user.id, manual.id, section.id, [a.id],
+                )
+
+    @pytest.mark.asyncio
+    async def test_rejects_a_repeated_id(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual, section = await _make_section(db, test_org, test_user)
+        a = await welcome_manual_section_field_repo.create(db, section_id=section.id, label="A", value=None, display_order=0)
+        await welcome_manual_section_field_repo.create(db, section_id=section.id, label="B", value=None, display_order=1)
+        await db.commit()
+        with _patch_uow(db):
+            with pytest.raises(welcome_manual_section_field_service.InvalidFieldReorderError):
+                await welcome_manual_section_field_service.reorder_fields(
+                    test_org.id, test_user.id, manual.id, section.id, [a.id, a.id],
+                )
+
+    @pytest.mark.asyncio
+    async def test_other_sections_fields_are_unknown(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual, section = await _make_section(db, test_org, test_user)
+        other = await welcome_manual_section_repo.create(db, manual_id=manual.id, title="Other", body=None, display_order=1)
+        mine = await welcome_manual_section_field_repo.create(db, section_id=section.id, label="Mine", value=None, display_order=0)
+        theirs = await welcome_manual_section_field_repo.create(db, section_id=other.id, label="Theirs", value=None, display_order=0)
+        await db.commit()
+        with _patch_uow(db):
+            with pytest.raises(welcome_manual_section_field_service.InvalidFieldReorderError):
+                await welcome_manual_section_field_service.reorder_fields(
+                    test_org.id, test_user.id, manual.id, section.id, [theirs.id],
+                )
+            kept = await welcome_manual_section_field_service.reorder_fields(
+                test_org.id, test_user.id, manual.id, section.id, [mine.id],
+            )
+        assert [f.label for f in kept] == ["Mine"]
+
+    @pytest.mark.asyncio
+    async def test_manual_and_section_scope(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual, section = await _make_section(db, test_org, test_user)
+        await db.commit()
+        with _patch_uow(db):
+            with pytest.raises(welcome_manual_section_field_service.ManualNotFoundError):
+                await welcome_manual_section_field_service.reorder_fields(
+                    uuid.uuid4(), test_user.id, manual.id, section.id, [uuid.uuid4()],
+                )
+            with pytest.raises(welcome_manual_section_field_service.SectionNotFoundError):
+                await welcome_manual_section_field_service.reorder_fields(
+                    test_org.id, test_user.id, manual.id, uuid.uuid4(), [uuid.uuid4()],
+                )

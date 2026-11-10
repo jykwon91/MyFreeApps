@@ -14,6 +14,7 @@ import pytest
 from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.welcome_manual_constants import WELCOME_MANUAL_MAX_SECTION_IMAGES
 from app.models.organization.organization import Organization
 from app.models.user.user import User
 from app.repositories.welcome_manuals import (
@@ -118,6 +119,34 @@ class TestUpload:
                 )
 
 
+class TestUploadCap:
+    @pytest.mark.asyncio
+    async def test_refuses_a_batch_past_the_cap_and_stores_nothing(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual, section = await _make_section(db, test_org, test_user)
+        for index in range(WELCOME_MANUAL_MAX_SECTION_IMAGES - 1):
+            await welcome_manual_section_image_repo.create(db, section_id=section.id, storage_key=f"k/{index}.jpg", caption=None, display_order=index)
+        await db.commit()
+        files = [(_jpeg_bytes(), "a.jpg", "image/jpeg"), (_jpeg_bytes(), "b.jpg", "image/jpeg")]
+        with _patch_uow(db):
+            with pytest.raises(welcome_manual_section_image_service.TooManyImagesError, match=str(WELCOME_MANUAL_MAX_SECTION_IMAGES)):
+                await welcome_manual_section_image_service.upload_images(
+                    test_org.id, test_user.id, manual.id, section.id, files,
+                )
+        assert len(await welcome_manual_section_image_repo.list_by_section(db, section.id)) == WELCOME_MANUAL_MAX_SECTION_IMAGES - 1
+
+    @pytest.mark.asyncio
+    async def test_allows_a_batch_that_lands_exactly_on_the_cap(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual, section = await _make_section(db, test_org, test_user)
+        for index in range(WELCOME_MANUAL_MAX_SECTION_IMAGES - 1):
+            await welcome_manual_section_image_repo.create(db, section_id=section.id, storage_key=f"k/{index}.jpg", caption=None, display_order=index)
+        await db.commit()
+        with _patch_uow(db):
+            result = await welcome_manual_section_image_service.upload_images(
+                test_org.id, test_user.id, manual.id, section.id, [(_jpeg_bytes(), "a.jpg", "image/jpeg")],
+            )
+        assert len(result) == 1
+
+
 class TestUpdateDelete:
     @pytest.mark.asyncio
     async def test_update_caption(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
@@ -185,3 +214,77 @@ class TestImagesSurfaceInManualResponse:
         assert len(resp.sections[0].images) == 1
         assert resp.sections[0].images[0].caption == "cap"
         assert resp.sections[0].images[0].presigned_url is not None
+
+
+class TestReorder:
+    @pytest.mark.asyncio
+    async def test_reorders_images_in_one_write(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual, section = await _make_section(db, test_org, test_user)
+        a = await welcome_manual_section_image_repo.create(db, section_id=section.id, storage_key="k/a.jpg", caption="A", display_order=0)
+        b = await welcome_manual_section_image_repo.create(db, section_id=section.id, storage_key="k/b.jpg", caption="B", display_order=1)
+        await db.commit()
+        with _patch_uow(db):
+            result = await welcome_manual_section_image_service.reorder_images(
+                test_org.id, test_user.id, manual.id, section.id, [b.id, a.id],
+            )
+        assert [i.caption for i in result] == ["B", "A"]
+        assert [i.display_order for i in result] == [0, 1]
+        assert all(i.presigned_url for i in result)
+        persisted = await welcome_manual_section_image_repo.list_by_section(db, section.id)
+        assert [i.caption for i in persisted] == ["B", "A"]
+
+    @pytest.mark.asyncio
+    async def test_rejects_a_partial_set(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual, section = await _make_section(db, test_org, test_user)
+        a = await welcome_manual_section_image_repo.create(db, section_id=section.id, storage_key="k/a.jpg", caption=None, display_order=0)
+        await welcome_manual_section_image_repo.create(db, section_id=section.id, storage_key="k/b.jpg", caption=None, display_order=1)
+        await db.commit()
+        with _patch_uow(db):
+            with pytest.raises(welcome_manual_section_image_service.InvalidImageReorderError):
+                await welcome_manual_section_image_service.reorder_images(
+                    test_org.id, test_user.id, manual.id, section.id, [a.id],
+                )
+
+    @pytest.mark.asyncio
+    async def test_rejects_a_duplicated_id_even_when_the_length_matches(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual, section = await _make_section(db, test_org, test_user)
+        a = await welcome_manual_section_image_repo.create(db, section_id=section.id, storage_key="k/a.jpg", caption=None, display_order=0)
+        await welcome_manual_section_image_repo.create(db, section_id=section.id, storage_key="k/b.jpg", caption=None, display_order=1)
+        await db.commit()
+        with _patch_uow(db):
+            with pytest.raises(welcome_manual_section_image_service.InvalidImageReorderError):
+                await welcome_manual_section_image_service.reorder_images(
+                    test_org.id, test_user.id, manual.id, section.id, [a.id, a.id],
+                )
+
+    @pytest.mark.asyncio
+    async def test_rejects_an_image_of_another_section(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual, section = await _make_section(db, test_org, test_user)
+        other = await welcome_manual_section_repo.create(db, manual_id=manual.id, title="Other", body=None, display_order=1)
+        a = await welcome_manual_section_image_repo.create(db, section_id=section.id, storage_key="k/a.jpg", caption=None, display_order=0)
+        foreign = await welcome_manual_section_image_repo.create(db, section_id=other.id, storage_key="k/f.jpg", caption=None, display_order=0)
+        await db.commit()
+        with _patch_uow(db):
+            with pytest.raises(welcome_manual_section_image_service.InvalidImageReorderError):
+                await welcome_manual_section_image_service.reorder_images(
+                    test_org.id, test_user.id, manual.id, section.id, [foreign.id],
+                )
+            with pytest.raises(welcome_manual_section_image_service.InvalidImageReorderError):
+                await welcome_manual_section_image_service.reorder_images(
+                    test_org.id, test_user.id, manual.id, section.id, [a.id, foreign.id],
+                )
+        assert [i.id for i in await welcome_manual_section_image_repo.list_by_section(db, section.id)] == [a.id]
+
+    @pytest.mark.asyncio
+    async def test_manual_and_section_scope(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        manual, section = await _make_section(db, test_org, test_user)
+        await db.commit()
+        with _patch_uow(db):
+            with pytest.raises(welcome_manual_section_image_service.ManualNotFoundError):
+                await welcome_manual_section_image_service.reorder_images(
+                    uuid.uuid4(), test_user.id, manual.id, section.id, [uuid.uuid4()],
+                )
+            with pytest.raises(welcome_manual_section_image_service.SectionNotFoundError):
+                await welcome_manual_section_image_service.reorder_images(
+                    test_org.id, test_user.id, manual.id, uuid.uuid4(), [uuid.uuid4()],
+                )

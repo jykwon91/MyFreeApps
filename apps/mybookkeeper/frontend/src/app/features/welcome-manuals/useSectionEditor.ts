@@ -1,20 +1,10 @@
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { showError, showSuccess } from "@platform/ui";
-import { useUpdateSectionMutation } from "@/shared/store/welcomeManualsApi";
-import type { SectionEditorValues } from "@/shared/types/welcome-manual/section-editor-values";
+import { useUpdateSectionMutation } from "@mybookkeeper/api-client/store/welcomeManualsApi";
+import type { WelcomeManualSectionEditorValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-editor-values";
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
-import type { WelcomeManualSectionUpdateRequest } from "@/shared/types/welcome-manual/welcome-manual-section-update-request";
-
-function valuesToUpdateRequest(
-  values: SectionEditorValues,
-  dirty: Partial<Record<keyof SectionEditorValues, boolean>>,
-): WelcomeManualSectionUpdateRequest {
-  const out: WelcomeManualSectionUpdateRequest = {};
-  if (dirty.title) out.title = values.title.trim();
-  if (dirty.body) out.body = values.body.trim() || null;
-  return out;
-}
+import { sectionUpdateRequest } from "@mybookkeeper/api-client/utils/welcomeManualRequests";
 
 export interface UseSectionEditorArgs {
   manualId: string;
@@ -22,7 +12,7 @@ export interface UseSectionEditorArgs {
 }
 
 export interface UseSectionEditorResult {
-  register: ReturnType<typeof useForm<SectionEditorValues>>["register"];
+  register: ReturnType<typeof useForm<WelcomeManualSectionEditorValues>>["register"];
   /** Wrapped submit handler — performs a dirty-only PATCH. */
   handleSubmit: () => void;
   /** Reset the form back to the server state (Cancel). */
@@ -49,7 +39,7 @@ export function useSectionEditor({ manualId, section }: UseSectionEditorArgs): U
   const serverTitle = section.title;
   const serverBody = section.body ?? "";
 
-  const defaults = useMemo<SectionEditorValues>(
+  const defaults = useMemo<WelcomeManualSectionEditorValues>(
     () => ({ title: serverTitle, body: serverBody }),
     [serverTitle, serverBody],
   );
@@ -60,7 +50,7 @@ export function useSectionEditor({ manualId, section }: UseSectionEditorArgs): U
     reset,
     watch,
     formState: { errors, dirtyFields, isDirty },
-  } = useForm<SectionEditorValues>({ defaultValues: defaults });
+  } = useForm<WelcomeManualSectionEditorValues>({ defaultValues: defaults });
 
   // Re-baseline only when the persisted text actually changes — a successful
   // save, or an edit from elsewhere. Keying this on object identity meant a
@@ -72,8 +62,8 @@ export function useSectionEditor({ manualId, section }: UseSectionEditorArgs): U
 
   const bodyValue = watch("body");
 
-  async function onSubmit(values: SectionEditorValues) {
-    const payload = valuesToUpdateRequest(values, dirtyFields);
+  async function onSubmit(values: WelcomeManualSectionEditorValues) {
+    const payload = sectionUpdateRequest(values, dirtyFields);
     if (Object.keys(payload).length === 0) return;
     try {
       await updateSection({ manualId, sectionId: section.id, data: payload }).unwrap();

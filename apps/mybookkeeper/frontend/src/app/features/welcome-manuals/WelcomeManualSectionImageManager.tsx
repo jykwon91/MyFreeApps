@@ -17,16 +17,20 @@ import {
 } from "@dnd-kit/sortable";
 import { Upload } from "lucide-react";
 import { LoadingButton, ConfirmDialog, showError, showSuccess } from "@platform/ui";
-import { validateSectionImages } from "@/shared/lib/validate-section-images";
+import { WELCOME_MANUAL_MAX_SECTION_IMAGES } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { validateSectionImages } from "@mybookkeeper/api-client/utils/welcomeManualImageValidation";
 import {
   useDeleteSectionImageMutation,
+  useReorderSectionImagesMutation,
   useUpdateSectionImageMutation,
   useUploadSectionImagesMutation,
-} from "@/shared/store/welcomeManualsApi";
+} from "@mybookkeeper/api-client/store/welcomeManualsApi";
+import { reorderFailureMessage } from "./reorder-failure-message";
 import type { SectionImageLightboxTarget } from "@/shared/types/welcome-manual/section-image-lightbox-target";
 import type { WelcomeManualSectionImageResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-image-response";
 import PhotoLightbox from "@/app/features/listings/PhotoLightbox";
 import WelcomeManualSectionImageCard from "./WelcomeManualSectionImageCard";
+import { buildSectionImageForm } from "./build-section-image-form";
 import { sectionImageToLightboxPhoto } from "./section-image-to-lightbox";
 
 export interface WelcomeManualSectionImageManagerProps {
@@ -43,6 +47,7 @@ export default function WelcomeManualSectionImageManager({
   const [uploadImages, { isLoading: isUploading }] = useUploadSectionImagesMutation();
   const [deleteImage] = useDeleteSectionImageMutation();
   const [updateImage] = useUpdateSectionImageMutation();
+  const [reorderImages] = useReorderSectionImagesMutation();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [orderedIds, setOrderedIds] = useState<string[] | null>(null);
   const [lightboxTarget, setLightboxTarget] = useState<SectionImageLightboxTarget | null>(null);
@@ -54,6 +59,7 @@ export default function WelcomeManualSectionImageManager({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  const atCap = images.length >= WELCOME_MANUAL_MAX_SECTION_IMAGES;
   const sortedImages = [...images].sort((a, b) => a.display_order - b.display_order);
   const displayIds = orderedIds ?? sortedImages.map((img) => img.id);
   const imagesById = new Map(sortedImages.map((img) => [img.id, img]));
@@ -72,8 +78,12 @@ export default function WelcomeManualSectionImageManager({
       showError(rejected.join("; "));
     }
     if (valid.length === 0) return;
+    if (images.length + valid.length > WELCOME_MANUAL_MAX_SECTION_IMAGES) {
+      showError(`A section can have at most ${WELCOME_MANUAL_MAX_SECTION_IMAGES} photos. Choose fewer and try again.`);
+      return;
+    }
     try {
-      await uploadImages({ manualId, sectionId, files: valid }).unwrap();
+      await uploadImages({ manualId, sectionId, form: buildSectionImageForm(valid) }).unwrap();
       showSuccess(valid.length === 1 ? "Photo added." : `${valid.length} photos added.`);
     } catch {
       showError("I couldn't upload that. Want to try again?");
@@ -94,7 +104,7 @@ export default function WelcomeManualSectionImageManager({
 
   async function handleCaptionSave(imageId: string, caption: string) {
     try {
-      await updateImage({ manualId, sectionId, imageId, caption: caption || null }).unwrap();
+      await updateImage({ manualId, sectionId, imageId, data: { caption: caption || null } }).unwrap();
     } catch {
       showError("I couldn't save that caption. Want to try again?");
     }
@@ -111,20 +121,10 @@ export default function WelcomeManualSectionImageManager({
     const newOrder = arrayMove(displayIds, oldIndex, newIndex);
     setOrderedIds(newOrder);
 
-    // There's no bulk-order endpoint for section images — fire one PATCH per
-    // image whose display_order changed. Small-N (a handful of photos per
-    // section) keeps this cheap, mirroring ListingPhotoManager.
     try {
-      await Promise.all(
-        newOrder.map((imageId, index) => {
-          const current = imagesById.get(imageId);
-          if (!current) return Promise.resolve();
-          if (current.display_order === index) return Promise.resolve();
-          return updateImage({ manualId, sectionId, imageId, display_order: index }).unwrap();
-        }),
-      );
-    } catch {
-      showError("I couldn't save the new order. Reverting.");
+      await reorderImages({ manualId, sectionId, imageIds: newOrder }).unwrap();
+    } catch (err) {
+      showError(reorderFailureMessage(err));
       setOrderedIds(null);
     }
   }
@@ -138,14 +138,16 @@ export default function WelcomeManualSectionImageManager({
     <div className="space-y-3" data-testid="welcome-manual-image-manager">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          JPEG, PNG, or HEIC. 10MB max each. EXIF metadata (including GPS) is
-          stripped on upload.
+          {atCap
+            ? `You've reached the ${WELCOME_MANUAL_MAX_SECTION_IMAGES}-photo limit for this section.`
+            : "JPEG, PNG, or HEIC. 10MB max each. EXIF metadata (including GPS) is stripped on upload."}
         </p>
         <LoadingButton
           variant="secondary"
           size="sm"
           isLoading={isUploading}
           loadingText="Uploading…"
+          disabled={atCap}
           onClick={() => fileInputRef.current?.click()}
           type="button"
           data-testid="welcome-manual-image-upload-button"

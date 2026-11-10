@@ -10,10 +10,10 @@ from app.models.welcome_manuals.welcome_manual_section_image import (
 
 # Columns mutable via PATCH. ``section_id`` and ``storage_key`` are immutable
 # post-create — moving an image between sections or rewriting its key is not a
-# supported flow.
+# supported flow. ``display_order`` is NOT here: it's only reassigned by the
+# atomic reorder (display_order_repo), so a PATCH can never create duplicates.
 _UPDATABLE_COLUMNS: frozenset[str] = frozenset({
     "caption",
-    "display_order",
 })
 
 

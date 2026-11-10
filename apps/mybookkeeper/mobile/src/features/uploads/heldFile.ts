@@ -24,6 +24,10 @@ export function holdFile(sourceUri: string, name: string): string {
   }
 }
 
+export function heldFileSize(uri: string): number {
+  return new File(uri).size;
+}
+
 /** Never throws: a saved upload mustn't look failed. The next launch tries again, and the system clears this folder when it needs room. */
 export function releaseHeldFile(uri: string): void {
   try {

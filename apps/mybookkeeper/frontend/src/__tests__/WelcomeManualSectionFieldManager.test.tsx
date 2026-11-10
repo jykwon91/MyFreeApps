@@ -9,18 +9,28 @@
  *   - The "Add field" button is disabled once the section hits the field cap.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
+import { showError } from "@platform/ui";
+import { WELCOME_MANUAL_STALE_ORDER_MESSAGE } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import userEvent from "@testing-library/user-event";
 import WelcomeManualSectionFieldManager from "@/app/features/welcome-manuals/WelcomeManualSectionFieldManager";
-import {
-  MAX_FIELDS_PER_SECTION,
-  NEW_FIELD_DEFAULT_LABEL,
-} from "@/shared/lib/welcome-manual-constants";
+import { MAX_FIELDS_PER_SECTION } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { NEW_FIELD_DEFAULT_LABEL } from "@/shared/lib/welcome-manual-constants";
 import type { WelcomeManualSectionFieldResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-field-response";
 
 const createFieldMock = vi.fn();
 const updateFieldMock = vi.fn();
+const reorderFieldsMock = vi.fn();
 const deleteFieldMock = vi.fn();
+
+let capturedDragEnd: ((e: unknown) => Promise<void>) | undefined;
+vi.mock("@dnd-kit/core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@dnd-kit/core")>()),
+  DndContext: ({ children, onDragEnd }: { children: React.ReactNode; onDragEnd: (e: unknown) => Promise<void> }) => {
+    capturedDragEnd = onDragEnd;
+    return <>{children}</>;
+  },
+}));
 
 vi.mock("@platform/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@platform/ui")>()),
@@ -28,10 +38,11 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showSuccess: vi.fn(),
 }));
 
-vi.mock("@/shared/store/welcomeManualsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/welcomeManualsApi", () => ({
   useCreateSectionFieldMutation: vi.fn(() => [createFieldMock, { isLoading: false }]),
   useUpdateSectionFieldMutation: vi.fn(() => [updateFieldMock, { isLoading: false }]),
   useDeleteSectionFieldMutation: vi.fn(() => [deleteFieldMock, { isLoading: false }]),
+  useReorderSectionFieldsMutation: vi.fn(() => [reorderFieldsMock, { isLoading: false }]),
 }));
 
 function makeField(
@@ -102,7 +113,7 @@ describe("WelcomeManualSectionFieldManager", () => {
         manualId: "m-1",
         sectionId: "sec-1",
         fieldId: "fld-1",
-        value: "Harbor",
+        data: { value: "Harbor" },
       });
     });
   });
@@ -121,5 +132,16 @@ describe("WelcomeManualSectionFieldManager", () => {
     );
     renderManager(fields);
     expect(screen.getByTestId("welcome-manual-field-add-button")).toBeDisabled();
+  });
+
+  it("shows the stale-order copy when a reorder is rejected with 409", async () => {
+    reorderFieldsMock.mockReturnValue({ unwrap: () => Promise.reject({ status: 409 }) });
+    renderManager([makeField({ id: "f-a" }), makeField({ id: "f-b", display_order: 1 })]);
+
+    await act(async () => {
+      await capturedDragEnd?.({ active: { id: "f-a" }, over: { id: "f-b" } });
+    });
+
+    expect(showError).toHaveBeenCalledWith(WELCOME_MANUAL_STALE_ORDER_MESSAGE);
   });
 });

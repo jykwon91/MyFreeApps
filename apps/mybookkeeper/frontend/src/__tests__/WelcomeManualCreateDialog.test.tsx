@@ -22,7 +22,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showSuccess: vi.fn(),
 }));
 
-vi.mock("@/shared/store/welcomeManualsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/welcomeManualsApi", () => ({
   useCreateWelcomeManualMutation: vi.fn(() => [createMutationMock, { isLoading: false }]),
 }));
 

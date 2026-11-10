@@ -20,6 +20,7 @@ WELCOME_MANUAL_STORAGE_DOMAIN = "welcome-manuals"
 # single manual into an unbounded number of rows. 50 is far above any real
 # welcome guide (Wi-Fi, trash, laundry, parking, check-out, house rules…).
 WELCOME_MANUAL_MAX_SECTIONS = 50
+TOO_MANY_SECTIONS_MESSAGE = "A manual can have at most {max} sections"
 
 # Section fields (label + value pairs, e.g. "Network name" / "Password").
 # Bounds mirrored by the Pydantic schemas. ``WELCOME_MANUAL_MAX_FIELDS`` guards
@@ -27,7 +28,13 @@ WELCOME_MANUAL_MAX_SECTIONS = 50
 WELCOME_MANUAL_MAX_FIELDS = 20
 WELCOME_MANUAL_FIELD_LABEL_MAX_LEN = 100
 WELCOME_MANUAL_FIELD_VALUE_MAX_LEN = 500
+TOO_MANY_FIELDS_MESSAGE = "A section can have at most {max} fields"
 NEW_FIELD_DEFAULT_LABEL = "New field"
+
+# Photos per section. Guards a section against unbounded image rows (and the
+# bucket against unbounded objects); enforced on upload and on reorder.
+WELCOME_MANUAL_MAX_SECTION_IMAGES = 20
+TOO_MANY_IMAGES_MESSAGE = "A section can have at most {max} photos"
 
 # Rooms. A manual can be split into rooms when one property is rented by the
 # room — the shared sections (Wi-Fi, trash day, house rules) are written once

@@ -14,9 +14,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import WelcomeManualEmailDialog from "@/app/features/welcome-manuals/WelcomeManualEmailDialog";
-import { SHARED_ROOM_OPTION } from "@/shared/lib/welcome-manual-constants";
+import { SHARED_ROOM_OPTION } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
-import type { WelcomeManualSendResponse } from "@/shared/types/welcome-manual/welcome-manual-send-response";
+import type { WelcomeManualSendResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-send-response";
 
 const emailMutationMock = vi.fn();
 const showErrorMock = vi.fn();
@@ -27,7 +27,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   showSuccess: vi.fn(),
 }));
 
-vi.mock("@/shared/store/welcomeManualsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/welcomeManualsApi", () => ({
   useEmailWelcomeManualMutation: vi.fn(() => [emailMutationMock, { isLoading: false }]),
 }));
 

@@ -66,14 +66,22 @@ async def get_by_id(
     db: AsyncSession,
     section_id: uuid.UUID,
     manual_id: uuid.UUID,
+    *,
+    for_update: bool = False,
 ) -> WelcomeManualSection | None:
-    """Return the section iff it exists and belongs to the given manual."""
-    result = await db.execute(
-        select(WelcomeManualSection).where(
-            WelcomeManualSection.id == section_id,
-            WelcomeManualSection.manual_id == manual_id,
-        )
+    """Return the section iff it exists and belongs to the given manual.
+
+    ``for_update=True`` locks the section row until the transaction ends, so
+    writers to its fields and images run one at a time per section. SQLite
+    ignores FOR UPDATE; Postgres honours it.
+    """
+    query = select(WelcomeManualSection).where(
+        WelcomeManualSection.id == section_id,
+        WelcomeManualSection.manual_id == manual_id,
     )
+    if for_update:
+        query = query.with_for_update()
+    result = await db.execute(query)
     return result.scalar_one_or_none()
 
 
@@ -148,6 +156,15 @@ async def update(
     section = await get_by_id(db, section_id, manual_id)
     if section is None:
         return None
+    return await apply_update(db, section, fields)
+
+
+async def apply_update(
+    db: AsyncSession,
+    section: WelcomeManualSection,
+    fields: dict[str, Any],
+) -> WelcomeManualSection:
+    """Apply allowlisted updates to an already-loaded (and locked) section."""
     safe_fields = {k: v for k, v in fields.items() if k in _UPDATABLE_COLUMNS}
     if not safe_fields:
         return section

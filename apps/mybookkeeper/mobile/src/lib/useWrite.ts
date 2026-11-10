@@ -13,6 +13,7 @@ interface RunOptions {
 export function useWrite() {
   const [isBusy, setIsBusy] = useState(false);
   const [failure, setFailure] = useState<WriteFailure | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const isSending = useRef(false);
 
   /** "done" when the write went through, "busy" when one was already in flight (and nothing was sent), or why it failed. */
@@ -21,19 +22,31 @@ export function useWrite() {
     isSending.current = true;
     setIsBusy(true);
     setFailure(null);
+    setError(null);
     try {
       await action();
       if (!staysLocked) isSending.current = false;
       return "done";
-    } catch (error) {
+    } catch (caught) {
       isSending.current = false;
-      const reason = writeFailure(error);
+      const reason = writeFailure(caught);
       setFailure(reason);
+      setError(caught);
       return reason;
     } finally {
       setIsBusy(false);
     }
   }
 
-  return { isBusy, failure, run, clearFailure: () => setFailure(null) };
+  /** `error` is what the failed request threw, for the screens that show the server's own reason. */
+  return {
+    isBusy,
+    failure,
+    error,
+    run,
+    clearFailure: () => {
+      setFailure(null);
+      setError(null);
+    },
+  };
 }

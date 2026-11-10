@@ -1,7 +1,7 @@
 """Pydantic schema for PATCH .../sections/{section_id}/fields/{field_id}.
 
-Allows label editing, value editing (including clearing to null), and
-reordering (display_order).
+Allows label editing and value editing (including clearing to null). Position
+only changes through the atomic reorder endpoint.
 """
 from __future__ import annotations
 
@@ -16,7 +16,6 @@ from app.core.welcome_manual_constants import (
 class WelcomeManualSectionFieldUpdateRequest(BaseModel):
     label: str | None = Field(default=None, min_length=1, max_length=WELCOME_MANUAL_FIELD_LABEL_MAX_LEN)
     value: str | None = Field(default=None, max_length=WELCOME_MANUAL_FIELD_VALUE_MAX_LEN)
-    display_order: int | None = Field(default=None, ge=0)
 
     model_config = ConfigDict(extra="forbid")
 

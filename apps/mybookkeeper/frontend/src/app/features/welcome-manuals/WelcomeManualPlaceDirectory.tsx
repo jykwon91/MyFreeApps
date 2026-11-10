@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MapPin } from "lucide-react";
-import { WELCOME_MANUAL_PRICE_TIERS } from "@/shared/lib/welcome-manual-constants";
 import type { WelcomeManualPlaceResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-response";
+import { filterPlaces, groupPlacesByCuisine, placeCuisines, placePriceTiers } from "@mybookkeeper/api-client/utils/welcomeManualPlaces";
 
 export interface WelcomeManualPlaceDirectoryProps {
   places: WelcomeManualPlaceResponse[];
@@ -28,30 +28,10 @@ export default function WelcomeManualPlaceDirectory({
 
   if (places.length === 0) return null;
 
-  const cuisines = Array.from(new Set(places.map((p) => p.cuisine))).sort();
-  const priceTiers = WELCOME_MANUAL_PRICE_TIERS.filter((tier) =>
-    places.some((p) => p.price_tier === tier),
-  );
-
-  const query = search.trim().toLowerCase();
-  const filteredPlaces = places.filter((place) => {
-    const matchesSearch =
-      !query ||
-      place.name.toLowerCase().includes(query) ||
-      place.cuisine.toLowerCase().includes(query) ||
-      (place.note ?? "").toLowerCase().includes(query);
-    const matchesCuisine = !selectedCuisine || place.cuisine === selectedCuisine;
-    const matchesPriceTier = !selectedPriceTier || place.price_tier === selectedPriceTier;
-    return matchesSearch && matchesCuisine && matchesPriceTier;
-  });
-
-  const groups = new Map<string, WelcomeManualPlaceResponse[]>();
-  for (const place of filteredPlaces) {
-    const list = groups.get(place.cuisine) ?? [];
-    list.push(place);
-    groups.set(place.cuisine, list);
-  }
-  const sortedCuisineKeys = Array.from(groups.keys()).sort();
+  const cuisines = placeCuisines(places);
+  const priceTiers = placePriceTiers(places);
+  const filteredPlaces = filterPlaces(places, { search, cuisine: selectedCuisine, priceTier: selectedPriceTier });
+  const groups = groupPlacesByCuisine(filteredPlaces);
 
   return (
     <section
@@ -138,11 +118,11 @@ export default function WelcomeManualPlaceDirectory({
         </p>
       ) : (
         <div className="space-y-4">
-          {sortedCuisineKeys.map((cuisine) => (
+          {groups.map(({ cuisine, places: groupPlaces }) => (
             <div key={cuisine} data-testid="welcome-manual-place-directory-group">
               <h3 className="text-sm font-semibold text-foreground mb-2">{cuisine}</h3>
               <ul className="space-y-2 list-none">
-                {(groups.get(cuisine) ?? []).map((place) => (
+                {groupPlaces.map((place) => (
                   <li
                     key={place.id}
                     className="border rounded-lg p-3 space-y-1"

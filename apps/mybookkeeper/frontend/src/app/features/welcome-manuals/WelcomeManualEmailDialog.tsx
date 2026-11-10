@@ -3,8 +3,9 @@ import { AlertCircle, CheckCircle, Info, X } from "lucide-react";
 import { FormField, LoadingButton, Panel, PanelTitle, showError } from "@platform/ui";
 import { DEMO_EMAIL_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
-import { EMAIL_REGEX, SHARED_ROOM_OPTION } from "@/shared/lib/welcome-manual-constants";
-import { useEmailWelcomeManualMutation } from "@/shared/store/welcomeManualsApi";
+import { EMAIL_REGEX, SHARED_ROOM_OPTION } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { useEmailWelcomeManualMutation } from "@mybookkeeper/api-client/store/welcomeManualsApi";
+import { emailRequest } from "@mybookkeeper/api-client/utils/welcomeManualRequests";
 import type { WelcomeManualEmailDialogStep } from "@/shared/types/welcome-manual/welcome-manual-email-dialog-step";
 import type { WelcomeManualRoomResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-room-response";
 
@@ -34,15 +35,10 @@ export default function WelcomeManualEmailDialog({ manualId, rooms, onClose }: W
 
   async function handleSend() {
     if (!canSend) return;
-    const roomId = roomChoice === "" || roomChoice === SHARED_ROOM_OPTION ? null : roomChoice;
     try {
       const send = await emailManual({
         manualId,
-        data: {
-          recipient_email: email.trim(),
-          recipient_name: name.trim() || null,
-          room_id: roomId,
-        },
+        data: emailRequest({ recipient_email: email, recipient_name: name, room_id: roomChoice }),
       }).unwrap();
       setErrorReason(send.error_reason);
       setStep(send.status);

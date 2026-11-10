@@ -1,4 +1,4 @@
-import type { ListingPhotoAddSource } from "../types/ListingPhotoAddSource";
+import type { HeldPhotoSource } from "../types/HeldPhotoSource";
 
 export const LISTING_PHOTO_MESSAGES = {
   heading: "Photos",
@@ -99,14 +99,10 @@ export const LISTING_PHOTO_FILE_NAME = "listing-photo.jpg";
 export const LISTING_PHOTO_GRID_COLUMNS = 3;
 export const LISTING_PHOTO_CAPTION_LINES = 1;
 
-export const LISTING_PHOTO_ADD_OPTIONS: { value: ListingPhotoAddSource; label: string }[] = [
+export const LISTING_PHOTO_ADD_OPTIONS: { value: HeldPhotoSource; label: string }[] = [
   { value: "camera", label: LISTING_PHOTO_MESSAGES.takePhoto },
   { value: "library", label: LISTING_PHOTO_MESSAGES.fromLibrary },
 ];
-
-export function preparingProgress(done: number, total: number): string {
-  return `Preparing ${Math.min(done + 1, total)} of ${total}`;
-}
 
 /** "Photo 2" for the upload list: where the photo is among those still to go. */
 export function uploadName(position: number): string {
