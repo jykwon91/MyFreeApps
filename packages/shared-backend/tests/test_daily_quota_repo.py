@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from platform_shared.db.models.daily_usage_counter import DailyUsageCounter
 from platform_shared.repositories.daily_quota_repo import (
+    delete_daily_usage_for_bucket,
     get_daily_usage,
     release_daily_quota,
     try_consume_daily_quota,
@@ -208,3 +209,54 @@ async def test_concurrent_reservations_never_exceed_cap(tmp_path: Path) -> None:
     assert sum(results) == cap // amount
     assert used == (cap // amount) * amount
     assert used <= cap
+
+
+# ---------------------------------------------------------------------------
+# Deleting an owner's bucket
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_delete_bucket_removes_every_day_of_that_bucket_only(db: AsyncSession) -> None:
+    other_day = date(2026, 9, 23)
+    for day in (_DAY, other_day):
+        await try_consume_daily_quota(db, bucket="app:user:1", cap=5, today=day)
+        await try_consume_daily_quota(db, bucket="app:global", cap=5, today=day)
+
+    removed = await delete_daily_usage_for_bucket(db, bucket="app:user:1")
+
+    assert removed == 2
+    assert await get_daily_usage(db, bucket="app:user:1", today=_DAY) == 0
+    assert await get_daily_usage(db, bucket="app:user:1", today=other_day) == 0
+    assert await get_daily_usage(db, bucket="app:global", today=_DAY) == 1
+    assert await get_daily_usage(db, bucket="app:global", today=other_day) == 1
+
+
+@pytest.mark.anyio
+async def test_delete_bucket_does_not_touch_buckets_it_is_a_prefix_of(db: AsyncSession) -> None:
+    """User id 12 must not take user id 123 (or 12-x) with it."""
+    for bucket in ("app:user:12", "app:user:123", "app:user:12-x", "xapp:user:12"):
+        await try_consume_daily_quota(db, bucket=bucket, cap=5, today=_DAY)
+
+    assert await delete_daily_usage_for_bucket(db, bucket="app:user:12") == 1
+
+    assert await get_daily_usage(db, bucket="app:user:12", today=_DAY) == 0
+    for survivor in ("app:user:123", "app:user:12-x", "xapp:user:12"):
+        assert await get_daily_usage(db, bucket=survivor, today=_DAY) == 1
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("wildcard_bucket", ["app:user:%", "app:user:_", "app:user:1%", "%"])
+async def test_delete_bucket_treats_like_wildcards_literally(
+    db: AsyncSession, wildcard_bucket: str,
+) -> None:
+    await try_consume_daily_quota(db, bucket="app:user:1", cap=5, today=_DAY)
+
+    assert await delete_daily_usage_for_bucket(db, bucket=wildcard_bucket) == 0
+
+    assert await get_daily_usage(db, bucket="app:user:1", today=_DAY) == 1
+
+
+@pytest.mark.anyio
+async def test_delete_bucket_with_no_rows_is_a_noop(db: AsyncSession) -> None:
+    assert await delete_daily_usage_for_bucket(db, bucket="never-used") == 0

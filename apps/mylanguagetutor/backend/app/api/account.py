@@ -20,7 +20,7 @@ from platform_shared.api.account_deletion_router import (
 from app.core.auth import current_active_user, get_user_manager
 from app.db.session import get_db, unit_of_work
 from app.models.user.user import User
-from app.services.user import account_service
+from app.services.user import account_deletion_service, account_service
 from app.services.user import totp_service
 
 router = APIRouter(tags=["account"])
@@ -39,6 +39,7 @@ router.include_router(
         verify_totp_step_up=_verify_totp_late_lookup,
         # Lambda for late lookup so tests patching `unit_of_work` take effect.
         unit_of_work_factory=lambda: unit_of_work(),
+        prepare_deletion=account_deletion_service.prepare_deletion,
     )
 )
 

@@ -35,7 +35,7 @@ input doesn't burn quota) and BEFORE the expensive call.
 """
 from datetime import date, datetime, timezone
 
-from sqlalchemy import case, update
+from sqlalchemy import case, delete, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -134,3 +134,17 @@ async def get_daily_usage(
     """Current count for ``bucket`` on ``today`` (UTC); 0 when no row yet."""
     row = await db.get(DailyUsageCounter, (bucket, today or utc_today()))
     return row.count if row is not None else 0
+
+
+async def delete_daily_usage_for_bucket(db: AsyncSession, *, bucket: str) -> int:
+    """Delete every day's counter row for exactly ``bucket``; returns rows removed.
+
+    For per-owner buckets (e.g. ``app:user:<id>``) when the owner's account is
+    deleted: the key embeds their id, so no foreign key cascades to it. The
+    match is on the whole key (equality, not a prefix or LIKE), so one owner's
+    delete can never touch another's. Pass the key from the same builder the
+    app consumes with. Does NOT commit - the caller owns the transaction.
+    """
+    table = DailyUsageCounter.__table__
+    result = await db.execute(delete(table).where(table.c.bucket == bucket))
+    return result.rowcount
