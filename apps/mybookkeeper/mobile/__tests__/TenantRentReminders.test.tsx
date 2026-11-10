@@ -4,12 +4,11 @@ import type { RentReminderPreview } from "@mybookkeeper/api-client/types/rent/re
 import type { RentReminderSend } from "@mybookkeeper/api-client/types/rent/rent-reminder-send";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import {
   addEmailFirst,
   emailOnlyWent,

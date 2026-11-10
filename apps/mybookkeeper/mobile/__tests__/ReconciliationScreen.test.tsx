@@ -2,7 +2,7 @@ import { reconciliationApi } from "@mybookkeeper/api-client/store/reconciliation
 import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import type { ReactNode } from "react";
@@ -10,7 +10,6 @@ import { Alert } from "react-native";
 import { reconciliationTaxYears } from "@mybookkeeper/api-client/utils/reconciliationTaxYears";
 import { compareFailureMessage, compareResultMessage } from "@mybookkeeper/api-client/utils/reconciliationCompare";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../src/constants/reconciliation";
 import ReconciliationAddScreen from "../src/features/reconciliation/ReconciliationAddScreen";
 import {

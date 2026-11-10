@@ -1,12 +1,10 @@
 import { useGetMortgageByIdQuery } from "@mybookkeeper/api-client/store/mortgagesApi";
-import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, Chip, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { MORTGAGE_MESSAGES } from "../../constants/mortgages";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useTodayIso } from "../../lib/useTodayIso";
-import InquiryChip from "../inquiries/InquiryChip";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import MortgageDetailSkeleton from "./MortgageDetailSkeleton";
@@ -48,7 +46,7 @@ export default function MortgageDetailScreen({ id }: { id: string }) {
         {mortgage.lender ? <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{mortgage.lender}</Text> : null}
         {mortgage.rate_type === "arm" ? (
           <View style={{ flexDirection: "row" }}>
-            <InquiryChip label={MORTGAGE_MESSAGES.adjustable} />
+            <Chip label={MORTGAGE_MESSAGES.adjustable} />
           </View>
         ) : null}
         {fixedLine ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{fixedLine}</Text> : null}

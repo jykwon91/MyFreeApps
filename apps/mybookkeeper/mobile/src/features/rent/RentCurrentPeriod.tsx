@@ -3,10 +3,9 @@ import type { RentPeriodSummary } from "@mybookkeeper/api-client/types/rent/rent
 import { periodDateRange } from "@mybookkeeper/api-client/utils/rentPeriodDates";
 import { proratedNote } from "@mybookkeeper/api-client/utils/rentProratedNote";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { useTheme } from "@platform/mobile";
+import { Chip, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { amountOf, isOverdue, RENT_MESSAGES, stillToCome } from "../../constants/rent";
-import InquiryChip from "../inquiries/InquiryChip";
 import { isMoreThanACent } from "./rentDisplay";
 
 function periodOutlook(period: RentPeriodSummary): string {
@@ -29,7 +28,7 @@ export default function RentCurrentPeriod({ period }: { period: RentPeriodSummar
       <Text style={{ fontSize: fontSize.lg, fontWeight: "600", fontVariant: ["tabular-nums"], color: colors.foreground }}>
         {period.status === "waived" ? formatCurrency(period.amount) : amountOf(formatCurrency(period.allocated), formatCurrency(period.amount))}
       </Text>
-      <InquiryChip label={RENT_CHARGE_STATUS_LABEL[period.status]} />
+      <Chip label={RENT_CHARGE_STATUS_LABEL[period.status]} />
       {note ? <Text style={mutedText}>{note}</Text> : null}
       <Text style={isLate ? { fontSize: fontSize.sm, color: colors.destructive } : mutedText}>{periodOutlook(period)}</Text>
     </View>

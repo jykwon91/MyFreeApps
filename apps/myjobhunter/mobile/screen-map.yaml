@@ -4,7 +4,7 @@ routes:
   /analyze:
     not_on_mobile: Not built yet.
   /applications:
-    not_on_mobile: Not built yet.
+    screen: (app)/(tabs)/applications
   /applications/:id:
     not_on_mobile: Not built yet.
   /companies:

@@ -1,7 +1,6 @@
 import { useGetAttributionReviewQueueQuery } from "@mybookkeeper/api-client/store/attributionApi";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { FlatList, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES } from "../../constants/paymentReview";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { moreWaitingLine, queueCountLine } from "./paymentReviewDisplay";

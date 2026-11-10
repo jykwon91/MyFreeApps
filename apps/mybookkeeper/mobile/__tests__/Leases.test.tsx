@@ -4,14 +4,13 @@ import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease
 import { signedLeasesApi } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { MoreRow, ToastProvider } from "@platform/mobile";
+import { MoreRow, SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import * as Sharing from "expo-sharing";
 import { Linking } from "react-native";
 import { Provider } from "react-redux";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { WEB_BASE_URL } from "../src/constants/api";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { leaseCountdown, leaseTerm, sortLeaseFiles } from "../src/features/leases/leaseDisplay";
 import LeaseDetailScreen from "../src/features/leases/LeaseDetailScreen";
 import LeaseValuesScreen from "../src/features/leases/LeaseValuesScreen";

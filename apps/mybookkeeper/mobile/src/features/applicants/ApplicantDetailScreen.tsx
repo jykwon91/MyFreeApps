@@ -4,19 +4,17 @@ import { transactionsApi } from "@mybookkeeper/api-client/store/transactionsApi"
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import { getAllowedTransitions } from "@mybookkeeper/api-client/utils/applicantStageTransitions";
-import { Banner, EmptyState, LoadingButton, OptionSheet, Skeleton, useRefresh, useTheme, useToast } from "@platform/mobile";
+import { Banner, Chip, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CONTRACT_LOCKED_STAGE, STAGES_READY_FOR_LEASE } from "../../constants/applicants";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import TenantLeases from "../leases/TenantLeases";
 import TenantRent from "../rent/TenantRent";
 import TenantRentReminders from "../rent/TenantRentReminders";
 import TenantPayments from "./TenantPayments";
 import TenancySection from "../tenants/TenancySection";
-import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
 import TransactionFact from "../transactions/TransactionFact";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
@@ -97,7 +95,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
             {applicantName(applicant.legal_name)}
           </Text>
           {isTenant ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`Promoted ${promotedAgo(applicant.created_at)}`}</Text>}
-          {isTenant ? null : <InquiryChip label={applicantStageLabel(applicant.stage)} />}
+          {isTenant ? null : <Chip label={applicantStageLabel(applicant.stage)} />}
         </View>
 
         {isTenant ? <TenancySection applicant={applicant} /> : null}

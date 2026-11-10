@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { Provider } from "react-redux";
 import { DRILL_DOWN_TRUNCATED_MESSAGE } from "@mybookkeeper/api-client/constants/transactionPaging";
 import { DRILL_DOWN_MESSAGES as MESSAGES } from "../src/constants/moneyAnalysis";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
+import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import DrillDownScreen from "../src/features/drillDown/DrillDownScreen";
 import { store } from "../src/lib/store";
 import { aTransaction, startTransactionServer } from "../test-support/transactionsServer";

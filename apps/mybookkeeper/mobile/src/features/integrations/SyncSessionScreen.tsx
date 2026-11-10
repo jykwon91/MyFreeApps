@@ -1,10 +1,9 @@
 import { integrationsApi, useGetEmailQueueQuery, useGetSyncLogsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import { syncPollInterval } from "@mybookkeeper/api-client/utils/syncPollInterval";
-import { Banner, EmptyState, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { FlatList, Text, View } from "react-native";
 import { INTEGRATIONS_MESSAGES as MESSAGES } from "../../constants/integrations";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useScreenFocused } from "../../lib/useScreenFocused";
 import QueueItemRow from "./QueueItemRow";
 import SyncSessionFacts from "./SyncSessionFacts";

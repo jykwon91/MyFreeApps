@@ -1,9 +1,8 @@
 import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { Chip, LoadingButton, useTheme } from "@platform/mobile";
 import { useRef } from "react";
 import { Text, View } from "react-native";
 import { EMAIL_QUEUE_STATUS_LABELS, INTEGRATIONS_MESSAGES as MESSAGES } from "../../constants/integrations";
-import InquiryChip from "../inquiries/InquiryChip";
 import { askOnce } from "../../lib/askOnce";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { useQueueItemActions } from "./useQueueItemActions";
@@ -31,7 +30,7 @@ export default function QueueItemRow({ item }: { item: EmailQueueItem }) {
           {item.email_subject}
         </Text>
       ) : null}
-      <InquiryChip label={EMAIL_QUEUE_STATUS_LABELS[item.status]} />
+      <Chip label={EMAIL_QUEUE_STATUS_LABELS[item.status]} />
       {item.error ? (
         <Text selectable style={{ fontSize: fontSize.sm, color: item.status === "failed" ? colors.destructiveText : colors.mutedForeground }}>
           {item.error}

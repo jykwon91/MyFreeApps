@@ -1,8 +1,7 @@
 import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
 import { formatAnnualPremium } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
-import InquiryChip from "../inquiries/InquiryChip";
 import { expiryLabel, policyPlace, policyRowLabel } from "./policyDisplay";
 
 interface PolicyRowProps {
@@ -43,7 +42,7 @@ export default function PolicyRow({ policy, todayIso, onPress }: PolicyRowProps)
       ) : null}
       {expiry ? (
         <View style={{ flexDirection: "row" }}>
-          <InquiryChip label={expiry} />
+          <Chip label={expiry} />
         </View>
       ) : null}
     </Pressable>

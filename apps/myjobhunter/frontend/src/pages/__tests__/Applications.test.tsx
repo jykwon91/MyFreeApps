@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Applications from "@/pages/Applications";
+import { columnValues, sortTableBy } from "@/test-utils/sortTableBy";
 
 // ---------------------------------------------------------------------------
 // Mock RTK Query hooks
@@ -103,6 +104,7 @@ function makeApp(overrides: Partial<{
   role_title: string;
   latest_status: string | null;
   company_name: string | null;
+  applied_at: string | null;
 }> = {}) {
   return {
     id: overrides.id ?? "app-1",
@@ -113,7 +115,7 @@ function makeApp(overrides: Partial<{
     jd_text: null,
     jd_parsed: null,
     source: "linkedin",
-    applied_at: "2026-01-15T00:00:00Z",
+    applied_at: overrides.applied_at === undefined ? "2026-01-15T00:00:00Z" : overrides.applied_at,
     posted_salary_min: null,
     posted_salary_max: null,
     posted_salary_currency: "USD",
@@ -369,6 +371,46 @@ describe("Applications page", () => {
 
       // formatEventType falls back to capitalize + replace underscores
       expect(screen.getByText("Phone screen")).toBeInTheDocument();
+    });
+  });
+
+  describe("sorting", () => {
+    // Rows render in the server's order; the company name tells them apart.
+    const apps = [
+      makeApp({ id: "a", company_name: "NoStatus", latest_status: null, applied_at: "2026-10-02T00:00:00Z" }),
+      makeApp({ id: "b", company_name: "Offer", latest_status: "offer_received", applied_at: null }),
+      makeApp({ id: "c", company_name: "Applied", latest_status: "applied", applied_at: "2026-09-30T00:00:00Z" }),
+      makeApp({ id: "d", company_name: "Interview", latest_status: "interview_scheduled", applied_at: "2025-12-01T00:00:00Z" }),
+    ];
+
+    beforeEach(() => {
+      mockUseListApplicationsQuery.mockReturnValue({
+        data: { items: apps, total: apps.length },
+        isLoading: false,
+        isError: false,
+        error: undefined,
+      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+    });
+
+    it("sorts Status in pipeline order with no status last, both ways", () => {
+      renderApplications();
+
+      sortTableBy(/status/i, "ascending");
+      expect(columnValues(0)).toEqual(["Applied", "Interview", "Offer", "NoStatus"]);
+
+      sortTableBy(/status/i, "descending");
+      expect(columnValues(0)).toEqual(["Offer", "Interview", "Applied", "NoStatus"]);
+    });
+
+    it("sorts Applied on the real date with not-yet-applied last, both ways", () => {
+      renderApplications();
+
+      sortTableBy(/applied/i, "ascending");
+      expect(columnValues(0)).toEqual(["Interview", "Applied", "NoStatus", "Offer"]);
+
+      sortTableBy(/applied/i, "descending");
+      // Localized text would put 10/2/2026 before 9/30/2026 ascending; the date doesn't.
+      expect(columnValues(0)).toEqual(["NoStatus", "Applied", "Interview", "Offer"]);
     });
   });
 });

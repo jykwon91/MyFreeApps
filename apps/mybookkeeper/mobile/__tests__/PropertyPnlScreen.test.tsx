@@ -6,7 +6,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import type { ReactNode } from "react";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
+import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { PROPERTY_PNL_MESSAGES as MESSAGES } from "../src/constants/propertyPnl";
 import { NO_FILTERS } from "../src/constants/transactionFilters";
 import PropertyPnlScreen from "../src/features/propertyPnl/PropertyPnlScreen";

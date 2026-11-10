@@ -2,13 +2,12 @@ import { useGetCalendarEventsQuery, useGetReviewQueueCountQuery } from "@mybookk
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
-import { Banner, LoadingButton, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { SectionList, View } from "react-native";
 import { CALENDAR_LISTINGS_CHECK, CALENDAR_MESSAGES } from "../../constants/calendar";
 import { FILTER_MESSAGES } from "../../constants/calendarFilters";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { isoFromDate, monthOf, shiftMonth } from "../../lib/localDate";
 import { useToday } from "../../lib/useToday";
 import type { CalendarFilters } from "../../types/CalendarFilters";

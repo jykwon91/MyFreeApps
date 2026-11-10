@@ -2,14 +2,13 @@ import { RECEIPT_GMAIL_STATE_MESSAGES, RECEIPT_SEND_BLOCKER_MESSAGES } from "@my
 import { rentReceiptsApi } from "@mybookkeeper/api-client/store/rentReceiptsApi";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, renderHook, screen } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { router } from "expo-router";
 import type { ReactNode } from "react";
 import { Alert, Linking } from "react-native";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { FIX_ON_WEBSITE, RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../src/constants/receipts";
 import {
   blockerMessage,

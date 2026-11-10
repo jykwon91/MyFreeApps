@@ -1,9 +1,8 @@
 import type { TaxSummaryResponse } from "@mybookkeeper/api-client/types/summary/TaxSummaryResponse";
 import { TAX_REPORT_VIEWS } from "../../constants/taxReport";
-import { Banner, SegmentedControl, useTheme } from "@platform/mobile";
+import { Banner, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useTheme } from "@platform/mobile";
 import { formatCurrency } from "@platform/core/utils/currency";
 import { Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { TAX_REPORT_MESSAGES as MESSAGES } from "../../constants/taxReport";
 import type { TaxReportView } from "../../types/TaxReportView";
 import PickerField from "../transactions/PickerField";

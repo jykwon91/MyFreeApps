@@ -1,8 +1,7 @@
 import { useListSourcesQuery } from "@mybookkeeper/api-client/store/reconciliationApi";
-import { Banner, EmptyState, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import { useCanWrite } from "../workspace/useCanWrite";
 import ReconciliationDetailBody from "./ReconciliationDetailBody";

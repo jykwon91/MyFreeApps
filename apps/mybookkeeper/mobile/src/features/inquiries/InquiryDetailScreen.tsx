@@ -2,19 +2,17 @@ import { useGetInquiryByIdQuery } from "@mybookkeeper/api-client/store/inquiries
 import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { INQUIRY_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
-import { Banner, EmptyState, LoadingButton, OptionSheet, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, Chip, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import type { InquiryMoreAction } from "../../types/InquiryMoreAction";
 import TransactionFact from "../transactions/TransactionFact";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { deleteReplyDraft } from "./replyDrafts";
 import { moreOptions, stageOptions } from "./inquiryActionOptions";
-import InquiryChip from "./InquiryChip";
 import InquiryContact from "./InquiryContact";
 import { inquirerName, receivedAgo, stageLabel, stayDates } from "./inquiryDisplay";
 import InquiryExtras from "./InquiryExtras";
@@ -90,7 +88,7 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
           <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
             {`${INQUIRY_SOURCE_LABELS[inquiry.source]} · Received ${receivedAgo(inquiry.received_at)}`}
           </Text>
-          <InquiryChip label={stageLabel(inquiry.stage)} />
+          <Chip label={stageLabel(inquiry.stage)} />
         </View>
 
         {isFlagged || isSpam ? (

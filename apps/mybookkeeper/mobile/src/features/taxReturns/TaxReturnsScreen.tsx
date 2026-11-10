@@ -1,10 +1,9 @@
 import { useListTaxReturnsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import type { TaxReturn } from "@mybookkeeper/api-client/types/tax/TaxReturn";
-import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { FlatList, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { TAX_RETURN_CREATE_MESSAGES } from "../../constants/taxReturnCreate";
 import { TAX_RETURNS_MESSAGES as MESSAGES } from "../../constants/taxReturns";
 import { isServerAnswer } from "../../utils/isServerAnswer";

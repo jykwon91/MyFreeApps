@@ -1,12 +1,11 @@
 import { LISTING_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
-import { Banner, LoadingButton, useOpenLink, useTheme } from "@platform/mobile";
+import { Banner, Chip, LoadingButton, useOpenLink, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef } from "react";
 import { Text, View } from "react-native";
 import { LISTING_LINK_MESSAGES as MESSAGES, removeLinkTitle } from "../../constants/listingLinks";
 import { askOnce } from "../../lib/askOnce";
-import InquiryChip from "../inquiries/InquiryChip";
 import { useListingLinkActions } from "./useListingLinkActions";
 
 interface ListingLinkRowProps {
@@ -24,7 +23,7 @@ export default function ListingLinkRow({ link, canWrite }: ListingLinkRowProps) 
   return (
     <View style={{ gap: spacing.sm, padding: spacing.md, borderWidth: 1, borderRadius: radius.md, borderColor: colors.input }}>
       {actions.failure ? <Banner message={actions.failure} /> : null}
-      <InquiryChip label={source} />
+      <Chip label={source} />
       {link.external_id ? (
         <Text selectable style={{ fontSize: fontSize.md, color: colors.foreground }}>
           {MESSAGES.idLabel}: {link.external_id}

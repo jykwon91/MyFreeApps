@@ -1,12 +1,11 @@
 import { useListSignedLeasePagesInfiniteQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { Banner, EmptyState, LoadingButton, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
 import { LEASE_IMPORT_MESSAGES } from "../../constants/leaseImport";
 import { LEASE_FILTERS, LEASE_MESSAGES } from "../../constants/leases";
 import { NEW_LEASE_MESSAGES } from "../../constants/newLease";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { uniqueById } from "../../lib/uniqueById";
 import type { LeaseFilter } from "../../types/LeaseFilter";
 import ApplicantsSkeleton, { ApplicantSkeletonRow } from "../applicants/ApplicantsSkeleton";

@@ -1,10 +1,9 @@
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetReviewQueueQuery } from "@mybookkeeper/api-client/store/calendarApi";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { useMemo } from "react";
 import { FlatList, Text } from "react-native";
 import { REVIEW_MESSAGES, REVIEW_QUEUE_LISTINGS_ARGS } from "../../constants/calendarReview";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useCanWrite } from "../workspace/useCanWrite";
 import ReviewQueueCard from "./ReviewQueueCard";
 import ReviewQueueSkeleton from "./ReviewQueueSkeleton";

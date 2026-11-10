@@ -1,10 +1,9 @@
 import { changeFigures } from "@mybookkeeper/api-client/utils/comparePeriods";
-import { Banner, SegmentedControl, useTheme } from "@platform/mobile";
+import { Banner, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useTheme } from "@platform/mobile";
 import { formatCurrency } from "@platform/core/utils/currency";
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 import { UTILITY_COSTS_MESSAGES as MESSAGES, UTILITY_GRANULARITIES } from "../../constants/analytics";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import type { UtilityCostRow } from "../../types/UtilityCostRow";
 import type { UtilityGranularity } from "../../types/UtilityGranularity";
 import ChangeNote from "../analyticsControls/ChangeNote";

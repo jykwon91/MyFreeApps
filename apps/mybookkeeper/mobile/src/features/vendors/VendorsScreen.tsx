@@ -1,10 +1,9 @@
 import { useListVendorPagesInfiniteQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendor-category";
-import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { VENDOR_MESSAGES } from "../../constants/vendors";
 import { uniqueById } from "../../lib/uniqueById";
 import LoadMoreFailed from "../shell/LoadMoreFailed";

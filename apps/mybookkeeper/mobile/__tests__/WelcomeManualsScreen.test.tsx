@@ -1,6 +1,6 @@
 import api from "@platform/core/lib/api";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
+import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { WELCOME_MANUAL_MESSAGES } from "../src/constants/welcomeManuals";
 import WelcomeManualsScreen from "../src/features/welcomeManuals/WelcomeManualsScreen";
 import { aManual } from "../test-support/aWelcomeManual";

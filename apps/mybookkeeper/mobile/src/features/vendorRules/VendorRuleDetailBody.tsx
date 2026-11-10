@@ -2,10 +2,9 @@ import type { ClassificationRule } from "@mybookkeeper/api-client/types/classifi
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import { matchTypeLabel, ruleSourceLabel } from "@mybookkeeper/api-client/utils/classificationRules";
 import type { VendorRulePropertyState } from "../../types/VendorRulePropertyState";
-import { Banner, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useTheme } from "@platform/mobile";
 import { type ReactElement, useRef } from "react";
 import { type RefreshControlProps, ScrollView, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { DELETE_VENDOR_RULE_BODY, deleteVendorRuleTitle, VENDOR_RULE_MESSAGES as MESSAGES } from "../../constants/vendorRules";
 import { askOnce } from "../../lib/askOnce";
 import { categoryLabel } from "../transactions/transactionDisplay";

@@ -1,11 +1,10 @@
 import { RENT_REMINDER_CHANNEL_LABEL, RENT_REMINDER_STATUS_LABEL } from "@mybookkeeper/api-client/constants/rentReminderLabels";
 import { useGetRentReminderSendsQuery } from "@mybookkeeper/api-client/store/rentRemindersApi";
 import { describeReminderError } from "@mybookkeeper/api-client/utils/rentReminderError";
-import { LoadingButton, Skeleton, useTheme } from "@platform/mobile";
+import { Chip, LoadingButton, Skeleton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { REMINDER_MESSAGES, RENT_REMINDERS_SHOWN_AT_FIRST, showAllReminders } from "../../constants/rentReminders";
-import InquiryChip from "../inquiries/InquiryChip";
 import { dueLine } from "./rentReminderDisplay";
 
 export default function RentReminderHistory({ applicantId }: { applicantId: string }) {
@@ -38,7 +37,7 @@ export default function RentReminderHistory({ applicantId }: { applicantId: stri
       {shown?.map((send) => (
         <View accessible key={send.id} style={{ gap: spacing.xs }}>
           <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{`${RENT_REMINDER_CHANNEL_LABEL[send.channel]} · ${dueLine(send)}`}</Text>
-          <InquiryChip label={RENT_REMINDER_STATUS_LABEL[send.status]} />
+          <Chip label={RENT_REMINDER_STATUS_LABEL[send.status]} />
           {send.status === "failed" ? <Text style={mutedText}>{describeReminderError(send.error_code)}</Text> : null}
         </View>
       ))}

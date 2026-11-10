@@ -2,12 +2,11 @@ import { transactionsApi } from "@mybookkeeper/api-client/store/transactionsApi"
 import type { RentLedgerResponse } from "@mybookkeeper/api-client/types/rent/rent-ledger-response";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { router } from "expo-router";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { RENT_MESSAGES } from "../src/constants/rent";
 import { RENT_MANAGE_MESSAGES } from "../src/constants/rentManage";
 import TenantRent from "../src/features/rent/TenantRent";

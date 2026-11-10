@@ -2,7 +2,7 @@ import api from "@platform/core/lib/api";
 import { act, fireEvent, screen } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import { INTEGRATIONS_MESSAGES as MESSAGES } from "../src/constants/integrations";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
+import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import IntegrationsScreen from "../src/features/integrations/IntegrationsScreen";
 import { aGmail, aQueueItem, aSyncLog, startIntegrationsServer } from "../test-support/integrationsServer";
 import { renderScreen, resetSignedInStore } from "../test-support/renderScreen";

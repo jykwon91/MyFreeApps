@@ -4,12 +4,11 @@ import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insur
 import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { Provider } from "react-redux";
 import { INSURANCE_MESSAGES } from "../src/constants/insurance";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { openAttachmentFile } from "../src/features/documents/openDocumentFile";
 import PoliciesScreen from "../src/features/insurance/PoliciesScreen";
 import { expiryLabel, policyTerm, sortedPolicies } from "../src/features/insurance/policyDisplay";

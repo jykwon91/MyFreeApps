@@ -5,7 +5,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { act, render, screen } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
+import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { TAX_REVIEW_MESSAGES as MESSAGES } from "../src/constants/taxReview";
 import TaxReviewFormScreen from "../src/features/tax/TaxReviewFormScreen";
 import { store } from "../src/lib/store";

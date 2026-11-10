@@ -1,11 +1,10 @@
 import { useGetFormFieldsQuery } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import type { TaxFormField } from "@mybookkeeper/api-client/types/tax/TaxFormField";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { Banner, EmptyState, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { SectionList, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { TAX_FORM_MESSAGES as MESSAGES, TAX_FORM_SKELETON_ROWS } from "../../constants/taxForm";
 import type { TaxFormSection } from "../../types/TaxFormSection";
 import { isServerAnswer } from "../../utils/isServerAnswer";

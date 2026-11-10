@@ -1,9 +1,8 @@
 import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedgerApi";
-import { LoadingButton, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingButton, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { RENT_MESSAGES } from "../../constants/rent";
 import { RENT_MANAGE_MESSAGES } from "../../constants/rentManage";
 import InquirySection from "../inquiries/InquirySection";

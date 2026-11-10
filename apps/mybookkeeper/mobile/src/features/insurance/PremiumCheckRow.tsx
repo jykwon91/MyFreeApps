@@ -1,10 +1,9 @@
 import type { InsurancePremiumComparisonRow } from "@mybookkeeper/api-client/types/insurance/insurance-premium-comparison-row";
 import { formatBenchmarkGap } from "@mybookkeeper/api-client/utils/benchmarkFormat";
 import { formatCoverageRate } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
-import { useTheme } from "@platform/mobile";
+import { Chip, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { INSURANCE_MESSAGES } from "../../constants/insurance";
-import InquiryChip from "../inquiries/InquiryChip";
 import { policyPlace } from "./policyDisplay";
 
 export default function PremiumCheckRow({ row }: { row: InsurancePremiumComparisonRow }) {
@@ -19,7 +18,7 @@ export default function PremiumCheckRow({ row }: { row: InsurancePremiumComparis
         {INSURANCE_MESSAGES.payingVsMarket(formatCoverageRate(row.policy_rate_cents_per_1000), formatCoverageRate(row.benchmark_rate_cents_per_1000))}
         {row.benchmark_is_stale ? ` (${INSURANCE_MESSAGES.recordedAWhileAgo})` : ""}
       </Text>
-      <InquiryChip label={formatBenchmarkGap(row.gap_pct)} />
+      <Chip label={formatBenchmarkGap(row.gap_pct)} />
     </View>
   );
 }

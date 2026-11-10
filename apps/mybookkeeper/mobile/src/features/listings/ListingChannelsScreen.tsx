@@ -1,10 +1,9 @@
 import { useGetListingChannelsQuery } from "@mybookkeeper/api-client/store/listingsApi";
-import { Banner, EmptyState, LoadingButton, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { LISTING_CHANNEL_MESSAGES as MESSAGES } from "../../constants/listingChannels";
 import { LISTING_MESSAGES } from "../../constants/listings";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useCanWrite } from "../workspace/useCanWrite";
 import ChannelListingRow from "./ChannelListingRow";
 import ListingGate from "./ListingGate";

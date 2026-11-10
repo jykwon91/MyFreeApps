@@ -16,7 +16,7 @@ export function serve(routes: Record<string, FakeRoute>): SentRequest[] {
     const body = bodyOf(config);
     const authorization = config.headers.Authorization;
     sent.push({ route, body, authorization: typeof authorization === "string" ? authorization : undefined });
-    const reply = routes[route]?.(body) ?? { status: 404, data: { detail: "Not Found" } };
+    const reply = (await routes[route]?.(body)) ?? { status: 404, data: { detail: "Not Found" } };
     const response: AxiosResponse = { data: reply.data ?? null, status: reply.status, statusText: "", headers: {}, config };
     if (reply.status < 400) return response;
     throw Object.assign(new Error(String(reply.status)), { config, response, isAxiosError: true });

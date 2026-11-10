@@ -1,14 +1,13 @@
 import type { UtilityTrendPoint } from "@mybookkeeper/api-client/types/analytics/utility-trend-point";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { Provider } from "react-redux";
 import { MAX_UTILITY_TREND_PROPERTIES } from "@mybookkeeper/api-client/constants/utilityTrendLimits";
 import { UTILITY_COSTS_MESSAGES as MESSAGES } from "../src/constants/analytics";
 import { MONEY_ANALYSIS_MESSAGES as ANALYSIS } from "../src/constants/moneyAnalysis";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { barPercent, totalCents, utilityLabel, utilityRows } from "../src/features/analytics/utilityCostsDisplay";
 import { isCurrentPeriod, periodBounds, periodBoundsWithin, periodRows, quarterlyTrends, spanOf } from "../src/features/analytics/utilityPeriods";
 import UtilityCostsScreen from "../src/features/analytics/UtilityCostsScreen";

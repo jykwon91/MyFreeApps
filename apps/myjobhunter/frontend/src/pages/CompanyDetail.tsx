@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, ExternalLink as ExternalLinkIcon, Trash2 } from "lucide-react";
-import { Badge, DataTable, showSuccess, showError, extractErrorMessage, type ColumnDef } from "@platform/ui";
+import { Badge, DataTable, showSuccess, showError, extractErrorMessage, type ColumnDef, type SortingState } from "@platform/ui";
 import CompanyDetailSkeleton from "@/features/companies/CompanyDetailSkeleton";
 import CompanyResearchPanel from "@/features/companies/CompanyResearchPanel";
+import { APPLIED_AT_COLUMN } from "@/features/applications/appliedAtColumn";
 import { useGetCompanyQuery, useDeleteCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
 import { useListApplicationsQuery } from "@myjobhunter/api-client/store/applicationsApi";
 import { isCompanyHasApplicationsError } from "@myjobhunter/api-client/utils/isCompanyHasApplicationsError";
@@ -29,11 +31,7 @@ const APPLICATION_COLUMNS: ColumnDef<Application>[] = [
       return <span className="text-sm text-muted-foreground">{v === "unknown" ? "—" : v}</span>;
     },
   },
-  {
-    id: "applied_at",
-    header: "Applied",
-    accessorFn: (row) => (row.applied_at ? new Date(row.applied_at).toLocaleDateString() : "—"),
-  },
+  APPLIED_AT_COLUMN,
 ];
 
 const DELETE_BLOCKED_HINT = "This company has applications, so it can't be deleted.";
@@ -47,6 +45,7 @@ export default function CompanyDetail() {
     { skip: !id },
   );
   const [deleteCompany, { isLoading: deleting }] = useDeleteCompanyMutation();
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   async function handleDelete() {
     if (!company) return;
@@ -181,6 +180,8 @@ export default function CompanyDetail() {
             columns={APPLICATION_COLUMNS}
             getRowId={(row) => row.id}
             onRowClick={(row) => navigate(`/applications/${row.id}`)}
+            sorting={sorting}
+            onSortingChange={setSorting}
           />
         )}
       </section>

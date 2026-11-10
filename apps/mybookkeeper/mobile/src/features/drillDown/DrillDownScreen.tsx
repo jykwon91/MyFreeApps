@@ -2,13 +2,12 @@ import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/properties
 import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { DRILL_DOWN_TRUNCATED_MESSAGE } from "@mybookkeeper/api-client/constants/transactionPaging";
 import { drillDownListParams, drillDownTotal, filterDrillDownTransactions, isDrillDownTruncated } from "@mybookkeeper/api-client/utils/drillDown";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { formatCurrency } from "@platform/core/utils/currency";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMemo } from "react";
 import { FlatList, Text, View } from "react-native";
 import { DRILL_DOWN_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import type { DrillDownParams } from "../../types/DrillDownParams";
 import TransactionRow from "../transactions/TransactionRow";
 import TransactionsSkeleton from "../transactions/TransactionsSkeleton";

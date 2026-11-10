@@ -2,7 +2,7 @@ import { calendarApi } from "@mybookkeeper/api-client/store/calendarApi";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { AccessibilityInfo, Platform } from "react-native";
@@ -20,7 +20,6 @@ import CalendarScreen from "../src/features/calendar/CalendarScreen";
 import { useOpenAtSection } from "../src/features/calendar/useOpenAtSection";
 import { CALENDAR_OPEN_RETRY_LIMIT, CALENDAR_OPEN_RETRY_MS } from "../src/constants/calendar";
 import { monthOf, shiftMonth } from "../src/lib/localDate";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { store } from "../src/lib/store";
 
 const mockPush = jest.fn();

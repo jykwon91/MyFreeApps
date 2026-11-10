@@ -1,11 +1,10 @@
 import { inquiriesApi } from "@mybookkeeper/api-client/store/inquiriesApi";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { REPLY_TEMPLATE_MESSAGES as MESSAGES } from "../src/constants/replyTemplates";
 import ArchivedReplyTemplateDetailScreen from "../src/features/replyTemplates/ArchivedReplyTemplateDetailScreen";
 import ArchivedReplyTemplatesScreen from "../src/features/replyTemplates/ArchivedReplyTemplatesScreen";

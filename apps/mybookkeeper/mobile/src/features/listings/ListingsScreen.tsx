@@ -2,12 +2,11 @@ import { LISTING_STATUS_LABELS, LISTING_STATUSES } from "@mybookkeeper/api-clien
 import { useListListingPagesInfiniteQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
-import { Banner, EmptyState, LoadingButton, OptionSheet, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
 import { ALL_STATUSES_OPTION, LISTING_MESSAGES } from "../../constants/listings";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { uniqueById } from "../../lib/uniqueById";
 import { useCanWrite } from "../workspace/useCanWrite";
 import LoadMoreFailed from "../shell/LoadMoreFailed";

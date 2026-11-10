@@ -4,12 +4,11 @@ import type { MergeableField } from "@mybookkeeper/api-client/types/transaction/
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 import { duplicateConfidenceLabel, duplicateHeadline } from "@mybookkeeper/api-client/utils/duplicatePairLabels";
 import { computeDefaults, differingFields } from "@mybookkeeper/api-client/utils/mergeDefaults";
-import { Banner, useTheme } from "@platform/mobile";
+import { Banner, SHOWING_LAST_LOADED_MESSAGE, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState, type ReactElement } from "react";
 import { type RefreshControlProps, ScrollView, Text, View } from "react-native";
 import { DUPLICATES_MESSAGES as MESSAGES } from "../../constants/duplicates";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import type { MergeChoices } from "../../types/MergeChoices";
 import { confirmDuplicateChange } from "./confirmDuplicateChange";
 import DuplicateActionBar from "./DuplicateActionBar";

@@ -1,10 +1,9 @@
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { TENANT_PAYMENT_MESSAGES } from "../../constants/tenantPayments";
 import { categoryLabel, displayAmount, isMoneyIn, shortDate, spokenAmount, spokenDate, statusLabel } from "../transactions/transactionDisplay";
-import TransactionStatusChip from "../transactions/TransactionStatusChip";
 
 export default function TenantPaymentRow({ payment, rentNote }: { payment: Transaction; rentNote: string | null }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -32,7 +31,7 @@ export default function TenantPaymentRow({ payment, rentNote }: { payment: Trans
         {`${shortDate(payment.transaction_date)} · ${category}`}
       </Text>
       {rentNote ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{rentNote}</Text> : null}
-      {isApproved ? null : <TransactionStatusChip status={payment.status} />}
+      {isApproved ? null : <Chip label={statusLabel(payment.status)} />}
     </Pressable>
   );
 }

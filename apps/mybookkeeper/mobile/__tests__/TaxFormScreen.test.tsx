@@ -2,7 +2,7 @@ import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
+import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { TAX_FORM_MESSAGES as MESSAGES } from "../src/constants/taxForm";
 import TaxFormScreen from "../src/features/taxReturns/TaxFormScreen";
 import { useIsAdmin } from "../src/features/workspace/useIsAdmin";

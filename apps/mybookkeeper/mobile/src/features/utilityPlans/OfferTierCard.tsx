@@ -2,10 +2,9 @@ import { OFFER_VERDICT_LABELS } from "@mybookkeeper/api-client/constants/offerVe
 import type { OfferTier } from "@mybookkeeper/api-client/types/utility/offer-tier";
 import type { UtilityOfferGroup } from "@mybookkeeper/api-client/types/utility/utility-offer-group";
 import { buildOfferStats, offerVerdict } from "@mybookkeeper/api-client/utils/offerStats";
-import { useTheme } from "@platform/mobile";
+import { Chip, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { UTILITY_OFFER_MESSAGES as MESSAGES } from "../../constants/utilityOffers";
-import InquiryChip from "../inquiries/InquiryChip";
 import OfferEnrollButton from "./OfferEnrollButton";
 import OfferPriceDetail from "./OfferPriceDetail";
 import OfferSavingHeadline from "./OfferSavingHeadline";
@@ -40,7 +39,7 @@ export default function OfferTierCard({ tier, group, referenceAnnualKwh, maxSavi
       <Text style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {offer.provider_name} · {offer.plan_name}
       </Text>
-      <InquiryChip label={OFFER_VERDICT_LABELS[verdict]} />
+      <Chip label={OFFER_VERDICT_LABELS[verdict]} />
       <OfferSavingHeadline isConditional={verdict === "conditional"} maxSavingCents={maxSavingCents} savingCents={offer.annual_saving_cents} />
       <OfferStatList stats={buildOfferStats(offer, group, referenceAnnualKwh)} />
       {offer.is_teaser_priced ? <Text style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>{MESSAGES.teaser}</Text> : null}

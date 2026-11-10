@@ -1,9 +1,8 @@
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
-import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { FlatList, Text, View } from "react-native";
 import { LEASE_TEMPLATE_LIST_LIMIT, LEASE_TEMPLATE_MESSAGES as MESSAGES } from "../../constants/leaseTemplates";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useCanWrite } from "../workspace/useCanWrite";
 import LeaseTemplateRow from "./LeaseTemplateRow";
 import LeaseTemplatesSkeleton from "./LeaseTemplatesSkeleton";

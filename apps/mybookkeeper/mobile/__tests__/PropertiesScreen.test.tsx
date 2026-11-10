@@ -2,11 +2,10 @@ import { propertiesApi } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import PropertiesScreen from "../src/features/properties/PropertiesScreen";
 import { store } from "../src/lib/store";
 

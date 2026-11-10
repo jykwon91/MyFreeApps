@@ -1,9 +1,8 @@
 import { useGetUtilityPlansQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { UTILITY_PLAN_LIST_LIMIT, UTILITY_PLAN_MESSAGES as MESSAGES } from "../../constants/utilityPlans";
 import { useTodayIso } from "../../lib/useTodayIso";
 import type { UtilityPlanFilter } from "../../types/UtilityPlanFilter";
