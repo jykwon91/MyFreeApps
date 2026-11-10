@@ -1378,6 +1378,8 @@
         "backend/app/schemas/leases/tenant_email_stamps.py",
         "backend/app/repositories/leases/signed_lease_attachment_repo.py",
         "backend/alembic/versions/leasefileemail261110_add_attachment_emailed_to_tenant_at.py",
+        "backend/alembic/versions/leasetplver261110_add_signed_lease_template_snapshot.py",
+        "backend/app/services/leases/lease_template_snapshot.py",
         "backend/app/services/leases/exceptions/lease_value_locked_error.py",
         "api-client/src/utils/leasePlaceholderValue.ts",
         "api-client/src/utils/leasePlaceholders.ts",
@@ -1391,6 +1393,8 @@
         "api-client/src/constants/leaseTemplateCreateCopy.ts",
         "api-client/src/constants/leasePlaceholderForm.ts",
         "api-client/src/constants/leaseTemplateUpload.ts",
+        "api-client/src/constants/leaseTemplateSource.ts",
+        "api-client/src/utils/leaseTemplateSourceLabel.ts",
         "api-client/src/types/lease/",
         "mobile/src/features/leases/",
         "mobile/src/features/leaseImport/",
@@ -1447,6 +1451,8 @@
         "test_lease_email_lock.py",
         "test_lease_per_file_email_lock.py",
         "test_lease_file_emailed_migration.py",
+        "test_lease_template_snapshot.py",
+        "test_lease_template_snapshot_migration.py",
         "test_lease_template_upload_routes.py",
         "test_committed_write_guard.py",
         "test_lease_write_races.py",
@@ -1467,7 +1473,8 @@
         "list-load-mode.test.ts",
         "detail-load-mode.test.ts",
         "LeaseAddTemplateModal.test.tsx",
-        "LeaseDocumentsLockedPicker.test.tsx"
+        "LeaseDocumentsLockedPicker.test.tsx",
+        "LeaseTemplateSources.test.tsx"
       ],
       "e2e_specs": [
         "lease-templates.spec.ts",
@@ -1479,6 +1486,7 @@
         "lease-email-tenant.spec.ts",
         "lease-templates-phase2.spec.ts",
         "lease-documents-locked.spec.ts",
+        "mocked/lease-template-source-mock.spec.ts",
         "mocked/list-pages-retry-mock.spec.ts",
         "mocked/sections-retry-mock.spec.ts"
       ]

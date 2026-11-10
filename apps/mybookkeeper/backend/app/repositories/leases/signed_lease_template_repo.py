@@ -10,10 +10,13 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import delete as _sa_delete, func, select
+from sqlalchemy import delete as _sa_delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.leases.signed_lease_template import SignedLeaseTemplate
+from app.repositories.leases.signed_lease_template_link_missing_error import (
+    SignedLeaseTemplateLinkMissingError,
+)
 
 
 async def create(
@@ -31,6 +34,37 @@ async def create(
     db.add(row)
     await db.flush()
     return row
+
+
+async def record_render_snapshot(
+    db: AsyncSession,
+    *,
+    lease_id: uuid.UUID,
+    template_id: uuid.UUID,
+    template_name: str,
+    template_version: int,
+) -> None:
+    """Stamp the template name + version whose files were just rendered.
+
+    Raises ``SignedLeaseTemplateLinkMissingError`` when no link matched, so a
+    render can never commit without recording what it rendered from.
+    """
+    result = await db.execute(
+        update(SignedLeaseTemplate)
+        .where(
+            SignedLeaseTemplate.lease_id == lease_id,
+            SignedLeaseTemplate.template_id == template_id,
+        )
+        .values(
+            template_name_snapshot=template_name,
+            template_version_snapshot=template_version,
+        )
+        .execution_options(synchronize_session=False)
+    )
+    if (result.rowcount or 0) != 1:
+        raise SignedLeaseTemplateLinkMissingError(
+            f"No template link for lease {lease_id} and template {template_id}"
+        )
 
 
 async def list_for_lease(

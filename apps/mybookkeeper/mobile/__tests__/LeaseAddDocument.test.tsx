@@ -129,7 +129,7 @@ describe("picking which templates to make documents from", () => {
   });
 
   it("says which templates are already on the lease, since picking one makes it again", async () => {
-    startLeaseWritesServer({ lease: aLease({ status: "generated", templates: [{ id: "t2", name: "Pet addendum", version: 1, display_order: 0 }] }) });
+    startLeaseWritesServer({ lease: aLease({ status: "generated", templates: [{ id: "t2", name: "Pet addendum", version: 1, display_order: 0, template_name_snapshot: null, template_version_snapshot: null }] }) });
     await openAt(addDocumentPath("l1"));
     await screen.findByRole("checkbox", { name: "Pet addendum" });
     expect(screen.getAllByText(MESSAGES.onThisLease)).toHaveLength(1);
@@ -137,7 +137,7 @@ describe("picking which templates to make documents from", () => {
 
   it("won't offer a template already on an emailed lease either, and hints why to a screen reader", async () => {
     startLeaseWritesServer({
-      lease: aLease({ status: "generated", documents_locked: true, last_emailed_to_tenant_at: "2026-05-02T00:00:00Z", templates: [{ id: "t2", name: "Pet addendum", version: 1, display_order: 0 }] }),
+      lease: aLease({ status: "generated", documents_locked: true, last_emailed_to_tenant_at: "2026-05-02T00:00:00Z", templates: [{ id: "t2", name: "Pet addendum", version: 1, display_order: 0, template_name_snapshot: null, template_version_snapshot: null }] }),
     });
     await openAt(addDocumentPath("l1"));
     const blocked = await screen.findByRole("checkbox", { name: "Pet addendum" });
@@ -147,7 +147,7 @@ describe("picking which templates to make documents from", () => {
 
   it("drops a pick the lease locks out after a refetch, and hides Continue", async () => {
     const server = startLeaseWritesServer({
-      lease: aLease({ status: "generated", templates: [{ id: "t2", name: "Pet addendum", version: 1, display_order: 0 }] }),
+      lease: aLease({ status: "generated", templates: [{ id: "t2", name: "Pet addendum", version: 1, display_order: 0, template_name_snapshot: null, template_version_snapshot: null }] }),
     });
     await openAt(addDocumentPath("l1"));
     await fireEvent.press(await screen.findByRole("checkbox", { name: "Pet addendum" }));
@@ -163,7 +163,7 @@ describe("picking which templates to make documents from", () => {
   });
 
   it("won't offer a template already on a signed lease, but still offers a new one", async () => {
-    startLeaseWritesServer({ lease: aLease({ status: "signed", documents_locked: true, templates: [{ id: "t2", name: "Pet addendum", version: 1, display_order: 0 }] }) });
+    startLeaseWritesServer({ lease: aLease({ status: "signed", documents_locked: true, templates: [{ id: "t2", name: "Pet addendum", version: 1, display_order: 0, template_name_snapshot: null, template_version_snapshot: null }] }) });
     await openAt(addDocumentPath("l1"));
     const blocked = await screen.findByRole("checkbox", { name: "Pet addendum" });
     expect(blocked.props.accessibilityState.disabled).toBe(true);
@@ -256,7 +256,7 @@ describe("filling in what the documents need", () => {
   });
 
   it("says it made a document again when it was already on the lease", async () => {
-    startLeaseWritesServer({ prefill: [aPrefillItem("Tenant name", { value: "Dana" })], lease: aLease({ templates: [{ id: "t1", name: "Standard lease", version: 1, display_order: 0 }] }) });
+    startLeaseWritesServer({ prefill: [aPrefillItem("Tenant name", { value: "Dana" })], lease: aLease({ templates: [{ id: "t1", name: "Standard lease", version: 1, display_order: 0, template_name_snapshot: null, template_version_snapshot: null }] }) });
     await openValues(["t1"]);
     await screen.findByDisplayValue("Dana");
     await make();

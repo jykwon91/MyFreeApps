@@ -29,6 +29,7 @@ import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge
 import SignedLeaseStatusPicker from "@/app/features/leases/SignedLeaseStatusPicker";
 import ExtendLeaseDialog from "@/app/features/leases/ExtendLeaseDialog";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
+import LeaseTemplateSources from "@/app/features/leases/LeaseTemplateSources";
 import { LEASE_DOCUMENTS_LOCKED_MESSAGE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import { isLeaseDocumentsLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseDocumentsLockedFailure";
 import LeaseAddTemplateModal from "@/app/features/leases/LeaseAddTemplateModal";
@@ -384,6 +385,7 @@ export default function LeaseDetail() {
                   </Button>
                 </div>
               ) : null}
+              <LeaseTemplateSources templates={lease.templates} />
               <LeaseAttachmentsSection
                 leaseId={lease.id}
                 attachments={lease.attachments}

@@ -113,7 +113,7 @@ function buildLease(overrides: Partial<SignedLeaseDetail> = {}): SignedLeaseDeta
     user_id: "user-1",
     organization_id: "org-1",
     templates: [
-      { id: "tpl-existing", name: "Master Lease", version: 1, display_order: 0 },
+      { id: "tpl-existing", name: "Master Lease", version: 1, display_order: 0, template_name_snapshot: null, template_version_snapshot: null },
     ],
     applicant_id: "app-1",
     applicant_legal_name: null,
