@@ -13,7 +13,7 @@
  * - NotesSection (debounced auto-save)
  * - EventsSection
  * - DocumentsSection
- * - ContactsSection
+ * - ContactsManager (add / remove contacts; shared with ApplicationDetail)
  *
  * 404 -> "Application not found" inline (no toast; never emit the raw uuid
  * onto the DOM in the error message per the security review).
@@ -39,7 +39,7 @@ import { useGetCompanyQuery } from "@myjobhunter/api-client/store/companiesApi";
 import OverviewSection from "./sections/OverviewSection";
 import EventsSection from "./sections/EventsSection";
 import DocumentsSection from "./sections/DocumentsSection";
-import ContactsSection from "./sections/ContactsSection";
+import ContactsManager from "./contacts/ContactsManager";
 import NotesSection from "./sections/NotesSection";
 import { KANBAN_COLUMN_LABELS } from "@myjobhunter/api-client/constants/kanbanColumnLabels";
 import { KANBAN_COLUMN_ORDER } from "@myjobhunter/api-client/constants/kanbanColumnOrder";
@@ -246,7 +246,7 @@ function DrawerContent({ application, onClose }: DrawerContentProps) {
         />
         <EventsSection applicationId={application.id} />
         <DocumentsSection applicationId={application.id} />
-        <ContactsSection contacts={application.contacts} />
+        <ContactsManager applicationId={application.id} contacts={application.contacts} />
       </div>
 
       <ConfirmDialog

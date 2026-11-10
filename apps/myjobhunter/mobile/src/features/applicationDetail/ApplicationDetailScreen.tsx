@@ -87,7 +87,7 @@ export default function ApplicationDetailScreen({ id }: ApplicationDetailScreenP
           await documents.refetch();
         }}
       />
-      <ContactsSection contacts={application.contacts} />
+      <ContactsSection applicationId={id} contacts={application.contacts} />
     </ScrollView>
   );
 }

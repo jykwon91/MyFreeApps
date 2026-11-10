@@ -20,7 +20,7 @@ import ApplicationDetailSkeleton from "@/features/applications/ApplicationDetail
 import OverviewSection from "@/features/applications/sections/OverviewSection";
 import EventsSection from "@/features/applications/sections/EventsSection";
 import DocumentsSection from "@/features/applications/sections/DocumentsSection";
-import ContactsSection from "@/features/applications/sections/ContactsSection";
+import ContactsManager from "@/features/applications/contacts/ContactsManager";
 import NotesSection from "@/features/applications/sections/NotesSection";
 import {
   useGetApplicationQuery,
@@ -184,7 +184,7 @@ export default function ApplicationDetail() {
       <NotesSection applicationId={app.id} initialValue={app.notes ?? ""} />
       <EventsSection applicationId={app.id} />
       <DocumentsSection applicationId={app.id} />
-      <ContactsSection contacts={app.contacts} />
+      <ContactsManager applicationId={app.id} contacts={app.contacts} />
 
       <ConfirmDialog
         open={confirmDeleteOpen}
