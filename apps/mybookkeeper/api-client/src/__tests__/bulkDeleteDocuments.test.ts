@@ -1,19 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 import { MAX_BULK_DELETE_DOCUMENT_IDS } from "../constants/documentBulkDelete";
-import { chunkDocumentIds, mergeBulkDeleteResponses, runBulkDelete } from "../utils/bulkDeleteDocuments";
+import { mergeBulkDeleteResponses, runBulkDelete } from "../utils/bulkDeleteDocuments";
+import { chunkIds } from "../utils/runInBatches";
 
-describe("chunkDocumentIds", () => {
+describe("chunkIds at the documents cap", () => {
   it("keeps every request within the server cap", () => {
     const ids = Array.from({ length: MAX_BULK_DELETE_DOCUMENT_IDS * 2 + 1 }, (_, i) => `d${i}`);
 
-    const chunks = chunkDocumentIds(ids);
+    const chunks = chunkIds(ids, MAX_BULK_DELETE_DOCUMENT_IDS);
 
     expect(chunks.map((c) => c.length)).toEqual([MAX_BULK_DELETE_DOCUMENT_IDS, MAX_BULK_DELETE_DOCUMENT_IDS, 1]);
     expect(chunks.flat()).toEqual(ids);
   });
 
   it("sends nothing for no ids", () => {
-    expect(chunkDocumentIds([])).toEqual([]);
+    expect(chunkIds([], MAX_BULK_DELETE_DOCUMENT_IDS)).toEqual([]);
   });
 });
 

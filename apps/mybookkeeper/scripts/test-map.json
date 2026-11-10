@@ -1775,6 +1775,8 @@
         "api-client/src/utils/isoDay.ts",
         "api-client/src/constants/summaryCategorySets.ts",
         "api-client/src/constants/transactionPaging.ts",
+        "api-client/src/constants/transactionBulk.ts",
+        "backend/app/core/transaction_bulk_constants.py",
         "api-client/src/types/transaction/TransactionListParams.ts",
         "api-client/src/utils/transactionExportPath.ts",
         "api-client/src/types/analytics/drill-down-filter.ts",
@@ -1821,6 +1823,8 @@
       ],
       "frontend_tests": [
         "Transactions.test.tsx",
+        "bulkTransactionMessages.test.ts",
+        "useTransactionPageStateBulk.test.tsx",
         "ColumnFilter.test.tsx",
         "Dashboard.test.tsx",
         "MonthlyAverageCard.test.tsx",

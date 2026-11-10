@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
-from app.schemas.common import BulkIdsRequest
+from app.schemas.transactions.bulk_transaction_ids_request import BulkTransactionIdsRequest
 from app.schemas.transactions.duplicate import DuplicateDismissRequest, DuplicateKeepRequest, DuplicateMergeRequest, DuplicatePair, DuplicatePairsResponse, DuplicateTransactionRead
 from app.schemas.transactions.operation_responses import (
     BulkApproveResponse,
@@ -148,7 +148,7 @@ async def schedule_e_report(
 
 @router.post("/bulk-approve")
 async def bulk_approve(
-    body: BulkIdsRequest,
+    body: BulkTransactionIdsRequest,
     ctx: RequestContext = Depends(require_write_access),
 ) -> BulkApproveResponse:
     result = await transaction_service.bulk_approve(ctx, body.ids)
@@ -157,7 +157,7 @@ async def bulk_approve(
 
 @router.post("/bulk-delete")
 async def bulk_delete(
-    body: BulkIdsRequest,
+    body: BulkTransactionIdsRequest,
     ctx: RequestContext = Depends(require_write_access),
 ) -> BulkDeleteResponse:
     result = await transaction_service.bulk_delete(ctx, body.ids)

@@ -8,7 +8,6 @@ All three modules are re-exported here so existing callers
 (`transaction_repo.<fn>`) continue to work without changes.
 """
 import uuid
-from datetime import datetime, timezone
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +33,9 @@ from app.repositories.transactions.transaction_list_repo import (
 from app.repositories.transactions.transaction_bulk_repo import (
     bulk_approve,
     bulk_delete,
+    lock_live_transactions,
+    mark_deleted,
+    soft_delete_transactions,
     create_transaction_document_link,
     delete_by_extraction_ids,
     get_existing_external_ids,
@@ -82,6 +84,8 @@ __all__ = [
     # bulk
     "bulk_approve",
     "bulk_delete",
+    "lock_live_transactions",
+    "soft_delete_transactions",
     "create_transaction_document_link",
     "delete_by_extraction_ids",
     "get_existing_external_ids",
@@ -170,12 +174,6 @@ async def get_by_id(
 async def update(db: AsyncSession, transaction: Transaction) -> Transaction:
     await db.flush()
     return transaction
-
-
-async def mark_deleted(db: AsyncSession, transaction: Transaction) -> None:
-    transaction.deleted_at = datetime.now(timezone.utc)
-    transaction.status = "duplicate"
-    await db.flush()
 
 
 async def flush(db: AsyncSession) -> None:

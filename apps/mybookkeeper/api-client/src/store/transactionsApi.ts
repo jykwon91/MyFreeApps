@@ -1,6 +1,8 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import { TRANSACTION_PAGE_SIZE } from "../constants/transactionPaging";
 import type { BankCsvImportRequest } from "../types/transaction/BankCsvImportRequest";
+import type { BulkApproveTransactionsResponse } from "../types/transaction/BulkApproveTransactionsResponse";
+import type { BulkDeleteTransactionsResponse } from "../types/transaction/BulkDeleteTransactionsResponse";
 import type { DuplicatePairsResponse } from "../types/transaction/DuplicatePairsResponse";
 import type { ImportResult } from "../types/transaction/ImportResult";
 import type { MergeDuplicatesRequest } from "../types/transaction/MergeDuplicatesRequest";
@@ -68,11 +70,11 @@ export const transactionsApi = baseApi.enhanceEndpoints({
       // New rows change the list, the review count and every total built from them.
       invalidatesTags: ["Transaction", "Summary"],
     }),
-    bulkApproveTransactions: builder.mutation<{ approved: number; skipped: number }, string[]>({
+    bulkApproveTransactions: builder.mutation<BulkApproveTransactionsResponse, string[]>({
       query: (ids) => ({ url: "/transactions/bulk-approve", method: "POST", data: { ids } }),
       invalidatesTags: ["Transaction", "Summary"],
     }),
-    bulkDeleteTransactions: builder.mutation<{ deleted: number }, string[]>({
+    bulkDeleteTransactions: builder.mutation<BulkDeleteTransactionsResponse, string[]>({
       query: (ids) => ({ url: "/transactions/bulk-delete", method: "POST", data: { ids } }),
       invalidatesTags: ["Transaction", "Summary"],
     }),

@@ -181,7 +181,7 @@ async def bulk_approve(
         approved = await transaction_repo.bulk_approve(
             db, ids, ctx.organization_id,
         )
-        return {"approved": approved, "skipped": len(ids) - approved}
+        return {"approved": approved, "skipped": len(set(ids)) - approved}
 
 
 async def bulk_delete(
@@ -191,7 +191,7 @@ async def bulk_delete(
         deleted = await transaction_repo.bulk_delete(
             db, ids, ctx.organization_id,
         )
-        return {"deleted": deleted}
+        return {"deleted": len(deleted), "skipped": len(set(ids)) - len(deleted)}
 
 
 async def get_schedule_e_report(
@@ -222,19 +222,24 @@ async def keep_transaction(
 ) -> dict[str, int]:
     """Keep one transaction, soft-delete the others. Transfer document links."""
     async with unit_of_work() as db:
-        keep_txn = await transaction_repo.get_by_id(db, keep_id, ctx.organization_id)
-        if not keep_txn:
+        # One org-scoped, id-ordered lock over the kept row and the rows to delete.
+        # Anything missing, in another org or already deleted is simply not in the set.
+        locked = await transaction_repo.lock_live_transactions(
+            db, [keep_id, *delete_ids], ctx.organization_id,
+        )
+        keep_txn = next((t for t in locked if t.id == keep_id), None)
+        if keep_txn is None:
             raise ValueError("Transaction to keep not found")
+        to_delete = [t for t in locked if t.id != keep_id]
 
-        # Transfer document links from deleted transactions to the kept one
-        for del_id in delete_ids:
-            await transaction_repo.transfer_document_links(db, del_id, keep_id)
-
-        deleted = await transaction_repo.bulk_delete(db, delete_ids, ctx.organization_id)
+        await transaction_repo.soft_delete_transactions(db, to_delete)
+        # Transfer document links from the deleted transactions to the kept one
+        for txn in to_delete:
+            await transaction_repo.transfer_document_links(db, txn.id, keep_id)
 
         keep_txn.duplicate_reviewed_at = datetime.now(timezone.utc)
 
-        return {"kept": 1, "deleted": deleted}
+        return {"kept": 1, "deleted": len(to_delete)}
 
 
 async def dismiss_duplicates(

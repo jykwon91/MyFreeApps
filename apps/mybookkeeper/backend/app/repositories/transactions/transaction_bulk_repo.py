@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import delete as sa_delete, select, update as sa_update
+from sqlalchemy import ColumnElement, Select, delete as sa_delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.repositories import soft_delete as _soft_delete
@@ -12,36 +12,83 @@ from app.models.transactions.transaction_document import TransactionDocument
 from app.models.extraction.extraction import Extraction
 
 
-async def bulk_approve(
-    db: AsyncSession, transaction_ids: list[uuid.UUID], organization_id: uuid.UUID
-) -> int:
-    result = await db.execute(
-        sa_update(Transaction)
+def live_transactions_for_update_stmt(
+    transaction_ids: list[uuid.UUID], organization_id: uuid.UUID, *criteria: ColumnElement[bool],
+) -> Select[tuple[Transaction]]:
+    """The org's live transactions among the ids, locked in id order.
+
+    Locking in a fixed order means two overlapping bulk requests queue instead of deadlocking.
+    """
+    return (
+        select(Transaction)
         .where(
             Transaction.id.in_(transaction_ids),
             Transaction.organization_id == organization_id,
-            Transaction.property_id.isnot(None),
-            Transaction.status.in_(REVIEWABLE_STATUSES),
             Transaction.deleted_at.is_(None),
+            *criteria,
         )
-        .values(status="approved")
+        .order_by(Transaction.id)
+        .with_for_update()
     )
-    return result.rowcount  # type: ignore[return-value]
+
+
+async def lock_live_transactions(
+    db: AsyncSession, transaction_ids: list[uuid.UUID], organization_id: uuid.UUID,
+) -> list[Transaction]:
+    """Lock and return the org's live transactions among the ids, in id order."""
+    result = await db.execute(live_transactions_for_update_stmt(transaction_ids, organization_id))
+    return list(result.scalars().all())
+
+
+def apply_soft_delete(transaction: Transaction, now: datetime) -> None:
+    """Set the soft-delete columns without flushing."""
+    transaction.deleted_at = now
+    transaction.status = "duplicate"
+
+
+async def mark_deleted(db: AsyncSession, transaction: Transaction) -> None:
+    apply_soft_delete(transaction, datetime.now(timezone.utc))
+    await db.flush()
+
+
+async def soft_delete_transactions(db: AsyncSession, transactions: list[Transaction]) -> None:
+    """Soft-delete already-locked rows as ``mark_deleted`` does, with one shared timestamp and one flush."""
+    now = datetime.now(timezone.utc)
+    for txn in transactions:
+        apply_soft_delete(txn, now)
+    await db.flush()
+
+
+async def bulk_approve(
+    db: AsyncSession, transaction_ids: list[uuid.UUID], organization_id: uuid.UUID
+) -> int:
+    """Approve the reviewable, property-assigned transactions among the ids.
+
+    Changes go through the ORM (not a bulk UPDATE) so the audit listener sees each row,
+    exactly as it does for a single approve.
+    """
+    rows = (await db.execute(live_transactions_for_update_stmt(
+        transaction_ids,
+        organization_id,
+        Transaction.property_id.isnot(None),
+        Transaction.status.in_(REVIEWABLE_STATUSES),
+    ))).scalars().all()
+    for txn in rows:
+        txn.status = "approved"
+    await db.flush()
+    return len(rows)
 
 
 async def bulk_delete(
     db: AsyncSession, transaction_ids: list[uuid.UUID], organization_id: uuid.UUID
-) -> int:
-    result = await db.execute(
-        sa_update(Transaction)
-        .where(
-            Transaction.id.in_(transaction_ids),
-            Transaction.organization_id == organization_id,
-            Transaction.deleted_at.is_(None),
-        )
-        .values(status="duplicate", deleted_at=datetime.now(timezone.utc))
-    )
-    return result.rowcount  # type: ignore[return-value]
+) -> list[uuid.UUID]:
+    """Soft-delete the org's live transactions among the ids as a single delete does (same columns, via ``apply_soft_delete``).
+
+    Returns the ids actually deleted; the rest were unknown, in another org or already deleted.
+    """
+    rows = await lock_live_transactions(db, transaction_ids, organization_id)
+    await soft_delete_transactions(db, rows)
+    return [txn.id for txn in rows]
 
 
 async def delete_by_extraction_ids(
