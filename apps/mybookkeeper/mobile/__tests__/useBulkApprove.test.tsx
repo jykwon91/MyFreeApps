@@ -19,26 +19,26 @@ describe("useBulkApprove", () => {
     mockSend.mockResolvedValueOnce({ approved: 499, skipped: 1 }).mockResolvedValueOnce({ approved: 1, skipped: 0 });
     const { result } = await renderHook(() => useBulkApprove());
 
-    let done = false;
+    let failed: string[] = ["x"];
     await act(async () => {
-      done = await result.current.approve(ids);
+      failed = await result.current.approve(ids);
     });
 
     expect(mockSend.mock.calls.map(([batch]) => batch.length)).toEqual([MAX_BULK_TRANSACTION_IDS, 1]);
-    expect(done).toBe(true);
-    expect(mockShowToast).toHaveBeenCalledWith("500 approved, 1 skipped");
+    expect(failed).toEqual([]);
+    expect(mockShowToast).toHaveBeenCalledWith("500 approved, 1 skipped", "success");
   });
 
-  it("says what the first batch did when a later one fails, and keeps the selection", async () => {
+  it("says what the first batch did when a later one fails, and hands back the ids that were not sent", async () => {
     mockSend.mockResolvedValueOnce({ approved: 497, skipped: 3 }).mockRejectedValueOnce(new Error("boom"));
     const { result } = await renderHook(() => useBulkApprove());
 
-    let done = true;
+    let failed: string[] = [];
     await act(async () => {
-      done = await result.current.approve(ids);
+      failed = await result.current.approve(ids);
     });
 
-    expect(done).toBe(false);
+    expect(failed).toEqual(ids.slice(MAX_BULK_TRANSACTION_IDS));
     expect(mockShowToast).toHaveBeenCalledWith("Approved 497, skipped 3. The rest failed — try again.", "error");
   });
 });

@@ -6,7 +6,7 @@ import { nextToReview } from "../src/features/transactions/nextToReview";
 import { displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, spokenAmount, spokenMoney } from "../src/features/transactions/transactionDisplay";
 import { amountError, categoryChoices, changedFields, selectableProperties, toEditValues } from "../src/features/transactions/transactionEditValues";
 import { activeFilterCount, filtersFromParams, filtersToParams, periodRange, reviewLink, reviewQueueParams, toListParams, transactionsLink } from "../src/features/transactions/transactionFilters";
-import { approveFailureMessage, bulkApprovedMessage, bulkApprovedSomeFailedMessage, othersUpdatedSentence, saveFailureMessage } from "../src/features/transactions/transactionMessages";
+import { approveFailureMessage, bulkDeleteConfirmBody, bulkDeleteConfirmTitle, bulkDeleteFailureMessage, othersUpdatedSentence, saveFailureMessage } from "../src/features/transactions/transactionMessages";
 import { NO_FILTERS, UNASSIGNED_PROPERTY } from "../src/constants/transactionFilters";
 import { aProperty, aTransaction } from "../test-support/transactionsServer";
 
@@ -300,10 +300,14 @@ describe("bulk approve", () => {
     expect(isBulkApprovable(aTransaction({ status: "duplicate" }))).toBe(false);
   });
 
-  it("words the result like the website", () => {
-    expect(bulkApprovedMessage(3, 0)).toBe("3 approved");
-    expect(bulkApprovedMessage(2, 1)).toBe("2 approved, 1 skipped");
-    expect(bulkApprovedSomeFailedMessage(500, 3)).toBe("Approved 500, skipped 3. The rest failed \u2014 try again.");
-    expect(bulkApprovedSomeFailedMessage(500, 0)).toBe("Approved 500. The rest failed \u2014 try again.");
+  it("words the delete question and its failures", () => {
+    expect(bulkDeleteConfirmTitle(1)).toBe("Delete 1 transaction?");
+    expect(bulkDeleteConfirmTitle(12)).toBe("Delete 12 transactions?");
+    expect(bulkDeleteConfirmBody(1)).toBe("It'll be removed from your books. This can't be undone.");
+    expect(bulkDeleteConfirmBody(2)).toBe("They'll be removed from your books. This can't be undone.");
+    expect(bulkDeleteFailureMessage(undefined)).toContain("can't reach the server");
+    expect(bulkDeleteFailureMessage({ status: 403 })).toContain("read-only");
+    expect(bulkDeleteFailureMessage({ status: 500 })).toBe("I couldn't delete those. Want to try again?");
   });
+
 });

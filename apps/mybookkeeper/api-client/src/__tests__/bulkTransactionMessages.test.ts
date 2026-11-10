@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bulkApproveMessage, bulkDeleteMessage } from "@/app/features/transactions/bulkTransactionMessages";
+import { bulkApproveMessage, bulkDeleteMessage } from "../utils/bulkTransactionMessages";
 
 describe("bulkDeleteMessage", () => {
   it("says how many went and how many didn't when a later batch failed", () => {

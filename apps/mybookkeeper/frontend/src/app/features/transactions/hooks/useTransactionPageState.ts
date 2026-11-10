@@ -16,7 +16,7 @@ import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/properties
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import { useToast } from "@/shared/hooks/useToast";
 import { EMPTY_FILTERS } from "@/shared/lib/transaction-config";
-import { bulkApproveMessage, bulkDeleteMessage } from "@/app/features/transactions/bulkTransactionMessages";
+import { bulkApproveMessage, bulkDeleteMessage } from "@mybookkeeper/api-client/utils/bulkTransactionMessages";
 import { downloadFile } from "@/shared/utils/download";
 import { formatTag } from "@/shared/utils/tag";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
