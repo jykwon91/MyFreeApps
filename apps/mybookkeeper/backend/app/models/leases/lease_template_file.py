@@ -5,8 +5,11 @@ Pet Disclosure). ``display_order`` preserves the host's intended order so
 generated documents come out the same way every time.
 
 Storage: objects live in MinIO under
-``lease-templates/<template_id>/<file_id>``. CASCADE-deleted with the parent
-template; storage cleanup is best-effort in the service layer.
+``lease-templates/<template_id>/<file_id>``. Rows are CASCADE-deleted only
+when a template is hard-deleted; soft-deleting a template keeps its rows and
+objects. The service removes an object only after the commit that stopped
+referencing it, best-effort and logged, so a failed removal leaves an
+unreferenced object rather than a row pointing at nothing.
 """
 from __future__ import annotations
 

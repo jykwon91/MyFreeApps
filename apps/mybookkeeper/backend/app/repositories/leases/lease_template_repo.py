@@ -22,8 +22,12 @@ async def create(
     organization_id: uuid.UUID,
     name: str,
     description: str | None = None,
+    template_id: uuid.UUID | None = None,
 ) -> LeaseTemplate:
+    """``template_id`` lets a caller fix the id up front (e.g. to name storage
+    objects before the row exists); omitted, the model default generates one."""
     template = LeaseTemplate(
+        **({"id": template_id} if template_id is not None else {}),
         user_id=user_id,
         organization_id=organization_id,
         name=name,
@@ -41,6 +45,7 @@ async def get(
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
     include_deleted: bool = False,
+    for_update: bool = False,
 ) -> LeaseTemplate | None:
     stmt = select(LeaseTemplate).where(
         LeaseTemplate.id == template_id,
@@ -49,6 +54,8 @@ async def get(
     )
     if not include_deleted:
         stmt = stmt.where(LeaseTemplate.deleted_at.is_(None))
+    if for_update:
+        stmt = stmt.with_for_update()
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -121,18 +128,20 @@ async def bump_version(
     template_id: uuid.UUID,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
-) -> LeaseTemplate | None:
-    template = await get(
-        db,
-        template_id=template_id,
-        user_id=user_id,
-        organization_id=organization_id,
+) -> bool:
+    """Increment the version in SQL so concurrent bumps cannot lose one."""
+    result = await db.execute(
+        update(LeaseTemplate)
+        .where(
+            LeaseTemplate.id == template_id,
+            LeaseTemplate.user_id == user_id,
+            LeaseTemplate.organization_id == organization_id,
+            LeaseTemplate.deleted_at.is_(None),
+        )
+        .values(version=LeaseTemplate.version + 1)
+        .execution_options(synchronize_session=False)
     )
-    if template is None:
-        return None
-    template.version = (template.version or 1) + 1
-    await db.flush()
-    return template
+    return (result.rowcount or 0) > 0
 
 
 async def list_by_ids(

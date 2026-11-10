@@ -39,31 +39,33 @@ class TemplateNotFoundError(LookupError):
     pass
 
 
-def extract_text_from_upload(content: bytes, content_type: str) -> str:
-    """Pull plain text out of the upload for placeholder extraction.
+def extract_docx_text(content: bytes) -> str:
+    """Plain text of a DOCX (paragraphs, then table cells); raises if unreadable."""
+    import io
 
-    For DOCX we use python-docx if available; otherwise we can't extract
-    placeholders (the host can still edit the spec by hand later).
+    import docx  # type: ignore[import-untyped]
+
+    document = docx.Document(io.BytesIO(content))
+    parts = [p.text for p in document.paragraphs]
+    for table in document.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    parts.append(p.text)
+    return "\n".join(parts)
+
+
+def extract_text_from_upload(content: bytes, content_type: str) -> str:
+    """Pull plain text out of a stored file for placeholder suggestion.
+
+    Tolerant: an unreadable DOCX yields ``""`` so suggestion still runs on the
+    other files. Uploads are validated strictly by ``read_template_text``.
     """
     if content_type in ("text/markdown", "text/plain"):
-        try:
-            return content.decode("utf-8", errors="replace")
-        except Exception:  # noqa: BLE001
-            return ""
+        return content.decode("utf-8", errors="replace")
     if content_type == DOCX_MIME:
         try:
-            import io
-
-            import docx  # type: ignore[import-untyped]
-
-            document = docx.Document(io.BytesIO(content))
-            parts = [p.text for p in document.paragraphs]
-            for table in document.tables:
-                for row in table.rows:
-                    for cell in row.cells:
-                        for p in cell.paragraphs:
-                            parts.append(p.text)
-            return "\n".join(parts)
+            return extract_docx_text(content)
         except ImportError:
             logger.info(
                 "python-docx not installed — DOCX placeholder extraction skipped",
