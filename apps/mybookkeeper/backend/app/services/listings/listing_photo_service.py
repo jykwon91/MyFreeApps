@@ -22,7 +22,11 @@ from app.db.session import unit_of_work
 from app.repositories import listing_photo_repo, listing_repo
 from app.schemas.listings.listing_photo_response import ListingPhotoResponse
 from app.services.listings.photo_response_builder import attach_presigned_urls
-from app.services.storage.image_processor import ImageRejected, process_image
+from app.services.storage.image_processor import (
+    ImageRejected,
+    filename_for_content_type,
+    process_image,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +74,9 @@ async def upload_photos(
         result = await asyncio.to_thread(process_image, content, declared_content_type=declared)
         # filename can be empty (some clients send no filename); generate one
         # from the sniffed content type so the storage key is stable.
-        safe_name = filename or f"photo-{uuid.uuid4().hex}"
+        safe_name = filename_for_content_type(
+            filename or f"photo-{uuid.uuid4().hex}", result.content_type,
+        )
         processed.append((result.content, result.content_type, safe_name))
 
     async with unit_of_work() as db:

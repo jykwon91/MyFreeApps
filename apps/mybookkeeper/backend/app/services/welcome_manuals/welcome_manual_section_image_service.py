@@ -26,7 +26,11 @@ from app.repositories import (
 from app.schemas.welcome_manuals.welcome_manual_section_image_response import (
     WelcomeManualSectionImageResponse,
 )
-from app.services.storage.image_processor import ImageRejected, process_image  # noqa: F401 — ImageRejected re-exported for the route
+from app.services.storage.image_processor import (
+    ImageRejected,  # noqa: F401 — re-exported for the route
+    filename_for_content_type,
+    process_image,
+)
 from app.services.welcome_manuals.section_image_response_builder import (
     attach_presigned_urls,
 )
@@ -89,7 +93,9 @@ async def upload_images(
     processed: list[tuple[bytes, str, str]] = []
     for content, filename, declared in files:
         result = await asyncio.to_thread(process_image, content, declared_content_type=declared)
-        safe_name = filename or f"image-{uuid.uuid4().hex}"
+        safe_name = filename_for_content_type(
+            filename or f"image-{uuid.uuid4().hex}", result.content_type,
+        )
         processed.append((result.content, result.content_type, safe_name))
 
     async with unit_of_work() as db:

@@ -29,7 +29,11 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from app.services.storage.image_processor import ImageRejected, strip_metadata
+from app.services.storage.image_processor import (
+    ImageRejected,
+    ProcessedImage,
+    strip_metadata,
+)
 
 if TYPE_CHECKING:  # pragma: no cover — types-only
     pass
@@ -195,7 +199,7 @@ def _clamav_scan(content: bytes) -> None:
 # Pillow EXIF strip (image uploads only)
 # --------------------------------------------------------------------------- #
 
-def _strip_image_metadata(content: bytes, mime: str) -> bytes:
+def _strip_image_metadata(content: bytes, mime: str) -> ProcessedImage:
     """Re-encode the image so EXIF / XMP / ICC chunks are dropped.
 
     Defensive — KeyCheck reports are PDFs and rarely image uploads, but a
@@ -250,4 +254,4 @@ def process_report(
 
     # Image upload — strip EXIF / metadata via Pillow re-encode.
     cleaned = _strip_image_metadata(content, sniffed)
-    return ProcessedReport(content=cleaned, content_type=sniffed)
+    return ProcessedReport(content=cleaned.content, content_type=cleaned.content_type)

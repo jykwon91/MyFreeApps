@@ -104,9 +104,9 @@ class TestSniffContentType:
 
     def test_heic_header_recognised(self) -> None:
         # Synthesise a minimal ISO-BMFF "ftypmif1" container header. The full
-        # file isn't a real HEIC (PIL won't decode it without pillow-heif),
-        # but the sniffer only looks at the header bytes — that's enough to
-        # exercise the recognition branch independently of the decoder.
+        # file isn't a real HEIC, but the sniffer only looks at the header
+        # bytes — that's enough to exercise the recognition branch
+        # independently of the decoder.
         header = b"\x00\x00\x00\x18ftypmif1" + b"\x00" * 100
         assert sniff_content_type(header) == "image/heic"
 
@@ -233,7 +233,7 @@ class TestStripMetadata:
         with Image.open(io.BytesIO(webp)) as before:
             assert before.getexif().get_ifd(0x8825), "fixture must carry GPS"
 
-        stripped = strip_metadata(webp, "image/webp")
+        stripped = strip_metadata(webp, "image/webp").content
 
         with Image.open(io.BytesIO(stripped)) as after:
             assert after.format == "WEBP"

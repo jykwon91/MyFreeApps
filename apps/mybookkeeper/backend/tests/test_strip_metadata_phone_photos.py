@@ -30,7 +30,7 @@ def test_a_multi_image_jpeg_is_kept_as_a_single_jpeg_without_gps() -> None:
         assert before.n_frames == 2
     assert gps_of(buf.getvalue()), "fixture must carry GPS"
 
-    stripped = strip_metadata(buf.getvalue(), "image/jpeg")
+    stripped = strip_metadata(buf.getvalue(), "image/jpeg").content
 
     with Image.open(io.BytesIO(stripped)) as after:
         assert after.format == "JPEG"
@@ -48,7 +48,7 @@ def test_a_rotated_photo_is_stored_upright(fmt: str) -> None:
     img.save(buf, format=fmt, exif=exif.tobytes())
     assert gps_of(buf.getvalue()), "fixture must carry GPS"
 
-    stripped = strip_metadata(buf.getvalue(), f"image/{fmt.lower()}")
+    stripped = strip_metadata(buf.getvalue(), f"image/{fmt.lower()}").content
 
     with Image.open(io.BytesIO(stripped)) as after:
         assert after.size == (20, 40)
