@@ -3,11 +3,10 @@ import type { WelcomeManualCreateFormValues } from "@mybookkeeper/api-client/typ
 import type { WelcomeManualDirtyFlags } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-dirty-flags";
 import type { WelcomeManualFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-form-values";
 import { manualCreateRequest, manualUpdateRequest } from "@mybookkeeper/api-client/utils/welcomeManualRequests";
-import { useToast } from "@platform/mobile";
+import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { WELCOME_MANUAL_FORM_MESSAGES } from "../../constants/welcomeManualForms";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useWrite } from "../../lib/useWrite";
 import { saveFailure } from "./welcomeManualFailure";
 import { MANUAL_WORDS } from "../../constants/welcomeManualSheets";

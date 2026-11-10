@@ -1,9 +1,8 @@
 import { useGetVendorByIdQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { EmptyState, useRefresh } from "@platform/mobile";
+import { EmptyState, useLeaveWhenSaved, useRefresh } from "@platform/mobile";
 import { router } from "expo-router";
 import { VENDOR_MESSAGES } from "../../constants/vendors";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useCanWrite } from "../workspace/useCanWrite";
 import VendorDetailBody from "./VendorDetailBody";
 import VendorDetailSkeleton from "./VendorDetailSkeleton";

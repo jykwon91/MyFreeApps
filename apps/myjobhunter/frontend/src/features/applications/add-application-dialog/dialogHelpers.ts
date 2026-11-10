@@ -1,56 +1,15 @@
 /**
- * dialogHelpers — pure utility functions for the AddApplicationDialog flow.
- *
- * All functions here are stateless and have no React dependencies.
- * They are extracted from useAddApplicationFlow to keep the hook focused
- * on state transitions and async logic.
+ * dialogHelpers — the browser's half of turning an extracted job description
+ * into the notes scaffold. The shared rules (line breaks, folding, the notes
+ * limit) live in @myjobhunter/api-client; this file only supplies the HTML
+ * and URL parsers, which are the browser's own.
  */
-import type { Company } from "@myjobhunter/api-client/types/company";
-import type { ReviewCompanyState } from "../useAddApplicationDialogState";
+import { combineNotes as combineExtractNotes } from "@myjobhunter/api-client/utils/combineNotes";
+import { htmlToPlainText } from "@myjobhunter/api-client/utils/htmlToPlainText";
 import type { JdUrlExtractResponse } from "@myjobhunter/api-client/types/application/jd-url-extract-response";
 
-const NOTES_MAX_LEN = 5000;
-
-export function findCompanyByName(companies: Company[], name: string): Company | undefined {
-  const trimmed = name.trim().toLowerCase();
-  return companies.find((c) => c.name.trim().toLowerCase() === trimmed);
-}
-
-export function readCompanyId(company: ReviewCompanyState): string | null {
-  if (company.kind === "tracked" || company.kind === "new") return company.companyId;
-  if (company.kind === "manual") return company.companyId;
-  return null;
-}
-
-/**
- * Reduce a company website URL to its bare host (no scheme, no leading
- * "www.", no trailing slash). The Company model's `primary_domain` is a
- * domain string, not a URL.
- */
-export function websiteToDomain(website: string | null | undefined): string | null {
-  if (!website) return null;
-  try {
-    const url = new URL(website.trim());
-    let host = url.hostname.toLowerCase();
-    if (host.startsWith("www.")) host = host.slice(4);
-    return host || null;
-  } catch {
-    const stripped = website.trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
-    return stripped.replace(/^www\./i, "") || null;
-  }
-}
-
 export function combineNotes(result: JdUrlExtractResponse): string | null {
-  const chunks: string[] = [];
-  if (result.summary) chunks.push(result.summary);
-  if (result.description_html) {
-    const stripped = stripHtml(result.description_html).trim();
-    if (stripped) chunks.push(stripped);
-  }
-  if (result.requirements_text) chunks.push(result.requirements_text);
-  if (chunks.length === 0) return null;
-  const combined = chunks.join("\n\n");
-  return combined.length > NOTES_MAX_LEN ? combined.slice(0, NOTES_MAX_LEN) : combined;
+  return combineExtractNotes(result, domTextContent);
 }
 
 /**
@@ -68,33 +27,30 @@ export function combineNotes(result: JdUrlExtractResponse): string | null {
  *   `&lt;` -> `<` as another means `&amp;lt;` decodes twice and yields `<`,
  *   again reconstructing markup from an already-escaped input.
  *
- * `DOMParser.parseFromString(html, "text/html")` builds an inert document:
- * scripts do not execute and no subresources are fetched. `textContent` then
- * yields the text with every tag removed and every entity decoded exactly
- * once, per the HTML spec.
- *
  * The result is used as plain text (the notes scaffold) and must never be fed
  * to `dangerouslySetInnerHTML` — see NotesSection.
  */
 export function stripHtml(html: string): string {
-  // Preserve the line structure block-level markup implies, before the parser
-  // flattens everything to text.
-  const withBreaks = html
-    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
-    .replace(/<\s*\/?\s*(p|li|div|h[1-6])\b[^>]*>/gi, "\n");
+  return htmlToPlainText(html, domTextContent);
+}
 
-  const doc = new DOMParser().parseFromString(withBreaks, "text/html");
+/**
+ * `DOMParser.parseFromString(html, "text/html")` builds an inert document:
+ * scripts do not execute and no subresources are fetched. `textContent` then
+ * yields the text with every tag removed and every entity decoded exactly
+ * once, per the HTML spec.
+ */
+export function domTextContent(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
   // Script/style bodies are markup internals, not prose — their text would
   // otherwise survive into the notes.
   doc.body
     ?.querySelectorAll("script, style, noscript, template")
     .forEach((el) => el.remove());
+  return doc.body?.textContent ?? "";
+}
 
-  return (doc.body?.textContent ?? "")
-    // The parser decodes `&nbsp;` to U+00A0. Notes are plain text edited in a
-    // textarea, where a non-breaking space is an invisible foot-gun; fold it
-    // back to an ordinary space.
-    .replace(/\u00a0/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+/** The browser's URL parser, for reducing a company website to its domain. */
+export function urlHostname(url: string): string {
+  return new URL(url).hostname;
 }

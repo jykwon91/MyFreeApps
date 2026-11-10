@@ -4,11 +4,10 @@ import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendo
 import type { VendorFormValues } from "@mybookkeeper/api-client/types/vendor/vendor-form-values";
 import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendor-response";
 import { EMPTY_VENDOR_FORM, vendorDirtyFields, vendorFormProblems, vendorToFormValues } from "@mybookkeeper/api-client/utils/vendorForm";
-import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useTheme } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { VENDOR_FORM_MESSAGES as MESSAGES } from "../../constants/vendorForm";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { useSaveVendor } from "./useSaveVendor";
 
 const CATEGORY_OPTIONS = VENDOR_CATEGORIES.map((category) => ({ value: category, label: VENDOR_CATEGORY_LABELS[category] }));

@@ -75,6 +75,7 @@ const companiesApi = baseApi
 
 export const {
   useListCompaniesQuery,
+  useLazyListCompaniesQuery,
   useGetCompanyQuery,
   useCreateCompanyMutation,
   useUpdateCompanyMutation,

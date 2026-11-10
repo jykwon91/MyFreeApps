@@ -3,6 +3,7 @@ routes:
     not_on_mobile: Not built yet.
   /analyze:
     not_on_mobile: Not built yet.
+  # The website adds an application in a dialog on this page; the app adds it on (app)/applications/new.
   /applications:
     screen: (app)/(tabs)/applications
   /applications/:id:

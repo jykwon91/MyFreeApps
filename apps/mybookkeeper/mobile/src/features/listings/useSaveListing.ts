@@ -2,9 +2,8 @@ import { useCreateListingMutation, useUpdateListingMutation } from "@mybookkeepe
 import type { ListingFormValues } from "@mybookkeeper/api-client/types/listing/listing-form-values";
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import { formValuesToCreateRequest, formValuesToUpdateRequest, listingDirtyFields } from "@mybookkeeper/api-client/utils/listingForm";
-import { useToast } from "@platform/mobile";
+import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import { LISTING_FORM_MESSAGES } from "../../constants/listingForm";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useWrite } from "../../lib/useWrite";
 import { saveFailureCopy } from "../../lib/writeFailureCopy";
 

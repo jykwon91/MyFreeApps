@@ -2,9 +2,8 @@ import { useCreateSectionMutation, useUpdateSectionMutation } from "@mybookkeepe
 import type { WelcomeManualDirtyFlags } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-dirty-flags";
 import type { WelcomeManualSectionFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-form-values";
 import { sectionFormCreateRequest, sectionFormUpdateRequest } from "@mybookkeeper/api-client/utils/welcomeManualRequests";
-import { useToast } from "@platform/mobile";
+import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import { WELCOME_MANUAL_SECTION_MESSAGES } from "../../constants/welcomeManualForms";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useWrite } from "../../lib/useWrite";
 import { saveFailure } from "./welcomeManualFailure";
 import { SECTION_WORDS } from "../../constants/welcomeManualSheets";

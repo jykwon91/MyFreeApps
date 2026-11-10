@@ -2,10 +2,9 @@ import { useDeleteMarketRateBenchmarkMutation, useUpsertMarketRateBenchmarkMutat
 import type { MarketRateFormValues } from "@mybookkeeper/api-client/types/utility/market-rate-form-values";
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import { toMarketRateUpsert } from "@mybookkeeper/api-client/utils/marketRateForm";
-import { useToast } from "@platform/mobile";
+import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { MARKET_RATE_MESSAGES as MESSAGES } from "../../constants/marketRates";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useWrite } from "../../lib/useWrite";
 import { deleteFailureCopy, saveFailureCopy } from "../../lib/writeFailureCopy";
 

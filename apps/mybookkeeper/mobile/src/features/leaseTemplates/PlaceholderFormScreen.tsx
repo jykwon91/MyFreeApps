@@ -4,12 +4,11 @@ import type { LeasePlaceholderFormField } from "@mybookkeeper/api-client/types/l
 import type { LeasePlaceholderFormValues } from "@mybookkeeper/api-client/types/lease/lease-placeholder-form-values";
 import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
 import { placeholderDirtyFields, placeholderFormProblems, placeholderToFormValues } from "@mybookkeeper/api-client/utils/leasePlaceholderForm";
-import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useTheme } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
 import { PLACEHOLDER_MESSAGES as MESSAGES } from "../../constants/leasePlaceholderEdit";
 import type { PlaceholderFormScreenProps } from "../../types/PlaceholderFormScreenProps";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { useSavePlaceholder } from "./useSavePlaceholder";
 
 const TYPE_OPTIONS = LEASE_PLACEHOLDER_INPUT_TYPES.map((type) => ({ value: type, label: LEASE_PLACEHOLDER_INPUT_TYPE_LABELS[type] }));

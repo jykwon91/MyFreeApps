@@ -1,10 +1,9 @@
-import { Banner, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ScrollView, Text } from "react-native";
 import { BANK_CSV_FILE_TYPES, BANK_IMPORT_MESSAGES as MESSAGES } from "../../constants/bankImport";
 import { NO_FILTERS } from "../../constants/transactionFilters";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import HeldFilesList from "../uploads/HeldFilesList";
 import { chooseHeldFile } from "../uploads/pickHeldFile";
 import { useHeldFiles } from "../uploads/useHeldFiles";

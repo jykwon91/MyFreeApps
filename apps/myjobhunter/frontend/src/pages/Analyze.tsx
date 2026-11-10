@@ -43,10 +43,8 @@ import JobAnalysisHeader from "@/features/analyze/JobAnalysisHeader";
 import VerdictBanner from "@/features/analyze/VerdictBanner";
 import DimensionsTable from "@/features/analyze/DimensionsTable";
 import AnalysisActions from "@/features/analyze/AnalysisActions";
-import {
-  describeExtractError,
-  isAuthRequiredError,
-} from "@/features/applications/jdErrorRouting";
+import { describeExtractError } from "@myjobhunter/api-client/utils/describeExtractError";
+import { isAuthRequiredError } from "@myjobhunter/api-client/utils/isAuthRequiredError";
 import {
   useAnalyzeJobMutation,
   useApplyFromAnalysisMutation,

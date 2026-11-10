@@ -5,13 +5,12 @@ import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/i
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/insurancePolicyDraft";
 import { EMPTY_POLICY_FORM, policyToFormValues, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
 import { INSURANCE_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/insuranceUploads";
-import { Banner, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { Banner, LoadingButton, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { POLICY_FORM_MESSAGES, POLICY_PHOTO_NAME, POLICY_PROPERTY_MESSAGES, POLICY_READER_MESSAGES } from "../../constants/insuranceForm";
 import { sameFormValues } from "../../lib/sameFormValues";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import type { PolicyFormErrors } from "../../types/PolicyFormErrors";
 import { useFormSubmit } from "../shell/useFormSubmit";
 import DocumentDraftNotices from "../documentReader/DocumentDraftNotices";

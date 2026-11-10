@@ -12,6 +12,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { showError } from "@platform/ui";
 import AddApplicationDialog from "../AddApplicationDialog";
 
 // ---- mocks ----
@@ -806,6 +807,68 @@ describe("AddApplicationDialog — auto-create failure recovery", () => {
         expect.objectContaining({ company_id: "co-retry" }),
       );
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Review form validation — shared addApplicationFormProblems check
+// ---------------------------------------------------------------------------
+
+describe("AddApplicationDialog — review form validation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseListCompaniesQuery.mockReturnValue(emptyCompanies);
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useExtractJdFromUrlMutation>>(),
+    );
+    mockUseParseJobDescriptionMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useParseJobDescriptionMutation>>(),
+    );
+  });
+
+  it("a whitespace-only role title shows the inline required error and sends nothing", async () => {
+    const user = userEvent.setup();
+    const mockCreateCompany = vi.fn().mockReturnValue({
+      unwrap: () =>
+        Promise.resolve({
+          id: "co-manual",
+          user_id: "u1",
+          name: "Acme Corp",
+          primary_domain: null,
+          logo_url: null,
+          industry: null,
+          size_range: null,
+          hq_location: null,
+          description: null,
+          external_ref: null,
+          external_source: null,
+          crunchbase_id: null,
+          created_at: "",
+          updated_at: "",
+        }),
+    });
+    const mockCreateApp = vi.fn();
+    mockUseCreateCompanyMutation.mockReturnValue(
+      [mockCreateCompany, { isLoading: false }] as unknown as ReturnType<typeof useCreateCompanyMutation>,
+    );
+    mockUseCreateApplicationMutation.mockReturnValue(
+      [mockCreateApp, { isLoading: false }] as unknown as ReturnType<typeof useCreateApplicationMutation>,
+    );
+
+    renderDialog();
+    await user.click(screen.getByText(/adding manually\? type a company name/i));
+    await user.type(screen.getByLabelText(/company name/i), "Acme Corp");
+    await user.keyboard("{Enter}");
+    await waitFor(() => {
+      expect(screen.getByText(/review and adjust before saving/i)).toBeInTheDocument();
+    });
+
+    await user.type(screen.getByPlaceholderText(/senior backend engineer/i), "   ");
+    await user.click(screen.getByRole("button", { name: /add application/i }));
+
+    expect(await screen.findByText("Role title is required")).toBeInTheDocument();
+    expect(mockCreateApp).not.toHaveBeenCalled();
+    expect(vi.mocked(showError)).not.toHaveBeenCalled();
   });
 });
 

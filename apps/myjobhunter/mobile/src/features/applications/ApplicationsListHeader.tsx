@@ -10,7 +10,7 @@ export default function ApplicationsListHeader({ isStale, hasRows, sortLabel, on
       {isStale ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
       {hasRows ? (
         <>
-          <LoadingButton onPress={onAdd}>{MESSAGES.addOnWebsite}</LoadingButton>
+          <LoadingButton onPress={onAdd}>{MESSAGES.add}</LoadingButton>
           <LoadingButton onPress={onSort} variant="secondary">
             {`${MESSAGES.sort}: ${sortLabel}`}
           </LoadingButton>

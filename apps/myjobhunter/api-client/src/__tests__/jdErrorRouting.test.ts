@@ -1,7 +1,7 @@
 /**
  * Tests for the JD URL extract error-routing helpers.
  *
- * The frontend reads two pieces of information off RTK Query's error
+ * Each client reads two pieces of information off RTK Query's error
  * response (`{ status, data }`):
  *   1. `isAuthRequiredError` — distinguishes the 422 + auth_required
  *      case from every other 422 (which are validation errors).
@@ -9,7 +9,8 @@
  *      the status code, with a sensible fallback.
  */
 import { describe, it, expect } from "vitest";
-import { describeExtractError, isAuthRequiredError } from "../jdErrorRouting";
+import { describeExtractError } from "../utils/describeExtractError";
+import { isAuthRequiredError } from "../utils/isAuthRequiredError";
 
 describe("isAuthRequiredError", () => {
   it("matches a 422 response with detail 'auth_required'", () => {

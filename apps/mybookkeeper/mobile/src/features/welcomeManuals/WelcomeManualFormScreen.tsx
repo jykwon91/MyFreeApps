@@ -3,11 +3,10 @@ import { WELCOME_MANUAL_TITLE_MAX_LENGTH } from "@mybookkeeper/api-client/consta
 import type { WelcomeManualFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-form-values";
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 import { manualEditProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
-import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useTheme } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { WELCOME_MANUAL_FORM_MESSAGES as MESSAGES, WELCOME_MANUAL_INTRO_MIN_HEIGHT } from "../../constants/welcomeManualForms";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import { NO_PROPERTY_VALUE, propertyOptions } from "./welcomeManualPropertyOptions";
 import { useSaveWelcomeManual } from "./useSaveWelcomeManual";

@@ -1,9 +1,8 @@
 import { useGetLeaseTemplateByIdQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { EmptyState, useRefresh } from "@platform/mobile";
+import { EmptyState, useLeaveWhenSaved, useRefresh } from "@platform/mobile";
 import { router } from "expo-router";
 import { LEASE_TEMPLATE_MESSAGES as MESSAGES } from "../../constants/leaseTemplates";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useCanWrite } from "../workspace/useCanWrite";
 import LeaseTemplateDetailBody from "./LeaseTemplateDetailBody";
 import LeaseTemplateDetailSkeleton from "./LeaseTemplateDetailSkeleton";

@@ -16,10 +16,11 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { type UseFormRegister, type FieldErrors } from "react-hook-form";
 import { LoadingButton } from "@platform/ui";
 import type { Company } from "@myjobhunter/api-client/types/company";
-import type { DialogState, ReviewCompanyState } from "../useAddApplicationDialogState";
+import type { DialogState } from "../useAddApplicationDialogState";
+import type { ReviewCompanyState } from "@myjobhunter/api-client/types/application/review-company-state";
+import type { AddApplicationFormValues } from "@myjobhunter/api-client/types/application/add-application-form-values";
 import CompanyCombobox from "../CompanyCombobox";
 import CompanyConfirmationPill from "../CompanyConfirmationPill";
-import type { AddApplicationFormValues } from "./useAddApplicationFlow";
 
 const REMOTE_OPTIONS: { value: AddApplicationFormValues["remote_type"]; label: string }[] = [
   { value: "unknown", label: "Unknown" },
@@ -99,7 +100,7 @@ export default function CompanyConfirmStep({
           </label>
           <input
             type="text"
-            {...register("role_title", { required: "Role title is required", minLength: 1 })}
+            {...register("role_title")}
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
             placeholder="e.g. Senior Backend Engineer"
           />
@@ -117,6 +118,9 @@ export default function CompanyConfirmStep({
               className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               placeholder="e.g. SF, NYC, Remote-EU"
             />
+            {errors.location ? (
+              <p className="text-xs text-destructive mt-1">{errors.location.message}</p>
+            ) : null}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Remote</label>
@@ -141,6 +145,9 @@ export default function CompanyConfirmStep({
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
             placeholder="Anything to remember about this role…"
           />
+          {errors.notes ? (
+            <p className="text-xs text-destructive mt-1">{errors.notes.message}</p>
+          ) : null}
         </div>
 
         <div className="flex justify-end gap-2 pt-2">

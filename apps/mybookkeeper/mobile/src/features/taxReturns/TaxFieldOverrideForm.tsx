@@ -3,11 +3,10 @@ import type { FieldOverrideProblems } from "@mybookkeeper/api-client/types/tax/F
 import type { TaxFormField } from "@mybookkeeper/api-client/types/tax/TaxFormField";
 import { formatTaxFieldValue } from "@mybookkeeper/api-client/utils/formatTaxFieldValue";
 import { TAX_FIELD_LIMITS } from "@mybookkeeper/api-client/constants/taxFieldLimits";
-import { Banner, FormField, LoadingButton, SegmentedControl, useTheme } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
 import { TAX_FIELD_OVERRIDE_MESSAGES as MESSAGES } from "../../constants/taxFieldOverride";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { useOverrideTaxField } from "./useOverrideTaxField";
 
 const YES_NO = [

@@ -2,9 +2,8 @@ import { useCreateVendorMutation, useUpdateVendorMutation } from "@mybookkeeper/
 import type { VendorFormValues } from "@mybookkeeper/api-client/types/vendor/vendor-form-values";
 import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendor-response";
 import { formValuesToCreateRequest, formValuesToUpdateRequest, vendorDirtyFields, vendorToFormValues } from "@mybookkeeper/api-client/utils/vendorForm";
-import { useToast } from "@platform/mobile";
+import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import { VENDOR_FORM_MESSAGES } from "../../constants/vendorForm";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useWrite } from "../../lib/useWrite";
 import { saveFailureCopy } from "../../lib/writeFailureCopy";
 

@@ -42,6 +42,8 @@ export { default as WebLink } from "./components/WebLink";
 
 export { useAnnouncement } from "./hooks/useAnnouncement";
 export { useConfirmLeave } from "./hooks/useConfirmLeave";
+export { useDiscardPrompt } from "./hooks/useDiscardPrompt";
+export { useLeaveWhenSaved } from "./hooks/useLeaveWhenSaved";
 export { useRefresh } from "./hooks/useRefresh";
 export { filePart } from "./utils/filePart";
 export { useDevices } from "./hooks/useDevices";
@@ -96,6 +98,7 @@ export type { ToastVariant } from "./types/ToastVariant";
 export type { WebLinkProps } from "./types/WebLinkProps";
 export type { WebPath } from "./types/WebPath";
 export { TWO_STEP_MESSAGES } from "./constants/twoStep";
+export { DISCARD_MESSAGES } from "./constants/discard";
 export { LINK_MESSAGES } from "./constants/links";
 export { SHOWING_LAST_LOADED_MESSAGE } from "./constants/offline";
 export { CHIP_HEIGHT } from "./constants/chip";

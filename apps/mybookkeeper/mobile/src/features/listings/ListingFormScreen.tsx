@@ -5,12 +5,11 @@ import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/lis
 import type { ListingRoomType } from "@mybookkeeper/api-client/types/listing/listing-room-type";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
 import { EMPTY_LISTING_FORM, listingDirtyFields, listingFormProblems, listingToFormValues } from "@mybookkeeper/api-client/utils/listingForm";
-import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useTheme } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { LISTING_FORM_MESSAGES as MESSAGES, LISTING_MULTILINE_MIN_HEIGHT, LISTING_PROPERTY_CHOICE, LISTING_ROOM_OPTIONS, LISTING_STATUS_OPTIONS } from "../../constants/listingForm";
 import type { ListingFormPicking } from "../../types/ListingFormPicking";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import PropertyChoiceField from "../properties/PropertyChoiceField";
 import { daysInput, rateInput } from "./listingInput";
 import { useSaveListing } from "./useSaveListing";

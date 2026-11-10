@@ -2,7 +2,7 @@
  * ProcessingStep — step-2 spinner shown while the URL extract or
  * JD-text parse mutation is in flight.
  *
- * After PROCESSING_LONG_RUNNING_THRESHOLD_MS the parent hook flips
+ * After JD_READ_LONG_RUNNING_MS the parent hook flips
  * `longRunning` to true, which swaps the copy from "Reading job
  * posting…" to "This is taking longer than usual…".
  */

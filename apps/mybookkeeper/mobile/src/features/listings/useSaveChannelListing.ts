@@ -2,9 +2,8 @@ import { useCreateListingChannelMutation, useUpdateChannelListingMutation } from
 import type { ChannelListing } from "@mybookkeeper/api-client/types/listing/channel-listing";
 import type { ChannelListingFormValues } from "@mybookkeeper/api-client/types/listing/channel-listing-form-values";
 import { channelListingToCreateRequest, channelListingToUpdateRequest } from "@mybookkeeper/api-client/utils/channelListingForm";
-import { useToast } from "@platform/mobile";
+import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import { LISTING_CHANNEL_MESSAGES } from "../../constants/listingChannels";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useWrite } from "../../lib/useWrite";
 import { saveFailureCopy } from "../../lib/writeFailureCopy";
 

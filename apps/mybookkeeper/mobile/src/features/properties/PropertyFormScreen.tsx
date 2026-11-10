@@ -5,11 +5,10 @@ import type { PropertyClassification } from "@mybookkeeper/api-client/types/prop
 import type { PropertyForm } from "@mybookkeeper/api-client/types/property/PropertyForm";
 import type { PropertyType } from "@mybookkeeper/api-client/types/property/PropertyType";
 import { blankForm, fromProperty, isBlank, propertyChanges, propertyFormProblems, withClassification } from "@mybookkeeper/api-client/utils/propertyForm";
-import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SegmentedControl, useTheme } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { PROPERTY_FORM_MESSAGES as MESSAGES, PROPERTY_TYPE_SEGMENTS } from "../../constants/propertyForm";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { useSaveProperty } from "./useSaveProperty";
 
 const CLASSIFICATION_OPTIONS = CLASSIFICATION_CHOICES.map(({ value, label }) => ({ value, label }));

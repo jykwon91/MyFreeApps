@@ -31,8 +31,10 @@
 import { useMemo, useRef, useState } from "react";
 import { Plus, Building2 } from "lucide-react";
 import type { Company } from "@myjobhunter/api-client/types/company";
+import { filterCompanies } from "@myjobhunter/api-client/utils/filterCompanies";
 
 const NO_HIGHLIGHT = -1;
+const MAX_VISIBLE_ROWS = 8;
 
 export interface CompanyComboboxProps {
   /** All tracked companies (unfiltered — combobox does the filtering). */
@@ -71,7 +73,7 @@ export default function CompanyCombobox({
   const [rawHighlight, setHighlight] = useState<number>(NO_HIGHLIGHT);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const filtered = useMemo(() => filterCompanies(companies, query), [companies, query]);
+  const filtered = useMemo(() => visibleCompanies(companies, query), [companies, query]);
 
   const trimmed = query.trim();
   const exactMatch = filtered.find(
@@ -182,21 +184,12 @@ export default function CompanyCombobox({
 }
 
 // ---------------------------------------------------------------------------
-// Filtering — case-insensitive substring match on name + primary_domain.
+// Filtering — shared name/domain match, capped to the rows that fit.
 // ---------------------------------------------------------------------------
 
-function filterCompanies(companies: Company[], query: string): Company[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return companies.slice(0, MAX_VISIBLE_ROWS);
-  const matches = companies.filter((c) => {
-    const name = c.name.toLowerCase();
-    const domain = (c.primary_domain ?? "").toLowerCase();
-    return name.includes(q) || domain.includes(q);
-  });
-  return matches.slice(0, MAX_VISIBLE_ROWS);
+function visibleCompanies(companies: Company[], query: string): Company[] {
+  return filterCompanies(companies, query).slice(0, MAX_VISIBLE_ROWS);
 }
-
-const MAX_VISIBLE_ROWS = 8;
 
 // ---------------------------------------------------------------------------
 // Row sub-components — kept tiny so the parent reads top-down.
