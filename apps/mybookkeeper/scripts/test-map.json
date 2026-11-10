@@ -1931,6 +1931,7 @@
         "backend/app/api/classification_rules.py",
         "api-client/src/store/classificationRulesApi.ts",
         "frontend/src/app/features/transactions/ClassificationRulesPanel.tsx",
+        "frontend/src/shared/lib/classification-rule-messages.ts",
         "api-client/src/types/classification-rule/",
         "api-client/src/constants/classificationRuleLabels.ts",
         "api-client/src/utils/classificationRules.ts",
@@ -1943,7 +1944,8 @@
         "test_vendor_normalization.py"
       ],
       "frontend_tests": [
-        "useClassificationRulesPanelMode.test.ts"
+        "useClassificationRulesPanelMode.test.ts",
+        "ClassificationRulesPanel.test.tsx"
       ],
       "e2e_specs": [
         "classification-rules.spec.ts"

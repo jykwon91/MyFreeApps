@@ -3,6 +3,7 @@ import type { ClassificationRule } from "@mybookkeeper/api-client/types/classifi
 
 interface UseClassificationRulesPanelModeArgs {
   isLoading: boolean;
+  isError: boolean;
   rules: readonly ClassificationRule[];
 }
 
@@ -13,9 +14,10 @@ interface UseClassificationRulesPanelModeArgs {
  */
 export function useClassificationRulesPanelMode({
   isLoading,
+  isError,
   rules,
 }: UseClassificationRulesPanelModeArgs): ClassificationRulesPanelMode {
   if (isLoading) return "loading";
-  if (rules.length === 0) return "empty";
+  if (rules.length === 0) return isError ? "error" : "empty";
   return "list";
 }
