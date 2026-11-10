@@ -3,8 +3,9 @@
 
 Two rules enforced:
   1. Hard limit — any non-allowlisted source file over 1000 LOC fails immediately.
-  2. Growth guard — any source file already over 500 LOC on the base ref that has
-     grown (net positive lines) since that ref also fails.
+  2. Growth guard — any source file over 500 LOC that has grown (net positive
+     lines) since the base ref fails. This covers files that were already over
+     500, files that cross 500 in this change, and new files over 500.
 
 Usage:
     python scripts/check-file-size.py [--base <git-ref>]
@@ -197,10 +198,11 @@ def check_files(
             )
             continue  # no need to also check growth guard for the same file
 
-        # Rule 2 — growth guard (only for files already over the threshold)
+        # Rule 2 — growth guard: a file over the threshold must not have grown,
+        # whether it was already over, crossed it in this change, or is new.
         if current_loc > GROWTH_GUARD_THRESHOLD and rel_path not in allow_growth_allowlist:
             base_loc = count_lines_at_ref(rel_path, base_ref)
-            if base_loc > GROWTH_GUARD_THRESHOLD and current_loc > base_loc:
+            if current_loc > base_loc:
                 violations.append(
                     Violation(
                         rule="growth_guard",
@@ -237,7 +239,7 @@ def print_summary(violations: list[Violation]) -> None:
 
     if growth:
         print(
-            f"  GROWTH GUARD (file already >{GROWTH_GUARD_THRESHOLD} LOC and grew) — {len(growth)} file(s):"
+            f"  GROWTH GUARD (file >{GROWTH_GUARD_THRESHOLD} LOC and grew) — {len(growth)} file(s):"
         )
         for v in sorted(growth, key=lambda x: -(x.current_loc - x.base_loc)):
             delta = v.current_loc - v.base_loc
