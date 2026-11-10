@@ -1,25 +1,25 @@
 import type { DestinationViewer } from "../types/DestinationViewer";
-import type { MoreMenuGroup } from "../types/MoreMenuGroup";
-import type { MoreMenuItem } from "../types/MoreMenuItem";
+import type { MoreMenuGroup } from "@platform/mobile";
+import type { MoreDestination } from "../types/MoreDestination";
 import type { SearchDestination } from "../types/SearchDestination";
 import { searchJoined, searchWords } from "./normalizeSearchText";
 
 /** Whether this person is allowed to see the item. */
-export function canSee(item: MoreMenuItem, viewer: DestinationViewer): boolean {
+export function canSee(item: MoreDestination, viewer: DestinationViewer): boolean {
   if (item.access === "admin") return viewer.isAdmin;
   if (item.access === "write") return viewer.canWrite;
   return true;
 }
 
 /** The groups with the items this person can't see taken out, and no group left empty. */
-export function visibleGroups(groups: readonly MoreMenuGroup[], viewer: DestinationViewer): MoreMenuGroup[] {
+export function visibleGroups(groups: readonly MoreMenuGroup<MoreDestination>[], viewer: DestinationViewer): MoreMenuGroup<MoreDestination>[] {
   return groups
     .map((group) => ({ ...group, items: group.items.filter((item) => canSee(item, viewer)) }))
     .filter((group) => group.items.length > 0);
 }
 
 /** Every item this person can see as one flat list, with the group each is under. */
-export function flattenDestinations(groups: readonly MoreMenuGroup[], viewer: DestinationViewer): SearchDestination[] {
+export function flattenDestinations(groups: readonly MoreMenuGroup<MoreDestination>[], viewer: DestinationViewer): SearchDestination[] {
   return visibleGroups(groups, viewer).flatMap((group) => group.items.map((item) => ({ item, groupTitle: group.title })));
 }
 
@@ -32,7 +32,7 @@ const startsSomeWord = (words: readonly string[], tokens: readonly string[]): bo
  * 1: a keyword matches the same way.
  * 0: no match.
  */
-function matchRank(item: MoreMenuItem, tokens: readonly string[], joinedQuery: string): number {
+function matchRank(item: MoreDestination, tokens: readonly string[], joinedQuery: string): number {
   const labelWords = searchWords(item.label);
   if (startsSomeWord(labelWords, tokens)) return 3;
   if (searchJoined(item.label).includes(joinedQuery)) return 2;

@@ -4,7 +4,7 @@ import {
   useLazyRenderReplyTemplateQuery,
 } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
-import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, useAnnouncement, useTheme, useToast } from "@platform/mobile";
+import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, useAnnouncement, useOpenWebsite, useTheme, useToast } from "@platform/mobile";
 import { router, usePreventRemove } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useReplySend } from "@mybookkeeper/api-client/hooks/useReplySend";
@@ -25,14 +25,13 @@ import ReplySendNotice from "./ReplySendNotice";
 import { REPLY_SEND_OPTIONS } from "./replySendOptions";
 import { matchesRendered, REPLY_BLOCK_WORDS, REPLY_SEND_LABELS, REPLY_SEND_WORDS, replyBlock, replySendingAnnouncement } from "./replyStatus";
 import { replyToSend } from "./replyToSend";
-import { useOpenLink } from "./useOpenLink";
 import { useReplyDraft } from "./useReplyDraft";
 
 export default function InquiryReplyBody({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
-  const openLink = useOpenLink();
+  const openWebsite = useOpenWebsite();
   const { currentData: inquiry, error: loadError, isFetching, refetch: refetchInquiry } = useGetInquiryByIdQuery(id);
   const { data: integrations, refetch: refetchIntegrations } = useGetIntegrationsQuery();
   const { data: templates, error: templatesError, refetch: refetchTemplates } = useGetReplyTemplatesQuery();
@@ -178,7 +177,7 @@ export default function InquiryReplyBody({ id }: { id: string }) {
       >
         {block ? (
           <Banner
-            actions={block === "noEmailAddress" ? undefined : [{ label: "Open on the website", onPress: () => void openLink(`${WEB_BASE_URL}/integrations`) }]}
+            actions={block === "noEmailAddress" ? undefined : [{ label: "Open on the website", onPress: () => void openWebsite(WEB_BASE_URL, "/integrations") }]}
             message={REPLY_BLOCK_WORDS[block]}
           />
         ) : null}

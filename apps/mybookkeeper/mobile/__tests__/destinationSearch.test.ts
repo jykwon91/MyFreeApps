@@ -1,13 +1,14 @@
 import { ALL_DESTINATIONS } from "../src/constants/allDestinations";
 import type { DestinationViewer } from "../src/types/DestinationViewer";
-import type { MoreMenuGroup } from "../src/types/MoreMenuGroup";
+import type { MoreMenuGroup } from "@platform/mobile";
+import type { MoreDestination } from "../src/types/MoreDestination";
 import { canSee, filterDestinations, flattenDestinations, visibleGroups } from "../src/utils/destinationSearch";
 
 const ADMIN: DestinationViewer = { isAdmin: true, canWrite: true };
 const MEMBER: DestinationViewer = { isAdmin: false, canWrite: true };
 const READ_ONLY: DestinationViewer = { isAdmin: false, canWrite: false };
 
-const GROUPS: readonly MoreMenuGroup[] = [
+const GROUPS: readonly MoreMenuGroup<MoreDestination>[] = [
   {
     title: "Leasing",
     items: [
@@ -106,7 +107,7 @@ describe("filterDestinations", () => {
   });
 
   it("ranks a label word start, then the label containing it, then a keyword", () => {
-    const groups: readonly MoreMenuGroup[] = [
+    const groups: readonly MoreMenuGroup<MoreDestination>[] = [
       { title: "G", items: [
         { label: "Alpha", screen: "/a", keywords: ["lease"] },
         { label: "Sublease", screen: "/b" },

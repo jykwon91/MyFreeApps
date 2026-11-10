@@ -1,4 +1,4 @@
-import { type MobileSession, type SessionState, SessionProvider } from "@platform/mobile";
+import { type MobileSession, type SessionState, SessionProvider, ToastProvider } from "@platform/mobile";
 import api from "@platform/core/lib/api";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
@@ -14,6 +14,8 @@ jest.mock("expo-router", () => {
   };
 });
 
+jest.mock("expo-constants", () => ({ __esModule: true, default: { expoConfig: { version: "1.0.0" } } }));
+
 const originalAdapter = api.defaults.adapter;
 
 function fakeSession(state: SessionState, overrides: Partial<MobileSession> = {}): MobileSession {
@@ -28,7 +30,9 @@ function fakeSession(state: SessionState, overrides: Partial<MobileSession> = {}
 async function renderWith(session: MobileSession) {
   await render(
     <SessionProvider session={session}>
-      <SettingsScreen />
+      <ToastProvider bottomOffset={0}>
+        <SettingsScreen />
+      </ToastProvider>
     </SessionProvider>,
   );
 }
@@ -50,6 +54,7 @@ describe("SettingsScreen", () => {
 
   it("offers sign-in when signed out", async () => {
     await renderWith(fakeSession({ status: "signedOut", endedByServer: false, lastEmail: null }));
+    expect(screen.getByText("Version 1.0.0")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
     expect(mockPush).toHaveBeenCalledWith("/sign-in");
   });

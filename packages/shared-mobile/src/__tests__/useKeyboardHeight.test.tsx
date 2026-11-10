@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react-native";
 import { Keyboard } from "react-native";
-import { useKeyboardHeight } from "../src/lib/useKeyboardHeight";
+import { useKeyboardHeight } from "../hooks/useKeyboardHeight";
 
 type Handler = (event: { endCoordinates: { height: number } }) => void;
 

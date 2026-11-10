@@ -75,7 +75,7 @@ export default function AiPermissionPanel({ onAllowed, onNotNow }: AiPermissionP
             {paragraph}
           </Text>
         ))}
-        <WebLink label="Read the privacy policy" url={`${WEB_BASE_URL}${PRIVACY_POLICY_PATH}`} />
+        <WebLink label="Read the privacy policy" webBaseUrl={WEB_BASE_URL} webPath={PRIVACY_POLICY_PATH} />
       </ScrollView>
       <View style={{ gap: spacing.sm, padding: spacing.lg }}>
         {isAllowed ? (

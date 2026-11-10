@@ -1,8 +1,7 @@
-import { EmptyState } from "@platform/mobile";
+import { EmptyState, useOpenWebsite } from "@platform/mobile";
 import { WEB_BASE_URL } from "../../constants/api";
 import { CALENDAR_MESSAGES } from "../../constants/calendar";
 import { FILTER_MESSAGES } from "../../constants/calendarFilters";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import { emptyMonthHeading } from "./calendarDisplay";
 import CalendarSkeleton from "./CalendarSkeleton";
 
@@ -17,7 +16,7 @@ interface CalendarEmptyListProps {
 }
 
 export default function CalendarEmptyList({ isLoading, hasFailed, hasNoListings, hasFilters, month, onRetry, onClearFilters }: CalendarEmptyListProps) {
-  const openLink = useOpenLink();
+  const openWebsite = useOpenWebsite();
   if (isLoading) return <CalendarSkeleton />;
   if (hasFailed) {
     return (
@@ -40,7 +39,7 @@ export default function CalendarEmptyList({ isLoading, hasFailed, hasNoListings,
   if (hasNoListings) {
     return (
       <EmptyState
-        action={{ label: CALENDAR_MESSAGES.openWebsite, onPress: () => void openLink(`${WEB_BASE_URL}/listings`) }}
+        action={{ label: CALENDAR_MESSAGES.openWebsite, onPress: () => openWebsite(WEB_BASE_URL, "/listings") }}
         body={CALENDAR_MESSAGES.noListingsBody}
         heading={CALENDAR_MESSAGES.noListingsHeading}
       />

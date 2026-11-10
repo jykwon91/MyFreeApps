@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { View } from "react-native";
+import { useKeyboardHeight } from "../hooks/useKeyboardHeight";
 import { useTheme } from "../theme/useTheme";
 import type { ToastProviderProps } from "../types/ToastProviderProps";
 import type { ToastVariant } from "../types/ToastVariant";
@@ -9,6 +10,7 @@ import { ToastContext } from "./ToastContext";
 /** Holds the toast above the screens, so a message outlives the screen that sent it. */
 export default function ToastProvider({ children, bottomOffset }: ToastProviderProps) {
   const { spacing } = useTheme();
+  const keyboardHeight = useKeyboardHeight();
   const [toast, setToast] = useState<{ id: number; message: string; variant: ToastVariant } | null>(null);
   const value = useMemo(
     () => ({
@@ -27,7 +29,8 @@ export default function ToastProvider({ children, bottomOffset }: ToastProviderP
             key={toast.id}
             message={toast.message}
             onDismiss={() => setToast(null)}
-            style={{ position: "absolute", left: spacing.lg, right: spacing.lg, bottom: bottomOffset }}
+            // The keyboard covers the tab bar, so above it is clear.
+            style={{ position: "absolute", left: spacing.lg, right: spacing.lg, bottom: keyboardHeight ? keyboardHeight + spacing.md : bottomOffset }}
             variant={toast.variant}
           />
         ) : null}

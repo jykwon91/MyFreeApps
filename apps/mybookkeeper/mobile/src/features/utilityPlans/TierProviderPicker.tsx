@@ -1,9 +1,8 @@
 import type { UtilityOffer } from "@mybookkeeper/api-client/types/utility/utility-offer";
 import { formatCancellationFee } from "@mybookkeeper/api-client/utils/utilityOfferFormat";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { LoadingButton, useOpenLink, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { UTILITY_OFFER_MESSAGES as MESSAGES } from "../../constants/utilityOffers";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import CollapsibleSection from "../inquiries/CollapsibleSection";
 
 /** The other providers selling this same rate and term. Only the cost to leave differs, so that is what each carries. */

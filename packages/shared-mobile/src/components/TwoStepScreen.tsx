@@ -14,7 +14,7 @@ import Skeleton from "./Skeleton";
 import TwoStepTurnOffSheet from "./TwoStepTurnOffSheet";
 import WebLink from "./WebLink";
 
-export default function TwoStepScreen({ whatItProtects, websiteUrl, confirmOwner, onTurnOn, reloadSignal }: TwoStepScreenProps) {
+export default function TwoStepScreen({ whatItProtects, webBaseUrl, webPath, confirmOwner, onTurnOn, reloadSignal }: TwoStepScreenProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
   const { enabled, failure, successfulReads, reload, markEnabled } = useTwoStepStatus(reloadSignal);
@@ -101,7 +101,7 @@ export default function TwoStepScreen({ whatItProtects, websiteUrl, confirmOwner
       )}
       <View>
         <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{MESSAGES.websiteNote}</Text>
-        <WebLink label={MESSAGES.openWebsite} url={websiteUrl} />
+        <WebLink label={MESSAGES.openWebsite} webPath={webPath} webBaseUrl={webBaseUrl} />
       </View>
       {isTurningOff ? <TwoStepTurnOffSheet onClose={() => setIsTurningOff(false)} onSettled={turnOffSettled} /> : null}
     </ScrollView>

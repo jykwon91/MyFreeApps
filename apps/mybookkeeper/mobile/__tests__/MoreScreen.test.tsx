@@ -1,3 +1,4 @@
+import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { AccessibilityInfo, Text as MockText } from "react-native";
 import { MORE_MENU } from "../src/constants/moreMenu";
@@ -15,8 +16,7 @@ jest.mock("expo-constants", () => ({ expoConfig: { version: "1.0.0" } }));
 jest.mock("@platform/mobile", () => {
   return {
     ...jest.requireActual("@platform/mobile"),
-    useDevices: () => ({ reload: jest.fn() }),
-    AccountSection: () => <MockText>Account section</MockText>,
+    AccountSettings: () => <MockText>Account section</MockText>,
   };
 });
 jest.mock("../src/features/workspace/useIsAdmin", () => ({ useIsAdmin: jest.fn() }));
@@ -29,7 +29,11 @@ const field = () => screen.getByLabelText(MORE_SEARCH_MESSAGES.label);
 async function show(role: "admin" | "member" | "readOnly" = "admin"): Promise<void> {
   jest.mocked(useIsAdmin).mockReturnValue(role === "admin");
   jest.mocked(useCanWrite).mockReturnValue(role !== "readOnly");
-  await render(<MoreScreen />);
+  await render(
+    <ToastProvider bottomOffset={0}>
+      <MoreScreen />
+    </ToastProvider>,
+  );
 }
 
 beforeEach(() => {

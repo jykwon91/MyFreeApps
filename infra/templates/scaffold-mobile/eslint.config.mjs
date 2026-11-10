@@ -18,4 +18,13 @@ export default tseslint.config(
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
   },
+  {
+    files: ["app/**", "src/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { patterns: [{ group: ["@platform/mobile/test-support/*"], message: "Test helpers are for tests only." }] },
+      ],
+    },
+  },
 );

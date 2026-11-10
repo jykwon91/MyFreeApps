@@ -1,6 +1,6 @@
 import { VENDOR_CATEGORY_LABELS } from "@mybookkeeper/api-client/constants/vendorLabels";
 import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendor-response";
-import { Banner, LoadingButton, SwitchRow, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, SwitchRow, useOpenLink, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { type ReactElement, useRef } from "react";
 import { Platform, type RefreshControlProps, ScrollView, Text, View } from "react-native";
@@ -8,7 +8,6 @@ import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { DELETE_VENDOR_BODY, deleteVendorTitle, VENDOR_MESSAGES } from "../../constants/vendors";
 import InquiryChip from "../inquiries/InquiryChip";
 import InquiryContact from "../inquiries/InquiryContact";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import { askOnce } from "../../lib/askOnce";
 import TransactionFact from "../transactions/TransactionFact";
 import { directionsUrl, hourlyRateText, lastUsedText } from "./vendorDisplay";

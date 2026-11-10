@@ -1,9 +1,11 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { act, render, screen, userEvent, waitFor } from "@testing-library/react-native";
+import { LINK_MESSAGES, ToastProvider } from "@platform/mobile";
+import { act, fireEvent, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
-import { AppState, Text } from "react-native";
+import { AppState, Linking, Text } from "react-native";
 import { Provider } from "react-redux";
+import { WEB_BASE_URL } from "../src/constants/api";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import WorkspaceGate from "../src/features/workspace/WorkspaceGate";
 import { session } from "../src/lib/session";
@@ -29,9 +31,11 @@ function respondWith(status: number | "offline", data: unknown = []): AxiosAdapt
 async function renderGate() {
   await render(
     <Provider store={store}>
-      <WorkspaceGate>
-        <Text>Inside</Text>
-      </WorkspaceGate>
+      <ToastProvider bottomOffset={0}>
+        <WorkspaceGate>
+          <Text>Inside</Text>
+        </WorkspaceGate>
+      </ToastProvider>
     </Provider>,
   );
 }
@@ -88,6 +92,15 @@ describe("WorkspaceGate", () => {
     expect(await screen.findByRole("header", { name: "No workspace yet" })).toBeTruthy();
     expect(screen.queryByText("Inside")).toBeNull();
     expect(screen.getByText("Sign out")).toBeTruthy();
+  });
+
+  it("opens the website from there, and says so when the phone can't", async () => {
+    const open = jest.spyOn(Linking, "openURL").mockRejectedValue(new Error("no browser"));
+    api.defaults.adapter = respondWith(200, []);
+    await renderGate();
+    await fireEvent.press(await screen.findByRole("button", { name: "Open the website" }));
+    expect(open).toHaveBeenCalledWith(`${WEB_BASE_URL}/`);
+    expect(await screen.findByText(LINK_MESSAGES.couldntOpen)).toBeTruthy();
   });
 
   it("keeps someone signed in while offline, and recovers", async () => {

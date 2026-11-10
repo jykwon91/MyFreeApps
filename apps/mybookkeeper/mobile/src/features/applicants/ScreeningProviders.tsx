@@ -1,10 +1,9 @@
 import { useGetScreeningProvidersQuery, useLazyGetScreeningRedirectQuery } from "@mybookkeeper/api-client/store/screeningApi";
 import type { ScreeningProviderInfo } from "@mybookkeeper/api-client/types/applicant/screening-provider-info";
-import { Banner, LoadingButton, Skeleton, useTheme, useToast } from "@platform/mobile";
+import { Banner, LINK_MESSAGES, LoadingButton, Skeleton, useOpenLink, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Linking, Text, View } from "react-native";
 import { couldntOpenProviderMessage, learnMoreLabel, openedProviderMessage, SCREENING_MESSAGES } from "../../constants/applicantScreening";
-import { useOpenLink } from "../inquiries/useOpenLink";
 
 export default function ScreeningProviders({ applicantId }: { applicantId: string }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -49,7 +48,7 @@ export default function ScreeningProviders({ applicantId }: { applicantId: strin
           <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{provider.description}</Text>
           <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`${provider.cost_label} · ${provider.turnaround_label}`}</Text>
           <LoadingButton
-            accessibilityHint="Opens in your browser"
+            accessibilityHint={LINK_MESSAGES.opensBrowser}
             disabled={openingName !== null}
             isLoading={openingName === provider.name}
             loadingText={SCREENING_MESSAGES.opening}
@@ -58,7 +57,7 @@ export default function ScreeningProviders({ applicantId }: { applicantId: strin
           >
             {`Open ${provider.label}`}
           </LoadingButton>
-          <LoadingButton accessibilityHint="Opens in your browser" accessibilityLabel={learnMoreLabel(provider.label)} onPress={() => void openLink(provider.external_url)} variant="ghost">
+          <LoadingButton accessibilityHint={LINK_MESSAGES.opensBrowser} accessibilityLabel={learnMoreLabel(provider.label)} onPress={() => void openLink(provider.external_url)} variant="ghost">
             {SCREENING_MESSAGES.learnMore}
           </LoadingButton>
         </View>

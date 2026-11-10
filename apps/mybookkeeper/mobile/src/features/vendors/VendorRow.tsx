@@ -1,10 +1,9 @@
 import { VENDOR_CATEGORY_LABELS } from "@mybookkeeper/api-client/constants/vendorLabels";
 import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
-import { LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { LoadingButton, MIN_TOUCH_TARGET, useOpenLink, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { VENDOR_MESSAGES } from "../../constants/vendors";
 import InquiryChip from "../inquiries/InquiryChip";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import { callLink, vendorRowLabel } from "./vendorDisplay";
 
 interface VendorRowProps {

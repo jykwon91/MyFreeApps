@@ -4,19 +4,19 @@ import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease
 import { signedLeasesApi } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { MoreRow, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import * as Sharing from "expo-sharing";
 import { Linking } from "react-native";
 import { Provider } from "react-redux";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
+import { WEB_BASE_URL } from "../src/constants/api";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { leaseCountdown, leaseTerm, sortLeaseFiles } from "../src/features/leases/leaseDisplay";
 import LeaseDetailScreen from "../src/features/leases/LeaseDetailScreen";
 import LeaseValuesScreen from "../src/features/leases/LeaseValuesScreen";
 import LeasesScreen from "../src/features/leases/LeasesScreen";
 import TenantLeases from "../src/features/leases/TenantLeases";
-import MoreRow from "../src/features/more/MoreRow";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
@@ -436,7 +436,7 @@ describe("leases", () => {
   describe("in More", () => {
     it("opens the app's screen when it has one", async () => {
       const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
-      await renderIn(<MoreRow item={{ label: "Leases", webPath: "/leases", screen: "/leases" }} />);
+      await renderIn(<MoreRow item={{ label: "Leases", webPath: "/leases", screen: "/leases" }} webBaseUrl={WEB_BASE_URL} />);
       await fireEvent.press(screen.getByRole("button", { name: "Leases" }));
       expect(mockPush).toHaveBeenCalledWith("/leases");
       expect(openURL).not.toHaveBeenCalled();
@@ -444,9 +444,9 @@ describe("leases", () => {
 
     it("opens the website otherwise", async () => {
       const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
-      await renderIn(<MoreRow item={{ label: "Vendors", webPath: "/vendors" }} />);
+      await renderIn(<MoreRow item={{ label: "Vendors", webPath: "/vendors" }} webBaseUrl={WEB_BASE_URL} />);
       await fireEvent.press(screen.getByRole("link", { name: "Vendors" }));
-      expect(openURL).toHaveBeenCalledWith(expect.stringContaining("/vendors"));
+      expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/vendors`);
     });
   });
 

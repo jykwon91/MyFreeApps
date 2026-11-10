@@ -1,39 +1,26 @@
-import { type AccountMessage, AccountSection, SearchField, Toast, useDevices, useTheme } from "@platform/mobile";
-import Constants from "expo-constants";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { AccountSettings, AppVersion, MoreRow, SearchField, useTheme } from "@platform/mobile";
+import { router } from "expo-router";
+import { useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
+import { WEB_BASE_URL } from "../../constants/api";
 import { ALL_DESTINATIONS } from "../../constants/allDestinations";
 import { MORE_MENU } from "../../constants/moreMenu";
 import { MORE_SEARCH_ANNOUNCE_DELAY_MS, MORE_SEARCH_MESSAGES } from "../../constants/moreSearch";
 import { useDebouncedAnnouncement } from "../../lib/useDebouncedAnnouncement";
-import { useKeyboardHeight } from "../../lib/useKeyboardHeight";
 import { filterDestinations, flattenDestinations, visibleGroups } from "../../utils/destinationSearch";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { useIsAdmin } from "../workspace/useIsAdmin";
-import MoreRow from "./MoreRow";
 import MoreSearchResults from "./MoreSearchResults";
 
 export default function MoreScreen() {
   const { colors, fontSize, spacing } = useTheme();
-  const devices = useDevices();
-  const { reload } = devices;
-  const [message, setMessage] = useState<AccountMessage | null>(null);
   const isAdmin = useIsAdmin();
   const canWrite = useCanWrite();
-  const keyboardHeight = useKeyboardHeight();
   const viewer = useMemo(() => ({ isAdmin, canWrite }), [isAdmin, canWrite]);
   const [query, setQuery] = useState("");
   const results = useMemo(() => filterDestinations(flattenDestinations(ALL_DESTINATIONS, viewer), query), [viewer, query]);
   const isSearching = query.trim() !== "";
   useDebouncedAnnouncement(isSearching ? MORE_SEARCH_MESSAGES.count(results.length) : undefined, MORE_SEARCH_ANNOUNCE_DELAY_MS);
-  const version = Constants.expoConfig?.version;
-
-  useFocusEffect(
-    useCallback(() => {
-      void reload();
-    }, [reload]),
-  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -64,23 +51,17 @@ export default function MoreScreen() {
               {group.title}
             </Text>
             {group.items.map((item) => (
-              <MoreRow item={item} key={item.label} />
+              <MoreRow item={item} key={item.label} webBaseUrl={WEB_BASE_URL} />
             ))}
           </View>
         ))}
         {isSearching ? null : (
           <>
-            <AccountSection
-              appName="MyBookkeeper"
-              devices={devices}
-              onDeleteAccount={() => router.push("/delete-account")}
-              onMessage={setMessage}
-            />
-            {version ? <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>Version {version}</Text> : null}
+            <AccountSettings appName="MyBookkeeper" onDeleteAccount={() => router.push("/delete-account")} />
+            <AppVersion />
           </>
         )}
       </ScrollView>
-      {message ? <Toast message={message.message} onDismiss={() => setMessage(null)} style={{ marginBottom: keyboardHeight }} variant={message.variant} /> : null}
     </View>
   );
 }

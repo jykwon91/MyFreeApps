@@ -1,7 +1,7 @@
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, useOpenWebsite, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -10,7 +10,6 @@ import { WEB_BASE_URL } from "../../constants/api";
 import { continueWithDocuments, LEASE_DOCUMENT_MESSAGES as MESSAGES } from "../../constants/leaseDocuments";
 import { LEASE_TEMPLATE_LIST_LIMIT } from "../../constants/leaseTemplates";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
-import { useOpenLink } from "../inquiries/useOpenLink";
 import LeaseTemplatesSkeleton from "../leaseTemplates/LeaseTemplatesSkeleton";
 import MoreOnWebsite from "../newLease/MoreOnWebsite";
 import TemplatePickerRow from "../newLease/TemplatePickerRow";
@@ -20,7 +19,7 @@ import { addDocumentDetailsPath } from "./addDocumentFlow";
 export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
   const { colors, spacing, fontSize } = useTheme();
   const insets = useSafeAreaInsets();
-  const openLink = useOpenLink();
+  const openWebsite = useOpenWebsite();
   const [picked, setPicked] = useState<string[]>([]);
   const lease = useGetSignedLeaseByIdQuery(leaseId);
   const templates = useGetLeaseTemplatesQuery({ limit: LEASE_TEMPLATE_LIST_LIMIT });
@@ -44,7 +43,7 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
     <EmptyState action={{ label: MESSAGES.tryAgain, onPress: refresh }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoadTemplates} />
   ) : (
     <EmptyState
-      action={{ label: MESSAGES.openWebsite, onPress: () => void openLink(`${WEB_BASE_URL}/lease-templates`) }}
+      action={{ label: MESSAGES.openWebsite, onPress: () => openWebsite(WEB_BASE_URL, "/lease-templates") }}
       body={MESSAGES.noTemplatesBody}
       heading={MESSAGES.noTemplatesHeading}
     />

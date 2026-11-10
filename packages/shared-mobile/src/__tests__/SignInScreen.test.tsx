@@ -6,6 +6,8 @@ import type { MobileSession } from "../types/MobileSession";
 import type { SessionState } from "../types/SessionState";
 import type { SignInResult } from "../types/SignInResult";
 
+jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
+
 const SIGNED_OUT: SessionState = { status: "signedOut", endedByServer: false, lastEmail: "kept@example.com" };
 const SIGNED_IN: SessionState = { status: "signedIn", email: "me@example.com", sessionId: "s" };
 
@@ -109,6 +111,13 @@ describe("SignInScreen", () => {
     await fireEvent.press(screen.getByRole("link", { name: /Forgot your password/ }));
     await fireEvent.press(screen.getByRole("link", { name: /Create an account/ }));
     expect(open.mock.calls).toEqual([["https://web.test/forgot-password"], ["https://web.test/register"]]);
+  });
+
+  it("says so when the phone can't open the website", async () => {
+    jest.spyOn(Linking, "openURL").mockRejectedValue(new Error("no browser"));
+    await renderScreen(jest.fn());
+    await fireEvent.press(screen.getByRole("link", { name: /Forgot your password/ }));
+    expect(await screen.findByText("I couldn't open that on this phone.")).toBeTruthy();
   });
 
   describe("second factor", () => {

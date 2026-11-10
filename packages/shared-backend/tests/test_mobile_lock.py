@@ -44,8 +44,10 @@ class TestWithApp:
     def test_the_real_lockfile_has_nested_entries_to_copy(self) -> None:
         """Those are the packages npm would resolve again, which is what this exists for."""
         packages = json.loads((_REPO_ROOT / "package-lock.json").read_text("utf-8"))["packages"]
+        nested = {key: entry for key, entry in packages.items() if key.startswith(f"{_TEMPLATE}/node_modules/")}
+        assert nested
         result = mobile_lock.with_app(packages, "demo")
-        assert result[f"{_APP}/node_modules/expo-router"] == packages[f"{_TEMPLATE}/node_modules/expo-router"]
+        assert {_APP + key.removeprefix(_TEMPLATE): entry for key, entry in nested.items()}.items() <= result.items()
 
 
 class TestAddAppToLockfile:

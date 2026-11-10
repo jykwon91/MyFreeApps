@@ -1,0 +1,45 @@
+routes:
+  /:
+    not_on_mobile: Not built yet.
+  /analyze:
+    not_on_mobile: Not built yet.
+  /applications:
+    not_on_mobile: Not built yet.
+  /applications/:id:
+    not_on_mobile: Not built yet.
+  /companies:
+    not_on_mobile: Not built yet.
+  /companies/:id:
+    not_on_mobile: Not built yet.
+  /dashboard:
+    not_on_mobile: Not built yet.
+  /discover:
+    not_on_mobile: Not built yet.
+  /documents:
+    not_on_mobile: Not built yet.
+  /forgot-password:
+    not_on_mobile: Done on the website, which the sign-in screen links to.
+  /login:
+    screen: sign-in
+  /profile:
+    not_on_mobile: Not built yet.
+  /register:
+    not_on_mobile: Done on the website, which the sign-in screen links to.
+  /reset-password:
+    not_on_mobile: Done on the website, which the sign-in screen links to.
+  /resume:
+    not_on_mobile: Not built yet.
+  /security:
+    not_on_mobile: Not built yet.
+  /settings:
+    screen: (app)/(tabs)/more
+  /support-myfreeapps:
+    not_on_mobile: Opens on the website.
+  /verify-email:
+    not_on_mobile: Done on the website, which the sign-in screen links to.
+  ADMIN_ROUTES.DASHBOARD:
+    not_on_mobile: Operator dashboards, for the website.
+  ADMIN_ROUTES.DEMO_USERS:
+    not_on_mobile: Operator dashboards, for the website.
+  ADMIN_ROUTES.INVITES:
+    not_on_mobile: Operator dashboards, for the website.

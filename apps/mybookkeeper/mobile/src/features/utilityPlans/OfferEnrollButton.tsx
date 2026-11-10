@@ -1,6 +1,5 @@
-import { LoadingButton } from "@platform/mobile";
+import { LoadingButton, useOpenLink } from "@platform/mobile";
 import { UTILITY_OFFER_MESSAGES as MESSAGES } from "../../constants/utilityOffers";
-import { useOpenLink } from "../inquiries/useOpenLink";
 
 interface OfferEnrollButtonProps {
   url: string;
