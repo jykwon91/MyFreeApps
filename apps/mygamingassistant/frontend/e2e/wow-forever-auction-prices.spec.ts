@@ -310,7 +310,7 @@ test("the Auction house page downloads the MGA Prices addon with every house's p
   expect(data).toContain("[2320] = {vendor = true},");
   expect(data).toMatch(/\[2589\] = \{leveling = "[^"]*First Aid 1–\d+/);
   expect(data).toContain("crafts = {");
-  expect(files["MGAPrices/MGAPrices.toc"]).toBeDefined();
+  expect(strFromU8(files["MGAPrices/MGAPrices.toc"])).toContain("## SavedVariables: MGAPricesSettings");
   expect(asked).toEqual(expect.arrayContaining(["pvp/alliance", "pvp/horde", "pvp/neutral"]));
   await expect(page.getByText("MGA Prices is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
 });

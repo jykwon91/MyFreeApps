@@ -1054,7 +1054,16 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `crafts[id] = {recipe, profit}` = the best craft that pays after the house's
   cut (5%, Blackwater 15%), only for widely known recipes (no rare-drop
   patterns), made items with ≥5 auctions, profit ≥1s and ≥10% of the materials.
-  No price history exists, so the tooltip never claims a price WILL rise. `src/__tests__/wowPricesAddon.test.ts` runs the real Lua under
+  No price history exists, so the tooltip never claims a price WILL rise.
+  Chat (`MGAPrices.lua`): a `ChatFrame_AddMessageEventFilter` on chat/loot
+  events writes your house's market value after each item link (display only;
+  `/mgaprices chat` toggles, saved in `MGAPricesSettings` via the .toc's
+  SavedVariables); hovering an item link in a chat frame (incl. whisper windows,
+  `FCF_OpenTemporaryWindow`) shows GameTooltip. Item tooltips are priced from
+  all three client paths (TooltipDataProcessor, OnTooltipSetItem,
+  `hooksecurefunc(SetHyperlink)`), deduped per item — a clicked link always
+  gets priced. A clicked BoP link with no price says "can't be sold"; hovered
+  soulbound items stay quiet. `src/__tests__/wowPricesAddon.test.ts` runs the real Lua under
   fengari against WoW stubs (`src/test/addonLua/`). Refresh = download again.
 - Material prices fill in automatically (`CraftPriceField` shows the price as
   its value, labelled "Auction house"). An item with no auction price is
