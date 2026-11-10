@@ -1,3 +1,5 @@
+import { LEASE_RECORD_FILE_LOCKED_NOTE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
+import { LEASE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
 import { LEASE_ATTACHMENT_KINDS } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 import api from "@platform/core/lib/api";
@@ -41,6 +43,7 @@ function aFile(overrides: Partial<SignedLeaseAttachment> = {}): SignedLeaseAttac
     uploaded_at: "2026-02-01T12:00:00Z",
     presigned_url: "https://files.example/first",
     is_available: true,
+    is_locked: false,
     ...overrides,
   };
 }
@@ -113,6 +116,25 @@ describe("what the lease page says about the lease", () => {
   });
 });
 
+describe("files added after the lease was locked", () => {
+  it("can still be removed or changed, because they were never sent", async () => {
+    startLeaseWritesServer({ lease: aLease({ status: "sent", documents_locked: true, attachments: [aFile({ is_locked: false })] }) });
+    await renderScreen();
+    expect(await screen.findByRole("button", { name: "Remove signed.pdf" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Change the type of signed.pdf" })).toBeTruthy();
+    expect(screen.queryByText(LEASE_RECORD_FILE_LOCKED_NOTE)).toBeNull();
+  });
+
+  it("can't be marked as an original or a signed copy, since that would move the record", async () => {
+    startLeaseWritesServer({ lease: aLease({ status: "sent", documents_locked: true, attachments: [aFile({ is_locked: false })] }) });
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("button", { name: "Change the type of signed.pdf" }));
+    expect(screen.getAllByRole("radio")).toHaveLength(LEASE_ATTACHMENT_KINDS.length - 2);
+    expect(screen.queryByRole("radio", { name: LEASE_ATTACHMENT_KIND_LABELS.rendered_original })).toBeNull();
+    expect(screen.queryByRole("radio", { name: LEASE_ATTACHMENT_KIND_LABELS.signed_lease })).toBeNull();
+  });
+});
+
 describe("changing what a file is", () => {
   it("offers every kind the website does, and sends the one picked", async () => {
     const server = startLeaseWritesServer({ lease: aLease({ attachments: [aFile(), NOTICE] }) });
@@ -164,7 +186,7 @@ describe("changing what a file is", () => {
 
 describe("while a file is being opened", () => {
   it("holds every file's change and remove buttons until it's open", async () => {
-    const server = startLeaseWritesServer({ lease: aLease({ attachments: [aFile(), NOTICE] }) });
+    const server = startLeaseWritesServer({ lease: aLease({ status: "draft", attachments: [aFile(), NOTICE] }) });
     await renderScreen();
     await screen.findByRole("button", { name: "Open notice.pdf" });
     await roleKnown(server);
@@ -174,6 +196,27 @@ describe("while a file is being opened", () => {
     for (const name of ["Remove signed.pdf", "Remove notice.pdf", "Change the type of signed.pdf"]) {
       expect(screen.getByRole("button", { name }).props.accessibilityState?.disabled).toBe(true);
     }
+  });
+});
+
+describe("a sent, emailed or signed lease's record files", () => {
+  it("gives no remove or change-type for the signed copy, says why, and keeps them for other files", async () => {
+    startLeaseWritesServer({ lease: aLease({ status: "signed", documents_locked: true, attachments: [aFile({ is_locked: true }), NOTICE] }) });
+    await renderScreen();
+    await screen.findByRole("button", { name: "Open signed.pdf" });
+    expect(screen.queryByRole("button", { name: "Remove signed.pdf" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Change the type of signed.pdf" })).toBeNull();
+    expect(screen.getByText(LEASE_RECORD_FILE_LOCKED_NOTE)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Remove notice.pdf" })).toBeTruthy();
+  });
+
+  it("locks the rendered original of a generated lease once it has been emailed", async () => {
+    startLeaseWritesServer({
+      lease: aLease({ status: "generated", documents_locked: true, last_emailed_to_tenant_at: "2026-02-03T00:00:00Z", attachments: [aFile({ kind: "rendered_original", is_locked: true })] }),
+    });
+    await renderScreen();
+    await screen.findByRole("button", { name: "Open signed.pdf" });
+    expect(screen.queryByRole("button", { name: "Remove signed.pdf" })).toBeNull();
   });
 });
 
@@ -241,7 +284,7 @@ describe("removing a file", () => {
   });
 
   it("can remove a file whose copy has gone missing", async () => {
-    startLeaseWritesServer({ lease: aLease({ attachments: [aFile({ is_available: false })] }) });
+    startLeaseWritesServer({ lease: aLease({ status: "draft", attachments: [aFile({ is_available: false })] }) });
     await renderScreen();
     expect(await screen.findByRole("button", { name: "Remove signed.pdf" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Open signed.pdf" })).toBeNull();

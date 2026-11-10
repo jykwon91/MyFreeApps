@@ -3,7 +3,7 @@ import type { SignedLeaseTemplatePrefillItem } from "../types/lease/signed-lease
 import { prefillItemsToAsk, prefillProblems, prefillProvenanceLabel, SAVED_ON_LEASE_LABEL } from "../utils/leasePrefill";
 
 function anItem(overrides: Partial<SignedLeaseTemplatePrefillItem> = {}): SignedLeaseTemplatePrefillItem {
-  return { key: "rent", display_label: "Monthly rent", input_type: "number", required: true, value: "", provenance: null, is_from_existing_values: false, ...overrides };
+  return { key: "rent", display_label: "Monthly rent", input_type: "number", required: true, value: "", provenance: null, is_from_existing_values: false, is_read_only: false, ...overrides };
 }
 
 describe("prefillProvenanceLabel", () => {

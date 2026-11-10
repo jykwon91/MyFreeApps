@@ -30,6 +30,9 @@ class SignedLeaseTemplatePrefillItem(BaseModel):
     # (typical on a regenerate). The frontend uses this to label the field
     # as "saved on lease" — outside the resolver's provenance contract.
     is_from_existing_values: bool = False
+    # True when the lease's documents are locked and this value is already on
+    # the lease: it is shown but cannot be changed.
+    is_read_only: bool = False
 
 
 class SignedLeaseTemplatePrefillResponse(BaseModel):

@@ -47,6 +47,7 @@ const ORPHAN_ATTACHMENT: SignedLeaseAttachment = {
   uploaded_at: "2026-05-01T10:00:00Z",
   presigned_url: null,
   is_available: false,
+  is_locked: false,
 };
 
 function renderSection(att: SignedLeaseAttachment, canWrite = true) {
@@ -56,6 +57,8 @@ function renderSection(att: SignedLeaseAttachment, canWrite = true) {
         leaseId="lease-1"
         attachments={[att]}
         canWrite={canWrite}
+        isDocumentsLocked={false}
+        onLockedRefusal={vi.fn()}
       />
     </Provider>,
   );

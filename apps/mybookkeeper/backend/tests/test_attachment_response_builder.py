@@ -37,6 +37,7 @@ def _row(**overrides) -> SignedLeaseAttachmentResponse:
         "signed_by_landlord_at": None,
         "presigned_url": None,
         "is_available": True,
+        "is_locked": False,
     }
     base.update(overrides)
     return SignedLeaseAttachmentResponse(**base)

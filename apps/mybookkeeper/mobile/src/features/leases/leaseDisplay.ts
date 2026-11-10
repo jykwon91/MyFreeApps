@@ -29,13 +29,13 @@ export function leaseCanHaveSuccessor(lease: Pick<SignedLeaseDetail, "status" | 
  * Making files moves a lease to generated, whatever it was, so it's only offered
  * before the lease goes out. A sent or signed lease would quietly lose its status.
  */
-export function leaseNeedsFiles(lease: Pick<SignedLeaseDetail, "kind" | "status" | "attachments">): boolean {
-  return lease.kind === "generated" && (lease.status === "draft" || (lease.status === "generated" && lease.attachments.length === 0));
+export function leaseNeedsFiles(lease: Pick<SignedLeaseDetail, "kind" | "status" | "attachments" | "documents_locked">): boolean {
+  return lease.kind === "generated" && !lease.documents_locked && (lease.status === "draft" || (lease.status === "generated" && lease.attachments.length === 0));
 }
 
 /** Same rule as the server's `should_auto_email_after_generate`. */
-export function leaseEmailsOnGenerate(lease: Pick<SignedLeaseDetail, "auto_email_tenant" | "status" | "last_emailed_to_tenant_at">): boolean {
-  return lease.auto_email_tenant && lease.status !== "generated" && !lease.last_emailed_to_tenant_at;
+export function leaseEmailsOnGenerate(lease: Pick<SignedLeaseDetail, "auto_email_tenant" | "status">): boolean {
+  return lease.auto_email_tenant && lease.status !== "generated";
 }
 
 export function leaseTerm(startsOn: string | null, endsOn: string | null): string {

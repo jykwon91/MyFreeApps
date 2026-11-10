@@ -9,6 +9,7 @@ export interface LeaseAddTemplatePickStepProps {
   linkedSet: Set<string>;
   selectedIds: string[];
   onToggle: (template: LeaseTemplateSummary) => void;
+  isDocumentsLocked: boolean;
   mode: ListLoadMode;
   /** The latest load failed; items from an earlier load may still show. */
   hasError: boolean;
@@ -23,13 +24,15 @@ export interface LeaseAddTemplatePickStepProps {
  * Step 1 of the Add Document modal: pick one or more templates from the
  * host's library. Already-linked templates are listed with a small
  * "picking will regenerate" badge so the host can knowingly trigger a
- * regenerate via the same flow.
+ * regenerate via the same flow. Once the lease is sent or signed they are
+ * disabled instead, since its documents are never made again.
  */
 export default function LeaseAddTemplatePickStep({
   available,
   linkedSet,
   selectedIds,
   onToggle,
+  isDocumentsLocked,
   mode,
   hasError,
   isRetrying,
@@ -49,6 +52,7 @@ export default function LeaseAddTemplatePickStep({
         linkedSet={linkedSet}
         selectedIds={selectedIds}
         onToggle={onToggle}
+        isDocumentsLocked={isDocumentsLocked}
       />
 
       <div className="flex justify-end gap-2 pt-2">

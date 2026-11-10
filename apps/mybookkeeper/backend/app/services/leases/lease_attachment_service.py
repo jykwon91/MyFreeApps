@@ -12,8 +12,11 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings as _settings
 from app.core.lease_enums import LEASE_ATTACHMENT_KINDS
 from app.core.storage import get_storage
+from app.models.leases.signed_lease import SignedLease
+from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
 from app.db.session import unit_of_work
 from app.repositories.leases import (
     lease_term_version_repo,
@@ -32,10 +35,16 @@ from app.services.leases._lease_helpers import (
     InvalidAttachmentKindError,
     SignedLeaseNotFoundError,
     StorageNotConfiguredError,
+    _attachment_response,
     _attachment_responses,
 )
 from app.services.leases.attachment_response_builder import (
     attach_presigned_urls_to_attachments,
+)
+from app.services.leases.lease_documents_lock import (
+    ensure_attachment_change_allowed,
+    ensure_original_upload_allowed,
+    ensure_signing_change_allowed,
 )
 from app.services.storage.attachment_content import (
     UnreadableImage,
@@ -59,8 +68,6 @@ async def upload_attachment(
     if storage is None:
         raise StorageNotConfiguredError("Object storage is not configured")
 
-    from app.core.config import settings as _settings
-
     if kind not in LEASE_ATTACHMENT_KINDS:
         raise AttachmentTypeRejectedError(f"Invalid kind: {kind}")
 
@@ -73,6 +80,7 @@ async def upload_attachment(
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+        await _ensure_original_upload_allowed(db, lease, kind)
 
     if len(content) > _settings.max_blackout_attachment_size_bytes:
         max_mb = _settings.max_blackout_attachment_size_bytes // (1024 * 1024)
@@ -93,6 +101,16 @@ async def upload_attachment(
 
     try:
         async with unit_of_work() as db:
+            locked_lease = await signed_lease_repo.get(
+                db,
+                lease_id=lease_id,
+                user_id=user_id,
+                organization_id=organization_id,
+                for_update=True,
+            )
+            if locked_lease is None:
+                raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+            await _ensure_original_upload_allowed(db, locked_lease, kind)
             row = await signed_lease_attachment_repo.create(
                 db,
                 lease_id=lease_id,
@@ -104,7 +122,7 @@ async def upload_attachment(
                 uploaded_by_user_id=user_id,
                 uploaded_at=_dt.datetime.now(_dt.timezone.utc),
             )
-            response = SignedLeaseAttachmentResponse.model_validate(row)
+            response = await _response_for(db, locked_lease, row)
     except Exception:
         try:
             storage.delete_file(storage_key)
@@ -131,7 +149,7 @@ async def list_attachments(
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
         rows = await signed_lease_attachment_repo.list_by_lease(db, lease_id)
-    return _attachment_responses(rows)
+    return _attachment_responses(rows, lease)
 
 
 async def update_attachment_signing_state(
@@ -155,9 +173,16 @@ async def update_attachment_signing_state(
             lease_id=lease_id,
             user_id=user_id,
             organization_id=organization_id,
+            for_update=True,
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+
+        saved = await signed_lease_attachment_repo.get_by_id(db, attachment_id)
+        if saved is None or saved.lease_id != lease_id:
+            raise AttachmentNotFoundError(f"Attachment {attachment_id} not found")
+        attachments = await signed_lease_attachment_repo.list_by_lease(db, lease_id)
+        ensure_signing_change_allowed(lease, attachments, saved, signing_fields)
 
         row = await signed_lease_attachment_repo.update_signing_state_scoped_to_lease(
             db,
@@ -168,7 +193,7 @@ async def update_attachment_signing_state(
         if row is None:
             raise AttachmentNotFoundError(f"Attachment {attachment_id} not found")
 
-        response = SignedLeaseAttachmentResponse.model_validate(row)
+        response = await _response_for(db, lease, row)
 
     return attach_presigned_urls_to_attachments([response])[0]
 
@@ -186,6 +211,31 @@ async def _refuse_if_backing_extension(
         raise AttachmentBacksExtensionError(
             f"Attachment {attachment_id} backs a live extension",
         )
+
+
+async def _response_for(db: AsyncSession, lease: SignedLease, row: SignedLeaseAttachment) -> SignedLeaseAttachmentResponse:
+    """The file as the lease now stands, so ``is_locked`` is never guessed."""
+    return _attachment_response(row, lease, await signed_lease_attachment_repo.list_by_lease(db, lease.id))
+
+
+async def _ensure_original_upload_allowed(db: AsyncSession, lease: SignedLease, kind: str) -> None:
+    """No more rendered originals can appear on a lease whose documents are the record."""
+    ensure_original_upload_allowed(lease, await signed_lease_attachment_repo.list_by_lease(db, lease.id), kind=kind)
+
+
+async def _ensure_change_allowed(
+    db: AsyncSession,
+    lease: SignedLease,
+    *,
+    attachment_id: uuid.UUID,
+    new_kind: str | None,
+) -> None:
+    """On a locked lease the original and signed files are the record (the lease row is already locked)."""
+    row = await signed_lease_attachment_repo.get_by_id(db, attachment_id)
+    if row is None or row.lease_id != lease.id:
+        raise AttachmentNotFoundError(f"Attachment {attachment_id} not found")
+    attachments = await signed_lease_attachment_repo.list_by_lease(db, lease.id)
+    ensure_attachment_change_allowed(lease, attachments, row, new_kind=new_kind)
 
 
 async def update_attachment_kind(
@@ -210,13 +260,15 @@ async def update_attachment_kind(
             lease_id=lease_id,
             user_id=user_id,
             organization_id=organization_id,
+            for_update=True,
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
-
         # Regenerate deletes every rendered_original, so a new kind could
-        # delete an addendum by the back door.
+        # delete an addendum by the back door. This is the more specific
+        # reason, so it is told before the lease-wide lock.
         await _refuse_if_backing_extension(db, lease_id=lease_id, attachment_id=attachment_id)
+        await _ensure_change_allowed(db, lease, attachment_id=attachment_id, new_kind=kind)
 
         row = await signed_lease_attachment_repo.update_kind_scoped_to_lease(
             db,
@@ -227,7 +279,7 @@ async def update_attachment_kind(
         if row is None:
             raise AttachmentNotFoundError(f"Attachment {attachment_id} not found")
 
-        response = SignedLeaseAttachmentResponse.model_validate(row)
+        response = await _response_for(db, lease, row)
 
     return attach_presigned_urls_to_attachments([response])[0]
 
@@ -245,10 +297,12 @@ async def delete_attachment(
             lease_id=lease_id,
             user_id=user_id,
             organization_id=organization_id,
+            for_update=True,
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
         await _refuse_if_backing_extension(db, lease_id=lease_id, attachment_id=attachment_id)
+        await _ensure_change_allowed(db, lease, attachment_id=attachment_id, new_kind=None)
         deleted = await signed_lease_attachment_repo.delete_by_id_scoped_to_lease(
             db, attachment_id, lease_id,
         )

@@ -1,11 +1,20 @@
+import { signedLeasesApi } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
-import { act, fireEvent, screen } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { renderRouter } from "expo-router/testing-library";
 import { Alert, type AlertButton, Text } from "react-native";
 import { Provider } from "react-redux";
+import {
+  LEASE_DOCUMENTS_LOCKED_CODE,
+  LEASE_DOCUMENTS_LOCKED_MESSAGE,
+  LEASE_DOCUMENTS_LOCKED_NOTE,
+  LEASE_VALUE_LOCKED_CODE,
+  LEASE_VALUE_LOCKED_MESSAGE,
+  LEASE_VALUE_READ_ONLY_NOTE,
+} from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import { LEASE_DOCUMENT_MESSAGES as MESSAGES } from "../src/constants/leaseDocuments";
 import AddDocumentPickScreen from "../src/features/leases/AddDocumentPickScreen";
 import AddDocumentValuesScreen from "../src/features/leases/AddDocumentValuesScreen";
@@ -120,10 +129,49 @@ describe("picking which templates to make documents from", () => {
   });
 
   it("says which templates are already on the lease, since picking one makes it again", async () => {
-    startLeaseWritesServer({ lease: aLease({ templates: [{ id: "t2", name: "Pet addendum", version: 1, display_order: 0 }] }) });
+    startLeaseWritesServer({ lease: aLease({ status: "generated", templates: [{ id: "t2", name: "Pet addendum", version: 1, display_order: 0 }] }) });
     await openAt(addDocumentPath("l1"));
     await screen.findByRole("checkbox", { name: "Pet addendum" });
     expect(screen.getAllByText(MESSAGES.onThisLease)).toHaveLength(1);
+  });
+
+  it("won't offer a template already on an emailed lease either, and hints why to a screen reader", async () => {
+    startLeaseWritesServer({
+      lease: aLease({ status: "generated", documents_locked: true, last_emailed_to_tenant_at: "2026-05-02T00:00:00Z", templates: [{ id: "t2", name: "Pet addendum", version: 1, display_order: 0 }] }),
+    });
+    await openAt(addDocumentPath("l1"));
+    const blocked = await screen.findByRole("checkbox", { name: "Pet addendum" });
+    expect(blocked.props.accessibilityState.disabled).toBe(true);
+    expect(blocked.props.accessibilityHint).toBe(LEASE_DOCUMENTS_LOCKED_NOTE);
+  });
+
+  it("drops a pick the lease locks out after a refetch, and hides Continue", async () => {
+    const server = startLeaseWritesServer({
+      lease: aLease({ status: "generated", templates: [{ id: "t2", name: "Pet addendum", version: 1, display_order: 0 }] }),
+    });
+    await openAt(addDocumentPath("l1"));
+    await fireEvent.press(await screen.findByRole("checkbox", { name: "Pet addendum" }));
+    expect(screen.getByRole("button", { name: "Continue with 1 template" })).toBeTruthy();
+
+    server.lease = { ...server.lease, documents_locked: true, last_emailed_to_tenant_at: "2026-05-02T00:00:00Z" };
+    await act(async () => {
+      testStore.dispatch(signedLeasesApi.util.invalidateTags([{ type: "SignedLease", id: "l1" }]));
+    });
+
+    await waitFor(() => expect(screen.queryByRole("button", { name: /^Continue with/ })).toBeNull());
+    expect((await screen.findByRole("checkbox", { name: "Pet addendum" })).props.accessibilityState.checked).toBe(false);
+  });
+
+  it("won't offer a template already on a signed lease, but still offers a new one", async () => {
+    startLeaseWritesServer({ lease: aLease({ status: "signed", documents_locked: true, templates: [{ id: "t2", name: "Pet addendum", version: 1, display_order: 0 }] }) });
+    await openAt(addDocumentPath("l1"));
+    const blocked = await screen.findByRole("checkbox", { name: "Pet addendum" });
+    expect(blocked.props.accessibilityState.disabled).toBe(true);
+    expect(screen.getByText(LEASE_DOCUMENTS_LOCKED_NOTE)).toBeTruthy();
+    await fireEvent.press(blocked);
+    expect(screen.queryByRole("button", { name: /^Continue with/ })).toBeNull();
+    await fireEvent.press(screen.getByRole("checkbox", { name: "Standard lease" }));
+    expect(screen.getByRole("button", { name: "Continue with 1 template" })).toBeTruthy();
   });
 
   it("says so when there are no templates", async () => {
@@ -241,6 +289,16 @@ describe("filling in what the documents need", () => {
     expect(sent(server, "post", "/signed-leases/l1/templates").values.Rent).toBe("$1,600.50");
   });
 
+  it("shows a value already on a locked lease read-only, with the reason", async () => {
+    startLeaseWritesServer({
+      prefill: [aPrefillItem("Rent", { value: "$1,500", is_from_existing_values: true, is_read_only: true }), aPrefillItem("Pet name")],
+    });
+    await openValues();
+    expect((await screen.findByLabelText("Rent")).props.editable).toBe(false);
+    expect(screen.getByText(LEASE_VALUE_READ_ONLY_NOTE)).toBeTruthy();
+    expect(screen.getByLabelText("Pet name").props.editable).not.toBe(false);
+  });
+
   it("doesn't mind a blank optional number", async () => {
     const server = startLeaseWritesServer({ prefill: [aPrefillItem("Deposit", { input_type: "number" })] });
     await openValues();
@@ -280,6 +338,43 @@ describe("filling in what the documents need", () => {
     delete server.failures.addTemplates;
     await make();
     expect(await screen.findByText("lease-page-l1")).toBeTruthy();
+  });
+
+  it("offers a way back to the picker when the lease locks while the values are being filled in", async () => {
+    const server = startLeaseWritesServer({ prefill: items });
+    server.failures.addTemplates = { status: 409, detail: { code: LEASE_DOCUMENTS_LOCKED_CODE, message: "server words" } };
+    await openAt(addDocumentPath("l1"));
+    await act(async () => {
+      router.push(addDocumentDetailsPath("l1", ["t1"]) as `/${string}`);
+    });
+    await make();
+    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.backToPicking }));
+    expect(await screen.findByText(MESSAGES.pickTitle)).toBeTruthy();
+  });
+
+  it("says why when the server refuses to make a sent or signed lease's documents again", async () => {
+    const server = startLeaseWritesServer({ prefill: items });
+    server.failures.addTemplates = { status: 409, detail: { code: LEASE_DOCUMENTS_LOCKED_CODE, message: "server words" } };
+    await openValues();
+    await make();
+    expect(await screen.findByText(LEASE_DOCUMENTS_LOCKED_MESSAGE)).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.refused)).toBeNull();
+  });
+
+  it("says a value is already on the lease, then asks again so it turns read-only and keeps what I typed", async () => {
+    const server = startLeaseWritesServer({ prefill: items });
+    server.failures.addTemplates = { status: 422, detail: { code: LEASE_VALUE_LOCKED_CODE, message: "server words", keys: ["Rent"] } };
+    await openValues();
+    await fireEvent.changeText(await screen.findByLabelText("Pet name"), "Rex");
+    expect((await screen.findByLabelText("Rent")).props.editable).not.toBe(false);
+
+    server.prefill = items.map((item) => (item.key === "Rent" ? { ...item, value: "$1,500", is_read_only: true } : item));
+    await make();
+
+    expect(await screen.findByText(LEASE_VALUE_LOCKED_MESSAGE)).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.refused)).toBeNull();
+    await waitFor(() => expect(screen.getByLabelText("Rent").props.editable).toBe(false));
+    expect(screen.getByDisplayValue("Rex")).toBeTruthy();
   });
 
   it("doesn't show a blank form when it can't load what's needed, and tries again", async () => {

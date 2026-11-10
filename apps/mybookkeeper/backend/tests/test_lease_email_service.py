@@ -90,15 +90,15 @@ class TestRedactEmail:
 
 
 class TestShouldAutoEmailAfterGenerate:
-    """Four gates: previous_status != 'generated' AND auto_email_tenant
-    AND last_emailed_to_tenant_at IS NULL.
+    """Two gates: previous_status != 'generated' AND auto_email_tenant.
+
+    An emailed or sent lease never reaches the predicate; generate refuses it.
     """
 
     def test_first_generate_with_email_enabled_returns_true(self) -> None:
         assert should_auto_email_after_generate(
             previous_status="draft",
             auto_email_tenant=True,
-            last_emailed_to_tenant_at=None,
         ) is True
 
     def test_regenerate_does_not_re_email(self) -> None:
@@ -107,39 +107,12 @@ class TestShouldAutoEmailAfterGenerate:
         assert should_auto_email_after_generate(
             previous_status="generated",
             auto_email_tenant=True,
-            last_emailed_to_tenant_at=None,
         ) is False
 
     def test_opted_out_lease_does_not_email(self) -> None:
         assert should_auto_email_after_generate(
             previous_status="draft",
             auto_email_tenant=False,
-            last_emailed_to_tenant_at=None,
-        ) is False
-
-    def test_already_emailed_does_not_email(self) -> None:
-        # Defensive: if some prior path stamped the column, don't auto-
-        # send again on a subsequent generate.
-        assert should_auto_email_after_generate(
-            previous_status="draft",
-            auto_email_tenant=True,
-            last_emailed_to_tenant_at=_dt.datetime.now(_dt.timezone.utc),
-        ) is False
-
-    @pytest.mark.parametrize("prev", ["sent", "signed", "active"])
-    def test_post_generated_states_also_block(self, prev: str) -> None:
-        # If a host moves the lease to sent/signed/active and then
-        # tries to "generate" again (allowed by the status machine for
-        # generated→sent, but treat any non-draft as already-handled).
-        # The gate checks specifically previous == "generated" — these
-        # statuses are NOT "generated" so the gate would PASS unless
-        # last_emailed_to_tenant_at is set. In practice the lifecycle
-        # always sets last_emailed_to_tenant_at before status moves to
-        # "sent", so the second gate covers this.
-        assert should_auto_email_after_generate(
-            previous_status=prev,
-            auto_email_tenant=True,
-            last_emailed_to_tenant_at=_dt.datetime.now(_dt.timezone.utc),
         ) is False
 
 

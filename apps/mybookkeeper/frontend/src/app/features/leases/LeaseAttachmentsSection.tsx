@@ -9,15 +9,20 @@ import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import LeaseAttachmentDropzone from "@/app/features/leases/LeaseAttachmentDropzone";
 import LeaseAttachmentRow from "@/app/features/leases/LeaseAttachmentRow";
+import { LEASE_ATTACHMENT_LOCKED_MESSAGE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
+import { isLeaseAttachmentLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseAttachmentLockedFailure";
 import { attachmentBacksExtension } from "@mybookkeeper/api-client/utils/attachmentBacksExtension";
 
 export interface LeaseAttachmentsSectionProps {
   leaseId: string;
   attachments: SignedLeaseAttachment[];
   canWrite: boolean;
+  isDocumentsLocked: boolean;
+  /** The server says a file is locked that was shown as open: load the lease again. */
+  onLockedRefusal: () => void;
 }
 
-export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite }: LeaseAttachmentsSectionProps) {
+export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite, isDocumentsLocked, onLockedRefusal }: LeaseAttachmentsSectionProps) {
   const [deleteAttachment, { isLoading: isDeleting }] =
     useDeleteSignedLeaseAttachmentMutation();
   const [updateAttachment] = useUpdateLeaseAttachmentMutation();
@@ -40,6 +45,10 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
       if (attachmentBacksExtension(err)) {
         setPendingDelete(null);
         showError("This addendum is the record of an extension. Undo the extension to remove it.");
+      } else if (isLeaseAttachmentLockedFailure(err)) {
+        setPendingDelete(null);
+        onLockedRefusal();
+        showError(LEASE_ATTACHMENT_LOCKED_MESSAGE);
       } else {
         showError("Couldn't remove that file.");
       }
@@ -51,10 +60,13 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
       await updateAttachment({ leaseId, attachmentId: att.id, kind }).unwrap();
       showSuccess("Kind updated.");
     } catch (err) {
+      if (isLeaseAttachmentLockedFailure(err)) onLockedRefusal();
       showError(
         attachmentBacksExtension(err)
           ? "This addendum is the record of an extension. Undo the extension to change it."
-          : "Couldn't update the kind.",
+          : isLeaseAttachmentLockedFailure(err)
+            ? LEASE_ATTACHMENT_LOCKED_MESSAGE
+            : "Couldn't update the kind.",
       );
     }
   }
@@ -72,6 +84,7 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
               key={att.id}
               att={att}
               canWrite={canWrite}
+              isDocumentsLocked={isDocumentsLocked}
               onPreview={() => setViewingAttachment(att)}
               onDelete={() => void handleDelete(att)}
               onKindChange={(kind) => void handleKindChange(att, kind)}

@@ -30,6 +30,8 @@ export interface SignedLeaseDetail {
   created_at: string;
   updated_at: string;
   attachments: SignedLeaseAttachment[];
+  /** The server's one rule for "these documents are what the tenant was given": no re-rendering, no more originals. */
+  documents_locked: boolean;
   /** The most-recent live extension (seed excluded), or null when the lease
    *  is at its original term. Drives the Undo button's 30-day gating. */
   latest_extension: LeaseExtensionSummary | null;

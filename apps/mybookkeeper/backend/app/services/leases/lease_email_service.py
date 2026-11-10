@@ -33,6 +33,7 @@ import html as html_mod
 import logging
 import uuid
 from collections.abc import Callable
+from typing import NamedTuple
 
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
@@ -202,13 +203,15 @@ async def send_lease_to_tenant(
 
     Returns True on a successful SMTP send, False on any skip (no
     email on file, SMTP unconfigured, no eligible attachments) or
-    failure. Never raises — callers (background task + manual route)
-    rely on best-effort semantics.
+    failure of the send itself; a failure to stamp the lease raises, since
+    nothing may go out that the lease does not know about.
 
-    On success, stamps ``signed_leases.last_emailed_to_tenant_at`` so
-    the auto-email idempotency gate doesn't fire again on a Regenerate.
-    Manual re-send also stamps this column — the column is "the most
-    recent successful tenant email", not strictly "the first one".
+    Before anything is read for sending, stamps
+    ``signed_leases.last_emailed_to_tenant_at`` under the lease row lock. That
+    locks the lease's documents (see ``lease_documents_lock``) and stops the
+    auto-email gate firing again on a Regenerate. The column means "the most
+    recent time a tenant email was started", so it stays set when the send
+    then fails, and the host can always send again.
     """
     return await _send_to_tenant(
         lease_id=lease_id,
@@ -242,6 +245,16 @@ async def send_extension_addendum_to_tenant(
     )
 
 
+async def _restore_email_stamp(
+    *, user_id: uuid.UUID, organization_id: uuid.UUID, lease_id: uuid.UUID, stamp: _dt.datetime | None,
+) -> None:
+    async with unit_of_work() as db:
+        await signed_lease_repo.update_lease(
+            db, lease_id=lease_id, user_id=user_id, organization_id=organization_id,
+            fields={"last_emailed_to_tenant_at": stamp},
+        )
+
+
 async def _send_to_tenant(
     *,
     lease_id: uuid.UUID,
@@ -251,7 +264,12 @@ async def _send_to_tenant(
     subject_for: Callable[..., str],
     body_for: Callable[..., str],
 ) -> bool:
-    # Load the lease + applicant + attachments in one short transaction.
+    # One transaction locks the lease, reads what will be sent and, when there
+    # is something to send, stamps ``last_emailed_to_tenant_at``. The stamp is
+    # what locks the lease's documents, so a regenerate that read the lease
+    # earlier is refused at its own write: what is read here is what the tenant
+    # gets. The lease stays locked even if the send then fails, because the
+    # documents may have reached the tenant; the host can always send again.
     async with unit_of_work() as db:
         # Generating a lease queues this with no check first, and whoever is trying
         # a demo account can type a real person's address.
@@ -264,6 +282,7 @@ async def _send_to_tenant(
             lease_id=lease_id,
             user_id=user_id,
             organization_id=organization_id,
+            for_update=True,
         )
         if lease is None:
             logger.warning(
@@ -286,6 +305,7 @@ async def _send_to_tenant(
             return False
 
         attachments = await signed_lease_attachment_repo.list_by_lease(db, lease_id)
+        eligible = [a for a in attachments if is_eligible(a)]
 
         listing_title: str | None = None
         if lease.listing_id is not None:
@@ -297,47 +317,27 @@ async def _send_to_tenant(
 
         applicant_legal_name = applicant.legal_name
         contact_email = applicant.contact_email
+        storage = get_storage()
 
-    if not contact_email:
-        logger.info(
-            "lease_email.skipped reason=no_contact_email lease_id=%s",
-            lease_id,
-        )
+        skip = _skip_reason(contact_email, eligible, storage)
+        previous_stamp = lease.last_emailed_to_tenant_at
+        if skip is None:
+            await signed_lease_repo.update_lease(
+                db,
+                lease_id=lease_id,
+                user_id=user_id,
+                organization_id=organization_id,
+                fields={"last_emailed_to_tenant_at": _dt.datetime.now(_dt.timezone.utc)},
+            )
+
+    if skip is not None:
+        logger.log(skip.log_level, "lease_email.skipped reason=%s lease_id=%s", skip.reason, lease_id)
         await record_event(
             organization_id,
             "lease_email_skipped",
-            "info",
-            "Tenant email skipped: applicant has no contact email on file.",
-            {"lease_id": str(lease_id), "reason": "no_contact_email"},
-        )
-        return False
-
-    if not email_service.is_configured():
-        logger.info(
-            "lease_email.skipped reason=smtp_not_configured lease_id=%s",
-            lease_id,
-        )
-        await record_event(
-            organization_id,
-            "lease_email_skipped",
-            "info",
-            "Tenant email skipped: SMTP is not configured on this deploy.",
-            {"lease_id": str(lease_id), "reason": "smtp_not_configured"},
-        )
-        return False
-
-    eligible = [a for a in attachments if is_eligible(a)]
-    if not eligible:
-        logger.warning(
-            "lease_email.skipped reason=no_eligible_attachments lease_id=%s",
-            lease_id,
-        )
-        await record_event(
-            organization_id,
-            "lease_email_skipped",
-            "warning",
-            "Tenant email skipped: no documents to send.",
-            {"lease_id": str(lease_id), "reason": "no_eligible_attachments"},
+            skip.event_level,
+            skip.message,
+            {"lease_id": str(lease_id), "reason": skip.reason},
         )
         return False
 
@@ -345,21 +345,6 @@ async def _send_to_tenant(
     # the whole send — partial attachments would be confusing for the
     # tenant ("where's page 2?"). Generation already validated storage
     # was reachable, so this path is defensive.
-    storage = get_storage()
-    if storage is None:
-        logger.warning(
-            "lease_email.skipped reason=storage_not_configured lease_id=%s",
-            lease_id,
-        )
-        await record_event(
-            organization_id,
-            "lease_email_skipped",
-            "warning",
-            "Tenant email skipped: object storage is not configured.",
-            {"lease_id": str(lease_id), "reason": "storage_not_configured"},
-        )
-        return False
-
     email_attachments: list[EmailAttachment] = []
     for a in eligible:
         try:
@@ -368,6 +353,10 @@ async def _send_to_tenant(
             logger.warning(
                 "lease_email.fetch_failed lease_id=%s storage_key=%s",
                 lease_id, a.storage_key, exc_info=True,
+            )
+            # Nothing was sent, so the stamp that locked the documents goes back.
+            await _restore_email_stamp(
+                user_id=user_id, organization_id=organization_id, lease_id=lease_id, stamp=previous_stamp,
             )
             await record_event(
                 organization_id,
@@ -409,26 +398,6 @@ async def _send_to_tenant(
         )
         return False
 
-    # Stamp last_emailed_to_tenant_at so a Regenerate doesn't auto-resend.
-    # Use a short separate transaction so a stamp failure is logged but
-    # doesn't unsend the email.
-    try:
-        async with unit_of_work() as db:
-            await signed_lease_repo.update_lease(
-                db,
-                lease_id=lease_id,
-                user_id=user_id,
-                organization_id=organization_id,
-                fields={
-                    "last_emailed_to_tenant_at": _dt.datetime.now(_dt.timezone.utc),
-                },
-            )
-    except Exception:
-        logger.warning(
-            "lease_email.stamp_failed lease_id=%s",
-            lease_id, exc_info=True,
-        )
-
     logger.info(
         "lease_email.sent lease_id=%s recipient=%s attachments=%d",
         lease_id, _redact_email(contact_email), len(email_attachments),
@@ -444,6 +413,26 @@ async def _send_to_tenant(
         },
     )
     return True
+
+
+class _Skip(NamedTuple):
+    reason: str
+    message: str
+    log_level: int
+    event_level: str
+
+
+def _skip_reason(contact_email: str | None, eligible: list, storage: object | None) -> _Skip | None:
+    """Why nothing can be sent (checked before the lease is stamped), or None to go ahead."""
+    if not contact_email:
+        return _Skip("no_contact_email", "Tenant email skipped: applicant has no contact email on file.", logging.INFO, "info")
+    if not email_service.is_configured():
+        return _Skip("smtp_not_configured", "Tenant email skipped: SMTP is not configured on this deploy.", logging.INFO, "info")
+    if not eligible:
+        return _Skip("no_eligible_attachments", "Tenant email skipped: no documents to send.", logging.WARNING, "warning")
+    if storage is None:
+        return _Skip("storage_not_configured", "Tenant email skipped: object storage is not configured.", logging.WARNING, "warning")
+    return None
 
 
 def _redact_email(value: str) -> str:

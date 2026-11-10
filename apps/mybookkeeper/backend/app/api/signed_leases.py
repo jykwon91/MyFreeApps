@@ -202,21 +202,20 @@ async def update_lease(
     ctx: RequestContext = Depends(require_write_access),
 ) -> SignedLeaseResponse:
     try:
-        return await signed_lease_service.update_lease(
-            user_id=ctx.user_id,
-            organization_id=ctx.organization_id,
-            lease_id=lease_id,
-            notes=payload.notes,
-            status=payload.status,
-            values=payload.values,
-            auto_email_tenant=payload.auto_email_tenant,
-        )
+        with lease_render_errors():
+            return await signed_lease_service.update_lease(
+                user_id=ctx.user_id,
+                organization_id=ctx.organization_id,
+                lease_id=lease_id,
+                notes=payload.notes,
+                status=payload.status,
+                values=payload.values,
+                auto_email_tenant=payload.auto_email_tenant,
+            )
     except signed_lease_service.SignedLeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc
     except signed_lease_service.InvalidStatusTransitionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except signed_lease_service.CannotEditValuesError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.delete("/{lease_id}", status_code=204)

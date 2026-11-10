@@ -26,6 +26,7 @@ from app.services.leases._lease_helpers import (
     _load_resolution_context,
 )
 from app.services.leases.default_source_resolver import resolve_default_source
+from app.services.leases.lease_documents_lock import lease_documents_locked
 from app.services.leases.lease_template_service import TemplateNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,7 @@ async def prefill_addendum_placeholders(
         )
 
         existing_values = lease.values or {}
+        is_locked = await lease_documents_locked(db, lease)
 
         items: list[SignedLeaseTemplatePrefillItem] = []
         for p in placeholders:
@@ -107,6 +109,7 @@ async def prefill_addendum_placeholders(
                         value=str(existing),
                         provenance=None,
                         is_from_existing_values=True,
+                        is_read_only=is_locked,
                     )
                 )
                 continue

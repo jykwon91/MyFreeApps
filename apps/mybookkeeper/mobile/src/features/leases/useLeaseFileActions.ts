@@ -1,6 +1,7 @@
-import { useDeleteSignedLeaseAttachmentMutation, useUpdateLeaseAttachmentMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
+import { useDeleteSignedLeaseAttachmentMutation, useGetSignedLeaseByIdQuery, useUpdateLeaseAttachmentMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
+import { isLeaseAttachmentLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseAttachmentLockedFailure";
 import { useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { LEASE_FILE_MESSAGES } from "../../constants/leaseFiles";
@@ -17,6 +18,7 @@ export function useLeaseFileActions(leaseId: string): {
   const [updateFile] = useUpdateLeaseAttachmentMutation();
   const [deleteFile] = useDeleteSignedLeaseAttachmentMutation();
   const [busy, setBusy] = useState<{ id: string; action: LeaseFileAction } | null>(null);
+  const { refetch } = useGetSignedLeaseByIdQuery(leaseId);
   const isSending = useRef(false);
 
   async function run(file: SignedLeaseAttachment, kind: LeaseFileAction, action: () => Promise<unknown>, success: string, failure: (error: unknown) => string): Promise<void> {
@@ -27,6 +29,7 @@ export function useLeaseFileActions(leaseId: string): {
       await action();
       showToast(success);
     } catch (error) {
+      if (isLeaseAttachmentLockedFailure(error)) void refetch();
       showToast(failure(error), "error");
     } finally {
       isSending.current = false;

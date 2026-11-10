@@ -6,6 +6,8 @@ export interface SignedLeaseTemplatePrefillItem {
   value: string;
   provenance: string | null;
   is_from_existing_values: boolean;
+  /** Already on a locked lease, so it is shown but cannot change. */
+  is_read_only: boolean;
 }
 
 export interface SignedLeaseTemplatePrefillResponse {

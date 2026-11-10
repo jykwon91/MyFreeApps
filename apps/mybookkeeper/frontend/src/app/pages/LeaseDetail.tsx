@@ -29,6 +29,8 @@ import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge
 import SignedLeaseStatusPicker from "@/app/features/leases/SignedLeaseStatusPicker";
 import ExtendLeaseDialog from "@/app/features/leases/ExtendLeaseDialog";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
+import { LEASE_DOCUMENTS_LOCKED_MESSAGE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
+import { isLeaseDocumentsLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseDocumentsLockedFailure";
 import LeaseAddTemplateModal from "@/app/features/leases/LeaseAddTemplateModal";
 import UndoExtensionDialog from "@/app/features/leases/UndoExtensionDialog";
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
@@ -105,8 +107,13 @@ export default function LeaseDetail() {
     try {
       await generateLease(lease.id).unwrap();
       showSuccess("Lease generated.");
-    } catch {
-      showError("Couldn't generate the lease. Want to try again?");
+    } catch (err) {
+      if (isLeaseDocumentsLockedFailure(err)) {
+        void refetch();
+        showError(LEASE_DOCUMENTS_LOCKED_MESSAGE);
+      } else {
+        showError("Couldn't generate the lease. Want to try again?");
+      }
     }
   }
 
@@ -194,6 +201,7 @@ export default function LeaseDetail() {
               <div className="flex items-center gap-2 flex-wrap">
                 {canWrite
                 && lease.kind === "generated"
+                && !lease.documents_locked
                 && (lease.status === "draft" || lease.attachments.length === 0) ? (
                   <LoadingButton
                     isLoading={isGenerating}
@@ -307,6 +315,8 @@ export default function LeaseDetail() {
             <LeaseAddTemplateModal
               leaseId={lease.id}
               existingTemplateIds={lease.templates.map((t) => t.id)}
+              isDocumentsLocked={lease.documents_locked}
+              onLockedRefusal={() => void refetch()}
               onClose={() => setShowAddTemplateModal(false)}
             />
           ) : null}
@@ -378,6 +388,8 @@ export default function LeaseDetail() {
                 leaseId={lease.id}
                 attachments={lease.attachments}
                 canWrite={canWrite}
+                isDocumentsLocked={lease.documents_locked}
+                onLockedRefusal={() => void refetch()}
               />
             </div>
           ) : null}

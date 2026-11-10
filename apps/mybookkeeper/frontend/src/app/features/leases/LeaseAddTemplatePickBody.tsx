@@ -1,5 +1,6 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
+import { LEASE_DOCUMENTS_LOCKED_NOTE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 
 export interface LeaseAddTemplatePickBodyProps {
@@ -8,6 +9,8 @@ export interface LeaseAddTemplatePickBodyProps {
   linkedSet: Set<string>;
   selectedIds: string[];
   onToggle: (template: LeaseTemplateSummary) => void;
+  /** The lease is sent or signed: its templates cannot be made again. */
+  isDocumentsLocked: boolean;
 }
 
 export default function LeaseAddTemplatePickBody({
@@ -16,6 +19,7 @@ export default function LeaseAddTemplatePickBody({
   linkedSet,
   selectedIds,
   onToggle,
+  isDocumentsLocked,
 }: LeaseAddTemplatePickBodyProps) {
   switch (mode) {
     case "error":
@@ -47,14 +51,17 @@ export default function LeaseAddTemplatePickBody({
           {available.map((t) => {
             const checked = selectedIds.includes(t.id);
             const alreadyLinked = linkedSet.has(t.id);
+            const isBlocked = alreadyLinked && isDocumentsLocked;
             return (
               <li key={t.id}>
                 <label
                   className={[
-                    "w-full flex items-start gap-3 border rounded-lg px-4 py-3 transition-colors min-h-[44px] cursor-pointer",
-                    checked
-                      ? "border-primary bg-primary/5"
-                      : "hover:bg-muted/50",
+                    "w-full flex items-start gap-3 border rounded-lg px-4 py-3 transition-colors min-h-[44px]",
+                    isBlocked
+                      ? "opacity-60 cursor-not-allowed"
+                      : checked
+                        ? "border-primary bg-primary/5 cursor-pointer"
+                        : "hover:bg-muted/50 cursor-pointer",
                   ].join(" ")}
                   data-testid={`add-template-option-${t.id}`}
                 >
@@ -62,7 +69,9 @@ export default function LeaseAddTemplatePickBody({
                     type="checkbox"
                     checked={checked}
                     onChange={() => onToggle(t)}
-                    className="mt-1 h-4 w-4 cursor-pointer"
+                    disabled={isBlocked}
+                    aria-describedby={isBlocked ? `add-template-locked-${t.id}` : undefined}
+                    className="mt-1 h-4 w-4 cursor-pointer disabled:cursor-not-allowed"
                     aria-label={`Select template ${t.name}`}
                     data-testid={`add-template-checkbox-${t.id}`}
                   />
@@ -85,7 +94,15 @@ export default function LeaseAddTemplatePickBody({
                           ? "placeholder"
                           : "placeholders"}
                       </span>
-                      {alreadyLinked ? (
+                      {isBlocked ? (
+                        <span
+                          id={`add-template-locked-${t.id}`}
+                          className="text-xs"
+                          data-testid={`add-template-locked-${t.id}`}
+                        >
+                          {LEASE_DOCUMENTS_LOCKED_NOTE}
+                        </span>
+                      ) : alreadyLinked ? (
                         <span className="text-[10px] uppercase tracking-wide bg-muted rounded px-1.5 py-0.5 font-medium">
                           on this lease — picking will regenerate
                         </span>

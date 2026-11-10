@@ -8,6 +8,7 @@ treated as the photo it is.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from collections.abc import Awaitable, Callable, Iterator
 from contextlib import ExitStack, asynccontextmanager
 from dataclasses import dataclass, field
@@ -20,6 +21,9 @@ from app.services.insurance import insurance_policy_service
 from app.services.leases import lease_attachment_service, lease_import_service
 from tests.gps_photo import gps_of, photo_with_gps
 
+_DRAFT_LEASE = SimpleNamespace(
+    id=uuid.uuid4(), status="draft", sent_at=None, signed_at=None, last_emailed_to_tenant_at=None,
+)
 _BROKEN_JPEG = b"\xff\xd8\xff" + b"MZ\x90\x00" * 100
 
 
@@ -34,7 +38,11 @@ class _Recorded:
 
     async def create(self, _db: object, **row: object) -> SimpleNamespace:
         self.rows.append(row)
-        return SimpleNamespace(id=uuid.uuid4(), **row)
+        stored = {
+            "id": uuid.uuid4(), "lease_id": uuid.uuid4(), "uploaded_by_user_id": uuid.uuid4(),
+            "uploaded_at": datetime.now(timezone.utc), "signed_by_tenant_at": None, "signed_by_landlord_at": None,
+        }
+        return SimpleNamespace(**{**stored, **row})
 
 
 @asynccontextmanager
@@ -53,9 +61,9 @@ def _lease_attachment(stack: ExitStack, recorded: _Recorded) -> Upload:
     svc = lease_attachment_service
     stack.enter_context(patch.object(svc, "get_storage", return_value=recorded.storage))
     stack.enter_context(patch.object(svc, "unit_of_work", _fake_uow))
-    stack.enter_context(patch.object(svc.signed_lease_repo, "get", new=AsyncMock(return_value=MagicMock())))
+    stack.enter_context(patch.object(svc.signed_lease_repo, "get", new=AsyncMock(return_value=_DRAFT_LEASE)))
     stack.enter_context(patch.object(svc.signed_lease_attachment_repo, "create", new=recorded.create))
-    stack.enter_context(patch.object(svc.SignedLeaseAttachmentResponse, "model_validate", side_effect=lambda row: row))
+    stack.enter_context(patch.object(svc.signed_lease_attachment_repo, "list_by_lease", new=AsyncMock(return_value=[])))
     stack.enter_context(patch.object(svc, "attach_presigned_urls_to_attachments", side_effect=_identity))
 
     async def upload(content: bytes, filename: str) -> object:

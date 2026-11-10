@@ -15,6 +15,7 @@ from app.core.lease_enums import LEASE_STATUS_GROUPS
 from app.db.session import unit_of_work
 from app.models.leases.signed_lease import SignedLease
 from app.repositories.applicants import applicant_repo
+from app.services.leases.lease_documents_lock import lease_documents_locked
 from app.services.leases.listing_resolution import default_listing_id
 from app.repositories.leases import (
     lease_template_placeholder_repo,
@@ -285,6 +286,7 @@ async def update_lease(
             lease_id=lease_id,
             user_id=user_id,
             organization_id=organization_id,
+            for_update=True,
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
@@ -308,9 +310,9 @@ async def update_lease(
             fields["auto_email_tenant"] = auto_email_tenant
 
         if values is not None:
-            if lease.status != "draft":
+            if lease.status != "draft" or await lease_documents_locked(db, lease):
                 raise CannotEditValuesError(
-                    "Values can only be edited while the lease is a draft",
+                    "Values can only be edited while the lease is a draft whose documents are not locked",
                 )
             fields["values"] = values
             starts, ends = _denormalise_dates(values)

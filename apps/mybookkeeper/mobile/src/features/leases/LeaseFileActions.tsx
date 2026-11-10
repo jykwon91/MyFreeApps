@@ -1,3 +1,4 @@
+import { LEASE_RECORD_KINDS } from "@mybookkeeper/api-client/constants/leaseRecordKinds";
 import { LEASE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
@@ -10,16 +11,19 @@ import { askOnce } from "../../lib/askOnce";
 import { useLeaseFileActions } from "./useLeaseFileActions";
 
 const KIND_OPTIONS = LEASE_FILE_KIND_CHOICES.map((kind) => ({ value: kind, label: LEASE_ATTACHMENT_KIND_LABELS[kind] }));
+/** A locked lease takes no more originals or signed copies by relabelling, so a file cannot be marked as one. */
+const LOCKED_KIND_OPTIONS = KIND_OPTIONS.filter((option) => !LEASE_RECORD_KINDS.includes(option.value));
 
 interface LeaseFileActionsProps {
   leaseId: string;
   file: SignedLeaseAttachment;
+  isDocumentsLocked: boolean;
   /** Another file is being opened, so nothing else should start. */
   isDisabled: boolean;
 }
 
 /** What a writer can do with a file: mark it as another kind, or remove it. */
-export default function LeaseFileActions({ leaseId, file, isDisabled }: LeaseFileActionsProps) {
+export default function LeaseFileActions({ leaseId, file, isDocumentsLocked, isDisabled }: LeaseFileActionsProps) {
   const { busy, changeKind, remove } = useLeaseFileActions(leaseId);
   const [isChoosing, setIsChoosing] = useState(false);
   const asking = useRef(false);
@@ -56,7 +60,7 @@ export default function LeaseFileActions({ leaseId, file, isDisabled }: LeaseFil
           setIsChoosing(false);
           void changeKind(file, kind);
         }}
-        options={KIND_OPTIONS}
+        options={isDocumentsLocked ? LOCKED_KIND_OPTIONS : KIND_OPTIONS}
         title={LEASE_FILE_MESSAGES.typeSheetTitle}
         value={file.kind}
       />

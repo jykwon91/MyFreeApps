@@ -1,13 +1,13 @@
 import { useRef, useState } from "react";
 import { Loader2, Upload } from "lucide-react";
 import { showError, showSuccess } from "@platform/ui";
-import {
-  LEASE_ATTACHMENT_KINDS,
-  type LeaseAttachmentKind,
-} from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
+import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
+import { LEASE_MANUAL_UPLOAD_KINDS } from "@mybookkeeper/api-client/constants/leaseManualUploadKinds";
 import { LEASE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
 import { leaseAttachmentForm } from "@/shared/lib/lease-upload-form";
 import { useUploadSignedLeaseAttachmentMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
+import { LEASE_ATTACHMENT_LOCKED_MESSAGE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
+import { isLeaseAttachmentLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseAttachmentLockedFailure";
 import { inferKindsForFiles } from "@mybookkeeper/api-client/utils/inferAttachmentKind";
 
 const ALLOWED_MIME = [
@@ -33,7 +33,7 @@ export default function LeaseAttachmentDropzone({
   const [uploadAttachment, { isLoading: isUploading }] =
     useUploadSignedLeaseAttachmentMutation();
 
-  const [manualKind, setManualKind] = useState<LeaseAttachmentKind>("signed_lease");
+  const [selectedKind, setSelectedKind] = useState<LeaseAttachmentKind>("signed_lease");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,7 +51,7 @@ export default function LeaseAttachmentDropzone({
     const kinds: LeaseAttachmentKind[] =
       validFiles.length > 1
         ? inferKindsForFiles(validFiles.map((f) => f.name))
-        : [manualKind];
+        : [selectedKind];
 
     let successCount = 0;
     for (let i = 0; i < validFiles.length; i++) {
@@ -63,7 +63,8 @@ export default function LeaseAttachmentDropzone({
         successCount++;
       } catch (e: unknown) {
         const status = (e as { status?: number }).status;
-        if (status === 413) showError(`${file.name} is too large.`);
+        if (isLeaseAttachmentLockedFailure(e)) showError(LEASE_ATTACHMENT_LOCKED_MESSAGE);
+        else if (status === 413) showError(`${file.name} is too large.`);
         else if (status === 415) showError(`${file.name}: unsupported file type.`);
         else showError(`Couldn't upload ${file.name}.`);
       }
@@ -84,13 +85,13 @@ export default function LeaseAttachmentDropzone({
         </label>
         <select
           id={`attachment-kind-${leaseId}`}
-          value={manualKind}
-          onChange={(e) => setManualKind(e.target.value as LeaseAttachmentKind)}
+          value={selectedKind}
+          onChange={(e) => setSelectedKind(e.target.value as LeaseAttachmentKind)}
           className="px-2 py-1 text-sm border rounded"
           data-testid="lease-attachment-kind-select"
           disabled={isDisabled}
         >
-          {LEASE_ATTACHMENT_KINDS.map((k) => (
+          {LEASE_MANUAL_UPLOAD_KINDS.map((k) => (
             <option key={k} value={k}>
               {LEASE_ATTACHMENT_KIND_LABELS[k]}
             </option>

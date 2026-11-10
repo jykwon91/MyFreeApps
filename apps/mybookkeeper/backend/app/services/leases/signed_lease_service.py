@@ -43,7 +43,6 @@ from app.services.leases.lease_lifecycle_service import (
 # PDF generation
 from app.services.leases.lease_pdf_service import (
     ImportedLeaseTemplateError,
-    TemplatesAlreadyLinkedError,
     add_templates_and_generate,
     generate_lease,
     render_md_text_to_pdf_or_keep,
@@ -87,7 +86,6 @@ __all__ = [
     "StorageNotConfiguredError",
     "SuccessorAlreadyExistsError",
     "ImportedLeaseTemplateError",
-    "TemplatesAlreadyLinkedError",
     "ApplicantNotFoundError",
     "ListingNotFoundError",
     # Lifecycle

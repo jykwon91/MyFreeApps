@@ -1,3 +1,4 @@
+import { LEASE_RECORD_FILE_LOCKED_NOTE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 import { LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
@@ -11,10 +12,12 @@ interface LeaseFileRowProps {
   file: SignedLeaseAttachment;
   isOpening: boolean;
   isDisabled: boolean;
+  /** The lease is sent, emailed or signed, so no file can be relabelled into a rendered original. */
+  isDocumentsLocked: boolean;
   onOpen: () => void;
 }
 
-export default function LeaseFileRow({ leaseId, file, isOpening, isDisabled, onOpen }: LeaseFileRowProps) {
+export default function LeaseFileRow({ leaseId, file, isOpening, isDisabled, isDocumentsLocked, onOpen }: LeaseFileRowProps) {
   const { colors, spacing, fontSize } = useTheme();
   const canWrite = useCanWrite();
   return (
@@ -36,7 +39,11 @@ export default function LeaseFileRow({ leaseId, file, isOpening, isDisabled, onO
       ) : (
         <Text style={{ fontSize: fontSize.sm, color: colors.destructive }}>{LEASE_MESSAGES.fileMissing}</Text>
       )}
-      {canWrite ? <LeaseFileActions file={file} isDisabled={isOpening || isDisabled} leaseId={leaseId} /> : null}
+      {canWrite && file.is_locked ? (
+        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{LEASE_RECORD_FILE_LOCKED_NOTE}</Text>
+      ) : canWrite ? (
+        <LeaseFileActions file={file} isDocumentsLocked={isDocumentsLocked} isDisabled={isOpening || isDisabled} leaseId={leaseId} />
+      ) : null}
     </View>
   );
 }

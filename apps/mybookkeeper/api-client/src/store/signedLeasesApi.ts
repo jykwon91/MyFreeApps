@@ -150,10 +150,8 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
         url: `/signed-leases/${id}/email-tenant`,
         method: "POST",
       }),
-      // The send happens out-of-band; the lease row only updates
-      // ``last_emailed_to_tenant_at`` after the SMTP round-trip.
-      // Invalidate so the UI refetches and reflects the new stamp
-      // (next user navigation or polling will pick it up).
+      // ``last_emailed_to_tenant_at`` is stamped when the send starts, not
+      // when it is delivered. Invalidate so the UI refetches and shows it.
       invalidatesTags: (_r, _e, id) => [{ type: "SignedLease", id }],
     }),
 

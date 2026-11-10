@@ -82,6 +82,7 @@ def _attachment(lease_id: uuid.UUID, i: int) -> dict:
         uploaded_by_user_id=uuid.uuid4(),
         uploaded_at=_dt.datetime.now(_dt.timezone.utc),
         presigned_url=None,
+        is_locked=True,
     )
 
 
