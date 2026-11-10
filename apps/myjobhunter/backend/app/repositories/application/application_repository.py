@@ -27,7 +27,7 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import literal_column, select
+from sqlalchemy import delete, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -350,3 +350,12 @@ async def soft_delete(db: AsyncSession, application: Application) -> Application
     if was_deleted:
         await db.refresh(application)
     return application
+
+
+async def delete_all_for_user(db: AsyncSession, user_id: uuid.UUID) -> None:
+    """Hard-delete every application a user owns, soft-deleted ones included.
+
+    Only account deletion uses this. Events, contacts and documents hanging off
+    the applications go with them through their ``ON DELETE CASCADE`` keys.
+    """
+    await db.execute(delete(Application).where(Application.user_id == user_id))

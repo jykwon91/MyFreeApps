@@ -191,9 +191,9 @@ NOT_STORED_FILE_COLUMNS: dict[str, str] = {
 # look: run the delete against migrated Postgres, then add it here.
 KNOWN_BLOCKING_FOREIGN_KEYS: dict[str, str] = {
     "applications.company_id": (
-        "Both rows cascade from the user. Deleting a user holding a company and an "
-        "application succeeds on migrated Postgres, though RESTRICT is checked immediately "
-        "so this relies on cascade order"
+        "Both rows cascade from the user, and RESTRICT is checked immediately. prepare_deletion "
+        "deletes the user's applications first, so the order no longer depends on cascade luck; "
+        "the key stays RESTRICT so deleting a company still refuses while applications use it"
     ),
 }
 
