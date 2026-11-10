@@ -1788,7 +1788,17 @@
         "mobile/src/types/PeriodSheetProps.ts",
         "mobile/src/features/money/",
         "mobile/src/lib/useRowSelection.ts",
-        "api-client/src/utils/pruneSelection.ts"
+        "api-client/src/utils/pruneSelection.ts",
+        "api-client/src/constants/bankImport.ts",
+        "api-client/src/utils/bankImportFailure.ts",
+        "api-client/src/utils/bankImportSummary.ts",
+        "api-client/src/types/transaction/ImportResult.ts",
+        "api-client/src/types/transaction/TransactionPreview.ts",
+        "api-client/src/types/transaction/BankCsvImportRequest.ts",
+        "frontend/src/app/features/transactions/BankStatementImport.tsx",
+        "mobile/src/features/bankImport/",
+        "mobile/src/constants/bankImport.ts",
+        "mobile/app/(app)/transactions/import.tsx"
       ],
       "backend_tests": [
         "test_bank_csv_parser.py",
@@ -1836,7 +1846,8 @@
         "UtilityTrendsDateRange.test.tsx",
         "Reconciliation.test.tsx",
         "ReconciliationCompare.test.tsx",
-        "ReconciliationDelete.test.tsx"
+        "ReconciliationDelete.test.tsx",
+        "BankStatementImport.test.tsx"
       ],
       "e2e_specs": [
         "transactions.spec.ts",
@@ -1846,7 +1857,8 @@
         "reconciliation.spec.ts",
         "mocked/transactions-unsaved-mock.spec.ts",
         "analytics.spec.ts",
-        "tax-return-detail.spec.ts"
+        "tax-return-detail.spec.ts",
+        "bank-statement-import.spec.ts"
       ]
     },
     "attribution": {

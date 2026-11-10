@@ -1,6 +1,8 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import { TRANSACTION_PAGE_SIZE } from "../constants/transactionPaging";
+import type { BankCsvImportRequest } from "../types/transaction/BankCsvImportRequest";
 import type { DuplicatePairsResponse } from "../types/transaction/DuplicatePairsResponse";
+import type { ImportResult } from "../types/transaction/ImportResult";
 import type { MergeDuplicatesRequest } from "../types/transaction/MergeDuplicatesRequest";
 import type { MergeDuplicatesResponse } from "../types/transaction/MergeDuplicatesResponse";
 import type { ScheduleEReport } from "../types/transaction/ScheduleEReport";
@@ -56,6 +58,16 @@ export const transactionsApi = baseApi.enhanceEndpoints({
       query: (id) => ({ url: `/transactions/${id}`, method: "DELETE" }),
       invalidatesTags: ["Transaction", "Summary"],
     }),
+    importBankCsv: builder.mutation<ImportResult, BankCsvImportRequest>({
+      query: ({ form, propertyId }) => ({
+        url: "/imports/bank-csv",
+        method: "POST",
+        data: form,
+        params: propertyId ? { property_id: propertyId } : undefined,
+      }),
+      // New rows change the list, the review count and every total built from them.
+      invalidatesTags: ["Transaction", "Summary"],
+    }),
     bulkApproveTransactions: builder.mutation<{ approved: number; skipped: number }, string[]>({
       query: (ids) => ({ url: "/transactions/bulk-approve", method: "POST", data: { ids } }),
       invalidatesTags: ["Transaction", "Summary"],
@@ -102,4 +114,5 @@ export const {
   useKeepDuplicateMutation,
   useDismissDuplicateMutation,
   useMergeDuplicatesMutation,
+  useImportBankCsvMutation,
 } = transactionsApi;

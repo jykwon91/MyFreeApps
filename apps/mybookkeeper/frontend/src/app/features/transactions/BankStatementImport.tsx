@@ -1,8 +1,10 @@
 import { useCallback, useRef, useState } from "react";
 import { Upload, FileSpreadsheet, X, Loader2 } from "lucide-react";
-import api from "@/shared/lib/api";
+import { useImportBankCsvMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
-import type { ImportResult } from "@/shared/types/transaction/import-result";
+import type { ImportResult } from "@mybookkeeper/api-client/types/transaction/ImportResult";
+import { bankImportFailure } from "@mybookkeeper/api-client/utils/bankImportFailure";
+import { bankImportSummary } from "@mybookkeeper/api-client/utils/bankImportSummary";
 import { Button } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 
@@ -17,7 +19,7 @@ export default function BankStatementImport({ properties, onClose, onSuccess, on
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [propertyId, setPropertyId] = useState("");
-  const [importing, setImporting] = useState(false);
+  const [importBankCsv, { isLoading: importing }] = useImportBankCsvMutation();
   const [result, setResult] = useState<ImportResult | null>(null);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,32 +30,22 @@ export default function BankStatementImport({ properties, onClose, onSuccess, on
 
   const handleImport = useCallback(async () => {
     if (!file) return;
-    setImporting(true);
+    const form = new FormData();
+    form.append("file", file);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const params = propertyId ? `?property_id=${propertyId}` : "";
-      const res = await api.post<ImportResult>(`/imports/bank-csv${params}`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      setResult(res.data);
-      onSuccess(
-        `Imported ${res.data.imported} transaction(s)` +
-        (res.data.skipped_duplicates > 0 ? `, ${res.data.skipped_duplicates} duplicate(s) skipped` : ""),
-      );
+      const imported = await importBankCsv({ form, propertyId: propertyId || undefined }).unwrap();
+      setResult(imported);
+      onSuccess(bankImportSummary(imported));
     } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      onError(detail ?? "Failed to import bank statement");
-    } finally {
-      setImporting(false);
+      onError(bankImportFailure(err));
     }
-  }, [file, propertyId, onSuccess, onError]);
+  }, [file, propertyId, importBankCsv, onSuccess, onError]);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-      <div className="bg-card border rounded-lg shadow-lg w-full max-w-lg">
+      <div role="dialog" aria-modal="true" aria-labelledby="bank-import-title" className="bg-card border rounded-lg shadow-lg w-full max-w-lg">
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-base font-semibold">Import Bank Statement</h2>
+          <h2 id="bank-import-title" className="text-base font-semibold">Import Bank Statement</h2>
           <button onClick={onClose} aria-label="Close import modal" className="text-muted-foreground hover:text-foreground">
             <X size={18} />
           </button>

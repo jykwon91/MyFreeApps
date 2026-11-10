@@ -1,0 +1,35 @@
+import { BANK_CSV_MAX_LABEL } from "@mybookkeeper/api-client/constants/bankImport";
+
+export const BANK_CSV_FILE_TYPES = ["text/csv", "text/comma-separated-values", "application/csv", "application/vnd.ms-excel"] as const;
+
+export const BANK_IMPORT_MESSAGES = {
+  importEntry: "Import bank statement",
+  title: "Import a bank statement",
+  intro: "Add a CSV from your bank, such as Chase, Wells Fargo or Bank of America. New rows are added to your transactions.",
+  file: "Statement file",
+  noFile: "No file yet.",
+  chooseFile: "Choose a CSV file",
+  chooseDifferentFile: "Choose a different file",
+  property: "Property (optional)",
+  propertySheetTitle: "Which property?",
+  noProperty: "No property",
+  loadingProperties: "Loading your properties",
+  propertiesFailed: "I couldn't load your properties. You can still import without one.",
+  tryAgain: "Try again",
+  submit: "Import statement",
+  submitting: "Importing…",
+  needFile: "Choose a CSV file first.",
+  notCsv: "That isn't a CSV file. Download the statement from your bank as a CSV.",
+  tooBig: `That file is too big. Bank statements can be up to ${BANK_CSV_MAX_LABEL}, so try a shorter date range.`,
+  viewOnly: "You have view-only access, so I can't import a statement.",
+  resultHeading: "Statement imported",
+  imported: "Imported",
+  duplicates: "Duplicates skipped",
+  format: "Format",
+  previewHeading: "First rows in the file",
+  nothingNew: "Everything in that file was already imported, so nothing new was added.",
+  viewTransactions: "View imported transactions",
+  importButton: "Import",
+  untitledRow: "Untitled transaction",
+  importAnother: "Import another statement",
+} as const;
