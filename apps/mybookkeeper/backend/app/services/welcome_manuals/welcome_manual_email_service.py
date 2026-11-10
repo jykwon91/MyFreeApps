@@ -50,18 +50,14 @@ from app.services.welcome_manuals.welcome_manual_pdf_service import (
     WelcomeManualPdfData,
     generate_welcome_manual_pdf,
 )
+from app.services.welcome_manuals.welcome_manual_scope import (
+    ManualNotFoundError,
+    RoomNotFoundError,
+)
 
 logger = logging.getLogger(__name__)
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
-
-
-class ManualNotFoundError(LookupError):
-    """The manual doesn't exist, is soft-deleted, or belongs to another org."""
-
-
-class RoomNotFoundError(LookupError):
-    """The requested room isn't one of this manual's rooms."""
 
 
 def build_subject(*, manual_title: str, room_name: str | None = None) -> str:

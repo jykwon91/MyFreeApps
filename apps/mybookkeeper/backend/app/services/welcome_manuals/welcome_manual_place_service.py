@@ -13,7 +13,7 @@ from app.repositories import welcome_manual_place_repo, welcome_manual_repo
 from app.schemas.welcome_manuals.welcome_manual_place_response import (
     WelcomeManualPlaceResponse,
 )
-from app.services.welcome_manuals.welcome_manual_section_service import (
+from app.services.welcome_manuals.welcome_manual_scope import (
     ManualNotFoundError,  # noqa: F401 — re-exported for the route
 )
 
@@ -45,12 +45,12 @@ async def add_place(
         TooManyPlacesError: the manual is already at the place cap.
     """
     async with unit_of_work() as db:
-        manual = await welcome_manual_repo.get_by_id(db, manual_id, organization_id)
+        manual = await welcome_manual_repo.get_by_id(db, manual_id, organization_id, for_update=True)
         if manual is None:
             raise ManualNotFoundError(f"Welcome manual {manual_id} not found")
 
-        existing = await welcome_manual_place_repo.list_by_manual(db, manual.id)
-        if len(existing) >= WELCOME_MANUAL_MAX_PLACES:
+        existing = await welcome_manual_place_repo.count_by_manual(db, manual.id)
+        if existing >= WELCOME_MANUAL_MAX_PLACES:
             raise TooManyPlacesError(
                 f"A manual can have at most {WELCOME_MANUAL_MAX_PLACES} places",
             )
@@ -79,7 +79,7 @@ async def update_place(
     """Update a place's name, cuisine, price_tier, note, map_url, and/or
     display_order."""
     async with unit_of_work() as db:
-        manual = await welcome_manual_repo.get_by_id(db, manual_id, organization_id)
+        manual = await welcome_manual_repo.get_by_id(db, manual_id, organization_id, for_update=True)
         if manual is None:
             raise ManualNotFoundError(f"Welcome manual {manual_id} not found")
         place = await welcome_manual_place_repo.update(db, place_id, manual.id, fields)
@@ -96,7 +96,7 @@ async def delete_place(
 ) -> None:
     """Delete a place from a manual."""
     async with unit_of_work() as db:
-        manual = await welcome_manual_repo.get_by_id(db, manual_id, organization_id)
+        manual = await welcome_manual_repo.get_by_id(db, manual_id, organization_id, for_update=True)
         if manual is None:
             raise ManualNotFoundError(f"Welcome manual {manual_id} not found")
         deleted = await welcome_manual_place_repo.delete_by_id(db, place_id, manual.id)

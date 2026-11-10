@@ -49,6 +49,16 @@ async def get_by_id(
     return result.scalar_one_or_none()
 
 
+async def count_by_manual(db: AsyncSession, manual_id: uuid.UUID) -> int:
+    """Number of places on a manual — used to enforce the per-manual cap."""
+    result = await db.execute(
+        select(func.count(WelcomeManualPlace.id)).where(
+            WelcomeManualPlace.manual_id == manual_id,
+        )
+    )
+    return int(result.scalar_one())
+
+
 async def next_display_order(
     db: AsyncSession,
     manual_id: uuid.UUID,

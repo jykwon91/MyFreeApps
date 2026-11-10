@@ -6,13 +6,14 @@ means "shared by every room"). Every operation re-verifies the parent manual
 belongs to the caller's organization first — the room table carries no org
 column, the manual is the scope gate.
 """
-import logging
 import uuid
 from typing import Any
 
-from app.core.storage import get_storage
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.welcome_manual_constants import WELCOME_MANUAL_MAX_ROOMS
 from app.db.session import unit_of_work
+from app.models.welcome_manuals.welcome_manual import WelcomeManual
 from app.repositories import (
     welcome_manual_repo,
     welcome_manual_room_repo,
@@ -22,17 +23,12 @@ from app.repositories import (
 from app.schemas.welcome_manuals.welcome_manual_room_response import (
     WelcomeManualRoomResponse,
 )
-
-logger = logging.getLogger(__name__)
-
-
-class ManualNotFoundError(LookupError):
-    """The parent manual doesn't exist / is soft-deleted / is out of org."""
-
-
-class RoomNotFoundError(LookupError):
-    """The room doesn't exist or belongs to a different manual."""
-
+from app.services.storage.stored_file_cleanup import delete_stored_files
+from app.services.welcome_manuals.reorder_check import is_exact_permutation
+from app.services.welcome_manuals.welcome_manual_scope import (
+    ManualNotFoundError,
+    RoomNotFoundError,
+)
 
 class TooManyRoomsError(Exception):
     """The manual already has the maximum number of rooms (-> HTTP 409)."""
@@ -40,11 +36,15 @@ class TooManyRoomsError(Exception):
 
 class InvalidRoomReorderError(Exception):
     """The supplied ``room_ids`` are not a permutation of the manual's current
-    rooms (-> HTTP 400)."""
+    rooms (-> HTTP 409: the client's list is stale)."""
 
 
-async def _load_manual(db, manual_id: uuid.UUID, organization_id: uuid.UUID):
-    manual = await welcome_manual_repo.get_by_id(db, manual_id, organization_id)
+async def _load_manual(
+    db: AsyncSession, manual_id: uuid.UUID, organization_id: uuid.UUID, *, for_update: bool = False,
+) -> WelcomeManual:
+    manual = await welcome_manual_repo.get_by_id(
+        db, manual_id, organization_id, for_update=for_update,
+    )
     if manual is None:
         raise ManualNotFoundError(f"Welcome manual {manual_id} not found")
     return manual
@@ -69,7 +69,7 @@ async def add_room(
     name: str,
 ) -> WelcomeManualRoomResponse:
     async with unit_of_work() as db:
-        manual = await _load_manual(db, manual_id, organization_id)
+        manual = await _load_manual(db, manual_id, organization_id, for_update=True)
 
         existing = await welcome_manual_room_repo.count_by_manual(db, manual.id)
         if existing >= WELCOME_MANUAL_MAX_ROOMS:
@@ -92,7 +92,7 @@ async def update_room(
     fields: dict[str, Any],
 ) -> WelcomeManualRoomResponse:
     async with unit_of_work() as db:
-        manual = await _load_manual(db, manual_id, organization_id)
+        manual = await _load_manual(db, manual_id, organization_id, for_update=True)
         room = await welcome_manual_room_repo.update(db, room_id, manual.id, fields)
         if room is None:
             raise RoomNotFoundError(f"Room {room_id} not found")
@@ -112,16 +112,18 @@ async def delete_room(
     the transaction commits.
     """
     async with unit_of_work() as db:
-        manual = await _load_manual(db, manual_id, organization_id)
-        room = await welcome_manual_room_repo.get_by_id(db, room_id, manual.id)
+        manual = await _load_manual(db, manual_id, organization_id, for_update=True)
+        room = await welcome_manual_room_repo.get_by_id(db, room_id, manual.id, for_update=True)
         if room is None:
             raise RoomNotFoundError(f"Room {room_id} not found")
 
         # The FK is ON DELETE CASCADE all the way down (room → sections →
         # images), so the image rows vanish with the room — capture their
-        # object keys while they still exist.
-        sections = await welcome_manual_section_repo.list_by_manual(db, manual.id)
-        room_section_ids = [s.id for s in sections if s.room_id == room.id]
+        # object keys while they still exist. The room's sections are locked
+        # first, so a concurrent image upload waits and then finds no section
+        # instead of leaving an orphaned object.
+        sections = await welcome_manual_section_repo.lock_by_room(db, manual.id, room.id)
+        room_section_ids = [s.id for s in sections]
         images = await welcome_manual_section_image_repo.list_by_section_ids(
             db, room_section_ids,
         )
@@ -131,17 +133,7 @@ async def delete_room(
 
     # Best-effort object-store cleanup outside the transaction — the rows are
     # already gone; anything left behind can be swept later.
-    if storage_keys:
-        storage = get_storage()
-        if storage is not None:
-            for key in storage_keys:
-                try:
-                    storage.delete_file(key)
-                except Exception:  # noqa: BLE001
-                    logger.warning(
-                        "Failed to delete welcome-manual image object %s after room delete",
-                        key, exc_info=True,
-                    )
+    await delete_stored_files(storage_keys)
 
 
 async def reorder_rooms(
@@ -153,15 +145,14 @@ async def reorder_rooms(
     """Reassign ``display_order`` to match the supplied id order.
 
     ``room_ids`` must be a permutation of the manual's current room ids — a
-    partial or unknown set raises InvalidRoomReorderError so the resulting
+    partial or unknown set (-> 409) raises InvalidRoomReorderError so the resulting
     order is always unambiguous.
     """
     async with unit_of_work() as db:
-        manual = await _load_manual(db, manual_id, organization_id)
+        manual = await _load_manual(db, manual_id, organization_id, for_update=True)
 
         existing = await welcome_manual_room_repo.list_by_manual(db, manual.id)
-        existing_ids = {r.id for r in existing}
-        if len(room_ids) != len(existing_ids) or set(room_ids) != existing_ids:
+        if not is_exact_permutation(room_ids, {r.id for r in existing}):
             raise InvalidRoomReorderError(
                 "room_ids must be a permutation of the manual's current rooms",
             )

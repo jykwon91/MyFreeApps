@@ -3,11 +3,9 @@ a manual. Every operation re-verifies the parent manual belongs to the caller's
 organization before touching a section (the section table carries no org column;
 the manual is the scope gate).
 """
-import logging
 import uuid
 from typing import Any
 
-from app.core.storage import get_storage
 from app.core.welcome_manual_constants import TOO_MANY_SECTIONS_MESSAGE, WELCOME_MANUAL_MAX_SECTIONS
 from app.db.session import unit_of_work
 from app.repositories import (
@@ -20,15 +18,14 @@ from app.repositories import (
 from app.schemas.welcome_manuals.welcome_manual_section_response import (
     WelcomeManualSectionResponse,
 )
+from app.services.storage.stored_file_cleanup import delete_stored_files
 from app.services.welcome_manuals.reorder_check import is_exact_permutation
 from app.services.welcome_manuals.welcome_manual_scope import (
     ManualNotFoundError,
+    RoomNotFoundError,
     SectionNotFoundError,
     load_section_for_update,
 )
-
-logger = logging.getLogger(__name__)
-
 
 class TooManySectionsError(Exception):
     """The manual already has the maximum number of sections (-> HTTP 409)."""
@@ -37,10 +34,6 @@ class TooManySectionsError(Exception):
 class InvalidReorderError(Exception):
     """The supplied ``section_ids`` are not a permutation of the manual's
     current sections (-> HTTP 409: the client's list is stale)."""
-
-
-class RoomNotFoundError(LookupError):
-    """The requested room scope doesn't exist on this manual."""
 
 
 async def _verify_room_scope(db, manual_id: uuid.UUID, room_id: uuid.UUID | None) -> None:
@@ -95,6 +88,12 @@ async def update_section(
     fields: dict[str, Any],
 ) -> WelcomeManualSectionResponse:
     async with unit_of_work() as db:
+        if "room_id" in fields:
+            # Moving into a room: lock the manual first (manual -> section, like
+            # delete_section) so the room can't be deleted under the move.
+            manual = await welcome_manual_repo.get_by_id(db, manual_id, organization_id, for_update=True)
+            if manual is None:
+                raise ManualNotFoundError(f"Welcome manual {manual_id} not found")
         section = await load_section_for_update(db, organization_id, manual_id, section_id)
         if "room_id" in fields:
             await _verify_room_scope(db, section.manual_id, fields["room_id"])
@@ -122,17 +121,7 @@ async def delete_section(
 
     # Best-effort MinIO cleanup outside the transaction — the section (and its
     # image rows) are already gone; orphaned objects can be swept later.
-    if storage_keys:
-        storage = get_storage()
-        if storage is not None:
-            for key in storage_keys:
-                try:
-                    storage.delete_file(key)
-                except Exception:  # noqa: BLE001
-                    logger.warning(
-                        "Failed to delete welcome-manual image object %s after section delete",
-                        key, exc_info=True,
-                    )
+    await delete_stored_files(storage_keys)
 
 
 async def reorder_sections(
