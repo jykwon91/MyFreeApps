@@ -117,7 +117,7 @@ function buildLease(overrides: Partial<SignedLeaseDetail> = {}): SignedLeaseDeta
     user_id: "user-1",
     organization_id: "org-1",
     templates: [
-      { id: "tpl-existing", name: "Master Lease", version: 1, display_order: 0 },
+      { id: "tpl-existing", name: "Master Lease", version: 1, display_order: 0, template_name_snapshot: null, template_version_snapshot: null },
     ],
     applicant_id: "app-1",
     applicant_legal_name: null,
@@ -439,8 +439,8 @@ describe("LeaseAddTemplateModal", () => {
     // Lease already has tpl-new attached — re-picking it should regenerate.
     mockLease = buildLease({
       templates: [
-        { id: "tpl-existing", name: "Master Lease", version: 1, display_order: 0 },
-        { id: "tpl-new", name: "Addendum", version: 2, display_order: 1 },
+        { id: "tpl-existing", name: "Master Lease", version: 1, display_order: 0, template_name_snapshot: null, template_version_snapshot: null },
+        { id: "tpl-new", name: "Addendum", version: 2, display_order: 1, template_name_snapshot: null, template_version_snapshot: null },
       ],
     });
     renderDetail();

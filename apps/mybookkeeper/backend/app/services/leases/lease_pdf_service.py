@@ -32,6 +32,10 @@ from app.services.leases.lease_render_service import (
     render_md_text_to_pdf_or_keep,  # noqa: F401 — re-exported via signed_lease_service
 )
 from app.services.leases.lease_template_service import TemplateNotFoundError
+from app.services.leases.lease_template_snapshot import (
+    read_template_versions,
+    record_rendered_templates,
+)
 from app.services.leases.lease_addendum_values import merge_addendum_values
 from app.services.leases.lease_documents_lock import ensure_documents_rerenderable, lease_documents_locked
 from app.services.leases.lease_write_precheck import lock_lease_and_verify
@@ -115,6 +119,9 @@ async def generate_lease(
         join_rows = await signed_lease_template_repo.list_for_lease(
             db, lease_id=lease_id,
         )
+        rendered_versions = await read_template_versions(
+            db, template_ids=[jr.template_id for jr in join_rows],
+        )
         files: list = []
         placeholders: list = []
         seen_placeholder_keys: set[str] = set()
@@ -173,6 +180,9 @@ async def generate_lease(
                 user_id=user_id,
                 organization_id=organization_id,
                 fields={"status": "generated", "generated_at": now},
+            )
+            await record_rendered_templates(
+                db, lease_id=lease_id, rendered_versions=rendered_versions,
             )
             guard.set_superseded(superseded)
             guard.rows_written()
@@ -257,6 +267,10 @@ async def add_templates_and_generate(
         is_regenerate = any(tid in existing_ids for tid in template_ids)
         if is_regenerate:
             await ensure_documents_rerenderable(db, lease)
+        rendered_versions = await read_template_versions(
+            db,
+            template_ids=([r.template_id for r in existing_rows] if is_regenerate else []) + template_ids,
+        )
 
         files_to_render: list = []
         placeholders: list = []
@@ -372,6 +386,9 @@ async def add_templates_and_generate(
                 await signed_lease_template_repo.create(
                     db, lease_id=lease_id, template_id=tid, display_order=max_order,
                 )
+            await record_rendered_templates(
+                db, lease_id=lease_id, rendered_versions=rendered_versions,
+            )
             if fields_to_update:
                 await signed_lease_repo.update_lease(
                     db,

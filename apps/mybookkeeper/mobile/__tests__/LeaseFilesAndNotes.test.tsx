@@ -14,6 +14,7 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aLease } from "../test-support/aLease";
+import { holdReads } from "../test-support/holdReads";
 import { holdWrites } from "../test-support/holdWrites";
 import { lastRequest, roleKnown, startLeaseWritesServer } from "../test-support/leaseWritesServer";
 
@@ -84,6 +85,42 @@ describe("what the lease page says about the lease", () => {
     await renderScreen();
     expect(await screen.findByText("Made from templates")).toBeTruthy();
     expect(screen.getByText("Made February 3, 2026 · Signed February 10, 2026")).toBeTruthy();
+  });
+
+  it("says which template name and version its documents were generated from", async () => {
+    const link = { name: "Renamed since", version: 4, display_order: 0 };
+    startLeaseWritesServer({
+      lease: aLease({
+        kind: "generated",
+        templates: [
+          { ...link, id: "t1", template_name_snapshot: "Standard lease", template_version_snapshot: 2 },
+          { ...link, id: "t2", template_name_snapshot: "Pet addendum", template_version_snapshot: null },
+          { ...link, id: "t3", template_name_snapshot: null, template_version_snapshot: null },
+        ],
+      }),
+    });
+    await renderScreen();
+    expect(await screen.findByText("Generated from Standard lease v2")).toBeTruthy();
+    expect(screen.getByText("Generated from Pet addendum")).toBeTruthy();
+    expect(screen.getAllByText(/^Generated from /)).toHaveLength(2);
+    expect(screen.queryByText(/Renamed since/)).toBeNull();
+  });
+
+  it("keeps a place for the template list while the lease loads", async () => {
+    startLeaseWritesServer();
+    holdReads();
+    await renderScreen();
+    expect(await screen.findByTestId("lease-skeleton")).toBeTruthy();
+    expect(screen.getByTestId("lease-skeleton-templates")).toBeTruthy();
+  });
+
+  it("shows no template list before anything has been generated", async () => {
+    startLeaseWritesServer({
+      lease: aLease({ kind: "generated", templates: [{ id: "t1", name: "Standard lease", version: 1, display_order: 0, template_name_snapshot: null, template_version_snapshot: null }] }),
+    });
+    await renderScreen();
+    expect(await screen.findByText("Made from templates")).toBeTruthy();
+    expect(screen.queryByText("Templates")).toBeNull();
   });
 
   it("opens every filled-in value on its own screen", async () => {

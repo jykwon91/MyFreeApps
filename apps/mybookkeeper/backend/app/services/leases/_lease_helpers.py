@@ -307,6 +307,8 @@ async def _resolve_template_links(
                 name=template.name,
                 version=template.version,
                 display_order=r.display_order,
+                template_name_snapshot=r.template_name_snapshot,
+                template_version_snapshot=r.template_version_snapshot,
             )
         )
     return links

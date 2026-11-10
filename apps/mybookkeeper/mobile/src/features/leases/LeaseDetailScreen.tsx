@@ -24,6 +24,7 @@ import ExtendLeaseSheet from "./ExtendLeaseSheet";
 import LeaseFileRow from "./LeaseFileRow";
 import LeaseNotesSection from "./LeaseNotesSection";
 import LeaseStatusControl from "./LeaseStatusControl";
+import LeaseTemplateSources from "./LeaseTemplateSources";
 import LeaseUploadSheet from "./LeaseUploadSheet";
 import MakeLeaseFilesButton from "./MakeLeaseFilesButton";
 import UndoExtensionButton from "./UndoExtensionButton";
@@ -131,6 +132,8 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
           </InquirySection>
         ) : null}
   
+        <LeaseTemplateSources templates={lease.templates} />
+
         <InquirySection title={LEASE_DETAIL_MESSAGES.detailsTitle}>
           {valueCount === 0 ? <Text style={mutedText}>{LEASE_DETAIL_MESSAGES.noDetails}</Text> : <Text style={mutedText}>{detailsCount(valueCount)}</Text>}
           {valueCount > 0 ? (

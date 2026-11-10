@@ -12,6 +12,13 @@ Cascade behaviour:
 - ``ON DELETE RESTRICT`` on ``template_id`` — preserves links when a
   template is soft-deleted; the application enforces "soft-delete blocked
   when active leases reference this template" with a 409 response.
+
+``template_name_snapshot`` / ``template_version_snapshot`` record the template
+name and version whose files were last rendered into this lease. They are
+written in the same transaction as the rendered documents and never follow a
+later rename or file replacement. NULL means the template has not been
+rendered for this lease yet, or (for the version) the link predates the
+snapshot and its version could not be known.
 """
 from __future__ import annotations
 
@@ -24,6 +31,7 @@ from sqlalchemy import (
     Index,
     Integer,
     PrimaryKeyConstraint,
+    String,
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -48,6 +56,13 @@ class SignedLeaseTemplate(Base):
 
     display_order: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0",
+    )
+
+    template_name_snapshot: Mapped[str | None] = mapped_column(
+        String(200), nullable=True,
+    )
+    template_version_snapshot: Mapped[int | None] = mapped_column(
+        Integer, nullable=True,
     )
 
     created_at: Mapped[_dt.datetime] = mapped_column(
