@@ -1,7 +1,6 @@
-import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, ExternalLink as ExternalLinkIcon, Trash2 } from "lucide-react";
-import { Badge, DataTable, showSuccess, showError, extractErrorMessage, type ColumnDef, type SortingState } from "@platform/ui";
+import { Badge, DataTable, showSuccess, showError, extractErrorMessage, type ColumnDef } from "@platform/ui";
 import CompanyDetailSkeleton from "@/features/companies/CompanyDetailSkeleton";
 import CompanyResearchPanel from "@/features/companies/CompanyResearchPanel";
 import { APPLIED_AT_COLUMN } from "@/features/applications/appliedAtColumn";
@@ -45,7 +44,6 @@ export default function CompanyDetail() {
     { skip: !id },
   );
   const [deleteCompany, { isLoading: deleting }] = useDeleteCompanyMutation();
-  const [sorting, setSorting] = useState<SortingState>([]);
 
   async function handleDelete() {
     if (!company) return;
@@ -180,8 +178,6 @@ export default function CompanyDetail() {
             columns={APPLICATION_COLUMNS}
             getRowId={(row) => row.id}
             onRowClick={(row) => navigate(`/applications/${row.id}`)}
-            sorting={sorting}
-            onSortingChange={setSorting}
           />
         )}
       </section>

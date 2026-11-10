@@ -18,7 +18,7 @@ export default function CompaniesSkeleton() {
               <th
                 key={col}
                 scope="col"
-                className="px-3 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap"
+                className="h-11 px-3 text-left font-medium text-muted-foreground whitespace-nowrap"
               >
                 {col}
               </th>

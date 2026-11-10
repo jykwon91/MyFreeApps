@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Companies from "@/pages/Companies";
+import { columnValues, sortTableBy } from "@/test-utils/sortTableBy";
 
 // ---------------------------------------------------------------------------
 // Mock RTK Query hooks — all state is controlled per-test via mockReturnValue.
@@ -210,6 +211,103 @@ describe("Companies page", () => {
       expect(
         screen.getByRole("button", { name: /add company/i }),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("sorting", () => {
+    function company(
+      id: string,
+      name: string,
+      primaryDomain: string | null,
+      industry: string | null,
+      hqLocation: string | null,
+    ) {
+      return {
+        id,
+        user_id: "u1",
+        name,
+        primary_domain: primaryDomain,
+        industry,
+        hq_location: hqLocation,
+        logo_url: null,
+        size_range: null,
+        description: null,
+        external_ref: null,
+        external_source: null,
+        crunchbase_id: null,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      };
+    }
+
+    // The server's order (name A to Z). Each company is missing a different
+    // field; Umbrella's domain is blank, which counts as missing too.
+    const items = [
+      company("c1", "Acme Corp", "acme.com", "SaaS", "Chicago, IL"),
+      company("c2", "Globex", null, null, "Austin, TX"),
+      company("c3", "Initech", "initech.com", "Fintech", null),
+      company("c4", "Umbrella", "", "Biotech", "Boston, MA"),
+    ];
+
+    beforeEach(() => {
+      mockUseListCompaniesQuery.mockReturnValue({
+        data: { items, total: items.length },
+        isLoading: false,
+        isError: false,
+        error: undefined,
+      } as unknown as ReturnType<typeof useListCompaniesQuery>);
+    });
+
+    it("shows the server's order with every header unsorted", () => {
+      renderCompanies();
+      expect(columnValues(0)).toEqual(["Acme Corp", "Globex", "Initech", "Umbrella"]);
+      const headers = screen.getAllByRole("columnheader");
+      expect(headers).toHaveLength(4);
+      for (const header of headers) {
+        expect(header).toHaveAttribute("aria-sort", "none");
+      }
+    });
+
+    it("sorts by Name when its header is clicked, both ways", () => {
+      renderCompanies();
+
+      sortTableBy(/name/i, "descending");
+      expect(columnValues(0)).toEqual(["Umbrella", "Initech", "Globex", "Acme Corp"]);
+
+      sortTableBy(/name/i, "ascending");
+      expect(columnValues(0)).toEqual(["Acme Corp", "Globex", "Initech", "Umbrella"]);
+    });
+
+    it("sorts Industry with missing last, both ways, still showing a dash", () => {
+      renderCompanies();
+
+      sortTableBy(/industry/i, "ascending");
+      expect(columnValues(2)).toEqual(["Biotech", "Fintech", "SaaS", "—"]);
+      expect(screen.getByRole("columnheader", { name: /name/i })).toHaveAttribute("aria-sort", "none");
+
+      sortTableBy(/industry/i, "descending");
+      expect(columnValues(2)).toEqual(["SaaS", "Fintech", "Biotech", "—"]);
+    });
+
+    it("sorts HQ with missing last, both ways", () => {
+      renderCompanies();
+
+      sortTableBy(/hq/i, "ascending");
+      expect(columnValues(3)).toEqual(["Austin, TX", "Boston, MA", "Chicago, IL", "—"]);
+
+      sortTableBy(/hq/i, "descending");
+      expect(columnValues(3)).toEqual(["Chicago, IL", "Boston, MA", "Austin, TX", "—"]);
+    });
+
+    it("sorts Domain with null and blank domains last, both ways", () => {
+      renderCompanies();
+
+      sortTableBy(/domain/i, "ascending");
+      expect(columnValues(0)).toEqual(["Acme Corp", "Initech", "Globex", "Umbrella"]);
+      expect(columnValues(1)).toEqual(["acme.com", "initech.com", "—", "—"]);
+
+      sortTableBy(/domain/i, "descending");
+      expect(columnValues(0)).toEqual(["Initech", "Acme Corp", "Globex", "Umbrella"]);
     });
   });
 });

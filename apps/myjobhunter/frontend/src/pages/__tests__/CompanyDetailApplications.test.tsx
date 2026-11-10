@@ -18,13 +18,14 @@ import { useListApplicationsQuery } from "@myjobhunter/api-client/store/applicat
 
 const COMPANY = { id: "c1", name: "Acme Corp", primary_domain: null, industry: null, size_range: null, hq_location: null, description: null };
 
-// The server's order; the role tells the rows apart.
+// The server's order (newest applied first, not-yet-applied last); the role
+// tells the rows apart.
 const APPLICATIONS = [
-  { id: "a1", role_title: "Not sent", location: null, remote_type: "unknown", applied_at: null },
   { id: "a2", role_title: "October", location: null, remote_type: "remote", applied_at: "2026-10-02T00:00:00Z" },
-  { id: "a3", role_title: "Blank", location: null, remote_type: "unknown", applied_at: "" },
   { id: "a4", role_title: "September", location: null, remote_type: "onsite", applied_at: "2026-09-30T00:00:00Z" },
   { id: "a5", role_title: "Last year", location: null, remote_type: "hybrid", applied_at: "2025-12-01T00:00:00Z" },
+  { id: "a1", role_title: "Not sent", location: null, remote_type: "unknown", applied_at: null },
+  { id: "a3", role_title: "Blank", location: null, remote_type: "unknown", applied_at: "" },
 ];
 
 function renderCompany() {
@@ -42,11 +43,22 @@ function renderCompany() {
 }
 
 describe("CompanyDetail applications table", () => {
+  it("shows the server's order with every header unsorted", () => {
+    renderCompany();
+
+    expect(columnValues(0)).toEqual(["October", "September", "Last year", "Not sent", "Blank"]);
+    const headers = screen.getAllByRole("columnheader");
+    expect(headers).toHaveLength(4);
+    for (const header of headers) {
+      expect(header).toHaveAttribute("aria-sort", "none");
+    }
+  });
+
   it("shows the applied date in the reader's locale, and a dash when not sent", () => {
     renderCompany();
 
     expect(screen.getByText(new Date("2026-10-02T00:00:00Z").toLocaleDateString())).toBeInTheDocument();
-    expect(columnValues(3)[0]).toBe("—");
+    expect(columnValues(3)[3]).toBe("—");
   });
 
   it("sorts Applied on the real date with not-yet-applied last, both ways", () => {

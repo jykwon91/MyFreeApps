@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import DataTable from "../components/data/DataTable";
-import type { ColumnDef } from "../components/data/DataTable";
+import ControlledSortDataTable from "./ControlledSortDataTable";
+import type { ColumnDef } from "../types/data-table-column-def";
 
 interface Row {
   id: string;
@@ -94,7 +95,9 @@ describe("DataTable", () => {
         getRowId={(row) => row.id}
       />
     );
-    const rows = screen.getAllByRole("button");
+    const body = screen.getByRole("table").querySelector("tbody");
+    if (!body) throw new Error("table has no body");
+    const rows = within(body).getAllByRole("button");
     rows[0].focus();
     await userEvent.keyboard("{Enter}");
     expect(onRowClick).toHaveBeenCalled();
@@ -102,6 +105,151 @@ describe("DataTable", () => {
 
   it("does not make rows interactive when onRowClick is not provided", () => {
     render(<DataTable data={data} columns={columns} />);
-    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    const body = screen.getByRole("table").querySelector("tbody");
+    if (!body) throw new Error("table has no body");
+    expect(within(body).queryAllByRole("button")).toHaveLength(0);
+  });
+
+  describe("sorting", () => {
+    // Names out of order on purpose so every sort step changes the row order.
+    const unsorted: Row[] = [
+      { id: "1", name: "Bob", status: "Active" },
+      { id: "2", name: "Carol", status: "Inactive" },
+      { id: "3", name: "Alice", status: "Active" },
+    ];
+
+    function nameHeader(): HTMLElement {
+      return screen.getByRole("columnheader", { name: /name/i });
+    }
+
+    function nameSortButton(): HTMLElement {
+      return within(nameHeader()).getByRole("button", { name: /name/i });
+    }
+
+    function names(): string[] {
+      const body = screen.getByRole("table").querySelector("tbody");
+      if (!body) throw new Error("table has no body");
+      return Array.from(body.querySelectorAll("tr")).map(
+        (row) => within(row).getAllByRole("cell")[0]?.textContent ?? "",
+      );
+    }
+
+    it("sorts on header click without sorting props (asc, desc, then none)", async () => {
+      render(<DataTable data={unsorted} columns={columns} />);
+      expect(nameHeader()).toHaveAttribute("aria-sort", "none");
+      expect(names()).toEqual(["Bob", "Carol", "Alice"]);
+
+      await userEvent.click(nameSortButton());
+      expect(nameHeader()).toHaveAttribute("aria-sort", "ascending");
+      expect(names()).toEqual(["Alice", "Bob", "Carol"]);
+
+      await userEvent.click(nameSortButton());
+      expect(nameHeader()).toHaveAttribute("aria-sort", "descending");
+      expect(names()).toEqual(["Carol", "Bob", "Alice"]);
+
+      await userEvent.click(nameSortButton());
+      expect(nameHeader()).toHaveAttribute("aria-sort", "none");
+      expect(names()).toEqual(["Bob", "Carol", "Alice"]);
+    });
+
+    it("starts from defaultSorting and keeps sorting from there", async () => {
+      render(
+        <DataTable data={unsorted} columns={columns} defaultSorting={[{ id: "name", desc: true }]} />,
+      );
+      expect(nameHeader()).toHaveAttribute("aria-sort", "descending");
+      expect(names()).toEqual(["Carol", "Bob", "Alice"]);
+
+      await userEvent.click(nameSortButton());
+      expect(nameHeader()).toHaveAttribute("aria-sort", "none");
+      expect(names()).toEqual(["Bob", "Carol", "Alice"]);
+    });
+
+    it("reports sort changes in uncontrolled mode", async () => {
+      const onSortingChange = vi.fn();
+      render(<DataTable data={unsorted} columns={columns} onSortingChange={onSortingChange} />);
+      await userEvent.click(nameSortButton());
+      expect(onSortingChange).toHaveBeenLastCalledWith([{ id: "name", desc: false }]);
+      expect(names()).toEqual(["Alice", "Bob", "Carol"]);
+    });
+
+    it("follows the parent's sorting in controlled mode", async () => {
+      const onSortingChange = vi.fn();
+      render(<ControlledSortDataTable data={unsorted} columns={columns} onSortingChange={onSortingChange} />);
+
+      await userEvent.click(nameSortButton());
+      expect(nameHeader()).toHaveAttribute("aria-sort", "ascending");
+      expect(names()).toEqual(["Alice", "Bob", "Carol"]);
+
+      await userEvent.click(nameSortButton());
+      expect(nameHeader()).toHaveAttribute("aria-sort", "descending");
+      expect(names()).toEqual(["Carol", "Bob", "Alice"]);
+      expect(onSortingChange.mock.calls).toEqual([
+        [[{ id: "name", desc: false }]],
+        [[{ id: "name", desc: true }]],
+      ]);
+    });
+
+    it("does not move a controlled sort the parent doesn't apply", async () => {
+      const onSortingChange = vi.fn();
+      render(
+        <DataTable
+          data={unsorted}
+          columns={columns}
+          sorting={[{ id: "name", desc: false }]}
+          onSortingChange={onSortingChange}
+        />,
+      );
+      await userEvent.click(nameSortButton());
+      expect(onSortingChange).toHaveBeenCalledWith([{ id: "name", desc: true }]);
+      expect(nameHeader()).toHaveAttribute("aria-sort", "ascending");
+      expect(names()).toEqual(["Alice", "Bob", "Carol"]);
+    });
+
+    it("ignores defaultSorting when sorting is controlled", () => {
+      render(
+        <DataTable
+          data={unsorted}
+          columns={columns}
+          sorting={[]}
+          defaultSorting={[{ id: "name", desc: true }]}
+          onSortingChange={vi.fn()}
+        />,
+      );
+      expect(nameHeader()).toHaveAttribute("aria-sort", "none");
+      expect(names()).toEqual(["Bob", "Carol", "Alice"]);
+    });
+
+    it("puts each sortable label in a header button that sorts from the keyboard", async () => {
+      render(<DataTable data={unsorted} columns={columns} />);
+      const button = nameSortButton();
+      expect(button).toHaveAttribute("type", "button");
+      expect(nameHeader()).toHaveAttribute("scope", "col");
+
+      button.focus();
+      await userEvent.keyboard("{Enter}");
+      expect(nameHeader()).toHaveAttribute("aria-sort", "ascending");
+      expect(names()).toEqual(["Alice", "Bob", "Carol"]);
+
+      await userEvent.keyboard(" ");
+      expect(nameHeader()).toHaveAttribute("aria-sort", "descending");
+      expect(names()).toEqual(["Carol", "Bob", "Alice"]);
+    });
+
+    it("reaches the header buttons with Tab", async () => {
+      render(<DataTable data={unsorted} columns={columns} />);
+      await userEvent.tab();
+      expect(nameSortButton()).toHaveFocus();
+    });
+
+    it("renders a column that can't sort as a plain header with no button or aria-sort", () => {
+      const fixedColumns: ColumnDef<Row>[] = [
+        { accessorKey: "name", header: "Name" },
+        { accessorKey: "status", header: "Status", enableSorting: false },
+      ];
+      render(<DataTable data={unsorted} columns={fixedColumns} />);
+      const statusHeader = screen.getByRole("columnheader", { name: /status/i });
+      expect(within(statusHeader).queryByRole("button")).toBeNull();
+      expect(statusHeader).not.toHaveAttribute("aria-sort");
+    });
   });
 });

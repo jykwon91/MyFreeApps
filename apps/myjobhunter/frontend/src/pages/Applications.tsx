@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FilePlus } from "lucide-react";
-import { Badge, DataTable, EmptyState, type ColumnDef, type SortingState } from "@platform/ui";
+import { Badge, DataTable, EmptyState, type ColumnDef } from "@platform/ui";
 import ApplicationsSkeleton from "@/features/applications/ApplicationsSkeleton";
 import AddApplicationDialog from "@/features/applications/AddApplicationDialog";
 import { APPLIED_AT_COLUMN } from "@/features/applications/appliedAtColumn";
@@ -70,7 +70,6 @@ export default function Applications() {
   const navigate = useNavigate();
   const { data, isLoading, isError, error } = useListApplicationsQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [sorting, setSorting] = useState<SortingState>([]);
   const copy = EMPTY_STATES.applications;
 
   function handleAddApplication() {
@@ -139,8 +138,6 @@ export default function Applications() {
         columns={COLUMNS}
         getRowId={(row) => row.id}
         onRowClick={(row) => navigate(`/applications/${row.id}`)}
-        sorting={sorting}
-        onSortingChange={setSorting}
       />
     </main>
   );
