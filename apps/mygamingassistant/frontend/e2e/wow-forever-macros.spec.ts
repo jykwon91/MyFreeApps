@@ -18,7 +18,7 @@ async function readClipboard(page: Page): Promise<string> {
 
 async function expectHoverCastFirst(page: Page) {
   const sections = page.locator("main h2");
-  await expect(sections).toHaveText(["How to make a macro", HOVER_CAST_HEADING, "Ready-made macros by class"]);
+  await expect(sections).toHaveText(["How to make a macro", HOVER_CAST_HEADING, "Tag a mob first", "Ready-made macros by class"]);
   await expect(page.getByRole("heading", { name: HOVER_CAST_HEADING, level: 2 })).toBeInViewport();
 }
 
@@ -123,4 +123,27 @@ test("the phone layout never scrolls sideways and keeps touch targets large", as
   await expect(page.getByRole("article", { name: "Healthstone and potion together" })).toBeAttached();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("pasting a mob's name gives a Corruption tag macro to copy, and #tag jumps to it", async ({ page }) => {
+  await page.goto("/wow-forever/macros#tag");
+  const section = page.locator("section#tag");
+  await expect(section.getByRole("heading", { name: "Tag a mob first", level: 2 })).toBeInViewport();
+  await section.getByTestId("tag-mob-names").fill("Lord Gregor Lescovar");
+  const card = section.getByRole("article", { name: "Tag macro" });
+  await card.getByRole("button", { name: "Copy macro: Tag macro" }).click();
+  const NL = String.fromCharCode(10);
+  expect(await readClipboard(page)).toBe(
+    ["#showtooltip Corruption", "/cleartarget", "/targetexact Lord Gregor Lescovar", "/stopmacro [noexists][dead]", "/cast Corruption"].join(NL),
+  );
+  await page.setViewportSize({ width: 375, height: 800 });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("the link at the top of the Macros page jumps to the tag macro builder", async ({ page }) => {
+  await page.goto("/wow-forever/macros");
+  await page.getByRole("link", { name: "Tag a mob first: paste its name, get a macro" }).click();
+  await expect(page).toHaveURL(/#tag$/);
+  await expect(page.getByTestId("tag-mob-names")).toBeInViewport();
 });

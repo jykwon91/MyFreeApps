@@ -10,7 +10,7 @@ interface MacroCardProps {
   summary: string;
   text: string;
   /** The card's heading level under its section. */
-  headingLevel: "h4" | "h5";
+  headingLevel: "h3" | "h4" | "h5";
   /** Spell and item names the macro uses; empty for a template the player fills in. */
   names?: readonly string[];
   /** Names the Forever client doesn't have; empty when every one is confirmed. */
