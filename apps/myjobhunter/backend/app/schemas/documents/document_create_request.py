@@ -12,21 +12,26 @@ this schema internally; callers never send ``file_path`` directly.
 """
 import uuid
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
+from app.core.document_limits import (
+    DOCUMENT_CONTENT_TYPE_MAX_LEN,
+    DOCUMENT_FILENAME_MAX_LEN,
+    DOCUMENT_TITLE_MAX_LEN,
+)
 from app.schemas.documents.document_kind import DocumentKindLiteral
 
 
 class DocumentCreateRequest(BaseModel):
-    title: str
+    title: str = Field(max_length=DOCUMENT_TITLE_MAX_LEN)
     kind: DocumentKindLiteral
     application_id: uuid.UUID | None = None
     # Text body — required for text-only documents.
     body: str | None = None
     # File metadata — set by the service layer, never by the caller.
     file_path: str | None = None
-    filename: str | None = None
-    content_type: str | None = None
+    filename: str | None = Field(default=None, max_length=DOCUMENT_FILENAME_MAX_LEN)
+    content_type: str | None = Field(default=None, max_length=DOCUMENT_CONTENT_TYPE_MAX_LEN)
     size_bytes: int | None = None
 
     model_config = {"extra": "forbid"}

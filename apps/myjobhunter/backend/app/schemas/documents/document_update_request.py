@@ -6,13 +6,14 @@ All fields are optional; omitting them leaves the existing value unchanged.
 """
 import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from app.core.document_limits import DOCUMENT_TITLE_MAX_LEN
 from app.schemas.documents.document_kind import DocumentKindLiteral
 
 
 class DocumentUpdateRequest(BaseModel):
-    title: str | None = None
+    title: str | None = Field(default=None, max_length=DOCUMENT_TITLE_MAX_LEN)
     kind: DocumentKindLiteral | None = None
     body: str | None = None
     application_id: uuid.UUID | None = None

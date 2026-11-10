@@ -18,9 +18,11 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Respon
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
+from app.core.document_limits import DOCUMENT_FILENAME_MAX_LEN, DOCUMENT_TITLE_MAX_LEN
 from app.core.storage import StorageNotConfiguredError
 from app.db.session import get_db
 from app.models.user.user import User
+from app.schemas.documents.document_kind import DocumentKindLiteral
 from app.schemas.documents.document_text_create_request import DocumentTextCreateRequest
 from app.schemas.documents.document_response import DocumentResponse
 from app.schemas.documents.document_update_request import DocumentUpdateRequest
@@ -66,8 +68,8 @@ async def create_document(
 
 @router.post("/upload", response_model=DocumentResponse, status_code=201)
 async def upload_document(
-    title: str = Form(...),
-    kind: str = Form(...),
+    title: str = Form(..., max_length=DOCUMENT_TITLE_MAX_LEN),
+    kind: DocumentKindLiteral = Form(...),
     application_id: uuid.UUID | None = Form(default=None),
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
@@ -78,8 +80,15 @@ async def upload_document(
     Returns 413 if the file exceeds 25 MB.
     Returns 415 if the file type is unsupported.
     Returns 503 if MinIO is not configured.
-    Returns 422 if ``application_id`` does not belong to the caller.
+    Returns 422 if ``application_id`` does not belong to the caller, or if the
+    uploaded filename is longer than the ``filename`` column allows.
     """
+    filename = file.filename or "document"
+    if len(filename) > DOCUMENT_FILENAME_MAX_LEN:
+        raise HTTPException(
+            status_code=422,
+            detail=f"filename must be at most {DOCUMENT_FILENAME_MAX_LEN} characters",
+        )
     content = await file.read()
 
     try:
@@ -90,7 +99,7 @@ async def upload_document(
             kind=kind,
             application_id=application_id,
             file_bytes=content,
-            filename=file.filename or "document",
+            filename=filename,
             declared_content_type=file.content_type or "",
         )
     except ApplicationNotOwnedError as exc:
