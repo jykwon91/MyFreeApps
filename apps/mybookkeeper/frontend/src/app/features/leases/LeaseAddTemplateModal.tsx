@@ -10,6 +10,9 @@ import {
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import type { SignedLeaseTemplatePrefillItem } from "@mybookkeeper/api-client/types/lease/signed-lease-template-prefill";
 import { prefillProblems } from "@mybookkeeper/api-client/utils/leasePrefill";
+import { LEASE_DOCUMENTS_LOCKED_MESSAGE, LEASE_VALUE_LOCKED_MESSAGE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
+import { isLeaseDocumentsLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseDocumentsLockedFailure";
+import { isLeaseValueLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseValueLockedFailure";
 import LeaseAddTemplatePickStep from "./LeaseAddTemplatePickStep";
 import LeaseAddTemplateValuesStep from "./LeaseAddTemplateValuesStep";
 
@@ -20,6 +23,10 @@ export interface LeaseAddTemplateModalProps {
    * the picker — selecting one is a regenerate, not a duplicate-add.
    */
   existingTemplateIds: string[];
+  /** Decides whether the already-linked templates can be picked to regenerate. */
+  isDocumentsLocked: boolean;
+  /** The server says the lease is locked but it was shown as open: load it again. */
+  onLockedRefusal: () => void;
   onClose: () => void;
 }
 
@@ -46,9 +53,11 @@ interface ValuesFormState {
 export default function LeaseAddTemplateModal({
   leaseId,
   existingTemplateIds,
+  isDocumentsLocked,
+  onLockedRefusal,
   onClose,
 }: LeaseAddTemplateModalProps) {
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [pickedIds, setPickedIds] = useState<string[]>([]);
   const [valuesState, setValuesState] = useState<ValuesFormState | null>(null);
   const [hasTried, setHasTried] = useState(false);
 
@@ -62,6 +71,10 @@ export default function LeaseAddTemplateModal({
     () => new Set(existingTemplateIds),
     [existingTemplateIds],
   );
+  // A template picked while the lease looked open stops counting once it locks.
+  const selectedIds = pickedIds.filter(
+    (id) => !(isDocumentsLocked && linkedSet.has(id)),
+  );
   const available = data?.items ?? [];
   const templatesMode = resolveListLoadMode({
     hasData: data !== undefined,
@@ -70,7 +83,7 @@ export default function LeaseAddTemplateModal({
   });
 
   function handleToggle(t: LeaseTemplateSummary) {
-    setSelectedIds((prev) =>
+    setPickedIds((prev) =>
       prev.includes(t.id) ? prev.filter((id) => id !== t.id) : [...prev, t.id],
     );
   }
@@ -87,6 +100,21 @@ export default function LeaseAddTemplateModal({
         initialValues[item.key] = item.value;
       }
       setValuesState({ items: result.items, values: initialValues });
+    } catch {
+      showError("Couldn't load the template fields. Want to try again?");
+    }
+  }
+
+  // The lease locked after the fields were shown: ask again so the saved values are read-only, keeping what was typed.
+  async function refreshPrefill() {
+    try {
+      const result = await prefill({ leaseId, templateIds: selectedIds }).unwrap();
+      setValuesState((prev) => ({
+        items: result.items,
+        values: Object.fromEntries(
+          result.items.map((item) => [item.key, item.is_read_only ? item.value : (prev?.values[item.key] ?? item.value)]),
+        ),
+      }));
     } catch {
       showError("Couldn't load the template fields. Want to try again?");
     }
@@ -117,8 +145,17 @@ export default function LeaseAddTemplateModal({
       const verb = anyAlreadyLinked ? "regenerated" : "added";
       showSuccess(`${noun} ${verb}.`);
       onClose();
-    } catch {
-      showError("Couldn't generate the document. Want to try again?");
+    } catch (err) {
+      if (isLeaseDocumentsLockedFailure(err)) {
+        onLockedRefusal();
+        showError(LEASE_DOCUMENTS_LOCKED_MESSAGE);
+      } else if (isLeaseValueLockedFailure(err)) {
+        onLockedRefusal();
+        showError(LEASE_VALUE_LOCKED_MESSAGE);
+        await refreshPrefill();
+      } else {
+        showError("Couldn't generate the document. Want to try again?");
+      }
     }
   }
 
@@ -156,6 +193,7 @@ export default function LeaseAddTemplateModal({
               linkedSet={linkedSet}
               selectedIds={selectedIds}
               onToggle={handleToggle}
+              isDocumentsLocked={isDocumentsLocked}
               mode={templatesMode}
               hasError={error !== undefined}
               isRetrying={isFetching}

@@ -70,6 +70,7 @@ function aLease(status: SignedLeaseStatus): SignedLeaseDetail {
     latest_extension: null,
     parent_lease_id: null,
     successor_lease_id: null,
+    documents_locked: false,
   };
 }
 

@@ -583,7 +583,9 @@ async def seed_signed_lease(
     payload: _SeedSignedLeaseRequest,
     ctx: RequestContext = Depends(current_org_member),
 ) -> _SeedSignedLeaseResponse:
-    """Test-only: create a signed lease (status=signed) with optional fake attachments.
+    """Test-only: create a lease in the requested status with optional fake attachments.
+
+    ``signed_at`` is stamped only when the status is ``signed``.
 
     Bypasses MinIO — attachment storage_keys are fake paths. Suitable for
     testing import / attachment UX (kind picker, viewer links, PATCH kind
@@ -606,7 +608,7 @@ async def seed_signed_lease(
             status=payload.status,
             starts_on=payload.starts_on,
             ends_on=payload.ends_on,
-            signed_at=now,
+            signed_at=now if payload.status == "signed" else None,
             created_at=now,
             updated_at=now,
         )

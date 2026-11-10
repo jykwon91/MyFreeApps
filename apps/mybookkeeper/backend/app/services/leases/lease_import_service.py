@@ -10,6 +10,7 @@ import datetime as _dt
 import logging
 import uuid
 
+from app.core.config import settings as _settings
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
@@ -135,8 +136,6 @@ async def import_signed_lease(
     ``kind=signed_lease``; subsequent files use the ``_infer_attachment_kind``
     heuristic.
     """
-    from app.core.config import settings as _settings
-
     storage = get_storage()
     if storage is None:
         raise StorageNotConfiguredError("Object storage is not configured")
@@ -157,6 +156,8 @@ async def import_signed_lease(
             raise AttachmentTypeRejectedError(f"Couldn't read the image '{filename}'") from exc
         processed.append((cleaned.content, filename, cleaned.content_type))
 
+    # One moment for the lease's signed_at and every file's uploaded_at: the files are the lock point itself.
+    now = _dt.datetime.now(_dt.timezone.utc)
     async with unit_of_work() as db:
         applicant = await applicant_repo.get(
             db,
@@ -189,7 +190,6 @@ async def import_signed_lease(
                 db, applicant=applicant, organization_id=organization_id,
             )
 
-        now = _dt.datetime.now(_dt.timezone.utc)
         lease = await signed_lease_repo.create(
             db,
             user_id=user_id,
@@ -215,7 +215,6 @@ async def import_signed_lease(
     uploaded: list[str] = []
     try:
         async with unit_of_work() as db:
-            now = _dt.datetime.now(_dt.timezone.utc)
             for position, (content, filename, ct) in enumerate(processed):
                 attachment_id = uuid.uuid4()
                 storage_key = f"signed-leases/{lease_id}/{attachment_id}"

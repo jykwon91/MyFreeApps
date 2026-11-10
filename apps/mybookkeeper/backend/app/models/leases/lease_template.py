@@ -51,8 +51,9 @@ class LeaseTemplate(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    # Bumped by re-upload; surfaced in the UI so hosts know which template
-    # version a given signed lease was generated from.
+    # Bumped each time the template's files are replaced. Leases do not record
+    # which version they rendered from; their documents stay as first generated
+    # because a sent or signed lease is never re-rendered.
     version: Mapped[int] = mapped_column(
         Integer, nullable=False, default=1, server_default="1",
     )

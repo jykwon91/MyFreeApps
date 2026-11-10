@@ -77,6 +77,7 @@ function buildAttachment(): SignedLeaseAttachment {
     uploaded_at: "2026-05-07T00:00:00Z",
     presigned_url: "https://example.com/lease.pdf",
     is_available: true,
+    is_locked: false,
   };
 }
 
@@ -107,6 +108,7 @@ function buildLease(overrides: Partial<SignedLeaseDetail> = {}): SignedLeaseDeta
     latest_extension: null,
     parent_lease_id: null,
     successor_lease_id: null,
+    documents_locked: false,
     ...overrides,
   };
 }

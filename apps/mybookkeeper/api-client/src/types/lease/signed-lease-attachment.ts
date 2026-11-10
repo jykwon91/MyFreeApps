@@ -23,4 +23,6 @@ export interface SignedLeaseAttachment {
    * Defaults to `true` for backwards-compat with older API responses.
    */
   is_available: boolean;
+  /** An original or signed file that can no longer be deleted or relabelled. */
+  is_locked: boolean;
 }

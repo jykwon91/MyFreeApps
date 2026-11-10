@@ -421,7 +421,7 @@ class TestDeleteAttachmentIdor:
 # ---------------------------------------------------------------------------
 
 class TestUpdateLeaseValuesFrozen:
-    def test_edit_values_post_draft_returns_409(self) -> None:
+    def test_edit_values_post_draft_returns_a_coded_422(self) -> None:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         lease_id = uuid.uuid4()
 
@@ -440,7 +440,8 @@ class TestUpdateLeaseValuesFrozen:
                     f"/signed-leases/{lease_id}",
                     json={"values": {"x": "y"}},
                 )
-            assert resp.status_code == 409
+            assert resp.status_code == 422
+            assert resp.json()["detail"]["code"] == "LEASE_VALUE_LOCKED"
         finally:
             app.dependency_overrides.clear()
 

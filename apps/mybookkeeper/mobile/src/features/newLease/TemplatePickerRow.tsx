@@ -11,16 +11,20 @@ interface TemplatePickerRowProps {
   onPress: () => void;
   /** A line under the counts, such as a warning that picking it makes it again. */
   note?: string;
+  /** Can't be picked, so it is dimmed and a tap does nothing. */
+  isDisabled?: boolean;
 }
 
-export default function TemplatePickerRow({ template, position, onPress, note }: TemplatePickerRowProps) {
+export default function TemplatePickerRow({ template, position, onPress, note, isDisabled = false }: TemplatePickerRowProps) {
   const { colors, spacing, fontSize } = useTheme();
   const isSelected = position !== null;
   return (
     <Pressable
+      accessibilityHint={note}
       accessibilityLabel={isSelected ? `${template.name}, ${selectedLabel(position)}` : template.name}
       accessibilityRole="checkbox"
-      accessibilityState={{ checked: isSelected }}
+      accessibilityState={{ checked: isSelected, disabled: isDisabled }}
+      disabled={isDisabled}
       onPress={onPress}
       style={({ pressed }) => ({
         minHeight: MIN_TOUCH_TARGET,
@@ -32,6 +36,7 @@ export default function TemplatePickerRow({ template, position, onPress, note }:
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
         backgroundColor: pressed || isSelected ? colors.muted : colors.background,
+        opacity: isDisabled ? 0.6 : 1,
       })}
     >
       <View style={{ flex: 1, gap: spacing.xs }}>

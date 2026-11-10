@@ -7,9 +7,7 @@ Placeholder pre-fill lives in ``lease_prefill_service``.
 from __future__ import annotations
 
 import datetime as _dt
-import logging
 import uuid
-from typing import Any
 
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
@@ -24,10 +22,8 @@ from app.repositories.leases import (
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
 from app.services.leases._lease_helpers import (
     SignedLeaseNotFoundError,
-    _denormalise_dates,
     _load_resolution_context,
 )
-from app.services.leases.default_source_resolver import resolve_default_source
 from app.services.leases.lease_lifecycle_service import get_lease
 from app.services.leases.lease_render_service import (
     attachments_present_check,
@@ -36,21 +32,12 @@ from app.services.leases.lease_render_service import (
     render_md_text_to_pdf_or_keep,  # noqa: F401 — re-exported via signed_lease_service
 )
 from app.services.leases.lease_template_service import TemplateNotFoundError
+from app.services.leases.lease_addendum_values import merge_addendum_values
+from app.services.leases.lease_documents_lock import ensure_documents_rerenderable, lease_documents_locked
 from app.services.leases.lease_write_precheck import lock_lease_and_verify
 from app.services.storage.committed_write_guard import CommittedWriteGuard
 
-logger = logging.getLogger(__name__)
-
-
 # Exceptions specific to PDF generation
-
-class TemplatesAlreadyLinkedError(ValueError):
-    """One or more template_ids are already linked to this lease."""
-
-    def __init__(self, duplicate_ids: list[uuid.UUID]) -> None:
-        self.duplicate_ids = duplicate_ids
-        super().__init__(f"Templates already linked: {duplicate_ids}")
-
 
 class ImportedLeaseTemplateError(ValueError):
     """Cannot add templates to an imported lease."""
@@ -65,18 +52,19 @@ class ImportedLeaseTemplateError(ValueError):
 # ---------------------------------------------------------------------------
 
 def should_auto_email_after_generate(
-    *, previous_status: str, auto_email_tenant: bool, last_emailed_to_tenant_at,
+    *, previous_status: str, auto_email_tenant: bool,
 ) -> bool:
     """Pure predicate: should the tenant auto-email fire after generate?
 
-    The four gates that must all be TRUE:
+    The gates that must all be TRUE:
 
     1. ``previous_status != "generated"`` — Regenerate of an
        already-generated lease must not re-email.
     2. ``auto_email_tenant`` — host hasn't opted this lease out of the
        feature.
-    3. ``last_emailed_to_tenant_at`` is NULL — defensive: even if some
-       prior path sent a tenant email, don't auto-send again.
+
+    A lease that has already been emailed never gets here: ``generate_lease``
+    refuses to re-render it.
 
     The applicant-has-contact_email check is enforced inside
     ``lease_email_service.send_lease_to_tenant``.
@@ -84,8 +72,6 @@ def should_auto_email_after_generate(
     if previous_status == "generated":
         return False
     if not auto_email_tenant:
-        return False
-    if last_emailed_to_tenant_at is not None:
         return False
     return True
 
@@ -122,9 +108,9 @@ async def generate_lease(
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+        await ensure_documents_rerenderable(db, lease)
         previous_status = lease.status
         auto_email_tenant = lease.auto_email_tenant
-        last_emailed_to_tenant_at = lease.last_emailed_to_tenant_at
 
         join_rows = await signed_lease_template_repo.list_for_lease(
             db, lease_id=lease_id,
@@ -167,6 +153,8 @@ async def generate_lease(
                 rendered_values=lease_values,
                 rendered_starts_on=read_starts_on,
                 rendered_ends_on=read_ends_on,
+                rerenders_documents=True,
+                locked_at_read=False,
             )
             superseded = await lease_rendered_attachment_repo.replace_rendered_original(
                 db,
@@ -197,7 +185,6 @@ async def generate_lease(
     should_auto_email = should_auto_email_after_generate(
         previous_status=previous_status,
         auto_email_tenant=auto_email_tenant,
-        last_emailed_to_tenant_at=last_emailed_to_tenant_at,
     )
     return detail, should_auto_email
 
@@ -231,7 +218,10 @@ async def add_templates_and_generate(
     All-or-nothing: every file is rendered and uploaded before anything is
     written; if any fails the request fails and the lease is left unchanged.
     Re-adding an already-linked template regenerates the lease's rendered
-    documents, replacing the earlier ones in one transaction. If the lease's
+    documents, replacing the earlier ones in one transaction; once the lease is
+    sent or signed that raises ``LeaseDocumentsLockedError``, while adding only
+    new templates still renders just their files and leaves existing documents
+    untouched. If the lease's
     templates, values or dates changed while rendering, nothing is written and
     ``LeaseChangedDuringRenderError`` is raised.
     """
@@ -265,6 +255,8 @@ async def add_templates_and_generate(
         read_starts_on, read_ends_on = lease.starts_on, lease.ends_on
         new_template_ids = [tid for tid in template_ids if tid not in existing_ids]
         is_regenerate = any(tid in existing_ids for tid in template_ids)
+        if is_regenerate:
+            await ensure_documents_rerenderable(db, lease)
 
         files_to_render: list = []
         placeholders: list = []
@@ -310,46 +302,18 @@ async def add_templates_and_generate(
             )
         )
 
-        merged_values: dict[str, str] = {
-            k: ("" if v is None else str(v))
-            for k, v in (lease.values or {}).items()
-        }
-        for p in placeholders:
-            existing = merged_values.get(p.key)
-            if existing not in (None, ""):
-                continue
-            if not p.default_source:
-                continue
-            try:
-                resolved, _ = resolve_default_source(
-                    p.default_source, applicant, inquiry,
-                    today=today,
-                    lease=lease, property_record=property_record,
-                    user_record=user_record,
-                )
-            except (ValueError, AttributeError):
-                logger.warning(
-                    "default_source resolution failed for placeholder %s on lease %s",
-                    p.key, lease_id, exc_info=True,
-                )
-                continue
-            if resolved is not None and resolved != "":
-                merged_values[p.key] = str(resolved)
-
-        if values_override:
-            for k, v in values_override.items():
-                if v is None:
-                    continue
-                merged_values[k] = str(v)
-
-        fields_to_update: dict[str, Any] = {}
-        if merged_values != (lease.values or {}):
-            new_start, new_end = _denormalise_dates(merged_values)
-            fields_to_update["values"] = merged_values
-            if new_start is not None and lease.starts_on is None:
-                fields_to_update["starts_on"] = new_start
-            if new_end is not None and lease.ends_on is None:
-                fields_to_update["ends_on"] = new_end
+        is_locked = await lease_documents_locked(db, lease)
+        merged_values, fields_to_update = merge_addendum_values(
+            lease=lease,
+            placeholders=placeholders,
+            override=values_override,
+            applicant=applicant,
+            inquiry=inquiry,
+            property_record=property_record,
+            user_record=user_record,
+            today=today,
+            is_locked=is_locked,
+        )
 
     # Nothing is written until every file has rendered and uploaded, so a
     # failure (a template object that vanished, a render error) leaves the
@@ -374,6 +338,8 @@ async def add_templates_and_generate(
                 rendered_values=read_values,
                 rendered_starts_on=read_starts_on,
                 rendered_ends_on=read_ends_on,
+                rerenders_documents=is_regenerate,
+                locked_at_read=is_locked,
             )
             # A template soft-deleted since the read cannot be linked; templates
             # are locked in a fixed order so concurrent adds cannot deadlock.

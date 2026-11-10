@@ -50,6 +50,7 @@ function aFile(overrides: Partial<SignedLeaseAttachment> = {}): SignedLeaseAttac
     uploaded_at: "2026-02-01T12:00:00Z",
     presigned_url: "https://files.example/first",
     is_available: true,
+    is_locked: false,
     ...overrides,
   };
 }
@@ -81,6 +82,7 @@ function aLease(attachments: SignedLeaseAttachment[] = []): SignedLeaseDetail {
     latest_extension: null,
     parent_lease_id: null,
     successor_lease_id: null,
+    documents_locked: false,
   };
 }
 

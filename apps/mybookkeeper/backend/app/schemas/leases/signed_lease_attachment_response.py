@@ -28,5 +28,8 @@ class SignedLeaseAttachmentResponse(BaseModel):
     # that 404s. Defaults to ``True`` so legacy callers / tests that
     # construct this schema directly don't have to set it.
     is_available: bool = True
+    # A record file (original or signed copy) that can no longer be deleted or
+    # relabelled because the lease has locked. Set by the response builder.
+    is_locked: bool
 
     model_config = ConfigDict(from_attributes=True)

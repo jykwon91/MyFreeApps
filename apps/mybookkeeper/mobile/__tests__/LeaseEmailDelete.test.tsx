@@ -36,6 +36,7 @@ function aFile(kind: SignedLeaseAttachment["kind"]): SignedLeaseAttachment {
     uploaded_at: "2026-02-01T12:00:00Z",
     presigned_url: "https://example.com/f1",
     is_available: true,
+    is_locked: false,
   };
 }
 
@@ -221,11 +222,11 @@ describe("emailing and deleting a lease", () => {
       expect(await screen.findByText("I couldn't send that. Want to try again?")).toBeTruthy();
     });
 
-    it("shows when it last went out", async () => {
+    it("shows when the last email was started", async () => {
       startServer(aLease({ attachments: [aFile("signed_lease")], last_emailed_to_tenant_at: "2026-10-20T12:00:00Z" }));
       await renderScreen();
 
-      expect(await screen.findByText(/^Last emailed Oct/)).toBeTruthy();
+      expect(await screen.findByText(/^Last email started Oct/)).toBeTruthy();
     });
   });
 

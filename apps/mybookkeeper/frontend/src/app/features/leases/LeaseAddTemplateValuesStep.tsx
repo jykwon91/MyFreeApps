@@ -1,5 +1,6 @@
 import { ArrowLeft, Plus } from "lucide-react";
 import { Button, LoadingButton } from "@platform/ui";
+import { LEASE_VALUE_READ_ONLY_NOTE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import { prefillProvenanceLabel } from "@mybookkeeper/api-client/utils/leasePrefill";
 import type { LeasePrefillProblem } from "@mybookkeeper/api-client/types/lease/lease-prefill-problem";
 import { LEASE_PREFILL_PROBLEM_MESSAGES } from "@/shared/lib/lease-labels";
@@ -78,11 +79,22 @@ export default function LeaseAddTemplateValuesStep({
                   type={inputTypeAttr(item.input_type)}
                   value={value}
                   onChange={(e) => onValueChange(item.key, e.target.value)}
-                  className="px-3 py-2 text-sm border rounded-md bg-background"
+                  className="px-3 py-2 text-sm border rounded-md bg-background read-only:bg-muted read-only:text-muted-foreground"
                   data-testid={`addendum-input-${item.key}`}
                   placeholder={item.required ? "Required" : "Optional"}
                   aria-invalid={problems[item.key] ? true : undefined}
+                  readOnly={item.is_read_only}
+                  aria-describedby={item.is_read_only ? `addendum-readonly-${item.key}` : undefined}
                 />
+                {item.is_read_only ? (
+                  <p
+                    id={`addendum-readonly-${item.key}`}
+                    className="text-xs text-muted-foreground"
+                    data-testid={`addendum-readonly-${item.key}`}
+                  >
+                    {LEASE_VALUE_READ_ONLY_NOTE}
+                  </p>
+                ) : null}
                 {problems[item.key] ? (
                   <p role="alert" className="text-xs text-destructive" data-testid={`addendum-error-${item.key}`}>
                     {LEASE_PREFILL_PROBLEM_MESSAGES[problems[item.key]]}

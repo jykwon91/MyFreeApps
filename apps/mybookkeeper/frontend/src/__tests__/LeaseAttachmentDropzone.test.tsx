@@ -11,10 +11,14 @@
  * - disabled prop makes the zone non-interactive
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
+import {
+  LEASE_ATTACHMENT_LOCKED_CODE,
+  LEASE_ATTACHMENT_LOCKED_MESSAGE,
+} from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import LeaseAttachmentDropzone from "@/app/features/leases/LeaseAttachmentDropzone";
 
 // ---------------------------------------------------------------------------
@@ -198,5 +202,26 @@ describe("LeaseAttachmentDropzone", () => {
     await waitFor(() => {
       expect(showErrorMock).toHaveBeenCalledWith("big.pdf is too large.");
     });
+  });
+
+  it("explains a locked refusal from the server by its code", async () => {
+    mockUpload.mockReturnValue({
+      unwrap: () => Promise.reject({ status: 409, data: { detail: { code: LEASE_ATTACHMENT_LOCKED_CODE, message: "server words" } } }),
+    });
+
+    renderDropzone();
+    const input = document.querySelector<HTMLInputElement>("input[type='file']");
+    await userEvent.upload(input!, makeFile("a.pdf"));
+
+    await waitFor(() => {
+      expect(showErrorMock).toHaveBeenCalledWith(LEASE_ATTACHMENT_LOCKED_MESSAGE);
+    });
+  });
+
+  it("never offers a rendered original as a kind to upload", () => {
+    renderDropzone();
+    const options = within(screen.getByTestId("lease-attachment-kind-select")).getAllByRole("option");
+    expect(options.map((o) => o.textContent)).not.toContain("Rendered original");
+    expect(options.length).toBeGreaterThan(1);
   });
 });

@@ -20,7 +20,7 @@ export interface FakeLeaseWritesServer {
 }
 
 export function aPrefillItem(key: string, overrides: Partial<SignedLeaseTemplatePrefillItem> = {}): SignedLeaseTemplatePrefillItem {
-  return { key, display_label: key, input_type: "text", required: false, value: "", provenance: null, is_from_existing_values: false, ...overrides };
+  return { key, display_label: key, input_type: "text", required: false, value: "", provenance: null, is_from_existing_values: false, is_read_only: false, ...overrides };
 }
 
 export function aTemplateSummary(id: string, name: string) {

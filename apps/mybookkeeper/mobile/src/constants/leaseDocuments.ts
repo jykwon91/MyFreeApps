@@ -13,6 +13,7 @@ export const LEASE_DOCUMENT_MESSAGES = {
   checkConnection: "Check your connection and try again.",
   tryAgain: "Try again",
   goBack: "Go back",
+  backToPicking: "Back to picking",
   fillTitle: "What goes in these documents?",
   fillBody: "I filled in what I could. Change anything that's wrong and fill in the rest.",
   nothingToFill: "There's nothing for you to fill in. I'll make the documents as they are.",

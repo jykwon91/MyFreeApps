@@ -88,7 +88,7 @@ export const LEASE_MESSAGES = {
   sendEmail: "Send email",
   emailing: "Sending…",
   emailFailed: "I couldn't send that. Want to try again?",
-  emailUnsure: "I can't reach the server, so I'm not sure that went out. Check \"Last emailed\" before trying again.",
+  emailUnsure: "I can't reach the server, so I'm not sure that went out. Check \"Last email started\" before trying again.",
   deleteLease: "Delete lease",
   deleteLeaseHint: "Asks you to confirm first",
   deleteLeaseBody: "Their signed copy and all attached files go too. This can't be undone.",
@@ -204,7 +204,7 @@ export function noEmailForLease(name: string | null): string {
 }
 
 export function lastEmailed(date: string): string {
-  return `Last emailed ${date}`;
+  return `Last email started ${date}`;
 }
 
 export function deleteLeaseLabel(name: string | null): string {

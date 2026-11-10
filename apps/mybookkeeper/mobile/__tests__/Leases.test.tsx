@@ -49,6 +49,7 @@ function aFile(overrides: Partial<SignedLeaseAttachment> = {}): SignedLeaseAttac
     uploaded_at: "2026-02-01T12:00:00Z",
     presigned_url: "https://files.example/first",
     is_available: true,
+    is_locked: false,
     ...overrides,
   };
 }
@@ -80,6 +81,7 @@ function aLease(overrides: Partial<SignedLeaseDetail> = {}): SignedLeaseDetail {
     latest_extension: null,
     parent_lease_id: null,
     successor_lease_id: null,
+    documents_locked: false,
     ...overrides,
   };
 }
@@ -352,6 +354,7 @@ describe("leases", () => {
           latest_extension: { id: "x", created_at: "2026-01-03T12:00:00Z", starts_on: "2026-03-01", ends_on: "2099-02-28", source_attachment_id: "f1", previous_ends_on: "2098-02-28", undo_expires_at: "2026-02-02T12:00:00Z", can_undo: false },
           parent_lease_id: "l0",
           successor_lease_id: "l9",
+          documents_locked: false,
         }),
       ]);
       await renderIn(<LeaseDetailScreen id="l1" />);

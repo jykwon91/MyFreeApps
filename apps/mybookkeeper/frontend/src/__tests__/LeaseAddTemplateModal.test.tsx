@@ -140,6 +140,7 @@ function buildLease(overrides: Partial<SignedLeaseDetail> = {}): SignedLeaseDeta
     latest_extension: null,
     parent_lease_id: null,
     successor_lease_id: null,
+    documents_locked: false,
     ...overrides,
   };
 }

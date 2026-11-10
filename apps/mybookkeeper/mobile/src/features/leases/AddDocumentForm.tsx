@@ -1,7 +1,11 @@
-import { useAddSignedLeaseTemplatesMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
+import { useAddSignedLeaseTemplatesMutation, useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { SignedLeaseTemplatePrefillItem } from "@mybookkeeper/api-client/types/lease/signed-lease-template-prefill";
+import { LEASE_DOCUMENTS_LOCKED_MESSAGE, LEASE_VALUE_LOCKED_MESSAGE, LEASE_VALUE_READ_ONLY_NOTE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
+import { isLeaseDocumentsLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseDocumentsLockedFailure";
+import { isLeaseValueLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseValueLockedFailure";
 import { prefillItemsToAsk, prefillProblems, prefillProvenanceLabel } from "@mybookkeeper/api-client/utils/leasePrefill";
 import { Banner, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { router } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,13 +25,16 @@ interface AddDocumentFormProps {
   /** Picked templates that are already on the lease, which are made again. */
   isRemake: boolean;
   items: readonly SignedLeaseTemplatePrefillItem[];
+  /** The lease locked after the fields were shown: ask the server again so saved values turn read-only. */
+  onPrefillStale: () => void;
 }
 
-export default function AddDocumentForm({ leaseId, templateIds, isRemake, items }: AddDocumentFormProps) {
+export default function AddDocumentForm({ leaseId, templateIds, isRemake, items, onPrefillStale }: AddDocumentFormProps) {
   const { colors, spacing, fontSize } = useTheme();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const [addTemplates] = useAddSignedLeaseTemplatesMutation();
+  const { refetch: refetchLease } = useGetSignedLeaseByIdQuery(leaseId);
   const write = useWrite();
   const { isLeaving, leave } = useLeaveToLease(leaseId);
   const [edits, setEdits] = useState<PlaceholderEdits>({});
@@ -41,7 +48,21 @@ export default function AddDocumentForm({ leaseId, templateIds, isRemake, items 
   async function make(): Promise<void> {
     setHasTried(true);
     if (Object.keys(problems).length > 0) return;
-    const result = await write.run(() => addTemplates({ leaseId, templateIds: [...templateIds], values: documentValues(items, edits) }).unwrap(), { staysLocked: true });
+    const result = await write.run(
+      () =>
+        addTemplates({ leaseId, templateIds: [...templateIds], values: documentValues(items, edits) })
+          .unwrap()
+          .catch((error: unknown) => {
+            // The lease was sent or emailed meanwhile: learn its new state so the picker and files catch up.
+            if (isLeaseDocumentsLockedFailure(error)) void refetchLease();
+            if (isLeaseValueLockedFailure(error)) {
+              void refetchLease();
+              onPrefillStale();
+            }
+            throw error;
+          }),
+      { staysLocked: true },
+    );
     if (result !== "done") return;
     showToast(documentsMade(templateIds.length, isRemake));
     leave();
@@ -56,17 +77,26 @@ export default function AddDocumentForm({ leaseId, templateIds, isRemake, items 
           </Text>
           <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{asked.length === 0 ? MESSAGES.nothingToFill : MESSAGES.fillBody}</Text>
         </View>
-        {write.failure ? <Banner message={ADD_DOCUMENT_COPY[write.failure]} /> : null}
+        {write.failure ? (
+          isLeaseDocumentsLockedFailure(write.error) ? (
+            // The picker behind this screen has caught up with the lock, so going back shows what can still be picked.
+            <Banner actions={[{ label: MESSAGES.backToPicking, onPress: () => router.back() }]} message={LEASE_DOCUMENTS_LOCKED_MESSAGE} />
+          ) : isLeaseValueLockedFailure(write.error) ? (
+            <Banner message={LEASE_VALUE_LOCKED_MESSAGE} />
+          ) : (
+            <Banner message={ADD_DOCUMENT_COPY[write.failure]} />
+          )
+        ) : null}
         {asked.map((item) => {
           const provenance = prefillProvenanceLabel(item);
           const isEdited = documentValue(item, edits) !== item.value;
           const problem = problems[item.key];
           return (
             <PlaceholderField
-              caption={isEdited || !provenance ? null : prefillCaption(provenance)}
+              caption={item.is_read_only ? LEASE_VALUE_READ_ONLY_NOTE : isEdited || !provenance ? null : prefillCaption(provenance)}
               error={hasTried && problem ? (PLACEHOLDER_PROBLEM_MESSAGES[problem]) : undefined}
               inputType={item.input_type}
-              isDisabled={locked}
+              isDisabled={locked || item.is_read_only}
               key={item.key}
               label={item.display_label}
               onChange={(value) => setEdits((current) => ({ ...current, [item.key]: value }))}

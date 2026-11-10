@@ -1,5 +1,6 @@
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
+import { LEASE_DOCUMENTS_LOCKED_NOTE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { Banner, EmptyState, LoadingButton, useOpenWebsite, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
@@ -20,20 +21,23 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
   const { colors, spacing, fontSize } = useTheme();
   const insets = useSafeAreaInsets();
   const openWebsite = useOpenWebsite();
-  const [picked, setPicked] = useState<string[]>([]);
+  const [pickedIds, setPickedIds] = useState<string[]>([]);
   const lease = useGetSignedLeaseByIdQuery(leaseId);
   const templates = useGetLeaseTemplatesQuery({ limit: LEASE_TEMPLATE_LIST_LIMIT });
   const error = lease.error ?? templates.error;
   const { refresh, refreshControl } = useRefresh(() => Promise.all([lease.refetch(), templates.refetch()]), error);
   const rows = templates.currentData?.items ?? [];
   const onLease = new Set(lease.currentData?.templates.map((template) => template.id));
+  const isLocked = lease.currentData?.documents_locked ?? false;
+  // A pick that the lease has since locked out is dropped, so it is never sent.
+  const picked = pickedIds.filter((id) => !(isLocked && onLease.has(id)));
 
   if (httpStatus(lease.error) === 404) {
     return <EmptyState action={{ label: MESSAGES.goBack, onPress: () => router.back() }} body={MESSAGES.goneBody} heading={MESSAGES.goneHeading} />;
   }
 
   function toggle(id: string): void {
-    setPicked((current) => (current.includes(id) ? current.filter((other) => other !== id) : [...current, id]));
+    setPickedIds(picked.includes(id) ? picked.filter((other) => other !== id) : [...picked, id]);
   }
 
   const isLoaded = Boolean(templates.currentData && lease.currentData);
@@ -69,7 +73,9 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
         refreshControl={refreshControl}
         renderItem={({ item }) => {
           const index = picked.indexOf(item.id);
-          return <TemplatePickerRow note={onLease.has(item.id) ? MESSAGES.onThisLease : undefined} onPress={() => toggle(item.id)} position={index === -1 ? null : index + 1} template={item} />;
+          const isBlocked = isLocked && onLease.has(item.id);
+          const note = isBlocked ? LEASE_DOCUMENTS_LOCKED_NOTE : onLease.has(item.id) ? MESSAGES.onThisLease : undefined;
+          return <TemplatePickerRow isDisabled={isBlocked} note={note} onPress={() => toggle(item.id)} position={index === -1 ? null : index + 1} template={item} />;
         }}
         style={{ flex: 1 }}
       />

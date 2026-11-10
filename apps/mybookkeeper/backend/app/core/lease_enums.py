@@ -29,6 +29,17 @@ SIGNED_LEASE_STATUSES: tuple[str, ...] = (
     "terminated",
 )
 
+# The only states in which a lease's generated documents may be re-rendered.
+# From ``sent`` onward the rendered originals are the record of what the
+# tenant was given to sign, so they are never replaced. A ``generated`` lease
+# that has already been emailed to the tenant is locked too.
+LEASE_DOCUMENT_RERENDER_STATUSES: tuple[str, ...] = ("draft", "generated")
+
+# Attachment kinds that are the legal record of a locked lease. A locked file of
+# these kinds is neither deleted nor relabelled, and on a locked lease nothing
+# can be relabelled into them (a new one can only be uploaded, as a signed copy).
+LEASE_RECORD_ATTACHMENT_KINDS: tuple[str, ...] = ("rendered_original", "signed_lease")
+
 # How the Leases list groups those states. A lease being prepared is in neither.
 LEASE_STATUS_GROUPS: dict[str, tuple[str, ...]] = {
     "current": ("signed", "active"),

@@ -28,7 +28,6 @@ from app.schemas.leases.signed_lease_add_templates_request import (
 from app.services.leases.signed_lease_service import (
     ImportedLeaseTemplateError,
     SignedLeaseNotFoundError,
-    TemplatesAlreadyLinkedError,
     add_templates_and_generate,
 )
 from app.services.leases.lease_template_service import TemplateNotFoundError
@@ -229,7 +228,7 @@ async def test_add_templates_raises_not_found_for_unknown_template(db) -> None:
 async def test_add_templates_already_linked_treated_as_regenerate(db) -> None:
     """Re-attaching an already-linked template is now a regenerate.
 
-    Pre-2026-05-08 the service raised ``TemplatesAlreadyLinkedError``. The
+    Pre-2026-05-08 the service rejected it as a duplicate. The
     new behaviour: skip creating a duplicate join row and proceed with
     rendering — so the host can edit values and re-render via the same
     "Add document" path. Verify here at the unit level that the call no

@@ -54,6 +54,7 @@ def _attachment_response(
         signed_by_tenant_at=signed_by_tenant_at,
         signed_by_landlord_at=signed_by_landlord_at,
         presigned_url=None,
+        is_locked=False,
     ).model_dump(mode="json")
 
 

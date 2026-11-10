@@ -55,7 +55,7 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
   const datesLine = leaseDatesLine(lease);
   const valueCount = Object.keys(lease.values).length;
   const fileRow = (file: SignedLeaseAttachment) => (
-    <LeaseFileRow file={file} leaseId={id} isDisabled={openingId !== null} isOpening={openingId === file.id} key={file.id} onOpen={() => void open(file)} />
+    <LeaseFileRow file={file} leaseId={id} isDisabled={openingId !== null} isDocumentsLocked={lease.documents_locked} isOpening={openingId === file.id} key={file.id} onOpen={() => void open(file)} />
   );
 
   return (

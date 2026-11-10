@@ -5,6 +5,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 
+from app.api.lease_render_error_mapping import lease_attachment_lock_errors
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
 from app.schemas.leases.signed_lease_attachment_response import (
@@ -34,14 +35,15 @@ async def upload_attachment(
 ) -> SignedLeaseAttachmentResponse:
     content = await file.read()
     try:
-        return await signed_lease_service.upload_attachment(
-            user_id=ctx.user_id,
-            organization_id=ctx.organization_id,
-            lease_id=lease_id,
-            content=content,
-            filename=file.filename or "",
-            kind=kind,
-        )
+        with lease_attachment_lock_errors():
+            return await signed_lease_service.upload_attachment(
+                user_id=ctx.user_id,
+                organization_id=ctx.organization_id,
+                lease_id=lease_id,
+                content=content,
+                filename=file.filename or "",
+                kind=kind,
+            )
     except signed_lease_service.SignedLeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc
     except signed_lease_service.AttachmentTooLargeError as exc:
@@ -81,13 +83,14 @@ async def update_attachment(
     ctx: RequestContext = Depends(require_write_access),
 ) -> SignedLeaseAttachmentResponse:
     try:
-        return await signed_lease_service.update_attachment_kind(
-            user_id=ctx.user_id,
-            organization_id=ctx.organization_id,
-            lease_id=lease_id,
-            attachment_id=attachment_id,
-            kind=payload.kind,
-        )
+        with lease_attachment_lock_errors():
+            return await signed_lease_service.update_attachment_kind(
+                user_id=ctx.user_id,
+                organization_id=ctx.organization_id,
+                lease_id=lease_id,
+                attachment_id=attachment_id,
+                kind=payload.kind,
+            )
     except (
         signed_lease_service.SignedLeaseNotFoundError,
         signed_lease_service.AttachmentNotFoundError,
@@ -120,13 +123,14 @@ async def update_attachment_signing_state(
         if key in {"signed_by_tenant_at", "signed_by_landlord_at"}
     }
     try:
-        return await signed_lease_service.update_attachment_signing_state(
-            user_id=ctx.user_id,
-            organization_id=ctx.organization_id,
-            lease_id=lease_id,
-            attachment_id=attachment_id,
-            signing_fields=signing_fields,
-        )
+        with lease_attachment_lock_errors():
+            return await signed_lease_service.update_attachment_signing_state(
+                user_id=ctx.user_id,
+                organization_id=ctx.organization_id,
+                lease_id=lease_id,
+                attachment_id=attachment_id,
+                signing_fields=signing_fields,
+            )
     except (
         signed_lease_service.SignedLeaseNotFoundError,
         signed_lease_service.AttachmentNotFoundError,
@@ -144,12 +148,13 @@ async def delete_attachment(
     ctx: RequestContext = Depends(require_write_access),
 ) -> Response:
     try:
-        await signed_lease_service.delete_attachment(
-            user_id=ctx.user_id,
-            organization_id=ctx.organization_id,
-            lease_id=lease_id,
-            attachment_id=attachment_id,
-        )
+        with lease_attachment_lock_errors():
+            await signed_lease_service.delete_attachment(
+                user_id=ctx.user_id,
+                organization_id=ctx.organization_id,
+                lease_id=lease_id,
+                attachment_id=attachment_id,
+            )
     except (
         signed_lease_service.SignedLeaseNotFoundError,
         signed_lease_service.AttachmentNotFoundError,

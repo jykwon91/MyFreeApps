@@ -8,6 +8,7 @@ import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
 import { showError } from "@platform/ui";
+import { LEASE_ATTACHMENT_LOCKED_CODE, LEASE_ATTACHMENT_LOCKED_MESSAGE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 
 // ---------------------------------------------------------------------------
@@ -17,6 +18,7 @@ import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease
 const updateMock = vi.fn();
 const deleteMock = vi.fn();
 const uploadMock = vi.fn();
+const onLockedRefusal = vi.fn();
 
 vi.mock("@mybookkeeper/api-client/store/signedLeasesApi", () => ({
   useUploadSignedLeaseAttachmentMutation: () => [uploadMock, { isLoading: false }],
@@ -43,6 +45,7 @@ const ATTACHMENT: SignedLeaseAttachment = {
   uploaded_at: "2026-05-01T10:00:00Z",
   presigned_url: "https://storage.example.com/presigned/lease.pdf",
   is_available: true,
+  is_locked: false,
 };
 
 describe("LeaseAttachmentsSection — kind picker", () => {
@@ -58,6 +61,8 @@ describe("LeaseAttachmentsSection — kind picker", () => {
           leaseId="lease-1"
           attachments={[ATTACHMENT]}
           canWrite
+          isDocumentsLocked={false}
+          onLockedRefusal={onLockedRefusal}
         />
       </Provider>,
     );
@@ -96,6 +101,8 @@ describe("LeaseAttachmentsSection — kind picker", () => {
           leaseId="lease-1"
           attachments={[ATTACHMENT]}
           canWrite={false}
+          isDocumentsLocked={false}
+          onLockedRefusal={onLockedRefusal}
         />
       </Provider>,
     );
@@ -111,7 +118,7 @@ describe("LeaseAttachmentsSection — delete", () => {
     });
     render(
       <Provider store={store}>
-        <LeaseAttachmentsSection leaseId="lease-1" attachments={[ATTACHMENT]} canWrite />
+        <LeaseAttachmentsSection leaseId="lease-1" attachments={[ATTACHMENT]} canWrite isDocumentsLocked={false} onLockedRefusal={onLockedRefusal} />
       </Provider>,
     );
     fireEvent.change(screen.getByTestId(`lease-attachment-kind-picker-${ATTACHMENT.id}`), {
@@ -131,7 +138,7 @@ describe("LeaseAttachmentsSection — delete", () => {
     });
     render(
       <Provider store={store}>
-        <LeaseAttachmentsSection leaseId="lease-1" attachments={[ATTACHMENT]} canWrite />
+        <LeaseAttachmentsSection leaseId="lease-1" attachments={[ATTACHMENT]} canWrite isDocumentsLocked={false} onLockedRefusal={onLockedRefusal} />
       </Provider>,
     );
     fireEvent.click(screen.getByRole("button", { name: `Delete ${ATTACHMENT.filename}` }));
@@ -143,5 +150,39 @@ describe("LeaseAttachmentsSection — delete", () => {
       );
     });
     await waitFor(() => expect(screen.queryByRole("button", { name: "Remove" })).toBeNull());
+  });
+});
+
+describe("LeaseAttachmentsSection — a refusal because the lease locked", () => {
+  const refusal = { unwrap: () => Promise.reject({ status: 409, data: { detail: { code: LEASE_ATTACHMENT_LOCKED_CODE } } }) };
+
+  function renderOpenSection() {
+    onLockedRefusal.mockReset();
+    render(
+      <Provider store={store}>
+        <LeaseAttachmentsSection leaseId="lease-1" attachments={[ATTACHMENT]} canWrite isDocumentsLocked={false} onLockedRefusal={onLockedRefusal} />
+      </Provider>,
+    );
+  }
+
+  it("loads the lease again after a refused relabel", async () => {
+    updateMock.mockReset();
+    updateMock.mockReturnValue(refusal);
+    renderOpenSection();
+    fireEvent.change(screen.getByTestId(`lease-attachment-kind-picker-${ATTACHMENT.id}`), { target: { value: "notice" } });
+
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(LEASE_ATTACHMENT_LOCKED_MESSAGE));
+    expect(onLockedRefusal).toHaveBeenCalledTimes(1);
+  });
+
+  it("loads the lease again after a refused delete", async () => {
+    deleteMock.mockReset();
+    deleteMock.mockReturnValue(refusal);
+    renderOpenSection();
+    fireEvent.click(screen.getByRole("button", { name: `Delete ${ATTACHMENT.filename}` }));
+    fireEvent.click(await screen.findByRole("button", { name: "Remove" }));
+
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(LEASE_ATTACHMENT_LOCKED_MESSAGE));
+    expect(onLockedRefusal).toHaveBeenCalledTimes(1);
   });
 });

@@ -125,9 +125,11 @@ class SignedLease(Base):
     auto_email_tenant: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false"),
     )
-    # Stamped on first successful auto-email send. Used as the idempotency
-    # gate so a Regenerate does not re-send. ``POST /signed-leases/{id}/email-tenant``
-    # bypasses this gate (manual re-send is always allowed).
+    # Stamped when an email send starts, under the lease row lock, before any
+    # file is read - so it locks the documents and gates a Regenerate, but does
+    # not prove delivery (a failure is recorded as a ``lease_email_failed``
+    # event). ``POST /signed-leases/{id}/email-tenant`` bypasses the
+    # auto-email idempotency gate (manual re-send is always allowed).
     last_emailed_to_tenant_at: Mapped[_dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )

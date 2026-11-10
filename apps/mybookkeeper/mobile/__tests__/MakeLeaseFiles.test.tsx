@@ -1,3 +1,4 @@
+import { LEASE_DOCUMENTS_LOCKED_CODE, LEASE_DOCUMENTS_LOCKED_MESSAGE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import api from "@platform/core/lib/api";
@@ -26,7 +27,7 @@ jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({
 const originalAdapter = api.defaults.adapter;
 const alert = jest.spyOn(Alert, "alert");
 
-function startServer(lease: SignedLeaseDetail, options: { role?: string; generateStatus?: number } = {}) {
+function startServer(lease: SignedLeaseDetail, options: { role?: string; generateStatus?: number; generateDetail?: unknown } = {}) {
   const generates: AxiosRequestConfig[] = [];
   const adapter: AxiosAdapter = (config) => {
     const respond = (data: unknown, status = 200) => {
@@ -38,6 +39,7 @@ function startServer(lease: SignedLeaseDetail, options: { role?: string; generat
     if (config.url === "/applicants/a1") return respond({ id: "a1", has_contact_email: true });
     if (config.url === `/signed-leases/${lease.id}/generate`) {
       generates.push(config);
+      if (options.generateDetail) return respond({ detail: options.generateDetail }, options.generateStatus ?? 409);
       return respond({ ...lease, status: "generated", attachments: [{ id: "f1", lease_id: lease.id, filename: "lease.pdf", storage_key: "k", content_type: "application/pdf", size_bytes: 10, kind: "rendered_original", uploaded_by_user_id: "u1", uploaded_at: "2026-02-01T12:00:00Z", presigned_url: null, is_available: true }] }, options.generateStatus ?? 200);
     }
     // The reload after making files never answers, so the screen has to go by the generate's own answer.
@@ -96,12 +98,20 @@ describe("making a draft's files", () => {
     expect(generates).toHaveLength(1);
   });
 
-  it("doesn't ask once they've already been emailed", async () => {
-    const generates = startServer(aDraft({ auto_email_tenant: true, last_emailed_to_tenant_at: "2026-01-01T00:00:00Z" }));
+  it("explains it plainly when the server says the lease has been sent or emailed meanwhile", async () => {
+    startServer(aDraft(), { generateStatus: 409, generateDetail: { code: LEASE_DOCUMENTS_LOCKED_CODE, message: "server words" } });
     await renderScreen();
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.makeFiles }));
-    expect(alert).not.toHaveBeenCalled();
-    expect(generates).toHaveLength(1);
+    expect(await screen.findByText(LEASE_DOCUMENTS_LOCKED_MESSAGE)).toBeTruthy();
+    expect(screen.queryByText("server words")).toBeNull();
+  });
+
+  it("offers no way to make them once they've been emailed", async () => {
+    const generates = startServer(aDraft({ auto_email_tenant: true, documents_locked: true, last_emailed_to_tenant_at: "2026-01-01T00:00:00Z" }));
+    await renderScreen();
+    await screen.findByText("Dana Reed");
+    expect(screen.queryByRole("button", { name: MESSAGES.makeFiles })).toBeNull();
+    expect(generates).toHaveLength(0);
   });
 
   it.each([
@@ -154,11 +164,13 @@ describe("the rules", () => {
   });
 
   it("only generated leases without files need them", () => {
-    expect(leaseNeedsFiles({ kind: "generated", status: "draft", attachments: [] })).toBe(true);
-    expect(leaseNeedsFiles({ kind: "generated", status: "generated", attachments: [] })).toBe(true);
-    expect(leaseNeedsFiles({ kind: "imported", status: "draft", attachments: [] })).toBe(false);
+    expect(leaseNeedsFiles({ kind: "generated", status: "draft", attachments: [], documents_locked: false })).toBe(true);
+    expect(leaseNeedsFiles({ kind: "generated", status: "generated", attachments: [], documents_locked: false })).toBe(true);
+    expect(leaseNeedsFiles({ kind: "imported", status: "draft", attachments: [], documents_locked: false })).toBe(false);
     // Making files would move these back to generated.
-    expect(leaseNeedsFiles({ kind: "generated", status: "sent", attachments: [] })).toBe(false);
-    expect(leaseNeedsFiles({ kind: "generated", status: "signed", attachments: [] })).toBe(false);
+    expect(leaseNeedsFiles({ kind: "generated", status: "sent", attachments: [], documents_locked: false })).toBe(false);
+    expect(leaseNeedsFiles({ kind: "generated", status: "signed", attachments: [], documents_locked: false })).toBe(false);
+    // Emailing the tenant locks the documents even while the status is still generated.
+    expect(leaseNeedsFiles({ kind: "generated", status: "generated", attachments: [], documents_locked: true })).toBe(false);
   });
 });

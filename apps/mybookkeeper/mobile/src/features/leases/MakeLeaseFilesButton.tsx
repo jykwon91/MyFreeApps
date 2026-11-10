@@ -1,5 +1,7 @@
-import { useGenerateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
+import { useGenerateSignedLeaseMutation, useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
+import { LEASE_DOCUMENTS_LOCKED_MESSAGE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
+import { isLeaseDocumentsLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseDocumentsLockedFailure";
 import { LoadingButton, useToast } from "@platform/mobile";
 import { useRef } from "react";
 import { MAKE_AND_EMAIL_BODY, makeAndEmailTitle, NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
@@ -10,6 +12,7 @@ import { leaseEmailsOnGenerate } from "./leaseDisplay";
 export default function MakeLeaseFilesButton({ lease }: { lease: SignedLeaseDetail }) {
   const { showToast } = useToast();
   const [generate, { isLoading }] = useGenerateSignedLeaseMutation();
+  const { refetch } = useGetSignedLeaseByIdQuery(lease.id);
   const asking = useRef(false);
 
   async function makeFiles(): Promise<void> {
@@ -17,6 +20,11 @@ export default function MakeLeaseFilesButton({ lease }: { lease: SignedLeaseDeta
       await generate(lease.id).unwrap();
       showToast(MESSAGES.madeFiles);
     } catch (error) {
+      if (isLeaseDocumentsLockedFailure(error)) {
+        showToast(LEASE_DOCUMENTS_LOCKED_MESSAGE, "error");
+        void refetch();
+        return;
+      }
       showToast(httpStatus(error) === 503 ? MESSAGES.storageDown : MESSAGES.makeFilesFailed, "error");
     }
   }

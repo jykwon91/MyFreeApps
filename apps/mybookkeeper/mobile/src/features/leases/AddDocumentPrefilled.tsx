@@ -16,7 +16,7 @@ export default function AddDocumentPrefilled({ leaseId, templateIds }: AddDocume
   const { currentData: lease } = useGetSignedLeaseByIdQuery(leaseId);
   // Picking one that is already on the lease makes it again, and the toast says so.
   const isRemake = lease?.templates.some((template) => templateIds.includes(template.id)) ?? false;
-  const { state, retry } = usePrefillDocuments(leaseId, templateIds);
+  const { state, retry, refresh } = usePrefillDocuments(leaseId, templateIds);
 
   if (state.status === "loading") return <NewLeaseDetailsSkeleton label={MESSAGES.loadingFields} />;
   if (state.status === "failed") {
@@ -26,5 +26,5 @@ export default function AddDocumentPrefilled({ leaseId, templateIds }: AddDocume
       <EmptyState action={{ label: MESSAGES.tryAgain, onPress: retry }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoadFields} />
     );
   }
-  return <AddDocumentForm isRemake={isRemake} items={state.items} leaseId={leaseId} templateIds={templateIds} />;
+  return <AddDocumentForm isRemake={isRemake} items={state.items} leaseId={leaseId} onPrefillStale={refresh} templateIds={templateIds} />;
 }

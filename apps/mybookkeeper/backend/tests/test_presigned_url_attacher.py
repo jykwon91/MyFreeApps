@@ -45,6 +45,7 @@ def _row(**overrides) -> SignedLeaseAttachmentResponse:
         "uploaded_at": _dt.datetime.now(_dt.timezone.utc),
         "presigned_url": None,
         "is_available": True,
+        "is_locked": False,
     }
     base.update(overrides)
     return SignedLeaseAttachmentResponse(**base)

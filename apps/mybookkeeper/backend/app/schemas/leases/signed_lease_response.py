@@ -39,6 +39,9 @@ class SignedLeaseResponse(BaseModel):
     created_at: _dt.datetime
     updated_at: _dt.datetime
     attachments: list[SignedLeaseAttachmentResponse]
+    # The documents are the record of what the tenant was given, so they are
+    # never re-rendered. One server-side rule; the clients only read it.
+    documents_locked: bool = False
     # The most-recent live extension (seed excluded), or null when the lease
     # is at its original term. Drives the Undo button on the frontend; the
     # client checks ``created_at`` against the 30-day undo window to decide

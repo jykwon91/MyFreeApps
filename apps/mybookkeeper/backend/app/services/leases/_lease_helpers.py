@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
+from collections.abc import Sequence
 from typing import Any
 
 from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401
@@ -14,6 +15,8 @@ from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401
 from app.core.datetime_utils import as_utc
 from app.models.applicants.applicant import Applicant
 from app.models.inquiries.inquiry import Inquiry
+from app.models.leases.signed_lease import SignedLease
+from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
 from app.models.properties.property import Property
 from app.models.user.user import User
 from app.repositories.applicants import applicant_repo
@@ -35,6 +38,7 @@ from app.schemas.leases.signed_lease_attachment_response import (
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
 from app.schemas.leases.signed_lease_summary import SignedLeaseSummary
 from app.schemas.leases.signed_lease_template_link import SignedLeaseTemplateLink
+from app.services.leases.lease_documents_lock import is_lease_documents_locked, is_record_file_locked
 from app.services.leases.attachment_response_builder import (
     attach_presigned_urls_to_attachments,
 )
@@ -159,10 +163,23 @@ def _build_summary(
     return summary.model_copy(update=updates)
 
 
-def _attachment_responses(rows) -> list[SignedLeaseAttachmentResponse]:
-    return attach_presigned_urls_to_attachments(
-        [SignedLeaseAttachmentResponse.model_validate(r) for r in rows],
-    )
+_ATTACHMENT_RESPONSE_COMPUTED = frozenset({"presigned_url", "is_available", "is_locked"})
+
+
+def _attachment_response(
+    row: SignedLeaseAttachment, lease: SignedLease, attachments: Sequence[SignedLeaseAttachment],
+) -> SignedLeaseAttachmentResponse:
+    """One file, saying whether it is a record file that can no longer change."""
+    stored = {
+        name: getattr(row, name)
+        for name in SignedLeaseAttachmentResponse.model_fields
+        if name not in _ATTACHMENT_RESPONSE_COMPUTED
+    }
+    return SignedLeaseAttachmentResponse(**stored, is_locked=is_record_file_locked(lease, attachments, row))
+
+
+def _attachment_responses(rows: Sequence[SignedLeaseAttachment], lease: SignedLease) -> list[SignedLeaseAttachmentResponse]:
+    return attach_presigned_urls_to_attachments([_attachment_response(r, lease, rows) for r in rows])
 
 
 def _to_detail(
@@ -195,7 +212,8 @@ def _to_detail(
         last_emailed_to_tenant_at=lease.last_emailed_to_tenant_at,
         created_at=lease.created_at,
         updated_at=lease.updated_at,
-        attachments=_attachment_responses(attachments),
+        attachments=_attachment_responses(attachments, lease),
+        documents_locked=is_lease_documents_locked(lease, attachments),
         latest_extension=latest_extension,
         parent_lease_id=lease.parent_lease_id,
         successor_lease_id=successor_lease_id,

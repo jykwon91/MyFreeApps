@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { Download, Trash2 } from "lucide-react";
+import { LEASE_RECORD_FILE_LOCKED_NOTE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
+import { LEASE_RECORD_KINDS } from "@mybookkeeper/api-client/constants/leaseRecordKinds";
 import { LEASE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
 import {
   LEASE_ATTACHMENT_KINDS,
@@ -11,6 +13,8 @@ import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 export interface LeaseAttachmentRowProps {
   att: SignedLeaseAttachment;
   canWrite: boolean;
+  /** The lease is locked: no file can be relabelled into an original or a signed copy. */
+  isDocumentsLocked: boolean;
   onPreview: () => void;
   onDelete: () => void;
   onKindChange: (kind: LeaseAttachmentKind) => void;
@@ -19,11 +23,13 @@ export interface LeaseAttachmentRowProps {
 export default function LeaseAttachmentRow({
   att,
   canWrite,
+  isDocumentsLocked,
   onPreview,
   onDelete,
   onKindChange,
 }: LeaseAttachmentRowProps) {
   const isMissing = att.is_available === false;
+  const isRecordLocked = att.is_locked;
 
   useEffect(() => {
     if (!isMissing) return;
@@ -67,7 +73,7 @@ export default function LeaseAttachmentRow({
               <Download size={14} />
             </a>
           ) : null}
-          {canWrite ? (
+          {canWrite && !isRecordLocked ? (
             <button
               type="button"
               onClick={onDelete}
@@ -81,7 +87,7 @@ export default function LeaseAttachmentRow({
       </div>
 
       <div className="flex items-center gap-2">
-        {canWrite ? (
+        {canWrite && !isRecordLocked ? (
           <select
             value={att.kind}
             onChange={(e) => onKindChange(e.target.value as LeaseAttachmentKind)}
@@ -90,7 +96,7 @@ export default function LeaseAttachmentRow({
             data-testid={`lease-attachment-kind-picker-${att.id}`}
           >
             {LEASE_ATTACHMENT_KINDS.map((k) => (
-              <option key={k} value={k}>
+              <option key={k} value={k} disabled={isDocumentsLocked && LEASE_RECORD_KINDS.includes(k)}>
                 {LEASE_ATTACHMENT_KIND_LABELS[k]}
               </option>
             ))}
@@ -100,6 +106,14 @@ export default function LeaseAttachmentRow({
             {LEASE_ATTACHMENT_KIND_LABELS[att.kind as LeaseAttachmentKind]}
           </span>
         )}
+        {canWrite && isRecordLocked ? (
+          <span
+            className="text-xs text-muted-foreground"
+            data-testid={`lease-attachment-locked-${att.id}`}
+          >
+            {LEASE_RECORD_FILE_LOCKED_NOTE}
+          </span>
+        ) : null}
       </div>
     </li>
   );
