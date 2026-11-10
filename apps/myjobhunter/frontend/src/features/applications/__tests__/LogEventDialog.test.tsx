@@ -17,7 +17,7 @@ import userEvent from "@testing-library/user-event";
 
 const logEventMock = vi.fn();
 
-vi.mock("@/lib/applicationsApi", () => ({
+vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({
   useLogApplicationEventMutation: () => [logEventMock, { isLoading: false }],
 }));
 

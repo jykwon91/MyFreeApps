@@ -7,9 +7,10 @@
  * vertically. Tapping a card opens the same drawer as the desktop board.
  */
 import { Badge } from "@platform/ui";
-import type { KanbanColumn } from "@/types/kanban/kanban-column";
-import { KANBAN_COLUMN_LABELS, KANBAN_COLUMN_ORDER } from "@/types/kanban/kanban-column";
-import type { KanbanItem } from "@/types/kanban/kanban-item";
+import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
+import { KANBAN_COLUMN_LABELS } from "@myjobhunter/api-client/constants/kanbanColumnLabels";
+import { KANBAN_COLUMN_ORDER } from "@myjobhunter/api-client/constants/kanbanColumnOrder";
+import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
 
 interface KanbanMobileListProps {
   itemsByColumn: Record<KanbanColumn, KanbanItem[]>;

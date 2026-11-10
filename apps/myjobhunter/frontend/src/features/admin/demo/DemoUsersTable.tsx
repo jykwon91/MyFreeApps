@@ -1,6 +1,6 @@
 import { Trash2 } from "lucide-react";
 import { formatDate } from "@platform/ui";
-import type { DemoUser } from "@/types/demo/demo-user";
+import type { DemoUser } from "@myjobhunter/api-client/types/demo/demo-user";
 
 interface DemoUsersTableProps {
   users: DemoUser[];

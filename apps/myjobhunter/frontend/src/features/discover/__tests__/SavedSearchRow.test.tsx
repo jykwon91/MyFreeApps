@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import SavedSearchRow from "../SavedSearchRow";
-import type { DiscoverySource } from "@/types/discovery/discovery-source";
+import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -65,7 +65,7 @@ vi.mock("lucide-react", () => ({
   Trash2: () => null,
 }));
 
-vi.mock("@/store/discoverApi", () => ({
+vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useRefreshDiscoverySourceMutation: () => [vi.fn(), { isLoading: false }],
   useDeactivateDiscoverySourceMutation: () => [vi.fn(), { isLoading: false }],
   useUpdateDiscoverySourceMutation: () => [vi.fn(), { isLoading: false }],

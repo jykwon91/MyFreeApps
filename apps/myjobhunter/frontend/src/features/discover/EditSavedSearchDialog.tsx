@@ -32,14 +32,12 @@ import {
   showSuccess,
   extractErrorMessage,
 } from "@platform/ui";
-import { useUpdateDiscoverySourceMutation } from "@/store/discoverApi";
-import type { DiscoverySource } from "@/types/discovery/discovery-source";
-import type {
-  Country,
-  DatePosted,
-  EmploymentType,
-  Experience,
-} from "@/types/discovery/dialog-enums";
+import { useUpdateDiscoverySourceMutation } from "@myjobhunter/api-client/store/discoverApi";
+import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
+import type { Country } from "@myjobhunter/api-client/types/discovery/country";
+import type { DatePosted } from "@myjobhunter/api-client/types/discovery/date-posted";
+import type { EmploymentType } from "@myjobhunter/api-client/types/discovery/employment-type";
+import type { Experience } from "@myjobhunter/api-client/types/discovery/experience";
 import GreenhouseConfigSection from "./dialog-sections/GreenhouseConfigSection";
 import LeverConfigSection from "./dialog-sections/LeverConfigSection";
 import SearchInputsSection from "./dialog-sections/SearchInputsSection";

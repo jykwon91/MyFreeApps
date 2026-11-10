@@ -12,7 +12,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import type { ResumeUploadJob } from "@/types/resume-upload-job/resume-upload-job";
+import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
 
 // ---------------------------------------------------------------------------
 // Mock child components and @platform/ui to avoid deep render.

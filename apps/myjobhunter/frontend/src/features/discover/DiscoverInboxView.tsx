@@ -5,9 +5,9 @@ import { DISCOVER_EMPTY_STATES } from "@/constants/empty-states";
 import DiscoveredJobCard from "@/features/discover/DiscoveredJobCard";
 import DiscoveredJobsSkeleton from "@/features/discover/DiscoveredJobsSkeleton";
 import ProfileCompletenessBanner from "@/features/discover/ProfileCompletenessBanner";
-import { useListDiscoveredJobsQuery, useListDiscoverySourcesQuery } from "@/store/discoverApi";
-import { useGetProfileQuery } from "@/lib/profileApi";
-import { useListSkillsQuery } from "@/lib/skillsApi";
+import { useListDiscoveredJobsQuery, useListDiscoverySourcesQuery } from "@myjobhunter/api-client/store/discoverApi";
+import { useGetProfileQuery } from "@myjobhunter/api-client/store/profileApi";
+import { useListSkillsQuery } from "@myjobhunter/api-client/store/skillsApi";
 
 // Background scoring runs after /refresh as a FastAPI BackgroundTask
 // (~30s for the prefilter top-N). While a fetch is plausibly still

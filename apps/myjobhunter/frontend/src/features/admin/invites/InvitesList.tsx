@@ -1,6 +1,6 @@
 import { EmptyState, Skeleton } from "@platform/ui";
 import InviteRow from "@/features/admin/invites/InviteRow";
-import { useListInvitesQuery } from "@/store/invitesApi";
+import { useListInvitesQuery } from "@myjobhunter/api-client/store/invitesApi";
 
 const SKELETON_ROWS = 3;
 

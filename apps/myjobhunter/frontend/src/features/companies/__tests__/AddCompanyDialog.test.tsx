@@ -14,7 +14,7 @@ import AddCompanyDialog from "../AddCompanyDialog";
 
 // ---- mocks ----
 
-vi.mock("@/lib/companiesApi", () => ({
+vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
   useCreateCompanyMutation: vi.fn(),
 }));
 
@@ -51,7 +51,7 @@ vi.mock("@platform/ui", async (importOriginal) => {
   };
 });
 
-import { useCreateCompanyMutation } from "@/lib/companiesApi";
+import { useCreateCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
 import { showSuccess, showError } from "@platform/ui";
 
 const mockUseCreateCompanyMutation = vi.mocked(useCreateCompanyMutation);

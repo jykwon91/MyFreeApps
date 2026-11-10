@@ -33,8 +33,8 @@ import KanbanMobileList from "./KanbanMobileList";
 import KanbanEmptyState from "./KanbanEmptyState";
 import { useKanbanDragHandler } from "./use-kanban-drag-handler";
 import { columnForEventType } from "./kanban-stage-mapping";
-import type { KanbanColumn as KanbanColumnId } from "@/types/kanban/kanban-column";
-import type { KanbanItem } from "@/types/kanban/kanban-item";
+import type { KanbanColumn as KanbanColumnId } from "@myjobhunter/api-client/types/kanban/kanban-column";
+import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
 
 interface KanbanBoardProps {
   items: KanbanItem[];

@@ -12,7 +12,7 @@
  */
 import { useState } from "react";
 import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
-import { useUpdateDiscoverySourceMutation } from "@/store/discoverApi";
+import { useUpdateDiscoverySourceMutation } from "@myjobhunter/api-client/store/discoverApi";
 import { REFRESH_INTERVAL_OPTIONS } from "./refresh-interval";
 
 interface EditFrequencyPopoverProps {

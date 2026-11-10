@@ -1,9 +1,9 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import { X } from "lucide-react";
-import { useCreateCompanyMutation } from "@/lib/companiesApi";
-import type { Company } from "@/types/company";
-import type { CompanyCreateRequest } from "@/types/company-create-request";
+import { useCreateCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
+import type { Company } from "@myjobhunter/api-client/types/company";
+import type { CompanyCreateRequest } from "@myjobhunter/api-client/types/company-create-request";
 import CompanyForm from "./CompanyForm";
 
 export interface AddCompanyDialogProps {

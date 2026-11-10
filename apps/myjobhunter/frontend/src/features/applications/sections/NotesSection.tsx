@@ -10,7 +10,7 @@
  *   the security review.
  */
 import { useEffect, useRef, useState } from "react";
-import { useUpdateApplicationMutation } from "@/lib/applicationsApi";
+import { useUpdateApplicationMutation } from "@myjobhunter/api-client/store/applicationsApi";
 import { extractErrorMessage } from "@platform/ui";
 
 interface NotesSectionProps {

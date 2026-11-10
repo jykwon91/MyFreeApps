@@ -1,5 +1,5 @@
 import ParseProvenanceWarning from "@/features/profile/ParseProvenanceWarning";
-import type { ResumeJobParsedFields } from "@/types/resume-upload-job/resume-upload-job";
+import type { ResumeJobParsedFields } from "@myjobhunter/api-client/types/resume-upload-job/resume-job-parsed-fields";
 
 export interface ResumeJobParsedPanelProps {
   parsed: ResumeJobParsedFields;

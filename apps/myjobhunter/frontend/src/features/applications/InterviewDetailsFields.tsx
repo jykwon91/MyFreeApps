@@ -6,7 +6,7 @@
  * gets serialised into the `interview_details` JSONB column at submit time.
  */
 import type { UseFormRegister, FieldErrors } from "react-hook-form";
-import type { InterviewType } from "@/types/interview-details";
+import type { InterviewType } from "@myjobhunter/api-client/types/interview-type";
 import type { LogEventFormValues } from "./interviewEventForm";
 
 const INTERVIEW_TYPE_OPTIONS: { value: InterviewType; label: string }[] = [

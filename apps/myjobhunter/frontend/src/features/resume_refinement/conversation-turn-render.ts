@@ -1,4 +1,4 @@
-import type { RefinementTurn } from "@/types/resume-refinement/refinement-turn";
+import type { RefinementTurn } from "@myjobhunter/api-client/types/resume-refinement/refinement-turn";
 
 /**
  * Pure render helpers for the conversation transcript. Shared by

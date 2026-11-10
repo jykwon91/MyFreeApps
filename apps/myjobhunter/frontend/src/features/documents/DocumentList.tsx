@@ -4,14 +4,14 @@ import { Download, Edit2, ExternalLink, Trash2 } from "lucide-react";
 import { Badge, EmptyState, Skeleton, showError, showSuccess, extractErrorMessage, formatFileSize } from "@platform/ui";
 import DocumentKindBadge from "@/features/documents/DocumentKindBadge";
 import DocumentEditDialog from "@/features/documents/DocumentEditDialog";
-import type { Document } from "@/types/document/document";
-import type { DocumentKind } from "@/types/document/document-kind";
+import type { Document } from "@myjobhunter/api-client/types/document/document";
+import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
 import { DOCUMENT_KIND_OPTIONS } from "@/features/documents/document-kind-labels";
 import {
   useListDocumentsQuery,
   useDeleteDocumentMutation,
   useGetDocumentDownloadUrlQuery,
-} from "@/lib/documentsApi";
+} from "@myjobhunter/api-client/store/documentsApi";
 
 export interface DocumentListProps {
   /** When set, only shows documents for this application. */

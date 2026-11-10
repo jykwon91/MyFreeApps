@@ -11,7 +11,7 @@ import {
   useSupplyCustomRewriteMutation,
   useRequestAlternativeMutation,
   useSkipTargetMutation,
-} from "@/lib/resumeRefinementApi";
+} from "@myjobhunter/api-client/store/resumeRefinementApi";
 import { SuggestionMode } from "@/features/resume_refinement/suggestion-mode";
 import SuggestionBody from "@/features/resume_refinement/SuggestionBody";
 import SuggestionActions from "@/features/resume_refinement/SuggestionActions";
@@ -24,7 +24,7 @@ import {
   SEVERITY_BADGE_CLASS,
   SEVERITY_LABEL,
 } from "@/features/resume_refinement/improvement-target-labels";
-import type { RefinementSession } from "@/types/resume-refinement/refinement-session";
+import type { RefinementSession } from "@myjobhunter/api-client/types/resume-refinement/refinement-session";
 
 interface PendingProposalCardProps {
   session: RefinementSession;

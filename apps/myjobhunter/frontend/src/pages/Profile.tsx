@@ -21,17 +21,17 @@ import ResumeUploadSection from "@/features/profile/ResumeUploadSection";
 import SkillAddForm from "@/features/profile/SkillAddForm";
 import ScreeningAnswerRow from "@/features/profile/ScreeningAnswerRow";
 import { REMOTE_PREF_LABELS, formatDateRange } from "@/features/profile/profile-format";
-import { useGetProfileQuery, useUpdateProfileMutation } from "@/lib/profileApi";
-import { useListWorkHistoryQuery, useDeleteWorkHistoryMutation } from "@/lib/workHistoryApi";
-import { useListEducationQuery, useDeleteEducationMutation } from "@/lib/educationApi";
-import { useListSkillsQuery, useDeleteSkillMutation } from "@/lib/skillsApi";
+import { useGetProfileQuery, useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileApi";
+import { useListWorkHistoryQuery, useDeleteWorkHistoryMutation } from "@myjobhunter/api-client/store/workHistoryApi";
+import { useListEducationQuery, useDeleteEducationMutation } from "@myjobhunter/api-client/store/educationApi";
+import { useListSkillsQuery, useDeleteSkillMutation } from "@myjobhunter/api-client/store/skillsApi";
 import {
   useListScreeningAnswersQuery,
   useDeleteScreeningAnswerMutation,
-} from "@/lib/screeningAnswersApi";
-import type { WorkHistory } from "@/types/work-history/work-history";
-import type { Education } from "@/types/education/education";
-import type { ScreeningAnswer } from "@/types/screening-answer/screening-answer";
+} from "@myjobhunter/api-client/store/screeningAnswersApi";
+import type { WorkHistory } from "@myjobhunter/api-client/types/work-history/work-history";
+import type { Education } from "@myjobhunter/api-client/types/education/education";
+import type { ScreeningAnswer } from "@myjobhunter/api-client/types/screening-answer/screening-answer";
 
 // ---------------------------------------------------------------------------
 // Main Profile page

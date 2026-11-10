@@ -18,13 +18,12 @@
  */
 import { Badge } from "@platform/ui";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
-import type { JobAnalysisDimension } from "@/types/job-analysis/job-analysis-dimension";
-import {
-  DIMENSION_KEY_ORDER,
-  DIMENSION_LABELS,
-  DIMENSION_STATUS_LABELS,
-  DIMENSION_STATUS_TONES,
-} from "@/types/job-analysis/job-analysis-dimension";
+import type { JobAnalysisDimension } from "@myjobhunter/api-client/types/job-analysis/job-analysis-dimension";
+import { DIMENSION_KEY_ORDER } from "@myjobhunter/api-client/constants/jobAnalysisDimensionKeys";
+import { DIMENSION_LABELS } from "@myjobhunter/api-client/constants/jobAnalysisDimensionLabels";
+import { DIMENSION_STATUS_LABELS } from "@myjobhunter/api-client/constants/jobAnalysisDimensionStatusLabels";
+import { isDimensionKey } from "@myjobhunter/api-client/utils/isDimensionKey";
+import { DIMENSION_STATUS_TONES } from "@/constants/jobAnalysisDimensionTones";
 
 interface DimensionsTableProps {
   dimensions: JobAnalysisDimension[];
@@ -98,7 +97,7 @@ export default function DimensionsTable({
 }
 
 function DimensionRow({ row }: { row: JobAnalysisDimension }) {
-  const label = DIMENSION_LABELS[row.key] ?? row.key;
+  const label = isDimensionKey(row.key) ? DIMENSION_LABELS[row.key] : row.key;
   const statusLabel = DIMENSION_STATUS_LABELS[row.status] ?? row.status;
   const tone = DIMENSION_STATUS_TONES[row.status] ?? "gray";
   return (
@@ -163,7 +162,7 @@ function orderedDimensions(
   // Append any unknown dimensions at the end so future enum additions
   // surface in the UI even if the type union hasn't caught up.
   for (const row of dimensions) {
-    if (!DIMENSION_KEY_ORDER.includes(row.key)) {
+    if (!isDimensionKey(row.key)) {
       ordered.push(row);
     }
   }

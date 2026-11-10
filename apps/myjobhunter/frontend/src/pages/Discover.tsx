@@ -8,7 +8,7 @@ import DiscoverViewTabs from "@/features/discover/DiscoverViewTabs";
 import NewSavedSearchDialog from "@/features/discover/NewSavedSearchDialog";
 import SavedSearchesPanel from "@/features/discover/SavedSearchesPanel";
 import SourceFilterChips from "@/features/discover/SourceFilterChips";
-import { useListDiscoverySourcesQuery } from "@/store/discoverApi";
+import { useListDiscoverySourcesQuery } from "@myjobhunter/api-client/store/discoverApi";
 import type { DiscoverView } from "@/types/discovery/discover-view";
 
 /**

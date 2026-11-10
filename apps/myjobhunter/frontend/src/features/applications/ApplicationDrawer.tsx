@@ -34,18 +34,16 @@ import {
   useDeleteApplicationMutation,
   useUpdateApplicationMutation,
   useTransitionApplicationMutation,
-} from "@/lib/applicationsApi";
-import { useGetCompanyQuery } from "@/lib/companiesApi";
+} from "@myjobhunter/api-client/store/applicationsApi";
+import { useGetCompanyQuery } from "@myjobhunter/api-client/store/companiesApi";
 import OverviewSection from "./sections/OverviewSection";
 import EventsSection from "./sections/EventsSection";
 import DocumentsSection from "./sections/DocumentsSection";
 import ContactsSection from "./sections/ContactsSection";
 import NotesSection from "./sections/NotesSection";
-import {
-  KANBAN_COLUMN_LABELS,
-  KANBAN_COLUMN_ORDER,
-  type KanbanColumn,
-} from "@/types/kanban/kanban-column";
+import { KANBAN_COLUMN_LABELS } from "@myjobhunter/api-client/constants/kanbanColumnLabels";
+import { KANBAN_COLUMN_ORDER } from "@myjobhunter/api-client/constants/kanbanColumnOrder";
+import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
 import { columnForEventType } from "@/features/kanban/kanban-stage-mapping";
 import ApplicationDetailSkeleton from "./ApplicationDetailSkeleton";
 

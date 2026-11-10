@@ -7,14 +7,14 @@ import Applications from "@/pages/Applications";
 // Mock RTK Query hooks
 // ---------------------------------------------------------------------------
 
-vi.mock("@/lib/applicationsApi", () => ({
+vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({
   useListApplicationsQuery: vi.fn(),
   useCreateApplicationMutation: vi.fn(),
   useParseJobDescriptionMutation: vi.fn(),
   useExtractJdFromUrlMutation: vi.fn(),
 }));
 
-vi.mock("@/lib/companiesApi", () => ({
+vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
   useListCompaniesQuery: vi.fn(),
   useCreateCompanyMutation: vi.fn(),
   useTriggerCompanyResearchMutation: vi.fn(),
@@ -51,12 +51,12 @@ import {
   useCreateApplicationMutation,
   useParseJobDescriptionMutation,
   useExtractJdFromUrlMutation,
-} from "@/lib/applicationsApi";
+} from "@myjobhunter/api-client/store/applicationsApi";
 import {
   useListCompaniesQuery,
   useCreateCompanyMutation,
   useTriggerCompanyResearchMutation,
-} from "@/lib/companiesApi";
+} from "@myjobhunter/api-client/store/companiesApi";
 
 const mockUseListApplicationsQuery = vi.mocked(useListApplicationsQuery);
 const mockUseCreateApplicationMutation = vi.mocked(useCreateApplicationMutation);

@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CompanyForm from "../CompanyForm";
-import type { CompanyCreateRequest } from "@/types/company-create-request";
+import type { CompanyCreateRequest } from "@myjobhunter/api-client/types/company-create-request";
 
 vi.mock("@platform/ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@platform/ui")>();

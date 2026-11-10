@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Badge, LoadingButton } from "@platform/ui";
-import type { CompanyResearch, ResearchSentiment } from "@/types/company-research";
+import type { CompanyResearch } from "@myjobhunter/api-client/types/company-research";
+import type { ResearchSentiment } from "@myjobhunter/api-client/types/research-sentiment";
 import FlagsSection from "./FlagsSection";
 import SourcesList from "./SourcesList";
 

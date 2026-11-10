@@ -1,8 +1,9 @@
 import { useState, useRef } from "react";
 import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
-import type { DocumentKind } from "@/types/document/document-kind";
+import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
 import { DOCUMENT_KIND_OPTIONS } from "@/features/documents/document-kind-labels";
-import { useCreateDocumentMutation, useUploadDocumentMutation } from "@/lib/documentsApi";
+import { buildDocumentUploadForm } from "@/features/documents/buildDocumentUploadForm";
+import { useCreateDocumentMutation, useUploadDocumentMutation } from "@myjobhunter/api-client/store/documentsApi";
 
 export interface DocumentUploadDialogProps {
   open: boolean;
@@ -55,12 +56,14 @@ export default function DocumentUploadDialog({
           showError("Please select a file");
           return;
         }
-        await uploadDocument({
-          title,
-          kind,
-          application_id: applicationId ?? null,
-          file: selectedFile,
-        }).unwrap();
+        await uploadDocument(
+          buildDocumentUploadForm({
+            title,
+            kind,
+            application_id: applicationId ?? null,
+            file: selectedFile,
+          }),
+        ).unwrap();
       }
       showSuccess("Document created");
       reset();

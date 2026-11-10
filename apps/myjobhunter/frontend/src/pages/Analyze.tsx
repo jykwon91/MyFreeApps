@@ -50,10 +50,10 @@ import {
 import {
   useAnalyzeJobMutation,
   useApplyFromAnalysisMutation,
-} from "@/lib/jobAnalysisApi";
-import { setLastAnalysis, clearLastAnalysis } from "@/store/jobAnalysisSlice";
+} from "@myjobhunter/api-client/store/jobAnalysisApi";
+import { setLastAnalysis, clearLastAnalysis } from "@myjobhunter/api-client/store/jobAnalysisSlice";
 import type { RootState } from "@/lib/store";
-import type { JobAnalysis } from "@/types/job-analysis/job-analysis";
+import type { JobAnalysis } from "@myjobhunter/api-client/types/job-analysis/job-analysis";
 
 const PROCESSING_LONG_RUNNING_THRESHOLD_MS = 3000;
 

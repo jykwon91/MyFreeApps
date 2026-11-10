@@ -7,7 +7,7 @@
  *   'ready'       — research record exists and is loaded
  *   'failed'      — mutation or query errored with a non-404 status
  */
-import type { CompanyResearch } from "@/types/company-research";
+import type { CompanyResearch } from "@myjobhunter/api-client/types/company-research";
 
 export type CompanyResearchMode = "no-research" | "loading" | "ready" | "failed";
 

@@ -5,7 +5,7 @@
  * The combobox handles both selecting an existing company and creating
  * a new one on the fly.
  */
-import type { Company } from "@/types/company";
+import type { Company } from "@myjobhunter/api-client/types/company";
 import CompanyCombobox from "../CompanyCombobox";
 
 interface ManualEntryStepProps {

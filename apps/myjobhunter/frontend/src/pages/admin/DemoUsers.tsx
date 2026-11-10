@@ -10,15 +10,15 @@ import {
   useCreateDemoUserMutation,
   useDeleteDemoUserMutation,
   useListDemoUsersQuery,
-} from "@/lib/demoUsersApi";
+} from "@myjobhunter/api-client/store/demoUsersApi";
 import CreateDemoDialog from "@/features/admin/demo/CreateDemoDialog";
 import CredentialsModal from "@/features/admin/demo/CredentialsModal";
 import DeleteDemoConfirmDialog from "@/features/admin/demo/DeleteDemoConfirmDialog";
 import DemoUsersEmptyState from "@/features/admin/demo/DemoUsersEmptyState";
 import DemoUsersSkeleton from "@/features/admin/demo/DemoUsersSkeleton";
 import DemoUsersTable from "@/features/admin/demo/DemoUsersTable";
-import type { DemoCredentials } from "@/types/demo/demo-credentials";
-import type { DemoUser } from "@/types/demo/demo-user";
+import type { DemoCredentials } from "@myjobhunter/api-client/types/demo/demo-credentials";
+import type { DemoUser } from "@myjobhunter/api-client/types/demo/demo-user";
 
 export default function DemoUsers() {
   const { data, isLoading, isError, error } = useListDemoUsersQuery();

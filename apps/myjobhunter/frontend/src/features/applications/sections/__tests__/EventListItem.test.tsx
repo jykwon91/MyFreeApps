@@ -15,11 +15,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import EventListItem from "../EventListItem";
-import type { ApplicationEvent } from "@/types/application-event";
+import type { ApplicationEvent } from "@myjobhunter/api-client/types/application-event";
 
 const updateEventMock = vi.fn();
 
-vi.mock("@/lib/applicationsApi", () => ({
+vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({
   useUpdateApplicationEventMutation: () => [updateEventMock, { isLoading: false }],
 }));
 

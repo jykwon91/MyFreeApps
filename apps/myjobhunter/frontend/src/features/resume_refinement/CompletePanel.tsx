@@ -7,9 +7,9 @@ import {
   extractErrorMessage,
 } from "@platform/ui";
 import api from "@/lib/api";
-import { useCompleteRefinementSessionMutation } from "@/lib/resumeRefinementApi";
+import { useCompleteRefinementSessionMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
 import { ExportFormat } from "@/features/resume_refinement/export-format";
-import type { RefinementSession } from "@/types/resume-refinement/refinement-session";
+import type { RefinementSession } from "@myjobhunter/api-client/types/resume-refinement/refinement-session";
 
 interface CompletePanelProps {
   session: RefinementSession;

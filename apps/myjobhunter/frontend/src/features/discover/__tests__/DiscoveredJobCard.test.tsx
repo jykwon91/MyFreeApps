@@ -6,8 +6,8 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DiscoveredJobCard from "../DiscoveredJobCard";
-import type { DiscoveredJob } from "@/types/discovery/discovered-job";
-import type { DiscoverySource } from "@/types/discovery/discovery-source";
+import type { DiscoveredJob } from "@myjobhunter/api-client/types/discovery/discovered-job";
+import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
 
 vi.mock("lucide-react", () => ({
   Bookmark: () => null,
@@ -33,7 +33,7 @@ vi.mock("@platform/ui", () => ({
   extractErrorMessage: vi.fn(),
 }));
 
-vi.mock("@/store/discoverApi", () => ({
+vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useDismissDiscoveredJobMutation: () => [vi.fn(), { isLoading: false }],
   useSaveDiscoveredJobMutation: () => [vi.fn(), { isLoading: false }],
   usePromoteDiscoveredJobMutation: () => [vi.fn(), { isLoading: false }],

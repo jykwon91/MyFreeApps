@@ -3,9 +3,9 @@ import { ChevronLeft, ExternalLink as ExternalLinkIcon, Trash2 } from "lucide-re
 import { Badge, DataTable, showSuccess, showError, extractErrorMessage, type ColumnDef } from "@platform/ui";
 import CompanyDetailSkeleton from "@/features/companies/CompanyDetailSkeleton";
 import CompanyResearchPanel from "@/features/companies/CompanyResearchPanel";
-import { useGetCompanyQuery, useDeleteCompanyMutation } from "@/lib/companiesApi";
-import { useListApplicationsQuery } from "@/lib/applicationsApi";
-import type { Application } from "@/types/application";
+import { useGetCompanyQuery, useDeleteCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
+import { useListApplicationsQuery } from "@myjobhunter/api-client/store/applicationsApi";
+import type { Application } from "@myjobhunter/api-client/types/application";
 
 const APPLICATION_COLUMNS: ColumnDef<Application>[] = [
   {

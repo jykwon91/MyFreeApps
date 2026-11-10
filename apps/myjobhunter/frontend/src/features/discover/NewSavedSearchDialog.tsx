@@ -7,8 +7,8 @@ import {
   InlineBoldText,
   Skeleton,
 } from "@platform/ui";
-import { useCreateDiscoverySourceMutation } from "@/store/discoverApi";
-import { useUpdateProfileMutation } from "@/lib/profileApi";
+import { useCreateDiscoverySourceMutation } from "@myjobhunter/api-client/store/discoverApi";
+import { useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileApi";
 import { buildSavedSearchSummary } from "./saved-search-summary";
 import { useDiscoveryDefaultsPrefill } from "./useDiscoveryDefaultsPrefill";
 import SearchInputsSection from "./dialog-sections/SearchInputsSection";
@@ -21,12 +21,10 @@ import {
   DEFAULT_REFRESH_INTERVAL_MINUTES,
   REFRESH_INTERVAL_OPTIONS,
 } from "./refresh-interval";
-import type {
-  Country,
-  DatePosted,
-  EmploymentType,
-  Experience,
-} from "@/types/discovery/dialog-enums";
+import type { Country } from "@myjobhunter/api-client/types/discovery/country";
+import type { DatePosted } from "@myjobhunter/api-client/types/discovery/date-posted";
+import type { EmploymentType } from "@myjobhunter/api-client/types/discovery/employment-type";
+import type { Experience } from "@myjobhunter/api-client/types/discovery/experience";
 
 /** The three source types that have shipped adapters. */
 type SourceKind = "jsearch" | "greenhouse" | "lever";

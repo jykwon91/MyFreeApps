@@ -1,5 +1,6 @@
 import { FormField } from "@platform/ui";
-import type { EmploymentType, Experience } from "@/types/discovery/dialog-enums";
+import type { EmploymentType } from "@myjobhunter/api-client/types/discovery/employment-type";
+import type { Experience } from "@myjobhunter/api-client/types/discovery/experience";
 
 const INPUT_CLASS =
   "w-full px-3 py-2 border border-input rounded-md bg-background text-foreground";

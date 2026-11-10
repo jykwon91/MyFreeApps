@@ -1,5 +1,5 @@
 import { makeTarget } from "./makeTarget";
-import type { RefinementSession } from "@/types/resume-refinement/refinement-session";
+import type { RefinementSession } from "@myjobhunter/api-client/types/resume-refinement/refinement-session";
 
 export function makeRefinementSession(overrides: Partial<RefinementSession> = {}): RefinementSession {
   return {

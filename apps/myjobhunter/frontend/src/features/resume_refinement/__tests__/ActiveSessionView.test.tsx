@@ -7,7 +7,7 @@ import { makeTarget } from "./makeTarget";
 
 const createTargetFromLine = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 
-vi.mock("@/lib/resumeRefinementApi", () => ({
+vi.mock("@myjobhunter/api-client/store/resumeRefinementApi", () => ({
   useCreateTargetFromLineMutation: () => [createTargetFromLine, { isLoading: false }],
 }));
 

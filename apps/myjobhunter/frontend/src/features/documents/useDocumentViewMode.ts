@@ -1,4 +1,4 @@
-import type { Document } from "@/types/document/document";
+import type { Document } from "@myjobhunter/api-client/types/document/document";
 
 export type DocumentViewMode =
   | "loading"

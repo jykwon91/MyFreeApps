@@ -1,11 +1,11 @@
 # Types
 
-Per-domain TypeScript types land here in Phase 2, one file per domain.
+Web-only types: form state, UI view modes, and anything that touches the
+browser (for example a `File` from an `<input type="file">`).
 
-Examples coming in Phase 2:
-- `application.ts` — Application, ApplicationStatus, ApplicationDetail
-- `company.ts` — Company, CompanyDetail
-- `profile.ts` — Profile, WorkExperience, Education, Skill
-- `user.ts` — User, UserSettings
+API request/response types live in `@myjobhunter/api-client`
+(`apps/myjobhunter/api-client/src/types/`), shared by the web app and the
+phone app. Import them from there, e.g.
+`@myjobhunter/api-client/types/application/applications-filter`.
 
-Convention: one type/interface per file. Never group multiple unrelated types in the same file.
+Convention: one type/interface per file.

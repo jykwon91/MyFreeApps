@@ -1,4 +1,4 @@
-import type { DocumentKind } from "@/types/document/document-kind";
+import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
 
 export const DOCUMENT_KIND_LABELS: Record<DocumentKind, string> = {
   cover_letter: "Cover Letter",

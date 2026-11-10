@@ -15,7 +15,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 import NavigationButtons from "../NavigationButtons";
-import { NavDirection } from "../nav-direction";
+import { NavDirection } from "@myjobhunter/api-client/types/resume-refinement/nav-direction";
 
 const showError = vi.fn();
 let navigateUnwrap: ReturnType<typeof vi.fn>;
@@ -33,7 +33,7 @@ vi.mock("@platform/ui", () => ({
     err instanceof Error ? err.message : "unknown error",
 }));
 
-vi.mock("@/lib/resumeRefinementApi", () => ({
+vi.mock("@myjobhunter/api-client/store/resumeRefinementApi", () => ({
   useNavigateRefinementMutation: () => [
     vi.fn((args: unknown) => {
       lastNavArgs = args;

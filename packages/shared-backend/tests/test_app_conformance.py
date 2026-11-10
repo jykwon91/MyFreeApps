@@ -2040,13 +2040,16 @@ class TestSharedCoreStaysPlatformNeutral:
         re.DOTALL,
     )
     _INTERPOLATION = re.compile(r"\$\{([^{}]*)\}")
+    # A field that opens a line, like `location: string | null;` in a response type,
+    # names the API's data, not the browser's global. Only the key goes; its value stays.
+    _PROPERTY_KEY = re.compile(r"^(\s*(?:readonly\s+)?)\w+\??:", re.M)
 
     def _code_only(self, source: str) -> str:
         def keep(match: re.Match[str]) -> str:
             text = match.group(0)
             return " ".join(self._INTERPOLATION.findall(text)) if text.startswith("`") else ""
 
-        return self._STRING_OR_COMMENT.sub(keep, source)
+        return self._PROPERTY_KEY.sub(r"\1:", self._STRING_OR_COMMENT.sub(keep, source))
 
     def _sources(self) -> list[Path]:
         files = []
@@ -2073,6 +2076,10 @@ class TestSharedCoreStaysPlatformNeutral:
             ("const s = `${window.innerWidth}px`;", True),
             ("const s = `a`; document.title = s;", True),
             ("const url = `https://x//${location.host}`;", True),
+            ("interface Job {\n  location: string | null;\n}", False),
+            ("interface Job {\n  readonly location?: string;\n}", False),
+            ("const job = {\n  location: window.location.href,\n};", True),
+            ("const a = ok\n  ? x\n  : document.title;", True),
         ],
     )
     def test_reads_code_not_copy(self, source: str, flagged: bool) -> None:

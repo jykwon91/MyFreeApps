@@ -9,7 +9,7 @@ import {
 } from "@platform/ui";
 import { Briefcase } from "lucide-react";
 import { register } from "@/lib/auth";
-import { useGetInviteInfoQuery } from "@/store/invitesApi";
+import { useGetInviteInfoQuery } from "@myjobhunter/api-client/store/invitesApi";
 
 const INVITE_TOKEN_STORAGE_KEY = "myjobhunter.pendingInviteToken";
 

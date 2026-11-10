@@ -5,9 +5,9 @@
  * They are extracted from useAddApplicationFlow to keep the hook focused
  * on state transitions and async logic.
  */
-import type { Company } from "@/types/company";
+import type { Company } from "@myjobhunter/api-client/types/company";
 import type { ReviewCompanyState } from "../useAddApplicationDialogState";
-import type { JdUrlExtractResponse } from "@/types/application/jd-url-extract-response";
+import type { JdUrlExtractResponse } from "@myjobhunter/api-client/types/application/jd-url-extract-response";
 
 const NOTES_MAX_LEN = 5000;
 

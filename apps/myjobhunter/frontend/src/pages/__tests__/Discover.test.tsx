@@ -12,7 +12,7 @@ import Discover from "@/pages/Discover";
 // Discover.tsx; mutations live in sub-components that are mocked below.
 // ---------------------------------------------------------------------------
 
-vi.mock("@/store/discoverApi", () => ({
+vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useListDiscoverySourcesQuery: vi.fn(),
   useListDiscoveredJobsQuery: vi.fn(),
 }));
@@ -50,7 +50,7 @@ vi.mock("@platform/ui", async (importOriginal) => {
 import {
   useListDiscoverySourcesQuery,
   useListDiscoveredJobsQuery,
-} from "@/store/discoverApi";
+} from "@myjobhunter/api-client/store/discoverApi";
 
 const mockListSources = vi.mocked(useListDiscoverySourcesQuery);
 const mockListJobs = vi.mocked(useListDiscoveredJobsQuery);

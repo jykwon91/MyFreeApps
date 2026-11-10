@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { AlertTriangle, Check, Copy } from "lucide-react";
-import type { DemoCredentials } from "@/types/demo/demo-credentials";
+import type { DemoCredentials } from "@myjobhunter/api-client/types/demo/demo-credentials";
 
 interface CredentialsModalProps {
   open: boolean;

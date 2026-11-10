@@ -13,7 +13,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CompanyResearchPanelBody from "../CompanyResearchPanelBody";
 import type { CompanyResearchMode } from "../useCompanyResearchMode";
-import type { CompanyResearch } from "@/types/company-research";
+import type { CompanyResearch } from "@myjobhunter/api-client/types/company-research";
 
 // ---------------------------------------------------------------------------
 // Mocks

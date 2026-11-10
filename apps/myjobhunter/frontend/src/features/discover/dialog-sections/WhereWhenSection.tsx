@@ -1,5 +1,6 @@
 import { FormField } from "@platform/ui";
-import type { Country, DatePosted } from "@/types/discovery/dialog-enums";
+import type { Country } from "@myjobhunter/api-client/types/discovery/country";
+import type { DatePosted } from "@myjobhunter/api-client/types/discovery/date-posted";
 
 const INPUT_CLASS =
   "w-full px-3 py-2 border border-input rounded-md bg-background text-foreground";

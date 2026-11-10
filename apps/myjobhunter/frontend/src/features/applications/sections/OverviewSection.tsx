@@ -7,7 +7,7 @@
  */
 import { ExternalLink as ExternalLinkIcon } from "lucide-react";
 import { formatSalaryRange } from "@platform/ui";
-import type { Application } from "@/types/application";
+import type { Application } from "@myjobhunter/api-client/types/application";
 
 interface OverviewSectionProps {
   application: Application;

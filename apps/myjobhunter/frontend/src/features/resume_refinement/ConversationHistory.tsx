@@ -3,7 +3,7 @@ import ConversationBubble from "@/features/resume_refinement/ConversationBubble"
 import SectionDivider from "@/features/resume_refinement/SectionDivider";
 import PendingEchoBubbles from "@/features/resume_refinement/PendingEchoBubbles";
 import { buildItems } from "@/features/resume_refinement/conversation-turn-render";
-import type { RefinementTurn } from "@/types/resume-refinement/refinement-turn";
+import type { RefinementTurn } from "@myjobhunter/api-client/types/resume-refinement/refinement-turn";
 
 interface ConversationHistoryProps {
   turns: RefinementTurn[];

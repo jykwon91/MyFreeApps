@@ -246,6 +246,14 @@ jobs:
       - name: Test frontend
         run: npm test --workspace=myjobhunter-frontend
 
+      - name: Check API client
+        # Runs even when the website tests fail, so one red run shows both problems.
+        if: ${{ !cancelled() }}
+        run: |
+          npm run typecheck --workspace=@myjobhunter/api-client
+          npm run lint --workspace=@myjobhunter/api-client
+          npm test --workspace=@myjobhunter/api-client
+
   caddy-image:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}

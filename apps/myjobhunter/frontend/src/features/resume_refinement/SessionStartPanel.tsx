@@ -8,8 +8,8 @@ import {
   showError,
   extractErrorMessage,
 } from "@platform/ui";
-import { useListResumeJobsQuery } from "@/lib/resumesApi";
-import { useStartRefinementSessionMutation } from "@/lib/resumeRefinementApi";
+import { useListResumeJobsQuery } from "@myjobhunter/api-client/store/resumesApi";
+import { useStartRefinementSessionMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
 import ResumeJobOption from "@/features/resume_refinement/ResumeJobOption";
 
 interface SessionStartPanelProps {

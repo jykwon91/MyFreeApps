@@ -5,7 +5,7 @@
  * CompanyResearchPanel. Each mode branch is a separate file under research/.
  */
 import type { CompanyResearchMode } from "@/features/companies/useCompanyResearchMode";
-import type { CompanyResearch } from "@/types/company-research";
+import type { CompanyResearch } from "@myjobhunter/api-client/types/company-research";
 import NoResearchState from "./research/NoResearchState";
 import LoadingState from "./research/LoadingState";
 import ReadyState from "./research/ReadyState";

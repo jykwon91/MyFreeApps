@@ -5,9 +5,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import SavedSearchesPanel from "../SavedSearchesPanel";
-import type { DiscoverySource } from "@/types/discovery/discovery-source";
+import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
 
-vi.mock("@/store/discoverApi", () => ({
+vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useListDiscoverySourcesQuery: vi.fn(),
   useRefreshDiscoverySourceMutation: vi.fn(),
   useDeactivateDiscoverySourceMutation: vi.fn(),
@@ -87,7 +87,7 @@ import {
   useListDiscoverySourcesQuery,
   useRefreshDiscoverySourceMutation,
   useDeactivateDiscoverySourceMutation,
-} from "@/store/discoverApi";
+} from "@myjobhunter/api-client/store/discoverApi";
 
 const mockListSources = vi.mocked(useListDiscoverySourcesQuery);
 

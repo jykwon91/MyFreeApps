@@ -15,11 +15,11 @@ import {
   useDismissDiscoveredJobMutation,
   usePromoteDiscoveredJobMutation,
   useSaveDiscoveredJobMutation,
-  type DismissalReason,
-} from "@/store/discoverApi";
-import type { DiscoveredJob } from "@/types/discovery/discovered-job";
-import type { DiscoverySource } from "@/types/discovery/discovery-source";
-import type { JobAnalysisVerdict } from "@/types/job-analysis/job-analysis-verdict";
+} from "@myjobhunter/api-client/store/discoverApi";
+import type { DismissalReason } from "@myjobhunter/api-client/types/discovery/dismissal-reason";
+import type { DiscoveredJob } from "@myjobhunter/api-client/types/discovery/discovered-job";
+import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
+import type { JobAnalysisVerdict } from "@myjobhunter/api-client/types/job-analysis/job-analysis-verdict";
 import DismissReasonPopover from "./DismissReasonPopover";
 import UndoDismissToast from "./UndoDismissToast";
 

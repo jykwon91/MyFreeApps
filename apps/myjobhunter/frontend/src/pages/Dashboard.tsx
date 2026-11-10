@@ -10,7 +10,7 @@ import { useSearchParams } from "react-router-dom";
 import KanbanBoard from "@/features/kanban/KanbanBoard";
 import ApplicationDrawer from "@/features/applications/ApplicationDrawer";
 import DashboardSkeleton from "@/features/dashboard/DashboardSkeleton";
-import { useListApplicationsKanbanQuery } from "@/lib/applicationsApi";
+import { useListApplicationsKanbanQuery } from "@myjobhunter/api-client/store/applicationsApi";
 
 const APP_QUERY_PARAM = "app";
 

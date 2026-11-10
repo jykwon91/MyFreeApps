@@ -1,4 +1,4 @@
-import type { ImprovementTarget } from "@/types/resume-refinement/improvement-target";
+import type { ImprovementTarget } from "@myjobhunter/api-client/types/resume-refinement/improvement-target";
 
 export function makeTarget(currentText: string): ImprovementTarget {
   return {

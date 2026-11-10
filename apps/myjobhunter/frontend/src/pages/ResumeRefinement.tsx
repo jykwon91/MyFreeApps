@@ -3,7 +3,7 @@ import NoSessionView from "@/features/resume_refinement/NoSessionView";
 import SessionLoadErrorView from "@/features/resume_refinement/SessionLoadErrorView";
 import SessionLoadingView from "@/features/resume_refinement/SessionLoadingView";
 import ActiveSessionView from "@/features/resume_refinement/ActiveSessionView";
-import { useGetRefinementSessionQuery } from "@/lib/resumeRefinementApi";
+import { useGetRefinementSessionQuery } from "@myjobhunter/api-client/store/resumeRefinementApi";
 
 const ACTIVE_SESSION_KEY = "mjh:resumeRefinementSessionId";
 const POLL_INTERVAL_MS = 3000;

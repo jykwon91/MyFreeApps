@@ -19,7 +19,7 @@ import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { MemoryRouter } from "react-router-dom";
 import { baseApi } from "@platform/ui";
-import type { KanbanItem } from "@/types/kanban/kanban-item";
+import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
 
 // Force desktop layout so KanbanMobileList isn't picked.
 vi.mock("@platform/ui", async (importOriginal) => {
@@ -160,5 +160,21 @@ describe("KanbanBoard", () => {
     expect(card).not.toBeNull();
     await userEvent.click(card!);
     expect(onSelectCard).toHaveBeenCalledWith("click-1");
+  });
+
+  it("labels a known verdict and shows an unknown one as-is", () => {
+    const items = [
+      makeItem({ id: "v-1", role_title: "Known verdict", verdict: "strong_fit" }),
+      makeItem({ id: "v-2", role_title: "Unknown verdict", verdict: "long_shot" }),
+    ];
+    renderBoard(items);
+
+    const applied = screen.getByLabelText(/Applied column/i);
+    const known = within(applied).getByText("Known verdict").closest<HTMLElement>("[data-kanban-card-id]");
+    const unknown = within(applied).getByText("Unknown verdict").closest<HTMLElement>("[data-kanban-card-id]");
+    expect(known).not.toBeNull();
+    expect(unknown).not.toBeNull();
+    expect(within(known!).getByText("Strong fit")).toBeInTheDocument();
+    expect(within(unknown!).getByText("long_shot")).toBeInTheDocument();
   });
 });

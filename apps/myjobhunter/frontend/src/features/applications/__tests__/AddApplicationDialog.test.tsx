@@ -24,7 +24,7 @@ import AddApplicationDialog from "../AddApplicationDialog";
 // render as harmless <svg> in jsdom — tests query by text/role, never by
 // icon.
 
-vi.mock("@/lib/companiesApi", () => ({
+vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
   useListCompaniesQuery: vi.fn(),
   useCreateCompanyMutation: vi.fn(),
   useTriggerCompanyResearchMutation: vi.fn(() => [
@@ -33,7 +33,7 @@ vi.mock("@/lib/companiesApi", () => ({
   ]),
 }));
 
-vi.mock("@/lib/applicationsApi", () => ({
+vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({
   useCreateApplicationMutation: vi.fn(),
   useParseJobDescriptionMutation: vi.fn(),
   useExtractJdFromUrlMutation: vi.fn(),
@@ -85,12 +85,12 @@ vi.mock("@platform/ui", async (importOriginal) => {
   };
 });
 
-import { useListCompaniesQuery, useCreateCompanyMutation } from "@/lib/companiesApi";
+import { useListCompaniesQuery, useCreateCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
 import {
   useCreateApplicationMutation,
   useExtractJdFromUrlMutation,
   useParseJobDescriptionMutation,
-} from "@/lib/applicationsApi";
+} from "@myjobhunter/api-client/store/applicationsApi";
 
 const mockUseListCompaniesQuery = vi.mocked(useListCompaniesQuery);
 const mockUseCreateCompanyMutation = vi.mocked(useCreateCompanyMutation);

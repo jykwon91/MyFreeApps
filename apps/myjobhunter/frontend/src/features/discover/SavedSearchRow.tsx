@@ -13,8 +13,8 @@ import {
 import {
   useDeactivateDiscoverySourceMutation,
   useRefreshDiscoverySourceMutation,
-} from "@/store/discoverApi";
-import type { DiscoverySource } from "@/types/discovery/discovery-source";
+} from "@myjobhunter/api-client/store/discoverApi";
+import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
 import { summarizeSearchQuery, getSourceLabel, getSourceBadgeColor } from "./saved-search-summary";
 import { refreshIntervalShortLabel } from "./refresh-interval";
 import EditFrequencyPopover from "./EditFrequencyPopover";
