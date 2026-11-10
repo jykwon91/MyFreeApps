@@ -285,6 +285,53 @@ def check_transparency_configured(
     )
 
 
+def check_transparency_sync_configured(
+    *,
+    transparency_primary: bool,
+    minio_endpoint: str,
+    minio_access_key: str,
+    minio_secret_key: str,
+    transparency_shared_bucket: str,
+    environment: str,
+) -> None:
+    """Fail loud at boot if the process that runs the daily cost sync can't write.
+
+    The primary's cost sync runs in its scheduler worker, not the API, so the
+    API lifespan's guards don't cover that process. Without shared-bucket
+    storage config every daily run would fail at runtime and the /support
+    cost figure would silently go stale. The Anthropic admin key is optional
+    (empty → fixed costs only) and is not checked.
+
+    Non-primary apps never run the sync, so the guard is a no-op for them.
+    Dev/test also pass with empty config.
+
+    Raises:
+        TransparencyNotConfiguredError: If ``environment`` is not dev/test,
+            ``transparency_primary`` is true, and any storage field is empty.
+    """
+    if environment in _DEV_ENVIRONMENTS:
+        return
+    if not transparency_primary:
+        return
+    missing = [
+        name for name, value in (
+            ("MINIO_ENDPOINT", minio_endpoint),
+            ("MINIO_ACCESS_KEY", minio_access_key),
+            ("MINIO_SECRET_KEY", minio_secret_key),
+            ("TRANSPARENCY_SHARED_BUCKET", transparency_shared_bucket),
+        ) if not value
+    ]
+    if not missing:
+        return
+    raise TransparencyNotConfiguredError(
+        "TRANSPARENCY_PRIMARY=true but the daily cost sync cannot reach the "
+        "shared transparency bucket; unset: " + ", ".join(missing) + ". Set "
+        "them on the process that runs the sync (the primary app's scheduler "
+        "worker), or set TRANSPARENCY_PRIMARY=false, or set "
+        "ENVIRONMENT=development."
+    )
+
+
 def check_extraction_configured(
     *,
     anthropic_api_key: str,

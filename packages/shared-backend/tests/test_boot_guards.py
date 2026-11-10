@@ -12,6 +12,7 @@ from platform_shared.core.boot_guards import (
     check_sms_configured,
     check_test_mode_off,
     check_transparency_configured,
+    check_transparency_sync_configured,
     check_turnstile_configured,
 )
 
@@ -305,6 +306,56 @@ class TestCheckTransparencyConfigured:
 
     def test_inherits_from_runtime_error(self) -> None:
         assert issubclass(TransparencyNotConfiguredError, RuntimeError)
+
+
+def _sync_guard(
+    *,
+    environment: str = "production",
+    transparency_primary: bool = True,
+    minio_endpoint: str = "myfreeapps-minio:9000",
+    minio_access_key: str = "access",
+    minio_secret_key: str = "secret",
+    transparency_shared_bucket: str = "myfreeapps-shared",
+) -> None:
+    check_transparency_sync_configured(
+        transparency_primary=transparency_primary,
+        minio_endpoint=minio_endpoint,
+        minio_access_key=minio_access_key,
+        minio_secret_key=minio_secret_key,
+        transparency_shared_bucket=transparency_shared_bucket,
+        environment=environment,
+    )
+
+
+class TestCheckTransparencySyncConfigured:
+    def test_primary_fully_configured_passes_in_prod(self) -> None:
+        _sync_guard()
+
+    @pytest.mark.parametrize("environment", ["development", "test"])
+    def test_dev_and_test_pass_with_empty_storage(self, environment: str) -> None:
+        _sync_guard(environment=environment, minio_endpoint="", minio_access_key="")
+
+    def test_non_primary_passes_with_empty_storage_in_prod(self) -> None:
+        _sync_guard(transparency_primary=False, minio_endpoint="", minio_secret_key="")
+
+    @pytest.mark.parametrize(
+        ("field", "env_name"),
+        [
+            ("minio_endpoint", "MINIO_ENDPOINT"),
+            ("minio_access_key", "MINIO_ACCESS_KEY"),
+            ("minio_secret_key", "MINIO_SECRET_KEY"),
+            ("transparency_shared_bucket", "TRANSPARENCY_SHARED_BUCKET"),
+        ],
+    )
+    def test_primary_missing_field_raises_naming_it(self, field: str, env_name: str) -> None:
+        with pytest.raises(TransparencyNotConfiguredError) as exc:
+            _sync_guard(**{field: ""})
+        assert env_name in str(exc.value)
+        assert "TRANSPARENCY_PRIMARY" in str(exc.value)
+
+    def test_raises_in_staging(self) -> None:
+        with pytest.raises(TransparencyNotConfiguredError):
+            _sync_guard(environment="staging", minio_access_key="")
 
 
 class TestCheckTestModeOff:

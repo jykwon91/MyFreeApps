@@ -1864,36 +1864,41 @@ class TestTransparencyRouterMounted:
 
 @pytest.mark.parametrize("app", _APPS)
 class TestTransparencyPrimaryWiring:
-    """Exactly ONE app (mybookkeeper) starts the daily cost-sync loop via its
-    lifespan on_startup / on_shutdown hooks. The shared lifespan deliberately
-    does NOT auto-wire it (that would force a core -> services import), so it is
-    wired per-app on the primary only. Enforced in both directions so the loop
-    can't silently start on a second app (two writers racing on the one shared
-    object) or stop being wired on the primary.
+    """Exactly ONE app (mybookkeeper) runs the daily cost sync, and it runs it
+    from its single-replica scheduler worker — never from the API lifespan,
+    which runs once per uvicorn worker (``--workers 2``) and would duplicate
+    Anthropic cost-API calls and race on the one shared object. Enforced in
+    both directions so the sync can't move back into an API process, start on
+    a second app, or stop being wired on the primary.
     """
 
-    def test_primary_starts_and_stops_sync(self, app: str) -> None:
+    def test_api_never_runs_the_sync(self, app: str) -> None:
         main_src = _read("apps", app, "backend", "app", "main.py")
+        for needle in ("transparency.scheduler", "run_cost_sync"):
+            assert needle not in main_src, (
+                f"{app}/backend/app/main.py references {needle}. The cost sync "
+                f"must run in one process — the primary's scheduler worker — not "
+                f"in the API, which runs one copy per uvicorn worker."
+            )
+
+    def test_only_primary_scheduler_runs_the_sync(self, app: str) -> None:
+        worker = _REPO_ROOT / "apps" / app / "backend" / "app" / "workers" / "scheduler_worker.py"
+        worker_src = worker.read_text(encoding="utf-8") if worker.exists() else ""
         if app == _TRANSPARENCY_PRIMARY_APP:
-            assert "maybe_start_transparency_sync(settings)" in main_src, (
-                f"{app} is the transparency primary; its main.py on_startup must "
-                f"call maybe_start_transparency_sync(settings)."
-            )
-            assert "stop_transparency_sync()" in main_src, (
-                f"{app} is the transparency primary; its main.py on_shutdown must "
-                f"await stop_transparency_sync()."
-            )
+            for needle in (
+                "run_cost_sync_once(settings)",
+                "is_daily_sync_due(",
+                "check_transparency_sync_configured(",
+            ):
+                assert needle in worker_src, (
+                    f"{app} is the transparency primary; its scheduler worker "
+                    f"must call {needle} (daily cost sync + its boot guard)."
+                )
         else:
-            assert "maybe_start_transparency_sync" not in main_src, (
+            assert "run_cost_sync_once" not in worker_src, (
                 f"{app} is NOT the transparency primary ({_TRANSPARENCY_PRIMARY_APP} "
-                f"is) but its main.py wires maybe_start_transparency_sync. Only the "
-                f"primary may start the cost-sync loop — two writers would race on "
-                f"the shared object."
-            )
-            assert "stop_transparency_sync" not in main_src, (
-                f"{app} is NOT the transparency primary but its main.py references "
-                f"stop_transparency_sync. Only {_TRANSPARENCY_PRIMARY_APP} wires the "
-                f"cost-sync lifecycle."
+                f"is) but its scheduler runs the cost sync. Two writers would race "
+                f"on the shared object."
             )
 
 

@@ -18,6 +18,7 @@ This package holds the shared, app-agnostic pieces:
   the Anthropic Admin Cost Report API.
 - ``cost_sync`` — orchestrate the poll: fetch spend, recompute costs,
   persist.
-- ``scheduler`` — the daily asyncio cost-sync loop (started only on the
-  primary app, gated by ``transparency_primary``).
+- ``scheduler`` — when the daily cost sync is due + a never-raising run-once,
+  driven by the primary app's single scheduler worker (gated by
+  ``transparency_primary``).
 """

@@ -1,108 +1,90 @@
-"""Daily cost-sync background task for the transparency feature.
+"""Scheduling primitives for the transparency primary's daily cost sync.
 
-A single, stateless, once-a-day job is a poor fit for a persistent job store
-(APScheduler + a Postgres jobstore, as MJH's discovery scheduler uses) — there
-is nothing to persist, since each run recomputes month-to-date costs from
-scratch. So this is a plain asyncio background task: zero extra dependency,
-and it self-heals on restart (the startup catch-up run repopulates the object).
+The cost sync must run in exactly ONE process platform-wide — it calls the
+Anthropic Cost Report API and read-modify-writes the single shared
+transparency object. An in-process loop started from an API lifespan would
+run once per uvicorn worker (and restart with every API restart/scale), so
+the primary app drives the sync from its dedicated single-replica scheduler
+worker instead (MyBookkeeper: ``app/workers/scheduler_worker.py``).
 
-Lifecycle — started ONLY on the primary app (``settings.transparency_primary``)
-and wired via that app's FastAPI ``on_startup`` / ``on_shutdown`` hooks (PR3),
-NOT by the shared lifespan factory (which stays free of a ``core → services``
-import). Non-primary apps never start it.
+This module holds only the app-agnostic pieces that worker needs:
 
-Cadence: one catch-up run a few moments after startup (so a fresh deploy fills
-the shared object immediately), then daily at ~00:15 UTC — just after month
-rollover, so a new month's costs appear within minutes instead of waiting up to
-a day. A failed run logs + is retried on the next cycle; it never tears down the
-loop and never overwrites a good figure with a zero (see ``cost_sync``).
+- ``is_daily_sync_due`` — pure: is a run owed given the last run and now?
+  ``None`` (process just started) is always due, so a fresh deploy fills the
+  shared object immediately; after that, a run is owed once the most recent
+  daily slot (``DAILY_SYNC_HOUR_UTC:DAILY_SYNC_MINUTE_UTC``) has passed since
+  the last run.
+- ``run_cost_sync_once`` — run one sync without ever propagating its failure,
+  so a failed run never kills the worker loop and (because ``cost_sync``
+  fetches before it writes) never overwrites a good figure with a zero. It
+  returns whether the run succeeded; the caller records ``last_run`` only on
+  success, so a failure stays due and is retried on the caller's next tick.
+
+The caller owns the gate on ``settings.transparency_primary``.
 """
 from __future__ import annotations
 
-import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from datetime import datetime, timedelta
 
+from platform_shared.core.aware_datetime import require_aware_utc
 from platform_shared.services.transparency import cost_sync
+from platform_shared.services.transparency.cost_sync import CostSyncSettings
+from platform_shared.services.transparency.sync_schedule_constants import (
+    DAILY_SYNC_HOUR_UTC,
+    DAILY_SYNC_MINUTE_UTC,
+)
 
 logger = logging.getLogger(__name__)
 
-# Run the daily sync just after midnight UTC so a new month's costs populate
-# promptly at rollover.
-_DAILY_RUN_HOUR = 0
-_DAILY_RUN_MINUTE = 15
 
-# Module-level singleton task — a process runs at most one cost-sync loop.
-# Populated by ``maybe_start_transparency_sync``, cleared by ``stop_transparency_sync``.
-_task: asyncio.Task[None] | None = None
-
-
-def _seconds_until_next_run(now: datetime) -> float:
-    """Seconds from ``now`` until the next ``HH:MM`` UTC daily slot."""
-    target = now.replace(
-        hour=_DAILY_RUN_HOUR, minute=_DAILY_RUN_MINUTE, second=0, microsecond=0,
+def _latest_slot_at_or_before(now: datetime) -> datetime:
+    """The most recent daily sync slot that is not after ``now`` (UTC)."""
+    slot = now.replace(
+        hour=DAILY_SYNC_HOUR_UTC,
+        minute=DAILY_SYNC_MINUTE_UTC,
+        second=0,
+        microsecond=0,
     )
-    if target <= now:
-        target += timedelta(days=1)
-    return (target - now).total_seconds()
+    if slot > now:
+        slot -= timedelta(days=1)
+    return slot
 
 
-async def _run_once(settings: Any) -> None:
-    """Run one cost sync, swallowing transient errors.
+def is_daily_sync_due(*, last_run: datetime | None, now: datetime) -> bool:
+    """Whether the daily cost sync is owed at ``now``.
 
-    The loop must never die on a failed run (Anthropic outage, MinIO blip):
-    log at ERROR with the traceback (captured by Sentry where wired) and leave
-    the previously stored figure intact until the next cycle.
+    ``last_run`` is when the previous run succeeded, or ``None`` if this
+    process has not completed one yet — the startup catch-up. Both datetimes
+    must be timezone-aware (any zone; the slot is evaluated in UTC).
+
+    Raises:
+        ValueError: If ``now`` or ``last_run`` is naive — its zone, and so
+            whether the UTC slot has passed, would be a guess.
+    """
+    now_utc = require_aware_utc(now, name="now")
+    if last_run is None:
+        return True
+    return require_aware_utc(last_run, name="last_run") < _latest_slot_at_or_before(now_utc)
+
+
+async def run_cost_sync_once(settings: CostSyncSettings) -> bool:
+    """Run one cost sync; return whether it succeeded. Never raises.
+
+    A failed run (Anthropic outage, MinIO blip) is logged at ERROR with the
+    traceback and reported as ``False`` so the caller retries it; the
+    previously stored figure stays intact because ``cost_sync`` fetches
+    before it writes.
     """
     try:
         await cost_sync.run_cost_sync(settings)
-    except Exception:  # noqa: BLE001 — a daily job must not propagate / die
-        logger.exception("Transparency cost sync failed; will retry next cycle")
-
-
-async def _daily_loop(settings: Any) -> None:
-    """Catch-up once at startup, then run daily at the configured UTC slot."""
-    await _run_once(settings)
-    while True:
-        await asyncio.sleep(_seconds_until_next_run(datetime.now(timezone.utc)))
-        await _run_once(settings)
-
-
-def maybe_start_transparency_sync(settings: Any) -> asyncio.Task[None] | None:
-    """Start the daily cost-sync loop iff this app is the primary writer.
-
-    Returns the created task (so the caller can hold a reference), or ``None``
-    when ``transparency_primary`` is false — the no-op path for every read-only
-    app. Idempotent: returns the existing task if one is already running.
-
-    Must be called from within a running event loop (the FastAPI ``on_startup``
-    hook satisfies this).
-    """
-    global _task
-    if not getattr(settings, "transparency_primary", False):
-        return None
-    if _task is not None and not _task.done():
-        return _task
-    _task = asyncio.create_task(_daily_loop(settings), name="transparency-cost-sync")
-    logger.info("Transparency cost-sync loop started (primary app)")
-    return _task
-
-
-async def stop_transparency_sync() -> None:
-    """Cancel the cost-sync loop if running. Idempotent; safe on non-primary apps."""
-    global _task
-    if _task is not None and not _task.done():
-        _task.cancel()
-        try:
-            await _task
-        except asyncio.CancelledError:
-            pass
-        logger.info("Transparency cost-sync loop stopped")
-    _task = None
+    except Exception:  # noqa: BLE001 — a daily job must not take its host loop down
+        logger.exception("Transparency cost sync failed; will retry")
+        return False
+    return True
 
 
 __all__ = [
-    "maybe_start_transparency_sync",
-    "stop_transparency_sync",
+    "is_daily_sync_due",
+    "run_cost_sync_once",
 ]
