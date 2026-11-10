@@ -3,8 +3,11 @@ import { strFromU8, unzipSync } from "fflate";
 import addonLua from "../../addon/MGAPrices/MGAPrices.lua?raw";
 import addonToc from "../../addon/MGAPrices/MGAPrices.toc?raw";
 import emptyData from "../../addon/MGAPrices/Data.lua?raw";
+import { loadAllCraftingData } from "@/games/wow-forever/crafting/loadCraftingData";
 import { addonPriceLua } from "@/games/wow-forever/lib/auctionHouse/addonPriceLua";
 import { pricesAddonZip } from "@/games/wow-forever/lib/auctionHouse/pricesAddonZip";
+import { craftsThatPay, reagentDemand } from "@/games/wow-forever/lib/auctionHouse/reagentDemand";
+import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
 import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
 import { runAddonLua } from "@/test/addonLua/runAddonLua";
@@ -26,7 +29,9 @@ const HOUSES = [
   house("neutral", null, []),
 ];
 
-const DATA = addonPriceLua(HOUSES);
+// The price-only tests leave crafting out, so the tooltip shows just the price lines.
+const NO_CRAFTING = new Map();
+const DATA = addonPriceLua(HOUSES, NO_CRAFTING);
 const HOUR = 3600;
 const ALLIANCE_EPOCH = Date.parse(ALLIANCE_AT) / 1000;
 
@@ -49,7 +54,7 @@ describe("addonPriceLua", () => {
 
 describe("the download", () => {
   it("is the addon folder with today's prices in Data.lua", () => {
-    const files = unzipSync(pricesAddonZip(HOUSES));
+    const files = unzipSync(pricesAddonZip(HOUSES, NO_CRAFTING));
     expect(Object.keys(files).filter((name) => !name.endsWith("/")).sort()).toEqual(["MGAPrices/Data.lua", "MGAPrices/MGAPrices.lua", "MGAPrices/MGAPrices.toc"]);
     expect(strFromU8(files["MGAPrices/Data.lua"])).toBe(DATA);
     expect(strFromU8(files["MGAPrices/MGAPrices.toc"])).toBe(addonToc);
@@ -108,5 +113,92 @@ describe("MGA Prices in the game's tooltips", () => {
     expect(status[0]).toBe("chat: |cff33aaffMGA Prices:|r Alliance: 1 item, updated 2 hours ago.");
     expect(status[1]).toBe("chat: |cff33aaffMGA Prices:|r Horde: 1 item, updated 1 hour ago.");
     expect(status[2]).toBe("chat: |cff33aaffMGA Prices:|r Blackwater: no prices.");
+  });
+});
+
+const CRAFTING = await loadAllCraftingData();
+const LINEN_CLOTH = 2589;
+const LINEN_BANDAGE = 1251;
+const COARSE_THREAD = 2320;
+const COPPER_ORE = 2770;
+
+function price(itemId: number, marketValue: number, listings: number): [number, AuctionPrice] {
+  return [itemId, { itemId, name: "", marketValue, minBuyout: marketValue, quantity: listings * 5, listings }];
+}
+
+describe("crafting demand on materials", () => {
+  const demand = reagentDemand(CRAFTING);
+
+  it("names the leveling routes that use a material, its own recipes' too (Linen Cloth via Bolts of Linen)", () => {
+    const linen = demand.get(LINEN_CLOTH);
+    expect(linen?.vendor).toBe(false);
+    expect(linen?.leveling).toMatch(/First Aid 1–\d+/);
+    expect(linen?.leveling).toMatch(/Tailoring 1–\d+/);
+    expect(linen?.recipes).toBeGreaterThan(5);
+    // Ore goes into the bars Blacksmithing's route uses.
+    expect(demand.get(COPPER_ORE)?.leveling).toMatch(/Blacksmithing \d+–\d+/);
+  });
+
+  it("marks materials a vendor always sells", () => {
+    expect(demand.get(COARSE_THREAD)?.vendor).toBe(true);
+  });
+
+  it("finds a craft that pays after the house's cut, only on a made item with enough auctions and a clear margin", () => {
+    const byId = new Map([price(LINEN_CLOTH, 30, 50), price(LINEN_BANDAGE, 200, 10)]);
+    expect(craftsThatPay(CRAFTING, byId, 0.05).get(LINEN_CLOTH)).toEqual({ recipe: "Linen Bandage", profit: 160 });
+    expect(craftsThatPay(CRAFTING, byId, 0.15).get(LINEN_CLOTH)).toEqual({ recipe: "Linen Bandage", profit: 140 });
+
+    const thin = new Map([price(LINEN_CLOTH, 30, 50), price(LINEN_BANDAGE, 200, 2)]);
+    expect(craftsThatPay(CRAFTING, thin, 0.05).has(LINEN_CLOTH)).toBe(false);
+    const slim = new Map([price(LINEN_CLOTH, 30, 50), price(LINEN_BANDAGE, 120, 10)]);
+    expect(craftsThatPay(CRAFTING, slim, 0.05).has(LINEN_CLOTH)).toBe(false);
+    const unpriced = new Map([price(LINEN_BANDAGE, 200, 10)]);
+    expect(craftsThatPay(CRAFTING, unpriced, 0.05).has(LINEN_CLOTH)).toBe(false);
+  });
+
+  it("never says a craft pays with a vendor-sold material", () => {
+    const byId = new Map([...CRAFTING.values()].flatMap((d) => d.file.recipes).flatMap((r) => [
+      ...r.reagents.map((g) => price(g.id, 1, 10)),
+      ...(r.creates ? [price(r.creates.id, 1_000_000, 10)] : []),
+    ]));
+    expect(craftsThatPay(CRAFTING, byId, 0.05).has(COARSE_THREAD)).toBe(false);
+  });
+});
+
+describe("crafting demand in the game's tooltips", () => {
+  const CRAFT_HOUSES = [
+    house("alliance", ALLIANCE_AT, [
+      [LINEN_CLOTH, 30, 25, 900, 50, "Linen Cloth"],
+      [LINEN_BANDAGE, 200, 180, 50, 10, "Linen Bandage"],
+      [COARSE_THREAD, 15, 10, 40, 8, "Coarse Thread"],
+    ]),
+    house("horde", HORDE_AT, [[LINEN_CLOTH, 35, 30, 500, 40, "Linen Cloth"]]),
+    house("neutral", null, []),
+  ];
+  const CRAFT_DATA = addonPriceLua(CRAFT_HOUSES, CRAFTING);
+
+  it("writes each material's demand and each house's paying crafts into Data.lua", () => {
+    expect(CRAFT_DATA).toContain(`    [${COARSE_THREAD}] = {vendor = true},`);
+    expect(CRAFT_DATA).toMatch(/\[2589\] = \{leveling = "[^"]*First Aid 1–\d+[^"]*", recipes = \d+, professions = "[^"]+"\},/);
+    expect(CRAFT_DATA).toContain(`        [${LINEN_CLOTH}] = {"Linen Bandage", 160},`);
+  });
+
+  it("shows the leveling routes and the craft that pays on your house, under the price", () => {
+    const lines = tooltip(`hover(GameTooltip, ${LINEN_CLOTH})`, CRAFT_DATA);
+    expect(lines.slice(0, 2)).toEqual(["Auction (Alliance) | 30c", "Cheapest · on sale | 25c · 900"]);
+    expect(lines[2]).toMatch(/^Leveling demand \| .*First Aid 1–\d+/);
+    expect(lines[3]).toBe("Crafting pays | Linen Bandage +160c");
+    // Nothing pays on the Horde house: only the leveling line.
+    const horde = tooltip(`faction = "Horde"; hover(GameTooltip, ${LINEN_CLOTH})`, CRAFT_DATA);
+    expect(horde).toHaveLength(3);
+    expect(horde[2]).toMatch(/^Leveling demand \| /);
+  });
+
+  it("says only 'sold by vendors' for vendor materials, and how many recipes use the rest", () => {
+    expect(tooltip(`hover(GameTooltip, ${COARSE_THREAD})`, CRAFT_DATA).slice(2)).toEqual(["Reagent | sold by vendors"]);
+    const quiet = [...reagentDemand(CRAFTING)].find(([, d]) => !d.vendor && !d.leveling && d.recipes > 1);
+    expect(quiet).toBeDefined();
+    const [id, d] = quiet!;
+    expect(tooltip(`hover(GameTooltip, ${id})`, CRAFT_DATA)).toEqual(["Auction (Alliance) | not on sale", `Reagent | ${d.recipes} recipes (${d.professions})`]);
   });
 });

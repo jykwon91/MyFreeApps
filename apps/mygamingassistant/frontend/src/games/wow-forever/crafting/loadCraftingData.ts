@@ -1,4 +1,5 @@
 import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/data/sourceDecode";
+import type { CraftingByProfession } from "@/games/wow-forever/types/auctionHouse/craftingByProfession";
 import type { CraftingFile, CraftingProfession, TrainerSkills } from "@/games/wow-forever/types/crafting";
 import type { CraftingData } from "@/games/wow-forever/types/craftingData";
 
@@ -28,4 +29,11 @@ export async function loadCraftingData(profession: CraftingProfession): Promise<
     trainerSkills,
     sources: createSourceLookup(sources.default as unknown as RawSourcesFile),
   };
+}
+
+/** Every crafting profession's data, for the MGA Prices addon's crafting-demand lines. */
+export async function loadAllCraftingData(): Promise<CraftingByProfession> {
+  const professions = Object.keys(RECIPE_FILES) as CraftingProfession[];
+  const loaded = await Promise.all(professions.map(loadCraftingData));
+  return new Map(professions.map((profession, i) => [profession, loaded[i]]));
 }

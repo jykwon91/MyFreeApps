@@ -1044,7 +1044,17 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   fetches all three houses and zips the addon (fflate, `lib/auctionHouse/pricesAddonZip.ts`)
   with a generated `Data.lua` (`lib/auctionHouse/addonPriceLua.ts`:
   `items[id] = {market, cheapest, on sale}`); the repo's `Data.lua` is an empty
-  stand-in. `src/__tests__/wowPricesAddon.test.ts` runs the real Lua under
+  stand-in. Crafting demand on materials (`lib/auctionHouse/reagentDemand.ts`,
+  thresholds in `data/auctionHouse/reagentDemandRules.ts`; the download loads
+  every profession via `loadAllCraftingData`): `reagents[id]` = `{vendor = true}`
+  (tooltip just says "sold by vendors" — crafting can't push those) or the
+  leveling routes that use it (route recipes' reagents plus one level down
+  through the profession's own makers/smelts, each profession's full span,
+  2 named then "+N more") with a recipe count fallback; per house
+  `crafts[id] = {recipe, profit}` = the best craft that pays after the house's
+  cut (5%, Blackwater 15%), only for widely known recipes (no rare-drop
+  patterns), made items with ≥5 auctions, profit ≥1s and ≥10% of the materials.
+  No price history exists, so the tooltip never claims a price WILL rise. `src/__tests__/wowPricesAddon.test.ts` runs the real Lua under
   fengari against WoW stubs (`src/test/addonLua/`). Refresh = download again.
 - Material prices fill in automatically (`CraftPriceField` shows the price as
   its value, labelled "Auction house"). An item with no auction price is

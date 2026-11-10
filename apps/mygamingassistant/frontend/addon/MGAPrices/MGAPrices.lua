@@ -6,6 +6,9 @@
 --
 --   Tooltip: your faction's house price (×stack when you hover a stack), the
 --            cheapest listing and how many are on sale. Hold Shift for every house.
+--            On crafting materials: which profession leveling routes use it, and
+--            the best craft that pays with it on your house right now — the
+--            demand that can push its price up. Vendor-sold ones just say so.
 --   /mgaprices  which prices are loaded and how old they are
 
 local ADDON = "MGA Prices"
@@ -98,6 +101,27 @@ local function addEveryHouse(tooltip, itemId)
   end
 end
 
+-- Crafting demand for a material: leveling routes, a craft that pays on your house, else how many recipes use it.
+local function addDemand(tooltip, itemId)
+  local reagent = MGAPricesData.reagents and MGAPricesData.reagents[itemId]
+  if not reagent then return end
+  if reagent.vendor then
+    line(tooltip, "Reagent", "sold by vendors", MUTED, MUTED)
+    return
+  end
+  local _, house = houseRow(playerHouse(), itemId)
+  local craft = house and house.crafts and house.crafts[itemId]
+  if reagent.leveling ~= "" then
+    line(tooltip, "Leveling demand", reagent.leveling, LABEL, VALUE)
+  end
+  if craft then
+    line(tooltip, "Crafting pays", craft[1] .. " +" .. money(craft[2]), LABEL, VALUE)
+  end
+  if reagent.leveling == "" and not craft then
+    line(tooltip, "Reagent", reagent.recipes .. (reagent.recipes == 1 and " recipe" or " recipes") .. " (" .. reagent.professions .. ")", MUTED, MUTED)
+  end
+end
+
 local function addAge(tooltip)
   local updated = MGAPricesData.updated
   if not updated then return end
@@ -120,6 +144,7 @@ local function addPrice(tooltip, itemId)
   else
     addYourHouse(tooltip, itemId)
   end
+  addDemand(tooltip, itemId)
   addAge(tooltip)
 end
 
