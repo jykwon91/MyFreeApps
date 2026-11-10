@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-09",
+    title: "Addon: prices on chat links",
+    summary:
+      "Download the MGA Prices addon again: every item link in chat now has its auction price written after it, hovering a link shows its priced tooltip, and clicking a soulbound item's link says why it has no price.",
+    to: "/wow-forever/auction-house",
+  },
+  {
+    date: "2026-11-09",
     title: "Addon: which materials crafters want",
     summary:
       "Download the MGA Prices addon again: mousing over a crafting material now shows which profession leveling routes use it and the best craft that pays with it on your auction house right now, the demand that can push its price up.",

@@ -9,7 +9,10 @@
 --            On crafting materials: which profession leveling routes use it, and
 --            the best craft that pays with it on your house right now — the
 --            demand that can push its price up. Vendor-sold ones just say so.
---   /mgaprices  which prices are loaded and how old they are
+--   Chat:    hover an item link to see its tooltip (priced like any other), and
+--            each item link in chat gets your house's price after it.
+--   /mgaprices       which prices are loaded and how old they are
+--   /mgaprices chat  turn the prices after chat links off or on
 
 local ADDON = "MGA Prices"
 local PREFIX = "|cff33aaff" .. ADDON .. ":|r "
@@ -138,7 +141,13 @@ local function addPrice(tooltip, itemId)
     return
   end
   local anywhere = houseRow("alliance", itemId) or houseRow("horde", itemId) or houseRow("neutral", itemId)
-  if not anywhere and not canBeAuctioned(itemId) then return end
+  if not anywhere and not canBeAuctioned(itemId) then
+    -- Quiet on your own soulbound gear, but a clicked chat link says why it has no price.
+    if tooltip == ItemRefTooltip then
+      line(tooltip, "Auction", "can't be sold (binds when picked up)", LABEL, MUTED)
+    end
+    return
+  end
   if IsShiftKeyDown() then
     addEveryHouse(tooltip, itemId)
   else
@@ -159,21 +168,36 @@ end
 
 local PRICED_TOOLTIPS = { GameTooltip = true, ItemRefTooltip = true }
 
+-- The client can build an item tooltip three ways, and which ones fire differs by
+-- client build, so hook all of them; addPrice's per-item guard prices each item once.
 if TooltipDataProcessor and Enum and Enum.TooltipDataType then
   TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, data)
     if PRICED_TOOLTIPS[tooltip:GetName() or ""] then
       addPrice(tooltip, data and data.id)
     end
   end)
-else
-  for name in pairs(PRICED_TOOLTIPS) do
-    _G[name]:HookScript("OnTooltipSetItem", function(self)
+end
+for name in pairs(PRICED_TOOLTIPS) do
+  local tooltip = _G[name]
+  watch(tooltip)
+  if not tooltip.HasScript or tooltip:HasScript("OnTooltipSetItem") then
+    tooltip:HookScript("OnTooltipSetItem", function(self)
       local _, link = self:GetItem()
       addPrice(self, itemIdFromLink(link))
     end)
   end
+  -- Clicking a chat link opens ItemRefTooltip with SetHyperlink (hovering one uses
+  -- GameTooltip's): price it there too, then Show() so the tooltip fits the new lines.
+  if hooksecurefunc then
+    hooksecurefunc(tooltip, "SetHyperlink", function(self, link)
+      local itemId = type(link) == "string" and itemIdFromLink(link)
+      if itemId and self.mgaPricedItem ~= itemId then
+        addPrice(self, itemId)
+        self:Show()
+      end
+    end)
+  end
 end
-for name in pairs(PRICED_TOOLTIPS) do watch(_G[name]) end
 
 -- Shift switches between your house and every house while the tooltip is open.
 local events = CreateFrame("Frame")
@@ -185,8 +209,90 @@ events:SetScript("OnEvent", function(_, _, key)
   end
 end)
 
+-- Chat. MGAPricesSettings is saved between sessions (.toc SavedVariables).
+local function chatPricesOn()
+  return not (MGAPricesSettings and MGAPricesSettings.chat == false)
+end
+
+-- "1g 20s", "3s 5c", "29c": short enough to sit after a link in a chat line.
+local function shortMoney(copper)
+  local gold, silver, rest = floor(copper / 10000), floor(copper / 100) % 100, copper % 100
+  if gold > 0 then return silver > 0 and (gold .. "g " .. silver .. "s") or (gold .. "g") end
+  if silver > 0 then return rest > 0 and (silver .. "s " .. rest .. "c") or (silver .. "s") end
+  return rest .. "c"
+end
+
+local ITEM_LINK = "(|Hitem:(%d+)[^|]*|h%[[^%]]*%]|h|r)"
+local ITEM_LINK_NO_RESET = "(|Hitem:(%d+)[^|]*|h%[[^%]]*%]|h)"
+
+-- The message with your house's price after each item link that has one.
+local function withPrices(message)
+  local function priced(link, id)
+    local row = houseRow(playerHouse(), tonumber(id))
+    if not row then return link end
+    return link .. " |cff999999(" .. shortMoney(row[1]) .. ")|r"
+  end
+  local result, count = message:gsub(ITEM_LINK, priced)
+  if count == 0 then result = message:gsub(ITEM_LINK_NO_RESET, priced) end
+  return result
+end
+
+local CHAT_EVENTS = {
+  "CHAT_MSG_CHANNEL", "CHAT_MSG_SAY", "CHAT_MSG_YELL", "CHAT_MSG_GUILD", "CHAT_MSG_OFFICER",
+  "CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER", "CHAT_MSG_RAID", "CHAT_MSG_RAID_LEADER",
+  "CHAT_MSG_RAID_WARNING", "CHAT_MSG_WHISPER", "CHAT_MSG_WHISPER_INFORM", "CHAT_MSG_LOOT",
+}
+
+-- Only changes what your chat window shows, never what anyone sends.
+local function chatFilter(_, _, message, ...)
+  if not MGAPricesData or not chatPricesOn() or type(message) ~= "string" then return false end
+  local priced = withPrices(message)
+  if priced == message then return false end
+  return false, priced, ...
+end
+
+if ChatFrame_AddMessageEventFilter then
+  for _, event in ipairs(CHAT_EVENTS) do ChatFrame_AddMessageEventFilter(event, chatFilter) end
+end
+
+-- Hovering an item link in a chat window shows its tooltip, which addPrice prices.
+local hookedChatFrames = {}
+local showingChatLink = false
+local function hookChatFrame(frame)
+  if not frame or hookedChatFrames[frame] then return end
+  hookedChatFrames[frame] = true
+  frame:HookScript("OnHyperlinkEnter", function(self, link)
+    if type(link) ~= "string" or not link:match("^item:") then return end
+    GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
+    GameTooltip:SetHyperlink(link)
+    GameTooltip:Show()
+    showingChatLink = true
+  end)
+  frame:HookScript("OnHyperlinkLeave", function()
+    if showingChatLink then
+      showingChatLink = false
+      GameTooltip:Hide()
+    end
+  end)
+end
+
+for i = 1, (NUM_CHAT_WINDOWS or 10) do hookChatFrame(_G["ChatFrame" .. i]) end
+-- Whisper windows open later.
+if hooksecurefunc and FCF_OpenTemporaryWindow then
+  hooksecurefunc("FCF_OpenTemporaryWindow", function()
+    for _, name in ipairs(CHAT_FRAMES or {}) do hookChatFrame(_G[name]) end
+  end)
+end
+
 SLASH_MGAPRICES1 = "/mgaprices"
-SlashCmdList.MGAPRICES = function()
+SlashCmdList.MGAPRICES = function(message)
+  local command = (message or ""):lower():match("^%s*(.-)%s*$")
+  if command == "chat" then
+    MGAPricesSettings = MGAPricesSettings or {}
+    MGAPricesSettings.chat = not chatPricesOn()
+    say("Prices after item links in chat: " .. (chatPricesOn() and "on" or "off") .. ".")
+    return
+  end
   if not MGAPricesData then
     say("No prices loaded. Download the addon from " .. SITE .. ", replace this folder and /reload.")
     return
@@ -202,4 +308,5 @@ SlashCmdList.MGAPRICES = function()
     end
   end
   say("Mouse over an item to see its price; hold Shift for every house. Refresh: download again from " .. SITE .. ".")
+  say("Chat links show their price too; /mgaprices chat turns that " .. (chatPricesOn() and "off" or "on") .. ".")
 end

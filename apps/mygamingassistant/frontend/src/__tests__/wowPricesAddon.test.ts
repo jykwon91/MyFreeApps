@@ -126,6 +126,52 @@ function price(itemId: number, marketValue: number, listings: number): [number, 
   return [itemId, { itemId, name: "", marketValue, minBuyout: marketValue, quantity: listings * 5, listings }];
 }
 
+const LINEN_LINK = "|cffffffff|Hitem:2589::::::::32:::::::|h[Linen Cloth]|h|r";
+const PEARL_LINK = "|cff1eff00|Hitem:4611::::::::32:::::::|h[Blue Pearl]|h|r";
+
+describe("MGA Prices in chat", () => {
+  const shown = (event: string, message: string, before = "") =>
+    tooltip(`${before}\ntable.insert(out, chat("${event}", "${message}"))`);
+
+  it("writes your house's price after each item link, and leaves unpriced links alone", () => {
+    expect(shown("CHAT_MSG_CHANNEL", `WTS ${LINEN_LINK} x20, ${PEARL_LINK}`)).toEqual([
+      `WTS ${LINEN_LINK} |cff999999(30c)|r x20, ${PEARL_LINK}`,
+    ]);
+    expect(shown("CHAT_MSG_GUILD", LINEN_LINK, 'faction = "Horde"')).toEqual([`${LINEN_LINK} |cff999999(35c)|r`]);
+    expect(shown("CHAT_MSG_LOOT", `You receive loot: ${LINEN_LINK}.`)[0]).toContain("(30c)");
+    expect(shown("CHAT_MSG_SAY", "no links here")).toEqual(["no links here"]);
+  });
+
+  it("/mgaprices chat turns the prices after links off and on again", () => {
+    expect(shown("CHAT_MSG_CHANNEL", LINEN_LINK, 'SlashCmdList.MGAPRICES("chat")')).toEqual([
+      "chat: |cff33aaffMGA Prices:|r Prices after item links in chat: off.",
+      LINEN_LINK,
+    ]);
+    const back = shown("CHAT_MSG_CHANNEL", LINEN_LINK, 'SlashCmdList.MGAPRICES("chat"); SlashCmdList.MGAPRICES(" CHAT ")');
+    expect(back[back.length - 1]).toBe(`${LINEN_LINK} |cff999999(30c)|r`);
+  });
+
+  it("shows a priced tooltip while you hover an item link in a chat window", () => {
+    expect(tooltip('enterLink(ChatFrame1, "item:2589::::::::32")\ntable.insert(out, tostring(GameTooltip.shown))')).toEqual([
+      "Auction (Alliance) | 30c",
+      "Cheapest · on sale | 25c · 8109",
+      "true",
+    ]);
+    expect(tooltip('enterLink(ChatFrame1, "item:2589"); leaveLink(ChatFrame1)\ntable.insert(out, tostring(GameTooltip.shown))').pop()).toBe("false");
+    expect(tooltip('enterLink(ChatFrame1, "player:Somebody")')).toEqual([]);
+  });
+
+  it("prices a clicked chat link even when the client fires no tooltip post-call for it, once", () => {
+    expect(tooltip('ItemRefTooltip:SetHyperlink("item:2589::::::::32")')).toEqual(["Auction (Alliance) | 30c", "Cheapest · on sale | 25c · 8109"]);
+    expect(tooltip('hover(ItemRefTooltip, 2589); ItemRefTooltip:SetHyperlink("item:2589")')).toHaveLength(4);
+  });
+
+  it("says why a clicked soulbound link has no price, but stays quiet on hover", () => {
+    expect(tooltip('bind[4612] = 1; ItemRefTooltip:SetHyperlink("item:4612")')).toEqual(["Auction | can't be sold (binds when picked up)"]);
+    expect(tooltip("bind[4612] = 1; hover(GameTooltip, 4612)")).toEqual([]);
+  });
+});
+
 describe("crafting demand on materials", () => {
   const demand = reagentDemand(CRAFTING);
 

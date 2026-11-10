@@ -1,8 +1,9 @@
 ## Interface: 16001
 ## Title: MGA Prices
-## Notes: Auction-house prices in item tooltips, from the MyGamingAssistant Auction house page. Hold Shift to see every house.
+## Notes: Auction-house prices in item tooltips and after item links in chat, from the MyGamingAssistant Auction house page. Hold Shift to see every house.
 ## Author: MyGamingAssistant
-## Version: 1.0.0
+## Version: 1.1.0
+## SavedVariables: MGAPricesSettings
 ## IconTexture: Interface\Icons\INV_Misc_Coin_01
 
 Data.lua
