@@ -4,8 +4,10 @@ import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import LeaseTemplateUploadDialog from "@/app/features/leases/LeaseTemplateUploadDialog";
+import { LEASE_TEMPLATE_CREATE_COPY } from "@mybookkeeper/api-client/constants/leaseTemplateCreateCopy";
+import { LEASE_TEMPLATE_UPLOAD_PROBLEMS } from "@mybookkeeper/api-client/constants/leaseTemplateUpload";
 import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
-import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-placeholders-response";
+import type { SuggestPlaceholdersResponse } from "@mybookkeeper/api-client/types/lease/suggest-placeholders-response";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -20,7 +22,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 const mockCreateMutation = vi.fn();
 const mockSuggestMutation = vi.fn();
 
-vi.mock("@/shared/store/leaseTemplatesApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
   useCreateLeaseTemplateMutation: vi.fn(() => [
     mockCreateMutation,
     { isLoading: false },
@@ -205,6 +207,60 @@ describe("LeaseTemplateUploadDialog", () => {
       // AI failure is swallowed — onCreated still called with null suggestions.
       expect(onCreated).toHaveBeenCalledWith(template, null);
     });
+  });
+
+  async function fillAndSubmit(file: File) {
+    fireEvent.change(screen.getByTestId("template-name-input"), { target: { value: "My Lease" } });
+    fireEvent.drop(screen.getByTestId("template-file-dropzone"), { dataTransfer: { files: [file] } });
+    submitForm();
+  }
+
+  it("refuses a file over 25 MB before sending anything", async () => {
+    const { showError } = await import("@platform/ui");
+    renderDialog({});
+    const big = new File(["x"], "big.docx");
+    Object.defineProperty(big, "size", { value: 26 * 1024 * 1024 });
+    await fillAndSubmit(big);
+    expect(showError).toHaveBeenCalledWith(LEASE_TEMPLATE_UPLOAD_PROBLEMS.file_too_big);
+    expect(mockCreateMutation).not.toHaveBeenCalled();
+  });
+
+  it("refuses files that are too large together before sending anything", async () => {
+    const { showError } = await import("@platform/ui");
+    renderDialog({});
+    const first = new File(["x"], "a.docx");
+    const second = new File(["x"], "b.docx");
+    Object.defineProperty(first, "size", { value: 20 * 1024 * 1024 });
+    Object.defineProperty(second, "size", { value: 20 * 1024 * 1024 });
+    fireEvent.change(screen.getByTestId("template-name-input"), { target: { value: "My Lease" } });
+    fireEvent.drop(screen.getByTestId("template-file-dropzone"), { dataTransfer: { files: [first, second] } });
+    submitForm();
+    expect(showError).toHaveBeenCalledWith(LEASE_TEMPLATE_UPLOAD_PROBLEMS.files_too_big_together);
+    expect(mockCreateMutation).not.toHaveBeenCalled();
+  });
+
+  it("says it may have saved when the upload times out, so a retry doesn't make a second template", async () => {
+    const { showError } = await import("@platform/ui");
+    mockCreateMutation.mockImplementation(() => ({ unwrap: () => Promise.reject(new Error("timeout of 300000ms exceeded")) }));
+    renderDialog({});
+    await fillAndSubmit(new File(["x"], "lease.md", { type: "text/markdown" }));
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(LEASE_TEMPLATE_CREATE_COPY.noResponse));
+  });
+
+  it("says the files are too large to send together when the proxy refuses with no message", async () => {
+    const { showError } = await import("@platform/ui");
+    mockCreateMutation.mockImplementation(() => ({ unwrap: () => Promise.reject({ status: 413, data: "" }) }));
+    renderDialog({});
+    await fillAndSubmit(new File(["x"], "lease.md", { type: "text/markdown" }));
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(LEASE_TEMPLATE_CREATE_COPY.tooBigTogether));
+  });
+
+  it("shows the server's sentence naming a file that is too big", async () => {
+    const { showError } = await import("@platform/ui");
+    mockCreateMutation.mockImplementation(() => ({ unwrap: () => Promise.reject({ status: 413, data: { detail: "lease.md exceeds 25MB limit" } }) }));
+    renderDialog({});
+    await fillAndSubmit(new File(["x"], "lease.md", { type: "text/markdown" }));
+    await waitFor(() => expect(showError).toHaveBeenCalledWith("lease.md exceeds 25MB limit"));
   });
 
   it("does not render when closed", () => {

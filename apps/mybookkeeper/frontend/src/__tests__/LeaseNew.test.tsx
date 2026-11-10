@@ -37,16 +37,13 @@ const mockUseCreateSignedLeaseMutation = vi.fn();
 const mockUseCanWrite = vi.fn();
 
 vi.mock("@mybookkeeper/api-client/store/leaseTemplatesApi", () => ({
+  useGetGenerateDefaultsQuery: (args: unknown, opts: unknown) =>
+    mockUseGetGenerateDefaultsQuery(args, opts),
   useGetLeaseTemplatesQuery: () => mockUseGetLeaseTemplatesQuery(),
   useGetLeaseTemplateByIdQuery: (id: unknown, opts: unknown) =>
     mockUseGetLeaseTemplateByIdQuery(id, opts),
   useGetMultiGenerateDefaultsQuery: (args: unknown, opts: unknown) =>
     mockUseGetMultiGenerateDefaultsQuery(args, opts),
-}));
-
-vi.mock("@/shared/store/leaseTemplatesApi", () => ({
-  useGetGenerateDefaultsQuery: (args: unknown, opts: unknown) =>
-    mockUseGetGenerateDefaultsQuery(args, opts),
 }));
 
 vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({

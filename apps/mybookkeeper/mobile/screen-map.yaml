@@ -40,7 +40,7 @@ routes:
   /lease-templates:
     screen: (app)/lease-templates/index
   /lease-templates/:templateId:
-    screen: (app)/lease-templates/[id]
+    screen: (app)/lease-templates/[id]/index
   /leases:
     screen: (app)/leases/index
   /leases/:leaseId:

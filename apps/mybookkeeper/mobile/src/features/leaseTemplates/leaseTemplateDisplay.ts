@@ -1,6 +1,9 @@
+import { LEASE_PLACEHOLDER_INPUT_TYPE_LABELS } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { LeaseTemplateFile } from "@mybookkeeper/api-client/types/lease/lease-template-file";
+import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import { formatFileSize } from "@mybookkeeper/api-client/utils/file-size";
+import { PLACEHOLDER_MESSAGES } from "../../constants/leasePlaceholderEdit";
 import { LEASE_TEMPLATE_FILE_KINDS, LEASE_TEMPLATE_MESSAGES } from "../../constants/leaseTemplates";
 
 function counted(count: number, singular: string): string {
@@ -24,9 +27,25 @@ export function templateFileLine(file: Pick<LeaseTemplateFile, "content_type" | 
 
 export function placeholdersLine(count: number): string {
   if (count === 0) return LEASE_TEMPLATE_MESSAGES.noPlaceholders;
-  return `This template has ${counted(count, "placeholder")} that ${count === 1 ? "gets" : "get"} filled in when you make a lease on the website.`;
+  return `This template has ${counted(count, "placeholder")} that ${count === 1 ? "gets" : "get"} filled in when you make a lease.`;
 }
 
 export function inDisplayOrder(files: readonly LeaseTemplateFile[]): LeaseTemplateFile[] {
   return [...files].sort((a, b) => a.display_order - b.display_order);
+}
+
+export function placeholderRowLine(placeholder: Pick<LeaseTemplatePlaceholder, "input_type" | "required" | "default_source">): string {
+  return [
+    LEASE_PLACEHOLDER_INPUT_TYPE_LABELS[placeholder.input_type],
+    placeholder.required ? PLACEHOLDER_MESSAGES.required : PLACEHOLDER_MESSAGES.optional,
+    placeholder.default_source ? `from ${placeholder.default_source}` : PLACEHOLDER_MESSAGES.noDefault,
+  ].join(", ");
+}
+
+export function placeholderRowLabel(placeholder: LeaseTemplatePlaceholder): string {
+  return `${placeholder.display_label}. ${placeholderRowLine(placeholder)}`;
+}
+
+export function placeholdersInOrder(placeholders: readonly LeaseTemplatePlaceholder[]): LeaseTemplatePlaceholder[] {
+  return [...placeholders].sort((a, b) => a.display_order - b.display_order);
 }

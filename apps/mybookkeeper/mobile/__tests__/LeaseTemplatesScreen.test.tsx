@@ -167,8 +167,8 @@ describe("lease template wording", () => {
 
   it("describes placeholders by how many there are", () => {
     expect(placeholdersLine(0)).toBe(LEASE_TEMPLATE_MESSAGES.noPlaceholders);
-    expect(placeholdersLine(1)).toBe("This template has 1 placeholder that gets filled in when you make a lease on the website.");
-    expect(placeholdersLine(14)).toBe("This template has 14 placeholders that get filled in when you make a lease on the website.");
+    expect(placeholdersLine(1)).toBe("This template has 1 placeholder that gets filled in when you make a lease.");
+    expect(placeholdersLine(14)).toBe("This template has 14 placeholders that get filled in when you make a lease.");
   });
 
   it("puts files in their display order without touching the cached list", () => {
@@ -192,29 +192,38 @@ describe("LeaseTemplatesScreen", () => {
     expect(server.listParams).toEqual({ limit: 100 });
     expect(screen.getByText("For the Oak Street rooms")).toBeTruthy();
     expect(screen.getByText("2 files, 14 placeholders")).toBeTruthy();
-    expect(screen.getByText(LEASE_TEMPLATE_MESSAGES.manageOnWebsite)).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Standard lease. For the Oak Street rooms, 2 files, 14 placeholders" }));
     expect(mockPush).toHaveBeenCalledWith("/lease-templates/t1");
   });
 
-  it("says when there are more than it shows, and links to all of them", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("says when there are more than it shows", async () => {
     startServer(aPage([aSummary()], true));
     await show(<LeaseTemplatesScreen />);
-    await screen.findByText(LEASE_TEMPLATE_MESSAGES.moreOnWebsite);
-    expect(screen.queryByText(LEASE_TEMPLATE_MESSAGES.manageOnWebsite)).toBeNull();
-    await fireEvent.press(screen.getByRole("button", { name: LEASE_TEMPLATE_MESSAGES.openListOnWebsite }));
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/lease-templates`);
+    await screen.findByText(LEASE_TEMPLATE_MESSAGES.moreThanShown);
   });
 
-  it("points to the website when there are none", async () => {
-    const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("offers to upload a template from the list and when there are none", async () => {
+    startServer(aPage([aSummary()]));
+    await show(<LeaseTemplatesScreen />);
+    await fireEvent.press(await screen.findByRole("button", { name: LEASE_TEMPLATE_MESSAGES.add }));
+    expect(mockPush).toHaveBeenCalledWith("/lease-templates/new");
+  });
+
+  it("offers to upload the first one when there are none", async () => {
     startServer(aPage([]));
     await show(<LeaseTemplatesScreen />);
     await screen.findByText(LEASE_TEMPLATE_MESSAGES.noneHeading);
     expect(screen.getByText(LEASE_TEMPLATE_MESSAGES.noneBody)).toBeTruthy();
-    await fireEvent.press(screen.getByRole("button", { name: LEASE_TEMPLATE_MESSAGES.openWebsite }));
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/lease-templates`);
+    await fireEvent.press(screen.getByRole("button", { name: LEASE_TEMPLATE_MESSAGES.add }));
+    expect(mockPush).toHaveBeenCalledWith("/lease-templates/new");
+  });
+
+  it("doesn't offer uploading to someone with view-only access", async () => {
+    const server = startServer(aPage([]));
+    server.role = "viewer";
+    await show(<LeaseTemplatesScreen />);
+    await screen.findByText(LEASE_TEMPLATE_MESSAGES.noneViewOnlyBody);
+    expect(screen.queryByRole("button", { name: LEASE_TEMPLATE_MESSAGES.add })).toBeNull();
   });
 
   it("keeps saying there are none during a reload", async () => {

@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { showError, showSuccess } from "@platform/ui";
-import { useUpdateLeasePlaceholderMutation } from "@/shared/store/leaseTemplatesApi";
+import { useUpdateLeasePlaceholderMutation } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import {
   LEASE_PLACEHOLDER_INPUT_TYPE_LABELS,
   LEASE_PLACEHOLDER_INPUT_TYPES,
-} from "@/shared/lib/lease-labels";
+} from "@mybookkeeper/api-client/constants/leaseLabels";
+import type { LeasePlaceholderFormField } from "@mybookkeeper/api-client/types/lease/lease-placeholder-form-field";
+import type { LeasePlaceholderFormValues } from "@mybookkeeper/api-client/types/lease/lease-placeholder-form-values";
 import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
 import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
+import { placeholderToFormValues, placeholderUpdateRequest } from "@mybookkeeper/api-client/utils/leasePlaceholderForm";
+import { leaseTemplateFailure } from "@mybookkeeper/api-client/utils/leaseTemplateFailure";
 
 export interface PlaceholderSpecRowProps {
   templateId: string;
@@ -22,16 +26,10 @@ export interface PlaceholderSpecRowProps {
  */
 export default function PlaceholderSpecRow({ templateId, placeholder }: PlaceholderSpecRowProps) {
   const [updatePlaceholder] = useUpdateLeasePlaceholderMutation();
-  const [draft, setDraft] = useState({
-    display_label: placeholder.display_label,
-    input_type: placeholder.input_type,
-    required: placeholder.required,
-    default_source: placeholder.default_source ?? "",
-    computed_expr: placeholder.computed_expr ?? "",
-  });
+  const [draft, setDraft] = useState<LeasePlaceholderFormValues>(() => placeholderToFormValues(placeholder));
   const [saving, setSaving] = useState(false);
 
-  async function commit(field: keyof typeof draft, value: typeof draft[typeof field]) {
+  async function commit<Field extends LeasePlaceholderFormField>(field: Field, value: LeasePlaceholderFormValues[Field]) {
     const next = { ...draft, [field]: value };
     setDraft(next);
     setSaving(true);
@@ -39,19 +37,11 @@ export default function PlaceholderSpecRow({ templateId, placeholder }: Placehol
       await updatePlaceholder({
         templateId,
         placeholderId: placeholder.id,
-        data: {
-          [field]:
-            field === "default_source" || field === "computed_expr"
-              ? next[field] === ""
-                ? null
-                : next[field]
-              : next[field],
-        },
+        data: placeholderUpdateRequest(next, [field]),
       }).unwrap();
       showSuccess("Saved.");
     } catch (e: unknown) {
-      const status = (e as { status?: number }).status;
-      if (status === 400) showError("That computed expression isn't supported.");
+      if (leaseTemplateFailure(e) === "rejected") showError("That computed expression isn't supported.");
       else showError("Couldn't save. Want to try again?");
     } finally {
       setSaving(false);

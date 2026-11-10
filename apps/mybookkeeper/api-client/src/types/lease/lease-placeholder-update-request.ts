@@ -1,5 +1,6 @@
-import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
+import type { LeasePlaceholderInputType } from "./lease-placeholder-input-type";
 
+/** Body of PATCH /lease-templates/{id}/placeholders/{placeholder_id}: only the fields sent change. */
 export interface LeasePlaceholderUpdateRequest {
   display_label?: string;
   input_type?: LeasePlaceholderInputType;

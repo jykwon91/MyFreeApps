@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useCreateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { useGetMultiGenerateDefaultsQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
-import { useGetGenerateDefaultsQuery } from "@/shared/store/leaseTemplatesApi";
+import { useGetGenerateDefaultsQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
 import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/lease/lease-template-placeholder";
 import type { PlaceholderProvenance } from "@mybookkeeper/api-client/types/lease/placeholder-provenance";

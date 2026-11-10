@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import AISuggestionsPanel from "@/app/features/leases/AISuggestionsPanel";
-import type { SuggestedPlaceholderItem } from "@/shared/types/lease/suggest-placeholders-response";
+import type { SuggestedPlaceholderItem } from "@mybookkeeper/api-client/types/lease/suggested-placeholder-item";
 
 const suggestions: SuggestedPlaceholderItem[] = [
   {

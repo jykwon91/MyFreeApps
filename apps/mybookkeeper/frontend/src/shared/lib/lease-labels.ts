@@ -1,4 +1,3 @@
-import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 
@@ -18,29 +17,6 @@ export const SIGNED_LEASE_STATUS_BADGE_COLORS: Record<SignedLeaseStatus, BadgeCo
   ended: "gray",
   terminated: "red",
 };
-
-export const LEASE_PLACEHOLDER_INPUT_TYPE_LABELS: Record<
-  LeasePlaceholderInputType,
-  string
-> = {
-  text: "Text",
-  email: "Email",
-  phone: "Phone",
-  date: "Date",
-  number: "Number",
-  computed: "Computed",
-  signature: "Signature",
-};
-
-export const LEASE_PLACEHOLDER_INPUT_TYPES: readonly LeasePlaceholderInputType[] = [
-  "text",
-  "email",
-  "phone",
-  "date",
-  "number",
-  "computed",
-  "signature",
-] as const;
 
 /** Why the import dialog can't send yet, for the fields that have a message of their own. */
 export const LEASE_IMPORT_PROBLEM_MESSAGES = {

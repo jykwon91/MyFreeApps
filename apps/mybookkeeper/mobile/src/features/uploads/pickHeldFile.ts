@@ -20,7 +20,9 @@ export async function chooseHeldFile(types: readonly string[]): Promise<FileForU
   const result = await DocumentPicker.getDocumentAsync({ type: [...types], copyToCacheDirectory: true });
   if (result.canceled) return null;
   const [asset] = result.assets;
-  return { uri: holdFile(asset.uri, asset.name), name: asset.name, mimeType: asset.mimeType ?? mimeTypeFor(asset.name) };
+  // Some Android pickers report a file they can't name as octet-stream; the extension says more.
+  const declared = asset.mimeType && asset.mimeType !== "application/octet-stream" ? asset.mimeType : mimeTypeFor(asset.name);
+  return { uri: holdFile(asset.uri, asset.name), name: asset.name, mimeType: declared, size: asset.size };
 }
 
 export async function chooseHeldPhoto(name: string): Promise<FileForUpload | null> {

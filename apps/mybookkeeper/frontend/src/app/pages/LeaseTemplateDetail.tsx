@@ -4,15 +4,14 @@ import { ArrowLeft, Download, Trash2 } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { LoadingButton, showError, showSuccess } from "@platform/ui";
-import { useGetLeaseTemplateByIdQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
-import { useDeleteLeaseTemplateMutation } from "@/shared/store/leaseTemplatesApi";
+import { useDeleteLeaseTemplateMutation, useGetLeaseTemplateByIdQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import PlaceholderSpecEditor from "@/app/features/leases/PlaceholderSpecEditor";
 import AISuggestionsPanel from "@/app/features/leases/AISuggestionsPanel";
-import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-placeholders-response";
+import type { SuggestPlaceholdersResponse } from "@mybookkeeper/api-client/types/lease/suggest-placeholders-response";
+import { leaseTemplateFailure } from "@mybookkeeper/api-client/utils/leaseTemplateFailure";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
-import { hasHttpStatus } from "@/shared/utils/http-status";
 
 interface LocationState {
   aiSuggestions?: SuggestPlaceholdersResponse | null;
@@ -53,8 +52,7 @@ export default function LeaseTemplateDetail() {
       showSuccess("Template deleted.");
       navigate("/lease-templates");
     } catch (e: unknown) {
-      const detail = (e as { data?: { detail?: { code?: string } } }).data?.detail;
-      if (hasHttpStatus(e, 409) && detail?.code === "template_in_use") {
+      if (leaseTemplateFailure(e) === "inUse") {
         showError(
           "Can't delete this template — there are active leases referencing it.",
         );
