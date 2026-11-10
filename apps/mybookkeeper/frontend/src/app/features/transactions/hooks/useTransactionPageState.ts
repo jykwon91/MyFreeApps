@@ -16,12 +16,14 @@ import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/properties
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import { useToast } from "@/shared/hooks/useToast";
 import { EMPTY_FILTERS } from "@/shared/lib/transaction-config";
+import { bulkApproveMessage, bulkDeleteMessage } from "@/app/features/transactions/bulkTransactionMessages";
 import { downloadFile } from "@/shared/utils/download";
 import { formatTag } from "@/shared/utils/tag";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { Tab } from "@/shared/types/transaction/transaction-tab";
 import type { Filters } from "@/shared/types/transaction/transaction-filters";
 import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
+import { runBulkCounts } from "@mybookkeeper/api-client/utils/runBulkCounts";
 import { transactionExportPath } from "@mybookkeeper/api-client/utils/transactionExportPath";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 
@@ -183,12 +185,9 @@ export function useTransactionPageState(): TransactionPageState {
       if (!ids.length) return;
       setBulkAction("approve");
       try {
-        const result = await bulkApprove(ids).unwrap();
-        showSuccess(
-          `${result.approved} approved${result.skipped > 0 ? `, ${result.skipped} skipped` : ""}`,
-        );
-      } catch {
-        showError("Failed to approve transactions");
+        const run = await runBulkCounts(ids, ["approved", "skipped"], (batch) => bulkApprove(batch).unwrap());
+        const { text, isError } = bulkApproveMessage(run);
+        (isError ? showError : showSuccess)(text);
       } finally {
         setBulkAction(null);
       }
@@ -201,10 +200,9 @@ export function useTransactionPageState(): TransactionPageState {
       setConfirmBulkDelete(false);
       setBulkAction("delete");
       try {
-        const result = await bulkDelete(ids).unwrap();
-        showSuccess(`${result.deleted} transaction(s) deleted`);
-      } catch {
-        showError("Failed to delete transactions");
+        const run = await runBulkCounts(ids, ["deleted", "skipped"], (batch) => bulkDelete(batch).unwrap());
+        const { text, isError } = bulkDeleteMessage(run);
+        (isError ? showError : showSuccess)(text);
       } finally {
         setBulkAction(null);
       }

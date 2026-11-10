@@ -306,7 +306,7 @@ class TestBulkDelete:
         await transaction_repo.create(db, txn)
         await db.commit()
 
-        count = await transaction_repo.bulk_delete(db, [txn.id], test_org.id)
+        count = len(await transaction_repo.bulk_delete(db, [txn.id], test_org.id))
         assert count == 1
 
 

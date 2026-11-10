@@ -22,34 +22,21 @@ test.describe("Typed response shapes — common mutations", () => {
   });
 
   test.describe("Transaction bulk operations", () => {
-    test("POST /transactions/bulk-approve with empty list returns { approved, skipped }", async ({ api }) => {
-      const res = await api.post("/transactions/bulk-approve", {
-        data: { ids: [] },
-      });
-      expect(res.ok()).toBe(true);
-      const data = await res.json();
-      expect(typeof data.approved).toBe("number");
-      expect(typeof data.skipped).toBe("number");
+    test("POST /transactions/bulk-approve with an empty list is rejected with 422", async ({ api }) => {
+      const res = await api.post("/transactions/bulk-approve", { data: { ids: [] } });
+      expect(res.status()).toBe(422);
     });
 
-    test("POST /transactions/bulk-delete with empty list returns { deleted: number }", async ({ api }) => {
-      const res = await api.post("/transactions/bulk-delete", {
-        data: { ids: [] },
-      });
-      expect(res.ok()).toBe(true);
-      const data = await res.json();
-      expect(typeof data.deleted).toBe("number");
+    test("POST /transactions/bulk-delete with an empty list is rejected with 422", async ({ api }) => {
+      const res = await api.post("/transactions/bulk-delete", { data: { ids: [] } });
+      expect(res.status()).toBe(422);
     });
   });
 
   test.describe("Document bulk operations", () => {
-    test("POST /documents/bulk-delete with empty list returns { deleted: number }", async ({ api }) => {
-      const res = await api.post("/documents/bulk-delete", {
-        data: { ids: [] },
-      });
-      expect(res.ok()).toBe(true);
-      const data = await res.json();
-      expect(typeof data.deleted).toBe("number");
+    test("POST /documents/bulk-delete with an empty list is rejected with 422", async ({ api }) => {
+      const res = await api.post("/documents/bulk-delete", { data: { ids: [] } });
+      expect(res.status()).toBe(422);
     });
   });
 

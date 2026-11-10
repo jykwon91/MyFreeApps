@@ -1,15 +1,7 @@
 import { MAX_BULK_DELETE_DOCUMENT_IDS } from "../constants/documentBulkDelete";
 import type { BulkDeleteDocumentsResponse } from "../types/document/BulkDeleteDocumentsResponse";
 import type { BulkDeleteRun } from "../types/document/BulkDeleteRun";
-
-/** Split ids into requests the server will accept. */
-export function chunkDocumentIds(ids: string[], size: number = MAX_BULK_DELETE_DOCUMENT_IDS): string[][] {
-  const chunks: string[][] = [];
-  for (let i = 0; i < ids.length; i += size) {
-    chunks.push(ids.slice(i, i + size));
-  }
-  return chunks;
-}
+import { runInBatches } from "./runInBatches";
 
 /** Combine the responses of several bulk-delete requests into one. */
 export function mergeBulkDeleteResponses(responses: BulkDeleteDocumentsResponse[]): BulkDeleteDocumentsResponse {
@@ -28,14 +20,6 @@ export async function runBulkDelete(
   ids: readonly string[],
   send: (ids: string[]) => Promise<BulkDeleteDocumentsResponse>,
 ): Promise<BulkDeleteRun> {
-  const responses: BulkDeleteDocumentsResponse[] = [];
-  const batches = chunkDocumentIds([...ids]);
-  for (const [index, batch] of batches.entries()) {
-    try {
-      responses.push(await send(batch));
-    } catch (error) {
-      return { ...mergeBulkDeleteResponses(responses), failedIds: batches.slice(index).flat(), error };
-    }
-  }
-  return { ...mergeBulkDeleteResponses(responses), failedIds: [], error: null };
+  const run = await runInBatches(ids, MAX_BULK_DELETE_DOCUMENT_IDS, send);
+  return { ...mergeBulkDeleteResponses(run.responses), failedIds: run.failedIds, error: run.error };
 }

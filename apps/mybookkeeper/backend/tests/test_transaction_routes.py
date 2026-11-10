@@ -11,16 +11,23 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import current_user_id
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
+from app.core.transaction_bulk_constants import MAX_BULK_TRANSACTION_IDS
 from app.main import app
 from app.models.organization.organization import Organization
+from app.models.system.audit_log import AuditLog
 from app.models.properties.property import Property, PropertyType
 from app.models.transactions.transaction import Transaction
+from app.models.transactions.transaction_document import TransactionDocument
 from app.models.user.user import User
 from app.repositories import transaction_repo
+from app.repositories.transactions.transaction_bulk_repo import live_transactions_for_update_stmt
 from app.repositories.classification import classification_rule_repo
 
 
@@ -135,6 +142,41 @@ async def _seed_transaction(
     await db.commit()
     await db.refresh(txn)
     return txn
+
+
+async def _link_new_document(db: AsyncSession, txn: Transaction) -> uuid.UUID:
+    from app.models.documents.document import Document
+
+    doc = Document(
+        id=uuid.uuid4(), organization_id=txn.organization_id, user_id=txn.user_id,
+        file_name="d.pdf", source="upload", status="completed",
+    )
+    db.add(doc)
+    await db.flush()
+    db.add(TransactionDocument(transaction_id=txn.id, document_id=doc.id, link_type="duplicate_source"))
+    await db.commit()
+    return doc.id
+
+
+async def _other_org_transaction(db: AsyncSession) -> Transaction:
+    """A reviewable transaction with a property, belonging to an org the caller is not in."""
+    from app.repositories import organization_repo
+
+    stranger = User(
+        id=uuid.uuid4(), email="stranger@example.com", hashed_password="fakehash",
+        is_active=True, is_superuser=False, is_verified=True,
+    )
+    db.add(stranger)
+    await db.commit()
+    other_org = await organization_repo.create(db, "Other Org", stranger.id)
+    await db.commit()
+    other_prop = Property(
+        id=uuid.uuid4(), organization_id=other_org.id, user_id=stranger.id,
+        name="Other Property", type=PropertyType.SHORT_TERM,
+    )
+    db.add(other_prop)
+    await db.commit()
+    return await _seed_transaction(db, other_org, stranger, property_id=other_prop.id)
 
 
 class TestListTransactions:
@@ -412,7 +454,175 @@ class TestBulkDelete:
             "ids": [str(txn.id)],
         })
         assert resp.status_code == 200
-        assert resp.json()["deleted"] == 1
+        assert resp.json() == {"deleted": 1, "skipped": 0}
+
+    @pytest.mark.asyncio
+    async def test_skips_unknown_already_deleted_and_other_orgs(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        live = await _seed_transaction(db, org, owner)
+        gone = await _seed_transaction(db, org, owner)
+        await transaction_repo.mark_deleted(db, gone)
+        other_org = await _other_org_transaction(db)
+        ids = [live.id, gone.id, other_org.id, uuid.uuid4()]
+
+        resp = await client.post("/transactions/bulk-delete", json={"ids": [str(i) for i in ids]})
+
+        assert resp.json() == {"deleted": 1, "skipped": 3}
+        await db.refresh(other_org)
+        assert other_org.deleted_at is None
+        assert other_org.status == "pending"
+
+    @pytest.mark.asyncio
+    async def test_duplicate_ids_are_counted_once(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        txn = await _seed_transaction(db, org, owner)
+
+        resp = await client.post("/transactions/bulk-delete", json={"ids": [str(txn.id)] * 3})
+
+        assert resp.json() == {"deleted": 1, "skipped": 0}
+
+    @pytest.mark.asyncio
+    async def test_leaves_the_same_row_state_as_the_single_delete(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+        prop: Property,
+    ) -> None:
+        single = await _seed_transaction(db, org, owner, property_id=prop.id, status="approved")
+        bulk = await _seed_transaction(db, org, owner, property_id=prop.id, status="approved")
+
+        assert (await client.delete(f"/transactions/{single.id}")).status_code == 204
+        await client.post("/transactions/bulk-delete", json={"ids": [str(bulk.id)]})
+
+        await db.refresh(single)
+        await db.refresh(bulk)
+        assert single.deleted_at is not None and bulk.deleted_at is not None
+        assert (single.status, single.property_id) == (bulk.status, bulk.property_id) == ("duplicate", prop.id)
+        # Both paths leave the row soft-deleted, so the listing hides both alike.
+        listed = {t["id"] for t in (await client.get("/transactions")).json()}
+        assert str(single.id) not in listed and str(bulk.id) not in listed
+
+    @pytest.mark.asyncio
+    async def test_an_empty_list_is_422(self, client: AsyncClient) -> None:
+        assert (await client.post("/transactions/bulk-delete", json={"ids": []})).status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_ids_above_the_cap_are_422(self, client: AsyncClient) -> None:
+        ids = [str(uuid.uuid4()) for _ in range(MAX_BULK_TRANSACTION_IDS + 1)]
+        assert (await client.post("/transactions/bulk-delete", json={"ids": ids})).status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_ids_at_the_cap_are_accepted(self, client: AsyncClient) -> None:
+        ids = [str(uuid.uuid4()) for _ in range(MAX_BULK_TRANSACTION_IDS)]
+        resp = await client.post("/transactions/bulk-delete", json={"ids": ids})
+        assert resp.status_code == 200
+        assert resp.json() == {"deleted": 0, "skipped": MAX_BULK_TRANSACTION_IDS}
+
+
+async def _update_audit_rows(
+    db: AsyncSession, transaction_id: uuid.UUID,
+) -> set[tuple[str | None, str | None, str | None, str | None]]:
+    """The (field, old, new, changed_by) of every UPDATE audit row written for the transaction."""
+    rows = (await db.execute(
+        select(AuditLog).where(
+            AuditLog.table_name == "transactions",
+            AuditLog.record_id == str(transaction_id),
+            AuditLog.operation == "UPDATE",
+        )
+    )).scalars().all()
+    return {(row.field_name, row.old_value, row.new_value, row.changed_by) for row in rows}
+
+
+def _without_timestamps(rows: set[tuple[str | None, str | None, str | None, str | None]]):
+    """deleted_at differs per call by design; compare which fields changed, and the rest exactly."""
+    return {(f, o, n if f != "deleted_at" else None, by) for f, o, n, by in rows}
+
+
+@pytest.fixture()
+def acting_user(owner: User):
+    token = current_user_id.set(str(owner.id))
+    yield str(owner.id)
+    current_user_id.reset(token)
+
+
+@pytest.mark.usefixtures("audit_listeners")
+class TestBulkAuditTrail:
+    @pytest.mark.asyncio
+    async def test_bulk_delete_audits_every_row_like_the_single_delete(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User, acting_user: str,
+    ) -> None:
+        single = await _seed_transaction(db, org, owner, status="approved")
+        bulk = [await _seed_transaction(db, org, owner, status="approved") for _ in range(3)]
+
+        assert (await client.delete(f"/transactions/{single.id}")).status_code == 204
+        await client.post("/transactions/bulk-delete", json={"ids": [str(t.id) for t in bulk]})
+
+        expected = _without_timestamps(await _update_audit_rows(db, single.id))
+        assert {f for f, _, _, _ in expected} >= {"status", "deleted_at"}
+        assert {by for _, _, _, by in expected} == {acting_user}
+        for txn in bulk:
+            assert _without_timestamps(await _update_audit_rows(db, txn.id)) == expected
+
+    @pytest.mark.asyncio
+    async def test_bulk_approve_audits_every_row_like_the_single_approve(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User, prop: Property,
+        acting_user: str,
+    ) -> None:
+        single = await _seed_transaction(db, org, owner, property_id=prop.id, status="pending")
+        bulk = [await _seed_transaction(db, org, owner, property_id=prop.id, status="pending") for _ in range(3)]
+
+        assert (await client.patch(f"/transactions/{single.id}", json={"status": "approved"})).status_code == 200
+        await client.post("/transactions/bulk-approve", json={"ids": [str(t.id) for t in bulk]})
+
+        expected = await _update_audit_rows(db, single.id)
+        assert ("status", "pending", "approved", acting_user) in expected
+        for txn in bulk:
+            assert await _update_audit_rows(db, txn.id) == expected
+
+
+class TestBulkLocking:
+    def test_the_row_select_locks_in_id_order(self) -> None:
+        stmt = live_transactions_for_update_stmt([uuid.uuid4()], uuid.uuid4())
+
+        sql = str(stmt.compile(dialect=postgresql.dialect()))
+
+        # SQLite ignores FOR UPDATE, so assert on the Postgres rendering.
+        assert sql.rstrip().endswith("FOR UPDATE")
+        assert "ORDER BY transactions.id" in sql
+
+
+class TestBulkApproveLimits:
+    @pytest.mark.asyncio
+    async def test_duplicate_ids_are_counted_once(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User, prop: Property,
+    ) -> None:
+        txn = await _seed_transaction(db, org, owner, property_id=prop.id, status="pending")
+
+        resp = await client.post("/transactions/bulk-approve", json={"ids": [str(txn.id)] * 3})
+
+        assert resp.json() == {"approved": 1, "skipped": 0}
+
+
+    @pytest.mark.asyncio
+    async def test_an_empty_list_is_422(self, client: AsyncClient) -> None:
+        assert (await client.post("/transactions/bulk-approve", json={"ids": []})).status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_ids_above_the_cap_are_422(self, client: AsyncClient) -> None:
+        ids = [str(uuid.uuid4()) for _ in range(MAX_BULK_TRANSACTION_IDS + 1)]
+        assert (await client.post("/transactions/bulk-approve", json={"ids": ids})).status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_other_orgs_are_skipped(
+        self, client: AsyncClient, db: AsyncSession,
+    ) -> None:
+        other_org = await _other_org_transaction(db)
+
+        resp = await client.post("/transactions/bulk-approve", json={"ids": [str(other_org.id)]})
+
+        assert resp.json() == {"approved": 0, "skipped": 1}
+        await db.refresh(other_org)
+        assert other_org.status == "pending"
 
 
 class TestScheduleEReport:
@@ -445,3 +655,91 @@ class TestScheduleEReport:
         resp = await client.get("/transactions/schedule-e", params={"tax_year": 2099})
         assert resp.status_code == 200
         assert resp.json() == []
+
+
+class TestKeepDuplicate:
+    @pytest.mark.asyncio
+    async def test_delete_ids_must_be_within_the_cap(self, client: AsyncClient) -> None:
+        keep = str(uuid.uuid4())
+        for delete_ids in ([], [str(uuid.uuid4()) for _ in range(MAX_BULK_TRANSACTION_IDS + 1)]):
+            resp = await client.post("/transactions/duplicates/keep", json={"keep_id": keep, "delete_ids": delete_ids})
+            assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_another_orgs_delete_id_is_neither_deleted_nor_linked(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        keep = await _seed_transaction(db, org, owner)
+        mine = await _seed_transaction(db, org, owner)
+        theirs = await _other_org_transaction(db)
+        doc_mine, doc_theirs = await _link_new_document(db, mine), await _link_new_document(db, theirs)
+
+        resp = await client.post("/transactions/duplicates/keep", json={
+            "keep_id": str(keep.id), "delete_ids": [str(mine.id), str(theirs.id)],
+        })
+
+        assert resp.json() == {"kept": 1, "deleted": 1}
+        await db.refresh(theirs)
+        assert theirs.deleted_at is None
+        linked = (await db.execute(
+            select(TransactionDocument.document_id).where(TransactionDocument.transaction_id == keep.id)
+        )).scalars().all()
+        assert linked == [doc_mine]
+        assert doc_theirs not in linked
+
+    @pytest.mark.asyncio
+    async def test_a_soft_deleted_keep_id_is_404(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        gone = await _seed_transaction(db, org, owner)
+        await transaction_repo.mark_deleted(db, gone)
+        other = await _seed_transaction(db, org, owner)
+
+        resp = await client.post("/transactions/duplicates/keep", json={
+            "keep_id": str(gone.id), "delete_ids": [str(other.id)],
+        })
+
+        assert resp.status_code == 404
+        await db.refresh(other)
+        assert other.deleted_at is None
+
+    @pytest.mark.asyncio
+    async def test_keep_locks_both_sides_in_one_org_scoped_select(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        keep = await _seed_transaction(db, org, owner)
+        other = await _seed_transaction(db, org, owner)
+        statements: list[str] = []
+        real = live_transactions_for_update_stmt
+
+        def record(*args, **kwargs):
+            stmt = real(*args, **kwargs)
+            statements.append(str(stmt.compile(dialect=postgresql.dialect())))
+            return stmt
+
+        with patch("app.repositories.transactions.transaction_bulk_repo.live_transactions_for_update_stmt", record):
+            await client.post("/transactions/duplicates/keep", json={
+                "keep_id": str(keep.id), "delete_ids": [str(other.id)],
+            })
+
+        # SQL-level check only: SQLite ignores FOR UPDATE, so this shows the statement, not runtime behaviour.
+        assert len(statements) == 1
+        sql = statements[0]
+        assert sql.rstrip().endswith("FOR UPDATE")
+        assert "ORDER BY transactions.id" in sql
+        assert "transactions.organization_id =" in sql and "transactions.deleted_at IS NULL" in sql
+
+
+    @pytest.mark.asyncio
+    async def test_keep_id_in_delete_ids_is_422_and_deletes_nothing(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        txn = await _seed_transaction(db, org, owner)
+
+        resp = await client.post("/transactions/duplicates/keep", json={
+            "keep_id": str(txn.id), "delete_ids": [str(txn.id)],
+        })
+
+        assert resp.status_code == 422
+        await db.refresh(txn)
+        assert txn.deleted_at is None

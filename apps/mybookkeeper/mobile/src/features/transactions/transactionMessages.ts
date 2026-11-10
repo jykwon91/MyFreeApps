@@ -60,3 +60,7 @@ export function bulkApproveFailureMessage(error: unknown): string {
 export function bulkApprovedMessage(approved: number, skipped: number): string {
   return `${approved} approved${skipped > 0 ? `, ${skipped} skipped` : ""}`;
 }
+
+export function bulkApprovedSomeFailedMessage(approved: number, skipped: number): string {
+  return `Approved ${approved}${skipped > 0 ? `, skipped ${skipped}` : ""}. The rest failed \u2014 try again.`;
+}

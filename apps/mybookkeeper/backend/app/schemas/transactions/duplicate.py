@@ -3,7 +3,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
+
+from app.core.transaction_bulk_constants import MAX_BULK_TRANSACTION_IDS
 
 
 class DuplicateTransactionRead(BaseModel):
@@ -44,7 +46,13 @@ class DuplicatePairsResponse(BaseModel):
 
 class DuplicateKeepRequest(BaseModel):
     keep_id: uuid.UUID
-    delete_ids: list[uuid.UUID]
+    delete_ids: list[uuid.UUID] = Field(min_length=1, max_length=MAX_BULK_TRANSACTION_IDS)
+
+    @model_validator(mode="after")
+    def _keep_id_not_deleted(self) -> "DuplicateKeepRequest":
+        if self.keep_id in self.delete_ids:
+            raise ValueError("keep_id must not be in delete_ids")
+        return self
 
 
 class DuplicateDismissRequest(BaseModel):

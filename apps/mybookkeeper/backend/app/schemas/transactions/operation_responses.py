@@ -22,3 +22,4 @@ class BulkApproveResponse(BaseModel):
 
 class BulkDeleteResponse(BaseModel):
     deleted: int
+    skipped: int
