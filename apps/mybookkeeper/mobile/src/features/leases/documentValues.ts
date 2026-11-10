@@ -1,5 +1,5 @@
 import type { SignedLeaseTemplatePrefillItem } from "@mybookkeeper/api-client/types/lease/signed-lease-template-prefill";
-import type { PlaceholderEdits } from "../../types/PlaceholderEdits";
+import type { PlaceholderEdits } from "@mybookkeeper/api-client/types/lease/placeholder-edits";
 
 export function documentValue(item: SignedLeaseTemplatePrefillItem, edits: PlaceholderEdits): string {
   return edits[item.key] ?? item.value;

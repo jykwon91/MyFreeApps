@@ -250,6 +250,7 @@ export default function LeaseNew() {
         <section className="space-y-3" data-testid="lease-generate-form-section">
           <h2 className="text-sm font-semibold">Fill in placeholders</h2>
           <LeaseGenerateForm
+            key={`${resolvedApplicantId}|${selectedTemplateIds.join(",")}`}
             templateIds={selectedTemplateIds}
             templateLabels={templateLabels}
             applicantId={resolvedApplicantId!}
