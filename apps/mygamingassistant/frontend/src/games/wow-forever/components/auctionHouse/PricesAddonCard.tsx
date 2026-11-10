@@ -11,7 +11,8 @@ export default function PricesAddonCard() {
       <div className="space-y-3 pt-2">
         <p>
           The MGA Prices addon shows an item&apos;s auction price when you mouse over it in WoW Forever: your faction&apos;s house,
-          or every house while you hold Shift.
+          or every house while you hold Shift. On crafting materials it also shows which profession leveling routes use them
+          and the best craft that pays with them on your house: the demand that can push a price up.
         </p>
         <ol className="list-decimal space-y-1 pl-5">
           <li>Download the addon. It comes with today&apos;s prices for every house.</li>

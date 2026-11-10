@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-09",
+    title: "Addon: which materials crafters want",
+    summary:
+      "Download the MGA Prices addon again: mousing over a crafting material now shows which profession leveling routes use it and the best craft that pays with it on your auction house right now, the demand that can push its price up.",
+    to: "/wow-forever/auction-house",
+  },
+  {
+    date: "2026-11-09",
     title: "Tag macros: paste a mob's name",
     summary:
       "On the Macros page, paste a rare's or quest mob's name and copy a macro that targets it by its exact name and casts Corruption (or any spell you type) the moment you press it, so you get the tag first.",

@@ -19,7 +19,7 @@
  *   - prices that fail to load leave the route usable, with a retry
  *   - the Auction house page narrows to one profession's materials, and prices one recipe
  *     (each material, the total, what it sells for, the difference) from its link
- *   - "Download the addon" zips MGA Prices with every house's prices in Data.lua
+ *   - "Download the addon" zips MGA Prices with every house's prices in Data.lua, plus crafting demand per material
  *   - nothing scrolls sideways at 375px
  *
  * Run: npm run test:e2e -- wow-forever-auction-prices
@@ -306,6 +306,10 @@ test("the Auction house page downloads the MGA Prices addon with every house's p
   expect(data).toContain("[4611] = {3300, 3300, 20},");
   expect(data).toContain("[4611] = {3495, 3495, 20},");
   expect(data).toContain("[4611] = {5349, 5349, 20},");
+  // Crafting demand rides along: vendor thread says so, Linen Cloth names its leveling routes.
+  expect(data).toContain("[2320] = {vendor = true},");
+  expect(data).toMatch(/\[2589\] = \{leveling = "[^"]*First Aid 1–\d+/);
+  expect(data).toContain("crafts = {");
   expect(files["MGAPrices/MGAPrices.toc"]).toBeDefined();
   expect(asked).toEqual(expect.arrayContaining(["pvp/alliance", "pvp/horde", "pvp/neutral"]));
   await expect(page.getByText("MGA Prices is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
