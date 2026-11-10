@@ -125,12 +125,20 @@ services:
     networks:
       - default
       - myfreeapps
+    # The deploy workflow waits for this to report healthy before finishing.
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.workers.upload_processor_healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   scheduler:
     image: ghcr.io/jykwon91/myfreeapps-mybookkeeper-backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     command: ["python", "-m", "app.workers.scheduler_worker"]
     mem_limit: 512m
+    stop_grace_period: 60s
     cpus: 1.0
     pids_limit: 128
     # format: raw (compose >= 2.30) — values are literal, never interpolated.
@@ -157,6 +165,13 @@ services:
     networks:
       - default
       - myfreeapps
+    # The deploy workflow waits for this to report healthy before finishing.
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.workers.scheduler_healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   caddy:
     # Custom image: caddy:2-alpine + freshly-built frontend dist baked in

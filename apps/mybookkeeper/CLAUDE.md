@@ -106,7 +106,7 @@
 | Backend | FastAPI, Python, SQLAlchemy 2.0 (async), PostgreSQL, Alembic, Pydantic 2 |
 | Auth | fastapi-users, JWT (Bearer token) |
 | AI | Anthropic Claude SDK (`backend/app/services/extraction/claude_service.py`) |
-| Background jobs | Dramatiq + PostgreSQL broker, scheduler polls Gmail every 15 min |
+| Background jobs | Two worker containers: `upload-processor` (document extraction) and `scheduler` (Gmail sync every `GMAIL_POLL_INTERVAL_MINUTES`, default daily; hourly rent reminders; transparency cost sync). Both heartbeat-healthchecked; the deploy waits for them |
 | File parsing | pypdf (PDF), mammoth (DOCX), openpyxl (XLSX/CSV) |
 
 ## Directory Map
@@ -164,7 +164,8 @@ deploy/                   # Caddyfile, systemd service files
 5. Storage cleanup on DB-insert failure: best-effort `delete_file` on the just-uploaded object (logged on failure for the next sweep)
 
 **Email sync (background):**
-- `scheduler_worker.py` → Dramatiq queue → `email_sync_worker.py`
+- `scheduler_worker.py` calls `email_sync_worker.sync_gmail_connection` per connected org on each full cycle
+- Liveness: the scheduler's heartbeat is kept fresh by a background task (ticks are an hour apart, a sync can run for minutes); the upload processor's beats on every poll and every finished document. `scheduler_healthcheck.py` / `upload_processor_healthcheck.py` are the container healthchecks declared in `app.yaml`
 - Deduped on `email_message_id` column
 
 **Auth:**
@@ -273,8 +274,9 @@ npm run lint     # ESLint
 ```bash
 source .venv/bin/activate
 uvicorn app.main:app --reload          # API on :8000
-python -m app.workers.scheduler_worker # Email scheduler
-python -m dramatiq app.workers.email_sync_worker  # Dramatiq worker
+python -m app.workers.scheduler_worker         # Scheduler (Gmail sync, reminders, cost sync)
+python -m app.workers.upload_processor_worker  # Document extraction (or RUN_UPLOAD_WORKER=true in the API)
+python -m app.workers.scheduler_healthcheck    # Exit 0 if the scheduler heartbeat is fresh
 bash scripts/migrate.sh                # Apply migrations (with verification)
 bash scripts/migrate.sh --status       # Check migration status
 alembic revision --autogenerate -m "description"  # New migration

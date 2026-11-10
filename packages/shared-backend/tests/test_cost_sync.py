@@ -6,6 +6,7 @@ and an Anthropic failure aborts the write (no partial/zero overwrite).
 """
 from __future__ import annotations
 
+import threading
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
@@ -54,6 +55,31 @@ def _stub_fetch(monkeypatch: pytest.MonkeyPatch, value: int) -> None:
 
 
 class TestRunCostSync:
+    @pytest.mark.anyio
+    async def test_storage_round_trip_runs_off_the_event_loop(
+        self, monkeypatch: pytest.MonkeyPatch, fake_storage: FakeStorageClient,
+    ) -> None:
+        """MinIO calls are blocking; on the loop thread they would freeze the
+        scheduler worker (and its heartbeat) for the whole round trip."""
+        loop_thread = threading.get_ident()
+        threads: dict[str, int] = {}
+        real_load, real_save = transparency_store.load_document, transparency_store.save_document
+
+        def _load(settings: SimpleNamespace) -> TransparencyDocument | None:
+            threads["load"] = threading.get_ident()
+            return real_load(settings)
+
+        def _save(settings: SimpleNamespace, document: TransparencyDocument) -> None:
+            threads["save"] = threading.get_ident()
+            real_save(settings, document)
+
+        monkeypatch.setattr(transparency_store, "load_document", _load)
+        monkeypatch.setattr(transparency_store, "save_document", _save)
+        _stub_fetch(monkeypatch, 0)
+        await cost_sync.run_cost_sync(_settings(), now=_NOW)
+        assert threads["load"] != loop_thread
+        assert threads["save"] != loop_thread
+
     @pytest.mark.anyio
     async def test_computes_and_persists_costs(
         self, monkeypatch: pytest.MonkeyPatch, fake_storage: FakeStorageClient,

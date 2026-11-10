@@ -124,6 +124,9 @@ services:
     restart: unless-stopped
     command: {{ w.command | tojson }}
     mem_limit: {{ w.mem_limit | default("512m") }}
+{%- if w.stop_grace_period is defined %}
+    stop_grace_period: {{ w.stop_grace_period }}
+{%- endif %}
     cpus: 1.0
     pids_limit: 128
     # format: raw (compose >= 2.30) — values are literal, never interpolated.

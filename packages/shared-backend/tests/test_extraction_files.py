@@ -9,7 +9,9 @@ openpyxl workbook.
 from __future__ import annotations
 
 import io
+import threading
 import zipfile
+from collections.abc import Awaitable, Callable
 
 import openpyxl
 import pytest
@@ -110,3 +112,30 @@ class TestParseEml:
         assert len(parsed["attachments"]) == 1
         assert parsed["attachments"][0]["filename"] == "r.pdf"
         assert parsed["attachments"][0]["content_type"] == "application/pdf"
+
+
+class TestParsersRunOffTheEventLoop:
+    """pypdf / mammoth / openpyxl are CPU-bound; running them on the loop
+    thread would freeze every other request (and a worker's heartbeat)."""
+
+    @pytest.mark.parametrize(
+        ("parser", "call"),
+        [
+            ("_pdf_text", lambda: files.extract_text_from_pdf(b"%PDF")),
+            ("_docx_text", lambda: files.extract_text_from_docx(b"PK")),
+            ("_workbook_text", lambda: files.extract_text_from_spreadsheet(b"PK", "x.xlsx", max_chars=10)),
+        ],
+    )
+    async def test_runs_in_a_worker_thread(
+        self, monkeypatch: pytest.MonkeyPatch, parser: str, call: Callable[[], Awaitable[object]],
+    ) -> None:
+        loop_thread = threading.get_ident()
+        seen: list[int] = []
+
+        def _record(_content: bytes) -> str:
+            seen.append(threading.get_ident())
+            return "text"
+
+        monkeypatch.setattr(files, parser, _record)
+        assert await call() == "text"
+        assert seen and seen[0] != loop_thread

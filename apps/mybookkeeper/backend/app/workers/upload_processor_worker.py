@@ -3,6 +3,19 @@ Run with: python -m app.workers.upload_processor_worker
 Polls for documents with status='processing' and runs Claude extraction.
 Processes one document per user concurrently across multiple users.
 Self-healing: transient errors trigger exponential backoff retries.
+
+Liveness: the poll loop touches a heartbeat file after every successful look
+for work and after every document it finishes; the container healthcheck
+(``app.workers.upload_processor_healthcheck``) reports unhealthy once it goes
+stale. A failure to reach the database propagates and exits the process, so
+``restart: unless-stopped`` restarts it.
+
+Boot (as its own container, ``run()``) is fail loud: Sentry init, then a
+guard that one extraction fits inside the heartbeat max age. SIGTERM /
+SIGINT stop polling once the current drain finishes. A document still
+extracting when compose's stop grace period runs out is killed mid-read and
+stays ``extracting``; once that claim is stale (``document_read_state``) the
+user can re-extract it — the same as for any worker crash.
 """
 import asyncio
 import logging
@@ -11,19 +24,26 @@ from datetime import datetime, timedelta, timezone
 
 import anthropic
 import sqlalchemy.exc
+from platform_shared.workers.entrypoint import run_until_signalled, run_worker
+from platform_shared.workers.heartbeat import clear_heartbeat, touch_heartbeat
+from platform_shared.workers.wait_or_stop import wait_or_stop
 
 from app.core.document_constants import EXTRACTION_TIMEOUT_SECONDS
-from app.db.session import AsyncSessionLocal
+from app.core.observability import init_sentry
+from app.core.upload_processor_constants import (
+    HEARTBEAT_PATH,
+    MAX_CONCURRENT_USERS,
+    MAX_RETRIES,
+    POLL_INTERVAL_SECONDS,
+)
+from app.core.upload_processor_guard import check_heartbeat_outlasts_extraction
+from app.db.session import AsyncSessionLocal, engine
 from app.repositories import document_repo, system_event_repo
 from app.services.extraction.document_extraction_service import process_document
 from app.services.system.cost_service import check_cost_alerts
 from app.services.system.event_service import record_event
 
 logger = logging.getLogger(__name__)
-
-POLL_INTERVAL_SECONDS = 2
-MAX_CONCURRENT_USERS = 5
-MAX_RETRIES = 3
 
 _TRANSIENT_ERROR_TYPES = (
     anthropic.RateLimitError,
@@ -93,7 +113,7 @@ async def process_one_for_user(user_id: uuid.UUID) -> bool:
                 await system_event_repo.resolve_by_type(resolve_db, org_id, "extraction_failed")
                 await resolve_db.commit()
         except Exception:
-            pass
+            logger.exception("Failed to resolve extraction_failed events for org %s", org_id)
         try:
             msg = f"Document {doc_id} extracted successfully"
             if retry_count > 0:
@@ -106,11 +126,11 @@ async def process_one_for_user(user_id: uuid.UUID) -> bool:
                 {"document_id": str(doc_id), "retry_count": retry_count},
             )
         except Exception:
-            pass
+            logger.exception("Failed to record extraction success event for document %s", doc_id)
         try:
             await check_cost_alerts(org_id)
         except Exception:
-            pass
+            logger.exception("Cost alert check failed for org %s", org_id)
     except Exception as exc:
         logger.exception("Failed to process document %s", doc_id)
         transient = _is_transient_error(exc)
@@ -149,7 +169,7 @@ async def process_one_for_user(user_id: uuid.UUID) -> bool:
                 },
             )
         except Exception:
-            pass
+            logger.exception("Failed to record extraction failure event for document %s", doc_id)
     return True
 
 
@@ -158,6 +178,7 @@ async def drain_user(user_id: uuid.UUID) -> int:
     count = 0
     while await process_one_for_user(user_id):
         count += 1
+        touch_heartbeat(HEARTBEAT_PATH)
     return count
 
 
@@ -165,6 +186,7 @@ async def drain() -> int:
     """Process documents for all users concurrently (one doc at a time per user)."""
     async with AsyncSessionLocal() as db:
         user_ids = await document_repo.get_processing_user_ids(db)
+    touch_heartbeat(HEARTBEAT_PATH)
 
     if not user_ids:
         return 0
@@ -179,20 +201,41 @@ async def drain() -> int:
     return sum(results)
 
 
-async def main() -> None:
+async def poll_until_stopped(stop: asyncio.Event) -> None:
+    """Drain, then poll every ``POLL_INTERVAL_SECONDS`` while idle, until ``stop`` is set."""
     logger.info(
         "Upload processor started — polling every %ds, max %d concurrent users",
         POLL_INTERVAL_SECONDS, MAX_CONCURRENT_USERS,
     )
-    while True:
+    while not stop.is_set():
         processed = await drain()
         if not processed:
-            await asyncio.sleep(POLL_INTERVAL_SECONDS)
+            await wait_or_stop(stop, POLL_INTERVAL_SECONDS)
+
+
+async def main() -> None:
+    """In-process mode (the API with ``RUN_UPLOAD_WORKER=true``): poll until cancelled."""
+    await poll_until_stopped(asyncio.Event())
+
+
+async def run_processor(stop: asyncio.Event) -> None:
+    """Container mode: boot (fail loud), then poll until ``stop`` is set."""
+    clear_heartbeat(HEARTBEAT_PATH)
+    init_sentry()
+    check_heartbeat_outlasts_extraction(EXTRACTION_TIMEOUT_SECONDS)
+    try:
+        await poll_until_stopped(stop)
+    finally:
+        await engine.dispose()
+        logger.info("Upload processor stopped")
+
+
+async def _run_until_signalled() -> None:
+    await run_until_signalled(run_processor)
 
 
 def run() -> None:
-    logging.basicConfig(level=logging.INFO)
-    asyncio.run(main())
+    run_worker(_run_until_signalled)
 
 
 if __name__ == "__main__":

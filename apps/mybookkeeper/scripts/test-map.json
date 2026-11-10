@@ -2142,6 +2142,29 @@
       ],
       "frontend_tests": [],
       "e2e_specs": []
+    },
+    "workers": {
+      "source_paths": [
+        "backend/app/workers/scheduler_worker.py",
+        "backend/app/workers/scheduler_healthcheck.py",
+        "backend/app/workers/upload_processor_worker.py",
+        "backend/app/workers/upload_processor_healthcheck.py",
+        "backend/app/core/scheduler_worker_constants.py",
+        "backend/app/core/upload_processor_constants.py",
+        "backend/app/core/upload_processor_guard.py",
+        "backend/app/core/upload_heartbeat_too_short_error.py"
+      ],
+      "backend_tests": [
+        "test_scheduler_worker_heartbeat.py",
+        "test_scheduler_worker_cycle_isolation.py",
+        "test_scheduler_worker_transparency.py",
+        "test_upload_processor_heartbeat.py",
+        "test_self_healing.py",
+        "test_lease_auto_end_scheduler.py",
+        "test_utility_plan_scheduler.py"
+      ],
+      "frontend_tests": [],
+      "e2e_specs": []
     }
   },
   "shared_paths": [

@@ -15,11 +15,11 @@ Shape::
 """
 from __future__ import annotations
 
-import re
 from typing import Any
 
+from platform_shared.infra.compose_duration import is_compose_duration
+
 _TEST_FORMS = ("CMD", "CMD-SHELL")
-_DURATION = re.compile(r"^\d+(ms|s|m|h)$")
 _DURATION_KEYS = ("interval", "timeout", "start_period")
 _DEFAULTS: dict[str, Any] = {
     "interval": "15s",
@@ -54,7 +54,7 @@ def normalize_worker_healthcheck(worker_name: str, raw: object) -> dict[str, Any
     normalized: dict[str, Any] = {**_DEFAULTS, **raw}
     for key in _DURATION_KEYS:
         value = normalized[key]
-        if not isinstance(value, str) or not _DURATION.match(value):
+        if not is_compose_duration(value):
             raise ValueError(f"{where} `{key}` must be a duration like '15s', got {value!r}")
     retries = normalized["retries"]
     if not isinstance(retries, int) or isinstance(retries, bool) or retries < 1:

@@ -71,7 +71,10 @@ Other keys:
                                and the deploy workflow waits for it to report healthy
                                (so a crash-looping worker fails the deploy instead of
                                restarting unseen). Optional ``mem_limit`` overrides
-                               the 512m worker default.
+                               the 512m worker default. Optional ``stop_grace_period``
+                               (duration string; validated by
+                               ``worker_stop_grace_period``) overrides compose's 10s
+                               SIGTERM-to-SIGKILL wait.
   post_deploy_commands  list   Shell commands run in-container after ``alembic upgrade head``.
 """
 
@@ -88,6 +91,7 @@ import yaml
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from platform_shared.infra.worker_healthcheck import normalize_worker_healthcheck
+from platform_shared.infra.worker_stop_grace_period import validate_worker_stop_grace_period
 
 
 # Canonical feature order for the Permissions-Policy header.  This list is the
@@ -279,6 +283,10 @@ def render_app(repo_root: Path, app_slug: str, *, write: bool) -> dict[str, tupl
         if "healthcheck" in worker:
             worker["healthcheck"] = normalize_worker_healthcheck(
                 worker["name"], worker["healthcheck"],
+            )
+        if "stop_grace_period" in worker:
+            worker["stop_grace_period"] = validate_worker_stop_grace_period(
+                worker["name"], worker["stop_grace_period"],
             )
     # The web image builds from a subset of the workspace, so it has to copy this.
     ctx["has_api_client"] = (repo_root / "apps" / app_slug / "api-client" / "package.json").is_file()

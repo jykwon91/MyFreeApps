@@ -42,15 +42,27 @@ from __future__ import annotations
 
 import io
 import logging
+import os
 import re
 import uuid
 from datetime import timedelta
 from typing import Any
 from urllib.parse import urlparse
 
+import certifi
+import urllib3
 from minio import Minio
 from minio.deleteobjects import DeleteObject
 from minio.error import S3Error
+
+from platform_shared.core.storage_constants import (
+    STORAGE_CONNECT_TIMEOUT_SECONDS,
+    STORAGE_MAX_RETRIES,
+    STORAGE_POOL_MAXSIZE,
+    STORAGE_READ_TIMEOUT_SECONDS,
+    STORAGE_RETRY_BACKOFF_FACTOR,
+    STORAGE_RETRY_STATUS_CODES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +139,10 @@ def _build_minio_client(
     ``TLSV1_ALERT_INTERNAL_ERROR`` from storage.<domain>). The region
     value is only used in the SigV4 string-to-sign; MinIO accepts any
     value here.
+
+    The HTTP client is built here rather than left to minio-py, whose
+    default waits up to 5 minutes per connect/read and retries 5 times — see
+    ``storage_constants``. CA handling matches minio-py's default.
     """
     return Minio(
         host,
@@ -134,6 +150,24 @@ def _build_minio_client(
         secret_key=secret_key,
         secure=secure,
         region="us-east-1",
+        http_client=_build_http_client(),
+    )
+
+
+def _build_http_client() -> urllib3.PoolManager:
+    return urllib3.PoolManager(
+        timeout=urllib3.Timeout(
+            connect=STORAGE_CONNECT_TIMEOUT_SECONDS,
+            read=STORAGE_READ_TIMEOUT_SECONDS,
+        ),
+        maxsize=STORAGE_POOL_MAXSIZE,
+        cert_reqs="CERT_REQUIRED",
+        ca_certs=os.environ.get("SSL_CERT_FILE") or certifi.where(),
+        retries=urllib3.Retry(
+            total=STORAGE_MAX_RETRIES,
+            backoff_factor=STORAGE_RETRY_BACKOFF_FACTOR,
+            status_forcelist=STORAGE_RETRY_STATUS_CODES,
+        ),
     )
 
 

@@ -1039,6 +1039,26 @@ class TestWorkerHealthchecksGateDeploy:
         )
 
     @pytest.mark.parametrize(
+        ("app", "worker_name"),
+        [
+            ("myjobhunter", "scheduler"),
+            ("mygamingassistant", "scheduler"),
+            ("mybookkeeper", "scheduler"),
+            ("mybookkeeper", "upload-processor"),
+        ],
+    )
+    def test_background_job_workers_declare_a_healthcheck(self, app: str, worker_name: str) -> None:
+        """These workers run jobs nothing else runs (schedulers, MBK document
+        extraction). Without a healthcheck the parametrized test above skips
+        them, and a crash-looping one ships with a green deploy."""
+        config = yaml.safe_load(_read("apps", app, "app.yaml"))
+        workers = {w["name"]: w for w in config.get("workers", [])}
+        assert "healthcheck" in workers.get(worker_name, {}), (
+            f"apps/{app}/app.yaml worker `{worker_name}` must declare a `healthcheck` "
+            f"so the deploy waits for it."
+        )
+
+    @pytest.mark.parametrize(
         ("app", "worker_module"),
         [
             ("myjobhunter", "app.workers.discovery_scheduler_worker"),

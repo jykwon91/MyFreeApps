@@ -23,16 +23,10 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from platform_shared.workers.heartbeat import touch_heartbeat
+from platform_shared.workers.wait_or_stop import wait_or_stop
 from platform_shared.workers.worker_tick_failing_error import WorkerTickFailingError
 
 logger = logging.getLogger(__name__)
-
-
-async def _wait_or_stop(stop: asyncio.Event, timeout: float) -> None:
-    try:
-        await asyncio.wait_for(stop.wait(), timeout=timeout)
-    except TimeoutError:
-        pass
 
 
 async def run_heartbeat_loop(
@@ -50,7 +44,7 @@ async def run_heartbeat_loop(
     logger.info("%s running — ticking every %ss", label, interval_seconds)
     failures = 0
     while not stop.is_set():
-        await _wait_or_stop(stop, interval_seconds)
+        await wait_or_stop(stop, interval_seconds)
         if stop.is_set():
             break
         try:
