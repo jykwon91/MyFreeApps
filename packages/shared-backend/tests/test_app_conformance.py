@@ -1105,6 +1105,25 @@ class TestMobileManifestsGetDependabotUpdates:
             )
 
 
+class TestApiClientsGetDependabotUpdates:
+    """Each app's api-client is its own npm workspace with its own dependencies, so
+    without a Dependabot entry they would never get an update and nothing would say so."""
+
+    _CONFIG = yaml.safe_load(_read(".github", "dependabot.yml"))
+
+    @pytest.mark.parametrize(
+        "client",
+        sorted(path.parent for path in (_REPO_ROOT / "apps").glob("*/api-client/package.json")),
+        ids=lambda path: path.parent.name,
+    )
+    def test_client_has_an_npm_entry(self, client: Path) -> None:
+        directory = "/" + client.relative_to(_REPO_ROOT).as_posix()
+        assert any(
+            update["package-ecosystem"] == "npm" and update["directory"] == directory
+            for update in self._CONFIG["updates"]
+        ), f".github/dependabot.yml has no npm entry for {directory}."
+
+
 class TestReactTypesHeldWithReact:
     """Root overrides pin @types/react alongside react, so a Dependabot entry holding one
     has to hold the other, or it opens PRs the override makes meaningless."""
