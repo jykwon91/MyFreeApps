@@ -9,7 +9,7 @@ import { documentsMade, LEASE_DOCUMENT_MESSAGES as MESSAGES, prefillCaption } fr
 import { PLACEHOLDER_PROBLEM_MESSAGES } from "../../constants/placeholderProblems";
 import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { useWrite } from "../../lib/useWrite";
-import type { PlaceholderEdits } from "../../types/PlaceholderEdits";
+import type { PlaceholderEdits } from "@mybookkeeper/api-client/types/lease/placeholder-edits";
 import PlaceholderField from "../newLease/PlaceholderField";
 import { ADD_DOCUMENT_COPY } from "./addDocumentFailure";
 import { documentValue, documentValuesChanged, documentValues } from "./documentValues";

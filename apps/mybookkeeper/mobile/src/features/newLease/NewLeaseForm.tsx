@@ -12,8 +12,8 @@ import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
 import { leaseConflictCode } from "../leases/leaseConflictCode";
 import { isOutOfDateForm, newLeaseFailure } from "./newLeaseFailure";
 import PlaceholderField from "./PlaceholderField";
-import type { PlaceholderEdits } from "../../types/PlaceholderEdits";
-import { hasChanges, leaseValues, missingRequired, placeholderValue, unreadableNumbers } from "./placeholderValues";
+import type { PlaceholderEdits } from "@mybookkeeper/api-client/types/lease/placeholder-edits";
+import { hasChanges, leaseValues, missingRequired, placeholderProvenance, placeholderValue, unreadableNumbers } from "@mybookkeeper/api-client/utils/leaseFormValues";
 import { useLeaveNewLeaseFlow } from "./useLeaveNewLeaseFlow";
 
 interface NewLeaseFormProps {
@@ -127,8 +127,7 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
   }
 
   function captionFor(field: MergedPlaceholder): string | null {
-    const isEdited = placeholderValue(field, edits) !== (field.value ?? "");
-    const provenance = isEdited ? "manual" : field.provenance;
+    const provenance = placeholderProvenance(field, edits);
     const names = field.template_ids.map((id) => templateNames[id]).filter((name): name is string => Boolean(name));
     const parts = [provenance ? PROVENANCE_CAPTIONS[provenance] : null, names.length > 1 ? usedIn(names) : null];
     return parts.filter(Boolean).join(" · ") || null;

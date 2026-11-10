@@ -10,9 +10,9 @@
  * - Error states for template / applicant fetch failures
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useSearchParams } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import LeaseNew from "@/app/pages/LeaseNew";
@@ -276,6 +276,73 @@ describe("LeaseNew page", () => {
     });
     renderLeaseNew("/leases/new?template_ids=tpl-1&applicant_id=app-approved");
     expect(screen.getByTestId("lease-generate-form-section")).toBeInTheDocument();
+  });
+
+  it("starts a fresh form, dropping typed values, when the applicant changes", () => {
+    mockUseGetApplicantByIdQuery.mockReturnValue({
+      ...queryData(APPROVED_APPLICANT_DETAIL),
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    const nameField = {
+      id: "ph-1",
+      template_id: "tpl-1",
+      key: "TENANT FULL NAME",
+      display_label: "Tenant full name",
+      input_type: "text",
+      required: true,
+      default_source: null,
+      computed_expr: null,
+      display_order: 0,
+      created_at: "2026-05-02T00:00:00Z",
+      updated_at: "2026-05-02T00:00:00Z",
+    };
+    mockUseGetMultiGenerateDefaultsQuery.mockImplementation(
+      (args: { applicant_id: string }) => ({
+        ...queryData({
+          placeholders: [
+            {
+              placeholder: nameField,
+              template_ids: ["tpl-1"],
+              value: args.applicant_id === "app-approved" ? "Jane" : "Bob",
+              provenance: "applicant",
+            },
+          ],
+        }),
+        isLoading: false,
+        isFetching: false,
+      }),
+    );
+
+    function SwitchApplicant() {
+      const [, setParams] = useSearchParams();
+      return (
+        <button
+          type="button"
+          data-testid="switch-applicant"
+          onClick={() => setParams({ template_ids: "tpl-1", applicant_id: "app-lease-sent" })}
+        />
+      );
+    }
+    render(
+      <Provider store={store}>
+        <MemoryRouter initialEntries={["/leases/new?template_ids=tpl-1&applicant_id=app-approved"]}>
+          <Routes>
+            <Route path="/leases/new" element={<><LeaseNew /><SwitchApplicant /></>} />
+          </Routes>
+        </MemoryRouter>
+      </Provider>,
+    );
+
+    const input = () =>
+      screen.getByTestId("generate-field-TENANT FULL NAME").querySelector("input")!;
+    fireEvent.change(input(), { target: { value: "Typed Name" } });
+    expect(input().value).toBe("Typed Name");
+
+    fireEvent.click(screen.getByTestId("switch-applicant"));
+    expect(input().value).toBe("Bob");
   });
 
   it("shows the form skeleton while the applicant loads", () => {

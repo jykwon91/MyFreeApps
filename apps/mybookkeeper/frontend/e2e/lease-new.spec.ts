@@ -254,17 +254,37 @@ test.describe("Lease New page (/leases/new)", () => {
           `applicant-option-${applicantId}`,
         );
         await expect(applicantOption).toBeVisible({ timeout: 10_000 });
+        // Hold the defaults response so the loading skeleton is observable.
+        let releaseDefaults: () => void = () => {};
+        const defaultsHeld = new Promise<void>((resolve) => {
+          releaseDefaults = resolve;
+        });
+        await page.route("**/lease-templates/generate-defaults", async (route) => {
+          await defaultsHeld;
+          await route.continue();
+        });
         await applicantOption.click();
 
-        // Step 3 — form should appear.
+        // Step 3 — form should appear, with a skeleton in the same grid while loading.
         await expect(
           page.getByTestId("lease-generate-form-section"),
         ).toBeVisible({ timeout: 15_000 });
+        const skeleton = page.getByTestId("lease-generate-fields-skeleton");
+        await expect(skeleton).toBeVisible();
+        await expect(skeleton).toHaveClass(/sm:grid-cols-2/);
+        await expect(page.getByTestId("lease-generate-submit")).toBeDisabled();
+        releaseDefaults();
+        const loadedFields = page.getByTestId("lease-generate-fields");
+        await expect(loadedFields).toBeVisible({ timeout: 10_000 });
+        await expect(loadedFields).toHaveClass(/sm:grid-cols-2/);
+        await expect(skeleton).toHaveCount(0);
 
         // Submit the form (every required field is auto-filled).
         await page.waitForLoadState("networkidle");
         const submitBtn = page.getByTestId("lease-generate-submit");
         await expect(submitBtn).toBeVisible({ timeout: 10_000 });
+        // Submit stays disabled until the placeholder defaults have loaded.
+        await expect(submitBtn).toBeEnabled({ timeout: 10_000 });
         const createResponse = page.waitForResponse(
           (resp) =>
             resp.request().method() === "POST" &&

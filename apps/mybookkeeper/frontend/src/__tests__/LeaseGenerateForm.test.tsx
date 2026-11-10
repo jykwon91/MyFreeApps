@@ -11,6 +11,8 @@ import { MemoryRouter } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import LeaseGenerateForm from "@/app/features/leases/LeaseGenerateForm";
+import { queryData } from "@/test/rtk-query-data";
+import { queryStatus } from "@/test/rtk-query-status";
 import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
 
 // ---------------------------------------------------------------------------
@@ -90,23 +92,23 @@ const TEMPLATE: LeaseTemplateDetail = {
 };
 
 const DEFAULTS_FROM_APPLICANT = {
-  data: {
-    defaults: [
-      { key: "TENANT FULL NAME", value: "Jane Doe", provenance: "applicant" },
-      { key: "TENANT EMAIL", value: null, provenance: null },
-    ],
-  },
+  ...queryData({
+      defaults: [
+        { key: "TENANT FULL NAME", value: "Jane Doe", provenance: "applicant" },
+        { key: "TENANT EMAIL", value: null, provenance: null },
+      ],
+    }),
   isLoading: false,
   isFetching: false,
 };
 
 const DEFAULTS_FROM_INQUIRY = {
-  data: {
-    defaults: [
-      { key: "TENANT FULL NAME", value: "John Smith", provenance: "inquiry" },
-      { key: "TENANT EMAIL", value: "john@example.com", provenance: "inquiry" },
-    ],
-  },
+  ...queryData({
+      defaults: [
+        { key: "TENANT FULL NAME", value: "John Smith", provenance: "inquiry" },
+        { key: "TENANT EMAIL", value: "john@example.com", provenance: "inquiry" },
+      ],
+    }),
   isLoading: false,
   isFetching: false,
 };
@@ -131,7 +133,7 @@ describe("LeaseGenerateForm", () => {
     // Default the multi-template query to "skipped" — single-template tests
     // never trigger it.
     mockUseGetMultiGenerateDefaultsQuery.mockReturnValue({
-      data: undefined,
+      ...queryData(undefined),
       isLoading: false,
       isFetching: false,
     });
@@ -241,7 +243,7 @@ describe("LeaseGenerateForm", () => {
 
   describe("multi-template mode", () => {
     const MULTI_DEFAULTS = {
-      data: {
+      ...queryData({
         placeholders: [
           {
             placeholder: TEMPLATE.placeholders[0],
@@ -256,7 +258,7 @@ describe("LeaseGenerateForm", () => {
             provenance: null,
           },
         ],
-      },
+      }),
       isLoading: false,
       isFetching: false,
     };
@@ -341,5 +343,152 @@ describe("LeaseGenerateForm", () => {
     // Value preserved, confirmation gone
     expect(nameInput.value).toBe("Manually Edited");
     expect(screen.queryByTestId("pull-from-source-confirm")).not.toBeInTheDocument();
+  });
+
+  it("disables submit and ignores a submit event while the defaults are still loading", async () => {
+    mockUseGetGenerateDefaultsQuery.mockReturnValue({
+      ...queryData(undefined),
+      isLoading: true,
+      ...queryStatus({ failed: false, fetching: true }),
+    });
+    const createMutation = vi.fn();
+    mockUseCreateSignedLeaseMutation.mockReturnValue([createMutation, { isLoading: false }]);
+    renderForm("applicant-1");
+
+    expect(screen.getByTestId("lease-generate-submit")).toBeDisabled();
+    fireEvent.submit(screen.getByTestId("lease-generate-form"));
+    await Promise.resolve();
+    expect(createMutation).not.toHaveBeenCalled();
+  });
+
+  it("enables submit once the defaults have loaded", () => {
+    mockUseGetGenerateDefaultsQuery.mockReturnValue(DEFAULTS_FROM_APPLICANT);
+    renderForm("applicant-1");
+
+    expect(screen.getByTestId("lease-generate-submit")).toBeEnabled();
+  });
+
+  it("keeps submit disabled, shows an error with Try again, and sends nothing when the defaults fail to load", async () => {
+    const refetch = vi.fn();
+    mockUseGetGenerateDefaultsQuery.mockReturnValue({
+      ...queryData(undefined),
+      isLoading: false,
+      ...queryStatus({ failed: true, fetching: false }),
+      refetch,
+    });
+    const createMutation = vi.fn();
+    mockUseCreateSignedLeaseMutation.mockReturnValue([createMutation, { isLoading: false }]);
+    renderForm("applicant-1");
+
+    expect(screen.getByTestId("lease-generate-submit")).toBeDisabled();
+    fireEvent.submit(screen.getByTestId("lease-generate-form"));
+    await Promise.resolve();
+    expect(createMutation).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("keeps submit enabled and the typed value when the defaults refetch in the background", async () => {
+    mockUseGetGenerateDefaultsQuery.mockReturnValue(DEFAULTS_FROM_APPLICANT);
+    const { rerender } = renderForm("applicant-1");
+
+    const nameInput = screen.getByTestId("generate-field-TENANT FULL NAME")
+      .querySelector("input")!;
+    fireEvent.change(nameInput, { target: { value: "Typed Name" } });
+
+    mockUseGetGenerateDefaultsQuery.mockReturnValue({
+      ...queryData({
+        defaults: [
+          { key: "TENANT FULL NAME", value: "Refetched Name", provenance: "applicant" },
+          { key: "TENANT EMAIL", value: "new@example.com", provenance: "applicant" },
+        ],
+      }),
+      isLoading: false,
+      isFetching: true,
+    });
+    await act(async () => {
+      rerender(
+        <MemoryRouter>
+          <Provider store={store}>
+            <LeaseGenerateForm template={TEMPLATE} applicantId="applicant-1" />
+          </Provider>
+        </MemoryRouter>,
+      );
+    });
+
+    expect(screen.getByTestId("lease-generate-submit")).toBeEnabled();
+    expect(nameInput.value).toBe("Typed Name");
+    const emailInput = screen.getByTestId("generate-field-TENANT EMAIL")
+      .querySelector("input")!;
+    expect(emailInput.value).toBe("new@example.com");
+  });
+
+  it("sends only the current asked fields, trimmed", async () => {
+    mockUseGetGenerateDefaultsQuery.mockReturnValue({
+      ...queryData({
+        defaults: [
+          ...DEFAULTS_FROM_APPLICANT.currentData.defaults,
+          { key: "STALE KEY", value: "gone", provenance: "applicant" },
+        ],
+      }),
+      isLoading: false,
+      isFetching: false,
+    });
+    const unwrap = vi.fn().mockResolvedValue({ id: "lease-1" });
+    const createMutation = vi.fn().mockReturnValue({ unwrap });
+    mockUseCreateSignedLeaseMutation.mockReturnValue([createMutation, { isLoading: false }]);
+    renderForm("applicant-1");
+
+    const nameInput = screen.getByTestId("generate-field-TENANT FULL NAME")
+      .querySelector("input")!;
+    fireEvent.change(nameInput, { target: { value: "  Padded  " } });
+    fireEvent.submit(screen.getByTestId("lease-generate-form"));
+    await Promise.resolve();
+
+    expect(createMutation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        values: { "TENANT FULL NAME": "Padded", "TENANT EMAIL": "" },
+      }),
+    );
+  });
+
+  it("shows a field skeleton matching the template's asked fields while loading, then the inputs", () => {
+    mockUseGetGenerateDefaultsQuery.mockReturnValue({
+      ...queryData(undefined),
+      isLoading: true,
+      ...queryStatus({ failed: false, fetching: true }),
+    });
+    const { rerender } = renderForm("applicant-1");
+
+    expect(screen.getByTestId("lease-generate-fields-skeleton")).toBeInTheDocument();
+    expect(screen.getAllByTestId("lease-generate-field-skeleton")).toHaveLength(
+      TEMPLATE.placeholders.length,
+    );
+    expect(screen.queryByTestId("lease-generate-fields")).not.toBeInTheDocument();
+
+    mockUseGetGenerateDefaultsQuery.mockReturnValue(DEFAULTS_FROM_APPLICANT);
+    rerender(
+      <MemoryRouter>
+        <Provider store={store}>
+          <LeaseGenerateForm template={TEMPLATE} applicantId="applicant-1" />
+        </Provider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByTestId("lease-generate-fields-skeleton")).not.toBeInTheDocument();
+    expect(screen.getByTestId("lease-generate-fields")).toBeInTheDocument();
+  });
+
+  it("shows no skeleton when the defaults fail to load", () => {
+    mockUseGetGenerateDefaultsQuery.mockReturnValue({
+      ...queryData(undefined),
+      isLoading: false,
+      ...queryStatus({ failed: true, fetching: false }),
+      refetch: vi.fn(),
+    });
+    renderForm("applicant-1");
+
+    expect(screen.queryByTestId("lease-generate-fields-skeleton")).not.toBeInTheDocument();
   });
 });
