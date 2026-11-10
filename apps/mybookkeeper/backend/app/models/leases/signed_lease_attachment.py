@@ -73,6 +73,12 @@ class SignedLeaseAttachment(Base):
         DateTime(timezone=True), nullable=True,
     )
 
+    # When this file last went out in a tenant email. A record file that was
+    # emailed is part of what the tenant was given, so it stays locked.
+    emailed_to_tenant_at: Mapped[_dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+
     __table_args__ = (
         CheckConstraint(
             f"kind IN {LEASE_ATTACHMENT_KINDS_SQL}",

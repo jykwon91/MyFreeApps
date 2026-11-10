@@ -261,6 +261,28 @@ async def update_lease(
     return lease
 
 
+async def restore_last_emailed_if_unchanged(
+    db: AsyncSession,
+    *,
+    lease_id: uuid.UUID,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    expected: _dt.datetime,
+    restore_to: _dt.datetime | None,
+) -> None:
+    """Put ``last_emailed_to_tenant_at`` back only if no later email has stamped it since."""
+    await db.execute(
+        update(SignedLease)
+        .where(
+            SignedLease.id == lease_id,
+            SignedLease.user_id == user_id,
+            SignedLease.organization_id == organization_id,
+            SignedLease.last_emailed_to_tenant_at == expected,
+        )
+        .values(last_emailed_to_tenant_at=restore_to)
+    )
+
+
 async def soft_delete(
     db: AsyncSession,
     *,

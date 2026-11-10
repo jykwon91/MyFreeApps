@@ -2,7 +2,7 @@
 
 A lease locks when it is past generated, has been emailed, or holds a signed
 copy. Then no more rendered originals can appear, and an original or signed
-file only goes if it was added after the lock and has not been emailed since.
+file only goes if it was added after the lock and was never in a tenant email.
 """
 from __future__ import annotations
 
@@ -219,10 +219,13 @@ async def test_the_first_signed_copy_stays_locked_even_when_it_arrived_after_the
 
 
 @pytest.mark.asyncio
-async def test_a_file_added_after_the_lock_but_before_the_last_email_stays_locked(db: AsyncSession) -> None:
+async def test_a_later_signed_copy_that_was_emailed_stays_locked(db: AsyncSession) -> None:
     user_id, org_id, lease_id, file_id = await _locked_lease_with_file(
-        db, kind="signed_lease", offset=HOUR, last_emailed_to_tenant_at=T + 2 * HOUR,
+        db, kind="signed_lease", offset=2 * HOUR, last_emailed_to_tenant_at=T + 3 * HOUR,
     )
+    await _file(db, lease_id, user_id, kind="signed_lease", at=T + HOUR)
+    await signed_lease_attachment_repo.set_emailed_to_tenant_at(db, lease_id=lease_id, stamps={file_id: T + 3 * HOUR})
+    await db.commit()
 
     with pytest.raises(LeaseAttachmentLockedError):
         await delete_attachment(user_id=user_id, organization_id=org_id, lease_id=lease_id, attachment_id=file_id)

@@ -7,6 +7,7 @@ attacks (lesson from the calendar/blackout PR #172 fix).
 from __future__ import annotations
 
 import uuid
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
 
@@ -175,3 +176,45 @@ async def delete_by_id_scoped_to_lease(
         )
     )
     return row
+
+
+async def set_emailed_to_tenant_at(
+    db: AsyncSession,
+    *,
+    lease_id: uuid.UUID,
+    stamps: Mapping[uuid.UUID, datetime | None],
+) -> None:
+    """Set ``emailed_to_tenant_at`` per attachment, scoped to its lease (same IDOR guard)."""
+    for stamp, ids in _ids_by_stamp(stamps).items():
+        await db.execute(
+            update(SignedLeaseAttachment)
+            .where(SignedLeaseAttachment.lease_id == lease_id, SignedLeaseAttachment.id.in_(ids))
+            .values(emailed_to_tenant_at=stamp)
+        )
+
+
+async def restore_emailed_to_tenant_at_if_unchanged(
+    db: AsyncSession,
+    *,
+    lease_id: uuid.UUID,
+    expected: datetime,
+    stamps: Mapping[uuid.UUID, datetime | None],
+) -> None:
+    """Put each file's stamp back, skipping any a later email has stamped since."""
+    for stamp, ids in _ids_by_stamp(stamps).items():
+        await db.execute(
+            update(SignedLeaseAttachment)
+            .where(
+                SignedLeaseAttachment.lease_id == lease_id,
+                SignedLeaseAttachment.id.in_(ids),
+                SignedLeaseAttachment.emailed_to_tenant_at == expected,
+            )
+            .values(emailed_to_tenant_at=stamp)
+        )
+
+
+def _ids_by_stamp(stamps: Mapping[uuid.UUID, datetime | None]) -> dict[datetime | None, list[uuid.UUID]]:
+    by_value: dict[datetime | None, list[uuid.UUID]] = {}
+    for attachment_id, stamp in stamps.items():
+        by_value.setdefault(stamp, []).append(attachment_id)
+    return by_value
