@@ -1,5 +1,5 @@
-import type { FileForUpload } from "../../types/FileForUpload";
 import { type HeldFilePick, useHeldFiles } from "./useHeldFiles";
+import type { FileForUpload } from "@platform/mobile";
 
 export type { HeldFilePick };
 

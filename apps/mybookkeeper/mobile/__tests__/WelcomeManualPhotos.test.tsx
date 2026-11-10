@@ -1,4 +1,4 @@
-import "../test-support/reactNativeFormData";
+import "@platform/mobile/test-support/reactNativeFormData";
 import api from "@platform/core/lib/api";
 import { WELCOME_MANUAL_MAX_SECTION_IMAGES, SECTION_IMAGE_MAX_BYTES } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import type { AxiosAdapter } from "axios";

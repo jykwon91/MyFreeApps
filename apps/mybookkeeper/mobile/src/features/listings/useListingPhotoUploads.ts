@@ -1,11 +1,10 @@
 import { LISTING_PHOTO_MAX_MB } from "@mybookkeeper/api-client/constants/listingPhotos";
+import { type FileForUpload, filePart } from "@platform/mobile";
 import { useUploadListingPhotosMutation } from "@mybookkeeper/api-client/store/listingsApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { nanoid } from "@reduxjs/toolkit";
 import { useEffect, useRef, useState } from "react";
 import { uploadFailureCopy } from "../../constants/listingPhotos";
-import { filePart } from "../../lib/filePart";
-import type { FileForUpload } from "../../types/FileForUpload";
 import type { ListingPhotoBatch } from "../../types/ListingPhotoBatch";
 import type { ListingPhotoUpload } from "../../types/ListingPhotoUpload";
 import { releaseHeldFile } from "../uploads/heldFile";

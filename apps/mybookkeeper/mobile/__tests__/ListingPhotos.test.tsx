@@ -1,4 +1,4 @@
-import "../test-support/reactNativeFormData";
+import "@platform/mobile/test-support/reactNativeFormData";
 import { listingsApi } from "@mybookkeeper/api-client/store/listingsApi";
 import { store } from "../src/lib/store";
 import api from "@platform/core/lib/api";

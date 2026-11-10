@@ -1,14 +1,13 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { FormField, LoadingButton, MIN_TOUCH_TARGET, OptionSheet, SegmentedControl, useTheme, useToast } from "@platform/mobile";
+import { FormField, LoadingButton, MIN_TOUCH_TARGET, OptionSheet, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Switch, Text, View } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
 import { DEFAULT_CATEGORY, NO_PROPERTY_OPTION } from "../../constants/transactionEdit";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
-import { useConfirmLeave } from "../../lib/useConfirmLeave";
 import type { TransactionChoice } from "../../types/TransactionChoice";
 import type { TransactionCreateValues } from "../../types/TransactionCreateValues";
 import PeriodDateRow from "../shell/PeriodDateRow";

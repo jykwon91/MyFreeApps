@@ -2,11 +2,10 @@ import { LEASE_ATTACHMENT_KIND_LABELS } from "@mybookkeeper/api-client/constants
 import { useUploadSignedLeaseAttachmentMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
 import { inferKindsForFiles } from "@mybookkeeper/api-client/utils/inferAttachmentKind";
-import { Banner, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
+import { Banner, filePart, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Modal, ScrollView, Text, View } from "react-native";
 import { addedFile, addedFiles, LEASE_FILE_TYPES, LEASE_MESSAGES, LEASE_PHOTO_NAME, LEASE_UPLOAD_KINDS } from "../../constants/leases";
-import { filePart } from "../../lib/filePart";
 import { confirmDiscard } from "../uploads/confirmDiscard";
 import HeldFileButtons from "../uploads/HeldFileButtons";
 import HeldFilesList from "../uploads/HeldFilesList";

@@ -1,0 +1,43 @@
+import type { Document } from "@myjobhunter/api-client/types/document/document";
+import { EmptyState, LoadingButton, useTheme } from "@platform/mobile";
+import { useState } from "react";
+import { View } from "react-native";
+import { APPLICATION_DOCUMENT_MESSAGES as MESSAGES } from "../../constants/applicationDocuments";
+import type { DocumentsSectionProps } from "../../types/DocumentsSectionProps";
+import DocumentCard from "./DocumentCard";
+import DocumentSheet from "./DocumentSheet";
+import DocumentUploadSheet from "./DocumentUploadSheet";
+import SectionError from "./SectionError";
+import SectionHeading from "./SectionHeading";
+import SectionSkeletonCards from "./SectionSkeletonCards";
+
+/** The application's documents: write a text one, upload a file, and open, edit or delete each. */
+export default function DocumentsSection({ applicationId, documents, isLoading, isError, onRetry }: DocumentsSectionProps) {
+  const { spacing } = useTheme();
+  const [isWriting, setIsWriting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [editing, setEditing] = useState<Document | null>(null);
+
+  function body() {
+    if (isLoading) return <SectionSkeletonCards label={MESSAGES.loading} testID="documents-skeleton" />;
+    if (!documents) return isError ? <SectionError message={MESSAGES.couldntLoad} onRetry={onRetry} retryLabel={MESSAGES.tryAgain} /> : null;
+    if (documents.length === 0) return <EmptyState body={MESSAGES.noneBody} heading={MESSAGES.none} />;
+    return documents.map((document) => <DocumentCard document={document} key={document.id} onEdit={setEditing} />);
+  }
+
+  return (
+    <View style={{ gap: spacing.md }}>
+      <SectionHeading title={MESSAGES.title} />
+      <LoadingButton onPress={() => setIsWriting(true)} variant="secondary">
+        {MESSAGES.add}
+      </LoadingButton>
+      <LoadingButton onPress={() => setIsUploading(true)} variant="secondary">
+        {MESSAGES.upload}
+      </LoadingButton>
+      {body()}
+      {isWriting ? <DocumentSheet applicationId={applicationId} onClose={() => setIsWriting(false)} /> : null}
+      {isUploading ? <DocumentUploadSheet applicationId={applicationId} onClose={() => setIsUploading(false)} /> : null}
+      {editing ? <DocumentSheet applicationId={applicationId} document={editing} key={editing.id} onClose={() => setEditing(null)} /> : null}
+    </View>
+  );
+}

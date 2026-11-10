@@ -1,9 +1,8 @@
 import { useImportBankCsvMutation } from "@mybookkeeper/api-client/store/transactionsApi";
+import { type FileForUpload, filePart } from "@platform/mobile";
 import type { ImportResult } from "@mybookkeeper/api-client/types/transaction/ImportResult";
 import { bankImportFailure } from "@mybookkeeper/api-client/utils/bankImportFailure";
 import { useRef, useState } from "react";
-import { filePart } from "../../lib/filePart";
-import type { FileForUpload } from "../../types/FileForUpload";
 
 /** Sends the statement once, however many times the button is tapped, and keeps the answer. */
 export function useImportBankCsv() {

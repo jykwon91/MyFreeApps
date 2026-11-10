@@ -11,7 +11,7 @@ export const APPLICATION_MESSAGES = {
   fit: "fit",
   sort: "Sort",
   sortTitle: "Sort applications by",
-  opensOnWebsite: "Opens this application on the website",
+  opensApplication: "Opens this application",
   loadingMore: "Loading more applications",
   couldntLoadMore: "I couldn't load the rest of your applications.",
 } as const;

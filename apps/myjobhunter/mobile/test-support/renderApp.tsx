@@ -6,6 +6,7 @@ import Applications from "../app/(app)/(tabs)/applications";
 import Dashboard from "../app/(app)/(tabs)/index";
 import More from "../app/(app)/(tabs)/more";
 import Profile from "../app/(app)/(tabs)/profile";
+import ApplicationRoute from "../app/(app)/applications/[id]";
 import DeleteAccountRoute from "../app/(app)/delete-account";
 import SignInRoute from "../app/sign-in";
 
@@ -14,6 +15,7 @@ export const APP_ROUTES = {
   _layout: RootLayout,
   "sign-in": SignInRoute,
   "(app)/_layout": AppLayout,
+  "(app)/applications/[id]": ApplicationRoute,
   "(app)/delete-account": DeleteAccountRoute,
   "(app)/(tabs)/_layout": TabsLayout,
   "(app)/(tabs)/index": Dashboard,

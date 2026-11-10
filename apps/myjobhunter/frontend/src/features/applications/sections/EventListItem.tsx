@@ -4,11 +4,10 @@ import { Pencil } from "lucide-react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import InterviewDetailsSummary from "@/features/applications/InterviewDetailsSummary";
 import InterviewDetailsFields from "@/features/applications/InterviewDetailsFields";
-import {
-  buildInterviewDetails,
-  eventToFormValues,
-  type LogEventFormValues,
-} from "@/features/applications/interviewEventForm";
+import { INTERVIEW_EVENT_TYPES } from "@myjobhunter/api-client/constants/interviewEventTypes";
+import type { LogEventFormValues } from "@myjobhunter/api-client/types/log-event-form-values";
+import { eventToFormValues } from "@myjobhunter/api-client/utils/interviewEventForm";
+import { interviewEventUpdateRequest } from "@myjobhunter/api-client/utils/interviewEventUpdateRequest";
 import { useUpdateApplicationEventMutation } from "@myjobhunter/api-client/store/applicationsApi";
 import type { ApplicationEvent } from "@myjobhunter/api-client/types/application-event";
 import type { ApplicationEventType } from "@myjobhunter/api-client/types/application-event-type";
@@ -41,11 +40,6 @@ const EVENT_BADGE_COLOR: Record<
   note_added: "purple",
   follow_up_sent: "blue",
 };
-
-const INTERVIEW_EVENT_TYPES = new Set<ApplicationEventType>([
-  "interview_scheduled",
-  "interview_completed",
-]);
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString();
@@ -113,10 +107,7 @@ function InlineEditForm({
       await updateEvent({
         applicationId,
         eventId: event.id,
-        body: {
-          interview_details: buildInterviewDetails(values),
-          note: values.note.trim() || null,
-        },
+        body: interviewEventUpdateRequest(values),
       }).unwrap();
       showSuccess("Interview details updated");
       onSaved();

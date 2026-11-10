@@ -1,6 +1,6 @@
 import { BANK_CSV_MAX_BYTES } from "@mybookkeeper/api-client/constants/bankImport";
+import type { FileForUpload } from "@platform/mobile";
 import { BANK_IMPORT_MESSAGES as MESSAGES } from "../../constants/bankImport";
-import type { FileForUpload } from "../../types/FileForUpload";
 
 /** What's wrong with a chosen file, caught before it's sent. The server turns the same files away. */
 export function bankCsvProblem(file: FileForUpload): string | null {

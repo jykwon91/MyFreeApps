@@ -1,9 +1,9 @@
+import { filePart } from "@platform/mobile";
 import {
   useExtractMortgageFromUploadMutation,
   useExtractMortgageMutation,
 } from "@mybookkeeper/api-client/store/mortgagesApi";
 import type { MortgageDraft } from "@mybookkeeper/api-client/types/mortgage/mortgage-draft";
-import { filePart } from "../../lib/filePart";
 import type { DocumentReaders } from "../../types/DocumentReaders";
 
 /** How a statement gets read into a loan: picked just now, or already in the library. */

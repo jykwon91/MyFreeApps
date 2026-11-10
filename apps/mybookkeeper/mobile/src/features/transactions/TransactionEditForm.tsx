@@ -2,7 +2,7 @@ import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/properties
 import { useUpdateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { Banner, FormField, LoadingButton, OptionSheet, SegmentedControl, useTheme, useToast } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, OptionSheet, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
@@ -16,7 +16,6 @@ import { otherTaxYear } from "./taxYear";
 import { categoryLabel, isReviewable, propertyLabel } from "./transactionDisplay";
 import { amountError, categoryChoices, categoryFitsType, changedFields, selectableProperties, toEditValues } from "./transactionEditValues";
 import { othersUpdatedSentence, saveFailureMessage } from "./transactionMessages";
-import { useConfirmLeave } from "../../lib/useConfirmLeave";
 
 export default function TransactionEditForm({ original }: { original: Transaction }) {
   const { colors, spacing, fontSize } = useTheme();

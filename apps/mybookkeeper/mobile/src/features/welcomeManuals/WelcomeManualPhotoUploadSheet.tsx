@@ -1,12 +1,11 @@
 import { SECTION_IMAGE_PICKER_MIME, WELCOME_MANUAL_MAX_SECTION_IMAGES } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import { useUploadSectionImagesMutation } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import { validateSectionImages } from "@mybookkeeper/api-client/utils/welcomeManualImageValidation";
-import { FormSheet, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { filePart, FormSheet, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text } from "react-native";
 import { UPLOAD_MESSAGES, preparingProgress } from "../../constants/uploads";
 import { WELCOME_MANUAL_PHOTO_MESSAGES as MESSAGES, photosLeftLabel, rejectedPhotosMessage, sectionPhotoName } from "../../constants/welcomeManualForms";
-import { filePart } from "../../lib/filePart";
 import { useWrite } from "../../lib/useWrite";
 import type { WelcomeManualPhotoUploadSheetProps } from "../../types/WelcomeManualPhotoUploadSheetProps";
 import HeldFilesList from "../uploads/HeldFilesList";

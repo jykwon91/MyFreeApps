@@ -3,7 +3,7 @@ import {
   RECONCILIATION_SOURCE_TYPES,
 } from "@mybookkeeper/api-client/constants/reconciliationSourceTypes";
 import { useUpload1099Mutation } from "@mybookkeeper/api-client/store/reconciliationApi";
-import { Banner, FormField, LoadingButton, OptionSheet, useTheme, useToast } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, OptionSheet, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { Text } from "react-native";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -12,7 +12,6 @@ import { DOCUMENTS_LINK, ISSUER_MAX_LENGTH, RECONCILIATION_MESSAGES as MESSAGES 
 import PickerField from "../transactions/PickerField";
 import { reportedAmountError, sourceTypeLabel } from "./reconciliationDisplay";
 import { addFailureMessage } from "./reconciliationFailure";
-import { useConfirmLeave } from "../../lib/useConfirmLeave";
 
 export default function ReconciliationAddForm({ year }: { year: number }) {
   const { colors, spacing, fontSize } = useTheme();

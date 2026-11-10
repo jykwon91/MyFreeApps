@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import type { FileForUpload } from "@platform/mobile";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
-import type { FileForUpload } from "../../types/FileForUpload";
 import { releaseHeldFile } from "./heldFile";
 
 export type HeldFilePick = () => Promise<FileForUpload | "denied" | null>;

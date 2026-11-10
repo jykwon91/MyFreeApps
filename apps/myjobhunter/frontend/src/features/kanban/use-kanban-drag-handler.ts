@@ -21,7 +21,7 @@ import {
 import type { AppDispatch } from "@/lib/store";
 import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
 import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
-import { COLUMN_TO_DEFAULT_EVENT_TYPE } from "./kanban-event-types";
+import { COLUMN_TO_DEFAULT_EVENT_TYPE } from "@myjobhunter/api-client/constants/columnDefaultEventTypes";
 
 const COLUMN_ID_PREFIX = "column-";
 

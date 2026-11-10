@@ -32,7 +32,7 @@ import ClosedColumnAccordion from "./ClosedColumnAccordion";
 import KanbanMobileList from "./KanbanMobileList";
 import KanbanEmptyState from "./KanbanEmptyState";
 import { useKanbanDragHandler } from "./use-kanban-drag-handler";
-import { columnForEventType } from "./kanban-stage-mapping";
+import { columnForEventType } from "@myjobhunter/api-client/utils/columnForEventType";
 import type { KanbanColumn as KanbanColumnId } from "@myjobhunter/api-client/types/kanban/kanban-column";
 import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
 

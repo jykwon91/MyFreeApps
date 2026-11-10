@@ -1,6 +1,6 @@
 import { Alert } from "react-native";
+import { useConfirmLeave } from "@platform/mobile";
 import { FORM_MESSAGES } from "../constants/forms";
-import { useConfirmLeave } from "./useConfirmLeave";
 
 /** Asks before a form with unsaved changes closes. A save in flight can't be walked away from. */
 export function useDiscardPrompt(hasUnsavedChanges: boolean, isBusy: boolean): void {

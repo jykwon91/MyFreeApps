@@ -1,12 +1,10 @@
 import { useImportSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { LeaseImportFormValues } from "@mybookkeeper/api-client/types/lease/lease-import-form-values";
 import { leaseImportFields } from "@mybookkeeper/api-client/utils/leaseImportForm";
-import { useToast } from "@platform/mobile";
+import { type FileForUpload, filePart, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { leaseImported } from "../../constants/leaseImport";
-import { filePart } from "../../lib/filePart";
-import type { FileForUpload } from "../../types/FileForUpload";
 import { leaseImportFailure } from "./leaseImportFailure";
 
 /** Sends the form and its files, then opens the lease it made. */

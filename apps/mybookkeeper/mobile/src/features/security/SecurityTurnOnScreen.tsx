@@ -1,9 +1,8 @@
-import { TWO_STEP_MESSAGES as MESSAGES, type TwoStepLeaveRisk, TwoStepTurnOnScreen } from "@platform/mobile";
+import { TWO_STEP_MESSAGES as MESSAGES, type TwoStepLeaveRisk, TwoStepTurnOnScreen, useConfirmLeave } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { APP_NAME, SECURITY_ROUTE } from "../../constants/security";
-import { useConfirmLeave } from "../../lib/useConfirmLeave";
 
 export default function SecurityTurnOnScreen() {
   const [leaveRisk, setLeaveRisk] = useState<TwoStepLeaveRisk>("none");

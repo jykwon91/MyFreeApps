@@ -44,7 +44,7 @@ import NotesSection from "./sections/NotesSection";
 import { KANBAN_COLUMN_LABELS } from "@myjobhunter/api-client/constants/kanbanColumnLabels";
 import { KANBAN_COLUMN_ORDER } from "@myjobhunter/api-client/constants/kanbanColumnOrder";
 import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
-import { columnForEventType } from "@/features/kanban/kanban-stage-mapping";
+import { currentKanbanColumn } from "@myjobhunter/api-client/utils/currentKanbanColumn";
 import ApplicationDetailSkeleton from "./ApplicationDetailSkeleton";
 
 interface ApplicationDrawerProps {
@@ -136,31 +136,9 @@ function DrawerContent({ application, onClose }: DrawerContentProps) {
 
   // The drawer doesn't carry latest_event_type directly (the detail
   // endpoint omits it in favour of the events list). Derive it from the
-  // first stage-defining event in the events list, falling back to
+  // newest stage-defining event in the events list, falling back to
   // "applied" — same logic the kanban board uses.
-  const detailWithEvents = application as typeof application & {
-    events?: { event_type: string; occurred_at: string }[];
-    contacts?: {
-      id: string;
-      name: string | null;
-      email: string | null;
-      linkedin_url: string | null;
-      role: string;
-      notes: string | null;
-    }[];
-  };
-  const stageEvent = (detailWithEvents.events ?? []).find((e: { event_type: string }) =>
-    [
-      "applied",
-      "interview_scheduled",
-      "interview_completed",
-      "offer_received",
-      "rejected",
-      "withdrawn",
-      "ghosted",
-    ].includes(e.event_type),
-  );
-  const currentColumn: KanbanColumn = columnForEventType(stageEvent?.event_type ?? null);
+  const currentColumn: KanbanColumn = currentKanbanColumn(application.events);
 
   async function handleStageChange(target: KanbanColumn) {
     if (target === currentColumn) return;
@@ -268,7 +246,7 @@ function DrawerContent({ application, onClose }: DrawerContentProps) {
         />
         <EventsSection applicationId={application.id} />
         <DocumentsSection applicationId={application.id} />
-        <ContactsSection contacts={detailWithEvents.contacts ?? []} />
+        <ContactsSection contacts={application.contacts} />
       </div>
 
       <ConfirmDialog

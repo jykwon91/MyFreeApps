@@ -7,14 +7,7 @@
  */
 import type { ReactNode } from "react";
 import type { InterviewDetails } from "@myjobhunter/api-client/types/interview-details";
-import type { InterviewType } from "@myjobhunter/api-client/types/interview-type";
-
-const TYPE_LABEL: Record<InterviewType, string> = {
-  phone: "Phone",
-  video: "Video",
-  onsite: "On-site",
-  panel: "Panel",
-};
+import { INTERVIEW_TYPE_LABELS } from "@myjobhunter/api-client/constants/interviewTypeLabels";
 
 function formatScheduledAt(iso: string): string {
   return new Date(iso).toLocaleString();
@@ -80,7 +73,7 @@ interface Props {
 export default function InterviewDetailsSummary({ details }: Props) {
   return (
     <dl className="text-xs grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 mt-2 text-muted-foreground">
-      <Row label="Type">{TYPE_LABEL[details.type]}</Row>
+      <Row label="Type">{INTERVIEW_TYPE_LABELS[details.type]}</Row>
       <ScheduledRow iso={details.scheduled_at} />
       <DurationRow minutes={details.duration_minutes} />
       <LocationRow value={details.location_or_link} />

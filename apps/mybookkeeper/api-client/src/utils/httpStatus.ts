@@ -1,4 +1,2 @@
-/** The HTTP status of a failed request, or undefined when no answer came back. */
-export function httpStatus(error: unknown): number | undefined {
-  return typeof error === "object" && error !== null && "status" in error ? (error.status as number | undefined) : undefined;
-}
+// Shared with every app: the status read lives in @platform/core.
+export { httpStatus } from "@platform/core/utils/httpStatus";

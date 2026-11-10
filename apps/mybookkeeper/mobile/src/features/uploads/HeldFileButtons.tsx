@@ -1,8 +1,7 @@
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { type FileForUpload, LoadingButton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
-import type { FileForUpload } from "../../types/FileForUpload";
 import { chooseHeldFile, chooseHeldPhoto, takeHeldPhoto } from "./pickHeldFile";
 import type { HeldFilePick } from "./useHeldFiles";
 

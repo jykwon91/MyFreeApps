@@ -1,5 +1,5 @@
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
-import { Banner, FormField, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import {
@@ -13,7 +13,6 @@ import {
   REPLY_TEMPLATE_VARIABLES,
   unknownVariablesHint,
 } from "../../constants/replyTemplates";
-import { useConfirmLeave } from "../../lib/useConfirmLeave";
 import type { ReplyTemplateField } from "../../types/ReplyTemplateField";
 import type { ReplyTemplateFormValues } from "../../types/ReplyTemplateFormValues";
 import CollapsibleSection from "../inquiries/CollapsibleSection";

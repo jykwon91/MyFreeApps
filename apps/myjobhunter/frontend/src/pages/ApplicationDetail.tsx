@@ -29,20 +29,10 @@ import {
   useTransitionApplicationMutation,
 } from "@myjobhunter/api-client/store/applicationsApi";
 import { useGetCompanyQuery } from "@myjobhunter/api-client/store/companiesApi";
-import { columnForEventType } from "@/features/kanban/kanban-stage-mapping";
+import { currentKanbanColumn } from "@myjobhunter/api-client/utils/currentKanbanColumn";
 import { KANBAN_COLUMN_LABELS } from "@myjobhunter/api-client/constants/kanbanColumnLabels";
 import { KANBAN_COLUMN_ORDER } from "@myjobhunter/api-client/constants/kanbanColumnOrder";
 import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
-
-const STAGE_DEFINING_TYPES = [
-  "applied",
-  "interview_scheduled",
-  "interview_completed",
-  "offer_received",
-  "rejected",
-  "withdrawn",
-  "ghosted",
-];
 
 export default function ApplicationDetail() {
   const { id } = useParams<{ id: string }>();
@@ -86,23 +76,8 @@ export default function ApplicationDetail() {
     );
   }
 
-  // Derive the current kanban column from the events list (eager-loaded
-  // by the detail endpoint).
-  const detailWithEvents = app as typeof app & {
-    events?: { event_type: string; occurred_at: string }[];
-    contacts?: {
-      id: string;
-      name: string | null;
-      email: string | null;
-      linkedin_url: string | null;
-      role: string;
-      notes: string | null;
-    }[];
-  };
-  const stageEvent = (detailWithEvents.events ?? []).find((e: { event_type: string }) =>
-    STAGE_DEFINING_TYPES.includes(e.event_type),
-  );
-  const currentColumn: KanbanColumn = columnForEventType(stageEvent?.event_type ?? null);
+  // The detail endpoint eager-loads the events, newest first.
+  const currentColumn: KanbanColumn = currentKanbanColumn(app.events);
 
   async function handleStageChange(target: KanbanColumn) {
     if (!app || target === currentColumn) return;
@@ -209,7 +184,7 @@ export default function ApplicationDetail() {
       <NotesSection applicationId={app.id} initialValue={app.notes ?? ""} />
       <EventsSection applicationId={app.id} />
       <DocumentsSection applicationId={app.id} />
-      <ContactsSection contacts={detailWithEvents.contacts ?? []} />
+      <ContactsSection contacts={app.contacts} />
 
       <ConfirmDialog
         open={confirmDeleteOpen}

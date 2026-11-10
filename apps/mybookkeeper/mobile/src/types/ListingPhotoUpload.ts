@@ -1,4 +1,4 @@
-import type { FileForUpload } from "./FileForUpload";
+import type { FileForUpload } from "@platform/mobile";
 import type { ListingPhotoUploadStatus } from "./ListingPhotoUploadStatus";
 
 /** One photo on its way to a listing. A failed one keeps its file, so Try again has something to send. */
