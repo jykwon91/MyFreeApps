@@ -6,7 +6,7 @@ import DocumentKindBadge from "@/features/documents/DocumentKindBadge";
 import DocumentEditDialog from "@/features/documents/DocumentEditDialog";
 import type { Document } from "@myjobhunter/api-client/types/document/document";
 import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
-import { DOCUMENT_KIND_OPTIONS } from "@/features/documents/document-kind-labels";
+import { DOCUMENT_KIND_OPTIONS } from "@myjobhunter/api-client/constants/documentKindOptions";
 import {
   useListDocumentsQuery,
   useDeleteDocumentMutation,

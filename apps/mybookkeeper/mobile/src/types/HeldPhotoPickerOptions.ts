@@ -1,4 +1,4 @@
-import type { FileForUpload } from "./FileForUpload";
+import type { FileForUpload } from "@platform/mobile";
 
 export interface HeldPhotoPickerOptions {
   /** Called with each photo the moment it is ready. */

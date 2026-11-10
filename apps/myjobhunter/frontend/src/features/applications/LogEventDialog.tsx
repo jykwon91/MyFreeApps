@@ -4,32 +4,13 @@ import { useForm, type SubmitHandler } from "react-hook-form";
 import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import { X } from "lucide-react";
 import { useLogApplicationEventMutation } from "@myjobhunter/api-client/store/applicationsApi";
-import type { ApplicationEventType } from "@myjobhunter/api-client/types/application-event-type";
+import { INTERVIEW_EVENT_TYPES } from "@myjobhunter/api-client/constants/interviewEventTypes";
+import { LOGGABLE_EVENT_TYPES } from "@myjobhunter/api-client/constants/loggableEventTypes";
+import type { LogEventFormValues } from "@myjobhunter/api-client/types/log-event-form-values";
+import { emptyFormValues } from "@myjobhunter/api-client/utils/interviewEventForm";
+import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
+import { logEventRequest } from "@myjobhunter/api-client/utils/logEventRequest";
 import InterviewDetailsFields from "./InterviewDetailsFields";
-import {
-  buildInterviewDetails,
-  emptyFormValues,
-  type LogEventFormValues,
-} from "./interviewEventForm";
-
-const EVENT_TYPE_OPTIONS: { value: ApplicationEventType; label: string }[] = [
-  { value: "applied", label: "Applied" },
-  { value: "interview_scheduled", label: "Interview scheduled" },
-  { value: "interview_completed", label: "Interview completed" },
-  { value: "offer_received", label: "Offer received" },
-  { value: "rejected", label: "Rejected" },
-  { value: "withdrawn", label: "Withdrawn" },
-  { value: "ghosted", label: "Ghosted" },
-  { value: "note_added", label: "Note added" },
-  { value: "follow_up_sent", label: "Follow-up sent" },
-  // `email_received` intentionally omitted from manual logging — that's
-  // the Gmail sync worker's lane.
-];
-
-const INTERVIEW_EVENT_TYPES = new Set<ApplicationEventType>([
-  "interview_scheduled",
-  "interview_completed",
-]);
 
 export interface LogEventDialogProps {
   applicationId: string;
@@ -64,21 +45,7 @@ export default function LogEventDialog({
 
   const onSubmit: SubmitHandler<LogEventFormValues> = async (values) => {
     try {
-      // datetime-local is naive; promote to UTC ISO so the backend stores
-      // a tz-aware datetime.
-      const occurredIso = new Date(values.occurred_at).toISOString();
-      await logEvent({
-        applicationId,
-        body: {
-          event_type: values.event_type,
-          occurred_at: occurredIso,
-          source: "manual",
-          note: values.note.trim() || null,
-          interview_details: INTERVIEW_EVENT_TYPES.has(values.event_type)
-            ? buildInterviewDetails(values)
-            : null,
-        },
-      }).unwrap();
+      await logEvent({ applicationId, body: logEventRequest(values) }).unwrap();
       showSuccess("Event logged");
       onOpenChange(false);
     } catch (err) {
@@ -113,8 +80,8 @@ export default function LogEventDialog({
                 {...register("event_type", { required: true })}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               >
-                {EVENT_TYPE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
+                {LOGGABLE_EVENT_TYPES.map((type) => (
+                  <option key={type} value={type}>{formatEventType(type)}</option>
                 ))}
               </select>
             </div>

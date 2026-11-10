@@ -12,7 +12,7 @@ export default function ApplicationRow({ application, onPress }: ApplicationRowP
 
   return (
     <Pressable
-      accessibilityHint={APPLICATION_MESSAGES.opensOnWebsite}
+      accessibilityHint={APPLICATION_MESSAGES.opensApplication}
       accessibilityLabel={applicationRowLabel(application)}
       accessibilityRole="link"
       onPress={onPress}

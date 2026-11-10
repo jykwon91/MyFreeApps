@@ -10,6 +10,7 @@ import { APPLICATION_SORT_KEYS, APPLICATION_SORTS } from "../src/constants/appli
 import { APPLICATION_MESSAGES } from "../src/constants/applications";
 import ApplicationsScreen from "../src/features/applications/ApplicationsScreen";
 import { store } from "../src/lib/store";
+import { applicationDetailRecord } from "../test-support/applicationDetailRecord";
 import { applicationRecord } from "../test-support/applicationRecord";
 import { serve } from "../test-support/fakeServer";
 import { storedItems } from "../test-support/memorySecureStore";
@@ -170,13 +171,19 @@ it("opens the Applications tab on a skeleton of the rows while the list loads, t
   expect(companies()).toEqual(["Stripe", "Airbnb", "Lyft", "Zillow"]);
 });
 
-it("opens an application on the website when its row is pressed", async () => {
-  serve({ "GET /applications": listOf(STRIPE, AIRBNB) });
-  await showScreen();
+it("opens an application's own screen when its row is pressed", async () => {
+  serve({
+    "POST /auth/mobile/refresh": refreshed,
+    "GET /applications": listOf(STRIPE, AIRBNB),
+    "GET /applications/app-airbnb": () => ({ status: 200, data: applicationDetailRecord({ id: "app-airbnb", role_title: "Senior Engineer" }) }),
+  });
+  await renderApp("/applications");
 
   await fireEvent.press(await screen.findByRole("link", { name: /^Airbnb, Senior Engineer/ }));
 
-  expect(openURL).toHaveBeenLastCalledWith(`${WEB_BASE_URL}/applications/app-airbnb`);
+  expect(screen).toHavePathname("/applications/app-airbnb");
+  expect(await screen.findByRole("header", { name: "Senior Engineer" })).toBeTruthy();
+  expect(openURL).not.toHaveBeenCalled();
 });
 
 it("opens asking the server for its default order, applied most recently first, a page at a time", async () => {

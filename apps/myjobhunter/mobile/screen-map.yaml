@@ -6,7 +6,7 @@ routes:
   /applications:
     screen: (app)/(tabs)/applications
   /applications/:id:
-    not_on_mobile: Not built yet.
+    screen: (app)/applications/[id]
   /companies:
     not_on_mobile: Not built yet.
   /companies/:id:

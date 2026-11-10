@@ -1,11 +1,10 @@
 import { useCreateLeaseTemplateMutation, useSuggestPlaceholdersMutation } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import type { LeaseTemplateDetail } from "@mybookkeeper/api-client/types/lease/lease-template-detail";
-import { useToast } from "@platform/mobile";
+import { filePart, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { LEASE_TEMPLATE_CREATE_COPY } from "@mybookkeeper/api-client/constants/leaseTemplateCreateCopy";
 import { templateCreated } from "../../constants/leaseTemplateForm";
-import { filePart } from "../../lib/filePart";
 import { useLeaseTemplateWrite } from "../../lib/useLeaseTemplateWrite";
 import { holdSuggestions } from "./leaseTemplateSuggestions";
 import type { NewLeaseTemplate } from "../../types/NewLeaseTemplate";

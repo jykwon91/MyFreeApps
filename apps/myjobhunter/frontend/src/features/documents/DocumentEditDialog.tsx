@@ -2,8 +2,9 @@ import { useState } from "react";
 import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import type { Document } from "@myjobhunter/api-client/types/document/document";
 import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
-import { DOCUMENT_KIND_OPTIONS } from "@/features/documents/document-kind-labels";
+import { DOCUMENT_KIND_OPTIONS } from "@myjobhunter/api-client/constants/documentKindOptions";
 import { useUpdateDocumentMutation } from "@myjobhunter/api-client/store/documentsApi";
+import { documentChangesRequest } from "@myjobhunter/api-client/utils/documentChangesRequest";
 
 export interface DocumentEditDialogProps {
   document: Document;
@@ -25,11 +26,7 @@ export default function DocumentEditDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const patch: { title?: string; kind?: DocumentKind; body?: string } = {};
-    if (title !== document.title) patch.title = title;
-    if (kind !== document.kind) patch.kind = kind;
-    // Only update body for text-body documents.
-    if (!document.has_file && body !== (document.body ?? "")) patch.body = body;
+    const patch = documentChangesRequest(document, { title, kind, body });
 
     if (Object.keys(patch).length === 0) {
       onOpenChange(false);

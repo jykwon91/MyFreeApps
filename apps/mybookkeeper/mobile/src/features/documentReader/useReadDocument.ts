@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
+import type { FileForUpload } from "@platform/mobile";
 import type { DocumentReaderMessages } from "../../types/DocumentReaderMessages";
 import type { DocumentReaders } from "../../types/DocumentReaders";
-import type { FileForUpload } from "../../types/FileForUpload";
 import { type HeldFilePick, useHeldFile } from "../uploads/useHeldFile";
 import { documentReadFailure } from "./documentReadFailure";
 

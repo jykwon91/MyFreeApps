@@ -1,9 +1,9 @@
+import { filePart } from "@platform/mobile";
 import {
   useExtractInsurancePolicyFromUploadMutation,
   useExtractInsurancePolicyMutation,
 } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import type { InsurancePolicyDraft } from "@mybookkeeper/api-client/types/insurance/insurance-policy-draft";
-import { filePart } from "../../lib/filePart";
 import type { DocumentReaders } from "../../types/DocumentReaders";
 
 /** How a document gets read into a policy: picked just now, or already in the library. */

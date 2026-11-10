@@ -1,11 +1,10 @@
 import { useUpdateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { FormField, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { FormField, LoadingButton, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { INQUIRY_NOTES_MAX_LENGTH } from "../../constants/inquiries";
 import { inquiryWriteFailure } from "./inquiryFailures";
 import CollapsibleSection from "./CollapsibleSection";
-import { useConfirmLeave } from "../../lib/useConfirmLeave";
 
 export default function InquiryNotes({ id, notes, canWrite }: { id: string; notes: string | null; canWrite: boolean }) {
   const { colors, spacing, fontSize } = useTheme();

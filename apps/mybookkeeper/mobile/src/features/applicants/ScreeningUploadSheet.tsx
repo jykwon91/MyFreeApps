@@ -1,11 +1,10 @@
 import { useUploadScreeningResultMutation } from "@mybookkeeper/api-client/store/screeningApi";
 import { ADVERSE_OUTCOMES, SCREENING_UPLOAD_OUTCOMES } from "@mybookkeeper/api-client/constants/screeningStatus";
 import type { ScreeningStatus } from "@mybookkeeper/api-client/types/applicant/screening-status";
-import { Banner, FormField, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
+import { Banner, filePart, FormField, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, View } from "react-native";
 import { SCREENING_MESSAGES, SCREENING_PHOTO_NAME, SCREENING_REASON_MAX_LENGTH, SCREENING_REPORT_FILE_TYPES } from "../../constants/applicantScreening";
-import { filePart } from "../../lib/filePart";
 import { screeningOutcomeLabel } from "./applicantDisplay";
 import { confirmDiscard } from "../uploads/confirmDiscard";
 import HeldFileButtons from "../uploads/HeldFileButtons";

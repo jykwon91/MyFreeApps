@@ -1,7 +1,6 @@
-import { LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { type FileForUpload, LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Image, Text, View } from "react-native";
 import { HELD_THUMBNAIL_SIZE, removeHeldFileLabel, UPLOAD_MESSAGES } from "../../constants/uploads";
-import type { FileForUpload } from "../../types/FileForUpload";
 
 interface HeldFilesListProps {
   files: readonly FileForUpload[];

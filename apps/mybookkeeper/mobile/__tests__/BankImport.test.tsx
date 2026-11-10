@@ -1,4 +1,4 @@
-import "../test-support/reactNativeFormData";
+import "@platform/mobile/test-support/reactNativeFormData";
 import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { BANK_CSV_MAX_BYTES, BANK_IMPORT_FAILURE_MESSAGES as FAILURES } from "@mybookkeeper/api-client/constants/bankImport";
 import api from "@platform/core/lib/api";

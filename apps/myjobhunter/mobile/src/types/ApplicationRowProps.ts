@@ -2,6 +2,6 @@ import type { Application } from "@myjobhunter/api-client/types/application";
 
 export interface ApplicationRowProps {
   application: Application;
-  /** Opens the application on the website until its own screen is on the phone. */
+  /** Opens the application's own screen. */
   onPress: () => void;
 }

@@ -1,5 +1,5 @@
 import { LISTING_PHOTO_FILE_NAME, LISTING_PHOTO_MESSAGES, LISTING_PHOTO_NO_SELECTION_LIMIT } from "../../constants/listingPhotos";
-import type { FileForUpload } from "../../types/FileForUpload";
+import type { FileForUpload } from "@platform/mobile";
 import { useHeldPhotoPicker } from "../uploads/useHeldPhotoPicker";
 
 /** A listing holds as many photos as the host likes, so the library sets no limit. */

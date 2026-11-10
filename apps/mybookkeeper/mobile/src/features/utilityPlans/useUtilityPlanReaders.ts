@@ -1,9 +1,9 @@
+import { filePart } from "@platform/mobile";
 import {
   useExtractUtilityPlanFromUploadMutation,
   useExtractUtilityPlanMutation,
 } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import type { UtilityPlanDraft } from "@mybookkeeper/api-client/types/utility/utility-plan-draft";
-import { filePart } from "../../lib/filePart";
 import type { DocumentReaders } from "../../types/DocumentReaders";
 
 /** How a document gets read into a plan: picked just now, or already in the library. */

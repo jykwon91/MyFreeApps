@@ -1,10 +1,9 @@
 import { BLACKOUT_ATTACHMENT_MIME_TYPES } from "@mybookkeeper/api-client/constants/blackoutAttachments";
 import { useUploadBlackoutAttachmentMutation } from "@mybookkeeper/api-client/store/calendarApi";
-import { Banner, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { Banner, filePart, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { View } from "react-native";
 import { CALENDAR_ATTACHMENT_FILE_TYPES, CALENDAR_ATTACHMENT_PHOTO_NAME, EVENT_MESSAGES } from "../../constants/calendarEventDetail";
-import { filePart } from "../../lib/filePart";
 import HeldFileButtons from "../uploads/HeldFileButtons";
 import { useHeldFile } from "../uploads/useHeldFile";
 import { attachmentUploadFailure } from "./calendarEventFailures";

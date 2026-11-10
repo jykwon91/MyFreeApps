@@ -6,15 +6,19 @@
  * gets serialised into the `interview_details` JSONB column at submit time.
  */
 import type { UseFormRegister, FieldErrors } from "react-hook-form";
+import {
+  INTERVIEW_DURATION_MAX_MINUTES,
+  INTERVIEW_DURATION_MIN_MINUTES,
+  INTERVIEW_LOCATION_MAX_LENGTH,
+} from "@myjobhunter/api-client/constants/interviewDetailLimits";
+import { INTERVIEW_TYPE_LABELS } from "@myjobhunter/api-client/constants/interviewTypeLabels";
 import type { InterviewType } from "@myjobhunter/api-client/types/interview-type";
-import type { LogEventFormValues } from "./interviewEventForm";
+import type { LogEventFormValues } from "@myjobhunter/api-client/types/log-event-form-values";
+import { isInterviewDurationValid } from "@myjobhunter/api-client/utils/isInterviewDurationValid";
 
-const INTERVIEW_TYPE_OPTIONS: { value: InterviewType; label: string }[] = [
-  { value: "phone", label: "Phone" },
-  { value: "video", label: "Video" },
-  { value: "onsite", label: "On-site" },
-  { value: "panel", label: "Panel" },
-];
+const INTERVIEW_TYPE_OPTIONS = (
+  Object.entries(INTERVIEW_TYPE_LABELS) as [InterviewType, string][]
+).map(([value, label]) => ({ value, label }));
 
 interface Props {
   register: UseFormRegister<LogEventFormValues>;
@@ -91,18 +95,13 @@ export default function InterviewDetailsFields({
           <input
             id={`${idPrefix}-duration`}
             type="number"
-            min={1}
-            max={1440}
+            min={INTERVIEW_DURATION_MIN_MINUTES}
+            max={INTERVIEW_DURATION_MAX_MINUTES}
             {...register("interview_duration_minutes", {
               valueAsNumber: false,
-              validate: (v) => {
-                if (v === "" || v == null) return true;
-                const n = Number(v);
-                if (!Number.isFinite(n) || n < 1 || n > 1440) {
-                  return "Between 1 and 1440";
-                }
-                return true;
-              },
+              validate: (v) =>
+                isInterviewDurationValid(v ?? "") ||
+                `Between ${INTERVIEW_DURATION_MIN_MINUTES} and ${INTERVIEW_DURATION_MAX_MINUTES}`,
             })}
             placeholder="e.g. 60"
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
@@ -122,7 +121,7 @@ export default function InterviewDetailsFields({
         <input
           id={`${idPrefix}-location`}
           type="text"
-          {...register("interview_location_or_link", { maxLength: 1024 })}
+          {...register("interview_location_or_link", { maxLength: INTERVIEW_LOCATION_MAX_LENGTH })}
           placeholder="https://meet.google.com/… or 123 Main St"
           className="w-full border rounded-md px-3 py-2 text-sm bg-background"
         />

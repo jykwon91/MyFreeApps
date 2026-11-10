@@ -8,7 +8,7 @@ import {
 import { usePromoteFromInquiryMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import { promoteConflictDetail } from "@mybookkeeper/api-client/utils/applicantPromoteConflict";
-import { Banner, FormField, LoadingButton, SegmentedControl, useTheme, useToast } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
@@ -18,7 +18,6 @@ import type { PromoteValues } from "../../types/PromoteValues";
 import OptionalDateField from "../shell/OptionalDateField";
 import { promoteFailure } from "./applicantFailures";
 import { isOldEnough, promoteRequest, promoteValuesFrom } from "./promoteValues";
-import { useConfirmLeave } from "../../lib/useConfirmLeave";
 
 export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
   const { colors, spacing, fontSize } = useTheme();

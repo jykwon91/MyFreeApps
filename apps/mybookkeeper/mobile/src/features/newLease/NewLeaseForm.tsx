@@ -1,13 +1,12 @@
 import { useLazyGetSignedLeaseByIdQuery, useCreateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { MergedPlaceholder } from "@mybookkeeper/api-client/types/lease/merged-placeholder";
-import { Banner, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { Banner, LoadingButton, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PLACEHOLDER_PROBLEM_MESSAGES } from "../../constants/placeholderProblems";
 import { draftMade, leaseFor, NEW_LEASE_MESSAGES as MESSAGES, PROVENANCE_CAPTIONS, usedIn } from "../../constants/newLease";
-import { useConfirmLeave } from "../../lib/useConfirmLeave";
 import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
 import { leaseConflictCode } from "../leases/leaseConflictCode";
 import { isOutOfDateForm, newLeaseFailure } from "./newLeaseFailure";

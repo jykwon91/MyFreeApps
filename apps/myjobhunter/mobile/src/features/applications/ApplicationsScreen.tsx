@@ -1,5 +1,6 @@
 import { useApplicationsPages } from "@myjobhunter/api-client/hooks/useApplicationsPages";
 import { EmptyState, OptionSheet, useOpenWebsite, useRefresh } from "@platform/mobile";
+import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
@@ -65,7 +66,7 @@ export default function ApplicationsScreen() {
         onEndReached={loadMore}
         onEndReachedThreshold={LOAD_MORE_THRESHOLD}
         refreshControl={refreshControl}
-        renderItem={({ item }) => <ApplicationRow application={item} onPress={() => void openWebsite(WEB_BASE_URL, `/applications/${item.id}`)} />}
+        renderItem={({ item }) => <ApplicationRow application={item} onPress={() => router.push(`/applications/${item.id}`)} />}
         testID="applications-list"
       />
       <OptionSheet

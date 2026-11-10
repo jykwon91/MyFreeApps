@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { Image, Modal, ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { LISTING_PHOTO_MESSAGES as MESSAGES, photoLabel, photoPosition } from "../../constants/listingPhotos";
 import { askOnce } from "../../lib/askOnce";
-import { mimeTypeFor } from "../../lib/mimeTypeFor";
+import { mimeTypeFor } from "@platform/core/utils/mimeTypeFor";
 import { openAttachmentFile } from "../documents/openDocumentFile";
 import { photoUrl } from "./listingPhotoDisplay";
 

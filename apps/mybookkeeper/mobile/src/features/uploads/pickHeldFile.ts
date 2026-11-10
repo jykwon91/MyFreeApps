@@ -1,7 +1,7 @@
 import * as DocumentPicker from "expo-document-picker";
+import type { FileForUpload } from "@platform/mobile";
 import * as ImagePicker from "expo-image-picker";
-import { mimeTypeFor } from "../../lib/mimeTypeFor";
-import type { FileForUpload } from "../../types/FileForUpload";
+import { mimeTypeFor } from "@platform/core/utils/mimeTypeFor";
 import { preparePhoto } from "../capture/preparePhoto";
 import { discardFile } from "../capture/uploadQueueFiles";
 import { heldFileSize, holdFile } from "./heldFile";

@@ -1,4 +1,4 @@
-import "../test-support/reactNativeFormData";
+import "@platform/mobile/test-support/reactNativeFormData";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { FORM_MESSAGES } from "../src/constants/forms";

@@ -12,27 +12,13 @@
  */
 import { Mail, Link2 } from "lucide-react";
 import { Badge } from "@platform/ui";
-
-interface DrawerContact {
-  id: string;
-  name: string | null;
-  email: string | null;
-  linkedin_url: string | null;
-  role: string;
-  notes: string | null;
-}
+import type { ApplicationContact } from "@myjobhunter/api-client/types/contact/application-contact";
+import { contactDisplayName } from "@myjobhunter/api-client/utils/contactDisplayName";
+import { formatContactRole } from "@myjobhunter/api-client/utils/formatContactRole";
 
 interface ContactsSectionProps {
-  contacts: DrawerContact[];
+  contacts: ApplicationContact[];
 }
-
-const ROLE_LABELS: Record<string, string> = {
-  recruiter: "Recruiter",
-  hiring_manager: "Hiring manager",
-  interviewer: "Interviewer",
-  referrer: "Referrer",
-  other: "Other",
-};
 
 export default function ContactsSection({ contacts }: ContactsSectionProps) {
   return (
@@ -47,48 +33,51 @@ export default function ContactsSection({ contacts }: ContactsSectionProps) {
         </p>
       ) : (
         <ul className="space-y-2">
-          {contacts.map((c) => (
-            <li key={c.id} className="border rounded-lg p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {c.name ?? c.email ?? "Unnamed contact"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {ROLE_LABELS[c.role] ?? c.role}
-                  </p>
+          {contacts.map((c) => {
+            const roleLabel = formatContactRole(c.role);
+            return (
+              <li key={c.id} className="border rounded-lg p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {contactDisplayName(c) ?? "Unnamed contact"}
+                    </p>
+                    {roleLabel ? (
+                      <p className="text-xs text-muted-foreground">{roleLabel}</p>
+                    ) : null}
+                  </div>
+                  {roleLabel ? <Badge label={roleLabel} color="blue" /> : null}
                 </div>
-                <Badge label={ROLE_LABELS[c.role] ?? c.role} color="blue" />
-              </div>
-              <div className="flex items-center gap-3 mt-2 text-xs">
-                {c.email ? (
-                  <a
-                    href={`mailto:${c.email}`}
-                    className="inline-flex items-center gap-1 text-primary hover:underline"
-                  >
-                    <Mail size={12} />
-                    {c.email}
-                  </a>
+                <div className="flex items-center gap-3 mt-2 text-xs">
+                  {c.email ? (
+                    <a
+                      href={`mailto:${c.email}`}
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <Mail size={12} />
+                      {c.email}
+                    </a>
+                  ) : null}
+                  {c.linkedin_url ? (
+                    <a
+                      href={c.linkedin_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <Link2 size={12} />
+                      LinkedIn
+                    </a>
+                  ) : null}
+                </div>
+                {c.notes ? (
+                  <p className="text-xs mt-2 whitespace-pre-wrap text-muted-foreground">
+                    {c.notes}
+                  </p>
                 ) : null}
-                {c.linkedin_url ? (
-                  <a
-                    href={c.linkedin_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-primary hover:underline"
-                  >
-                    <Link2 size={12} />
-                    LinkedIn
-                  </a>
-                ) : null}
-              </div>
-              {c.notes ? (
-                <p className="text-xs mt-2 whitespace-pre-wrap text-muted-foreground">
-                  {c.notes}
-                </p>
-              ) : null}
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

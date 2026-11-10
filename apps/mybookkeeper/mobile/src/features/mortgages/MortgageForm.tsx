@@ -4,11 +4,10 @@ import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage
 import { applyMortgageDraftToForm } from "@mybookkeeper/api-client/utils/mortgageDraft";
 import { EMPTY_MORTGAGE_FORM, mortgageToFormValues } from "@mybookkeeper/api-client/utils/mortgageForm";
 import { mortgageFormProblems } from "@mybookkeeper/api-client/utils/mortgageFormProblems";
-import { Banner, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { MORTGAGE_FORM_MESSAGES as MESSAGES, MORTGAGE_STATEMENT_MESSAGES, MORTGAGE_STATEMENT_PHOTO_NAME } from "../../constants/mortgageForm";
-import { useConfirmLeave } from "../../lib/useConfirmLeave";
 import DocumentDraftNotices from "../documentReader/DocumentDraftNotices";
 import DocumentReader from "../documentReader/DocumentReader";
 import PropertyChoiceField from "../properties/PropertyChoiceField";

@@ -1,5 +1,6 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import type { Application } from "../types/application";
+import type { ApplicationDetail } from "../types/application-detail";
 import type { ApplicationListResponse } from "../types/application-list-response";
 import type { ApplicationCreateRequest } from "../types/application-create-request";
 import type { ApplicationEvent } from "../types/application-event";
@@ -76,7 +77,8 @@ const applicationsApi = baseApi.enhanceEndpoints({
           : [{ type: APPLICATIONS_TAG, id: "LIST" } as const],
     }),
 
-    getApplication: build.query<Application, string>({
+    /** GET /applications/{id}: the application with its timeline and contacts. */
+    getApplication: build.query<ApplicationDetail, string>({
       query: (id) => ({ url: `/applications/${id}`, method: "GET" }),
       providesTags: (_result, _err, id) => [{ type: APPLICATIONS_TAG, id }],
     }),
@@ -94,6 +96,7 @@ const applicationsApi = baseApi.enhanceEndpoints({
       invalidatesTags: (_result, _err, { id }) => [
         { type: APPLICATIONS_TAG, id },
         { type: APPLICATIONS_TAG, id: "LIST" },
+        { type: APPLICATIONS_TAG, id: APPLICATIONS_KANBAN_LIST_ID },
       ],
     }),
 
@@ -102,6 +105,7 @@ const applicationsApi = baseApi.enhanceEndpoints({
       invalidatesTags: (_result, _err, id) => [
         { type: APPLICATIONS_TAG, id },
         { type: APPLICATIONS_TAG, id: "LIST" },
+        { type: APPLICATIONS_TAG, id: APPLICATIONS_KANBAN_LIST_ID },
       ],
     }),
 

@@ -39,7 +39,7 @@ const documentsApi = baseApi
         invalidatesTags: [{ type: DOCUMENTS_TAG, id: "LIST" }],
       }),
 
-      // The caller builds the form: a browser appends a File, a phone a { uri, name, type }.
+      // The caller fills the form with fillDocumentUploadForm: a browser appends a File, a phone a { uri, name, type }.
       uploadDocument: build.mutation<Document, FormData>({
         query: (form) => ({ url: "/documents/upload", method: "POST", data: form }),
         invalidatesTags: [{ type: DOCUMENTS_TAG, id: "LIST" }],
@@ -81,4 +81,5 @@ export const {
   useUpdateDocumentMutation,
   useDeleteDocumentMutation,
   useGetDocumentDownloadUrlQuery,
+  useLazyGetDocumentDownloadUrlQuery,
 } = documentsApi;

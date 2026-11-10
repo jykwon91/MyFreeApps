@@ -1,4 +1,4 @@
-import "../test-support/reactNativeFormData";
+import "@platform/mobile/test-support/reactNativeFormData";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
 import api from "@platform/core/lib/api";

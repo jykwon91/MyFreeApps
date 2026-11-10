@@ -1,8 +1,9 @@
 import { useState, useRef } from "react";
 import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
-import { DOCUMENT_KIND_OPTIONS } from "@/features/documents/document-kind-labels";
-import { buildDocumentUploadForm } from "@/features/documents/buildDocumentUploadForm";
+import { DOCUMENT_KIND_OPTIONS } from "@myjobhunter/api-client/constants/documentKindOptions";
+import { DOCUMENT_UPLOAD_EXTENSIONS, DOCUMENT_UPLOAD_MIME_TYPES } from "@myjobhunter/api-client/constants/documentUploadLimits";
+import { fillDocumentUploadForm } from "@myjobhunter/api-client/utils/fillDocumentUploadForm";
 import { useCreateDocumentMutation, useUploadDocumentMutation } from "@myjobhunter/api-client/store/documentsApi";
 
 export interface DocumentUploadDialogProps {
@@ -56,14 +57,14 @@ export default function DocumentUploadDialog({
           showError("Please select a file");
           return;
         }
-        await uploadDocument(
-          buildDocumentUploadForm({
-            title,
-            kind,
-            application_id: applicationId ?? null,
-            file: selectedFile,
-          }),
-        ).unwrap();
+        const form = new FormData();
+        fillDocumentUploadForm(form, {
+          title,
+          kind,
+          application_id: applicationId ?? null,
+          file: selectedFile,
+        });
+        await uploadDocument(form).unwrap();
       }
       showSuccess("Document created");
       reset();
@@ -149,7 +150,7 @@ export default function DocumentUploadDialog({
                 id="new-doc-file"
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                accept={[...DOCUMENT_UPLOAD_EXTENSIONS, ...DOCUMENT_UPLOAD_MIME_TYPES].join(",")}
                 onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
                 className="w-full text-sm"
               />

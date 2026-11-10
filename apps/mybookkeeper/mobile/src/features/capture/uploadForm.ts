@@ -1,5 +1,5 @@
-import { filePart } from "../../lib/filePart";
 import type { PendingUpload } from "../../types/PendingUpload";
+import { filePart } from "@platform/mobile";
 
 export function uploadForm(upload: PendingUpload): FormData {
   const form = new FormData();

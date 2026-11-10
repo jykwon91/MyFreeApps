@@ -1,4 +1,4 @@
-import "../test-support/reactNativeFormData";
+import "@platform/mobile/test-support/reactNativeFormData";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
