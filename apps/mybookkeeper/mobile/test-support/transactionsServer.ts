@@ -3,6 +3,7 @@ import type { InsurancePremiumComparison } from "@mybookkeeper/api-client/types/
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { SummaryResponse } from "@mybookkeeper/api-client/types/summary/summary";
 import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
+import type { ImportResult } from "@mybookkeeper/api-client/types/transaction/ImportResult";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { UtilityPlanRateComparison } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-comparison";
 import type { UtilityPlanRenewalAlert } from "@mybookkeeper/api-client/types/utility/utility-plan-renewal-alert";
@@ -55,6 +56,10 @@ export interface FakeTransactionServer {
   premiumComparison: InsurancePremiumComparison;
   /** What the duplicates list serves. Resolving one takes it off. */
   duplicates: DuplicatePair[];
+  /** What a bank statement import answers with. Its preview rows land in the list, approved, as the backend saves them. */
+  bankImportResult: ImportResult;
+  /** Fails bank statement imports while set: with a status, or with no answer at all. */
+  bankImportFailure: { status: number } | "offline" | null;
   requests: AxiosRequestConfig[];
 }
 
@@ -113,6 +118,16 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     rateComparison: noRateComparison(),
     premiumComparison: noPremiumComparison(),
     duplicates: [],
+    bankImportResult: {
+      imported: 2,
+      skipped_duplicates: 1,
+      format_detected: "chase",
+      preview: [
+        { date: "2026-03-02", vendor: "Shell", amount: "40.00", transaction_type: "expense", category: "maintenance" },
+        { date: "2026-03-03", vendor: "Tenant rent", amount: "1200.00", transaction_type: "income", category: "rental_revenue" },
+      ],
+    },
+    bankImportFailure: null,
     requests: [],
   };
   const adapter: AxiosAdapter = (config) => {
@@ -147,6 +162,17 @@ export function startTransactionServer(transactions: Transaction[], properties: 
       const created = aTransaction({ id: `new${server.transactions.length}`, ...(JSON.parse(String(config.data)) as Partial<Transaction>) });
       server.transactions.unshift(created);
       return respond(created, 201);
+    }
+    if (config.url === "/imports/bank-csv") {
+      const failure = server.bankImportFailure;
+      if (failure === "offline") return Promise.reject(Object.assign(new Error("Network Error"), { config }));
+      if (failure) return respond({ detail: "A developer's message" }, failure.status);
+      server.bankImportResult.preview.forEach((row, index) => {
+        server.transactions.unshift(
+          aTransaction({ id: `imp${server.transactions.length}-${index}`, vendor: row.vendor, transaction_date: row.date, amount: row.amount, transaction_type: row.transaction_type, status: "approved", property_id: null } as Partial<Transaction>),
+        );
+      });
+      return respond(server.bankImportResult, 200);
     }
     if (config.url === "/transactions/duplicates") return respond({ pairs: server.duplicates, total: server.duplicates.length });
     if (config.url?.startsWith("/transactions/duplicates/")) {

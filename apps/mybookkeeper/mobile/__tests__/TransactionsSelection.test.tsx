@@ -187,6 +187,7 @@ describe("picking several transactions", () => {
     expect(screen.queryByText("1 selected")).toBeNull();
     expect(screen.queryByRole("button", { name: "Select several transactions" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Add a transaction by hand" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Import bank statement" })).toBeNull();
   });
 });
 
@@ -197,5 +198,13 @@ describe("adding by hand", () => {
     await screen.findByText("Acme");
     await fireEvent.press(screen.getByRole("button", { name: "Add a transaction by hand" }));
     expect(mockPush).toHaveBeenCalledWith("/transactions/new");
+  });
+
+  it("opens the bank statement import from the Money tab", async () => {
+    startTransactionServer(waiting);
+    await renderScreen();
+    await screen.findByText("Acme");
+    await fireEvent.press(screen.getByRole("button", { name: "Import bank statement" }));
+    expect(mockPush).toHaveBeenCalledWith("/transactions/import");
   });
 });

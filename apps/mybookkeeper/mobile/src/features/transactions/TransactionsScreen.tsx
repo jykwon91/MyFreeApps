@@ -6,6 +6,7 @@ import { Banner, EmptyState, LoadingButton, OptionSheet, SearchField, SegmentedC
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
+import { BANK_IMPORT_MESSAGES as IMPORT_MESSAGES } from "../../constants/bankImport";
 import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { TRANSACTION_EXPORT_FORMATS, TRANSACTION_EXPORT_MESSAGES as EXPORT_MESSAGES } from "../../constants/transactionExport";
 import { NO_FILTERS, TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
@@ -167,9 +168,14 @@ export default function TransactionsScreen({
               value={filters.view}
             />
             {canWrite && !selection.isSelecting ? (
-              <LoadingButton accessibilityLabel="Add a transaction by hand" onPress={() => router.push("/transactions/new")}>
-                Add transaction
-              </LoadingButton>
+              <View style={{ flexDirection: "row", gap: spacing.sm }}>
+                <LoadingButton accessibilityLabel="Add a transaction by hand" onPress={() => router.push("/transactions/new")} style={{ flex: 1 }}>
+                  Add transaction
+                </LoadingButton>
+                <LoadingButton accessibilityLabel={IMPORT_MESSAGES.importEntry} onPress={() => router.push("/transactions/import")} style={{ flex: 1 }} variant="secondary">
+                  {IMPORT_MESSAGES.importButton}
+                </LoadingButton>
+              </View>
             ) : null}
             <View style={{ flexDirection: "row", gap: spacing.sm }}>
               <LoadingButton
