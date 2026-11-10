@@ -10,6 +10,7 @@ import { WARLOCK_MACROS } from "@/games/wow-forever/data/macros/warlockMacros";
 import { ALL_MACROS, hoverCastToMacro, macroClasses, macroClassGroups } from "@/games/wow-forever/lib/macros/macroCatalog";
 import { missingNames, namesInText } from "@/games/wow-forever/lib/macros/macroNameCheck";
 import { fillMacroTemplate, findMacroTemplate } from "@/games/wow-forever/lib/macros/macroTemplates";
+import { buildTagMacro, parseMobNames } from "@/games/wow-forever/lib/macros/tagMacro";
 import type { Macro } from "@/games/wow-forever/types/macros/macro";
 import type { MacroNames } from "@/games/wow-forever/types/macros/macroNames";
 
@@ -200,5 +201,22 @@ describe("namesInText", () => {
 
   it("ignores #showtooltip and other commands", () => {
     expect(namesInText("#showtooltip\n/petattack\n/startattack")).toEqual([]);
+  });
+});
+
+describe("tag macro", () => {
+  it("reads one mob per line, tidied, without repeats, brackets or blank lines, and at most five", () => {
+    expect(parseMobNames('  "Lord Gregor   Lescovar"\n\n[Marzon the Silent Blade]\nlord gregor lescovar\r\nVan Cleef\'s Minion'))
+      .toEqual(["Lord Gregor Lescovar", "Marzon the Silent Blade", "Van Cleef's Minion"]);
+    expect(parseMobNames("a\nb\nc\nd\ne\nf\ng")).toEqual(["a", "b", "c", "d", "e"]);
+  });
+
+  it("clears the target, targets each name, stops when none is up, and casts", () => {
+    expect(buildTagMacro({ mobs: ["Mor'Ladim"], spell: " ", skull: false })).toBe(
+      "#showtooltip Corruption\n/cleartarget\n/targetexact Mor'Ladim\n/stopmacro [noexists][dead]\n/cast Corruption",
+    );
+    expect(buildTagMacro({ mobs: [], spell: "Immolate", skull: true })).toBe(
+      '#showtooltip Immolate\n/cleartarget\n/targetexact Mob Name\n/stopmacro [noexists][dead]\n/script SetRaidTarget("target",8)\n/cast Immolate',
+    );
   });
 });

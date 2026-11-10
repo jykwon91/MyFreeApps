@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-09",
+    title: "Tag macros: paste a mob's name",
+    summary:
+      "On the Macros page, paste a rare's or quest mob's name and copy a macro that targets it by its exact name and casts Corruption (or any spell you type) the moment you press it, so you get the tag first.",
+    to: "/wow-forever/macros",
+  },
+  {
+    date: "2026-11-09",
     title: "Auction prices in your game tooltips",
     summary:
       "Download the MGA Prices addon from the Auction house page and mouse over any item in game to see what it sells for on your faction's auction house, the whole stack's worth, or every house while you hold Shift. Download it again to refresh the prices.",

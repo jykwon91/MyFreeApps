@@ -34,7 +34,7 @@ function renderPage(url = "/wow-forever/macros") {
 }
 
 const sectionHeadings = () => screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-const classHeadings = () => screen.queryAllByRole("heading", { level: 3 }).map((h) => h.textContent).filter((t) => t !== "Good to know" && t !== "Make your own, for any class");
+const classHeadings = () => screen.queryAllByRole("heading", { level: 3 }).map((h) => h.textContent).filter((t) => t !== "Good to know" && t !== "Make your own, for any class" && t !== "Tag macro");
 
 describe("Macros page", () => {
   beforeEach(() => {
@@ -43,12 +43,12 @@ describe("Macros page", () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
-  it("puts the how-to first, then hover cast as the first macro section, then every class's macros", () => {
+  it("puts the how-to first, then hover cast as the first macro section, then tagging, then every class's macros", () => {
     renderPage();
     expect(screen.getByRole("heading", { name: "Macros", level: 1 })).toBeInTheDocument();
-    expect(sectionHeadings()).toEqual(["How to make a macro", "Hover-cast macros (mouseover)", "Ready-made macros by class"]);
+    expect(sectionHeadings()).toEqual(["How to make a macro", "Hover-cast macros (mouseover)", "Tag a mob first", "Ready-made macros by class"]);
     expect(screen.getByText("A hover-cast macro casts on whoever your mouse is over, without changing your target.")).toBeInTheDocument();
-    expect(screen.getAllByRole("article")).toHaveLength(MOUSEOVER_TEMPLATES.length + ALL_MACROS.length);
+    expect(screen.getAllByRole("article")).toHaveLength(MOUSEOVER_TEMPLATES.length + 1 + ALL_MACROS.length);
     expect(classHeadings()).toEqual(["Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior"]);
   });
 
@@ -137,5 +137,50 @@ describe("Macros page", () => {
     expect(toast.showError).toHaveBeenCalled();
     expect(toast.showSuccess).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Copy macro: Life Tap" })).toHaveTextContent("Copy");
+  });
+});
+
+describe("Macros page: tag a mob first", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.localStorage.clear();
+  });
+
+  const tagMacro = () => within(screen.getByRole("article", { name: "Tag macro" })).getByTestId("macro-text");
+
+  it("turns a pasted mob name into a Corruption macro that targets it by its exact name", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    expect(tagMacro()).toHaveTextContent("/targetexact Mob Name");
+    await user.click(screen.getByTestId("tag-mob-names"));
+    await user.paste("  Lord Gregor   Lescovar ");
+    expect(tagMacro().textContent).toBe(
+      "#showtooltip Corruption\n/cleartarget\n/targetexact Lord Gregor Lescovar\n/stopmacro [noexists][dead]\n/cast Corruption",
+    );
+    expect(screen.getByText(/^Targets Lord Gregor Lescovar by its exact name and casts Corruption on it\./)).toBeInTheDocument();
+  });
+
+  it("takes several mobs, another spell and an optional skull, and copies the macro", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+    renderPage();
+    await user.click(screen.getByTestId("tag-mob-names"));
+    await user.paste("Marzon the Silent Blade\nLord Gregor Lescovar");
+    await user.clear(screen.getByTestId("tag-spell"));
+    await user.type(screen.getByTestId("tag-spell"), "Immolate");
+    await user.click(screen.getByRole("checkbox", { name: /Put a skull on it too/ }));
+    const text =
+      "#showtooltip Immolate\n/cleartarget\n/targetexact Marzon the Silent Blade\n/targetexact Lord Gregor Lescovar\n/stopmacro [noexists][dead]\n/script SetRaidTarget(\"target\",8)\n/cast Immolate";
+    expect(tagMacro().textContent).toBe(text);
+    await user.click(screen.getByRole("button", { name: "Copy macro: Tag macro" }));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(text);
+  });
+
+  it("warns when the names don't fit in one macro", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByTestId("tag-mob-names"));
+    await user.paste(["Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "Bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "Cccccccccccccccccccccccccccccccccccccccccccccccccc", "Dddddddddddddddddddddddddddddddddddddddddddddddddd"].join("\n"));
+    expect(screen.getByText(/^Too long for one macro \(\d+ of 255 characters\)\. Remove a name, or the skull\.$/)).toBeInTheDocument();
   });
 });

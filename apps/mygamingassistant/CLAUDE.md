@@ -285,7 +285,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - **Macros** (`/wow-forever/macros`, `pages/WowMacrosPage.tsx`): how-to, then "Hover-cast macros
   (mouseover)" (three templates in `data/macros/macroTemplates.ts`, filled live
   from a "Your spell name" box by `lib/macros/macroTemplates.ts`; empty =
-  `Spell Name`), then ready-made macros for every class. Data in
+  `Spell Name`), then "Tag a mob first" (`components/macros/TagMacroSection.tsx`,
+  `#tag` jumps there via `hooks/useScrollToHashOnLoad.ts`, linked at the top):
+  paste mob names (one per line, max 5, `lib/macros/tagMacro.ts` `parseMobNames`)
+  → `#showtooltip` + `/cleartarget` + `/targetexact` per name + `/stopmacro
+  [noexists][dead]` + optional skull (`SetRaidTarget`) + `/cast` (default
+  Corruption, editable); warns past 255 characters. Then ready-made macros for every class. Data in
   `data/macros/`: `hoverCastMacros.ts` (template + spell, every class) and
   `warlockMacros.ts` (hand-written). `lib/macros/macroCatalog.ts` groups them
   by class then kind (`macroKinds.ts`, hover cast always first). Class picker:
