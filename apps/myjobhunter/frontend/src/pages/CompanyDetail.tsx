@@ -1,49 +1,27 @@
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, ExternalLink as ExternalLinkIcon, Trash2 } from "lucide-react";
-import { Badge, DataTable, showSuccess, showError, extractErrorMessage, type ColumnDef } from "@platform/ui";
+import { Badge, showSuccess, showError, extractErrorMessage, type SortingState } from "@platform/ui";
 import CompanyDetailSkeleton from "@/features/companies/CompanyDetailSkeleton";
 import CompanyResearchPanel from "@/features/companies/CompanyResearchPanel";
-import { APPLIED_AT_COLUMN } from "@/features/applications/appliedAtColumn";
+import CompanyApplications from "@/features/companies/CompanyApplications";
+import CompanyField from "@/features/companies/CompanyField";
+import { useApplicationsList } from "@/features/applications/useApplicationsList";
 import { useGetCompanyQuery, useDeleteCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
-import { useListApplicationsQuery } from "@myjobhunter/api-client/store/applicationsApi";
+import { COMPANY_APPLICATIONS_MESSAGES } from "@/constants/company-applications-messages";
+import { DEFAULT_APPLICATIONS_TABLE_SORTING } from "@/constants/default-applications-table-sorting";
 import { isCompanyHasApplicationsError } from "@myjobhunter/api-client/utils/isCompanyHasApplicationsError";
-import type { Application } from "@myjobhunter/api-client/types/application";
-
-const APPLICATION_COLUMNS: ColumnDef<Application>[] = [
-  {
-    id: "role_title",
-    header: "Role",
-    accessorKey: "role_title",
-    cell: ({ getValue }) => <span className="font-medium">{getValue<string>()}</span>,
-  },
-  {
-    id: "location",
-    header: "Location",
-    accessorFn: (row) => row.location ?? "—",
-  },
-  {
-    id: "remote_type",
-    header: "Remote",
-    accessorKey: "remote_type",
-    cell: ({ getValue }) => {
-      const v = getValue<string>();
-      return <span className="text-sm text-muted-foreground">{v === "unknown" ? "—" : v}</span>;
-    },
-  },
-  APPLIED_AT_COLUMN,
-];
-
-const DELETE_BLOCKED_HINT = "This company has applications, so it can't be deleted.";
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: company, isLoading, isError, error } = useGetCompanyQuery(id ?? "", { skip: !id });
-  const { data: applicationsData } = useListApplicationsQuery(
-    id ? { company_id: id } : undefined,
-    { skip: !id },
-  );
   const [deleteCompany, { isLoading: deleting }] = useDeleteCompanyMutation();
+  const [sorting, setSorting] = useState<SortingState>(DEFAULT_APPLICATIONS_TABLE_SORTING);
+  const applications = useApplicationsList({ company_id: id }, sorting, !id);
+  // Delete waits for the list: until it loads, "no applications" isn't known.
+  const applicationsLoaded = !applications.isLoading && applications.loadError === undefined;
+  const hasApplications = applications.total > 0;
 
   async function handleDelete() {
     if (!company) return;
@@ -92,10 +70,11 @@ export default function CompanyDetail() {
     );
   }
 
-  // Backend filters by ?company_id= so this list already contains only
-  // applications for this company. No client-side filter needed.
-  const applicationsForCompany = applicationsData?.items ?? [];
-  const hasApplications = applicationsForCompany.length > 0;
+  const deleteHint = !applicationsLoaded
+    ? COMPANY_APPLICATIONS_MESSAGES.deleteWaiting
+    : hasApplications
+      ? COMPANY_APPLICATIONS_MESSAGES.deleteBlocked
+      : undefined;
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
@@ -129,27 +108,27 @@ export default function CompanyDetail() {
         <div className="flex flex-col items-end gap-1 shrink-0">
           <button
             onClick={handleDelete}
-            disabled={deleting || hasApplications}
-            title={hasApplications ? DELETE_BLOCKED_HINT : undefined}
+            disabled={deleting || !applicationsLoaded || hasApplications}
+            title={deleteHint}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-md hover:bg-destructive/10 text-destructive disabled:opacity-50 shrink-0"
           >
             <Trash2 size={14} />
             {deleting ? "Deleting..." : "Delete"}
           </button>
-          {hasApplications ? (
-            <p className="text-xs text-muted-foreground max-w-48 text-right">{DELETE_BLOCKED_HINT}</p>
+          {applicationsLoaded && hasApplications ? (
+            <p className="text-xs text-muted-foreground max-w-48 text-right">{COMPANY_APPLICATIONS_MESSAGES.deleteBlocked}</p>
           ) : null}
         </div>
       </header>
 
       <section className="border rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-        <Field label="HQ" value={company.hq_location ?? "—"} />
-        <Field
+        <CompanyField label="HQ" value={company.hq_location ?? "—"} />
+        <CompanyField
           label="Created"
           value={new Date(company.created_at).toLocaleDateString()}
         />
-        <Field label="Domain" value={company.primary_domain ?? "—"} />
-        <Field label="Industry" value={company.industry ?? "—"} />
+        <CompanyField label="Domain" value={company.primary_domain ?? "—"} />
+        <CompanyField label="Industry" value={company.industry ?? "—"} />
       </section>
 
       {company.description ? (
@@ -163,33 +142,12 @@ export default function CompanyDetail() {
 
       <CompanyResearchPanel companyId={company.id} />
 
-      <section>
-        <h2 className="text-sm font-medium mb-2">
-          Applications at {company.name}{" "}
-          <span className="text-muted-foreground font-normal">({applicationsForCompany.length})</span>
-        </h2>
-        {applicationsForCompany.length === 0 ? (
-          <p className="text-sm text-muted-foreground border rounded-lg p-3 bg-muted/30">
-            No applications at this company yet.
-          </p>
-        ) : (
-          <DataTable<Application>
-            data={applicationsForCompany}
-            columns={APPLICATION_COLUMNS}
-            getRowId={(row) => row.id}
-            onRowClick={(row) => navigate(`/applications/${row.id}`)}
-          />
-        )}
-      </section>
+      <CompanyApplications
+        companyName={company.name}
+        list={applications}
+        onSortingChange={setSorting}
+        onOpen={(applicationId) => navigate(`/applications/${applicationId}`)}
+      />
     </main>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="font-medium">{value}</p>
-    </div>
   );
 }

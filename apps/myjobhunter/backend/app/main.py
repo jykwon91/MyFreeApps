@@ -16,7 +16,7 @@ from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.api.users_router import build_users_router
 
-from app.api import account, admin, admin_invites, applications, companies, demo, discover, documents, health, integrations, job_analysis, mobile_auth, profile, resume_refinement, resumes, totp
+from app.api import account, admin, admin_invites, applications, applications_list, companies, demo, discover, documents, health, integrations, job_analysis, mobile_auth, profile, resume_refinement, resumes, totp
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.permissions import current_admin, current_strict_superuser
@@ -202,6 +202,7 @@ app.include_router(
 # App routes
 app.include_router(health.router, tags=["health"])
 app.include_router(profile.router, tags=["profile"])
+app.include_router(applications_list.router, tags=["applications"])
 app.include_router(applications.router, tags=["applications"])
 app.include_router(job_analysis.router, tags=["job_analysis"])
 app.include_router(companies.router, tags=["companies"])

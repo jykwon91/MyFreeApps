@@ -1,5 +1,6 @@
 import api from "@platform/core/lib/api";
 import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import type { FakeParams } from "./types/FakeParams";
 import type { FakeRoute } from "./types/FakeRoute";
 import type { SentRequest } from "./types/SentRequest";
 
@@ -14,9 +15,10 @@ export function serve(routes: Record<string, FakeRoute>): SentRequest[] {
   const adapter: AxiosAdapter = async (config) => {
     const route = `${(config.method ?? "get").toUpperCase()} ${config.url ?? ""}`;
     const body = bodyOf(config);
+    const params = (config.params ?? {}) as FakeParams;
     const authorization = config.headers.Authorization;
-    sent.push({ route, body, authorization: typeof authorization === "string" ? authorization : undefined });
-    const reply = (await routes[route]?.(body)) ?? { status: 404, data: { detail: "Not Found" } };
+    sent.push({ route, body, params, authorization: typeof authorization === "string" ? authorization : undefined });
+    const reply = (await routes[route]?.(body, params)) ?? { status: 404, data: { detail: "Not Found" } };
     const response: AxiosResponse = { data: reply.data ?? null, status: reply.status, statusText: "", headers: {}, config };
     if (reply.status < 400) return response;
     throw Object.assign(new Error(String(reply.status)), { config, response, isAxiosError: true });

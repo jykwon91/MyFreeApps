@@ -252,4 +252,44 @@ describe("DataTable", () => {
       expect(statusHeader).not.toHaveAttribute("aria-sort");
     });
   });
+
+  it("with manualSorting, reports the sort but keeps rows in the order given", async () => {
+    const onSortingChange = vi.fn();
+    const { rerender } = render(
+      <DataTable data={data} columns={columns} sorting={[]} onSortingChange={onSortingChange} manualSorting />,
+    );
+    const header = () => screen.getByRole("columnheader", { name: /name/i });
+    await userEvent.click(within(header()).getByRole("button", { name: /name/i }));
+    expect(onSortingChange).toHaveBeenCalledWith([{ id: "name", desc: false }]);
+    rerender(
+      <DataTable
+        data={data}
+        columns={columns}
+        sorting={[{ id: "name", desc: true }]}
+        onSortingChange={onSortingChange}
+        manualSorting
+      />,
+    );
+    expect(header()).toHaveAttribute("aria-sort", "descending");
+    expect(screen.getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["Alice", "Active", "Bob", "Inactive"]);
+  });
+
+  it("with enableSortingRemoval off, a sorted header only flips direction and never reads as unsorted", async () => {
+    render(
+      <DataTable
+        data={data}
+        columns={columns}
+        defaultSorting={[{ id: "name", desc: true }]}
+        enableSortingRemoval={false}
+      />,
+    );
+    const header = () => screen.getByRole("columnheader", { name: /name/i });
+    expect(header()).toHaveAttribute("aria-sort", "descending");
+    const directions: (string | null)[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      await userEvent.click(within(header()).getByRole("button", { name: /name/i }));
+      directions.push(header().getAttribute("aria-sort"));
+    }
+    expect(directions).toEqual(["ascending", "descending", "ascending"]);
+  });
 });

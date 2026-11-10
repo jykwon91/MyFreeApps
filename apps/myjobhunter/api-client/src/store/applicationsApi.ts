@@ -6,12 +6,14 @@ import type { ApplicationEvent } from "../types/application-event";
 import type { ApplicationEventCreateRequest } from "../types/application-event-create-request";
 import type { ApplicationEventUpdateRequest } from "../types/application-event-update-request";
 import type { ApplicationEventListResponse } from "../types/application-event-list-response";
-import type { ApplicationsFilter } from "../types/application/applications-filter";
+import type { ApplicationsListQuery } from "../types/application/applications-list-query";
 import type { JdParseResponse } from "../types/application/jd-parse-response";
 import type { JdUrlExtractRequest } from "../types/application/jd-url-extract-request";
 import type { JdUrlExtractResponse } from "../types/application/jd-url-extract-response";
 import type { KanbanColumn } from "../types/kanban/kanban-column";
 import type { KanbanListResponse } from "../types/kanban/kanban-list-response";
+import { APPLICATIONS_PAGE_SIZE, FIRST_APPLICATIONS_OFFSET } from "../constants/applicationsPaging";
+import { getNextApplicationsOffset } from "../utils/getNextApplicationsOffset";
 
 const APPLICATIONS_TAG = "Applications";
 const APPLICATION_EVENTS_TAG = "ApplicationEvents";
@@ -40,16 +42,35 @@ const applicationsApi = baseApi.enhanceEndpoints({
           : [{ type: APPLICATIONS_TAG, id: APPLICATIONS_KANBAN_LIST_ID } as const],
     }),
 
-    listApplications: build.query<ApplicationListResponse, ApplicationsFilter | void>({
-      query: (filter) => ({
+    /**
+     * GET /applications, one page per offset, sorted on the server so the
+     * order holds across pages. The arg (filter + sort) keys the cache, so a
+     * new sort starts again from the first page. `fetchNextPage` loads the
+     * next one; there is none once every matching row is loaded. Refetching
+     * (invalidation, focus, pull to refresh) reloads every loaded page.
+     */
+    listApplications: build.infiniteQuery<ApplicationListResponse, ApplicationsListQuery, number>({
+      infiniteQueryOptions: {
+        initialPageParam: FIRST_APPLICATIONS_OFFSET,
+        getNextPageParam: (lastPage, _allPages, lastOffset) => getNextApplicationsOffset(lastPage, lastOffset),
+      },
+      query: ({ queryArg, pageParam }) => ({
         url: "/applications",
         method: "GET",
-        params: { company_id: filter?.company_id || undefined },
+        params: {
+          company_id: queryArg.company_id || undefined,
+          sort: queryArg.sort,
+          order: queryArg.order,
+          limit: APPLICATIONS_PAGE_SIZE,
+          offset: pageParam,
+        },
       }),
       providesTags: (result) =>
         result
           ? [
-              ...result.items.map(({ id }) => ({ type: APPLICATIONS_TAG, id }) as const),
+              ...result.pages.flatMap((page) =>
+                page.items.map(({ id }) => ({ type: APPLICATIONS_TAG, id }) as const),
+              ),
               { type: APPLICATIONS_TAG, id: "LIST" } as const,
             ]
           : [{ type: APPLICATIONS_TAG, id: "LIST" } as const],
@@ -227,7 +248,7 @@ const applicationsApi = baseApi.enhanceEndpoints({
 });
 
 export const {
-  useListApplicationsQuery,
+  useListApplicationsInfiniteQuery,
   useListApplicationsKanbanQuery,
   useGetApplicationQuery,
   useCreateApplicationMutation,

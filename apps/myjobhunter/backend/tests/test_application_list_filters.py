@@ -4,7 +4,7 @@ Covers:
 - ``?status=<event_type>``: only applications whose latest event matches.
 - ``?archived=true`` / ``?archived=false``: filter by archived flag.
 - ``?since=<ISO8601>``: filter by applied_at >= since.
-- ``?limit=N&offset=M``: pagination.
+- ``?limit=N&offset=M``: pagination (``total`` is the count across pages).
 - Combined filters: status + archived, etc.
 - Edge cases: status filter with no matches returns empty list; invalid
   limit returns 422.
@@ -156,7 +156,7 @@ class TestArchivedFilter:
             resp_a = await authed.post("/applications", json=_app_payload(company.id, "Active"))
             app_a_id = resp_a.json()["id"]
 
-            resp_b = await authed.post(
+            await authed.post(
                 "/applications",
                 json=_app_payload(company.id, "Archived", archived=True),
             )
@@ -287,7 +287,9 @@ class TestPagination:
             list_resp = await authed.get("/applications?limit=3")
 
         body = list_resp.json()
-        assert body["total"] == 3  # total = len of returned page
+        # ``total`` counts every matching row, not just this page, so a
+        # client can tell there are more to load.
+        assert body["total"] == 5
         assert len(body["items"]) == 3
 
     @pytest.mark.asyncio

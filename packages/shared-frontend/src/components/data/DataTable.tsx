@@ -20,6 +20,8 @@ export default function DataTable<T extends RowData>({
   sorting,
   defaultSorting,
   onSortingChange,
+  manualSorting = false,
+  enableSortingRemoval = true,
   pagination,
   onPaginationChange,
   pageCount,
@@ -46,6 +48,8 @@ export default function DataTable<T extends RowData>({
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
     getRowId: getRowId ? (row) => getRowId(row) : undefined,
+    manualSorting,
+    enableSortingRemoval,
     manualPagination: pageCount !== undefined,
     pageCount: pageCount,
   });

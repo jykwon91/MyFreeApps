@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Applications from "@/pages/Applications";
+import { applicationsListResult } from "@/test-utils/applicationsListResult";
 import { columnValues, sortTableBy } from "@/test-utils/sortTableBy";
 
 // ---------------------------------------------------------------------------
@@ -9,7 +10,7 @@ import { columnValues, sortTableBy } from "@/test-utils/sortTableBy";
 // ---------------------------------------------------------------------------
 
 vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({
-  useListApplicationsQuery: vi.fn(),
+  useListApplicationsInfiniteQuery: vi.fn(),
   useCreateApplicationMutation: vi.fn(),
   useParseJobDescriptionMutation: vi.fn(),
   useExtractJdFromUrlMutation: vi.fn(),
@@ -48,7 +49,7 @@ vi.mock("@platform/ui", async (importOriginal) => {
 });
 
 import {
-  useListApplicationsQuery,
+  useListApplicationsInfiniteQuery,
   useCreateApplicationMutation,
   useParseJobDescriptionMutation,
   useExtractJdFromUrlMutation,
@@ -59,7 +60,7 @@ import {
   useTriggerCompanyResearchMutation,
 } from "@myjobhunter/api-client/store/companiesApi";
 
-const mockUseListApplicationsQuery = vi.mocked(useListApplicationsQuery);
+const mockUseListApplications = vi.mocked(useListApplicationsInfiniteQuery);
 const mockUseCreateApplicationMutation = vi.mocked(useCreateApplicationMutation);
 const mockUseListCompaniesQuery = vi.mocked(useListCompaniesQuery);
 const mockUseCreateCompanyMutation = vi.mocked(useCreateCompanyMutation);
@@ -153,12 +154,7 @@ describe("Applications page", () => {
 
   describe("loading state", () => {
     it("renders the skeleton while loading", () => {
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        isError: false,
-        error: undefined,
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+      mockUseListApplications.mockReturnValue(applicationsListResult({ isLoading: true }));
 
       renderApplications();
 
@@ -168,12 +164,7 @@ describe("Applications page", () => {
 
   describe("error state", () => {
     it("renders the error message with status code", () => {
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        isError: true,
-        error: { status: 503 },
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+      mockUseListApplications.mockReturnValue(applicationsListResult({ isError: true, error: { status: 503 } }));
 
       renderApplications();
 
@@ -183,12 +174,7 @@ describe("Applications page", () => {
 
   describe("empty state", () => {
     it("renders the empty state heading when there are no applications", () => {
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: { items: [], total: 0 },
-        isLoading: false,
-        isError: false,
-        error: undefined,
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: { items: [], total: 0 } }));
 
       renderApplications();
 
@@ -200,15 +186,10 @@ describe("Applications page", () => {
 
   describe("loaded state — Status column", () => {
     it("renders a Status badge for an app with latest_status='applied'", () => {
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: {
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: {
           items: [makeApp({ latest_status: "applied" })],
           total: 1,
-        },
-        isLoading: false,
-        isError: false,
-        error: undefined,
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+        } }));
 
       renderApplications();
 
@@ -218,15 +199,10 @@ describe("Applications page", () => {
     });
 
     it("renders a Status badge for an app with latest_status='interview_scheduled'", () => {
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: {
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: {
           items: [makeApp({ latest_status: "interview_scheduled" })],
           total: 1,
-        },
-        isLoading: false,
-        isError: false,
-        error: undefined,
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+        } }));
 
       renderApplications();
 
@@ -234,15 +210,10 @@ describe("Applications page", () => {
     });
 
     it("renders a Status badge for an app with latest_status='offer_received'", () => {
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: {
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: {
           items: [makeApp({ latest_status: "offer_received" })],
           total: 1,
-        },
-        isLoading: false,
-        isError: false,
-        error: undefined,
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+        } }));
 
       renderApplications();
 
@@ -250,15 +221,10 @@ describe("Applications page", () => {
     });
 
     it("renders a Status badge for an app with latest_status='rejected'", () => {
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: {
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: {
           items: [makeApp({ latest_status: "rejected" })],
           total: 1,
-        },
-        isLoading: false,
-        isError: false,
-        error: undefined,
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+        } }));
 
       renderApplications();
 
@@ -266,15 +232,10 @@ describe("Applications page", () => {
     });
 
     it("renders an em-dash for an app with latest_status=null", () => {
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: {
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: {
           items: [makeApp({ latest_status: null })],
           total: 1,
-        },
-        isLoading: false,
-        isError: false,
-        error: undefined,
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+        } }));
 
       renderApplications();
 
@@ -291,12 +252,7 @@ describe("Applications page", () => {
         makeApp({ id: "a3", role_title: "Fullstack Dev", latest_status: null }),
       ];
 
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: { items, total: 3 },
-        isLoading: false,
-        isError: false,
-        error: undefined,
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: { items, total: 3 } }));
 
       renderApplications();
 
@@ -307,15 +263,10 @@ describe("Applications page", () => {
     });
 
     it("renders the Status column header", () => {
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: {
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: {
           items: [makeApp({ latest_status: "applied" })],
           total: 1,
-        },
-        isLoading: false,
-        isError: false,
-        error: undefined,
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+        } }));
 
       renderApplications();
 
@@ -323,15 +274,10 @@ describe("Applications page", () => {
     });
 
     it("renders the Company column with the company_name value", () => {
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: {
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: {
           items: [makeApp({ latest_status: "applied", company_name: "Stripe" })],
           total: 1,
-        },
-        isLoading: false,
-        isError: false,
-        error: undefined,
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+        } }));
 
       renderApplications();
 
@@ -340,15 +286,10 @@ describe("Applications page", () => {
     });
 
     it("renders an em-dash in the Company cell when company_name is null", () => {
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: {
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: {
           items: [makeApp({ latest_status: "applied", company_name: null })],
           total: 1,
-        },
-        isLoading: false,
-        isError: false,
-        error: undefined,
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+        } }));
 
       renderApplications();
 
@@ -357,15 +298,10 @@ describe("Applications page", () => {
     });
 
     it("renders unknown event type with neutral badge text (no crash)", () => {
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: {
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: {
           items: [makeApp({ latest_status: "phone_screen" })],
           total: 1,
-        },
-        isLoading: false,
-        isError: false,
-        error: undefined,
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+        } }));
 
       renderApplications();
 
@@ -385,44 +321,152 @@ describe("Applications page", () => {
     ];
 
     beforeEach(() => {
-      mockUseListApplicationsQuery.mockReturnValue({
-        data: { items: apps, total: apps.length },
-        isLoading: false,
-        isError: false,
-        error: undefined,
-      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: { items: apps, total: apps.length } }));
     });
 
-    it("shows the server's order with every header unsorted", () => {
+    function lastSortRequested() {
+      return mockUseListApplications.mock.lastCall?.[0];
+    }
+
+    it("shows the server's order, with Applied marked as the sort it's in", () => {
       renderApplications();
 
       expect(columnValues(0)).toEqual(["NoStatus", "Applied", "Interview", "Offer"]);
       const headers = screen.getAllByRole("columnheader");
       expect(headers).toHaveLength(7);
       for (const header of headers) {
-        expect(header).toHaveAttribute("aria-sort", "none");
+        const expected = /^applied/i.test(header.textContent ?? "") ? "descending" : "none";
+        expect(header).toHaveAttribute("aria-sort", expected);
       }
     });
 
-    it("sorts Status in pipeline order with no status last, both ways", () => {
+    it("opens in the server's default order, applied most recently first", () => {
       renderApplications();
-
-      sortTableBy(/status/i, "ascending");
-      expect(columnValues(0)).toEqual(["Applied", "Interview", "Offer", "NoStatus"]);
-
-      sortTableBy(/status/i, "descending");
-      expect(columnValues(0)).toEqual(["Offer", "Interview", "Applied", "NoStatus"]);
+      expect(lastSortRequested()).toEqual({ sort: "applied", order: "desc" });
     });
 
-    it("sorts Applied on the real date with not-yet-applied last, both ways", () => {
+    it("asks the server for each column's sort, both ways, and shows the rows in the order it sends", () => {
+      renderApplications();
+      const columns: [RegExp, string][] = [
+        [/company/i, "company"],
+        [/role/i, "role"],
+        [/status/i, "status"],
+        [/location/i, "location"],
+        [/remote/i, "remote"],
+        [/^applied/i, "applied"],
+        [/fit/i, "fit"],
+      ];
+      for (const [header, field] of columns) {
+        sortTableBy(header, "ascending");
+        expect(lastSortRequested()).toEqual({ sort: field, order: "asc" });
+        sortTableBy(header, "descending");
+        expect(lastSortRequested()).toEqual({ sort: field, order: "desc" });
+      }
+      // Never re-sorted in the browser: the server already put missing values last.
+      expect(columnValues(0)).toEqual(["NoStatus", "Applied", "Interview", "Offer"]);
+    });
+
+    it("shows skeleton rows under the headers while a new sort loads", () => {
+      mockUseListApplications.mockReturnValue(
+        applicationsListResult({ page: { items: apps, total: apps.length }, isStale: true }),
+      );
       renderApplications();
 
-      sortTableBy(/applied/i, "ascending");
-      expect(columnValues(0)).toEqual(["Interview", "Applied", "NoStatus", "Offer"]);
+      expect(screen.getByRole("columnheader", { name: /company/i })).toBeInTheDocument();
+      expect(screen.queryByRole("cell", { name: "Offer" })).toBeNull();
+      expect(screen.queryByRole("heading", { name: "No applications yet" })).toBeNull();
+    });
+  });
 
-      sortTableBy(/applied/i, "descending");
-      // Localized text would put 10/2/2026 before 9/30/2026 ascending; the date doesn't.
-      expect(columnValues(0)).toEqual(["NoStatus", "Applied", "Interview", "Offer"]);
+  describe("paging", () => {
+    const first = [makeApp({ id: "p1", company_name: "One" }), makeApp({ id: "p2", company_name: "Two" })];
+    const second = [makeApp({ id: "p3", company_name: "Three" })];
+
+    it("shows every loaded page and how many there are in all, with Load more", () => {
+      mockUseListApplications.mockReturnValue(
+        applicationsListResult({ pages: [{ items: first, total: 5 }, { items: second, total: 5 }], hasNextPage: true }),
+      );
+      renderApplications();
+
+      expect(columnValues(0)).toEqual(["One", "Two", "Three"]);
+      expect(screen.getByText("Showing 3 of 5 applications")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Load more" })).toBeEnabled();
+    });
+
+    it("loads the next page on Load more, showing it's busy meanwhile", () => {
+      const fetchNextPage = vi.fn(() => Promise.resolve({ isError: false }));
+      mockUseListApplications.mockReturnValue(
+        applicationsListResult({ page: { items: first, total: 5 }, hasNextPage: true, fetchNextPage }),
+      );
+      const { rerender } = renderApplications();
+
+      fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+      expect(fetchNextPage).toHaveBeenCalledTimes(1);
+
+      mockUseListApplications.mockReturnValue(
+        applicationsListResult({ page: { items: first, total: 5 }, hasNextPage: true, isFetchingNextPage: true }),
+      );
+      rerender(
+        <MemoryRouter initialEntries={["/applications"]}>
+          <Routes>
+            <Route path="/applications" element={<Applications />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+      expect(screen.getByRole("button", { name: /loading more/i })).toBeDisabled();
+    });
+
+    it("keeps the loaded rows and offers Try again when the next page fails", () => {
+      const fetchNextPage = vi.fn(() => Promise.resolve({ isError: false }));
+      mockUseListApplications.mockReturnValue(
+        applicationsListResult({ page: { items: first, total: 5 }, hasNextPage: true, isError: true, direction: "forward", fetchNextPage }),
+      );
+      renderApplications();
+
+      expect(screen.getByRole("alert")).toHaveTextContent("Couldn't load more applications.");
+      expect(columnValues(0)).toEqual(["One", "Two"]);
+      expect(screen.queryByText("Couldn't load applications")).toBeNull();
+
+      fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+      expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    });
+
+    it("drops the next-page error once a later load works, such as a background refresh", () => {
+      mockUseListApplications.mockReturnValue(
+        applicationsListResult({ page: { items: first, total: 5 }, hasNextPage: true, isError: true, direction: "forward" }),
+      );
+      const { rerender } = renderApplications();
+      expect(screen.getByRole("alert")).toHaveTextContent("Couldn't load more applications.");
+
+      // A refetch (direction cleared) succeeded.
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: { items: first, total: 5 }, hasNextPage: true }));
+      rerender(
+        <MemoryRouter initialEntries={["/applications"]}>
+          <Routes>
+            <Route path="/applications" element={<Applications />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.getByRole("button", { name: "Load more" })).toBeEnabled();
+    });
+
+    it("ignores Load more while the list is already fetching", () => {
+      const fetchNextPage = vi.fn(() => Promise.resolve({ isError: false }));
+      mockUseListApplications.mockReturnValue(
+        applicationsListResult({ page: { items: first, total: 5 }, hasNextPage: true, isFetching: true, fetchNextPage }),
+      );
+      renderApplications();
+
+      fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+      expect(fetchNextPage).not.toHaveBeenCalled();
+    });
+
+    it("has no Load more once every application is loaded", () => {
+      mockUseListApplications.mockReturnValue(applicationsListResult({ page: { items: first, total: 2 } }));
+      renderApplications();
+      expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+      expect(screen.queryByText(/^Showing/)).toBeNull();
     });
   });
 });

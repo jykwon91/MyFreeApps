@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import CompanyDetail from "@/pages/CompanyDetail";
+import { applicationsListResult } from "@/test-utils/applicationsListResult";
 import { columnValues, sortTableBy } from "@/test-utils/sortTableBy";
 
 vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
@@ -9,12 +10,13 @@ vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
   useDeleteCompanyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({
-  useListApplicationsQuery: vi.fn(),
+  useListApplicationsInfiniteQuery: vi.fn(),
 }));
 vi.mock("@/features/companies/CompanyResearchPanel", () => ({ default: () => null }));
 
 import { useGetCompanyQuery } from "@myjobhunter/api-client/store/companiesApi";
-import { useListApplicationsQuery } from "@myjobhunter/api-client/store/applicationsApi";
+import { useListApplicationsInfiniteQuery } from "@myjobhunter/api-client/store/applicationsApi";
+import type { Application } from "@myjobhunter/api-client/types/application";
 
 const COMPANY = { id: "c1", name: "Acme Corp", primary_domain: null, industry: null, size_range: null, hq_location: null, description: null };
 
@@ -26,13 +28,13 @@ const APPLICATIONS = [
   { id: "a5", role_title: "Last year", location: null, remote_type: "hybrid", applied_at: "2025-12-01T00:00:00Z" },
   { id: "a1", role_title: "Not sent", location: null, remote_type: "unknown", applied_at: null },
   { id: "a3", role_title: "Blank", location: null, remote_type: "unknown", applied_at: "" },
-];
+] as unknown as Application[];
 
-function renderCompany() {
+const mockList = vi.mocked(useListApplicationsInfiniteQuery);
+
+function renderCompany(total = APPLICATIONS.length, hasNextPage = false) {
   vi.mocked(useGetCompanyQuery).mockReturnValue({ data: COMPANY, isLoading: false, isError: false } as unknown as ReturnType<typeof useGetCompanyQuery>);
-  vi.mocked(useListApplicationsQuery).mockReturnValue({
-    data: { items: APPLICATIONS, total: APPLICATIONS.length },
-  } as unknown as ReturnType<typeof useListApplicationsQuery>);
+  mockList.mockReturnValue(applicationsListResult({ page: { items: APPLICATIONS, total }, hasNextPage }));
   render(
     <MemoryRouter initialEntries={["/companies/c1"]}>
       <Routes>
@@ -43,13 +45,21 @@ function renderCompany() {
 }
 
 describe("CompanyDetail applications table", () => {
-  it("shows the server's order with every header unsorted", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("asks the server for this company's applications only, in the default order", () => {
+    renderCompany();
+    expect(mockList).toHaveBeenLastCalledWith({ company_id: "c1", sort: "applied", order: "desc" }, { skip: false });
+  });
+
+  it("shows the server's order, with Applied marked as the sort it's in", () => {
     renderCompany();
 
     expect(columnValues(0)).toEqual(["October", "September", "Last year", "Not sent", "Blank"]);
     const headers = screen.getAllByRole("columnheader");
     expect(headers).toHaveLength(4);
-    for (const header of headers) {
+    expect(screen.getByRole("columnheader", { name: /applied/i })).toHaveAttribute("aria-sort", "descending");
+    for (const header of headers.filter((h) => !/applied/i.test(h.textContent ?? ""))) {
       expect(header).toHaveAttribute("aria-sort", "none");
     }
   });
@@ -61,13 +71,73 @@ describe("CompanyDetail applications table", () => {
     expect(columnValues(3)[3]).toBe("—");
   });
 
-  it("sorts Applied on the real date with not-yet-applied last, both ways", () => {
+  it("sorts on the server, both ways, keeping the rows in the order it sends", () => {
     renderCompany();
 
     sortTableBy(/applied/i, "ascending");
-    expect(columnValues(0)).toEqual(["Last year", "September", "October", "Not sent", "Blank"]);
-
-    sortTableBy(/applied/i, "descending");
+    expect(mockList.mock.lastCall?.[0]).toEqual({ company_id: "c1", sort: "applied", order: "asc" });
+    sortTableBy(/role/i, "descending");
+    expect(mockList.mock.lastCall?.[0]).toEqual({ company_id: "c1", sort: "role", order: "desc" });
     expect(columnValues(0)).toEqual(["October", "September", "Last year", "Not sent", "Blank"]);
+  });
+
+  it("counts every application at the company, not just the loaded page, and loads more", () => {
+    renderCompany(60, true);
+
+    expect(screen.getByRole("heading", { name: /Applications at Acme Corp \(60\)/ })).toBeInTheDocument();
+    expect(screen.getByText("Showing 5 of 60 applications")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    const result = mockList.mock.results[mockList.mock.results.length - 1]?.value as ReturnType<typeof useListApplicationsInfiniteQuery>;
+    expect(result.fetchNextPage).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("CompanyDetail applications before they load", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function renderWith(result: ReturnType<typeof applicationsListResult>) {
+    vi.mocked(useGetCompanyQuery).mockReturnValue({ data: COMPANY, isLoading: false, isError: false } as unknown as ReturnType<typeof useGetCompanyQuery>);
+    mockList.mockReturnValue(result);
+    render(
+      <MemoryRouter initialEntries={["/companies/c1"]}>
+        <Routes>
+          <Route path="/companies/:id" element={<CompanyDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  const deleteButton = () => screen.getByRole("button", { name: "Delete" });
+
+  it("shows a skeleton with the table's columns while loading, never the empty message, and Delete waits", () => {
+    renderWith(applicationsListResult({ isLoading: true }));
+
+    const skeleton = screen.getByLabelText("Loading applications at this company");
+    expect(within(skeleton).getAllByRole("columnheader")).toHaveLength(4);
+    expect(skeleton.querySelectorAll("tbody tr").length).toBeGreaterThan(0);
+    expect(screen.queryByText("No applications at this company yet.")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Applications at Acme Corp" })).toBeInTheDocument();
+    expect(deleteButton()).toBeDisabled();
+    expect(deleteButton()).toHaveAttribute("title", "Checking this company's applications before it can be deleted.");
+  });
+
+  it("shows an error with Try again when the list fails, keeping Delete disabled, and retries", () => {
+    renderWith(applicationsListResult({ isError: true, error: { status: 500 } }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't load this company's applications.");
+    expect(screen.queryByText("No applications at this company yet.")).toBeNull();
+    expect(deleteButton()).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    const result = mockList.mock.results[mockList.mock.results.length - 1]?.value as ReturnType<typeof useListApplicationsInfiniteQuery>;
+    expect(result.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("enables Delete once the list has loaded and is empty", () => {
+    renderWith(applicationsListResult({ page: { items: [], total: 0 } }));
+
+    expect(screen.getByText("No applications at this company yet.")).toBeInTheDocument();
+    expect(deleteButton()).toBeEnabled();
+    expect(deleteButton()).not.toHaveAttribute("title");
   });
 });

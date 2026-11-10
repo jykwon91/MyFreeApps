@@ -23,6 +23,17 @@ export interface DataTableProps<T extends RowData> {
   defaultSorting?: SortingState;
   /** Called on every sort change, in both controlled and uncontrolled mode. */
   onSortingChange?: (s: SortingState) => void;
+  /**
+   * The rows arrive already sorted (e.g. by the server), so header clicks only
+   * update the sort for the caller to act on; the table never reorders `data`.
+   */
+  manualSorting?: boolean;
+  /**
+   * Whether a third click on a sorted header clears the sort. Pass `false` when
+   * there is always a sort in effect (a server default), so the header never
+   * claims the rows are unsorted.
+   */
+  enableSortingRemoval?: boolean;
   pagination?: PaginationState;
   onPaginationChange?: (p: PaginationState) => void;
   pageCount?: number;

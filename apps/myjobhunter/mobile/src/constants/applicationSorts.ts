@@ -2,7 +2,7 @@ import type { SheetOption } from "@platform/mobile";
 import type { ApplicationSort } from "../types/ApplicationSort";
 import type { ApplicationSortKey } from "../types/ApplicationSortKey";
 
-/** Every way the website's table sorts, each column both ways. */
+/** Every way the website's table sorts, each column both ways. The server does the sorting. */
 export const APPLICATION_SORTS: Record<ApplicationSortKey, ApplicationSort> = {
   "applied-desc": { field: "applied", direction: "desc", label: "Applied, newest first" },
   "applied-asc": { field: "applied", direction: "asc", label: "Applied, oldest first" },
@@ -43,5 +43,5 @@ export const APPLICATION_SORT_OPTIONS: readonly SheetOption<ApplicationSortKey>[
   label: APPLICATION_SORTS[key].label,
 }));
 
-/** The order the server sends, so the list opens the way the website's does. */
+/** The server's default order, so the list opens the way the website's does. */
 export const DEFAULT_APPLICATION_SORT: ApplicationSortKey = "applied-desc";

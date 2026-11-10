@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { formatEventType } from "../utils/formatEventType";
-import { getEventTypeSortRank } from "../utils/getEventTypeSortRank";
 import { isApplicationEventType } from "../utils/isApplicationEventType";
 
 describe("formatEventType", () => {
@@ -33,22 +32,3 @@ describe("formatEventType", () => {
   });
 });
 
-describe("getEventTypeSortRank", () => {
-  it("sorts no status last", () => {
-    expect(getEventTypeSortRank(null)).toBe(999);
-    expect(getEventTypeSortRank(undefined)).toBe(999);
-  });
-
-  it("orders applied, interviewing, offer, then closed out", () => {
-    const order = ["applied", "interview_scheduled", "interview_completed", "offer_received", "rejected"];
-    const ranks = order.map(getEventTypeSortRank);
-    expect([...ranks].sort((a, b) => a - b)).toEqual(ranks);
-    expect(getEventTypeSortRank("rejected")).toBeLessThan(getEventTypeSortRank(null));
-  });
-
-  it("sorts an unknown status after known ones and before no status", () => {
-    const unknown = getEventTypeSortRank("phone_screen");
-    expect(unknown).toBeGreaterThan(getEventTypeSortRank("follow_up_sent"));
-    expect(unknown).toBeLessThan(getEventTypeSortRank(null));
-  });
-});
