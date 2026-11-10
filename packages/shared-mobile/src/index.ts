@@ -46,6 +46,7 @@ export { useOpenLink } from "./hooks/useOpenLink";
 export { useOpenWebsite } from "./hooks/useOpenWebsite";
 export { useReduceMotion } from "./hooks/useReduceMotion";
 export { useScreenReaderEnabled } from "./hooks/useScreenReaderEnabled";
+export { useStackScreenOptions } from "./hooks/useStackScreenOptions";
 export { useSession } from "./hooks/useSession";
 export { useToast } from "./hooks/useToast";
 
