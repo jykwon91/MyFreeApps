@@ -1913,13 +1913,22 @@
         "backend/app/repositories/classification/classification_rule_repo.py",
         "backend/app/models/classification/classification_rule.py",
         "backend/app/api/classification_rules.py",
-        "frontend/src/shared/store/classificationRulesApi.ts",
-        "frontend/src/app/features/transactions/ClassificationRulesPanel.tsx"
+        "api-client/src/store/classificationRulesApi.ts",
+        "frontend/src/app/features/transactions/ClassificationRulesPanel.tsx",
+        "api-client/src/types/classification-rule/",
+        "api-client/src/constants/classificationRuleLabels.ts",
+        "api-client/src/utils/classificationRules.ts",
+        "mobile/src/features/vendorRules/",
+        "mobile/src/constants/vendorRules.ts",
+        "mobile/test-support/classificationRulesServer.ts",
+        "mobile/app/(app)/vendor-rules/"
       ],
       "backend_tests": [
         "test_vendor_normalization.py"
       ],
-      "frontend_tests": [],
+      "frontend_tests": [
+        "useClassificationRulesPanelMode.test.ts"
+      ],
       "e2e_specs": [
         "classification-rules.spec.ts"
       ]

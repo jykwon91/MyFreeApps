@@ -13,7 +13,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { json } from "./fixtures/mockResponse";
 import { ORG_ID, plantAuth, stubSignedInShell } from "./fixtures/mockSession";
-import type { ClassificationRule } from "@/shared/types/classification-rule/classification-rule";
+import type { ClassificationRule } from "@mybookkeeper/api-client/types/classification-rule/classification-rule";
 
 const rule = (id: string, match_pattern: string, category: string, times_applied: number): ClassificationRule => ({
   id,

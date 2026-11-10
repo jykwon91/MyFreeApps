@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { useClassificationRulesPanelMode } from "@/app/features/transactions/useClassificationRulesPanelMode";
-import type { ClassificationRule } from "@/shared/types/classification-rule/classification-rule";
+import type { ClassificationRule } from "@mybookkeeper/api-client/types/classification-rule/classification-rule";
 
 function makeRule(override?: Partial<ClassificationRule>): ClassificationRule {
   return {

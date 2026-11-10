@@ -1,5 +1,5 @@
 import type { ClassificationRulesPanelMode } from "@/shared/types/transaction/classification-rules-panel-mode";
-import type { ClassificationRule } from "@/shared/types/classification-rule/classification-rule";
+import type { ClassificationRule } from "@mybookkeeper/api-client/types/classification-rule/classification-rule";
 
 interface UseClassificationRulesPanelModeArgs {
   isLoading: boolean;
