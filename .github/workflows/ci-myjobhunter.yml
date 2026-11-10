@@ -276,3 +276,52 @@ jobs:
         # inside the caddy image. If this fails, the bake step silently
         # didn't copy the dist (wrong COPY path, wrong build stage, etc.).
         run: docker run --rm myjobhunter-caddy:ci test -f /srv/frontend/index.html
+
+  frontend-layout-e2e:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
+    name: frontend-layout-e2e / myjobhunter
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Mocked specs in e2e/mocked/ answer every API call via page.route(); no
+    # backend is started. They exercise real user flows (sign-in, list
+    # loading, create, error states) against stubbed responses. The
+    # full-stack specs elsewhere in e2e/ need a live backend and are not run
+    # here (playwright.config.ts ignores e2e/mocked/).
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        working-directory: apps/myjobhunter/frontend
+        timeout-minutes: 4
+        run: npx playwright install chromium
+
+      - name: Run mocked E2E tests (no backend)
+        working-directory: apps/myjobhunter/frontend
+        # Runs everything in e2e/mocked/.
+        run: npx playwright test --config=playwright.layout.config.ts
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: apps/myjobhunter/frontend/e2e/test-results-mocked/
+          retention-days: 7
