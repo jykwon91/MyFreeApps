@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Download, Edit2, ExternalLink, Trash2 } from "lucide-react";
+import { Edit2, ExternalLink, Trash2 } from "lucide-react";
 import { Badge, EmptyState, Skeleton, showError, showSuccess, extractErrorMessage, formatFileSize } from "@platform/ui";
 import DocumentKindBadge from "@/features/documents/DocumentKindBadge";
+import DocumentDownloadButton from "@/features/documents/DocumentDownloadButton";
 import DocumentEditDialog from "@/features/documents/DocumentEditDialog";
 import type { Document } from "@myjobhunter/api-client/types/document/document";
 import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
@@ -10,7 +11,6 @@ import { DOCUMENT_KIND_OPTIONS } from "@myjobhunter/api-client/constants/documen
 import {
   useListDocumentsQuery,
   useDeleteDocumentMutation,
-  useGetDocumentDownloadUrlQuery,
 } from "@myjobhunter/api-client/store/documentsApi";
 
 export interface DocumentListProps {
@@ -26,42 +26,6 @@ function formatDate(iso: string): string {
     month: "short",
     day: "numeric",
   });
-}
-
-interface DownloadButtonProps {
-  documentId: string;
-}
-
-function DownloadButton({ documentId }: DownloadButtonProps) {
-  const [fetch, setFetch] = useState(false);
-  const { data, isFetching } = useGetDocumentDownloadUrlQuery(documentId, {
-    skip: !fetch,
-  });
-
-  function handleClick() {
-    if (data?.url) {
-      window.open(data.url, "_blank", "noopener,noreferrer");
-      setFetch(false);
-    } else {
-      setFetch(true);
-    }
-  }
-
-  if (data?.url && fetch) {
-    window.open(data.url, "_blank", "noopener,noreferrer");
-    setFetch(false);
-  }
-
-  return (
-    <button
-      onClick={handleClick}
-      disabled={isFetching}
-      title="Download file"
-      className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50"
-    >
-      <Download size={14} />
-    </button>
-  );
 }
 
 interface DocumentRowProps {
@@ -97,7 +61,7 @@ function DocumentRow({ doc, onEdit, onDelete }: DocumentRowProps) {
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        {doc.has_file ? <DownloadButton documentId={doc.id} /> : null}
+        {doc.has_file ? <DocumentDownloadButton documentId={doc.id} /> : null}
         <button
           onClick={() => onEdit(doc)}
           title="Edit"

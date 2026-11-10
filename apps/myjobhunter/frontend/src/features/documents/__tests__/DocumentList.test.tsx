@@ -8,6 +8,7 @@
  * - Loaded state: renders document titles and kind badges
  * - Delete: calls mutation after window.confirm
  * - Kind filter: shows select when hideKindFilter is false, hidden when true
+ * - Download: one popup-safe open per click, none on re-render, error path
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -22,7 +23,7 @@ import DocumentList from "../DocumentList";
 vi.mock("@myjobhunter/api-client/store/documentsApi", () => ({
   useListDocumentsQuery: vi.fn(),
   useDeleteDocumentMutation: vi.fn(),
-  useGetDocumentDownloadUrlQuery: vi.fn(),
+  useLazyGetDocumentDownloadUrlQuery: vi.fn(),
   useUpdateDocumentMutation: vi.fn(),
 }));
 
@@ -61,13 +62,14 @@ vi.mock("@/features/documents/DocumentKindBadge", () => ({
 import {
   useListDocumentsQuery,
   useDeleteDocumentMutation,
-  useGetDocumentDownloadUrlQuery,
+  useLazyGetDocumentDownloadUrlQuery,
 } from "@myjobhunter/api-client/store/documentsApi";
-import { showSuccess } from "@platform/ui";
+import { showSuccess, showError } from "@platform/ui";
 
 const mockUseListDocumentsQuery = vi.mocked(useListDocumentsQuery);
 const mockUseDeleteDocumentMutation = vi.mocked(useDeleteDocumentMutation);
-const mockUseGetDocumentDownloadUrlQuery = vi.mocked(useGetDocumentDownloadUrlQuery);
+const mockUseLazyDownloadQuery = vi.mocked(useLazyGetDocumentDownloadUrlQuery);
+const mockShowError = vi.mocked(showError);
 const mockShowSuccess = vi.mocked(showSuccess);
 
 const stubDeleteMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
@@ -105,10 +107,10 @@ describe("DocumentList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseDeleteDocumentMutation.mockReturnValue(stubDeleteMutation);
-    mockUseGetDocumentDownloadUrlQuery.mockReturnValue({
-      data: undefined,
-      isFetching: false,
-    } as unknown as ReturnType<typeof useGetDocumentDownloadUrlQuery>);
+    mockUseLazyDownloadQuery.mockReturnValue([
+      vi.fn(),
+      {},
+    ] as unknown as ReturnType<typeof useLazyGetDocumentDownloadUrlQuery>);
   });
 
   describe("loading state", () => {
@@ -259,6 +261,122 @@ describe("DocumentList", () => {
       await user.click(screen.getByTitle("Delete"));
 
       expect(mockDelete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("download", () => {
+    const FILE_URL = "https://files.example.com/doc-1.pdf?sig=abc";
+
+    function mockFileDoc() {
+      mockUseListDocumentsQuery.mockReturnValue({
+        data: { items: [makeDoc({ has_file: true, filename: "cv.pdf" })], total: 1 },
+        isLoading: false,
+        isError: false,
+      } as unknown as ReturnType<typeof useListDocumentsQuery>);
+    }
+
+    function mockTrigger(result: () => Promise<{ url: string }>) {
+      const trigger = vi.fn().mockReturnValue({ unwrap: result });
+      mockUseLazyDownloadQuery.mockReturnValue([
+        trigger,
+        {},
+      ] as unknown as ReturnType<typeof useLazyGetDocumentDownloadUrlQuery>);
+      return trigger;
+    }
+
+    function stubPopup() {
+      const popup = { opener: {}, close: vi.fn(), location: { href: "" } };
+      const openSpy = vi
+        .spyOn(window, "open")
+        .mockReturnValue(popup as unknown as Window);
+      return { popup, openSpy };
+    }
+
+    it("does not open anything on render or re-render", () => {
+      const { openSpy } = stubPopup();
+      const trigger = mockTrigger(() => Promise.resolve({ url: FILE_URL }));
+      mockFileDoc();
+
+      const { rerender } = renderList();
+      rerender(
+        <MemoryRouter>
+          <DocumentList />
+        </MemoryRouter>,
+      );
+
+      expect(openSpy).not.toHaveBeenCalled();
+      expect(trigger).not.toHaveBeenCalled();
+    });
+
+    it("opens a blank window synchronously in the click, then navigates it once", async () => {
+      const user = userEvent.setup();
+      const { popup, openSpy } = stubPopup();
+      const trigger = mockTrigger(() => Promise.resolve({ url: FILE_URL }));
+      mockFileDoc();
+
+      renderList();
+      await user.click(screen.getByTitle("Download file"));
+
+      await waitFor(() => expect(popup.location.href).toBe(FILE_URL));
+      expect(trigger).toHaveBeenCalledTimes(1);
+      expect(trigger).toHaveBeenCalledWith("doc-1");
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(openSpy).toHaveBeenCalledWith("", "_blank");
+      expect(popup.opener).toBeNull();
+      expect(popup.close).not.toHaveBeenCalled();
+    });
+
+    it("shows a busy, disabled button while the URL is fetched, then re-enables", async () => {
+      const user = userEvent.setup();
+      stubPopup();
+      let resolve!: (v: { url: string }) => void;
+      mockTrigger(() => new Promise((r) => (resolve = r)));
+      mockFileDoc();
+
+      renderList();
+      const button = screen.getByTitle("Download file");
+      await user.click(button);
+
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute("aria-busy", "true");
+
+      resolve({ url: FILE_URL });
+      await waitFor(() => expect(button).toBeEnabled());
+    });
+
+    it("opens exactly once per click even when clicked again while in flight", async () => {
+      const user = userEvent.setup();
+      const { openSpy } = stubPopup();
+      let resolve!: (v: { url: string }) => void;
+      const trigger = mockTrigger(() => new Promise((r) => (resolve = r)));
+      mockFileDoc();
+
+      renderList();
+      const button = screen.getByTitle("Download file");
+      await user.click(button);
+      await user.click(button);
+
+      resolve({ url: FILE_URL });
+      await waitFor(() => expect(button).toBeEnabled());
+      expect(trigger).toHaveBeenCalledTimes(1);
+      expect(openSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("closes the blank window and shows an error toast when the fetch fails", async () => {
+      const user = userEvent.setup();
+      const { popup } = stubPopup();
+      mockTrigger(() => Promise.reject(new Error("boom")));
+      mockFileDoc();
+
+      renderList();
+      const button = screen.getByTitle("Download file");
+      await user.click(button);
+
+      await waitFor(() => expect(mockShowError).toHaveBeenCalledTimes(1));
+      expect(mockShowError.mock.calls[0][0]).toMatch(/couldn't download/i);
+      expect(popup.close).toHaveBeenCalledTimes(1);
+      expect(popup.location.href).toBe("");
+      expect(button).toBeEnabled();
     });
   });
 });
