@@ -11,7 +11,13 @@ export interface DataTableProps<T extends RowData> {
   onRowClick?: (row: T) => void;
   getRowId?: (row: T) => string;
   className?: string;
-  /** Controlled sort. Omit it and the table keeps its own sort state. */
+  /**
+   * Controlled sort. Omit it and the table keeps its own sort state.
+   *
+   * Pass a value with a stable identity: React state, or a constant defined
+   * outside the component. A new array literal on every render tells the table
+   * the sort changed each time, so it re-syncs on every render.
+   */
   sorting?: SortingState;
   /** Starting sort when `sorting` is omitted. Ignored once `sorting` is passed. */
   defaultSorting?: SortingState;

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Building2, Plus } from "lucide-react";
 import { DataTable, EmptyState, type ColumnDef } from "@platform/ui";
 import CompaniesSkeleton from "@/features/companies/CompaniesSkeleton";
+import { optionalCompanyTextColumn } from "@/features/companies/optionalCompanyTextColumn";
 import AddCompanyDialog from "@/features/companies/AddCompanyDialog";
 import { useListCompaniesQuery } from "@myjobhunter/api-client/store/companiesApi";
 import { EMPTY_STATES } from "@/constants/empty-states";
@@ -15,30 +16,9 @@ const COLUMNS: ColumnDef<Company>[] = [
     accessorKey: "name",
     cell: ({ getValue }) => <span className="font-medium">{getValue<string>()}</span>,
   },
-  {
-    id: "primary_domain",
-    header: "Domain",
-    accessorFn: (row) => row.primary_domain ?? "—",
-    cell: ({ getValue }) => (
-      <span className="text-sm text-muted-foreground">{getValue<string>()}</span>
-    ),
-  },
-  {
-    id: "industry",
-    header: "Industry",
-    accessorFn: (row) => row.industry ?? "—",
-    cell: ({ getValue }) => (
-      <span className="text-sm text-muted-foreground">{getValue<string>()}</span>
-    ),
-  },
-  {
-    id: "hq_location",
-    header: "HQ",
-    accessorFn: (row) => row.hq_location ?? "—",
-    cell: ({ getValue }) => (
-      <span className="text-sm text-muted-foreground">{getValue<string>()}</span>
-    ),
-  },
+  optionalCompanyTextColumn("primary_domain", "Domain"),
+  optionalCompanyTextColumn("industry", "Industry"),
+  optionalCompanyTextColumn("hq_location", "HQ"),
 ];
 
 export default function Companies() {

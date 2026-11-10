@@ -1,7 +1,7 @@
 import { useTable, flexRender, type RowData } from "@tanstack/react-table";
-import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "../../utils/cn";
 import Skeleton from "../ui/Skeleton";
+import DataTableHeaderCell from "./DataTableHeaderCell";
 import { useControllableState } from "../../hooks/useControllableState";
 import { DATA_TABLE_FEATURES } from "../../constants/data-table-features";
 import { DATA_TABLE_DEFAULT_PAGINATION } from "../../constants/data-table-default-pagination";
@@ -60,47 +60,9 @@ export default function DataTable<T extends RowData>({
         <thead>
           {headerGroups.map((headerGroup) => (
             <tr key={headerGroup.id} className="border-b">
-              {headerGroup.headers.map((header) => {
-                const canSort = header.column.getCanSort();
-                const sortDir = header.column.getIsSorted();
-                return (
-                  <th
-                    key={header.id}
-                    scope="col"
-                    aria-sort={
-                      sortDir === "asc"
-                        ? "ascending"
-                        : sortDir === "desc"
-                        ? "descending"
-                        : canSort
-                        ? "none"
-                        : undefined
-                    }
-                    className={cn(
-                      "px-3 py-2.5 text-left font-medium text-muted-foreground whitespace-nowrap",
-                      canSort && "cursor-pointer select-none hover:text-foreground"
-                    )}
-                    onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                      {canSort && (
-                        <span className="text-muted-foreground">
-                          {sortDir === "asc" ? (
-                            <ChevronUp className="w-3.5 h-3.5" />
-                          ) : sortDir === "desc" ? (
-                            <ChevronDown className="w-3.5 h-3.5" />
-                          ) : (
-                            <ChevronsUpDown className="w-3.5 h-3.5 opacity-50" />
-                          )}
-                        </span>
-                      )}
-                    </span>
-                  </th>
-                );
-              })}
+              {headerGroup.headers.map((header) => (
+                <DataTableHeaderCell key={header.id} header={header} />
+              ))}
             </tr>
           ))}
         </thead>

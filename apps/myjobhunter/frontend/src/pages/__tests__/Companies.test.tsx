@@ -215,12 +215,18 @@ describe("Companies page", () => {
   });
 
   describe("sorting", () => {
-    function company(id: string, name: string, industry: string, hqLocation: string) {
+    function company(
+      id: string,
+      name: string,
+      primaryDomain: string | null,
+      industry: string | null,
+      hqLocation: string | null,
+    ) {
       return {
         id,
         user_id: "u1",
         name,
-        primary_domain: `${id}.example.com`,
+        primary_domain: primaryDomain,
         industry,
         hq_location: hqLocation,
         logo_url: null,
@@ -234,11 +240,13 @@ describe("Companies page", () => {
       };
     }
 
-    // The server's order; every sort step below changes it.
+    // The server's order (name A to Z). Each company is missing a different
+    // field; Umbrella's domain is blank, which counts as missing too.
     const items = [
-      company("c1", "Globex", "Energy", "Austin, TX"),
-      company("c2", "Acme Corp", "SaaS", "Chicago, IL"),
-      company("c3", "Initech", "Fintech", "Boston, MA"),
+      company("c1", "Acme Corp", "acme.com", "SaaS", "Chicago, IL"),
+      company("c2", "Globex", null, null, "Austin, TX"),
+      company("c3", "Initech", "initech.com", "Fintech", null),
+      company("c4", "Umbrella", "", "Biotech", "Boston, MA"),
     ];
 
     beforeEach(() => {
@@ -252,8 +260,10 @@ describe("Companies page", () => {
 
     it("shows the server's order with every header unsorted", () => {
       renderCompanies();
-      expect(columnValues(0)).toEqual(["Globex", "Acme Corp", "Initech"]);
-      for (const header of screen.getAllByRole("columnheader")) {
+      expect(columnValues(0)).toEqual(["Acme Corp", "Globex", "Initech", "Umbrella"]);
+      const headers = screen.getAllByRole("columnheader");
+      expect(headers).toHaveLength(4);
+      for (const header of headers) {
         expect(header).toHaveAttribute("aria-sort", "none");
       }
     });
@@ -261,22 +271,43 @@ describe("Companies page", () => {
     it("sorts by Name when its header is clicked, both ways", () => {
       renderCompanies();
 
-      sortTableBy(/name/i, "ascending");
-      expect(columnValues(0)).toEqual(["Acme Corp", "Globex", "Initech"]);
-
       sortTableBy(/name/i, "descending");
-      expect(columnValues(0)).toEqual(["Initech", "Globex", "Acme Corp"]);
+      expect(columnValues(0)).toEqual(["Umbrella", "Initech", "Globex", "Acme Corp"]);
+
+      sortTableBy(/name/i, "ascending");
+      expect(columnValues(0)).toEqual(["Acme Corp", "Globex", "Initech", "Umbrella"]);
     });
 
-    it("sorts by Industry and by HQ", () => {
+    it("sorts Industry with missing last, both ways, still showing a dash", () => {
       renderCompanies();
 
       sortTableBy(/industry/i, "ascending");
-      expect(columnValues(2)).toEqual(["Energy", "Fintech", "SaaS"]);
+      expect(columnValues(2)).toEqual(["Biotech", "Fintech", "SaaS", "—"]);
       expect(screen.getByRole("columnheader", { name: /name/i })).toHaveAttribute("aria-sort", "none");
 
+      sortTableBy(/industry/i, "descending");
+      expect(columnValues(2)).toEqual(["SaaS", "Fintech", "Biotech", "—"]);
+    });
+
+    it("sorts HQ with missing last, both ways", () => {
+      renderCompanies();
+
+      sortTableBy(/hq/i, "ascending");
+      expect(columnValues(3)).toEqual(["Austin, TX", "Boston, MA", "Chicago, IL", "—"]);
+
       sortTableBy(/hq/i, "descending");
-      expect(columnValues(3)).toEqual(["Chicago, IL", "Boston, MA", "Austin, TX"]);
+      expect(columnValues(3)).toEqual(["Chicago, IL", "Boston, MA", "Austin, TX", "—"]);
+    });
+
+    it("sorts Domain with null and blank domains last, both ways", () => {
+      renderCompanies();
+
+      sortTableBy(/domain/i, "ascending");
+      expect(columnValues(0)).toEqual(["Acme Corp", "Initech", "Globex", "Umbrella"]);
+      expect(columnValues(1)).toEqual(["acme.com", "initech.com", "—", "—"]);
+
+      sortTableBy(/domain/i, "descending");
+      expect(columnValues(0)).toEqual(["Initech", "Acme Corp", "Globex", "Umbrella"]);
     });
   });
 });

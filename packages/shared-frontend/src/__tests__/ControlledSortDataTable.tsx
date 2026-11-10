@@ -1,13 +1,7 @@
 import { useState } from "react";
 import type { SortingState } from "@tanstack/react-table";
 import DataTable from "../components/data/DataTable";
-import type { ColumnDef } from "../types/data-table-column-def";
-
-interface ControlledSortDataTableProps<T extends object> {
-  data: T[];
-  columns: ColumnDef<T>[];
-  onSortingChange: (next: SortingState) => void;
-}
+import type { ControlledSortDataTableProps } from "./controlled-sort-data-table-props";
 
 /** A parent that owns DataTable's sort state, for the controlled-mode tests. */
 export default function ControlledSortDataTable<T extends object>({

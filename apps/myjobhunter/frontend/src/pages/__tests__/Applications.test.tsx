@@ -375,12 +375,13 @@ describe("Applications page", () => {
   });
 
   describe("sorting", () => {
-    // Rows render in the server's order; the company name tells them apart.
+    // The server's order (newest applied first, not-yet-applied last); the
+    // company name tells the rows apart.
     const apps = [
       makeApp({ id: "a", company_name: "NoStatus", latest_status: null, applied_at: "2026-10-02T00:00:00Z" }),
-      makeApp({ id: "b", company_name: "Offer", latest_status: "offer_received", applied_at: null }),
       makeApp({ id: "c", company_name: "Applied", latest_status: "applied", applied_at: "2026-09-30T00:00:00Z" }),
       makeApp({ id: "d", company_name: "Interview", latest_status: "interview_scheduled", applied_at: "2025-12-01T00:00:00Z" }),
+      makeApp({ id: "b", company_name: "Offer", latest_status: "offer_received", applied_at: null }),
     ];
 
     beforeEach(() => {
@@ -390,6 +391,17 @@ describe("Applications page", () => {
         isError: false,
         error: undefined,
       } as unknown as ReturnType<typeof useListApplicationsQuery>);
+    });
+
+    it("shows the server's order with every header unsorted", () => {
+      renderApplications();
+
+      expect(columnValues(0)).toEqual(["NoStatus", "Applied", "Interview", "Offer"]);
+      const headers = screen.getAllByRole("columnheader");
+      expect(headers).toHaveLength(7);
+      for (const header of headers) {
+        expect(header).toHaveAttribute("aria-sort", "none");
+      }
     });
 
     it("sorts Status in pipeline order with no status last, both ways", () => {
