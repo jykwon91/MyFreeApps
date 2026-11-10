@@ -2041,6 +2041,32 @@
       ],
       "frontend_tests": [],
       "e2e_specs": []
+    },
+    "phone_all_screen": {
+      "source_paths": [
+        "mobile/app/(app)/(tabs)/more.tsx",
+        "mobile/src/features/more/",
+        "mobile/src/constants/moreMenu.ts",
+        "mobile/src/constants/tabDestinations.ts",
+        "mobile/src/constants/extraDestinations.ts",
+        "mobile/src/constants/allDestinations.ts",
+        "mobile/src/constants/moreSearch.ts",
+        "mobile/src/utils/destinationSearch.ts",
+        "mobile/src/types/MoreMenuItem.ts",
+        "mobile/src/types/MoreMenuGroup.ts",
+        "mobile/src/types/SearchDestination.ts",
+        "mobile/screen-map.yaml",
+        "mobile/src/utils/normalizeSearchText.ts",
+        "mobile/src/lib/useDebouncedAnnouncement.ts",
+        "mobile/src/lib/useKeyboardHeight.ts",
+        "mobile/src/types/MoreMenuAccess.ts",
+        "mobile/src/types/DestinationViewer.ts",
+        "mobile/src/types/MoreRowProps.ts",
+        "mobile/src/types/MoreSearchResultsProps.ts"
+      ],
+      "backend_tests": [],
+      "frontend_tests": [],
+      "e2e_specs": []
     }
   },
   "shared_paths": [
