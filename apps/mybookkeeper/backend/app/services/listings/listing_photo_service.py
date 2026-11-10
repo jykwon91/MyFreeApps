@@ -145,10 +145,11 @@ async def reorder_photos(
     """Put the listing's photos in `photo_ids` order in one transaction.
 
     The listing row is locked first, so uploads, deletes and other reorders on
-    it run one at a time. A partial list is fine: photos not named follow in
-    their current order. Raises ListingNotFoundError when the listing is
-    missing, and StalePhotoOrderError when an id is not one of its photos (the
-    caller's list is out of date); nothing is changed in either case.
+    it run one at a time. `photo_ids` must be an exact permutation of the
+    listing's current photos. Raises ListingNotFoundError when the listing is
+    missing, and StalePhotoOrderError when the list is partial or names an
+    unknown or repeated id (the caller's list is out of date); nothing is
+    changed in either case.
     """
     async with unit_of_work() as db:
         listing = await listing_repo.get_by_id(db, listing_id, organization_id, for_update=True)
@@ -156,7 +157,7 @@ async def reorder_photos(
             raise ListingNotFoundError(f"Listing {listing_id} not found")
         ordered = await listing_photo_repo.apply_order(db, listing.id, photo_ids)
         if ordered is None:
-            raise StalePhotoOrderError("A photo in the new order is no longer on this listing")
+            raise StalePhotoOrderError("photo_ids must be a permutation of the listing's current photos")
         return attach_presigned_urls([ListingPhotoResponse.model_validate(p) for p in ordered])
 
 

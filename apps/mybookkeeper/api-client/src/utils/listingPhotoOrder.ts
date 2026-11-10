@@ -12,3 +12,8 @@ export function moveId(ids: readonly string[], from: number, to: number): string
   next.splice(to, 0, moved);
   return next;
 }
+
+/** True when both lists hold the same ids, in any order. The server only accepts a full list, so a local order that no longer matches the photos must not be sent. */
+export function hasSameIds(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && new Set(a).size === a.length && b.every((id) => a.includes(id));
+}
