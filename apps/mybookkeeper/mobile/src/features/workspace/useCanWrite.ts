@@ -1,7 +1,6 @@
-import { useActiveWorkspace } from "./useActiveWorkspace";
+import { useWriteAccess } from "./useWriteAccess";
 
 /** Hides what a viewer can't do. The server enforces it either way. */
 export function useCanWrite(): boolean {
-  const workspace = useActiveWorkspace();
-  return workspace !== null && workspace.org_role !== "viewer";
+  return useWriteAccess() === "allowed";
 }

@@ -1,10 +1,11 @@
-import { EmptyState } from "@platform/mobile";
-import { FORM_MESSAGES } from "../../constants/forms";
-import { useCanWrite } from "../workspace/useCanWrite";
+import RequireWrite from "../workspace/RequireWrite";
+import VendorDetailSkeleton from "./VendorDetailSkeleton";
 import VendorFormScreen from "./VendorFormScreen";
 
 export default function VendorCreateScreen() {
-  const canWrite = useCanWrite();
-  if (!canWrite) return <EmptyState body={FORM_MESSAGES.viewOnlyBody} heading={FORM_MESSAGES.viewOnlyHeading} />;
-  return <VendorFormScreen original={null} />;
+  return (
+    <RequireWrite loading={<VendorDetailSkeleton />}>
+      <VendorFormScreen original={null} />
+    </RequireWrite>
+  );
 }

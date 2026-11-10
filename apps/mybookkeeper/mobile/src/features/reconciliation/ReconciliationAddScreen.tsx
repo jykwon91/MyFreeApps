@@ -1,10 +1,11 @@
-import { EmptyState } from "@platform/mobile";
-import { FORM_MESSAGES } from "../../constants/forms";
-import { useCanWrite } from "../workspace/useCanWrite";
+import RequireWrite from "../workspace/RequireWrite";
+import ReconciliationSkeleton from "./ReconciliationSkeleton";
 import ReconciliationAddForm from "./ReconciliationAddForm";
 
 export default function ReconciliationAddScreen({ year }: { year: number }) {
-  const canWrite = useCanWrite();
-  if (!canWrite) return <EmptyState body={FORM_MESSAGES.viewOnlyBody} heading={FORM_MESSAGES.viewOnlyHeading} />;
-  return <ReconciliationAddForm year={year} />;
+  return (
+    <RequireWrite loading={<ReconciliationSkeleton />}>
+      <ReconciliationAddForm year={year} />
+    </RequireWrite>
+  );
 }

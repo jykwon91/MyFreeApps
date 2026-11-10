@@ -39,6 +39,10 @@ jest.mock("@react-native-community/datetimepicker", () => {
   return { __esModule: true, default: View, DateTimePickerAndroid: { open: jest.fn() } };
 });
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: jest.fn() }));
+// The mocked answer drives the guard too, so these tests need no workspace list.
+jest.mock("../src/features/workspace/useWriteAccess", () => ({
+  useWriteAccess: () => (jest.requireMock("../src/features/workspace/useCanWrite").useCanWrite() ? "allowed" : "denied"),
+}));
 jest.mock("react-native/Libraries/Modal/Modal", () => ({
   __esModule: true,
   default: ({ visible, children }: { visible: boolean; children: unknown }) => (visible ? children : null),

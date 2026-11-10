@@ -1,10 +1,11 @@
-import { EmptyState } from "@platform/mobile";
-import { FORM_MESSAGES } from "../../constants/forms";
-import { useCanWrite } from "../workspace/useCanWrite";
+import RequireWrite from "../workspace/RequireWrite";
+import PropertyDetailSkeleton from "./PropertyDetailSkeleton";
 import PropertyFormScreen from "./PropertyFormScreen";
 
 export default function PropertyCreateScreen() {
-  const canWrite = useCanWrite();
-  if (!canWrite) return <EmptyState body={FORM_MESSAGES.viewOnlyBody} heading={FORM_MESSAGES.viewOnlyHeading} />;
-  return <PropertyFormScreen original={null} />;
+  return (
+    <RequireWrite loading={<PropertyDetailSkeleton />}>
+      <PropertyFormScreen original={null} />
+    </RequireWrite>
+  );
 }
