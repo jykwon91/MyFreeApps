@@ -4,31 +4,55 @@ from datetime import datetime, timezone
 from sqlalchemy import ColumnElement, Select, delete as sa_delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from platform_shared.repositories import soft_delete as _soft_delete
-
 from app.core.transaction_statuses import REVIEWABLE_STATUSES
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.models.extraction.extraction import Extraction
 
 
-def live_transactions_for_update_stmt(
-    transaction_ids: list[uuid.UUID], organization_id: uuid.UUID, *criteria: ColumnElement[bool],
+def _live_org_transactions_for_update_stmt(
+    organization_id: uuid.UUID, *criteria: ColumnElement[bool],
 ) -> Select[tuple[Transaction]]:
-    """The org's live transactions among the ids, locked in id order.
+    """The org's live transactions matching the criteria, locked in id order.
 
-    Locking in a fixed order means two overlapping bulk requests queue instead of deadlocking.
+    Every transaction-locking path uses this order, so overlapping callers queue instead of deadlocking.
     """
     return (
         select(Transaction)
         .where(
-            Transaction.id.in_(transaction_ids),
             Transaction.organization_id == organization_id,
             Transaction.deleted_at.is_(None),
             *criteria,
         )
         .order_by(Transaction.id)
         .with_for_update()
+    )
+
+
+def live_transactions_for_update_stmt(
+    transaction_ids: list[uuid.UUID], organization_id: uuid.UUID, *criteria: ColumnElement[bool],
+) -> Select[tuple[Transaction]]:
+    """The org's live transactions among the ids, locked in id order."""
+    return _live_org_transactions_for_update_stmt(
+        organization_id, Transaction.id.in_(transaction_ids), *criteria,
+    )
+
+
+def live_transactions_for_document_for_update_stmt(
+    document_id: uuid.UUID, organization_id: uuid.UUID,
+) -> Select[tuple[Transaction]]:
+    """The org's live transactions extracted from the document, locked in id order.
+
+    Extractions are matched by subquery so the lock covers transaction rows only.
+    """
+    return _live_org_transactions_for_update_stmt(
+        organization_id,
+        Transaction.extraction_id.in_(
+            select(Extraction.id).where(
+                Extraction.document_id == document_id,
+                Extraction.organization_id == organization_id,
+            )
+        ),
     )
 
 
@@ -121,46 +145,17 @@ async def soft_delete_by_document_id(
 ) -> list[Transaction]:
     """Soft-delete all transactions linked to a document via extractions.
 
+    Lock order: the caller locks the document first (``FOR NO KEY UPDATE``), then this locks the
+    transactions in id order. ``keep_transaction``/``merge_transactions`` lock transactions and then insert
+    ``TransactionDocument`` rows, whose FK takes ``FOR KEY SHARE`` on the document; ``FOR NO KEY UPDATE``
+    doesn't conflict with that, so the two orders can't deadlock. Rows are changed through the ORM, so the
+    audit listener records each one.
     Returns the list of deleted transactions for UX confirmation.
     """
-    stmt = (
-        select(Transaction)
-        .join(Extraction, Transaction.extraction_id == Extraction.id)
-        .where(
-            Extraction.document_id == document_id,
-            Transaction.organization_id == organization_id,
-            Transaction.deleted_at.is_(None),
-        )
-    )
-    result = await db.execute(stmt)
+    result = await db.execute(live_transactions_for_document_for_update_stmt(document_id, organization_id))
     transactions = list(result.scalars().all())
-
-    for txn in transactions:
-        txn.status = "duplicate"
-        await _soft_delete(db, txn)
-
+    await soft_delete_transactions(db, transactions)
     return transactions
-
-
-async def soft_delete_by_external_id(
-    db: AsyncSession,
-    organization_id: uuid.UUID,
-    external_source: str,
-    external_id: str,
-) -> None:
-    """Soft-delete a transaction by external source and ID."""
-    result = await db.execute(
-        select(Transaction).where(
-            Transaction.organization_id == organization_id,
-            Transaction.external_source == external_source,
-            Transaction.external_id == external_id,
-            Transaction.deleted_at.is_(None),
-        )
-    )
-    txn = result.scalar_one_or_none()
-    if txn:
-        txn.status = "duplicate"
-        await _soft_delete(db, txn)
 
 
 async def get_existing_external_ids(

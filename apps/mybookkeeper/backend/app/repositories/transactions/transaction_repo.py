@@ -41,7 +41,6 @@ from app.repositories.transactions.transaction_bulk_repo import (
     get_existing_external_ids,
     get_linked_document_ids,
     soft_delete_by_document_id,
-    soft_delete_by_external_id,
     transfer_document_links,
 )
 from app.repositories.transactions.transaction_reconciliation_repo import (
@@ -91,7 +90,6 @@ __all__ = [
     "get_existing_external_ids",
     "get_linked_document_ids",
     "soft_delete_by_document_id",
-    "soft_delete_by_external_id",
     "transfer_document_links",
     # reconciliation
     "count_by_category",
