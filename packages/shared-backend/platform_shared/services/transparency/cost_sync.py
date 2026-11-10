@@ -5,14 +5,15 @@
 Cost Report. Donations are written by the webhook; this sync owns only the
 cost side of the shared object.
 
-Run by the daily asyncio cost-sync loop (and once at startup) on the primary app.
+Run once a day (and once when the process starts) by the primary app's single
+scheduler worker, via ``scheduler.run_cost_sync_once``.
 It is idempotent — recomputing and overwriting the current month's
 ``costs_cents`` each run is correct, so a missed run simply self-heals on
 the next one.
 
 Failure posture (rules/check-third-party-error-codes + no-bandaid): if the
 Anthropic fetch raises, we do NOT write a partial/zero cost — we let the
-error propagate so the caller (the scheduler job wrapper) logs it and the
+error propagate so the caller (``scheduler.run_cost_sync_once``) logs it and the
 PREVIOUS cost figure stays intact rather than the widget flipping to a
 wrong "$0 costs". An empty admin key is not a failure: it yields 0 Anthropic
 cents and the costs reflect the fixed constants alone.
@@ -32,7 +33,7 @@ from platform_shared.services.transparency import (
 logger = logging.getLogger(__name__)
 
 
-class _CostSyncSettings(Protocol):
+class CostSyncSettings(Protocol):
     """Settings fields the cost sync reads. BaseAppSettings satisfies this."""
 
     anthropic_admin_api_key: str
@@ -54,7 +55,7 @@ def _month_start(now: datetime) -> datetime:
 
 
 async def run_cost_sync(
-    settings: _CostSyncSettings,
+    settings: CostSyncSettings,
     now: datetime | None = None,
 ) -> int:
     """Recompute and persist the current month's ``costs_cents``.
@@ -101,4 +102,4 @@ async def run_cost_sync(
     return costs_cents
 
 
-__all__ = ["run_cost_sync"]
+__all__ = ["CostSyncSettings", "run_cost_sync"]

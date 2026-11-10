@@ -1,132 +1,114 @@
-"""Unit tests for platform_shared.services.transparency.scheduler (asyncio loop).
+"""Unit tests for platform_shared.services.transparency.scheduler.
 
-Confirms primary-only gating, the next-run-time math, startup catch-up,
-idempotent start, clean cancellation, and that one failed run never tears
-down the loop.
+Covers the pure "is the daily sync due" decision (startup catch-up, the
+00:15 UTC slot, day and month rollover) and that ``run_cost_sync_once``
+reports failure instead of raising, so a failed run never takes down the
+worker loop that drives it.
 """
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
 
-from platform_shared.services.transparency import cost_sync, scheduler
+from platform_shared.services.transparency import cost_sync
 from platform_shared.services.transparency.scheduler import (
-    _run_once,
-    _seconds_until_next_run,
-    maybe_start_transparency_sync,
-    stop_transparency_sync,
+    is_daily_sync_due,
+    run_cost_sync_once,
 )
 
 
-@pytest.fixture(autouse=True)
-def _reset_task():
-    """Clear the module singleton around each test (tasks live in per-test loops)."""
-    scheduler._task = None
-    yield
-    scheduler._task = None
+def _utc(year: int, month: int, day: int, hour: int, minute: int = 0) -> datetime:
+    return datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
 
 
-def _settings(*, primary: bool) -> SimpleNamespace:
-    return SimpleNamespace(transparency_primary=primary)
+class TestIsDailySyncDue:
+    def test_first_run_is_always_due(self) -> None:
+        assert is_daily_sync_due(last_run=None, now=_utc(2026, 6, 15, 12))
+
+    def test_not_due_again_later_the_same_day(self) -> None:
+        assert not is_daily_sync_due(
+            last_run=_utc(2026, 6, 15, 9), now=_utc(2026, 6, 15, 23, 59),
+        )
+
+    def test_not_due_before_next_days_slot(self) -> None:
+        # 00:10 is before the 00:15 slot — yesterday's run still covers it.
+        assert not is_daily_sync_due(
+            last_run=_utc(2026, 6, 15, 9), now=_utc(2026, 6, 16, 0, 10),
+        )
+
+    def test_due_once_the_slot_has_passed(self) -> None:
+        assert is_daily_sync_due(
+            last_run=_utc(2026, 6, 15, 9), now=_utc(2026, 6, 16, 0, 15),
+        )
+
+    def test_not_due_twice_after_running_at_the_slot(self) -> None:
+        assert not is_daily_sync_due(
+            last_run=_utc(2026, 6, 16, 0, 15), now=_utc(2026, 6, 16, 1, 15),
+        )
+
+    def test_run_just_before_slot_is_due_at_slot(self) -> None:
+        assert is_daily_sync_due(
+            last_run=_utc(2026, 6, 16, 0, 14), now=_utc(2026, 6, 16, 0, 20),
+        )
+
+    def test_due_after_month_rollover(self) -> None:
+        assert is_daily_sync_due(
+            last_run=_utc(2026, 6, 30, 22), now=_utc(2026, 7, 1, 1),
+        )
+
+    def test_due_after_several_missed_days(self) -> None:
+        assert is_daily_sync_due(
+            last_run=_utc(2026, 6, 10, 9), now=_utc(2026, 6, 15, 3),
+        )
+
+    def test_non_utc_now_is_evaluated_in_utc(self) -> None:
+        # 19:20 on the 15th at UTC-5 is 00:20 UTC on the 16th: past the slot.
+        minus_five = timezone(timedelta(hours=-5))
+        now = datetime(2026, 6, 15, 19, 20, tzinfo=minus_five)
+        assert is_daily_sync_due(last_run=_utc(2026, 6, 15, 9), now=now)
+        # 19:10 at UTC-5 is 00:10 UTC: still before the slot.
+        before = datetime(2026, 6, 15, 19, 10, tzinfo=minus_five)
+        assert not is_daily_sync_due(last_run=_utc(2026, 6, 15, 9), now=before)
+
+    def test_non_utc_last_run_is_evaluated_in_utc(self) -> None:
+        # 20:20 on the 15th at UTC-5 is 01:20 UTC on the 16th: after today's slot.
+        last_run = datetime(2026, 6, 15, 20, 20, tzinfo=timezone(timedelta(hours=-5)))
+        assert not is_daily_sync_due(last_run=last_run, now=_utc(2026, 6, 16, 3))
+
+    def test_naive_now_raises(self) -> None:
+        with pytest.raises(ValueError, match="now must be timezone-aware"):
+            is_daily_sync_due(last_run=None, now=datetime(2026, 6, 16, 1))
+
+    def test_naive_last_run_raises(self) -> None:
+        with pytest.raises(ValueError, match="last_run must be timezone-aware"):
+            is_daily_sync_due(
+                last_run=datetime(2026, 6, 15, 9), now=_utc(2026, 6, 16, 1),
+            )
 
 
-class TestNextRunMath:
-    def test_before_daily_slot(self) -> None:
-        # 00:00 → next 00:15 is 900s away.
-        now = datetime(2026, 6, 15, 0, 0, 0, tzinfo=timezone.utc)
-        assert _seconds_until_next_run(now) == 900
-
-    def test_after_daily_slot_rolls_to_next_day(self) -> None:
-        # 00:20 → next 00:15 is tomorrow: 24h - 5min = 86100s.
-        now = datetime(2026, 6, 15, 0, 20, 0, tzinfo=timezone.utc)
-        assert _seconds_until_next_run(now) == 86100
-
-    def test_midday(self) -> None:
-        # 12:15 → next 00:15 is 12h away = 43200s.
-        now = datetime(2026, 6, 15, 12, 15, 0, tzinfo=timezone.utc)
-        assert _seconds_until_next_run(now) == 43200
-
-
-class TestGating:
-    def test_non_primary_returns_none(self) -> None:
-        assert maybe_start_transparency_sync(_settings(primary=False)) is None
-        assert scheduler._task is None
-
-    def test_missing_attr_treated_as_non_primary(self) -> None:
-        assert maybe_start_transparency_sync(SimpleNamespace()) is None
-
-
-class TestLifecycle:
+class TestRunCostSyncOnce:
     @pytest.mark.anyio
-    async def test_primary_starts_and_runs_startup_sync(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        ran = asyncio.Event()
-        calls: list = []
+    async def test_runs_sync_and_reports_success(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        calls: list[SimpleNamespace] = []
 
-        async def _fake_sync(settings):  # noqa: ANN001
+        async def _fake_sync(settings: SimpleNamespace) -> int:
             calls.append(settings)
-            ran.set()
-
-        monkeypatch.setattr(cost_sync, "run_cost_sync", _fake_sync)
-        settings = _settings(primary=True)
-        task = maybe_start_transparency_sync(settings)
-        assert task is not None
-        await asyncio.wait_for(ran.wait(), timeout=1.0)
-        assert calls == [settings]  # startup catch-up ran exactly once
-        await stop_transparency_sync()
-        assert scheduler._task is None
-
-    @pytest.mark.anyio
-    async def test_idempotent_returns_same_task(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        async def _fake_sync(settings):  # noqa: ANN001
-            await asyncio.sleep(0)
-
-        monkeypatch.setattr(cost_sync, "run_cost_sync", _fake_sync)
-        first = maybe_start_transparency_sync(_settings(primary=True))
-        second = maybe_start_transparency_sync(_settings(primary=True))
-        assert first is second
-        await stop_transparency_sync()
-
-    @pytest.mark.anyio
-    async def test_stop_cancels_running_loop(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        started = asyncio.Event()
-
-        async def _fake_sync(settings):  # noqa: ANN001
-            started.set()
-
-        monkeypatch.setattr(cost_sync, "run_cost_sync", _fake_sync)
-        task = maybe_start_transparency_sync(_settings(primary=True))
-        await asyncio.wait_for(started.wait(), timeout=1.0)
-        await stop_transparency_sync()
-        assert task.cancelled() or task.done()
-        assert scheduler._task is None
-
-    @pytest.mark.anyio
-    async def test_stop_when_never_started_is_noop(self) -> None:
-        await stop_transparency_sync()  # must not raise
-        assert scheduler._task is None
-
-
-class TestRunOnceSwallowsErrors:
-    @pytest.mark.anyio
-    async def test_run_once_runs_sync(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        calls: list = []
-
-        async def _fake_sync(settings):  # noqa: ANN001
-            calls.append(settings)
+            return 1200
 
         monkeypatch.setattr(cost_sync, "run_cost_sync", _fake_sync)
         sentinel = SimpleNamespace(tag="s")
-        await _run_once(sentinel)
+        assert await run_cost_sync_once(sentinel) is True
         assert calls == [sentinel]
 
     @pytest.mark.anyio
-    async def test_run_once_swallows_errors(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        async def _boom(settings):  # noqa: ANN001
+    async def test_failure_is_logged_and_reported_not_raised(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        async def _boom(settings: SimpleNamespace) -> int:
             raise RuntimeError("anthropic down")
 
         monkeypatch.setattr(cost_sync, "run_cost_sync", _boom)
-        # Must NOT raise — the loop must survive a failed run.
-        await _run_once(SimpleNamespace())
+        assert await run_cost_sync_once(SimpleNamespace()) is False
+        assert "Transparency cost sync failed" in caplog.text

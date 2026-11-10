@@ -17,10 +17,6 @@ from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.api.users_router import build_users_router
-from platform_shared.services.transparency.scheduler import (
-    maybe_start_transparency_sync,
-    stop_transparency_sync,
-)
 
 from app.core.auth import fastapi_users, auth_backend
 from app.core.permissions import current_admin, current_strict_superuser
@@ -55,19 +51,16 @@ _worker_task: asyncio.Task[None] | None = None
 
 
 async def _on_startup() -> None:
-    """MBK-specific startup: spawn the upload-processor worker + start the
-    platform-wide cost-transparency daily sync loop.
+    """MBK-specific startup: spawn the upload-processor worker.
 
     The worker pulls Document rows in status=processing and runs the
     extraction pipeline; if RUN_UPLOAD_WORKER is False (e.g. running
     a one-off migration container), we skip it so the same image can
     boot without grabbing the queue.
 
-    MBK is the designated transparency primary, so it also starts the daily
-    cost-sync loop. ``maybe_start_transparency_sync`` is a no-op whenever
-    ``settings.transparency_primary`` is false (every other app, and MBK in
-    any env where the operator hasn't flipped the flag), so calling it here
-    unconditionally is safe.
+    The platform-wide transparency cost sync deliberately does NOT start
+    here: the API runs one process per uvicorn worker, and the sync must run
+    in exactly one. It runs in ``app.workers.scheduler_worker`` instead.
     """
     global _worker_task
     if settings.run_upload_worker:
@@ -79,11 +72,9 @@ async def _on_startup() -> None:
 
         _worker_task = asyncio.create_task(_run_worker())
 
-    maybe_start_transparency_sync(settings)
-
 
 async def _on_shutdown() -> None:
-    """MBK-specific shutdown: cancel the upload worker + stop the cost-sync loop."""
+    """MBK-specific shutdown: cancel the upload worker."""
     global _worker_task
     if _worker_task and not _worker_task.done():
         _worker_task.cancel()
@@ -91,8 +82,6 @@ async def _on_shutdown() -> None:
             await _worker_task
         except asyncio.CancelledError:
             pass
-
-    await stop_transparency_sync()
 
 
 lifespan = create_app_lifespan(

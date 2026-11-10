@@ -2124,6 +2124,16 @@
       "backend_tests": [],
       "frontend_tests": [],
       "e2e_specs": []
+    },
+    "transparency": {
+      "source_paths": [
+        "backend/app/workers/scheduler_worker.py"
+      ],
+      "backend_tests": [
+        "test_scheduler_worker_transparency.py"
+      ],
+      "frontend_tests": [],
+      "e2e_specs": []
     }
   },
   "shared_paths": [
