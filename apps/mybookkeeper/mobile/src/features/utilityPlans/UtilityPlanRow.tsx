@@ -1,7 +1,6 @@
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
-import InquiryChip from "../inquiries/InquiryChip";
 import { planChip, planPriceLine, planProvider, planRowLabel, planTitle } from "./utilityPlanDisplay";
 
 interface UtilityPlanRowProps {
@@ -37,7 +36,7 @@ export default function UtilityPlanRow({ plan, todayIso, onPress }: UtilityPlanR
       <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
         {planPriceLine(plan)}
       </Text>
-      {chip ? <InquiryChip label={chip} /> : null}
+      {chip ? <Chip label={chip} /> : null}
     </Pressable>
   );
 }

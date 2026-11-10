@@ -2,15 +2,13 @@ import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signe
 import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, EmptyState, LoadingButton, MIN_TOUCH_TARGET, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, Chip, EmptyState, LoadingButton, MIN_TOUCH_TARGET, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { detailsCount, LEASE_DETAIL_MESSAGES } from "../../constants/leaseDetails";
 import { extendedLine, lastEmailed, LEASE_MESSAGES } from "../../constants/leases";
 import { NEW_LEASE_MESSAGES } from "../../constants/newLease";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
-import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
 import { templatesPath } from "../newLease/newLeaseFlow";
 import { addDocumentPath } from "./addDocumentFlow";
@@ -81,8 +79,8 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
             </Text>
           </Pressable>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }}>
-            <InquiryChip label={leaseStatusLabel(lease.status)} />
-            <InquiryChip label={leaseKindLabel(lease.kind)} />
+            <Chip label={leaseStatusLabel(lease.status)} />
+            <Chip label={leaseKindLabel(lease.kind)} />
           </View>
           {datesLine ? <Text style={mutedText}>{datesLine}</Text> : null}
           {canWrite ? <LeaseStatusControl leaseId={lease.id} status={lease.status} /> : null}

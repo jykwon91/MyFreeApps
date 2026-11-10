@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 16 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 2 [1 blocked-on-react-19, 1 public-launch cost guardrail] / Medium: 6 [4 prior + 1 triage-2026-05-28: rejection-visibility + 1 discovery content_hash dedup] / Low: 6 [6 prior] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
+**Open issues: 17 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 2 [1 blocked-on-react-19, 1 public-launch cost guardrail] / Medium: 7 [4 prior + 1 triage-2026-05-28: rejection-visibility + 1 discovery content_hash dedup + 1 applications list 100-row cap] / Low: 6 [6 prior] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
 
 > Status (2026-05-08 PM): All actionable audit items resolved across batches PR #492-#528 (~30 PRs). Remaining open entries are either (a) blocked on the React 18→19 monorepo bump (5 items), (b) deferred-by-design conventions or follow-ups (4), (c) environmental issues unrelated to code (3: asyncpg Windows, test hang on Windows, Quality Gate false-positive), or (d) intentional accepted lint warnings (2).
 
@@ -779,3 +779,10 @@ This rules a lot of work in and out: **don't** invest in a relevance-overhaul or
 **Reported:** 2026-07-02 (branch `fix/mjh-guard-confirm-loop`). Each shard in `.github/workflows/ci-myjobhunter.yml` listed its files by path; ~50 of 86 test files were in no shard and never gated a merge.
 **Resolved:** 2026-11-09 (branch `fix/mjh-ci-run-every-test`). Every shard now runs `pytest tests` with `MJH_TEST_SHARD` set; `tests/ci_shards.py` lists only the files moved out of the catch-all `fast` shard for balance, and `tests/conftest.py` drops files belonging to other shards. A new test file runs in CI with no edit. `tests/test_ci_shards.py` fails if the workflow matrix and the shard map disagree, if the pytest step names files instead of `tests`, or if any test file maps to a shard CI doesn't run. The five shard names (required checks) are unchanged; `test_application_writes.py` now runs in `crud`.
 Running everything exposed what had rotted while unrun, fixed in separate PRs that land first: teardown hangs, committed rows leaking between tests, discovery endpoint tests calling the real Anthropic API, and three tests out of date with intentional changes (`fix/mjh-test-isolation`; see the `test_application_writes.py` entry above); fresh postings counted as updated (`fix/mjh-discovery-new-count`); refreshing one saved search expiring another's postings (`fix/mjh-discovery-expiry-per-search`).
+
+### MEDIUM — [Applications] List shows at most 100 applications, with no sign that more exist
+
+**Effort:** M
+**Location:** `backend/app/api/applications.py` (`list_applications`, `limit` defaults to 100), `api-client/src/store/applicationsApi.ts` (`listApplications` sends no `limit`/`offset`), `frontend/src/pages/Applications.tsx`, `mobile/src/features/applications/ApplicationsScreen.tsx`
+**Problem:** `GET /applications` returns the first 100 rows (newest applied first) and `{items, total}` where `total` is the page's length, not the account's count. Neither the website table nor the phone list pages or says anything, so a hunter past 100 applications silently loses the oldest ones from both lists — and from client-side sorting, which only sees the 100 loaded.
+**Recommendation:** Return the true total and a `has_more` from the backend, switch `listApplications` to an infinite query (the phone already has the load-more pattern in MBK's lists: `useList*PagesInfiniteQuery` + `LoadMoreFailed`), and move sorting server-side so a sort covers every application, not just the loaded page.

@@ -1,9 +1,8 @@
 import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
 import { formatRatePct } from "@mybookkeeper/api-client/utils/mortgageFormat";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { MORTGAGE_MESSAGES } from "../../constants/mortgages";
-import InquiryChip from "../inquiries/InquiryChip";
 import { balanceLine, mortgageTitle } from "./mortgageDisplay";
 
 interface MortgageRowProps {
@@ -43,7 +42,7 @@ export default function MortgageRow({ mortgage, onPress }: MortgageRowProps) {
       {balance ? <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{balance}</Text> : null}
       {isAdjustable ? (
         <View style={{ flexDirection: "row" }}>
-          <InquiryChip label={MORTGAGE_MESSAGES.adjustable} />
+          <Chip label={MORTGAGE_MESSAGES.adjustable} />
         </View>
       ) : null}
     </Pressable>

@@ -1,9 +1,8 @@
 import { useGetMarketRateBenchmarksQuery } from "@mybookkeeper/api-client/store/marketRateBenchmarksApi";
 import { useGetUtilityPlanRateComparisonQuery, useGetUtilityPlansQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { UTILITY_RATE_CHECK_MESSAGES as MESSAGES } from "../../constants/utilityInsights";
 import { useCanWrite } from "../workspace/useCanWrite";
 import UtilityRateCheckRow from "./UtilityRateCheckRow";

@@ -3,12 +3,11 @@ import {
   reconciliationDeleteLabel,
 } from "@mybookkeeper/api-client/constants/reconciliationDelete";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { Chip, LoadingButton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import type { ReconciliationDetailBodyProps } from "../../types/ReconciliationDetailBodyProps";
-import InquiryChip from "../inquiries/InquiryChip";
 import TransactionFact from "../transactions/TransactionFact";
 import { detailLabel, differenceText, recordsTotalText, sourceTitle, sourceTypeLabel, statusWord } from "./reconciliationDisplay";
 import { useDeleteReconciliationSource } from "./useDeleteReconciliationSource";
@@ -25,7 +24,7 @@ export default function ReconciliationDetailBody({ source, canWrite }: Reconcili
         <Text style={{ fontSize: fontSize.xl, fontWeight: "700", fontVariant: ["tabular-nums"], color: colors.foreground }}>
           {formatCurrency(Number(source.reported_amount))}
         </Text>
-        <InquiryChip label={statusWord(source.status)} />
+        <Chip label={statusWord(source.status)} />
       </View>
       <TransactionFact label={MESSAGES.fileType} value={sourceTypeLabel(source.source_type)} />
       <TransactionFact label={MESSAGES.fileIssuer} value={source.issuer ?? MESSAGES.notCompared} />

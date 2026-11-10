@@ -1,13 +1,11 @@
 import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import { useGetRentReminderOverviewQuery } from "@mybookkeeper/api-client/store/rentRemindersApi";
 import { describePlan } from "@mybookkeeper/api-client/utils/rentReminderFormat";
-import { LoadingButton, Skeleton, useTheme } from "@platform/mobile";
+import { Chip, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { REMINDER_MESSAGES } from "../../constants/rentReminders";
 import { REMINDER_SETUP_MESSAGES } from "../../constants/rentReminderSetup";
-import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
 import { useCanWrite } from "../workspace/useCanWrite";
 import RentReminderHistory from "./RentReminderHistory";
@@ -90,7 +88,7 @@ export default function TenantRentReminders({ applicantId, name, hasEnded }: Ten
       <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{describePlan(plan)}</Text>
       {plan.is_active ? null : (
         <>
-          <InquiryChip label={REMINDER_MESSAGES.paused} />
+          <Chip label={REMINDER_MESSAGES.paused} />
           <Text style={mutedText}>{REMINDER_MESSAGES.pausedNote}</Text>
         </>
       )}

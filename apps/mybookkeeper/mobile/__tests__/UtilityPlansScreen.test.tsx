@@ -3,12 +3,11 @@ import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/u
 import type { UtilityPlanSummary } from "@mybookkeeper/api-client/types/utility/utility-plan-summary";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { ReactElement } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { UTILITY_PLAN_MESSAGES } from "../src/constants/utilityPlans";
 import { planChip, planFacts, planTermNote, sortedPlans } from "../src/features/utilityPlans/utilityPlanDisplay";
 import UtilityPlanDetailScreen from "../src/features/utilityPlans/UtilityPlanDetailScreen";

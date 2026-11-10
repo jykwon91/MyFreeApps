@@ -5,7 +5,7 @@ import type { LeaseTemplatePlaceholder } from "@mybookkeeper/api-client/types/le
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import type { ReactElement } from "react";
@@ -14,7 +14,6 @@ import { Provider } from "react-redux";
 import { WEB_BASE_URL } from "../src/constants/api";
 import { NEW_LEASE_MESSAGES } from "../src/constants/newLease";
 import { LEASE_TEMPLATE_MESSAGES } from "../src/constants/leaseTemplates";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { openAttachmentFile } from "../src/features/documents/openDocumentFile";
 import { inDisplayOrder, placeholdersLine, templateCountsLine, templateFileLine, templateRowLabel } from "../src/features/leaseTemplates/leaseTemplateDisplay";
 import LeaseTemplateDetailScreen from "../src/features/leaseTemplates/LeaseTemplateDetailScreen";

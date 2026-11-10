@@ -1,12 +1,11 @@
 import { APPLICANT_STAGES } from "@mybookkeeper/api-client/constants/applicantLabels";
 import { useListApplicantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
-import { Banner, EmptyState, LoadingButton, OptionSheet, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
 import { ALL_STAGES_OPTION } from "../../constants/inquiries";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { uniqueById } from "../../lib/uniqueById";
 import LoadMoreFailed from "../shell/LoadMoreFailed";
 import { applicantStageLabel } from "./applicantDisplay";

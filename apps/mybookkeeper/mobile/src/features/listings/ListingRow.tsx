@@ -1,8 +1,7 @@
 import { LISTING_STATUS_LABELS } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
-import InquiryChip from "../inquiries/InquiryChip";
 import { listingRowLabel, monthlyRateText } from "./listingDisplay";
 
 interface ListingRowProps {
@@ -37,7 +36,7 @@ export default function ListingRow({ listing, propertyName, onPress }: ListingRo
         </Text>
       ) : null}
       <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-        <InquiryChip label={LISTING_STATUS_LABELS[listing.status]} />
+        <Chip label={LISTING_STATUS_LABELS[listing.status]} />
         <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{monthlyRateText(listing.monthly_rate)}</Text>
       </View>
     </Pressable>

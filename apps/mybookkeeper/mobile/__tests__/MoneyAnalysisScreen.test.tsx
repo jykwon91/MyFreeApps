@@ -8,7 +8,7 @@ import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { StyleSheet } from "react-native";
 import { Provider } from "react-redux";
 import { MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../src/constants/moneyAnalysis";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
+import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import MoneyAnalysisScreen from "../src/features/moneyAnalysis/MoneyAnalysisScreen";
 import { store } from "../src/lib/store";
 import { useToday } from "../src/lib/useToday";

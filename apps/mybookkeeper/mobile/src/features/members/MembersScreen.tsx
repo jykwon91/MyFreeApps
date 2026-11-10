@@ -3,11 +3,10 @@ import { canManageMember } from "@mybookkeeper/api-client/utils/canManageMember"
 import { useListInvitesQuery, useListMembersQuery } from "@mybookkeeper/api-client/store/membersApi";
 import type { AssignableRole } from "@mybookkeeper/api-client/types/organization/AssignableRole";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
-import { Banner, EmptyState, LoadingButton, useRefresh, useSession, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useSession, useTheme } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { MEMBERS_MESSAGES as MESSAGES } from "../../constants/members";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useToday } from "../../lib/useToday";
 import type { Workspace } from "../../types/Workspace";
 import { isServerAnswer } from "../../utils/isServerAnswer";

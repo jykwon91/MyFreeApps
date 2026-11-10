@@ -1,11 +1,10 @@
 import { useListClassificationRulesQuery } from "@mybookkeeper/api-client/store/classificationRulesApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { filterRulesByMatchType, groupRulesByMatchType } from "@mybookkeeper/api-client/utils/classificationRules";
-import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { SectionList, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { rulesTotalText, VENDOR_RULE_MESSAGES } from "../../constants/vendorRules";
 import { useIsAdmin } from "../workspace/useIsAdmin";
 import VendorRuleFilterSheet from "./VendorRuleFilterSheet";

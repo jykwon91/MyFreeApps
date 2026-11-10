@@ -1,7 +1,6 @@
 import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
-import InquiryChip from "./InquiryChip";
 import { inquirerName, qualityLabel, receivedAgo, rowAccessibilityLabel, rowDetails, shortSource, spamLabel, stageLabel } from "./inquiryDisplay";
 
 export default function InquiryRow({
@@ -49,10 +48,10 @@ export default function InquiryRow({
         </Text>
       ) : null}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs }}>
-        {showStage ? <InquiryChip label={stageLabel(inquiry.stage)} /> : null}
-        <InquiryChip label={shortSource(inquiry)} />
-        {quality ? <InquiryChip label={quality} /> : null}
-        {spam ? <InquiryChip label={spam} /> : null}
+        {showStage ? <Chip label={stageLabel(inquiry.stage)} /> : null}
+        <Chip label={shortSource(inquiry)} />
+        {quality ? <Chip label={quality} /> : null}
+        {spam ? <Chip label={spam} /> : null}
       </View>
     </Pressable>
   );

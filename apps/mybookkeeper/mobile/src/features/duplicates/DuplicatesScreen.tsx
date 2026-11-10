@@ -1,9 +1,8 @@
 import { useGetDuplicatesQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { FlatList, Text, View } from "react-native";
 import { DUPLICATES_MESSAGES as MESSAGES } from "../../constants/duplicates";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { duplicateCountLine } from "./duplicateDisplay";
 import DuplicateRow from "./DuplicateRow";

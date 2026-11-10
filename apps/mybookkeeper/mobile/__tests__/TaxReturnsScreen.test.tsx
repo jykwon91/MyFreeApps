@@ -5,7 +5,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
+import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { TAX_RETURNS_MESSAGES as MESSAGES } from "../src/constants/taxReturns";
 import { byYearNewestFirst, taxReturnTitle } from "../src/features/taxReturns/taxReturnDisplay";
 import TaxReturnsScreen from "../src/features/taxReturns/TaxReturnsScreen";

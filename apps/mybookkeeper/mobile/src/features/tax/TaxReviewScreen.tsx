@@ -1,10 +1,9 @@
 import { useGetTaxCompletenessQuery } from "@mybookkeeper/api-client/store/taxCompletenessApi";
 import type { FormCompleteness } from "@mybookkeeper/api-client/types/tax/FormCompleteness";
-import { Banner, EmptyState, LoadingButton, OptionSheet, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { TAX_REPORT_MESSAGES } from "../../constants/taxReport";
 import { TAX_REVIEW_MESSAGES as MESSAGES } from "../../constants/taxReview";
 import { useToday } from "../../lib/useToday";

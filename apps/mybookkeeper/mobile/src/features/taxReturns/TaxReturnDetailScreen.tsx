@@ -7,11 +7,10 @@ import {
 } from "@mybookkeeper/api-client/store/taxReturnsApi";
 import { summarizeForms } from "@mybookkeeper/api-client/utils/buildFormSummaries";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, EmptyState, LoadingButton, WebLink, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, WebLink, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { FILING_STATUSES } from "@mybookkeeper/api-client/constants/taxFilingStatuses";
 import { TAX_RETURNS_MESSAGES as MESSAGES } from "../../constants/taxReturns";
 import { isServerAnswer } from "../../utils/isServerAnswer";

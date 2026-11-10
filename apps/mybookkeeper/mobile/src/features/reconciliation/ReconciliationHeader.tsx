@@ -1,6 +1,5 @@
-import { Banner, LoadingButton, SegmentedControl, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import type { ReconciliationFilter } from "../../types/ReconciliationFilter";
 import PickerField from "../transactions/PickerField";

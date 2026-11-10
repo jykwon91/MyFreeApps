@@ -1,12 +1,11 @@
 import { INQUIRY_STAGES } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import { useListInquiryPagesInfiniteQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
-import { Banner, EmptyState, LoadingButton, OptionSheet, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { ALL_STAGES_OPTION, INQUIRY_EMPTY_WORDS, INQUIRY_VIEWS } from "../../constants/inquiries";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { uniqueById } from "../../lib/uniqueById";
 import type { InquiryView } from "../../types/InquiryView";
 import LoadMoreFailed from "../shell/LoadMoreFailed";

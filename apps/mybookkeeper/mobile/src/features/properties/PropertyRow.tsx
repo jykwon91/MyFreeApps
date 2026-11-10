@@ -1,8 +1,7 @@
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { PROPERTY_MESSAGES } from "../../constants/properties";
-import InquiryChip from "../inquiries/InquiryChip";
 import { needsClassification, propertySpokenLabel, propertyUse } from "./propertyDisplay";
 
 interface PropertyRowProps {
@@ -40,8 +39,8 @@ export default function PropertyRow({ property, onPress }: PropertyRowProps) {
       {use ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{use}</Text> : null}
       {isWaiting || !property.is_active ? (
         <View style={{ flexDirection: "row", gap: spacing.sm }}>
-          {property.is_active ? null : <InquiryChip label={PROPERTY_MESSAGES.inactive} />}
-          {isWaiting ? <InquiryChip label={PROPERTY_MESSAGES.needsClassification} /> : null}
+          {property.is_active ? null : <Chip label={PROPERTY_MESSAGES.inactive} />}
+          {isWaiting ? <Chip label={PROPERTY_MESSAGES.needsClassification} /> : null}
         </View>
       ) : null}
     </Pressable>

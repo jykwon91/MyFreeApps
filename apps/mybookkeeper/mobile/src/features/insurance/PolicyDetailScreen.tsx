@@ -1,12 +1,10 @@
 import { useDeleteInsurancePolicyMutation, useGetInsurancePolicyByIdQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
-import { Banner, EmptyState, LoadingButton, useRefresh, useTheme, useToast } from "@platform/mobile";
+import { Banner, Chip, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
 import { INSURANCE_MESSAGES } from "../../constants/insurance";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useTodayIso } from "../../lib/useTodayIso";
-import InquiryChip from "../inquiries/InquiryChip";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { expiryLabel, policyPlace } from "./policyDisplay";
@@ -72,7 +70,7 @@ export default function PolicyDetailScreen({ id }: { id: string }) {
         {place ? <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{place}</Text> : null}
         {expiry ? (
           <View style={{ flexDirection: "row" }}>
-            <InquiryChip label={expiry} />
+            <Chip label={expiry} />
           </View>
         ) : null}
       </View>

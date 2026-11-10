@@ -4,13 +4,12 @@ import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentR
 import { useGetSummaryQuery, useGetSummaryYearsQuery } from "@mybookkeeper/api-client/store/summaryApi";
 import { useGetTransactionReviewCountQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { useGetUtilityPlanRateComparisonQuery, useGetUtilityPlanRenewalAlertsQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-import { Banner, EmptyState, SegmentedControl, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { ALL_DOCUMENTS } from "../../constants/documents";
 import { HOME_PERIODS, HOME_RECEIPTS_ARGS, MONEY_ANALYSIS_LINK, type HomePeriod } from "../../constants/home";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useToday } from "../../lib/useToday";
 import { periodRange } from "../transactions/transactionFilters";
 import { useCanWrite } from "../workspace/useCanWrite";

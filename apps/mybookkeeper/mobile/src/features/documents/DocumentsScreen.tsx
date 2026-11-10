@@ -2,7 +2,7 @@ import { DOCUMENT_LIST_LIMIT } from "@mybookkeeper/api-client/constants/document
 import { DEFAULT_DOCUMENT_VIEW } from "@mybookkeeper/api-client/constants/documentListView";
 import type { DocumentListView } from "@mybookkeeper/api-client/types/document/DocumentListView";
 import { activeDocumentFilterCount, isDefaultDocumentView, viewDocuments } from "@mybookkeeper/api-client/utils/documentListView";
-import { Banner, EmptyState, LoadingButton, SearchField, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, SearchField, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -10,7 +10,6 @@ import { DOCUMENT_BULK_MESSAGES, hiddenSelectedNote } from "../../constants/docu
 import { DOCUMENT_FILTERS } from "../../constants/documentFilters";
 import type { DocumentFilter } from "../../types/DocumentFilter";
 import { cappedListLabel, DOCUMENT_LIST_MESSAGES, documentCountLabel, filtersAccessibilityLabel, filtersButtonLabel, STILL_READING_MESSAGE } from "../../constants/documents";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useRowSelection } from "../../lib/useRowSelection";
 import UploadStatus from "../capture/UploadStatus";
 import { useCanWrite } from "../workspace/useCanWrite";

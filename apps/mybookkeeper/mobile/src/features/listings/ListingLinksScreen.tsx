@@ -1,9 +1,8 @@
 import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
-import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView } from "react-native";
 import { LISTING_LINK_MESSAGES as MESSAGES } from "../../constants/listingLinks";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useCanWrite } from "../workspace/useCanWrite";
 import ListingGate from "./ListingGate";
 import ListingLinkRow from "./ListingLinkRow";

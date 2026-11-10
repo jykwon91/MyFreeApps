@@ -1,10 +1,9 @@
 import { useGetMortgagesQuery } from "@mybookkeeper/api-client/store/mortgagesApi";
-import { Banner, EmptyState, LoadingButton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { FlatList, Text, View } from "react-native";
 import { MORTGAGE_LIST_LIMIT, MORTGAGE_MESSAGES } from "../../constants/mortgages";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { sortedMortgages } from "./mortgageDisplay";
 import MortgageRow from "./MortgageRow";

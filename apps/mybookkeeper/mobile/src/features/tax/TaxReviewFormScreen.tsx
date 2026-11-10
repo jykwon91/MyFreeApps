@@ -1,8 +1,7 @@
 import { useGetTaxCompletenessQuery } from "@mybookkeeper/api-client/store/taxCompletenessApi";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { ScrollView, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { TAX_REVIEW_MESSAGES as MESSAGES } from "../../constants/taxReview";
 import { isServerAnswer } from "../../utils/isServerAnswer";
 import { findReviewForm, reviewFormTitle } from "./taxReviewDisplay";

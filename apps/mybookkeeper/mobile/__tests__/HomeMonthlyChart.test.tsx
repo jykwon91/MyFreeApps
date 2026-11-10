@@ -1,6 +1,6 @@
 import api from "@platform/core/lib/api";
 import { fireEvent, screen } from "@testing-library/react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
+import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { holdSummary, pull, renderHome, resetHome } from "../test-support/homeScreen";
 import { startTransactionServer } from "../test-support/transactionsServer";
 

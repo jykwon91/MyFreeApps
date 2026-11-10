@@ -5,11 +5,10 @@ import {
 import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
 import { hasBeenCompared } from "@mybookkeeper/api-client/utils/reconciliationCompare";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { Chip, LoadingButton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
-import InquiryChip from "../inquiries/InquiryChip";
 import { differenceLine, rowLabel, sourceTitle, statusWord } from "./reconciliationDisplay";
 import { useDeleteReconciliationSource } from "./useDeleteReconciliationSource";
 
@@ -43,7 +42,7 @@ export default function ReconciliationRow({ source, canWrite, year }: Reconcilia
           </Text>
         ) : null}
         {difference ? <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{difference}</Text> : null}
-        <InquiryChip label={statusWord(source.status)} />
+        <Chip label={statusWord(source.status)} />
       </Pressable>
       {canWrite ? (
         <LoadingButton

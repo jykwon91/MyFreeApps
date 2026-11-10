@@ -1,10 +1,9 @@
 import { useGetInsurancePoliciesQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { EXPIRING_FILTER_DAYS, INSURANCE_MESSAGES, POLICY_LIST_LIMIT } from "../../constants/insurance";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { addDays } from "../../lib/localDate";
 import { useTodayIso } from "../../lib/useTodayIso";
 import type { PolicyFilter } from "../../types/PolicyFilter";

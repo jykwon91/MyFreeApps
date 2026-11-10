@@ -1,16 +1,14 @@
 import { LISTING_STATUS_LABELS, LISTING_STATUSES } from "@mybookkeeper/api-client/constants/listingLabels";
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
-import { Banner, LoadingButton, OptionSheet, useOpenWebsite, useTheme } from "@platform/mobile";
+import { Banner, Chip, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useOpenWebsite, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { type ReactElement, useMemo, useRef, useState } from "react";
 import { type RefreshControlProps, ScrollView, Text, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
 import { deleteListingTitle, LISTING_MESSAGES } from "../../constants/listings";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { askOnce } from "../../lib/askOnce";
 import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
-import InquiryChip from "../inquiries/InquiryChip";
 import TransactionFact from "../transactions/TransactionFact";
 import ListingFacts from "./ListingFacts";
 import ListingShareLink from "./ListingShareLink";
@@ -49,7 +47,7 @@ export default function ListingDetailBody({ listing, propertyName, canWrite, has
           {listing.title}
         </Text>
         <View accessible accessibilityLabel={`Status: ${LISTING_STATUS_LABELS[listing.status]}`}>
-          <InquiryChip label={LISTING_STATUS_LABELS[listing.status]} />
+          <Chip label={LISTING_STATUS_LABELS[listing.status]} />
         </View>
       </View>
       {propertyName ? <ListingSummaryRow label={LISTING_MESSAGES.property} onPress={() => router.push(`/properties/${listing.property_id}`)} value={propertyName} /> : null}

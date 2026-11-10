@@ -1,9 +1,8 @@
 import { useGetMarketRateBenchmarksQuery } from "@mybookkeeper/api-client/store/marketRateBenchmarksApi";
 import { UTILITY_SERVICE_TYPES } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { MARKET_RATE_MESSAGES as MESSAGES } from "../../constants/marketRates";
 import { useCanWrite } from "../workspace/useCanWrite";
 import MarketRateRow from "./MarketRateRow";

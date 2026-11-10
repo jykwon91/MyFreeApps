@@ -1,11 +1,10 @@
 import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import { LEASE_DETAIL_MESSAGES as MESSAGES } from "../../constants/leaseDetails";
 import { LEASE_MESSAGES } from "../../constants/leases";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { leaseValueRows } from "./leaseDisplay";
 import LeaseValuesSkeleton from "./LeaseValuesSkeleton";
 

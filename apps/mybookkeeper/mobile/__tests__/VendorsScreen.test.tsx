@@ -4,12 +4,11 @@ import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendo
 import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { Linking, Platform } from "react-native";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { VENDOR_FILTER_MESSAGES, VENDOR_MESSAGES } from "../src/constants/vendors";
 import { directionsUrl } from "../src/features/vendors/vendorDisplay";
 import VendorDetailScreen from "../src/features/vendors/VendorDetailScreen";

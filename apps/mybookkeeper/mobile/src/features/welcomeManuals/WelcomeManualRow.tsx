@@ -1,8 +1,7 @@
 import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
 import { WELCOME_MANUAL_MESSAGES } from "../../constants/welcomeManuals";
-import InquiryChip from "../inquiries/InquiryChip";
 import { manualRowLabel, manualSummaryLine } from "./welcomeManualDisplay";
 
 interface WelcomeManualRowProps {
@@ -39,7 +38,7 @@ export default function WelcomeManualRow({ manual, propertyName, onPress }: Welc
       <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
         {manualSummaryLine(manual)}
       </Text>
-      {manual.section_count === 0 ? <InquiryChip label={WELCOME_MANUAL_MESSAGES.noSectionsChip} /> : null}
+      {manual.section_count === 0 ? <Chip label={WELCOME_MANUAL_MESSAGES.noSectionsChip} /> : null}
     </Pressable>
   );
 }

@@ -7,9 +7,8 @@ import {
 import { summarizeForms } from "@mybookkeeper/api-client/utils/buildFormSummaries";
 import { advisorCtaState } from "@mybookkeeper/api-client/utils/taxAdvisorView";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { Banner, EmptyState, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
 import { ScrollView, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { TAX_ADVISOR_MESSAGES as MESSAGES, TAX_ADVISOR_SKELETON_ROWS } from "../../constants/taxAdvisor";
 import { isServerAnswer } from "../../utils/isServerAnswer";
 import { useIsAdmin } from "../workspace/useIsAdmin";

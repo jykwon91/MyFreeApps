@@ -1,7 +1,6 @@
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
-import InquiryChip from "../inquiries/InquiryChip";
 import { applicantName, applicantRowDetails, applicantRowLabel, applicantStageLabel, promotedAgo } from "./applicantDisplay";
 
 export default function ApplicantRow({
@@ -42,7 +41,7 @@ export default function ApplicantRow({
           {details}
         </Text>
       ) : null}
-      {showStage ? <InquiryChip label={applicantStageLabel(applicant.stage)} /> : null}
+      {showStage ? <Chip label={applicantStageLabel(applicant.stage)} /> : null}
     </Pressable>
   );
 }

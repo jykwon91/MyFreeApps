@@ -1,9 +1,8 @@
 import type { ApplicantSummary } from "@mybookkeeper/api-client/types/applicant/applicant-summary";
 import { tenancyState } from "@mybookkeeper/api-client/utils/tenancyState";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { TENANT_MESSAGES } from "../../constants/tenants";
-import InquiryChip from "../inquiries/InquiryChip";
 import { tenancyLine, tenancyStateLabel, tenantRowLabel } from "./tenantDisplay";
 
 export default function TenantRow({ tenant, onPress }: { tenant: ApplicantSummary; onPress: () => void }) {
@@ -39,7 +38,7 @@ export default function TenantRow({ tenant, onPress }: { tenant: ApplicantSummar
           {employer}
         </Text>
       ) : null}
-      {state === "active" ? null : <InquiryChip label={tenancyStateLabel(state)} />}
+      {state === "active" ? null : <Chip label={tenancyStateLabel(state)} />}
     </Pressable>
   );
 }

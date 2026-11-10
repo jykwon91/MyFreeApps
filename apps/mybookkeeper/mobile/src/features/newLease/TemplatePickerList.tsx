@@ -1,5 +1,5 @@
 import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
-import { Banner, EmptyState, LoadingButton, useOpenWebsite, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useOpenWebsite, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WEB_BASE_URL } from "../../constants/api";
 import { LEASE_TEMPLATE_LIST_LIMIT } from "../../constants/leaseTemplates";
 import { continueWithTemplates, NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
 import LeaseTemplatesSkeleton from "../leaseTemplates/LeaseTemplatesSkeleton";
 import MoreOnWebsite from "./MoreOnWebsite";

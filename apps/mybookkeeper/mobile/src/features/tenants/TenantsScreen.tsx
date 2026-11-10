@@ -1,10 +1,9 @@
 import { useListTenantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
-import { Banner, EmptyState, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { TENANT_FILTERS, TENANT_MESSAGES } from "../../constants/tenants";
 import { uniqueById } from "../../lib/uniqueById";
 import type { TenantFilter } from "../../types/TenantFilter";

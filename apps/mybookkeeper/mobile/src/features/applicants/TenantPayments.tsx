@@ -1,10 +1,9 @@
 import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { LoadingButton, Skeleton, useTheme } from "@platform/mobile";
+import { LoadingButton, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { RENT_MESSAGES } from "../../constants/rent";
 import { includesDeposits, noPaymentsFrom, PAYMENTS_SHOWN_AT_FIRST, showAllPayments, TENANT_PAYMENT_MESSAGES, totalReceived } from "../../constants/tenantPayments";
 import InquirySection from "../inquiries/InquirySection";

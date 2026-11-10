@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { Linking } from "react-native";
 import { WEB_BASE_URL } from "../src/constants/api";
 import { MORE_MENU } from "../src/constants/moreMenu";
-import { MORE_TAB, TABS } from "../src/constants/tabs";
+import { APPLICATIONS_TAB, MORE_TAB, TABS } from "../src/constants/tabs";
 import type { AppTab } from "../src/types/AppTab";
 import { serve } from "../test-support/fakeServer";
 import { storedItems } from "../test-support/memorySecureStore";
@@ -48,13 +48,13 @@ it("opens the live website unless a build points it elsewhere", () => {
 
 // One app launch per file, so these run in order: the last one signs out.
 describe("the signed-in shell", () => {
-  it("has a tab for each main page, each opening that page on the website until it's built", async () => {
+  it("has a tab for each main page, each not built yet opening that page on the website", async () => {
     serve({ "POST /auth/mobile/refresh": () => ({ status: 200, data: tokens(1) }) });
     await renderApp();
     expect(await screen.findByRole("header", { name: "Dashboard" })).toBeTruthy();
     expect(TABS.filter((tab) => !screen.queryByRole("button", { name: tabBarName(tab) })).map((tab) => tab.title)).toEqual([]);
 
-    for (const tab of TABS.filter((each) => each !== MORE_TAB)) {
+    for (const tab of TABS.filter((each) => each !== MORE_TAB && each !== APPLICATIONS_TAB)) {
       await fireEvent.press(screen.getByRole("button", { name: tabBarName(tab) }));
       await fireEvent.press(await screen.findByRole("button", { name: "Open on the website" }));
       expect(openURL).toHaveBeenLastCalledWith(`${WEB_BASE_URL}${tab.webPath}`);

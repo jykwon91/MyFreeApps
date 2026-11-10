@@ -1,5 +1,5 @@
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
-import { Banner, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, Chip, LoadingButton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef } from "react";
 import { ScrollView, Text, View } from "react-native";
@@ -8,7 +8,6 @@ import { countLabel } from "../../constants/welcomeManuals";
 import { askOnce } from "../../lib/askOnce";
 import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
 import type { WelcomeManualView } from "../../types/WelcomeManualView";
-import InquiryChip from "../inquiries/InquiryChip";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { roomNameFor } from "./welcomeManualRoomOptions";
 import WelcomeManualNavRow from "./WelcomeManualNavRow";
@@ -39,7 +38,7 @@ export default function WelcomeManualSectionDetailBody({ view, section, onDelete
         <Text accessibilityRole="header" style={{ fontSize: fontSize.xl, fontWeight: "600", color: colors.foreground }}>
           {section.title}
         </Text>
-        {roomName ? <InquiryChip label={roomName} /> : null}
+        {roomName ? <Chip label={roomName} /> : null}
         <Text selectable style={{ fontSize: fontSize.md, color: section.body ? colors.foreground : colors.mutedForeground }}>
           {section.body ? plainFromMarkdown(section.body) : MESSAGES.noText}
         </Text>

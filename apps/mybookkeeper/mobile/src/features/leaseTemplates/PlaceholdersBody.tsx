@@ -1,9 +1,8 @@
 import { useGetLeaseTemplateByIdQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import { PLACEHOLDER_MESSAGES as MESSAGES } from "../../constants/leasePlaceholderEdit";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import type { PlaceholdersBodyProps } from "../../types/PlaceholdersBodyProps";
 import { placeholdersInOrder } from "./leaseTemplateDisplay";
 import PlaceholderRow from "./PlaceholderRow";

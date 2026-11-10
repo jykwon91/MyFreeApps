@@ -2,7 +2,7 @@ import { documentsApi } from "@mybookkeeper/api-client/store/documentsApi";
 import api from "@platform/core/lib/api";
 import { act, fireEvent, screen } from "@testing-library/react-native";
 import { ALL_DOCUMENTS } from "../src/constants/documents";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
+import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { store } from "../src/lib/store";
 import { failRequests, holdRequests, holdSummary, pull, renderHome as renderScreen, resetHome } from "../test-support/homeScreen";
 import { aTransaction, startTransactionServer } from "../test-support/transactionsServer";

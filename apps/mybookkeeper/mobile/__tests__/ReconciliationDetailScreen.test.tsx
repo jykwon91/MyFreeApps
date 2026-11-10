@@ -2,13 +2,12 @@ import { RECONCILIATION_DELETE_MESSAGES as DELETE } from "@mybookkeeper/api-clie
 import type { ReconciliationSource } from "@mybookkeeper/api-client/types/reconciliation/reconciliation-source";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import type { ReactNode } from "react";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { DOCUMENTS_LINK, RECONCILIATION_MESSAGES as MESSAGES } from "../src/constants/reconciliation";
 import ReconciliationAddScreen from "../src/features/reconciliation/ReconciliationAddScreen";
 import ReconciliationDetailScreen from "../src/features/reconciliation/ReconciliationDetailScreen";

@@ -4,13 +4,12 @@ import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgI
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { Alert, Text } from "react-native";
 import { Provider, useSelector } from "react-redux";
 import { ALREADY_MEMBER_DETAIL, MEMBERS_MESSAGES as MESSAGES, NOT_A_MEMBER_DETAIL } from "../src/constants/members";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { inviteStatusLine, memberFirstName, memberName } from "../src/features/members/membersDisplay";
 import MembersScreen from "../src/features/members/MembersScreen";
 import WorkspaceGate from "../src/features/workspace/WorkspaceGate";

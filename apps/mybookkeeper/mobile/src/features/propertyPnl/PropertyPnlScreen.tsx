@@ -1,9 +1,8 @@
 import { useGetPropertyPnlQuery } from "@mybookkeeper/api-client/store/attributionApi";
 import { propertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { PROPERTY_PNL_MESSAGES as MESSAGES } from "../../constants/propertyPnl";
 import { useToday } from "../../lib/useToday";
 import type { PropertyPnlSelection } from "../../types/PropertyPnlSelection";

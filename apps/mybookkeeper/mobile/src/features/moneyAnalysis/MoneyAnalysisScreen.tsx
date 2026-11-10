@@ -3,12 +3,11 @@ import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/properties
 import { useGetSummaryQuery, useGetSummaryYearsQuery } from "@mybookkeeper/api-client/store/summaryApi";
 import type { CompareMode } from "@mybookkeeper/api-client/types/analytics/compare-mode";
 import { monthlyAverage } from "@mybookkeeper/api-client/utils/summaryAverages";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { ScrollView } from "react-native";
 import { COMPARE_AGAINST_LABEL, MONEY_ANALYSIS_MESSAGES as MESSAGES } from "../../constants/moneyAnalysis";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { useToday } from "../../lib/useToday";
 import type { AnalysisScope } from "../../types/AnalysisScope";
 import type { AnalysisSelection } from "../../types/AnalysisSelection";

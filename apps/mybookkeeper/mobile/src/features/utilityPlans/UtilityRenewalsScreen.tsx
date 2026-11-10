@@ -1,7 +1,6 @@
 import { useGetUtilityPlanRenewalAlertsQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-import { Banner, EmptyState, useRefresh } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh } from "@platform/mobile";
 import { ScrollView } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { UTILITY_RENEWAL_MESSAGES as MESSAGES } from "../../constants/utilityInsights";
 import { useTodayIso } from "../../lib/useTodayIso";
 import UtilityPlanListSection from "./UtilityPlanListSection";

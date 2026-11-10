@@ -1,11 +1,10 @@
-import { Banner, LoadingButton, useOpenWebsite, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useOpenWebsite, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
 import { deleteTemplateTitle, LEASE_TEMPLATE_MESSAGES as MESSAGES } from "../../constants/leaseTemplates";
 import { NEW_LEASE_MESSAGES } from "../../constants/newLease";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { askOnce } from "../../lib/askOnce";
 import { nextPath } from "../newLease/newLeaseFlow";
 import AiSuggestionsCard from "./AiSuggestionsCard";

@@ -1,11 +1,10 @@
 import { RENT_CHARGE_STATUS_LABEL } from "@mybookkeeper/api-client/constants/rentLabels";
 import type { RentCharge } from "@mybookkeeper/api-client/types/rent/rent-charge";
 import { proratedNote } from "@mybookkeeper/api-client/utils/rentProratedNote";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { RENT_MESSAGES, waivedBecause } from "../../constants/rent";
-import InquiryChip from "../inquiries/InquiryChip";
 import RentChargeActions from "./RentChargeActions";
 import RentChargeApplication from "./RentChargeApplication";
 import { chargeAmountText, chargeSpokenLabel, chargeTitle } from "./rentDisplay";
@@ -34,7 +33,7 @@ export default function RentChargeRow({ applicantId, canWrite, charge }: { appli
             {chargeAmountText(charge)}
           </Text>
         </View>
-        <InquiryChip label={RENT_CHARGE_STATUS_LABEL[charge.status]} />
+        <Chip label={RENT_CHARGE_STATUS_LABEL[charge.status]} />
         {note ? <Text style={mutedText}>{note}</Text> : null}
         {charge.waived_at && charge.waived_reason ? <Text style={mutedText}>{waivedBecause(charge.waived_reason)}</Text> : null}
       </Pressable>

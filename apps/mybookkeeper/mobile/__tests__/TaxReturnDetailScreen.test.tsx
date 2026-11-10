@@ -7,13 +7,12 @@ import type { ValidationResult } from "@mybookkeeper/api-client/types/tax/Valida
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { Alert, Linking } from "react-native";
 import { Provider } from "react-redux";
 import { WEB_BASE_URL } from "../src/constants/api";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { TAX_ADVISOR_MESSAGES } from "../src/constants/taxAdvisor";
 import { TAX_DOCUMENTS_MESSAGES } from "../src/constants/taxDocuments";
 import { SEVERITY_LABELS, TAX_RETURNS_MESSAGES as MESSAGES } from "../src/constants/taxReturns";

@@ -1,12 +1,10 @@
 import { VENDOR_CATEGORY_LABELS } from "@mybookkeeper/api-client/constants/vendorLabels";
 import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendor-response";
-import { Banner, LoadingButton, SwitchRow, useOpenLink, useTheme } from "@platform/mobile";
+import { Banner, Chip, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, SwitchRow, useOpenLink, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { type ReactElement, useRef } from "react";
 import { Platform, type RefreshControlProps, ScrollView, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { DELETE_VENDOR_BODY, deleteVendorTitle, VENDOR_MESSAGES } from "../../constants/vendors";
-import InquiryChip from "../inquiries/InquiryChip";
 import InquiryContact from "../inquiries/InquiryContact";
 import { askOnce } from "../../lib/askOnce";
 import TransactionFact from "../transactions/TransactionFact";
@@ -42,7 +40,7 @@ export default function VendorDetailBody({ vendor, canWrite, hasStaleData, refre
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{lastUsedText(vendor.last_used_at) ?? VENDOR_MESSAGES.neverUsed}</Text>
         {vendor.preferred ? (
           <View style={{ flexDirection: "row" }}>
-            <InquiryChip label={VENDOR_MESSAGES.preferred} />
+            <Chip label={VENDOR_MESSAGES.preferred} />
           </View>
         ) : null}
       </View>

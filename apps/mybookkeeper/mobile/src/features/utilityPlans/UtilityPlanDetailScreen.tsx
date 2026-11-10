@@ -1,11 +1,9 @@
 import { useGetUtilityPlanByIdQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, Chip, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { UTILITY_PLAN_MESSAGES } from "../../constants/utilityPlans";
 import { useTodayIso } from "../../lib/useTodayIso";
-import InquiryChip from "../inquiries/InquiryChip";
 import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import HiddenNumber from "../shell/HiddenNumber";
 import TransactionFact from "../transactions/TransactionFact";
@@ -50,7 +48,7 @@ export default function UtilityPlanDetailScreen({ id }: { id: string }) {
         </Text>
         <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{planProvider(plan)}</Text>
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{planPriceLine(plan)}</Text>
-        {chip ? <InquiryChip label={chip} /> : null}
+        {chip ? <Chip label={chip} /> : null}
         {termNote ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{termNote}</Text> : null}
       </View>
       <View style={{ gap: spacing.md }}>

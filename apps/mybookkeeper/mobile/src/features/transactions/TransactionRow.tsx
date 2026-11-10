@@ -1,8 +1,7 @@
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
-import { categoryLabel, displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, transactionName } from "./transactionDisplay";
-import TransactionStatusChip from "./TransactionStatusChip";
+import { categoryLabel, displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, statusLabel, transactionName } from "./transactionDisplay";
 
 export default function TransactionRow({
   transaction,
@@ -66,7 +65,7 @@ export default function TransactionRow({
       <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {details}
       </Text>
-      {transaction.status === "approved" ? null : <TransactionStatusChip status={transaction.status} />}
+      {transaction.status === "approved" ? null : <Chip label={statusLabel(transaction.status)} />}
     </Pressable>
   );
 }

@@ -1,8 +1,7 @@
 import { useGetArchivedReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { FlatList, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
 import { useCanWrite } from "../workspace/useCanWrite";
 import ReplyTemplateRow from "./ReplyTemplateRow";

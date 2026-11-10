@@ -1,9 +1,8 @@
 import { useListTaxDocumentsQuery } from "@mybookkeeper/api-client/store/taxDocumentsApi";
-import { Banner, EmptyState, OptionSheet, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { SectionList, Text, View } from "react-native";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { ALL_YEARS, TAX_DOCUMENTS_MESSAGES as MESSAGES } from "../../constants/taxDocuments";
 import { TAX_REPORT_MESSAGES } from "../../constants/taxReport";
 import { useToday } from "../../lib/useToday";

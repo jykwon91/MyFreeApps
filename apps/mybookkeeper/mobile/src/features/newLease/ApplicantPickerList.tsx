@@ -1,11 +1,10 @@
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { Banner, EmptyState, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo } from "react";
 import { FlatList, Text, View } from "react-native";
 import { STAGES_READY_FOR_LEASE } from "../../constants/applicants";
 import { NEW_LEASE_APPLICANT_LIMIT, NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../../constants/offline";
 import { uniqueById } from "../../lib/uniqueById";
 import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
 import ApplicantRow from "../applicants/ApplicantRow";

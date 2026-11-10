@@ -1,12 +1,11 @@
 import { useEndTenancyMutation, useRestartTenancyMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantDetailResponse } from "@mybookkeeper/api-client/types/applicant/applicant-detail-response";
 import { tenancyState } from "@mybookkeeper/api-client/utils/tenancyState";
-import { LoadingButton, useOpenWebsite, useTheme, useToast } from "@platform/mobile";
+import { Chip, LoadingButton, useOpenWebsite, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
 import { endedToast, restartedToast, TENANT_MESSAGES } from "../../constants/tenants";
-import InquiryChip from "../inquiries/InquiryChip";
 import InquirySection from "../inquiries/InquirySection";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -61,7 +60,7 @@ export default function TenancySection({ applicant }: { applicant: ApplicantDeta
 
   return (
     <InquirySection title={TENANT_MESSAGES.section}>
-      <InquiryChip label={tenancyStateLabel(state)} />
+      <Chip label={tenancyStateLabel(state)} />
       {line ? <Text style={mutedText}>{line}</Text> : null}
       {reason ? <Text style={mutedText}>{reason}</Text> : null}
       {state === "expired" ? <Text style={mutedText}>{TENANT_MESSAGES.expiredBody}</Text> : null}

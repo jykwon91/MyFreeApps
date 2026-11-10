@@ -1,7 +1,7 @@
 import { inquiriesApi } from "@mybookkeeper/api-client/store/inquiriesApi";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { Alert } from "react-native";
@@ -9,7 +9,6 @@ import { Provider } from "react-redux";
 import { archiveTemplateTitle, REPLY_TEMPLATE_MESSAGES as MESSAGES } from "../src/constants/replyTemplates";
 import ReplyTemplateDetailScreen from "../src/features/replyTemplates/ReplyTemplateDetailScreen";
 import ReplyTemplatesScreen from "../src/features/replyTemplates/ReplyTemplatesScreen";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";

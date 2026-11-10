@@ -4,8 +4,13 @@ import { FilePlus } from "lucide-react";
 import { Badge, DataTable, EmptyState, type ColumnDef, type SortingState } from "@platform/ui";
 import ApplicationsSkeleton from "@/features/applications/ApplicationsSkeleton";
 import AddApplicationDialog from "@/features/applications/AddApplicationDialog";
+import { APPLIED_AT_COLUMN } from "@/features/applications/appliedAtColumn";
 import { useListApplicationsQuery } from "@myjobhunter/api-client/store/applicationsApi";
-import { formatEventType, getEventTypeColor, getEventTypeSortRank } from "@/lib/event-format";
+import { getEventTypeColor } from "@/lib/event-color";
+import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
+import { formatFitScore } from "@myjobhunter/api-client/utils/formatFitScore";
+import { formatRemoteType } from "@myjobhunter/api-client/utils/formatRemoteType";
+import { getEventTypeSortRank } from "@myjobhunter/api-client/utils/getEventTypeSortRank";
 import { EMPTY_STATES } from "@/constants/empty-states";
 import type { Application } from "@myjobhunter/api-client/types/application";
 
@@ -25,15 +30,14 @@ const COLUMNS: ColumnDef<Application>[] = [
   {
     id: "latest_status",
     header: "Status",
-    accessorKey: "latest_status",
-    // Custom sort function so the order is applied → interview → offer → rejected → null
-    sortFn: (rowA, rowB) => {
-      const a = getEventTypeSortRank(rowA.original.latest_status);
-      const b = getEventTypeSortRank(rowB.original.latest_status);
-      return a - b;
-    },
-    cell: ({ getValue }) => {
-      const value = getValue<string | null>();
+    // No status reads as undefined so `sortUndefined: "last"` keeps it last both ways.
+    accessorFn: (row) => row.latest_status ?? undefined,
+    sortUndefined: "last",
+    // Pipeline order: applied → interview → offer → rejected.
+    sortFn: (rowA, rowB) =>
+      getEventTypeSortRank(rowA.original.latest_status) - getEventTypeSortRank(rowB.original.latest_status),
+    cell: ({ row }) => {
+      const value = row.original.latest_status;
       if (value == null) {
         return <span className="text-sm text-muted-foreground">—</span>;
       }
@@ -49,26 +53,16 @@ const COLUMNS: ColumnDef<Application>[] = [
     id: "remote_type",
     header: "Remote",
     accessorKey: "remote_type",
-    cell: ({ getValue }) => {
-      const value = getValue<string>();
-      const label = value === "unknown" ? "—" : value.charAt(0).toUpperCase() + value.slice(1);
-      return <span className="text-sm text-muted-foreground">{label}</span>;
-    },
+    cell: ({ getValue }) => (
+      <span className="text-sm text-muted-foreground">{formatRemoteType(getValue<string>()) ?? "—"}</span>
+    ),
   },
-  {
-    id: "applied_at",
-    header: "Applied",
-    accessorFn: (row) => (row.applied_at ? new Date(row.applied_at).toLocaleDateString() : "—"),
-  },
+  APPLIED_AT_COLUMN,
   {
     id: "fit_score",
     header: "Fit",
     accessorKey: "fit_score",
-    cell: ({ getValue }) => {
-      const v = getValue<string | null>();
-      // fit_score is string | null; "" (empty string) is falsy but not "no score" — keep === null
-      return <span className="text-sm">{v === null ? "—" : `${v}%`}</span>;
-    },
+    cell: ({ getValue }) => <span className="text-sm">{formatFitScore(getValue<string | null>()) ?? "—"}</span>,
   },
 ];
 

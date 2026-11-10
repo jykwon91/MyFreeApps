@@ -4,13 +4,12 @@ import type { AttributionReviewItem } from "@mybookkeeper/api-client/types/attri
 import type { AttributionReviewQueueResponse } from "@mybookkeeper/api-client/types/attribution/attribution-review-queue-response";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, renderHook, screen } from "@testing-library/react-native";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import type { ReactNode } from "react";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
-import { SHOWING_LAST_LOADED_MESSAGE } from "../src/constants/offline";
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES, PAYMENT_REVIEW_SERVER_DETAILS as DETAILS } from "../src/constants/paymentReview";
 import { TENANT_PICKER_MESSAGES } from "../src/constants/tenantPicker";
 import { confirmActionLabel, isPayout, moreWaitingLine, pickActionLabel, proposedTarget, queueCountLine, rowLabel, skipActionLabel } from "../src/features/paymentReview/paymentReviewDisplay";
