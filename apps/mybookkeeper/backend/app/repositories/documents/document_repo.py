@@ -55,7 +55,7 @@ async def _first(
     if not include_deleted:
         stmt = stmt.where(Document.deleted_at.is_(None))
     if for_update:
-        stmt = stmt.with_for_update()
+        stmt = stmt.with_for_update(key_share=True)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -135,7 +135,7 @@ async def list_active_by_ids_for_update(
             Document.deleted_at.is_(None),
         )
         .order_by(Document.id)
-        .with_for_update()
+        .with_for_update(key_share=True)
     )
     return result.scalars().all()
 
@@ -153,7 +153,7 @@ async def list_failed_by_name_for_update(
             Document.deleted_at.is_(None),
         )
         .order_by(Document.id)
-        .with_for_update()
+        .with_for_update(key_share=True)
     )
     return result.scalars().all()
 
@@ -171,7 +171,7 @@ async def list_unfinished_in_batch_for_update(
             Document.deleted_at.is_(None),
         )
         .order_by(Document.id)
-        .with_for_update()
+        .with_for_update(key_share=True)
     )
     return result.scalars().all()
 

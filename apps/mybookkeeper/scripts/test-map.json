@@ -1815,6 +1815,7 @@
         "test_summary_from_transactions.py",
         "test_transaction_repo.py",
         "test_transaction_routes.py",
+        "test_transaction_document_path_soft_delete.py",
         "test_transaction_schema.py",
         "test_transaction_service.py",
         "test_vendor_normalization.py",
