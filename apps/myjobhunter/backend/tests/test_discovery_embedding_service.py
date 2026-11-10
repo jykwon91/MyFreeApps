@@ -3,7 +3,7 @@
 Covers:
 
 - ``embed_text`` returns 384-dim vectors of the expected shape
-- ``embed_posting`` includes title + company + truncated description
+- posting text assembly includes title + company + truncated description
 - ``embed_profile`` includes summary, skills, work history
 - ``embed_pending_for_user`` populates ``embedding`` / ``embedding_model``
   / ``embedded_at`` on rows where embedding was NULL, batches commits,
@@ -21,6 +21,7 @@ costs ~1s and ~90MB of RAM per test run. One end-to-end test
 """
 from __future__ import annotations
 
+import threading
 import uuid
 from datetime import datetime, timezone
 from typing import Iterable
@@ -115,7 +116,7 @@ def _patch_model(monkeypatch: pytest.MonkeyPatch) -> _FakeModel:
 
 
 # ---------------------------------------------------------------------------
-# embed_text / embed_posting / embed_profile assembly
+# embed_text / posting + profile text assembly
 # ---------------------------------------------------------------------------
 
 
@@ -159,20 +160,6 @@ def test_assemble_posting_text_truncates_long_description() -> None:
     text = _assemble_posting_text(posting)
     # 2000 chars of x's + "T C "
     assert text.count("x") == 2000
-
-
-def test_embed_posting_returns_model_name(_patch_model: _FakeModel) -> None:
-    posting = DiscoveredJob(
-        user_id=uuid.uuid4(),
-        source="jsearch",
-        source_external_id="x",
-        title="Eng",
-        company_name="Acme",
-        description="d",
-    )
-    vec, model_name = discovery_embedding_service.embed_posting(posting)
-    assert len(vec) == _EMBED_DIMS
-    assert model_name == _MODEL_NAME
 
 
 def test_assemble_profile_text_includes_summary_skills_work_history() -> None:
@@ -257,6 +244,34 @@ async def test_embed_pending_for_user_populates_columns(
         assert len(list(row.embedding)) == _EMBED_DIMS
         assert row.embedding_model == _MODEL_NAME
         assert row.embedded_at is not None
+
+
+@pytest.mark.asyncio
+async def test_embed_pending_for_user_runs_inference_off_the_event_loop(
+    db: AsyncSession, user_factory, _patch_model: _FakeModel,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ONNX inference is CPU-bound; it must not stall the event loop (API
+    requests, or the scheduler's reconcile + heartbeat)."""
+    user = await user_factory()
+    user_id = uuid.UUID(user["id"])
+    db.add_all([_make_discovered_job(user_id, "t1"), _make_discovered_job(user_id, "t2")])
+    await db.commit()
+
+    loop_thread = threading.get_ident()
+    inference_threads: set[int] = set()
+    real_embed = _patch_model.embed
+
+    def _recording_embed(inputs: Iterable[str]):
+        inference_threads.add(threading.get_ident())
+        return real_embed(inputs)
+
+    monkeypatch.setattr(_patch_model, "embed", _recording_embed)
+
+    count = await discovery_embedding_service.embed_pending_for_user(db, user_id)
+
+    assert count == 2
+    assert inference_threads and loop_thread not in inference_threads
 
 
 @pytest.mark.asyncio

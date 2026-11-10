@@ -63,7 +63,15 @@ Permissions-Policy (optional):
                            ``infra/templates/Caddyfile.docker.j2``.
 
 Other keys:
-  workers               list   Worker definitions, each with ``name`` and ``command``.
+  workers               list   Worker definitions, each with ``name`` and ``command``,
+                               and optionally ``healthcheck`` (mapping: ``test`` list +
+                               optional timings; validated by
+                               ``worker_healthcheck.normalize_worker_healthcheck``). A
+                               worker with a healthcheck gets one in docker-compose.yml,
+                               and the deploy workflow waits for it to report healthy
+                               (so a crash-looping worker fails the deploy instead of
+                               restarting unseen). Optional ``mem_limit`` overrides
+                               the 512m worker default.
   post_deploy_commands  list   Shell commands run in-container after ``alembic upgrade head``.
 """
 
@@ -78,6 +86,8 @@ from typing import Any
 
 import yaml
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
+
+from platform_shared.infra.worker_healthcheck import normalize_worker_healthcheck
 
 
 # Canonical feature order for the Permissions-Policy header.  This list is the
@@ -265,6 +275,11 @@ def render_app(repo_root: Path, app_slug: str, *, write: bool) -> dict[str, tupl
     permissions_policy_self: list[str] = ctx.get("permissions_policy_self") or []
     ctx["permissions_policy"] = _build_permissions_policy(permissions_policy_self)
     _apply_discord_activity(ctx)
+    for worker in ctx.get("workers") or []:
+        if "healthcheck" in worker:
+            worker["healthcheck"] = normalize_worker_healthcheck(
+                worker["name"], worker["healthcheck"],
+            )
     # The web image builds from a subset of the workspace, so it has to copy this.
     ctx["has_api_client"] = (repo_root / "apps" / app_slug / "api-client" / "package.json").is_file()
 

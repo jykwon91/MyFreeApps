@@ -48,6 +48,7 @@ existing profiles after a change.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import threading
 import uuid
@@ -192,8 +193,8 @@ def embed_text(text: str) -> list[float]:
     """Embed a single string and return the 384-dim vector.
 
     Used by tests and by callers that already have the text assembled.
-    Use ``embed_posting`` / ``embed_profile`` when you have the ORM
-    row — they handle the field-assembly contract.
+    Use ``embed_profile`` / ``embed_pending_for_user`` when you have ORM
+    rows — they handle the field-assembly contract.
 
     Raises:
         EmbeddingModelLoadError: If the model has not loaded.
@@ -204,6 +205,11 @@ def embed_text(text: str) -> list[float]:
     # JSON-safe pgvector storage.
     vec = next(iter(model.embed([text or ""])))
     return vec.tolist()
+
+
+def _embed_texts(texts: list[str]) -> list[list[float]]:
+    """Embed each string with ``embed_text``. Blocking — run off the loop."""
+    return [embed_text(text) for text in texts]
 
 
 # ---------------------------------------------------------------------------
@@ -225,18 +231,6 @@ def _assemble_posting_text(posting: DiscoveredJob) -> str:
     company = (posting.company_name or "").strip()
     description = (posting.description or "")[:_DESCRIPTION_MAX_CHARS]
     return f"{title} {company} {description}".strip()
-
-
-def embed_posting(posting: DiscoveredJob) -> tuple[list[float], str]:
-    """Embed a posting and return (vector, model_name).
-
-    Caller is responsible for persisting the result. The two-tuple
-    shape (vector + model identifier) lets us store which model
-    produced each row so a future model swap can re-embed stale rows
-    selectively.
-    """
-    text = _assemble_posting_text(posting)
-    return embed_text(text), _MODEL_NAME
 
 
 def _assemble_profile_text(
@@ -337,10 +331,12 @@ async def embed_pending_for_user(
         )
         if not rows:
             break
-        vectors: list[list[float]] = []
-        for row in rows:
-            vec, _ = embed_posting(row)
-            vectors.append(vec)
+        # Assemble on the loop (ORM attribute access must stay on it), run
+        # the CPU-bound ONNX inference in a worker thread so the event loop
+        # — request handling in the API, reconcile + heartbeat in the
+        # scheduler process — is not stalled for the whole batch.
+        texts = [_assemble_posting_text(row) for row in rows]
+        vectors = await asyncio.to_thread(_embed_texts, texts)
         await discovery_embedding_repository.write_posting_embeddings(
             db, rows, vectors=vectors, model_name=_MODEL_NAME,
         )

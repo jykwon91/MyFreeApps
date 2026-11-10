@@ -107,6 +107,36 @@ services:
       - default
       - myfreeapps
 
+  scheduler:
+    image: ghcr.io/jykwon91/myfreeapps-myjobhunter-backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    command: ["python", "-m", "app.workers.discovery_scheduler_worker"]
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 128
+    # format: raw (compose >= 2.30) — values are literal, never interpolated.
+    # Default env_file parsing expands $-sequences, which silently corrupts
+    # bcrypt hashes (SEED_*_PASSWORD_HASH: "$2b$12$<salt>..." loses everything
+    # after the first $<alnum-run> to a blank-variable substitution).
+    env_file:
+      - path: backend/.env.docker
+        format: raw
+    environment:
+      DATABASE_URL: postgresql+asyncpg://myjobhunter:${DB_PASSWORD}@postgres/myjobhunter
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - default
+      - myfreeapps
+    # The deploy workflow waits for this to report healthy before finishing.
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.workers.discovery_scheduler_healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
   caddy:
     # Custom image: caddy:2-alpine + freshly-built frontend dist baked in
     # at /srv/frontend + Caddyfile baked at /etc/caddy/Caddyfile. No shared

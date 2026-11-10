@@ -7,12 +7,13 @@ Verifies:
 - Invalid interval (below 15, above 10080) returns 422
 - Cross-tenant PATCH returns 404 (tenant isolation)
 - Unknown source_id returns 404
-- Scheduler update is called when interval changes
+
+How a changed interval reaches the scheduler process is covered in
+test_discovery_scheduler_service.py (reconcile tests).
 """
 from __future__ import annotations
 
 import uuid
-from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
@@ -176,35 +177,3 @@ async def test_patch_source_unknown_id_returns_404(
         )
 
     assert resp.status_code == 404
-
-
-# ===========================================================================
-# Scheduler wiring
-# ===========================================================================
-
-
-@pytest.mark.asyncio
-async def test_patch_source_calls_update_source_job(
-    client: AsyncClient, user_factory, as_user,
-):
-    """When interval changes, the scheduler's update_source_job should be called."""
-    user = await user_factory()
-    async with await as_user(user) as a:
-        created = await a.post(
-            "/discover/sources",
-            json={"source": "jsearch", "config": {"query": "x"}, "fetch_interval_minutes": 1440},
-        )
-        source_id = created.json()["id"]
-
-        with patch(
-            "app.services.discovery.discovery_source_service.discovery_scheduler_service.update_source_job",
-        ) as mock_update:
-            resp = await a.patch(
-                f"/discover/sources/{source_id}",
-                json={"fetch_interval_minutes": 120},
-            )
-
-    assert resp.status_code == 200
-    mock_update.assert_called_once()
-    call_kwargs = mock_update.call_args.kwargs
-    assert call_kwargs["interval_minutes"] == 120

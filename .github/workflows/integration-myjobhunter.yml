@@ -107,6 +107,28 @@ jobs:
           docker compose -f apps/myjobhunter/docker-compose.yml logs --tail=100 >&2
           exit 1
 
+      - name: Wait for scheduler health (and only the scheduler runs APScheduler)
+        working-directory: apps/myjobhunter
+        run: |
+          for i in $(seq 1 40); do
+            STATUS=$(docker inspect --format '{{.State.Health.Status}}' "$(docker compose ps -q scheduler)" 2>/dev/null || echo missing)
+            if [ "$STATUS" = "healthy" ]; then
+              echo "scheduler is healthy"
+              break
+            fi
+            if [ $i -eq 40 ]; then
+              echo "scheduler not healthy after 200 seconds (status: $STATUS)" >&2
+              docker compose logs scheduler --tail=100 >&2
+              exit 1
+            fi
+            sleep 5
+          done
+          # The api's uvicorn workers must never start a scheduler of their own.
+          if docker compose logs api | grep -q "discovery_scheduler_service: scheduler started"; then
+            echo "api process started an APScheduler — it must only run in the scheduler service" >&2
+            exit 1
+          fi
+
       - name: Verify frontend is served
         run: |
           curl -fsS -o /tmp/index.html http://localhost:8092/
