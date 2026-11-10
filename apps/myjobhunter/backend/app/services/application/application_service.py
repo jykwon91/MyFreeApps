@@ -38,8 +38,6 @@ from app.schemas.application.application_detail_response import ApplicationDetai
 from app.schemas.application.application_event_create_request import ApplicationEventCreateRequest
 from app.schemas.application.application_event_response import ApplicationEventResponse
 from app.schemas.application.application_event_update_request import ApplicationEventUpdateRequest
-from app.schemas.application.application_kanban_item import ApplicationKanbanItem
-from app.schemas.application.application_list_item import ApplicationListItem
 from app.schemas.application.application_update_request import ApplicationUpdateRequest
 
 
@@ -67,66 +65,6 @@ class CompanyNotOwnedError(LookupError):
     "I can't find that company under your account" is the same response
     whether the company is missing or owned by someone else.
     """
-
-
-async def list_applications(
-    db: AsyncSession,
-    user_id: uuid.UUID,
-    *,
-    company_id: uuid.UUID | None = None,
-    status_filter: str | None = None,
-    archived: bool | None = None,
-    since: _dt.datetime | None = None,
-    limit: int = 100,
-    offset: int = 0,
-) -> list[ApplicationListItem]:
-    """List a user's non-deleted applications with computed ``latest_status``.
-
-    Delegates to the repository's lateral-join query so status is always
-    computed from ``application_events`` — never stored on the applications
-    row. Returns ``ApplicationListItem`` instances (Pydantic) ready for
-    serialization; the route handler can call ``.model_dump(mode='json')``
-    directly without re-validating.
-
-    Optional filters:
-    - ``company_id``: narrow to a single company (tenant-safe).
-    - ``status_filter``: keep only rows whose latest event_type matches.
-    - ``archived``: ``True`` = archived only; ``False`` = active only; ``None`` = all.
-    - ``since``: include only applications with ``applied_at >= since``.
-    - ``limit`` / ``offset``: pagination (default limit=100, offset=0).
-    """
-    rows = await application_repository.list_with_status(
-        db,
-        user_id,
-        company_id=company_id,
-        status_filter=status_filter,
-        archived=archived,
-        since=since,
-        limit=limit,
-        offset=offset,
-    )
-    return [
-        ApplicationListItem.model_validate(app).model_copy(
-            update={"latest_status": status, "company_name": company_name},
-        )
-        for app, status, company_name in rows
-    ]
-
-
-async def list_kanban_items(
-    db: AsyncSession,
-    user_id: uuid.UUID,
-) -> list[ApplicationKanbanItem]:
-    """Return non-archived applications shaped for the kanban dashboard.
-
-    Each row carries the company display fields, the most-recent
-    stage-defining event, and the verdict from the analysis that
-    spawned the application (if any). The frontend derives the column
-    id from ``latest_event_type`` via the same mapping the transition
-    service uses so the read and write sides stay in sync.
-    """
-    rows = await application_repository.list_for_kanban(db, user_id)
-    return [ApplicationKanbanItem.model_validate(row) for row in rows]
 
 
 async def get_application_detail(

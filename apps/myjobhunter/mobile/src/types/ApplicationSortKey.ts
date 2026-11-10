@@ -1,4 +1,4 @@
-import type { ApplicationSortField } from "./ApplicationSortField";
-import type { SortDirection } from "./SortDirection";
+import type { ApplicationSortField } from "@myjobhunter/api-client/types/application/application-sort-field";
+import type { SortOrder } from "@myjobhunter/api-client/types/application/sort-order";
 
-export type ApplicationSortKey = `${ApplicationSortField}-${SortDirection}`;
+export type ApplicationSortKey = `${ApplicationSortField}-${SortOrder}`;

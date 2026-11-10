@@ -11,7 +11,7 @@ vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
   useRunCompanyResearchMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({
-  useListApplicationsQuery: vi.fn(),
+  useListApplicationsInfiniteQuery: vi.fn(),
 }));
 vi.mock("@/features/companies/CompanyResearchPanel", () => ({ default: () => null }));
 vi.mock("@platform/ui", async (importOriginal) => {
@@ -21,13 +21,17 @@ vi.mock("@platform/ui", async (importOriginal) => {
 
 import { showError } from "@platform/ui";
 import { useGetCompanyQuery, useDeleteCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
-import { useListApplicationsQuery } from "@myjobhunter/api-client/store/applicationsApi";
+import { useListApplicationsInfiniteQuery } from "@myjobhunter/api-client/store/applicationsApi";
+import type { Application } from "@myjobhunter/api-client/types/application";
+import { applicationsListResult } from "@/test-utils/applicationsListResult";
 
 const COMPANY = { id: "c1", name: "Acme Corp", primary_domain: null, industry: null, size_range: null, hq_location: null, description: null };
 
 function arrange(applications: unknown[], deleteImpl: () => Promise<unknown>) {
   vi.mocked(useGetCompanyQuery).mockReturnValue({ data: COMPANY, isLoading: false, isError: false } as unknown as ReturnType<typeof useGetCompanyQuery>);
-  vi.mocked(useListApplicationsQuery).mockReturnValue({ data: { items: applications, total: applications.length } } as unknown as ReturnType<typeof useListApplicationsQuery>);
+  vi.mocked(useListApplicationsInfiniteQuery).mockReturnValue(
+    applicationsListResult({ page: { items: applications as Application[], total: applications.length } }),
+  );
   vi.mocked(useDeleteCompanyMutation).mockReturnValue([
     () => ({ unwrap: deleteImpl }),
     { isLoading: false },

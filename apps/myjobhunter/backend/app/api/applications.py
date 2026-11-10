@@ -25,10 +25,9 @@ all mirror that PR.
 """
 from __future__ import annotations
 
-import datetime as _dt
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.request_utils import get_client_ip
@@ -44,7 +43,6 @@ from app.schemas.application.application_detail_response import ApplicationDetai
 from app.schemas.application.application_event_create_request import ApplicationEventCreateRequest
 from app.schemas.application.application_event_response import ApplicationEventResponse
 from app.schemas.application.application_event_update_request import ApplicationEventUpdateRequest
-from app.schemas.application.application_list_item import ApplicationListItem
 from app.schemas.application.application_response import ApplicationResponse
 from app.schemas.application.application_transition_request import ApplicationTransitionRequest
 from app.schemas.application.application_update_request import ApplicationUpdateRequest
@@ -75,9 +73,6 @@ _NOT_FOUND_DETAIL = "Application not found"
 _CONTACT_NOT_FOUND_DETAIL = "Contact not found"
 _EVENT_NOT_FOUND_DETAIL = "Event not found"
 _EVENT_NOT_EDITABLE_DETAIL = "event_type does not support editing"
-
-# Pagination safety cap — prevents pathological limit values.
-_MAX_LIMIT = 500
 
 # Per-IP rate limit for the JD URL extractor. 10 requests / 5 minutes is
 # generous for a legitimate operator (one-paste-per-application throughput)
@@ -110,64 +105,6 @@ def _check_per_user_limit(user_id: uuid.UUID, *limiters: RateLimiter) -> None:
     key = str(user_id)
     for limiter in limiters:
         limiter.check(key)
-
-
-@router.get("/applications")
-async def list_applications(
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(current_active_user),
-    company_id: uuid.UUID | None = Query(default=None),
-    status: str | None = Query(default=None, description="Filter by latest event_type"),
-    archived: bool | None = Query(default=None, description="True=archived only; False=active only"),
-    since: _dt.datetime | None = Query(default=None, description="applied_at >= since (ISO-8601)"),
-    limit: int = Query(default=100, ge=1, le=_MAX_LIMIT),
-    offset: int = Query(default=0, ge=0),
-    view: str | None = Query(
-        default=None,
-        description="When 'kanban', return board-shaped rows with company + verdict joined.",
-    ),
-) -> dict:
-    """Return the caller's non-deleted applications.
-
-    Default response shape: ``{"items": [ApplicationListItem...], "total": int}``.
-    Each item includes ``latest_status: str | None`` — the ``event_type`` of
-    the most-recent ``application_events`` row.
-
-    When ``view=kanban`` is supplied the response shape changes to
-    ``{"items": [ApplicationKanbanItem...], "total": int}`` — board-shaped
-    rows with the company name + logo and the verdict from the analysis
-    that spawned the application (when present) joined in. Other filters
-    are ignored in kanban view; the board always renders all non-archived,
-    non-deleted applications for the user.
-
-    Filters (default view only):
-    - ``company_id``: narrow to a single company (tenant-safe empty list on miss).
-    - ``status``: keep only rows whose latest event_type matches (e.g. "applied").
-    - ``archived``: ``true`` = archived only; ``false`` = active only; omit = all.
-    - ``since``: include only applications with ``applied_at >= since``.
-    - ``limit`` / ``offset``: pagination (default 100 / 0; max limit 500).
-    """
-    if view == "kanban":
-        kanban_items = await application_service.list_kanban_items(db, user.id)
-        return {
-            "items": [item.model_dump(mode="json") for item in kanban_items],
-            "total": len(kanban_items),
-        }
-
-    items = await application_service.list_applications(
-        db,
-        user.id,
-        company_id=company_id,
-        status_filter=status,
-        archived=archived,
-        since=since,
-        limit=limit,
-        offset=offset,
-    )
-    return {
-        "items": [item.model_dump(mode="json") for item in items],
-        "total": len(items),
-    }
 
 
 @router.get("/applications/{application_id}", response_model=ApplicationDetailResponse)

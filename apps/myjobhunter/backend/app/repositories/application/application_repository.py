@@ -12,14 +12,16 @@ that is already soft-deleted is a no-op (returns the existing row unchanged).
 
 Status query: ``list_with_status`` returns
 ``(Application, str | None, str)`` tuples where the second element is the
-latest ``event_type`` from ``application_events`` via a correlated scalar
-sub-select on the covering index ``ix_appevent_app_occurred(application_id,
-occurred_at) INCLUDE (event_type)``, and the third element is the
-``companies.name`` of the application's owning company (INNER joined since
-``applications.company_id`` is non-null).  The INCLUDE column lets PostgreSQL satisfy the sub-select
-entirely from the index leaf pages (Index Only Scan) with no heap fetch.
-No denormalized column is written to the ``applications`` table — status
-is always computed at query time per CLAUDE.md architecture rules.
+latest ``event_type`` from ``application_events`` via a LATERAL join on the
+covering index ``ix_appevent_app_occurred(application_id, occurred_at)
+INCLUDE (event_type)`` (ties on ``occurred_at`` broken by ``created_at`` then
+``id``; see ``application_list_query``), and the third element is the ``companies.name`` of
+the application's owning company (INNER joined since
+``applications.company_id`` is non-null). The INCLUDE column lets PostgreSQL
+satisfy the lateral read entirely from the index leaf pages (Index Only Scan)
+with no heap fetch. No denormalized column is written to the ``applications``
+table — status is always computed at query time per CLAUDE.md architecture
+rules. ``count_with_status`` counts the same rows across all pages.
 """
 from __future__ import annotations
 
@@ -27,16 +29,25 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, func, literal_column, select
+from sqlalchemy import delete, func, literal_column, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from platform_shared.repositories import soft_delete as _soft_delete
 
+from app.core.application_list_constants import DEFAULT_PAGE_SIZE, DEFAULT_SORT_FIELD, DEFAULT_SORT_ORDER
+from app.core.application_sort_field import ApplicationSortField
+from app.core.sort_order import SortOrder
 from app.models.application.application import Application
 from app.models.application.application_event import ApplicationEvent
 from app.models.company.company import Company
 from app.models.job_analysis.job_analysis import JobAnalysis
+from app.repositories.application.application_list_query import (
+    LATEST_EVENT_ORDER,
+    latest_event_lateral,
+    list_conditions,
+    sort_expressions,
+)
 
 
 # Event types that DEFINE a kanban stage. Filtered out: ``note_added``,
@@ -167,81 +178,103 @@ async def list_with_status(
     status_filter: str | None = None,
     archived: bool | None = None,
     since: _dt.datetime | None = None,
-    limit: int = 100,
+    sort: ApplicationSortField = DEFAULT_SORT_FIELD,
+    order: SortOrder = DEFAULT_SORT_ORDER,
+    limit: int = DEFAULT_PAGE_SIZE,
     offset: int = 0,
 ) -> list[tuple[Application, str | None, str]]:
-    """List a user's non-deleted applications with their latest event type and company name.
+    """One page of a user's non-deleted applications with latest event type and company name.
 
-    Uses a correlated scalar sub-select (equivalent to a lateral join) so
-    PostgreSQL can use the covering index ``ix_appevent_app_occurred`` on
-    ``(application_id, occurred_at) INCLUDE (event_type)`` — one Index
-    Only Scan per row with no heap fetch and no sequential scan of
-    ``application_events``.
+    Returns ``(Application, latest_event_type_or_None, company_name)`` tuples.
+    ``latest_status`` is ``None`` for applications with zero events. The
+    ``companies`` join is INNER because ``applications.company_id`` is
+    non-null at the schema level.
 
-    Returns a list of ``(Application, latest_event_type_or_None, company_name)``
-    tuples. The ``latest_status`` is ``None`` for applications that have
-    zero events. Tenant isolation is enforced on both sides of the
-    correlated sub-query (``user_id`` on ``application_events`` as well)
-    so user A's events can never bleed into user B's application rows.
-    The ``companies`` join is INNER because ``applications.company_id``
-    is non-null at the schema level.
+    Every filter is applied in SQL, before ``OFFSET`` / ``LIMIT``, so pages
+    are exact and ``count_with_status`` with the same filters gives the
+    total across pages.
+
+    Ordering: ``sort`` (one of ``_sort_expressions``; anything else raises
+    ``ValueError``) in ``order``, missing values last either way, then the
+    default order — applied most recently first, newest created first — and
+    finally ``id`` so rows that tie on everything still page stably.
 
     Optional filters:
     - ``company_id``: narrow to a specific company (tenant-safe — returns
-      empty list, not 403/404, for cross-tenant probing).
-    - ``status_filter``: keep only rows whose latest event_type matches this
-      string.  Applied in Python after the query (the sub-select is already
-      scalar; a HAVING clause would require a different query shape).
-    - ``archived``: when ``True`` include only archived rows; when ``False``
-      include only non-archived rows; when ``None`` include both.
+      an empty list, not 403/404, for cross-tenant probing).
+    - ``status_filter``: keep only rows whose latest event_type matches.
+    - ``archived``: ``True`` archived only; ``False`` active only; ``None`` both.
     - ``since``: include only applications with ``applied_at >= since``.
-    - ``limit`` / ``offset``: standard pagination.  Offset is applied on the
-      ``applications`` table before status filtering for correct page sizes;
-      callers that need exact pages with status filtering should pass ``None``
-      for ``status_filter`` and filter in the service layer.
     """
-    latest_event_sq = (
-        select(ApplicationEvent.event_type)
-        .where(
-            ApplicationEvent.application_id == Application.id,
-            ApplicationEvent.user_id == user_id,
-        )
-        .order_by(ApplicationEvent.occurred_at.desc())
-        .limit(1)
-        .correlate(Application)
-        .scalar_subquery()
-    )
+    latest_event = latest_event_lateral(user_id)
+    sortable = sort_expressions(latest_event)
+    if sort not in sortable:
+        raise ValueError(f"Unknown sort field: {sort!r}")
+    primary = sortable[sort]
+    primary_order = primary.asc() if order == "asc" else primary.desc()
 
     stmt = (
         select(
             Application,
-            latest_event_sq.label("latest_status"),
+            latest_event.c.event_type.label("latest_status"),
             Company.name.label("company_name"),
         )
         .join(Company, Application.company_id == Company.id)
+        .outerjoin(latest_event, true())
         .where(
-            Application.user_id == user_id,
-            Application.deleted_at.is_(None),
+            *list_conditions(
+                user_id,
+                latest_event,
+                company_id=company_id,
+                status_filter=status_filter,
+                archived=archived,
+                since=since,
+            ),
         )
-        .order_by(Application.applied_at.desc().nullslast(), Application.created_at.desc())
+        .order_by(
+            primary_order.nulls_last(),
+            Application.applied_at.desc().nulls_last(),
+            Application.created_at.desc(),
+            Application.id.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
     )
-    if company_id is not None:
-        stmt = stmt.where(Application.company_id == company_id)
-    if archived is not None:
-        stmt = stmt.where(Application.archived == archived)
-    if since is not None:
-        stmt = stmt.where(Application.applied_at >= since)
-
-    stmt = stmt.offset(offset).limit(limit)
     result = await db.execute(stmt)
-    rows = [(row[0], row[1], row[2]) for row in result.all()]
+    return [(row[0], row[1], row[2]) for row in result.all()]
 
-    # status_filter is applied post-query because it filters on the sub-select
-    # label value, which is not a real column and cannot be used in WHERE.
+
+async def count_with_status(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    company_id: uuid.UUID | None = None,
+    status_filter: str | None = None,
+    archived: bool | None = None,
+    since: _dt.datetime | None = None,
+) -> int:
+    """How many rows ``list_with_status`` matches across all pages, same filters and tenant scope."""
+    latest_event = latest_event_lateral(user_id)
+    stmt = (
+        select(func.count())
+        .select_from(Application)
+        .join(Company, Application.company_id == Company.id)
+        .where(
+            *list_conditions(
+                user_id,
+                latest_event,
+                company_id=company_id,
+                status_filter=status_filter,
+                archived=archived,
+                since=since,
+            ),
+        )
+    )
+    # The latest event is only needed to filter on it.
     if status_filter is not None:
-        rows = [(app, status, company_name) for app, status, company_name in rows if status == status_filter]
-
-    return rows
+        stmt = stmt.outerjoin(latest_event, true())
+    result = await db.execute(stmt)
+    return int(result.scalar_one())
 
 
 async def list_for_kanban(
@@ -281,7 +314,7 @@ async def list_for_kanban(
             ApplicationEvent.user_id == user_id,
             ApplicationEvent.event_type.in_(_STAGE_EVENT_TYPES),
         )
-        .order_by(ApplicationEvent.occurred_at.desc())
+        .order_by(*LATEST_EVENT_ORDER)
         .limit(1)
         .lateral("e")
     )
