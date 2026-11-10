@@ -45,6 +45,23 @@ async def get_by_id(db: AsyncSession, company_id: uuid.UUID, user_id: uuid.UUID)
     return result.scalar_one_or_none()
 
 
+async def get_by_id_for_update(
+    db: AsyncSession, company_id: uuid.UUID, user_id: uuid.UUID,
+) -> Company | None:
+    """Return the company iff it belongs to ``user_id``, holding a row lock.
+
+    ``FOR UPDATE`` conflicts with the ``FOR KEY SHARE`` lock Postgres takes on
+    the parent row when an ``applications`` row referencing it is inserted, so
+    a concurrent application create waits until this transaction ends.
+    """
+    result = await db.execute(
+        select(Company)
+        .where(Company.id == company_id, Company.user_id == user_id)
+        .with_for_update()
+    )
+    return result.scalar_one_or_none()
+
+
 async def list_by_user(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -108,8 +125,9 @@ async def delete(db: AsyncSession, company: Company) -> None:
     """Hard-delete a Company.
 
     Companies use HARD delete (no ``deleted_at`` column) per the data model.
-    Associated records (applications, company_research, research_sources) are
-    handled by CASCADE rules on the foreign key constraints.
+    ``company_research`` / ``research_sources`` cascade with the company.
+    ``applications.company_id`` is ON DELETE RESTRICT, so callers must ensure
+    the company has no applications (soft-deleted included) first.
     """
     await db.delete(company)
     await db.flush()
