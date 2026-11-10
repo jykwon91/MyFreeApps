@@ -57,10 +57,27 @@ export function bulkApproveFailureMessage(error: unknown): string {
   }
 }
 
-export function bulkApprovedMessage(approved: number, skipped: number): string {
-  return `${approved} approved${skipped > 0 ? `, ${skipped} skipped` : ""}`;
+export const BULK_TRANSACTION_MESSAGES = {
+  delete: "Delete",
+  deleting: "Deleting\u2026",
+  approving: "Approving\u2026",
+} as const;
+
+export function bulkDeleteFailureMessage(error: unknown): string {
+  switch (httpStatus(error)) {
+    case undefined:
+      return "I can't reach the server, so I couldn't delete those. They're still selected.";
+    case 403:
+      return "You have read-only access, so I can't delete these.";
+    default:
+      return "I couldn't delete those. Want to try again?";
+  }
 }
 
-export function bulkApprovedSomeFailedMessage(approved: number, skipped: number): string {
-  return `Approved ${approved}${skipped > 0 ? `, skipped ${skipped}` : ""}. The rest failed \u2014 try again.`;
+export function bulkDeleteConfirmTitle(count: number): string {
+  return count === 1 ? "Delete 1 transaction?" : `Delete ${count} transactions?`;
+}
+
+export function bulkDeleteConfirmBody(count: number): string {
+  return `${count === 1 ? "It'll" : "They'll"} be removed from your books. This can't be undone.`;
 }

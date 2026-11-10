@@ -18,11 +18,22 @@ export function useRowSelection() {
     [],
   );
   const selectAll = useCallback((ids: readonly string[]) => setSelected(new Set(ids)), []);
-  /** Drops ticks for rows that are gone, so a refreshed or narrowed list never acts on what can't be seen. */
+  /** Keeps only the ticks whose id is in `ids`: those of rows that are gone are dropped, so one that comes back isn't still ticked. */
   const keepOnly = useCallback(
     (ids: readonly string[]) => setSelected((current) => (current === null ? current : pruneSelection(current, ids))),
     [],
   );
 
-  return { selected, isSelecting: selected !== null, start, cancel, toggle, selectAll, keepOnly };
+  /** Unticks `ids` and leaves every other tick as it is. */
+  const drop = useCallback(
+    (ids: readonly string[]) =>
+      setSelected((current) => {
+        if (current === null) return current;
+        const gone = new Set(ids);
+        return new Set([...current].filter((id) => !gone.has(id)));
+      }),
+    [],
+  );
+
+  return { selected, isSelecting: selected !== null, start, cancel, toggle, selectAll, keepOnly, drop };
 }

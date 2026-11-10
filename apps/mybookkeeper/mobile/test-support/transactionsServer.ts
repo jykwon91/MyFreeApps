@@ -1,3 +1,4 @@
+import { MAX_BULK_TRANSACTION_IDS } from "@mybookkeeper/api-client/constants/transactionBulk";
 import api from "@platform/core/lib/api";
 import type { InsurancePremiumComparison } from "@mybookkeeper/api-client/types/insurance/insurance-premium-comparison";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
@@ -40,6 +41,10 @@ export interface FakeTransactionServer {
   offline: boolean;
   /** The status every transaction write fails with, while set. */
   failWritesWith: number | null;
+  /** Lets this many bulk-delete requests through, then fails the rest with a 500, while set. */
+  bulkDeletesBeforeFailing: number | null;
+  /** Lets this many bulk-approve requests through, then fails the rest with a 500, while set. */
+  bulkApprovesBeforeFailing: number | null;
   /** Fails list requests at or past this offset, while set. */
   failListFromOffset: number | null;
   retroactiveCount: number;
@@ -106,6 +111,8 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     role: "owner",
     offline: false,
     failWritesWith: null,
+    bulkDeletesBeforeFailing: null,
+    bulkApprovesBeforeFailing: null,
     failListFromOffset: null,
     retroactiveCount: 0,
     summary: { revenue: 0, expenses: 0, profit: 0, by_property: [] },
@@ -187,11 +194,30 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     if (config.url === "/transactions/bulk-approve") {
       if (server.failWritesWith !== null) return respond({ detail: "nope" }, server.failWritesWith);
       const { ids } = JSON.parse(String(config.data)) as { ids: string[] };
+      if (server.bulkApprovesBeforeFailing !== null) {
+        if (server.bulkApprovesBeforeFailing <= 0) return respond({ detail: "nope" }, 500);
+        server.bulkApprovesBeforeFailing -= 1;
+      }
       const approvable = server.transactions.filter((row) => ids.includes(row.id) && REVIEWABLE.includes(row.status) && row.property_id);
       approvable.forEach((row) => {
         row.status = "approved";
       });
       return respond({ approved: approvable.length, skipped: ids.length - approvable.length });
+    }
+    if (config.url === "/transactions/bulk-delete") {
+      if (server.role === "viewer") return respond({ detail: "Viewers have read-only access" }, 403);
+      if (server.failWritesWith !== null) return respond({ detail: "nope" }, server.failWritesWith);
+      const { ids } = JSON.parse(String(config.data)) as { ids: string[] };
+      // The backend's request schema: 1 to MAX_BULK_TRANSACTION_IDS ids.
+      if (ids.length < 1 || ids.length > MAX_BULK_TRANSACTION_IDS) return respond({ detail: [{ msg: "ids: invalid length" }] }, 422);
+      if (server.bulkDeletesBeforeFailing !== null) {
+        if (server.bulkDeletesBeforeFailing <= 0) return respond({ detail: "nope" }, 500);
+        server.bulkDeletesBeforeFailing -= 1;
+      }
+      const before = server.transactions.length;
+      server.transactions = server.transactions.filter((row) => !ids.includes(row.id));
+      const deleted = before - server.transactions.length;
+      return respond({ deleted, skipped: new Set(ids).size - deleted });
     }
     if (config.url === "/transactions") {
       const params = (config.params ?? {}) as Record<string, string | number | boolean | undefined>;

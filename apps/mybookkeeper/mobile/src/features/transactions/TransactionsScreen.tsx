@@ -16,12 +16,13 @@ import { useRowSelection } from "../../lib/useRowSelection";
 import { useToday } from "../../lib/useToday";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { categoryLabel, customRangeLabel, propertyLabel } from "./transactionDisplay";
-import BulkApproveBar from "./BulkApproveBar";
+import TransactionSelectionBar from "./TransactionSelectionBar";
 import { isBulkApprovable } from "./bulkApprovable";
 import TransactionFilterSheet from "./TransactionFilterSheet";
 import { activeFilterCount, reviewLink, toListParams } from "./transactionFilters";
 import TransactionRow from "./TransactionRow";
 import { useBulkApprove } from "./useBulkApprove";
+import { useBulkDeleteTransactions } from "./useBulkDeleteTransactions";
 import { useShareTransactionExport } from "./useShareTransactionExport";
 import { useVendorSearch } from "./useVendorSearch";
 import TransactionsSkeleton, { TransactionSkeletonRow } from "./TransactionsSkeleton";
@@ -45,6 +46,8 @@ export default function TransactionsScreen({
 
   const selection = useRowSelection();
   const bulk = useBulkApprove();
+  const { cancel: cancelSelection, keepOnly: keepSelected, drop: dropSelected } = selection;
+  const bulkDelete = useBulkDeleteTransactions(settleSelection);
 
   const params = useMemo(() => toListParams(filters, today), [filters, today]);
   const {
@@ -67,7 +70,6 @@ export default function TransactionsScreen({
   }, error);
 
   // Ticks belong to the list they were made in.
-  const { cancel: cancelSelection } = selection;
   useEffect(() => cancelSelection(), [listKey, cancelSelection]);
 
   const propertyNames = useMemo(() => new Map(properties.map((property) => [property.id, property.name])), [properties]);
@@ -94,10 +96,23 @@ export default function TransactionsScreen({
     .join(" · ");
 
   const selectedRows = useMemo(() => rows.filter((row) => selection.selected?.has(row.id)), [rows, selection.selected]);
+  // A tick never outlives its row: one that is gone after a refresh must not come back ticked.
+  const rowIds = useMemo(() => rows.map((row) => row.id), [rows]);
+  useEffect(() => keepSelected(rowIds), [rowIds, keepSelected]);
   const approvableIds = selectedRows.filter(isBulkApprovable).map((row) => row.id);
 
+  /** Done when nothing failed; otherwise only what went through is unticked, so everything else stays to try again. */
+  function settleSelection(sentIds: readonly string[], failedIds: readonly string[]): void {
+    if (failedIds.length === 0) {
+      cancelSelection();
+      return;
+    }
+    const failed = new Set(failedIds);
+    dropSelected(sentIds.filter((id) => !failed.has(id)));
+  }
+
   async function approveSelected(): Promise<void> {
-    if (await bulk.approve(approvableIds)) selection.cancel();
+    settleSelection(approvableIds, await bulk.approve(approvableIds));
   }
 
   async function loadMore(): Promise<void> {
@@ -250,10 +265,12 @@ export default function TransactionsScreen({
         testID="transactions-list"
       />
       {selection.isSelecting ? (
-        <BulkApproveBar
+        <TransactionSelectionBar
           approvableCount={approvableIds.length}
           isApproving={bulk.isApproving}
+          isDeleting={bulkDelete.isDeleting}
           onApprove={approveSelected}
+          onDelete={() => bulkDelete.askToDelete(selectedRows.map((row) => row.id))}
           onCancel={selection.cancel}
           selectedCount={selectedRows.length}
         />
