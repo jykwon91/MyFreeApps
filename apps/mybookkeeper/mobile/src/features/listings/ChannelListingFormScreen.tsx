@@ -3,12 +3,11 @@ import type { Channel } from "@mybookkeeper/api-client/types/listing/channel";
 import type { ChannelListing } from "@mybookkeeper/api-client/types/listing/channel-listing";
 import type { ChannelListingFormValues } from "@mybookkeeper/api-client/types/listing/channel-listing-form-values";
 import { channelListingFormProblems, channelListingToFormValues, emptyChannelListingForm, sameChannelListingForm } from "@mybookkeeper/api-client/utils/channelListingForm";
-import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, PickerField, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
 import { copyOutboundLabel, LISTING_CHANNEL_MESSAGES as MESSAGES } from "../../constants/listingChannels";
 import { useCopyText } from "../../lib/useCopyText";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { useSaveChannelListing } from "./useSaveChannelListing";
 
 interface ChannelListingFormScreenProps {

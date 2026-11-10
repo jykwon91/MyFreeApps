@@ -2,11 +2,10 @@ import { WELCOME_MANUAL_RECIPIENT_NAME_MAX_LENGTH } from "@mybookkeeper/api-clie
 import type { WelcomeManualEmailFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-email-form-values";
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 import { emailProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
-import { Banner, FormField, LoadingButton, OptionSheet, PickerField, useTheme } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState, type ReactElement } from "react";
 import { KeyboardAvoidingView, Platform, RefreshControlProps, ScrollView, Text, View } from "react-native";
 import { WELCOME_MANUAL_EMAIL_EMPTY_VALUES, WELCOME_MANUAL_EMAIL_MESSAGES as MESSAGES } from "../../constants/welcomeManualForms";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import WelcomeManualEmailOutcome from "./WelcomeManualEmailOutcome";
 import { emailRoomOptions } from "./welcomeManualRoomOptions";

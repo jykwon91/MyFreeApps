@@ -1,10 +1,9 @@
 import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { EmptyState, useRefresh } from "@platform/mobile";
+import { EmptyState, useLeaveWhenSaved, useRefresh } from "@platform/mobile";
 import { router } from "expo-router";
 import { LISTING_MESSAGES } from "../../constants/listings";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useCanWrite } from "../workspace/useCanWrite";
 import ListingDetailBody from "./ListingDetailBody";
 import ListingDetailSkeleton from "./ListingDetailSkeleton";

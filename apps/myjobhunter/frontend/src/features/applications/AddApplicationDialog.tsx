@@ -23,12 +23,14 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { showSuccess } from "@platform/ui";
 import { X } from "lucide-react";
-import { useAddApplicationFlow, type AddApplicationFormValues } from "./add-application-dialog/useAddApplicationFlow";
+import type { AddApplicationFormValues } from "@myjobhunter/api-client/types/application/add-application-form-values";
+import { useAddApplicationFlow } from "./add-application-dialog/useAddApplicationFlow";
 import PasteLinkStep from "./add-application-dialog/PasteLinkStep";
 import PasteTextStep from "./add-application-dialog/PasteTextStep";
 import ManualEntryStep from "./add-application-dialog/ManualEntryStep";
 import ProcessingStep from "./add-application-dialog/ProcessingStep";
 import CompanyConfirmStep from "./add-application-dialog/CompanyConfirmStep";
+import { addApplicationFormResolver } from "./add-application-dialog/addApplicationFormResolver";
 
 export interface AddApplicationDialogProps {
   open: boolean;
@@ -43,6 +45,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     reset: resetForm,
     setValue,
   } = useForm<AddApplicationFormValues>({
+    resolver: addApplicationFormResolver,
     defaultValues: {
       role_title: "",
       location: "",

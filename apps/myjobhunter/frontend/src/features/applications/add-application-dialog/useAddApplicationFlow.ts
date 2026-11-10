@@ -13,8 +13,9 @@
  *   - Dialog open/close lifecycle (onOpenChange is passed in so the
  *     orchestrator can reset both the form and this hook together)
  *
- * Pure utility functions (combineNotes, stripHtml, etc.) live in
- * dialogHelpers.ts to keep this file focused on state transitions.
+ * Pure rules shared with the phone (company matching, pre-fill, the request
+ * body, error routing) live in @myjobhunter/api-client; the browser's HTML
+ * and URL parsers live in dialogHelpers.ts.
  */
 import { useEffect, useState } from "react";
 import { showError, extractErrorMessage } from "@platform/ui";
@@ -30,30 +31,26 @@ import {
 } from "@myjobhunter/api-client/store/applicationsApi";
 import type { JdParseResponse } from "@myjobhunter/api-client/types/application/jd-parse-response";
 import type { JdUrlExtractResponse } from "@myjobhunter/api-client/types/application/jd-url-extract-response";
-import { describeExtractError, isAuthRequiredError } from "../jdErrorRouting";
+import { JD_READ_LONG_RUNNING_MS } from "@myjobhunter/api-client/constants/addApplicationForm";
+import type { AddApplicationFormValues } from "@myjobhunter/api-client/types/application/add-application-form-values";
+import type { ExtractedCompanyHints } from "@myjobhunter/api-client/types/application/extracted-company-hints";
+import type { ReviewCompanyState } from "@myjobhunter/api-client/types/application/review-company-state";
+import type { Company } from "@myjobhunter/api-client/types/company";
+import { buildApplicationCreateRequest } from "@myjobhunter/api-client/utils/buildApplicationCreateRequest";
+import { describeExtractError } from "@myjobhunter/api-client/utils/describeExtractError";
+import { findCompanyByName } from "@myjobhunter/api-client/utils/findCompanyByName";
+import { isAuthRequiredError } from "@myjobhunter/api-client/utils/isAuthRequiredError";
+import { isJobPostingUrl } from "@myjobhunter/api-client/utils/isJobPostingUrl";
+import { prefillFromExtract } from "@myjobhunter/api-client/utils/prefillFromExtract";
+import { prefillFromParse } from "@myjobhunter/api-client/utils/prefillFromParse";
+import { readCompanyId } from "@myjobhunter/api-client/utils/readCompanyId";
+import { resolveExtractedCompany } from "@myjobhunter/api-client/utils/resolveExtractedCompany";
 import {
   INITIAL_STATE,
-  PROCESSING_LONG_RUNNING_THRESHOLD_MS,
   type DialogInputMode,
   type DialogState,
-  type ReviewCompanyState,
 } from "../useAddApplicationDialogState";
-import type { Company } from "@myjobhunter/api-client/types/company";
-import {
-  findCompanyByName,
-  readCompanyId,
-  websiteToDomain,
-  combineNotes,
-} from "./dialogHelpers";
-
-const URL_REGEX = /^https?:\/\/\S+$/i;
-
-export interface AddApplicationFormValues {
-  role_title: string;
-  location: string;
-  remote_type: "unknown" | "remote" | "hybrid" | "onsite";
-  notes: string;
-}
+import { domTextContent, urlHostname } from "./dialogHelpers";
 
 export interface ApplyPreFillFns {
   /** Called when an extract/parse result arrives. */
@@ -164,7 +161,7 @@ export function useAddApplicationFlow(
 
   function handleUrlPaste(e: React.ClipboardEvent<HTMLInputElement>) {
     const pasted = e.clipboardData.getData("text").trim();
-    if (URL_REGEX.test(pasted)) {
+    if (isJobPostingUrl(pasted)) {
       e.preventDefault();
       setUrlValue(pasted);
       void runUrlExtract(pasted);
@@ -284,27 +281,25 @@ export function useAddApplicationFlow(
         if (prev.kind !== "processing") return prev;
         return { ...prev, longRunning: true };
       });
-    }, PROCESSING_LONG_RUNNING_THRESHOLD_MS);
+    }, JD_READ_LONG_RUNNING_MS);
     return () => clearTimeout(timer);
   }, [state]);
 
   // -------------------------------------------------------------------------
   // Pre-fill helpers — both extract and parse routes converge here.
   // -------------------------------------------------------------------------
+  function applyPrefill(prefill: Partial<AddApplicationFormValues>) {
+    for (const field of Object.keys(prefill) as (keyof AddApplicationFormValues)[]) {
+      const value = prefill[field];
+      if (value) preFillFns.setValue(field, value, { shouldValidate: true });
+    }
+  }
+
   async function applyParseResult(
     result: JdParseResponse,
     { sourceUrl }: { sourceUrl: string | null },
   ) {
-    const { setValue } = preFillFns;
-    if (result.title) setValue("role_title", result.title, { shouldValidate: true });
-    if (result.location) setValue("location", result.location, { shouldValidate: true });
-    if (
-      result.remote_type === "remote" ||
-      result.remote_type === "hybrid" ||
-      result.remote_type === "onsite"
-    ) {
-      setValue("remote_type", result.remote_type, { shouldValidate: true });
-    }
+    applyPrefill(prefillFromParse(result));
 
     const companyState = await resolveCompany(result.company, {});
     setState({
@@ -317,14 +312,7 @@ export function useAddApplicationFlow(
   }
 
   async function applyExtractResult(result: JdUrlExtractResponse) {
-    const { setValue } = preFillFns;
-    if (result.title) setValue("role_title", result.title, { shouldValidate: true });
-    if (result.location) setValue("location", result.location, { shouldValidate: true });
-
-    const notesScaffold = combineNotes(result);
-    if (notesScaffold) {
-      setValue("notes", notesScaffold, { shouldValidate: true });
-    }
+    applyPrefill(prefillFromExtract(result, domTextContent));
 
     const companyState = await resolveCompany(result.company, {
       website: result.company_website,
@@ -339,25 +327,18 @@ export function useAddApplicationFlow(
     });
   }
 
-  interface CompanyExtras {
-    website?: string | null;
-    logoUrl?: string | null;
-  }
-
   async function resolveCompany(
     name: string | null,
-    extras: CompanyExtras,
+    extras: ExtractedCompanyHints,
   ): Promise<ReviewCompanyState> {
-    const trimmed = (name ?? "").trim();
-    if (!trimmed) {
+    const resolution = resolveExtractedCompany(companies, name, urlHostname, extras);
+    if (resolution.kind === "none") {
       setPendingCompanyName(null);
       return { kind: "autoCreateFailed", name: "" };
     }
-    setPendingCompanyName(trimmed);
-
-    const existing = findCompanyByName(companies, trimmed);
-    if (existing) {
+    if (resolution.kind === "existing") {
       setPendingCompanyName(null);
+      const existing = resolution.company;
       return {
         kind: "tracked",
         companyId: existing.id,
@@ -365,15 +346,11 @@ export function useAddApplicationFlow(
         logoUrl: existing.logo_url,
       };
     }
+    const trimmed = resolution.request.name;
+    setPendingCompanyName(trimmed);
 
     try {
-      const payload: { name: string; primary_domain?: string | null; logo_url?: string | null } =
-        { name: trimmed };
-      const domain = websiteToDomain(extras.website);
-      if (domain) payload.primary_domain = domain;
-      if (extras.logoUrl) payload.logo_url = extras.logoUrl;
-
-      const created = await createCompany(payload).unwrap();
+      const created = await createCompany(resolution.request).unwrap();
       void triggerCompanyResearch(created.id)
         .unwrap()
         .catch((err) => {
@@ -492,16 +469,13 @@ export function useAddApplicationFlow(
     }
 
     try {
-      const url = state.sourceUrl ?? null;
-      await createApplication({
-        company_id: companyId,
-        role_title: values.role_title.trim(),
-        url,
-        location: values.location.trim() || null,
-        remote_type: values.remote_type,
-        notes: values.notes.trim() || null,
-        jd_text: submittedJdText.trim() || null,
-      }).unwrap();
+      await createApplication(
+        buildApplicationCreateRequest(values, {
+          companyId,
+          sourceUrl: state.sourceUrl ?? null,
+          jdText: submittedJdText,
+        }),
+      ).unwrap();
       onSuccess();
     } catch (err) {
       showError(`Couldn't create application: ${extractErrorMessage(err)}`);

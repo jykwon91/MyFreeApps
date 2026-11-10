@@ -5,7 +5,6 @@ import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { Linking } from "react-native";
 import { Provider } from "react-redux";
-import { WEB_BASE_URL } from "../src/constants/api";
 import { APPLICATION_SORT_KEYS, APPLICATION_SORTS } from "../src/constants/applicationSorts";
 import { APPLICATION_MESSAGES } from "../src/constants/applications";
 import ApplicationsScreen from "../src/features/applications/ApplicationsScreen";
@@ -291,11 +290,18 @@ it("keeps the rows it has when the next page fails, and loads it on Try again", 
   expect(screen.queryByText(APPLICATION_MESSAGES.couldntLoadMore)).toBeNull();
 });
 
-it("sends adding an application to the website from the list, since adding needs its job-link reader", async () => {
-  serve({ "GET /applications": listOf(STRIPE) });
-  await showScreen();
-  await fireEvent.press(await screen.findByRole("button", { name: APPLICATION_MESSAGES.addOnWebsite }));
-  expect(openURL).toHaveBeenLastCalledWith(`${WEB_BASE_URL}/applications`);
+it("opens the add screen from the list, on the phone rather than the website", async () => {
+  serve({
+    "POST /auth/mobile/refresh": refreshed,
+    "GET /applications": listOf(STRIPE),
+    "GET /companies": () => ({ status: 200, data: { items: [], total: 0 } }),
+  });
+  await renderApp("/applications");
+  await fireEvent.press(await screen.findByRole("button", { name: APPLICATION_MESSAGES.add }));
+
+  expect(screen).toHavePathname("/applications/new");
+  expect(await screen.findByTestId("add-application")).toBeTruthy();
+  expect(openURL).not.toHaveBeenCalled();
 });
 
 it("clears a failed next page once any later load works, a refresh or an edit elsewhere", async () => {
@@ -360,8 +366,8 @@ it("says when there are no applications yet, and offers to add one", async () =>
 
   expect(await screen.findByRole("header", { name: APPLICATION_MESSAGES.noneHeading })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /^Sort:/ })).toBeNull();
-  await fireEvent.press(screen.getByRole("button", { name: APPLICATION_MESSAGES.addOnWebsite }));
-  expect(openURL).toHaveBeenLastCalledWith(`${WEB_BASE_URL}/applications`);
+  expect(screen.getByRole("button", { name: APPLICATION_MESSAGES.add })).toBeTruthy();
+  expect(openURL).not.toHaveBeenCalled();
 });
 
 it("says when the list couldn't load, and loads it on Try again", async () => {

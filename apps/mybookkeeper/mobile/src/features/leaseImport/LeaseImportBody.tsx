@@ -1,12 +1,11 @@
 import { LEASE_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { LeaseImportFormValues } from "@mybookkeeper/api-client/types/lease/lease-import-form-values";
 import { EMPTY_LEASE_IMPORT_FORM, leaseImportProblems } from "@mybookkeeper/api-client/utils/leaseImportForm";
-import { Banner, FormField, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
 import { LEASE_IMPORT_MESSAGES as MESSAGES, LEASE_IMPORT_PROBLEM_MESSAGES, notesLeft } from "../../constants/leaseImport";
 import { LEASE_FILE_TYPES } from "../../constants/leases";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import OptionalDateField from "../shell/OptionalDateField";
 import HeldFileButtons from "../uploads/HeldFileButtons";
 import HeldFilesList from "../uploads/HeldFilesList";

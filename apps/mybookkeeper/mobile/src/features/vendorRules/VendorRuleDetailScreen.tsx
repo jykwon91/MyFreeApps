@@ -1,9 +1,8 @@
 import { useListClassificationRulesQuery } from "@mybookkeeper/api-client/store/classificationRulesApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { EmptyState, useRefresh } from "@platform/mobile";
+import { EmptyState, useLeaveWhenSaved, useRefresh } from "@platform/mobile";
 import { useMemo } from "react";
 import { VENDOR_RULE_MESSAGES } from "../../constants/vendorRules";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useIsAdmin } from "../workspace/useIsAdmin";
 import VendorRuleDetailBody from "./VendorRuleDetailBody";
 import VendorRuleDetailSkeleton from "./VendorRuleDetailSkeleton";

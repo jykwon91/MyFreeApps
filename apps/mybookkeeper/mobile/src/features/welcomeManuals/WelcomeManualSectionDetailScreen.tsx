@@ -1,4 +1,4 @@
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
+import { useLeaveWhenSaved } from "@platform/mobile";
 import WelcomeManualSectionDetailBody from "./WelcomeManualSectionDetailBody";
 import WelcomeManualSectionGate from "./WelcomeManualSectionGate";
 

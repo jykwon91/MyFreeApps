@@ -4,11 +4,10 @@ import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/l
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
 import { externalIdChanged, externalIdProblem } from "@mybookkeeper/api-client/utils/externalIdForm";
-import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, PickerField, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { LISTING_LINK_MESSAGES as MESSAGES } from "../../constants/listingLinks";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { useSaveListingLink } from "./useSaveListingLink";
 
 interface ListingLinkFormScreenProps {

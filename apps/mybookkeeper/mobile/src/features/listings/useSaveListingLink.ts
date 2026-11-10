@@ -2,9 +2,8 @@ import { useCreateListingExternalIdMutation, useUpdateListingExternalIdMutation 
 import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
 import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
 import { externalIdChanged, externalIdFormToRequest } from "@mybookkeeper/api-client/utils/externalIdForm";
-import { useToast } from "@platform/mobile";
+import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import { LISTING_LINK_MESSAGES } from "../../constants/listingLinks";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useWrite } from "../../lib/useWrite";
 import { saveFailureCopy } from "../../lib/writeFailureCopy";
 

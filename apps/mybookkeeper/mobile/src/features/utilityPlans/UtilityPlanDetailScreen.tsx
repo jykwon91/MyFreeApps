@@ -1,10 +1,9 @@
 import { useGetUtilityPlanByIdQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-import { Banner, Chip, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, Chip, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useLeaveWhenSaved, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import { UTILITY_PLAN_MESSAGES } from "../../constants/utilityPlans";
 import { useTodayIso } from "../../lib/useTodayIso";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import HiddenNumber from "../shell/HiddenNumber";
 import TransactionFact from "../transactions/TransactionFact";
 import { useCanWrite } from "../workspace/useCanWrite";

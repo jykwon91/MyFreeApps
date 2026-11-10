@@ -1,8 +1,7 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { EmptyState, useRefresh } from "@platform/mobile";
+import { EmptyState, useLeaveWhenSaved, useRefresh } from "@platform/mobile";
 import { router } from "expo-router";
 import { PROPERTY_MESSAGES } from "../../constants/properties";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useCanWrite } from "../workspace/useCanWrite";
 import PropertyDetailBody from "./PropertyDetailBody";
 import PropertyDetailSkeleton from "./PropertyDetailSkeleton";

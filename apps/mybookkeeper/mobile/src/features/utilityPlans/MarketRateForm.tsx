@@ -3,12 +3,11 @@ import type { MarketRateFormValues } from "@mybookkeeper/api-client/types/utilit
 import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import { isFlatService, isMarketRateFigureValid, marketRateToFormValues } from "@mybookkeeper/api-client/utils/marketRateForm";
-import { Banner, FormField, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { MARKET_RATE_MESSAGES as MESSAGES, MARKET_RATE_SOURCE_MAX_LENGTH } from "../../constants/marketRates";
 import { sameFormValues } from "../../lib/sameFormValues";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { askOnce } from "../../lib/askOnce";
 import OptionalDateField from "../shell/OptionalDateField";
 import { useSaveMarketRate } from "./useSaveMarketRate";

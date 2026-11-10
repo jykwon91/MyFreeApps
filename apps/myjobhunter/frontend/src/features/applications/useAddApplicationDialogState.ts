@@ -27,26 +27,9 @@
  * step 1.
  */
 
-export type DialogInputMode = "url" | "text" | "company-name";
+import type { ReviewCompanyState } from "@myjobhunter/api-client/types/application/review-company-state";
 
-/**
- * Confirmation pill state during the review step.
- *
- * - tracked:           AI extracted a company name that already exists
- *                      in the operator's list — we just selected it.
- * - new:               AI extracted a name and we created it on the fly.
- * - autoCreateFailed:  AI extracted a name but createCompany rejected.
- *                      The submit-time fallback in the parent is what
- *                      eventually saves the application.
- * - manual:            Operator went through the company-name path and
- *                      typed a company themselves. companyId may be
- *                      empty if the create hasn't happened yet.
- */
-export type ReviewCompanyState =
-  | { kind: "tracked"; companyId: string; name: string; logoUrl: string | null }
-  | { kind: "new"; companyId: string; name: string; logoUrl: string | null }
-  | { kind: "autoCreateFailed"; name: string }
-  | { kind: "manual"; companyId: string | null; name: string; logoUrl: string | null };
+export type DialogInputMode = "url" | "text" | "company-name";
 
 export type DialogState =
   | { kind: "input"; inputMode: DialogInputMode }
@@ -61,10 +44,3 @@ export type DialogState =
     };
 
 export const INITIAL_STATE: DialogState = { kind: "input", inputMode: "url" };
-
-/**
- * Threshold (ms) after which the processing step swaps the spinner
- * sub-text from "Reading job posting…" to "This is taking longer than
- * usual…". 3 seconds was chosen by the design review.
- */
-export const PROCESSING_LONG_RUNNING_THRESHOLD_MS = 3000;

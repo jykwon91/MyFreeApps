@@ -4,6 +4,6 @@ export interface ApplicationsListHeaderProps {
   /** Add and Sort only make sense once there are rows; the empty state offers its own Add. */
   hasRows: boolean;
   sortLabel: string;
-  onAdd: () => Promise<void>;
+  onAdd: () => void;
   onSort: () => void;
 }

@@ -3,11 +3,10 @@ import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welco
 import type { WelcomeManualSectionFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-form-values";
 import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-response";
 import { sectionProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
-import { Banner, FormField, LoadingButton, OptionSheet, PickerField, useTheme } from "@platform/mobile";
+import { Banner, FormField, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { WELCOME_MANUAL_SECTION_BODY_MIN_HEIGHT, WELCOME_MANUAL_SECTION_MESSAGES as MESSAGES } from "../../constants/welcomeManualForms";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import { roomNameFor, roomScopeOptions } from "./welcomeManualRoomOptions";
 import { useSaveWelcomeManualSection } from "./useSaveWelcomeManualSection";

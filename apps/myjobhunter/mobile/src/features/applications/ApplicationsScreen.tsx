@@ -1,12 +1,10 @@
 import { useApplicationsPages } from "@myjobhunter/api-client/hooks/useApplicationsPages";
-import { EmptyState, OptionSheet, useOpenWebsite, useRefresh } from "@platform/mobile";
+import { EmptyState, OptionSheet, useRefresh } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { APPLICATION_SORT_OPTIONS, APPLICATION_SORTS, DEFAULT_APPLICATION_SORT } from "../../constants/applicationSorts";
 import { APPLICATION_MESSAGES as MESSAGES, LOAD_MORE_THRESHOLD } from "../../constants/applications";
-import { APPLICATIONS_TAB } from "../../constants/tabs";
 import type { ApplicationSortKey } from "../../types/ApplicationSortKey";
 import ApplicationRow from "./ApplicationRow";
 import ApplicationsListFooter from "./ApplicationsListFooter";
@@ -14,7 +12,6 @@ import ApplicationsListHeader from "./ApplicationsListHeader";
 import ApplicationsSkeleton from "./ApplicationsSkeleton";
 
 export default function ApplicationsScreen() {
-  const openWebsite = useOpenWebsite();
   const [sortKey, setSortKey] = useState<ApplicationSortKey>(DEFAULT_APPLICATION_SORT);
   const [isSortSheetOpen, setIsSortSheetOpen] = useState(false);
   const sort = APPLICATION_SORTS[sortKey];
@@ -26,8 +23,7 @@ export default function ApplicationsScreen() {
   const rows = isLoadingList ? [] : list.applications;
   const hasLoaded = !isLoadingList && list.loadError === undefined;
 
-  // Adding takes the website's job-link reader and company matching, which aren't on the phone yet.
-  const addOnWebsite = () => openWebsite(WEB_BASE_URL, APPLICATIONS_TAB.webPath);
+  const addApplication = () => router.push("/applications/new");
 
   const loadMore = () => {
     // After a failed page, wait for Try again rather than retrying on every scroll.
@@ -40,7 +36,7 @@ export default function ApplicationsScreen() {
   ) : !hasLoaded ? (
     <EmptyState action={{ label: MESSAGES.tryAgain, onPress: refresh, isLoading: isRefreshing }} body={MESSAGES.tryAgainOffer} heading={MESSAGES.couldntLoadList} />
   ) : (
-    <EmptyState action={{ label: MESSAGES.addOnWebsite, onPress: addOnWebsite }} body={MESSAGES.noneBody} heading={MESSAGES.noneHeading} />
+    <EmptyState action={{ label: MESSAGES.add, onPress: addApplication }} body={MESSAGES.noneBody} heading={MESSAGES.noneHeading} />
   );
 
   return (
@@ -55,7 +51,7 @@ export default function ApplicationsScreen() {
             <ApplicationsListHeader
               hasRows={rows.length > 0}
               isStale={Boolean(list.error) && !list.isLoadMoreError}
-              onAdd={addOnWebsite}
+              onAdd={addApplication}
               onSort={() => setIsSortSheetOpen(true)}
               sortLabel={sort.label}
             />

@@ -2,9 +2,8 @@ import { useCreatePropertyMutation, useUpdatePropertyMutation } from "@mybookkee
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import type { PropertyForm } from "@mybookkeeper/api-client/types/property/PropertyForm";
 import { propertyChanges, toPropertyWrite, trimmedForm } from "@mybookkeeper/api-client/utils/propertyForm";
-import { useToast } from "@platform/mobile";
+import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import { PROPERTY_FORM_MESSAGES } from "../../constants/propertyForm";
-import { useLeaveWhenSaved } from "../../lib/useLeaveWhenSaved";
 import { useWrite } from "../../lib/useWrite";
 import { saveFailureCopy } from "../../lib/writeFailureCopy";
 

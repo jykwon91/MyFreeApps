@@ -5,7 +5,7 @@ import { UTILITY_SERVICE_TYPES, UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeepe
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/utilityPlanDraft";
 import { EMPTY_UTILITY_PLAN_FORM, toUtilityPlanFormValues, utilityPlanFormProblems } from "@mybookkeeper/api-client/utils/utilityPlanForm";
-import { Banner, LoadingButton, OptionSheet, useTheme } from "@platform/mobile";
+import { Banner, LoadingButton, OptionSheet, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import {
@@ -15,7 +15,6 @@ import {
   UTILITY_PLAN_READER_MESSAGES,
 } from "../../constants/utilityPlanForm";
 import { sameFormValues } from "../../lib/sameFormValues";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import type { UtilityPlanFieldChange } from "../../types/UtilityPlanFieldChange";
 import DocumentDraftNotices from "../documentReader/DocumentDraftNotices";
 import DocumentReader from "../documentReader/DocumentReader";

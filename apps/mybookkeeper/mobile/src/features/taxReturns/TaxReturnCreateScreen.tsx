@@ -1,10 +1,9 @@
 import { DEFAULT_FILING_STATUS, FILING_STATUSES } from "@mybookkeeper/api-client/constants/taxFilingStatuses";
 import { taxReturnYearChoices } from "@mybookkeeper/api-client/utils/taxReturnYearChoices";
-import { Banner, EmptyState, LoadingButton, OptionSheet, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, OptionSheet, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { ScrollView } from "react-native";
 import { TAX_RETURN_CREATE_MESSAGES as MESSAGES } from "../../constants/taxReturnCreate";
-import { useDiscardPrompt } from "../../lib/useDiscardPrompt";
 import { useToday } from "../../lib/useToday";
 import PickerField from "../transactions/PickerField";
 import { useIsAdmin } from "../workspace/useIsAdmin";
