@@ -1,18 +1,16 @@
 """MyLanguageTutor account-management services.
 
-delete_user_data: hook for app-owned data the FK cascade can't reach. Every
-tutor table (``tutor_profile``, ``tutor_session``, ``tutor_turn``) carries
-``user_id`` with ``ON DELETE CASCADE``, so the shared account-deletion router's
-single ``DELETE FROM users`` removes them; nothing extra to do here. The
-``ltutor:user:{id}`` rows in ``daily_usage_counters`` hold only a UUID and a
-daily unit count (no personal data) and are left to age out.
+Account deletion: every tutor table (``tutor_profile``, ``tutor_session``,
+``tutor_turn``) carries ``user_id`` with ``ON DELETE CASCADE``. The user's
+``ltutor:user:{id}`` counter rows in ``daily_usage_counters`` are keyed by a
+plain string, so they are removed explicitly by
+``account_deletion_service.prepare_deletion``.
 
 build_export: assembles the full per-user data export -- profile metadata, the
 tutor profile (onboarding language + level), plus every tutor session and
 its turns (decrypted transcript text; the export is the user's own data).
 Transcript text is never logged.
 """
-import logging
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -29,17 +27,6 @@ from app.repositories.tutor import (
     tutor_turn_repository,
 )
 from app.services.tutor.tutor_mappers import to_session_detail
-
-logger = logging.getLogger(__name__)
-
-
-async def delete_user_data(db: AsyncSession, user_id: uuid.UUID) -> None:
-    """Delete app-owned data for ``user_id`` not covered by the FK cascade.
-
-    None today: tutor sessions and turns cascade from ``users``.
-    """
-    logger.info("delete_user_data called for user_id=%s -- tutor rows cascade", user_id)
-
 
 def _profile_export(profile: TutorProfile | None) -> dict[str, str] | None:
     if profile is None:

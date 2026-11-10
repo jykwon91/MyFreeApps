@@ -41,7 +41,7 @@ def build_account_deletion_router(
         [AsyncSession, uuid.UUID, str], Awaitable[bool]
     ],
     unit_of_work_factory: Callable[..., Any],
-    prepare_deletion: Callable[[AsyncSession, Any], Awaitable[Callable[[], None]]] | None = None,
+    prepare_deletion: Callable[[AsyncSession, Any], Awaitable[Callable[[], None] | None]] | None = None,
 ) -> APIRouter:
     """Build a router exposing ``DELETE /users/me``.
 
@@ -66,7 +66,7 @@ def build_account_deletion_router(
             the user's cascade can't remove. Raises
             ``AccountDeletionBlockedError`` to refuse with a 409. Returns
             work to run after the commit and the response, for what a
-            rollback couldn't undo.
+            rollback couldn't undo, or None when there is none.
 
     Returns:
         An ``APIRouter`` with a single DELETE route at ``/users/me``.

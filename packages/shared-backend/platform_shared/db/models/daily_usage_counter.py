@@ -12,7 +12,10 @@ own ``app.models`` package and provisions the table in its own Alembic
 migration (same ownership shape as ``auth_events`` / ``audit_logs``).
 
 Rows are tiny (one per bucket per day) and never updated after their day ends;
-an app may prune old days at its leisure, but nothing reads them.
+nothing reads a past day, so old days are dead weight an app may prune. A bucket
+that embeds a user id (``app:user:<id>``) is removed with
+``daily_quota_repo.delete_daily_usage_for_bucket`` when that user's account is
+deleted - the key is a plain string, so no foreign key cascades to it.
 """
 from datetime import date, datetime, timezone
 
