@@ -28,7 +28,8 @@ function reagentLines(crafting: CraftingByProfession): string[] {
 /**
  * The MGA Prices addon's `Data.lua`: each house's prices as
  * `items[itemId] = { market value, cheapest, on sale }` in copper, with when
- * Blizzard listed them, and its `crafts[itemId] = { recipe, profit }` (the
+ * Blizzard listed them, the house's cut of a sale (so the addon can say
+ * whether an item nets more there than at a vendor), and its `crafts[itemId] = { recipe, profit }` (the
  * best craft that pays with that material there). `reagents` says which
  * leveling routes use each material. The top-level `updated` is the oldest
  * house's, so the addon's "download again" warning never understates how old
@@ -46,7 +47,7 @@ export function addonPriceLua(houses: readonly PriceListResponse[], crafting: Cr
     const prices = mapPriceList(response);
     const updated = epochSeconds(prices.sourceUpdatedAt);
     if (updated !== null) stamps.push(updated);
-    houseLines.push(`    ${prices.faction} = {`);
+    houseLines.push(`    ${prices.faction} = {`, `      cut = ${AUCTION_CUT[prices.faction]},`);
     if (updated !== null) houseLines.push(`      updated = ${updated},`);
     houseLines.push("      items = {");
     for (const p of prices.byId.values()) houseLines.push(`        [${p.itemId}] = {${p.marketValue}, ${p.minBuyout}, ${p.quantity}},`);

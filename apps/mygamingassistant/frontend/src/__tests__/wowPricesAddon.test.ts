@@ -100,6 +100,37 @@ describe("MGA Prices in the game's tooltips", () => {
     expect(tooltip("hover(GameTooltip, 2589); hover(GameTooltip, 2589)")).toHaveLength(4);
   });
 
+  it("says to sell on the AH when the house nets clearly more than a vendor, after its cut", () => {
+    // 30c less the 5% cut nets 28c, against a vendor's 13c.
+    expect(tooltip("sell[2589] = 13; hover(GameTooltip, 2589)")).toEqual([
+      "Auction (Alliance) | 30c",
+      "Cheapest · on sale | 25c · 8109",
+      "Sell on AH | +15c over vendor",
+    ]);
+    expect(tooltip("sell[2589] = 13; GameTooltip.owner = { count = 20 }; hover(GameTooltip, 2589)")).toContain(
+      "Sell on AH | +300c over vendor",
+    );
+  });
+
+  it("says to vendor it when the house's net isn't worth the deposit risk", () => {
+    expect(tooltip("sell[2589] = 26; hover(GameTooltip, 2589)")).toContain("Vendor it | AH nets 28c · vendor 26c");
+    expect(tooltip("sell[2589] = 40; GameTooltip.owner = { count = 2 }; hover(GameTooltip, 2589)")).toContain(
+      "Vendor it | AH nets 56c · vendor 80c",
+    );
+  });
+
+  it("writes each house's cut, and says when vendors won't buy an item", () => {
+    const blackwater = addonPriceLua([house("neutral", ALLIANCE_AT, [[2589, 100, 90, 10, 2, "Linen Cloth"]])], NO_CRAFTING);
+    expect(blackwater).toContain("cut = 0.15,");
+    expect(DATA).toContain("cut = 0.05,");
+    expect(tooltip("sell[2589] = 0; hover(GameTooltip, 2589)")).toContain("Sell on AH | vendors won't buy it");
+  });
+
+  it("gives no verdict before the client knows the item's vendor price, or on the every-house view", () => {
+    expect(tooltip("hover(GameTooltip, 2589)").some((l) => /Sell on AH|Vendor it/.test(l))).toBe(false);
+    expect(tooltip("sell[2589] = 13; shift = true; hover(GameTooltip, 2589)").some((l) => /Sell on AH|Vendor it/.test(l))).toBe(false);
+  });
+
   it("asks for a fresh download once the prices are a day old", () => {
     const lines = tooltip(`NOW = NOW + 2 * 86400; hover(GameTooltip, 2589)`);
     expect(lines[lines.length - 1]).toBe(

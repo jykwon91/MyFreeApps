@@ -1074,6 +1074,11 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   frontend so the caddy image's build context has it): item tooltips show the
   player's faction house price (×stack on a bag stack, cheapest · on sale),
   every house while Shift is held; soulbound items with no price stay quiet;
+  on your-house view a verdict line: "Sell on AH +X over vendor" when the
+  market value after the house's cut (`cut` per house in `Data.lua`, from
+  `AUCTION_CUT`) beats the client's vendor price (`GetItemInfo` 11th return)
+  by >10% (`AH_BEATS_VENDOR_BY`, covers deposit risk), else "Vendor it"; "vendors
+  won't buy it" at vendor price 0; no line while the client hasn't cached it;
   warns once prices are a day old; `/mgaprices` prints what's loaded. Addons
   can't go online, so the Auction house page's folded "Get these prices in your
   game tooltips" card (`PricesAddonCard`, `hooks/useDownloadPricesAddon.ts`)
