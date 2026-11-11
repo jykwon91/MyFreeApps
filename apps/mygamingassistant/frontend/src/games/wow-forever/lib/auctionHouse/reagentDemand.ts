@@ -10,6 +10,7 @@ import {
 import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/craftingRoutes";
 import type { CraftingByProfession } from "@/games/wow-forever/types/auctionHouse/craftingByProfession";
 import type { CraftPays } from "@/games/wow-forever/types/auctionHouse/craftPays";
+import type { ReagentWant } from "@/games/wow-forever/types/auctionHouse/reagentWant";
 import type { ReagentDemand } from "@/games/wow-forever/types/auctionHouse/reagentDemand";
 import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
 import type { CraftingProfession, CraftRecipe, CraftRouteEntry } from "@/games/wow-forever/types/crafting";
@@ -157,6 +158,31 @@ export function craftsThatPay(crafting: CraftingByProfession, byId: ReadonlyMap<
         if (soldByVendors(data, id)) continue;
         const current = best.get(id);
         if (!current || profit > current.profit) best.set(id, { recipe: recipe.name, profit });
+      }
+    }
+  }
+  return best;
+}
+
+/**
+ * Each material's most valuable product on one house: the recipe whose made items sell for the most per craft,
+ * rare patterns included (their crafters buy too). That demand is what holds a material's price up, even once
+ * its price has risen so far that the craft no longer pays. Vendor-sold materials are left out, and so is a
+ * product that sells for no more than the material it uses.
+ */
+export function mostWantedFor(crafting: CraftingByProfession, byId: ReadonlyMap<number, AuctionPrice>): Map<number, ReagentWant> {
+  const best = new Map<number, ReagentWant>();
+  for (const data of crafting.values()) {
+    for (const recipe of data.file.recipes) {
+      const product = recipe.creates && !recipe.enchant ? byId.get(recipe.creates.id) : undefined;
+      if (!recipe.creates || !product || product.listings < MIN_PRODUCT_LISTINGS) continue;
+      const sells = product.marketValue * recipe.creates.count;
+      for (const reagent of recipe.reagents) {
+        if (soldByVendors(data, reagent.id)) continue;
+        // A product worth less than the material it eats (Essence of Air into Fire) isn't what holds that price up.
+        if (sells <= (byId.get(reagent.id)?.marketValue ?? 0) * reagent.count) continue;
+        const current = best.get(reagent.id);
+        if (!current || sells > current.sells) best.set(reagent.id, { recipe: recipe.name, count: reagent.count, sells });
       }
     }
   }

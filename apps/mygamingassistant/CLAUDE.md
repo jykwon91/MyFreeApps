@@ -1100,6 +1100,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `crafts[id] = {recipe, profit}` = the best craft that pays after the house's
   cut (5%, Blackwater 15%), only for widely known recipes (no rare-drop
   patterns), made items with ≥5 auctions, profit ≥1s and ≥10% of the materials.
+  Per house `wanted[id] = {recipe, count, sells}` (`mostWantedFor`) = the most
+  valuable product the material goes into there (rare patterns included, not
+  enchants, ≥5 auctions, selling for more than the material it uses — so
+  Essence of Air → Fire doesn't count): the tooltip's "Wanted for | Runecloth
+  Bag x5 · sells 7g 24s" says why a dear material's price is held up even when
+  no craft pays; hidden when it's the same recipe as "Crafting pays".
   No price history exists, so the tooltip never claims a price WILL rise.
   Chat (`MGAPrices.lua`): a `ChatFrame_AddMessageEventFilter` on chat/loot
   events writes your house's market value after each item link (display only;

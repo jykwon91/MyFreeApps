@@ -156,7 +156,12 @@ local function addDemand(tooltip, itemId)
   if craft then
     line(tooltip, "Crafting pays", craft[1] .. " +" .. money(craft[2]), LABEL, VALUE)
   end
-  if reagent.leveling == "" and not craft then
+  -- What holds the price up: the most valuable thing it goes into here, even when the craft no longer pays.
+  local wanted = house and house.wanted and house.wanted[itemId]
+  if wanted and not (craft and craft[1] == wanted[1]) then
+    line(tooltip, "Wanted for", wanted[1] .. " x" .. wanted[2] .. " · sells " .. money(wanted[3]), LABEL, VALUE)
+  end
+  if reagent.leveling == "" and not craft and not wanted then
     line(tooltip, "Reagent", reagent.recipes .. (reagent.recipes == 1 and " recipe" or " recipes") .. " (" .. reagent.professions .. ")", MUTED, MUTED)
   end
 end
