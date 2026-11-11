@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AddCompanyDialog from "../AddCompanyDialog";
+import { COMPANY_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/companyFormProblems";
 
 // ---- mocks ----
 
@@ -124,6 +125,31 @@ describe("AddCompanyDialog", () => {
       expect(mockShowError).toHaveBeenCalled();
       expect(mockOnOpenChange).not.toHaveBeenCalled();
     });
+  });
+
+  it("says on the domain field, not in a toast, when another company already has that domain", async () => {
+    const user = userEvent.setup();
+    const mockCreate = vi.fn().mockReturnValue({
+      unwrap: () => Promise.reject({ status: 409, data: { detail: "A company with primary_domain='acme.com' already exists." } }),
+    });
+    const stubMutation = [mockCreate, { isLoading: false }] as unknown as ReturnType<typeof useCreateCompanyMutation>;
+    mockUseCreateCompanyMutation.mockReturnValue(stubMutation);
+
+    renderDialog(true);
+
+    await user.type(screen.getByLabelText(/name/i), "Acme Again");
+    await user.type(screen.getByPlaceholderText("acme.com"), "acme.com");
+    await user.click(screen.getByRole("button", { name: /add company/i }));
+
+    expect(await screen.findByText(COMPANY_FORM_PROBLEMS.duplicateDomain)).toBeInTheDocument();
+    expect(screen.queryByText(/must be unique across your companies/i)).not.toBeInTheDocument();
+    expect(mockShowError).not.toHaveBeenCalled();
+    expect(mockShowSuccess).not.toHaveBeenCalled();
+    expect(mockOnOpenChange).not.toHaveBeenCalled();
+
+    // Changing the domain clears it.
+    await user.type(screen.getByPlaceholderText("acme.com"), "x");
+    await waitFor(() => expect(screen.queryByText(COMPANY_FORM_PROBLEMS.duplicateDomain)).not.toBeInTheDocument());
   });
 
   it("closes the dialog on cancel without calling the mutation", async () => {

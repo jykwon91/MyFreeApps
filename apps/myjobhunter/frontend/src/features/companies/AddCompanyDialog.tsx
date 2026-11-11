@@ -3,7 +3,10 @@ import { showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import { X } from "lucide-react";
 import { useCreateCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
 import type { Company } from "@myjobhunter/api-client/types/company";
+import { COMPANY_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/companyFormProblems";
 import type { CompanyCreateRequest } from "@myjobhunter/api-client/types/company-create-request";
+import type { CompanyFormProblems } from "@myjobhunter/api-client/types/company/company-form-problems";
+import { isDuplicateCompanyDomainError } from "@myjobhunter/api-client/utils/isDuplicateCompanyDomainError";
 import CompanyForm from "./CompanyForm";
 
 export interface AddCompanyDialogProps {
@@ -21,15 +24,18 @@ export interface AddCompanyDialogProps {
 export default function AddCompanyDialog({ open, onOpenChange, onCreated }: AddCompanyDialogProps) {
   const [createCompany, { isLoading }] = useCreateCompanyMutation();
 
-  const handleSubmit = async (request: CompanyCreateRequest) => {
+  // A domain another company already has is said on the domain field, as on the phone.
+  const handleSubmit = async (request: CompanyCreateRequest): Promise<CompanyFormProblems | undefined> => {
     try {
       const created = await createCompany(request).unwrap();
       showSuccess(`Company "${created.name}" added`);
       onCreated?.(created);
       onOpenChange(false);
     } catch (err) {
+      if (isDuplicateCompanyDomainError(err)) return { primary_domain: COMPANY_FORM_PROBLEMS.duplicateDomain };
       showError(`Couldn't create company: ${extractErrorMessage(err)}`);
     }
+    return undefined;
   };
 
   return (

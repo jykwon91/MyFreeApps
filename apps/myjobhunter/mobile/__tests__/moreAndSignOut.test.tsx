@@ -67,10 +67,24 @@ describe("the signed-in shell", () => {
 
     expect(await screen.findByText(`Signed in as ${ACCOUNT_EMAIL}`)).toBeTruthy();
     expect(await screen.findByText("Old iPad")).toBeTruthy();
-    for (const item of MORE_MENU.flatMap((group) => group.items)) {
+    for (const item of MORE_MENU.flatMap((group) => group.items).filter((each) => !each.screen)) {
       await fireEvent.press(screen.getByRole("link", { name: item.label }));
       expect(openURL).toHaveBeenLastCalledWith(`${WEB_BASE_URL}${item.webPath}`);
     }
+  });
+
+  it("opens the pages the phone has from More on the phone, not the website", async () => {
+    serve({
+      "GET /auth/mobile/sessions": () => ({ status: 200, data: DEVICES }),
+      "GET /companies": () => ({ status: 200, data: { items: [], total: 0 } }),
+    });
+    await renderApp("/more");
+
+    await fireEvent.press(await screen.findByRole("button", { name: "Companies" }));
+
+    expect(screen).toHavePathname("/companies");
+    expect(await screen.findByRole("header", { name: "No companies here yet" })).toBeTruthy();
+    expect(openURL).not.toHaveBeenCalled();
   });
 
   it("signs out of this phone, tells the server, and goes back to sign-in", async () => {

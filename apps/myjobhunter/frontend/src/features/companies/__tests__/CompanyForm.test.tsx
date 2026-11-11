@@ -5,10 +5,17 @@
  * These tests cover: validation, submit payload, cancel, initialValues.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CompanyForm from "../CompanyForm";
 import type { CompanyCreateRequest } from "@myjobhunter/api-client/types/company-create-request";
+import {
+  COMPANY_DOMAIN_MAX_LENGTH,
+  COMPANY_HQ_LOCATION_MAX_LENGTH,
+  COMPANY_INDUSTRY_MAX_LENGTH,
+  COMPANY_NAME_MAX_LENGTH,
+} from "@myjobhunter/api-client/constants/companyFieldLimits";
+import { COMPANY_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/companyFormProblems";
 
 vi.mock("@platform/ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@platform/ui")>();
@@ -100,6 +107,44 @@ describe("CompanyForm", () => {
 
       await waitFor(() => {
         expect(screen.queryByText("Name is required")).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("length limits", () => {
+    it("says which fields are longer than the server accepts, keeps the full text, and doesn't submit", async () => {
+      renderForm();
+      const longName = "n".repeat(COMPANY_NAME_MAX_LENGTH + 1);
+      // Pasted in one go, as a long value usually arrives.
+      fireEvent.change(screen.getByLabelText(/name/i), { target: { value: longName } });
+      fireEvent.change(screen.getByPlaceholderText("acme.com"), { target: { value: "d".repeat(COMPANY_DOMAIN_MAX_LENGTH + 1) } });
+      fireEvent.change(screen.getByPlaceholderText("e.g. SaaS"), { target: { value: "i".repeat(COMPANY_INDUSTRY_MAX_LENGTH + 1) } });
+      fireEvent.change(screen.getByPlaceholderText("e.g. SF, NYC"), { target: { value: "h".repeat(COMPANY_HQ_LOCATION_MAX_LENGTH + 1) } });
+      fireEvent.click(screen.getByRole("button", { name: /add company/i }));
+
+      expect(await screen.findByText(COMPANY_FORM_PROBLEMS.nameTooLong)).toBeInTheDocument();
+      expect(screen.getByText(COMPANY_FORM_PROBLEMS.domainTooLong)).toBeInTheDocument();
+      expect(screen.getByText(COMPANY_FORM_PROBLEMS.industryTooLong)).toBeInTheDocument();
+      expect(screen.getByText(COMPANY_FORM_PROBLEMS.hqLocationTooLong)).toBeInTheDocument();
+      expect(screen.getByDisplayValue(longName)).toBeInTheDocument();
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    it("submits values right at the limits", async () => {
+      mockOnSubmit.mockResolvedValue(undefined);
+      renderForm();
+      const name = "n".repeat(COMPANY_NAME_MAX_LENGTH);
+      fireEvent.change(screen.getByLabelText(/name/i), { target: { value: name } });
+      fireEvent.change(screen.getByPlaceholderText("e.g. SaaS"), { target: { value: "i".repeat(COMPANY_INDUSTRY_MAX_LENGTH) } });
+      fireEvent.click(screen.getByRole("button", { name: /add company/i }));
+
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledWith<[CompanyCreateRequest]>({
+          name,
+          primary_domain: null,
+          industry: "i".repeat(COMPANY_INDUSTRY_MAX_LENGTH),
+          hq_location: null,
+        });
       });
     });
   });

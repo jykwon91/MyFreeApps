@@ -4,6 +4,7 @@ import { Building2, Plus } from "lucide-react";
 import { DataTable, EmptyState, type ColumnDef } from "@platform/ui";
 import CompaniesSkeleton from "@/features/companies/CompaniesSkeleton";
 import { optionalCompanyTextColumn } from "@/features/companies/optionalCompanyTextColumn";
+import { companyTextSortFn } from "@/features/companies/companyTextSortFn";
 import AddCompanyDialog from "@/features/companies/AddCompanyDialog";
 import { useListCompaniesQuery } from "@myjobhunter/api-client/store/companiesApi";
 import { EMPTY_STATES } from "@/constants/empty-states";
@@ -14,6 +15,7 @@ const COLUMNS: ColumnDef<Company>[] = [
     id: "name",
     header: "Name",
     accessorKey: "name",
+    sortFn: companyTextSortFn,
     cell: ({ getValue }) => <span className="font-medium">{getValue<string>()}</span>,
   },
   optionalCompanyTextColumn("primary_domain", "Domain"),
