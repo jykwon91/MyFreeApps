@@ -52,7 +52,7 @@ async def list_by_user(
             JobAnalysis.user_id == user_id,
             JobAnalysis.deleted_at.is_(None),
         )
-        .order_by(JobAnalysis.created_at.desc())
+        .order_by(JobAnalysis.created_at.desc(), JobAnalysis.id.desc())
         .limit(limit)
         .offset(offset)
     )
