@@ -12,11 +12,12 @@ time = function() return NOW end
 shift = false
 faction = "Alliance"
 bind = {}
+sell = {}
 out = {}
 IsShiftKeyDown = function() return shift end
 UnitFactionGroup = function() return faction end
 -- Like the Forever client: only C_Item.GetItemInfo, no global GetItemInfo.
-C_Item = { GetItemInfo = function(id) return "x",nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil,nil, bind[id] end }
+C_Item = { GetItemInfo = function(id) return "x",nil,nil,nil,nil,nil,nil,nil,nil,nil,sell[id],nil,nil, bind[id] end }
 GetCoinTextureString = function(c) return c .. "c" end
 DEFAULT_CHAT_FRAME = { AddMessage = function(_, m) table.insert(out, "chat: " .. m) end }
 SlashCmdList = {}

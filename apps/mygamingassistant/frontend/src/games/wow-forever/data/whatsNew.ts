@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-11",
+    title: "Addon: sell on the AH or vendor it",
+    summary:
+      "Download the MGA Prices addon again: an item on sale at your auction house now says in its tooltip whether to sell it there or vendor it, weighing what the house pays after its cut against the vendor's price.",
+    to: "/wow-forever/auction-house",
+  },
+  {
+    date: "2026-11-11",
     title: "Class icons in drop-downs",
     summary: "Every class drop-down (Best gear, Item Compare, food, gold, downrank and the World Map) shows your class's in-game icon beside it.",
     to: "/wow-forever/gear",

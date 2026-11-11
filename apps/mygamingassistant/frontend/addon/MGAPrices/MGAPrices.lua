@@ -9,6 +9,8 @@
 --            On crafting materials: which profession leveling routes use it, and
 --            the best craft that pays with it on your house right now — the
 --            demand that can push its price up. Vendor-sold ones just say so.
+--            Whether to sell it on the AH or vendor it: what the house pays after
+--            its cut against what a vendor pays.
 --   Chat:    hover an item link to see its tooltip (priced like any other), and
 --            each item link in chat gets your house's price after it.
 --   /mgaprices       which prices are loaded and how old they are
@@ -21,11 +23,15 @@ local OLD_AFTER_SECONDS = 24 * 60 * 60
 local HOUSES = { "alliance", "horde", "neutral" }
 local HOUSE_LABEL = { alliance = "Alliance", horde = "Horde", neutral = "Blackwater" }
 local BIND_ON_PICKUP = 1
+-- The auction house only wins when it nets this much more than a vendor: an
+-- unsold auction loses its deposit, and selling takes a trip back to the mailbox.
+local AH_BEATS_VENDOR_BY = 1.1
 
 local LABEL = { 0.2, 0.67, 1 }
 local VALUE = { 1, 1, 1 }
 local MUTED = { 0.6, 0.6, 0.6 }
 local WARN = { 1, 0.5, 0.25 }
+local GOOD = { 0.25, 1, 0.25 }
 
 local function say(message)
   DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. message)
@@ -79,9 +85,34 @@ local function canBeAuctioned(itemId)
   return bindType ~= BIND_ON_PICKUP
 end
 
+local function vendorPrice(itemId)
+  if not getItemInfo then return nil end
+  return select(11, getItemInfo(itemId))
+end
+
+-- Sell on the AH or vendor it: the house's market value after its cut against
+-- the vendor's price. Unknown until the client has the item's info cached.
+local function addVerdict(tooltip, itemId, market, cut, count)
+  local vendor = vendorPrice(itemId)
+  if not vendor or not cut then return end
+  if vendor == 0 then
+    line(tooltip, "Sell on AH", "vendors won't buy it", GOOD, MUTED)
+    return
+  end
+  -- The house takes its cut, rounded down, of the whole sale.
+  local total = market * count
+  local nets = total - floor(total * cut)
+  local vendors = vendor * count
+  if nets > vendors * AH_BEATS_VENDOR_BY then
+    line(tooltip, "Sell on AH", "+" .. money(nets - vendors) .. " over vendor", GOOD, VALUE)
+  else
+    line(tooltip, "Vendor it", "AH nets " .. money(nets) .. " · vendor " .. money(vendors), WARN, MUTED)
+  end
+end
+
 local function addYourHouse(tooltip, itemId)
   local house = playerHouse()
-  local row = houseRow(house, itemId)
+  local row, data = houseRow(house, itemId)
   if not row then
     line(tooltip, "Auction (" .. HOUSE_LABEL[house] .. ")", "not on sale", LABEL, MUTED)
     return
@@ -95,6 +126,7 @@ local function addYourHouse(tooltip, itemId)
     line(tooltip, "Auction (" .. HOUSE_LABEL[house] .. ")", money(market), LABEL, VALUE)
   end
   line(tooltip, "Cheapest · on sale", money(cheapest) .. " · " .. quantity, MUTED, MUTED)
+  addVerdict(tooltip, itemId, market, data.cut, count)
 end
 
 local function addEveryHouse(tooltip, itemId)
