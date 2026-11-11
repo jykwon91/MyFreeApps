@@ -95,4 +95,35 @@ describe("ToastProvider", () => {
     jest.spyOn(console, "error").mockImplementation(() => {});
     await expect(render(<Sender />)).rejects.toThrow("needs a ToastProvider");
   });
+  it("shows an action with the message, and drops it with the next toast", async () => {
+    const onUndo = jest.fn();
+    function ActionSender() {
+      const { showToast } = useToast();
+      return (
+        <>
+          <Pressable onPress={() => showToast("Dismissed.", "success", { label: "Undo", onPress: onUndo })}>
+            <Text>Dismiss it</Text>
+          </Pressable>
+          <Pressable onPress={() => showToast("Saved")}>
+            <Text>Save it</Text>
+          </Pressable>
+        </>
+      );
+    }
+    await render(
+      <ToastProvider bottomOffset={0}>
+        <ActionSender />
+      </ToastProvider>,
+    );
+
+    await fireEvent.press(screen.getByText("Dismiss it"));
+    await fireEvent.press(screen.getByRole("button", { name: "Undo" }));
+    expect(onUndo).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert", { name: "Dismissed." })).toBeNull();
+
+    await fireEvent.press(screen.getByText("Dismiss it"));
+    await fireEvent.press(screen.getByText("Save it"));
+    expect(screen.getByRole("alert", { name: "Saved" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+  });
 });

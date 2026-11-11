@@ -68,8 +68,6 @@ vi.mock("@platform/ui", () => ({
   ),
   showError: vi.fn(),
   showSuccess: vi.fn(),
-  timeAgo: () => "2 hours ago",
-  extractErrorMessage: vi.fn(),
   Skeleton: () => <div data-testid="skeleton" />,
 }));
 
@@ -77,10 +75,8 @@ vi.mock("../SavedSearchesSkeleton", () => ({
   default: () => <div data-testid="sources-skeleton" />,
 }));
 
-vi.mock("../saved-search-summary", () => ({
+vi.mock("@myjobhunter/api-client/utils/summarizeSearchQuery", () => ({
   summarizeSearchQuery: () => "Software Engineer — Remote",
-  getSourceLabel: (s: string) => s,
-  getSourceBadgeColor: () => "gray",
 }));
 
 import {
@@ -137,7 +133,7 @@ describe("SavedSearchesPanel", () => {
       isError: false,
     } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
 
-    render(<SavedSearchesPanel />);
+    render(<SavedSearchesPanel onRefreshed={vi.fn()} />);
 
     expect(screen.getByTestId("sources-skeleton")).toBeInTheDocument();
   });
@@ -149,7 +145,7 @@ describe("SavedSearchesPanel", () => {
       isError: true,
     } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
 
-    render(<SavedSearchesPanel />);
+    render(<SavedSearchesPanel onRefreshed={vi.fn()} />);
 
     expect(
       screen.getByText(/Couldn't load saved searches/i),
@@ -163,7 +159,7 @@ describe("SavedSearchesPanel", () => {
       isError: false,
     } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
 
-    const { container } = render(<SavedSearchesPanel />);
+    const { container } = render(<SavedSearchesPanel onRefreshed={vi.fn()} />);
 
     expect(container.firstChild).toBeNull();
   });
@@ -175,7 +171,7 @@ describe("SavedSearchesPanel", () => {
       isError: false,
     } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
 
-    render(<SavedSearchesPanel />);
+    render(<SavedSearchesPanel onRefreshed={vi.fn()} />);
 
     expect(screen.getByText("Software Engineer — Remote")).toBeInTheDocument();
   });
@@ -187,7 +183,7 @@ describe("SavedSearchesPanel", () => {
       isError: false,
     } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
 
-    render(<SavedSearchesPanel />);
+    render(<SavedSearchesPanel onRefreshed={vi.fn()} />);
 
     expect(screen.getByText("Fetch failed")).toBeInTheDocument();
     expect(screen.getByTestId("alert-icon")).toBeInTheDocument();
@@ -200,7 +196,7 @@ describe("SavedSearchesPanel", () => {
       isError: false,
     } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
 
-    render(<SavedSearchesPanel />);
+    render(<SavedSearchesPanel onRefreshed={vi.fn()} />);
 
     expect(screen.queryByText("Fetch failed")).toBeNull();
   });

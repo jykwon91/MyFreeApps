@@ -2,7 +2,12 @@ import SavedSearchesSkeleton from "@/features/discover/SavedSearchesSkeleton";
 import SavedSearchRow from "@/features/discover/SavedSearchRow";
 import { useListDiscoverySourcesQuery } from "@myjobhunter/api-client/store/discoverApi";
 
-export default function SavedSearchesPanel() {
+interface SavedSearchesPanelProps {
+  /** Called with a saved search's id when its refresh added postings, so the inbox polls while they're scored. */
+  onRefreshed: (sourceId: string) => void;
+}
+
+export default function SavedSearchesPanel({ onRefreshed }: SavedSearchesPanelProps) {
   const { data: sources, isLoading, isError } = useListDiscoverySourcesQuery();
 
   if (isLoading) {
@@ -25,7 +30,7 @@ export default function SavedSearchesPanel() {
         Saved searches
       </h2>
       {sources.map((source) => (
-        <SavedSearchRow key={source.id} source={source} />
+        <SavedSearchRow key={source.id} onRefreshed={onRefreshed} source={source} />
       ))}
     </div>
   );

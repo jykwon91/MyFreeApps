@@ -10,6 +10,9 @@ Covers:
 """
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 from app.services.discovery.discovery_fetch_service import (
     _apply_post_fetch_filters,
     _build_jsearch_query,
@@ -206,12 +209,12 @@ def test_staffing_chip_drops_via_dice_postings() -> None:
 
 
 # ===========================================================================
-# Frontend / backend key drift — industry-chips.ts vs INDUSTRY_DENYLISTS
+# Client / backend key drift — industryChips.ts vs INDUSTRY_DENYLISTS
 # ===========================================================================
 
 
 def _read_frontend_chip_keys() -> list[str]:
-    """Parse industry-chips.ts to extract every chip's ``value`` field.
+    """Parse api-client industryChips.ts to extract every chip's ``value`` field.
 
     The TS file declares ``INDUSTRY_CHIPS: IndustryChip[]`` where each
     element is an object literal with ``value: "<key>"`` and ``label: "..."``.
@@ -220,19 +223,15 @@ def _read_frontend_chip_keys() -> list[str]:
 
     If the TS file's shape changes (e.g. the field is renamed from ``value``
     to ``key``), this regex stops matching and the test fails loudly with
-    "Frontend industry-chips.ts produced no keys" — which is the right signal
+    "industryChips.ts produced no keys" — which is the right signal
     to update the regex here rather than to silently pass.
     """
-    from pathlib import Path
-    import re
-
     chips_ts = (
         Path(__file__).parent.parent.parent
-        / "frontend"
+        / "api-client"
         / "src"
-        / "features"
-        / "discover"
-        / "industry-chips.ts"
+        / "constants"
+        / "industryChips.ts"
     )
     text = chips_ts.read_text(encoding="utf-8")
     return re.findall(r'\bvalue\s*:\s*"([^"]+)"', text)
@@ -247,12 +246,12 @@ def test_every_frontend_chip_has_backend_denylist_entry() -> None:
     is active when it isn't.
 
     If this test fails, the missing keys must be added to
-    ``industry_denylists.py`` OR the chip removed from ``industry-chips.ts``.
+    ``industry_denylists.py`` OR the chip removed from ``industryChips.ts``.
     Do NOT auto-fix in this test — the human decides which side is canonical.
     """
     chip_keys = _read_frontend_chip_keys()
     assert chip_keys, (
-        "Frontend industry-chips.ts produced no keys — "
+        "api-client industryChips.ts produced no keys — "
         "the value-field regex may be stale or the file has moved"
     )
     missing = [k for k in chip_keys if k not in INDUSTRY_DENYLISTS]
@@ -260,5 +259,5 @@ def test_every_frontend_chip_has_backend_denylist_entry() -> None:
         f"Frontend INDUSTRY_CHIPS has keys with no backend entry in "
         f"INDUSTRY_DENYLISTS: {missing}. "
         f"Add them to apps/myjobhunter/backend/app/services/discovery/"
-        f"industry_denylists.py or remove from industry-chips.ts."
+        f"industry_denylists.py or remove from industryChips.ts."
     )

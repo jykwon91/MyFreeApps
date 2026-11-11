@@ -63,8 +63,6 @@ vi.mock("@platform/ui", async (importOriginal) => {
     ) : null,
   showError: (msg: string) => mockShowError(msg),
   showSuccess: (msg: string) => mockShowSuccess(msg),
-  extractErrorMessage: (e: unknown) =>
-    e instanceof Error ? e.message : String(e),
   InlineBoldText: ({ text }: { text: string }) => <span>{text}</span>,
   Skeleton: () => <div data-testid="skeleton" />,
   // Used by GreenhouseConfigSection + LeverConfigSection
@@ -130,7 +128,7 @@ vi.mock("../dialog-sections/ExclusionsSection", () => ({
 }));
 
 // Mock prefill hook — no loading, no prefill.
-vi.mock("../useDiscoveryDefaultsPrefill", () => ({
+vi.mock("@myjobhunter/api-client/hooks/useDiscoveryDefaultsPrefill", () => ({
   useDiscoveryDefaultsPrefill: () => ({
     profile: null,
     recentRoleSuggestions: [],
@@ -141,11 +139,8 @@ vi.mock("../useDiscoveryDefaultsPrefill", () => ({
   }),
 }));
 
-vi.mock("../saved-search-summary", () => ({
+vi.mock("@myjobhunter/api-client/utils/buildSavedSearchSummary", () => ({
   buildSavedSearchSummary: () => null,
-  summarizeSearchQuery: () => "",
-  getSourceLabel: (s: string) => s,
-  getSourceBadgeColor: () => "gray",
 }));
 
 // ---------------------------------------------------------------------------
@@ -533,5 +528,33 @@ describe("NewSavedSearchDialog — Greenhouse excluded_keywords payload", () => 
     });
     const callArgs = mockCreateSource.mock.calls[0][0];
     expect(callArgs.config).not.toHaveProperty("excluded_keywords");
+  });
+});
+
+describe("NewSavedSearchDialog — create failures", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function rejected(error: unknown) {
+    return { unwrap: () => Promise.reject(error) };
+  }
+
+  async function createGreenhouse() {
+    renderDialog();
+    await userEvent.selectOptions(getSourceSelect(), "greenhouse");
+    await userEvent.type(screen.getByLabelText("Greenhouse board token"), "stripe");
+    fireEvent.click(screen.getByTestId("confirm-btn"));
+  }
+
+  it("shows the server's reason", async () => {
+    mockCreateSource.mockReturnValue(rejected({ status: 409, data: { detail: "A saved search with this name already exists" } }));
+    await createGreenhouse();
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith("A saved search with this name already exists"));
+  });
+
+  it("falls back to its own message when the server gives no reason", async () => {
+    mockCreateSource.mockReturnValue(rejected({ status: "FETCH_ERROR", data: undefined }));
+    await createGreenhouse();
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith("Failed to create saved search"));
+    expect(mockShowSuccess).not.toHaveBeenCalled();
   });
 });

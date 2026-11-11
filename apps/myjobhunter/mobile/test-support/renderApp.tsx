@@ -12,6 +12,7 @@ import AddApplicationRoute from "../app/(app)/applications/new";
 import CompanyRoute from "../app/(app)/companies/[id]";
 import CompaniesRoute from "../app/(app)/companies/index";
 import DeleteAccountRoute from "../app/(app)/delete-account";
+import DiscoverRoute from "../app/(app)/discover";
 import DocumentsRoute from "../app/(app)/documents";
 import SignInRoute from "../app/sign-in";
 
@@ -26,6 +27,7 @@ export const APP_ROUTES = {
   "(app)/companies/[id]": CompanyRoute,
   "(app)/companies/index": CompaniesRoute,
   "(app)/delete-account": DeleteAccountRoute,
+  "(app)/discover": DiscoverRoute,
   "(app)/documents": DocumentsRoute,
   "(app)/(tabs)/_layout": TabsLayout,
   "(app)/(tabs)/index": Dashboard,

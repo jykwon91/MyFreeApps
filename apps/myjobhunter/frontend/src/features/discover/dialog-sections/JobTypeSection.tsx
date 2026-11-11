@@ -1,4 +1,5 @@
 import { FormField } from "@platform/ui";
+import { EMPLOYMENT_TYPE_OPTIONS, EXPERIENCE_OPTIONS } from "@myjobhunter/api-client/constants/jsearchFilterOptions";
 import type { EmploymentType } from "@myjobhunter/api-client/types/discovery/employment-type";
 import type { Experience } from "@myjobhunter/api-client/types/discovery/experience";
 
@@ -33,11 +34,11 @@ export default function JobTypeSection({
             className={INPUT_CLASS}
             {...field}
           >
-            <option value="FULLTIME">Full-time</option>
-            <option value="CONTRACTOR">Contract</option>
-            <option value="PARTTIME">Part-time</option>
-            <option value="INTERN">Intern</option>
-            <option value="">Any</option>
+            {EMPLOYMENT_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         )}
       </FormField>
@@ -50,11 +51,11 @@ export default function JobTypeSection({
             className={INPUT_CLASS}
             {...field}
           >
-            <option value="">Any</option>
-            <option value="more_than_3_years_experience">3+ years</option>
-            <option value="under_3_years_experience">Under 3 years</option>
-            <option value="no_experience">Entry level</option>
-            <option value="no_degree">No degree required</option>
+            {EXPERIENCE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         )}
       </FormField>

@@ -8,8 +8,9 @@ import DiscoverViewTabs from "@/features/discover/DiscoverViewTabs";
 import NewSavedSearchDialog from "@/features/discover/NewSavedSearchDialog";
 import SavedSearchesPanel from "@/features/discover/SavedSearchesPanel";
 import SourceFilterChips from "@/features/discover/SourceFilterChips";
+import { useScoringWindow } from "@myjobhunter/api-client/hooks/useScoringWindow";
 import { useListDiscoverySourcesQuery } from "@myjobhunter/api-client/store/discoverApi";
-import type { DiscoverView } from "@/types/discovery/discover-view";
+import type { DiscoverView } from "@myjobhunter/api-client/types/discovery/discover-view";
 
 /**
  * /discover — proactive job-posting inbox.
@@ -33,6 +34,8 @@ export default function Discover() {
   const activeView: DiscoverView = rawView === "saved" ? "saved" : "inbox";
 
   const activeSourceId = searchParams.get("source");
+  // Owned here, above both the saved searches (whose refresh opens it) and the inbox (which it polls).
+  const scoringWindow = useScoringWindow(activeSourceId);
 
   function setView(view: DiscoverView) {
     setSearchParams(
@@ -83,7 +86,7 @@ export default function Discover() {
         </Button>
       </header>
 
-      <SavedSearchesPanel />
+      <SavedSearchesPanel onRefreshed={scoringWindow.open} />
 
       {hasSources && (
         <SourceFilterChips
@@ -99,6 +102,7 @@ export default function Discover() {
         <DiscoverInboxView
           hasSources={hasSources}
           activeSourceId={activeSourceId}
+          scoringWindow={scoringWindow}
         />
       ) : (
         <DiscoverSavedView />

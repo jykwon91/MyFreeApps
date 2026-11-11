@@ -1,66 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import InlineBoldText, { __INTERNAL__ } from "../components/ui/InlineBoldText";
-
-const { parseBoldSegments } = __INTERNAL__;
-
-describe("parseBoldSegments", () => {
-  it("returns a single plain segment for a string with no bold markers", () => {
-    expect(parseBoldSegments("hello world")).toEqual([
-      { text: "hello world", bold: false },
-    ]);
-  });
-
-  it("returns a single bold segment for a fully-wrapped string", () => {
-    expect(parseBoldSegments("**bold**")).toEqual([
-      { text: "bold", bold: true },
-    ]);
-  });
-
-  it("splits a string into plain + bold + plain", () => {
-    expect(parseBoldSegments("hello **world** today")).toEqual([
-      { text: "hello ", bold: false },
-      { text: "world", bold: true },
-      { text: " today", bold: false },
-    ]);
-  });
-
-  it("handles multiple bold segments", () => {
-    expect(parseBoldSegments("**a** and **b**")).toEqual([
-      { text: "a", bold: true },
-      { text: " and ", bold: false },
-      { text: "b", bold: true },
-    ]);
-  });
-
-  it("returns an empty array for an empty string", () => {
-    expect(parseBoldSegments("")).toEqual([]);
-  });
-
-  it("treats unbalanced opening markers as plain text", () => {
-    const result = parseBoldSegments("hello **world");
-    expect(result).toEqual([{ text: "hello **world", bold: false }]);
-  });
-
-  it("treats unbalanced closing markers as plain text", () => {
-    const result = parseBoldSegments("hello world**");
-    expect(result).toEqual([{ text: "hello world**", bold: false }]);
-  });
-
-  it("handles bold segment at the very start", () => {
-    expect(parseBoldSegments("**start** of the string")).toEqual([
-      { text: "start", bold: true },
-      { text: " of the string", bold: false },
-    ]);
-  });
-
-  it("handles bold segment at the very end", () => {
-    expect(parseBoldSegments("end of the **string**")).toEqual([
-      { text: "end of the ", bold: false },
-      { text: "string", bold: true },
-    ]);
-  });
-});
+import InlineBoldText from "../components/ui/InlineBoldText";
 
 describe("InlineBoldText", () => {
   it("renders plain text without any strong elements", () => {

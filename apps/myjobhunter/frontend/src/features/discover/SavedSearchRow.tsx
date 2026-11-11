@@ -1,30 +1,31 @@
 import { useState } from "react";
 import { AlertTriangle, Pencil, RefreshCw, Trash2 } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Card,
-  LoadingButton,
-  showError,
-  showSuccess,
-  timeAgo,
-  extractErrorMessage,
-} from "@platform/ui";
+import { Badge, Button, Card, LoadingButton, showError, showSuccess } from "@platform/ui";
 import {
   useDeactivateDiscoverySourceMutation,
   useRefreshDiscoverySourceMutation,
 } from "@myjobhunter/api-client/store/discoverApi";
 import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
-import { summarizeSearchQuery, getSourceLabel, getSourceBadgeColor } from "./saved-search-summary";
-import { refreshIntervalShortLabel } from "./refresh-interval";
+import { describeRefreshError } from "@myjobhunter/api-client/utils/describeRefreshError";
+import { describeRefreshResult } from "@myjobhunter/api-client/utils/describeRefreshResult";
+import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
+import { discoverySourceLabel } from "@myjobhunter/api-client/utils/discoverySourceLabel";
+import { discoverySourceTone } from "@myjobhunter/api-client/utils/discoverySourceTone";
+import { refreshIntervalShortLabel } from "@myjobhunter/api-client/utils/refreshIntervalShortLabel";
+import { savedSearchCadence } from "@myjobhunter/api-client/utils/savedSearchCadence";
+import { summarizeSearchQuery } from "@myjobhunter/api-client/utils/summarizeSearchQuery";
+import { STATUS_TONE_BADGE_COLORS } from "@/constants/statusToneBadgeColors";
+import { DISCOVER_ACTION_MESSAGES } from "@myjobhunter/api-client/constants/discoverMessages";
 import EditFrequencyPopover from "./EditFrequencyPopover";
 import EditSavedSearchDialog from "./EditSavedSearchDialog";
 
 interface SavedSearchRowProps {
   source: DiscoverySource;
+  /** Called with this saved search's id when a refresh added postings, so the inbox polls while they're scored. */
+  onRefreshed: (sourceId: string) => void;
 }
 
-export default function SavedSearchRow({ source }: SavedSearchRowProps) {
+export default function SavedSearchRow({ source, onRefreshed }: SavedSearchRowProps) {
   const [refresh, { isLoading: isRefreshing }] = useRefreshDiscoverySourceMutation();
   const [deactivate, { isLoading: isDeactivating }] = useDeactivateDiscoverySourceMutation();
   const [isEditingFrequency, setIsEditingFrequency] = useState(false);
@@ -37,33 +38,25 @@ export default function SavedSearchRow({ source }: SavedSearchRowProps) {
   // the operator see at a glance how often the search runs and how
   // recent the last automatic run was.
   const cadence = refreshIntervalShortLabel(source.fetch_interval_minutes);
-  const lastFetched = source.last_fetched_at
-    ? `Refreshes ${cadence.toLowerCase()} — last fetched ${timeAgo(source.last_fetched_at)}`
-    : `Refreshes ${cadence.toLowerCase()} — never fetched yet`;
+  const lastFetched = savedSearchCadence(source);
 
   async function handleRefresh() {
     try {
-      const result = await refresh(source.id).unwrap();
-      if (result.status === "success") {
-        showSuccess(
-          `Fetched ${result.fetched_count} posting${
-            result.fetched_count === 1 ? "" : "s"
-          } (${result.new_count} new)`,
-        );
-      } else if (result.error_message) {
-        showError(result.error_message);
-      }
+      const { message, isError, addedPostings } = describeRefreshResult(await refresh(source.id).unwrap());
+      if (isError) showError(message);
+      else showSuccess(message);
+      if (addedPostings) onRefreshed(source.id);
     } catch (err) {
-      showError(extractErrorMessage(err) ?? "Refresh failed");
+      showError(describeRefreshError(err));
     }
   }
 
   async function handleDeactivate() {
     try {
       await deactivate(source.id).unwrap();
-      showSuccess("Saved search removed");
+      showSuccess(DISCOVER_ACTION_MESSAGES.removed);
     } catch (err) {
-      showError(extractErrorMessage(err) ?? "Couldn't remove saved search");
+      showError(discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.removeFailed));
     }
   }
 
@@ -82,11 +75,11 @@ export default function SavedSearchRow({ source }: SavedSearchRowProps) {
             {hasName ? (
               <>
                 <span className="font-medium truncate text-sm">{source.name}</span>
-                <Badge label={getSourceLabel(source.source)} color={getSourceBadgeColor(source.source)} />
+                <Badge label={discoverySourceLabel(source.source)} color={STATUS_TONE_BADGE_COLORS[discoverySourceTone(source.source)]} />
               </>
             ) : (
               <>
-                <Badge label={getSourceLabel(source.source)} color={getSourceBadgeColor(source.source)} />
+                <Badge label={discoverySourceLabel(source.source)} color={STATUS_TONE_BADGE_COLORS[discoverySourceTone(source.source)]} />
                 <span className="font-medium truncate text-sm">{query}</span>
               </>
             )}
@@ -160,12 +153,16 @@ export default function SavedSearchRow({ source }: SavedSearchRowProps) {
         />
       )}
 
-      {/* Full edit dialog — source kind locked; all other fields editable */}
-      <EditSavedSearchDialog
-        source={source}
-        open={isEditDialogOpen}
-        onClose={() => setIsEditDialogOpen(false)}
-      />
+      {/* Full edit dialog — source kind locked; all other fields editable.
+          Mounted only while open so each opening starts from the saved row,
+          not from a cancelled edit or a cadence changed since. */}
+      {isEditDialogOpen && (
+        <EditSavedSearchDialog
+          source={source}
+          open
+          onClose={() => setIsEditDialogOpen(false)}
+        />
+      )}
     </Card>
   );
 }

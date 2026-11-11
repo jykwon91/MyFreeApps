@@ -42,7 +42,6 @@ vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
 
 vi.mock("@platform/ui", () => ({
   showError: vi.fn(),
-  extractErrorMessage: vi.fn((err) => String(err)),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

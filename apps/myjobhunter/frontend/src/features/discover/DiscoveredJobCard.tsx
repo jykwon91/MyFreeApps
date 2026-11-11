@@ -1,16 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Bookmark, Briefcase, Check, ExternalLink, Loader2, X } from "lucide-react";
-import {
-  Badge,
-  Button,
-  Card,
-  formatSalaryRange,
-  showError,
-  showSuccess,
-  timeAgo,
-  extractErrorMessage,
-} from "@platform/ui";
+import { Badge, Button, Card, LoadingButton, showError, showSuccess } from "@platform/ui";
 import {
   useDismissDiscoveredJobMutation,
   usePromoteDiscoveredJobMutation,
@@ -19,7 +10,11 @@ import {
 import type { DismissalReason } from "@myjobhunter/api-client/types/discovery/dismissal-reason";
 import type { DiscoveredJob } from "@myjobhunter/api-client/types/discovery/discovered-job";
 import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
-import type { JobAnalysisVerdict } from "@myjobhunter/api-client/types/job-analysis/job-analysis-verdict";
+import { DISCOVER_ACTION_MESSAGES } from "@myjobhunter/api-client/constants/discoverMessages";
+import { discoveredJobFacts } from "@myjobhunter/api-client/utils/discoveredJobFacts";
+import { discoveredJobUrl } from "@myjobhunter/api-client/utils/discoveredJobUrl";
+import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
+import { STATUS_TONE_BADGE_COLORS } from "@/constants/statusToneBadgeColors";
 import DismissReasonPopover from "./DismissReasonPopover";
 import UndoDismissToast from "./UndoDismissToast";
 
@@ -60,25 +55,6 @@ interface DiscoveredJobCardProps {
   sources?: DiscoverySource[];
 }
 
-const REMOTE_LABEL: Record<string, string> = {
-  remote: "Remote",
-  hybrid: "Hybrid",
-  onsite: "On-site",
-  unknown: "",
-};
-
-interface VerdictVisual {
-  label: string;
-  color: "green" | "blue" | "yellow" | "red";
-}
-
-const VERDICT_VISUAL: Record<JobAnalysisVerdict, VerdictVisual> = {
-  strong_fit: { label: "Strong fit", color: "green" },
-  worth_considering: { label: "Worth considering", color: "blue" },
-  stretch: { label: "Stretch", color: "yellow" },
-  mismatch: { label: "Mismatch", color: "red" },
-};
-
 export default function DiscoveredJobCard({
   job,
   isScoringInFlight = false,
@@ -97,63 +73,41 @@ export default function DiscoveredJobCard({
       setShowReasons(false);
       setUndoToastOpen(true);
     } catch (err) {
-      showError(extractErrorMessage(err) ?? "Couldn't dismiss this posting");
+      showError(discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.dismissFailed));
     }
   }
 
   async function handleSave() {
     try {
       await save(job.id).unwrap();
-      showSuccess("Saved");
+      showSuccess(DISCOVER_ACTION_MESSAGES.saved);
     } catch (err) {
-      showError(extractErrorMessage(err) ?? "Couldn't save this posting");
+      showError(discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.saveFailed));
     }
   }
 
   async function handlePromote() {
     try {
       await promote(job.id).unwrap();
-      showSuccess("Added to Applications");
+      showSuccess(DISCOVER_ACTION_MESSAGES.promoted);
     } catch (err) {
-      showError(extractErrorMessage(err) ?? "Couldn't add this to Applications");
+      showError(discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.promoteFailed));
     }
   }
 
-  const remoteLabel = REMOTE_LABEL[job.remote_type] ?? "";
-  const salaryLabel = formatSalaryRange(
-    job.salary_min !== null ? String(job.salary_min) : null,
-    job.salary_max !== null ? String(job.salary_max) : null,
-    job.salary_currency ?? "USD",
-    job.salary_period,
-  );
-  const hasSalary = salaryLabel && salaryLabel !== "—";
-  const postedLabel = job.posted_at ? timeAgo(job.posted_at) : null;
-  const isAlreadySaved = !!job.saved_at;
-  const isAlreadyPromoted = !!job.promoted_application_id;
-  const verdictVisual = job.verdict ? VERDICT_VISUAL[job.verdict] ?? null : null;
-  const isUnscored = job.verdict === null && job.score === null;
-
-  // A scored card is "stale" when the operator has updated their profile
-  // AFTER the score was computed. The worker will re-score on its next pass;
-  // this pill lets the operator know the current score may not reflect their
-  // latest skills/experience without waiting for the worker to run.
-  // Only applies when the card actually has a score — truly unscored cards
-  // already show the "Not scored" pill / the bounded scoring spinner.
-  const isScoreStale =
-    !isUnscored &&
-    job.scored_at !== null &&
-    profileUpdatedAt !== null &&
-    new Date(profileUpdatedAt) > new Date(job.scored_at);
-
-  // Resolve the source name for the secondary badge. Look up by
-  // discovery_source_id against the already-fetched sources list — no
-  // extra network call. Falls back to null (no badge) for legacy rows.
-  const matchedSource = job.discovery_source_id
-    ? sources.find((s) => s.id === job.discovery_source_id) ?? null
-    : null;
-  const sourceBadgeLabel = matchedSource
-    ? matchedSource.name || matchedSource.source
-    : null;
+  const {
+    remoteLabel,
+    salaryLabel,
+    postedLabel,
+    verdictLabel,
+    verdictTone,
+    isUnscored,
+    isScoreStale,
+    isSaved: isAlreadySaved,
+    isPromoted: isAlreadyPromoted,
+    sourceName: sourceBadgeLabel,
+  } = discoveredJobFacts(job, profileUpdatedAt, sources);
+  const postingUrl = discoveredJobUrl(job);
 
   return (
     <>
@@ -178,7 +132,7 @@ export default function DiscoveredJobCard({
             share one vertical center instead of top-aligning on different
             baselines — the misalignment the operator flagged. */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {verdictVisual && <Badge label={verdictVisual.label} color={verdictVisual.color} />}
+          {verdictLabel && <Badge label={verdictLabel} color={STATUS_TONE_BADGE_COLORS[verdictTone]} />}
           {isScoreStale && (
             <span
               className="px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 rounded"
@@ -188,7 +142,7 @@ export default function DiscoveredJobCard({
               Re-scoring soon
             </span>
           )}
-          {!verdictVisual && isUnscored && isScoringInFlight && (
+          {!verdictLabel && isUnscored && isScoringInFlight && (
             <span
               className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-muted-foreground border border-muted rounded"
               role="status"
@@ -200,7 +154,7 @@ export default function DiscoveredJobCard({
               <span>Scoring</span>
             </span>
           )}
-          {!verdictVisual && isUnscored && !isScoringInFlight && (
+          {!verdictLabel && isUnscored && !isScoringInFlight && (
             <span
               className="px-2 py-0.5 text-xs text-muted-foreground border border-muted rounded"
               data-testid="discovered-job-awaiting-score"
@@ -222,7 +176,7 @@ export default function DiscoveredJobCard({
 
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
         {remoteLabel && <span>{remoteLabel}</span>}
-        {hasSalary && (
+        {salaryLabel && (
           <>
             <span aria-hidden="true">•</span>
             <span>{salaryLabel}</span>
@@ -256,9 +210,9 @@ export default function DiscoveredJobCard({
         />
       ) : (
         <div className="flex items-center gap-2 pt-1 flex-wrap">
-          {job.source_url && (
+          {postingUrl && (
             <a
-              href={job.source_url}
+              href={postingUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium border rounded hover:bg-muted min-h-[44px] sm:min-h-[32px]"
@@ -285,26 +239,29 @@ export default function DiscoveredJobCard({
               </Link>
             </>
           ) : (
-            <Button
+            <LoadingButton
               size="sm"
               variant="primary"
               onClick={handlePromote}
-              disabled={isPromoting}
+              isLoading={isPromoting}
+              loadingText="Adding…"
             >
               <Briefcase className="w-4 h-4 mr-1" />
               Apply
-            </Button>
+            </LoadingButton>
           )}
-          <Button
+          <LoadingButton
             size="sm"
             variant="secondary"
             onClick={handleSave}
-            disabled={isSaving || isAlreadySaved || isAlreadyPromoted}
+            isLoading={isSaving}
+            loadingText="Saving…"
+            disabled={isAlreadySaved || isAlreadyPromoted}
             data-testid="save-button"
           >
             <Bookmark className="w-4 h-4 mr-1" />
             {isAlreadySaved ? "Saved" : "Save"}
-          </Button>
+          </LoadingButton>
           <Button
             size="sm"
             variant="ghost"

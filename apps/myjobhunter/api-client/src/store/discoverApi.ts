@@ -1,7 +1,10 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
+import { DISCOVERED_JOBS_PAGE_SIZE, FIRST_DISCOVERED_JOBS_OFFSET } from "../constants/discoverPaging";
 import type { Application } from "../types/application";
 import type { DiscoveredJobListArgs } from "../types/discovery/discovered-job-list-args";
 import type { DiscoveredJobListResponse } from "../types/discovery/discovered-job-list-response";
+import type { DiscoveredJobsFilter } from "../types/discovery/discovered-jobs-filter";
 import type { DiscoverySource } from "../types/discovery/discovery-source";
 import type { DiscoverySourceCreate } from "../types/discovery/discovery-source-create-request";
 import type { DiscoverySourcePatchRequest } from "../types/discovery/discovery-source-patch-request";
@@ -73,6 +76,29 @@ const discoverApi = apiWithTags.injectEndpoints({
         (currentArg?.limit ?? 0) !== (previousArg?.limit ?? 0),
       providesTags: ["DiscoveredJob"],
     }),
+    /**
+     * GET /discover one page per offset. The filter keys the cache, so a new view or
+     * saved search starts from the first page. Refetching (invalidation, polling, coming back to
+     * the app, pull to refresh) reloads every loaded page; paged lists drop repeats by id, so a
+     * posting a fresh score moves across a page boundary shows once.
+     */
+    listDiscoveredJobsPages: build.infiniteQuery<DiscoveredJobListResponse, DiscoveredJobsFilter, number>({
+      infiniteQueryOptions: {
+        initialPageParam: FIRST_DISCOVERED_JOBS_OFFSET,
+        getNextPageParam: (lastPage, _allPages, lastOffset) => getNextPageOffset(lastPage, lastOffset),
+      },
+      query: ({ queryArg, pageParam }) => ({
+        url: "/discover",
+        method: "GET",
+        params: {
+          state: queryArg.state,
+          source_id: queryArg.source_id || undefined,
+          limit: DISCOVERED_JOBS_PAGE_SIZE,
+          offset: pageParam,
+        },
+      }),
+      providesTags: ["DiscoveredJob"],
+    }),
     dismissDiscoveredJob: build.mutation<
       void,
       { jobId: string; reason?: DismissalReason }
@@ -117,6 +143,7 @@ export const {
   useDeactivateDiscoverySourceMutation,
   useRefreshDiscoverySourceMutation,
   useListDiscoveredJobsQuery,
+  useListDiscoveredJobsPagesInfiniteQuery,
   useDismissDiscoveredJobMutation,
   useUndoDismissDiscoveredJobMutation,
   useSaveDiscoveredJobMutation,

@@ -69,8 +69,6 @@ vi.mock("@platform/ui", async () => {
     ) : null,
   showError: (msg: string) => mockShowError(msg),
   showSuccess: (msg: string) => mockShowSuccess(msg),
-  extractErrorMessage: (err: unknown) =>
-    err instanceof Error ? err.message : String(err),
   };
 });
 
@@ -151,14 +149,6 @@ vi.mock("../dialog-sections/JobTypeSection", () => ({
 
 vi.mock("../dialog-sections/ExclusionsSection", () => ({
   default: () => <div data-testid="exclusions-section" />,
-}));
-
-vi.mock("../refresh-interval", () => ({
-  REFRESH_INTERVAL_OPTIONS: [
-    { minutes: 120, label: "Every 2 hours", short: "Every 2h" },
-    { minutes: 360, label: "Every 6 hours", short: "Every 6h" },
-    { minutes: 1440, label: "Daily", short: "Daily" },
-  ],
 }));
 
 // ---------------------------------------------------------------------------

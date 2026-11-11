@@ -33,7 +33,7 @@ Adding new chips
 1. Pick a snake_case key.
 2. Add an entry below with the keywords (lowercase; substring match
    is case-insensitive at apply time).
-3. Mirror the entry in ``apps/myjobhunter/frontend/src/features/discover/industry-chips.ts``
+3. Mirror the entry in ``apps/myjobhunter/api-client/src/constants/industryChips.ts``
    so the frontend renders a chip with the same key.
 4. The keyword list should be conservative — false-positives drop
    real opportunities. Add a company / term only if the operator
