@@ -41,7 +41,9 @@ beforeAll(() => {
   const adapter: AxiosAdapter = (config) => {
     sent.push(config);
     const status = config.method === "delete" ? 204 : config.method === "post" ? 201 : 200;
-    return Promise.resolve({ data: {}, status, statusText: "", headers: {}, config });
+    // A GET returns an application shape: its contacts come embedded, and a confirmed removal edits them.
+    const data = config.method === "get" ? { contacts: [] } : {};
+    return Promise.resolve({ data, status, statusText: "", headers: {}, config });
   };
   api.defaults.adapter = adapter;
 });

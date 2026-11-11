@@ -8,32 +8,19 @@ import {
   useUpdateWorkHistoryMutation,
 } from "@myjobhunter/api-client/store/workHistoryApi";
 import type { WorkHistory } from "@myjobhunter/api-client/types/work-history/work-history";
+import type { WorkHistoryFormValues as FormValues } from "@myjobhunter/api-client/types/work-history/work-history-form-values";
+import { workHistoryFormProblems } from "@myjobhunter/api-client/utils/workHistoryFormProblems";
+import { workHistoryFormValues } from "@myjobhunter/api-client/utils/workHistoryFormValues";
+import { workHistoryRequest } from "@myjobhunter/api-client/utils/workHistoryRequest";
+import { problemsResolver } from "@/lib/problems-resolver";
 
-interface FormValues {
-  company_name: string;
-  title: string;
-  start_date: string;
-  end_date: string;
-  is_current: boolean;
-  bullets: string;
-}
+const resolver = problemsResolver(workHistoryFormProblems);
 
 export interface WorkHistoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** When provided, dialog is in edit mode; otherwise add mode. */
   existing?: WorkHistory;
-}
-
-function bulletsToText(bullets: string[]): string {
-  return bullets.join("\n");
-}
-
-function textToBullets(text: string): string[] {
-  return text
-    .split("\n")
-    .map((b) => b.trim())
-    .filter(Boolean);
 }
 
 export default function WorkHistoryDialog({ open, onOpenChange, existing }: WorkHistoryDialogProps) {
@@ -50,59 +37,26 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
     setValue,
     watch,
   } = useForm<FormValues>({
-    defaultValues: {
-      company_name: "",
-      title: "",
-      start_date: "",
-      end_date: "",
-      is_current: false,
-      bullets: "",
-    },
+    defaultValues: workHistoryFormValues(),
+    resolver,
   });
 
   const isCurrent = watch("is_current");
 
   useEffect(() => {
     if (open) {
-      reset({
-        company_name: existing?.company_name ?? "",
-        title: existing?.title ?? "",
-        start_date: existing?.start_date ?? "",
-        end_date: existing?.end_date ?? "",
-        is_current: existing?.is_current ?? false,
-        bullets: existing ? bulletsToText(existing.bullets) : "",
-      });
+      reset(workHistoryFormValues(existing));
     }
   }, [open, existing, reset]);
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
-    const bullets = textToBullets(values.bullets);
-    // The backend rejects a current role that carries an end date; the
-    // checkbox clears + disables the field, so this only guards races.
-    const endDate = values.is_current ? null : values.end_date.trim() || null;
+    const body = workHistoryRequest(values);
     try {
       if (isEdit && existing) {
-        await updateWorkHistory({
-          id: existing.id,
-          patch: {
-            company_name: values.company_name.trim(),
-            title: values.title.trim(),
-            start_date: values.start_date || null,
-            end_date: endDate,
-            is_current: values.is_current,
-            bullets,
-          },
-        }).unwrap();
+        await updateWorkHistory({ id: existing.id, patch: body }).unwrap();
         showSuccess("Work history updated");
       } else {
-        await createWorkHistory({
-          company_name: values.company_name.trim(),
-          title: values.title.trim(),
-          start_date: values.start_date,
-          end_date: endDate,
-          is_current: values.is_current,
-          bullets,
-        }).unwrap();
+        await createWorkHistory(body).unwrap();
         showSuccess("Work history added");
       }
       onOpenChange(false);
@@ -140,7 +94,7 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
                 <input
                   id="wh-company"
                   type="text"
-                  {...register("company_name", { required: "Company is required" })}
+                  {...register("company_name")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="e.g. Acme Corp"
                   autoFocus
@@ -156,7 +110,7 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
                 <input
                   id="wh-title"
                   type="text"
-                  {...register("title", { required: "Title is required" })}
+                  {...register("title")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="e.g. Senior Engineer"
                 />
@@ -174,7 +128,7 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
                 <input
                   id="wh-start-date"
                   type="date"
-                  {...register("start_date", { required: "Start date is required" })}
+                  {...register("start_date")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                 />
                 {errors.start_date ? (
@@ -190,6 +144,9 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
                   {...register("end_date")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background disabled:opacity-50 disabled:cursor-not-allowed"
                 />
+                {errors.end_date ? (
+                  <p className="text-xs text-destructive mt-1">{errors.end_date.message}</p>
+                ) : null}
               </div>
             </div>
 
@@ -212,14 +169,19 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Bullets</label>
+              <label htmlFor="wh-bullets" className="block text-sm font-medium mb-1">Bullets</label>
               <textarea
+                id="wh-bullets"
                 {...register("bullets")}
                 rows={5}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background resize-none"
                 placeholder={"One bullet per line, e.g.:\nLed microservices migration\nReduced p99 latency by 40%"}
               />
-              <p className="text-xs text-muted-foreground mt-1">One achievement per line</p>
+              {errors.bullets ? (
+                <p className="text-xs text-destructive mt-1">{errors.bullets.message}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1">One achievement per line</p>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

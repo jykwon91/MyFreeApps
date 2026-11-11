@@ -1,4 +1,6 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { removalIsDone } from "../utils/removalIsDone";
+import { withoutListItem } from "../utils/withoutListItem";
 import type { ScreeningAnswer } from "../types/screening-answer/screening-answer";
 import type { ScreeningAnswerListResponse } from "../types/screening-answer/screening-answer-list-response";
 import type { ScreeningAnswerCreateRequest } from "../types/screening-answer/screening-answer-create-request";
@@ -43,6 +45,11 @@ const screeningAnswersApi = baseApi
 
       deleteScreeningAnswer: build.mutation<void, string>({
         query: (id) => ({ url: `/screening-answers/${id}`, method: "DELETE" }),
+        // Once the record is gone (deleted, or already gone: a 404), the loaded list drops it at once,
+        // so it leaves the screen even if the reload the invalidation starts fails.
+        async onQueryStarted(id, { dispatch, queryFulfilled }) {
+          if (await removalIsDone(queryFulfilled)) dispatch(screeningAnswersApi.util.updateQueryData("listScreeningAnswers", undefined, (list) => withoutListItem(list, id)));
+        },
         invalidatesTags: (_result, _err, id) => [
           { type: SCREENING_ANSWERS_TAG, id },
           { type: SCREENING_ANSWERS_TAG, id: "LIST" },

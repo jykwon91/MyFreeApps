@@ -3,10 +3,12 @@ import { Linking } from "react-native";
 import { WEB_BASE_URL } from "../src/constants/api";
 import { MORE_MENU } from "../src/constants/moreMenu";
 import { DASHBOARD_MESSAGES } from "../src/constants/dashboard";
-import { APPLICATIONS_TAB, DASHBOARD_TAB, MORE_TAB, TABS } from "../src/constants/tabs";
+import { PROFILE_MESSAGES } from "../src/constants/profile";
+import { PROFILE_TAB, TABS } from "../src/constants/tabs";
 import type { AppTab } from "../src/types/AppTab";
 import { EMPTY_BOARD } from "../test-support/emptyBoard";
 import { serve } from "../test-support/fakeServer";
+import { profileRoutes } from "../test-support/profileRoutes";
 import { storedItems } from "../test-support/memorySecureStore";
 import { renderApp } from "../test-support/renderApp";
 import { ACCOUNT_EMAIL, storeSession, storedSession, tokens } from "../test-support/storedSession";
@@ -50,17 +52,15 @@ it("opens the live website unless a build points it elsewhere", () => {
 
 // One app launch per file, so these run in order: the last one signs out.
 describe("the signed-in shell", () => {
-  it("has a tab for each main page, each not built yet opening that page on the website", async () => {
-    serve({ ...EMPTY_BOARD, "POST /auth/mobile/refresh": () => ({ status: 200, data: tokens(1) }) });
+  it("has a tab for each main page, the Profile tab opening the phone's own Profile", async () => {
+    serve({ ...EMPTY_BOARD, ...profileRoutes(), "POST /auth/mobile/refresh": () => ({ status: 200, data: tokens(1) }) });
     await renderApp();
     expect(await screen.findByRole("header", { name: DASHBOARD_MESSAGES.noneHeading })).toBeTruthy();
     expect(TABS.filter((tab) => !screen.queryByRole("button", { name: tabBarName(tab) })).map((tab) => tab.title)).toEqual([]);
 
-    for (const tab of TABS.filter((each) => each !== MORE_TAB && each !== APPLICATIONS_TAB && each !== DASHBOARD_TAB)) {
-      await fireEvent.press(screen.getByRole("button", { name: tabBarName(tab) }));
-      await fireEvent.press(await screen.findByRole("button", { name: "Open on the website" }));
-      expect(openURL).toHaveBeenLastCalledWith(`${WEB_BASE_URL}${tab.webPath}`);
-    }
+    await fireEvent.press(screen.getByRole("button", { name: tabBarName(PROFILE_TAB) }));
+    expect(await screen.findByRole("header", { name: PROFILE_MESSAGES.aboutTitle })).toBeTruthy();
+    expect(openURL).not.toHaveBeenCalled();
   });
 
   it("lists the rest of the website on More, with this account's devices", async () => {

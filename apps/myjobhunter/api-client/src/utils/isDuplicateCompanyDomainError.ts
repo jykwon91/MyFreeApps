@@ -1,8 +1,6 @@
-import { httpStatus } from "@platform/core/utils/httpStatus";
-
-const CONFLICT = 409;
+import { isConflict } from "./isConflict";
 
 /** Whether POST /companies refused because another of your companies already has that domain. */
 export function isDuplicateCompanyDomainError(error: unknown): boolean {
-  return httpStatus(error) === CONFLICT;
+  return isConflict(error);
 }

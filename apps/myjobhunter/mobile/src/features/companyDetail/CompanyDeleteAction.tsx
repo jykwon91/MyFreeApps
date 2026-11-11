@@ -1,9 +1,9 @@
 import { useDeleteCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
 import { isCompanyHasApplicationsError } from "@myjobhunter/api-client/utils/isCompanyHasApplicationsError";
-import { isNotFound } from "@platform/core/utils/isNotFound";
-import { LoadingButton, useTheme, useToast } from "@platform/mobile";
-import { Alert, Text, View } from "react-native";
+import { LoadingButton, useTheme } from "@platform/mobile";
+import { Text, View } from "react-native";
 import { COMPANY_DETAIL_MESSAGES as MESSAGES } from "../../constants/companyDetail";
+import { useConfirmedRemoval } from "../../hooks/useConfirmedRemoval";
 import type { CompanyDeleteActionProps } from "../../types/CompanyDeleteActionProps";
 
 /**
@@ -13,43 +13,34 @@ import type { CompanyDeleteActionProps } from "../../types/CompanyDeleteActionPr
  */
 export default function CompanyDeleteAction({ company, deleteState, isLeaving, onDeleted, onRefused }: CompanyDeleteActionProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const { showToast } = useToast();
-  const [deleteCompany, { isLoading }] = useDeleteCompanyMutation();
-
-  async function remove(): Promise<void> {
-    try {
-      await deleteCompany(company.id).unwrap();
-      showToast(MESSAGES.deleted(company.name));
-      onDeleted();
-    } catch (error) {
-      if (isNotFound(error)) {
-        // Already gone, deleted elsewhere: what was asked for is done, so leave as a delete does.
-        showToast(MESSAGES.gone);
-        onDeleted();
-      } else if (isCompanyHasApplicationsError(error)) {
-        showToast(error.data.detail.message, "error");
-        onRefused();
-      } else {
-        showToast(MESSAGES.couldntDelete, "error");
-      }
-    }
-  }
-
-  function confirmDelete(): void {
-    Alert.alert(MESSAGES.deleteTitle(company.name), MESSAGES.deleteBody, [
-      { text: MESSAGES.keep, style: "cancel" },
-      { text: MESSAGES.delete, style: "destructive", onPress: () => void remove() },
-    ]);
-  }
+  const [deleteCompany] = useDeleteCompanyMutation();
+  // Already gone (deleted elsewhere) is what was asked for, so the screen leaves as after a delete.
+  const { isRemoving, confirmRemove } = useConfirmedRemoval(
+    () => deleteCompany(company.id).unwrap(),
+    {
+      removeTitle: MESSAGES.deleteTitle(company.name),
+      removeBody: MESSAGES.deleteBody,
+      remove: MESSAGES.delete,
+      keep: MESSAGES.keep,
+      removed: MESSAGES.deleted(company.name),
+      gone: MESSAGES.gone,
+      couldntRemove: MESSAGES.couldntDelete,
+    },
+    {
+      onRemoved: onDeleted,
+      refusalMessage: (error) => (isCompanyHasApplicationsError(error) ? error.data.detail.message : null),
+      onRefused,
+    },
+  );
 
   return (
     <View style={{ gap: spacing.sm }}>
       <LoadingButton
         accessibilityHint={deleteState === "waiting" ? MESSAGES.deleteWaiting : undefined}
         disabled={deleteState !== "allowed" || isLeaving}
-        isLoading={isLoading}
+        isLoading={isRemoving}
         loadingText={MESSAGES.deleting}
-        onPress={confirmDelete}
+        onPress={confirmRemove}
         variant="destructive"
       >
         {MESSAGES.delete}

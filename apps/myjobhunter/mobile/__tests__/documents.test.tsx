@@ -497,6 +497,27 @@ describe("a document's actions", () => {
     await waitFor(() => expect(screen.getByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy());
   });
 
+  it("treats a 404 as already deleted: says it's deleted and drops the card, even when the reload fails", async () => {
+    let reloadFails = false;
+    serve({
+      "GET /documents": () => (reloadFails ? { status: 503, data: { detail: "down" } } : listOf(RESUME, LETTER)),
+      "DELETE /documents/d-letter": () => {
+        reloadFails = true;
+        return { status: 404, data: { detail: "Document not found" } };
+      },
+    });
+    await showScreen();
+
+    await fireEvent.press(await screen.findByRole("button", { name: `${DOCUMENTS.delete} General cover letter` }));
+    await act(async () => alertButton(DOCUMENTS.delete).onPress?.());
+
+    expect(await screen.findByText(DOCUMENTS.deleted)).toBeTruthy();
+    expect(DOCUMENTS.deleted).toBe("Document deleted.");
+    await waitFor(() => expect(titles()).toEqual(["Stripe resume"]));
+    expect(screen.queryByText(DOCUMENTS.couldntDelete)).toBeNull();
+    expect(screen.queryByText(DOCUMENTS.deleting)).toBeNull();
+  });
+
   it("says so and keeps the document when deleting fails", async () => {
     serveDocuments([LETTER], { "DELETE /documents/d-letter": () => ({ status: 500 }) });
     await showScreen();

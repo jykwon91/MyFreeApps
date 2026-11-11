@@ -11,7 +11,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { showError, showSuccess, extractErrorMessage, formatSalaryRange } from "@platform/ui";
+import { showError, extractErrorMessage, formatSalaryRange } from "@platform/ui";
 import ProfileSkeleton from "@/features/profile/ProfileSkeleton";
 import ProfileHeaderDialog from "@/features/profile/ProfileHeaderDialog";
 import WorkHistoryDialog from "@/features/profile/WorkHistoryDialog";
@@ -20,7 +20,15 @@ import ScreeningAnswerDialog from "@/features/profile/ScreeningAnswerDialog";
 import ResumeUploadSection from "@/features/profile/ResumeUploadSection";
 import SkillAddForm from "@/features/profile/SkillAddForm";
 import ScreeningAnswerRow from "@/features/profile/ScreeningAnswerRow";
-import { REMOTE_PREF_LABELS, formatDateRange } from "@/features/profile/profile-format";
+import { deleteWithFeedback } from "@/lib/delete-with-feedback";
+import { REMOTE_PREFERENCE_LABELS } from "@myjobhunter/api-client/constants/remotePreferenceLabels";
+import { REMOTE_PREFERENCES } from "@myjobhunter/api-client/constants/remotePreferences";
+import { educationDegreeLine } from "@myjobhunter/api-client/utils/educationDegreeLine";
+import { educationYearsLine } from "@myjobhunter/api-client/utils/educationYearsLine";
+import { formatSeniority } from "@myjobhunter/api-client/utils/formatSeniority";
+import { formatWorkAuthStatus } from "@myjobhunter/api-client/utils/formatWorkAuthStatus";
+import { formatWorkDateRange } from "@myjobhunter/api-client/utils/formatWorkDateRange";
+import { unansweredScreeningQuestions } from "@myjobhunter/api-client/utils/unansweredScreeningQuestions";
 import { useGetProfileQuery, useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileApi";
 import { useListWorkHistoryQuery, useDeleteWorkHistoryMutation } from "@myjobhunter/api-client/store/workHistoryApi";
 import { useListEducationQuery, useDeleteEducationMutation } from "@myjobhunter/api-client/store/educationApi";
@@ -32,10 +40,6 @@ import {
 import type { WorkHistory } from "@myjobhunter/api-client/types/work-history/work-history";
 import type { Education } from "@myjobhunter/api-client/types/education/education";
 import type { ScreeningAnswer } from "@myjobhunter/api-client/types/screening-answer/screening-answer";
-
-// ---------------------------------------------------------------------------
-// Main Profile page
-// ---------------------------------------------------------------------------
 
 export default function Profile() {
   const { data: profile, isLoading: profileLoading, isError: profileError } = useGetProfileQuery();
@@ -84,41 +88,21 @@ export default function Profile() {
 
   async function handleDeleteWorkHistory(id: string, company: string) {
     if (!confirm(`Delete "${company}" from work history?`)) return;
-    try {
-      await deleteWorkHistory(id).unwrap();
-      showSuccess("Work history deleted");
-    } catch (err) {
-      showError(`Couldn't delete: ${extractErrorMessage(err)}`);
-    }
+    await deleteWithFeedback(() => deleteWorkHistory(id).unwrap(), "Work history deleted", "Couldn't delete");
   }
 
   async function handleDeleteEducation(id: string, school: string) {
     if (!confirm(`Delete "${school}" from education?`)) return;
-    try {
-      await deleteEducation(id).unwrap();
-      showSuccess("Education deleted");
-    } catch (err) {
-      showError(`Couldn't delete: ${extractErrorMessage(err)}`);
-    }
+    await deleteWithFeedback(() => deleteEducation(id).unwrap(), "Education deleted", "Couldn't delete");
   }
 
   async function handleDeleteSkill(id: string, name: string) {
-    try {
-      await deleteSkill(id).unwrap();
-      showSuccess(`Skill "${name}" removed`);
-    } catch (err) {
-      showError(`Couldn't remove skill: ${extractErrorMessage(err)}`);
-    }
+    await deleteWithFeedback(() => deleteSkill(id).unwrap(), `Skill "${name}" removed`, "Couldn't remove skill");
   }
 
   async function handleDeleteScreeningAnswer(id: string) {
     if (!confirm("Remove this screening answer?")) return;
-    try {
-      await deleteScreeningAnswer(id).unwrap();
-      showSuccess("Answer removed");
-    } catch (err) {
-      showError(`Couldn't remove answer: ${extractErrorMessage(err)}`);
-    }
+    await deleteWithFeedback(() => deleteScreeningAnswer(id).unwrap(), "Answer removed", "Couldn't remove answer");
   }
 
   async function handleRemoteToggle(pref: string) {
@@ -143,9 +127,7 @@ export default function Profile() {
             <div>
               <p className="text-sm text-muted-foreground">Signed in as</p>
               <p className="text-sm font-medium text-muted-foreground">
-                {profile.seniority
-                  ? `${profile.seniority.charAt(0).toUpperCase()}${profile.seniority.slice(1)} level`
-                  : "Level not set"}
+                {formatSeniority(profile.seniority) ?? "Level not set"}
               </p>
               {profile.summary ? (
                 <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{profile.summary}</p>
@@ -191,7 +173,7 @@ export default function Profile() {
             <dt className="text-muted-foreground text-xs uppercase tracking-wide mb-0.5">
               Work authorization
             </dt>
-            <dd className="capitalize">{profile.work_auth_status.replace(/_/g, " ")}</dd>
+            <dd>{formatWorkAuthStatus(profile.work_auth_status)}</dd>
           </div>
         </dl>
       </section>
@@ -221,7 +203,7 @@ export default function Profile() {
           )}
         </div>
         <div className="flex gap-2 flex-wrap">
-          {(["remote_only", "hybrid", "onsite", "any"] as const).map((pref) => (
+          {REMOTE_PREFERENCES.map((pref) => (
             <button
               key={pref}
               onClick={() => void handleRemoteToggle(pref)}
@@ -231,7 +213,7 @@ export default function Profile() {
                   : "hover:bg-muted"
               }`}
             >
-              {REMOTE_PREF_LABELS[pref]}
+              {REMOTE_PREFERENCE_LABELS[pref]}
             </button>
           ))}
         </div>
@@ -272,7 +254,7 @@ export default function Profile() {
                   <p className="font-medium text-sm">{entry.title}</p>
                   <p className="text-sm text-muted-foreground">{entry.company_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatDateRange(entry.start_date, entry.end_date, entry.is_current)}
+                    {formatWorkDateRange(entry.start_date, entry.end_date, entry.is_current)}
                   </p>
                   {entry.bullets.length > 0 ? (
                     <ul className="mt-2 space-y-1 list-disc list-inside">
@@ -342,15 +324,11 @@ export default function Profile() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm">{entry.school}</p>
-                  {entry.degree || entry.field ? (
-                    <p className="text-sm text-muted-foreground">
-                      {[entry.degree, entry.field].filter(Boolean).join(" in ")}
-                    </p>
+                  {educationDegreeLine(entry) ? (
+                    <p className="text-sm text-muted-foreground">{educationDegreeLine(entry)}</p>
                   ) : null}
-                  {entry.start_year || entry.end_year ? (
-                    <p className="text-xs text-muted-foreground">
-                      {[entry.start_year, entry.end_year].filter(Boolean).join(" – ")}
-                    </p>
+                  {educationYearsLine(entry) ? (
+                    <p className="text-xs text-muted-foreground">{educationYearsLine(entry)}</p>
                   ) : null}
                   {entry.gpa ? (
                     <p className="text-xs text-muted-foreground">GPA: {entry.gpa}</p>
@@ -435,7 +413,7 @@ export default function Profile() {
             }}
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-3"
             aria-label="Add screening answer"
-            disabled={existingAnswerKeys.length >= 22}
+            disabled={unansweredScreeningQuestions(existingAnswerKeys).length === 0}
           >
             <Plus size={14} />
             Add

@@ -13,6 +13,16 @@ const profileApi = baseApi.enhanceEndpoints({ addTagTypes: [PROFILE_TAG] }).inje
 
     updateProfile: build.mutation<Profile, ProfileUpdateRequest>({
       query: (body) => ({ url: "/profile", method: "PATCH", data: body }),
+      // The saved profile goes into the cache as soon as the server returns it, so the screen
+      // shows the change at once and keeps showing it even if the refetch below fails.
+      async onQueryStarted(_body, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(profileApi.util.updateQueryData("getProfile", undefined, () => data));
+        } catch {
+          // A failed save leaves the cached profile as it was.
+        }
+      },
       invalidatesTags: [{ type: PROFILE_TAG, id: "SINGLETON" }],
     }),
   }),

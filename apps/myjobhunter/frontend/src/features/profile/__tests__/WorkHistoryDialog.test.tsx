@@ -2,6 +2,7 @@
  * Unit tests for WorkHistoryDialog — the is_current checkbox logic.
  *
  * Covers:
+ *   - the shared checks (end before start, required fields) stop a save before it is sent
  *   - checking "I currently work in this role" disables and clears the end date
  *   - submit sends is_current: true with a null end_date
  *   - edit mode pre-checks the checkbox for a current entry
@@ -14,6 +15,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { WorkHistory } from "@myjobhunter/api-client/types/work-history/work-history";
+import { PROFILE_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/profileFormProblems";
 
 vi.mock("@myjobhunter/api-client/store/workHistoryApi", () => ({
   useCreateWorkHistoryMutation: vi.fn(),
@@ -154,5 +156,34 @@ describe("WorkHistoryDialog — is_current", () => {
       is_current: false,
       bullets: [],
     });
+  });
+});
+
+describe("WorkHistoryDialog — shared validation", () => {
+  beforeEach(() => {
+    setupMutationMocks();
+  });
+
+  it("refuses an end date before the start date and sends nothing", async () => {
+    renderDialog();
+    fireEvent.change(screen.getByLabelText(/Company/), { target: { value: "OldCo" } });
+    fireEvent.change(screen.getByLabelText(/Title/), { target: { value: "Dev" } });
+    fireEvent.change(screen.getByLabelText(/Start date/), { target: { value: "2021-06-30" } });
+    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2019-01-01" } });
+
+    await userEvent.click(screen.getByRole("button", { name: "Add work history" }));
+
+    expect(await screen.findByText(PROFILE_FORM_PROBLEMS.endBeforeStart)).toBeInTheDocument();
+    expect(createTrigger).not.toHaveBeenCalled();
+  });
+
+  it("names every missing required field and sends nothing", async () => {
+    renderDialog();
+    await userEvent.click(screen.getByRole("button", { name: "Add work history" }));
+
+    expect(await screen.findByText(PROFILE_FORM_PROBLEMS.companyRequired)).toBeInTheDocument();
+    expect(screen.getByText(PROFILE_FORM_PROBLEMS.titleRequired)).toBeInTheDocument();
+    expect(screen.getByText(PROFILE_FORM_PROBLEMS.startDateRequired)).toBeInTheDocument();
+    expect(createTrigger).not.toHaveBeenCalled();
   });
 });
