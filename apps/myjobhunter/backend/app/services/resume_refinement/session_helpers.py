@@ -11,13 +11,6 @@ import uuid
 from decimal import Decimal
 from typing import Any
 
-# Cap on parallel Claude calls during session-start prefetch. Anthropic
-# allows higher concurrency, but throttling protects against rate-limit
-# spikes when a session has many improvement targets and ensures a
-# clean failure mode if Claude has an outage (5 in-flight requests
-# fail-fast vs. 13).
-_PREFETCH_CONCURRENCY = 5
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.resume_refinement.session import ResumeRefinementSession
@@ -29,6 +22,13 @@ from app.services.resume_refinement.errors import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Cap on parallel Claude calls during session-start prefetch. Anthropic
+# allows higher concurrency, but throttling protects against rate-limit
+# spikes when a session has many improvement targets and ensures a
+# clean failure mode if Claude has an outage (5 in-flight requests
+# fail-fast vs. 13).
+_PREFETCH_CONCURRENCY = 5
 
 
 async def _with_turns(

@@ -27,13 +27,11 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from platform_shared.core.request_utils import get_client_ip
-
 from app.core.auth import current_active_user
-from app.core.rate_limit import RateLimiter
+from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.application.application_contact_create_request import ApplicationContactCreateRequest
@@ -74,13 +72,20 @@ _CONTACT_NOT_FOUND_DETAIL = "Contact not found"
 _EVENT_NOT_FOUND_DETAIL = "Event not found"
 _EVENT_NOT_EDITABLE_DETAIL = "event_type does not support editing"
 
-# Per-IP rate limit for the JD URL extractor. 10 requests / 5 minutes is
-# generous for a legitimate operator (one-paste-per-application throughput)
-# but tight enough to prevent the endpoint being used as an SSRF probe or
-# a free third-party HTML scraper. Pre-instantiated at module import so all
-# requests share the same sliding-window state. Pattern mirrors
-# admin_invites._INVITE_INFO_LIMITER.
+# Per-user rate limit for the JD URL extractor (outbound fetch + possible
+# Claude call). 10 requests / 5 minutes is generous for a legitimate operator
+# (one-paste-per-application throughput) but tight enough to prevent the
+# endpoint being used as an SSRF probe or a free third-party HTML scraper.
+# Keyed on user.id, not IP: users behind one carrier NAT must not share a
+# budget. Pre-instantiated at module import so all requests share the same
+# sliding-window state. In-memory per process and the API runs 2 uvicorn
+# workers, so the effective budget is up to ~2x (same for the limiters below).
 _JD_URL_EXTRACT_LIMITER = RateLimiter(max_attempts=10, window_seconds=300)
+
+# Per-user limit for the paste-text JD parser: one Claude call per request,
+# no fetch. A legitimate bulk-add pastes about one JD every 15-30 seconds, so
+# 20 / 5 minutes covers that with headroom while capping a runaway client.
+_JD_PARSE_LIMITER = RateLimiter(max_attempts=20, window_seconds=300)
 
 # Per-user transition write limit for the kanban dashboard. Drag-drop on
 # a flaky network can fire dozens of identical writes; the auto-save on
@@ -93,18 +98,6 @@ _TRANSITION_LIMITER_PER_MIN = RateLimiter(max_attempts=30, window_seconds=60)
 _TRANSITION_LIMITER_PER_HOUR = RateLimiter(max_attempts=200, window_seconds=3600)
 _NOTES_PATCH_LIMITER_PER_MIN = RateLimiter(max_attempts=30, window_seconds=60)
 _NOTES_PATCH_LIMITER_PER_HOUR = RateLimiter(max_attempts=200, window_seconds=3600)
-
-
-def _check_per_user_limit(user_id: uuid.UUID, *limiters: RateLimiter) -> None:
-    """Apply each per-user limiter under the same user-keyed bucket.
-
-    Each limiter raises HTTPException(429) on its own; we run them in
-    order from tightest window to widest so the tighter one fires first
-    when both are saturated.
-    """
-    key = str(user_id)
-    for limiter in limiters:
-        limiter.check(key)
 
 
 @router.get("/applications/{application_id}", response_model=ApplicationDetailResponse)
@@ -145,12 +138,15 @@ async def parse_job_description(
     preview call. Pass the parsed fields alongside the rest of the form on
     ``POST /applications`` to actually save them.
 
+    Rate limited per user (20 / 5 min); 429 when exceeded.
+
     Returns HTTP 502 if the Claude API call fails so the client can surface
     a clear "AI parsing unavailable" message rather than a generic 500.
 
     No ``db`` session needed — the only DB write is an extraction_log row
     written inside ``claude_service._record_log`` via its own session.
     """
+    check_user_rate_limit(user.id, _JD_PARSE_LIMITER)
     try:
         result = await parse_jd(payload.jd_text, user.id)
     except JdParseError as exc:
@@ -168,7 +164,6 @@ async def parse_job_description(
 )
 async def extract_from_url_endpoint(
     payload: JdUrlExtractRequest,
-    request: Request,
     user: User = Depends(current_active_user),
 ) -> JdUrlExtractResponse:
     """Fetch a job-posting URL and extract structured fields from it.
@@ -179,7 +174,7 @@ async def extract_from_url_endpoint(
     an Application row (the frontend then submits ``POST /applications``
     with the merged values once the user has reviewed them).
 
-    Rate limit: 10 requests per 5 minutes per IP. Bypassing requires
+    Rate limit: 10 requests per 5 minutes per user. Bypassing requires
     going through ``POST /applications/parse-jd`` (the paste-text path),
     which has its own gating.
 
@@ -190,7 +185,7 @@ async def extract_from_url_endpoint(
       Glassdoor) or when the fetched page returned <500 visible bytes
       after stripping. The frontend prompts the user to paste the
       description text instead.
-    - 429 when the per-IP rate limit is exceeded.
+    - 429 when the per-user rate limit is exceeded.
     - 502 when the upstream returned non-2xx, the body could not be
       parsed, or the Claude fallback failed.
     - 504 when the upstream fetch timed out.
@@ -199,7 +194,7 @@ async def extract_from_url_endpoint(
     written inside ``claude_service._record_log`` on the Tier-2 path
     via its own session.
     """
-    _JD_URL_EXTRACT_LIMITER.check(get_client_ip(request))
+    check_user_rate_limit(user.id, _JD_URL_EXTRACT_LIMITER)
 
     url_str = str(payload.url)
     try:
@@ -278,7 +273,7 @@ async def update_application(
     ``user.id`` (not IP) is correct for bearer-auth — IP is network
     noise behind any NAT/VPN.
     """
-    _check_per_user_limit(
+    check_user_rate_limit(
         user.id,
         _NOTES_PATCH_LIMITER_PER_MIN,
         _NOTES_PATCH_LIMITER_PER_HOUR,
@@ -323,7 +318,7 @@ async def create_application_transition(
     - 404 when the application is missing or belongs to another user.
     - 429 when the per-user rate limit is exceeded.
     """
-    _check_per_user_limit(
+    check_user_rate_limit(
         user.id,
         _TRANSITION_LIMITER_PER_MIN,
         _TRANSITION_LIMITER_PER_HOUR,
@@ -447,7 +442,7 @@ async def update_application_event(
     application-level PATCH because both surfaces fire from the same
     drawer UI; users hammering one shouldn't bypass the other.
     """
-    _check_per_user_limit(
+    check_user_rate_limit(
         user.id,
         _NOTES_PATCH_LIMITER_PER_MIN,
         _NOTES_PATCH_LIMITER_PER_HOUR,

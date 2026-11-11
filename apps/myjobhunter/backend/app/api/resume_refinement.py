@@ -28,6 +28,7 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
+from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.resume_refinement.session import (
@@ -54,6 +55,27 @@ from app.services.resume_refinement.export_service import (
 
 router = APIRouter(prefix="/resume-refinement", tags=["resume-refinement"])
 
+# Per-user limits. Two tiers because the Claude cost per call differs by ~20x.
+# Counts live in process memory and the API runs 2 uvicorn workers, so the
+# effective budgets are up to ~2x the numbers below.
+#
+# Preparing a session (start / retry-preparation) queues the critique pass plus
+# a prefetched rewrite for EVERY improvement target: 1-2 minutes of Claude
+# calls per session. A legitimate user starts a session per resume, plus an
+# occasional "Try again" after a failure, so 10 per hour is ample while
+# capping a wedged client that retries forever.
+_PREPARE_LIMITER = RateLimiter(max_attempts=10, window_seconds=3600)
+
+# Every turn route (accept, accept-flagged, custom, alternative, skip, navigate,
+# target-from-line) makes at most one Claude rewrite call. A user reads each
+# proposal before acting, so a sustained pace faster than one call per 5 s is
+# not human; 60 per 5 minutes allows quick skipping through a session with
+# headroom (cache-hit navigation still counts, which is cheap to allow). The
+# hourly cap (300, about one call per 12 s sustained) bounds a client that
+# paces itself just under the short window all day.
+_TURN_LIMITER_PER_5_MIN = RateLimiter(max_attempts=60, window_seconds=300)
+_TURN_LIMITER_PER_HOUR = RateLimiter(max_attempts=300, window_seconds=3600)
+
 
 @router.post("/sessions", response_model=SessionWithTurnsRead, status_code=201)
 async def start_session(
@@ -67,6 +89,7 @@ async def start_session(
     critique + prefetch run in the background worker; poll
     GET /sessions/{id} for the unlock (``status="active"``).
     """
+    check_user_rate_limit(user.id, _PREPARE_LIMITER)
     try:
         session = await session_service.start_session(
             db=db,
@@ -90,6 +113,7 @@ async def retry_preparation(
     user: User = Depends(current_active_user),
 ) -> SessionWithTurnsRead:
     """Re-queue a failed background preparation ("Try again")."""
+    check_user_rate_limit(user.id, _PREPARE_LIMITER)
     try:
         session = await session_service.retry_preparation(
             db=db, user_id=user.id, session_id=session_id,
@@ -122,6 +146,9 @@ async def accept_pending(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> SessionWithTurnsRead:
+    check_user_rate_limit(
+        user.id, _TURN_LIMITER_PER_5_MIN, _TURN_LIMITER_PER_HOUR,
+    )
     try:
         session = await session_service.accept_pending(
             db=db, user_id=user.id, session_id=session_id,
@@ -147,6 +174,9 @@ async def accept_flagged(
     guard never re-flags them; the held proposal is applied to the
     draft exactly like a normal accept.
     """
+    check_user_rate_limit(
+        user.id, _TURN_LIMITER_PER_5_MIN, _TURN_LIMITER_PER_HOUR,
+    )
     try:
         session = await session_service.accept_flagged(
             db=db, user_id=user.id, session_id=session_id,
@@ -167,6 +197,9 @@ async def supply_custom(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> SessionWithTurnsRead:
+    check_user_rate_limit(
+        user.id, _TURN_LIMITER_PER_5_MIN, _TURN_LIMITER_PER_HOUR,
+    )
     try:
         session = await session_service.accept_custom(
             db=db,
@@ -190,6 +223,9 @@ async def request_alternative(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> SessionWithTurnsRead:
+    check_user_rate_limit(
+        user.id, _TURN_LIMITER_PER_5_MIN, _TURN_LIMITER_PER_HOUR,
+    )
     try:
         session = await session_service.request_alternative(
             db=db,
@@ -212,6 +248,9 @@ async def skip_target(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> SessionWithTurnsRead:
+    check_user_rate_limit(
+        user.id, _TURN_LIMITER_PER_5_MIN, _TURN_LIMITER_PER_HOUR,
+    )
     try:
         session = await session_service.skip_target(
             db=db, user_id=user.id, session_id=session_id,
@@ -236,6 +275,9 @@ async def navigate(
     pending AI proposal for the new target. The current_draft is
     untouched. 400 when the move would step out of bounds.
     """
+    check_user_rate_limit(
+        user.id, _TURN_LIMITER_PER_5_MIN, _TURN_LIMITER_PER_HOUR,
+    )
     try:
         session = await session_service.navigate(
             db=db,
@@ -270,6 +312,9 @@ async def create_target_from_line(
     (deduplicated server-side); otherwise inserts a user-origin target
     after the cursor and generates a proposal on-demand.
     """
+    check_user_rate_limit(
+        user.id, _TURN_LIMITER_PER_5_MIN, _TURN_LIMITER_PER_HOUR,
+    )
     try:
         session = await session_service.create_target_from_line(
             db=db,

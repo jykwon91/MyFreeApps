@@ -32,6 +32,7 @@ from platform_shared.core.auth_events import AuthEventType
 from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from platform_shared.core.rate_limit import (
     RateLimiter,
+    check_user_rate_limit,
     email_domain_from_request,
     make_check_account_not_locked,
     make_check_login_ip_limit,
@@ -173,6 +174,46 @@ class TestRateLimiter:
         limiter.check("b")
         with pytest.raises(HTTPException):
             limiter.check("a")
+
+
+class TestCheckUserRateLimit:
+    def test_users_have_separate_budgets(self) -> None:
+        limiter = RateLimiter(max_attempts=2, window_seconds=300)
+        first, second = uuid.uuid4(), uuid.uuid4()
+
+        check_user_rate_limit(first, limiter)
+        check_user_rate_limit(first, limiter)
+        with pytest.raises(HTTPException) as exc:
+            check_user_rate_limit(first, limiter)
+        assert exc.value.status_code == 429
+
+        check_user_rate_limit(second, limiter)
+
+    def test_every_limiter_is_applied(self) -> None:
+        short = RateLimiter(max_attempts=5, window_seconds=60)
+        long = RateLimiter(max_attempts=2, window_seconds=3600)
+        user = uuid.uuid4()
+
+        check_user_rate_limit(user, short, long)
+        check_user_rate_limit(user, short, long)
+        with pytest.raises(HTTPException):
+            check_user_rate_limit(user, short, long)
+
+    def test_burst_refused_by_short_window_does_not_charge_long_window(self) -> None:
+        short = RateLimiter(max_attempts=1, window_seconds=60)
+        long = RateLimiter(max_attempts=3, window_seconds=3600)
+        user = uuid.uuid4()
+
+        check_user_rate_limit(user, short, long)
+        for _ in range(5):
+            with pytest.raises(HTTPException):
+                check_user_rate_limit(user, short, long)
+
+        # Only the one admitted call was charged to the hourly window.
+        long.check(str(user))
+        long.check(str(user))
+        with pytest.raises(HTTPException):
+            long.check(str(user))
 
 
 class TestEmailDomainFromRequest:

@@ -15,21 +15,19 @@ Auth: every endpoint requires an authenticated user via
 filter by ``user_id`` at the repository layer.
 
 Rate-limit: ``POST /discover/sources/{id}/refresh`` calls JSearch which
-is paid + per-month-quota. Cap at 30 / 5 min per IP. The other endpoints
+is paid + per-month-quota. Cap at 30 / 5 min per user. The other endpoints
 are cheap and don't need throttling beyond the global gateway.
 """
 from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from platform_shared.core.request_utils import get_client_ip
 
 from app.core.auth import current_active_user
 from app.core.config import settings
-from app.core.rate_limit import RateLimiter
+from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
 from app.repositories.discovery import (
@@ -77,10 +75,12 @@ router = APIRouter(prefix="/discover", tags=["discovery"])
 
 _NOT_FOUND_DETAIL = "Discovery resource not found"
 
-# Fetches hit JSearch (paid). Cap is generous for one operator running
-# ad-hoc refreshes but limits blast radius if a key leaks. Defaults
-# (30 / 5 min) live in Settings so an operator can lower them without
-# code changes.
+# Fetches hit JSearch (paid) and queue background scoring/embedding. Cap is
+# generous for one operator running ad-hoc refreshes but limits blast radius
+# if a key leaks. Keyed on user.id, not IP, so users behind one NAT don't
+# share a budget. Defaults (30 / 5 min) live in Settings so an operator can
+# lower them without code changes. In-memory per process and the API runs
+# 2 uvicorn workers, so the effective budget is up to ~2x.
 _REFRESH_LIMITER = RateLimiter(
     max_attempts=settings.discovery_refresh_rate_limit_threshold,
     window_seconds=settings.discovery_refresh_rate_limit_window_seconds,
@@ -195,7 +195,6 @@ async def deactivate_source(
 )
 async def refresh_source(
     source_id: uuid.UUID,
-    request: Request,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
@@ -206,13 +205,13 @@ async def refresh_source(
     - 200 — fetch completed (status field tells you success/partial/error)
     - 404 — source not found or doesn't belong to caller
     - 409 — source is deactivated
-    - 429 — per-IP rate limit (30 / 5 min) OR the JSearch RapidAPI plan's
+    - 429 — per-user rate limit (30 / 5 min) OR the JSearch RapidAPI plan's
             monthly quota is exhausted (distinct, actionable detail)
     - 502 — adapter raised transient error after retries exhausted
     - 503 — JSEARCH_API_KEY not configured (or invalid)
     - 501 — no adapter for this source kind (shouldn't happen; defensive)
     """
-    _REFRESH_LIMITER.check(get_client_ip(request))
+    check_user_rate_limit(user.id, _REFRESH_LIMITER)
 
     try:
         result = await discovery_fetch_service.fetch_source(

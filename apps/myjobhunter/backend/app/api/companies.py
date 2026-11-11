@@ -28,9 +28,8 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
 from app.core.auth import current_active_user
+from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.company.company_create_request import CompanyCreateRequest
@@ -46,10 +45,23 @@ from app.services.company.company_service import (
 )
 from app.services.integrations.tavily_service import TavilyNotConfiguredError
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 _NOT_FOUND_DETAIL = "Company not found"
 _RESEARCH_NOT_FOUND_DETAIL = "No research has been run for this company yet"
+
+# Per-user limits for research runs. Each run is the most expensive call in the
+# app: two Tavily searches plus a Claude synthesis, 10-30 s synchronous. A
+# legitimate operator researches a company per application or re-runs one
+# occasionally; 10 / 5 min matches the JD URL extractor (outbound fetch +
+# Claude) and is tighter than analyze (30) because every call also spends
+# Tavily credits. The hourly cap bounds a client that paces itself just under
+# the short window all day. Counts live in process memory and the API runs
+# 2 uvicorn workers, so the effective budget is up to ~2x these numbers.
+_RESEARCH_LIMITER_PER_5_MIN = RateLimiter(max_attempts=10, window_seconds=300)
+_RESEARCH_LIMITER_PER_HOUR = RateLimiter(max_attempts=30, window_seconds=3600)
 
 
 @router.get("/companies")
@@ -234,11 +246,16 @@ async def trigger_company_research(
     search results and synthesise them with Claude. Phase 5 will move this
     to a background queue.
 
+    Rate limited per user (10 / 5 min, 30 / hour); 429 when exceeded.
+
     Returns 404 if the company does not exist or belongs to another user.
     Returns 503 if the Tavily API key is not configured.
     Returns 502 if the Anthropic API call fails.
     Returns 200 with the populated research record on success.
     """
+    check_user_rate_limit(
+        user.id, _RESEARCH_LIMITER_PER_5_MIN, _RESEARCH_LIMITER_PER_HOUR,
+    )
     try:
         research = await company_research_service.run_research(
             db, company_id=company_id, user_id=user.id

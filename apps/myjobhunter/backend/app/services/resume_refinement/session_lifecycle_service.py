@@ -50,6 +50,7 @@ from app.services.resume_refinement.errors import (
 from app.services.resume_refinement.markdown_renderer import render_resume_to_markdown
 from app.services.resume_refinement.session_helpers import (
     _generate_next_proposal,
+    _load_active,
     _prefetch_all_proposals,
     _with_turns,
 )
@@ -236,7 +237,6 @@ async def complete_session(
     session_id: uuid.UUID,
 ) -> ResumeRefinementSession:
     """Terminal: mark the session done. Locks the current_draft."""
-    from app.services.resume_refinement.session_helpers import _load_active
     session = await _load_active(db, session_id, user_id)
     session = await session_repo.mark_completed(db, session)
     await turn_repo.append(

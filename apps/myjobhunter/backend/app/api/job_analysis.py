@@ -26,7 +26,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
-from app.core.rate_limit import RateLimiter
+from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.application.application_response import ApplicationResponse
@@ -47,7 +47,8 @@ _NOT_FOUND_DETAIL = "Job analysis not found"
 # 30 / 5 min per user — analysis is more expensive than the existing extract +
 # parse endpoints. The cap is generous for a legitimate operator (one
 # analysis per role across a hunting session) but tight enough to
-# limit blast radius if a key leaks.
+# limit blast radius if a key leaks. Counts live in process memory and the
+# API runs --workers 2, so the effective budget is up to ~2x.
 _ANALYZE_LIMITER = RateLimiter(max_attempts=30, window_seconds=300)
 
 
@@ -76,7 +77,7 @@ async def analyze_job(
     - 502 — Claude failed or returned malformed JSON
     - 504 — upstream URL fetch timed out
     """
-    _ANALYZE_LIMITER.check(str(user.id))
+    check_user_rate_limit(user.id, _ANALYZE_LIMITER)
 
     url = str(payload.url) if payload.url is not None else None
     jd_text = payload.jd_text

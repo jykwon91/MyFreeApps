@@ -24,6 +24,7 @@ import logging
 import math
 import time
 import threading
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Mapping, Optional
@@ -128,6 +129,24 @@ class RateLimiter:
                 ]
                 for k in stale_keys:
                     del self._buckets[k]
+
+
+def check_user_rate_limit(user_id: uuid.UUID, *limiters: RateLimiter) -> None:
+    """Apply each limiter under the caller's user-id bucket (raises 429 when full).
+
+    For authenticated endpoints that spend money or hit external services.
+    Keying on ``user_id`` (not IP) is correct for bearer auth: behind a
+    carrier NAT or VPN many users share one IP and would share one budget.
+    Call it AFTER auth resolves and BEFORE any paid work.
+
+    Pass limiters shortest window first. ``RateLimiter.check`` records an
+    attempt as it passes, so when the short window refuses a burst, the
+    refusal stops the loop before the longer window is charged: a refused
+    burst does not use up the hourly budget.
+    """
+    key = str(user_id)
+    for limiter in limiters:
+        limiter.check(key)
 
 
 # ---------------------------------------------------------------------------
