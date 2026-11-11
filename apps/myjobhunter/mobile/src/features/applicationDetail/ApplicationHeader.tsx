@@ -1,4 +1,5 @@
 import { KANBAN_COLUMN_LABELS } from "@myjobhunter/api-client/constants/kanbanColumnLabels";
+import { KANBAN_COLUMN_TONES } from "@myjobhunter/api-client/constants/kanbanColumnTones";
 import { formatRemoteType } from "@myjobhunter/api-client/utils/formatRemoteType";
 import { Chip, Skeleton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
@@ -20,9 +21,9 @@ export default function ApplicationHeader({ application, column, companyName }: 
         <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{companyName}</Text>
       )}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, paddingTop: spacing.xs }}>
-        <Chip label={KANBAN_COLUMN_LABELS[column]} />
+        <Chip label={KANBAN_COLUMN_LABELS[column]} tone={KANBAN_COLUMN_TONES[column]} />
         {application.archived ? <Chip label={MESSAGES.archived} /> : null}
-        {remote ? <Chip label={remote} /> : null}
+        {remote ? <Chip label={remote} tone="info" /> : null}
       </View>
     </View>
   );

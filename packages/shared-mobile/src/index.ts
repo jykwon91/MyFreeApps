@@ -66,6 +66,7 @@ export type { AccountMessage } from "./types/AccountMessage";
 export type { AccountSettingsProps } from "./types/AccountSettingsProps";
 export type { ButtonVariant } from "./types/ButtonVariant";
 export type { ChipProps } from "./types/ChipProps";
+export type { ChipTone } from "./types/ChipTone";
 export type { ComingToAppScreenProps } from "./types/ComingToAppScreenProps";
 export type { EmptyStateAction } from "./types/EmptyStateAction";
 export type { FileForUpload } from "./types/FileForUpload";

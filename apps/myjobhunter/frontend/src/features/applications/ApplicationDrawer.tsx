@@ -46,6 +46,7 @@ import { KANBAN_COLUMN_ORDER } from "@myjobhunter/api-client/constants/kanbanCol
 import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
 import { currentKanbanColumn } from "@myjobhunter/api-client/utils/currentKanbanColumn";
 import ApplicationDetailSkeleton from "./ApplicationDetailSkeleton";
+import { getStageColor } from "@/lib/stage-color";
 
 interface ApplicationDrawerProps {
   /** Application id from ``?app=`` query param. ``null`` when closed. */
@@ -297,7 +298,7 @@ function DrawerHeader({
         ) : null}
         {currentColumn ? (
           <div className="mt-1.5">
-            <Badge label={KANBAN_COLUMN_LABELS[currentColumn]} color="blue" />
+            <Badge label={KANBAN_COLUMN_LABELS[currentColumn]} color={getStageColor(currentColumn)} />
           </div>
         ) : null}
       </div>

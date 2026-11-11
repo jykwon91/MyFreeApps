@@ -1,8 +1,10 @@
 import type { Application } from "@myjobhunter/api-client/types/application";
+import type { StatusTone } from "@myjobhunter/api-client/types/status-tone";
 import { formatAppliedDate } from "@myjobhunter/api-client/utils/formatAppliedDate";
 import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
 import { formatFitScore } from "@myjobhunter/api-client/utils/formatFitScore";
 import { formatRemoteType } from "@myjobhunter/api-client/utils/formatRemoteType";
+import { toneForEventType } from "@myjobhunter/api-client/utils/toneForEventType";
 import { APPLICATION_MESSAGES } from "../../constants/applications";
 
 export function companyName(application: Application): string {
@@ -11,6 +13,10 @@ export function companyName(application: Application): string {
 
 export function statusLabel(application: Application): string | null {
   return application.latest_status === null ? null : formatEventType(application.latest_status);
+}
+
+export function statusTone(application: Application): StatusTone {
+  return application.latest_status === null ? "neutral" : toneForEventType(application.latest_status);
 }
 
 export function fitText(application: Application): string | null {
