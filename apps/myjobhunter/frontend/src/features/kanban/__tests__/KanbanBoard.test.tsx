@@ -177,4 +177,15 @@ describe("KanbanBoard", () => {
     expect(within(known!).getByText("Strong fit")).toBeInTheDocument();
     expect(within(unknown!).getByText("long_shot")).toBeInTheDocument();
   });
+
+  it("loads a company logo only from an http or https address", () => {
+    const items = [
+      makeItem({ id: "l-1", role_title: "Web logo", company_logo_url: "https://logo.example.com/acme.png" }),
+      makeItem({ id: "l-2", role_title: "Script logo", company_logo_url: "javascript:alert(1)" }),
+    ];
+    const { container } = renderBoard(items);
+
+    const sources = Array.from(container.querySelectorAll("img")).map((img) => img.getAttribute("src"));
+    expect(sources).toEqual(["https://logo.example.com/acme.png"]);
+  });
 });

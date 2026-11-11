@@ -14,7 +14,7 @@ import type { JdUrlExtractResponse } from "@myjobhunter/api-client/types/applica
 import type { Company } from "@myjobhunter/api-client/types/company";
 import { baseApi } from "@platform/core/store/baseApi";
 import { DISCARD_MESSAGES } from "@platform/mobile";
-import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
 import { Alert } from "react-native";
@@ -125,15 +125,6 @@ function field(label: string) {
 function requestsTo(sent: ReturnType<typeof serve>, route: string) {
   return sent.filter((request) => request.route === route);
 }
-
-// renderApp puts each test on a fresh fake clock, which drops whatever the last one left pending.
-// This screen leaves some (a toast's dismissal, the slow-read hint), and among them can be the one
-// Redux Toolkit tells the screen about store updates on; dropped, the next test's screen never
-// hears from the store again. So each test's timers are run out once it has unmounted.
-afterEach(async () => {
-  await cleanup();
-  jest.runAllTimers();
-});
 
 beforeEach(() => {
   storedItems.clear();

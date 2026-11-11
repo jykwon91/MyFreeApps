@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { KanbanLane } from "@myjobhunter/api-client/types/kanban/kanban-lane";
 
 /**
  * Per-lane collapse state, persisted to localStorage.
@@ -14,8 +15,6 @@ import { useCallback, useEffect, useState } from "react";
  * tabs (collapse a lane in tab A → tab B's kanban hides it on next
  * render).
  */
-export type KanbanLane = "strong_fit" | "everything_else";
-
 const PREFIX = "mjh_kanban_lane_";
 
 function storageKey(lane: KanbanLane): string {

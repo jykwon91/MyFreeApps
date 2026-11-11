@@ -1,6 +1,6 @@
 import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { baseApi } from "@platform/core/store/baseApi";
-import { assertSecureApiUrl, onAccountLeft, resetCacheOnAccountChange } from "@platform/mobile";
+import { assertSecureApiUrl, onAccountLeft, refetchOnForeground, resetCacheOnAccountChange } from "@platform/mobile";
 import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
 import { stopAi } from "../features/aiPermission/aiPermission";
@@ -11,7 +11,6 @@ import { clearReplyDrafts } from "../features/inquiries/replyDrafts";
 import { clearReplyRequestIds } from "../features/inquiries/replyRequestIds";
 import workspace, { workspaceChosen, workspaceLost } from "../features/workspace/workspaceSlice";
 import { clearHeldFiles } from "../features/uploads/heldFile";
-import { refetchOnForeground } from "./refetchOnForeground";
 import { session } from "./session";
 
 assertSecureApiUrl(API_BASE_URL);

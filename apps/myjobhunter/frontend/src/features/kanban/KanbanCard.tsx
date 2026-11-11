@@ -13,12 +13,20 @@
  * The ``draggable`` prop is true for normal in-column cards, false for
  * the floating clone rendered inside ``<DragOverlay>``.
  */
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Badge } from "@platform/ui";
 import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
 import type { BadgeColor } from "@platform/ui/components/ui/Badge";
-import { colorForVerdict, labelForVerdict } from "./verdictBadge";
+import type { StatusTone } from "@myjobhunter/api-client/types/status-tone";
+import { companyLogoUrl } from "@myjobhunter/api-client/utils/companyLogoUrl";
+import { daysInStage } from "@myjobhunter/api-client/utils/daysInStage";
+import { formatDaysInStage } from "@myjobhunter/api-client/utils/formatDaysInStage";
+import { formatVerdict } from "@myjobhunter/api-client/utils/formatVerdict";
+import { stageAgeTone } from "@myjobhunter/api-client/utils/stageAgeTone";
+import { STATUS_TONE_BADGE_COLORS } from "@/constants/statusToneBadgeColors";
+import { colorForVerdict } from "./verdictBadge";
 
 interface KanbanCardProps {
   item: KanbanItem;
@@ -26,43 +34,28 @@ interface KanbanCardProps {
   draggable?: boolean;
 }
 
-const STALE_AMBER_DAYS = 14;
-const STALE_RED_DAYS = 21;
-const STALE_VISIBLE_THRESHOLD = 7;
-
-function daysSince(iso: string | null): number | null {
-  if (!iso) return null;
-  const ms = Date.now() - new Date(iso).getTime();
-  if (Number.isNaN(ms)) return null;
-  return Math.floor(ms / (1000 * 60 * 60 * 24));
-}
-
-function staleBadgeColor(days: number): "gray" | "yellow" | "red" {
-  if (days >= STALE_RED_DAYS) return "red";
-  if (days >= STALE_AMBER_DAYS) return "yellow";
-  return "gray";
-}
-
 interface CardBodyProps {
   item: KanbanItem;
-  showStaleChip: boolean;
   stageDays: number | null;
+  staleTone: StatusTone | null;
   verdictLabel: string | null;
   verdictColor: BadgeColor;
 }
 
 function CardBody({
   item,
-  showStaleChip,
   stageDays,
+  staleTone,
   verdictLabel,
   verdictColor,
 }: CardBodyProps) {
+  // Only an http or https logo is loaded; anything else gets the plain circle.
+  const logoUrl = companyLogoUrl(item.company_logo_url);
   return (
     <div className="flex items-start gap-2">
-      {item.company_logo_url ? (
+      {logoUrl ? (
         <img
-          src={item.company_logo_url}
+          src={logoUrl}
           alt=""
           className="w-6 h-6 rounded-full object-cover flex-shrink-0 bg-muted"
           loading="lazy"
@@ -80,8 +73,8 @@ function CardBody({
 
         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
           {verdictLabel ? <Badge label={verdictLabel} color={verdictColor} /> : null}
-          {showStaleChip && stageDays !== null ? (
-            <Badge label={`${stageDays}d in stage`} color={staleBadgeColor(stageDays)} />
+          {staleTone !== null && stageDays !== null ? (
+            <Badge label={formatDaysInStage(stageDays)} color={STATUS_TONE_BADGE_COLORS[staleTone]} />
           ) : null}
         </div>
       </div>
@@ -90,9 +83,11 @@ function CardBody({
 }
 
 function StaticKanbanCard({ item, onSelect }: KanbanCardProps) {
-  const stageDays = daysSince(item.stage_entered_at);
-  const showStaleChip = stageDays !== null && stageDays >= STALE_VISIBLE_THRESHOLD;
-  const verdictLabel = labelForVerdict(item.verdict);
+  // Read the clock once per card: whole days don't need a re-render to stay right.
+  const [now] = useState(Date.now);
+  const stageDays = daysInStage(item.stage_entered_at, now);
+  const staleTone = stageAgeTone(stageDays);
+  const verdictLabel = formatVerdict(item.verdict);
   const verdictColor = colorForVerdict(item.verdict);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
@@ -113,8 +108,8 @@ function StaticKanbanCard({ item, onSelect }: KanbanCardProps) {
     >
       <CardBody
         item={item}
-        showStaleChip={showStaleChip}
         stageDays={stageDays}
+        staleTone={staleTone}
         verdictLabel={verdictLabel}
         verdictColor={verdictColor}
       />
@@ -134,9 +129,11 @@ function SortableKanbanCard({ item, onSelect }: KanbanCardProps) {
     opacity: isDragging ? 0 : 1,
   };
 
-  const stageDays = daysSince(item.stage_entered_at);
-  const showStaleChip = stageDays !== null && stageDays >= STALE_VISIBLE_THRESHOLD;
-  const verdictLabel = labelForVerdict(item.verdict);
+  // Read the clock once per card: whole days don't need a re-render to stay right.
+  const [now] = useState(Date.now);
+  const stageDays = daysInStage(item.stage_entered_at, now);
+  const staleTone = stageAgeTone(stageDays);
+  const verdictLabel = formatVerdict(item.verdict);
   const verdictColor = colorForVerdict(item.verdict);
 
   function handleClick(e: React.MouseEvent<HTMLDivElement>) {
@@ -168,8 +165,8 @@ function SortableKanbanCard({ item, onSelect }: KanbanCardProps) {
     >
       <CardBody
         item={item}
-        showStaleChip={showStaleChip}
         stageDays={stageDays}
+        staleTone={staleTone}
         verdictLabel={verdictLabel}
         verdictColor={verdictColor}
       />
