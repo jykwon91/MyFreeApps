@@ -1,5 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
-import { act, fireEvent, screen, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import {
   CONTACT_EMAIL_MAX_LENGTH,
   CONTACT_LINKEDIN_MAX_LENGTH,
@@ -266,6 +266,27 @@ describe("removing a contact", () => {
     expect(screen.queryByText(CONTACTS.couldntRemove)).toBeNull();
     expect(screen.queryByText(APPLICATION_DETAIL_MESSAGES.gone)).toBeNull();
     expect(await screen.findByText(CONTACTS.none)).toBeTruthy();
+  });
+
+  it("takes them off the list, without spinning, even when the reload after the removal fails", async () => {
+    let reloadFails = false;
+    serve({
+      ...applicationDetailRoutes(applicationDetailRecord({ id: ID })),
+      [`GET /applications/${ID}`]: () =>
+        reloadFails ? { status: 503, data: { detail: "down" } } : { status: 200, data: applicationDetailRecord({ id: ID, contacts: [SAM] }) },
+      [`DELETE /applications/${ID}/contacts/k-1`]: () => {
+        reloadFails = true;
+        return { status: 204 };
+      },
+    });
+    await renderApplicationDetail(ID);
+    await fireEvent.press(await removeButton());
+    await act(async () => alertButton(CONTACTS.remove).onPress?.());
+
+    expect(await screen.findByText(CONTACTS.removed)).toBeTruthy();
+    await waitFor(() => expect(screen.queryByTestId("contact-k-1")).toBeNull());
+    expect(screen.queryByText(CONTACTS.removing)).toBeNull();
+    expect(screen.getByText(CONTACTS.none)).toBeTruthy();
   });
 
   it("says so and keeps them when the removal fails", async () => {

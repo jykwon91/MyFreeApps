@@ -8,38 +8,18 @@ import {
   useUpdateScreeningAnswerMutation,
 } from "@myjobhunter/api-client/store/screeningAnswersApi";
 import type { ScreeningAnswer } from "@myjobhunter/api-client/types/screening-answer/screening-answer";
+import type { ScreeningAnswerFormValues as FormValues } from "@myjobhunter/api-client/types/screening-answer/screening-answer-form-values";
+import { PROFILE_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/profileFormProblems";
+import { SCREENING_QUESTIONS } from "@myjobhunter/api-client/constants/screeningQuestions";
+import { isConflict } from "@myjobhunter/api-client/utils/isConflict";
+import { screeningAnswerFormProblems } from "@myjobhunter/api-client/utils/screeningAnswerFormProblems";
+import { screeningQuestionLabel } from "@myjobhunter/api-client/utils/screeningQuestionLabel";
+import { unansweredScreeningQuestions } from "@myjobhunter/api-client/utils/unansweredScreeningQuestions";
+import { problemsResolver } from "@/lib/problems-resolver";
 
-const ALLOWED_QUESTION_KEYS = [
-  // Non-EEOC
-  { key: "work_auth_us", label: "Work authorization (US)", eeoc: false },
-  { key: "require_sponsorship", label: "Requires visa sponsorship", eeoc: false },
-  { key: "willing_to_relocate", label: "Willing to relocate", eeoc: false },
-  { key: "salary_expectation", label: "Salary expectation", eeoc: false },
-  { key: "notice_period", label: "Notice period", eeoc: false },
-  { key: "years_experience", label: "Total years of experience", eeoc: false },
-  { key: "highest_education", label: "Highest education level", eeoc: false },
-  { key: "linkedin_url", label: "LinkedIn URL", eeoc: false },
-  { key: "github_url", label: "GitHub URL", eeoc: false },
-  { key: "portfolio_url", label: "Portfolio URL", eeoc: false },
-  { key: "available_start_date", label: "Available start date", eeoc: false },
-  { key: "cover_letter", label: "Cover letter", eeoc: false },
-  { key: "referral_source", label: "Referral source", eeoc: false },
-  { key: "willing_to_travel", label: "Willing to travel", eeoc: false },
-  { key: "has_drivers_license", label: "Has driver's license", eeoc: false },
-  { key: "felony_conviction", label: "Felony conviction", eeoc: false },
-  { key: "non_compete_agreement", label: "Non-compete agreement", eeoc: false },
-  // EEOC
-  { key: "eeoc_gender", label: "Gender (EEOC)", eeoc: true },
-  { key: "eeoc_race_ethnicity", label: "Race / ethnicity (EEOC)", eeoc: true },
-  { key: "eeoc_veteran_status", label: "Veteran status (EEOC)", eeoc: true },
-  { key: "eeoc_disability_status", label: "Disability status (EEOC)", eeoc: true },
-  { key: "eeoc_protected_class", label: "Protected class (EEOC)", eeoc: true },
-];
-
-interface FormValues {
-  question_key: string;
-  answer: string;
-}
+const resolver = problemsResolver(screeningAnswerFormProblems);
+const QUESTION_PROBLEM_ID = "sa-question-key-problem";
+const ANSWER_PROBLEM_ID = "sa-answer-problem";
 
 export interface ScreeningAnswerDialogProps {
   open: boolean;
@@ -60,11 +40,18 @@ export default function ScreeningAnswerDialog({
   const isLoading = isCreating || isUpdating;
   const isEdit = Boolean(existing);
 
-  const { register, handleSubmit, reset } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors },
+  } = useForm<FormValues>({
     defaultValues: {
       question_key: "",
       answer: "",
     },
+    resolver,
   });
 
   useEffect(() => {
@@ -76,9 +63,7 @@ export default function ScreeningAnswerDialog({
     }
   }, [open, existing, reset]);
 
-  const availableKeys = isEdit
-    ? ALLOWED_QUESTION_KEYS
-    : ALLOWED_QUESTION_KEYS.filter((q) => !existingKeys.includes(q.key));
+  const availableKeys = isEdit ? SCREENING_QUESTIONS : unansweredScreeningQuestions(existingKeys);
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     try {
@@ -97,11 +82,14 @@ export default function ScreeningAnswerDialog({
       }
       onOpenChange(false);
     } catch (err) {
-      showError(
-        isEdit
-          ? `Couldn't update answer: ${extractErrorMessage(err)}`
-          : `Couldn't add answer: ${extractErrorMessage(err)}`,
-      );
+      if (isEdit) {
+        showError(`Couldn't update answer: ${extractErrorMessage(err)}`);
+      } else if (isConflict(err)) {
+        // Answered meanwhile (another tab, or a double click): say so by the question.
+        setError("question_key", { type: "server", message: PROFILE_FORM_PROBLEMS.screeningAlreadyAnswered });
+      } else {
+        showError(`Couldn't add answer: ${extractErrorMessage(err)}`);
+      }
     }
   };
 
@@ -126,8 +114,7 @@ export default function ScreeningAnswerDialog({
               <div>
                 <label className="block text-sm font-medium mb-1">Question</label>
                 <p className="text-sm text-muted-foreground">
-                  {ALLOWED_QUESTION_KEYS.find((q) => q.key === existing?.question_key)?.label ??
-                    existing?.question_key}
+                  {existing ? screeningQuestionLabel(existing.question_key) : null}
                   {existing?.is_eeoc ? (
                     <span className="ml-2 text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
                       EEOC
@@ -142,8 +129,10 @@ export default function ScreeningAnswerDialog({
                 </label>
                 <select
                   id="sa-question-key"
-                  {...register("question_key", { required: "Question is required" })}
+                  {...register("question_key")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                  aria-invalid={errors.question_key ? true : undefined}
+                  aria-describedby={errors.question_key ? QUESTION_PROBLEM_ID : undefined}
                 >
                   <option value="">Select a question...</option>
                   {availableKeys.map((q) => (
@@ -153,6 +142,11 @@ export default function ScreeningAnswerDialog({
                     </option>
                   ))}
                 </select>
+                {errors.question_key ? (
+                  <p id={QUESTION_PROBLEM_ID} role="alert" className="text-xs text-destructive mt-1">
+                    {errors.question_key.message}
+                  </p>
+                ) : null}
               </div>
             )}
 
@@ -165,7 +159,14 @@ export default function ScreeningAnswerDialog({
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background resize-none"
                 placeholder="Enter your pre-filled answer..."
                 autoFocus={isEdit}
+                aria-invalid={errors.answer ? true : undefined}
+                aria-describedby={errors.answer ? ANSWER_PROBLEM_ID : undefined}
               />
+              {errors.answer ? (
+                <p id={ANSWER_PROBLEM_ID} role="alert" className="text-xs text-destructive mt-1">
+                  {errors.answer.message}
+                </p>
+              ) : null}
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

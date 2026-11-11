@@ -6,7 +6,7 @@
  * - Error state: renders error message
  * - Empty state: renders empty-state heading
  * - Loaded state: renders document titles and kind badges
- * - Delete: calls mutation after window.confirm
+ * - Delete: calls mutation after window.confirm; a 404 reads as deleted, other failures as an error
  * - Kind filter: shows select when hideKindFilter is false, hidden when true
  * - Download: one popup-safe open per click, none on re-render, error path
  */
@@ -436,6 +436,41 @@ describe("DocumentList", () => {
         expect(mockDelete).toHaveBeenCalledWith("doc-1");
         expect(mockShowSuccess).toHaveBeenCalledWith("Document deleted");
       });
+    });
+
+    it("says it's deleted, with no error, when the document was already gone (a 404)", async () => {
+      const user = userEvent.setup();
+      const mockDelete = vi
+        .fn()
+        .mockReturnValue({ unwrap: () => Promise.reject({ status: 404, data: { detail: "Document not found" } }) });
+      mockUseDeleteDocumentMutation.mockReturnValue(
+        [mockDelete, { isLoading: false }] as unknown as ReturnType<typeof useDeleteDocumentMutation>,
+      );
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+      mockUseDocumentsPages.mockReturnValue(pagesState({ documents: [makeDoc()], total: 1 }));
+
+      renderList();
+      await user.click(screen.getByTitle("Delete"));
+
+      await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith("Document deleted"));
+      expect(mockShowError).not.toHaveBeenCalled();
+    });
+
+    it("says it couldn't delete when the delete fails any other way", async () => {
+      const user = userEvent.setup();
+      const mockDelete = vi.fn().mockReturnValue({ unwrap: () => Promise.reject({ status: 500, data: { detail: "boom" } }) });
+      mockUseDeleteDocumentMutation.mockReturnValue(
+        [mockDelete, { isLoading: false }] as unknown as ReturnType<typeof useDeleteDocumentMutation>,
+      );
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+      mockUseDocumentsPages.mockReturnValue(pagesState({ documents: [makeDoc()], total: 1 }));
+
+      renderList();
+      await user.click(screen.getByTitle("Delete"));
+
+      await waitFor(() => expect(mockShowError).toHaveBeenCalledTimes(1));
+      expect(mockShowError.mock.calls[0][0]).toMatch(/^Couldn't delete: /);
+      expect(mockShowSuccess).not.toHaveBeenCalled();
     });
 
     it("does not call deleteDocument if user cancels confirmation", async () => {

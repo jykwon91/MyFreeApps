@@ -5,15 +5,13 @@ import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@pla
 import { X } from "lucide-react";
 import { useCreateEducationMutation, useUpdateEducationMutation } from "@myjobhunter/api-client/store/educationApi";
 import type { Education } from "@myjobhunter/api-client/types/education/education";
+import type { EducationFormValues as FormValues } from "@myjobhunter/api-client/types/education/education-form-values";
+import { educationFormProblems } from "@myjobhunter/api-client/utils/educationFormProblems";
+import { educationFormValues } from "@myjobhunter/api-client/utils/educationFormValues";
+import { educationRequest } from "@myjobhunter/api-client/utils/educationRequest";
+import { problemsResolver } from "@/lib/problems-resolver";
 
-interface FormValues {
-  school: string;
-  degree: string;
-  field: string;
-  start_year: string;
-  end_year: string;
-  gpa: string;
-}
+const resolver = problemsResolver(educationFormProblems);
 
 export interface EducationDialogProps {
   open: boolean;
@@ -33,57 +31,24 @@ export default function EducationDialog({ open, onOpenChange, existing }: Educat
     formState: { errors },
     reset,
   } = useForm<FormValues>({
-    defaultValues: {
-      school: "",
-      degree: "",
-      field: "",
-      start_year: "",
-      end_year: "",
-      gpa: "",
-    },
+    defaultValues: educationFormValues(),
+    resolver,
   });
 
   useEffect(() => {
     if (open) {
-      reset({
-        school: existing?.school ?? "",
-        degree: existing?.degree ?? "",
-        field: existing?.field ?? "",
-        start_year: existing?.start_year?.toString() ?? "",
-        end_year: existing?.end_year?.toString() ?? "",
-        gpa: existing?.gpa ?? "",
-      });
+      reset(educationFormValues(existing));
     }
   }, [open, existing, reset]);
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
-    const start_year = values.start_year ? parseInt(values.start_year, 10) : null;
-    const end_year = values.end_year ? parseInt(values.end_year, 10) : null;
-    const gpa = values.gpa.trim() || null;
-
+    const body = educationRequest(values);
     try {
       if (isEdit && existing) {
-        await updateEducation({
-          id: existing.id,
-          patch: {
-            school: values.school.trim(),
-            degree: values.degree.trim() || null,
-            field: values.field.trim() || null,
-            start_year,
-            end_year,
-            gpa,
-          },
-        }).unwrap();
+        await updateEducation({ id: existing.id, patch: body }).unwrap();
         showSuccess("Education updated");
       } else {
-        await createEducation({
-          school: values.school.trim(),
-          degree: values.degree.trim() || null,
-          field: values.field.trim() || null,
-          start_year,
-          end_year,
-          gpa,
-        }).unwrap();
+        await createEducation(body).unwrap();
         showSuccess("Education added");
       }
       onOpenChange(false);
@@ -114,12 +79,13 @@ export default function EducationDialog({ open, onOpenChange, existing }: Educat
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label htmlFor="ed-school" className="block text-sm font-medium mb-1">
                 School <span className="text-destructive">*</span>
               </label>
               <input
+                id="ed-school"
                 type="text"
-                {...register("school", { required: "School is required" })}
+                {...register("school")}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                 placeholder="e.g. State University"
                 autoFocus
@@ -131,34 +97,40 @@ export default function EducationDialog({ open, onOpenChange, existing }: Educat
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium mb-1">Degree</label>
+                <label htmlFor="ed-degree" className="block text-sm font-medium mb-1">Degree</label>
                 <input
+                  id="ed-degree"
                   type="text"
                   {...register("degree")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="e.g. B.S."
                 />
+                {errors.degree ? (
+                  <p className="text-xs text-destructive mt-1">{errors.degree.message}</p>
+                ) : null}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Field</label>
+                <label htmlFor="ed-field" className="block text-sm font-medium mb-1">Field</label>
                 <input
+                  id="ed-field"
                   type="text"
                   {...register("field")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="e.g. Computer Science"
                 />
+                {errors.field ? (
+                  <p className="text-xs text-destructive mt-1">{errors.field.message}</p>
+                ) : null}
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-sm font-medium mb-1">Start year</label>
+                <label htmlFor="ed-start-year" className="block text-sm font-medium mb-1">Start year</label>
                 <input
+                  id="ed-start-year"
                   type="number"
-                  {...register("start_year", {
-                    min: { value: 1950, message: "Min 1950" },
-                    max: { value: 2100, message: "Max 2100" },
-                  })}
+                  {...register("start_year")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="2018"
                 />
@@ -167,13 +139,11 @@ export default function EducationDialog({ open, onOpenChange, existing }: Educat
                 ) : null}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">End year</label>
+                <label htmlFor="ed-end-year" className="block text-sm font-medium mb-1">End year</label>
                 <input
+                  id="ed-end-year"
                   type="number"
-                  {...register("end_year", {
-                    min: { value: 1950, message: "Min 1950" },
-                    max: { value: 2100, message: "Max 2100" },
-                  })}
+                  {...register("end_year")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="2022"
                 />
@@ -182,14 +152,18 @@ export default function EducationDialog({ open, onOpenChange, existing }: Educat
                 ) : null}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">GPA</label>
+                <label htmlFor="ed-gpa" className="block text-sm font-medium mb-1">GPA</label>
                 <input
+                  id="ed-gpa"
                   type="number"
                   step="0.01"
                   {...register("gpa")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
                   placeholder="3.80"
                 />
+                {errors.gpa ? (
+                  <p className="text-xs text-destructive mt-1">{errors.gpa.message}</p>
+                ) : null}
               </div>
             </div>
 

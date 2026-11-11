@@ -1,4 +1,6 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { removalIsDone } from "../utils/removalIsDone";
+import { withoutListItem } from "../utils/withoutListItem";
 import type { WorkHistory } from "../types/work-history/work-history";
 import type { WorkHistoryListResponse } from "../types/work-history/work-history-list-response";
 import type { WorkHistoryCreateRequest } from "../types/work-history/work-history-create-request";
@@ -43,6 +45,11 @@ const workHistoryApi = baseApi
 
       deleteWorkHistory: build.mutation<void, string>({
         query: (id) => ({ url: `/work-history/${id}`, method: "DELETE" }),
+        // Once the record is gone (deleted, or already gone: a 404), the loaded list drops it at once,
+        // so it leaves the screen even if the reload the invalidation starts fails.
+        async onQueryStarted(id, { dispatch, queryFulfilled }) {
+          if (await removalIsDone(queryFulfilled)) dispatch(workHistoryApi.util.updateQueryData("listWorkHistory", undefined, (list) => withoutListItem(list, id)));
+        },
         invalidatesTags: (_result, _err, id) => [
           { type: WORK_HISTORY_TAG, id },
           { type: WORK_HISTORY_TAG, id: "LIST" },

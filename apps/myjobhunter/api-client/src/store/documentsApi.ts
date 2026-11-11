@@ -7,6 +7,7 @@ import type { DocumentsFilter } from "../types/document/documents-filter";
 import { DOCUMENTS_PAGE_SIZE, FIRST_DOCUMENTS_OFFSET } from "../constants/documentsPaging";
 import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
 import { withoutDocument } from "../utils/withoutDocument";
+import { removalIsDone } from "../utils/removalIsDone";
 
 const DOCUMENTS_TAG = "Documents";
 
@@ -74,16 +75,12 @@ const documentsApi = baseApi
 
       deleteDocument: build.mutation<void, string>({
         query: (id) => ({ url: `/documents/${id}`, method: "DELETE" }),
-        // Once the server confirms, every loaded list drops it from whichever page holds it
-        // and lowers its total, at once. The reload of every loaded page the invalidation
-        // starts then realigns the pages, and if that reload fails the list still doesn't
-        // show a document that's gone.
+        // Once the document is gone (deleted, or already gone: a 404), every loaded list drops it
+        // from whichever page holds it and lowers its total, at once. The reload of every loaded
+        // page the invalidation starts then realigns the pages, and if that reload fails the list
+        // still doesn't show a document that's gone.
         async onQueryStarted(id, { dispatch, getState, queryFulfilled }) {
-          try {
-            await queryFulfilled;
-          } catch {
-            return;
-          }
+          if (!(await removalIsDone(queryFulfilled))) return;
           for (const { endpointName, originalArgs } of documentsApi.util.selectInvalidatedBy(getState(), [{ type: DOCUMENTS_TAG, id }])) {
             if (endpointName !== "listDocuments") continue;
             dispatch(documentsApi.util.updateQueryData("listDocuments", originalArgs as DocumentsFilter, (pages) => withoutDocument(pages, id)));

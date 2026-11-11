@@ -17,6 +17,7 @@ import type { KanbanColumn } from "../types/kanban/kanban-column";
 import type { KanbanListResponse } from "../types/kanban/kanban-list-response";
 import { APPLICATIONS_PAGE_SIZE, FIRST_APPLICATIONS_OFFSET } from "../constants/applicationsPaging";
 import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
+import { removalIsDone } from "../utils/removalIsDone";
 
 const APPLICATIONS_TAG = "Applications";
 const APPLICATION_EVENTS_TAG = "ApplicationEvents";
@@ -138,6 +139,17 @@ const applicationsApi = baseApi.enhanceEndpoints({
         method: "DELETE",
       }),
       invalidatesTags: (_result, _err, { applicationId }) => [{ type: APPLICATIONS_TAG, id: applicationId }],
+      // Once the contact is gone (deleted, or a 404), it leaves the cached application at once, so it
+      // drops off the screen even if the reload that follows fails.
+      async onQueryStarted({ applicationId, contactId }, { dispatch, queryFulfilled }) {
+        if (!(await removalIsDone(queryFulfilled))) return;
+        dispatch(
+          applicationsApi.util.updateQueryData("getApplication", applicationId, (application) => ({
+            ...application,
+            contacts: application.contacts.filter((contact) => contact.id !== contactId),
+          })),
+        );
+      },
     }),
 
     listApplicationEvents: build.query<ApplicationEventListResponse, string>({

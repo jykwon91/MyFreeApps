@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Profile from "@/pages/Profile";
 
@@ -123,6 +123,10 @@ import {
   useDeleteScreeningAnswerMutation,
 } from "@myjobhunter/api-client/store/screeningAnswersApi";
 
+import { showError, showSuccess } from "@platform/ui";
+
+const mockShowSuccess = vi.mocked(showSuccess);
+const mockShowError = vi.mocked(showError);
 const mockGetProfile = vi.mocked(useGetProfileQuery);
 const mockUpdateProfile = vi.mocked(useUpdateProfileMutation);
 const mockListWorkHistory = vi.mocked(useListWorkHistoryQuery);
@@ -500,3 +504,96 @@ describe("Profile page", () => {
     });
   });
 });
+
+describe("Profile page — level and work authorization wording", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupAllMocks();
+  });
+
+  function showProfile(overrides: Partial<typeof STUB_PROFILE>) {
+    mockGetProfile.mockReturnValue({
+      data: { ...STUB_PROFILE, ...overrides },
+      isLoading: false,
+      isError: false,
+      error: undefined,
+    } as unknown as ReturnType<typeof useGetProfileQuery>);
+    renderProfile();
+  }
+
+  it.each([
+    ["exec", "Executive level"],
+    // A level this client doesn't know yet still reads as words.
+    ["intern", "Intern level"],
+  ])("shows the %s level as %s", (seniority, wording) => {
+    showProfile({ seniority });
+    expect(screen.getByText(wording)).toBeInTheDocument();
+  });
+
+  it.each([
+    ["permanent_resident", "Permanent resident"],
+    ["unknown", "Not set"],
+    ["tn", "TN"],
+    ["h1b", "H-1B"],
+    // A status this client doesn't know yet still reads as words.
+    ["o1_visa", "O1 visa"],
+  ])("shows the %s work authorization as %s", (work_auth_status, wording) => {
+    showProfile({ work_auth_status });
+    expect(screen.getByText(wording)).toBeInTheDocument();
+  });
+});
+
+describe("Profile page — deleting a work history entry", () => {
+  const ENTRY = {
+    id: "wh1",
+    user_id: "u1",
+    profile_id: "p1",
+    company_name: "Acme Corp",
+    title: "Senior Engineer",
+    start_date: "2020-01-01",
+    end_date: "2022-12-31",
+    is_current: false,
+    bullets: [],
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setupAllMocks();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    mockListWorkHistory.mockReturnValue({
+      data: { items: [ENTRY], total: 1 },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useListWorkHistoryQuery>);
+  });
+
+  function deleteReplies(reply: () => Promise<unknown>) {
+    const trigger = vi.fn().mockReturnValue({ unwrap: reply });
+    mockDeleteWorkHistory.mockReturnValue([trigger, { isLoading: false }] as unknown as ReturnType<
+      typeof useDeleteWorkHistoryMutation
+    >);
+    return trigger;
+  }
+
+  it("says it's deleted when the server says it was already gone (a 404)", async () => {
+    const trigger = deleteReplies(() => Promise.reject({ status: 404, data: { detail: "Not found" } }));
+    renderProfile();
+    fireEvent.click(screen.getByRole("button", { name: "Delete Acme Corp" }));
+
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith("Work history deleted"));
+    expect(trigger).toHaveBeenCalledWith("wh1");
+    expect(mockShowError).not.toHaveBeenCalled();
+  });
+
+  it("says it couldn't delete when the server fails any other way", async () => {
+    deleteReplies(() => Promise.reject({ status: 500, data: { detail: "boom" } }));
+    renderProfile();
+    fireEvent.click(screen.getByRole("button", { name: "Delete Acme Corp" }));
+
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledTimes(1));
+    expect(mockShowError.mock.calls[0][0]).toMatch(/^Couldn't delete: /);
+    expect(mockShowSuccess).not.toHaveBeenCalled();
+  });
+});
+

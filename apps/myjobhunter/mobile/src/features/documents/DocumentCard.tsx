@@ -2,9 +2,9 @@ import { useDeleteDocumentMutation, useLazyGetDocumentDownloadUrlQuery } from "@
 import { documentDownloadUrl } from "@myjobhunter/api-client/utils/documentDownloadUrl";
 import { documentKindLabel, documentKindTone } from "@myjobhunter/api-client/utils/documentKind";
 import { Chip, LoadingButton, useOpenLink, useTheme, useToast } from "@platform/mobile";
-import { useState } from "react";
-import { Alert, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
+import { useConfirmedRemoval } from "../../hooks/useConfirmedRemoval";
 import { documentMeta } from "../../lib/documentMeta";
 import { writeFailure } from "../../lib/writeFailure";
 import type { DocumentCardProps } from "../../types/DocumentCardProps";
@@ -17,7 +17,14 @@ export default function DocumentCard({ document, onEdit, onOpenApplication }: Do
   const openLink = useOpenLink();
   const [getDownloadUrl] = useLazyGetDocumentDownloadUrlQuery();
   const [deleteDocument] = useDeleteDocumentMutation();
-  const [isDeleting, setIsDeleting] = useState(false);
+  const { isRemoving: isDeleting, confirmRemove: confirmDelete } = useConfirmedRemoval(() => deleteDocument(document.id).unwrap(), {
+    removeTitle: MESSAGES.deleteTitle,
+    removeBody: `"${document.title}" — ${MESSAGES.deleteBody}`,
+    remove: MESSAGES.delete,
+    keep: MESSAGES.keep,
+    removed: MESSAGES.deleted,
+    couldntRemove: MESSAGES.couldntDelete,
+  });
   const applicationId = document.application_id;
 
   async function open(): Promise<void> {
@@ -29,24 +36,6 @@ export default function DocumentCard({ document, onEdit, onOpenApplication }: Do
     } catch (error) {
       showToast(writeFailure(error, MESSAGES.couldntOpen), "error");
     }
-  }
-
-  async function remove(): Promise<void> {
-    setIsDeleting(true);
-    try {
-      await deleteDocument(document.id).unwrap();
-      showToast(MESSAGES.deleted);
-    } catch (error) {
-      showToast(writeFailure(error, MESSAGES.couldntDelete), "error");
-      setIsDeleting(false);
-    }
-  }
-
-  function confirmDelete(): void {
-    Alert.alert(MESSAGES.deleteTitle, `"${document.title}" — ${MESSAGES.deleteBody}`, [
-      { text: MESSAGES.keep, style: "cancel" },
-      { text: MESSAGES.delete, style: "destructive", onPress: () => void remove() },
-    ]);
   }
 
   return (

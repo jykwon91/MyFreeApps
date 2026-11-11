@@ -1,5 +1,6 @@
 import { EVENT_TYPE_LABELS } from "../constants/eventTypeLabels";
 import { isApplicationEventType } from "./isApplicationEventType";
+import { humanizeKey } from "./humanizeKey";
 
 /**
  * A snake_case event type as people read it. One added on the backend after this
@@ -7,5 +8,5 @@ import { isApplicationEventType } from "./isApplicationEventType";
  */
 export function formatEventType(eventType: string): string {
   if (isApplicationEventType(eventType)) return EVENT_TYPE_LABELS[eventType];
-  return eventType.charAt(0).toUpperCase() + eventType.slice(1).replace(/_/g, " ");
+  return humanizeKey(eventType);
 }

@@ -5,23 +5,8 @@ import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@pla
 import { X } from "lucide-react";
 import { useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileApi";
 import type { Profile } from "@myjobhunter/api-client/types/profile/profile";
-
-interface FormValues {
-  summary: string;
-  seniority: string;
-}
-
-const SENIORITY_OPTIONS = [
-  { value: "", label: "— not set —" },
-  { value: "junior", label: "Junior" },
-  { value: "mid", label: "Mid" },
-  { value: "senior", label: "Senior" },
-  { value: "staff", label: "Staff" },
-  { value: "principal", label: "Principal" },
-  { value: "manager", label: "Manager" },
-  { value: "director", label: "Director" },
-  { value: "exec", label: "Executive" },
-];
+import { SENIORITY_CHOICES } from "@/constants/seniority-choices";
+import type { ProfileHeaderFormValues as FormValues } from "@/types/profile/profile-header-form-values";
 
 export interface ProfileHeaderDialogProps {
   open: boolean;
@@ -82,7 +67,7 @@ export default function ProfileHeaderDialog({ open, onOpenChange, profile }: Pro
                 {...register("seniority")}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               >
-                {SENIORITY_OPTIONS.map((opt) => (
+                {SENIORITY_CHOICES.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>

@@ -1,4 +1,6 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { removalIsDone } from "../utils/removalIsDone";
+import { withoutListItem } from "../utils/withoutListItem";
 import type { Education } from "../types/education/education";
 import type { EducationListResponse } from "../types/education/education-list-response";
 import type { EducationCreateRequest } from "../types/education/education-create-request";
@@ -34,6 +36,11 @@ const educationApi = baseApi.enhanceEndpoints({ addTagTypes: [EDUCATION_TAG] }).
 
     deleteEducation: build.mutation<void, string>({
       query: (id) => ({ url: `/education/${id}`, method: "DELETE" }),
+      // Once the record is gone (deleted, or already gone: a 404), the loaded list drops it at once,
+      // so it leaves the screen even if the reload the invalidation starts fails.
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        if (await removalIsDone(queryFulfilled)) dispatch(educationApi.util.updateQueryData("listEducation", undefined, (list) => withoutListItem(list, id)));
+      },
       invalidatesTags: (_result, _err, id) => [
         { type: EDUCATION_TAG, id },
         { type: EDUCATION_TAG, id: "LIST" },

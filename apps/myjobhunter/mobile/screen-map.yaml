@@ -33,8 +33,9 @@ routes:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /login:
     screen: sign-in
+  # The website embeds its resume upload here; on the phone that is the Resume screen's job (/resume).
   /profile:
-    not_on_mobile: Not built yet.
+    screen: (app)/(tabs)/profile
   /register:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /reset-password:

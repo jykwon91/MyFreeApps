@@ -2,46 +2,25 @@ import { useRemoveApplicationContactMutation } from "@myjobhunter/api-client/sto
 import { contactEmailUrl, contactProfileUrl } from "@myjobhunter/api-client/utils/contactLinkUrls";
 import { contactDisplayName } from "@myjobhunter/api-client/utils/contactDisplayName";
 import { formatContactRole } from "@myjobhunter/api-client/utils/formatContactRole";
-import { isNotFound } from "@platform/core/utils/isNotFound";
-import { Chip, LoadingButton, useTheme, useToast } from "@platform/mobile";
-import { useState } from "react";
-import { Alert, Text, View } from "react-native";
+import { Chip, LoadingButton, useTheme } from "@platform/mobile";
+import { Text, View } from "react-native";
 import { APPLICATION_CONTACT_MESSAGES as MESSAGES } from "../../constants/applicationContacts";
+import { useConfirmedRemoval } from "../../hooks/useConfirmedRemoval";
 import type { ContactCardProps } from "../../types/ContactCardProps";
 import ContactLink from "./ContactLink";
 
 /** Who they are, their role, how to reach them, notes, and Remove. Only http, https and plain-address mailto links open. */
 export default function ContactCard({ applicationId, contact }: ContactCardProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
-  const { showToast } = useToast();
   const [removeContact] = useRemoveApplicationContactMutation();
-  const [isRemoving, setIsRemoving] = useState(false);
   const name = contactDisplayName(contact) ?? MESSAGES.unnamed;
   const role = formatContactRole(contact.role);
-
-  async function remove(): Promise<void> {
-    setIsRemoving(true);
-    try {
-      await removeContact({ applicationId, contactId: contact.id }).unwrap();
-      showToast(MESSAGES.removed);
-    } catch (error) {
-      // A 404 means they're already gone (removed elsewhere, or a double tap): what was asked for.
-      // The failed request still refetches the application, so the card drops off.
-      if (isNotFound(error)) {
-        showToast(MESSAGES.removed);
-        return;
-      }
-      showToast(MESSAGES.couldntRemove, "error");
-      setIsRemoving(false);
-    }
-  }
-
-  function confirmRemove(): void {
-    Alert.alert(MESSAGES.removeTitle, `${name} — ${MESSAGES.removeBody}`, [
-      { text: MESSAGES.keep, style: "cancel" },
-      { text: MESSAGES.remove, style: "destructive", onPress: () => void remove() },
-    ]);
-  }
+  // Once the contact is gone (deleted, or a 404), it leaves the cached application, so the card drops off
+  // even if the reload fails.
+  const { isRemoving, confirmRemove } = useConfirmedRemoval(() => removeContact({ applicationId, contactId: contact.id }).unwrap(), {
+    ...MESSAGES,
+    removeBody: `${name} — ${MESSAGES.removeBody}`,
+  });
 
   return (
     <View

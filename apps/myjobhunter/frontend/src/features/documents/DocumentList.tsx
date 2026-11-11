@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
-import { LoadMoreFooter, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { LoadMoreFooter } from "@platform/ui";
 import ListLoadError from "@/components/ListLoadError";
 import DocumentListSkeleton from "@/features/documents/DocumentListSkeleton";
 import DocumentRow from "@/features/documents/DocumentRow";
 import DocumentKindFilterSelect from "@/features/documents/DocumentKindFilterSelect";
 import DocumentListEmptyState from "@/features/documents/DocumentListEmptyState";
+import { deleteWithFeedback } from "@/lib/delete-with-feedback";
 import { documentsEmptyKind } from "@/lib/documentsEmptyKind";
 import DocumentEditDialog from "@/features/documents/DocumentEditDialog";
 import type { Document } from "@myjobhunter/api-client/types/document/document";
@@ -32,12 +33,7 @@ export default function DocumentList({ applicationId, hideKindFilter }: Document
 
   async function handleDelete(doc: Document) {
     if (!window.confirm(`Delete "${doc.title}"? This cannot be undone.`)) return;
-    try {
-      await deleteDocument(doc.id).unwrap();
-      showSuccess("Document deleted");
-    } catch (err) {
-      showError(`Couldn't delete: ${extractErrorMessage(err)}`);
-    }
+    await deleteWithFeedback(() => deleteDocument(doc.id).unwrap(), "Document deleted", "Couldn't delete");
   }
 
   if (list.isLoading) return <DocumentListSkeleton withFilterBar={!hideKindFilter} />;
