@@ -1,3 +1,4 @@
+import { KANBAN_ACTIVE_COLUMNS } from "@myjobhunter/api-client/constants/kanbanActiveColumns";
 import { KANBAN_COLUMN_ORDER } from "@myjobhunter/api-client/constants/kanbanColumnOrder";
 import { KANBAN_LANE_ORDER } from "@myjobhunter/api-client/constants/kanbanLaneOrder";
 import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
@@ -6,11 +7,9 @@ import { splitKanbanLanes } from "@myjobhunter/api-client/utils/splitKanbanLanes
 import type { DashboardLayout } from "../types/DashboardLayout";
 import type { DashboardRow } from "../types/DashboardRow";
 
-/** The stage the website folds away until it's opened. */
-const COLLAPSIBLE_STAGE: KanbanColumn = "closed";
-
 function stageRows(column: KanbanColumn, items: readonly KanbanItem[], layout: DashboardLayout): DashboardRow[] {
-  const isCollapsible = column === COLLAPSIBLE_STAGE;
+  // The stages off the board proper are the ones the website folds away until opened.
+  const isCollapsible = !KANBAN_ACTIVE_COLUMNS.includes(column);
   const isOpen = !isCollapsible || layout.isClosedOpen;
   const rows: DashboardRow[] = [{ kind: "stage", key: `stage-${column}`, column, count: items.length, isCollapsible, isOpen }];
   if (!isOpen) return rows;

@@ -1,45 +1,43 @@
-import { Skeleton } from "@platform/ui";
+/**
+ * Loading skeleton for /dashboard. Mirrors the loaded board: on desktop the
+ * "Pipeline" header, three columns with two swim lanes each, and the Closed
+ * accordion bar; on a phone the stage-by-stage list. Same wrapper classes as
+ * KanbanBoard so nothing shifts when the board arrives.
+ */
+import { Skeleton, useMediaQuery } from "@platform/ui";
+import { KANBAN_ACTIVE_COLUMNS } from "@myjobhunter/api-client/constants/kanbanActiveColumns";
+import DashboardColumnSkeleton from "./DashboardColumnSkeleton";
+import DashboardMobileSkeleton from "./DashboardMobileSkeleton";
 
 export default function DashboardSkeleton() {
+  const isMobile = useMediaQuery("(max-width: 767px)");
+
+  if (isMobile) {
+    return (
+      <main className="p-4 space-y-6" aria-label="Loading dashboard" aria-busy="true">
+        <DashboardMobileSkeleton />
+      </main>
+    );
+  }
+
   return (
-    <div className="p-6 space-y-6" aria-label="Loading dashboard" aria-busy="true">
-      {/* Header */}
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-48" />
-        <Skeleton className="h-4 w-72" />
-      </div>
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="border rounded-lg p-6 space-y-3">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-8 w-16" />
-            <Skeleton className="h-3 w-32" />
-          </div>
+    <main
+      className="p-4 sm:p-8 flex flex-col h-[calc(100vh-4rem)] min-h-0"
+      aria-label="Loading dashboard"
+      aria-busy="true"
+    >
+      <header className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Pipeline</h1>
+        <Skeleton className="h-4 w-32" />
+      </header>
+      <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
+        {KANBAN_ACTIVE_COLUMNS.map((column) => (
+          <DashboardColumnSkeleton key={column} />
         ))}
       </div>
-
-      {/* Funnel chart area */}
-      <div className="border rounded-lg p-6 space-y-4">
-        <Skeleton className="h-5 w-36" />
-        <Skeleton className="h-[280px] w-full" />
+      <div className="mt-4 rounded-lg border bg-muted/30 px-3 py-2">
+        <Skeleton className="h-5 w-24" />
       </div>
-
-      {/* Recent activity */}
-      <div className="border rounded-lg p-6 space-y-4">
-        <Skeleton className="h-5 w-36" />
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3">
-            <Skeleton className="h-8 w-8 rounded-full shrink-0" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-3 w-1/2" />
-            </div>
-            <Skeleton className="h-3 w-16 shrink-0" />
-          </div>
-        ))}
-      </div>
-    </div>
+    </main>
   );
 }

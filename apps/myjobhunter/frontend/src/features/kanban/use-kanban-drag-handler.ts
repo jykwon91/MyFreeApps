@@ -1,21 +1,16 @@
 /**
  * Drag-handler hook for the kanban board.
  *
- * Turns a drop into a move:
- * - Generates an idempotency_key per drop so a flaky network can't
- *   create phantom duplicates server-side.
- * - Dispatches the shared moveKanbanItem, which moves the card in the
- *   listApplicationsKanban cache at once and puts it back if the server
- *   refuses. An open drawer refetches through the transition's tags.
- * - Surfaces a toast with the error message when the move fails.
+ * Turns a drop into a move through the shared board move (optimistic move,
+ * put back if the server refuses, toast either way).
  */
 import { useCallback } from "react";
 import type { DragEndEvent } from "@dnd-kit/core";
-import { useDispatch } from "react-redux";
-import { showError, extractErrorMessage } from "@platform/ui";
-import { moveKanbanItem } from "@myjobhunter/api-client/store/moveKanbanItem";
-import type { AppDispatch } from "@/lib/store";
+import type { BoardMoveState } from "@myjobhunter/api-client/types/kanban/board-move-state";
 import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
+import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
+import { columnForEventType } from "@myjobhunter/api-client/utils/columnForEventType";
+import { isKanbanColumn } from "@myjobhunter/api-client/utils/isKanbanColumn";
 
 const COLUMN_ID_PREFIX = "column-";
 
@@ -28,15 +23,14 @@ export function columnDroppableId(column: KanbanColumn): string {
 export function columnFromDroppableId(id: string | null | undefined): KanbanColumn | null {
   if (!id || !id.startsWith(COLUMN_ID_PREFIX)) return null;
   const tail = id.slice(COLUMN_ID_PREFIX.length);
-  if (tail === "applied" || tail === "interviewing" || tail === "offer" || tail === "closed") {
-    return tail;
-  }
-  return null;
+  return isKanbanColumn(tail) ? tail : null;
 }
 
 interface UseKanbanDragHandlerArgs {
-  /** Resolve the column a given application id is currently in. */
-  currentColumnFor: (applicationId: string) => KanbanColumn | null;
+  /** The card behind a dragged id, or null when it is no longer on the board. */
+  itemFor: (applicationId: string) => KanbanItem | null;
+  /** The shared move: the card moves at once, and a toast says how it ended. */
+  moveTo: BoardMoveState["moveTo"];
 }
 
 interface UseKanbanDragHandlerReturn {
@@ -44,36 +38,22 @@ interface UseKanbanDragHandlerReturn {
 }
 
 export function useKanbanDragHandler({
-  currentColumnFor,
+  itemFor,
+  moveTo,
 }: UseKanbanDragHandlerArgs): UseKanbanDragHandlerReturn {
-  const dispatch = useDispatch<AppDispatch>();
-
   const onDragEnd = useCallback(
     async (event: DragEndEvent) => {
-      const applicationId = String(event.active.id);
       const targetColumn = columnFromDroppableId(
         event.over?.id !== undefined ? String(event.over.id) : null,
       );
       if (!targetColumn) return; // Dropped outside any column.
 
-      const currentColumn = currentColumnFor(applicationId);
-      if (currentColumn === targetColumn) return; // No-op move.
+      const item = itemFor(String(event.active.id));
+      if (!item) return;
 
-      const idempotencyKey =
-        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const occurredAt = new Date().toISOString();
-
-      try {
-        await dispatch(
-          moveKanbanItem({ applicationId, target: targetColumn, idempotencyKey, occurredAt }),
-        );
-      } catch (err) {
-        showError(`Couldn't move card: ${extractErrorMessage(err)}`);
-      }
+      await moveTo(item, columnForEventType(item.latest_event_type), targetColumn);
     },
-    [dispatch, currentColumnFor],
+    [itemFor, moveTo],
   );
 
   return { onDragEnd };
