@@ -99,11 +99,14 @@ local function addVerdict(tooltip, itemId, market, cut, count)
     line(tooltip, "Sell on AH", "vendors won't buy it", GOOD, MUTED)
     return
   end
-  local nets = floor(market * (1 - cut))
-  if nets > vendor * AH_BEATS_VENDOR_BY then
-    line(tooltip, "Sell on AH", "+" .. money((nets - vendor) * count) .. " over vendor", GOOD, VALUE)
+  -- The house takes its cut, rounded down, of the whole sale.
+  local total = market * count
+  local nets = total - floor(total * cut)
+  local vendors = vendor * count
+  if nets > vendors * AH_BEATS_VENDOR_BY then
+    line(tooltip, "Sell on AH", "+" .. money(nets - vendors) .. " over vendor", GOOD, VALUE)
   else
-    line(tooltip, "Vendor it", "AH nets " .. money(nets * count) .. " · vendor " .. money(vendor * count), WARN, MUTED)
+    line(tooltip, "Vendor it", "AH nets " .. money(nets) .. " · vendor " .. money(vendors), WARN, MUTED)
   end
 end
 

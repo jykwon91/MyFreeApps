@@ -15,7 +15,7 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
     date: "2026-11-11",
     title: "Addon: sell on the AH or vendor it",
     summary:
-      "Download the MGA Prices addon again: every item's tooltip now says whether to sell it on your auction house or vendor it, weighing what the house pays after its cut against the vendor's price.",
+      "Download the MGA Prices addon again: an item on sale at your auction house now says in its tooltip whether to sell it there or vendor it, weighing what the house pays after its cut against the vendor's price.",
     to: "/wow-forever/auction-house",
   },
   {

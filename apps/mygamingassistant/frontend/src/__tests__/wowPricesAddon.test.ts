@@ -101,21 +101,21 @@ describe("MGA Prices in the game's tooltips", () => {
   });
 
   it("says to sell on the AH when the house nets clearly more than a vendor, after its cut", () => {
-    // 30c less the 5% cut nets 28c, against a vendor's 13c.
+    // 30c less the 5% cut (1c, rounded down) nets 29c, against a vendor's 13c.
     expect(tooltip("sell[2589] = 13; hover(GameTooltip, 2589)")).toEqual([
       "Auction (Alliance) | 30c",
       "Cheapest · on sale | 25c · 8109",
-      "Sell on AH | +15c over vendor",
+      "Sell on AH | +16c over vendor",
     ]);
     expect(tooltip("sell[2589] = 13; GameTooltip.owner = { count = 20 }; hover(GameTooltip, 2589)")).toContain(
-      "Sell on AH | +300c over vendor",
+      "Sell on AH | +310c over vendor",
     );
   });
 
   it("says to vendor it when the house's net isn't worth the deposit risk", () => {
-    expect(tooltip("sell[2589] = 26; hover(GameTooltip, 2589)")).toContain("Vendor it | AH nets 28c · vendor 26c");
+    expect(tooltip("sell[2589] = 27; hover(GameTooltip, 2589)")).toContain("Vendor it | AH nets 29c · vendor 27c");
     expect(tooltip("sell[2589] = 40; GameTooltip.owner = { count = 2 }; hover(GameTooltip, 2589)")).toContain(
-      "Vendor it | AH nets 56c · vendor 80c",
+      "Vendor it | AH nets 57c · vendor 80c",
     );
   });
 
@@ -124,6 +124,18 @@ describe("MGA Prices in the game's tooltips", () => {
     expect(blackwater).toContain("cut = 0.15,");
     expect(DATA).toContain("cut = 0.05,");
     expect(tooltip("sell[2589] = 0; hover(GameTooltip, 2589)")).toContain("Sell on AH | vendors won't buy it");
+  });
+
+  it("needs the AH to net more than 10% over the vendor, on either faction", () => {
+    // Horde's 35c nets 34c: not more than 31c × 1.1, but more than 30c × 1.1.
+    expect(tooltip('faction = "Horde"; sell[2589] = 31; hover(GameTooltip, 2589)')).toContain("Vendor it | AH nets 34c · vendor 31c");
+    expect(tooltip('faction = "Horde"; sell[2589] = 30; hover(GameTooltip, 2589)')).toContain("Sell on AH | +4c over vendor");
+  });
+
+  it("gives no verdict from an older Data.lua that has no house cut", () => {
+    const old = DATA.replace(/ {6}cut = [\d.]+,\n/g, "");
+    expect(old).not.toContain("cut =");
+    expect(tooltip("sell[2589] = 13; hover(GameTooltip, 2589)", old)).toEqual(["Auction (Alliance) | 30c", "Cheapest · on sale | 25c · 8109"]);
   });
 
   it("gives no verdict before the client knows the item's vendor price, or on the every-house view", () => {
