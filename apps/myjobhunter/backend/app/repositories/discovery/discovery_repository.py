@@ -447,10 +447,10 @@ async def list_discovered(
         stmt = stmt.where(DiscoveryFetch.discovery_source_id == source_id)
 
     stmt = stmt.order_by(
-        # Highest score first; unscored rows fall to the bottom
-        # (nulls_last so an unscored row never beats a scored one).
+        # Highest score first, unscored last; id breaks ties so offset pages never skip or repeat a row.
         nulls_last(desc(DiscoveredJob.score)),
         desc(DiscoveredJob.discovered_at),
+        desc(DiscoveredJob.id),
     ).limit(limit).offset(offset)
 
     result = await db.execute(stmt)
