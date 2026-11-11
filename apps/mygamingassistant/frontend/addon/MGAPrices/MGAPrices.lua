@@ -70,8 +70,12 @@ local function stackCount(tooltip)
   return (count and count > 1) and count or 1
 end
 
+-- WoW Forever's client only has C_Item.GetItemInfo; older clients only the global.
+local getItemInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
+
 local function canBeAuctioned(itemId)
-  local bindType = select(14, GetItemInfo(itemId))
+  if not getItemInfo then return true end
+  local bindType = select(14, getItemInfo(itemId))
   return bindType ~= BIND_ON_PICKUP
 end
 
