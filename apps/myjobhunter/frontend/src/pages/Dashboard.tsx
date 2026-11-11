@@ -9,6 +9,7 @@ import { useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import KanbanBoard from "@/features/kanban/KanbanBoard";
 import ApplicationDrawer from "@/features/applications/ApplicationDrawer";
+import DashboardLoadError from "@/features/dashboard/DashboardLoadError";
 import DashboardSkeleton from "@/features/dashboard/DashboardSkeleton";
 import { useListApplicationsKanbanQuery } from "@myjobhunter/api-client/store/applicationsApi";
 
@@ -18,7 +19,7 @@ export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedAppId = searchParams.get(APP_QUERY_PARAM);
 
-  const { data, isLoading } = useListApplicationsKanbanQuery();
+  const { data, isLoading, isError, isFetching, refetch } = useListApplicationsKanbanQuery();
 
   const selectCard = useCallback(
     (id: string) => {
@@ -49,11 +50,17 @@ export default function Dashboard() {
     return <DashboardSkeleton />;
   }
 
-  const items = data?.items ?? [];
+  // No board and not loading means the request failed: say so, rather than
+  // showing the empty state, which is only for a board that loaded empty.
+  if (data === undefined) {
+    return <DashboardLoadError onRetry={() => void refetch()} isRetrying={isFetching} />;
+  }
+
+  const items = data.items;
 
   return (
     <>
-      <KanbanBoard items={items} onSelectCard={selectCard} />
+      <KanbanBoard items={items} onSelectCard={selectCard} isStale={isError} />
       <ApplicationDrawer applicationId={selectedAppId} onClose={closeDrawer} />
     </>
   );

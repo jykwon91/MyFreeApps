@@ -82,7 +82,7 @@ function makeItem(overrides: Partial<KanbanItem> = {}): KanbanItem {
   };
 }
 
-function renderBoard(items: KanbanItem[], onSelectCard = vi.fn()) {
+function renderBoard(items: KanbanItem[], onSelectCard = vi.fn(), isStale = false) {
   const store = configureStore({
     reducer: { [baseApi.reducerPath]: baseApi.reducer },
     middleware: (getDefault) => getDefault().concat(baseApi.middleware),
@@ -90,7 +90,7 @@ function renderBoard(items: KanbanItem[], onSelectCard = vi.fn()) {
   const utils = render(
     <Provider store={store}>
       <MemoryRouter>
-        <KanbanBoard items={items} onSelectCard={onSelectCard} />
+        <KanbanBoard items={items} onSelectCard={onSelectCard} isStale={isStale} />
       </MemoryRouter>
     </Provider>,
   );
@@ -105,6 +105,23 @@ describe("KanbanBoard", () => {
   it("renders empty state when items list is empty", () => {
     renderBoard([]);
     expect(screen.getByText(/your hunt starts here/i)).toBeInTheDocument();
+  });
+
+  it("shows a stale banner only when the board is stale", () => {
+    const { unmount } = renderBoard([makeItem()], vi.fn(), true);
+    expect(screen.getByText(/couldn't refresh it/i)).toBeInTheDocument();
+    unmount();
+    renderBoard([makeItem()]);
+    expect(screen.queryByText(/couldn't refresh it/i)).not.toBeInTheDocument();
+  });
+
+  it("counts only non-closed applications in the header", () => {
+    renderBoard([
+      makeItem({ id: "a", latest_event_type: "applied" }),
+      makeItem({ id: "b", latest_event_type: "offer_received" }),
+      makeItem({ id: "c", latest_event_type: "rejected" }),
+    ]);
+    expect(screen.getByText("2 active applications")).toBeInTheDocument();
   });
 
   it("renders Applied/Interviewing/Offer columns and groups cards by stage", () => {

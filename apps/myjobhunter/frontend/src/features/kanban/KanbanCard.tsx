@@ -16,17 +16,9 @@
 import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Badge } from "@platform/ui";
 import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
-import type { BadgeColor } from "@platform/ui/components/ui/Badge";
-import type { StatusTone } from "@myjobhunter/api-client/types/status-tone";
 import { companyLogoUrl } from "@myjobhunter/api-client/utils/companyLogoUrl";
-import { daysInStage } from "@myjobhunter/api-client/utils/daysInStage";
-import { formatDaysInStage } from "@myjobhunter/api-client/utils/formatDaysInStage";
-import { formatVerdict } from "@myjobhunter/api-client/utils/formatVerdict";
-import { stageAgeTone } from "@myjobhunter/api-client/utils/stageAgeTone";
-import { STATUS_TONE_BADGE_COLORS } from "@/constants/statusToneBadgeColors";
-import { colorForVerdict } from "./verdictBadge";
+import KanbanCardBadges from "./KanbanCardBadges";
 
 interface KanbanCardProps {
   item: KanbanItem;
@@ -36,19 +28,10 @@ interface KanbanCardProps {
 
 interface CardBodyProps {
   item: KanbanItem;
-  stageDays: number | null;
-  staleTone: StatusTone | null;
-  verdictLabel: string | null;
-  verdictColor: BadgeColor;
+  now: number;
 }
 
-function CardBody({
-  item,
-  stageDays,
-  staleTone,
-  verdictLabel,
-  verdictColor,
-}: CardBodyProps) {
+function CardBody({ item, now }: CardBodyProps) {
   // Only an http or https logo is loaded; anything else gets the plain circle.
   const logoUrl = companyLogoUrl(item.company_logo_url);
   return (
@@ -71,12 +54,7 @@ function CardBody({
         <p className="text-sm font-semibold truncate">{item.role_title}</p>
         <p className="text-xs text-muted-foreground truncate">{item.company_name}</p>
 
-        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          {verdictLabel ? <Badge label={verdictLabel} color={verdictColor} /> : null}
-          {staleTone !== null && stageDays !== null ? (
-            <Badge label={formatDaysInStage(stageDays)} color={STATUS_TONE_BADGE_COLORS[staleTone]} />
-          ) : null}
-        </div>
+        <KanbanCardBadges item={item} now={now} />
       </div>
     </div>
   );
@@ -85,10 +63,6 @@ function CardBody({
 function StaticKanbanCard({ item, onSelect }: KanbanCardProps) {
   // Read the clock once per card: whole days don't need a re-render to stay right.
   const [now] = useState(Date.now);
-  const stageDays = daysInStage(item.stage_entered_at, now);
-  const staleTone = stageAgeTone(stageDays);
-  const verdictLabel = formatVerdict(item.verdict);
-  const verdictColor = colorForVerdict(item.verdict);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     if (e.key === "Enter" || e.key === " ") {
@@ -106,13 +80,7 @@ function StaticKanbanCard({ item, onSelect }: KanbanCardProps) {
       data-kanban-card-id={item.id}
       className="rounded-md border bg-card p-3 shadow-md"
     >
-      <CardBody
-        item={item}
-        stageDays={stageDays}
-        staleTone={staleTone}
-        verdictLabel={verdictLabel}
-        verdictColor={verdictColor}
-      />
+      <CardBody item={item} now={now} />
     </div>
   );
 }
@@ -131,10 +99,6 @@ function SortableKanbanCard({ item, onSelect }: KanbanCardProps) {
 
   // Read the clock once per card: whole days don't need a re-render to stay right.
   const [now] = useState(Date.now);
-  const stageDays = daysInStage(item.stage_entered_at, now);
-  const staleTone = stageAgeTone(stageDays);
-  const verdictLabel = formatVerdict(item.verdict);
-  const verdictColor = colorForVerdict(item.verdict);
 
   function handleClick(e: React.MouseEvent<HTMLDivElement>) {
     // dnd-kit's PointerSensor swallows clicks that began as drags via the
@@ -163,13 +127,7 @@ function SortableKanbanCard({ item, onSelect }: KanbanCardProps) {
       data-kanban-card-id={item.id}
       className="cursor-grab active:cursor-grabbing rounded-md border bg-card p-3 shadow-sm hover:shadow-md hover:border-primary/30 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
     >
-      <CardBody
-        item={item}
-        stageDays={stageDays}
-        staleTone={staleTone}
-        verdictLabel={verdictLabel}
-        verdictColor={verdictColor}
-      />
+      <CardBody item={item} now={now} />
     </div>
   );
 }

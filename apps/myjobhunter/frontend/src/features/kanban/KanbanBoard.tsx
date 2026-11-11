@@ -14,7 +14,7 @@
  * - Drag activation requires a 5px move so cards remain clickable.
  * - DragOverlay portal so the drag clone isn't clipped by column overflow.
  */
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -32,19 +32,23 @@ import ClosedColumnAccordion from "./ClosedColumnAccordion";
 import KanbanMobileList from "./KanbanMobileList";
 import KanbanEmptyState from "./KanbanEmptyState";
 import { useKanbanDragHandler } from "./use-kanban-drag-handler";
-import { columnForEventType } from "@myjobhunter/api-client/utils/columnForEventType";
+import { useBoardMoveFeedback } from "./use-board-move-feedback";
+import DashboardStaleBanner from "@/features/dashboard/DashboardStaleBanner";
+import { useBoardMove } from "@myjobhunter/api-client/hooks/useBoardMove";
+import { newIdempotencyKey } from "@/lib/newIdempotencyKey";
 import { groupKanbanItems } from "@myjobhunter/api-client/utils/groupKanbanItems";
-import type { KanbanColumn as KanbanColumnId } from "@myjobhunter/api-client/types/kanban/kanban-column";
+import { KANBAN_ACTIVE_COLUMNS } from "@myjobhunter/api-client/constants/kanbanActiveColumns";
+import { activeApplicationCount } from "@/lib/activeApplicationCount";
 import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
 
 interface KanbanBoardProps {
   items: KanbanItem[];
   onSelectCard: (id: string) => void;
+  /** True when a refresh failed and these are the cards from the last good load. */
+  isStale?: boolean;
 }
 
-const ACTIVE_COLUMNS: readonly KanbanColumnId[] = ["applied", "interviewing", "offer"];
-
-export default function KanbanBoard({ items, onSelectCard }: KanbanBoardProps) {
+export default function KanbanBoard({ items, onSelectCard, isStale = false }: KanbanBoardProps) {
   const isMobile = useMediaQuery("(max-width: 767px)");
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -57,15 +61,12 @@ export default function KanbanBoard({ items, onSelectCard }: KanbanBoardProps) {
     return map;
   }, [items]);
 
-  const currentColumnFor = useMemo(() => {
-    return (applicationId: string): KanbanColumnId | null => {
-      const item = itemById.get(applicationId);
-      if (!item) return null;
-      return columnForEventType(item.latest_event_type);
-    };
-  }, [itemById]);
+  const itemFor = useCallback((applicationId: string) => itemById.get(applicationId) ?? null, [itemById]);
 
-  const { onDragEnd } = useKanbanDragHandler({ currentColumnFor });
+  const { notify, announcement, focusId, clearFocus } = useBoardMoveFeedback();
+  const { movingIds, moveTo } = useBoardMove({ newKey: newIdempotencyKey, notify });
+  const { onDragEnd } = useKanbanDragHandler({ itemFor, moveTo });
+  const activeCount = activeApplicationCount(itemsByColumn);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -84,9 +85,15 @@ export default function KanbanBoard({ items, onSelectCard }: KanbanBoardProps) {
   if (isMobile) {
     return (
       <main className="p-4 space-y-6">
+        {isStale ? <DashboardStaleBanner /> : null}
         <KanbanMobileList
           itemsByColumn={itemsByColumn}
           onSelectCard={onSelectCard}
+          movingIds={movingIds}
+          onMove={moveTo}
+          announcement={announcement}
+          focusId={focusId}
+          onFocused={clearFocus}
         />
       </main>
     );
@@ -96,10 +103,11 @@ export default function KanbanBoard({ items, onSelectCard }: KanbanBoardProps) {
 
   return (
     <main className="p-4 sm:p-8 flex flex-col h-[calc(100vh-4rem)] min-h-0">
+      {isStale ? <DashboardStaleBanner /> : null}
       <header className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Pipeline</h1>
         <p className="text-sm text-muted-foreground">
-          {items.length} active {items.length === 1 ? "application" : "applications"}
+          {activeCount} active {activeCount === 1 ? "application" : "applications"}
         </p>
       </header>
 
@@ -114,7 +122,7 @@ export default function KanbanBoard({ items, onSelectCard }: KanbanBoardProps) {
         onDragCancel={() => setActiveId(null)}
       >
         <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
-          {ACTIVE_COLUMNS.map((column) => (
+          {KANBAN_ACTIVE_COLUMNS.map((column) => (
             <KanbanColumn
               key={column}
               column={column}

@@ -4,25 +4,42 @@
  * Drag-drop on touch is intentionally disabled per the UX review — the
  * dnd-kit TouchSensor competes with vertical scroll on a phone. Instead
  * of a board, we render a grouped list: column heading + cards stacked
- * vertically. Tapping a card opens the same drawer as the desktop board.
+ * vertically. Tapping a card opens the same drawer as the desktop board, and
+ * each card has a Move button for changing its stage without dragging.
  */
-import { Badge } from "@platform/ui";
 import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
 import { KANBAN_COLUMN_LABELS } from "@myjobhunter/api-client/constants/kanbanColumnLabels";
 import { KANBAN_COLUMN_ORDER } from "@myjobhunter/api-client/constants/kanbanColumnOrder";
 import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
+import KanbanMobileCard from "./KanbanMobileCard";
 
 interface KanbanMobileListProps {
   itemsByColumn: Record<KanbanColumn, KanbanItem[]>;
   onSelectCard: (id: string) => void;
+  /** Ids of the cards with a move in flight. */
+  movingIds: ReadonlySet<string>;
+  onMove: (item: KanbanItem, from: KanbanColumn, target: KanbanColumn) => void;
+  /** Said politely to a screen reader when a move ends. */
+  announcement: string;
+  /** The card whose Move button should take focus, or null. */
+  focusId: string | null;
+  onFocused: () => void;
 }
 
 export default function KanbanMobileList({
   itemsByColumn,
   onSelectCard,
+  movingIds,
+  onMove,
+  announcement,
+  focusId,
+  onFocused,
 }: KanbanMobileListProps) {
   return (
     <div className="space-y-4">
+      <div role="status" aria-live="polite" className="sr-only">
+        {announcement}
+      </div>
       {KANBAN_COLUMN_ORDER.map((column) => {
         const items = itemsByColumn[column];
         return (
@@ -41,21 +58,15 @@ export default function KanbanMobileList({
               <ul className="space-y-2">
                 {items.map((item) => (
                   <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => onSelectCard(item.id)}
-                      className="w-full text-left rounded-md border bg-card p-3 hover:border-primary/30 focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    >
-                      <p className="text-sm font-semibold truncate">{item.role_title}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {item.company_name}
-                      </p>
-                      {item.verdict ? (
-                        <div className="mt-1.5">
-                          <Badge label={item.verdict} color="blue" />
-                        </div>
-                      ) : null}
-                    </button>
+                    <KanbanMobileCard
+                      item={item}
+                      column={column}
+                      isMoving={movingIds.has(item.id)}
+                      onSelect={onSelectCard}
+                      onMove={onMove}
+                      shouldFocus={focusId === item.id}
+                      onFocused={onFocused}
+                    />
                   </li>
                 ))}
               </ul>
