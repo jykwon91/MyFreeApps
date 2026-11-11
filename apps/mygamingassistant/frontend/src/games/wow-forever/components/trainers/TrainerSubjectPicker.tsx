@@ -1,5 +1,7 @@
 import clsx from "clsx";
 import { Link } from "react-router-dom";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import { trainerSubjectIcon } from "@/games/wow-forever/lib/trainers/trainerSubjectIcon";
 import { TRAINER_SUBJECT_GROUPS } from "@/games/wow-forever/data/trainers/trainerSubjects";
 import { TRAINERS_PATH } from "@/games/wow-forever/data/trainers/trainersConfig";
 
@@ -17,11 +19,12 @@ export default function TrainerSubjectPicker({ current }: { current: string | nu
                 to={`${TRAINERS_PATH}/${s.id}`}
                 aria-current={s.id === current ? "page" : undefined}
                 className={clsx(
-                  "inline-flex items-center rounded-md border px-3 text-sm min-h-[44px] transition-colors",
+                  "inline-flex items-center gap-2 rounded-md border px-3 text-sm min-h-[44px] transition-colors",
                   s.id === current && "bg-primary text-primary-foreground",
                   s.id !== current && "bg-card hover:bg-muted/40",
                 )}
               >
+                <GameIcon icon={trainerSubjectIcon(s)} size={24} alt="" />
                 {s.label}
               </Link>
             ))}

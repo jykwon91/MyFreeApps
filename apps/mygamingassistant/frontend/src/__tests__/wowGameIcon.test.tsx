@@ -6,7 +6,7 @@ import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import WowLegalNotice from "@/games/wow-forever/components/shared/WowLegalNotice";
 import { WOW_ICONS } from "@/games/wow-forever/data/icons/wowIconData";
 import { GATHERING_GUIDES } from "@/games/wow-forever/data/professions/gathering/gatheringGuides";
-import { iconUrl, itemIcon, recipeIcon, spellIcon } from "@/games/wow-forever/lib/icons/wowIcons";
+import { classIcon, iconUrl, itemIcon, professionIcon, recipeIcon, spellIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import type { CraftingFile } from "@/games/wow-forever/types/crafting";
 import type { WowIconFile } from "@/games/wow-forever/types/icons/wowIconFile";
 
@@ -16,9 +16,22 @@ const FIXTURE: WowIconFile = {
   items: { "2840": [133217, 1], "14048": [132905, 2], "99": [10, 42] },
   spells: { "7418": 135913 },
   files: [],
+  skills: { "197": 136249 },
 };
 
 describe("icon lookups", () => {
+  it("gives a profession its skill line's icon, and every profession one in the real map", () => {
+    expect(professionIcon("tailoring", FIXTURE)).toEqual({ fileDataId: 136249, quality: null });
+    expect(professionIcon("mining", FIXTURE)).toBeNull();
+    for (const p of ["alchemy", "blacksmithing", "enchanting", "engineering", "leatherworking", "tailoring", "herbalism", "mining", "skinning", "cooking", "firstaid", "fishing"] as const) {
+      expect(professionIcon(p)).not.toBeNull();
+    }
+  });
+
+  it("gives a class its in-game icon", () => {
+    expect(classIcon("mage")).toEqual({ fileDataId: 626001, quality: null });
+  });
+
   it("gives an item its icon and quality name", () => {
     expect(itemIcon(14048, FIXTURE)).toEqual({ fileDataId: 132905, quality: "uncommon" });
   });

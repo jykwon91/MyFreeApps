@@ -30,6 +30,14 @@ describe("Trainers page", () => {
     expect(within(screen.getByTestId("trainers-picker")).getByRole("link", { name: "Warlock" })).toHaveAttribute("href", "/wow-forever/trainers/warlock");
   });
 
+  it("every class and profession in the picker shows its in-game icon", () => {
+    renderPage("/wow-forever/trainers");
+    const links = within(screen.getByTestId("trainers-picker")).getAllByRole("link");
+    expect(links).toHaveLength(21);
+    for (const link of links) expect(within(link).getByTestId("game-icon")).toBeInTheDocument();
+    expect(within(screen.getByRole("link", { name: "Tailoring" })).getByTestId("game-icon")).toHaveAttribute("src", expect.stringContaining("/136249.webp"));
+  });
+
   it("says so for an unknown class or profession", () => {
     renderPage("/wow-forever/trainers/bard");
     expect(screen.getByText(`There's no class or profession called "bard". Pick one above.`)).toBeInTheDocument();
@@ -43,6 +51,8 @@ describe("Trainers page", () => {
     const levels = await screen.findAllByTestId("trainers-level");
     expect(within(levels[0]).getByText("Next")).toBeInTheDocument();
     expect(within(levels[0]).getByRole("list", { name: "Level 6" })).toBeInTheDocument();
+    const unlocks = within(within(levels[0]).getByRole("list", { name: "Level 6" })).getAllByRole("listitem");
+    for (const unlock of unlocks) expect(within(unlock).getByTestId("game-icon")).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Level 4" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Show levels 1–4 (below yours)" }));
     expect(screen.getByRole("list", { name: "Level 4" })).toBeInTheDocument();

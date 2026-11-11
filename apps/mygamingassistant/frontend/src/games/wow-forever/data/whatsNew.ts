@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-11",
+    title: "Trainers: in-game icons",
+    summary:
+      "The Trainers page now shows each class's and profession's in-game icon in the picker, and every spell you can learn has its in-game icon next to its name.",
+    to: "/wow-forever/trainers",
+  },
+  {
+    date: "2026-11-11",
     title: "Trainers: what unlocks when",
     summary:
       "Pick a class to see every spell you can learn at each level, with your next training visit marked, or a profession to see each rank's skill and level needs, plus where every trainer for your faction stands.",

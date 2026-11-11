@@ -4,6 +4,8 @@ import type { SpellbookLearnedBy } from "@/games/wow-forever/types/spellbook/spe
 export interface LevelUnlock {
   spell: number;
   name: string;
+  /** The spell's icon file id (0 = none). */
+  icon: number;
   /** "Rank 3", or "" when the spell has no rank. */
   rank: string;
   learnedBy: SpellbookLearnedBy;

@@ -18,6 +18,7 @@ export function levelUnlocks(book: SpellbookClass): readonly LevelUnlocks[] {
       list.push({
         spell: rank.spell,
         name: spell.name,
+        icon: spell.icon,
         rank: rank.label,
         learnedBy: rank.learnedBy,
         races,
