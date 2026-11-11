@@ -1,4 +1,4 @@
-/** Which materials crafting puts pressure on: leveling routes that use them, and crafts that pay on a house. Pure. */
+/** Which materials crafting puts pressure on: leveling routes that use them, crafts that pay on a house, and the most valuable products they go into there. Pure. */
 import { AUCTION_MATERIAL_PROFESSIONS } from "@/games/wow-forever/data/auctionHouse/auctionMaterialProfessions";
 import {
   MAX_LEVELING_PROFESSIONS,

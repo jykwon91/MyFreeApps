@@ -263,6 +263,14 @@ describe("crafting demand on materials", () => {
     // A product worth no more than the material it uses doesn't explain the price.
     const cheaper = new Map([price(LINEN_CLOTH, 200 / perCraft, 50), price(LINEN_BANDAGE, 200, 10)]);
     expect(linen(cheaper)).toBeUndefined();
+    // A material not on sale on the house still names what it's wanted for.
+    expect(linen(new Map([price(LINEN_BANDAGE, 200, 10)]))?.recipe).toBe("Linen Bandage");
+    // A craft that makes several sells for all of them.
+    const demand = reagentDemand(CRAFTING);
+    const batch = CRAFTING_RECIPES.find((r) => r.creates && r.creates.count > 1 && !r.enchant && r.reagents.some((g) => !demand.get(g.id)?.vendor))!;
+    const batchReagent = batch.reagents.find((g) => !demand.get(g.id)?.vendor)!;
+    const batchWant = mostWantedFor(CRAFTING, new Map([price(batch.creates!.id, 100, 10)])).get(batchReagent.id);
+    expect(batchWant).toEqual({ recipe: batch.name, count: batchReagent.count, sells: 100 * batch.creates!.count });
     // Vendor-sold materials don't need explaining.
     const all = new Map(CRAFTING_RECIPES.flatMap((r) => (r.creates ? [price(r.creates.id, 1_000, 10)] : [])));
     expect(mostWantedFor(CRAFTING, all).has(COARSE_THREAD)).toBe(false);
@@ -321,7 +329,7 @@ describe("crafting demand in the game's tooltips", () => {
     expect(dear).toMatch(/\[2589\] = \{"Linen Bandage", \d+, \d+\},/);
     const lines = tooltip(`hover(GameTooltip, ${LINEN_CLOTH})`, dear);
     expect(lines.some((l) => l.startsWith("Crafting pays"))).toBe(false);
-    expect(lines[lines.length - 1]).toMatch(/^Wanted for \| Linen Bandage x\d+ · sells \d+s?/);
+    expect(lines[lines.length - 1]).toBe("Wanted for | Linen Bandage x1 · sells 200c");
     // When the bandage pays, "Crafting pays" already says it.
     expect(tooltip(`hover(GameTooltip, ${LINEN_CLOTH})`, CRAFT_DATA).some((l) => l.startsWith("Wanted for"))).toBe(false);
   });

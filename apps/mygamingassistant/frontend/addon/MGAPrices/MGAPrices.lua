@@ -140,7 +140,7 @@ local function addEveryHouse(tooltip, itemId)
   end
 end
 
--- Crafting demand for a material: leveling routes, a craft that pays on your house, else how many recipes use it.
+-- Crafting demand for a material: leveling routes, a craft that pays and what it's wanted for on your house, else how many recipes use it.
 local function addDemand(tooltip, itemId)
   local reagent = MGAPricesData.reagents and MGAPricesData.reagents[itemId]
   if not reagent then return end
