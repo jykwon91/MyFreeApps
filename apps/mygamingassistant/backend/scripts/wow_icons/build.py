@@ -143,13 +143,11 @@ def downrank_icon_files(path: Path = DOWNRANK_FILE) -> set[int]:
 
 
 def spellbook_icon_files(directory: Path = SPELLBOOK_DIR) -> set[int]:
-    """The spellbook's spell icons: file ids already (``scripts.wow_spellbook.build``)."""
-    return {
-        spell["icon"]
-        for path in sorted(directory.glob("*.json"))
-        for spell in json.loads(path.read_text(encoding="utf-8"))["spells"]
-        if spell["icon"]
-    }
+    """The spellbook's spell and demon-ability icons: file ids already (``scripts.wow_spellbook.build``)."""
+    docs = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(directory.glob("*.json"))]
+    spells = {spell["icon"] for doc in docs for spell in doc["spells"]}
+    demons = {a["icon"] for doc in docs for d in doc.get("demons", []) for a in d["abilities"]}
+    return (spells | demons) - {0}
 
 
 def race_icon_files(path: Path = RACES_FILE) -> set[int]:

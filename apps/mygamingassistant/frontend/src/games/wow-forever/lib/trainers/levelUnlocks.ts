@@ -1,4 +1,5 @@
 import { SPELLBOOK_RACE_NAMES } from "@/games/wow-forever/data/spellbook/spellbookRaces";
+import type { SpellbookDemon } from "@/games/wow-forever/types/spellbook/spellbookDemon";
 import type { SpellbookClass } from "@/games/wow-forever/types/spellbook/spellbookClass";
 import type { LevelUnlock } from "@/games/wow-forever/types/trainers/levelUnlock";
 import type { LevelUnlocks } from "@/games/wow-forever/types/trainers/levelUnlocks";
@@ -23,10 +24,43 @@ export function levelUnlocks(book: SpellbookClass): readonly LevelUnlocks[] {
         learnedBy: rank.learnedBy,
         races,
         levelClassic: rank.levelClassic,
+        demon: null,
+        knownOnSummon: false,
+        grimoire: false,
       });
       byLevel.set(rank.level, list);
     }
   }
+  return byLevelLadder(byLevel);
+}
+
+/** The Warlock's demons as the same ladder: each ability rank at the level its Grimoire asks for. */
+export function demonUnlocks(demons: readonly SpellbookDemon[]): readonly LevelUnlocks[] {
+  const byLevel = new Map<number, LevelUnlock[]>();
+  for (const demon of demons) {
+    for (const ability of demon.abilities) {
+      for (const rank of ability.ranks) {
+        const list = byLevel.get(rank.level) ?? [];
+        list.push({
+          spell: rank.spell,
+          name: ability.name,
+          icon: ability.icon,
+          rank: rank.rank ?? "",
+          learnedBy: null,
+          races: [],
+          levelClassic: false,
+          demon: demon.name,
+          knownOnSummon: rank.known === true,
+          grimoire: rank.grimoire !== undefined,
+        });
+        byLevel.set(rank.level, list);
+      }
+    }
+  }
+  return byLevelLadder(byLevel);
+}
+
+function byLevelLadder(byLevel: ReadonlyMap<number, LevelUnlock[]>): readonly LevelUnlocks[] {
   return [...byLevel.entries()]
     .sort(([a], [b]) => a - b)
     .map(([level, unlocks]) => ({ level, unlocks: unlocks.sort((x, y) => x.name.localeCompare(y.name)) }));

@@ -48,20 +48,45 @@ describe("Trainers page", () => {
     savePlayer("H", 6);
     renderPage("/wow-forever/trainers/warlock");
     expect(screen.getByTestId("trainers-skeleton")).toBeInTheDocument();
-    const levels = await screen.findAllByTestId("trainers-level");
+    const learn = await screen.findByRole("region", { name: "What you can learn at each level" });
+    const levels = within(learn).getAllByTestId("trainers-level");
     expect(within(levels[0]).getByText("Next")).toBeInTheDocument();
     expect(within(levels[0]).getByRole("list", { name: "Level 6" })).toBeInTheDocument();
     const unlocks = within(within(levels[0]).getByRole("list", { name: "Level 6" })).getAllByRole("listitem");
     for (const unlock of unlocks) expect(within(unlock).getByTestId("game-icon")).toBeInTheDocument();
-    expect(screen.queryByRole("list", { name: "Level 4" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Show levels 1–4 (below yours)" }));
-    expect(screen.getByRole("list", { name: "Level 4" })).toBeInTheDocument();
+    expect(within(learn).queryByRole("list", { name: "Level 4" })).not.toBeInTheDocument();
+    await user.click(within(learn).getByRole("button", { name: "Show levels 1–4 (below yours)" }));
+    expect(within(learn).getByRole("list", { name: "Level 4" })).toBeInTheDocument();
 
     const trainers = screen.getByRole("list", { name: "Warlock trainers" });
     await user.click(within(trainers.parentElement as HTMLElement).getByRole("button", { name: /^Show all \d+ trainers$/ }));
     expect(within(trainers).getByText("Dhugru Gorelust", { exact: false })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: "Demon trainers" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Spell details and costs" })).toHaveAttribute("href", "/wow-forever/spellbook/warlock");
+  });
+
+  it("a Warlock also sees what each demon learns at each level, with its Grimoire", async () => {
+    const user = userEvent.setup();
+    savePlayer("A", 8);
+    renderPage("/wow-forever/trainers/warlock");
+    const demons = await screen.findByRole("region", { name: "What your demons learn at each level" });
+    const eight = within(demons).getByRole("list", { name: "Level 8" });
+    const firebolt = within(eight).getByText("Firebolt").closest("li") as HTMLElement;
+    expect(within(firebolt).getByText("(Rank 2)")).toBeInTheDocument();
+    expect(within(firebolt).getByText("Imp")).toBeInTheDocument();
+    expect(within(firebolt).getByText("Grimoire")).toBeInTheDocument();
+    expect(within(firebolt).getByTestId("game-icon")).toBeInTheDocument();
+    expect(within(demons).getAllByTestId("trainers-level")[0]).toHaveTextContent("Next");
+    await user.click(within(demons).getByRole("button", { name: "Show levels 1–4 (below yours)" }));
+    const one = within(demons).getByRole("list", { name: "Level 1" });
+    expect(within(one).getByText("Knows it when summoned")).toBeInTheDocument();
+  });
+
+  it("other classes have no demon section", async () => {
+    savePlayer("A", null);
+    renderPage("/wow-forever/trainers/mage");
+    await screen.findByRole("region", { name: "What you can learn at each level" });
+    expect(screen.queryByRole("region", { name: "What your demons learn at each level" })).not.toBeInTheDocument();
   });
 
   it("a Horde Paladin is told Forever's trainers aren't in the data yet", async () => {

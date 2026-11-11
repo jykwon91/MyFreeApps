@@ -13,4 +13,10 @@ export interface LevelUnlock {
   races: readonly string[];
   /** The level is Classic's: Forever's files don't give one. */
   levelClassic: boolean;
+  /** The demon that learns it (Warlock), or null for the class's own spells. */
+  demon: string | null;
+  /** The demon has it when summoned — no Grimoire to buy. */
+  knownOnSummon: boolean;
+  /** A Grimoire in the Forever files teaches this demon rank. */
+  grimoire: boolean;
 }

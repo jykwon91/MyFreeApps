@@ -14,7 +14,9 @@ family links to it; a talent's spell links to the talent calculator.
 
 Writes:
 
-* ``data/spellbook/<class>.json`` — the Forever client's spells, one per line.
+* ``data/spellbook/<class>.json`` — the Forever client's spells, one per line;
+  the Warlock's also has ``demons``: what each demon learns at which level and
+  the Grimoire that teaches it (``demons.py``).
 * ``data/spellbook/classic/<class>.json`` — what only Classic data has: trainer
   costs and quest- / book-taught spells (cmangos classic-db ``npc_trainer`` /
   ``quest_template`` / ``item_template``), and for ranks the Forever client can't give in full,
@@ -37,6 +39,7 @@ from scripts.wow_food.build import CLASSIC_LICENSE, WOW_DATA_DIR
 from scripts.wow_gear.build import write_json
 from scripts.wow_items.forever_items import hotfix_cache_path, load_forever_tables
 from scripts.wow_macros.build import CLASS_LINES
+from scripts.wow_spellbook.demons import DEMON_LINES, demon_docs, grimoire_items
 from scripts.wow_spellbook.docs import ClassicFill, FieldCounts, change_info, spell_doc, write_lines
 from scripts.wow_spellbook.spells import Learned, SpellFacts, SpellGaps, class_spells, talent_spells
 from scripts.wow_spellbook.trainers import book_spells, quest_spells, teaching_map, trainer_costs
@@ -55,7 +58,7 @@ SPELLBOOK_DIR = WOW_DATA_DIR / "spellbook"
 CLASSIC_DIR = SPELLBOOK_DIR / "classic"
 CHANGED_SPELLS_FILE = WOW_DATA_DIR / "changes" / "classic" / "spells.json"
 DOWNRANK_FILE = WOW_DATA_DIR / "downrank" / "spells.json"
-FOREVER_TABLES = (*FOREVER_BOOK_TABLES, "SpellLevels", "SkillLineAbility", "Talent")
+FOREVER_TABLES = (*FOREVER_BOOK_TABLES, "SpellLevels", "SkillLineAbility", "Talent", "ItemSparse")
 
 CLASSIC_README = """# Spellbook — Classic trainer data and text
 
@@ -143,6 +146,12 @@ def main() -> None:
         f"({WAGO_ERA_BRANCH} {WAGO_ERA_BUILD}) wording"
     )
 
+    demon_rows = [r for r in tables["SkillLineAbility"] if int(r["SkillLine"]) in DEMON_LINES]
+    demons = demon_docs(
+        demon_rows, facts, grimoire_items(tables["ItemSparse"]),
+        {int(r["Spell"]): full_text(book, int(r["Spell"])) for r in demon_rows},
+    )
+
     counts = FieldCounts()
     report: list[str] = []
     for class_id in CLASS_LINES:
@@ -157,13 +166,15 @@ def main() -> None:
             for s in spells
             if s.class_id == class_id
         ]
-        write_lines(SPELLBOOK_DIR / f"{class_id}.json", {
+        doc: dict[str, Any] = {
             "source": forever.source(),
             "clientBuild": WAGO_BUILD,
             "classId": class_id,
             "tabs": tab_docs(class_id),
-            "spells": docs,
-        }, "spells")
+        }
+        if class_id == "warlock":
+            doc["demons"] = demons
+        write_lines(SPELLBOOK_DIR / f"{class_id}.json", {**doc, "spells": docs}, "spells")
         write_json(CLASSIC_DIR / f"{class_id}.json", fill.doc(classic_source, class_id))
         marked = sum(1 for d in docs if "changed" in d)
         report.append(f"  {class_id}: {len(docs)} spells, {sum(len(d['ranks']) for d in docs)} ranks, {marked} different from Classic")
@@ -179,6 +190,11 @@ def main() -> None:
         f"text: {counts.text_classic} ranks from Classic, {counts.text_blank} blank; "
         f"level: {counts.level_classic} from Classic, {counts.level_blank} blank, {counts.level_talent} talent ranks left to the tree; "
         f"cost known for {counts.cost_known} ranks, quest-taught {counts.quest}, book-taught {counts.book}"
+    )
+    demon_ranks = [r for d in demons for a in d["abilities"] for r in a["ranks"]]
+    print(
+        f"warlock demons: {len(demon_ranks)} ranks, {sum('known' in r for r in demon_ranks)} known on summon, "
+        f"{sum('grimoire' in r for r in demon_ranks)} with a Grimoire"
     )
     print(f"left out: {len(gaps.not_in_client)} not in the client, {len(gaps.untaught)} nothing teaches")
 

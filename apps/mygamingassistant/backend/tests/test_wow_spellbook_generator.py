@@ -9,6 +9,7 @@ from scripts.wow_icons.build import OUT_FILE as ICON_MAP_FILE
 from scripts.wow_icons.build import spellbook_icon_files
 from scripts.wow_macros.build import CLASS_LINES
 from scripts.wow_spellbook.build import CLASSIC_DIR, SPELLBOOK_DIR
+from scripts.wow_spellbook.demons import DEMON_LINES, demon_docs, grimoire_items
 from scripts.wow_spellbook.docs import ChangeInfo, ClassicFill, FieldCounts, change_info, spell_doc
 from scripts.wow_spellbook.spells import (
     ACQUIRE_ON_LEARN,
@@ -297,3 +298,63 @@ def test_every_spellbook_icon_is_in_the_icon_map() -> None:
     assert wanted
     files = set(json.loads(ICON_MAP_FILE.read_text(encoding="utf-8"))["files"])
     assert wanted <= files, "re-run python -m scripts.wow_icons.build"
+
+
+# --- the Warlock's demons --------------------------------------------------------
+
+IMP_LINE = 188
+
+
+def _demon_row(spell: int, acquire: int = 0, line: int = IMP_LINE) -> dict[str, str]:
+    return {"SkillLine": str(line), "Spell": str(spell), "AcquireMethod": str(acquire)}
+
+
+def test_grimoires_map_ability_and_rank_to_the_item() -> None:
+    items = [
+        {"ID": "16302", "Display_lang": "Grimoire of Firebolt (Rank 2)"},
+        {"ID": "16331", "Display_lang": "Grimoire of Phase Shift"},
+        {"ID": "1238", "Display_lang": "Grimoire of Fear"},
+        {"ID": "5", "Display_lang": "Linen Cloth"},
+    ]
+    assert grimoire_items(items) == {("Firebolt", "Rank 2"): 16302, ("Phase Shift", ""): 16331, ("Fear", ""): 1238}
+
+
+def test_demon_docs_group_ranks_by_ability_mark_summon_ranks_and_link_grimoires() -> None:
+    facts = _facts(
+        s7799=("Firebolt", "Rank 2", 0, 8),
+        s3110=("Firebolt", "Rank 1", 0, 1),
+        s4511=("Phase Shift", "", 0, 12),
+        s18728=("Tamed Pet Passive (DND)", "", 0, None),
+        s416189=("Warlock Pet Scaling", "", ATTR0_HIDDEN, 1),
+        s19658=("Devour Magic Effect", "Rank 1", 0, 30),
+    )
+    rows = [
+        _demon_row(7799), _demon_row(3110, ACQUIRE_ON_LEARN), _demon_row(4511), _demon_row(18728, ACQUIRE_ON_LEARN),
+        _demon_row(416189, ACQUIRE_ON_LEARN), _demon_row(19658, line=189), _demon_row(3110, line=FIRE_LINE),
+    ]
+    grimoires = {("Firebolt", "Rank 2"): 16302, ("Phase Shift", ""): 16331}
+    demons = demon_docs(rows, facts, grimoires, {7799: "Deals 10 to 12 Fire damage to a target."})
+    assert [d["name"] for d in demons] == list(DEMON_LINES.values())
+    imp = demons[0]
+    assert imp == {"line": IMP_LINE, "name": "Imp", "abilities": [
+        {"name": "Firebolt", "icon": 1000 + 3110, "ranks": [
+            {"spell": 3110, "level": 1, "rank": "Rank 1", "known": True},
+            {"spell": 7799, "level": 8, "rank": "Rank 2", "text": "Deals 10 to 12 Fire damage to a target.", "grimoire": 16302},
+        ]},
+        {"name": "Phase Shift", "icon": 1000 + 4511, "ranks": [{"spell": 4511, "level": 12, "grimoire": 16331}]},
+    ]}
+    assert all(not d["abilities"] for d in demons[1:])  # the Effect spell is left out
+
+
+def test_committed_warlock_demons_match_the_forever_client() -> None:
+    demons = {d["name"]: {a["name"]: a for a in d["abilities"]} for d in _committed("warlock")["demons"]}
+    assert set(demons) == {"Imp", "Voidwalker", "Succubus", "Felhunter"}
+    firebolt = demons["Imp"]["Firebolt"]["ranks"]
+    assert [r["level"] for r in firebolt] == [1, 8, 18, 28, 38, 48, 58]
+    assert firebolt[0].get("known") and firebolt[1]["grimoire"] == 16302
+    assert demons["Felhunter"]["Spell Lock"]["ranks"][0] == {
+        **demons["Felhunter"]["Spell Lock"]["ranks"][0], "level": 36, "grimoire": 16388,
+    }
+    ranks = [r for abilities in demons.values() for a in abilities.values() for r in a["ranks"]]
+    assert all(("known" in r) != ("grimoire" in r) for r in ranks)
+    assert "demons" not in _committed("mage")

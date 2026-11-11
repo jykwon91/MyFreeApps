@@ -82,5 +82,6 @@ export function decodeSpellbook(file: SpellbookFile, classicFile: SpellbookClass
     clientBuild: file.clientBuild,
     tabs: file.tabs,
     spells: file.spells.map((s) => decodeSpell(s, classic)),
+    demons: file.demons ?? [],
   };
 }
