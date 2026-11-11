@@ -7,7 +7,7 @@
  * in constants/jobAnalysisVerdictBannerClasses.ts).
  */
 import { VERDICT_BANNER_CLASSES } from "@/constants/jobAnalysisVerdictBannerClasses";
-import { VERDICT_LABELS } from "@myjobhunter/api-client/constants/jobAnalysisVerdictLabels";
+import { verdictBannerLabel } from "@myjobhunter/api-client/utils/verdictBannerLabel";
 import type { JobAnalysisVerdict } from "@myjobhunter/api-client/types/job-analysis/job-analysis-verdict";
 
 interface VerdictBannerProps {
@@ -16,7 +16,7 @@ interface VerdictBannerProps {
 }
 
 export default function VerdictBanner({ verdict, summary }: VerdictBannerProps) {
-  const label = VERDICT_LABELS[verdict] ?? "Analyzed";
+  const label = verdictBannerLabel(verdict);
   const tone = VERDICT_BANNER_CLASSES[verdict] ?? VERDICT_BANNER_CLASSES.worth_considering;
   return (
     <div

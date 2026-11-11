@@ -21,6 +21,7 @@ Covers:
 """
 from __future__ import annotations
 
+import logging
 import uuid
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
@@ -31,6 +32,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.job_analysis.job_analysis import JobAnalysis
+from app.services.extraction.jd_url_extractor import JDFetchAuthRequiredError, JDFetchError
 from app.services.job_analysis import job_analysis_service
 from app.services.job_analysis.job_analysis_service import (
     JobAnalysisError,
@@ -290,8 +292,6 @@ async def test_analyze_url_auth_walled_translates_to_specific_error(
     user = await user_factory()
     user_id = uuid.UUID(user["id"])
 
-    from app.services.extraction.jd_url_extractor import JDFetchAuthRequiredError
-
     with patch(
         "app.services.job_analysis.job_analysis_service.extract_from_url",
         new_callable=AsyncMock,
@@ -430,14 +430,68 @@ async def test_post_analyze_unauthenticated_returns_401(client: AsyncClient) -> 
     assert resp.status_code == 401
 
 
+_SERVICE_LOGGER = "app.services.job_analysis.job_analysis_service"
+
+
+@pytest.mark.asyncio
+async def test_post_analyze_logs_why_once_before_returning_502(
+    client: AsyncClient, user_factory, as_user, caplog: pytest.LogCaptureFixture,
+) -> None:
+    user = await user_factory()
+    authed = await as_user(user)
+    bad_envelope = {"verdict": "not_real", "verdict_summary": "x", "dimensions": []}
+    jd_text = "Private posting text the log must not keep."
+
+    with caplog.at_level(logging.WARNING):
+        with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta(bad_envelope)):
+            async with authed as ac:
+                resp = await ac.post("/jobs/analyze", json={"jd_text": jd_text})
+
+    assert resp.status_code == 502, resp.text
+    # One WARNING says why; the request log's 5xx ERROR names only the path.
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert [r.name for r in warnings] == [_SERVICE_LOGGER]
+    message = warnings[0].getMessage()
+    assert f"user_id={user['id']}" in message
+    assert "unknown verdict: 'not_real'" in message
+    assert jd_text not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_post_analyze_logs_a_failed_url_fetch_once_without_its_query_before_returning_502(
+    client: AsyncClient, user_factory, as_user, caplog: pytest.LogCaptureFixture,
+) -> None:
+    user = await user_factory()
+    authed = await as_user(user)
+    url = "https://jobs.example.com/1?session=s3cret#apply"
+
+    with caplog.at_level(logging.WARNING):
+        with patch(
+            "app.services.job_analysis.job_analysis_service.extract_from_url",
+            new_callable=AsyncMock,
+            side_effect=JDFetchError(f"Upstream returned HTTP 503 for {url}"),
+        ):
+            async with authed as ac:
+                resp = await ac.post("/jobs/analyze", json={"url": url})
+
+    assert resp.status_code == 502, resp.text
+    # One WARNING says why; the request log's 5xx ERROR names only the path.
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert [r.name for r in warnings] == [_SERVICE_LOGGER]
+    message = warnings[0].getMessage()
+    assert f"user_id={user['id']}" in message
+    assert "url=https://jobs.example.com/1 " in message
+    assert "Upstream returned HTTP 503 for https://jobs.example.com/1" in message
+    assert "s3cret" not in caplog.text
+    assert "#apply" not in caplog.text
+
+
 @pytest.mark.asyncio
 async def test_post_analyze_auth_walled_returns_422_auth_required(
     client: AsyncClient, user_factory, as_user,
 ) -> None:
     user = await user_factory()
     authed = await as_user(user)
-
-    from app.services.extraction.jd_url_extractor import JDFetchAuthRequiredError
 
     with patch(
         "app.services.job_analysis.job_analysis_service.extract_from_url",

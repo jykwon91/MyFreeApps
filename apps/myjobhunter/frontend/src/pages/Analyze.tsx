@@ -1,26 +1,26 @@
 /**
  * Analyze-a-job page (/analyze).
  *
- * Three-state flow, modeled as a discriminated union (NOT useEffect-driven):
+ * Three views, derived from the jobAnalysis slice (NOT useEffect-driven):
  *
  *   1. INPUT       — operator pastes URL or text
- *   2. PROCESSING  — analyzing… spinner; flips to "longer than usual" copy
- *                    after 3s
+ *   2. PROCESSING  — an analysis is pending; spinner, flipping to "longer
+ *                    than usual" copy after 3s from when it was sent
  *   3. RESULT      — verdict banner + dimensions table + decision row
  *
- * The state machine is local — there's no backend session for an
- * in-flight analysis. If the operator refreshes mid-analysis they
- * lose progress (the analysis itself either persisted or didn't,
- * depending on whether Claude returned). This is the same shape the
- * Add Application dialog uses for its three-step flow.
+ * There's no backend session for an in-flight analysis. If the operator
+ * refreshes mid-analysis they lose progress (the analysis itself either
+ * persisted or didn't, depending on whether Claude returned).
  *
  * Redux-slice persistence (in-app navigation only):
- * When an analysis completes successfully, the result is written to the
- * jobAnalysis slice so that navigating to another page and back does NOT
- * lose the result — no second paid AI call needed.  On mount, if the
- * slice holds a lastResult, the page initialises directly to RESULT
- * (no flash of the input view).  When the user clicks "Analyze another"
- * the slice is cleared so remounting shows the input view.
+ * The pending request, the last result, and why the last one failed live in
+ * the jobAnalysis slice, so navigating away and back shows the wait, the
+ * result, or the sign-in-walled link's notice again — no second paid AI
+ * call, and no flash of the input view. Only the pending request's answer is
+ * kept: "Analyze another", a newer analysis, and a sign-in or sign-out (which
+ * reset the API cache, and the slice with it) all make an older answer
+ * arriving later a no-op. Adding to applications says nothing once the
+ * account has changed (its result is gone from the slice).
  *
  * Operator workflow (verbatim from session notes):
  * > "the application page should not be the first step. when we paste
@@ -31,169 +31,153 @@
  *    from there, the user can decide to move towards the application
  *    phase"
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { Loader2, Sparkles } from "lucide-react";
-import { EmptyState, showError, showSuccess, extractErrorMessage } from "@platform/ui";
-import AnalyzeJdInput, {
-  type AnalyzeInputMode,
-} from "@/features/analyze/AnalyzeJdInput";
-import JobAnalysisHeader from "@/features/analyze/JobAnalysisHeader";
-import VerdictBanner from "@/features/analyze/VerdictBanner";
-import DimensionsTable from "@/features/analyze/DimensionsTable";
-import AnalysisActions from "@/features/analyze/AnalysisActions";
-import { describeExtractError } from "@myjobhunter/api-client/utils/describeExtractError";
-import { isAuthRequiredError } from "@myjobhunter/api-client/utils/isAuthRequiredError";
+import { useDispatch, useSelector, useStore } from "react-redux";
+import { showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import type { AnalyzeInputMode } from "@/features/analyze/AnalyzeJdInput";
+import AnalyzeInputView from "@/features/analyze/AnalyzeInputView";
+import AnalyzeProcessingView from "@/features/analyze/AnalyzeProcessingView";
+import AnalyzeResultView from "@/features/analyze/AnalyzeResultView";
+import { ANALYZE_MESSAGES } from "@/constants/analyze-messages";
+import { useIsLongRunning } from "@myjobhunter/api-client/hooks/useIsLongRunning";
+import { analysisFailureFrom } from "@myjobhunter/api-client/utils/analysisFailureFrom";
 import {
   useAnalyzeJobMutation,
   useApplyFromAnalysisMutation,
 } from "@myjobhunter/api-client/store/jobAnalysisApi";
-import { setLastAnalysis, clearLastAnalysis } from "@myjobhunter/api-client/store/jobAnalysisSlice";
+import {
+  analysisFailed,
+  analysisFailureDismissed,
+  analysisStarted,
+  clearLastAnalysis,
+  isPendingAnalysis,
+  markLastAnalysisApplied,
+  setLastAnalysis,
+} from "@myjobhunter/api-client/store/jobAnalysisSlice";
 import type { RootState } from "@/lib/store";
 import type { JobAnalysis } from "@myjobhunter/api-client/types/job-analysis/job-analysis";
-
-const PROCESSING_LONG_RUNNING_THRESHOLD_MS = 3000;
-
-type PageState =
-  | { kind: "input"; mode: AnalyzeInputMode }
-  | { kind: "processing"; sourcePath: "url" | "text"; longRunning: boolean }
-  | { kind: "result"; analysis: JobAnalysis };
-
-function deriveInitialState(lastResult: JobAnalysis | null): PageState {
-  if (lastResult !== null) {
-    return { kind: "result", analysis: lastResult };
-  }
-  return { kind: "input", mode: "url" };
-}
+import type { JobAnalysisRequest } from "@myjobhunter/api-client/types/job-analysis/job-analysis-request";
+import type { JobAnalysisSource } from "@myjobhunter/api-client/types/job-analysis/job-analysis-source";
 
 export default function Analyze() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const store = useStore<RootState>();
   const lastResult = useSelector((s: RootState) => s.jobAnalysis.lastResult);
+  const pending = useSelector((s: RootState) => s.jobAnalysis.pending);
+  const failure = useSelector((s: RootState) => s.jobAnalysis.failure);
+  const longRunning = useIsLongRunning(pending?.startedAt ?? null);
 
-  const [analyzeJob, { isLoading: analyzing }] = useAnalyzeJobMutation();
+  const [analyzeJob] = useAnalyzeJobMutation();
   const [applyFromAnalysis, { isLoading: applying }] =
     useApplyFromAnalysisMutation();
 
-  // Initialise directly from the slice on first render — no post-mount
-  // useEffect — so the input view never flashes before the result appears.
-  const [state, setState] = useState<PageState>(() =>
-    deriveInitialState(lastResult),
-  );
+  const [chosenMode, setMode] = useState<AnalyzeInputMode>("url");
   const [urlValue, setUrlValue] = useState("");
   const [textValue, setTextValue] = useState("");
-  // Persistent "we couldn't read that link" explanation. Replaces the
-  // old transient toast, which vanished and left the user on a blank
-  // text tab with no idea why — it looked like the app had broken.
-  const [urlBlockedNotice, setUrlBlockedNotice] = useState<string | null>(
-    null,
-  );
+
+  // A sign-in-walled link moves to the text tab with a persistent
+  // explanation (not a toast, which vanished and left the user on a blank
+  // text tab with no idea why). It's kept in the slice, so it's still there
+  // on coming back, until the URL tab is chosen again.
+  const linkBlocked = failure?.authRequired === true;
+  const mode: AnalyzeInputMode = linkBlocked ? "text" : chosenMode;
 
   // ---------------------------------------------------------------------
   // Step transitions
   // ---------------------------------------------------------------------
 
-  function setInputMode(mode: AnalyzeInputMode) {
-    // Returning to the URL field means the blocked-link notice is no
-    // longer relevant; keep it while the user is on the text tab.
-    if (mode === "url") setUrlBlockedNotice(null);
-    setState({ kind: "input", mode });
+  function setInputMode(next: AnalyzeInputMode) {
+    if (next === "url" && linkBlocked) dispatch(analysisFailureDismissed());
+    setMode(next);
   }
 
-  function resetToInput(mode: AnalyzeInputMode = "url") {
+  function resetToInput(next: AnalyzeInputMode = "url") {
     setUrlValue("");
     setTextValue("");
-    setUrlBlockedNotice(null);
     dispatch(clearLastAnalysis());
-    setState({ kind: "input", mode });
+    setMode(next);
   }
 
-  async function runAnalyzeUrl(url: string) {
+  async function runAnalyze(source: JobAnalysisSource, body: JobAnalysisRequest) {
+    const request = analyzeJob(body);
+    const { requestId } = request;
+    dispatch(analysisStarted({ requestId, source, startedAt: Date.now() }));
+    setMode(source);
+    try {
+      // Kept only if it's still the analysis being waited for.
+      dispatch(setLastAnalysis({ requestId, analysis: await request.unwrap() }));
+    } catch (err) {
+      // Superseded, cleared, or from before a sign-in or sign-out: not ours to report.
+      if (!isPendingAnalysis(store.getState().jobAnalysis, requestId)) return;
+      const analysisFailure = analysisFailureFrom(err, source);
+      dispatch(analysisFailed({ requestId, failure: analysisFailure }));
+      if (analysisFailure.authRequired) return;
+      // Any other failure is toasted, so it's said even on another page, and done with.
+      showError(`${ANALYZE_MESSAGES.couldntAnalyze} ${analysisFailure.message}`);
+      dispatch(analysisFailureDismissed());
+    }
+  }
+
+  function runAnalyzeUrl(url: string) {
     const trimmed = url.trim();
     if (!trimmed) return;
-    setUrlBlockedNotice(null);
-    setState({ kind: "processing", sourcePath: "url", longRunning: false });
-    try {
-      const result = await analyzeJob({ url: trimmed }).unwrap();
-      dispatch(setLastAnalysis(result));
-      setState({ kind: "result", analysis: result });
-    } catch (err) {
-      if (isAuthRequiredError(err)) {
-        // Persistent in-context banner on the text tab — NOT a toast.
-        // The toast faded and the silent tab-switch read as "broken".
-        setInputMode("text");
-        setUrlBlockedNotice(
-          "We couldn't read that link — it needs a sign-in. Sites like " +
-            "LinkedIn and Glassdoor block automated access. Paste the job " +
-            "description text below and we'll analyze it.",
-        );
-        return;
-      }
-      showError(`Couldn't analyze: ${describeExtractError(err)}`);
-      setInputMode("url");
-    }
+    void runAnalyze("url", { url: trimmed });
   }
 
-  async function runAnalyzeText(text: string) {
+  function runAnalyzeText(text: string) {
     const trimmed = text.trim();
     if (!trimmed) return;
-    setUrlBlockedNotice(null);
-    setState({ kind: "processing", sourcePath: "text", longRunning: false });
-    try {
-      const result = await analyzeJob({ jd_text: trimmed }).unwrap();
-      dispatch(setLastAnalysis(result));
-      setState({ kind: "result", analysis: result });
-    } catch (err) {
-      showError(
-        `Couldn't analyze: ${extractErrorMessage(err) ?? "AI analysis failed"}`,
-      );
-      setInputMode("text");
-    }
+    void runAnalyze("text", { jd_text: trimmed });
   }
 
   function handlePasteUrl(pasted: string) {
     setUrlValue(pasted);
-    void runAnalyzeUrl(pasted);
+    runAnalyzeUrl(pasted);
   }
 
-  async function handleAddToApplications() {
-    if (state.kind !== "result") return;
+  async function handleAddToApplications(analysis: JobAnalysis) {
+    // A sign-in or sign-out meanwhile clears the result: nothing is said to the next account.
+    const stillThisAccount = () => store.getState().jobAnalysis.lastResult?.id === analysis.id;
     try {
-      await applyFromAnalysis(state.analysis.id).unwrap();
-      showSuccess("Application added");
+      const application = await applyFromAnalysis(analysis.id).unwrap();
+      if (!stillThisAccount()) return;
+      // Coming back to this page shows it as saved, not as one to add again.
+      dispatch(
+        markLastAnalysisApplied({
+          analysisId: analysis.id,
+          applicationId: application.id,
+        }),
+      );
+      showSuccess(ANALYZE_MESSAGES.added);
       navigate("/applications");
     } catch (err) {
-      showError(`Couldn't save: ${extractErrorMessage(err)}`);
+      if (stillThisAccount()) showError(`${ANALYZE_MESSAGES.couldntSave} ${extractErrorMessage(err)}`);
     }
   }
-
-  // ---------------------------------------------------------------------
-  // "Longer than usual…" copy after 3 seconds in processing.
-  // ---------------------------------------------------------------------
-  useEffect(() => {
-    if (state.kind !== "processing" || state.longRunning) return;
-    const timer = setTimeout(() => {
-      setState((prev) => {
-        if (prev.kind !== "processing") return prev;
-        return { ...prev, longRunning: true };
-      });
-    }, PROCESSING_LONG_RUNNING_THRESHOLD_MS);
-    return () => clearTimeout(timer);
-  }, [state]);
 
   // ---------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------
   return (
     <main className="p-4 sm:p-8 space-y-6">
-      {state.kind === "input" && (
-        <InputView
-          mode={state.mode}
+      {pending ? (
+        <AnalyzeProcessingView sourcePath={pending.source} longRunning={longRunning} />
+      ) : lastResult ? (
+        <AnalyzeResultView
+          analysis={lastResult}
+          applying={applying}
+          onApply={() => handleAddToApplications(lastResult)}
+          onAnalyzeAnother={() => resetToInput("url")}
+          onViewApplications={() => navigate("/applications")}
+        />
+      ) : (
+        <AnalyzeInputView
+          mode={mode}
           urlValue={urlValue}
           textValue={textValue}
-          analyzing={analyzing}
-          notice={urlBlockedNotice}
+          notice={linkBlocked ? ANALYZE_MESSAGES.linkBlocked : null}
           onChangeMode={setInputMode}
           onChangeUrl={setUrlValue}
           onChangeText={setTextValue}
@@ -202,146 +186,6 @@ export default function Analyze() {
           onPasteUrl={handlePasteUrl}
         />
       )}
-
-      {state.kind === "processing" && (
-        <ProcessingView
-          sourcePath={state.sourcePath}
-          longRunning={state.longRunning}
-        />
-      )}
-
-      {state.kind === "result" && (
-        <ResultView
-          analysis={state.analysis}
-          applying={applying}
-          onApply={handleAddToApplications}
-          onAnalyzeAnother={() => resetToInput("url")}
-          onViewApplications={() => navigate("/applications")}
-        />
-      )}
     </main>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Input view
-// ---------------------------------------------------------------------------
-
-interface InputViewProps {
-  mode: AnalyzeInputMode;
-  urlValue: string;
-  textValue: string;
-  analyzing: boolean;
-  notice: string | null;
-  onChangeMode: (mode: AnalyzeInputMode) => void;
-  onChangeUrl: (next: string) => void;
-  onChangeText: (next: string) => void;
-  onSubmitUrl: () => void;
-  onSubmitText: () => void;
-  onPasteUrl: (pasted: string) => void;
-}
-
-function InputView(props: InputViewProps) {
-  return (
-    <>
-      <header className="space-y-1 max-w-2xl">
-        <h1 className="text-2xl font-semibold">Analyze a job</h1>
-        <p className="text-sm text-muted-foreground">
-          Paste a job description to see how it stacks up against your
-          profile. We'll rank fit across skills, seniority, salary,
-          location, and work authorization — then you can decide whether
-          to add it to your applications.
-        </p>
-      </header>
-      <div className="max-w-2xl rounded-lg border bg-card p-4 sm:p-6">
-        <AnalyzeJdInput {...props} isSubmitting={props.analyzing} />
-      </div>
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Processing view
-// ---------------------------------------------------------------------------
-
-interface ProcessingViewProps {
-  sourcePath: "url" | "text";
-  longRunning: boolean;
-}
-
-function ProcessingView({ sourcePath, longRunning }: ProcessingViewProps) {
-  const primary =
-    sourcePath === "url"
-      ? "Reading the posting and analyzing fit…"
-      : "Analyzing this role…";
-  const longCopy = "This is taking longer than usual…";
-  return (
-    <div className="max-w-2xl">
-      <EmptyState
-        icon={
-          <Loader2
-            size={36}
-            className="animate-spin text-muted-foreground"
-            aria-hidden="true"
-          />
-        }
-        heading={longRunning ? longCopy : primary}
-        body={
-          longRunning
-            ? "Long postings can take 10–20 seconds to score."
-            : "Usually takes 5–15 seconds."
-        }
-      />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Result view
-// ---------------------------------------------------------------------------
-
-interface ResultViewProps {
-  analysis: JobAnalysis;
-  applying: boolean;
-  onApply: () => void;
-  onAnalyzeAnother: () => void;
-  onViewApplications: () => void;
-}
-
-function ResultView({
-  analysis,
-  applying,
-  onApply,
-  onAnalyzeAnother,
-  onViewApplications,
-}: ResultViewProps) {
-  return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Sparkles size={14} aria-hidden="true" />
-        <span>Analyzed against your profile</span>
-      </div>
-
-      <JobAnalysisHeader
-        extracted={analysis.extracted}
-        sourceUrl={analysis.source_url}
-      />
-      <VerdictBanner
-        verdict={analysis.verdict}
-        summary={analysis.verdict_summary}
-      />
-      <DimensionsTable
-        dimensions={analysis.dimensions}
-        redFlags={analysis.red_flags}
-        greenFlags={analysis.green_flags}
-      />
-      <AnalysisActions
-        appliedApplicationId={analysis.applied_application_id}
-        applying={applying}
-        onApply={onApply}
-        onAnalyzeAnother={onAnalyzeAnother}
-        onViewApplications={onViewApplications}
-      />
-    </div>
   );
 }

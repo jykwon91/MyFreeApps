@@ -3,7 +3,7 @@ import { useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { COMPANY_RESEARCH_MESSAGES as MESSAGES } from "../../constants/companyResearch";
 import type { ResearchReadyProps } from "../../types/ResearchReadyProps";
-import ResearchFlagList from "./ResearchFlagList";
+import FlagList from "../../components/FlagList";
 import ResearchSources from "./ResearchSources";
 import ResearchTextBlock from "./ResearchTextBlock";
 
@@ -18,8 +18,8 @@ export default function ResearchReady({ research }: ResearchReadyProps) {
       {research.interview_process ? <ResearchTextBlock label={MESSAGES.summary} text={research.interview_process} /> : null}
       {research.senior_engineer_sentiment ? <ResearchTextBlock isMuted label={MESSAGES.culture} text={research.senior_engineer_sentiment} /> : null}
       {compensation ? <ResearchTextBlock isMuted label={MESSAGES.compensation} text={compensation} /> : null}
-      <ResearchFlagList flags={research.green_flags} title={MESSAGES.greenFlags} tone="success" />
-      <ResearchFlagList flags={research.red_flags} title={MESSAGES.redFlags} tone="danger" />
+      <FlagList flags={research.green_flags} title={MESSAGES.greenFlags} tone="success" />
+      <FlagList flags={research.red_flags} title={MESSAGES.redFlags} tone="danger" />
       <ResearchSources sources={research.sources} />
     </View>
   );

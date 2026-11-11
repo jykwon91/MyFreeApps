@@ -2,8 +2,10 @@ routes:
   # The website sends / on to /dashboard; the app opens on its Dashboard tab.
   /:
     screen: (app)/(tabs)/index
+  # On More rather than a tab: the website's own phone tab bar leaves it out too. The Dashboard's
+  # empty board opens it as well.
   /analyze:
-    not_on_mobile: Not built yet.
+    screen: (app)/analyze
   # The website adds an application in a dialog on this page; the app adds it on (app)/applications/new.
   /applications:
     screen: (app)/(tabs)/applications

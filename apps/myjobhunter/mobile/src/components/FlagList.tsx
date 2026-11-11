@@ -1,9 +1,9 @@
 import { Chip, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
-import type { ResearchFlagListProps } from "../../types/ResearchFlagListProps";
+import type { FlagListProps } from "../types/FlagListProps";
 
 /** Green or red flags under a chip in their tone, one per line. Nothing when there are none. */
-export default function ResearchFlagList({ title, tone, flags }: ResearchFlagListProps) {
+export default function FlagList({ title, tone, flags }: FlagListProps) {
   const { colors, spacing, fontSize } = useTheme();
   if (flags.length === 0) return null;
   return (

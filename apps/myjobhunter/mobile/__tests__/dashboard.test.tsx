@@ -4,7 +4,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { AppState, FlatList, Linking } from "react-native";
 import type { AppStateStatus } from "react-native";
-import { WEB_BASE_URL } from "../src/constants/api";
+import { ANALYZE_MESSAGES } from "../src/constants/analyze";
 import { APPLICATION_DETAIL_MESSAGES as DETAIL } from "../src/constants/applicationDetail";
 import { DASHBOARD_FOLDS_KEY, DASHBOARD_MESSAGES as MESSAGES, STAGE_SCROLL_RETRY_LIMIT, STAGE_SCROLL_RETRY_MS } from "../src/constants/dashboard";
 import { store } from "../src/lib/store";
@@ -464,7 +464,7 @@ it("doesn't ask the server to move a card to the stage it's already in", async (
   expect(sent.some(({ route }) => route === MOVE_STRIPE)).toBe(false);
 });
 
-it("says when there are no applications yet, and opens the website's Analyze page", async () => {
+it("says when there are no applications yet, and opens the Analyze screen on the phone", async () => {
   serve({ "POST /auth/mobile/refresh": refreshed, [BOARD]: boardOf() });
   await renderApp();
 
@@ -472,7 +472,9 @@ it("says when there are no applications yet, and opens the website's Analyze pag
   expect(screen.getByText(MESSAGES.noneBody)).toBeTruthy();
   await fireEvent.press(screen.getByRole("button", { name: MESSAGES.analyze }));
 
-  expect(openURL).toHaveBeenLastCalledWith(`${WEB_BASE_URL}/analyze`);
+  expect(screen).toHavePathname("/analyze");
+  expect(await screen.findByLabelText(ANALYZE_MESSAGES.linkLabel)).toBeTruthy();
+  expect(openURL).not.toHaveBeenCalled();
 });
 
 it("says when the board couldn't load, and loads it on Try again", async () => {

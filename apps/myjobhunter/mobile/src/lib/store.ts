@@ -1,3 +1,4 @@
+import jobAnalysisReducer from "@myjobhunter/api-client/store/jobAnalysisSlice";
 import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { baseApi } from "@platform/core/store/baseApi";
 import { assertSecureApiUrl, refetchOnForeground, resetCacheOnAccountChange } from "@platform/mobile";
@@ -19,7 +20,9 @@ configurePlatform({
 
 export function makeStore() {
   return configureStore({
-    reducer: { [baseApi.reducerPath]: baseApi.reducer },
+    // The last analysis is kept, as on the website, so leaving the Analyze screen and coming back
+    // doesn't pay for a second one. Resetting the API cache empties it too.
+    reducer: { [baseApi.reducerPath]: baseApi.reducer, jobAnalysis: jobAnalysisReducer },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(baseApi.middleware),
   });
 }
@@ -28,6 +31,7 @@ export const store = makeStore();
 // Queries that ask for it, such as the board's stage ages, refetch when the app comes back to the foreground.
 refetchOnForeground(store.dispatch);
 
+// The analysis slice resets with the API cache, so the next account never sees the last one's.
 resetCacheOnAccountChange(session, () => store.dispatch(baseApi.util.resetApiState()));
 
 export type AppStore = ReturnType<typeof makeStore>;

@@ -1,4 +1,3 @@
-import type { WebPath } from "@platform/mobile";
 import type { DashboardLayout } from "../types/DashboardLayout";
 
 /** Copy for the Dashboard tab: the board of applications by stage. */
@@ -8,7 +7,7 @@ export const DASHBOARD_MESSAGES = {
   tryAgainOffer: "Want me to try again?",
   tryAgain: "Try again",
   noneHeading: "Your hunt starts here",
-  noneBody: "Paste a job description on the website's Analyze page to see how it ranks for you, then add it to your applications.",
+  noneBody: "Paste a job description on the Analyze page to see how it ranks for you, then add it to your applications.",
   analyze: "Analyze a job",
   summaryTitle: "Pipeline",
   onYourBoard: "on your board",
@@ -30,9 +29,6 @@ export const COMPANY_LOGO_SIZE = 32;
 
 /** The summary's stage tiles sit two to a row, so each takes just under half the width. */
 export const STAGE_TILE_BASIS = "47%";
-
-/** The website's page for analyzing a job, which the empty board points to. It isn't on the phone yet. */
-export const ANALYZE_WEB_PATH: WebPath = "/analyze";
 
 /** Where the phone keeps which lanes and stages the person folded, so the board opens the way they left it. */
 export const DASHBOARD_FOLDS_KEY = "mjh_dashboard_folds";

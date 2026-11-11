@@ -3,7 +3,7 @@
  *
  * Renders one row per dimension key in canonical order. Each row shows:
  *   - Dimension label    ("Skill match", "Seniority", ...)
- *   - Status badge       (color-keyed via DIMENSION_STATUS_TONES)
+ *   - Status badge       (color-keyed via toneForDimensionStatus)
  *   - Rationale          (1-2 sentences from Claude)
  *
  * Plus two flag lists below the grid (red flags, green flags). The
@@ -19,11 +19,11 @@
 import { Badge } from "@platform/ui";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import type { JobAnalysisDimension } from "@myjobhunter/api-client/types/job-analysis/job-analysis-dimension";
-import { DIMENSION_KEY_ORDER } from "@myjobhunter/api-client/constants/jobAnalysisDimensionKeys";
-import { DIMENSION_LABELS } from "@myjobhunter/api-client/constants/jobAnalysisDimensionLabels";
-import { DIMENSION_STATUS_LABELS } from "@myjobhunter/api-client/constants/jobAnalysisDimensionStatusLabels";
-import { isDimensionKey } from "@myjobhunter/api-client/utils/isDimensionKey";
-import { DIMENSION_STATUS_TONES } from "@/constants/jobAnalysisDimensionTones";
+import { formatDimensionKey } from "@myjobhunter/api-client/utils/formatDimensionKey";
+import { formatDimensionStatus } from "@myjobhunter/api-client/utils/formatDimensionStatus";
+import { orderedDimensions } from "@myjobhunter/api-client/utils/orderedDimensions";
+import { toneForDimensionStatus } from "@myjobhunter/api-client/utils/toneForDimensionStatus";
+import { STATUS_TONE_BADGE_COLORS } from "@/constants/statusToneBadgeColors";
 
 interface DimensionsTableProps {
   dimensions: JobAnalysisDimension[];
@@ -97,9 +97,9 @@ export default function DimensionsTable({
 }
 
 function DimensionRow({ row }: { row: JobAnalysisDimension }) {
-  const label = isDimensionKey(row.key) ? DIMENSION_LABELS[row.key] : row.key;
-  const statusLabel = DIMENSION_STATUS_LABELS[row.status] ?? row.status;
-  const tone = DIMENSION_STATUS_TONES[row.status] ?? "gray";
+  const label = formatDimensionKey(row.key);
+  const statusLabel = formatDimensionStatus(row.status);
+  const tone = STATUS_TONE_BADGE_COLORS[toneForDimensionStatus(row.status)];
   return (
     <tr className="border-t">
       <td className="px-4 py-3 align-top font-medium whitespace-nowrap">
@@ -148,23 +148,4 @@ function FlagList({ icon, heading, tone, items }: FlagListProps) {
       </ul>
     </div>
   );
-}
-
-function orderedDimensions(
-  dimensions: JobAnalysisDimension[],
-): JobAnalysisDimension[] {
-  const lookup = new Map(dimensions.map((d) => [d.key, d]));
-  const ordered: JobAnalysisDimension[] = [];
-  for (const key of DIMENSION_KEY_ORDER) {
-    const row = lookup.get(key);
-    if (row) ordered.push(row);
-  }
-  // Append any unknown dimensions at the end so future enum additions
-  // surface in the UI even if the type union hasn't caught up.
-  for (const row of dimensions) {
-    if (!isDimensionKey(row.key)) {
-      ordered.push(row);
-    }
-  }
-  return ordered;
 }

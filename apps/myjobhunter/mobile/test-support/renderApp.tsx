@@ -1,6 +1,7 @@
 import { renderRouter } from "expo-router/testing-library";
 import RootLayout from "../app/_layout";
 import AppLayout from "../app/(app)/_layout";
+import AnalyzeRoute from "../app/(app)/analyze";
 import TabsLayout from "../app/(app)/(tabs)/_layout";
 import Applications from "../app/(app)/(tabs)/applications";
 import Dashboard from "../app/(app)/(tabs)/index";
@@ -19,6 +20,7 @@ export const APP_ROUTES = {
   _layout: RootLayout,
   "sign-in": SignInRoute,
   "(app)/_layout": AppLayout,
+  "(app)/analyze": AnalyzeRoute,
   "(app)/applications/[id]": ApplicationRoute,
   "(app)/applications/new": AddApplicationRoute,
   "(app)/companies/[id]": CompanyRoute,

@@ -64,6 +64,7 @@ export { spacing } from "./theme/spacing";
 export { MIN_TOUCH_TARGET } from "./theme/touchTarget";
 export { fontSize } from "./theme/typography";
 export { useTheme } from "./theme/useTheme";
+export { useToneColor } from "./theme/useToneColor";
 
 export type { AccountMessage } from "./types/AccountMessage";
 export type { AccountSettingsProps } from "./types/AccountSettingsProps";
@@ -97,6 +98,7 @@ export type { SessionState } from "./types/SessionState";
 export type { Theme } from "./types/Theme";
 export type { SwitchRowProps } from "./types/SwitchRowProps";
 export type { ThemeColors } from "./types/ThemeColors";
+export type { ToneColor } from "./types/ToneColor";
 export type { ToastContextValue } from "./types/ToastContextValue";
 export type { ToastProps } from "./types/ToastProps";
 export type { ToastProviderProps } from "./types/ToastProviderProps";

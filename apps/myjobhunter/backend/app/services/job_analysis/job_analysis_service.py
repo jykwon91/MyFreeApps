@@ -52,6 +52,7 @@ from typing import Any
 import anthropic
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.loggable_url import loggable_url
 from app.models.discovery.discovered_job import DiscoveredJob
 from app.models.job_analysis.job_analysis import JobAnalysis
 from app.repositories.job_analysis import job_analysis_repository
@@ -71,6 +72,7 @@ from app.services.job_analysis._job_analysis_utils import (
     _safe_remote_type,
     _str_or_none,
 )
+from app.services.job_analysis.extracted_jd_text import join_extracted_text
 # Profile-snapshot construction lives in a sibling module (no-growth split).
 # Aliased to the prior underscore names so the call sites below are unchanged.
 from app.services.job_analysis.profile_snapshot import (
@@ -290,10 +292,16 @@ async def analyze(
         except JDFetchTimeoutError as exc:
             raise JobAnalysisFetchTimeoutError(str(exc)) from exc
         except JDFetchError as exc:
+            # The fetcher's messages carry the full URL; the log keeps only where it points.
+            safe_url = loggable_url(source_url)
+            logger.warning(
+                "Job posting fetch failed: user_id=%s url=%s err=%s",
+                user_id, safe_url, str(exc).replace(source_url, safe_url),
+            )
             raise JobAnalysisError(str(exc)) from exc
         except ValueError as exc:
             raise JobAnalysisInvalidUrlError(str(exc)) from exc
-        resolved_jd_text = _join_extracted_text(extracted)
+        resolved_jd_text = join_extracted_text(extracted)
     else:
         assert jd_text is not None
         source_url = None
@@ -378,7 +386,11 @@ async def score(
         logger.warning("Claude job-analysis response invalid: %s", exc)
         raise JobAnalysisError(str(exc), code=None, retryable=False) from exc
 
-    validated = _validate_response(meta["parsed"])
+    try:
+        validated = _validate_response(meta["parsed"])
+    except JobAnalysisError as exc:
+        logger.warning("Claude job-analysis response failed validation: user_id=%s err=%s", user_id, exc)
+        raise
 
     if extracted_hint:
         merged = dict(validated["extracted"])
@@ -449,56 +461,6 @@ async def soft_delete_analysis(
         await db.flush()
         await db.commit()
     return True
-
-
-# ---------------------------------------------------------------------------
-# Internal helpers — kept module-private so tests can hit them directly.
-# ---------------------------------------------------------------------------
-
-
-def _join_extracted_text(extracted: Any) -> str:
-    """Compose a single JD text body from ``ExtractedJD``.
-
-    The analysis prompt only needs the JD CONTENT — title, summary,
-    description body, and requirement bullets. Other extracted fields
-    (company, location, salary range) are echoed back to the operator
-    via the response's ``extracted`` field but are not part of the
-    model's analysis input.
-    """
-    parts: list[str] = []
-    if extracted.title:
-        parts.append(f"Title: {extracted.title}")
-    if extracted.company:
-        parts.append(f"Company: {extracted.company}")
-    if extracted.location:
-        parts.append(f"Location: {extracted.location}")
-    if extracted.summary:
-        parts.append(f"Summary:\n{extracted.summary}")
-    if extracted.description_html:
-        parts.append(f"Description:\n{_strip_html(extracted.description_html)}")
-    if extracted.requirements_text:
-        parts.append(f"Requirements:\n{extracted.requirements_text}")
-    return "\n\n".join(parts).strip()
-
-
-def _strip_html(html: str) -> str:
-    """Best-effort HTML → text. Mirrors the AddApplicationDialog's
-    ``stripHtml`` so the prompt sees the same text body the form would."""
-    import re
-
-    text = re.sub(r"<\s*br\s*/?\s*>", "\n", html, flags=re.I)
-    text = re.sub(r"<\s*/?\s*(p|li|div|h[1-6])[^>]*>", "\n", text, flags=re.I)
-    text = re.sub(r"<[^>]+>", "", text)
-    text = (
-        text.replace("&nbsp;", " ")
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", '"')
-        .replace("&#39;", "'")
-    )
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()
 
 
 # ---------------------------------------------------------------------------

@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
-import { baseApi } from "@platform/ui";
-import jobAnalysisReducer from "@myjobhunter/api-client/store/jobAnalysisSlice";
+import { baseApi, showError, showSuccess } from "@platform/ui";
+import jobAnalysisReducer, { analysisStarted } from "@myjobhunter/api-client/store/jobAnalysisSlice";
 import Analyze from "@/pages/Analyze";
 import type { JobAnalysis } from "@myjobhunter/api-client/types/job-analysis/job-analysis";
+import type { JobAnalysisState } from "@myjobhunter/api-client/types/job-analysis/job-analysis-state";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -64,12 +65,14 @@ import {
 
 const mockUseAnalyzeJobMutation = vi.mocked(useAnalyzeJobMutation);
 const mockUseApplyFromAnalysisMutation = vi.mocked(useApplyFromAnalysisMutation);
+const mockShowError = vi.mocked(showError);
+const mockShowSuccess = vi.mocked(showSuccess);
 
 // ---------------------------------------------------------------------------
 // Test store factory
 // ---------------------------------------------------------------------------
 
-function makeTestStore(preloadedJobAnalysis?: { lastResult: JobAnalysis | null }) {
+function makeTestStore(preloadedJobAnalysis?: Partial<JobAnalysisState>) {
   return configureStore({
     reducer: {
       [baseApi.reducerPath]: baseApi.reducer,
@@ -78,7 +81,7 @@ function makeTestStore(preloadedJobAnalysis?: { lastResult: JobAnalysis | null }
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(baseApi.middleware),
     preloadedState: preloadedJobAnalysis
-      ? { jobAnalysis: preloadedJobAnalysis }
+      ? { jobAnalysis: { lastResult: null, pending: null, failure: null, ...preloadedJobAnalysis } }
       : undefined,
   });
 }
@@ -181,6 +184,7 @@ describe("Analyze page", () => {
 
   it("transitions input → result on successful text analysis", async () => {
     const analyzeMock = vi.fn().mockReturnValue({
+      requestId: "req-1",
       unwrap: () => Promise.resolve(makeAnalysis()),
     });
     mockUseAnalyzeJobMutation.mockReturnValue([
@@ -223,12 +227,14 @@ describe("Analyze page", () => {
   it("calls apply and navigates to /applications when 'Add to applications' clicked", async () => {
     mockUseAnalyzeJobMutation.mockReturnValue([
       vi.fn().mockReturnValue({
-        unwrap: () => Promise.resolve(makeAnalysis()),
+        requestId: "req-1",
+      unwrap: () => Promise.resolve(makeAnalysis()),
       }),
       { isLoading: false, reset: vi.fn() },
     ] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
 
     const applyMock = vi.fn().mockReturnValue({
+      requestId: "req-1",
       unwrap: () =>
         Promise.resolve({
           id: "app-1",
@@ -272,10 +278,59 @@ describe("Analyze page", () => {
     expect(await screen.findByTestId("applications-page")).toBeInTheDocument();
   });
 
+  it("marks the remembered result as saved once it's added, so coming back doesn't offer to add it again", async () => {
+    const store = makeTestStore({ lastResult: makeAnalysis() });
+    mockUseAnalyzeJobMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
+    mockUseApplyFromAnalysisMutation.mockReturnValue([
+      vi.fn().mockReturnValue({ requestId: "req-1",
+      unwrap: () => Promise.resolve({ id: "app-1" }) }),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useApplyFromAnalysisMutation>);
+
+    const user = userEvent.setup();
+    renderAnalyze({ store });
+    await user.click(screen.getByRole("button", { name: /Add to applications/i }));
+
+    expect(await screen.findByTestId("applications-page")).toBeInTheDocument();
+    expect(store.getState().jobAnalysis.lastResult?.applied_application_id).toBe("app-1");
+  });
+
+  it("says a rate limit plainly, never the raw server detail", async () => {
+    mockUseAnalyzeJobMutation.mockReturnValue([
+      vi.fn().mockReturnValue({
+        requestId: "req-1",
+      unwrap: () => Promise.reject({ status: 429, data: { detail: "Too many attempts" } }),
+      }),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
+    mockUseApplyFromAnalysisMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useApplyFromAnalysisMutation>);
+
+    const user = userEvent.setup();
+    renderAnalyze();
+    await user.click(screen.getByText("No URL? Paste the description text instead."));
+    await user.type(await screen.findByLabelText("Job description text"), "Some JD.");
+    const submitButtons = screen.getAllByRole("button", { name: /Analyze this job/i });
+    await user.click(submitButtons[submitButtons.length - 1]!);
+
+    await waitFor(() =>
+      expect(mockShowError).toHaveBeenCalledWith(
+        "Couldn't analyze: Too many requests. Wait a few minutes and try again.",
+      ),
+    );
+    expect(await screen.findByLabelText("Job description text")).toBeInTheDocument();
+  });
+
   it("returns to input mode when 'Analyze another' clicked from result", async () => {
     mockUseAnalyzeJobMutation.mockReturnValue([
       vi.fn().mockReturnValue({
-        unwrap: () => Promise.resolve(makeAnalysis()),
+        requestId: "req-1",
+      unwrap: () => Promise.resolve(makeAnalysis()),
       }),
       { isLoading: false, reset: vi.fn() },
     ] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
@@ -308,8 +363,8 @@ describe("Analyze page", () => {
   });
 
   it("shows a persistent banner (not a vanishing toast) when the URL is auth-walled", async () => {
-    const { showError } = await import("@platform/ui");
     const analyzeMock = vi.fn().mockReturnValue({
+      requestId: "req-1",
       unwrap: () =>
         Promise.reject({ status: 422, data: { detail: "auth_required" } }),
     });
@@ -343,11 +398,12 @@ describe("Analyze page", () => {
     ).toBeInTheDocument();
     // The auth-required case must NOT use the transient toast — that
     // vanishing was the whole "it seems broken" complaint.
-    expect(showError).not.toHaveBeenCalled();
+    expect(mockShowError).not.toHaveBeenCalled();
   });
 
   it("clears the blocked-link banner when the user switches back to the URL tab", async () => {
     const analyzeMock = vi.fn().mockReturnValue({
+      requestId: "req-1",
       unwrap: () =>
         Promise.reject({ status: 422, data: { detail: "auth_required" } }),
     });
@@ -386,6 +442,7 @@ describe("Analyze page", () => {
 
   it("shows the 'saved — view applications' affordance for an analysis that's already applied", async () => {
     const analyzeMock = vi.fn().mockReturnValue({
+      requestId: "req-1",
       unwrap: () =>
         Promise.resolve(
           makeAnalysis({ applied_application_id: "app-existing" }),
@@ -482,6 +539,7 @@ describe("Analyze page", () => {
   it("slice is populated after a successful analysis", async () => {
     const analysis = makeAnalysis();
     const analyzeMock = vi.fn().mockReturnValue({
+      requestId: "req-1",
       unwrap: () => Promise.resolve(analysis),
     });
     mockUseAnalyzeJobMutation.mockReturnValue([
@@ -518,6 +576,7 @@ describe("Analyze page", () => {
 
   it("shows bridging copy framing the next step before applying", async () => {
     const analyzeMock = vi.fn().mockReturnValue({
+      requestId: "req-1",
       unwrap: () => Promise.resolve(makeAnalysis()),
     });
     mockUseAnalyzeJobMutation.mockReturnValue([
@@ -577,5 +636,150 @@ describe("Analyze page", () => {
         /Add to applications to track interviews/i,
       ),
     ).not.toBeInTheDocument();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Only the pending request's answer counts
+  // ---------------------------------------------------------------------------
+
+  function deferredAnalysis(requestId: string) {
+    let settle: { resolve: (a: JobAnalysis) => void; reject: (e: unknown) => void } = {
+      resolve: () => undefined,
+      reject: () => undefined,
+    };
+    const promise = new Promise<JobAnalysis>((resolve, reject) => (settle = { resolve, reject }));
+    return { request: { requestId, unwrap: () => promise }, settle };
+  }
+
+  function mockMutations(analyze: ReturnType<typeof vi.fn>) {
+    mockUseAnalyzeJobMutation.mockReturnValue([
+      analyze,
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
+    mockUseApplyFromAnalysisMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useApplyFromAnalysisMutation>);
+  }
+
+  async function analyzeText(user: ReturnType<typeof userEvent.setup>, text: string) {
+    await user.click(screen.getByText("No URL? Paste the description text instead."));
+    await user.type(await screen.findByLabelText("Job description text"), text);
+    const buttons = screen.getAllByRole("button", { name: /Analyze this job/i });
+    await user.click(buttons[buttons.length - 1]!);
+  }
+
+  it("shows the wait, not an empty form, when opened while an analysis is still running", () => {
+    mockMutations(vi.fn());
+    const store = makeTestStore({
+      pending: { requestId: "req-earlier", source: "url", startedAt: Date.now() },
+    });
+
+    renderAnalyze({ store });
+
+    expect(screen.getByText("Reading the posting and analyzing fit…")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Job posting URL")).not.toBeInTheDocument();
+  });
+
+  it("shows the result of an analysis started on an earlier visit when it lands", async () => {
+    const earlier = deferredAnalysis("req-earlier");
+    mockMutations(vi.fn().mockReturnValue(earlier.request));
+    const user = userEvent.setup();
+    const first = renderAnalyze();
+    await analyzeText(user, "Some JD.");
+    first.unmount();
+
+    renderAnalyze({ store: first.store });
+    expect(screen.getByText("Analyzing this role…")).toBeInTheDocument();
+    await act(async () => earlier.settle.resolve(makeAnalysis()));
+
+    expect(await screen.findByText("Worth considering")).toBeInTheDocument();
+  });
+
+  it("ignores an analysis that answers after a newer one was sent", async () => {
+    const older = deferredAnalysis("req-older");
+    mockMutations(vi.fn().mockReturnValue(older.request));
+    const user = userEvent.setup();
+    const { store } = renderAnalyze();
+    await analyzeText(user, "Some JD.");
+    act(() => {
+      store.dispatch(analysisStarted({ requestId: "req-newer", source: "text", startedAt: Date.now() }));
+    });
+
+    await act(async () => older.settle.resolve(makeAnalysis({ id: "an-older" })));
+
+    expect(store.getState().jobAnalysis.lastResult).toBeNull();
+    expect(store.getState().jobAnalysis.pending?.requestId).toBe("req-newer");
+    expect(screen.getByText("Analyzing this role…")).toBeInTheDocument();
+  });
+
+  it("drops a running analysis on a sign-in or sign-out, so its answer never reaches the next account", async () => {
+    const running = deferredAnalysis("req-a");
+    const failing = deferredAnalysis("req-b");
+    mockMutations(vi.fn().mockReturnValueOnce(running.request).mockReturnValueOnce(failing.request));
+    const user = userEvent.setup();
+    const { store } = renderAnalyze();
+
+    await analyzeText(user, "Account A's JD.");
+    act(() => {
+      store.dispatch(baseApi.util.resetApiState());
+    });
+    expect(await screen.findByLabelText("Job description text")).toBeInTheDocument();
+    await act(async () => running.settle.resolve(makeAnalysis()));
+    expect(store.getState().jobAnalysis).toEqual({ lastResult: null, pending: null, failure: null });
+    expect(screen.queryByText("Worth considering")).not.toBeInTheDocument();
+
+    const buttons = screen.getAllByRole("button", { name: /Analyze this job/i });
+    await user.click(buttons[buttons.length - 1]!);
+    expect(screen.getByText("Analyzing this role…")).toBeInTheDocument();
+    act(() => {
+      store.dispatch(baseApi.util.resetApiState());
+    });
+    await act(async () => failing.settle.reject({ status: 502, data: { detail: "boom" } }));
+    expect(mockShowError).not.toHaveBeenCalled();
+  });
+
+  it("still says the link needs a sign-in, on the text tab, when it failed while the page was closed", async () => {
+    const walled = deferredAnalysis("req-walled");
+    mockMutations(vi.fn().mockReturnValue(walled.request));
+    const user = userEvent.setup();
+    const first = renderAnalyze();
+    await user.type(screen.getByLabelText("Job posting URL"), "https://www.linkedin.com/jobs/view/123");
+    const buttons = screen.getAllByRole("button", { name: /Analyze this job/i });
+    await user.click(buttons[buttons.length - 1]!);
+    first.unmount();
+    await act(async () => walled.settle.reject({ status: 422, data: { detail: "auth_required" } }));
+
+    renderAnalyze({ store: first.store });
+
+    expect(screen.getByLabelText("Job description text")).toBeInTheDocument();
+    expect(screen.getByText(/couldn't read that link/i)).toBeInTheDocument();
+    expect(mockShowError).not.toHaveBeenCalled();
+  });
+
+  it("says nothing of an add that lands after a sign-in or sign-out", async () => {
+    let answerApply: (application: { id: string }) => void = () => undefined;
+    const store = makeTestStore({ lastResult: makeAnalysis() });
+    mockUseAnalyzeJobMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
+    mockUseApplyFromAnalysisMutation.mockReturnValue([
+      vi.fn().mockReturnValue({
+        unwrap: () => new Promise<{ id: string }>((resolve) => (answerApply = resolve)),
+      }),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useApplyFromAnalysisMutation>);
+    const user = userEvent.setup();
+    renderAnalyze({ store });
+    await user.click(screen.getByRole("button", { name: /Add to applications/i }));
+
+    act(() => {
+      store.dispatch(baseApi.util.resetApiState());
+    });
+    await act(async () => answerApply({ id: "app-1" }));
+
+    expect(mockShowSuccess).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("applications-page")).not.toBeInTheDocument();
   });
 });
