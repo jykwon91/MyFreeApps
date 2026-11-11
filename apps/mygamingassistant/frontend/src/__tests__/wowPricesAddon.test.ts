@@ -6,7 +6,7 @@ import emptyData from "../../addon/MGAPrices/Data.lua?raw";
 import { loadAllCraftingData } from "@/games/wow-forever/crafting/loadCraftingData";
 import { addonPriceLua } from "@/games/wow-forever/lib/auctionHouse/addonPriceLua";
 import { pricesAddonZip } from "@/games/wow-forever/lib/auctionHouse/pricesAddonZip";
-import { craftsThatPay, reagentDemand } from "@/games/wow-forever/lib/auctionHouse/reagentDemand";
+import { craftsThatPay, mostWantedFor, reagentDemand } from "@/games/wow-forever/lib/auctionHouse/reagentDemand";
 import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
 import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
@@ -160,6 +160,7 @@ describe("MGA Prices in the game's tooltips", () => {
 });
 
 const CRAFTING = await loadAllCraftingData();
+const CRAFTING_RECIPES = [...CRAFTING.values()].flatMap((d) => d.file.recipes);
 const LINEN_CLOTH = 2589;
 const LINEN_BANDAGE = 1251;
 const COARSE_THREAD = 2320;
@@ -245,6 +246,36 @@ describe("crafting demand on materials", () => {
     expect(craftsThatPay(CRAFTING, unpriced, 0.05).has(LINEN_CLOTH)).toBe(false);
   });
 
+  it("names each material's most valuable product on the house, even when the craft no longer pays", () => {
+    const linen = (byId: Map<number, AuctionPrice>) => mostWantedFor(CRAFTING, byId).get(LINEN_CLOTH);
+    const bandage = CRAFTING_RECIPES.find((r) => r.name === "Linen Bandage")!;
+    const perCraft = bandage.reagents.find((g) => g.id === LINEN_CLOTH)!.count;
+    // Linen Cloth costs nearly what the bandage sells for: no craft pays, but the bandage still wants it.
+    const dear = new Map([price(LINEN_CLOTH, 190, 50), price(LINEN_BANDAGE, 200, 10)]);
+    expect(craftsThatPay(CRAFTING, dear, 0.05).has(LINEN_CLOTH)).toBe(false);
+    expect(linen(dear)).toEqual({ recipe: "Linen Bandage", count: perCraft, sells: 200 * bandage.creates!.count });
+    // A product with too few auctions says nothing about demand.
+    expect(linen(new Map([price(LINEN_BANDAGE, 200, 2)]))).toBeUndefined();
+    // The priciest product wins.
+    const pricier = CRAFTING_RECIPES.find((r) => r.creates && !r.enchant && r.creates.id !== LINEN_BANDAGE && r.reagents.some((g) => g.id === LINEN_CLOTH))!;
+    const both = new Map([price(LINEN_BANDAGE, 200, 10), price(pricier.creates!.id, 50_000, 10)]);
+    expect(linen(both)?.recipe).toBe(pricier.name);
+    // A product worth no more than the material it uses doesn't explain the price.
+    const cheaper = new Map([price(LINEN_CLOTH, 200 / perCraft, 50), price(LINEN_BANDAGE, 200, 10)]);
+    expect(linen(cheaper)).toBeUndefined();
+    // A material not on sale on the house still names what it's wanted for.
+    expect(linen(new Map([price(LINEN_BANDAGE, 200, 10)]))?.recipe).toBe("Linen Bandage");
+    // A craft that makes several sells for all of them.
+    const demand = reagentDemand(CRAFTING);
+    const batch = CRAFTING_RECIPES.find((r) => r.creates && r.creates.count > 1 && !r.enchant && r.reagents.some((g) => !demand.get(g.id)?.vendor))!;
+    const batchReagent = batch.reagents.find((g) => !demand.get(g.id)?.vendor)!;
+    const batchWant = mostWantedFor(CRAFTING, new Map([price(batch.creates!.id, 100, 10)])).get(batchReagent.id);
+    expect(batchWant).toEqual({ recipe: batch.name, count: batchReagent.count, sells: 100 * batch.creates!.count });
+    // Vendor-sold materials don't need explaining.
+    const all = new Map(CRAFTING_RECIPES.flatMap((r) => (r.creates ? [price(r.creates.id, 1_000, 10)] : [])));
+    expect(mostWantedFor(CRAFTING, all).has(COARSE_THREAD)).toBe(false);
+  });
+
   it("never says a craft pays with a vendor-sold material", () => {
     const byId = new Map([...CRAFTING.values()].flatMap((d) => d.file.recipes).flatMap((r) => [
       ...r.reagents.map((g) => price(g.id, 1, 10)),
@@ -281,6 +312,26 @@ describe("crafting demand in the game's tooltips", () => {
     const horde = tooltip(`faction = "Horde"; hover(GameTooltip, ${LINEN_CLOTH})`, CRAFT_DATA);
     expect(horde).toHaveLength(3);
     expect(horde[2]).toMatch(/^Leveling demand \| /);
+  });
+
+  it("says what a dear material is wanted for when no craft pays, and skips it when that's the craft that pays", () => {
+    const dear = addonPriceLua(
+      [
+        house("alliance", ALLIANCE_AT, [
+          [LINEN_CLOTH, 190, 180, 900, 50, "Linen Cloth"],
+          [LINEN_BANDAGE, 200, 180, 50, 10, "Linen Bandage"],
+        ]),
+        house("horde", HORDE_AT, []),
+        house("neutral", null, []),
+      ],
+      CRAFTING,
+    );
+    expect(dear).toMatch(/\[2589\] = \{"Linen Bandage", \d+, \d+\},/);
+    const lines = tooltip(`hover(GameTooltip, ${LINEN_CLOTH})`, dear);
+    expect(lines.some((l) => l.startsWith("Crafting pays"))).toBe(false);
+    expect(lines[lines.length - 1]).toBe("Wanted for | Linen Bandage x1 · sells 200c");
+    // When the bandage pays, "Crafting pays" already says it.
+    expect(tooltip(`hover(GameTooltip, ${LINEN_CLOTH})`, CRAFT_DATA).some((l) => l.startsWith("Wanted for"))).toBe(false);
   });
 
   it("says only 'sold by vendors' for vendor materials, and how many recipes use the rest", () => {

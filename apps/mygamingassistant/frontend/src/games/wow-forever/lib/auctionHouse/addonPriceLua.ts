@@ -1,6 +1,6 @@
 import { AUCTION_CUT } from "@/games/wow-forever/data/auctionHouse/reagentDemandRules";
 import { luaString } from "@/games/wow-forever/lib/auctionHouse/luaString";
-import { craftsThatPay, reagentDemand } from "@/games/wow-forever/lib/auctionHouse/reagentDemand";
+import { craftsThatPay, mostWantedFor, reagentDemand } from "@/games/wow-forever/lib/auctionHouse/reagentDemand";
 import { mapPriceList } from "@/games/wow-forever/prices/auctionPrices";
 import type { CraftingByProfession } from "@/games/wow-forever/types/auctionHouse/craftingByProfession";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
@@ -30,7 +30,9 @@ function reagentLines(crafting: CraftingByProfession): string[] {
  * `items[itemId] = { market value, cheapest, on sale }` in copper, with when
  * Blizzard listed them, the house's cut of a sale (so the addon can say
  * whether an item nets more there than at a vendor), and its `crafts[itemId] = { recipe, profit }` (the
- * best craft that pays with that material there). `reagents` says which
+ * best craft that pays with that material there), and its `wanted[itemId] =
+ * { recipe, count, sells }` (the most valuable thing that material goes into
+ * there, which is what holds its price up). `reagents` says which
  * leveling routes use each material. The top-level `updated` is the oldest
  * house's, so the addon's "download again" warning never understates how old
  * a price is.
@@ -54,6 +56,10 @@ export function addonPriceLua(houses: readonly PriceListResponse[], crafting: Cr
     houseLines.push("      },", "      crafts = {");
     const crafts = craftsThatPay(crafting, prices.byId, AUCTION_CUT[prices.faction]);
     for (const [id, c] of [...crafts].sort((a, b) => a[0] - b[0])) houseLines.push(`        [${id}] = {${luaString(c.recipe)}, ${c.profit}},`);
+    houseLines.push("      },", "      wanted = {");
+    for (const [id, w] of [...mostWantedFor(crafting, prices.byId)].sort((a, b) => a[0] - b[0])) {
+      houseLines.push(`        [${id}] = {${luaString(w.recipe)}, ${w.count}, ${w.sells}},`);
+    }
     houseLines.push("      },", "    },");
   }
   if (stamps.length > 0) out.push(`  updated = ${Math.min(...stamps)},`);

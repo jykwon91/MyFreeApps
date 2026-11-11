@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-11",
+    title: "Addon: why a material is expensive",
+    summary:
+      "Download the MGA Prices addon again: a crafting material's tooltip now says what it's wanted for, the most valuable thing it goes into on your auction house, even when that craft no longer pays.",
+    to: "/wow-forever/auction-house",
+  },
+  {
+    date: "2026-11-11",
     title: "Trainers: what your demons learn",
     summary:
       "Warlocks: the Trainers page now lists what your Imp, Voidwalker, Succubus and Felhunter learn at each level, with the Grimoire to buy from a Demon trainer for each rank.",
