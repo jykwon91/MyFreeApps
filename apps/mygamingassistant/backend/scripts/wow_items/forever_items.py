@@ -40,6 +40,9 @@ DEFAULT_HOTFIX_CACHE = Path(r"D:\World of Warcraft\_forever_\Cache\ADB\enUS\DBCa
 TABLE_HASHES = {
     "Item": 0x50238EC2,
     "ItemSparse": 0x919BE54E,
+    # An item whose icon is its appearance's (scripts/wow_icons): WoWDBDefs manifest.json hashes.
+    "ItemModifiedAppearance": 0xE491AC55,
+    "ItemAppearance": 0x42261B89,
     "Spell": 0xE111669E,
     "SpellName": 0x46C66698,
     "SpellEffect": 0xF04238A5,

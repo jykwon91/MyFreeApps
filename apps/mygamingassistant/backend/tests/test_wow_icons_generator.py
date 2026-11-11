@@ -15,6 +15,7 @@ from PIL import Image
 
 from scripts.wow_icons.build import (
     OUT_FILE,
+    PROFESSION_SKILL_LINES,
     cooking_item_ids,
     dungeon_quest_item_ids,
     gathering_item_ids,
@@ -30,6 +31,7 @@ from scripts.wow_icons.ids import (
     icon_file_ids,
     item_icons,
     recipe_ids,
+    skill_icons,
     spell_icons,
     talent_file_ids,
 )
@@ -104,6 +106,18 @@ def test_spell_icon_uses_the_base_difficulty_row() -> None:
     found, missing = spell_icons({7418, 8}, rows)
     assert found == {7418: 135913}
     assert missing == [8]
+
+
+def test_skill_icon_is_the_skill_lines_icon_and_reports_missing() -> None:
+    rows = [{"ID": "197", "SpellIconFileID": "136249"}, {"ID": "8", "SpellIconFileID": "0"}, {"ID": "9", "SpellIconFileID": "5"}]
+    found, missing = skill_icons({197, 8}, rows)
+    assert found == {197: 136249}
+    assert missing == [8]
+
+
+def test_distinct_icon_files_include_profession_icons() -> None:
+    icon_map = {"items": {}, "spells": {}, "skills": {"197": 136249}}
+    assert icon_file_ids(icon_map) == [136249]
 
 
 def test_appearance_map_uses_order_zero() -> None:
@@ -237,4 +251,5 @@ def test_committed_map_covers_every_id_the_pages_name() -> None:
     assert wanted.items <= {int(k) for k in icon_map["items"]}
     assert wanted.spells <= {int(k) for k in icon_map["spells"]}
     assert wanted.files <= set(icon_map["files"])
+    assert {int(k) for k in icon_map["skills"]} == set(PROFESSION_SKILL_LINES)
     assert icon_map["build"] in icon_map["source"]

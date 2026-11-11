@@ -1,3 +1,5 @@
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import { fileIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import type { LevelUnlock } from "@/games/wow-forever/types/trainers/levelUnlock";
 
 const TAG = "rounded border px-1.5 py-0.5 text-xs text-muted-foreground";
@@ -6,9 +8,10 @@ const TAG = "rounded border px-1.5 py-0.5 text-xs text-muted-foreground";
 export default function LevelUnlockItem({ unlock }: { unlock: LevelUnlock }) {
   return (
     <li className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-      <span>
+      <span className="inline-flex items-center gap-2">
+        <GameIcon icon={fileIcon(unlock.icon)} size={24} alt="" />
         <span className="font-medium">{unlock.name}</span>
-        {unlock.rank ? <span className="text-muted-foreground"> ({unlock.rank})</span> : null}
+        {unlock.rank ? <span className="-ml-1 text-muted-foreground">({unlock.rank})</span> : null}
       </span>
       {unlock.learnedBy === "quest" ? <span className={TAG}>Quest</span> : null}
       {unlock.learnedBy === "book" ? <span className={TAG}>Book</span> : null}

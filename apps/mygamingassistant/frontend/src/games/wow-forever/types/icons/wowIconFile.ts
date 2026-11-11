@@ -3,6 +3,7 @@
  * `items`: item id -> `[icon file id, quality]` (quality 0 = poor … 7 = heirloom).
  * `spells`: spell id -> icon file id.
  * `files`: icon file ids named directly (talent and talent-tree icons).
+ * `skills`: profession SkillLine id -> icon file id.
  */
 export interface WowIconFile {
   source: string;
@@ -11,4 +12,5 @@ export interface WowIconFile {
   items: Record<string, number[]>;
   spells: Record<string, number>;
   files: number[];
+  skills: Record<string, number>;
 }

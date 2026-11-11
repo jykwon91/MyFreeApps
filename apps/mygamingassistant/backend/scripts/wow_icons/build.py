@@ -14,6 +14,7 @@ client tables (pinned build, ``scripts/wow_world_map/sources.py``) and writes
     {"source": ..., "build": "1.60.1.70790",
      "items": {"2447": [133939, 1], ...},   # item id -> [icon file id, quality]
      "spells": {"7418": 135913, ...},       # spell id -> icon file id
+     "skills": {"197": 136249, ...},        # profession skill line id -> icon file id
      "files": [132152, ...]}                # icon files a page names directly (talents, downrank, spellbook, races)
 
 The frontend joins names to icons by id; the images themselves are published
@@ -35,10 +36,11 @@ from scripts.wow_icons.ids import (
     crafting_file_ids,
     icon_file_ids,
     item_icons,
+    skill_icons,
     spell_icons,
     talent_file_ids,
 )
-from scripts.wow_items.forever_items import hotfix_cache_path, load_forever_item_tables
+from scripts.wow_items.forever_items import hotfix_cache_path, load_forever_item_tables, load_forever_tables
 from scripts.wow_world_map.sources import WAGO_BRANCH, WAGO_BUILD, wago_table
 
 CLASS_DETAILS_FILE = WOW_DATA_DIR / "classes" / "classDetails.json"
@@ -60,6 +62,10 @@ RARE_SPAWNS_FILE = WOW_DATA_DIR / "rares" / "classic" / "rareSpawns.json"
 LIBRARY_FILE = WOW_DATA_DIR / "library" / "library.json"
 LEGACY_FILE = WOW_DATA_DIR / "legacy" / "legacy.json"
 OUT_FILE = WOW_DATA_DIR / "icons" / "wowIcons.json"
+# Every profession the pages name, by SkillLine id (the frontend's `PROFESSION_SKILL_LINES`):
+# First Aid, Blacksmithing, Leatherworking, Alchemy, Herbalism, Cooking, Mining, Tailoring,
+# Engineering, Enchanting, Fishing, Skinning.
+PROFESSION_SKILL_LINES = (129, 164, 165, 171, 182, 185, 186, 197, 202, 333, 356, 393)
 # Hand-written gathering nodes name their item as `itemId: 2447`.
 _NODE_ITEM = re.compile(r"\bitemId:\s*(\d+)")
 # The hand-written Cooking guide names each ingredient as `{ id: 2672, name: "Stringy Wolf Meat" }`.
@@ -191,16 +197,20 @@ def main() -> None:
     ids = wanted_ids()
     print(f"Loading icon tables from wago.tools ({WAGO_BRANCH} {WAGO_BUILD})...")
     forever = load_forever_item_tables(cache_path)
+    # The client cache carries appearances too: a hotfixed item with no icon of its own needs them.
+    appearance_tables = load_forever_tables(cache_path, ("ItemModifiedAppearance", "ItemAppearance"))
     appearance = appearance_icon_map(
-        wago_table("ItemModifiedAppearance", hotfixes=True), wago_table("ItemAppearance", hotfixes=True)
+        appearance_tables.table("ItemModifiedAppearance"), appearance_tables.table("ItemAppearance")
     )
     items, missing_items = item_icons(ids.items, forever.item.values(), forever.sparse, appearance)
     spells, missing_spells = spell_icons(ids.spells, wago_table("SpellMisc"))
+    skills, missing_skills = skill_icons(PROFESSION_SKILL_LINES, wago_table("SkillLine"))
     payload = {
         "source": f"{forever.source}. Icons © Blizzard Entertainment.",
         "build": WAGO_BUILD,
         "items": {str(k): list(v) for k, v in items.items()},
         "spells": {str(k): v for k, v in spells.items()},
+        "skills": {str(k): v for k, v in skills.items()},
         "files": sorted(ids.files),
     }
     write_icon_map(OUT_FILE, payload)
@@ -209,8 +219,8 @@ def main() -> None:
         f"{len(icon_file_ids(payload))} distinct icons"
     )
     # A name with no icon gets the frontend's placeholder; say which, so a client change is noticed.
-    if missing_items or missing_spells:
-        print(f"  no icon: items {missing_items[:20]} spells {missing_spells[:20]}")
+    if missing_items or missing_spells or missing_skills:
+        print(f"  no icon: items {missing_items[:20]} spells {missing_spells[:20]} skills {missing_skills}")
 
 
 if __name__ == "__main__":

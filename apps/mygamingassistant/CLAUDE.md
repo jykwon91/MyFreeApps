@@ -913,6 +913,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   have (Horde Paladin, Alliance Shaman, …): an empty list says so, never invents one.
   Tests: `src/__tests__/wowTrainers.test.ts`, `wowTrainersPage.test.tsx`,
   `e2e/wow-forever-trainers.spec.ts`.
+- Icons: every picker chip shows its class / profession icon (`lib/trainers/trainerSubjectIcon.ts`)
+  and every unlock its spell's icon (`LevelUnlock.icon`, from the spellbook data).
 
 #### Downrank calculator (`/wow-forever/downrank`)
 
@@ -992,11 +994,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   the name is printed next to it) shows an item/spell icon in a frame ringed in
   the item's quality colour, lazy-loaded; no icon or a failed load = a same-size
   neutral placeholder. Look-ups: `lib/icons/wowIcons.ts` (`itemIcon`,
-  `spellIcon`, `recipeIcon`, `fileIcon`, `iconUrl`) against
+  `spellIcon`, `recipeIcon`, `fileIcon`, `professionIcon`, `classIcon`, `iconUrl`) against
   `data/icons/wowIcons.json` — **GENERATED** by `python -m scripts.wow_icons.build`
   (item → `Item.IconFileDataID`, else its default appearance's icon; spell →
-  `SpellMisc`; quality from ItemSparse, hotfixes included — it takes
-  `--hotfix-cache` like the item build; the build is pinned in the file). Covers
+  `SpellMisc`; profession → its SkillLine's icon in `skills`, keyed by
+  `data/professions/professionSkillLines.ts`; class → `classDetails.json`; quality from
+  ItemSparse. Item, ItemSparse and the appearance tables all take the client hotfix
+  cache (`--hotfix-cache`), so an item Forever re-skinned shows the in-game icon, not
+  Classic's; the build is pinned in the file). Covers
   the crafting / gathering guides' items and spells, the Cooking ingredients and
   every item in `items.json` (Best gear, Item Compare, item pages).
 - Images are the client's BLP icons as 64px WebP, uploaded by

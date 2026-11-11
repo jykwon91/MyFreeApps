@@ -104,6 +104,19 @@ def spell_icons(
     return dict(sorted(icons.items())), sorted(wanted_set - icons.keys())
 
 
+def skill_icons(
+    wanted: Iterable[int], skill_lines: Iterable[Mapping[str, str]]
+) -> tuple[dict[int, int], list[int]]:
+    """``{skill line id: icon file id}`` from SkillLine (a profession's icon), and the ids with no icon."""
+    wanted_set = set(wanted)
+    icons = {
+        int(row["ID"]): int(row["SpellIconFileID"] or 0)
+        for row in skill_lines
+        if int(row["ID"]) in wanted_set and int(row["SpellIconFileID"] or 0) > 0
+    }
+    return dict(sorted(icons.items())), sorted(wanted_set - icons.keys())
+
+
 def appearance_icon_map(
     modified: Iterable[Mapping[str, str]], appearances: Iterable[Mapping[str, str]]
 ) -> dict[int, int]:
@@ -135,4 +148,5 @@ def icon_file_ids(icon_map: Mapping[str, Any]) -> list[int]:
     files = {fdid for fdid, _quality in icon_map["items"].values()}
     files |= set(icon_map["spells"].values())
     files |= set(icon_map.get("files", []))
+    files |= set(icon_map.get("skills", {}).values())
     return sorted(files)
