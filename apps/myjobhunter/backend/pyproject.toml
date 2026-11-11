@@ -22,6 +22,9 @@ dependencies = [
     "passlib[bcrypt]==1.7.4",
     "cryptography==50.0.1",
     "httpx==0.28.1",
+    # IDNA 2008 / UTS 46 (browser-equivalent) punycode for companies.primary_domain.
+    # See app/core/company_domain.py.
+    "idna==3.20",
     "anyio==4.15.1",
     "minio==7.2.20",
     "platform-shared",
