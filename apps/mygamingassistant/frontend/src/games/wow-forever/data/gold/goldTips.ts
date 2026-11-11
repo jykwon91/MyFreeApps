@@ -7,6 +7,7 @@ import {
   type GoldTip,
   type LevelBand,
 } from "@/games/wow-forever/data/gold/goldTypes";
+import { PROFESSION } from "@/games/wow-forever/data/professions/professionTypes";
 
 /**
  * Making gold in Forever. Classic Era advice unless a tip says otherwise —
@@ -326,9 +327,9 @@ export const CLASS_GOLD_TIPS: readonly ClassGoldTips[] = [
 ];
 
 export const GATHERING_TIPS: readonly GatheringTip[] = [
-  { profession: "Skinning", what: "Leather and hides from every beast you kill.", pairsWith: "Herbalism or Mining — or with Leatherworking later." },
-  { profession: "Herbalism", what: "Herbs for potions and flasks; demand never stops.", pairsWith: "Mining or Skinning, or Alchemy later." },
-  { profession: "Mining", what: "Ore, stone and gems for every gear crafter.", pairsWith: "Herbalism or Skinning, or Blacksmithing / Engineering later." },
+  { id: PROFESSION.skinning, profession: "Skinning", what: "Leather and hides from every beast you kill.", pairsWith: "Herbalism or Mining — or with Leatherworking later." },
+  { id: PROFESSION.herbalism, profession: "Herbalism", what: "Herbs for potions and flasks; demand never stops.", pairsWith: "Mining or Skinning, or Alchemy later." },
+  { id: PROFESSION.mining, profession: "Mining", what: "Ore, stone and gems for every gear crafter.", pairsWith: "Herbalism or Skinning, or Blacksmithing / Engineering later." },
 ];
 
 export const SELL_ITEMS: readonly GoldTip[] = [

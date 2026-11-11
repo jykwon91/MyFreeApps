@@ -1,8 +1,10 @@
 import { Select } from "@platform/ui";
 import GoldTipList from "@/games/wow-forever/components/gold/GoldTipList";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
 import { findClass, WOW_CLASSES, type WowClassId } from "@/games/wow-forever/data/classes";
 import { CLASS_GOLD_TIPS } from "@/games/wow-forever/data/gold/goldTips";
+import { classIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 
 const ALL_CLASSES = "all";
 
@@ -44,7 +46,12 @@ export default function GoldClassSection({ classId, showAll, onClassChange, onSh
       </div>
       {shown.map((c) => (
         <div key={c.classId} className="space-y-2">
-          {showAll ? <h3 className="font-semibold">{findClass(c.classId)?.name}</h3> : null}
+          {showAll ? (
+            <h3 className="flex items-center gap-2 font-semibold">
+              <GameIcon icon={classIcon(c.classId)} size={24} alt="" />
+              {findClass(c.classId)?.name}
+            </h3>
+          ) : null}
           <GoldTipList tips={c.tips} />
         </div>
       ))}

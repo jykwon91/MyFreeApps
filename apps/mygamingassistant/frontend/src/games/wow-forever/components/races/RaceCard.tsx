@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import RaceClassChips from "@/games/wow-forever/components/races/RaceClassChips";
 import RaceStartZoneLine from "@/games/wow-forever/components/races/RaceStartZoneLine";
 import RacialRow from "@/games/wow-forever/components/races/RacialRow";
 import RemovedRacials from "@/games/wow-forever/components/races/RemovedRacials";
 import { RACE_FACTION_LABEL, RACES_PAGE_PATH, RACES_TEXT, RACIAL_STATUS } from "@/games/wow-forever/data/races/racesConfig";
+import { fileIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import type { Race } from "@/games/wow-forever/types/races/race";
 
 interface RaceCardProps {
@@ -41,7 +43,8 @@ export default function RaceCard({ race, linkName }: RaceCardProps) {
         {current.length > 0 ? (
           <nav aria-label={`${race.name} racials`} className="flex flex-wrap gap-x-3 text-sm">
             {current.map((r) => (
-              <a key={r.key} href={`#${r.key}`} className="inline-flex min-h-[44px] items-center underline underline-offset-2 sm:min-h-0">
+              <a key={r.key} href={`#${r.key}`} className="inline-flex min-h-[44px] items-center gap-1 underline underline-offset-2 sm:min-h-0">
+                <GameIcon icon={fileIcon(r.icon)} size={16} alt="" />
                 {r.name}
               </a>
             ))}

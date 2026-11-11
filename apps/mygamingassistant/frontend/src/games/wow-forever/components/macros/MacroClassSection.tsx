@@ -1,7 +1,9 @@
 import MacroCard from "@/games/wow-forever/components/macros/MacroCard";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import { classAccent } from "@/games/wow-forever/data/classAccents";
 import { MACRO_KIND_LABELS } from "@/games/wow-forever/data/macros/macroKinds";
 import { MACRO_NAMES } from "@/games/wow-forever/data/macros/macroNames";
+import { classIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { missingNames } from "@/games/wow-forever/lib/macros/macroNameCheck";
 import type { MacroClassGroup } from "@/games/wow-forever/types/macros/macroClassGroup";
 
@@ -17,7 +19,8 @@ export default function MacroClassSection({ group: { wowClass, kinds } }: MacroC
       className="space-y-4 border-l-[3px] pl-3"
       style={{ borderLeftColor: classAccent(wowClass.id) }}
     >
-      <h3 id={`macros-${wowClass.id}`} className="text-lg font-semibold">
+      <h3 id={`macros-${wowClass.id}`} className="flex items-center gap-2 text-lg font-semibold">
+        <GameIcon icon={classIcon(wowClass.id)} size={24} alt="" />
         {wowClass.name}
       </h3>
       {kinds.map(({ kind, macros }) => (

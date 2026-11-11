@@ -1,6 +1,8 @@
 import { ChevronDown, ChevronUp, Undo2 } from "lucide-react";
 import { useState } from "react";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import { MIN_TALENT_LEVEL } from "@/games/wow-forever/data/talents/talentConfig";
+import { fileIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import type { TalentOrderEntry } from "@/games/wow-forever/types/talents/talentOrderEntry";
 import type { TalentTree } from "@/games/wow-forever/types/talents/talentTree";
 
@@ -76,6 +78,7 @@ export default function TalentOrderList({ order, trees, onRemoveLast }: TalentOr
                 <span className="w-16 shrink-0 tabular-nums text-muted-foreground">
                   Level {level}
                 </span>
+                <GameIcon icon={fileIcon(talentData?.icon ?? 0)} size={24} alt="" />
                 <span className="min-w-0 flex-1">
                   <span className="text-muted-foreground">{treeData?.name}</span>
                   {" — "}
