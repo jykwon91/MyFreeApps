@@ -1,5 +1,6 @@
 import "@platform/mobile/test-support/reactNativeFormData";
 import { DOCUMENT_KIND_FILTER_OPTIONS } from "@myjobhunter/api-client/constants/documentKindFilterOptions";
+import { DOCUMENTS_PAGE_SIZE } from "@myjobhunter/api-client/constants/documentsPaging";
 import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
 import type { Document } from "@myjobhunter/api-client/types/document/document";
 import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
@@ -163,7 +164,7 @@ describe("the Documents list", () => {
     // In the server's order, newest change first, of every type.
     expect(titles()).toEqual(["Stripe resume", "General cover letter", "Stripe posting"]);
     expect(kindButton("All types")).toBeTruthy();
-    expect(listRequests(sent).map(({ params }) => params)).toEqual([{}]);
+    expect(listRequests(sent).map(({ params }) => params)).toEqual([{ limit: DOCUMENTS_PAGE_SIZE, offset: 0 }]);
   });
 
   it("opens the application a document is for, and comes back to the list", async () => {

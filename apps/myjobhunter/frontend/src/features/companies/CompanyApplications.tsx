@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
-import { DataTable, LoadingButton, type ColumnDef } from "@platform/ui";
+import { DataTable, LoadMoreFooter, LoadingButton, type ColumnDef } from "@platform/ui";
 import { APPLIED_AT_COLUMN } from "@/features/applications/appliedAtColumn";
-import LoadMoreApplications from "@/features/applications/LoadMoreApplications";
+import { APPLICATIONS_LIST_MESSAGES } from "@/constants/applications-list-messages";
 import { COMPANY_APPLICATIONS_MESSAGES as MESSAGES } from "@/constants/company-applications-messages";
 import { DEFAULT_APPLICATIONS_TABLE_SORTING } from "@/constants/default-applications-table-sorting";
 import type { Application } from "@myjobhunter/api-client/types/application";
@@ -83,13 +83,14 @@ export default function CompanyApplications({ companyName, list, onSortingChange
           manualSorting
           loading={list.isSorting}
         />
-        <LoadMoreApplications
+        <LoadMoreFooter
           shown={list.applications.length}
           total={list.total}
           hasNextPage={list.hasNextPage}
           isLoading={list.isFetchingNextPage}
           isError={list.isLoadMoreError}
           onLoadMore={list.loadMore}
+          messages={APPLICATIONS_LIST_MESSAGES}
         />
       </>
     );

@@ -19,10 +19,12 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.document_list_constants import DEFAULT_DOCUMENT_PAGE_SIZE
 from app.core.storage import StorageNotConfiguredError, get_storage
 from app.models.application.document import Document
 from app.repositories.documents import document_repo
 from app.repositories.application import application_repository
+from app.schemas.documents.document_list_page import DocumentListPage
 from app.schemas.documents.document_text_create_request import DocumentTextCreateRequest
 from app.schemas.documents.document_response import DocumentResponse
 from app.schemas.documents.document_update_request import DocumentUpdateRequest
@@ -176,10 +178,14 @@ async def list_for_user(
     *,
     application_id: uuid.UUID | None = None,
     kind: str | None = None,
-    limit: int = 100,
+    limit: int = DEFAULT_DOCUMENT_PAGE_SIZE,
     offset: int = 0,
-) -> list[DocumentResponse]:
-    """List non-deleted documents owned by the user with optional filters."""
+) -> DocumentListPage:
+    """One page of the user's non-deleted documents, and how many match in all.
+
+    ``total`` is a COUNT with the same filters and tenant scope as the page,
+    so a client knows whether there is another page to load.
+    """
     docs = await document_repo.list_for_user(
         db,
         user_id,
@@ -188,7 +194,13 @@ async def list_for_user(
         limit=limit,
         offset=offset,
     )
-    return [_to_response(d) for d in docs]
+    total = await document_repo.count_for_user(
+        db,
+        user_id,
+        application_id=application_id,
+        kind=kind,
+    )
+    return DocumentListPage(items=[_to_response(d) for d in docs], total=total, has_more=offset + len(docs) < total)
 
 
 async def list_by_application(

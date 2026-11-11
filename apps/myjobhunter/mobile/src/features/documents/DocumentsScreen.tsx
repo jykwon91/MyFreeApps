@@ -1,12 +1,13 @@
 import { DOCUMENT_KIND_FILTER_OPTIONS } from "@myjobhunter/api-client/constants/documentKindFilterOptions";
-import { useListDocumentsQuery } from "@myjobhunter/api-client/store/documentsApi";
+import { useDocumentsPages } from "@myjobhunter/api-client/hooks/useDocumentsPages";
 import type { Document } from "@myjobhunter/api-client/types/document/document";
 import type { DocumentKindFilter } from "@myjobhunter/api-client/types/document/document-kind-filter";
 import { documentsFilter } from "@myjobhunter/api-client/utils/documentsFilter";
-import { EmptyState, OptionSheet, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadMoreFooter, OptionSheet, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, View } from "react-native";
+import { PAGED_LIST_MESSAGES } from "../../constants/pagedListMessages";
 import { DOCUMENTS_SCREEN_MESSAGES as MESSAGES } from "../../constants/documentsScreen";
 import DocumentCard from "./DocumentCard";
 import DocumentSheet from "./DocumentSheet";
@@ -14,7 +15,7 @@ import DocumentsListHeader from "./DocumentsListHeader";
 import DocumentsSkeleton from "./DocumentsSkeleton";
 import DocumentUploadSheet from "./DocumentUploadSheet";
 
-/** The website's Documents page: every document newest first, filtered by type, with upload, write, open, edit and delete. */
+/** The website's Documents page: every document newest first, a page at a time, filtered by type, with upload, write, open, edit and delete. */
 export default function DocumentsScreen() {
   const { colors, spacing } = useTheme();
   const [kind, setKind] = useState<DocumentKindFilter>("all");
@@ -22,14 +23,16 @@ export default function DocumentsScreen() {
   const [isUploading, setIsUploading] = useState(false);
   const [isWriting, setIsWriting] = useState(false);
   const [editing, setEditing] = useState<Document | null>(null);
-  // The server filters by type, as it does for the website; `data` is whatever loaded last, for any type.
-  const { currentData, data, error, isFetching, refetch } = useListDocumentsQuery(documentsFilter(kind));
-  const { isRefreshing, refresh, refreshControl } = useRefresh(refetch, error);
+  // The server filters by type, as it does for the website, a page at a time. Until a new type's
+  // first page arrives, or if it can't load, the rows held are the last type's and aren't shown.
+  const list = useDocumentsPages(documentsFilter(kind));
+  const { isRefreshing, refresh, refreshControl } = useRefresh(list.refetch, list.error);
+  const isCurrent = !list.isLoading && !list.isFiltering && list.loadError === undefined;
   const kindLabel = DOCUMENT_KIND_FILTER_OPTIONS.find((option) => option.value === kind)?.label ?? kind;
 
   function emptyList() {
-    if (!currentData && isFetching) return <DocumentsSkeleton withHeader={!data} />;
-    if (!currentData) {
+    if (list.isLoading || list.isFiltering) return <DocumentsSkeleton withHeader={!list.hasData} />;
+    if (!isCurrent) {
       return <EmptyState action={{ label: MESSAGES.tryAgain, onPress: refresh, isLoading: isRefreshing }} body={MESSAGES.tryAgainOffer} heading={MESSAGES.couldntLoadList} />;
     }
     if (kind !== "all") {
@@ -44,9 +47,9 @@ export default function DocumentsScreen() {
         ListEmptyComponent={emptyList()}
         ListHeaderComponent={
           // Shown once anything has loaded; until then the skeleton stands in for it.
-          data ? (
+          list.hasData ? (
             <DocumentsListHeader
-              isStale={Boolean(error && currentData)}
+              isStale={isCurrent && list.error !== undefined && !list.isLoadMoreError}
               kindLabel={kindLabel}
               onChooseKind={() => setIsKindSheetOpen(true)}
               onUpload={() => setIsUploading(true)}
@@ -56,7 +59,19 @@ export default function DocumentsScreen() {
         }
         contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
-        data={currentData?.items ?? []}
+        ListFooterComponent={
+          isCurrent && list.hasNextPage ? (
+            <LoadMoreFooter
+              isError={list.isLoadMoreError}
+              isLoading={list.isFetchingNextPage}
+              messages={PAGED_LIST_MESSAGES}
+              onLoadMore={list.loadMore}
+              shown={list.documents.length}
+              total={list.total}
+            />
+          ) : undefined
+        }
+        data={isCurrent ? list.documents : []}
         keyExtractor={(document) => document.id}
         refreshControl={refreshControl}
         renderItem={({ item }) => <DocumentCard document={item} onEdit={setEditing} onOpenApplication={(id) => router.push(`/applications/${id}`)} />}

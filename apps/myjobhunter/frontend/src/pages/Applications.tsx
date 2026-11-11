@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FilePlus } from "lucide-react";
-import { Badge, DataTable, EmptyState, type ColumnDef, type SortingState } from "@platform/ui";
+import { Badge, DataTable, EmptyState, LoadMoreFooter, type ColumnDef, type SortingState } from "@platform/ui";
 import ApplicationsSkeleton from "@/features/applications/ApplicationsSkeleton";
 import AddApplicationDialog from "@/features/applications/AddApplicationDialog";
 import { APPLIED_AT_COLUMN } from "@/features/applications/appliedAtColumn";
-import LoadMoreApplications from "@/features/applications/LoadMoreApplications";
+import { APPLICATIONS_LIST_MESSAGES } from "@/constants/applications-list-messages";
 import { useApplicationsList } from "@/features/applications/useApplicationsList";
 import { getEventTypeColor } from "@/lib/event-color";
 import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
@@ -157,13 +157,14 @@ export default function Applications() {
         loading={list.isSorting}
       />
 
-      <LoadMoreApplications
+      <LoadMoreFooter
         shown={items.length}
         total={list.total}
         hasNextPage={list.hasNextPage}
         isLoading={list.isFetchingNextPage}
         isError={list.isLoadMoreError}
         onLoadMore={list.loadMore}
+        messages={APPLICATIONS_LIST_MESSAGES}
       />
     </main>
   );

@@ -1,15 +1,15 @@
-import { OptionSheet, PickerField, useTheme } from "@platform/mobile";
+import { LoadMoreFooter, OptionSheet, PickerField, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
 import { APPLICATION_SORTS } from "../../constants/applicationSorts";
+import { PAGED_LIST_MESSAGES } from "../../constants/pagedListMessages";
 import { COMPANY_APPLICATION_SORT_OPTIONS, COMPANY_APPLICATIONS_MESSAGES as MESSAGES } from "../../constants/companyApplications";
 import type { CompanyApplicationsSectionProps } from "../../types/CompanyApplicationsSectionProps";
 import SectionError from "../applicationDetail/SectionError";
 import SectionHeading from "../applicationDetail/SectionHeading";
 import CompanyApplicationRow from "./CompanyApplicationRow";
 import CompanyApplicationSkeletonRows from "./CompanyApplicationSkeletonRows";
-import CompanyApplicationsMore from "./CompanyApplicationsMore";
 
 /** The website's table of a company's applications: sorted on the server, a page at a time, each opening its own screen. */
 export default function CompanyApplicationsSection({ companyName, list, sortKey, onSortChange }: CompanyApplicationsSectionProps) {
@@ -45,9 +45,10 @@ export default function CompanyApplicationsSection({ companyName, list, sortKey,
         ))}
         {list.isFetchingNextPage ? <CompanyApplicationSkeletonRows /> : null}
         {list.hasNextPage ? (
-          <CompanyApplicationsMore
+          <LoadMoreFooter
             isError={list.isLoadMoreError}
             isLoading={list.isFetchingNextPage}
+            messages={PAGED_LIST_MESSAGES}
             onLoadMore={list.loadMore}
             shown={list.applications.length}
             total={list.total}

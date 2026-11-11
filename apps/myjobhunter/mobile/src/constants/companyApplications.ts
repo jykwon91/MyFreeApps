@@ -11,10 +11,6 @@ export const COMPANY_APPLICATIONS_MESSAGES = {
   tryAgain: "Try again",
   sort: "Sort",
   sortTitle: "Sort applications by",
-  showingCount: (shown: number, total: number) => `Showing ${shown} of ${total}`,
-  loadMore: "Show more",
-  loadingMore: "Loading more…",
-  couldntLoadMore: "I couldn't load the rest of them.",
 } as const;
 
 /** The website's company table sorts by its Role, Location, Remote and Applied columns, each both ways. */

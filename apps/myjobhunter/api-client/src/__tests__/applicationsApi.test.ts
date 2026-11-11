@@ -25,7 +25,7 @@ import "../store/applicationsApi";
 import type { Application } from "../types/application";
 import type { ApplicationListResponse } from "../types/application-list-response";
 import type { ApplicationsListQuery } from "../types/application/applications-list-query";
-import { flattenApplicationPages } from "../utils/flattenApplicationPages";
+import { flattenPagesById } from "@platform/core/utils/flattenPagesById";
 
 const sent: InternalAxiosRequestConfig[] = [];
 const EMPTY_LIST: ApplicationListResponse = { items: [], total: 0 };
@@ -168,7 +168,7 @@ describe("listApplications paging", () => {
       APPLICATIONS_PAGE_SIZE,
       APPLICATIONS_PAGE_SIZE * 2,
     ]);
-    expect(flattenApplicationPages(state.data?.pages).map(({ id }) => id)).toEqual(all.map(({ id }) => id));
+    expect(flattenPagesById(state.data?.pages).map(({ id }) => id)).toEqual(all.map(({ id }) => id));
     expect(state.hasNextPage).toBe(false);
   });
 

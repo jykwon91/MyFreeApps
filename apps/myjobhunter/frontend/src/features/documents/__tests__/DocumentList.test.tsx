@@ -20,8 +20,11 @@ import DocumentList from "../DocumentList";
 // Mocks
 // ---------------------------------------------------------------------------
 
+vi.mock("@myjobhunter/api-client/hooks/useDocumentsPages", () => ({
+  useDocumentsPages: vi.fn(),
+}));
+
 vi.mock("@myjobhunter/api-client/store/documentsApi", () => ({
-  useListDocumentsQuery: vi.fn(),
   useDeleteDocumentMutation: vi.fn(),
   useLazyGetDocumentDownloadUrlQuery: vi.fn(),
   useUpdateDocumentMutation: vi.fn(),
@@ -59,14 +62,16 @@ vi.mock("@/features/documents/DocumentKindBadge", () => ({
   default: ({ kind }: { kind: string }) => <span data-testid="kind-badge">{kind}</span>,
 }));
 
+import type { Document } from "@myjobhunter/api-client/types/document/document";
+import { useDocumentsPages } from "@myjobhunter/api-client/hooks/useDocumentsPages";
+import type { DocumentsPagesState } from "@myjobhunter/api-client/types/document/documents-pages-state";
 import {
-  useListDocumentsQuery,
   useDeleteDocumentMutation,
   useLazyGetDocumentDownloadUrlQuery,
 } from "@myjobhunter/api-client/store/documentsApi";
 import { showSuccess, showError } from "@platform/ui";
 
-const mockUseListDocumentsQuery = vi.mocked(useListDocumentsQuery);
+const mockUseDocumentsPages = vi.mocked(useDocumentsPages);
 const mockUseDeleteDocumentMutation = vi.mocked(useDeleteDocumentMutation);
 const mockUseLazyDownloadQuery = vi.mocked(useLazyGetDocumentDownloadUrlQuery);
 const mockShowError = vi.mocked(showError);
@@ -76,7 +81,7 @@ const stubDeleteMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnT
   typeof useDeleteDocumentMutation
 >;
 
-function makeDoc(overrides: Partial<Record<string, unknown>> = {}) {
+function makeDoc(overrides: Partial<Document> = {}): Document {
   return {
     id: "doc-1",
     user_id: "user-1",
@@ -91,6 +96,24 @@ function makeDoc(overrides: Partial<Record<string, unknown>> = {}) {
     deleted_at: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function pagesState(overrides: Partial<DocumentsPagesState> = {}): DocumentsPagesState {
+  return {
+    documents: [],
+    total: 0,
+    isLoading: false,
+    hasData: true,
+    isFiltering: false,
+    loadError: undefined,
+    error: undefined,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    isLoadMoreError: false,
+    loadMore: vi.fn(),
+    refetch: vi.fn(),
     ...overrides,
   };
 }
@@ -115,11 +138,7 @@ describe("DocumentList", () => {
 
   describe("loading state", () => {
     it("renders skeleton rows while loading", () => {
-      mockUseListDocumentsQuery.mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDocumentsQuery>);
+      mockUseDocumentsPages.mockReturnValue(pagesState({ isLoading: true }));
 
       renderList();
 
@@ -130,11 +149,7 @@ describe("DocumentList", () => {
 
   describe("error state", () => {
     it("renders an error message when the query fails", () => {
-      mockUseListDocumentsQuery.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        isError: true,
-      } as unknown as ReturnType<typeof useListDocumentsQuery>);
+      mockUseDocumentsPages.mockReturnValue(pagesState({ loadError: new Error("down") }));
 
       renderList();
 
@@ -144,11 +159,7 @@ describe("DocumentList", () => {
 
   describe("empty state", () => {
     it("renders empty state heading when there are no documents", () => {
-      mockUseListDocumentsQuery.mockReturnValue({
-        data: { items: [], total: 0 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDocumentsQuery>);
+      mockUseDocumentsPages.mockReturnValue(pagesState());
 
       renderList();
 
@@ -158,17 +169,10 @@ describe("DocumentList", () => {
 
   describe("loaded state", () => {
     it("renders document titles", () => {
-      mockUseListDocumentsQuery.mockReturnValue({
-        data: {
-          items: [
+      mockUseDocumentsPages.mockReturnValue(pagesState({ documents: [
             makeDoc({ id: "doc-1", title: "Cover Letter Draft" }),
             makeDoc({ id: "doc-2", title: "Acme Resume v2" }),
-          ],
-          total: 2,
-        },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDocumentsQuery>);
+          ], total: 2 }));
 
       renderList();
 
@@ -177,14 +181,7 @@ describe("DocumentList", () => {
     });
 
     it("renders kind badges for each document", () => {
-      mockUseListDocumentsQuery.mockReturnValue({
-        data: {
-          items: [makeDoc({ kind: "tailored_resume" })],
-          total: 1,
-        },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDocumentsQuery>);
+      mockUseDocumentsPages.mockReturnValue(pagesState({ documents: [makeDoc({ kind: "tailored_resume" })], total: 1 }));
 
       renderList();
 
@@ -192,11 +189,7 @@ describe("DocumentList", () => {
     });
 
     it("shows the kind filter select when hideKindFilter is not set", () => {
-      mockUseListDocumentsQuery.mockReturnValue({
-        data: { items: [], total: 0 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDocumentsQuery>);
+      mockUseDocumentsPages.mockReturnValue(pagesState());
 
       renderList();
 
@@ -205,32 +198,88 @@ describe("DocumentList", () => {
 
     it("asks the server for every type at first, then only the type picked", async () => {
       const user = userEvent.setup();
-      mockUseListDocumentsQuery.mockReturnValue({
-        data: { items: [], total: 0 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDocumentsQuery>);
+      mockUseDocumentsPages.mockReturnValue(pagesState());
 
       renderList({ applicationId: "app-1" });
-      expect(mockUseListDocumentsQuery).toHaveBeenLastCalledWith({ application_id: "app-1" });
+      expect(mockUseDocumentsPages).toHaveBeenLastCalledWith({ application_id: "app-1" });
 
       await user.selectOptions(screen.getByRole("combobox"), "Job Description");
-      expect(mockUseListDocumentsQuery).toHaveBeenLastCalledWith({ application_id: "app-1", kind: "job_description" });
+      expect(mockUseDocumentsPages).toHaveBeenLastCalledWith({ application_id: "app-1", kind: "job_description" });
 
       await user.selectOptions(screen.getByRole("combobox"), "All types");
-      expect(mockUseListDocumentsQuery).toHaveBeenLastCalledWith({ application_id: "app-1" });
+      expect(mockUseDocumentsPages).toHaveBeenLastCalledWith({ application_id: "app-1" });
     });
 
     it("hides the kind filter when hideKindFilter is true", () => {
-      mockUseListDocumentsQuery.mockReturnValue({
-        data: { items: [], total: 0 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDocumentsQuery>);
+      mockUseDocumentsPages.mockReturnValue(pagesState());
 
       renderList({ hideKindFilter: true });
 
       expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("paging", () => {
+    it("shows how many are loaded of the real total, with no button when everything is loaded", () => {
+      mockUseDocumentsPages.mockReturnValue(pagesState({ documents: [makeDoc()], total: 1 }));
+
+      renderList();
+
+      expect(screen.queryByText(/showing/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+    });
+
+    it("shows 'Showing X of Y' and loads the next page on Load more", async () => {
+      const user = userEvent.setup();
+      const loadMore = vi.fn();
+      mockUseDocumentsPages.mockReturnValue(
+        pagesState({
+          documents: [makeDoc({ id: "doc-1" }), makeDoc({ id: "doc-2", title: "Second" })],
+          total: 120,
+          hasNextPage: true,
+          loadMore,
+        }),
+      );
+
+      renderList();
+
+      expect(screen.getByText("Showing 2 of 120 documents")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Load more" }));
+      expect(loadMore).toHaveBeenCalledTimes(1);
+    });
+
+    it("disables the button and says so while the next page loads", () => {
+      mockUseDocumentsPages.mockReturnValue(
+        pagesState({ documents: [makeDoc()], total: 120, hasNextPage: true, isFetchingNextPage: true }),
+      );
+
+      renderList();
+
+      expect(screen.getByRole("button", { name: /loading more/i })).toBeDisabled();
+    });
+
+    it("keeps the rows and offers Try again when the next page fails", () => {
+      mockUseDocumentsPages.mockReturnValue(
+        pagesState({ documents: [makeDoc({ title: "Kept" })], total: 120, hasNextPage: true, isLoadMoreError: true }),
+      );
+
+      renderList();
+
+      expect(screen.getByText("Kept")).toBeInTheDocument();
+      expect(screen.getByRole("alert")).toHaveTextContent("Couldn't load more documents.");
+      expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    });
+
+    it("shows skeleton rows, not the old list or a Load more button, while a new filter loads", () => {
+      mockUseDocumentsPages.mockReturnValue(
+        pagesState({ documents: [makeDoc({ title: "Old filter row" })], total: 120, hasNextPage: true, isFiltering: true }),
+      );
+
+      renderList();
+
+      expect(screen.queryByText("Old filter row")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+      expect(screen.getAllByTestId("skeleton").length).toBeGreaterThanOrEqual(3);
     });
   });
 
@@ -244,11 +293,7 @@ describe("DocumentList", () => {
       // Stub window.confirm to return true
       vi.spyOn(window, "confirm").mockReturnValue(true);
 
-      mockUseListDocumentsQuery.mockReturnValue({
-        data: { items: [makeDoc()], total: 1 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDocumentsQuery>);
+      mockUseDocumentsPages.mockReturnValue(pagesState({ documents: [makeDoc()], total: 1 }));
 
       renderList();
 
@@ -268,11 +313,7 @@ describe("DocumentList", () => {
       );
       vi.spyOn(window, "confirm").mockReturnValue(false);
 
-      mockUseListDocumentsQuery.mockReturnValue({
-        data: { items: [makeDoc()], total: 1 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDocumentsQuery>);
+      mockUseDocumentsPages.mockReturnValue(pagesState({ documents: [makeDoc()], total: 1 }));
 
       renderList();
 
@@ -286,11 +327,7 @@ describe("DocumentList", () => {
     const FILE_URL = "https://files.example.com/doc-1.pdf?sig=abc";
 
     function mockFileDoc() {
-      mockUseListDocumentsQuery.mockReturnValue({
-        data: { items: [makeDoc({ has_file: true, filename: "cv.pdf" })], total: 1 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDocumentsQuery>);
+      mockUseDocumentsPages.mockReturnValue(pagesState({ documents: [makeDoc({ has_file: true, filename: "cv.pdf" })], total: 1 }));
     }
 
     function mockTrigger(result: () => Promise<{ url: string }>) {

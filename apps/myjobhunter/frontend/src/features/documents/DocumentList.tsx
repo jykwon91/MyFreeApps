@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { EmptyState, Skeleton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { EmptyState, LoadMoreFooter, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import DocumentListSkeleton from "@/features/documents/DocumentListSkeleton";
 import DocumentRow from "@/features/documents/DocumentRow";
 import DocumentEditDialog from "@/features/documents/DocumentEditDialog";
 import type { Document } from "@myjobhunter/api-client/types/document/document";
 import type { DocumentKindFilter } from "@myjobhunter/api-client/types/document/document-kind-filter";
 import { DOCUMENT_KIND_FILTER_OPTIONS } from "@myjobhunter/api-client/constants/documentKindFilterOptions";
 import { documentsFilter } from "@myjobhunter/api-client/utils/documentsFilter";
-import {
-  useListDocumentsQuery,
-  useDeleteDocumentMutation,
-} from "@myjobhunter/api-client/store/documentsApi";
+import { useDocumentsPages } from "@myjobhunter/api-client/hooks/useDocumentsPages";
+import { useDeleteDocumentMutation } from "@myjobhunter/api-client/store/documentsApi";
+import { DOCUMENTS_LIST_MESSAGES as MESSAGES } from "@/constants/documents-list-messages";
 
 export interface DocumentListProps {
   /** When set, only shows documents for this application. */
@@ -23,9 +23,8 @@ export default function DocumentList({ applicationId, hideKindFilter }: Document
   const [editingDoc, setEditingDoc] = useState<Document | null>(null);
   const [deleteDocument] = useDeleteDocumentMutation();
 
-  const { data, isLoading, isError } = useListDocumentsQuery(documentsFilter(kindFilter, applicationId));
-
-  const documents = data?.items ?? [];
+  const list = useDocumentsPages(documentsFilter(kindFilter, applicationId));
+  const { documents } = list;
 
   async function handleDelete(doc: Document) {
     if (!window.confirm(`Delete "${doc.title}"? This cannot be undone.`)) return;
@@ -37,22 +36,10 @@ export default function DocumentList({ applicationId, hideKindFilter }: Document
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {[0, 1, 2].map((i) => (
-          <Skeleton key={i} className="h-16 w-full rounded-lg" />
-        ))}
-      </div>
-    );
-  }
+  if (list.isLoading) return <DocumentListSkeleton />;
 
-  if (isError) {
-    return (
-      <p className="text-sm text-destructive">
-        Couldn't load documents. Please refresh.
-      </p>
-    );
+  if (list.loadError !== undefined) {
+    return <p className="text-sm text-destructive">{MESSAGES.couldntLoad}</p>;
   }
 
   return (
@@ -73,7 +60,9 @@ export default function DocumentList({ applicationId, hideKindFilter }: Document
         </div>
       ) : null}
 
-      {documents.length === 0 ? (
+      {list.isFiltering ? (
+        <DocumentListSkeleton />
+      ) : documents.length === 0 ? (
         <EmptyState
           icon="FileText"
           heading="No documents yet"
@@ -94,6 +83,18 @@ export default function DocumentList({ applicationId, hideKindFilter }: Document
             />
           ))}
         </div>
+      )}
+
+      {list.isFiltering ? null : (
+        <LoadMoreFooter
+          shown={documents.length}
+          total={list.total}
+          hasNextPage={list.hasNextPage}
+          isLoading={list.isFetchingNextPage}
+          isError={list.isLoadMoreError}
+          onLoadMore={list.loadMore}
+          messages={MESSAGES}
+        />
       )}
 
       {editingDoc ? (
