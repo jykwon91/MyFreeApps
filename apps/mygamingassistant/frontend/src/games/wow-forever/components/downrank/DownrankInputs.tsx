@@ -6,6 +6,7 @@ import { DOWNRANK_AMOUNT_WORD, DOWNRANK_BONUS_LABEL } from "@/games/wow-forever/
 import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
 import type { DownrankFamily } from "@/games/wow-forever/types/downrank/downrankFamily";
 import type { DownrankSettings } from "@/games/wow-forever/types/downrank/downrankSettings";
+import ClassSelect from "@/games/wow-forever/components/shared/ClassSelect";
 
 interface DownrankInputsProps {
   families: readonly DownrankFamily[];
@@ -30,19 +31,15 @@ export default function DownrankInputs({ families, family, settings, onChange }:
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="flex flex-col gap-1">
           <label htmlFor="downrank-class" className="text-xs font-medium text-muted-foreground">Class</label>
-          <Select
+          <ClassSelect
             id="downrank-class"
             value={family.classId}
-            onChange={(e) => {
-              const first = families.find((f) => f.classId === e.target.value);
+            classes={classes}
+            onChange={(classId) => {
+              const first = families.find((f) => f.classId === classId);
               if (first) onChange({ familyId: first.id });
             }}
-            className={SELECT_CLASS}
-          >
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </Select>
+          />
         </div>
         <div className="flex flex-col gap-1">
           <label htmlFor="downrank-spell" className="text-xs font-medium text-muted-foreground">Spell</label>

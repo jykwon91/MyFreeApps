@@ -6,10 +6,11 @@ import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedTogg
 import { MAX_BIS_LIST_NAME_LENGTH } from "@/games/wow-forever/data/bisLists/bisListConfig";
 import { BIS_LIST_PHASE, BIS_LIST_PHASES } from "@/games/wow-forever/data/bisLists/bisListPhases";
 import { BIS_LIST_START, BIS_LIST_START_OPTIONS } from "@/games/wow-forever/data/bisLists/bisListStartOptions";
-import { findClass, firstSpec, WOW_CLASSES, type WowClassId } from "@/games/wow-forever/data/classes";
+import { findClass, firstSpec } from "@/games/wow-forever/data/classes";
 import { MAX_LEVEL } from "@/games/wow-forever/data/levelCap";
 import { suggestedBisListName } from "@/games/wow-forever/lib/bisLists/bisListText";
 import type { BisListDraft } from "@/games/wow-forever/types/bisLists/bisListDraft";
+import ClassSelect from "@/games/wow-forever/components/shared/ClassSelect";
 
 interface BisListCreateFormProps {
   initial: BisListDraft;
@@ -54,20 +55,7 @@ export default function BisListCreateForm({ initial, onCreate, onCancel }: BisLi
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col gap-1 min-w-0">
           <span className={FIELD_LABEL}>Class</span>
-          <Select
-            value={draft.classId}
-            onChange={(e) => {
-              const classId = e.target.value as WowClassId;
-              update({ classId, specId: firstSpec(classId) });
-            }}
-            className="min-h-[44px] bg-card"
-          >
-            {WOW_CLASSES.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
+          <ClassSelect value={draft.classId} onChange={(classId) => update({ classId, specId: firstSpec(classId) })} />
         </label>
         <label className="flex flex-col gap-1 min-w-0">
           <span className={FIELD_LABEL}>Spec</span>

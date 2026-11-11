@@ -2,10 +2,11 @@ import { Select } from "@platform/ui";
 import NumberField from "@/games/wow-forever/components/shared/NumberField";
 import LevelCapNote from "@/games/wow-forever/components/shared/LevelCapNote";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
-import { findClass, LEVELING_SPEC_ID, WOW_CLASSES, type WowClassId } from "@/games/wow-forever/data/classes";
+import { findClass, LEVELING_SPEC_ID } from "@/games/wow-forever/data/classes";
 import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
 import { FOOD_ACTIVITIES } from "@/games/wow-forever/food/foodActivities";
 import type { FoodPickerSettings } from "@/games/wow-forever/hooks/useFoodPickerSettings";
+import ClassSelect from "@/games/wow-forever/components/shared/ClassSelect";
 
 interface FoodPickerInputsProps {
   settings: FoodPickerSettings;
@@ -36,17 +37,7 @@ export default function FoodPickerInputs({ settings, onChange }: FoodPickerInput
         </div>
         <label className="flex flex-col gap-1">
           <span className={FIELD_LABEL}>Class</span>
-          <Select
-            value={settings.classId}
-            onChange={(e) => onChange({ classId: e.target.value as WowClassId })}
-            className="min-h-[44px] bg-card"
-          >
-            {WOW_CLASSES.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
+          <ClassSelect value={settings.classId} onChange={(classId) => onChange({ classId })} />
         </label>
         <label className="flex flex-col gap-1">
           <span className={FIELD_LABEL}>Spec</span>

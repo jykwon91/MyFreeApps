@@ -1,14 +1,13 @@
-import { Select } from "@platform/ui";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
 import WhereAreYou from "@/games/wow-forever/components/worldMap/WhereAreYou";
 import ZoneSelect from "@/games/wow-forever/components/worldMap/ZoneSelect";
-import { WOW_CLASSES, findClass } from "@/games/wow-forever/data/classes";
 import LevelCapNote from "@/games/wow-forever/components/shared/LevelCapNote";
 import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
 import type { PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { FACTION, type PlayerFaction, type WorldMapData } from "@/games/wow-forever/types/worldMap";
 import type { Place } from "@/games/wow-forever/worldMap/places";
 import { PLAYER_FACTION_OPTIONS } from "@/games/wow-forever/data/playerFactionOptions";
+import ClassSelect from "@/games/wow-forever/components/shared/ClassSelect";
 
 interface PlayerStripProps {
   data: WorldMapData;
@@ -53,21 +52,7 @@ export default function PlayerStrip({ data, settings, places, onChange }: Player
           <label htmlFor="wm-class" className="text-sm font-medium">
             Class
           </label>
-          <Select
-            id="wm-class"
-            value={settings.classId}
-            onChange={(e) => {
-              const cls = findClass(e.target.value);
-              if (cls) onChange({ classId: cls.id });
-            }}
-            className="w-full min-h-[44px] bg-card"
-          >
-            {WOW_CLASSES.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
+          <ClassSelect id="wm-class" value={settings.classId} onChange={(classId) => onChange({ classId })} />
         </div>
         <div className="space-y-1">
           <label htmlFor="wm-zone" className="text-sm font-medium">

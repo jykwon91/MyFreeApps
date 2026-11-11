@@ -1011,6 +1011,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Classes and professions show their icon wherever they are picked or headed (class
   links and chips, macro / gold class headings, profession picker, gold gathering
   tiles); `SegmentedToggle` options take an optional `icon` (`types/segmentedOption.ts`).
+  Every class drop-down is `components/shared/ClassSelect` (the picked class's icon
+  beside a native select; optional `classes` subset and `allOption`) — never hand-roll one.
   Talent trees, talents, racials and pet abilities use `fileIcon` on their generated
   `icon`; `wowPickerIcons.test.tsx` fails if one of those ids isn't published.
 - Images are the client's BLP icons as 64px WebP, uploaded by
