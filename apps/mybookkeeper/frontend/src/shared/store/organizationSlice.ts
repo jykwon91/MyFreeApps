@@ -1,8 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
+import { ACTIVE_ORG_STORAGE_KEY } from "@/shared/lib/session-storage-keys";
 import { baseApi } from "./baseApi";
-
-const STORAGE_KEY = "v1_activeOrgId";
 
 interface OrganizationState {
   activeOrgId: string | null;
@@ -11,7 +10,7 @@ interface OrganizationState {
 
 function loadActiveOrgId(): string | null {
   try {
-    return localStorage.getItem(STORAGE_KEY);
+    return localStorage.getItem(ACTIVE_ORG_STORAGE_KEY);
   } catch {
     return null;
   }
@@ -30,9 +29,9 @@ const organizationSlice = createSlice({
       state.activeOrgId = action.payload;
       try {
         if (action.payload) {
-          localStorage.setItem(STORAGE_KEY, action.payload);
+          localStorage.setItem(ACTIVE_ORG_STORAGE_KEY, action.payload);
         } else {
-          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(ACTIVE_ORG_STORAGE_KEY);
         }
       } catch {
         // storage unavailable
@@ -44,9 +43,9 @@ const organizationSlice = createSlice({
         state.activeOrgId = action.payload[0]?.id ?? null;
         try {
           if (state.activeOrgId) {
-            localStorage.setItem(STORAGE_KEY, state.activeOrgId);
+            localStorage.setItem(ACTIVE_ORG_STORAGE_KEY, state.activeOrgId);
           } else {
-            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(ACTIVE_ORG_STORAGE_KEY);
           }
         } catch {
           // storage unavailable
@@ -55,25 +54,23 @@ const organizationSlice = createSlice({
       if (!state.activeOrgId && action.payload.length > 0) {
         state.activeOrgId = action.payload[0].id;
         try {
-          localStorage.setItem(STORAGE_KEY, state.activeOrgId);
+          localStorage.setItem(ACTIVE_ORG_STORAGE_KEY, state.activeOrgId);
         } catch {
           // storage unavailable
         }
       }
     },
-    clearOrganizationState(state) {
-      state.activeOrgId = null;
+    // The previous user's organizations go when the session changes hands. The stored
+    // choice is shared with the other tabs, so it is re-read rather than removed: only
+    // the tab that signs in or out changes it.
+    forgetOrganizations(state) {
       state.organizations = [];
-      try {
-        localStorage.removeItem(STORAGE_KEY);
-      } catch {
-        // storage unavailable
-      }
+      state.activeOrgId = loadActiveOrgId();
     },
   },
 });
 
-export const { setActiveOrg, setOrganizations, clearOrganizationState } = organizationSlice.actions;
+export const { setActiveOrg, setOrganizations, forgetOrganizations } = organizationSlice.actions;
 
 export function switchOrg(orgId: string) {
   return (dispatch: (action: unknown) => void) => {

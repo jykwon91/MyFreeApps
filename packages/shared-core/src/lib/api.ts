@@ -74,9 +74,9 @@ api.interceptors.response.use(
         return Promise.reject(err);
       }
       const { isOnLogin, tokenStore, refreshSession } = getPlatform();
+      const config: SessionRetryConfig | undefined = err.config;
       if (refreshSession) {
         const url: string = err.config?.url ?? "";
-        const config: SessionRetryConfig | undefined = err.config;
         if (
           !config ||
           config._sessionRetried ||
@@ -89,7 +89,10 @@ api.interceptors.response.use(
         return retried ?? Promise.reject(err);
       }
       const isLoginRequest = err.config?.url?.includes("/auth/");
-      if (!isLoginRequest && !isOnLogin()) {
+      // Only a rejection of the token signed in now signs out. One sent with a token
+      // since replaced, by a sign-in here or in another tab, says nothing about it.
+      const rejectedCurrentToken = config?._sentToken === tokenStore.get();
+      if (!isLoginRequest && !isOnLogin() && rejectedCurrentToken) {
         tokenStore.clear();
         notifyAuthChange();
       }

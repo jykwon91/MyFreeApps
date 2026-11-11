@@ -14,11 +14,6 @@ const { mockResetApiState, mockResetApiStateAction, mockDispatch } = vi.hoisted(
 });
 
 // The auth logic lives in @platform/core, so its collaborators are mocked there.
-vi.mock("@platform/core/lib/auth-store", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@platform/core/lib/auth-store")>()),
-  notifyAuthChange: vi.fn(),
-}));
-
 vi.mock("@platform/core/store/baseApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@platform/core/store/baseApi")>();
   return {
@@ -48,7 +43,7 @@ vi.mock("@platform/core/lib/api", () => ({
 }));
 
 import api from "@/lib/api";
-import { notifyAuthChange } from "@platform/ui";
+import { notifyAuthChange, onIdentityChange } from "@platform/ui";
 import {
   signIn,
   register,
@@ -59,12 +54,16 @@ import {
 } from "@/lib/auth";
 
 const mockApiPost = vi.mocked(api.post);
-const mockNotifyAuthChange = vi.mocked(notifyAuthChange);
+// Registered after the auth client's reset, so it hears what any subscriber would.
+const identityChanged = vi.fn();
+onIdentityChange(identityChanged);
 
 describe("auth helpers", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     localStorage.clear();
+    // Start each test signed out, as far as the auth store knows.
+    notifyAuthChange();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -81,7 +80,7 @@ describe("auth helpers", () => {
 
       expect(result).toEqual({ status: "ok" });
       expect(localStorage.getItem("token")).toBe("test.jwt.token");
-      expect(mockNotifyAuthChange).toHaveBeenCalledTimes(1);
+      expect(identityChanged).toHaveBeenCalledTimes(1);
     });
 
     it("posts to /auth/totp/login with email + password JSON body", async () => {
@@ -121,7 +120,7 @@ describe("auth helpers", () => {
 
       expect(result).toEqual({ status: "totp_required" });
       expect(localStorage.getItem("token")).toBeNull();
-      expect(mockNotifyAuthChange).not.toHaveBeenCalled();
+      expect(identityChanged).not.toHaveBeenCalled();
     });
 
     it("throws on network error without writing to localStorage", async () => {
@@ -150,7 +149,7 @@ describe("auth helpers", () => {
       );
       // Token must NOT be set — user has to verify their email first
       expect(localStorage.getItem("token")).toBeNull();
-      expect(mockNotifyAuthChange).not.toHaveBeenCalled();
+      expect(identityChanged).not.toHaveBeenCalled();
     });
 
     it("forwards X-Turnstile-Token header when supplied", async () => {
@@ -179,22 +178,30 @@ describe("auth helpers", () => {
   });
 
   describe("signOut", () => {
-    it("removes token from localStorage and notifies auth change", () => {
-      localStorage.setItem("token", "some.token");
+    async function signedIn(): Promise<void> {
+      mockApiPost.mockResolvedValueOnce({
+        data: { access_token: "some.token", token_type: "bearer" },
+      });
+      await signIn("u@e.com", "pass");
+      vi.clearAllMocks();
+    }
+
+    it("removes token from localStorage and notifies auth change", async () => {
+      await signedIn();
 
       signOut();
 
       expect(localStorage.getItem("token")).toBeNull();
-      expect(mockNotifyAuthChange).toHaveBeenCalledTimes(1);
+      expect(identityChanged).toHaveBeenCalledTimes(1);
     });
 
-    it("is safe to call when no token is stored", () => {
+    it("is safe to call when no token is stored, with no cache to wipe", () => {
       expect(() => signOut()).not.toThrow();
-      expect(mockNotifyAuthChange).toHaveBeenCalledTimes(1);
+      expect(mockDispatch).not.toHaveBeenCalled();
     });
 
-    it("dispatches resetApiState so the next signed-in user does not see cached responses", () => {
-      localStorage.setItem("token", "some.token");
+    it("dispatches resetApiState so the next signed-in user does not see cached responses", async () => {
+      await signedIn();
 
       signOut();
 
@@ -240,23 +247,24 @@ describe("auth helpers", () => {
   });
 
   describe("RTK Query cache reset on auth transitions", () => {
-    it("signIn dispatches resetApiState BEFORE notifyAuthChange", async () => {
+    it("signIn dispatches resetApiState once the new token is in place, before subscribers hear of it", async () => {
       mockApiPost.mockResolvedValueOnce({
         data: { access_token: "fresh.token", token_type: "bearer" },
+      });
+      let tokenAtReset: string | null = null;
+      mockDispatch.mockImplementationOnce(() => {
+        tokenAtReset = localStorage.getItem("token");
       });
 
       await signIn("u@e.com", "pass");
 
-      // Both must fire on a successful sign-in; order matters because
-      // the auth-change notification triggers a re-render that should
-      // refetch /users/me against the NEW token, not the previous
-      // response.
+      // The re-render that follows should refetch /users/me against the
+      // NEW token, not serve the previous response.
       expect(mockResetApiState).toHaveBeenCalledTimes(1);
-      expect(mockNotifyAuthChange).toHaveBeenCalledTimes(1);
-
-      const resetOrder = mockResetApiState.mock.invocationCallOrder[0]!;
-      const notifyOrder = mockNotifyAuthChange.mock.invocationCallOrder[0]!;
-      expect(resetOrder).toBeLessThan(notifyOrder);
+      expect(tokenAtReset).toBe("fresh.token");
+      expect(mockDispatch.mock.invocationCallOrder[0]!).toBeLessThan(
+        identityChanged.mock.invocationCallOrder[0]!,
+      );
     });
 
     it("signIn does NOT reset the cache on a totp_required response", async () => {

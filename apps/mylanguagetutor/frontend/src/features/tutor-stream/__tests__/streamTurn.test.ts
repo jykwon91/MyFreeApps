@@ -71,6 +71,19 @@ describe("streamTurn", () => {
     expect(localStorage.getItem("token")).toBeNull();
   });
 
+  it("leaves the next user signed in when the 401 answers the previous user's token", async () => {
+    fetchMock.mockImplementation(async () => {
+      // Another user signs in while the turn is in flight.
+      localStorage.setItem("token", "next-user-token");
+      return new Response(JSON.stringify({ detail: "Unauthorized" }), { status: 401 });
+    });
+
+    await expect(streamTurn({ sessionId: "s1", text: "hola", onEvent: () => {} })).rejects.toBeInstanceOf(
+      TurnRequestError,
+    );
+    expect(localStorage.getItem("token")).toBe("next-user-token");
+  });
+
   it("maps a failed fetch to network_error", async () => {
     fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
 

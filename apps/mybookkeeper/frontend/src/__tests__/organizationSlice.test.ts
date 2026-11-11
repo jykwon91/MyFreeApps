@@ -13,7 +13,7 @@ vi.stubGlobal("localStorage", {
 import reducer, {
   setActiveOrg,
   setOrganizations,
-  clearOrganizationState,
+  forgetOrganizations,
 } from "@/shared/store/organizationSlice";
 import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
 
@@ -99,16 +99,29 @@ describe("organizationSlice", () => {
     expect(state.activeOrgId).toBeNull();
   });
 
-  it("clearOrganizationState resets everything", () => {
+  // The stored choice is shared with other tabs, so forgetting a session's
+  // organizations re-reads it and never writes or removes it.
+  it("forgetOrganizations drops the organizations and re-reads the stored choice", () => {
     const org = makeOrg({ id: "org-1" });
+    mockGetItem.mockReturnValue("org-2");
 
     const state = reducer(
       { activeOrgId: "org-1", organizations: [org] },
-      clearOrganizationState(),
+      forgetOrganizations(),
+    );
+
+    expect(state).toEqual({ activeOrgId: "org-2", organizations: [] });
+    expect(mockRemoveItem).not.toHaveBeenCalled();
+    expect(mockSetItem).not.toHaveBeenCalled();
+  });
+
+  it("forgetOrganizations leaves no active organization when none is stored", () => {
+    const state = reducer(
+      { activeOrgId: "org-1", organizations: [makeOrg({ id: "org-1" })] },
+      forgetOrganizations(),
     );
 
     expect(state.activeOrgId).toBeNull();
-    expect(state.organizations).toHaveLength(0);
-    expect(mockRemoveItem).toHaveBeenCalledWith("v1_activeOrgId");
+    expect(mockRemoveItem).not.toHaveBeenCalled();
   });
 });
