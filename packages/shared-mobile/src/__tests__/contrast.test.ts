@@ -1,5 +1,6 @@
 import { processColor } from "react-native";
 import { darkColors, lightColors } from "../theme/colors";
+import { darkToneColors, lightToneColors } from "../theme/toneColors";
 import type { ThemeColors } from "../types/ThemeColors";
 
 const AA_TEXT = 4.5;
@@ -63,6 +64,15 @@ describe.each(Object.entries({ light: lightColors, dark: darkColors }))(
       expect(contrastRatio(colors.destructiveText, colors.background)).toBeGreaterThanOrEqual(
         AA_NON_TEXT,
       );
+    });
+  },
+);
+
+describe.each(Object.entries({ light: lightToneColors, dark: darkToneColors }))(
+  "%s chip tone contrast",
+  (_scheme, tones) => {
+    it.each(Object.entries(tones))("%s text meets AA on its background", (_tone, { foreground, background }) => {
+      expect(contrastRatio(foreground, background)).toBeGreaterThanOrEqual(AA_TEXT);
     });
   },
 );

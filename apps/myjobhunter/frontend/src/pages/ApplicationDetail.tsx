@@ -22,6 +22,7 @@ import EventsSection from "@/features/applications/sections/EventsSection";
 import DocumentsSection from "@/features/applications/sections/DocumentsSection";
 import ContactsManager from "@/features/applications/contacts/ContactsManager";
 import NotesSection from "@/features/applications/sections/NotesSection";
+import { getStageColor } from "@/lib/stage-color";
 import {
   useGetApplicationQuery,
   useDeleteApplicationMutation,
@@ -139,7 +140,7 @@ export default function ApplicationDetail() {
             {company?.name ?? <span className="italic">(loading company...)</span>}
           </p>
           <div className="flex items-center gap-2 pt-1 flex-wrap">
-            <Badge label={KANBAN_COLUMN_LABELS[currentColumn]} color="blue" />
+            <Badge label={KANBAN_COLUMN_LABELS[currentColumn]} color={getStageColor(currentColumn)} />
             {app.archived ? <Badge label="Archived" color="gray" /> : null}
             {app.remote_type !== "unknown" ? (
               <Badge label={app.remote_type} color="blue" />

@@ -2,7 +2,7 @@ import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { APPLICATION_MESSAGES } from "../../constants/applications";
 import type { ApplicationRowProps } from "../../types/ApplicationRowProps";
-import { applicationDetails, applicationRowLabel, companyName, fitText, statusLabel } from "./applicationDisplay";
+import { applicationDetails, applicationRowLabel, companyName, fitText, statusLabel, statusTone } from "./applicationDisplay";
 
 export default function ApplicationRow({ application, onPress }: ApplicationRowProps) {
   const { colors, spacing, fontSize } = useTheme();
@@ -40,7 +40,7 @@ export default function ApplicationRow({ application, onPress }: ApplicationRowP
           {details}
         </Text>
       ) : null}
-      {status ? <Chip label={status} /> : null}
+      {status ? <Chip label={status} tone={statusTone(application)} /> : null}
     </Pressable>
   );
 }
