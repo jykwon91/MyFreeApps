@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import VerdictBanner from "../VerdictBanner";
+import type { JobAnalysisVerdict } from "@myjobhunter/api-client/types/job-analysis/job-analysis-verdict";
 
 describe("VerdictBanner", () => {
   it("renders the verdict label and summary", () => {
@@ -37,5 +38,17 @@ describe("VerdictBanner", () => {
     const banner2 = c2.firstChild as HTMLElement;
     expect(banner1.className).toContain("border-green-200");
     expect(banner2.className).toContain("border-red-200");
+  });
+
+  it("says only Analyzed, in the default tone as before, for a verdict added on the backend after this build", () => {
+    render(
+      <VerdictBanner
+        verdict={"surprising_fit" as JobAnalysisVerdict}
+        summary="New rubric."
+      />,
+    );
+    expect(screen.getByText("Analyzed")).toBeInTheDocument();
+    expect(screen.queryByText("surprising_fit")).not.toBeInTheDocument();
+    expect(screen.getByRole("status").className).toContain("border-blue-200");
   });
 });

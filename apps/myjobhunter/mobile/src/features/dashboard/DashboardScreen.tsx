@@ -1,13 +1,12 @@
 import { useListApplicationsKanbanQuery } from "@myjobhunter/api-client/store/applicationsApi";
 import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-column";
 import { groupKanbanItems } from "@myjobhunter/api-client/utils/groupKanbanItems";
-import { Banner, EmptyState, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useOpenWebsite, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { APPLICATION_DETAIL_MESSAGES } from "../../constants/applicationDetail";
-import { ANALYZE_WEB_PATH, DASHBOARD_MESSAGES as MESSAGES } from "../../constants/dashboard";
+import { DASHBOARD_MESSAGES as MESSAGES } from "../../constants/dashboard";
 import { STAGE_OPTIONS } from "../../constants/stageOptions";
 import { dashboardRows } from "../../lib/dashboardRows";
 import type { BoardMoveTarget } from "../../types/BoardMoveTarget";
@@ -24,7 +23,6 @@ export default function DashboardScreen() {
   // Back in the foreground, the board reloads, so its stage ages are today's.
   const board = useListApplicationsKanbanQuery(undefined, { refetchOnFocus: true });
   const { isRefreshing, refresh, refreshControl } = useRefresh(board.refetch, board.error);
-  const openWebsite = useOpenWebsite();
   const { movingIds, moveTo } = useBoardMoves();
   const { layout, toggleLane, setClosedOpen } = useDashboardFolds();
   const [moveTarget, setMoveTarget] = useState<BoardMoveTarget | null>(null);
@@ -59,7 +57,7 @@ export default function DashboardScreen() {
   ) : items === undefined ? (
     <EmptyState action={{ label: MESSAGES.tryAgain, onPress: refresh, isLoading: isRefreshing }} body={MESSAGES.tryAgainOffer} heading={MESSAGES.couldntLoad} />
   ) : (
-    <EmptyState action={{ label: MESSAGES.analyze, onPress: () => openWebsite(WEB_BASE_URL, ANALYZE_WEB_PATH) }} body={MESSAGES.noneBody} heading={MESSAGES.noneHeading} />
+    <EmptyState action={{ label: MESSAGES.analyze, onPress: () => router.push("/analyze") }} body={MESSAGES.noneBody} heading={MESSAGES.noneHeading} />
   );
 
   const header = hasCards ? (

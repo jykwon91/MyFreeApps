@@ -4,3 +4,6 @@
 declare class FormData {}
 // Every platform has a console; only what the package uses is declared.
 declare const console: { warn: (...data: unknown[]) => void };
+// Every platform has timers too; each consumer's own declaration is the one that applies.
+declare function setTimeout(handler: () => void, timeout: number): number;
+declare function clearTimeout(id: number): void;

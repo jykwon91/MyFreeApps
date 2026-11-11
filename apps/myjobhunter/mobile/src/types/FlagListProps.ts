@@ -1,6 +1,6 @@
 import type { ChipTone } from "@platform/mobile";
 
-export interface ResearchFlagListProps {
+export interface FlagListProps {
   title: string;
   tone: ChipTone;
   flags: readonly string[];
