@@ -5,6 +5,7 @@ import { useListDiscoverySourcesQuery } from "@myjobhunter/api-client/store/disc
 import { useGetProfileQuery } from "@myjobhunter/api-client/store/profileApi";
 import type { DiscoverView } from "@myjobhunter/api-client/types/discovery/discover-view";
 import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
+import { discoveredJobsFilter } from "@myjobhunter/api-client/utils/discoveredJobsFilter";
 import { inboxCoverageLine } from "@myjobhunter/api-client/utils/inboxCoverageLine";
 import { savedSearchName } from "@myjobhunter/api-client/utils/savedSearchName";
 import { unscoredCount } from "@myjobhunter/api-client/utils/unscoredCount";
@@ -37,7 +38,7 @@ export default function DiscoverScreen() {
   const sourceId = chosenSource?.id ?? ALL_SOURCES;
   const scoringWindow = useScoringWindow(sourceId || null);
   const isInbox = view === "inbox";
-  const list = useDiscoveredJobsPages(sourceId ? { state: view, source_id: sourceId } : { state: view }, isInbox ? scoringWindow.pollingInterval : 0);
+  const list = useDiscoveredJobsPages(discoveredJobsFilter(view, sourceId || null), isInbox ? scoringWindow.pollingInterval : 0);
   const isScoringActive = useScoringActive(scoringWindow, isInbox ? unscoredCount(list.scoredCount, list.totalCount) : null);
   const { data: profile } = useGetProfileQuery();
   const { isRefreshing, refresh, refreshControl } = useRefresh(() => Promise.all([list.refetch(), sourcesQuery.refetch()]), list.error ?? sourcesQuery.error);

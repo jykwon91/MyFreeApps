@@ -105,7 +105,7 @@ export default function Discover() {
           scoringWindow={scoringWindow}
         />
       ) : (
-        <DiscoverSavedView />
+        <DiscoverSavedView activeSourceId={activeSourceId} onShowAllSources={() => setSourceFilter(null)} />
       )}
 
       <NewSavedSearchDialog

@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
 import { LoadMoreFooter, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import ListLoadError from "@/components/ListLoadError";
 import DocumentListSkeleton from "@/features/documents/DocumentListSkeleton";
 import DocumentRow from "@/features/documents/DocumentRow";
 import DocumentKindFilterSelect from "@/features/documents/DocumentKindFilterSelect";
-import DocumentListError from "@/features/documents/DocumentListError";
 import DocumentListEmptyState from "@/features/documents/DocumentListEmptyState";
 import { documentsEmptyKind } from "@/lib/documentsEmptyKind";
 import DocumentEditDialog from "@/features/documents/DocumentEditDialog";
@@ -56,7 +56,7 @@ export default function DocumentList({ applicationId, hideKindFilter }: Document
       ) : null}
 
       {list.loadError !== undefined ? (
-        <DocumentListError onRetry={list.refetch} />
+        <ListLoadError message={MESSAGES.couldntLoad} retryLabel={MESSAGES.retry} onRetry={list.refetch} />
       ) : list.isFiltering ? (
         <DocumentListSkeleton />
       ) : emptyKind !== "none" ? (
