@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactElement } from "react";
 import LoadingButton from "./LoadingButton";
 
 interface LegacyProps {
@@ -7,7 +7,8 @@ interface LegacyProps {
 }
 
 interface RichProps {
-  icon?: ReactNode;
+  /** An element such as `<FileText className="w-12 h-12" />`. A string would print as literal text. */
+  icon?: ReactElement;
   heading: string;
   body: string;
   action?: { label: string; onClick: () => void; loading?: boolean };

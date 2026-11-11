@@ -1,11 +1,14 @@
-import { useState } from "react";
-import { EmptyState, LoadMoreFooter, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { useRef, useState } from "react";
+import { LoadMoreFooter, showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import DocumentListSkeleton from "@/features/documents/DocumentListSkeleton";
 import DocumentRow from "@/features/documents/DocumentRow";
+import DocumentKindFilterSelect from "@/features/documents/DocumentKindFilterSelect";
+import DocumentListError from "@/features/documents/DocumentListError";
+import DocumentListEmptyState from "@/features/documents/DocumentListEmptyState";
+import { documentsEmptyKind } from "@/lib/documentsEmptyKind";
 import DocumentEditDialog from "@/features/documents/DocumentEditDialog";
 import type { Document } from "@myjobhunter/api-client/types/document/document";
 import type { DocumentKindFilter } from "@myjobhunter/api-client/types/document/document-kind-filter";
-import { DOCUMENT_KIND_FILTER_OPTIONS } from "@myjobhunter/api-client/constants/documentKindFilterOptions";
 import { documentsFilter } from "@myjobhunter/api-client/utils/documentsFilter";
 import { useDocumentsPages } from "@myjobhunter/api-client/hooks/useDocumentsPages";
 import { useDeleteDocumentMutation } from "@myjobhunter/api-client/store/documentsApi";
@@ -14,13 +17,14 @@ import { DOCUMENTS_LIST_MESSAGES as MESSAGES } from "@/constants/documents-list-
 export interface DocumentListProps {
   /** When set, only shows documents for this application. */
   applicationId?: string;
-  /** When true, the kind filter dropdown is hidden (parent controls it). */
+  /** When true, the kind filter dropdown is hidden and the list is never filtered by kind. */
   hideKindFilter?: boolean;
 }
 
 export default function DocumentList({ applicationId, hideKindFilter }: DocumentListProps) {
   const [kindFilter, setKindFilter] = useState<DocumentKindFilter>("all");
   const [editingDoc, setEditingDoc] = useState<Document | null>(null);
+  const filterRef = useRef<HTMLSelectElement>(null);
   const [deleteDocument] = useDeleteDocumentMutation();
 
   const list = useDocumentsPages(documentsFilter(kindFilter, applicationId));
@@ -36,41 +40,30 @@ export default function DocumentList({ applicationId, hideKindFilter }: Document
     }
   }
 
-  if (list.isLoading) return <DocumentListSkeleton />;
+  if (list.isLoading) return <DocumentListSkeleton withFilterBar={!hideKindFilter} />;
 
-  if (list.loadError !== undefined) {
-    return <p className="text-sm text-destructive">{MESSAGES.couldntLoad}</p>;
+  function clearFilter() {
+    setKindFilter("all");
+    filterRef.current?.focus();
   }
+
+  const emptyKind = documentsEmptyKind(list.total, documents.length, kindFilter);
 
   return (
     <div className="space-y-3">
       {!hideKindFilter ? (
-        <div className="flex items-center gap-2">
-          <select
-            value={kindFilter}
-            onChange={(e) => setKindFilter(e.target.value as DocumentKindFilter)}
-            className="text-sm border rounded-md px-2 py-1 bg-background"
-          >
-            {DOCUMENT_KIND_FILTER_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <DocumentKindFilterSelect value={kindFilter} onChange={setKindFilter} selectRef={filterRef} />
       ) : null}
 
-      {list.isFiltering ? (
+      {list.loadError !== undefined ? (
+        <DocumentListError onRetry={list.refetch} />
+      ) : list.isFiltering ? (
         <DocumentListSkeleton />
-      ) : documents.length === 0 ? (
-        <EmptyState
-          icon="FileText"
-          heading="No documents yet"
-          body={
-            applicationId
-              ? "Upload a cover letter or tailored resume for this application."
-              : "Start by uploading a document or writing a cover letter draft."
-          }
+      ) : emptyKind !== "none" ? (
+        <DocumentListEmptyState
+          kind={emptyKind}
+          forApplication={applicationId !== undefined}
+          onClearFilter={clearFilter}
         />
       ) : (
         <div className="space-y-2">
@@ -85,7 +78,7 @@ export default function DocumentList({ applicationId, hideKindFilter }: Document
         </div>
       )}
 
-      {list.isFiltering ? null : (
+      {list.isFiltering || list.loadError !== undefined ? null : (
         <LoadMoreFooter
           shown={documents.length}
           total={list.total}
