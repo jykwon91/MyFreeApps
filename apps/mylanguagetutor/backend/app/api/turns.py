@@ -25,7 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 
 from app.core.auth import current_active_user
-from app.core.rate_limit import turn_limiter
+from app.core.rate_limit import check_user_rate_limit, turn_limiter
 from app.models.user.user import User
 from app.schemas.tutor.turn_schemas import TurnCreateRequest
 from app.services.tutor import quota_service, turn_service
@@ -51,7 +51,7 @@ DAILY_LIMIT_REACHED = "daily_limit_reached"
 async def _turn_slot(user: User = Depends(current_active_user)) -> AsyncIterator[None]:
     """Burst limit + one turn in flight per user, held for the whole request
     (the yield-dependency teardown runs after the stream finishes)."""
-    turn_limiter.check(str(user.id))
+    check_user_rate_limit(user.id, turn_limiter)
     if not turn_slots.try_acquire(user.id):
         raise HTTPException(status_code=429, detail=TurnInProgressError.code)
     try:

@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
+from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.jobs.resume_upload_job_response import ResumeUploadJobResponse
@@ -32,6 +33,14 @@ router = APIRouter()
 
 _NOT_FOUND_JOB = "Resume upload job not found"
 
+# Per-user limit for resume uploads: each accepted upload queues a Claude parse
+# of the whole document. A legitimate user uploads once, maybe a couple more
+# times after a rejected or mis-parsed file; 10 / 5 min matches the other
+# document-sized Claude endpoints and leaves room for retries. In-memory per
+# process and the API runs 2 uvicorn workers, so the effective budget is up
+# to ~2x.
+_UPLOAD_LIMITER = RateLimiter(max_attempts=10, window_seconds=300)
+
 
 @router.post("/resumes", response_model=ResumeUploadJobResponse, status_code=201)
 async def upload_resume(
@@ -39,7 +48,11 @@ async def upload_resume(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> ResumeUploadJobResponse:
-    """Accept a resume file upload, store it in MinIO, and queue a parse job."""
+    """Accept a resume file upload, store it in MinIO, and queue a parse job.
+
+    Rate limited per user (10 / 5 min); 429 when exceeded.
+    """
+    check_user_rate_limit(user.id, _UPLOAD_LIMITER)
     content = await file.read()
     profile = await get_or_create_profile(db, user.id)
 

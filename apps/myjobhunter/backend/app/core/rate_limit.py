@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from platform_shared.core.rate_limit import (
     RateLimiter,
+    check_user_rate_limit,
     make_check_account_not_locked,
     make_check_login_ip_limit,
     make_check_json_login_not_locked,
@@ -42,6 +43,7 @@ __all__ = [
     "get_user_by_email",
     "login_limiter",
     "totp_limiter",
+    "check_user_rate_limit",
     "check_login_rate_limit",
     "check_totp_rate_limit",
     "check_account_not_locked",

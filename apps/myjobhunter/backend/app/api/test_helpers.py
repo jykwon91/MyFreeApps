@@ -10,10 +10,34 @@ from fastapi import APIRouter, Body, HTTPException
 from pydantic import EmailStr
 from sqlalchemy import text
 
-from app.db.session import AsyncSessionLocal
+from app.api import admin_invites, applications, companies, discover, resume_refinement, resumes
 from app.core import rate_limit as rl
+from app.core.rate_limit import RateLimiter
+from app.db.session import AsyncSessionLocal
 
 router = APIRouter()
+
+
+def _all_limiters() -> tuple[RateLimiter, ...]:
+    """Every module-level limiter, looked up at call time (tests may swap them)."""
+    return (
+        rl.login_limiter,
+        rl.totp_limiter,
+        admin_invites._INVITE_INFO_LIMITER,
+        applications._JD_PARSE_LIMITER,
+        applications._JD_URL_EXTRACT_LIMITER,
+        applications._TRANSITION_LIMITER_PER_MIN,
+        applications._TRANSITION_LIMITER_PER_HOUR,
+        applications._NOTES_PATCH_LIMITER_PER_MIN,
+        applications._NOTES_PATCH_LIMITER_PER_HOUR,
+        companies._RESEARCH_LIMITER_PER_5_MIN,
+        companies._RESEARCH_LIMITER_PER_HOUR,
+        discover._REFRESH_LIMITER,
+        resume_refinement._PREPARE_LIMITER,
+        resume_refinement._TURN_LIMITER_PER_5_MIN,
+        resume_refinement._TURN_LIMITER_PER_HOUR,
+        resumes._UPLOAD_LIMITER,
+    )
 
 
 @router.post("/_test/verify-email", status_code=204)
@@ -37,21 +61,11 @@ async def force_verify_email(email: EmailStr = Body(..., embed=True)) -> None:
 async def reset_rate_limit() -> None:
     """Clear all in-memory rate-limit buckets.
 
-    Allows E2E tests to reset per-IP login throttle between test runs
-    without restarting the server.
-
-    Uses the internal ``_buckets`` dict directly (thread-safe via the
-    limiter's own lock) because ``reset_all()`` may not be available in
-    older platform_shared releases.
+    Lets E2E tests reset every limiter (login, TOTP, and the per-user AI
+    endpoint budgets) between runs without restarting the server.
     """
-    limiter = rl.login_limiter
-    lock = getattr(limiter, "_lock", None)
-    if lock is not None:
-        with lock:
-            getattr(limiter, "_buckets", {}).clear()
-    else:
-        # Fallback: no-op rather than crash
-        pass
+    for limiter in _all_limiters():
+        limiter.reset()
 
 
 @router.post("/_test/promote-to-admin", status_code=204)

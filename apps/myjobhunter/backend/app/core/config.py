@@ -51,7 +51,7 @@ class Settings(BaseAppSettings):
     # scored rows per pass; tune down if Anthropic latency dominates.
     discovery_score_top_n: int = 20
 
-    # /discover refresh rate-limit (per IP). JSearch is paid; cap how
+    # /discover refresh rate-limit (per user). JSearch is paid; cap how
     # often an operator can hit /refresh in a window to bound runaway
     # cost from a stuck retry loop or a leaked credential. Defaults
     # mirror the previous hardcoded values in api/discover.py.
