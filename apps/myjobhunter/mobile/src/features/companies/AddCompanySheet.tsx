@@ -3,6 +3,7 @@ import { EMPTY_COMPANY_FORM_VALUES } from "@myjobhunter/api-client/constants/emp
 import { useCreateCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
 import type { CompanyFormValues } from "@myjobhunter/api-client/types/company/company-form-values";
 import { companyCreateRequest } from "@myjobhunter/api-client/utils/companyCreateRequest";
+import { companyFormCounters } from "@myjobhunter/api-client/utils/companyFormCounters";
 import { companyFormProblems } from "@myjobhunter/api-client/utils/companyFormProblems";
 import { isDuplicateCompanyDomainError } from "@myjobhunter/api-client/utils/isDuplicateCompanyDomainError";
 import { FormField, FormSheet, useToast } from "@platform/mobile";
@@ -25,6 +26,7 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
   const [failure, setFailure] = useState<string | null>(null);
   // The server's 409, until the domain is changed.
   const [isDuplicateDomain, setIsDuplicateDomain] = useState(false);
+  const counters = companyFormCounters(values);
   const problems = hasTried ? companyFormProblems(values) : {};
 
   function change(field: keyof CompanyFormValues) {
@@ -54,6 +56,7 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
         autoCapitalize="words"
         autoFocus
         editable={!isLoading}
+        counter={counters.name}
         error={problems.name}
         label={MESSAGES.nameLabel}
         onChangeText={change("name")}
@@ -65,6 +68,7 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
         autoCapitalize="none"
         autoCorrect={false}
         editable={!isLoading}
+        counter={counters.primary_domain}
         error={problems.primary_domain ?? (isDuplicateDomain ? COMPANY_FORM_PROBLEMS.duplicateDomain : undefined)}
         hint={MESSAGES.domainHint}
         keyboardType="url"
@@ -75,6 +79,7 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
       />
       <FormField
         editable={!isLoading}
+        counter={counters.industry}
         error={problems.industry}
         label={MESSAGES.industryLabel}
         onChangeText={change("industry")}
@@ -83,6 +88,7 @@ export default function AddCompanySheet({ onClose }: AddCompanySheetProps) {
       />
       <FormField
         editable={!isLoading}
+        counter={counters.hq_location}
         error={problems.hq_location}
         label={MESSAGES.hqLabel}
         onChangeText={change("hq_location")}

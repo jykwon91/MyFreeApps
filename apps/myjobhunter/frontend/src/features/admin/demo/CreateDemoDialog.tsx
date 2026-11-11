@@ -1,6 +1,9 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { LoadingButton } from "@platform/ui";
+import { DISPLAY_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
+import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
 
 export interface CreateDemoDialogProps {
   open: boolean;
@@ -31,6 +34,9 @@ export default function CreateDemoDialog({
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
 
+  const nameProblem = tooLongProblem(displayName.trim(), DISPLAY_NAME_MAX_LENGTH);
+  const nameFeedback = { id: "demo-display-name", error: nameProblem, counter: characterCounter(displayName.trim(), DISPLAY_NAME_MAX_LENGTH) };
+
   function resetForm() {
     setEmail("");
     setDisplayName("");
@@ -38,6 +44,7 @@ export default function CreateDemoDialog({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (nameProblem) return;
     const trimmedEmail = email.trim();
     const trimmedName = displayName.trim();
     // Optimistically clear so a re-open after success starts fresh.
@@ -106,10 +113,11 @@ export default function CreateDemoDialog({
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Alex Demo"
-                maxLength={100}
+                {...fieldFeedbackAria(nameFeedback)}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                 disabled={isLoading}
               />
+              <FieldFeedback {...nameFeedback} />
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

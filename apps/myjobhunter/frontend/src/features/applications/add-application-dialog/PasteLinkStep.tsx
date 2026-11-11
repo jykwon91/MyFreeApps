@@ -9,11 +9,15 @@
  * - Two escape links lead to the text-paste and manual-entry panels.
  */
 import { useEffect, useRef } from "react";
-import { LoadingButton } from "@platform/ui";
+import { JOB_URL_MAX_LENGTH } from "@myjobhunter/api-client/constants/addApplicationForm";
+import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
 import type { DialogInputMode } from "../useAddApplicationDialogState";
 
 interface PasteLinkStepProps {
   urlValue: string;
+  /** Why the link is too long to read; it is not sent while set. */
+  problem: string | null;
   onUrlChange: (next: string) => void;
   onUrlPaste: (e: React.ClipboardEvent<HTMLInputElement>) => void;
   onUrlSubmit: () => void;
@@ -22,6 +26,7 @@ interface PasteLinkStepProps {
 
 export default function PasteLinkStep({
   urlValue,
+  problem,
   onUrlChange,
   onUrlPaste,
   onUrlSubmit,
@@ -33,7 +38,12 @@ export default function PasteLinkStep({
     inputRef.current?.focus();
   }, []);
 
-  const canSubmit = urlValue.trim().length > 0;
+  const canSubmit = urlValue.trim().length > 0 && !problem;
+  const feedback = {
+    id: "add-app-url",
+    error: problem ?? undefined,
+    counter: characterCounter(urlValue.trim(), JOB_URL_MAX_LENGTH),
+  };
 
   return (
     <div className="space-y-3">
@@ -55,8 +65,10 @@ export default function PasteLinkStep({
         }}
         placeholder="https://jobs.example.com/posting/abc"
         aria-label="Job posting URL"
+        {...fieldFeedbackAria(feedback)}
         className="w-full border rounded-md px-3 py-2 text-sm bg-background"
       />
+      <FieldFeedback {...feedback} />
       <div className="flex justify-end">
         <LoadingButton
           type="button"

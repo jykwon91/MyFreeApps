@@ -45,11 +45,3 @@ export const APPLICATION_EVENT_MESSAGES = {
 export function durationRangeMessage(min: number, max: number): string {
   return `Between ${min} and ${max}.`;
 }
-
-export function tooManyInterviewersMessage(max: number): string {
-  return `List up to ${max} interviewers.`;
-}
-
-export function interviewerNameTooLongMessage(max: number): string {
-  return `Keep each name to ${max} characters.`;
-}

@@ -1,23 +1,21 @@
-import {
-  ADD_APPLICATION_FORM_PROBLEMS as PROBLEMS,
-  JD_READ_LONG_RUNNING_MS,
-  JD_TEXT_MAX_LENGTH,
-  JOB_URL_MAX_LENGTH,
-} from "@myjobhunter/api-client/constants/addApplicationForm";
+import { JD_READ_LONG_RUNNING_MS } from "@myjobhunter/api-client/constants/addApplicationForm";
 import { useCreateApplicationMutation, useExtractJdFromUrlMutation, useParseJobDescriptionMutation } from "@myjobhunter/api-client/store/applicationsApi";
 import { useCompanyResolver } from "@myjobhunter/api-client/hooks/useCompanyResolver";
 import { useListCompaniesQuery } from "@myjobhunter/api-client/store/companiesApi";
 import type { AddApplicationFormValues } from "@myjobhunter/api-client/types/application/add-application-form-values";
 import type { ExtractedCompanyHints } from "@myjobhunter/api-client/types/application/extracted-company-hints";
+import type { ReadCompanyOutcome } from "@myjobhunter/api-client/types/application/read-company-outcome";
 import type { ReviewCompanyState } from "@myjobhunter/api-client/types/application/review-company-state";
 import type { Company } from "@myjobhunter/api-client/types/company";
 import { addApplicationFormProblems } from "@myjobhunter/api-client/utils/addApplicationFormProblems";
 import { buildApplicationCreateRequest } from "@myjobhunter/api-client/utils/buildApplicationCreateRequest";
+import { companyNameProblem } from "@myjobhunter/api-client/utils/companyNameProblem";
 import { describeExtractError } from "@myjobhunter/api-client/utils/describeExtractError";
 import { isAuthRequiredError } from "@myjobhunter/api-client/utils/isAuthRequiredError";
 import { isJobPostingUrl } from "@myjobhunter/api-client/utils/isJobPostingUrl";
 import { prefillFromExtract } from "@myjobhunter/api-client/utils/prefillFromExtract";
 import { prefillFromParse } from "@myjobhunter/api-client/utils/prefillFromParse";
+import { jobDescriptionLengthProblem, jobLinkLengthProblem } from "@myjobhunter/api-client/utils/jobSourceProblems";
 import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import * as Clipboard from "expo-clipboard";
 import { useEffect, useRef, useState } from "react";
@@ -64,7 +62,7 @@ export function useAddApplicationFlow() {
   const inFlightRead = useRef<{ abort: () => void } | null>(null);
 
   const problems = addApplicationFormProblems(values);
-  const textError = textValue.trim().length > JD_TEXT_MAX_LENGTH ? PROBLEMS.jdTextTooLong : null;
+  const textError = jobDescriptionLengthProblem(textValue) ?? null;
   const isDirty = urlValue.trim() !== "" || textValue.trim() !== "" || review !== null;
 
   useEffect(() => {
@@ -100,19 +98,24 @@ export function useAddApplicationFlow() {
   }
 
   /** The company a read posting names: tracked, added now, or left to fix. Null once the screen has gone. */
+  function readFailureMessage(outcome: Extract<ReadCompanyOutcome, { kind: "failed" }>): string {
+    if (outcome.reason === "listUnavailable") return MESSAGES.couldntLoadCompanies;
+    if (outcome.reason === "nameTooLong") return companyNameProblem(outcome.company.name) ?? MESSAGES.couldntAddCompany;
+    return MESSAGES.couldntAddCompany;
+  }
+
   async function resolveCompany(name: string | null, hints: ExtractedCompanyHints): Promise<ReviewCompanyState | null> {
     const outcome = await resolveReadCompany(name, hints, () => isMounted.current);
     if (outcome.kind === "stale") return null;
     if (outcome.kind === "failed") {
-      setFailure(outcome.reason === "listUnavailable" ? MESSAGES.couldntLoadCompanies : MESSAGES.couldntAddCompany);
+      setFailure(readFailureMessage(outcome));
     }
     return outcome.company;
   }
 
   function linkProblem(url: string): string | null {
     if (!isJobPostingUrl(url)) return MESSAGES.notALink;
-    if (url.length > JOB_URL_MAX_LENGTH) return PROBLEMS.jobUrlTooLong;
-    return null;
+    return jobLinkLengthProblem(url) ?? null;
   }
 
   async function readLink(link: string = urlValue): Promise<void> {
@@ -223,6 +226,11 @@ export function useAddApplicationFlow() {
     setIsSaving(true);
     try {
       let companyId: string | null;
+      const nameProblem = review.company.kind === "autoCreateFailed" ? companyNameProblem(review.company.name) : undefined;
+      if (nameProblem) {
+        saveFailed(nameProblem);
+        return;
+      }
       try {
         companyId = await companyIdForSave(review.company, () => isMounted.current);
       } catch {

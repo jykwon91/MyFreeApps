@@ -9,8 +9,9 @@
  * - Cancel: calls onOpenChange(false) and does NOT call mutation
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
 import DocumentUploadDialog from "../DocumentUploadDialog";
 
 // ---------------------------------------------------------------------------
@@ -164,6 +165,26 @@ describe("DocumentUploadDialog", () => {
 
     await user.click(screen.getByRole("button", { name: /cancel/i }));
 
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("keeps a title over the limit, says so, and doesn't create the document", async () => {
+    const user = userEvent.setup();
+    const mockCreate = vi.fn().mockReturnValue({ unwrap: () => Promise.resolve({}) });
+    mockUseCreateDocumentMutation.mockReturnValue(
+      [mockCreate, { isLoading: false }] as unknown as ReturnType<typeof useCreateDocumentMutation>,
+    );
+    renderDialog();
+    await user.click(screen.getByRole("button", { name: "Write text" }));
+
+    const title = screen.getByLabelText(/title/i);
+    expect(title).not.toHaveAttribute("maxLength");
+    fireEvent.change(title, { target: { value: "😀".repeat(DOCUMENT_TITLE_MAX_LENGTH + 1) } });
+    await user.type(screen.getByLabelText(/content/i), "Body");
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Keep this to 255 characters or fewer.");
+    expect(screen.getByText("256 / 255")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /create/i }));
     expect(mockCreate).not.toHaveBeenCalled();
   });
 });

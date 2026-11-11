@@ -5,7 +5,7 @@
  * Only `type` is required; everything else is best-effort metadata that
  * gets serialised into the `interview_details` JSONB column at submit time.
  */
-import type { UseFormRegister, FieldErrors } from "react-hook-form";
+import type { UseFormRegister, FieldErrors, UseFormWatch } from "react-hook-form";
 import {
   INTERVIEW_DURATION_MAX_MINUTES,
   INTERVIEW_DURATION_MIN_MINUTES,
@@ -15,6 +15,11 @@ import { INTERVIEW_TYPE_LABELS } from "@myjobhunter/api-client/constants/intervi
 import type { InterviewType } from "@myjobhunter/api-client/types/interview-type";
 import type { LogEventFormValues } from "@myjobhunter/api-client/types/log-event-form-values";
 import { isInterviewDurationValid } from "@myjobhunter/api-client/utils/isInterviewDurationValid";
+import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { interviewerNamesProblem } from "@myjobhunter/api-client/utils/interviewerNamesProblem";
+import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+
+import { FieldFeedback, fieldFeedbackAria } from "@platform/ui";
 
 const INTERVIEW_TYPE_OPTIONS = (
   Object.entries(INTERVIEW_TYPE_LABELS) as [InterviewType, string][]
@@ -23,6 +28,7 @@ const INTERVIEW_TYPE_OPTIONS = (
 interface Props {
   register: UseFormRegister<LogEventFormValues>;
   errors: FieldErrors<LogEventFormValues>;
+  watch: UseFormWatch<LogEventFormValues>;
   /**
    * When true, `scheduled_at` + `duration_minutes` stack vertically
    * instead of the 2-column grid. The inline edit affordance inside
@@ -41,12 +47,22 @@ interface Props {
 export default function InterviewDetailsFields({
   register,
   errors,
+  watch,
   stackedLayout = false,
   idPrefix = "interview",
 }: Props) {
   const dateDurationLayout = stackedLayout
     ? "space-y-3"
     : "grid grid-cols-2 gap-3";
+  const locationFeedback = {
+    id: `${idPrefix}-location`,
+    error: errors.interview_location_or_link?.message,
+    counter: characterCounter(watch("interview_location_or_link").trim(), INTERVIEW_LOCATION_MAX_LENGTH),
+  };
+  const interviewersFeedback = {
+    id: `${idPrefix}-interviewers`,
+    error: errors.interview_interviewer_names?.message,
+  };
   return (
     <fieldset className="border rounded-md p-3 space-y-3">
       <legend className="px-1 text-xs font-medium text-muted-foreground">
@@ -121,10 +137,14 @@ export default function InterviewDetailsFields({
         <input
           id={`${idPrefix}-location`}
           type="text"
-          {...register("interview_location_or_link", { maxLength: INTERVIEW_LOCATION_MAX_LENGTH })}
+          {...fieldFeedbackAria(locationFeedback)}
+          {...register("interview_location_or_link", {
+            validate: (value) => tooLongProblem(value.trim(), INTERVIEW_LOCATION_MAX_LENGTH) ?? true,
+          })}
           placeholder="https://meet.google.com/… or 123 Main St"
           className="w-full border rounded-md px-3 py-2 text-sm bg-background"
         />
+        <FieldFeedback {...locationFeedback} />
       </div>
 
       <div>
@@ -133,11 +153,13 @@ export default function InterviewDetailsFields({
         </label>
         <textarea
           id={`${idPrefix}-interviewers`}
-          {...register("interview_interviewer_names")}
+          {...fieldFeedbackAria(interviewersFeedback)}
+          {...register("interview_interviewer_names", { validate: (value) => interviewerNamesProblem(value) ?? true })}
           rows={2}
           placeholder="One per line"
           className="w-full border rounded-md px-3 py-2 text-sm bg-background"
         />
+        <FieldFeedback {...interviewersFeedback} />
       </div>
     </fieldset>
   );

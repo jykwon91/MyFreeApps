@@ -3,5 +3,7 @@ export interface EventFormErrors {
   occurred_at?: string;
   interview_type?: string;
   interview_duration_minutes?: string;
+  interview_location_or_link?: string;
+  note?: string;
   interview_interviewer_names?: string;
 }

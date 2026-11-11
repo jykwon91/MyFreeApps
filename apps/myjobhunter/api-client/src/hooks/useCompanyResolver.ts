@@ -10,6 +10,7 @@ import type { ReviewCompanyState } from "../types/application/review-company-sta
 import type { UrlHostname } from "../types/application/url-hostname";
 import type { Company } from "../types/company";
 import type { CompanyCreateRequest } from "../types/company-create-request";
+import { companyNameProblem } from "../utils/companyNameProblem";
 import { findCompanyByName } from "../utils/findCompanyByName";
 import { readCompanyId } from "../utils/readCompanyId";
 import { resolveExtractedCompany } from "../utils/resolveExtractedCompany";
@@ -30,6 +31,8 @@ export function useCompanyResolver(hostnameOf: UrlHostname): CompanyResolver {
   }
 
   async function addCompany(request: CompanyCreateRequest): Promise<Company> {
+    const nameProblem = companyNameProblem(request.name);
+    if (nameProblem) throw new Error(nameProblem);
     const created = await createCompany(request).unwrap();
     void triggerCompanyResearch(created.id)
       .unwrap()
@@ -57,6 +60,11 @@ export function useCompanyResolver(hostnameOf: UrlHostname): CompanyResolver {
     if (resolution.kind === "existing") {
       const { id, name: existingName, logo_url } = resolution.company;
       return { kind: "resolved", company: { kind: "tracked", companyId: id, name: existingName, logoUrl: logo_url } };
+    }
+    const nameProblem = companyNameProblem(resolution.request.name);
+    if (nameProblem) {
+      const company = { kind: "autoCreateFailed", name: resolution.request.name } as const;
+      return { kind: "failed", reason: "nameTooLong", company, error: new Error(nameProblem) };
     }
     try {
       const created = await addCompany(resolution.request);

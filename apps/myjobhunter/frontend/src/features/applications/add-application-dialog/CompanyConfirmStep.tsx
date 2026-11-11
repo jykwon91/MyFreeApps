@@ -13,14 +13,16 @@
  * presentation-only.
  */
 import * as Dialog from "@radix-ui/react-dialog";
-import { type UseFormRegister, type FieldErrors } from "react-hook-form";
-import { LoadingButton } from "@platform/ui";
+import { useId } from "react";
+import { type UseFormRegister, type UseFormWatch, type FieldErrors } from "react-hook-form";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
+import { addApplicationFormCounters } from "@myjobhunter/api-client/utils/addApplicationFormCounters";
 import type { Company } from "@myjobhunter/api-client/types/company";
 import type { DialogState } from "../useAddApplicationDialogState";
-import type { ReviewCompanyState } from "@myjobhunter/api-client/types/application/review-company-state";
 import type { AddApplicationFormValues } from "@myjobhunter/api-client/types/application/add-application-form-values";
 import CompanyCombobox from "../CompanyCombobox";
-import CompanyConfirmationPill from "../CompanyConfirmationPill";
+import ReviewBanner from "./ReviewBanner";
+import ReviewCompanyDisplay from "./ReviewCompanyDisplay";
 
 const REMOTE_OPTIONS: { value: AddApplicationFormValues["remote_type"]; label: string }[] = [
   { value: "unknown", label: "Unknown" },
@@ -33,6 +35,7 @@ interface CompanyConfirmStepProps {
   state: Extract<DialogState, { kind: "review" }>;
   companies: Company[];
   register: UseFormRegister<AddApplicationFormValues>;
+  watch: UseFormWatch<AddApplicationFormValues>;
   errors: FieldErrors<AddApplicationFormValues>;
   creatingApplication: boolean;
   onSubmit: React.FormEventHandler<HTMLFormElement>;
@@ -48,6 +51,7 @@ export default function CompanyConfirmStep({
   state,
   companies,
   register,
+  watch,
   errors,
   creatingApplication,
   onSubmit,
@@ -58,6 +62,13 @@ export default function CompanyConfirmStep({
   companyNameValue,
   onCompanyNameChange,
 }: CompanyConfirmStepProps) {
+  const uid = useId();
+  const counters = addApplicationFormCounters(watch());
+  const feedback = (field: "role_title" | "location" | "notes") => ({
+    id: `${uid}-${field}`,
+    error: errors[field]?.message,
+    counter: counters[field],
+  });
   return (
     <div className="space-y-4">
       <ReviewBanner sourceUrl={state.sourceUrl} summary={state.summary} />
@@ -95,32 +106,32 @@ export default function CompanyConfirmStep({
 
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <div>
-          <label className="block text-sm font-medium mb-1">
+          <label htmlFor={`${uid}-role_title`} className="block text-sm font-medium mb-1">
             Role title <span className="text-destructive">*</span>
           </label>
           <input
+            id={`${uid}-role_title`}
             type="text"
+            {...fieldFeedbackAria(feedback("role_title"))}
             {...register("role_title")}
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
             placeholder="e.g. Senior Backend Engineer"
           />
-          {errors.role_title ? (
-            <p className="text-xs text-destructive mt-1">{errors.role_title.message}</p>
-          ) : null}
+          <FieldFeedback {...feedback("role_title")} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium mb-1">Location</label>
+            <label htmlFor={`${uid}-location`} className="block text-sm font-medium mb-1">Location</label>
             <input
+              id={`${uid}-location`}
               type="text"
+              {...fieldFeedbackAria(feedback("location"))}
               {...register("location")}
               className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               placeholder="e.g. SF, NYC, Remote-EU"
             />
-            {errors.location ? (
-              <p className="text-xs text-destructive mt-1">{errors.location.message}</p>
-            ) : null}
+            <FieldFeedback {...feedback("location")} />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Remote</label>
@@ -138,16 +149,16 @@ export default function CompanyConfirmStep({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Notes</label>
+          <label htmlFor={`${uid}-notes`} className="block text-sm font-medium mb-1">Notes</label>
           <textarea
+            id={`${uid}-notes`}
+            {...fieldFeedbackAria(feedback("notes"))}
             {...register("notes")}
             rows={3}
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
             placeholder="Anything to remember about this role…"
           />
-          {errors.notes ? (
-            <p className="text-xs text-destructive mt-1">{errors.notes.message}</p>
-          ) : null}
+          <FieldFeedback {...feedback("notes")} />
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
@@ -165,85 +176,5 @@ export default function CompanyConfirmStep({
         </div>
       </form>
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// ReviewBanner
-// ---------------------------------------------------------------------------
-
-interface ReviewBannerProps {
-  sourceUrl: string | null;
-  summary: string | null;
-}
-
-function ReviewBanner({ sourceUrl, summary }: ReviewBannerProps) {
-  return (
-    <div className="rounded-md border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30 p-3">
-      <p className="text-sm font-medium text-green-800 dark:text-green-300">
-        Review and adjust before saving
-      </p>
-      {summary ? (
-        <p className="text-xs text-green-700 dark:text-green-400 mt-0.5 line-clamp-2">
-          {summary}
-        </p>
-      ) : null}
-      {sourceUrl ? (
-        <p className="text-xs text-muted-foreground mt-1 truncate">
-          Source: <span className="underline">{sourceUrl}</span>
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// ReviewCompanyDisplay — pill → combobox toggle orchestration.
-// ---------------------------------------------------------------------------
-
-interface ReviewCompanyDisplayProps {
-  company: ReviewCompanyState;
-  onChangeRequest: () => void;
-  onCompanyNameChange: (next: string) => void;
-}
-
-function ReviewCompanyDisplay({
-  company,
-  onChangeRequest,
-  onCompanyNameChange,
-}: ReviewCompanyDisplayProps) {
-  function handleChange() {
-    onCompanyNameChange(company.name);
-    onChangeRequest();
-  }
-
-  if (company.kind === "tracked") {
-    return (
-      <CompanyConfirmationPill
-        name={company.name}
-        logoUrl={company.logoUrl}
-        variant="tracked"
-        onChangeRequest={handleChange}
-      />
-    );
-  }
-  if (company.kind === "new" || company.kind === "manual") {
-    return (
-      <CompanyConfirmationPill
-        name={company.name}
-        logoUrl={company.kind === "manual" ? company.logoUrl : company.logoUrl}
-        variant="new"
-        onChangeRequest={handleChange}
-      />
-    );
-  }
-  // autoCreateFailed
-  return (
-    <CompanyConfirmationPill
-      name={company.name || "(no company found)"}
-      logoUrl={null}
-      variant="error"
-      onChangeRequest={handleChange}
-    />
   );
 }

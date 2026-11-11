@@ -15,34 +15,27 @@ import SearchInputsSection from "./dialog-sections/SearchInputsSection";
 import WhereWhenSection from "./dialog-sections/WhereWhenSection";
 import JobTypeSection from "./dialog-sections/JobTypeSection";
 import ExclusionsSection from "./dialog-sections/ExclusionsSection";
+import { SAVED_SEARCH_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
+import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
 import GreenhouseConfigSection from "./dialog-sections/GreenhouseConfigSection";
+import SavedSearchNameField from "./dialog-sections/SavedSearchNameField";
 import LeverConfigSection from "./dialog-sections/LeverConfigSection";
 import {
   DEFAULT_REFRESH_INTERVAL_MINUTES,
   REFRESH_INTERVAL_OPTIONS,
 } from "./refresh-interval";
+import { SOURCE_DESCRIPTIONS } from "./source-descriptions";
+import type { SourceKind } from "@/types/discovery/source-kind";
 import type { Country } from "@myjobhunter/api-client/types/discovery/country";
 import type { DatePosted } from "@myjobhunter/api-client/types/discovery/date-posted";
 import type { EmploymentType } from "@myjobhunter/api-client/types/discovery/employment-type";
 import type { Experience } from "@myjobhunter/api-client/types/discovery/experience";
-
-/** The three source types that have shipped adapters. */
-type SourceKind = "jsearch" | "greenhouse" | "lever";
 
 const SOURCE_OPTIONS: Array<{ value: SourceKind; label: string }> = [
   { value: "jsearch", label: "JSearch (Google Jobs)" },
   { value: "greenhouse", label: "Greenhouse" },
   { value: "lever", label: "Lever" },
 ];
-
-const SOURCE_DESCRIPTIONS: Record<SourceKind, string> = {
-  jsearch:
-    "JSearch will run this query against Google Jobs (LinkedIn, Indeed, Glassdoor, ZipRecruiter).",
-  greenhouse:
-    "Fetch all active postings from a company's official Greenhouse job board. No API key required.",
-  lever:
-    "Fetch all active postings from a company's official Lever job board. No API key required.",
-};
 
 interface NewSavedSearchDialogProps {
   open: boolean;
@@ -215,7 +208,10 @@ export default function NewSavedSearchDialog({
     };
   }
 
+  const nameProblem = tooLongProblem(name.trim(), SAVED_SEARCH_NAME_MAX_LENGTH);
+
   function validate(): string | null {
+    if (nameProblem) return `Name: ${nameProblem}`;
     if (source === "greenhouse") {
       if (!boardToken.trim()) return "Enter a Greenhouse board token";
       if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(boardToken.trim())) {
@@ -304,25 +300,12 @@ export default function NewSavedSearchDialog({
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
         {/* Name — optional label that allows multiple sources of the same kind */}
-        <div className="space-y-1">
-          <label htmlFor="source-name" className="block text-sm font-medium">
-            Name{" "}
-            <span className="text-muted-foreground font-normal">(optional)</span>
-          </label>
-          <input
-            id="source-name"
-            type="text"
-            maxLength={100}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. 'Stripe backend roles'"
-            className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+        <SavedSearchNameField id="source-name" value={name} onChange={setName} error={nameProblem}>
           <p className="text-xs text-muted-foreground">
             A label for this search. Required only if you want multiple active
             searches of the same type — each must have a unique name.
           </p>
-        </div>
+        </SavedSearchNameField>
 
         {/* Source picker */}
         <div className="space-y-1">

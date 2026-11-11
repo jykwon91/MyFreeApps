@@ -1,3 +1,5 @@
+import { textLength } from "./textLength";
+
 /** Most characters in the part before the @ (RFC 5321). */
 const LOCAL_PART_MAX_LENGTH = 64;
 /** Most characters in one dot-separated part of the domain (RFC 1035). */
@@ -10,8 +12,8 @@ const ALL_DIGITS = /^\d+$/;
 
 function isLocalPart(local: string): boolean {
   return (
-    local.length >= 1 &&
-    local.length <= LOCAL_PART_MAX_LENGTH &&
+    textLength(local) >= 1 &&
+    textLength(local) <= LOCAL_PART_MAX_LENGTH &&
     !LOCAL_PART_FORBIDDEN.test(local) &&
     !local.startsWith(".") &&
     !local.endsWith(".") &&
@@ -21,8 +23,8 @@ function isLocalPart(local: string): boolean {
 
 function isDomainLabel(label: string): boolean {
   return (
-    label.length >= 1 &&
-    label.length <= DOMAIN_LABEL_MAX_LENGTH &&
+    textLength(label) >= 1 &&
+    textLength(label) <= DOMAIN_LABEL_MAX_LENGTH &&
     DOMAIN_LABEL_PATTERN.test(label) &&
     !label.startsWith("-") &&
     !label.endsWith("-")

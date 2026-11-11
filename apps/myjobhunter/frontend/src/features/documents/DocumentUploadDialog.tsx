@@ -1,5 +1,8 @@
 import { useState, useRef } from "react";
 import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
+import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import DocumentTitleField from "./DocumentTitleField";
 import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
 import { DOCUMENT_KIND_OPTIONS } from "@myjobhunter/api-client/constants/documentKindOptions";
 import { DOCUMENT_UPLOAD_EXTENSIONS, DOCUMENT_UPLOAD_MIME_TYPES } from "@myjobhunter/api-client/constants/documentUploadLimits";
@@ -31,6 +34,7 @@ export default function DocumentUploadDialog({
   const [uploadDocument, { isLoading: uploading }] = useUploadDocumentMutation();
 
   const isLoading = creatingText || uploading;
+  const titleProblem = tooLongProblem(title, DOCUMENT_TITLE_MAX_LENGTH);
 
   function reset() {
     setTitle("");
@@ -44,6 +48,7 @@ export default function DocumentUploadDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (titleProblem) return;
     try {
       if (mode === "text") {
         await createDocument({
@@ -108,20 +113,13 @@ export default function DocumentUploadDialog({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium" htmlFor="new-doc-title">
-              Title
-            </label>
-            <input
-              id="new-doc-title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              placeholder="e.g. Cover letter for Acme Corp"
-              className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-            />
-          </div>
+          <DocumentTitleField
+            id="new-doc-title"
+            value={title}
+            onChange={setTitle}
+            error={titleProblem}
+            placeholder="e.g. Cover letter for Acme Corp"
+          />
 
           <div className="space-y-1">
             <label className="text-sm font-medium" htmlFor="new-doc-kind">

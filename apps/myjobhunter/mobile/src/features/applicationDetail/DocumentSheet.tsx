@@ -2,7 +2,9 @@ import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/doc
 import { DOCUMENT_KIND_OPTIONS } from "@myjobhunter/api-client/constants/documentKindOptions";
 import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@myjobhunter/api-client/store/documentsApi";
 import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
+import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
 import { documentChangesRequest } from "@myjobhunter/api-client/utils/documentChangesRequest";
+import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
 import { FormField, FormSheet, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
@@ -25,12 +27,13 @@ export default function DocumentSheet({ applicationId, document, onClose }: Docu
   const [failure, setFailure] = useState<string | null>(null);
   const isBusy = isCreating || isUpdating;
   const hasFile = document?.has_file ?? false;
-  const titleError = hasTried && title.trim() === "" ? MESSAGES.titleRequired : undefined;
+  const titleTooLong = tooLongProblem(title, DOCUMENT_TITLE_MAX_LENGTH);
+  const titleError = hasTried && title.trim() === "" ? MESSAGES.titleRequired : titleTooLong;
   const bodyError = hasTried && !document && body.trim() === "" ? MESSAGES.contentRequired : undefined;
 
   async function save(): Promise<void> {
     setHasTried(true);
-    if (title.trim() === "" || (!document && body.trim() === "")) return;
+    if (title.trim() === "" || titleTooLong || (!document && body.trim() === "")) return;
     setFailure(null);
     try {
       if (document) {
@@ -51,7 +54,7 @@ export default function DocumentSheet({ applicationId, document, onClose }: Docu
 
   return (
     <FormSheet failure={failure} isOpen onRequestClose={() => (isBusy ? undefined : onClose())} title={document ? MESSAGES.editTitle : MESSAGES.addTitle}>
-      <FormField editable={!isBusy} error={titleError} label={MESSAGES.titleLabel} maxLength={DOCUMENT_TITLE_MAX_LENGTH} onChangeText={setTitle} placeholder={MESSAGES.titlePlaceholder} required value={title} />
+      <FormField counter={characterCounter(title, DOCUMENT_TITLE_MAX_LENGTH)} editable={!isBusy} error={titleError} label={MESSAGES.titleLabel} onChangeText={setTitle} placeholder={MESSAGES.titlePlaceholder} required value={title} />
       <ChoiceGroup disabled={isBusy} label={MESSAGES.kindLabel} onChange={setKind} options={DOCUMENT_KIND_OPTIONS} required value={kind} />
       {hasFile ? (
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`${document?.filename ?? ""} — ${MESSAGES.fileContent}`}</Text>

@@ -9,8 +9,9 @@
  *   - Inputs are disabled while loading.
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { DISPLAY_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import CreateDemoDialog from "../CreateDemoDialog";
 
 vi.mock("@radix-ui/react-dialog", async (importOriginal) => {
@@ -133,5 +134,24 @@ describe("CreateDemoDialog", () => {
     expect(screen.getByLabelText(/email/i)).toBeDisabled();
     expect(screen.getByLabelText(/display name/i)).toBeDisabled();
     expect(screen.getByRole("button", { name: /cancel/i })).toBeDisabled();
+  });
+
+  it("keeps a display name over the limit, says so, and doesn't submit it", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<CreateDemoDialog open isLoading={false} onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    const name = screen.getByLabelText(/display name/i);
+    expect(name).not.toHaveAttribute("maxLength");
+    fireEvent.change(name, { target: { value: "😀".repeat(DISPLAY_NAME_MAX_LENGTH + 1) } });
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Keep this to 100 characters or fewer.");
+    expect(screen.getByText("101 / 100")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^create$/i }));
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    fireEvent.change(name, { target: { value: "😀".repeat(DISPLAY_NAME_MAX_LENGTH) } });
+    await user.click(screen.getByRole("button", { name: /^create$/i }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 });

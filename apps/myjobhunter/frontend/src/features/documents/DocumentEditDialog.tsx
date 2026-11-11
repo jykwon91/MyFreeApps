@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
+import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import DocumentTitleField from "./DocumentTitleField";
 import type { Document } from "@myjobhunter/api-client/types/document/document";
 import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
 import { DOCUMENT_KIND_OPTIONS } from "@myjobhunter/api-client/constants/documentKindOptions";
@@ -22,10 +25,13 @@ export default function DocumentEditDialog({
   const [body, setBody] = useState(document.body ?? "");
   const [updateDocument, { isLoading }] = useUpdateDocumentMutation();
 
+  const titleProblem = tooLongProblem(title, DOCUMENT_TITLE_MAX_LENGTH);
+
   if (!open) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (titleProblem) return;
     const patch = documentChangesRequest(document, { title, kind, body });
 
     if (Object.keys(patch).length === 0) {
@@ -54,19 +60,7 @@ export default function DocumentEditDialog({
         <h2 className="text-lg font-semibold">Edit Document</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium" htmlFor="edit-doc-title">
-              Title
-            </label>
-            <input
-              id="edit-doc-title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-            />
-          </div>
+          <DocumentTitleField id="edit-doc-title" value={title} onChange={setTitle} error={titleProblem} />
 
           <div className="space-y-1">
             <label className="text-sm font-medium" htmlFor="edit-doc-kind">

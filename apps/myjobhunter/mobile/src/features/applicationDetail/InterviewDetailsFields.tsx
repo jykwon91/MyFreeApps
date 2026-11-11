@@ -1,4 +1,5 @@
 import { INTERVIEW_LOCATION_MAX_LENGTH } from "@myjobhunter/api-client/constants/interviewDetailLimits";
+import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
 import { FormField, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { APPLICATION_EVENT_MESSAGES as MESSAGES } from "../../constants/applicationEvents";
@@ -37,8 +38,9 @@ export default function InterviewDetailsFields({ values, onChange, errors, disab
       <FormField
         autoCapitalize="none"
         editable={!disabled}
+        counter={characterCounter(values.interview_location_or_link.trim(), INTERVIEW_LOCATION_MAX_LENGTH)}
+        error={errors.interview_location_or_link}
         label={MESSAGES.locationLabel}
-        maxLength={INTERVIEW_LOCATION_MAX_LENGTH}
         onChangeText={(next) => onChange("interview_location_or_link", next)}
         placeholder={MESSAGES.locationPlaceholder}
         value={values.interview_location_or_link}

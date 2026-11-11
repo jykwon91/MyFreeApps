@@ -100,4 +100,23 @@ describe("FormField", () => {
     await rerender(<FormField label="Email" />);
     expect(announce).toHaveBeenCalledTimes(2);
   });
+
+  it("shows a counter that screen readers skip, and announces an error that doesn't change with it", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+    announce.mockClear();
+    const error = "Keep this to 5,000 characters or fewer.";
+
+    const { rerender } = await render(<FormField counter="5,100 / 5,000" error={error} label="Notes" />);
+    expect(screen.getByText("5,100 / 5,000", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByText("5,100 / 5,000")).toBeNull();
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(screen.getByRole("alert")).toHaveTextContent(error);
+    expect(announce).toHaveBeenCalledTimes(1);
+
+    // Another over-limit value: the counter moves, the announced message does not.
+    await rerender(<FormField counter="5,101 / 5,000" error={error} label="Notes" />);
+    expect(screen.getByText("5,101 / 5,000", { includeHiddenElements: true })).toBeTruthy();
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenLastCalledWith(error);
+  });
 });

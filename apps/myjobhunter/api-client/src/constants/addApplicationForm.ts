@@ -6,7 +6,8 @@ export { COMPANY_NAME_MAX_LENGTH } from "./companyFieldLimits";
 // Notes share APPLICATION_NOTES_MAX_LENGTH. Bounds mirror ApplicationCreateRequest, CompanyCreateRequest and JdParseRequest on the backend.
 export const ROLE_TITLE_MAX_LENGTH = 200;
 export const LOCATION_MAX_LENGTH = 200;
-export const JOB_URL_MAX_LENGTH = 2048;
+/** Pydantic's `AnyHttpUrl` refuses a URL over 2083 characters (`JdUrlExtractRequest`, `ApplicationCreateRequest`); their `_URL_MAX_LEN` of 2048 is not enforced. */
+export const JOB_URL_MAX_LENGTH = 2083;
 export const JD_TEXT_MAX_LENGTH = 50000;
 
 /** A whole pasted value that is a job-posting link, so it can be read without a button press. */

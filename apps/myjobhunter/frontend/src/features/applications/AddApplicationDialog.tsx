@@ -43,6 +43,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     formState: { errors },
     reset: resetForm,
     setValue,
+    watch,
   } = useForm<AddApplicationFormValues>({
     resolver: addApplicationFormResolver,
     defaultValues: {
@@ -96,6 +97,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
           {flow.state.kind === "input" && flow.state.inputMode === "url" ? (
             <PasteLinkStep
               urlValue={flow.urlValue}
+              problem={flow.urlProblem}
               onUrlChange={flow.handleUrlInputChange}
               onUrlPaste={flow.handleUrlPaste}
               onUrlSubmit={flow.handleUrlSubmit}
@@ -106,6 +108,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
           {flow.state.kind === "input" && flow.state.inputMode === "text" ? (
             <PasteTextStep
               textValue={flow.textValue}
+              problem={flow.textProblem}
               onTextChange={flow.setTextValue}
               onTextSubmit={flow.handleTextSubmit}
               onSetInputMode={flow.setInputMode}
@@ -135,6 +138,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
               state={flow.state}
               companies={flow.companies}
               register={register}
+              watch={watch}
               errors={errors}
               creatingApplication={flow.creatingApplication}
               onSubmit={handleSubmit(onSubmit)}

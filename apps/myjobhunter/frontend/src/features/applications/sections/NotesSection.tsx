@@ -11,7 +11,12 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useUpdateApplicationMutation } from "@myjobhunter/api-client/store/applicationsApi";
-import { extractErrorMessage } from "@platform/ui";
+import { APPLICATION_NOTES_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
+import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import { extractErrorMessage, FieldFeedback, fieldFeedbackAria } from "@platform/ui";
+import NotesSaveStatus from "./NotesSaveStatus";
+import type { NotesSaveState } from "./NotesSaveState";
 
 interface NotesSectionProps {
   applicationId: string;
@@ -20,20 +25,24 @@ interface NotesSectionProps {
 }
 
 const DEBOUNCE_MS = 500;
-
-type SaveState =
-  | { status: "idle" }
-  | { status: "saving" }
-  | { status: "saved" }
-  | { status: "error"; message: string };
+const NOTES_FIELD_ID = "application-notes";
 
 export default function NotesSection({ applicationId, initialValue }: NotesSectionProps) {
   const [value, setValue] = useState(initialValue);
-  const [saveState, setSaveState] = useState<SaveState>({ status: "idle" });
+  const [saveState, setSaveState] = useState<NotesSaveState>({ status: "idle" });
   const [updateApplication] = useUpdateApplicationMutation();
+  const updateApplicationRef = useRef(updateApplication);
+  const applicationIdRef = useRef(applicationId);
+  useEffect(() => {
+    updateApplicationRef.current = updateApplication;
+    applicationIdRef.current = applicationId;
+  }, [updateApplication, applicationId]);
 
   const debounceRef = useRef<number | null>(null);
   const lastSavedRef = useRef(initialValue);
+  const valueRef = useRef(initialValue);
+  // Counts the saves begun and the edits that outdate one; a result whose number isn't the latest is dropped.
+  const saveGenerationRef = useRef(0);
 
   // Re-sync from server on prop change (e.g. drawer reopens with a different
   // application id) — but only when the user hasn't typed anything yet.
@@ -46,6 +55,8 @@ export default function NotesSection({ applicationId, initialValue }: NotesSecti
   }, [initialValue, applicationId]);
 
   async function performSave(next: string) {
+    saveGenerationRef.current += 1;
+    const generation = saveGenerationRef.current;
     setSaveState({ status: "saving" });
     try {
       await updateApplication({
@@ -53,8 +64,10 @@ export default function NotesSection({ applicationId, initialValue }: NotesSecti
         patch: { notes: next },
       }).unwrap();
       lastSavedRef.current = next;
+      if (generation !== saveGenerationRef.current) return;
       setSaveState({ status: "saved" });
     } catch (err) {
+      if (generation !== saveGenerationRef.current) return;
       setSaveState({
         status: "error",
         message: extractErrorMessage(err),
@@ -62,10 +75,15 @@ export default function NotesSection({ applicationId, initialValue }: NotesSecti
     }
   }
 
-  function scheduleSave(next: string) {
+  function cancelPendingSave() {
     if (debounceRef.current !== null) {
       window.clearTimeout(debounceRef.current);
+      debounceRef.current = null;
     }
+  }
+
+  function scheduleSave(next: string) {
+    cancelPendingSave();
     debounceRef.current = window.setTimeout(() => {
       void performSave(next);
     }, DEBOUNCE_MS);
@@ -74,6 +92,15 @@ export default function NotesSection({ applicationId, initialValue }: NotesSecti
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const next = e.target.value;
     setValue(next);
+    valueRef.current = next;
+    // Over the backend's limit the save would only be refused, so none is sent (nor an earlier, stale one,
+    // pending or already in flight: its result is dropped).
+    if (tooLongProblem(next, APPLICATION_NOTES_MAX_LENGTH)) {
+      cancelPendingSave();
+      saveGenerationRef.current += 1;
+      setSaveState({ status: "idle" });
+      return;
+    }
     if (next === lastSavedRef.current) {
       setSaveState({ status: "idle" });
       return;
@@ -82,23 +109,29 @@ export default function NotesSection({ applicationId, initialValue }: NotesSecti
   }
 
   function handleRetry() {
+    if (notesProblem) return;
     void performSave(value);
   }
 
-  // Cleanup any pending debounce on unmount.
+  // Closing within the debounce window must not lose the edit: save it now, if it fits and is new.
   useEffect(() => {
     return () => {
-      if (debounceRef.current !== null) {
-        window.clearTimeout(debounceRef.current);
-      }
+      if (debounceRef.current === null) return;
+      window.clearTimeout(debounceRef.current);
+      const pending = valueRef.current;
+      if (pending === lastSavedRef.current || tooLongProblem(pending, APPLICATION_NOTES_MAX_LENGTH)) return;
+      void updateApplicationRef.current({ id: applicationIdRef.current, patch: { notes: pending } });
     };
   }, []);
+
+  const notesProblem = tooLongProblem(value, APPLICATION_NOTES_MAX_LENGTH);
+  const feedback = { id: NOTES_FIELD_ID, error: notesProblem, counter: characterCounter(value, APPLICATION_NOTES_MAX_LENGTH) };
 
   return (
     <section>
       <header className="flex items-center justify-between mb-2">
         <h2 className="text-sm font-medium">Notes</h2>
-        <SaveStatus state={saveState} onRetry={handleRetry} />
+        <NotesSaveStatus state={saveState} onRetry={handleRetry} />
       </header>
       <textarea
         value={value}
@@ -107,35 +140,10 @@ export default function NotesSection({ applicationId, initialValue }: NotesSecti
         placeholder="Add notes — interview takeaways, recruiter conversations, follow-up plans…"
         className="w-full rounded-md border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         aria-label="Application notes"
+        id={NOTES_FIELD_ID}
+        {...fieldFeedbackAria(feedback)}
       />
+      <FieldFeedback {...feedback} />
     </section>
-  );
-}
-
-interface SaveStatusProps {
-  state: SaveState;
-  onRetry: () => void;
-}
-
-function SaveStatus({ state, onRetry }: SaveStatusProps) {
-  if (state.status === "idle") return null;
-  if (state.status === "saving") {
-    return <span className="text-xs text-muted-foreground">Saving…</span>;
-  }
-  if (state.status === "saved") {
-    return <span className="text-xs text-muted-foreground">Saved</span>;
-  }
-  // error
-  return (
-    <span className="text-xs text-destructive flex items-center gap-2">
-      Save failed — {state.message}
-      <button
-        type="button"
-        onClick={onRetry}
-        className="underline hover:no-underline font-medium"
-      >
-        Retry
-      </button>
-    </span>
   );
 }

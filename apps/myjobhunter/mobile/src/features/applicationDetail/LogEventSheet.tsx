@@ -1,5 +1,6 @@
 import { EVENT_NOTE_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import { useLogApplicationEventMutation } from "@myjobhunter/api-client/store/applicationsApi";
+import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
 import { emptyFormValues } from "@myjobhunter/api-client/utils/interviewEventForm";
 import { logEventRequest } from "@myjobhunter/api-client/utils/logEventRequest";
 import { FormField, FormSheet, useToast } from "@platform/mobile";
@@ -48,8 +49,9 @@ export default function LogEventSheet({ applicationId, onClose }: LogEventSheetP
       {form.hasInterviewFields ? <InterviewDetailsFields disabled={isLoading} errors={errors} onChange={change} values={values} /> : null}
       <FormField
         editable={!isLoading}
+        counter={characterCounter(values.note.trim(), EVENT_NOTE_MAX_LENGTH)}
+        error={errors.note}
         label={MESSAGES.noteLabel}
-        maxLength={EVENT_NOTE_MAX_LENGTH}
         multiline
         onChangeText={(next) => change("note", next)}
         placeholder={MESSAGES.notePlaceholder}

@@ -4,13 +4,17 @@ import {
   JD_READ_LONG_RUNNING_MS,
   JD_TEXT_MAX_LENGTH,
   JOB_URL_MAX_LENGTH,
+  LOCATION_MAX_LENGTH,
+  ROLE_TITLE_MAX_LENGTH,
 } from "@myjobhunter/api-client/constants/addApplicationForm";
+import { COMPANY_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/companyFormProblems";
+import { APPLICATION_NOTES_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import type { JdParseResponse } from "@myjobhunter/api-client/types/application/jd-parse-response";
 import type { JdUrlExtractResponse } from "@myjobhunter/api-client/types/application/jd-url-extract-response";
 import type { Company } from "@myjobhunter/api-client/types/company";
 import { baseApi } from "@platform/core/store/baseApi";
 import { DISCARD_MESSAGES } from "@platform/mobile";
-import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
 import { Alert } from "react-native";
@@ -514,7 +518,7 @@ describe("typed in", () => {
     expect(requestsTo(sent, "POST /applications")[0]?.body).toMatchObject({ company_id: "co-airbnb", url: LINK });
   });
 
-  it("starts the search within a company name's limit when the posting's name runs past it", async () => {
+  it("keeps a posting's long company name in the search, says it's too long, and offers no add", async () => {
     const longName = `Acme ${"x".repeat(COMPANY_NAME_MAX_LENGTH)}`;
     serveAdd({
       "POST /applications/extract-from-url": ok(extracted({ company: longName })),
@@ -523,8 +527,30 @@ describe("typed in", () => {
     await openAddScreen();
     await readLink();
     await fireEvent.press(await screen.findByRole("button", { name: `${MESSAGES.companyLabel}, ${longName}` }));
+    const picker = within(await screen.findByTestId("company-picker"));
 
-    expect((await screen.findByLabelText(MESSAGES.searchLabel)).props.value).toBe(longName.slice(0, COMPANY_NAME_MAX_LENGTH));
+    expect((await screen.findByLabelText(MESSAGES.searchLabel)).props.value).toBe(longName);
+    expect(picker.getByText(COMPANY_FORM_PROBLEMS.nameTooLong)).toBeTruthy();
+    expect(picker.queryByRole("button", { name: new RegExp(`^${MESSAGES.addCompany} “`) })).toBeNull();
+
+    await fireEvent.changeText(screen.getByLabelText(MESSAGES.searchLabel), "😀".repeat(COMPANY_NAME_MAX_LENGTH));
+    expect(picker.queryByText(COMPANY_FORM_PROBLEMS.nameTooLong)).toBeNull();
+    expect(await picker.findByRole("button", { name: new RegExp(`^${MESSAGES.addCompany} “`) })).toBeTruthy();
+  });
+
+  it("doesn't try to add a read company name that is too long: it says so in the banner and again on Save", async () => {
+    const longName = `Acme ${"x".repeat(COMPANY_NAME_MAX_LENGTH)}`;
+    const sent = serveAdd({ "POST /applications/extract-from-url": ok(extracted({ company: longName })) });
+    await openAddScreen();
+    await readLink();
+
+    expect(await screen.findAllByText(COMPANY_FORM_PROBLEMS.nameTooLong)).not.toHaveLength(0);
+    expect(requestsTo(sent, "POST /companies")).toHaveLength(0);
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+
+    expect((await screen.findAllByText(COMPANY_FORM_PROBLEMS.nameTooLong)).length).toBeGreaterThan(1);
+    expect(requestsTo(sent, "POST /companies")).toHaveLength(0);
+    expect(requestsTo(sent, "POST /applications")).toHaveLength(0);
   });
 
   it("shows a skeleton of the companies while they load, and a way to try again when they don't", async () => {
@@ -561,16 +587,31 @@ describe("checking and saving", () => {
     expect(screen.queryByText(ADD_APPLICATION_FORM_PROBLEMS.roleTitleRequired)).toBeNull();
   });
 
-  it("caps each field at what the server accepts", async () => {
-    serveAdd({ "POST /applications/extract-from-url": ok(extracted()) });
+  it("doesn't cut pasted text short: it says what is too long and won't save it", async () => {
+    const sent = serveAdd({ "POST /applications/extract-from-url": ok(extracted()) });
     await openAddScreen();
-    expect(field(MESSAGES.linkLabel).props.maxLength).toBe(2048);
+    expect(field(MESSAGES.linkLabel).props.maxLength).toBeUndefined();
     await readLink();
     await screen.findByText(MESSAGES.reviewHeading);
+    expect(field(ROLE_FIELD).props.maxLength).toBeUndefined();
+    expect(field(MESSAGES.locationLabel).props.maxLength).toBeUndefined();
+    expect(field(MESSAGES.notesLabel).props.maxLength).toBeUndefined();
 
-    expect(field(ROLE_FIELD).props.maxLength).toBe(200);
-    expect(field(MESSAGES.locationLabel).props.maxLength).toBe(200);
-    expect(field(MESSAGES.notesLabel).props.maxLength).toBe(5000);
+    // An emoji is one character to the backend: 200 of them fit, one more is too long.
+    const tooLongRole = "😀".repeat(ROLE_TITLE_MAX_LENGTH + 1);
+    await fireEvent.changeText(field(ROLE_FIELD), tooLongRole);
+    await fireEvent.changeText(field(MESSAGES.locationLabel), "a".repeat(LOCATION_MAX_LENGTH + 1));
+    await fireEvent.changeText(field(MESSAGES.notesLabel), "a".repeat(APPLICATION_NOTES_MAX_LENGTH + 1));
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
+
+    expect(await screen.findByText(ADD_APPLICATION_FORM_PROBLEMS.roleTitleTooLong)).toBeTruthy();
+    expect(screen.getByText(ADD_APPLICATION_FORM_PROBLEMS.locationTooLong)).toBeTruthy();
+    expect(screen.getByText(ADD_APPLICATION_FORM_PROBLEMS.notesTooLong)).toBeTruthy();
+    expect(field(ROLE_FIELD).props.value).toBe(tooLongRole);
+    expect(requestsTo(sent, "POST /applications")).toHaveLength(0);
+
+    await fireEvent.changeText(field(ROLE_FIELD), "😀".repeat(ROLE_TITLE_MAX_LENGTH));
+    expect(screen.queryByText(ADD_APPLICATION_FORM_PROBLEMS.roleTitleTooLong)).toBeNull();
   });
 
   it("says when saving failed, keeping everything typed, and saves on a second try", async () => {

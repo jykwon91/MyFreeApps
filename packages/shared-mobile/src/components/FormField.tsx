@@ -1,4 +1,5 @@
 import { Text, TextInput, View } from "react-native";
+import CharacterCounter from "./CharacterCounter";
 import { useAnnouncement } from "../hooks/useAnnouncement";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
@@ -8,6 +9,7 @@ export default function FormField({
   label,
   error,
   hint,
+  counter,
   required = false,
   trailing,
   style,
@@ -61,6 +63,7 @@ export default function FormField({
       ) : hint ? (
         <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>{hint}</Text>
       ) : null}
+      {counter ? <CharacterCounter counter={counter} isOver={error !== undefined} /> : null}
     </View>
   );
 }

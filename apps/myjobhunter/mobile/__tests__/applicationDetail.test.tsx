@@ -155,7 +155,7 @@ it("saves edited notes when Save is pressed, and says so", async () => {
   await renderApplicationDetail(ID);
   const field = await screen.findByDisplayValue("Recruiter is Sam.");
   const save = screen.getByRole("button", { name: NOTES.save });
-  expect(field.props.maxLength).toBe(APPLICATION_NOTES_MAX_LENGTH);
+  expect(field.props.maxLength).toBeUndefined();
 
   // Nothing to save until something changes.
   expect(save).toBeDisabled();
@@ -168,6 +168,31 @@ it("saves edited notes when Save is pressed, and says so", async () => {
     { notes: "Recruiter is Sam. Onsite next week." },
   ]);
   expect(screen.getByRole("button", { name: NOTES.save })).toBeDisabled();
+});
+
+it("says when notes are too long, keeps all of them and won't save", async () => {
+  const sent = serve({ ...applicationDetailRoutes(STRIPE), [`PATCH /applications/${ID}`]: () => ({ status: 200, data: STRIPE }) });
+  await renderApplicationDetail(ID);
+  const field = await screen.findByDisplayValue("Recruiter is Sam.");
+  // 😀 is one character to the backend but two to JavaScript: this many fit, one more doesn't.
+  const fits = "😀".repeat(APPLICATION_NOTES_MAX_LENGTH);
+  const tooLong = `${fits}😀`;
+
+  await fireEvent.changeText(field, fits);
+  expect(screen.queryByText(/Keep this to/)).toBeNull();
+  expect(screen.getByRole("button", { name: NOTES.save })).toBeEnabled();
+
+  await fireEvent.changeText(field, tooLong);
+  expect(await screen.findByText("Keep this to 5,000 characters or fewer.")).toBeTruthy();
+  expect(screen.getByDisplayValue(tooLong)).toBeTruthy();
+  expect(screen.getByText("5,001 / 5,000", { includeHiddenElements: true })).toBeTruthy();
+
+  // Over by more: the alert reads the same (so it isn't announced again) and only the counter moves.
+  await fireEvent.changeText(field, `${tooLong}😀`);
+  expect(await screen.findByText("5,002 / 5,000", { includeHiddenElements: true })).toBeTruthy();
+  expect(screen.getAllByRole("alert").map((alert) => alert.props.children)).toEqual(["Keep this to 5,000 characters or fewer."]);
+  expect(screen.getByRole("button", { name: NOTES.save })).toBeDisabled();
+  expect(sent.some(({ route }) => route === `PATCH /applications/${ID}`)).toBe(false);
 });
 
 it("keeps the typed notes and says so when saving them fails", async () => {
