@@ -1,5 +1,7 @@
 import api from "@platform/core/lib/api";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { DASHBOARD_MESSAGES } from "../src/constants/dashboard";
+import { EMPTY_BOARD } from "../test-support/emptyBoard";
 import { serve } from "../test-support/fakeServer";
 import { storedItems } from "../test-support/memorySecureStore";
 import { renderApp } from "../test-support/renderApp";
@@ -48,11 +50,11 @@ describe("signing in", () => {
   });
 
   it("signs in, keeps the session on the phone, and opens the Dashboard tab", async () => {
-    const sent = serve({ "POST /auth/mobile/login": () => ({ status: 200, data: tokens(1) }) });
+    const sent = serve({ ...EMPTY_BOARD, "POST /auth/mobile/login": () => ({ status: 200, data: tokens(1) }) });
     await renderApp();
     await submitCredentials();
 
-    expect(await screen.findByRole("header", { name: "Dashboard" })).toBeTruthy();
+    expect(await screen.findByRole("header", { name: DASHBOARD_MESSAGES.noneHeading })).toBeTruthy();
     expect(screen).toHavePathname("/");
     expect(sent[0].body).toEqual(
       expect.objectContaining({ email: ACCOUNT_EMAIL, password: "correct horse", device_name: "Test Phone" }),
@@ -67,6 +69,7 @@ describe("signing in", () => {
 
   it("asks for the two-step code, then signs in with it", async () => {
     const sent = serve({
+      ...EMPTY_BOARD,
       "POST /auth/mobile/login": (body) =>
         body.totp_code ? { status: 200, data: tokens(2) } : { status: 200, data: { detail: "totp_required" } },
     });
@@ -76,8 +79,10 @@ describe("signing in", () => {
     await fireEvent.changeText(await screen.findByLabelText("Authentication code"), "123456");
     await fireEvent.press(screen.getByRole("button", { name: "Verify" }));
 
-    expect(await screen.findByRole("header", { name: "Dashboard" })).toBeTruthy();
-    expect(sent.map((request) => request.body.totp_code ?? null)).toEqual([null, "123456"]);
+    expect(await screen.findByRole("header", { name: DASHBOARD_MESSAGES.noneHeading })).toBeTruthy();
+    expect(
+      sent.filter((request) => request.route === "POST /auth/mobile/login").map((request) => request.body.totp_code ?? null),
+    ).toEqual([null, "123456"]);
     await waitFor(() => expect(storedSession()?.refreshToken).toBe("r2"));
   });
 

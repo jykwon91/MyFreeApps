@@ -20,24 +20,18 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import KanbanCard from "./KanbanCard";
 import { columnDroppableId } from "./use-kanban-drag-handler";
-import { useLaneCollapse, type KanbanLane } from "./use-lane-collapse";
+import { useLaneCollapse } from "./use-lane-collapse";
 import type { KanbanColumn as KanbanColumnId } from "@myjobhunter/api-client/types/kanban/kanban-column";
 import { KANBAN_COLUMN_LABELS } from "@myjobhunter/api-client/constants/kanbanColumnLabels";
+import { KANBAN_LANE_LABELS } from "@myjobhunter/api-client/constants/kanbanLaneLabels";
 import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
+import type { KanbanLane } from "@myjobhunter/api-client/types/kanban/kanban-lane";
+import { splitKanbanLanes } from "@myjobhunter/api-client/utils/splitKanbanLanes";
 
 interface KanbanColumnProps {
   column: KanbanColumnId;
   items: KanbanItem[];
   onSelectCard: (id: string) => void;
-}
-
-const LANE_LABELS: Record<KanbanLane, string> = {
-  strong_fit: "Strong fit",
-  everything_else: "Everything else",
-};
-
-function laneFor(verdict: string | null): KanbanLane {
-  return verdict === "strong_fit" ? "strong_fit" : "everything_else";
 }
 
 export default function KanbanColumn({
@@ -48,10 +42,7 @@ export default function KanbanColumn({
   const droppableId = columnDroppableId(column);
   const { setNodeRef, isOver } = useDroppable({ id: droppableId });
 
-  const strongFit = items.filter((i) => laneFor(i.verdict) === "strong_fit");
-  const everythingElse = items.filter(
-    (i) => laneFor(i.verdict) === "everything_else",
-  );
+  const lanes = splitKanbanLanes(items);
 
   return (
     <section
@@ -77,10 +68,10 @@ export default function KanbanColumn({
           items={items.map((i) => i.id)}
           strategy={verticalListSortingStrategy}
         >
-          <Lane lane="strong_fit" items={strongFit} onSelectCard={onSelectCard} />
+          <Lane lane="strong_fit" items={lanes.strong_fit} onSelectCard={onSelectCard} />
           <Lane
             lane="everything_else"
-            items={everythingElse}
+            items={lanes.everything_else}
             onSelectCard={onSelectCard}
           />
         </SortableContext>
@@ -114,7 +105,7 @@ function Lane({ lane, items, onSelectCard }: LaneProps) {
         type="button"
         onClick={toggle}
         aria-expanded={!collapsed}
-        aria-label={`${LANE_LABELS[lane]} lane`}
+        aria-label={`${KANBAN_LANE_LABELS[lane]} lane`}
         className="w-full flex items-center gap-1.5 px-1 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors"
       >
         {collapsed ? (
@@ -123,7 +114,7 @@ function Lane({ lane, items, onSelectCard }: LaneProps) {
           <ChevronDown size={12} aria-hidden="true" />
         )}
         <span className={isStrong ? "text-emerald-700 dark:text-emerald-400" : ""}>
-          {LANE_LABELS[lane]}
+          {KANBAN_LANE_LABELS[lane]}
         </span>
         <span className="ml-auto tabular-nums">{items.length}</span>
       </button>

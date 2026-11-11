@@ -1,6 +1,7 @@
 routes:
+  # The website sends / on to /dashboard; the app opens on its Dashboard tab.
   /:
-    not_on_mobile: Not built yet.
+    screen: (app)/(tabs)/index
   /analyze:
     not_on_mobile: Not built yet.
   # The website adds an application in a dialog on this page; the app adds it on (app)/applications/new.
@@ -14,8 +15,9 @@ routes:
     screen: (app)/companies/index
   /companies/:id:
     screen: (app)/companies/[id]
+  # The board's drag and drop is a Move button on each card; its drawer is the application's screen.
   /dashboard:
-    not_on_mobile: Not built yet.
+    screen: (app)/(tabs)/index
   /discover:
     not_on_mobile: Not built yet.
   # On More rather than a tab: the website's own phone tab bar leaves it out too. Its Add document

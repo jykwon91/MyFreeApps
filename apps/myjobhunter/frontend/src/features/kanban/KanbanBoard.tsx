@@ -33,6 +33,7 @@ import KanbanMobileList from "./KanbanMobileList";
 import KanbanEmptyState from "./KanbanEmptyState";
 import { useKanbanDragHandler } from "./use-kanban-drag-handler";
 import { columnForEventType } from "@myjobhunter/api-client/utils/columnForEventType";
+import { groupKanbanItems } from "@myjobhunter/api-client/utils/groupKanbanItems";
 import type { KanbanColumn as KanbanColumnId } from "@myjobhunter/api-client/types/kanban/kanban-column";
 import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
 
@@ -48,19 +49,7 @@ export default function KanbanBoard({ items, onSelectCard }: KanbanBoardProps) {
 
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const itemsByColumn = useMemo<Record<KanbanColumnId, KanbanItem[]>>(() => {
-    const grouped: Record<KanbanColumnId, KanbanItem[]> = {
-      applied: [],
-      interviewing: [],
-      offer: [],
-      closed: [],
-    };
-    for (const item of items) {
-      const col = columnForEventType(item.latest_event_type);
-      grouped[col].push(item);
-    }
-    return grouped;
-  }, [items]);
+  const itemsByColumn = useMemo(() => groupKanbanItems(items), [items]);
 
   const itemById = useMemo(() => {
     const map = new Map<string, KanbanItem>();

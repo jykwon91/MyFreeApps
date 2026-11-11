@@ -1,5 +1,5 @@
 import { AppState } from "react-native";
-import { refetchOnForeground } from "../src/lib/refetchOnForeground";
+import { refetchOnForeground } from "../utils/refetchOnForeground";
 
 it("tells the API layer when the app leaves and comes back", () => {
   const listeners: ((state: string) => void)[] = [];

@@ -1,5 +1,9 @@
 const { transformIgnorePatterns } = require("jest-expo/jest-preset");
 
+// These publish ES modules to React Native's export condition, which is the one Jest
+// resolves here, so they need transforming like the packages the preset already allows.
+const ES_MODULE_PACKAGES = "(?:axios|@reduxjs/toolkit|immer|reselect|redux|redux-thunk)";
+
 module.exports = {
   preset: "jest-expo",
   setupFiles: ["<rootDir>/jest/animationFrame.js"],
@@ -8,8 +12,7 @@ module.exports = {
   // The first test in each file also pays for loading React Native, which is slow on CI.
   testTimeout: 30000,
   testMatch: ["<rootDir>/src/**/__tests__/**/*.test.{ts,tsx}"],
-  // axios publishes ES modules to React Native's export condition, which is the one Jest resolves.
   transformIgnorePatterns: transformIgnorePatterns.map((pattern) =>
-    pattern.replace("/node_modules/(?!", "/node_modules/(?!axios/|"),
+    pattern.replace("/node_modules/(?!", `/node_modules/(?!${ES_MODULE_PACKAGES}/|`),
   ),
 };

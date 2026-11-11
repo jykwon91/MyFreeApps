@@ -6,6 +6,7 @@ export { createMobileSession } from "./auth/createMobileSession";
 export { onAccountLeft } from "./auth/onAccountLeft";
 export { resetCacheOnAccountChange } from "./auth/resetCacheOnAccountChange";
 export { assertSecureApiUrl } from "./utils/assertSecureApiUrl";
+export { refetchOnForeground } from "./utils/refetchOnForeground";
 
 export { default as AccountDeletedBanner } from "./components/AccountDeletedBanner";
 export { default as AccountSection } from "./components/AccountSection";

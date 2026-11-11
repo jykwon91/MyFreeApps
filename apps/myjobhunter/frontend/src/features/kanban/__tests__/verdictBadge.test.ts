@@ -1,21 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { colorForVerdict, labelForVerdict } from "../verdictBadge";
-
-describe("labelForVerdict", () => {
-  it("uses the shared label for a known verdict", () => {
-    expect(labelForVerdict("strong_fit")).toBe("Strong fit");
-    expect(labelForVerdict("worth_considering")).toBe("Worth considering");
-  });
-
-  it("shows an unknown verdict as-is", () => {
-    expect(labelForVerdict("long_shot")).toBe("long_shot");
-  });
-
-  it("shows nothing without a verdict", () => {
-    expect(labelForVerdict(null)).toBeNull();
-    expect(labelForVerdict("")).toBeNull();
-  });
-});
+import { colorForVerdict } from "../verdictBadge";
 
 describe("colorForVerdict", () => {
   it("colours each known verdict", () => {
