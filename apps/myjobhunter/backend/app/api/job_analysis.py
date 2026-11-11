@@ -22,10 +22,8 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from platform_shared.core.request_utils import get_client_ip
 
 from app.core.auth import current_active_user
 from app.core.rate_limit import RateLimiter
@@ -46,7 +44,7 @@ router = APIRouter()
 
 _NOT_FOUND_DETAIL = "Job analysis not found"
 
-# 30 / 5 min — analysis is more expensive than the existing extract +
+# 30 / 5 min per user — analysis is more expensive than the existing extract +
 # parse endpoints. The cap is generous for a legitimate operator (one
 # analysis per role across a hunting session) but tight enough to
 # limit blast radius if a key leaks.
@@ -60,7 +58,6 @@ _ANALYZE_LIMITER = RateLimiter(max_attempts=30, window_seconds=300)
 )
 async def analyze_job(
     payload: JobAnalysisRequest,
-    request: Request,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> JobAnalysisResponse:
@@ -75,11 +72,11 @@ async def analyze_job(
     - 422 — request body failed schema validation, OR URL was auth-walled
             (LinkedIn / Glassdoor) and the operator should switch to
             text-paste
-    - 429 — per-IP rate limit exceeded (30 / 5 minutes)
+    - 429 — per-user rate limit exceeded (30 / 5 minutes)
     - 502 — Claude failed or returned malformed JSON
     - 504 — upstream URL fetch timed out
     """
-    _ANALYZE_LIMITER.check(get_client_ip(request))
+    _ANALYZE_LIMITER.check(str(user.id))
 
     url = str(payload.url) if payload.url is not None else None
     jd_text = payload.jd_text

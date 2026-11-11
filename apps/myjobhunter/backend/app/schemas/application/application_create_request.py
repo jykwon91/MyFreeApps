@@ -23,6 +23,7 @@ from decimal import Decimal
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from app.core.enums import ApplicationSource, RemoteType, SalaryPeriod
+from app.core.job_description_limits import JD_TEXT_MAX_LEN
 
 # Bounds mirror the ``Application`` model's String() lengths.
 _ROLE_TITLE_MAX_LEN = 200
@@ -31,7 +32,6 @@ _CURRENCY_LEN = 3
 _EXTERNAL_REF_MAX_LEN = 255
 _EXTERNAL_SOURCE_MAX_LEN = 50
 _URL_MAX_LEN = 2048
-_JD_TEXT_MAX_LEN = 50000
 _NOTES_MAX_LEN = 5000
 
 
@@ -48,7 +48,7 @@ class ApplicationCreateRequest(BaseModel):
     role_title: str = Field(min_length=1, max_length=_ROLE_TITLE_MAX_LEN)
 
     url: AnyHttpUrl | None = None
-    jd_text: str | None = Field(default=None, max_length=_JD_TEXT_MAX_LEN)
+    jd_text: str | None = Field(default=None, max_length=JD_TEXT_MAX_LEN)
     jd_parsed: dict | None = None
 
     source: str | None = None

@@ -2272,3 +2272,17 @@ class TestPhoneTwoStepMatchesServerErrors:
         server = "\n".join(path.read_text(encoding="utf-8") for path in self._SERVER_FILES)
         missing = [detail for detail in details if f'"{detail}"' not in server]
         assert not missing, f"the server no longer sends: {missing}"
+
+
+class TestMjhJobDescriptionLimitMatchesClients:
+    """The phone and web count job-description length against the api-client constant,
+    so the backend schemas must refuse exactly the same length."""
+
+    def test_backend_and_api_client_limits_agree(self) -> None:
+        mjh = _REPO_ROOT / "apps" / "myjobhunter"
+        backend = (mjh / "backend" / "app" / "core" / "job_description_limits.py").read_text(encoding="utf-8")
+        client = (mjh / "api-client" / "src" / "constants" / "addApplicationForm.ts").read_text(encoding="utf-8")
+        backend_match = re.search(r"^JD_TEXT_MAX_LEN = ([\d_]+)$", backend, re.M)
+        client_match = re.search(r"^export const JD_TEXT_MAX_LENGTH = ([\d_]+);$", client, re.M)
+        assert backend_match and client_match, "JD length constants not found"
+        assert int(backend_match.group(1).replace("_", "")) == int(client_match.group(1).replace("_", ""))
