@@ -11,10 +11,10 @@ import { store } from "../src/lib/store";
 import { formParts } from "../test-support/applicantsServer";
 import { anAttachment, startCalendarServer } from "../test-support/calendarServer";
 import { aBookingThisMonth, openBooking } from "../test-support/calendarSheet";
-import { fakeDownloads, File, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { fakeDownloads, File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { holdWrites } from "../test-support/holdWrites";
 
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn() } }));
 jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));

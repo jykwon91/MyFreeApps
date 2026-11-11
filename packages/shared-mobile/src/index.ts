@@ -2,11 +2,16 @@
 //
 // Logic that web also needs belongs in @platform/core, not here.
 
+export { bearerHeader } from "./auth/bearerHeader";
+export { confirmOwner } from "./auth/confirmOwner";
+export { confirmSecurityChange } from "./auth/confirmSecurityChange";
 export { createMobileSession } from "./auth/createMobileSession";
 export { onAccountLeft } from "./auth/onAccountLeft";
 export { resetCacheOnAccountChange } from "./auth/resetCacheOnAccountChange";
 export { assertSecureApiUrl } from "./utils/assertSecureApiUrl";
 export { refetchOnForeground } from "./utils/refetchOnForeground";
+export { clearDownloadCopies } from "./utils/clearDownloadCopies";
+export { shareDownloadedFile } from "./utils/shareDownloadedFile";
 
 export { default as AccountDeletedBanner } from "./components/AccountDeletedBanner";
 export { default as AccountSection } from "./components/AccountSection";
@@ -38,7 +43,8 @@ export { default as SwitchRow } from "./components/SwitchRow";
 export { default as Toast } from "./components/Toast";
 export { default as ToastProvider } from "./components/ToastProvider";
 export { default as TwoStepScreen } from "./components/TwoStepScreen";
-export { default as TwoStepTurnOnScreen } from "./components/TwoStepTurnOnScreen";
+export { default as TwoStepSection } from "./components/TwoStepSection";
+export { default as TwoStepTurnOnFlow } from "./components/TwoStepTurnOnFlow";
 export { default as UnreadableSession } from "./components/UnreadableSession";
 export { default as WebLink } from "./components/WebLink";
 
@@ -52,10 +58,12 @@ export { useDevices } from "./hooks/useDevices";
 export { useOpenLink } from "./hooks/useOpenLink";
 export { useOpenWebsite } from "./hooks/useOpenWebsite";
 export { useReduceMotion } from "./hooks/useReduceMotion";
+export { useRefocusSignal } from "./hooks/useRefocusSignal";
 export { useScreenReaderEnabled } from "./hooks/useScreenReaderEnabled";
 export { useStackScreenOptions } from "./hooks/useStackScreenOptions";
 export { useSession } from "./hooks/useSession";
 export { useToast } from "./hooks/useToast";
+export { useTwoStepStatus } from "./hooks/useTwoStepStatus";
 
 export { darkColors, lightColors } from "./theme/colors";
 export { radius } from "./theme/radius";
@@ -111,5 +119,8 @@ export { SHOWING_LAST_LOADED_MESSAGE } from "./constants/offline";
 export { CHIP_HEIGHT } from "./constants/chip";
 export { OPTION_SHEET_ROW_HEIGHT } from "./constants/optionSheet";
 export { TOAST_CLEARANCE } from "./constants/toast";
-export type { ConfirmOwner } from "./types/ConfirmOwner";
-export type { TwoStepLeaveRisk } from "./types/TwoStepLeaveRisk";
+export type { OwnerCheck } from "./types/OwnerCheck";
+export type { ShareDownloadOptions } from "./types/ShareDownloadOptions";
+export type { TwoStepSectionProps } from "./types/TwoStepSectionProps";
+export type { TwoStepStatus } from "./types/TwoStepStatus";
+export type { TwoStepTurnOnFlowProps } from "./types/TwoStepTurnOnFlowProps";

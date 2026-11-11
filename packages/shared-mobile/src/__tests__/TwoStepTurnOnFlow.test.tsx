@@ -1,29 +1,28 @@
-import { TWO_STEP_MESSAGES as MESSAGES, type TwoStepLeaveRisk } from "@platform/mobile";
 import { act, screen } from "@testing-library/react-native";
 import { router, Stack } from "expo-router";
 import { renderRouter } from "expo-router/testing-library";
 import { Alert, Text } from "react-native";
-import SecurityTurnOnScreen from "../src/features/security/SecurityTurnOnScreen";
+import TwoStepTurnOnFlow from "../components/TwoStepTurnOnFlow";
+import { TWO_STEP_MESSAGES as MESSAGES } from "../constants/twoStep";
+import type { TwoStepTurnOnScreenProps } from "../types/TwoStepTurnOnScreenProps";
 
-interface TurnOnProps {
-  appName: string;
-  onLeaveRiskChange: (risk: TwoStepLeaveRisk) => void;
-  onFinished: () => void;
-}
-
-const mockTurnOnScreen: { props: TurnOnProps | null } = { props: null };
-jest.mock("@platform/mobile", () => {
+const mockTurnOnScreen: { props: TwoStepTurnOnScreenProps | null } = { props: null };
+jest.mock("../components/TwoStepTurnOnScreen", () => {
   const { Text: MockText } = jest.requireActual("react-native");
   return {
-    ...jest.requireActual("@platform/mobile"),
-    TwoStepTurnOnScreen: (props: TurnOnProps) => {
+    __esModule: true,
+    default: (props: TwoStepTurnOnScreenProps) => {
       mockTurnOnScreen.props = props;
       return <MockText>turn-on-screen</MockText>;
     },
   };
 });
 
-function turnOn(): TurnOnProps {
+function SecurityTurnOnScreen() {
+  return <TwoStepTurnOnFlow appName="MyBookkeeper" securityRoute="/security" />;
+}
+
+function turnOn(): TwoStepTurnOnScreenProps {
   if (!mockTurnOnScreen.props) throw new Error("not rendered");
   return mockTurnOnScreen.props;
 }

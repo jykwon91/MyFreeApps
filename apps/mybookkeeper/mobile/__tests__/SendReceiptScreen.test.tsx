@@ -20,7 +20,7 @@ import { useSendReceipt } from "../src/features/receipts/useSendReceipt";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
-import { fakeDownloads, fakeFiles, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { fakeDownloads, fakeFiles, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { holdWrites } from "../test-support/holdWrites";
 import { aReceipt, type FakeReceiptServer, startReceiptServer } from "../test-support/receiptsServer";
 
@@ -33,7 +33,7 @@ jest.mock("expo-router", () => ({
   },
 }));
 jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("@react-native-community/datetimepicker", () => {
   const { View } = jest.requireActual("react-native");
   return { __esModule: true, default: View, DateTimePickerAndroid: { open: jest.fn() } };

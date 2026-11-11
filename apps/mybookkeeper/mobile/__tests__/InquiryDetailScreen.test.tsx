@@ -9,7 +9,7 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { saveReplyDraft } from "../src/features/inquiries/replyDrafts";
-import { resetFakeFiles } from "../test-support/fakeFileSystem";
+import { resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { aMessage, anInquiry, lastInquiryWrite, startInquiryServer } from "../test-support/inquiriesServer";
 import { holdWrites } from "../test-support/holdWrites";
 
@@ -32,7 +32,7 @@ jest.mock("expo-router", () => ({
     );
   },
 }));
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 
 const mockModal: { onDismiss?: () => void } = {};

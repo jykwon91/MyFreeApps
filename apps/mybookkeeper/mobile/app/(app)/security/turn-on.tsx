@@ -1,13 +1,12 @@
-import { TWO_STEP_MESSAGES } from "@platform/mobile";
+import { TWO_STEP_MESSAGES, TwoStepTurnOnFlow } from "@platform/mobile";
 import { Stack } from "expo-router";
-import { SECURITY_SCREEN_TITLE } from "../../../src/constants/security";
-import SecurityTurnOnScreen from "../../../src/features/security/SecurityTurnOnScreen";
+import { APP_NAME, SECURITY_ROUTE, SECURITY_SCREEN_TITLE } from "../../../src/constants/security";
 
 export default function SecurityTurnOnRoute() {
   return (
     <>
       <Stack.Screen options={{ headerShown: true, title: TWO_STEP_MESSAGES.heading, headerBackTitle: SECURITY_SCREEN_TITLE }} />
-      <SecurityTurnOnScreen />
+      <TwoStepTurnOnFlow appName={APP_NAME} securityRoute={SECURITY_ROUTE} />
     </>
   );
 }

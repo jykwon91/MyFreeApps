@@ -13,7 +13,7 @@ import { clearReplyDrafts, deleteReplyDraft, hasReplyDraft, loadReplyDraft, save
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
-import { fakeFiles, File, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { fakeFiles, File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { aMessage, anInquiry, lastInquiryWrite, startInquiryServer } from "../test-support/inquiriesServer";
 
 // The waits while an earlier copy is still sending.
@@ -32,7 +32,7 @@ jest.mock("expo-router", () => ({
     mockPreventRemove.active = active;
   },
 }));
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 const mockModal: { onDismiss?: () => void } = {};
 jest.mock("react-native/Libraries/Modal/Modal", () => ({

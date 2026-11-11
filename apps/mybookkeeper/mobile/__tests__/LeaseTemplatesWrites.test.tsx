@@ -14,11 +14,11 @@ import LeaseTemplatePlaceholdersScreen from "../src/features/leaseTemplates/Leas
 import { takeSuggestions } from "../src/features/leaseTemplates/leaseTemplateSuggestions";
 import PlaceholderEditScreen from "../src/features/leaseTemplates/PlaceholderEditScreen";
 import { formParts, formValue } from "../test-support/applicantsServer";
-import { fakeFiles, File, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { fakeFiles, File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { aServerPlaceholder, aServerTemplate, BAD_TYPE_DETAIL, startLeaseTemplatesServer, TOO_BIG_DETAIL } from "../test-support/leaseTemplatesServer";
 import { mockPreventRemove, mockRouter, pressAlertButton, restoreApi, show, signInToWorkspace } from "../test-support/listingsHarness";
 
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-router", () => jest.requireActual("../test-support/listingsHarness").expoRouterMock());
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));

@@ -12,7 +12,7 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import type { TransactionFilters } from "../src/types/TransactionFilters";
-import { fakeDownloads, fakeFiles, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { fakeDownloads, fakeFiles, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { aTransaction, startTransactionServer } from "../test-support/transactionsServer";
 
 jest.mock("expo-router", () => ({
@@ -20,7 +20,7 @@ jest.mock("expo-router", () => ({
   useFocusEffect: () => undefined,
 }));
 jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("react-native/Libraries/Modal/Modal", () => ({
   __esModule: true,
   default: ({ visible, children }: { visible: boolean; children: unknown }) => (visible ? children : null),

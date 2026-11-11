@@ -1,10 +1,11 @@
 import { isAxiosError } from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchTwoFactorEnabled } from "../auth/mobileAuthApi";
+import type { TwoStepStatus } from "../types/TwoStepStatus";
 import type { TwoStepStatusFailure } from "../types/TwoStepStatusFailure";
 
 /** `enabled` stays as last read when a reload fails, so a failure never reads as "off". */
-export function useTwoStepStatus(reloadSignal = 0) {
+export function useTwoStepStatus(reloadSignal = 0): TwoStepStatus {
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [failure, setFailure] = useState<TwoStepStatusFailure | null>(null);
   const [successfulReads, setSuccessfulReads] = useState(0);
@@ -27,7 +28,6 @@ export function useTwoStepStatus(reloadSignal = 0) {
     );
   }, []);
 
-  /** The server just said so, which beats any read still on its way. */
   const markEnabled = useCallback((isEnabled: boolean): void => {
     latestRead.current += 1;
     setEnabled(isEnabled);

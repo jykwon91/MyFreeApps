@@ -15,9 +15,9 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { formParts, formValue } from "../test-support/applicantsServer";
-import { fakeFiles, File, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { fakeFiles, File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn() } }));
 jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));

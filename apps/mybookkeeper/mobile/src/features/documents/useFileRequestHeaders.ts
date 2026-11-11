@@ -1,3 +1,4 @@
+import { bearerHeader } from "@platform/mobile";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../lib/store";
 import { session } from "../../lib/session";
@@ -6,7 +7,7 @@ import { session } from "../../lib/session";
 export function useFileRequestHeaders(): () => Record<string, string> {
   const workspaceId = useSelector((state: RootState) => state.workspace.activeId);
   return () => ({
-    Authorization: `Bearer ${session.tokenStore.get() ?? ""}`,
+    ...bearerHeader(session),
     ...(workspaceId ? { "X-Organization-Id": workspaceId } : {}),
   });
 }

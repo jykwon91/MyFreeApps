@@ -14,7 +14,7 @@ import TaxReportScreen from "../src/features/tax/TaxReportScreen";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { store } from "../src/lib/store";
 import { useToday } from "../src/lib/useToday";
-import { fakeDownloads, fakeFiles, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { fakeDownloads, fakeFiles, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({
@@ -22,7 +22,7 @@ jest.mock("expo-router", () => ({
   router: { push: (path: string) => mockPush(path) },
 }));
 jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: jest.fn() }));
 jest.mock("../src/lib/useToday", () => ({ useToday: jest.fn() }));
 jest.mock("react-native/Libraries/Modal/Modal", () => ({

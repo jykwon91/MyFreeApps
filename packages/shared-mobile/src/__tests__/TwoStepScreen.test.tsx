@@ -133,6 +133,15 @@ describe("turning off", () => {
     expect(screen.getByRole("button", { name: MESSAGES.confirmTurnOff }).props.accessibilityState?.disabled).toBe(true);
   });
 
+  it("stays on if the owner check says no, and shows why", async () => {
+    await open(jest.fn().mockResolvedValue({ confirmed: false, problem: "I couldn't confirm it's you." }));
+    await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.turnOff }));
+    expect(await screen.findByText("I couldn't confirm it's you.")).toBeTruthy();
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText(MESSAGES.turnOffCodeLabel)).toBeNull();
+    expect(disable).not.toHaveBeenCalled();
+  });
+
   it("does nothing if the alert is cancelled", async () => {
     await open();
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.turnOff }));

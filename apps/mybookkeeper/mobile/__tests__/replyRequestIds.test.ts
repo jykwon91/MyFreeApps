@@ -1,8 +1,8 @@
 import { clearReplyRequestIds, replyRequestIds } from "../src/features/inquiries/replyRequestIds";
 import { session } from "../src/lib/session";
-import { fakeFiles, File, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { fakeFiles, File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 
 const SAVED = "doc:/reply-request-ids.json";
 const signIn = (email: string) => jest.spyOn(session, "getState").mockReturnValue({ status: "signedIn", email } as never);
