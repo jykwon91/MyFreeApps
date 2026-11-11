@@ -3,13 +3,12 @@
  *
  * Owns the data-fetching (GET /companies/{id}/research) and the
  * mutation trigger (POST /companies/{id}/research). Delegates
- * rendering to CompanyResearchPanelBody via the useCompanyResearchMode hook.
+ * rendering to CompanyResearchPanelBody via companyResearchMode.
  */
 import { extractErrorMessage, showError } from "@platform/ui";
 import { useGetCompanyResearchQuery, useTriggerCompanyResearchMutation } from "@myjobhunter/api-client/store/companiesApi";
-import {
-  useCompanyResearchMode,
-} from "@/features/companies/useCompanyResearchMode";
+import { companyResearchMode } from "@myjobhunter/api-client/utils/companyResearchMode";
+import { researchRunFailure } from "@myjobhunter/api-client/utils/researchRunFailure";
 import CompanyResearchPanelBody from "@/features/companies/CompanyResearchPanelBody";
 
 interface CompanyResearchPanelProps {
@@ -31,7 +30,7 @@ export default function CompanyResearchPanel({ companyId }: CompanyResearchPanel
       ? (queryError as { status: number }).status
       : undefined;
 
-  const mode = useCompanyResearchMode({
+  const mode = companyResearchMode({
     research,
     isQueryError,
     queryErrorStatus,
@@ -40,6 +39,8 @@ export default function CompanyResearchPanel({ companyId }: CompanyResearchPanel
   });
 
   const errorMessage = mutationError ? extractErrorMessage(mutationError) : null;
+  // A 503 means research isn't set up on the server; retrying can't help.
+  const canRetry = !mutationError || researchRunFailure(mutationError).reason !== "not-configured";
 
   async function handleRunResearch() {
     try {
@@ -59,6 +60,7 @@ export default function CompanyResearchPanel({ companyId }: CompanyResearchPanel
           onRunResearch={handleRunResearch}
           isRunning={isMutationLoading}
           errorMessage={errorMessage}
+          canRetry={canRetry}
         />
       </div>
     </section>

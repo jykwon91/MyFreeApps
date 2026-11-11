@@ -7,15 +7,17 @@ import {
 import { COMPANY_FORM_PROBLEMS as PROBLEMS } from "@myjobhunter/api-client/constants/companyFormProblems";
 import type { Company } from "@myjobhunter/api-client/types/company";
 import { baseApi } from "@platform/core/store/baseApi";
-import { LINK_MESSAGES, SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { SHOWING_LAST_LOADED_MESSAGE, ToastProvider } from "@platform/mobile";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { router } from "expo-router";
+import { screen } from "expo-router/testing-library";
 import { Linking } from "react-native";
 import { Provider } from "react-redux";
-import { WEB_BASE_URL } from "../src/constants/api";
 import { COMPANY_MESSAGES as MESSAGES } from "../src/constants/companies";
 import { COMPANY_SORT_KEYS, COMPANY_SORTS, DEFAULT_COMPANY_SORT } from "../src/constants/companySorts";
 import CompaniesScreen from "../src/features/companies/CompaniesScreen";
 import { store } from "../src/lib/store";
+import { companyDetailRoutes } from "../test-support/companyDetailRoutes";
 import { companyRecord } from "../test-support/companyRecord";
 import { serve } from "../test-support/fakeServer";
 import { storedItems } from "../test-support/memorySecureStore";
@@ -140,15 +142,25 @@ describe("the Companies list", () => {
     expect(screen.getByRole("button", { name: `${MESSAGES.sort}: ${COMPANY_SORTS[DEFAULT_COMPANY_SORT].label}` })).toBeTruthy();
   });
 
-  it("opens a company's page on the website when its row is pressed, until the phone has its own", async () => {
-    serveCompanies(SERVER_ORDER);
-    await showScreen();
+  it("opens the company's own screen when its row is pressed, and comes back to the list", async () => {
+    serve({
+      "POST /auth/mobile/refresh": refreshed,
+      "GET /companies": listOf(...SERVER_ORDER),
+      ...companyDetailRoutes(INITECH),
+    });
+    await renderApp("/companies");
 
     const row = await screen.findByRole("link", { name: "Initech, initech.com, Fintech" });
-    expect(row.props.accessibilityHint).toBe(LINK_MESSAGES.opensBrowser);
+    expect(row.props.accessibilityHint).toBe(MESSAGES.opensCompany);
     await fireEvent.press(row);
 
-    expect(openURL).toHaveBeenLastCalledWith(`${WEB_BASE_URL}/companies/c3`);
+    expect(screen).toHavePathname("/companies/c3");
+    expect(await screen.findByRole("header", { name: "Initech" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "initech.com" })).toBeTruthy();
+    expect(openURL).not.toHaveBeenCalled();
+
+    await act(async () => router.back());
+    expect(screen).toHavePathname("/companies");
   });
 
   it("sorts by any of the website's columns, either way, with companies missing the value last", async () => {

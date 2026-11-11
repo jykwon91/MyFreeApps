@@ -9,6 +9,7 @@ export const COMPANY_MESSAGES = {
   noneHeading: "No companies here yet",
   noneBody: "I'll add companies here as you log applications — no need to add them separately.",
   addFromEmpty: "Add a company",
+  opensCompany: "Opens this company",
   add: "Add company",
   sort: "Sort",
   sortTitle: "Sort companies by",

@@ -29,9 +29,8 @@ const COMPANY = { id: "c1", name: "Acme Corp", primary_domain: null, industry: n
 
 function arrange(applications: unknown[], deleteImpl: () => Promise<unknown>) {
   vi.mocked(useGetCompanyQuery).mockReturnValue({ data: COMPANY, isLoading: false, isError: false } as unknown as ReturnType<typeof useGetCompanyQuery>);
-  vi.mocked(useListApplicationsInfiniteQuery).mockReturnValue(
-    applicationsListResult({ page: { items: applications as Application[], total: applications.length } }),
-  );
+  const list = applicationsListResult({ page: { items: applications as Application[], total: applications.length } });
+  vi.mocked(useListApplicationsInfiniteQuery).mockReturnValue(list);
   vi.mocked(useDeleteCompanyMutation).mockReturnValue([
     () => ({ unwrap: deleteImpl }),
     { isLoading: false },
@@ -44,6 +43,7 @@ function arrange(applications: unknown[], deleteImpl: () => Promise<unknown>) {
       </Routes>
     </MemoryRouter>,
   );
+  return list;
 }
 
 describe("CompanyDetail delete", () => {
@@ -62,6 +62,26 @@ describe("CompanyDetail delete", () => {
 
     await waitFor(() => expect(showError).toHaveBeenCalledWith(message));
     expect(screen.queryByText("Companies list")).toBeNull();
+  });
+
+  it("reloads the applications when the delete is refused for them, so Delete turns off", async () => {
+    const message = "This company still has 1 application linked to it, so it can't be deleted.";
+    const list = arrange([], () =>
+      Promise.reject({ status: 409, data: { detail: { code: "COMPANY_HAS_APPLICATIONS", message, application_count: 1 } } }),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(list.refetch).toHaveBeenCalledTimes(1));
+  });
+
+  it("doesn't reload the applications for other failures", async () => {
+    const list = arrange([], () => Promise.reject({ status: 500, data: { detail: "boom" } }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(showError).toHaveBeenCalled());
+    expect(list.refetch).not.toHaveBeenCalled();
   });
 
   it("falls back to the generic message for other failures", async () => {

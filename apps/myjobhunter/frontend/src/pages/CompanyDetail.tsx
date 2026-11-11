@@ -11,6 +11,8 @@ import { useGetCompanyQuery, useDeleteCompanyMutation } from "@myjobhunter/api-c
 import { COMPANY_APPLICATIONS_MESSAGES } from "@/constants/company-applications-messages";
 import { DEFAULT_APPLICATIONS_TABLE_SORTING } from "@/constants/default-applications-table-sorting";
 import { isCompanyHasApplicationsError } from "@myjobhunter/api-client/utils/isCompanyHasApplicationsError";
+import { companyDeleteState } from "@myjobhunter/api-client/utils/companyDeleteState";
+import { companyDomainUrl } from "@myjobhunter/api-client/utils/companyDomainUrl";
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
@@ -19,9 +21,7 @@ export default function CompanyDetail() {
   const [deleteCompany, { isLoading: deleting }] = useDeleteCompanyMutation();
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_APPLICATIONS_TABLE_SORTING);
   const applications = useApplicationsList({ company_id: id }, sorting, !id);
-  // Delete waits for the list: until it loads, "no applications" isn't known.
-  const applicationsLoaded = !applications.isLoading && applications.loadError === undefined;
-  const hasApplications = applications.total > 0;
+  const deleteState = companyDeleteState(applications);
 
   async function handleDelete() {
     if (!company) return;
@@ -33,11 +33,13 @@ export default function CompanyDetail() {
       showSuccess(`"${company.name}" deleted`);
       navigate("/companies");
     } catch (err) {
-      showError(
-        isCompanyHasApplicationsError(err)
-          ? err.data.detail.message
-          : `Couldn't delete: ${extractErrorMessage(err)}`,
-      );
+      if (isCompanyHasApplicationsError(err)) {
+        showError(err.data.detail.message);
+        // Applications this page didn't know about: reload them so Delete turns off and says why.
+        void applications.refetch();
+      } else {
+        showError(`Couldn't delete: ${extractErrorMessage(err)}`);
+      }
     }
   }
 
@@ -70,11 +72,12 @@ export default function CompanyDetail() {
     );
   }
 
-  const deleteHint = !applicationsLoaded
-    ? COMPANY_APPLICATIONS_MESSAGES.deleteWaiting
-    : hasApplications
-      ? COMPANY_APPLICATIONS_MESSAGES.deleteBlocked
-      : undefined;
+  const deleteHint =
+    deleteState === "waiting"
+      ? COMPANY_APPLICATIONS_MESSAGES.deleteWaiting
+      : deleteState === "blocked"
+        ? COMPANY_APPLICATIONS_MESSAGES.deleteBlocked
+        : undefined;
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
@@ -91,7 +94,7 @@ export default function CompanyDetail() {
           <h1 className="text-2xl font-semibold">{company.name}</h1>
           {company.primary_domain ? (
             <a
-              href={`https://${company.primary_domain}`}
+              href={companyDomainUrl(company.primary_domain)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
@@ -108,14 +111,14 @@ export default function CompanyDetail() {
         <div className="flex flex-col items-end gap-1 shrink-0">
           <button
             onClick={handleDelete}
-            disabled={deleting || !applicationsLoaded || hasApplications}
+            disabled={deleting || deleteState !== "allowed"}
             title={deleteHint}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-md hover:bg-destructive/10 text-destructive disabled:opacity-50 shrink-0"
           >
             <Trash2 size={14} />
             {deleting ? "Deleting..." : "Delete"}
           </button>
-          {applicationsLoaded && hasApplications ? (
+          {deleteState === "blocked" ? (
             <p className="text-xs text-muted-foreground max-w-48 text-right">{COMPANY_APPLICATIONS_MESSAGES.deleteBlocked}</p>
           ) : null}
         </div>

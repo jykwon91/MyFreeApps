@@ -13,7 +13,7 @@ routes:
   /companies:
     screen: (app)/companies/index
   /companies/:id:
-    not_on_mobile: Not built yet.
+    screen: (app)/companies/[id]
   /dashboard:
     not_on_mobile: Not built yet.
   /discover:

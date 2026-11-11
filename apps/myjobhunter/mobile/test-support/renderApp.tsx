@@ -8,6 +8,7 @@ import More from "../app/(app)/(tabs)/more";
 import Profile from "../app/(app)/(tabs)/profile";
 import ApplicationRoute from "../app/(app)/applications/[id]";
 import AddApplicationRoute from "../app/(app)/applications/new";
+import CompanyRoute from "../app/(app)/companies/[id]";
 import CompaniesRoute from "../app/(app)/companies/index";
 import DeleteAccountRoute from "../app/(app)/delete-account";
 import SignInRoute from "../app/sign-in";
@@ -19,6 +20,7 @@ export const APP_ROUTES = {
   "(app)/_layout": AppLayout,
   "(app)/applications/[id]": ApplicationRoute,
   "(app)/applications/new": AddApplicationRoute,
+  "(app)/companies/[id]": CompanyRoute,
   "(app)/companies/index": CompaniesRoute,
   "(app)/delete-account": DeleteAccountRoute,
   "(app)/(tabs)/_layout": TabsLayout,
