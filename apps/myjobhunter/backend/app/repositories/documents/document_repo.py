@@ -13,11 +13,12 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.repositories import soft_delete as _soft_delete
 
+from app.core.document_list_constants import DEFAULT_DOCUMENT_PAGE_SIZE
 from app.core.enums import DocumentKind
 from app.models.application.document import Document
 
@@ -50,41 +51,70 @@ async def get_by_id_for_user(
     return result.scalar_one_or_none()
 
 
+def _list_conditions(
+    user_id: uuid.UUID,
+    *,
+    application_id: uuid.UUID | None,
+    kind: str | None,
+) -> list[ColumnElement[bool]]:
+    """The tenant scope and filters shared by the page query and its count."""
+    conditions: list[ColumnElement[bool]] = [
+        Document.user_id == user_id,
+        Document.deleted_at.is_(None),
+    ]
+    if application_id is not None:
+        conditions.append(Document.application_id == application_id)
+    if kind is not None:
+        conditions.append(Document.kind == kind)
+    return conditions
+
+
 async def list_for_user(
     db: AsyncSession,
     user_id: uuid.UUID,
     *,
     application_id: uuid.UUID | None = None,
     kind: str | None = None,
-    limit: int = 100,
+    limit: int = DEFAULT_DOCUMENT_PAGE_SIZE,
     offset: int = 0,
 ) -> list[Document]:
-    """List non-deleted documents owned by ``user_id``.
+    """One page of non-deleted documents owned by ``user_id``, most recently updated first.
+
+    Rows that tie on ``updated_at`` and ``created_at`` fall back to ``id``, so
+    ``OFFSET`` / ``LIMIT`` pages never repeat or skip a row. Every filter is
+    applied in SQL before paging; ``count_for_user`` with the same filters
+    gives the total across pages.
 
     Optional filters:
     - ``application_id``: narrow to documents linked to a specific application.
-      Pass ``uuid.UUID('00000000-0000-0000-0000-000000000000')`` to mean "only
-      unlinked" — callers should use the explicit ``None`` check instead.
     - ``kind``: narrow to a specific document kind.
-    - ``limit`` / ``offset``: standard pagination.
     """
     stmt = (
         select(Document)
-        .where(
-            Document.user_id == user_id,
-            Document.deleted_at.is_(None),
-        )
-        .order_by(Document.updated_at.desc(), Document.created_at.desc())
+        .where(*_list_conditions(user_id, application_id=application_id, kind=kind))
+        .order_by(Document.updated_at.desc(), Document.created_at.desc(), Document.id.desc())
         .offset(offset)
         .limit(limit)
     )
-    if application_id is not None:
-        stmt = stmt.where(Document.application_id == application_id)
-    if kind is not None:
-        stmt = stmt.where(Document.kind == kind)
-
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def count_for_user(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    application_id: uuid.UUID | None = None,
+    kind: str | None = None,
+) -> int:
+    """How many rows ``list_for_user`` matches across all pages, same filters and tenant scope."""
+    stmt = (
+        select(func.count())
+        .select_from(Document)
+        .where(*_list_conditions(user_id, application_id=application_id, kind=kind))
+    )
+    result = await db.execute(stmt)
+    return int(result.scalar_one())
 
 
 async def list_by_application(

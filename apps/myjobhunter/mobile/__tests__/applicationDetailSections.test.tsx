@@ -2,6 +2,7 @@ import "@platform/mobile/test-support/reactNativeFormData";
 import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
+import { DOCUMENTS_PAGE_SIZE } from "@myjobhunter/api-client/constants/documentsPaging";
 import { DOCUMENT_UPLOAD_MAX_BYTES } from "@myjobhunter/api-client/constants/documentUploadLimits";
 import { INTERVIEW_LOCATION_MAX_LENGTH, INTERVIEWER_NAME_MAX_LENGTH, INTERVIEWERS_MAX } from "@myjobhunter/api-client/constants/interviewDetailLimits";
 import { EVENT_NOTE_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
@@ -258,7 +259,7 @@ describe("the documents", () => {
 
     expect(within(await screen.findByTestId("document-d-letter")).getByText("Stripe cover letter")).toBeTruthy();
     expect(within(screen.getByTestId("document-d-resume")).getByText(DOCUMENTS.file)).toBeTruthy();
-    expect(sent.find(({ route }) => route === "GET /documents")?.params).toEqual({ application_id: ID });
+    expect(sent.find(({ route }) => route === "GET /documents")?.params).toEqual({ application_id: ID, limit: DOCUMENTS_PAGE_SIZE, offset: 0 });
     // Everything happens on the phone now, uploads included.
     expect(openURL).not.toHaveBeenCalled();
   });

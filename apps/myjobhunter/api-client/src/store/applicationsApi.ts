@@ -16,7 +16,7 @@ import type { JdUrlExtractResponse } from "../types/application/jd-url-extract-r
 import type { KanbanColumn } from "../types/kanban/kanban-column";
 import type { KanbanListResponse } from "../types/kanban/kanban-list-response";
 import { APPLICATIONS_PAGE_SIZE, FIRST_APPLICATIONS_OFFSET } from "../constants/applicationsPaging";
-import { getNextApplicationsOffset } from "../utils/getNextApplicationsOffset";
+import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
 
 const APPLICATIONS_TAG = "Applications";
 const APPLICATION_EVENTS_TAG = "ApplicationEvents";
@@ -55,7 +55,7 @@ const applicationsApi = baseApi.enhanceEndpoints({
     listApplications: build.infiniteQuery<ApplicationListResponse, ApplicationsListQuery, number>({
       infiniteQueryOptions: {
         initialPageParam: FIRST_APPLICATIONS_OFFSET,
-        getNextPageParam: (lastPage, _allPages, lastOffset) => getNextApplicationsOffset(lastPage, lastOffset),
+        getNextPageParam: (lastPage, _allPages, lastOffset) => getNextPageOffset(lastPage, lastOffset),
       },
       query: ({ queryArg, pageParam }) => ({
         url: "/applications",

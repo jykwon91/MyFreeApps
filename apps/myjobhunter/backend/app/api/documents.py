@@ -19,10 +19,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
 from app.core.document_limits import DOCUMENT_FILENAME_MAX_LEN, DOCUMENT_TITLE_MAX_LEN
+from app.core.document_list_constants import DEFAULT_DOCUMENT_PAGE_SIZE, MAX_DOCUMENT_PAGE_SIZE
 from app.core.storage import StorageNotConfiguredError
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.documents.document_kind import DocumentKindLiteral
+from app.schemas.documents.document_list_page import DocumentListPage
 from app.schemas.documents.document_text_create_request import DocumentTextCreateRequest
 from app.schemas.documents.document_response import DocumentResponse
 from app.schemas.documents.document_update_request import DocumentUpdateRequest
@@ -33,7 +35,6 @@ from app.services.jobs.resume_validator import ResumeRejected
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 _NOT_FOUND_DETAIL = "Document not found"
-_MAX_LIMIT = 500
 
 
 # ---------------------------------------------------------------------------
@@ -123,23 +124,27 @@ async def upload_document(
 # ---------------------------------------------------------------------------
 
 
-@router.get("", response_model=dict)
+@router.get("", response_model=DocumentListPage)
 async def list_documents(
     application_id: uuid.UUID | None = Query(default=None),
     kind: str | None = Query(default=None),
-    limit: int = Query(default=100, ge=1, le=_MAX_LIMIT),
+    limit: int = Query(default=DEFAULT_DOCUMENT_PAGE_SIZE, ge=1, le=MAX_DOCUMENT_PAGE_SIZE),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
-) -> dict:
-    """Return the caller's non-deleted documents.
+) -> DocumentListPage:
+    """Return one page of the caller's non-deleted documents.
 
-    Response shape: ``{"items": [DocumentResponse...], "total": int}``.
+    Response shape: ``{"items": [DocumentResponse...], "total": int}``, where
+    ``total`` is the number of rows matching the filters across every page,
+    not the length of this page. Newest first (by last update), ties broken by
+    id so ``limit`` / ``offset`` pages never repeat or skip a row.
     Filters:
     - ``application_id``: narrow to documents linked to a specific application.
     - ``kind``: narrow to a specific document kind.
+    - ``limit`` / ``offset``: pagination (default 100 / 0; max limit 500).
     """
-    items = await document_service.list_for_user(
+    return await document_service.list_for_user(
         db,
         user.id,
         application_id=application_id,
@@ -147,10 +152,6 @@ async def list_documents(
         limit=limit,
         offset=offset,
     )
-    return {
-        "items": [item.model_dump(mode="json") for item in items],
-        "total": len(items),
-    }
 
 
 # ---------------------------------------------------------------------------

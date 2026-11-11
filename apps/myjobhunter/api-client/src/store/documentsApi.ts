@@ -4,6 +4,8 @@ import type { DocumentCreateRequest } from "../types/document/document-create-re
 import type { DocumentListResponse } from "../types/document/document-list-response";
 import type { DocumentUpdateRequest } from "../types/document/document-update-request";
 import type { DocumentsFilter } from "../types/document/documents-filter";
+import { DOCUMENTS_PAGE_SIZE, FIRST_DOCUMENTS_OFFSET } from "../constants/documentsPaging";
+import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
 import { withoutDocument } from "../utils/withoutDocument";
 
 const DOCUMENTS_TAG = "Documents";
@@ -12,19 +14,31 @@ const documentsApi = baseApi
   .enhanceEndpoints({ addTagTypes: [DOCUMENTS_TAG] })
   .injectEndpoints({
     endpoints: (build) => ({
-      listDocuments: build.query<DocumentListResponse, DocumentsFilter | void>({
-        query: (filter) => ({
+      /**
+       * GET /documents, one page per offset. The filter keys the cache, so a new
+       * filter starts again from the first page. `fetchNextPage` loads the next
+       * one; there is none once every matching document is loaded. Refetching
+       * (invalidation, focus, pull to refresh) reloads every loaded page.
+       */
+      listDocuments: build.infiniteQuery<DocumentListResponse, DocumentsFilter, number>({
+        infiniteQueryOptions: {
+          initialPageParam: FIRST_DOCUMENTS_OFFSET,
+          getNextPageParam: (lastPage, _allPages, lastOffset) => getNextPageOffset(lastPage, lastOffset),
+        },
+        query: ({ queryArg, pageParam }) => ({
           url: "/documents",
           method: "GET",
           params: {
-            application_id: filter?.application_id || undefined,
-            kind: filter?.kind || undefined,
+            application_id: queryArg.application_id || undefined,
+            kind: queryArg.kind || undefined,
+            limit: DOCUMENTS_PAGE_SIZE,
+            offset: pageParam,
           },
         }),
         providesTags: (result) =>
           result
             ? [
-                ...result.items.map(({ id }) => ({ type: DOCUMENTS_TAG, id }) as const),
+                ...result.pages.flatMap((page) => page.items.map(({ id }) => ({ type: DOCUMENTS_TAG, id }) as const)),
                 { type: DOCUMENTS_TAG, id: "LIST" } as const,
               ]
             : [{ type: DOCUMENTS_TAG, id: "LIST" } as const],
@@ -60,9 +74,10 @@ const documentsApi = baseApi
 
       deleteDocument: build.mutation<void, string>({
         query: (id) => ({ url: `/documents/${id}`, method: "DELETE" }),
-        // Once the server confirms, every loaded list drops it at once. The reload the
-        // invalidation starts then confirms it, and if that reload fails the list still
-        // doesn't show a document that's gone.
+        // Once the server confirms, every loaded list drops it from whichever page holds it
+        // and lowers its total, at once. The reload of every loaded page the invalidation
+        // starts then realigns the pages, and if that reload fails the list still doesn't
+        // show a document that's gone.
         async onQueryStarted(id, { dispatch, getState, queryFulfilled }) {
           try {
             await queryFulfilled;
@@ -71,7 +86,7 @@ const documentsApi = baseApi
           }
           for (const { endpointName, originalArgs } of documentsApi.util.selectInvalidatedBy(getState(), [{ type: DOCUMENTS_TAG, id }])) {
             if (endpointName !== "listDocuments") continue;
-            dispatch(documentsApi.util.updateQueryData("listDocuments", originalArgs as DocumentsFilter | void, (list) => withoutDocument(list, id)));
+            dispatch(documentsApi.util.updateQueryData("listDocuments", originalArgs as DocumentsFilter, (pages) => withoutDocument(pages, id)));
           }
         },
         invalidatesTags: (_result, _err, id) => [
@@ -89,7 +104,7 @@ const documentsApi = baseApi
   });
 
 export const {
-  useListDocumentsQuery,
+  useListDocumentsInfiniteQuery,
   useGetDocumentQuery,
   useCreateDocumentMutation,
   useUploadDocumentMutation,

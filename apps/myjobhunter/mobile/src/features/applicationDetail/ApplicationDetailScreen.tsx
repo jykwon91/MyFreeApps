@@ -1,6 +1,6 @@
 import { useGetApplicationQuery, useListApplicationEventsQuery } from "@myjobhunter/api-client/store/applicationsApi";
 import { useGetCompanyQuery } from "@myjobhunter/api-client/store/companiesApi";
-import { useListDocumentsQuery } from "@myjobhunter/api-client/store/documentsApi";
+import { useDocumentsPages } from "@myjobhunter/api-client/hooks/useDocumentsPages";
 import { currentKanbanColumn } from "@myjobhunter/api-client/utils/currentKanbanColumn";
 import { isNotFound } from "@platform/core/utils/isNotFound";
 import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
@@ -26,7 +26,9 @@ export default function ApplicationDetailScreen({ id }: ApplicationDetailScreenP
   const [isLeaving, setIsLeaving] = useState(false);
   const { currentData: application, error, isFetching, refetch } = useGetApplicationQuery(id);
   const events = useListApplicationEventsQuery(id);
-  const documents = useListDocumentsQuery({ application_id: id });
+  const documents = useDocumentsPages({ application_id: id });
+  // After the id changes the rows held are the previous application's, until this one's first page arrives or fails.
+  const hasCurrentDocuments = documents.hasData && !documents.isFiltering && documents.loadError === undefined;
   const company = useGetCompanyQuery(application?.company_id ?? "", { skip: !application?.company_id });
   const { refresh, isRefreshing, refreshControl } = useRefresh(
     () => Promise.all([refetch(), events.refetch(), documents.refetch()]),
@@ -80,12 +82,17 @@ export default function ApplicationDetailScreen({ id }: ApplicationDetailScreenP
       />
       <DocumentsSection
         applicationId={id}
-        documents={documents.currentData?.items}
-        isError={Boolean(documents.error)}
-        isLoading={!documents.currentData && documents.isFetching}
+        documents={hasCurrentDocuments ? documents.documents : undefined}
+        hasNextPage={documents.hasNextPage}
+        isError={documents.error !== undefined}
+        isLoading={documents.isLoading || documents.isFiltering}
+        isLoadMoreError={documents.isLoadMoreError}
+        isLoadingMore={documents.isFetchingNextPage}
+        onLoadMore={documents.loadMore}
         onRetry={async () => {
           await documents.refetch();
         }}
+        total={documents.total}
       />
       <ContactsSection applicationId={id} contacts={application.contacts} />
     </ScrollView>

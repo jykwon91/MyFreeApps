@@ -48,6 +48,8 @@ export { default as AlertBox } from "./components/ui/AlertBox";
 export type { AlertVariant } from "./components/ui/AlertBox";
 export { default as Button } from "./components/ui/Button";
 export { default as LoadingButton } from "./components/ui/LoadingButton";
+export { default as LoadMoreFooter } from "./components/ui/LoadMoreFooter";
+export type { LoadMoreFooterProps } from "./types/load-more-footer-props";
 export { default as Skeleton } from "./components/ui/Skeleton";
 export { default as Select } from "./components/ui/Select";
 export { default as Badge } from "./components/ui/Badge";

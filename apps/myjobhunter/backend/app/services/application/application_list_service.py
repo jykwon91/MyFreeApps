@@ -89,7 +89,7 @@ async def list_applications(
         )
         for app, status, company_name in rows
     ]
-    return ApplicationListPage(items=items, total=total)
+    return ApplicationListPage(items=items, total=total, has_more=offset + len(items) < total)
 
 
 async def list_kanban_items(

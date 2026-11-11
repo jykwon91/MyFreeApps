@@ -5,6 +5,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { Alert, Linking, StyleSheet } from "react-native";
 import { APPLICATION_SORTS } from "../src/constants/applicationSorts";
 import { COMPANY_APPLICATION_SORT_KEYS, COMPANY_APPLICATIONS_MESSAGES as APPS } from "../src/constants/companyApplications";
+import { PAGED_LIST_MESSAGES as PAGED } from "../src/constants/pagedListMessages";
 import { COMPANY_DETAIL_MESSAGES as MESSAGES } from "../src/constants/companyDetail";
 import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
 import { store } from "../src/lib/store";
@@ -244,16 +245,16 @@ describe("the applications at a company", () => {
     });
     await renderCompanyDetail(ID);
 
-    expect(await screen.findByText(APPS.showingCount(APPLICATIONS_PAGE_SIZE, MANY.length))).toBeTruthy();
-    await fireEvent.press(screen.getByRole("button", { name: APPS.loadMore }));
-    expect(await screen.findByText(APPS.couldntLoadMore)).toBeTruthy();
+    expect(await screen.findByText(PAGED.showingCount(APPLICATIONS_PAGE_SIZE, MANY.length))).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: PAGED.loadMore }));
+    expect(await screen.findByText(PAGED.couldntLoadMore)).toBeTruthy();
     // The rows already loaded stay.
     expect(screen.getByRole("link", { name: "Role 0" })).toBeTruthy();
 
     failNextPage = false;
     await fireEvent.press(screen.getByRole("button", { name: APPS.tryAgain }));
     expect(await screen.findByRole("link", { name: `Role ${MANY.length - 1}` })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: APPS.loadMore })).toBeNull();
+    expect(screen.queryByRole("button", { name: PAGED.loadMore })).toBeNull();
     expect(listRequests(sent).at(-1)?.params).toEqual(expect.objectContaining({ company_id: ID, offset: APPLICATIONS_PAGE_SIZE }));
   });
 });
