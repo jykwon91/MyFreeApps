@@ -2,7 +2,6 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
 import { DISCOVERED_JOBS_PAGE_SIZE, FIRST_DISCOVERED_JOBS_OFFSET } from "../constants/discoverPaging";
 import type { Application } from "../types/application";
-import type { DiscoveredJobListArgs } from "../types/discovery/discovered-job-list-args";
 import type { DiscoveredJobListResponse } from "../types/discovery/discovered-job-list-response";
 import type { DiscoveredJobsFilter } from "../types/discovery/discovered-jobs-filter";
 import type { DiscoverySource } from "../types/discovery/discovery-source";
@@ -50,37 +49,13 @@ const discoverApi = apiWithTags.injectEndpoints({
       }),
       invalidatesTags: ["DiscoverySource", "DiscoveredJob"],
     }),
-    listDiscoveredJobs: build.query<DiscoveredJobListResponse, DiscoveredJobListArgs>({
-      query: ({ state = "inbox", limit = 50, offset = 0, source_id } = {}) => {
-        const params: Record<string, string | number> = { state, limit, offset };
-        if (source_id) {
-          params.source_id = source_id;
-        }
-        return { url: "/discover", method: "GET", params };
-      },
-      // Collapse every page of one (state, source_id) view into a SINGLE cache
-      // entry — `limit`/`offset` are excluded from the key. The inbox paginates
-      // by growing `limit` from offset 0 (see DiscoverInboxView), so each fetch
-      // returns the whole loaded window. Sharing one entry means "load more"
-      // swaps the data in place (no empty-list flash), and a poll/refetch
-      // re-reads the entire window — so the #793 scoring poll fills in scores
-      // and re-sorts across the full list, not just the latest page.
-      serializeQueryArgs: ({ queryArgs }) => {
-        const { state = "inbox", source_id } = queryArgs ?? {};
-        return source_id ? { state, source_id } : { state };
-      },
-      // With the key collapsed, a `limit` change alone wouldn't trigger a
-      // request — force one so "load more" actually fetches the larger window.
-      // No `merge` is defined, so the larger response replaces the cache.
-      forceRefetch: ({ currentArg, previousArg }) =>
-        (currentArg?.limit ?? 0) !== (previousArg?.limit ?? 0),
-      providesTags: ["DiscoveredJob"],
-    }),
     /**
      * GET /discover one page per offset. The filter keys the cache, so a new view or
      * saved search starts from the first page. Refetching (invalidation, polling, coming back to
      * the app, pull to refresh) reloads every loaded page; paged lists drop repeats by id, so a
      * posting a fresh score moves across a page boundary shows once.
+     * While scores are filling in, a posting whose score changes can move to another page and be missing for
+     * one poll, until the next poll reloads the pages in order.
      */
     listDiscoveredJobsPages: build.infiniteQuery<DiscoveredJobListResponse, DiscoveredJobsFilter, number>({
       infiniteQueryOptions: {
@@ -142,7 +117,6 @@ export const {
   useUpdateDiscoverySourceMutation,
   useDeactivateDiscoverySourceMutation,
   useRefreshDiscoverySourceMutation,
-  useListDiscoveredJobsQuery,
   useListDiscoveredJobsPagesInfiniteQuery,
   useDismissDiscoveredJobMutation,
   useUndoDismissDiscoveredJobMutation,
