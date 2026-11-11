@@ -1,5 +1,5 @@
 import api from "../lib/api";
-import { notifyAuthChange } from "../lib/auth-store";
+import { notifyAuthChange, onIdentityChange } from "../lib/auth-store";
 import { getPlatform } from "../platform/configurePlatform";
 import { baseApi } from "../store/baseApi";
 import type { LoginResponse } from "../types/security/login-response";
@@ -16,13 +16,13 @@ function turnstileHeaders(turnstileToken: string): Record<string, string> {
  * `lib/auth.ts`.
  */
 export function createAuthClient(store: AuthClientStore) {
-  // Reset BEFORE notifying: every query cached under the previous identity (such
-  // as /users/me) is stale the moment it changes, and the notification triggers
-  // the re-render that refetches against the new token.
-  function identityChanged(): void {
+  // Every query cached under the previous identity (such as /users/me) is stale the
+  // moment it changes, however it changes: a sign-in or sign-out here, a rejected
+  // token, or another tab. notifyAuthChange() resets before the re-render that
+  // refetches against the new token, and leaves a refresh for the same user alone.
+  const stopResettingCache = onIdentityChange(() => {
     store.dispatch(baseApi.util.resetApiState());
-    notifyAuthChange();
-  }
+  });
 
   return {
     /**
@@ -49,7 +49,7 @@ export function createAuthClient(store: AuthClientStore) {
 
       if (response.data.access_token) {
         getPlatform().tokenStore.set(response.data.access_token);
-        identityChanged();
+        notifyAuthChange();
         return { status: "ok" };
       }
 
@@ -123,7 +123,13 @@ export function createAuthClient(store: AuthClientStore) {
      */
     signOut(): void {
       getPlatform().tokenStore.clear();
-      identityChanged();
+      notifyAuthChange();
     },
+
+    /**
+     * Stop resetting the store's cache on identity changes. For the module that made
+     * this client when it is replaced, as hot reload does, so resets don't pile up.
+     */
+    dispose: stopResettingCache,
   };
 }

@@ -1,3 +1,4 @@
+import { callEach } from "../utils/callEach";
 import type { PlatformConfig } from "./types/PlatformConfig";
 
 type ConfiguredListener = (config: PlatformConfig) => void;
@@ -9,15 +10,7 @@ export function configurePlatform(config: PlatformConfig): void {
   _config = config;
   // One failing listener must not leave the others unconfigured, such as the
   // API client without its baseURL. Everything runs, then the failure surfaces.
-  const errors: unknown[] = [];
-  _listeners.forEach((listener) => {
-    try {
-      listener(config);
-    } catch (error) {
-      errors.push(error);
-    }
-  });
-  if (errors.length > 0) throw errors[0];
+  callEach(_listeners, config);
 }
 
 export function getPlatform(): PlatformConfig {

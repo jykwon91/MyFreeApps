@@ -1,24 +1,32 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAuthClient } from "../auth/createAuthClient";
 import api from "../lib/api";
-import { notifyAuthChange } from "../lib/auth-store";
+import { onIdentityChange } from "../lib/auth-store";
 import { _resetPlatformForTests, configurePlatform } from "../platform/configurePlatform";
 import { baseApi } from "../store/baseApi";
-
-vi.mock("../lib/auth-store", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../lib/auth-store")>()),
-  notifyAuthChange: vi.fn(),
-}));
 
 const RESET_ACTION = baseApi.util.resetApiState();
 
 const dispatch = vi.fn();
-const setToken = vi.fn();
-const clearToken = vi.fn();
+let token: string | null = null;
+const setToken = vi.fn((next: string) => {
+  token = next;
+});
+const clearToken = vi.fn(() => {
+  token = null;
+});
 const post = vi.spyOn(api, "post");
 
 const client = createAuthClient({ dispatch });
+// Registered after the client's own reset, so it sees what a subscriber would.
+const identityChanged = vi.fn();
+const stopObserving = onIdentityChange(identityChanged);
+
+afterAll(() => {
+  stopObserving();
+  client.dispose();
+});
 
 function respondWith(data: unknown): void {
   post.mockResolvedValueOnce({ data });
@@ -26,12 +34,12 @@ function respondWith(data: unknown): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  setToken.mockReset();
   post.mockReset();
+  token = null;
   _resetPlatformForTests();
   configurePlatform({
     baseURL: "https://api.test",
-    tokenStore: { get: () => null, set: setToken, clear: clearToken },
+    tokenStore: { get: () => token, set: setToken, clear: clearToken },
     orgStore: { get: () => null },
     isOnLogin: () => false,
   });
@@ -48,18 +56,15 @@ describe("signIn", () => {
     });
   });
 
-  it("writes the token through the injected store, then resets the cache, then notifies", async () => {
+  it("writes the token through the injected store, then resets the cache", async () => {
     respondWith({ access_token: "jwt" });
 
     await expect(client.signIn("u@e.com", "pw")).resolves.toEqual({ status: "ok" });
 
     expect(setToken).toHaveBeenCalledWith("jwt");
+    expect(dispatch).toHaveBeenCalledTimes(1);
     expect(dispatch).toHaveBeenCalledWith(RESET_ACTION);
-    const write = setToken.mock.invocationCallOrder[0];
-    const reset = dispatch.mock.invocationCallOrder[0];
-    const notify = vi.mocked(notifyAuthChange).mock.invocationCallOrder[0];
-    expect(write).toBeLessThan(reset);
-    expect(reset).toBeLessThan(notify);
+    expect(setToken.mock.invocationCallOrder[0]).toBeLessThan(dispatch.mock.invocationCallOrder[0]);
   });
 
   it("reports a TOTP challenge without touching the token, the cache or subscribers", async () => {
@@ -69,7 +74,7 @@ describe("signIn", () => {
 
     expect(setToken).not.toHaveBeenCalled();
     expect(dispatch).not.toHaveBeenCalled();
-    expect(notifyAuthChange).not.toHaveBeenCalled();
+    expect(identityChanged).not.toHaveBeenCalled();
   });
 
   it("rejects a response with neither a token nor a challenge", async () => {
@@ -89,7 +94,7 @@ describe("signIn", () => {
     await expect(client.signIn("u@e.com", "pw")).rejects.toThrow("storage blocked");
 
     expect(dispatch).not.toHaveBeenCalled();
-    expect(notifyAuthChange).not.toHaveBeenCalled();
+    expect(identityChanged).not.toHaveBeenCalled();
   });
 
   it("leaves the token alone when the request fails", async () => {
@@ -100,16 +105,17 @@ describe("signIn", () => {
 });
 
 describe("signOut", () => {
-  it("clears the token through the injected store, then resets the cache, then notifies", () => {
+  it("clears the token through the injected store, then resets the cache", async () => {
+    respondWith({ access_token: "jwt" });
+    await client.signIn("u@e.com", "pw");
+    dispatch.mockClear();
+
     client.signOut();
 
     expect(clearToken).toHaveBeenCalledTimes(1);
+    expect(dispatch).toHaveBeenCalledTimes(1);
     expect(dispatch).toHaveBeenCalledWith(RESET_ACTION);
-    const clear = clearToken.mock.invocationCallOrder[0];
-    const reset = dispatch.mock.invocationCallOrder[0];
-    const notify = vi.mocked(notifyAuthChange).mock.invocationCallOrder[0];
-    expect(clear).toBeLessThan(reset);
-    expect(reset).toBeLessThan(notify);
+    expect(clearToken.mock.invocationCallOrder[0]).toBeLessThan(dispatch.mock.invocationCallOrder[0]);
   });
 });
 
@@ -125,7 +131,7 @@ describe("register", () => {
       { headers: {} },
     );
     expect(setToken).not.toHaveBeenCalled();
-    expect(notifyAuthChange).not.toHaveBeenCalled();
+    expect(identityChanged).not.toHaveBeenCalled();
   });
 
   it("forwards a Turnstile token as a header", async () => {

@@ -46,6 +46,11 @@ function analysis(): JobAnalysis {
   };
 }
 
+async function signedInAsA(): Promise<void> {
+  post.mockResolvedValueOnce({ data: { access_token: "account-a.jwt", token_type: "bearer" } });
+  await signIn("a@example.com", "password");
+}
+
 /** Account A analyzed a job, then sent another, still running, which replaced that result with its wait. */
 function accountAWasAnalyzing(): void {
   store.dispatch(analysisStarted({ requestId: "req-1", source: "text", startedAt: 0 }));
@@ -60,7 +65,8 @@ describe("the last analysis on the web, across accounts", () => {
     post.mockReset();
   });
 
-  it("is dropped, with the one still running, on sign-out", () => {
+  it("is dropped, with the one still running, on sign-out", async () => {
+    await signedInAsA();
     accountAWasAnalyzing();
 
     signOut();
@@ -72,6 +78,7 @@ describe("the last analysis on the web, across accounts", () => {
   });
 
   it("is dropped when someone else signs in in the same tab, as after the session expired", async () => {
+    await signedInAsA();
     accountAWasAnalyzing();
     post.mockResolvedValueOnce({ data: { access_token: "account-b.jwt", token_type: "bearer" } });
 

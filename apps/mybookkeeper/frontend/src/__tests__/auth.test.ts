@@ -1,3 +1,4 @@
+import type { AxiosAdapter } from "axios";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Must mock before importing the module under test
@@ -13,36 +14,43 @@ vi.mock("@/shared/lib/api", () => ({
   default: { post: vi.fn() },
 }));
 
-vi.mock("@platform/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@platform/ui")>();
-  return {
-    ...actual,
-    notifyAuthChange: vi.fn(),
-    useIsAuthenticated: vi.fn(),
-  };
-});
-
-const { mockDispatch, mockResetApiState, mockClearOrganizationState } = vi.hoisted(() => ({
+const { mockDispatch, mockResetApiState } = vi.hoisted(() => ({
   mockDispatch: vi.fn(),
   mockResetApiState: vi.fn(() => ({ type: "api/resetApiState" })),
-  mockClearOrganizationState: vi.fn(() => ({ type: "organization/clearOrganizationState" })),
 }));
 
-vi.mock("@/shared/store", () => ({
-  store: { dispatch: mockDispatch },
-}));
+// A real organization slice, so the tests see what the session reset does to it,
+// with every dispatch recorded.
+vi.mock("@/shared/store", async () => {
+  const { configureStore } = await import("@reduxjs/toolkit");
+  const { default: organization } = await import("@/shared/store/organizationSlice");
+  const realStore = configureStore({ reducer: { organization } });
+  return {
+    store: {
+      getState: realStore.getState,
+      dispatch: (action: Parameters<typeof realStore.dispatch>[0]) => {
+        mockDispatch(action);
+        return realStore.dispatch(action);
+      },
+    },
+  };
+});
 
 vi.mock("@/shared/store/baseApi", () => ({
   baseApi: { util: { resetApiState: mockResetApiState } },
 }));
 
-vi.mock("@/shared/store/organizationSlice", () => ({
-  clearOrganizationState: mockClearOrganizationState,
-}));
-
 import posthog from "posthog-js";
+import sharedApi from "@platform/ui/lib/api";
 import api from "@/shared/lib/api";
-import { login, logout } from "@/shared/lib/auth";
+import { login, logout, notifyAuthChange } from "@/shared/lib/auth";
+import { store } from "@/shared/store";
+import { forgetOrganizations, setActiveOrg } from "@/shared/store/organizationSlice";
+import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
+
+const RESET_API = { type: "api/resetApiState" };
+const FORGET_ORGS = forgetOrganizations();
+const ORG_KEY = "v1_activeOrgId";
 
 function createJwt(sub: string): string {
   const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
@@ -50,11 +58,32 @@ function createJwt(sub: string): string {
   return `${header}.${payload}.signature`;
 }
 
+function organizationState(): { activeOrgId: string | null; organizations: OrgWithRole[] } {
+  return store.getState().organization;
+}
+
+const rejectWith401: AxiosAdapter = async (config) =>
+  Promise.reject({
+    response: { status: 401, statusText: "Err", headers: {}, data: {}, config },
+    config,
+    isAxiosError: true,
+  });
+
+async function signIn(sub: string): Promise<void> {
+  (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    data: { access_token: createJwt(sub) },
+  });
+  await login("alice@example.com", "password");
+}
+
 describe("auth — session lifecycle", () => {
   const originalLocation = window.location;
 
   beforeEach(() => {
     localStorage.clear();
+    // Start each test signed out, as far as the auth store knows.
+    notifyAuthChange();
+    store.dispatch(forgetOrganizations());
     vi.clearAllMocks();
     (posthog as unknown as { __loaded: boolean }).__loaded = true;
     // Stub window.location.href assignment in logout()
@@ -130,18 +159,12 @@ describe("auth — session lifecycle", () => {
   });
 
   describe("login — session state reset", () => {
-    it("dispatches resetApiState and clearOrganizationState on successful login", async () => {
-      const token = createJwt("user-abc-123");
-      (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        data: { access_token: token },
-      });
-
-      await login("alice@example.com", "password");
+    it("dispatches resetApiState and forgetOrganizations on successful login", async () => {
+      await signIn("user-abc-123");
 
       expect(mockResetApiState).toHaveBeenCalledTimes(1);
-      expect(mockClearOrganizationState).toHaveBeenCalledTimes(1);
-      expect(mockDispatch).toHaveBeenCalledWith({ type: "api/resetApiState" });
-      expect(mockDispatch).toHaveBeenCalledWith({ type: "organization/clearOrganizationState" });
+      expect(mockDispatch).toHaveBeenCalledWith(RESET_API);
+      expect(mockDispatch).toHaveBeenCalledWith(FORGET_ORGS);
     });
 
     it("does not reset session state when login fails (no access_token)", async () => {
@@ -152,7 +175,79 @@ describe("auth — session lifecycle", () => {
       await login("alice@example.com", "password");
 
       expect(mockResetApiState).not.toHaveBeenCalled();
-      expect(mockClearOrganizationState).not.toHaveBeenCalled();
+      expect(mockDispatch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("session state reset outside login and logout", () => {
+    it("resets session state when a 401 signs out", async () => {
+      await signIn("user-abc-123");
+      vi.clearAllMocks();
+
+      await expect(sharedApi.get("/properties", { adapter: rejectWith401 })).rejects.toBeDefined();
+
+      expect(localStorage.getItem("token")).toBeNull();
+      expect(mockDispatch).toHaveBeenCalledWith(RESET_API);
+      expect(mockDispatch).toHaveBeenCalledWith(FORGET_ORGS);
+    });
+
+    it("resets session state when another tab signs in as someone else", async () => {
+      await signIn("user-abc-123");
+      vi.clearAllMocks();
+      localStorage.setItem("token", createJwt("user-xyz-789"));
+      window.dispatchEvent(new StorageEvent("storage", { key: "token" }));
+
+      expect(mockDispatch).toHaveBeenCalledWith(RESET_API);
+      expect(mockDispatch).toHaveBeenCalledWith(FORGET_ORGS);
+    });
+
+    it("keeps session state when another tab gets a new token for the same user", async () => {
+      await signIn("user-abc-123");
+      vi.clearAllMocks();
+      localStorage.setItem("token", `${createJwt("user-abc-123")}-refreshed`);
+      window.dispatchEvent(new StorageEvent("storage", { key: "token" }));
+
+      expect(mockDispatch).not.toHaveBeenCalled();
+    });
+  });
+
+  // localStorage is shared by every tab. This module is tab 1; tab 2 is simulated by
+  // writing localStorage directly, then delivering the storage event tab 1 would get.
+  describe("the stored organization choice", () => {
+    it("survives another tab's sign-in, which picked it, and becomes this tab's choice", async () => {
+      await signIn("user-abc-123");
+      store.dispatch(setActiveOrg("org-a"));
+
+      // Tab 2 signs in as another user and picks an organization.
+      localStorage.setItem("token", createJwt("user-xyz-789"));
+      localStorage.setItem(ORG_KEY, "org-b");
+      window.dispatchEvent(new StorageEvent("storage", { key: "token" }));
+
+      expect(localStorage.getItem(ORG_KEY)).toBe("org-b");
+      expect(organizationState()).toEqual({ activeOrgId: "org-b", organizations: [] });
+    });
+
+    it("is kept when the same user signs back in after a 401", async () => {
+      await signIn("user-abc-123");
+      store.dispatch(setActiveOrg("org-a"));
+
+      await expect(sharedApi.get("/properties", { adapter: rejectWith401 })).rejects.toBeDefined();
+      expect(localStorage.getItem(ORG_KEY)).toBe("org-a");
+      await signIn("user-abc-123");
+
+      expect(localStorage.getItem(ORG_KEY)).toBe("org-a");
+      expect(organizationState().activeOrgId).toBe("org-a");
+    });
+
+    it("is removed when someone else signs in after a 401", async () => {
+      await signIn("user-abc-123");
+      store.dispatch(setActiveOrg("org-a"));
+
+      await expect(sharedApi.get("/properties", { adapter: rejectWith401 })).rejects.toBeDefined();
+      await signIn("user-xyz-789");
+
+      expect(localStorage.getItem(ORG_KEY)).toBeNull();
+      expect(organizationState().activeOrgId).toBeNull();
     });
   });
 
@@ -178,13 +273,18 @@ describe("auth — session lifecycle", () => {
       expect(localStorage.getItem("token")).toBeNull();
     });
 
-    it("dispatches resetApiState and clearOrganizationState on logout", () => {
+    it("dispatches resetApiState and forgetOrganizations on logout, and forgets the chosen organization", async () => {
+      await signIn("user-abc-123");
+      store.dispatch(setActiveOrg("org-a"));
+      vi.clearAllMocks();
+
       logout();
 
       expect(mockResetApiState).toHaveBeenCalledTimes(1);
-      expect(mockClearOrganizationState).toHaveBeenCalledTimes(1);
-      expect(mockDispatch).toHaveBeenCalledWith({ type: "api/resetApiState" });
-      expect(mockDispatch).toHaveBeenCalledWith({ type: "organization/clearOrganizationState" });
+      expect(mockDispatch).toHaveBeenCalledWith(RESET_API);
+      expect(mockDispatch).toHaveBeenCalledWith(FORGET_ORGS);
+      expect(localStorage.getItem(ORG_KEY)).toBeNull();
+      expect(organizationState().activeOrgId).toBeNull();
     });
 
     it("redirects to /login", () => {

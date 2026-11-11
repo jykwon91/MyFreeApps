@@ -1,17 +1,19 @@
 import posthog from "posthog-js";
-import { notifyAuthChange, useIsAuthenticated } from "@platform/ui";
+import {
+  notifyAuthChange,
+  onIdentityChange,
+  readJwtPayload,
+  tokenIdentity,
+  useIsAuthenticated,
+} from "@platform/ui";
 import api from "./api";
+import { ACTIVE_ORG_STORAGE_KEY, TOKEN_STORAGE_KEY } from "./session-storage-keys";
 import { store } from "@/shared/store";
 import { baseApi } from "@/shared/store/baseApi";
-import { clearOrganizationState } from "@/shared/store/organizationSlice";
+import { forgetOrganizations } from "@/shared/store/organizationSlice";
+import type { LoginResponse } from "@/shared/types/security/login-response";
 
 export { useIsAuthenticated, notifyAuthChange };
-
-interface LoginResponse {
-  access_token?: string;
-  token_type?: string;
-  detail?: string;
-}
 
 function isPosthogReady(): boolean {
   return Boolean((posthog as unknown as { __loaded?: boolean }).__loaded);
@@ -19,25 +21,32 @@ function isPosthogReady(): boolean {
 
 function identifyInPosthog(token: string, email: string): void {
   if (!isPosthogReady()) return;
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    const userId = payload.sub;
-    if (userId) {
-      posthog.identify(userId, { email });
-    }
-  } catch {
-    // best-effort — analytics identification must never block auth
+  const userId = readJwtPayload(token)?.sub;
+  if (typeof userId === "string" && userId) {
+    posthog.identify(userId, { email });
   }
 }
 
-function resetSessionState(): void {
-  // Clear cached API responses + in-memory org selection so the next
-  // session starts from a clean slate. Without this, RTK Query serves
-  // the previous user's data until a hard reload, which manifests as
-  // "I need to open a new tab to log in."
-  store.dispatch(baseApi.util.resetApiState());
-  store.dispatch(clearOrganizationState());
+function storedUser(): string | null {
+  return tokenIdentity(localStorage.getItem(TOKEN_STORAGE_KEY));
 }
+
+// The last user this tab saw signed in. A 401 sign-out leaves it, so signing back
+// in as that user keeps the organization they picked.
+let lastSignedInUser = storedUser();
+
+// Whenever the token changes hands (a sign-in or sign-out here, a 401, or another
+// tab), drop the previous user's cached responses and organizations before anything
+// re-renders. Without it, RTK Query serves the previous user's data until a hard
+// reload. The stored organization choice is shared with every tab, so this leaves
+// it alone: only login() and logout(), in the tab running them, change it.
+const stopResettingSession = onIdentityChange(() => {
+  store.dispatch(baseApi.util.resetApiState());
+  store.dispatch(forgetOrganizations());
+  lastSignedInUser = storedUser() ?? lastSignedInUser;
+});
+// Hot reload runs this module again; without this the old reset would stay registered.
+import.meta.hot?.dispose(stopResettingSession);
 
 export async function login(
   email: string,
@@ -51,8 +60,11 @@ export async function login(
   });
 
   if (data.access_token) {
-    localStorage.setItem("token", data.access_token);
-    resetSessionState();
+    // One user's organization choice must not carry over to another.
+    if (tokenIdentity(data.access_token) !== lastSignedInUser) {
+      localStorage.removeItem(ACTIVE_ORG_STORAGE_KEY);
+    }
+    localStorage.setItem(TOKEN_STORAGE_KEY, data.access_token);
     identifyInPosthog(data.access_token, email);
     notifyAuthChange();
   }
@@ -61,23 +73,11 @@ export async function login(
 }
 
 export function logout(): void {
-  localStorage.removeItem("token");
-  localStorage.removeItem("v1_activeOrgId");
-  resetSessionState();
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  localStorage.removeItem(ACTIVE_ORG_STORAGE_KEY);
   if (isPosthogReady()) {
     posthog.reset();
   }
   notifyAuthChange();
   window.location.href = "/login";
-}
-
-export function isAuthenticated(): boolean {
-  const token = localStorage.getItem("token");
-  if (!token) return false;
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return typeof payload.exp === "number" && payload.exp * 1000 > Date.now();
-  } catch {
-    return false;
-  }
 }

@@ -34,6 +34,9 @@ function okAdapter(seen: InternalAxiosRequestConfig[]): AxiosAdapter {
   };
 }
 
+// Every auth client a test makes, disposed after it so no cache reset outlives the test.
+const clientDisposers: (() => void)[] = [];
+
 beforeEach(() => {
   vi.resetModules();
   localStorage.clear();
@@ -41,6 +44,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  clientDisposers.splice(0).forEach((dispose) => dispose());
   window.history.pushState({}, "", "/");
 });
 
@@ -92,7 +96,9 @@ describe("the auth client on the web", () => {
   async function loadClient() {
     const { createAuthClient } = await import("../lib/authClient");
     const { default: api } = await import("@platform/core/lib/api");
-    return { client: createAuthClient({ dispatch: () => undefined }), api };
+    const client = createAuthClient({ dispatch: () => undefined });
+    clientDisposers.push(client.dispose);
+    return { client, api };
   }
 
   const tokenResponse: AxiosAdapter = async (config) => ({
@@ -168,6 +174,16 @@ describe("the localStorage adapter", () => {
     expect(localStorage.getItem("token")).toBe("jwt-123");
   });
 
+  it("reads as signed in with a token whose base64url payload has - or _", async () => {
+    const payload = JSON.stringify({ sub: "user-a?>", exp: Math.floor(Date.now() / 1000) + 3600 });
+    const base64Url = btoa(payload).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    expect(base64Url).toMatch(/[-_]/);
+    localStorage.setItem("token", `header.${base64Url}.signature`);
+    const { useIsAuthenticated } = await import("../lib/auth-store");
+    const { result } = renderHook(() => useIsAuthenticated());
+    expect(result.current).toBe(true);
+  });
+
   it("re-renders useIsAuthenticated when a 401 signs out", async () => {
     localStorage.setItem("token", liveToken());
     const { useIsAuthenticated } = await import("../lib/auth-store");
@@ -210,5 +226,109 @@ describe("the localStorage adapter", () => {
     const code = request("totp");
     window.dispatchEvent(new Event("beforeunload"));
     await expect(code).rejects.toMatchObject({ reason: "tab_closed" });
+  });
+});
+
+describe("the API cache when the token changes hands", () => {
+  // Tokens for one user differ by lifetime, as a refreshed one would.
+  function tokenFor(sub: string, validForSeconds: number): string {
+    const payload = btoa(JSON.stringify({ sub, exp: Math.floor(Date.now() / 1000) + validForSeconds }));
+    return `header.${payload}.signature`;
+  }
+
+  // The token in localStorage when the page loads is the one the cache fills under.
+  async function signedInAs(token: string) {
+    localStorage.setItem("token", token);
+    const { createAuthClient } = await import("../lib/authClient");
+    const dispatch = vi.fn();
+    clientDisposers.push(createAuthClient({ dispatch }).dispose);
+    return dispatch;
+  }
+
+  function anotherTabWrites(token: string | null): void {
+    if (token === null) localStorage.removeItem("token");
+    else localStorage.setItem("token", token);
+    act(() => {
+      window.dispatchEvent(new StorageEvent("storage", { key: "token" }));
+    });
+  }
+
+  it("resets when a 401 signs out", async () => {
+    const dispatch = await signedInAs(tokenFor("user-a", 3600));
+    const { default: api } = await import("../lib/api");
+    const adapter: AxiosAdapter = async (config) =>
+      Promise.reject({
+        response: { status: 401, statusText: "Err", headers: {}, data: {}, config },
+        config,
+        isAxiosError: true,
+      });
+
+    await expect(api.get("/things", { adapter })).rejects.toBeDefined();
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("resets when another tab signs out", async () => {
+    const dispatch = await signedInAs(tokenFor("user-a", 3600));
+    anotherTabWrites(null);
+    expect(dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("resets when another tab clears all of localStorage", async () => {
+    const dispatch = await signedInAs(tokenFor("user-a", 3600));
+    localStorage.clear();
+    act(() => {
+      window.dispatchEvent(new StorageEvent("storage", { key: null }));
+    });
+    expect(dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("resets when another tab signs in as someone else", async () => {
+    const dispatch = await signedInAs(tokenFor("user-a", 3600));
+    anotherTabWrites(tokenFor("user-b", 3600));
+    expect(dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the cache when another tab gets a new token for the same user", async () => {
+    const dispatch = await signedInAs(tokenFor("user-a", 3600));
+    anotherTabWrites(tokenFor("user-a", 7200));
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it("still re-renders, and still resets, when another identity listener throws", async () => {
+    const dispatch = await signedInAs(tokenFor("user-a", 3600));
+    const { notifyAuthChange, onIdentityChange, useIsAuthenticated } = await import("../lib/auth-store");
+    const failure = new Error("listener failed");
+    clientDisposers.push(
+      onIdentityChange(() => {
+        throw failure;
+      }),
+    );
+    const { result } = renderHook(() => useIsAuthenticated());
+    expect(result.current).toBe(true);
+
+    localStorage.removeItem("token");
+    act(() => {
+      expect(() => notifyAuthChange()).toThrow(failure);
+    });
+
+    expect(result.current).toBe(false);
+    expect(dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("resets before the re-render that shows the change", async () => {
+    const dispatch = await signedInAs(tokenFor("user-a", 3600));
+    const { useIsAuthenticated } = await import("../lib/auth-store");
+    const resetsSeenSignedOut: number[] = [];
+    renderHook(() => {
+      const signedIn = useIsAuthenticated();
+      if (!signedIn) resetsSeenSignedOut.push(dispatch.mock.calls.length);
+      return signedIn;
+    });
+
+    anotherTabWrites(null);
+
+    expect(resetsSeenSignedOut.length).toBeGreaterThan(0);
+    expect(resetsSeenSignedOut.every((count) => count === 1)).toBe(true);
   });
 });

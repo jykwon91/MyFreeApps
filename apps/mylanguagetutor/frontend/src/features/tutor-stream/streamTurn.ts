@@ -33,8 +33,8 @@ async function errorDetail(response: Response): Promise<string> {
  * ``EventSource`` can't POST or send an Authorization header, so this reads
  * the ``fetch`` body stream through ``eventsource-parser``. Resolves when the
  * stream closes; throws ``TurnRequestError`` when the turn is refused before
- * streaming (the caller maps ``detail`` to copy). A 401 signs the user out,
- * the same as the shared axios instance does.
+ * streaming (the caller maps ``detail`` to copy). A 401 for the token signed in
+ * now signs the user out, the same as the shared axios instance does.
  */
 export async function streamTurn({ sessionId, text, onEvent, signal }: StreamTurnOptions): Promise<void> {
   const headers: Record<string, string> = {
@@ -58,7 +58,9 @@ export async function streamTurn({ sessionId, text, onEvent, signal }: StreamTur
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
+    // Only a rejection of the token signed in now signs out: someone may have signed
+    // in, here or in another tab, while this request was in flight.
+    if (response.status === 401 && localStorage.getItem(TOKEN_KEY) === token) {
       localStorage.removeItem(TOKEN_KEY);
       notifyAuthChange();
     }

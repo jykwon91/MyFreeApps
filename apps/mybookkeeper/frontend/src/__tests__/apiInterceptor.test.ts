@@ -35,16 +35,30 @@ describe("api axios interceptor — 401 handling", () => {
     }
   }
 
+  // The request interceptor records the token it attached as `_sentToken`; a real
+  // request reaching the error handler always carries it.
   it("logs the user out on 401 from a normal authenticated endpoint", async () => {
     const { notifyAuthChange } = await import("@platform/core/lib/auth-store");
 
     await triggerInterceptor({
       response: { status: 401, data: {}, headers: {}, statusText: "", config: {} as never },
-      config: { url: "/users/me" } as never,
+      config: { url: "/users/me", _sentToken: "dummy-token" } as never,
     });
 
     expect(localStorage.getItem("token")).toBeNull();
     expect(notifyAuthChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT log out a user who signed in after the rejected request was sent", async () => {
+    const { notifyAuthChange } = await import("@platform/core/lib/auth-store");
+
+    await triggerInterceptor({
+      response: { status: 401, data: {}, headers: {}, statusText: "", config: {} as never },
+      config: { url: "/users/me", _sentToken: "previous-user-token" } as never,
+    });
+
+    expect(localStorage.getItem("token")).toBe("dummy-token");
+    expect(notifyAuthChange).not.toHaveBeenCalled();
   });
 
   it("does NOT log the user out on 401 from /integrations/gmail/sync (business-level 401)", async () => {
@@ -58,7 +72,7 @@ describe("api axios interceptor — 401 handling", () => {
         statusText: "",
         config: {} as never,
       },
-      config: { url: "/integrations/gmail/sync" } as never,
+      config: { url: "/integrations/gmail/sync", _sentToken: "dummy-token" } as never,
     });
 
     expect(localStorage.getItem("token")).toBe("dummy-token");
@@ -76,7 +90,7 @@ describe("api axios interceptor — 401 handling", () => {
         statusText: "",
         config: {} as never,
       },
-      config: { url: "/admin/something" } as never,
+      config: { url: "/admin/something", _sentToken: "dummy-token" } as never,
     });
 
     expect(localStorage.getItem("token")).toBe("dummy-token");
@@ -88,7 +102,7 @@ describe("api axios interceptor — 401 handling", () => {
 
     await triggerInterceptor({
       response: { status: 401, data: {}, headers: {}, statusText: "", config: {} as never },
-      config: { url: "/auth/jwt/login" } as never,
+      config: { url: "/auth/jwt/login", _sentToken: "dummy-token" } as never,
     });
 
     expect(localStorage.getItem("token")).toBe("dummy-token");
