@@ -43,14 +43,14 @@ export default function DocumentRow({ doc, onEdit, onDelete }: DocumentRowProps)
         <button
           onClick={() => onEdit(doc)}
           title="Edit"
-          className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded hover:bg-muted text-muted-foreground hover:text-foreground"
         >
           <Edit2 size={14} />
         </button>
         <button
           onClick={() => onDelete(doc)}
           title="Delete"
-          className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+          className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
         >
           <Trash2 size={14} />
         </button>

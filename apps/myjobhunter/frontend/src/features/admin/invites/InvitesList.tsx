@@ -1,3 +1,4 @@
+import { Mail } from "lucide-react";
 import { EmptyState, Skeleton } from "@platform/ui";
 import InviteRow from "@/features/admin/invites/InviteRow";
 import { useListInvitesQuery } from "@myjobhunter/api-client/store/invitesApi";
@@ -38,7 +39,7 @@ export default function InvitesList() {
   if (invites.length === 0) {
     return (
       <EmptyState
-        icon="Mail"
+        icon={<Mail className="w-12 h-12" />}
         heading="No pending invites"
         body="When you invite someone, their pending invite will appear here until they register."
       />

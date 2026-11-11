@@ -1,4 +1,5 @@
 import type { Application } from "@myjobhunter/api-client/types/application";
+import type { Document } from "@myjobhunter/api-client/types/document/document";
 import type { Company } from "@myjobhunter/api-client/types/company";
 
 const TIMESTAMP = "2026-11-01T00:00:00+00:00";
@@ -47,6 +48,25 @@ export function mockApplication(overrides: Partial<Application> = {}): Applicati
     external_source: null,
     latest_status: null,
     company_name: "Acme Corp",
+    deleted_at: null,
+    created_at: TIMESTAMP,
+    updated_at: TIMESTAMP,
+    ...overrides,
+  };
+}
+
+export function mockDocument(overrides: Partial<Document> = {}): Document {
+  return {
+    id: "00000000-0000-0000-0000-0000000000d1",
+    user_id: "00000000-0000-0000-0000-000000000001",
+    application_id: null,
+    title: "Cover Letter Draft",
+    kind: "cover_letter",
+    body: "Dear hiring manager",
+    filename: null,
+    content_type: null,
+    size_bytes: null,
+    has_file: false,
     deleted_at: null,
     created_at: TIMESTAMP,
     updated_at: TIMESTAMP,

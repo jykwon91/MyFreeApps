@@ -36,7 +36,18 @@ vi.mock("@platform/ui", async (importOriginal) => {
     ...actual,
     showSuccess: vi.fn(),
     showError: vi.fn(),
-    EmptyState: ({ heading }: { heading: string }) => <div>{heading}</div>,
+    EmptyState: ({
+      heading,
+      action,
+    }: {
+      heading: string;
+      action?: { label: string; onClick: () => void };
+    }) => (
+      <div>
+        <h3>{heading}</h3>
+        {action ? <button onClick={action.onClick}>{action.label}</button> : null}
+      </div>
+    ),
     Skeleton: ({ className }: { className?: string }) => (
       <div data-testid="skeleton" className={className} />
     ),
@@ -145,6 +156,37 @@ describe("DocumentList", () => {
       const skeletons = screen.getAllByTestId("skeleton");
       expect(skeletons.length).toBeGreaterThanOrEqual(3);
     });
+
+    it("mirrors the loaded list: filter bar, then rows shaped like document rows", () => {
+      mockUseDocumentsPages.mockReturnValue(pagesState({ isLoading: true }));
+
+      renderList();
+
+      expect(screen.getByTestId("document-filter-skeleton")).toBeInTheDocument();
+      expect(screen.getAllByTestId("document-row-skeleton")).toHaveLength(3);
+      expect(screen.getByRole("status")).toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent("Loading documents");
+      expect(screen.queryByText(/loading\.\.\./i)).not.toBeInTheDocument();
+    });
+
+    it("omits the filter bar placeholder when the filter is hidden", () => {
+      mockUseDocumentsPages.mockReturnValue(pagesState({ isLoading: true }));
+
+      renderList({ hideKindFilter: true });
+
+      expect(screen.queryByTestId("document-filter-skeleton")).not.toBeInTheDocument();
+      expect(screen.getAllByTestId("document-row-skeleton")).toHaveLength(3);
+    });
+
+    it("keeps the real filter bar and shows only rows while a new filter loads", () => {
+      mockUseDocumentsPages.mockReturnValue(pagesState({ isFiltering: true }));
+
+      renderList();
+
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      expect(screen.queryByTestId("document-filter-skeleton")).not.toBeInTheDocument();
+      expect(screen.getAllByTestId("document-row-skeleton")).toHaveLength(3);
+    });
   });
 
   describe("error state", () => {
@@ -157,13 +199,104 @@ describe("DocumentList", () => {
     });
   });
 
+  describe("failed filter fetch", () => {
+    it("keeps the filter bar, shows an alert with Retry, and retry refetches", async () => {
+      const user = userEvent.setup();
+      const refetch = vi.fn().mockResolvedValue(undefined);
+      mockUseDocumentsPages.mockReturnValue(pagesState({ loadError: new Error("down"), refetch }));
+
+      renderList();
+
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+      expect(screen.getByRole("alert")).toHaveTextContent(/couldn't load documents/i);
+      await user.click(screen.getByRole("button", { name: "Retry" }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("empty state", () => {
+    it("moves focus back to the filter after Clear filter", async () => {
+      const user = userEvent.setup();
+      mockUseDocumentsPages.mockReturnValue(pagesState());
+
+      renderList();
+      await user.selectOptions(screen.getByRole("combobox"), "Job Description");
+      await user.click(screen.getByRole("button", { name: "Clear filter" }));
+
+      expect(screen.getByRole("combobox")).toHaveFocus();
+    });
+
+    it("announces the no-matches state in a status region", async () => {
+      const user = userEvent.setup();
+      mockUseDocumentsPages.mockReturnValue(pagesState());
+
+      renderList();
+      await user.selectOptions(screen.getByRole("combobox"), "Job Description");
+
+      expect(screen.getByRole("status")).toHaveTextContent("No documents match this filter");
+    });
+
+    it("switches to no-matches when the last document under a filter is deleted", async () => {
+      const user = userEvent.setup();
+      const mockDelete = vi.fn().mockReturnValue({ unwrap: () => Promise.resolve() });
+      mockUseDeleteDocumentMutation.mockReturnValue(
+        [mockDelete, { isLoading: false }] as unknown as ReturnType<typeof useDeleteDocumentMutation>,
+      );
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+      mockUseDocumentsPages.mockReturnValue(pagesState({ documents: [makeDoc()], total: 1 }));
+
+      const { rerender } = renderList();
+      await user.selectOptions(screen.getByRole("combobox"), "Cover Letter");
+      await user.click(screen.getByTitle("Delete"));
+      await waitFor(() => expect(mockDelete).toHaveBeenCalledWith("doc-1"));
+
+      // The delete invalidates the list; the refetched page is empty.
+      mockUseDocumentsPages.mockReturnValue(pagesState({ documents: [], total: 0 }));
+      rerender(
+        <MemoryRouter>
+          <DocumentList />
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByText("No documents match this filter")).toBeInTheDocument();
+      expect(screen.queryByText("No documents yet")).not.toBeInTheDocument();
+    });
+
     it("renders empty state heading when there are no documents", () => {
       mockUseDocumentsPages.mockReturnValue(pagesState());
 
       renderList();
 
       expect(screen.getByText("No documents yet")).toBeInTheDocument();
+      expect(screen.queryByText(/match this filter/i)).not.toBeInTheDocument();
+    });
+
+    it("says nothing matches, and offers Clear filter, when a filter finds no documents", async () => {
+      const user = userEvent.setup();
+      mockUseDocumentsPages.mockReturnValue(pagesState());
+
+      renderList();
+      await user.selectOptions(screen.getByRole("combobox"), "Job Description");
+
+      expect(screen.getByText("No documents match this filter")).toBeInTheDocument();
+      expect(screen.queryByText("No documents yet")).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Clear filter" }));
+
+      expect(mockUseDocumentsPages).toHaveBeenLastCalledWith({});
+      expect(screen.getByRole("combobox")).toHaveValue("all");
+      expect(screen.getByText("No documents yet")).toBeInTheDocument();
+    });
+
+    it("is not empty when the first page is empty but the server total says more exist", () => {
+      mockUseDocumentsPages.mockReturnValue(pagesState({ documents: [], total: 75, hasNextPage: true }));
+
+      renderList();
+
+      expect(screen.getByRole("button", { name: "Load more" })).toBeInTheDocument();
+      expect(screen.getByText("Showing 0 of 75 documents")).toBeInTheDocument();
+      expect(screen.queryByText("No documents yet")).not.toBeInTheDocument();
+      expect(screen.queryByText(/match this filter/i)).not.toBeInTheDocument();
     });
   });
 

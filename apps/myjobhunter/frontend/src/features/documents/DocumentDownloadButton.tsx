@@ -16,7 +16,7 @@ export default function DocumentDownloadButton({ documentId }: DocumentDownloadB
       aria-busy={isDownloading}
       title="Download file"
       aria-label="Download file"
-      className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50"
+      className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50"
     >
       {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
     </button>

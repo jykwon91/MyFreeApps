@@ -17,7 +17,7 @@ export default function Documents() {
         </div>
         <button
           onClick={() => setUploadOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm border rounded-md hover:bg-muted"
+          className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] text-sm border rounded-md hover:bg-muted"
         >
           <Plus size={14} />
           Add document
