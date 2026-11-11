@@ -3,18 +3,15 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, screen, within } from "@testing-library/react-native";
 import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
 import { DOCUMENT_UPLOAD_MAX_BYTES } from "@myjobhunter/api-client/constants/documentUploadLimits";
-import { INTERVIEWER_NAME_MAX_LENGTH, INTERVIEWERS_MAX } from "@myjobhunter/api-client/constants/interviewDetailLimits";
+import { INTERVIEW_LOCATION_MAX_LENGTH, INTERVIEWER_NAME_MAX_LENGTH, INTERVIEWERS_MAX } from "@myjobhunter/api-client/constants/interviewDetailLimits";
 import { EVENT_NOTE_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
 import * as DocumentPicker from "expo-document-picker";
 import { Alert, Linking } from "react-native";
 import { APPLICATION_CONTACT_MESSAGES as CONTACTS } from "../src/constants/applicationContacts";
 import { APPLICATION_DOCUMENT_MESSAGES as DOCUMENTS } from "../src/constants/applicationDocuments";
-import {
-  APPLICATION_EVENT_MESSAGES as EVENTS,
-  interviewerNameTooLongMessage,
-  tooManyInterviewersMessage,
-} from "../src/constants/applicationEvents";
+import { interviewerNameTooLongMessage, tooManyInterviewersMessage } from "@myjobhunter/api-client/constants/interviewerProblems";
+import { APPLICATION_EVENT_MESSAGES as EVENTS } from "../src/constants/applicationEvents";
 import { formatDateTime } from "../src/lib/formatDateTime";
 import { store } from "../src/lib/store";
 import { alertButton } from "../test-support/alertButton";
@@ -190,8 +187,21 @@ describe("the activity timeline", () => {
     await fireEvent.changeText(screen.getByLabelText(EVENTS.interviewersLabel), "x".repeat(INTERVIEWER_NAME_MAX_LENGTH + 1));
     await fireEvent.press(screen.getAllByRole("button", { name: EVENTS.logEvent }).at(-1)!);
     expect(await screen.findByText(interviewerNameTooLongMessage(INTERVIEWER_NAME_MAX_LENGTH))).toBeTruthy();
-    expect(screen.getByLabelText(EVENTS.noteLabel).props.maxLength).toBe(EVENT_NOTE_MAX_LENGTH);
+    expect(screen.getByLabelText(EVENTS.noteLabel).props.maxLength).toBeUndefined();
     expect(sent.some(({ route }) => route === `POST /applications/${ID}/events`)).toBe(false);
+
+    // A note or location over the limit is kept whole, named, and blocks the save.
+    await fireEvent.changeText(screen.getByLabelText(EVENTS.interviewersLabel), "Sam");
+    const tooLongNote = "😀".repeat(EVENT_NOTE_MAX_LENGTH + 1);
+    await fireEvent.changeText(screen.getByLabelText(EVENTS.noteLabel), tooLongNote);
+    await fireEvent.changeText(screen.getByLabelText(EVENTS.locationLabel), "x".repeat(INTERVIEW_LOCATION_MAX_LENGTH + 1));
+    await fireEvent.press(screen.getAllByRole("button", { name: EVENTS.logEvent }).at(-1)!);
+    expect(await screen.findByText("Keep this to 5,000 characters or fewer.")).toBeTruthy();
+    expect(screen.getByText("Keep this to 1,024 characters or fewer.")).toBeTruthy();
+    expect(screen.getByLabelText(EVENTS.noteLabel).props.value).toBe(tooLongNote);
+    expect(sent.some(({ route }) => route === `POST /applications/${ID}/events`)).toBe(false);
+    await fireEvent.changeText(screen.getByLabelText(EVENTS.noteLabel), "");
+    await fireEvent.changeText(screen.getByLabelText(EVENTS.locationLabel), "");
 
     await fireEvent.press(screen.getByRole("radio", { name: "Follow-up sent" }));
     expect(screen.queryByLabelText(EVENTS.durationLabel)).toBeNull();
@@ -380,12 +390,19 @@ describe("uploading a file", () => {
     expect(sent.some(({ route }) => route === "POST /documents/upload")).toBe(false);
   });
 
-  it("holds Upload and Cancel while the picker is open, and caps the title at the backend's length", async () => {
+  it("holds Upload and Cancel while the picker is open, and doesn't cut the title short, but says when it's too long and won't upload", async () => {
     let finish: (result: DocumentPicker.DocumentPickerResult) => void = () => undefined;
     serve(applicationDetailRoutes(STRIPE));
     await renderApplicationDetail(ID);
     await openUpload();
-    expect(screen.getByLabelText(`${DOCUMENTS.titleLabel}, required`).props.maxLength).toBe(DOCUMENT_TITLE_MAX_LENGTH);
+    const title = screen.getByLabelText(`${DOCUMENTS.titleLabel}, required`);
+    expect(title.props.maxLength).toBeUndefined();
+    const tooLong = "😀".repeat(DOCUMENT_TITLE_MAX_LENGTH + 1);
+    await fireEvent.changeText(title, tooLong);
+    expect(await screen.findByText("Keep this to 255 characters or fewer.")).toBeTruthy();
+    expect(screen.getByLabelText(`${DOCUMENTS.titleLabel}, required`).props.value).toBe(tooLong);
+    await fireEvent.changeText(title, "😀".repeat(DOCUMENT_TITLE_MAX_LENGTH));
+    expect(screen.queryByText(/Keep this to/)).toBeNull();
     jest.mocked(DocumentPicker.getDocumentAsync).mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
 
     await fireEvent.press(screen.getByRole("button", { name: DOCUMENTS.chooseFile }));

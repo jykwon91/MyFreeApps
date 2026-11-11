@@ -1,6 +1,7 @@
 import { useEffect, useId } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import { LoadingButton } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
+import { companyFormCounters } from "@myjobhunter/api-client/utils/companyFormCounters";
 import { companyCreateRequest } from "@myjobhunter/api-client/utils/companyCreateRequest";
 import type { CompanyFormValues } from "@myjobhunter/api-client/types/company/company-form-values";
 import type { CompanyFormProps } from "@/types/company/company-form-props";
@@ -29,6 +30,7 @@ export default function CompanyForm({
     formState: { errors },
     reset,
     setError,
+    watch,
   } = useForm<CompanyFormValues>({
     defaultValues: {
       name: initialValues?.name ?? "",
@@ -57,6 +59,9 @@ export default function CompanyForm({
     }
   };
 
+  const counters = companyFormCounters(watch());
+  const feedback = (field: keyof CompanyFormValues, id: string) => ({ id, error: errors[field]?.message, counter: counters[field] });
+
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4" noValidate>
       <div>
@@ -66,14 +71,13 @@ export default function CompanyForm({
         <input
           id={nameId}
           type="text"
+          {...fieldFeedbackAria(feedback("name", nameId))}
           {...register("name", { validate: companyFieldValidator("name") })}
           className="w-full border rounded-md px-3 py-2 text-sm bg-background"
           placeholder="e.g. Acme Corp"
           autoFocus={autoFocus}
         />
-        {errors.name ? (
-          <p className="text-xs text-destructive mt-1">{errors.name.message}</p>
-        ) : null}
+        <FieldFeedback {...feedback("name", nameId)} />
       </div>
 
       <div>
@@ -83,13 +87,13 @@ export default function CompanyForm({
         <input
           id={domainId}
           type="text"
+          {...fieldFeedbackAria(feedback("primary_domain", domainId))}
           {...register("primary_domain", { validate: companyFieldValidator("primary_domain") })}
           className="w-full border rounded-md px-3 py-2 text-sm bg-background"
           placeholder="acme.com"
         />
-        {errors.primary_domain ? (
-          <p className="text-xs text-destructive mt-1">{errors.primary_domain.message}</p>
-        ) : (
+        <FieldFeedback {...feedback("primary_domain", domainId)} />
+        {errors.primary_domain ? null : (
           <p className="text-xs text-muted-foreground mt-1">
             Optional — must be unique across your companies if set.
           </p>
@@ -104,13 +108,12 @@ export default function CompanyForm({
           <input
             id={industryId}
             type="text"
+            {...fieldFeedbackAria(feedback("industry", industryId))}
             {...register("industry", { validate: companyFieldValidator("industry") })}
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
             placeholder="e.g. SaaS"
           />
-          {errors.industry ? (
-            <p className="text-xs text-destructive mt-1">{errors.industry.message}</p>
-          ) : null}
+          <FieldFeedback {...feedback("industry", industryId)} />
         </div>
         <div>
           <label htmlFor={hqId} className="block text-sm font-medium mb-1">
@@ -119,13 +122,12 @@ export default function CompanyForm({
           <input
             id={hqId}
             type="text"
+            {...fieldFeedbackAria(feedback("hq_location", hqId))}
             {...register("hq_location", { validate: companyFieldValidator("hq_location") })}
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
             placeholder="e.g. SF, NYC"
           />
-          {errors.hq_location ? (
-            <p className="text-xs text-destructive mt-1">{errors.hq_location.message}</p>
-          ) : null}
+          <FieldFeedback {...feedback("hq_location", hqId)} />
         </div>
       </div>
 

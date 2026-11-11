@@ -1,5 +1,7 @@
 import { APPLICATION_NOTES_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import { useUpdateApplicationMutation } from "@myjobhunter/api-client/store/applicationsApi";
+import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
 import { FormField, LoadingButton, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Alert, View } from "react-native";
@@ -19,6 +21,7 @@ export default function NotesSection({ applicationId, notes, isLeaving }: NotesS
   const [savedNotes, setSavedNotes] = useState(serverNotes);
   const [lastServerNotes, setLastServerNotes] = useState(serverNotes);
   const isDirty = draft !== savedNotes;
+  const draftError = tooLongProblem(draft, APPLICATION_NOTES_MAX_LENGTH);
 
   // A refresh brings in notes saved elsewhere, but never over what's being typed.
   if (serverNotes !== lastServerNotes) {
@@ -28,6 +31,10 @@ export default function NotesSection({ applicationId, notes, isLeaving }: NotesS
   }
 
   async function save(): Promise<boolean> {
+    if (draftError) {
+      showToast(draftError, "error");
+      return false;
+    }
     const next = draft;
     try {
       await updateApplication({ id: applicationId, patch: { notes: next } }).unwrap();
@@ -60,11 +67,16 @@ export default function NotesSection({ applicationId, notes, isLeaving }: NotesS
       <SectionHeading title={MESSAGES.title} />
       <FormField
         editable={!isSaving && !isLeaving}
+        counter={characterCounter(draft, APPLICATION_NOTES_MAX_LENGTH)}
+        error={draftError}
         label={MESSAGES.label}
-        maxLength={APPLICATION_NOTES_MAX_LENGTH}
-        multiline onChangeText={setDraft} placeholder={MESSAGES.placeholder} value={draft} />
+        multiline
+        onChangeText={setDraft}
+        placeholder={MESSAGES.placeholder}
+        value={draft}
+      />
       <LoadingButton
-        disabled={!isDirty || isLeaving}
+        disabled={!isDirty || isLeaving || draftError !== undefined}
         isLoading={isSaving}
         loadingText={MESSAGES.saving}
         onPress={async () => {

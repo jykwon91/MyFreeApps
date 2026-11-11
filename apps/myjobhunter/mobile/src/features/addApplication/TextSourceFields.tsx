@@ -1,3 +1,5 @@
+import { JD_TEXT_MAX_LENGTH } from "@myjobhunter/api-client/constants/addApplicationForm";
+import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
 import { FormField, LoadingButton, useTheme } from "@platform/mobile";
 import { ADD_APPLICATION_MESSAGES as MESSAGES, MULTILINE_MIN_HEIGHT } from "../../constants/addApplication";
 import type { TextSourceFieldsProps } from "../../types/TextSourceFieldsProps";
@@ -9,6 +11,7 @@ export default function TextSourceFields({ value, error, onChange, onRead, isRea
   return (
     <>
       <FormField
+        counter={characterCounter(value.trim(), JD_TEXT_MAX_LENGTH)}
         editable={!isReading}
         error={error ?? undefined}
         hint={MESSAGES.textHint}

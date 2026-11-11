@@ -38,6 +38,7 @@ import type { ReviewCompanyState } from "@myjobhunter/api-client/types/applicati
 import type { Company } from "@myjobhunter/api-client/types/company";
 import { describeExtractError } from "@myjobhunter/api-client/utils/describeExtractError";
 import { isAuthRequiredError } from "@myjobhunter/api-client/utils/isAuthRequiredError";
+import { jobDescriptionLengthProblem, jobLinkLengthProblem } from "@myjobhunter/api-client/utils/jobSourceProblems";
 import { isJobPostingUrl } from "@myjobhunter/api-client/utils/isJobPostingUrl";
 import { prefillFromExtract } from "@myjobhunter/api-client/utils/prefillFromExtract";
 import { prefillFromParse } from "@myjobhunter/api-client/utils/prefillFromParse";
@@ -73,6 +74,9 @@ interface UseAddApplicationFlowReturn {
    * Null when there's nothing to explain.
    */
   urlBlockedNotice: string | null;
+  /** Why the link or the pasted description is too long to read (null when it fits). Neither is sent while set. */
+  urlProblem: string | null;
+  textProblem: string | null;
   companies: Company[];
   creatingApplication: boolean;
 
@@ -129,6 +133,8 @@ export function useAddApplicationFlow(
   const inFlightRead = useRef<{ abort: () => void } | null>(null);
 
   const companies = companiesData?.items ?? [];
+  const urlProblem = jobLinkLengthProblem(urlValue) ?? null;
+  const textProblem = jobDescriptionLengthProblem(textValue) ?? null;
 
   useEffect(
     () => () => {
@@ -175,7 +181,8 @@ export function useAddApplicationFlow(
 
   function handleUrlPaste(e: React.ClipboardEvent<HTMLInputElement>) {
     const pasted = e.clipboardData.getData("text").trim();
-    if (isJobPostingUrl(pasted)) {
+    // Too long to read: let it land in the field, where the problem is said, rather than send it.
+    if (isJobPostingUrl(pasted) && !jobLinkLengthProblem(pasted)) {
       e.preventDefault();
       setUrlValue(pasted);
       void runUrlExtract(pasted);
@@ -184,13 +191,13 @@ export function useAddApplicationFlow(
 
   function handleUrlSubmit() {
     const url = urlValue.trim();
-    if (!url) return;
+    if (!url || urlProblem) return;
     void runUrlExtract(url);
   }
 
   function handleTextSubmit() {
     const text = textValue.trim();
-    if (!text) return;
+    if (!text || textProblem) return;
     void runTextParse(text);
   }
 
@@ -441,6 +448,8 @@ export function useAddApplicationFlow(
     companyNameValue,
     submittedJdText,
     urlBlockedNotice,
+    urlProblem,
+    textProblem,
     companies,
     creatingApplication,
     setInputMode,

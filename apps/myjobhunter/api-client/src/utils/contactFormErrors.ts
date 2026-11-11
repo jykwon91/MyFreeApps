@@ -10,6 +10,7 @@ import { contactProfileUrl } from "./contactLinkUrls";
 import { extractEmailAddress } from "./extractEmailAddress";
 import { isPlainEmailAddress } from "./isPlainEmailAddress";
 import { normalizeProfileUrl } from "./normalizeProfileUrl";
+import { textLength } from "./textLength";
 
 /**
  * What stops the add-contact form from being sent, by field: the backend's rules
@@ -24,14 +25,14 @@ export function contactFormErrors(values: ContactFormValues): ContactFormErrors 
   const errors: ContactFormErrors = {};
 
   if (name === "" && email === "") errors.name = "identity_required";
-  else if (name.length > CONTACT_NAME_MAX_LENGTH) errors.name = "too_long";
+  else if (textLength(name) > CONTACT_NAME_MAX_LENGTH) errors.name = "too_long";
 
-  if (email.length > CONTACT_EMAIL_MAX_LENGTH) errors.email = "too_long";
+  if (textLength(email) > CONTACT_EMAIL_MAX_LENGTH) errors.email = "too_long";
   else if (email !== "" && !isPlainEmailAddress(email)) errors.email = "invalid";
 
-  if (profile.length > CONTACT_LINKEDIN_MAX_LENGTH) errors.linkedin_url = "too_long";
+  if (textLength(profile) > CONTACT_LINKEDIN_MAX_LENGTH) errors.linkedin_url = "too_long";
   else if (profile !== "" && contactProfileUrl(profile) === null) errors.linkedin_url = "invalid";
 
-  if (values.notes.trim().length > CONTACT_NOTES_MAX_LENGTH) errors.notes = "too_long";
+  if (textLength(values.notes.trim()) > CONTACT_NOTES_MAX_LENGTH) errors.notes = "too_long";
   return errors;
 }

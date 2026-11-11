@@ -14,6 +14,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { showError, showSuccess } from "@platform/ui";
+import { COMPANY_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/companyFieldLimits";
+import { COMPANY_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/companyFormProblems";
 import AddApplicationDialog from "../AddApplicationDialog";
 
 // ---- mocks ----
@@ -1300,5 +1302,25 @@ describe("AddApplicationDialog — races", () => {
     await user.click(screen.getByRole("button", { name: "Reopen" }));
     expect(screen.getByLabelText(/job posting url/i)).toHaveValue("");
     expect(screen.queryByText(REVIEW_HEADING)).not.toBeInTheDocument();
+  });
+
+  it("doesn't send a read company name that is too long: it says why, and Save says it again", async () => {
+    const user = userEvent.setup();
+    const createCompany = serveCreateCompany(() => Promise.resolve(companyRecord("co-x", "x")));
+    const createApp = serveCreateApp();
+    serveExtract({ company: `Acme ${"x".repeat(COMPANY_NAME_MAX_LENGTH)}` });
+
+    renderDialog();
+    await readLink(user);
+    await screen.findByText(REVIEW_HEADING);
+
+    expect(vi.mocked(showError)).toHaveBeenCalledWith(expect.stringContaining(COMPANY_FORM_PROBLEMS.nameTooLong));
+    expect(createCompany).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: /add application/i }));
+    await waitFor(() => expect(vi.mocked(showError)).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(showError)).toHaveBeenLastCalledWith(expect.stringContaining(COMPANY_FORM_PROBLEMS.nameTooLong));
+    expect(createCompany).not.toHaveBeenCalled();
+    expect(createApp).not.toHaveBeenCalled();
   });
 });

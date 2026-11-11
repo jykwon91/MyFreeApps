@@ -2,8 +2,10 @@ import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/doc
 import { DOCUMENT_KIND_OPTIONS } from "@myjobhunter/api-client/constants/documentKindOptions";
 import { useUploadDocumentMutation } from "@myjobhunter/api-client/store/documentsApi";
 import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
+import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
 import { documentUploadProblem } from "@myjobhunter/api-client/utils/documentUploadProblem";
 import { fillDocumentUploadForm } from "@myjobhunter/api-client/utils/fillDocumentUploadForm";
+import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
 import { formatFileSize } from "@platform/core/utils/fileSize";
 import { filePart, FormField, FormSheet, LoadingButton, useTheme, useToast, type FileForUpload } from "@platform/mobile";
 import { useState } from "react";
@@ -28,7 +30,8 @@ export default function DocumentUploadSheet({ applicationId, onClose }: Document
   const [hasTried, setHasTried] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const isBusy = isUploading || isPicking;
-  const titleError = hasTried && title.trim() === "" ? MESSAGES.titleRequired : undefined;
+  const titleTooLong = tooLongProblem(title.trim(), DOCUMENT_TITLE_MAX_LENGTH);
+  const titleError = hasTried && title.trim() === "" ? MESSAGES.titleRequired : titleTooLong;
   const fileError = hasTried && !file ? MESSAGES.fileRequired : undefined;
 
   async function choose(): Promise<void> {
@@ -53,7 +56,7 @@ export default function DocumentUploadSheet({ applicationId, onClose }: Document
 
   async function upload(): Promise<void> {
     setHasTried(true);
-    if (!file || title.trim() === "") return;
+    if (!file || title.trim() === "" || titleTooLong) return;
     setFailure(null);
     const form = new FormData();
     // React Native's FormData sends a { uri, name, type } part, which its types call a string.
@@ -85,7 +88,7 @@ export default function DocumentUploadSheet({ applicationId, onClose }: Document
         </LoadingButton>
         <FieldError message={fileError} />
       </View>
-      <FormField editable={!isBusy} error={titleError} label={MESSAGES.titleLabel} maxLength={DOCUMENT_TITLE_MAX_LENGTH} onChangeText={setTitle} placeholder={MESSAGES.titlePlaceholder} required value={title} />
+      <FormField counter={characterCounter(title.trim(), DOCUMENT_TITLE_MAX_LENGTH)} editable={!isBusy} error={titleError} label={MESSAGES.titleLabel} onChangeText={setTitle} placeholder={MESSAGES.titlePlaceholder} required value={title} />
       <ChoiceGroup disabled={isBusy} label={MESSAGES.kindLabel} onChange={setKind} options={DOCUMENT_KIND_OPTIONS} required value={kind} />
       {/* Nothing to press while the picker is up; Cancel also waits out an upload, as closing the sheet does. */}
       <SheetButtons

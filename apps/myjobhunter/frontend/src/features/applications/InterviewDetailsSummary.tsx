@@ -7,11 +7,8 @@
  */
 import type { ReactNode } from "react";
 import type { InterviewDetails } from "@myjobhunter/api-client/types/interview-details";
+import { formatLocalDateTime } from "@/lib/format-local-date-time";
 import { INTERVIEW_TYPE_LABELS } from "@myjobhunter/api-client/constants/interviewTypeLabels";
-
-function formatScheduledAt(iso: string): string {
-  return new Date(iso).toLocaleString();
-}
 
 function isUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
@@ -28,7 +25,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 function ScheduledRow({ iso }: { iso: string | null | undefined }) {
   if (!iso) return null;
-  return <Row label="Scheduled">{formatScheduledAt(iso)}</Row>;
+  return <Row label="Scheduled">{formatLocalDateTime(iso)}</Row>;
 }
 
 function DurationRow({ minutes }: { minutes: number | null | undefined }) {

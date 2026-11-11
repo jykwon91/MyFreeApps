@@ -1,4 +1,3 @@
-import { COMPANY_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/addApplicationForm";
 import { Banner, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { useState } from "react";
@@ -76,8 +75,7 @@ export default function AddApplicationScreen() {
       </ScrollView>
       <CompanyPickerSheet
         key={pickerOpenings}
-        // A posting's company name can run past what a company may be called; the search starts within it.
-        initialQuery={(flow.review?.company.name ?? "").slice(0, COMPANY_NAME_MAX_LENGTH)}
+        initialQuery={flow.review?.company.name ?? ""}
         isOpen={isPickerOpen}
         onAdd={addCompany}
         onClose={() => setIsPickerOpen(false)}

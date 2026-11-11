@@ -10,6 +10,7 @@ import type { LogEventFormValues } from "@myjobhunter/api-client/types/log-event
 import { emptyFormValues } from "@myjobhunter/api-client/utils/interviewEventForm";
 import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
 import { logEventRequest } from "@myjobhunter/api-client/utils/logEventRequest";
+import EventNoteField from "@/features/applications/EventNoteField";
 import InterviewDetailsFields from "./InterviewDetailsFields";
 
 export interface LogEventDialogProps {
@@ -102,19 +103,10 @@ export default function LogEventDialog({
             </div>
 
             {showInterviewFields ? (
-              <InterviewDetailsFields register={register} errors={errors} />
+              <InterviewDetailsFields register={register} errors={errors} watch={watch} />
             ) : null}
 
-            <div>
-              <label htmlFor="log-event-note" className="block text-sm font-medium mb-1">Note</label>
-              <textarea
-                id="log-event-note"
-                {...register("note")}
-                rows={3}
-                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-                placeholder="Anything to remember about this event..."
-              />
-            </div>
+            <EventNoteField id="log-event-note" register={register} errors={errors} watch={watch} />
 
             <div className="flex justify-end gap-2 pt-2">
               <Dialog.Close asChild>

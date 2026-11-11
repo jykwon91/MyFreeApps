@@ -1,18 +1,18 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { X } from "lucide-react";
-import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { FieldFeedback, fieldFeedbackAria, LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import { CONTACT_ROLE_OPTIONS } from "@myjobhunter/api-client/constants/contactRoleOptions";
 import { EMPTY_CONTACT_FORM_VALUES } from "@myjobhunter/api-client/constants/emptyContactFormValues";
 import { useAddApplicationContactMutation } from "@myjobhunter/api-client/store/applicationsApi";
 import type { ContactFormField } from "@myjobhunter/api-client/types/contact/contact-form-field";
 import type { ContactFormValues } from "@myjobhunter/api-client/types/contact/contact-form-values";
+import { contactFormCounters } from "@myjobhunter/api-client/utils/contactFormCounters";
 import { contactCreateRequest } from "@myjobhunter/api-client/utils/contactCreateRequest";
 import { contactServerErrors } from "@myjobhunter/api-client/utils/contactServerErrors";
 import { CONTACT_MESSAGES as MESSAGES } from "@/constants/contact-messages";
 import { contactFormResolver } from "@/lib/contact-form-resolver";
 import type { AddContactDialogProps } from "@/types/contact/add-contact-dialog-props";
-import ContactFieldError from "./ContactFieldError";
 
 const INPUT_CLASS = "w-full min-h-[44px] border rounded-md px-3 py-2 text-sm bg-background aria-[invalid=true]:border-destructive";
 const LABEL_CLASS = "block text-sm font-medium mb-1";
@@ -31,6 +31,7 @@ export default function AddContactDialog({ applicationId, open, onOpenChange }: 
     handleSubmit,
     reset,
     setError,
+    watch,
     formState: { errors },
   } = useForm<ContactFormValues>({ defaultValues: EMPTY_CONTACT_FORM_VALUES, resolver: contactFormResolver });
 
@@ -52,7 +53,8 @@ export default function AddContactDialog({ applicationId, open, onOpenChange }: 
     }
   };
 
-  const describedBy = (field: ContactFormField) => (errors[field] ? `contact-${field}-error` : undefined);
+  const counters = contactFormCounters(watch());
+  const feedback = (field: ContactFormField) => ({ id: `contact-${field}`, error: errors[field]?.message, counter: counters[field] });
 
   return (
     <Dialog.Root
@@ -91,12 +93,11 @@ export default function AddContactDialog({ applicationId, open, onOpenChange }: 
                     type="text"
                     autoComplete="off"
                     placeholder={MESSAGES.namePlaceholder}
-                    aria-invalid={Boolean(errors.name)}
-                    aria-describedby={describedBy("name")}
+                    {...fieldFeedbackAria(feedback("name"))}
                     className={INPUT_CLASS}
                     {...register("name")}
                   />
-                  <ContactFieldError id="contact-name-error" message={errors.name?.message} />
+                  <FieldFeedback {...feedback("name")} />
                 </div>
                 <div>
                   <label htmlFor="contact-email" className={LABEL_CLASS}>{MESSAGES.emailLabel}</label>
@@ -105,12 +106,11 @@ export default function AddContactDialog({ applicationId, open, onOpenChange }: 
                     type="email"
                     autoComplete="off"
                     placeholder={MESSAGES.emailPlaceholder}
-                    aria-invalid={Boolean(errors.email)}
-                    aria-describedby={describedBy("email")}
+                    {...fieldFeedbackAria(feedback("email"))}
                     className={INPUT_CLASS}
                     {...register("email")}
                   />
-                  <ContactFieldError id="contact-email-error" message={errors.email?.message} />
+                  <FieldFeedback {...feedback("email")} />
                 </div>
               </div>
 
@@ -118,8 +118,7 @@ export default function AddContactDialog({ applicationId, open, onOpenChange }: 
                 <label htmlFor="contact-role" className={LABEL_CLASS}>{MESSAGES.roleLabel}</label>
                 <select
                   id="contact-role"
-                  aria-invalid={Boolean(errors.role)}
-                  aria-describedby={describedBy("role")}
+                  {...fieldFeedbackAria(feedback("role"))}
                   className={INPUT_CLASS}
                   {...register("role")}
                 >
@@ -128,7 +127,7 @@ export default function AddContactDialog({ applicationId, open, onOpenChange }: 
                     <option key={value} value={value}>{label}</option>
                   ))}
                 </select>
-                <ContactFieldError id="contact-role-error" message={errors.role?.message} />
+                <FieldFeedback {...feedback("role")} />
               </div>
 
               <div>
@@ -139,12 +138,11 @@ export default function AddContactDialog({ applicationId, open, onOpenChange }: 
                   inputMode="url"
                   autoComplete="off"
                   placeholder={MESSAGES.linkedInPlaceholder}
-                  aria-invalid={Boolean(errors.linkedin_url)}
-                  aria-describedby={describedBy("linkedin_url")}
+                  {...fieldFeedbackAria(feedback("linkedin_url"))}
                   className={INPUT_CLASS}
                   {...register("linkedin_url")}
                 />
-                <ContactFieldError id="contact-linkedin_url-error" message={errors.linkedin_url?.message} />
+                <FieldFeedback {...feedback("linkedin_url")} />
               </div>
 
               <div>
@@ -153,12 +151,11 @@ export default function AddContactDialog({ applicationId, open, onOpenChange }: 
                   id="contact-notes"
                   rows={3}
                   placeholder={MESSAGES.notesPlaceholder}
-                  aria-invalid={Boolean(errors.notes)}
-                  aria-describedby={describedBy("notes")}
+                  {...fieldFeedbackAria(feedback("notes"))}
                   className={`${INPUT_CLASS} resize-y`}
                   {...register("notes")}
                 />
-                <ContactFieldError id="contact-notes-error" message={errors.notes?.message} />
+                <FieldFeedback {...feedback("notes")} />
               </div>
             </fieldset>
 

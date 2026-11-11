@@ -2,6 +2,7 @@ import { EMPTY_CONTACT_FORM_VALUES } from "@myjobhunter/api-client/constants/emp
 import { useAddApplicationContactMutation } from "@myjobhunter/api-client/store/applicationsApi";
 import type { ContactFormValues } from "@myjobhunter/api-client/types/contact/contact-form-values";
 import type { ContactServerErrors } from "@myjobhunter/api-client/types/contact/contact-server-errors";
+import { contactFormCounters } from "@myjobhunter/api-client/utils/contactFormCounters";
 import { contactCreateRequest } from "@myjobhunter/api-client/utils/contactCreateRequest";
 import { contactFormErrors } from "@myjobhunter/api-client/utils/contactFormErrors";
 import { contactServerErrors } from "@myjobhunter/api-client/utils/contactServerErrors";
@@ -31,6 +32,7 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
   const [failure, setFailure] = useState<string | null>(null);
   // What the server's 422 said about each field, until that field is changed.
   const [serverErrors, setServerErrors] = useState<ContactServerErrors>({});
+  const counters = contactFormCounters(values);
   const errors = hasTried ? contactFormErrors(values) : {};
 
   function change<Field extends keyof ContactFormValues>(field: Field) {
@@ -61,6 +63,7 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
       <FormField
         autoCapitalize="words"
         editable={!isLoading}
+        counter={counters.name}
         error={contactFieldMessage(errors, serverErrors, "name")}
         label={MESSAGES.nameLabel}
         onChangeText={change("name")}
@@ -72,6 +75,7 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
         autoComplete="off"
         autoCorrect={false}
         editable={!isLoading}
+        counter={counters.email}
         error={contactFieldMessage(errors, serverErrors, "email")}
         keyboardType="email-address"
         label={MESSAGES.emailLabel}
@@ -84,6 +88,7 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
         autoCapitalize="none"
         autoCorrect={false}
         editable={!isLoading}
+        counter={counters.linkedin_url}
         error={contactFieldMessage(errors, serverErrors, "linkedin_url")}
         keyboardType="url"
         label={MESSAGES.linkedInLabel}
@@ -93,6 +98,7 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
       />
       <FormField
         editable={!isLoading}
+        counter={counters.notes}
         error={contactFieldMessage(errors, serverErrors, "notes")}
         label={MESSAGES.notesLabel}
         multiline

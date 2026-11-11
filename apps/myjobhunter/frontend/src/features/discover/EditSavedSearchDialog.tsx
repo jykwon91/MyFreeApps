@@ -26,6 +26,8 @@
  *   - ``REFRESH_INTERVAL_OPTIONS`` — shared preset list.
  */
 import { useState } from "react";
+import { isSourceKind } from "./is-source-kind";
+import { EDIT_SOURCE_DESCRIPTIONS } from "./source-descriptions";
 import {
   ConfirmDialog,
   showError,
@@ -38,7 +40,10 @@ import type { Country } from "@myjobhunter/api-client/types/discovery/country";
 import type { DatePosted } from "@myjobhunter/api-client/types/discovery/date-posted";
 import type { EmploymentType } from "@myjobhunter/api-client/types/discovery/employment-type";
 import type { Experience } from "@myjobhunter/api-client/types/discovery/experience";
+import { SAVED_SEARCH_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
+import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
 import GreenhouseConfigSection from "./dialog-sections/GreenhouseConfigSection";
+import SavedSearchNameField from "./dialog-sections/SavedSearchNameField";
 import LeverConfigSection from "./dialog-sections/LeverConfigSection";
 import SearchInputsSection from "./dialog-sections/SearchInputsSection";
 import WhereWhenSection from "./dialog-sections/WhereWhenSection";
@@ -239,7 +244,10 @@ export default function EditSavedSearchDialog({
   // Validation
   // ---------------------------------------------------------------------------
 
+  const nameProblem = tooLongProblem(name.trim(), SAVED_SEARCH_NAME_MAX_LENGTH);
+
   function validate(): string | null {
+    if (nameProblem) return `Name: ${nameProblem}`;
     if (source.source === "greenhouse") {
       return validateGreenhouseToken(boardToken);
     }
@@ -335,22 +343,9 @@ export default function EditSavedSearchDialog({
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Source description for the dialog header
-  // ---------------------------------------------------------------------------
-
-  const SOURCE_DESCRIPTIONS: Record<string, string> = {
-    jsearch:
-      "Edit this JSearch saved search. Job source cannot be changed — delete and recreate to switch sources.",
-    greenhouse:
-      "Edit this Greenhouse board search. Job source cannot be changed — delete and recreate to switch sources.",
-    lever:
-      "Edit this Lever board search. Job source cannot be changed — delete and recreate to switch sources.",
-  };
-
-  const description =
-    SOURCE_DESCRIPTIONS[source.source] ??
-    "Edit this saved search. Job source cannot be changed after creation.";
+  const description = isSourceKind(source.source)
+    ? EDIT_SOURCE_DESCRIPTIONS[source.source]
+    : "Edit this saved search. Job source cannot be changed after creation.";
 
   // ---------------------------------------------------------------------------
   // Render
@@ -368,21 +363,7 @@ export default function EditSavedSearchDialog({
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1 mt-4">
         {/* Name */}
-        <div className="space-y-1">
-          <label htmlFor="edit-source-name" className="block text-sm font-medium">
-            Name{" "}
-            <span className="text-muted-foreground font-normal">(optional)</span>
-          </label>
-          <input
-            id="edit-source-name"
-            type="text"
-            maxLength={100}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. 'Stripe backend roles'"
-            className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
+        <SavedSearchNameField id="edit-source-name" value={name} onChange={setName} error={nameProblem} />
 
         {/* Refresh frequency */}
         <div className="space-y-1">

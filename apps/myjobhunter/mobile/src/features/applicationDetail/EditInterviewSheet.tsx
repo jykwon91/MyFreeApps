@@ -1,5 +1,6 @@
 import { EVENT_NOTE_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import { useUpdateApplicationEventMutation } from "@myjobhunter/api-client/store/applicationsApi";
+import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
 import { eventToFormValues } from "@myjobhunter/api-client/utils/interviewEventForm";
 import { interviewEventUpdateRequest } from "@myjobhunter/api-client/utils/interviewEventUpdateRequest";
 import { FormField, FormSheet, useToast } from "@platform/mobile";
@@ -36,8 +37,9 @@ export default function EditInterviewSheet({ applicationId, event, onClose }: Ed
       <InterviewDetailsFields disabled={isLoading} errors={errors} onChange={change} values={values} />
       <FormField
         editable={!isLoading}
+        counter={characterCounter(values.note.trim(), EVENT_NOTE_MAX_LENGTH)}
+        error={errors.note}
         label={MESSAGES.noteLabel}
-        maxLength={EVENT_NOTE_MAX_LENGTH}
         multiline
         onChangeText={(next) => change("note", next)}
         placeholder={MESSAGES.notePlaceholder}

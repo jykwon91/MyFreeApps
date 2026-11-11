@@ -32,7 +32,11 @@ vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useUpdateDiscoverySourceMutation: () => [mockUpdateSource, { isLoading: false }],
 }));
 
-vi.mock("@platform/ui", () => ({
+vi.mock("@platform/ui", async () => {
+  const actual = await vi.importActual<typeof import("@platform/ui")>("@platform/ui");
+  return {
+  FieldFeedback: actual.FieldFeedback,
+  fieldFeedbackAria: actual.fieldFeedbackAria,
   ConfirmDialog: ({
     open,
     children,
@@ -67,7 +71,8 @@ vi.mock("@platform/ui", () => ({
   showSuccess: (msg: string) => mockShowSuccess(msg),
   extractErrorMessage: (err: unknown) =>
     err instanceof Error ? err.message : String(err),
-}));
+  };
+});
 
 // Stub the dialog-section sub-components so we can test the dialog in
 // isolation without pulling in their dependencies.
@@ -413,6 +418,24 @@ describe("EditSavedSearchDialog", () => {
           patch: { name: "Stripe backend team" },
         });
       });
+    });
+
+    it("keeps a name that is too long, says so, and won't save it", async () => {
+      render(<EditSavedSearchDialog source={makeGreenhouseSource()} open={true} onClose={onClose} />);
+
+      const nameInput = screen.getByLabelText(/name/i);
+      expect(nameInput).not.toHaveAttribute("maxLength");
+      const tooLong = "😀".repeat(101);
+      fireEvent.change(nameInput, { target: { value: tooLong } });
+      fireEvent.click(screen.getByTestId("confirm-btn"));
+
+      expect(screen.getByRole("alert")).toHaveTextContent("Keep this to 100 characters or fewer.");
+      expect(nameInput).toHaveValue(tooLong);
+      expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("Keep this to 100 characters or fewer."));
+      expect(mockUpdateSource).not.toHaveBeenCalled();
+
+      fireEvent.change(nameInput, { target: { value: "😀".repeat(100) } });
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
 
     it("sends only fetch_interval_minutes when frequency changes", async () => {

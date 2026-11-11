@@ -4,11 +4,15 @@
  * Used when the operator doesn't have a URL (e.g. LinkedIn auth-walled
  * postings, copy-pasted email job descriptions).
  */
-import { AlertBox, LoadingButton } from "@platform/ui";
+import { JD_TEXT_MAX_LENGTH } from "@myjobhunter/api-client/constants/addApplicationForm";
+import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { AlertBox, FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
 import type { DialogInputMode } from "../useAddApplicationDialogState";
 
 interface PasteTextStepProps {
   textValue: string;
+  /** Why the description is too long to read; it is not sent while set. */
+  problem: string | null;
   onTextChange: (next: string) => void;
   onTextSubmit: () => void;
   onSetInputMode: (mode: DialogInputMode) => void;
@@ -23,12 +27,18 @@ interface PasteTextStepProps {
 
 export default function PasteTextStep({
   textValue,
+  problem,
   onTextChange,
   onTextSubmit,
   onSetInputMode,
   notice,
 }: PasteTextStepProps) {
-  const canSubmit = textValue.trim().length > 0;
+  const canSubmit = textValue.trim().length > 0 && !problem;
+  const feedback = {
+    id: "add-app-text",
+    error: problem ?? undefined,
+    counter: characterCounter(textValue.trim(), JD_TEXT_MAX_LENGTH),
+  };
 
   return (
     <div className="space-y-3">
@@ -44,8 +54,10 @@ export default function PasteTextStep({
         placeholder="Paste the full job description here…"
         aria-label="Job description text"
         autoFocus
+        {...fieldFeedbackAria(feedback)}
         className="w-full border rounded-md px-3 py-2 text-sm bg-background resize-y"
       />
+      <FieldFeedback {...feedback} />
       <div className="flex justify-end">
         <LoadingButton
           type="button"

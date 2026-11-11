@@ -1,12 +1,15 @@
-import { COMPANY_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/addApplicationForm";
 import { useListCompaniesQuery } from "@myjobhunter/api-client/store/companiesApi";
+import { COMPANY_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/companyFieldLimits";
+import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { companyNameProblem } from "@myjobhunter/api-client/utils/companyNameProblem";
 import { filterCompanies } from "@myjobhunter/api-client/utils/filterCompanies";
 import { findCompanyByName } from "@myjobhunter/api-client/utils/findCompanyByName";
-import { Banner, LoadingButton, MIN_TOUCH_TARGET, SearchField, useTheme } from "@platform/mobile";
+import { Banner, CharacterCounter, LoadingButton, MIN_TOUCH_TARGET, SearchField, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { FlatList, Modal, Pressable, Text, View } from "react-native";
 import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../../constants/addApplication";
 import type { CompanyPickerSheetProps } from "../../types/CompanyPickerSheetProps";
+import FieldError from "../applicationDetail/FieldError";
 import CompanyPickerRow from "./CompanyPickerRow";
 import CompanyPickerSkeleton from "./CompanyPickerSkeleton";
 
@@ -25,7 +28,11 @@ export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onA
   const companies = currentData?.items;
   const matches = companies ? filterCompanies(companies, query) : [];
   const typedName = query.trim();
-  const canAdd = companies !== undefined && typedName !== "" && !findCompanyByName(companies, typedName);
+  // The search keeps whatever was typed or pasted; a name over the company limit can be searched but not added.
+  const nameProblem = companyNameProblem(query);
+  const nameTooLong = nameProblem !== undefined;
+  const counter = characterCounter(typedName, COMPANY_NAME_MAX_LENGTH);
+  const canAdd = companies !== undefined && typedName !== "" && !nameTooLong && !findCompanyByName(companies, typedName);
 
   async function add(): Promise<void> {
     setFailure(null);
@@ -82,11 +89,13 @@ export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onA
           {failure ? <Banner message={failure} /> : null}
           <SearchField
             accessibilityLabel={MESSAGES.searchLabel}
-            onChangeText={(text) => setQuery(text.slice(0, COMPANY_NAME_MAX_LENGTH))}
+            onChangeText={setQuery}
             onClear={() => setQuery("")}
             placeholder={MESSAGES.searchPlaceholder}
             value={query}
           />
+          <FieldError message={nameTooLong ? nameProblem : undefined} />
+          {counter ? <CharacterCounter counter={counter} isOver={nameTooLong} /> : null}
           {canAdd ? (
             <LoadingButton isLoading={isAdding} loadingText={MESSAGES.addingCompany} onPress={add} variant="secondary">
               {`${MESSAGES.addCompany} “${typedName}”`}

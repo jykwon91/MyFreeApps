@@ -26,7 +26,11 @@ import NewSavedSearchDialog from "../NewSavedSearchDialog";
 const mockShowError = vi.fn();
 const mockShowSuccess = vi.fn();
 
-vi.mock("@platform/ui", async (importOriginal) => ({
+vi.mock("@platform/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@platform/ui")>();
+  return {
+  FieldFeedback: actual.FieldFeedback,
+  fieldFeedbackAria: actual.fieldFeedbackAria,
   ConfirmDialog: ({
     open,
     children,
@@ -64,7 +68,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
   InlineBoldText: ({ text }: { text: string }) => <span>{text}</span>,
   Skeleton: () => <div data-testid="skeleton" />,
   // Used by GreenhouseConfigSection + LeverConfigSection
-  FormField: (await importOriginal<typeof import("@platform/ui")>()).FormField,
+  FormField: actual.FormField,
   MultiChipInput: ({
     value,
     ariaLabel,
@@ -80,7 +84,8 @@ vi.mock("@platform/ui", async (importOriginal) => ({
       ))}
     </div>
   ),
-}));
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Mock store mutations
@@ -409,6 +414,26 @@ describe("NewSavedSearchDialog — name field (PR 6)", () => {
   it("renders the name field", () => {
     renderDialog();
     expect(screen.getByLabelText(/Name/i)).toBeInTheDocument();
+  });
+
+  it("keeps a name that is too long, says so, and won't create the search", async () => {
+    renderDialog();
+    const nameInput = screen.getByLabelText(/Name/i);
+    expect(nameInput).not.toHaveAttribute("maxLength");
+    await userEvent.selectOptions(screen.getByLabelText("Job source"), "greenhouse");
+    await userEvent.type(screen.getByLabelText("Greenhouse board token"), "stripe");
+
+    // 😀 is one character to the backend: 101 of them are one too many.
+    const tooLong = "😀".repeat(101);
+    fireEvent.change(nameInput, { target: { value: tooLong } });
+    fireEvent.click(screen.getByTestId("confirm-btn"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Keep this to 100 characters or fewer.");
+    expect(nameInput).toHaveValue(tooLong);
+    expect(mockCreateSource).not.toHaveBeenCalled();
+
+    fireEvent.change(nameInput, { target: { value: "😀".repeat(100) } });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("sends name when filled in", async () => {

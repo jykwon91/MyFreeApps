@@ -12,7 +12,7 @@
  * surface inside EventListItem (see EventListItem.test.tsx for those tests).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const logEventMock = vi.fn();
@@ -43,6 +43,8 @@ vi.mock("@platform/ui", async (importOriginal) => {
   };
 });
 
+import { INTERVIEWER_NAME_MAX_LENGTH, INTERVIEWERS_MAX } from "@myjobhunter/api-client/constants/interviewDetailLimits";
+import { interviewerNameTooLongMessage, tooManyInterviewersMessage } from "@myjobhunter/api-client/constants/interviewerProblems";
 import LogEventDialog from "../LogEventDialog";
 
 function renderDialog() {
@@ -149,5 +151,53 @@ describe("LogEventDialog — interview_details", () => {
     await userEvent.click(screen.getByRole("button", { name: /Log event/i }));
     expect(logEventMock).not.toHaveBeenCalled();
     expect(screen.getByText(/Between 1 and 1440/i)).toBeInTheDocument();
+  });
+
+  it("keeps a note over the backend's limit, says so, and doesn't log it", async () => {
+    renderDialog();
+    const note = screen.getByLabelText("Note");
+    expect(note).not.toHaveAttribute("maxLength");
+    // 😀 is one character to the backend, so 5000 fit and a 5001st is too many.
+    fireEvent.change(note, { target: { value: "😀".repeat(5001) } });
+    await userEvent.click(screen.getByRole("button", { name: /Log event/i }));
+
+    expect(await screen.findByText("Keep this to 5,000 characters or fewer.")).toBeInTheDocument();
+    expect(note).toHaveValue("😀".repeat(5001));
+    expect(logEventMock).not.toHaveBeenCalled();
+
+    fireEvent.change(note, { target: { value: "😀".repeat(5000) } });
+    await userEvent.click(screen.getByRole("button", { name: /Log event/i }));
+    expect(logEventMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps an interview location over the backend's limit, says so, and doesn't log it", async () => {
+    renderDialog();
+    await userEvent.selectOptions(screen.getByLabelText(/^Event/i), "interview_scheduled");
+    await userEvent.selectOptions(screen.getByLabelText(/Type/i), "video");
+    const location = screen.getByLabelText(/Location or link/i);
+    fireEvent.change(location, { target: { value: "😀".repeat(1025) } });
+    await userEvent.click(screen.getByRole("button", { name: /Log event/i }));
+
+    expect(await screen.findByText("Keep this to 1,024 characters or fewer.")).toBeInTheDocument();
+    expect(location).toHaveValue("😀".repeat(1025));
+    expect(logEventMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps too many interviewers, or one name over the limit, says so, and doesn't log it", async () => {
+    renderDialog();
+    await userEvent.selectOptions(screen.getByLabelText(/^Event/i), "interview_scheduled");
+    await userEvent.selectOptions(screen.getByLabelText(/Type/i), "video");
+    const names = screen.getByLabelText(/Interviewer names/i);
+
+    const tooMany = Array.from({ length: INTERVIEWERS_MAX + 1 }, (_, i) => `Person ${i}`).join("\n");
+    fireEvent.change(names, { target: { value: tooMany } });
+    await userEvent.click(screen.getByRole("button", { name: /Log event/i }));
+    expect(await screen.findByText(tooManyInterviewersMessage(INTERVIEWERS_MAX))).toBeInTheDocument();
+    expect(names).toHaveValue(tooMany);
+
+    fireEvent.change(names, { target: { value: "😀".repeat(INTERVIEWER_NAME_MAX_LENGTH + 1) } });
+    await userEvent.click(screen.getByRole("button", { name: /Log event/i }));
+    expect(await screen.findByText(interviewerNameTooLongMessage(INTERVIEWER_NAME_MAX_LENGTH))).toBeInTheDocument();
+    expect(logEventMock).not.toHaveBeenCalled();
   });
 });

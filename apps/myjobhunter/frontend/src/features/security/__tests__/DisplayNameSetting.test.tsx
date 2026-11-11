@@ -142,4 +142,27 @@ describe("DisplayNameSetting", () => {
     render(<DisplayNameSetting />);
     expect(screen.getByRole("textbox")).toBeDisabled();
   });
+
+  it("keeps a pasted name that is too long, says so, and won't save it", async () => {
+    const trigger = setupMutation();
+    const user = userEvent.setup();
+    render(<DisplayNameSetting />);
+    const input = screen.getByRole("textbox");
+    expect(input).not.toHaveAttribute("maxLength");
+
+    // 😀 is one character to the backend, so 100 fit and a 101st is too many.
+    await user.clear(input);
+    await user.click(input);
+    await user.paste("😀".repeat(101));
+
+    expect(input).toHaveValue("😀".repeat(101));
+    expect(screen.getByRole("alert")).toHaveTextContent("Keep this to 100 characters or fewer.");
+    expect(screen.getByRole("button", { name: /Save/i })).toBeDisabled();
+    expect(trigger).not.toHaveBeenCalled();
+
+    await user.clear(input);
+    await user.paste("😀".repeat(100));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Save/i })).toBeEnabled();
+  });
 });
