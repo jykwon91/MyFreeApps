@@ -174,6 +174,11 @@ async def test_click_matching_existing_target_jumps_with_cache_hit():
         patch(f"{_SVC}._with_turns", new_callable=AsyncMock, side_effect=lambda db, s: s),
         patch(f"{_SVC}.session_repo") as repo,
         patch(
+            f"{_SVC}._load_usable_cached_entry",
+            new_callable=AsyncMock,
+            return_value={"proposal": "cached"},
+        ),
+        patch(
             f"{_SVC}._generate_next_proposal", new_callable=AsyncMock,
         ) as generate,
     ):
@@ -201,13 +206,18 @@ async def test_click_matching_existing_target_generates_on_cache_miss():
         patch(f"{_SVC}._with_turns", new_callable=AsyncMock, side_effect=lambda db, s: s),
         patch(f"{_SVC}.session_repo") as repo,
         patch(
+            f"{_SVC}._load_usable_cached_entry",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
             f"{_SVC}._generate_next_proposal",
             new_callable=AsyncMock,
             return_value=session,
         ) as generate,
     ):
         repo.set_target_index = AsyncMock(return_value=session)
-        repo.hydrate_pending_from_cache = AsyncMock(return_value=None)
+        repo.hydrate_pending_from_cache = AsyncMock()
         await create_target_from_line(
             db=AsyncMock(),
             user_id=_USER_ID,
@@ -216,6 +226,8 @@ async def test_click_matching_existing_target_generates_on_cache_miss():
             section="Experience",
         )
     generate.assert_awaited_once()
+    repo.hydrate_pending_from_cache.assert_not_awaited()
+    assert generate.await_args.kwargs["use_cache"] is False
 
 
 @pytest.mark.asyncio

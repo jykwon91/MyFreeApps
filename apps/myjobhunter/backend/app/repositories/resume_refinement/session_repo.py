@@ -17,6 +17,16 @@ from sqlalchemy.orm import selectinload
 
 from app.models.resume_refinement.session import ResumeRefinementSession
 
+# Proposal-cache helpers live in a sibling module (this file is over the
+# 500-LOC guard) and are re-exported so callers keep using ``session_repo.<name>``.
+from app.repositories.resume_refinement.session_proposal_cache_repo import (
+    apply_cached_proposal as apply_cached_proposal,
+    cache_proposal as cache_proposal,
+    hydrate_pending_from_cache as hydrate_pending_from_cache,
+    invalidate_cached_proposal as invalidate_cached_proposal,
+    update_cached_context_marker as update_cached_context_marker,
+)
+
 _RECENT_LIMIT = 25
 
 
@@ -215,87 +225,6 @@ async def set_target_index(
     return session
 
 
-async def hydrate_pending_from_cache(
-    db: AsyncSession,
-    session: ResumeRefinementSession,
-    *,
-    target_index: int,
-) -> ResumeRefinementSession | None:
-    """If a cached proposal exists for ``target_index``, copy it onto
-    the pending_* fields and return the refreshed session. Returns
-    ``None`` when there's no cache entry — callers should fall through
-    to generation.
-    """
-    cache = session.proposal_cache or {}
-    entry = cache.get(str(target_index))
-    if not entry:
-        return None
-    session.pending_target_section = entry.get("section")
-    session.pending_proposal = entry.get("proposal")
-    session.pending_rationale = entry.get("rationale")
-    session.pending_clarifying_question = entry.get("clarifying_question")
-    session.pending_guard_flagged = entry.get("guard_flagged")
-    session.pending_flagged_proposal = entry.get("flagged_proposal")
-    await db.flush()
-    await db.commit()
-    await db.refresh(session)
-    return session
-
-
-async def cache_proposal(
-    db: AsyncSession,
-    session: ResumeRefinementSession,
-    *,
-    target_index: int,
-    target_section: str | None,
-    proposal: str | None,
-    rationale: str | None,
-    clarifying_question: str | None,
-    guard_flagged: list[str] | None = None,
-    flagged_proposal: str | None = None,
-) -> ResumeRefinementSession:
-    """Write the just-generated proposal into ``proposal_cache`` for
-    the given ``target_index`` so future navigations skip the AI call.
-
-    JSONB requires a fresh dict assignment for SQLAlchemy to detect
-    the change — mutating in place doesn't flush.
-    """
-    existing = dict(session.proposal_cache or {})
-    existing[str(target_index)] = {
-        "section": target_section,
-        "proposal": proposal,
-        "rationale": rationale,
-        "clarifying_question": clarifying_question,
-        "guard_flagged": guard_flagged,
-        "flagged_proposal": flagged_proposal,
-    }
-    session.proposal_cache = existing
-    await db.flush()
-    await db.commit()
-    await db.refresh(session)
-    return session
-
-
-async def invalidate_cached_proposal(
-    db: AsyncSession,
-    session: ResumeRefinementSession,
-    *,
-    target_index: int,
-) -> ResumeRefinementSession:
-    """Drop the cached proposal for ``target_index`` (used by
-    ``request_alternative`` so the next ``cache_proposal`` write is
-    the regenerated value).
-    """
-    existing = dict(session.proposal_cache or {})
-    if str(target_index) in existing:
-        del existing[str(target_index)]
-        session.proposal_cache = existing
-        await db.flush()
-        await db.commit()
-        await db.refresh(session)
-    return session
-
-
 async def mark_completed(
     db: AsyncSession,
     session: ResumeRefinementSession,
@@ -369,21 +298,6 @@ async def bump_turn_count(
     """Persist a turn_count increment for a user action that appends a
     turn row without going through ``apply_user_resolution``."""
     session.turn_count += 1
-    await db.flush()
-    await db.commit()
-    await db.refresh(session)
-    return session
-
-
-async def persist_prefetch_results(
-    db: AsyncSession,
-    session: ResumeRefinementSession,
-    *,
-    guard_flag_counts: dict,
-) -> ResumeRefinementSession:
-    """Final write of the prefetch pass: guard-flag counters plus the
-    token/cost accumulators the caller mutated on the instance."""
-    session.guard_flag_counts = guard_flag_counts
     await db.flush()
     await db.commit()
     await db.refresh(session)

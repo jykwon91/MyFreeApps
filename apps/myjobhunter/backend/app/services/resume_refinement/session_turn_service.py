@@ -42,6 +42,7 @@ from app.services.resume_refinement.session_helpers import (
     _current_target,
     _generate_next_proposal,
     _load_active,
+    _load_usable_cached_entry,
     _with_turns,
 )
 
@@ -81,7 +82,9 @@ async def accept_pending(
         draft_after=new_draft,
     )
 
-    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    session = await _generate_next_proposal(
+        db, session, user_id=user_id, hint=None, use_cache=True,
+    )
     return await _with_turns(db, session)
 
 
@@ -132,7 +135,9 @@ async def accept_flagged(
         draft_after=new_draft,
     )
 
-    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    session = await _generate_next_proposal(
+        db, session, user_id=user_id, hint=None, use_cache=True,
+    )
     return await _with_turns(db, session)
 
 
@@ -169,7 +174,9 @@ async def accept_custom(
         draft_after=new_draft,
     )
 
-    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    session = await _generate_next_proposal(
+        db, session, user_id=user_id, hint=None, use_cache=True,
+    )
     return await _with_turns(db, session)
 
 
@@ -216,7 +223,9 @@ async def request_alternative(
         db, session, target_index=session.target_index,
     )
 
-    session = await _generate_next_proposal(db, session, user_id=user_id, hint=hint)
+    session = await _generate_next_proposal(
+        db, session, user_id=user_id, hint=hint, use_cache=False,
+    )
     return await _with_turns(db, session)
 
 
@@ -245,7 +254,9 @@ async def skip_target(
         draft_after=session.current_draft,
     )
 
-    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    session = await _generate_next_proposal(
+        db, session, user_id=user_id, hint=None, use_cache=True,
+    )
     return await _with_turns(db, session)
 
 
@@ -293,15 +304,20 @@ async def navigate(
     # generated proposal for this target. No Anthropic round-trip,
     # so navigation is instant. The operator can still force a
     # regeneration via ``request_alternative`` ("Another option").
-    cached = await session_repo.hydrate_pending_from_cache(
-        db, session, target_index=new_index,
-    )
-    if cached is not None:
-        return await _with_turns(db, cached)
+    # Only a still-valid entry is served: one generated before the user's
+    # later edits would apply against text that has since changed.
+    if await _load_usable_cached_entry(db, session) is not None:
+        cached = await session_repo.hydrate_pending_from_cache(
+            db, session, target_index=new_index,
+        )
+        if cached is not None:
+            return await _with_turns(db, cached)
 
-    # Cache miss: fall through to generation. ``_generate_next_proposal``
+    # Cache miss or stale entry: generate. ``_generate_next_proposal``
     # writes the result back to the cache for future navigations.
-    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    session = await _generate_next_proposal(
+        db, session, user_id=user_id, hint=None, use_cache=False,
+    )
     return await _with_turns(db, session)
 
 
@@ -347,12 +363,15 @@ async def create_target_from_line(
             # Already the active target — nothing to do.
             return await _with_turns(db, session)
         session = await session_repo.set_target_index(db, session, new_index=idx)
-        cached = await session_repo.hydrate_pending_from_cache(
-            db, session, target_index=idx,
+        if await _load_usable_cached_entry(db, session) is not None:
+            cached = await session_repo.hydrate_pending_from_cache(
+                db, session, target_index=idx,
+            )
+            if cached is not None:
+                return await _with_turns(db, cached)
+        session = await _generate_next_proposal(
+            db, session, user_id=user_id, hint=None, use_cache=False,
         )
-        if cached is not None:
-            return await _with_turns(db, cached)
-        session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
         return await _with_turns(db, session)
 
     new_target = {
@@ -379,5 +398,7 @@ async def create_target_from_line(
         db, session, target=new_target, insert_at=insert_at,
     )
 
-    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    session = await _generate_next_proposal(
+        db, session, user_id=user_id, hint=None, use_cache=False,
+    )
     return await _with_turns(db, session)

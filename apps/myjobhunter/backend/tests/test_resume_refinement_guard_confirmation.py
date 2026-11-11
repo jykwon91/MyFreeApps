@@ -305,7 +305,7 @@ async def test_generation_persists_guard_state_and_increments_count() -> None:
         patch.object(session_service.turn_repo, "append", new=AsyncMock()),
     ):
         await session_helpers._generate_next_proposal(
-            db, session, user_id=session.user_id, hint=None,
+            db, session, user_id=session.user_id, hint=None, use_cache=True,
         )
 
     # The rewrite saw the allowlist and the pre-existing flag count.
