@@ -1064,7 +1064,13 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `hooksecurefunc(SetHyperlink)`), deduped per item — a clicked link always
   gets priced. A clicked BoP link with no price says "can't be sold"; hovered
   soulbound items stay quiet. `src/__tests__/wowPricesAddon.test.ts` runs the real Lua under
-  fengari against WoW stubs (`src/test/addonLua/`). Refresh = download again.
+  fengari against WoW stubs (`src/test/addonLua/`; they mirror the Forever
+  client, which has only `C_Item.GetItemInfo`, no global `GetItemInfo`).
+  Refresh = download again, or the PC updater (`frontend/updater/`, see its
+  README): `npm run build:prices-updater` bundles `refreshPricesAddon` (same
+  `addonPriceLua` + bundled recipe data) into one Node file that an hourly
+  scheduled task runs to rewrite only `Data.lua`; tested in
+  `updater/__tests__/refreshPricesAddon.test.ts`.
 - Material prices fill in automatically (`CraftPriceField` shows the price as
   its value, labelled "Auction house"). An item with no auction price is
   worked out in `crafting/derivedPrices.ts` — an essence from the other half of

@@ -6,13 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b . tsconfig.node.json && vite build",
-    "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.updater.json --noEmit",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",
-    "test:e2e:serve-only": "playwright test --config e2e/playwright.serve-only.config.ts"
+    "test:e2e:serve-only": "playwright test --config e2e/playwright.serve-only.config.ts",
+    "build:prices-updater": "vite build --config vite.updater.config.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
