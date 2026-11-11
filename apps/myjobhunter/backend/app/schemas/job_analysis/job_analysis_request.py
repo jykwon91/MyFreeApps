@@ -1,7 +1,9 @@
 """Request schemas for the Analyze-a-job endpoints."""
 from __future__ import annotations
 
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, model_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
+
+from app.core.job_description_limits import JD_TEXT_MAX_LEN
 
 
 class JobAnalysisRequest(BaseModel):
@@ -20,7 +22,7 @@ class JobAnalysisRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     url: AnyHttpUrl | None = None
-    jd_text: str | None = None
+    jd_text: str | None = Field(default=None, max_length=JD_TEXT_MAX_LEN)
 
     @model_validator(mode="after")
     def _exactly_one_source(self) -> "JobAnalysisRequest":

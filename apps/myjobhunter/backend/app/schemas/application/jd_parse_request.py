@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-_JD_TEXT_MAX_LEN = 50_000
+from app.core.job_description_limits import JD_TEXT_MAX_LEN
 
 
 class JdParseRequest(BaseModel):
@@ -14,6 +14,6 @@ class JdParseRequest(BaseModel):
     ``extra='forbid'`` prevents injection of extra keys.
     """
 
-    jd_text: str = Field(min_length=1, max_length=_JD_TEXT_MAX_LEN)
+    jd_text: str = Field(min_length=1, max_length=JD_TEXT_MAX_LEN)
 
     model_config = ConfigDict(extra="forbid")
