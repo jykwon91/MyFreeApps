@@ -15,7 +15,8 @@ interface DownrankInputsProps {
   onChange: (patch: Partial<DownrankSettings>) => void;
 }
 
-const SELECT_CLASS = "min-h-[44px] bg-card text-base sm:text-sm";
+const SELECT_TEXT = "text-base sm:text-sm";
+const SELECT_CLASS = `min-h-[44px] bg-card ${SELECT_TEXT}`;
 
 function clamp(value: number | null, max: number): number {
   return Math.min(max, Math.max(0, Math.round(value ?? 0)));
@@ -35,6 +36,7 @@ export default function DownrankInputs({ families, family, settings, onChange }:
             id="downrank-class"
             value={family.classId}
             classes={classes}
+            className={SELECT_TEXT}
             onChange={(classId) => {
               const first = families.find((f) => f.classId === classId);
               if (first) onChange({ familyId: first.id });
