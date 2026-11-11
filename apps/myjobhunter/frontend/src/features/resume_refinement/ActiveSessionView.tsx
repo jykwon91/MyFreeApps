@@ -1,5 +1,6 @@
+import { aiActionErrorMessage } from "@/lib/aiActionErrorMessage";
 import { useEffect, useRef, useState } from "react";
-import { showError, extractErrorMessage } from "@platform/ui";
+import { showError } from "@platform/ui";
 import CurrentDraftPanel from "@/features/resume_refinement/CurrentDraftPanel";
 import PendingProposalCard from "@/features/resume_refinement/PendingProposalCard";
 import CompletePanel from "@/features/resume_refinement/CompletePanel";
@@ -79,7 +80,7 @@ export default function ActiveSessionView({ session, onStartNew }: ActiveSession
       }
     } catch (err) {
       setPendingLine(null);
-      showError(extractErrorMessage(err));
+      showError(aiActionErrorMessage(err, "resumeRefinement"));
     }
   }
 

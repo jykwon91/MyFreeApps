@@ -1,3 +1,4 @@
+import { aiActionErrorMessage } from "@/lib/aiActionErrorMessage";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
@@ -6,7 +7,6 @@ import {
   LoadingButton,
   Skeleton,
   showError,
-  extractErrorMessage,
 } from "@platform/ui";
 import { useListResumeJobsQuery } from "@myjobhunter/api-client/store/resumesApi";
 import { useStartRefinementSessionMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
@@ -51,7 +51,7 @@ export default function SessionStartPanel({ onSessionStarted }: SessionStartPane
       const session = await startSession({ source_resume_job_id: picked }).unwrap();
       onSessionStarted(session.id);
     } catch (err) {
-      showError(extractErrorMessage(err));
+      showError(aiActionErrorMessage(err, "resumeRefinement"));
     }
   }
 

@@ -57,7 +57,7 @@ describe("describeAnalyzeError", () => {
   });
 
   it("says the same about the rate limit whichever way the job came in", () => {
-    const limited = "Too many requests. Wait a few minutes and try again.";
+    const limited = "You've looked up a lot of job postings recently. Try again in a few minutes.";
     expect(describeAnalyzeError(failed(429, "Too many attempts"), "url")).toBe(limited);
     expect(describeAnalyzeError(failed(429, "Too many attempts"), "text")).toBe(limited);
   });

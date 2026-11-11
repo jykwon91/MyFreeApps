@@ -15,6 +15,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { RATE_LIMITED_MESSAGES } from "@myjobhunter/api-client/constants/rateLimitedMessages";
 import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
 
 // ---------------------------------------------------------------------------
@@ -237,7 +238,7 @@ describe("ResumeUploadSection", () => {
     await userEvent.upload(fileInput, fakeFile);
 
     await waitFor(() => {
-      expect(mockShowError).toHaveBeenCalled();
+      expect(mockShowError).toHaveBeenCalledWith("Upload failed: Error: 413 Payload Too Large");
     });
     expect(mockShowSuccess).not.toHaveBeenCalled();
   });
@@ -256,5 +257,26 @@ describe("ResumeUploadSection", () => {
 
     expect(mockResumeUploadSectionSkeleton).toHaveBeenCalled();
     expect(screen.queryByText(/No resumes uploaded yet/i)).not.toBeInTheDocument();
+  });
+
+  it("toasts the upload-limit message on a 429 and takes another file", async () => {
+    const uploadTrigger = vi.fn().mockReturnValue({
+      unwrap: vi.fn().mockRejectedValue({ status: 429, data: { detail: "Too many attempts" } }),
+    });
+    setupDefaultMocks();
+    mockUseUploadResume.mockReturnValue(
+      [uploadTrigger, { isLoading: false }] as unknown as ReturnType<typeof useUploadResumeMutation>,
+    );
+
+    render(<ResumeUploadSection profileId="profile-1" />);
+    const fakeFile = new File(["%PDF-1.4 test"], "resume.pdf", { type: "application/pdf" });
+    await userEvent.upload(screen.getByTestId("file-input"), fakeFile);
+
+    await waitFor(() => {
+      expect(mockShowError).toHaveBeenCalledWith(RATE_LIMITED_MESSAGES.resumeUpload);
+    });
+
+    await userEvent.upload(screen.getByTestId("file-input"), new File(["%PDF-1.4 two"], "two.pdf", { type: "application/pdf" }));
+    await waitFor(() => expect(uploadTrigger).toHaveBeenCalledTimes(2));
   });
 });

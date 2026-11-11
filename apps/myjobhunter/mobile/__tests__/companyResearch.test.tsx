@@ -2,6 +2,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { Linking } from "react-native";
 import { COMPANY_RESEARCH_MESSAGES as MESSAGES } from "../src/constants/companyResearch";
+import { RATE_LIMITED_MESSAGES } from "@myjobhunter/api-client/constants/rateLimitedMessages";
 import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
 import { store } from "../src/lib/store";
 import { companyDetailRoutes } from "../test-support/companyDetailRoutes";
@@ -233,6 +234,31 @@ it("says when a run fails, and runs it again on Try again", async () => {
   expect(research().getByText("AI synthesis failed")).toBeTruthy();
 
   fails = false;
+  await fireEvent.press(research().getByRole("button", { name: MESSAGES.tryAgain }));
+  expect(await research().findByText("Positive")).toBeTruthy();
+  expect(runs(sent)).toHaveLength(2);
+});
+
+it("says plainly when the research limit is hit, hides the server's generic line, and runs again on Try again", async () => {
+  let limited = true;
+  let researched = false;
+  const sent = serve({
+    ...companyDetailRoutes(ACME),
+    [`GET /companies/${ID}/research`]: () => (researched ? { status: 200, data: FULL } : { status: 404 }),
+    [`POST /companies/${ID}/research`]: () => {
+      if (limited) return { status: 429, data: { detail: "Too many attempts" } };
+      researched = true;
+      return { status: 200, data: FULL };
+    },
+  });
+  await renderCompanyDetail(ID);
+
+  await fireEvent.press(await research().findByRole("button", { name: MESSAGES.run }));
+  // In a toast, and where the research would be.
+  await waitFor(() => expect(screen.getAllByText(RATE_LIMITED_MESSAGES.companyResearch)).toHaveLength(2));
+  expect(research().queryByText("Too many attempts")).toBeNull();
+
+  limited = false;
   await fireEvent.press(research().getByRole("button", { name: MESSAGES.tryAgain }));
   expect(await research().findByText("Positive")).toBeTruthy();
   expect(runs(sent)).toHaveLength(2);

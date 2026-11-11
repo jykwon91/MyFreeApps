@@ -1,5 +1,6 @@
+import { aiActionErrorMessage } from "@/lib/aiActionErrorMessage";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { showError, extractErrorMessage } from "@platform/ui";
+import { showError } from "@platform/ui";
 import { useNavigateRefinementMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
 import { NavDirection } from "@myjobhunter/api-client/types/resume-refinement/nav-direction";
 
@@ -37,7 +38,7 @@ export default function NavigationButtons({
     try {
       await navigate({ id: sessionId, direction }).unwrap();
     } catch (err) {
-      showError(extractErrorMessage(err));
+      showError(aiActionErrorMessage(err, "resumeRefinement"));
     }
   }
 

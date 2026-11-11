@@ -320,7 +320,7 @@ describe("Analyze page", () => {
 
     await waitFor(() =>
       expect(mockShowError).toHaveBeenCalledWith(
-        "Couldn't analyze: Too many requests. Wait a few minutes and try again.",
+        "Couldn't analyze: You've looked up a lot of job postings recently. Try again in a few minutes.",
       ),
     );
     expect(await screen.findByLabelText("Job description text")).toBeInTheDocument();

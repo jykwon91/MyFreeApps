@@ -1,5 +1,6 @@
+import { aiActionErrorMessage } from "@/lib/aiActionErrorMessage";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { LoadingButton, showError, extractErrorMessage } from "@platform/ui";
+import { LoadingButton, showError } from "@platform/ui";
 import { useRetryPreparationMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
 import SuggestionProgressBar from "@/features/resume_refinement/SuggestionProgressBar";
 import {
@@ -33,7 +34,7 @@ export default function SessionPreparingPanel({ session }: SessionPreparingPanel
     try {
       await retryPreparation(session.id).unwrap();
     } catch (err) {
-      showError(extractErrorMessage(err));
+      showError(aiActionErrorMessage(err, "resumeRefinement"));
     }
   }
 

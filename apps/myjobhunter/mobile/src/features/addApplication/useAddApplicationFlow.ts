@@ -14,6 +14,7 @@ import { describeExtractError } from "@myjobhunter/api-client/utils/describeExtr
 import { isAuthRequiredError } from "@myjobhunter/api-client/utils/isAuthRequiredError";
 import { isJobPostingUrl } from "@myjobhunter/api-client/utils/isJobPostingUrl";
 import { prefillFromExtract } from "@myjobhunter/api-client/utils/prefillFromExtract";
+import { rateLimitedMessage } from "@myjobhunter/api-client/utils/rateLimitedMessage";
 import { prefillFromParse } from "@myjobhunter/api-client/utils/prefillFromParse";
 import { jobDescriptionLengthProblem, jobLinkLengthProblem } from "@myjobhunter/api-client/utils/jobSourceProblems";
 import { useLeaveWhenSaved, useToast } from "@platform/mobile";
@@ -183,8 +184,8 @@ export function useAddApplicationFlow() {
       setSubmittedJdText(text);
       prefill(prefillFromParse(result));
       setReview({ sourceUrl: null, summary: result.summary, company });
-    } catch {
-      if (isMounted.current) setFailure(MESSAGES.couldntReadText);
+    } catch (error) {
+      if (isMounted.current) setFailure(rateLimitedMessage(error, "jobPosting") ?? MESSAGES.couldntReadText);
     } finally {
       inFlightRead.current = null;
       if (isMounted.current) setReading(null);
