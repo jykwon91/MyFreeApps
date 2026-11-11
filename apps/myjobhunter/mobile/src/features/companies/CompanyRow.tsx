@@ -1,6 +1,7 @@
 import { companyFieldText } from "@myjobhunter/api-client/utils/companyFieldText";
-import { LINK_MESSAGES, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
+import { COMPANY_MESSAGES } from "../../constants/companies";
 import type { CompanyRowProps } from "../../types/CompanyRowProps";
 import { companyDetails, companyRowLabel } from "./companyDisplay";
 
@@ -12,7 +13,7 @@ export default function CompanyRow({ company, onPress }: CompanyRowProps) {
 
   return (
     <Pressable
-      accessibilityHint={LINK_MESSAGES.opensBrowser}
+      accessibilityHint={COMPANY_MESSAGES.opensCompany}
       accessibilityLabel={companyRowLabel(company)}
       accessibilityRole="link"
       onPress={onPress}

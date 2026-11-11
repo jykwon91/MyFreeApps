@@ -2,18 +2,11 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Badge, LoadingButton } from "@platform/ui";
 import type { CompanyResearch } from "@myjobhunter/api-client/types/company-research";
-import type { ResearchSentiment } from "@myjobhunter/api-client/types/research-sentiment";
+import { researchCompensationSignals } from "@myjobhunter/api-client/utils/researchCompensationSignals";
+import { researchSentimentLabel, researchSentimentTone } from "@myjobhunter/api-client/utils/researchSentiment";
+import { STATUS_TONE_BADGE_COLORS } from "@/constants/statusToneBadgeColors";
 import FlagsSection from "./FlagsSection";
 import SourcesList from "./SourcesList";
-
-type SentimentBadgeColor = "green" | "yellow" | "red" | "gray";
-
-const SENTIMENT_BADGE: Record<ResearchSentiment, { label: string; color: SentimentBadgeColor }> = {
-  positive: { label: "Positive", color: "green" },
-  mixed: { label: "Mixed", color: "yellow" },
-  negative: { label: "Negative", color: "red" },
-  unknown: { label: "Unknown", color: "gray" },
-};
 
 interface ReadyStateProps {
   research: CompanyResearch;
@@ -23,7 +16,7 @@ interface ReadyStateProps {
 
 export default function ReadyState({ research, onRunResearch, isRunning }: ReadyStateProps) {
   const [sourcesOpen, setSourcesOpen] = useState(false);
-  const sentiment = SENTIMENT_BADGE[research.overall_sentiment] ?? SENTIMENT_BADGE.unknown;
+  const compensationSignals = researchCompensationSignals(research);
   const lastRun = research.last_researched_at
     ? new Date(research.last_researched_at).toLocaleDateString()
     : null;
@@ -33,7 +26,7 @@ export default function ReadyState({ research, onRunResearch, isRunning }: Ready
       {/* Header row: sentiment + re-run */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2">
-          <Badge label={sentiment.label} color={sentiment.color} />
+          <Badge label={researchSentimentLabel(research)} color={STATUS_TONE_BADGE_COLORS[researchSentimentTone(research)]} />
           {lastRun ? (
             <span className="text-xs text-muted-foreground">Last run {lastRun}</span>
           ) : null}
@@ -88,13 +81,13 @@ export default function ReadyState({ research, onRunResearch, isRunning }: Ready
       ) : null}
 
       {/* Comp signals */}
-      {research.raw_synthesis?.compensation_signals ? (
+      {compensationSignals ? (
         <section>
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
             Compensation signals
           </p>
           <p className="text-sm whitespace-pre-wrap text-muted-foreground">
-            {String(research.raw_synthesis.compensation_signals)}
+            {compensationSignals}
           </p>
         </section>
       ) : null}
