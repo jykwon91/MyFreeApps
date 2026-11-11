@@ -16,6 +16,7 @@ import userEvent from "@testing-library/user-event";
 import { showError, showSuccess } from "@platform/ui";
 import { COMPANY_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/companyFieldLimits";
 import { COMPANY_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/companyFormProblems";
+import { RATE_LIMITED_MESSAGES } from "@myjobhunter/api-client/constants/rateLimitedMessages";
 import AddApplicationDialog from "../AddApplicationDialog";
 
 // ---- mocks ----
@@ -1322,5 +1323,42 @@ describe("AddApplicationDialog — races", () => {
     expect(vi.mocked(showError)).toHaveBeenLastCalledWith(expect.stringContaining(COMPANY_FORM_PROBLEMS.nameTooLong));
     expect(createCompany).not.toHaveBeenCalled();
     expect(createApp).not.toHaveBeenCalled();
+  });
+
+  describe("parse-jd failures", () => {
+    async function submitText(trigger: ReturnType<typeof vi.fn>) {
+      const user = userEvent.setup();
+      mockUseParseJobDescriptionMutation.mockReturnValue(
+        [trigger, { isLoading: false }] as unknown as ReturnType<typeof useParseJobDescriptionMutation>,
+      );
+      renderDialog();
+      await user.click(screen.getByText(/no url\? paste the description text instead/i));
+      await user.type(screen.getByLabelText(/job description text/i), "JD text");
+      await user.click(screen.getByRole("button", { name: /parse with ai/i }));
+    }
+
+    it("says plainly that the job-posting limit was hit on a 429, and parses again on a second press", async () => {
+      const trigger = vi.fn().mockReturnValue({
+        unwrap: () => Promise.reject({ status: 429, data: { detail: "Too many attempts" } }),
+      });
+      await submitText(trigger);
+
+      await waitFor(() => {
+        expect(vi.mocked(showError)).toHaveBeenCalledWith(RATE_LIMITED_MESSAGES.jobPosting);
+      });
+      await userEvent.click(screen.getByRole("button", { name: /parse with ai/i }));
+      await waitFor(() => expect(trigger).toHaveBeenCalledTimes(2));
+    });
+
+    it("keeps the server's message for any other failure", async () => {
+      const trigger = vi.fn().mockReturnValue({
+        unwrap: () => Promise.reject({ status: 500, data: { detail: "AI exploded" } }),
+      });
+      await submitText(trigger);
+
+      await waitFor(() => {
+        expect(vi.mocked(showError)).toHaveBeenCalledWith("Couldn't auto-fill: AI exploded");
+      });
+    });
   });
 });

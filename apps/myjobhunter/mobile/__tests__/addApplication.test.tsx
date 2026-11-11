@@ -7,6 +7,7 @@ import {
   LOCATION_MAX_LENGTH,
   ROLE_TITLE_MAX_LENGTH,
 } from "@myjobhunter/api-client/constants/addApplicationForm";
+import { RATE_LIMITED_MESSAGES } from "@myjobhunter/api-client/constants/rateLimitedMessages";
 import { COMPANY_FORM_PROBLEMS } from "@myjobhunter/api-client/constants/companyFormProblems";
 import { APPLICATION_NOTES_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import type { JdParseResponse } from "@myjobhunter/api-client/types/application/jd-parse-response";
@@ -394,6 +395,18 @@ describe("from pasted text", () => {
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.autoFillFromText }));
 
     expect(await screen.findByText(MESSAGES.couldntReadText)).toBeTruthy();
+    expect(field(MESSAGES.textLabel).props.value).toBe("Some JD");
+  });
+
+  it("says plainly that the limit was hit when the description is read too often, keeping what was pasted", async () => {
+    serveAdd({ "POST /applications/parse-jd": fail(429) });
+    await openAddScreen();
+    await chooseSource("Paste text");
+    await fireEvent.changeText(field(MESSAGES.textLabel), "Some JD");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.autoFillFromText }));
+
+    expect(await screen.findByText(RATE_LIMITED_MESSAGES.jobPosting)).toBeTruthy();
+    expect(screen.queryByText(MESSAGES.couldntReadText)).toBeNull();
     expect(field(MESSAGES.textLabel).props.value).toBe("Some JD");
   });
 

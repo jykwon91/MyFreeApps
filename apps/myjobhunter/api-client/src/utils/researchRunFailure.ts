@@ -5,6 +5,7 @@ import type { ResearchRunFailureReason } from "../types/company/research-run-fai
 function reasonFor(status: number | undefined): ResearchRunFailureReason {
   if (status === 503) return "not-configured";
   if (status === 404) return "company-gone";
+  if (status === 429) return "rate-limited";
   return "retryable";
 }
 

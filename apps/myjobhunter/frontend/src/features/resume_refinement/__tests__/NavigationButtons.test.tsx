@@ -14,6 +14,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
+import { RATE_LIMITED_MESSAGES } from "@myjobhunter/api-client/constants/rateLimitedMessages";
 import NavigationButtons from "../NavigationButtons";
 import { NavDirection } from "@myjobhunter/api-client/types/resume-refinement/nav-direction";
 
@@ -172,5 +173,16 @@ describe("NavigationButtons", () => {
       expect(showError).toHaveBeenCalledTimes(1);
     });
     expect(showError.mock.calls[0]?.[0]).toMatch(/nav blew up/);
+  });
+
+  it("toasts the refinement message on a 429 and can move again", async () => {
+    navigateUnwrap = vi.fn().mockRejectedValue({ status: 429, data: { detail: "Too many attempts" } });
+    render(<NavigationButtons sessionId={SESSION_ID} targetIndex={2} totalTargets={5} isPending={false} />);
+
+    fireEvent.click(screen.getByLabelText(/next suggestion/i));
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(RATE_LIMITED_MESSAGES.resumeRefinement));
+
+    fireEvent.click(screen.getByLabelText(/next suggestion/i));
+    await waitFor(() => expect(navigateUnwrap).toHaveBeenCalledTimes(2));
   });
 });

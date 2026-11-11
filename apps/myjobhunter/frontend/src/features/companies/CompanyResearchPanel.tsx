@@ -8,6 +8,7 @@
 import { extractErrorMessage, showError } from "@platform/ui";
 import { useGetCompanyResearchQuery, useTriggerCompanyResearchMutation } from "@myjobhunter/api-client/store/companiesApi";
 import { companyResearchMode } from "@myjobhunter/api-client/utils/companyResearchMode";
+import { RATE_LIMITED_MESSAGES } from "@myjobhunter/api-client/constants/rateLimitedMessages";
 import { researchRunFailure } from "@myjobhunter/api-client/utils/researchRunFailure";
 import CompanyResearchPanelBody from "@/features/companies/CompanyResearchPanelBody";
 
@@ -38,15 +39,25 @@ export default function CompanyResearchPanel({ companyId }: CompanyResearchPanel
     isMutationError,
   });
 
-  const errorMessage = mutationError ? extractErrorMessage(mutationError) : null;
+  const failureReason = mutationError ? researchRunFailure(mutationError).reason : null;
+  const errorMessage =
+    failureReason === "rate-limited"
+      ? RATE_LIMITED_MESSAGES.companyResearch
+      : mutationError
+        ? extractErrorMessage(mutationError)
+        : null;
   // A 503 means research isn't set up on the server; retrying can't help.
-  const canRetry = !mutationError || researchRunFailure(mutationError).reason !== "not-configured";
+  const canRetry = failureReason !== "not-configured";
 
   async function handleRunResearch() {
     try {
       await triggerResearch(companyId).unwrap();
     } catch (err) {
-      showError(`Research failed: ${extractErrorMessage(err)}`);
+      showError(
+        researchRunFailure(err).reason === "rate-limited"
+          ? RATE_LIMITED_MESSAGES.companyResearch
+          : `Research failed: ${extractErrorMessage(err)}`,
+      );
     }
   }
 

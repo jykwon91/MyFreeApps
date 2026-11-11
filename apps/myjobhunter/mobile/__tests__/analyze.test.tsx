@@ -234,7 +234,7 @@ describe("from a link", () => {
   it.each([
     [504, TIMEOUT],
     [502, "Couldn't extract the job description from that page. Paste the description text instead."],
-    [429, "Too many requests. Wait a few minutes and try again."],
+    [429, "You've looked up a lot of job postings recently. Try again in a few minutes."],
     [400, "That URL doesn't look right. Make sure it starts with http:// or https://."],
   ])("says why a %s failed, and keeps the link to try again", async (status, why) => {
     serveAnalyze({ [ANALYZE]: fail(status) });
@@ -273,7 +273,7 @@ describe("from pasted text", () => {
   });
 
   it.each([
-    [429, "Too many requests. Wait a few minutes and try again."],
+    [429, "You've looked up a lot of job postings recently. Try again in a few minutes."],
     [502, JOB_ANALYSIS_ERRORS.aiFailed],
     [500, JOB_ANALYSIS_ERRORS.failed],
   ])("says why a %s failed without the server's raw detail, keeping the text", async (status, why) => {

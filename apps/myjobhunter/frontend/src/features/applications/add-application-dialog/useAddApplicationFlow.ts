@@ -22,6 +22,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { showError, extractErrorMessage } from "@platform/ui";
+import { aiActionErrorMessage } from "@/lib/aiActionErrorMessage";
 import { useCompanyResolver } from "@myjobhunter/api-client/hooks/useCompanyResolver";
 import { useListCompaniesQuery } from "@myjobhunter/api-client/store/companiesApi";
 import {
@@ -296,7 +297,7 @@ export function useAddApplicationFlow(
       await applyParseResult(result, isCurrent);
     } catch (err) {
       if (!isCurrent()) return;
-      showError(`Couldn't auto-fill: ${extractErrorMessage(err) ?? "AI parsing failed"}`);
+      showError(aiActionErrorMessage(err, "jobPosting", "Couldn't auto-fill: "));
       setInputMode("text");
     } finally {
       if (inFlightRead.current === request) inFlightRead.current = null;

@@ -1,9 +1,9 @@
+import { aiActionErrorMessage } from "@/lib/aiActionErrorMessage";
 import { useEffect, useRef, useState } from "react";
 import { Sparkles } from "lucide-react";
 import {
   showError,
   showSuccess,
-  extractErrorMessage,
 } from "@platform/ui";
 import {
   useAcceptPendingMutation,
@@ -116,7 +116,7 @@ export default function PendingProposalCard({
       showSuccess("Applied. Onto the next one.");
       resetMode();
     } catch (err) {
-      showError(extractErrorMessage(err));
+      showError(aiActionErrorMessage(err, "resumeRefinement"));
     }
   }
 
@@ -131,7 +131,7 @@ export default function PendingProposalCard({
       resetMode();
       setComposerText("");
     } catch (err) {
-      showError(extractErrorMessage(err));
+      showError(aiActionErrorMessage(err, "resumeRefinement"));
     }
   }
 
@@ -143,7 +143,7 @@ export default function PendingProposalCard({
       resetMode();
       setCustomText("");
     } catch (err) {
-      showError(extractErrorMessage(err));
+      showError(aiActionErrorMessage(err, "resumeRefinement"));
     }
   }
 
@@ -161,7 +161,7 @@ export default function PendingProposalCard({
     } catch (err) {
       setPendingEcho(null);
       setComposerText(text);
-      showError(extractErrorMessage(err));
+      showError(aiActionErrorMessage(err, "resumeRefinement"));
     }
   }
 
@@ -170,7 +170,7 @@ export default function PendingProposalCard({
     try {
       await requestAlternative({ id: session.id, hint: undefined }).unwrap();
     } catch (err) {
-      showError(extractErrorMessage(err));
+      showError(aiActionErrorMessage(err, "resumeRefinement"));
     }
   }
 
@@ -179,7 +179,7 @@ export default function PendingProposalCard({
       await skipTarget(session.id).unwrap();
       resetMode();
     } catch (err) {
-      showError(extractErrorMessage(err));
+      showError(aiActionErrorMessage(err, "resumeRefinement"));
     }
   }
 

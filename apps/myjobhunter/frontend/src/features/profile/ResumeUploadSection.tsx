@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FileText } from "lucide-react";
 import { FileUploadDropzone, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { aiActionErrorMessage } from "@/lib/aiActionErrorMessage";
 import ResumeJobRow from "@/features/profile/ResumeJobRow";
 import ResumeUploadSectionSkeleton from "@/features/profile/ResumeUploadSectionSkeleton";
 import {
@@ -55,7 +56,7 @@ export default function ResumeUploadSection({ profileId: _profileId }: ResumeUpl
       await uploadResume(formData).unwrap();
       showSuccess(`"${file.name}" uploaded and queued for processing`);
     } catch (err) {
-      showError(`Upload failed: ${extractErrorMessage(err)}`);
+      showError(aiActionErrorMessage(err, "resumeUpload", "Upload failed: "));
     }
   }
 

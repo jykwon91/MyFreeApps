@@ -8,6 +8,7 @@
  *   2. `describeExtractError` — picks a user-friendly sentence based on
  *      the status code, with a sensible fallback.
  */
+import { RATE_LIMITED_MESSAGES } from "../constants/rateLimitedMessages";
 import { describe, it, expect } from "vitest";
 import { describeExtractError } from "../utils/describeExtractError";
 import { isAuthRequiredError } from "../utils/isAuthRequiredError";
@@ -63,7 +64,7 @@ describe("describeExtractError", () => {
   });
 
   it("explains 429 as a rate-limit hit", () => {
-    expect(describeExtractError({ status: 429, data: "" })).toMatch(/too many/i);
+    expect(describeExtractError({ status: 429, data: "" })).toBe(RATE_LIMITED_MESSAGES.jobPosting);
   });
 
   it("explains 400 as a malformed URL", () => {

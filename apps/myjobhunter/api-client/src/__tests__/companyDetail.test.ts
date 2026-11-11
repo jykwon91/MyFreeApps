@@ -169,6 +169,10 @@ describe("researchRunFailure", () => {
     expect(researchRunFailure({ status: 404, data: { detail: "Company not found" } }).reason).toBe("company-gone");
   });
 
+  it("says a 429 is the rate limit", () => {
+    expect(researchRunFailure({ status: 429, data: { detail: "Too many attempts" } }).reason).toBe("rate-limited");
+  });
+
   it("offers a retry for the AI or search failing, or anything else, with the server's reason when there is one", () => {
     expect(researchRunFailure({ status: 502, data: { detail: "AI synthesis failed: overloaded" } })).toEqual({
       reason: "retryable",
