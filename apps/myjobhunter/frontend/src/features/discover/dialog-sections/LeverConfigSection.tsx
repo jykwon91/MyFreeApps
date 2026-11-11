@@ -18,8 +18,8 @@
  * not reliably include salary data.
  */
 import { MultiChipInput, FormField } from "@platform/ui";
-
-const COMPANY_SLUG_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+import { SAVED_SEARCH_FIELD_HINTS } from "@myjobhunter/api-client/constants/savedSearchProblems";
+import { isTypedCompanySlugInvalid } from "@myjobhunter/api-client/utils/isTypedCompanySlugInvalid";
 
 interface LeverConfigSectionProps {
   companySlug: string;
@@ -34,8 +34,7 @@ export default function LeverConfigSection({
   excludedKeywords,
   onExcludedKeywordsChange,
 }: LeverConfigSectionProps) {
-  const normalized = companySlug.toLowerCase();
-  const isInvalid = companySlug.length > 0 && !COMPANY_SLUG_RE.test(normalized);
+  const isInvalid = isTypedCompanySlugInvalid(companySlug);
 
   return (
     <div className="space-y-4">
@@ -65,8 +64,8 @@ export default function LeverConfigSection({
           className={`text-xs ${isInvalid ? "text-destructive" : "text-muted-foreground"}`}
         >
           {isInvalid
-            ? "Invalid slug — use lowercase letters, digits, and hyphens only."
-            : "Find this in the Lever URL: jobs.lever.co/​<company_slug>"}
+            ? SAVED_SEARCH_FIELD_HINTS.badCompanySlug
+            : SAVED_SEARCH_FIELD_HINTS.companySlug}
         </p>
       </div>
 

@@ -10,6 +10,7 @@ export default function Toast({
   message,
   variant,
   onDismiss,
+  action,
   durationMs = TOAST_DEFAULT_DURATION_MS,
   style,
 }: ToastProps) {
@@ -64,6 +65,19 @@ export default function Toast({
       >
         {message}
       </Text>
+      {action ? (
+        <Pressable
+          accessibilityHint={action.accessibilityHint}
+          accessibilityRole="button"
+          onPress={() => {
+            dismiss();
+            action.onPress();
+          }}
+          style={{ minHeight: MIN_TOUCH_TARGET, minWidth: MIN_TOUCH_TARGET, paddingHorizontal: spacing.sm, alignItems: "center", justifyContent: "center" }}
+        >
+          <Text style={{ color: foreground, fontSize: fontSize.sm, fontWeight: "600", textDecorationLine: "underline" }}>{action.label}</Text>
+        </Pressable>
+      ) : null}
       <Pressable
         accessibilityLabel="Dismiss notification"
         accessibilityRole="button"

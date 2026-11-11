@@ -36,16 +36,6 @@ vi.mock("@platform/ui", () => ({
   ),
   showSuccess: vi.fn(),
   showError: vi.fn(),
-  extractErrorMessage: vi.fn(),
-}));
-
-vi.mock("../refresh-interval", () => ({
-  REFRESH_INTERVAL_OPTIONS: [
-    { minutes: 120, label: "Every 2 hours", short: "Every 2h" },
-    { minutes: 360, label: "Every 6 hours", short: "Every 6h" },
-    { minutes: 720, label: "Twice daily", short: "Twice daily" },
-    { minutes: 1440, label: "Daily", short: "Daily" },
-  ],
 }));
 
 // ---------------------------------------------------------------------------

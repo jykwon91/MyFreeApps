@@ -143,4 +143,28 @@ describe("Toast", () => {
       lightColors.toastErrorBackground,
     );
   });
+  it("has no action button unless given one", async () => {
+    await render(<Toast message="Saved" onDismiss={jest.fn()} variant="success" />);
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+  });
+
+  it("runs its action and dismisses, with a touch target of at least the minimum", async () => {
+    const onDismiss = jest.fn();
+    const onPress = jest.fn();
+    await render(
+      <Toast action={{ label: "Undo", onPress, accessibilityHint: "Puts it back" }} message="Dismissed." onDismiss={onDismiss} variant="success" />,
+    );
+    const undo = screen.getByRole("button", { name: "Undo" });
+    expect(undo.props.accessibilityHint).toBe("Puts it back");
+    const style = StyleSheet.flatten(undo.props.style);
+    expect(style.minHeight).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+    expect(style.minWidth).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+
+    await fireEvent.press(undo);
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+
+    await act(async () => jest.advanceTimersByTime(10000));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
 });

@@ -23,14 +23,14 @@ vi.mock("@platform/ui", () => ({
   Button: ({ children, onClick, disabled }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean }) => (
     <button onClick={onClick} disabled={disabled}>{children}</button>
   ),
+  LoadingButton: ({ children, onClick, disabled, isLoading }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean; isLoading?: boolean }) => (
+    <button onClick={onClick} disabled={disabled || isLoading}>{children}</button>
+  ),
   Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={className}>{children}</div>
   ),
-  formatSalaryRange: () => "—",
   showError: vi.fn(),
   showSuccess: vi.fn(),
-  timeAgo: () => "2 hours ago",
-  extractErrorMessage: vi.fn(),
 }));
 
 vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
@@ -301,6 +301,23 @@ describe("DiscoveredJobCard — post-promote view application link (PR 7)", () =
     );
     expect(screen.queryByTestId("view-application-link")).toBeNull();
     expect(screen.queryByTestId("promoted-applied-badge")).toBeNull();
+  });
+});
+
+describe("DiscoveredJobCard — Open link", () => {
+  it("links to a web posting", () => {
+    renderInRouter(<DiscoveredJobCard job={makeJob({ source_url: "https://jobs.example.com/123" })} />);
+    expect(screen.getByRole("link", { name: /open/i })).toHaveAttribute("href", "https://jobs.example.com/123");
+  });
+
+  it("has no Open link for a posting URL that isn't a web link, such as javascript:", () => {
+    renderInRouter(<DiscoveredJobCard job={makeJob({ source_url: "javascript:alert(1)" })} />);
+    expect(screen.queryByRole("link", { name: /open/i })).toBeNull();
+  });
+
+  it("has no Open link without a posting URL", () => {
+    renderInRouter(<DiscoveredJobCard job={makeJob({ source_url: null })} />);
+    expect(screen.queryByRole("link", { name: /open/i })).toBeNull();
   });
 });
 

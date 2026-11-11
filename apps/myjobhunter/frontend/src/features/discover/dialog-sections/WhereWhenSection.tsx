@@ -1,4 +1,5 @@
 import { FormField } from "@platform/ui";
+import { COUNTRY_OPTIONS, DATE_POSTED_OPTIONS } from "@myjobhunter/api-client/constants/jsearchFilterOptions";
 import type { Country } from "@myjobhunter/api-client/types/discovery/country";
 import type { DatePosted } from "@myjobhunter/api-client/types/discovery/date-posted";
 
@@ -33,10 +34,11 @@ export default function WhereWhenSection({
             className={INPUT_CLASS}
             {...field}
           >
-            <option value="us">United States</option>
-            <option value="ca">Canada</option>
-            <option value="uk">United Kingdom</option>
-            <option value="au">Australia</option>
+            {COUNTRY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         )}
       </FormField>
@@ -49,11 +51,11 @@ export default function WhereWhenSection({
             className={INPUT_CLASS}
             {...field}
           >
-            <option value="today">Past 24 hours</option>
-            <option value="3days">Past 3 days</option>
-            <option value="week">Past week</option>
-            <option value="month">Past month</option>
-            <option value="all">Any time</option>
+            {DATE_POSTED_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         )}
       </FormField>

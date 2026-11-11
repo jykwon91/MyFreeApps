@@ -102,6 +102,7 @@ export type { ToneColor } from "./types/ToneColor";
 export type { ToastContextValue } from "./types/ToastContextValue";
 export type { ToastProps } from "./types/ToastProps";
 export type { ToastProviderProps } from "./types/ToastProviderProps";
+export type { ToastAction } from "./types/ToastAction";
 export type { ToastVariant } from "./types/ToastVariant";
 export type { WebLinkProps } from "./types/WebLinkProps";
 export type { WebPath } from "./types/WebPath";

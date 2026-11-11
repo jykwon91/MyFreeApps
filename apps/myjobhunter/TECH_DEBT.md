@@ -496,7 +496,7 @@ local test runs unreliable on Windows.
 (ESLint v9 flat config, mirrors MBK's config exactly). Installed `@eslint/js`, `typescript-eslint`,
 `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`. Two pre-existing rules
 (`react-hooks/refs`, `react-hooks/immutability`) downgraded to "warn" in the config for
-violations in `useDiscoveryDefaultsPrefill.ts` and `markdown-preview.tsx` — fix tracked separately.
+violations in `markdown-preview.tsx` — fix tracked separately (`useDiscoveryDefaultsPrefill` moved to api-client without the ref read).
 
 ---
 
@@ -594,7 +594,6 @@ with the correct type at the mock definition level so the stub doesn't need cast
 **Severity:** Medium
 **Effort:** S–M
 **Location:**
-- `apps/myjobhunter/frontend/src/features/discover/useDiscoveryDefaultsPrefill.ts` — reads `didPrefillRef.current` during render at lines 121 and 126
 - `apps/myjobhunter/frontend/src/features/resume_refinement/markdown-preview.tsx` — reads/writes `firstHighlightAssigned` and `firstHighlightRef.current` inside ref callbacks during render (lines 107, 119, 150, 164, 178, 191)
 **Discovered:** PR chore/mjh-eslint-and-setstate-fixes (2026-05-08) — first time ESLint ran
 
@@ -603,8 +602,6 @@ with the correct type at the mock definition level so the stub doesn't need cast
 keep lint green while the underlying patterns are fixed. These are warnings, not errors — CI passes.
 
 **Recommendation:**
-- `useDiscoveryDefaultsPrefill.ts`: replace `didPrefillRef.current` in the return value with a `useState`
-  boolean (`didPrefill`) updated in the effect where prefill fires. Refs must not be read during render.
 - `markdown-preview.tsx`: refactor `attachIfFirst` / `firstHighlightAssigned` to use `useCallback` +
   `useRef` accessed only in an effect or event handler, not inside a render-time ref callback.
 

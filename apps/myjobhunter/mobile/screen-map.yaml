@@ -20,8 +20,11 @@ routes:
   # The board's drag and drop is a Move button on each card; its drawer is the application's screen.
   /dashboard:
     screen: (app)/(tabs)/index
+  # On More rather than a tab: the website's own phone tab bar leaves it out too. Its new and edit
+  # saved-search dialogs are one sheet; the source filter, refresh frequency and dismiss reason are
+  # choice sheets; Undo is on the toast; the profile reminder's link opens the website's profile.
   /discover:
-    not_on_mobile: Not built yet.
+    screen: (app)/discover
   # On More rather than a tab: the website's own phone tab bar leaves it out too. Its Add document
   # dialog is two sheets on this screen, Upload a file and Write a document.
   /documents:

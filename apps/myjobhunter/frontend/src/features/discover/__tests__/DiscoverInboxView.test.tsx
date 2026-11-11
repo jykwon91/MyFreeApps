@@ -13,6 +13,9 @@ import { MemoryRouter } from "react-router-dom";
 import DiscoverInboxView from "@/features/discover/DiscoverInboxView";
 import type { DiscoveredJob } from "@myjobhunter/api-client/types/discovery/discovered-job";
 import type { DiscoveredJobListResponse } from "@myjobhunter/api-client/types/discovery/discovered-job-list-response";
+import { useGetProfileQuery } from "@myjobhunter/api-client/store/profileApi";
+import { useListSkillsQuery } from "@myjobhunter/api-client/store/skillsApi";
+import type { ScoringWindow } from "@myjobhunter/api-client/types/discovery/scoring-window";
 
 vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useListDiscoveredJobsQuery: vi.fn(),
@@ -45,7 +48,9 @@ vi.mock("@/features/discover/DiscoveredJobsSkeleton", () => ({
 }));
 
 vi.mock("@/features/discover/ProfileCompletenessBanner", () => ({
-  default: () => null,
+  default: (props: { hasResume: boolean; hasSkills: boolean }) => (
+    <div data-testid="profile-banner" data-has-resume={String(props.hasResume)} data-has-skills={String(props.hasSkills)} />
+  ),
 }));
 
 // Capture the isScoringInFlight prop each card receives so we can assert
@@ -110,10 +115,12 @@ function makeResponse(
   };
 }
 
-function renderInbox() {
+const CLOSED_WINDOW: ScoringWindow = { isOpen: false, pollingInterval: 0, open: vi.fn(), observe: vi.fn() };
+
+function renderInbox(scoringWindow: ScoringWindow = CLOSED_WINDOW) {
   return render(
     <MemoryRouter>
-      <DiscoverInboxView hasSources activeSourceId={null} />
+      <DiscoverInboxView hasSources activeSourceId={null} scoringWindow={scoringWindow} />
     </MemoryRouter>,
   );
 }
@@ -153,6 +160,13 @@ describe("DiscoverInboxView — bounded scoring window", () => {
     // "Not scored" pill, never the animated spinner.
     expect(cardSpy).toHaveBeenCalled();
     expect(cardSpy.mock.calls.every(([flag]) => flag === false)).toBe(true);
+  });
+
+  it("polls and shows cards as scoring while the page's window is open", () => {
+    mockListJobs.mockReturnValue(jobsResult(makeResponse({ scored_count: 0, total_count: 1 })));
+    renderInbox({ isOpen: true, pollingInterval: 4000, open: vi.fn(), observe: vi.fn() });
+    expect(mockListJobs.mock.calls[0][1]).toMatchObject({ pollingInterval: 4000 });
+    expect(cardSpy.mock.calls.every(([flag]) => flag === true)).toBe(true);
   });
 
   it("renders the coverage line 'Scored N of M' from the response counts", () => {
@@ -249,5 +263,31 @@ describe("DiscoverInboxView — load more", () => {
       expect.objectContaining({ limit: 200 }),
       expect.anything(),
     );
+  });
+});
+
+describe("DiscoverInboxView — profile reminder", () => {
+  const mockProfile = vi.mocked(useGetProfileQuery);
+  const mockSkills = vi.mocked(useListSkillsQuery);
+
+  beforeEach(() => {
+    mockListSources.mockReturnValue({ data: [] } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
+    mockListJobs.mockReturnValue(jobsResult(makeResponse()));
+  });
+
+  it("waits for the profile and skills to load before showing it, so it doesn't flash", () => {
+    mockProfile.mockReturnValue({ data: undefined } as unknown as ReturnType<typeof useGetProfileQuery>);
+    mockSkills.mockReturnValue({ data: { items: [], total: 0 } } as unknown as ReturnType<typeof useListSkillsQuery>);
+    renderInbox();
+    expect(screen.queryByTestId("profile-banner")).toBeNull();
+  });
+
+  it("shows it once both have loaded, with what's missing", () => {
+    mockProfile.mockReturnValue({ data: { resume_file_path: null } } as unknown as ReturnType<typeof useGetProfileQuery>);
+    mockSkills.mockReturnValue({ data: { items: [], total: 0 } } as unknown as ReturnType<typeof useListSkillsQuery>);
+    renderInbox();
+    const banner = screen.getByTestId("profile-banner");
+    expect(banner).toHaveAttribute("data-has-resume", "false");
+    expect(banner).toHaveAttribute("data-has-skills", "false");
   });
 });

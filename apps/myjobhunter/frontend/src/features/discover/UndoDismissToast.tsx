@@ -18,7 +18,9 @@
  * button pattern into shared-frontend at that point.
  */
 import * as Toast from "@radix-ui/react-toast";
-import { extractErrorMessage, showError } from "@platform/ui";
+import { showError } from "@platform/ui";
+import { DISCOVER_ACTION_MESSAGES } from "@myjobhunter/api-client/constants/discoverMessages";
+import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
 import { useUndoDismissDiscoveredJobMutation } from "@myjobhunter/api-client/store/discoverApi";
 
 const UNDO_TOAST_DURATION_MS = 5000;
@@ -45,7 +47,7 @@ export default function UndoDismissToast({
       await undoDismiss(jobId).unwrap();
       onOpenChange(false);
     } catch (err) {
-      showError(extractErrorMessage(err) ?? "Couldn't undo dismiss");
+      showError(discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.undoFailed));
       onOpenChange(false);
     }
   }
@@ -59,7 +61,7 @@ export default function UndoDismissToast({
       data-testid="undo-dismiss-toast"
     >
       <Toast.Description className="flex-1 text-foreground">
-        Dismissed.
+        {DISCOVER_ACTION_MESSAGES.dismissed}
       </Toast.Description>
       <Toast.Action asChild altText="Undo dismiss">
         <button

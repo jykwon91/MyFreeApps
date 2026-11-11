@@ -15,8 +15,8 @@
  * hide legitimate postings.
  */
 import { MultiChipInput, FormField } from "@platform/ui";
-
-const BOARD_TOKEN_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
+import { SAVED_SEARCH_FIELD_HINTS } from "@myjobhunter/api-client/constants/savedSearchProblems";
+import { isTypedBoardTokenInvalid } from "@myjobhunter/api-client/utils/isTypedBoardTokenInvalid";
 
 interface GreenhouseConfigSectionProps {
   boardToken: string;
@@ -31,7 +31,7 @@ export default function GreenhouseConfigSection({
   excludedKeywords,
   onExcludedKeywordsChange,
 }: GreenhouseConfigSectionProps) {
-  const isInvalid = boardToken.length > 0 && !BOARD_TOKEN_RE.test(boardToken);
+  const isInvalid = isTypedBoardTokenInvalid(boardToken);
 
   return (
     <div className="space-y-4">
@@ -61,8 +61,8 @@ export default function GreenhouseConfigSection({
           className={`text-xs ${isInvalid ? "text-destructive" : "text-muted-foreground"}`}
         >
           {isInvalid
-            ? "Invalid token — use letters, digits, hyphens, and underscores only."
-            : "Find this in the Greenhouse board URL: boards.greenhouse.io/​<board_token>"}
+            ? SAVED_SEARCH_FIELD_HINTS.badBoardToken
+            : SAVED_SEARCH_FIELD_HINTS.boardToken}
         </p>
       </div>
 

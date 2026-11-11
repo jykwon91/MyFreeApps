@@ -54,8 +54,6 @@ vi.mock("@platform/ui", () => ({
   ),
   showError: vi.fn(),
   showSuccess: vi.fn(),
-  timeAgo: () => "1 hour ago",
-  extractErrorMessage: vi.fn(),
 }));
 
 vi.mock("lucide-react", () => ({
@@ -93,14 +91,12 @@ vi.mock("../EditSavedSearchDialog", () => ({
     ) : null,
 }));
 
-vi.mock("../saved-search-summary", () => ({
+vi.mock("@myjobhunter/api-client/utils/summarizeSearchQuery", () => ({
   summarizeSearchQuery: (_config: unknown, _source: string) =>
     "Software Engineer — Remote",
-  getSourceLabel: (s: string) => s.charAt(0).toUpperCase() + s.slice(1),
-  getSourceBadgeColor: () => "gray",
 }));
 
-vi.mock("../refresh-interval", () => ({
+vi.mock("@myjobhunter/api-client/utils/refreshIntervalShortLabel", () => ({
   refreshIntervalShortLabel: () => "Every day",
 }));
 
@@ -136,7 +132,7 @@ describe("SavedSearchRow — name rendering", () => {
   });
 
   it("renders source badge as primary when name is empty", () => {
-    render(<SavedSearchRow source={makeSource({ name: "" })} />);
+    render(<SavedSearchRow onRefreshed={vi.fn()} source={makeSource({ name: "" })} />);
 
     const badge = screen.getByTestId("badge");
     // Badge is the first child in the row header when name is absent
@@ -150,6 +146,7 @@ describe("SavedSearchRow — name rendering", () => {
   it("renders name as primary and badge as secondary when name is present", () => {
     render(
       <SavedSearchRow
+        onRefreshed={vi.fn()}
         source={makeSource({ name: "Stripe engineering", source: "greenhouse" })}
       />,
     );
@@ -164,6 +161,7 @@ describe("SavedSearchRow — name rendering", () => {
   it("shows the query summary as subtitle when name is set", () => {
     render(
       <SavedSearchRow
+        onRefreshed={vi.fn()}
         source={makeSource({
           name: "Stripe engineering",
           source: "jsearch",
@@ -180,6 +178,7 @@ describe("SavedSearchRow — name rendering", () => {
     // When no name, the query IS the primary text so no separate subtitle is needed
     render(
       <SavedSearchRow
+        onRefreshed={vi.fn()}
         source={makeSource({ name: "", source: "jsearch", config: { query: "x" } })}
       />,
     );
@@ -196,13 +195,13 @@ describe("SavedSearchRow — edit affordance", () => {
   });
 
   it("renders an edit button on the row", () => {
-    render(<SavedSearchRow source={makeSource()} />);
+    render(<SavedSearchRow onRefreshed={vi.fn()} source={makeSource()} />);
 
     expect(screen.getByTestId("edit-source-btn")).toBeInTheDocument();
   });
 
   it("opens the EditSavedSearchDialog when edit button is clicked", async () => {
-    render(<SavedSearchRow source={makeSource()} />);
+    render(<SavedSearchRow onRefreshed={vi.fn()} source={makeSource()} />);
 
     // Dialog should be closed initially.
     expect(screen.queryByTestId("edit-saved-search-dialog")).not.toBeInTheDocument();
@@ -215,7 +214,7 @@ describe("SavedSearchRow — edit affordance", () => {
   });
 
   it("closes the EditSavedSearchDialog when dialog calls onClose", async () => {
-    render(<SavedSearchRow source={makeSource()} />);
+    render(<SavedSearchRow onRefreshed={vi.fn()} source={makeSource()} />);
 
     const editBtn = screen.getByTestId("edit-source-btn");
     fireEvent.click(editBtn);

@@ -11,9 +11,11 @@
  *   lives there; this component only owns the selected interval state.
  */
 import { useState } from "react";
-import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { LoadingButton, showError, showSuccess } from "@platform/ui";
+import { DISCOVER_ACTION_MESSAGES } from "@myjobhunter/api-client/constants/discoverMessages";
+import { REFRESH_INTERVAL_OPTIONS } from "@myjobhunter/api-client/constants/refreshIntervals";
+import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
 import { useUpdateDiscoverySourceMutation } from "@myjobhunter/api-client/store/discoverApi";
-import { REFRESH_INTERVAL_OPTIONS } from "./refresh-interval";
 
 interface EditFrequencyPopoverProps {
   sourceId: string;
@@ -39,10 +41,10 @@ export default function EditFrequencyPopover({
         sourceId,
         patch: { fetch_interval_minutes: selectedMinutes },
       }).unwrap();
-      showSuccess("Refresh frequency updated");
+      showSuccess(DISCOVER_ACTION_MESSAGES.frequencyUpdated);
       onClose();
     } catch (err) {
-      showError(extractErrorMessage(err) ?? "Couldn't update refresh frequency");
+      showError(discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.frequencyFailed));
     }
   }
 

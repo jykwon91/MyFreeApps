@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { parseBoldSegments } from "../../utils/parseBoldSegments";
 
 interface InlineBoldTextProps {
   /** A string with **bold** segments. Other markdown is rendered as
@@ -40,31 +41,3 @@ export default function InlineBoldText({
   );
 }
 
-
-interface Segment {
-  text: string;
-  bold: boolean;
-}
-
-
-function parseBoldSegments(s: string): Segment[] {
-  const out: Segment[] = [];
-  const re = /\*\*(.+?)\*\*/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(s)) !== null) {
-    if (m.index > last) {
-      out.push({ text: s.slice(last, m.index), bold: false });
-    }
-    out.push({ text: m[1], bold: true });
-    last = m.index + m[0].length;
-  }
-  if (last < s.length) {
-    out.push({ text: s.slice(last), bold: false });
-  }
-  return out;
-}
-
-
-// Exported only for unit tests.
-export const __INTERNAL__ = { parseBoldSegments };

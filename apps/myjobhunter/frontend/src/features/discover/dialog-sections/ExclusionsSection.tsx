@@ -1,5 +1,5 @@
 import { FormField, MultiChipInput, ToggleChipGroup } from "@platform/ui";
-import { INDUSTRY_CHIPS } from "../industry-chips";
+import { INDUSTRY_CHIPS } from "@myjobhunter/api-client/constants/industryChips";
 
 const INPUT_CLASS =
   "w-full px-3 py-2 border border-input rounded-md bg-background text-foreground";

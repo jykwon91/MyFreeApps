@@ -1,41 +1,25 @@
 import { useState } from "react";
-import {
-  ConfirmDialog,
-  showError,
-  showSuccess,
-  extractErrorMessage,
-  InlineBoldText,
-  Skeleton,
-} from "@platform/ui";
+import { ConfirmDialog, showError, showSuccess, InlineBoldText, Skeleton } from "@platform/ui";
 import { useCreateDiscoverySourceMutation } from "@myjobhunter/api-client/store/discoverApi";
 import { useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileApi";
-import { buildSavedSearchSummary } from "./saved-search-summary";
-import { useDiscoveryDefaultsPrefill } from "./useDiscoveryDefaultsPrefill";
-import SearchInputsSection from "./dialog-sections/SearchInputsSection";
-import WhereWhenSection from "./dialog-sections/WhereWhenSection";
-import JobTypeSection from "./dialog-sections/JobTypeSection";
-import ExclusionsSection from "./dialog-sections/ExclusionsSection";
-import { SAVED_SEARCH_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
-import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import { useDiscoveryDefaultsPrefill } from "@myjobhunter/api-client/hooks/useDiscoveryDefaultsPrefill";
+import { DISCOVER_ACTION_MESSAGES } from "@myjobhunter/api-client/constants/discoverMessages";
+import { EMPTY_SAVED_SEARCH_FORM_VALUES } from "@myjobhunter/api-client/constants/emptySavedSearchFormValues";
+import { SOURCE_DESCRIPTIONS, SOURCE_KIND_OPTIONS } from "@myjobhunter/api-client/constants/sourceKinds";
+import type { JSearchFormValues } from "@myjobhunter/api-client/types/discovery/jsearch-form-values";
+import type { SavedSearchFormValues } from "@myjobhunter/api-client/types/discovery/saved-search-form-values";
+import type { SourceKind } from "@myjobhunter/api-client/types/discovery/source-kind";
+import { buildSavedSearchSummary } from "@myjobhunter/api-client/utils/buildSavedSearchSummary";
+import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
+import { discoveryDefaultsFrom } from "@myjobhunter/api-client/utils/discoveryDefaultsFrom";
+import { savedSearchCreateRequest } from "@myjobhunter/api-client/utils/savedSearchCreateRequest";
+import { savedSearchNameProblem } from "@myjobhunter/api-client/utils/savedSearchNameProblem";
+import { savedSearchProblem } from "@myjobhunter/api-client/utils/savedSearchProblem";
 import GreenhouseConfigSection from "./dialog-sections/GreenhouseConfigSection";
-import SavedSearchNameField from "./dialog-sections/SavedSearchNameField";
+import JSearchFields from "./dialog-sections/JSearchFields";
 import LeverConfigSection from "./dialog-sections/LeverConfigSection";
-import {
-  DEFAULT_REFRESH_INTERVAL_MINUTES,
-  REFRESH_INTERVAL_OPTIONS,
-} from "./refresh-interval";
-import { SOURCE_DESCRIPTIONS } from "./source-descriptions";
-import type { SourceKind } from "@/types/discovery/source-kind";
-import type { Country } from "@myjobhunter/api-client/types/discovery/country";
-import type { DatePosted } from "@myjobhunter/api-client/types/discovery/date-posted";
-import type { EmploymentType } from "@myjobhunter/api-client/types/discovery/employment-type";
-import type { Experience } from "@myjobhunter/api-client/types/discovery/experience";
-
-const SOURCE_OPTIONS: Array<{ value: SourceKind; label: string }> = [
-  { value: "jsearch", label: "JSearch (Google Jobs)" },
-  { value: "greenhouse", label: "Greenhouse" },
-  { value: "lever", label: "Lever" },
-];
+import RefreshFrequencyField from "./dialog-sections/RefreshFrequencyField";
+import SavedSearchNameField from "./dialog-sections/SavedSearchNameField";
 
 interface NewSavedSearchDialogProps {
   open: boolean;
@@ -43,226 +27,61 @@ interface NewSavedSearchDialogProps {
 }
 
 /**
- * Dialog for creating a new saved search.
- *
- * Supports three sources: JSearch, Greenhouse, and Lever.
- * A source picker at the top of the dialog controls which config form is shown.
- *
- * JSearch: full structured config (roles, skills, location, filters)
- * Greenhouse: single board_token field
- * Lever: single company_slug field
- *
- * Profile prefill only applies to JSearch; Greenhouse/Lever require manual
- * board_token / company_slug input.
- *
- * Composition:
- *   - ``useDiscoveryDefaultsPrefill`` — owns profile/skills/work-history
- *     fetches, suggestion derivation, one-shot prefill (useRef-backed latch)
- *   - ``SearchInputsSection``, ``WhereWhenSection``, ``JobTypeSection``,
- *     ``ExclusionsSection`` — JSearch form-field clusters
- *   - ``GreenhouseConfigSection``, ``LeverConfigSection`` — per-source config forms
- *   - ``buildSavedSearchSummary`` — pure helper for the JSearch preview line
+ * Dialog for creating a new saved search: JSearch (structured filters, prefilled from the
+ * profile), Greenhouse (a board token) or Lever (a company slug). The source picker at the top
+ * chooses which config form shows. Building, checking and summarising the request is shared with
+ * the phone (api-client utils); this dialog holds the form state and renders it.
  */
-export default function NewSavedSearchDialog({
-  open,
-  onClose,
-}: NewSavedSearchDialogProps) {
-  // Source selection — defaults to jsearch to preserve existing behaviour.
-  const [source, setSource] = useState<SourceKind>("jsearch");
-
-  // Name field — applies to every source type (empty = unset)
-  const [name, setName] = useState("");
-
-  // JSearch form state
-  const [roles, setRoles] = useState<string[]>([]);
-  const [skills, setSkills] = useState<string[]>([]);
-  const [location, setLocation] = useState("");
-  const [country, setCountry] = useState<Country>("us");
-  const [datePosted, setDatePosted] = useState<DatePosted>("week");
-  const [remoteOnly, setRemoteOnly] = useState(false);
-  const [employmentType, setEmploymentType] = useState<EmploymentType>("FULLTIME");
-  const [experience, setExperience] = useState<Experience>("");
-  const [minSalary, setMinSalary] = useState("");
-  const [excludedIndustryChips, setExcludedIndustryChips] = useState<string[]>([]);
-  const [excludedKeywords, setExcludedKeywords] = useState<string[]>([]);
+export default function NewSavedSearchDialog({ open, onClose }: NewSavedSearchDialogProps) {
+  const [values, setValues] = useState<SavedSearchFormValues>(EMPTY_SAVED_SEARCH_FORM_VALUES);
   const [saveAsDefaults, setSaveAsDefaults] = useState(false);
-
-  // Greenhouse form state
-  const [boardToken, setBoardToken] = useState("");
-  const [greenhouseExcludedKeywords, setGreenhouseExcludedKeywords] = useState<
-    string[]
-  >([]);
-
-  // Lever form state
-  const [companySlug, setCompanySlug] = useState("");
-  const [leverExcludedKeywords, setLeverExcludedKeywords] = useState<string[]>(
-    [],
-  );
-
-  // Refresh-frequency picker (PR 5). Applies to every source type — the
-  // backend scheduler runs the same fetch chain for jsearch / greenhouse /
-  // lever. Defaults to daily.
-  const [fetchIntervalMinutes, setFetchIntervalMinutes] = useState<number>(
-    DEFAULT_REFRESH_INTERVAL_MINUTES,
-  );
 
   const [createSource, { isLoading: isCreating }] = useCreateDiscoverySourceMutation();
   const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation();
   const isLoading = isCreating || isUpdatingProfile;
 
-  const {
-    profile,
-    recentRoleSuggestions,
-    skillSuggestions,
-    isPrefillLoading,
-    didPrefill,
-    resetPrefill,
-  } = useDiscoveryDefaultsPrefill(open && source === "jsearch", {
-    setRoles,
-    setRemoteOnly,
-    setMinSalary,
-    setCountry: (next) => setCountry(next as Country),
-    setDatePosted,
-    setEmploymentType: (next) => setEmploymentType(next as EmploymentType),
-    setExperience,
-    setExcludedIndustryChips,
-    setExcludedKeywords,
-  });
+  function update(patch: Partial<SavedSearchFormValues>) {
+    setValues((current) => ({ ...current, ...patch }));
+  }
+
+  function updateJSearch(patch: Partial<JSearchFormValues>) {
+    setValues((current) => ({ ...current, jsearch: { ...current.jsearch, ...patch } }));
+  }
+
+  const { profile, recentRoleSuggestions, skillSuggestions, isPrefillLoading, didPrefill, resetPrefill } =
+    useDiscoveryDefaultsPrefill(open && values.source === "jsearch", updateJSearch);
 
   function resetAll() {
-    setSource("jsearch");
-    setName("");
-    setRoles([]);
-    setSkills([]);
-    setLocation("");
-    setCountry("us");
-    setDatePosted("week");
-    setRemoteOnly(false);
-    setEmploymentType("FULLTIME");
-    setExperience("");
-    setMinSalary("");
-    setExcludedIndustryChips([]);
-    setExcludedKeywords([]);
+    setValues(EMPTY_SAVED_SEARCH_FORM_VALUES);
     setSaveAsDefaults(false);
-    setBoardToken("");
-    setGreenhouseExcludedKeywords([]);
-    setCompanySlug("");
-    setLeverExcludedKeywords([]);
-    setFetchIntervalMinutes(DEFAULT_REFRESH_INTERVAL_MINUTES);
     resetPrefill();
   }
 
-  function buildConfig(): Record<string, unknown> {
-    if (source === "greenhouse") {
-      const ghConfig: Record<string, unknown> = {
-        board_token: boardToken.trim(),
-      };
-      if (greenhouseExcludedKeywords.length > 0) {
-        ghConfig.excluded_keywords = greenhouseExcludedKeywords;
-      }
-      return ghConfig;
-    }
-    if (source === "lever") {
-      const leverConfig: Record<string, unknown> = {
-        company_slug: companySlug.trim().toLowerCase(),
-      };
-      if (leverExcludedKeywords.length > 0) {
-        leverConfig.excluded_keywords = leverExcludedKeywords;
-      }
-      return leverConfig;
-    }
-    // jsearch
-    const config: Record<string, unknown> = {
-      roles,
-      skills,
-      country,
-      date_posted: datePosted,
-      remote_jobs_only: remoteOnly,
-    };
-    if (location.trim()) config.location = location.trim();
-    if (employmentType) config.employment_type = employmentType;
-    if (experience) config.experience = experience;
-
-    const minSalaryNum = Number(minSalary);
-    if (minSalary && Number.isFinite(minSalaryNum) && minSalaryNum > 0) {
-      config.min_salary_usd = Math.floor(minSalaryNum);
-    }
-    if (excludedIndustryChips.length > 0) {
-      config.excluded_industry_chips = excludedIndustryChips;
-    }
-    if (excludedKeywords.length > 0) {
-      config.excluded_keywords = excludedKeywords;
-    }
-    return config;
-  }
-
-  function buildDefaults(): Record<string, unknown> {
-    return {
-      ...(profile?.discovery_defaults ?? {}),
-      country,
-      date_posted: datePosted,
-      employment_type: employmentType,
-      experience,
-      excluded_industry_chips: excludedIndustryChips,
-      excluded_keywords: excludedKeywords,
-    };
-  }
-
-  const nameProblem = tooLongProblem(name.trim(), SAVED_SEARCH_NAME_MAX_LENGTH);
-
-  function validate(): string | null {
-    if (nameProblem) return `Name: ${nameProblem}`;
-    if (source === "greenhouse") {
-      if (!boardToken.trim()) return "Enter a Greenhouse board token";
-      if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(boardToken.trim())) {
-        return "Invalid board token — use letters, digits, hyphens, and underscores only";
-      }
-    } else if (source === "lever") {
-      const slug = companySlug.trim().toLowerCase();
-      if (!slug) return "Enter a Lever company slug";
-      if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(slug)) {
-        return "Invalid company slug — use lowercase letters, digits, and hyphens only";
-      }
-    } else {
-      if (roles.length === 0) return "Add at least one role title";
-    }
-    return null;
-  }
-
   async function handleConfirm() {
-    const validationError = validate();
-    if (validationError) {
-      showError(validationError);
+    const problem = savedSearchProblem(values);
+    if (problem) {
+      showError(problem);
       return;
     }
 
     try {
-      await createSource({
-        source,
-        name: name.trim() || undefined,
-        config: buildConfig(),
-        fetch_interval_minutes: fetchIntervalMinutes,
-      }).unwrap();
+      await createSource(savedSearchCreateRequest(values)).unwrap();
 
-      // Optionally persist the JSearch filter set as the operator's default.
-      // Only makes sense for JSearch (Greenhouse/Lever have no shareable
-      // filter preferences).
-      if (source === "jsearch" && saveAsDefaults) {
+      // Only JSearch has filters worth keeping as the defaults for new searches.
+      if (values.source === "jsearch" && saveAsDefaults) {
         try {
-          await updateProfile({ discovery_defaults: buildDefaults() }).unwrap();
-        } catch (defaultsErr) {
-          showError(
-            extractErrorMessage(defaultsErr) ??
-              "Saved search created, but couldn't update your defaults",
-          );
+          await updateProfile({ discovery_defaults: discoveryDefaultsFrom(profile?.discovery_defaults, values.jsearch) }).unwrap();
+        } catch {
+          // The search was created; say so rather than the server's reason for the defaults.
+          showError(DISCOVER_ACTION_MESSAGES.defaultsFailed);
         }
       }
 
-      showSuccess("Saved search created");
+      showSuccess(DISCOVER_ACTION_MESSAGES.created);
       resetAll();
       onClose();
     } catch (err) {
-      showError(extractErrorMessage(err) ?? "Failed to create saved search");
+      showError(discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.createFailed));
     }
   }
 
@@ -271,28 +90,13 @@ export default function NewSavedSearchDialog({
     onClose();
   }
 
-  const summary =
-    source === "jsearch"
-      ? buildSavedSearchSummary({
-          roles,
-          skills,
-          location,
-          country,
-          datePosted,
-          remoteOnly,
-          employmentType,
-          experience,
-          minSalary,
-          excludedIndustryChips,
-          excludedKeywords,
-        })
-      : null;
+  const summary = values.source === "jsearch" ? buildSavedSearchSummary(values.jsearch) : null;
 
   return (
     <ConfirmDialog
       open={open}
       title="New saved search"
-      description={SOURCE_DESCRIPTIONS[source]}
+      description={SOURCE_DESCRIPTIONS[values.source]}
       confirmLabel="Create"
       isLoading={isLoading}
       onConfirm={handleConfirm}
@@ -300,7 +104,7 @@ export default function NewSavedSearchDialog({
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
         {/* Name — optional label that allows multiple sources of the same kind */}
-        <SavedSearchNameField id="source-name" value={name} onChange={setName} error={nameProblem}>
+        <SavedSearchNameField id="source-name" value={values.name} onChange={(name) => update({ name })} error={savedSearchNameProblem(values.name)}>
           <p className="text-xs text-muted-foreground">
             A label for this search. Required only if you want multiple active
             searches of the same type — each must have a unique name.
@@ -315,10 +119,10 @@ export default function NewSavedSearchDialog({
           <select
             id="source-select"
             className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            value={source}
-            onChange={(e) => setSource(e.target.value as SourceKind)}
+            value={values.source}
+            onChange={(e) => update({ source: e.target.value as SourceKind })}
           >
-            {SOURCE_OPTIONS.map((opt) => (
+            {SOURCE_KIND_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
@@ -326,139 +130,82 @@ export default function NewSavedSearchDialog({
           </select>
         </div>
 
-        {/* Refresh frequency — applies to every source type. Sits
-            above the source-specific fields so it's the first thing
-            the operator sees after picking a source. */}
-        <div className="space-y-1">
-          <label htmlFor="refresh-frequency" className="block text-sm font-medium">
-            Refresh frequency
-          </label>
-          <select
-            id="refresh-frequency"
-            className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            value={fetchIntervalMinutes}
-            onChange={(e) => setFetchIntervalMinutes(Number(e.target.value))}
-          >
-            {REFRESH_INTERVAL_OPTIONS.map((opt) => (
-              <option key={opt.minutes} value={opt.minutes}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+        {/* Refresh frequency — every source type is fetched on this schedule. */}
+        <RefreshFrequencyField
+          id="refresh-frequency"
+          value={values.fetchIntervalMinutes}
+          onChange={(fetchIntervalMinutes) => update({ fetchIntervalMinutes })}
+        >
           <p className="text-xs text-muted-foreground">
             How often this saved search will fetch new postings automatically.
             You can also refresh on demand from the saved-search list.
           </p>
-        </div>
+        </RefreshFrequencyField>
 
-        {/* Greenhouse config */}
-        {source === "greenhouse" && (
+        {values.source === "greenhouse" && (
           <GreenhouseConfigSection
-            boardToken={boardToken}
-            onBoardTokenChange={setBoardToken}
-            excludedKeywords={greenhouseExcludedKeywords}
-            onExcludedKeywordsChange={setGreenhouseExcludedKeywords}
+            boardToken={values.boardToken}
+            onBoardTokenChange={(boardToken) => update({ boardToken })}
+            excludedKeywords={values.greenhouseExcludedKeywords}
+            onExcludedKeywordsChange={(greenhouseExcludedKeywords) => update({ greenhouseExcludedKeywords })}
           />
         )}
 
-        {/* Lever config */}
-        {source === "lever" && (
+        {values.source === "lever" && (
           <LeverConfigSection
-            companySlug={companySlug}
-            onCompanySlugChange={setCompanySlug}
-            excludedKeywords={leverExcludedKeywords}
-            onExcludedKeywordsChange={setLeverExcludedKeywords}
+            companySlug={values.companySlug}
+            onCompanySlugChange={(companySlug) => update({ companySlug })}
+            excludedKeywords={values.leverExcludedKeywords}
+            onExcludedKeywordsChange={(leverExcludedKeywords) => update({ leverExcludedKeywords })}
           />
         )}
 
-        {/* JSearch config */}
-        {source === "jsearch" && (
-          <>
-            {isPrefillLoading ? (
-              <div className="space-y-3" aria-busy="true">
-                <Skeleton className="h-9 w-full" />
-                <Skeleton className="h-9 w-full" />
-                <Skeleton className="h-9 w-3/4" />
-                <Skeleton className="h-9 w-full" />
-                <Skeleton className="h-9 w-1/2" />
-              </div>
-            ) : (
-              <>
-                {didPrefill && (
-                  <p className="text-xs text-muted-foreground bg-muted/40 px-3 py-2 rounded">
-                    Pre-filled from your profile. Edit anything below.
+        {values.source === "jsearch" &&
+          (isPrefillLoading ? (
+            <div className="space-y-3" aria-busy="true">
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-3/4" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-9 w-1/2" />
+            </div>
+          ) : (
+            <>
+              {didPrefill && (
+                <p className="text-xs text-muted-foreground bg-muted/40 px-3 py-2 rounded">
+                  Pre-filled from your profile. Edit anything below.
+                </p>
+              )}
+
+              <JSearchFields
+                values={values.jsearch}
+                onChange={updateJSearch}
+                roleSuggestions={recentRoleSuggestions}
+                skillSuggestions={skillSuggestions}
+              />
+
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={saveAsDefaults}
+                  onChange={(e) => setSaveAsDefaults(e.target.checked)}
+                  className="rounded"
+                />
+                <span>
+                  Save these filters (industries, employment, experience, etc.)
+                  as my defaults for new searches
+                </span>
+              </label>
+
+              {summary && (
+                <div className="border-t pt-3 mt-2">
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    <InlineBoldText text={summary} />
                   </p>
-                )}
-
-                <SearchInputsSection
-                  roles={roles}
-                  onRolesChange={setRoles}
-                  roleSuggestions={recentRoleSuggestions}
-                  skills={skills}
-                  onSkillsChange={setSkills}
-                  skillSuggestions={skillSuggestions}
-                  location={location}
-                  onLocationChange={setLocation}
-                  locationDisabled={remoteOnly}
-                />
-
-                <WhereWhenSection
-                  country={country}
-                  onCountryChange={setCountry}
-                  datePosted={datePosted}
-                  onDatePostedChange={setDatePosted}
-                />
-
-                <JobTypeSection
-                  employmentType={employmentType}
-                  onEmploymentTypeChange={setEmploymentType}
-                  experience={experience}
-                  onExperienceChange={setExperience}
-                />
-
-                <ExclusionsSection
-                  minSalary={minSalary}
-                  onMinSalaryChange={setMinSalary}
-                  excludedIndustryChips={excludedIndustryChips}
-                  onExcludedIndustryChipsChange={setExcludedIndustryChips}
-                  excludedKeywords={excludedKeywords}
-                  onExcludedKeywordsChange={setExcludedKeywords}
-                />
-
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={remoteOnly}
-                    onChange={(e) => setRemoteOnly(e.target.checked)}
-                    className="rounded"
-                  />
-                  <span>Remote jobs only</span>
-                </label>
-
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={saveAsDefaults}
-                    onChange={(e) => setSaveAsDefaults(e.target.checked)}
-                    className="rounded"
-                  />
-                  <span>
-                    Save these filters (industries, employment, experience, etc.)
-                    as my defaults for new searches
-                  </span>
-                </label>
-
-                {summary && (
-                  <div className="border-t pt-3 mt-2">
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      <InlineBoldText text={summary} />
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        )}
+                </div>
+              )}
+            </>
+          ))}
       </div>
     </ConfirmDialog>
   );

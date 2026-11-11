@@ -1,4 +1,4 @@
-import type { DiscoverView } from "@/types/discovery/discover-view";
+import type { DiscoverView } from "@myjobhunter/api-client/types/discovery/discover-view";
 
 export interface DiscoverTabButtonProps {
   label: string;

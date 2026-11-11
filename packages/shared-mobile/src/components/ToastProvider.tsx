@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { View } from "react-native";
 import { useKeyboardHeight } from "../hooks/useKeyboardHeight";
 import { useTheme } from "../theme/useTheme";
+import type { ToastAction } from "../types/ToastAction";
 import type { ToastProviderProps } from "../types/ToastProviderProps";
 import type { ToastVariant } from "../types/ToastVariant";
 import Toast from "./Toast";
@@ -11,10 +12,11 @@ import { ToastContext } from "./ToastContext";
 export default function ToastProvider({ children, bottomOffset }: ToastProviderProps) {
   const { spacing } = useTheme();
   const keyboardHeight = useKeyboardHeight();
-  const [toast, setToast] = useState<{ id: number; message: string; variant: ToastVariant } | null>(null);
+  const [toast, setToast] = useState<{ id: number; message: string; variant: ToastVariant; action?: ToastAction } | null>(null);
   const value = useMemo(
     () => ({
-      showToast: (message: string, variant: ToastVariant = "success") => setToast((current) => ({ id: (current?.id ?? 0) + 1, message, variant })),
+      showToast: (message: string, variant: ToastVariant = "success", action?: ToastAction) =>
+        setToast((current) => ({ id: (current?.id ?? 0) + 1, message, variant, action })),
     }),
     [],
   );
@@ -28,6 +30,7 @@ export default function ToastProvider({ children, bottomOffset }: ToastProviderP
             // A new toast is a new element, so saying the same thing twice restarts its timer.
             key={toast.id}
             message={toast.message}
+            action={toast.action}
             onDismiss={() => setToast(null)}
             // The keyboard covers the tab bar, so above it is clear.
             style={{ position: "absolute", left: spacing.lg, right: spacing.lg, bottom: keyboardHeight ? keyboardHeight + spacing.md : bottomOffset }}
