@@ -4,8 +4,10 @@ import ItemDetailsEditor from "@/games/wow-forever/components/compare/ItemDetail
 import ItemInputPanel from "@/games/wow-forever/components/compare/ItemInputPanel";
 import ItemNotices from "@/games/wow-forever/components/compare/ItemNotices";
 import ItemSourceNote from "@/games/wow-forever/components/compare/ItemSourceNote";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 import type { WeightBracket } from "@/games/wow-forever/data/weights/statWeights";
+import { itemIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { resetToGameFiles } from "@/games/wow-forever/lib/itemNumbers";
 import { fromClientData, fromExtraction, fromParsedText } from "@/games/wow-forever/lib/toCompareItem";
 import type { ClientItem } from "@/games/wow-forever/types/clientItem";
@@ -50,6 +52,7 @@ export default function ItemCard({
   return (
     <article className="rounded-xl border bg-card p-4 space-y-4" aria-label={`Item ${position}: ${item.name}`}>
       <div className="flex items-start gap-2">
+        {item.origin ? <GameIcon icon={itemIcon(item.origin.itemId)} size={32} alt="" className="mt-1.5" /> : null}
         <label className="flex-1 min-w-0">
           <span className="sr-only">Name of {itemLabel}</span>
           <input

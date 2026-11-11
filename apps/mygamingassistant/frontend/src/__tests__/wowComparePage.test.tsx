@@ -7,6 +7,7 @@ import { COMPARE_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/useCompa
 import { loadClientItems } from "@/games/wow-forever/lib/clientItemsLoader";
 import type { ClientItemList } from "@/games/wow-forever/types/clientItemList";
 import { fixtureList } from "./wowClientItemsFixture";
+import { iconSources } from "./wowIconFiles";
 
 vi.mock("@/games/wow-forever/api/wowItemsApi", () => ({
   useExtractItemMutation: () => [vi.fn(), { isLoading: false }],
@@ -176,4 +177,22 @@ describe("WoW Forever Item Compare page", () => {
     expect(screen.getAllByText(/not scored/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Pawn Classic Era scale — Arms Warrior/)).toBeInTheDocument();
   }, 20_000);
+});
+
+describe("Item Compare icons", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    loadMock.mockReset();
+    loadMock.mockResolvedValue(fixtureList());
+  });
+
+  it("shows the picked item's icon on its card and in the search results", async () => {
+    renderPage();
+    const box = within(card(1)).getByRole("combobox", { name: "Item name" });
+    await userEvent.type(box, "lionheart");
+    const option = await within(card(1)).findByRole("option", { name: /Lionheart Helm/ });
+    expect(within(option).getByTestId("game-icon")).toBeInTheDocument();
+    await userEvent.click(option);
+    expect(iconSources(card(1)).length).toBeGreaterThan(0);
+  });
 });

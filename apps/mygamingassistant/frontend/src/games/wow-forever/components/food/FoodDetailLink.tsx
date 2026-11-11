@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import ItemIcon from "@/games/wow-forever/components/shared/ItemIcon";
 import type { FoodRecord } from "@/games/wow-forever/types/food";
 
 /** The food's name, linking to its detail page — carrying the picker's question so Back returns to it. */
@@ -10,7 +11,10 @@ export default function FoodDetailLink({ food }: { food: FoodRecord }) {
       to={`/wow-forever/food/${food.id}${search}`}
       className="inline-flex items-center gap-0.5 text-primary underline-offset-2 hover:underline min-h-[44px] sm:min-h-0"
     >
-      {food.name}
+      <span>
+        <ItemIcon itemId={food.id} />
+        {food.name}
+      </span>
       <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
     </Link>
   );

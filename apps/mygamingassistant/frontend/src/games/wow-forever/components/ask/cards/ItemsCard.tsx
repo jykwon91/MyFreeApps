@@ -15,7 +15,7 @@ export default function ItemsCard({ card }: ItemsCardProps) {
       <ul className="divide-y">
         {card.items.map((item) => (
           <li key={item.id} className="flex min-h-[44px] flex-wrap items-center justify-between gap-x-3 py-1.5 text-sm">
-            <ItemNameLink itemId={item.id} name={item.name} item={item} className={QUALITY_TEXT_CLASSES[item.quality]} />
+            <ItemNameLink itemId={item.id} name={item.name} item={item} className={QUALITY_TEXT_CLASSES[item.quality]} withIcon />
             <span className="text-xs text-muted-foreground">
               {SLOT_LABELS[item.slot]}
               {item.requiredLevel > 0 ? ` · ${ASK_COPY.requiredLevel(item.requiredLevel)}` : null}

@@ -1,3 +1,4 @@
+import type { ItemRef } from "@/games/wow-forever/types/itemRef";
 import type { MobSpot } from "@/games/wow-forever/types/recipeSources";
 
 /** A zone worth gathering in now, ranked for your faction, skill and level. */
@@ -6,8 +7,8 @@ export interface GatheringZone {
   zoneName: string;
   /** Classic spawn points of the busiest node you can gather here now. */
   count: number;
-  /** The nodes worth gathering here now, lowest skill first ("Copper", "Tin"). */
-  nodes: readonly string[];
+  /** The nodes worth gathering here now, lowest skill first (Copper, Tin), each with the item it gives. */
+  nodes: readonly ItemRef[];
   /** Where that busiest node is densest — Directions go here. */
   spot: MobSpot;
   /** The zone's level range in Forever (`zones.json`), when known. */

@@ -8,6 +8,7 @@ import { ASK_COPY } from "@/games/wow-forever/data/ask/askCopy";
 import { currentEntryIndex, expectedCrafts } from "@/games/wow-forever/crafting/craftRoute";
 import { learnText } from "@/games/wow-forever/crafting/learnText";
 import type { RouteStep } from "@/games/wow-forever/data/professions/professionTypes";
+import { recipeIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { forFaction } from "@/games/wow-forever/lib/forFaction";
 import { routeStepEnd } from "@/games/wow-forever/lib/professions/routeStepEnd";
 import type { AskGuideRow } from "@/games/wow-forever/types/ask/askGuideRow";
@@ -28,6 +29,7 @@ function craftingRow(entry: ResolvedRouteEntry, skill: number | null, label: str
     return {
       skill: `${entry.step.from}–${entry.step.to}`,
       name: entry.step.title,
+      icon: null,
       lines: [entry.step.intro, ...choices],
       provenance: badge(entry.step.confidence),
     };
@@ -39,6 +41,7 @@ function craftingRow(entry: ResolvedRouteEntry, skill: number | null, label: str
   return {
     skill: `${from}–${entry.step.to}`,
     name: entry.recipe.name,
+    icon: recipeIcon(entry.recipe),
     lines: [
       ...(counted ? [ASK_COPY.crafts(crafts)] : []),
       ...(materials ? [ASK_COPY.materials(materials)] : []),
@@ -51,11 +54,12 @@ function craftingRow(entry: ResolvedRouteEntry, skill: number | null, label: str
 
 function guideRow(step: RouteStep, faction: PlayerFaction): AskGuideRow {
   if (step.kind === "milestone") {
-    return { skill: step.skill, name: step.name, lines: [forFaction(step.detail, faction)], provenance: badge(step.confidence) };
+    return { skill: step.skill, name: step.name, icon: null, lines: [forFaction(step.detail, faction)], provenance: badge(step.confidence) };
   }
   return {
     skill: step.skill,
     name: step.name,
+    icon: null,
     lines: [
       ASK_COPY.materials(forFaction(step.materials, faction)),
       ASK_COPY.learn(forFaction(step.source, faction)),

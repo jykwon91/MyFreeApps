@@ -25,7 +25,7 @@ export default function PricesCard({ card }: PricesCardProps) {
         <ul className="divide-y">
           {card.rows.map((row) => (
             <li key={row.itemId} className="flex min-h-[44px] flex-wrap items-center justify-between gap-x-3 py-1.5 text-sm">
-              <ItemNameLink itemId={row.itemId} name={row.name} />
+              <ItemNameLink itemId={row.itemId} name={row.name} withIcon />
               <span className="text-right">
                 <span className="font-medium tabular-nums">{row.price}</span>
                 <span className="block text-xs text-muted-foreground">{ASK_COPY.onSale(row.onSale)}</span>

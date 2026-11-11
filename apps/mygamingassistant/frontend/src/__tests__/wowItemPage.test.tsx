@@ -69,3 +69,13 @@ describe("item page", () => {
     expect(screen.getByRole("searchbox", { name: "Find an item" })).toHaveValue("");
   });
 });
+
+describe("item page crafted-by icons", () => {
+  it("shows the recipe's reagent icons", async () => {
+    window.localStorage.clear();
+    renderAt("/wow-forever/items/14152");
+    await screen.findByRole("heading", { level: 1, name: "Robe of the Archmage" });
+    const sources = howToGet();
+    expect(within(sources).getAllByTestId("game-icon").length).toBeGreaterThan(0);
+  });
+});

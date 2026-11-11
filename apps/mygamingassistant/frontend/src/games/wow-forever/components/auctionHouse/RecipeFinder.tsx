@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from "react";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import { findRecipes } from "@/games/wow-forever/lib/auctionHouse/professionMaterials";
 import type { RecipeOption } from "@/games/wow-forever/types/auctionHouse/recipeOption";
 
@@ -38,6 +39,7 @@ export default function RecipeFinder({ options, professionLabel, onPick }: Recip
               className="min-h-[44px] w-full rounded-md border bg-card px-3 text-left text-sm hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
               data-testid="recipe-match"
             >
+              <GameIcon icon={o.icon} size={16} alt="" className="mr-1.5 -mt-0.5" />
               {o.label}
             </button>
           </li>

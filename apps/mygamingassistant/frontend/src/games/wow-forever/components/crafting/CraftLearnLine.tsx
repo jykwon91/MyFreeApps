@@ -1,4 +1,5 @@
 import { learnText } from "@/games/wow-forever/crafting/learnText";
+import ItemIcon from "@/games/wow-forever/components/shared/ItemIcon";
 import FoodSourceList from "@/games/wow-forever/components/food/detail/FoodSourceList";
 import RecipeBuyLines from "@/games/wow-forever/components/recipeVendors/RecipeBuyLines";
 import type { VendorPlace } from "@/games/wow-forever/types/recipeVendors/vendorPlace";
@@ -36,6 +37,7 @@ export default function CraftLearnLine({ learn, professionLabel, place }: CraftL
       <RecipeBuyLines buys={[{ itemId: learn.itemId, name: learn.item, sources }]} place={place.vendors} />
       <details className="text-sm group">
         <summary className="cursor-pointer min-h-[44px] sm:min-h-0 py-1 marker:text-muted-foreground">
+          <ItemIcon itemId={learn.itemId} />
           <span className="font-medium">{learn.item}</span> <span className="text-muted-foreground">(skill {learn.skill})</span>
         </summary>
         <div className="pt-2 space-y-1">

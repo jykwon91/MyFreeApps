@@ -27,10 +27,19 @@ export function questClassesText(quest: Pick<DungeonQuest, "classes">): string {
   return quest.classes.map((id) => findClass(id)?.name ?? id).join(", ");
 }
 
+/** "Kill", "Use", "Collect". */
+export function objectiveVerb(kind: QuestTargetKind): string {
+  return OBJECTIVE_VERB[kind];
+}
+
+/** " × 10" after an objective's name; "" for one. */
+export function objectiveCountText(count: number): string {
+  return count > 1 ? ` × ${count}` : "";
+}
+
 /** "Kill Edwin VanCleef", "Collect Red Silk Bandana × 10". */
 export function objectiveText(objective: Pick<QuestObjective, "kind" | "name" | "count">): string {
-  const count = objective.count > 1 ? ` × ${objective.count}` : "";
-  return `${OBJECTIVE_VERB[objective.kind]} ${objective.name}${count}`;
+  return `${objectiveVerb(objective.kind)} ${objective.name}${objectiveCountText(objective.count)}`;
 }
 
 /** "× 5" after a reward's name; "" for one. */

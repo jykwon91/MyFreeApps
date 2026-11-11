@@ -2,6 +2,7 @@ import { MapPin, Navigation } from "lucide-react";
 import { Link } from "react-router-dom";
 import InsideDungeonChip from "@/games/wow-forever/components/dungeons/quests/InsideDungeonChip";
 import { DETAIL_LINK } from "@/games/wow-forever/components/food/detail/detailStyles";
+import ItemIcon from "@/games/wow-forever/components/shared/ItemIcon";
 import { directionsHref } from "@/games/wow-forever/food/recipeSources";
 import { questGiverMapHref } from "@/games/wow-forever/lib/dungeons/questGiverMapHref";
 import type { QuestGiver } from "@/games/wow-forever/types/dungeons/questGiver";
@@ -14,7 +15,10 @@ export default function QuestGiverLine({ giver }: { giver: QuestGiver }) {
   return (
     <li className="space-y-0.5" data-testid="quest-giver">
       <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-        <span className="font-medium">{giver.name}</span>
+        <span className="font-medium">
+          {giver.kind === QUEST_TARGET_KIND.item ? <ItemIcon itemId={giver.id} /> : null}
+          {giver.name}
+        </span>
         {giver.kind === QUEST_TARGET_KIND.item ? <span className="text-muted-foreground">(an item that starts the quest)</span> : null}
         {giver.insideDungeon ? <InsideDungeonChip /> : null}
         {place ? (

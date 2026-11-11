@@ -1,4 +1,5 @@
 import AskCardLink from "@/games/wow-forever/components/ask/cards/AskCardLink";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import { ASK_COPY } from "@/games/wow-forever/data/ask/askCopy";
 import type { AskProfessionCard } from "@/games/wow-forever/types/ask/askProfessionCard";
@@ -19,7 +20,10 @@ export default function ProfessionCard({ card }: ProfessionCardProps) {
             <li key={`${row.skill}-${row.name}`} className="space-y-0.5 py-2 text-sm">
               <div className="flex flex-wrap items-center gap-x-2">
                 <span className="font-semibold tabular-nums">{row.skill}</span>
-                <span className="font-medium">{row.name}</span>
+                <span className="font-medium">
+                  {row.icon ? <GameIcon icon={row.icon} size={16} alt="" className="mr-1.5 -mt-0.5" /> : null}
+                  {row.name}
+                </span>
                 {row.provenance ? <ProvenanceBadge {...row.provenance} /> : null}
               </div>
               {row.lines.map((line) => (

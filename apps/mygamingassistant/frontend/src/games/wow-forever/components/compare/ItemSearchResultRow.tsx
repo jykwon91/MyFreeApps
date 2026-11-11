@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import ItemIcon from "@/games/wow-forever/components/shared/ItemIcon";
 import { QUALITY_LABELS, QUALITY_TEXT_CLASSES } from "@/games/wow-forever/data/itemQualityStyles";
 import { describeClientItem } from "@/games/wow-forever/lib/describeClientItem";
 import type { ClientItem } from "@/games/wow-forever/types/clientItem";
@@ -28,6 +29,7 @@ export default function ItemSearchResultRow({ id, item, active, showId, onPick }
       )}
     >
       <span className="text-sm font-medium">
+        <ItemIcon itemId={item.id} />
         <span className={QUALITY_TEXT_CLASSES[item.quality]}>{item.name}</span>{" "}
         <span className="text-xs text-muted-foreground">({QUALITY_LABELS[item.quality]})</span>
         {showId ? <span className="text-xs text-muted-foreground"> #{item.id}</span> : null}

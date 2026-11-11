@@ -37,6 +37,8 @@ import { FACTION, TERRITORY } from "@/games/wow-forever/types/worldMap";
 import { COOKING_ROUTE } from "@/games/wow-forever/data/professions/cooking";
 import { FOOD_SOURCES } from "@/games/wow-forever/data/food/recipeSourceData";
 import type { CraftingFile, CraftingProfession, TrainerSkills } from "@/games/wow-forever/types/crafting";
+import CraftMakeLines from "@/games/wow-forever/components/crafting/CraftMakeLines";
+import { iconSources, itemIconFile } from "./wowIconFiles";
 
 const SOURCES = createSourceLookup(sourcesJson as unknown as RawSourcesFile);
 const NO_VENDOR_PLACE: VendorPlace = { faction: FACTION.alliance, here: null, zoneById: new Map() };
@@ -418,5 +420,16 @@ describe("Leatherworking materials", () => {
     expect(cured?.makesFrom?.map((r) => r.id).sort()).toEqual([MEDIUM_HIDE, SALT].sort());
     expect(list.buy.find((l) => l.id === MEDIUM_HIDE)?.count).toBeGreaterThan(0);
     expect(shoppingListText(list)).not.toMatch(/\d+ ?(gold|silver|copper)\b/i);
+  });
+});
+
+describe("crafting item icons", () => {
+  it("puts the item's icon before each extra item to make, and before its reagents", () => {
+    const lines = [{ id: SILK_CLOTH, name: "Silk Cloth", count: 2, makesFrom: [{ id: LINEN_CLOTH, name: "Linen Cloth", count: 3 }] }];
+    const { container } = render(<CraftMakeLines title="Make on the way" lines={lines} />);
+    const sources = iconSources(container);
+    expect(sources).toHaveLength(2);
+    expect(sources[0]).toContain(`/${itemIconFile(SILK_CLOTH)}.webp`);
+    expect(sources[1]).toContain(`/${itemIconFile(LINEN_CLOTH)}.webp`);
   });
 });

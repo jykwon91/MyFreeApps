@@ -84,7 +84,7 @@ export function decodeQuestDetail(
       const kind = targetKind(o[objCol.kind]);
       const found = kind ? target(`${kind}:${Number(o[objCol.id])}`) : null;
       if (!kind || !found) return [];
-      return [{ kind, name: found.name, count: Number(o[objCol.count]), insideDungeon: found.instance !== null }];
+      return [{ kind, id: Number(o[objCol.id]), name: found.name, count: Number(o[objCol.count]), insideDungeon: found.instance !== null }];
     });
 
   const decodeRewards = (value: unknown): QuestReward[] =>
@@ -108,7 +108,7 @@ export function decodeQuestDetail(
       const instanceId = numberOrNull(g[giverCol.instance]);
       const insideDungeon = instanceId !== null;
       if (insideDungeon && dungeonInstanceId === null) dungeonInstanceId = instanceId;
-      return [{ kind, name: String(g[giverCol.name]), place, insideDungeon }];
+      return [{ kind, id: Number(g[giverCol.id]), name: String(g[giverCol.name]), place, insideDungeon }];
     });
 
   const chainStep = (id: number): QuestChainStep[] => {

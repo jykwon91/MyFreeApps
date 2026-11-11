@@ -62,6 +62,10 @@ def crafting_file_ids(data: Mapping[str, Any]) -> IconIds:
     for item_id, maker in data.get("makers", {}).items():
         ids.items.add(int(item_id))
         ids.items |= _reagent_ids(maker.get("reagents", []))
+    for spec in data.get("specs", []):
+        ids.spells.add(int(spec["spell"]))
+        for quest in spec.get("quests", []):
+            ids.items |= _reagent_ids(quest.get("items", []))
     return ids
 
 

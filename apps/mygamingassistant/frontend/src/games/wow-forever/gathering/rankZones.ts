@@ -50,11 +50,12 @@ function compareZones(level: number | null) {
 export function rankZones({ nodes, skill, faction, level, zoneById }: ZoneRankInput): GatheringZone[] {
   const zones = new Map<number, GatheringZone>();
   for (const resolved of targetNodes(nodes, skill)) {
+    const nodeRef = { id: resolved.node.itemId, name: resolved.node.name };
     for (const o of resolved.spots) {
       if (o.count < MIN_ZONE_SPAWNS || isHostileGround(o.spot, faction)) continue;
       const known = zones.get(o.spot.zoneId);
       if (known) {
-        if (!known.nodes.includes(resolved.node.name)) known.nodes = [...known.nodes, resolved.node.name];
+        if (!known.nodes.some((n) => n.name === resolved.node.name)) known.nodes = [...known.nodes, nodeRef];
         if (o.count > known.count) Object.assign(known, { count: o.count, spot: o.spot });
         continue;
       }
@@ -63,7 +64,7 @@ export function rankZones({ nodes, skill, faction, level, zoneById }: ZoneRankIn
         zoneId: o.spot.zoneId,
         zoneName: o.spot.zoneName,
         count: o.count,
-        nodes: [resolved.node.name],
+        nodes: [nodeRef],
         spot: o.spot,
         levels,
         aboveYou: level !== null && levels !== null && levels[0] > level + ZONE_LEVEL_SLACK,

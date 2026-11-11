@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import WowFoodDetailPage from "@/games/wow-forever/pages/WowFoodDetailPage";
 import WowFoodPickerPage from "@/games/wow-forever/pages/WowFoodPickerPage";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { iconSources, itemIconFile } from "./wowIconFiles";
 
 // Auction prices come from the API; these tests don't look at them, so they stay loading.
 vi.mock("@/games/wow-forever/api/wowPricesApi", async () => {
@@ -128,5 +129,15 @@ describe("Worth training for, when just healing", () => {
     const train = section("Worth training for");
     const line = within(train).getByText(/is better, but your Cooking is/).textContent ?? "";
     expect(line).toMatch(/\([\d,]+ health over \d+ sec\) is better/);
+  });
+});
+
+describe("food detail icons", () => {
+  it("shows the dish's icon in the title and an icon on each ingredient", () => {
+    renderAt("/wow-forever/food/733");
+    const title = screen.getByRole("heading", { level: 1 });
+    expect(iconSources(title)[0]).toContain(`/${itemIconFile(733)}.webp`);
+    const need = section("What you need");
+    expect(within(need).getAllByTestId("game-icon").length).toBeGreaterThan(0);
   });
 });

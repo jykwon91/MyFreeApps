@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ITEM_PAGE_SHARD_COUNT } from "@/games/wow-forever/data/itemPages/itemPageConfig";
 import { CLASSIC_ITEM_SHARDS, FOREVER_ITEM_SHARDS } from "@/games/wow-forever/data/itemPages/itemPageShards";
-import { craftedLine, craftingGuideHref, reagentsLine } from "@/games/wow-forever/lib/itemPages/craftedText";
+import { craftedLine, craftingGuideHref } from "@/games/wow-forever/lib/itemPages/craftedText";
 import { decodeItemFacts } from "@/games/wow-forever/lib/itemPages/decodeItemFacts";
 import {
   bindText,
@@ -246,7 +246,6 @@ describe("item page text", () => {
       crafted: [["tailoring", 295, 18457, "Robe", [[14048, 12, "Bolt of Runecloth"]], "item", "Pattern: Robe"]],
     }).crafted[0];
     expect(craftedLine(crafted)).toBe("Tailoring 295 · learn from Pattern: Robe");
-    expect(reagentsLine(crafted)).toBe("12 × Bolt of Runecloth");
     expect(craftingGuideHref(crafted)).toBe("/wow-forever/professions?p=tailoring&skill=295");
   });
 

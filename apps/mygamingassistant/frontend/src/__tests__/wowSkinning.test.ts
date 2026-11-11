@@ -23,7 +23,7 @@ function mob(name: string, minLevel: number, maxLevel: number, spawns: number, z
     minLevel,
     maxLevel,
     spawns,
-    leather: "Light Leather",
+    leather: { id: 2318, name: "Light Leather" },
     spot: { zoneId, zoneName: `Zone ${zoneId}`, subzone: "", x: 50, y: 50, territory },
   };
 }
@@ -106,14 +106,16 @@ describe("skinning text", () => {
 });
 
 describe("leatherForBand", () => {
+  const ref = (name: string) => ({ id: 0, name });
   const brackets = [
-    { minLevel: 11, maxLevel: 21, leathers: ["Light Leather", "Ruined Leather Scraps", "Medium Leather"] },
-    { minLevel: 22, maxLevel: 31, leathers: ["Medium Leather", "Light Leather", "Heavy Leather"] },
+    { minLevel: 11, maxLevel: 21, leathers: ["Light Leather", "Ruined Leather Scraps", "Medium Leather"].map(ref) },
+    { minLevel: 22, maxLevel: 31, leathers: ["Medium Leather", "Light Leather", "Heavy Leather"].map(ref) },
   ];
 
   it("names each bracket's main leather first", () => {
-    expect(leatherForBand(brackets, { min: 18, max: 23 })).toEqual(["Light Leather", "Medium Leather", "Ruined Leather Scraps", "Heavy Leather"]);
-    expect(leatherForBand(brackets, { min: 25, max: 30 })).toEqual(["Medium Leather", "Light Leather", "Heavy Leather"]);
+    const names = (band: { min: number; max: number }) => leatherForBand(brackets, band).map((l) => l.name);
+    expect(names({ min: 18, max: 23 })).toEqual(["Light Leather", "Medium Leather", "Ruined Leather Scraps", "Heavy Leather"]);
+    expect(names({ min: 25, max: 30 })).toEqual(["Medium Leather", "Light Leather", "Heavy Leather"]);
   });
 });
 
@@ -146,7 +148,8 @@ describe("the committed Skinning data", () => {
   it("decodes every mob onto the map", () => {
     expect(decoded.mobs.length).toBe(skinningJson.mobs.length);
     expect(decoded.mobs.every((m) => m.spot.zoneName !== "")).toBe(true);
-    expect(decoded.leather[0]).toMatchObject({ minLevel: 1, leathers: ["Ruined Leather Scraps", "Light Leather"] });
+    expect(decoded.leather[0]).toMatchObject({ minLevel: 1, leathers: [{ id: 2934, name: "Ruined Leather Scraps" }, { id: 2318, name: "Light Leather" }] });
+    expect(decoded.mobs.every((m) => m.leather.id > 0)).toBe(true);
   });
 
   it("is the Skinning guide's mob file", async () => {

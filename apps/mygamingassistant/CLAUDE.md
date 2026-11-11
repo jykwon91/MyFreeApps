@@ -1003,7 +1003,11 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   cache (`--hotfix-cache`), so an item Forever re-skinned shows the in-game icon, not
   Classic's; the build is pinned in the file). Covers
   the crafting / gathering guides' items and spells, the Cooking ingredients and
-  every item in `items.json` (Best gear, Item Compare, item pages).
+  every item in `items.json` (Best gear, Item Compare, item pages) — and every other
+  Forever item (all ItemSparse rows), so any page that names an item by id can show its
+  icon. Print an item name with its icon via `ItemIcon` / `ItemNameList` / `ItemCountList`
+  (`components/shared/`) or `ItemNameLink withIcon`; a name with no id is a data bug —
+  make the generator emit the id (skinning `leatherIds`, gold farms `clothId`/`skinId`).
 - Images are the client's BLP icons as 64px WebP, uploaded by
   `python -m scripts.wow_icons.publish --to r2` (needs `scripts/.env.r2`;
   skips what's already there) to `wow/{build}/icons/{fdid}.webp`, and served

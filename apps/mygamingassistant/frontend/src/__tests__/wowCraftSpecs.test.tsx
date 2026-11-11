@@ -13,6 +13,11 @@ import { CRAFTING_ROUTES } from "@/games/wow-forever/data/professions/crafting/c
 import { CRAFTING_SPECS } from "@/games/wow-forever/data/professions/crafting/craftingSpecs";
 import { CRAFT_SPEC_STORAGE_KEY, useCraftingSpec } from "@/games/wow-forever/hooks/useCraftingSpec";
 import type { CraftingFile, CraftingProfession, ResolvedRouteEntry, TrainerSkills } from "@/games/wow-forever/types/crafting";
+import { render } from "@testing-library/react";
+import CraftSpecChoiceItem from "@/games/wow-forever/components/crafting/CraftSpecChoiceItem";
+import { createSourceLookup, type RawSourcesFile } from "@/games/wow-forever/data/sourceDecode";
+import sourcesJson from "@/games/wow-forever/data/professions/crafting/classic/sources.json";
+import { iconSources, spellIconFile } from "./wowIconFiles";
 
 const TRAINER_SKILLS = trainerSkillsJson as unknown as Record<CraftingProfession, TrainerSkills>;
 // Every profession with specializations.
@@ -154,5 +159,21 @@ describe("useCraftingSpec", () => {
     act(() => leather.result.current[1]("tribal"));
     expect(JSON.parse(window.localStorage.getItem(CRAFT_SPEC_STORAGE_KEY)!)).toEqual({ blacksmithing: "weaponsmith", leatherworking: "tribal" });
     expect(renderHook(() => useCraftingSpec("leatherworking"), { wrapper: wrapper("/p?spec=weaponsmith") }).result.current[0]).toBe("tribal");
+  });
+});
+
+describe("specialization choice icons", () => {
+  it("shows the specialization spell's icon before its name", () => {
+    const choice = SPECS.choices[0];
+    const sources = createSourceLookup(sourcesJson as unknown as RawSourcesFile);
+    const record = { spell: choice.spell, name: choice.label, quests: [] };
+    const { container } = render(
+      <MemoryRouter>
+        <ul>
+          <CraftSpecChoiceItem choice={choice} record={record} sources={sources} faction="A" chosen={false} />
+        </ul>
+      </MemoryRouter>,
+    );
+    expect(iconSources(container)[0]).toContain(`/${spellIconFile(choice.spell)}.webp`);
   });
 });

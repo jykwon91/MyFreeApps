@@ -8,7 +8,7 @@ export default function RankedItemRow({ entry, rank }: { entry: RankedItem; rank
       <div className="flex items-baseline justify-between gap-3 text-sm">
         <span className="font-medium truncate">
           {rank}.{" "}
-          {entry.item.origin ? <ItemNameLink itemId={entry.item.origin.itemId} name={entry.item.name} /> : entry.item.name}
+          {entry.item.origin ? <ItemNameLink itemId={entry.item.origin.itemId} name={entry.item.name} withIcon /> : entry.item.name}
         </span>
         <span className="whitespace-nowrap text-muted-foreground">
           {entry.score.total.toFixed(1)} pts · {entry.pctOfBest}%

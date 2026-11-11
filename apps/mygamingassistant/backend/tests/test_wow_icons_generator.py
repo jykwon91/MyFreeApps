@@ -84,6 +84,14 @@ def test_crafting_file_collects_recipes_smelts_camp_made_by_and_makers() -> None
     assert crafting_file_ids(data).items == {2770, 2840, 2771, 3576, 2835, 279960, 2996, 2589}
 
 
+def test_crafting_file_collects_each_specializations_spell_and_hand_ins() -> None:
+    data = {"specs": [{"spell": 10656, "name": "Dragonscale Leatherworking",
+                       "quests": [{"id": 5141, "skill": 225, "level": 40, "items": [{"id": 8165, "name": "Worn Dragonscale", "count": 10}]}]}]}
+    ids = crafting_file_ids(data)
+    assert ids.spells == {10656}
+    assert ids.items == {8165}
+
+
 def test_item_icon_falls_back_to_the_appearance_and_reports_missing() -> None:
     items = [
         {"ID": "2840", "IconFileDataID": "133217"},

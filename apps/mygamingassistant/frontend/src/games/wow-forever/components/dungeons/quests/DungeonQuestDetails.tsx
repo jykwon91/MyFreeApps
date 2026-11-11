@@ -4,9 +4,9 @@ import InsideDungeonChip from "@/games/wow-forever/components/dungeons/quests/In
 import QuestChain from "@/games/wow-forever/components/dungeons/quests/QuestChain";
 import QuestFact from "@/games/wow-forever/components/dungeons/quests/QuestFact";
 import QuestGiverLine from "@/games/wow-forever/components/dungeons/quests/QuestGiverLine";
+import QuestObjectiveText from "@/games/wow-forever/components/dungeons/quests/QuestObjectiveText";
 import QuestRewards from "@/games/wow-forever/components/dungeons/quests/QuestRewards";
 import { DETAIL_LINK } from "@/games/wow-forever/components/food/detail/detailStyles";
-import { objectiveText } from "@/games/wow-forever/lib/dungeons/describeQuest";
 import { questProvenance } from "@/games/wow-forever/lib/provenance/questProvenance";
 import { questPageHref } from "@/games/wow-forever/lib/quests/questPageHref";
 import type { DungeonQuest } from "@/games/wow-forever/types/dungeons/dungeonQuest";
@@ -45,7 +45,7 @@ export default function DungeonQuestDetails({ quest, id }: { quest: DungeonQuest
                 data-testid="quest-objective"
                 data-inside={o.insideDungeon}
               >
-                {objectiveText(o)}
+                <QuestObjectiveText objective={o} />
                 {o.insideDungeon ? <InsideDungeonChip /> : null}
               </li>
             ))}

@@ -1,8 +1,10 @@
 import CraftColorsLine from "@/games/wow-forever/components/crafting/CraftColorsLine";
 import CraftLearnLine, { type CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import CraftReagents from "@/games/wow-forever/components/crafting/CraftReagents";
 import SourceUnknownChip from "@/games/wow-forever/components/crafting/SourceUnknownChip";
 import { learnAt, sourceUnknown } from "@/games/wow-forever/crafting/craftRoute";
+import { recipeIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { transmutes } from "@/games/wow-forever/crafting/transmutes";
 import type { CraftRecipe, TrainerSkills } from "@/games/wow-forever/types/crafting";
 
@@ -27,6 +29,7 @@ export default function CraftTransmuteList({ recipes, trainerSkills, professionL
         {list.map((recipe) => (
           <li key={recipe.spell} className="rounded-lg border bg-card p-3 space-y-1.5">
             <p className="flex flex-wrap items-center gap-2">
+              <GameIcon icon={recipeIcon(recipe)} size={24} alt="" />
               <span className="font-medium">{recipe.name}</span>
               {sourceUnknown(recipe) ? <SourceUnknownChip /> : null}
             </p>

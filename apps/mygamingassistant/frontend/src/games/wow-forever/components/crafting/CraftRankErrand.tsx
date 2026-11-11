@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Ship } from "lucide-react";
 import TrainerMapLink from "@/games/wow-forever/components/professions/TrainerMapLink";
 import CraftMapLink from "@/games/wow-forever/components/crafting/CraftMapLink";
@@ -5,7 +6,7 @@ import type { TrainerNpc } from "@/games/wow-forever/data/professions/profession
 
 interface CraftRankErrandProps {
   /** What to do there: "Buy Expert First Aid – Under Wraps (1 gold in the game files) from". */
-  action: string;
+  action: ReactNode;
   npc: TrainerNpc;
   detail?: string;
   trip: string;

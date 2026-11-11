@@ -4,6 +4,8 @@ import type { QuestTargetKind } from "@/games/wow-forever/types/dungeons/questTa
 /** Who (or what) starts a quest (Classic data). */
 export interface QuestGiver {
   kind: QuestTargetKind;
+  /** The creature, object or item id (an item's id shows its icon). */
+  id: number;
   name: string;
   /** Out in the world, placed like the World Map places it; null when it isn't on a zone map. */
   place: QuestGiverPlace | null;

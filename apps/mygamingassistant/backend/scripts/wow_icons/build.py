@@ -7,7 +7,8 @@ first), the gathering guides' node items, the hand-written Cooking guide's
 ingredients, the dungeon quests' reward items (``scripts.wow_dungeons.build``)
 the talent calculator's icons (``scripts.wow_talents.build``), the downrank
 calculator's spell-family icons (``scripts.wow_downrank.build``) and the races
-page's racial icons (``scripts.wow_races.build``), looks each id up in the Forever
+page's racial icons (``scripts.wow_races.build``), adds every other Forever item
+(auction prices and Ask can name any), looks each id up in the Forever
 client tables (pinned build, ``scripts/wow_world_map/sources.py``) and writes
 ``frontend/src/games/wow-forever/data/icons/wowIcons.json``::
 
@@ -202,7 +203,10 @@ def main() -> None:
     appearance = appearance_icon_map(
         appearance_tables.table("ItemModifiedAppearance"), appearance_tables.table("ItemAppearance")
     )
-    items, missing_items = item_icons(ids.items, forever.item.values(), forever.sparse, appearance)
+    # Every Forever item, not only the ones a page names today: auction prices, Ask and
+    # quest objectives can name any item, and each should show its in-game icon.
+    every_item = ids.items | {int(row["ID"]) for row in forever.sparse}
+    items, missing_items = item_icons(every_item, forever.item.values(), forever.sparse, appearance)
     spells, missing_spells = spell_icons(ids.spells, wago_table("SpellMisc"))
     skills, missing_skills = skill_icons(PROFESSION_SKILL_LINES, wago_table("SkillLine"))
     payload = {

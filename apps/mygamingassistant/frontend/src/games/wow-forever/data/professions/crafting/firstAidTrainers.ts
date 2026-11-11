@@ -60,6 +60,7 @@ export const FIRST_AID_RANKS: readonly CraftingRank[] = [
     trainers: {
       kind: "book",
       book: "Expert First Aid – Under Wraps",
+      bookItemId: 16084,
       price: "1 gold in the game files",
       vendors: { A: DENEB_WALKER, H: BALAI_LOKWEIN },
       trip: {

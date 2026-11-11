@@ -14,6 +14,7 @@ import { decodeClientItems } from "@/games/wow-forever/lib/decodeClientItems";
 import type { AskNpcCard } from "@/games/wow-forever/types/ask/askNpcCard";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { FIXTURE_FILE } from "./wowClientItemsFixture";
+import { iconSources, itemIconFile } from "./wowIconFiles";
 import { askToolData } from "./wowAskWorld";
 
 async function desolaceCard(): Promise<AskNpcCard> {
@@ -147,6 +148,8 @@ describe("other cards", () => {
     inRouter(<ItemsCard card={{ kind: ASK_CARD.items, query: "x", items, total: 5 }} />);
     expect(screen.getByRole("link", { name: items[0].name }).getAttribute("href")).toContain(String(items[0].id));
     expect(screen.getByText("3 more match — ask with a fuller name.")).toBeTruthy();
+    expect(screen.getAllByTestId("game-icon")).toHaveLength(items.length);
+    expect(iconSources()[0]).toContain(`/${itemIconFile(items[0].id)}.webp`);
   });
 });
 

@@ -1,5 +1,6 @@
 import { Trophy } from "lucide-react";
 import { AlertBox } from "@platform/ui";
+import ItemIcon from "@/games/wow-forever/components/shared/ItemIcon";
 import RankedItemRow from "@/games/wow-forever/components/compare/RankedItemRow";
 import ScoreBreakdownTable from "@/games/wow-forever/components/compare/ScoreBreakdownTable";
 import type { CompareResult } from "@/games/wow-forever/scoring/scoreTypes";
@@ -28,7 +29,10 @@ export default function CompareResultPanel({ result, weightsLabel }: CompareResu
       <div className="flex items-start gap-3">
         <Trophy className="h-6 w-6 text-primary shrink-0" aria-hidden />
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold">{headline}</h2>
+          <h2 className="text-lg font-semibold">
+            {result.winner?.origin ? <ItemIcon itemId={result.winner.origin.itemId} size={24} /> : null}
+            {headline}
+          </h2>
           {result.why.map((line) => (
             <p key={line} className="text-sm">
               {line}

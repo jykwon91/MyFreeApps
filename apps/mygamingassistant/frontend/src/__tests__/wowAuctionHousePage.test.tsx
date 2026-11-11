@@ -9,6 +9,7 @@ import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
 import type { PriceHouse } from "@/games/wow-forever/types/priceHouse";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
 import { PRICE_COLUMNS, pricesFailed, pricesLoading, pricesReady } from "@/test/auctionPricesStub";
+import { iconSources, itemIconFile } from "./wowIconFiles";
 
 const usePricesQuery = vi.hoisted(() => vi.fn());
 vi.mock("@/games/wow-forever/api/wowPricesApi", () => ({ useGetWowPricesQuery: usePricesQuery }));
@@ -251,5 +252,32 @@ describe("Auction house page: profession and recipe filters", () => {
     await userEvent.selectOptions(screen.getByTestId("auction-profession"), "tailoring");
     expect(screen.getByTestId("search")).toHaveTextContent("prof=tailoring");
     expect(screen.getByTestId("search")).not.toHaveTextContent("recipe=");
+  });
+});
+
+describe("Auction house item icons", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    usePricesQuery.mockReset();
+  });
+
+  it("puts the item's icon before its name in each row", () => {
+    answerPerFaction();
+    renderPage();
+    const linen = rows()[0];
+    expect(within(linen).getByTestId("game-icon").getAttribute("src")).toContain(`/${itemIconFile(2589)}.webp`);
+  });
+
+  it("shows icons on the recipe picker, the recipe title and each material", async () => {
+    answerPerFaction([...ITEMS, [6217, 150, 140, 20, 4, "Copper Rod"], [247786, 250, 240, 600, 30, "Mote of Magic"], [6218, 1000, 900, 3, 2, "Runed Copper Rod"]]);
+    renderPage("/wow-forever/auction-house?prof=enchanting");
+    await userEvent.type(await screen.findByTestId("recipe-finder"), "copper rod");
+    expect(within(screen.getByRole("button", { name: "Runed Copper Rod (5)" })).getByTestId("game-icon")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Runed Copper Rod (5)" }));
+    const panel = await screen.findByTestId("recipe-panel");
+    expect(within(panel).getByRole("heading", { name: "Runed Copper Rod" }).querySelector("[data-testid=game-icon]")).not.toBeNull();
+    const materials = within(panel).getAllByTestId("recipe-material");
+    expect(within(materials[0]).getByTestId("game-icon").getAttribute("src")).toContain(`/${itemIconFile(6217)}.webp`);
+    expect(iconSources(panel).length).toBeGreaterThan(2);
   });
 });

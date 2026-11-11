@@ -174,7 +174,7 @@ describe("rankZones", () => {
 
   it("past every node's yellow, sends you to the highest one you can gather", () => {
     const zones = rankZones({ nodes: RESOLVED, skill: 260, faction: FACTION.horde, level: 60, zoneById: ZONES });
-    expect(zones.map((z) => [z.zoneName, z.nodes])).toEqual([["Badlands", ["Iron"]]]);
+    expect(zones.map((z) => [z.zoneName, z.nodes.map((n) => n.name)])).toEqual([["Badlands", ["Iron"]]]);
   });
 
   it("names a node once per zone and ranks a zone with no level range after the ones that have one", () => {
@@ -183,7 +183,7 @@ describe("rankZones", () => {
     const spawns = [vein("Copper Vein", 200, loch, 1), vein("Copper Vein", 150, loch, 1), vein("Copper Vein", 20, ELWYNN, 1)];
     const nodes = resolveNodes(copper, () => sourcesOf(spawns));
     const zones = rankZones({ nodes, skill: 1, faction: FACTION.alliance, level: 5, zoneById: ZONES });
-    expect(zones.map((z) => [z.zoneName, z.nodes, z.count])).toEqual([
+    expect(zones.map((z) => [z.zoneName, z.nodes.map((n) => n.name), z.count])).toEqual([
       ["Elwynn Forest", ["Copper"], 20],
       ["Loch Modan", ["Copper"], 200],
     ]);

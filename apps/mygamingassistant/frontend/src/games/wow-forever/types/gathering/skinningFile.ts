@@ -15,6 +15,8 @@ export interface SkinningFile {
   leatherColumns: readonly string[];
   /** What a mob of each level skins into, main leather first: `[minLevel, maxLevel, leathers]`. */
   leather: readonly (readonly (number | readonly string[])[])[];
+  /** Item id of every leather the rows name, by name. */
+  leatherIds: Readonly<Record<string, number>>;
   zones: Readonly<Record<string, string>>;
   /** Zone id -> "alliance" / "horde" / "contested". */
   territory: Readonly<Record<string, string>>;

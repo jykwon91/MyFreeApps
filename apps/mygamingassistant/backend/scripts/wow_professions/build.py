@@ -438,6 +438,7 @@ def main() -> None:
         "mobs": skin_mobs,
         "leatherColumns": ["minLevel", "maxLevel", "leathers"],
         "leather": classic.leather_by_level(),
+        "leatherIds": classic.leather_item_ids(),
         "zones": {str(z): zone_names[z] for z in sorted(skin_zones)},
         "territory": territory_of(skin_zones, zone_entries),
     })
