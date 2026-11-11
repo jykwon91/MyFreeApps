@@ -7,6 +7,8 @@ import type { ApplicationEvent } from "../types/application-event";
 import type { ApplicationEventCreateRequest } from "../types/application-event-create-request";
 import type { ApplicationEventUpdateRequest } from "../types/application-event-update-request";
 import type { ApplicationEventListResponse } from "../types/application-event-list-response";
+import type { ApplicationContact } from "../types/contact/application-contact";
+import type { ApplicationContactCreateRequest } from "../types/contact/application-contact-create-request";
 import type { ApplicationsListQuery } from "../types/application/applications-list-query";
 import type { JdParseResponse } from "../types/application/jd-parse-response";
 import type { JdUrlExtractRequest } from "../types/application/jd-url-extract-request";
@@ -107,6 +109,35 @@ const applicationsApi = baseApi.enhanceEndpoints({
         { type: APPLICATIONS_TAG, id: "LIST" },
         { type: APPLICATIONS_TAG, id: APPLICATIONS_KANBAN_LIST_ID },
       ],
+    }),
+
+    /**
+     * POST /applications/{id}/contacts: adds a person to the application.
+     * 404 when the application is missing or someone else's; 422 when the body breaks a rule.
+     * Contacts arrive with GET /applications/{id}, so that's what refetches.
+     */
+    addApplicationContact: build.mutation<
+      ApplicationContact,
+      { applicationId: string; body: ApplicationContactCreateRequest }
+    >({
+      query: ({ applicationId, body }) => ({
+        url: `/applications/${applicationId}/contacts`,
+        method: "POST",
+        data: body,
+      }),
+      invalidatesTags: (_result, _err, { applicationId }) => [{ type: APPLICATIONS_TAG, id: applicationId }],
+    }),
+
+    /**
+     * DELETE /applications/{id}/contacts/{contact_id}: removes a person for good.
+     * 404 when the contact isn't on this application or isn't the caller's.
+     */
+    removeApplicationContact: build.mutation<void, { applicationId: string; contactId: string }>({
+      query: ({ applicationId, contactId }) => ({
+        url: `/applications/${applicationId}/contacts/${contactId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _err, { applicationId }) => [{ type: APPLICATIONS_TAG, id: applicationId }],
     }),
 
     listApplicationEvents: build.query<ApplicationEventListResponse, string>({
@@ -258,6 +289,8 @@ export const {
   useCreateApplicationMutation,
   useUpdateApplicationMutation,
   useDeleteApplicationMutation,
+  useAddApplicationContactMutation,
+  useRemoveApplicationContactMutation,
   useListApplicationEventsQuery,
   useLogApplicationEventMutation,
   useUpdateApplicationEventMutation,
