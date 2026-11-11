@@ -18,6 +18,7 @@ vi.mock("@myjobhunter/api-client/store/applicationsApi", () => ({
 
 vi.mock("@myjobhunter/api-client/store/companiesApi", () => ({
   useListCompaniesQuery: vi.fn(),
+  useLazyListCompaniesQuery: vi.fn(() => [vi.fn()]),
   useCreateCompanyMutation: vi.fn(),
   useTriggerCompanyResearchMutation: vi.fn(),
 }));
