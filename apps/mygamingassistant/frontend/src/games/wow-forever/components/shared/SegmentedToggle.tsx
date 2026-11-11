@@ -35,7 +35,7 @@ export default function SegmentedToggle<T extends string>({ label, options, valu
             o.id !== value && "hover:bg-muted/40",
           )}
         >
-          {o.icon !== undefined ? <GameIcon icon={o.icon} size={16} alt="" /> : null}
+          {o.icon !== undefined && <GameIcon icon={o.icon} size={16} alt="" />}
           {o.label}
         </button>
       ))}

@@ -39,13 +39,16 @@ function iconIds(value: unknown, found: number[] = []): number[] {
   return found;
 }
 
+/** Each generated file whose `icon` ids the pickers, headings and lists draw. */
+const ICON_FILES: readonly (readonly [string, unknown])[] = [
+  ["classes", classDetailsJson],
+  ["races and racials", racesJson],
+  ["hunter pet families and abilities", hunterPetsJson],
+  ...Object.entries(TALENT_FILES).map(([path, file]) => [`talents ${path.split("/").pop()}`, file] as const),
+];
+
 describe("the icons pickers and headings name", () => {
-  it.each([
-    ["classes", classDetailsJson],
-    ["races and racials", racesJson],
-    ["hunter pet families and abilities", hunterPetsJson],
-    ...Object.entries(TALENT_FILES).map(([path, file]) => [`talents ${path.split("/").pop()}`, file] as const),
-  ])("every %s icon is published", (_name, file) => {
+  it.each(ICON_FILES)("every %s icon is published", (_name, file) => {
     const ids = iconIds(file);
     expect(ids.length).toBeGreaterThan(0);
     expect(ids.filter((id) => !PUBLISHED.has(id))).toEqual([]);
