@@ -1,4 +1,5 @@
 import { Pencil } from "lucide-react";
+import { plainDraftText } from "@myjobhunter/api-client/utils/plainDraftText";
 import InlineText from "@/features/resume_refinement/InlineText";
 
 interface DraftLineProps {
@@ -18,7 +19,7 @@ interface DraftLineProps {
  * affordance on touch) and intensifies on hover.
  */
 export default function DraftLine({ text, section, disabled, onSelect }: DraftLineProps) {
-  const plain = text.replace(/\*\*?/g, "").trim();
+  const plain = plainDraftText(text);
 
   function handleClick() {
     // Users drag-select bullets to copy them constantly — a click at

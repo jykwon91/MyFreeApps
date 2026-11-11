@@ -11,7 +11,7 @@ import { createAuthClient } from "../auth/createAuthClient";
 import { StepUpReauthRequiredError } from "../auth/errors/StepUpReauthRequiredError";
 import { _resetForTests as _resetStepUpForTests, getState as getStepUpState, submitCode } from "../auth/stepUpController";
 import api from "../lib/api";
-import { notifyAuthChange, onIdentityChange } from "../lib/auth-store";
+import { notifyAuthChange, onAccountLeft, onIdentityChange } from "../lib/auth-store";
 import { _resetSessionRefreshForTests } from "../lib/session-refresh";
 import { _resetPlatformForTests, configurePlatform } from "../platform/configurePlatform";
 import type { SessionRefreshResult } from "../platform/types/SessionRefreshResult";
@@ -144,6 +144,74 @@ describe("notifyAuthChange", () => {
     token = null;
     notifyAuthChange();
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe("onAccountLeft", () => {
+  const left = vi.fn();
+  let stop: () => void = () => undefined;
+
+  beforeEach(() => {
+    left.mockClear();
+    stop = onAccountLeft(left);
+  });
+
+  afterEach(() => {
+    stop();
+  });
+
+  it("runs on a sign-out", () => {
+    client.signOut();
+    expect(left).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs when a different user signs in", () => {
+    token = jwtFor("user-b", 2_000);
+    notifyAuthChange();
+    expect(left).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits through a session that ended without a sign-out, and stays quiet when the same user comes back", () => {
+    token = null;
+    notifyAuthChange();
+    token = jwtFor("user-a", 2_000);
+    notifyAuthChange();
+    expect(left).not.toHaveBeenCalled();
+  });
+
+  it("runs when a different user signs in after a session that ended", () => {
+    token = null;
+    notifyAuthChange();
+    token = jwtFor("user-b", 2_000);
+    notifyAuthChange();
+    expect(left).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs on a sign-out after a session that ended, once", () => {
+    token = null;
+    notifyAuthChange();
+    client.signOut();
+    client.signOut();
+    expect(left).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays quiet for a refreshed token for the same user", () => {
+    token = jwtFor("user-a", 2_000);
+    notifyAuthChange();
+    expect(left).not.toHaveBeenCalled();
+  });
+
+  it("waits through a 401 that ends the session", async () => {
+    serverReplying([[401]]);
+    await expect(api.get("/things")).rejects.toBeDefined();
+    expect(token).toBeNull();
+    expect(left).not.toHaveBeenCalled();
+  });
+
+  it("stops calling a listener once it unsubscribes", () => {
+    stop();
+    client.signOut();
+    expect(left).not.toHaveBeenCalled();
   });
 });
 

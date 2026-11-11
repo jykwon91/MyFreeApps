@@ -13,7 +13,7 @@ export const MORE_MENU: readonly MoreMenuGroup[] = [
     title: "Your materials",
     items: [
       { label: "Documents", webPath: "/documents", screen: "/documents" },
-      { label: "Resume", webPath: "/resume" },
+      { label: "Resume", webPath: "/resume", screen: "/resume" },
     ],
   },
   {

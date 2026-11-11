@@ -8,16 +8,12 @@ import SessionPreparingPanel from "@/features/resume_refinement/SessionPreparing
 import ConversationHistory from "@/features/resume_refinement/ConversationHistory";
 import ActiveSessionLayout from "@/features/resume_refinement/ActiveSessionLayout";
 import ResumeRefinementHeader from "@/features/resume_refinement/ResumeRefinementHeader";
-import { useCreateTargetFromLineMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
+import { useDraftLinePicker } from "@myjobhunter/api-client/hooks/useDraftLinePicker";
 import type { RefinementSession } from "@myjobhunter/api-client/types/resume-refinement/refinement-session";
 
 interface ActiveSessionViewProps {
   session: RefinementSession;
   onStartNew: () => void;
-}
-
-function normalizeLine(text: string): string {
-  return text.replace(/\*\*?/g, "").trim();
 }
 
 export default function ActiveSessionView({ session, onStartNew }: ActiveSessionViewProps) {
@@ -42,56 +38,30 @@ export default function ActiveSessionView({ session, onStartNew }: ActiveSession
   // while the bubbles render in ConversationHistory (history zone).
   const [pendingEcho, setPendingEcho] = useState<{ text: string } | null>(null);
 
-  const activeTarget =
-    session.improvement_targets &&
-    session.target_index < session.improvement_targets.length
-      ? session.improvement_targets[session.target_index]
-      : null;
-
   // Click-to-target: the clicked line becomes the highlight IMMEDIATELY
   // (before the 2-10s generation resolves); the override clears once
   // the refetched session's active target matches the clicked line.
-  const [createTargetFromLine, createTarget] = useCreateTargetFromLineMutation();
-  const [pendingLine, setPendingLine] = useState<string | null>(null);
+  const picker = useDraftLinePicker(session, (err) =>
+    showError(aiActionErrorMessage(err, "resumeRefinement")),
+  );
   const controlsRef = useRef<HTMLDivElement | null>(null);
 
-  // Adjusted during render, not in an effect (no extra render pass).
-  if (
-    pendingLine &&
-    activeTarget &&
-    normalizeLine(activeTarget.current_text) === normalizeLine(pendingLine)
-  ) {
-    setPendingLine(null);
-  }
-
-  async function handleLineSelected({ text, section }: { text: string; section: string }) {
-    if (createTarget.isLoading) return;
-    setPendingLine(text);
-    try {
-      await createTargetFromLine({
-        id: session.id,
-        current_text: text,
-        section,
-      }).unwrap();
-      // On narrow viewports the suggestion card sits below the draft —
-      // bring it into view so the generated proposal isn't off-screen.
-      if (window.innerWidth < 1024) {
-        controlsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    } catch (err) {
-      setPendingLine(null);
-      showError(aiActionErrorMessage(err, "resumeRefinement"));
+  async function handleLineSelected(line: { text: string; section: string }) {
+    // On narrow viewports the suggestion card sits below the draft —
+    // bring it into view so the generated proposal isn't off-screen.
+    if ((await picker.pick(line)) && window.innerWidth < 1024) {
+      controlsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 
-  const highlightText = pendingLine ?? activeTarget?.current_text ?? null;
+  const highlightText = picker.highlightText;
 
   const draft = (
     <CurrentDraftPanel
       markdown={session.current_draft}
       highlightText={highlightText}
       onLineClick={session.status === "active" ? handleLineSelected : undefined}
-      clickDisabled={createTarget.isLoading}
+      clickDisabled={picker.isPicking}
     />
   );
 
@@ -123,7 +93,7 @@ export default function ActiveSessionView({ session, onStartNew }: ActiveSession
           <PendingProposalCard
             session={session}
             onPendingEchoChange={setPendingEcho}
-            externalPending={createTarget.isLoading}
+            externalPending={picker.isPicking}
           />
         )}
         {/* Gated: CompletePanel's reached-end math treats a null

@@ -2,7 +2,7 @@ import { useInvalidateOnExtractionComplete } from "@mybookkeeper/api-client/hook
 import { integrationsApi, useGetEmailQueueQuery, useGetIntegrationsQuery, useGetSyncLogsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import { syncPollInterval } from "@mybookkeeper/api-client/utils/syncPollInterval";
 import { useEffect, useRef } from "react";
-import { useScreenFocused } from "../../lib/useScreenFocused";
+import { useScreenFocused } from "@platform/mobile";
 import type { IntegrationsData } from "../../types/IntegrationsData";
 import { gmailConnection, gmailIntegration } from "./gmailConnection";
 

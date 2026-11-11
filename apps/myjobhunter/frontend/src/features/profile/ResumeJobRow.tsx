@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, Download, FileText, Loader2 } from "lucide-reac
 import { Badge, formatFileSize } from "@platform/ui";
 import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
 import type { ResumeUploadJobStatus } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job-status";
+import { RESUME_JOB_STATUS_LABELS } from "@myjobhunter/api-client/constants/resumeJobStatusLabels";
 import ResumeJobParsedPanel from "@/features/profile/ResumeJobParsedPanel";
 
 export interface ResumeJobRowProps {
@@ -10,14 +11,6 @@ export interface ResumeJobRowProps {
   onDownload: (jobId: string) => void;
   isDownloading: boolean;
 }
-
-const STATUS_LABELS: Record<ResumeUploadJobStatus, string> = {
-  queued: "Queued",
-  processing: "Processing",
-  complete: "Complete",
-  failed: "Failed",
-  cancelled: "Cancelled",
-};
 
 // BadgeColor values from @platform/ui Badge component
 type BadgeColor = "gray" | "blue" | "yellow" | "orange" | "green" | "red" | "purple";
@@ -86,7 +79,7 @@ export default function ResumeJobRow({ job, onDownload, isDownloading }: ResumeJ
             aria-label="Processing"
           />
         )}
-        <Badge label={STATUS_LABELS[status]} color={STATUS_COLORS[status]} />
+        <Badge label={RESUME_JOB_STATUS_LABELS[status]} color={STATUS_COLORS[status]} />
 
         {mode.kind === "complete" ? (
           <button

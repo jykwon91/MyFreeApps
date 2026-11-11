@@ -44,4 +44,12 @@ describe("EmptyState", () => {
 
     expect(screen.getByTestId("loading-button-spinner")).toBeTruthy();
   });
+
+  it("says what the action is doing while it runs, when given the words", async () => {
+    await render(
+      <EmptyState action={{ label: "Add", onPress: jest.fn(), isLoading: true, loadingText: "Adding…" }} body="b" heading="h" />,
+    );
+
+    expect(screen.getByRole("button", { name: "Adding…" })).toBeDisabled();
+  });
 });

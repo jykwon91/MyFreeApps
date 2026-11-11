@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { POLL_GIVE_UP_MS, POLL_INTERVAL_MS } from "../../constants/documents";
-import { useScreenFocused } from "../../lib/useScreenFocused";
+import { useScreenFocused } from "@platform/mobile";
 
 /** Polls while the screen is showing something still being read, for a limited time. */
 export function useProcessingPoll(isProcessing: boolean): { pollingInterval: number; gaveUp: boolean } {

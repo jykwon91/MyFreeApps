@@ -4,7 +4,7 @@ import type { ResumeDownloadUrlResponse } from "../types/resume-upload-job/resum
 
 const RESUME_JOBS_TAG = "ResumeJobs";
 
-const resumesApi = baseApi.enhanceEndpoints({ addTagTypes: [RESUME_JOBS_TAG] }).injectEndpoints({
+export const resumesApi = baseApi.enhanceEndpoints({ addTagTypes: [RESUME_JOBS_TAG] }).injectEndpoints({
   endpoints: (build) => ({
     uploadResume: build.mutation<ResumeUploadJob, FormData>({
       query: (formData) => ({

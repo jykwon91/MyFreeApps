@@ -10,7 +10,8 @@ export type { TokenStore } from "./platform/types/TokenStore";
 
 export { default as api } from "./lib/api";
 export { refreshSessionOnce } from "./lib/session-refresh";
-export { notifyAuthChange, onIdentityChange, useIsAuthenticated } from "./lib/auth-store";
+export { notifyAuthChange, onAccountLeft, onIdentityChange, useIsAuthenticated } from "./lib/auth-store";
+export type { AuthChangeOptions } from "./lib/types/AuthChangeOptions";
 export { readJwtPayload } from "./utils/readJwtPayload";
 export { tokenIdentity } from "./utils/tokenIdentity";
 export { baseApi } from "./store/baseApi";

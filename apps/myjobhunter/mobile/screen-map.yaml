@@ -33,15 +33,21 @@ routes:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /login:
     screen: sign-in
-  # The website embeds its resume upload here; on the phone that is the Resume screen's job (/resume).
+  # The website embeds its resume upload here; on the phone the upload, with its read status, is on the
+  # Resume screen (/resume), where an uploaded resume gets used. The parsed-fields panel and the
+  # original-file download stay on the website.
   /profile:
     screen: (app)/(tabs)/profile
   /register:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /reset-password:
     not_on_mobile: Done on the website, which the sign-in screen links to.
+  # On More rather than a tab: the website's own phone tab bar leaves it out too. Its two columns are
+  # a Review and Draft switch; tapping a draft line opens Review on its new suggestion; Write my own is
+  # a sheet; the downloads open the share sheet. It also holds the Profile page's resume upload: the
+  # file picker, the read status of each upload, and Upload a resume when there's none to refine.
   /resume:
-    not_on_mobile: Not built yet.
+    screen: (app)/resume
   # On More. Its Turn on dialog is a screen of its own, (app)/security/turn-on; the Turn off dialog is a
   # sheet; the export downloads to the share sheet; Delete account opens (app)/delete-account.
   /security:

@@ -1,5 +1,6 @@
 import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
 import { DOCUMENT_KIND_OPTIONS } from "@myjobhunter/api-client/constants/documentKindOptions";
+import { DOCUMENT_UPLOAD_MIME_TYPES } from "@myjobhunter/api-client/constants/documentUploadLimits";
 import { useUploadDocumentMutation } from "@myjobhunter/api-client/store/documentsApi";
 import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
 import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
@@ -37,7 +38,7 @@ export default function DocumentUploadSheet({ applicationId, onClose }: Document
   async function choose(): Promise<void> {
     setIsPicking(true);
     try {
-      const picked = await pickDocumentFile();
+      const picked = await pickDocumentFile(DOCUMENT_UPLOAD_MIME_TYPES);
       // Backing out of the picker keeps whatever was chosen before.
       if (!picked) return;
       const problem = documentUploadProblem(picked);

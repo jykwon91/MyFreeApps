@@ -5,6 +5,8 @@ import { assertSecureApiUrl, onAccountLeft, refetchOnForeground, resetCacheOnAcc
 import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
 import { clearDataExportFiles } from "./dataExportFiles";
+import { clearResumeExportFiles } from "./resumeExportFiles";
+import { writeResumeSessionId } from "./resumeSessionStore";
 import { session } from "./session";
 
 assertSecureApiUrl(API_BASE_URL);
@@ -32,11 +34,13 @@ export const store = makeStore();
 // Queries that ask for it, such as the board's stage ages, refetch when the app comes back to the foreground.
 refetchOnForeground(store.dispatch);
 
-// What one account leaves on the phone that the next shouldn't open: a copy of its data export
-// on the way to the share sheet, which is the whole account. It doesn't throw, so the cache reset
-// below always runs.
+// What one account leaves on the phone that the next shouldn't open: a copy of its data export or
+// its resume on the way to the share sheet, and the resume session it was working on (the next
+// account would only find it gone). None of these throw, so the cache reset below always runs.
 onAccountLeft(session, () => {
   clearDataExportFiles();
+  void writeResumeSessionId(null);
+  clearResumeExportFiles();
 });
 // The analysis slice resets with the API cache, so the next account never sees the last one's.
 resetCacheOnAccountChange(session, () => store.dispatch(baseApi.util.resetApiState()));

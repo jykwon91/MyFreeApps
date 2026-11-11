@@ -1,23 +1,18 @@
 import { useEffect, useRef } from "react";
+import { draftBlocks } from "@myjobhunter/api-client/utils/draftBlocks";
+import type { DraftLine as DraftLineModel } from "@myjobhunter/api-client/types/resume-refinement/draft-line";
 import InlineText from "@/features/resume_refinement/InlineText";
 import DraftLine from "@/features/resume_refinement/DraftLine";
 
-// Tiny in-page markdown preview. Handles only the constrained subset
-// emitted by the backend's render/rewrite pipeline (headings, bullet
-// lists, **bold**, *italic*, paragraphs). For the canonical rendering
-// users export to PDF / DOCX which uses pandoc + weasyprint.
+// Tiny in-page markdown preview of the draft. The parsing (draftBlocks, shared with the phone)
+// handles only the constrained subset the backend's render/rewrite pipeline emits; the canonical
+// rendering is the PDF / DOCX export, which uses pandoc + weasyprint.
 //
-// `highlightText`: when provided, any block (heading / paragraph /
-// list-item) whose plain text contains this substring is wrapped in a
-// highlight band. The first matching block becomes the auto-scroll
-// target so users immediately see where the active refinement target
-// lives in the full draft.
+// `highlightText`: any block whose plain text contains it gets a highlight band, and the first one
+// becomes the auto-scroll target so users see where the active refinement target lives.
 //
-// `onLineClick`: when provided, bullet and paragraph blocks AFTER the
-// first ## heading become clickable (user-directed targeting). Blocks
-// before the first section heading are name/contact preamble — pure
-// facts that should never look actionable. The currently-highlighted
-// block is never clickable (it's already the active target).
+// `onLineClick`: when provided, bullets and paragraphs after the first ## heading become clickable
+// (user-directed targeting). The currently-highlighted block is never clickable.
 
 interface MarkdownPreviewProps {
   source: string;
@@ -26,24 +21,16 @@ interface MarkdownPreviewProps {
   clickDisabled?: boolean;
 }
 
-// Strip markdown decoration so a heading like "**Staff Engineer** — Acme"
-// matches a target_current_text of "Staff Engineer — Acme".
-function plainText(line: string): string {
-  return line.replace(/\*\*?/g, "").trim();
-}
-
-function shouldHighlight(line: string, highlightText: string | null | undefined): boolean {
-  if (!highlightText) return false;
-  const needle = highlightText.trim();
-  if (!needle) return false;
-  return plainText(line).includes(needle) || line.trim().includes(needle);
-}
-
 const HIGHLIGHT_CLASS =
   "rounded-md border-l-4 border-amber-400 bg-amber-50/60 dark:bg-amber-500/10 -ml-2 pl-3 py-1";
 
-// Screen-reader marker for the amber band — the highlight is otherwise
-// color-only.
+const HEADING_CLASS = {
+  1: "text-xl font-bold border-b border-border pb-1",
+  2: "text-base font-bold uppercase tracking-wide mt-4",
+  3: "text-sm font-bold mt-2",
+} as const;
+
+// Screen-reader marker for the amber band — the highlight is otherwise color-only.
 function activeMarker(highlight: boolean): React.ReactNode {
   if (!highlight) return null;
   return <span className="sr-only">(this is the suggestion you're working on)</span>;
@@ -55,147 +42,31 @@ export default function MarkdownPreview({
   onLineClick,
   clickDisabled = false,
 }: MarkdownPreviewProps) {
-  const lines = source.split("\n");
-  const blocks: React.ReactNode[] = [];
-  let listBuffer: { text: string; highlight: boolean; clickable: boolean; section: string }[] = [];
-  let key = 0;
-  // Section tracking for click-to-target: the nearest preceding ##
-  // heading labels the new target; blocks before the first ## are
-  // never clickable.
-  let currentSection = "";
-  let seenFirstSection = false;
+  const blocks = draftBlocks(source, highlightText, !!onLineClick);
   const firstHighlightRef = useRef<HTMLElement | null>(null);
   let firstHighlightAssigned = false;
 
-  // Capture-callback: assigns the first matching DOM node to the ref so
-  // useEffect can scroll to it once, on every re-render where the
-  // highlight target changes.
+  // Capture-callback: assigns the first matching DOM node to the ref so the effect below can
+  // scroll to it whenever the highlight target changes.
   function attachIfFirst(node: HTMLElement | null, isHighlight: boolean) {
     if (!isHighlight || !node || firstHighlightAssigned) return;
     firstHighlightAssigned = true;
     firstHighlightRef.current = node;
   }
 
-  function flushList() {
-    if (listBuffer.length > 0) {
-      const items = [...listBuffer];
-      blocks.push(
-        <ul key={`ul-${key++}`} className="list-disc pl-5 space-y-1 text-sm">
-          {items.map((item, idx) => (
-            <li
-              key={idx}
-              ref={(node) => attachIfFirst(node, item.highlight)}
-              className={item.highlight ? HIGHLIGHT_CLASS : undefined}
-            >
-              {item.clickable && onLineClick ? (
-                <DraftLine
-                  text={item.text}
-                  section={item.section}
-                  disabled={clickDisabled}
-                  onSelect={onLineClick}
-                />
-              ) : (
-                <InlineText source={item.text} />
-              )}
-              {activeMarker(item.highlight)}
-            </li>
-          ))}
-        </ul>
+  function content(line: DraftLineModel): React.ReactNode {
+    if (line.pickable && onLineClick) {
+      return (
+        <DraftLine
+          text={line.text}
+          section={line.section}
+          disabled={clickDisabled}
+          onSelect={onLineClick}
+        />
       );
-      listBuffer = [];
     }
+    return <InlineText source={line.text} />;
   }
-
-  for (const raw of lines) {
-    const line = raw.replace(/\s+$/, "");
-
-    if (line.startsWith("- ")) {
-      const text = line.slice(2);
-      const hl = shouldHighlight(text, highlightText);
-      listBuffer.push({
-        text,
-        highlight: hl,
-        clickable: seenFirstSection && !!onLineClick && !hl,
-        section: currentSection,
-      });
-      continue;
-    }
-
-    flushList();
-
-    if (!line) continue;
-
-    if (line.startsWith("# ")) {
-      const text = line.slice(2);
-      const hl = shouldHighlight(text, highlightText);
-      blocks.push(
-        <h1
-          key={`h-${key++}`}
-          ref={(node) => attachIfFirst(node, hl)}
-          className={`text-xl font-bold border-b border-border pb-1 ${hl ? HIGHLIGHT_CLASS : ""}`}
-        >
-          <InlineText source={text} />
-          {activeMarker(hl)}
-        </h1>
-      );
-      continue;
-    }
-    if (line.startsWith("## ")) {
-      const text = line.slice(3);
-      currentSection = plainText(text);
-      seenFirstSection = true;
-      const hl = shouldHighlight(text, highlightText);
-      blocks.push(
-        <h2
-          key={`h-${key++}`}
-          ref={(node) => attachIfFirst(node, hl)}
-          className={`text-base font-bold uppercase tracking-wide mt-4 ${hl ? HIGHLIGHT_CLASS : ""}`}
-        >
-          <InlineText source={text} />
-          {activeMarker(hl)}
-        </h2>
-      );
-      continue;
-    }
-    if (line.startsWith("### ")) {
-      const text = line.slice(4);
-      const hl = shouldHighlight(text, highlightText);
-      blocks.push(
-        <h3
-          key={`h-${key++}`}
-          ref={(node) => attachIfFirst(node, hl)}
-          className={`text-sm font-bold mt-2 ${hl ? HIGHLIGHT_CLASS : ""}`}
-        >
-          <InlineText source={text} />
-          {activeMarker(hl)}
-        </h3>
-      );
-      continue;
-    }
-
-    const hl = shouldHighlight(line, highlightText);
-    const clickable = seenFirstSection && !!onLineClick && !hl;
-    blocks.push(
-      <p
-        key={`p-${key++}`}
-        ref={(node) => attachIfFirst(node, hl)}
-        className={`text-sm ${hl ? HIGHLIGHT_CLASS : ""}`}
-      >
-        {clickable && onLineClick ? (
-          <DraftLine
-            text={line}
-            section={currentSection}
-            disabled={clickDisabled}
-            onSelect={onLineClick}
-          />
-        ) : (
-          <InlineText source={line} />
-        )}
-        {activeMarker(hl)}
-      </p>
-    );
-  }
-  flushList();
 
   // Auto-scroll the matched block into view whenever the target changes.
   useEffect(() => {
@@ -205,5 +76,51 @@ export default function MarkdownPreview({
     }
   }, [highlightText]);
 
-  return <div className="space-y-1.5">{blocks}</div>;
+  return (
+    <div className="space-y-1.5">
+      {blocks.map((block, index) => {
+        if (block.kind === "list") {
+          return (
+            <ul key={`ul-${index}`} className="list-disc pl-5 space-y-1 text-sm">
+              {block.items.map((item, idx) => (
+                <li
+                  key={idx}
+                  ref={(node) => attachIfFirst(node, item.highlight)}
+                  className={item.highlight ? HIGHLIGHT_CLASS : undefined}
+                >
+                  {content(item)}
+                  {activeMarker(item.highlight)}
+                </li>
+              ))}
+            </ul>
+          );
+        }
+        const { line } = block;
+        const highlight = line.highlight ? HIGHLIGHT_CLASS : "";
+        if (block.kind === "heading") {
+          const Heading = `h${block.level}` as const;
+          return (
+            <Heading
+              key={`h-${index}`}
+              ref={(node: HTMLHeadingElement | null) => attachIfFirst(node, line.highlight)}
+              className={`${HEADING_CLASS[block.level]} ${highlight}`}
+            >
+              <InlineText source={line.text} />
+              {activeMarker(line.highlight)}
+            </Heading>
+          );
+        }
+        return (
+          <p
+            key={`p-${index}`}
+            ref={(node) => attachIfFirst(node, line.highlight)}
+            className={`text-sm ${highlight}`}
+          >
+            {content(line)}
+            {activeMarker(line.highlight)}
+          </p>
+        );
+      })}
+    </div>
+  );
 }
