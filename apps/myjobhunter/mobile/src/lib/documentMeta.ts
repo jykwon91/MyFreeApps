@@ -1,6 +1,6 @@
 import type { Document } from "@myjobhunter/api-client/types/document/document";
 import { formatFileSize } from "@platform/core/utils/fileSize";
-import { formatShortDate } from "./formatShortDate";
+import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
 
 /** When it last changed and, for a file, how big it is. */
 export function documentMeta(document: Pick<Document, "updated_at" | "size_bytes">): string {

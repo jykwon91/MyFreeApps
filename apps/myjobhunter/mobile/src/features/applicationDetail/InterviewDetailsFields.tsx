@@ -5,7 +5,7 @@ import { Text, View } from "react-native";
 import { APPLICATION_EVENT_MESSAGES as MESSAGES } from "../../constants/applicationEvents";
 import { INTERVIEW_TYPE_OPTIONS } from "../../constants/eventOptions";
 import type { InterviewDetailsFieldsProps } from "../../types/InterviewDetailsFieldsProps";
-import ChoiceGroup from "./ChoiceGroup";
+import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import DateTimeField from "./DateTimeField";
 
 /** The website's interview details: only the type is required, the rest is what's known so far. */

@@ -1,6 +1,6 @@
 import "@platform/mobile/test-support/reactNativeFormData";
 import { baseApi } from "@platform/core/store/baseApi";
-import { act, fireEvent, screen, within } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
 import { DOCUMENT_UPLOAD_MAX_BYTES } from "@myjobhunter/api-client/constants/documentUploadLimits";
 import { INTERVIEW_LOCATION_MAX_LENGTH, INTERVIEWER_NAME_MAX_LENGTH, INTERVIEWERS_MAX } from "@myjobhunter/api-client/constants/interviewDetailLimits";
@@ -9,7 +9,7 @@ import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
 import * as DocumentPicker from "expo-document-picker";
 import { Alert, Linking } from "react-native";
 import { APPLICATION_CONTACT_MESSAGES as CONTACTS } from "../src/constants/applicationContacts";
-import { APPLICATION_DOCUMENT_MESSAGES as DOCUMENTS } from "../src/constants/applicationDocuments";
+import { DOCUMENT_MESSAGES as DOCUMENTS } from "../src/constants/documents";
 import { interviewerNameTooLongMessage, tooManyInterviewersMessage } from "@myjobhunter/api-client/constants/interviewerProblems";
 import { APPLICATION_EVENT_MESSAGES as EVENTS } from "../src/constants/applicationEvents";
 import { formatDateTime } from "../src/lib/formatDateTime";
@@ -326,6 +326,26 @@ describe("the documents", () => {
 
     expect(await screen.findByText(DOCUMENTS.deleted)).toBeTruthy();
     expect(sent.filter(({ route }) => route === "DELETE /documents/d-letter")).toHaveLength(1);
+  });
+
+  it("drops a deleted document from the section even when the reload after it fails", async () => {
+    let reloadFails = false;
+    serve({
+      ...applicationDetailRoutes(STRIPE),
+      "GET /documents": () => (reloadFails ? { status: 503 } : { status: 200, data: { items: [LETTER, RESUME], total: 2 } }),
+      "DELETE /documents/d-letter": () => {
+        reloadFails = true;
+        return { status: 204 };
+      },
+    });
+    await renderApplicationDetail(ID);
+    await fireEvent.press(await screen.findByRole("button", { name: `${DOCUMENTS.delete} Stripe cover letter` }));
+    await act(async () => alertButton(DOCUMENTS.delete).onPress?.());
+
+    expect(await screen.findByText(DOCUMENTS.deleted)).toBeTruthy();
+    await waitFor(() => expect(screen.queryByTestId("document-d-letter")).toBeNull());
+    expect(screen.getByTestId("document-d-resume")).toBeTruthy();
+    expect(screen.queryByText(DOCUMENTS.deleting)).toBeNull();
   });
 });
 

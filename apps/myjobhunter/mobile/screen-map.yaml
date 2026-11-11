@@ -18,8 +18,10 @@ routes:
     not_on_mobile: Not built yet.
   /discover:
     not_on_mobile: Not built yet.
+  # On More rather than a tab: the website's own phone tab bar leaves it out too. Its Add document
+  # dialog is two sheets on this screen, Upload a file and Write a document.
   /documents:
-    not_on_mobile: Not built yet.
+    screen: (app)/documents
   /forgot-password:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /login:

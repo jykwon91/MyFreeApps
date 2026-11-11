@@ -4,7 +4,7 @@ import { formatRemoteType } from "@myjobhunter/api-client/utils/formatRemoteType
 import { formatSalaryRange } from "@platform/core/utils/salaryRange";
 import { APPLICATION_DETAIL_MESSAGES as MESSAGES } from "../constants/applicationDetail";
 import type { OverviewFactProps } from "../types/OverviewFactProps";
-import { formatShortDate } from "./formatShortDate";
+import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
 
 /** The website's overview facts, in its order, with a dash for whatever the application doesn't say. */
 export function overviewFacts(application: Application): OverviewFactProps[] {

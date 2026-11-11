@@ -9,7 +9,7 @@ import { useState } from "react";
 import { FlatList, Modal, Pressable, Text, View } from "react-native";
 import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../../constants/addApplication";
 import type { CompanyPickerSheetProps } from "../../types/CompanyPickerSheetProps";
-import FieldError from "../applicationDetail/FieldError";
+import FieldError from "../../components/forms/FieldError";
 import CompanyPickerRow from "./CompanyPickerRow";
 import CompanyPickerSkeleton from "./CompanyPickerSkeleton";
 

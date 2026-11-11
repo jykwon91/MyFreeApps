@@ -4,6 +4,7 @@ import type { DocumentCreateRequest } from "../types/document/document-create-re
 import type { DocumentListResponse } from "../types/document/document-list-response";
 import type { DocumentUpdateRequest } from "../types/document/document-update-request";
 import type { DocumentsFilter } from "../types/document/documents-filter";
+import { withoutDocument } from "../utils/withoutDocument";
 
 const DOCUMENTS_TAG = "Documents";
 
@@ -59,6 +60,20 @@ const documentsApi = baseApi
 
       deleteDocument: build.mutation<void, string>({
         query: (id) => ({ url: `/documents/${id}`, method: "DELETE" }),
+        // Once the server confirms, every loaded list drops it at once. The reload the
+        // invalidation starts then confirms it, and if that reload fails the list still
+        // doesn't show a document that's gone.
+        async onQueryStarted(id, { dispatch, getState, queryFulfilled }) {
+          try {
+            await queryFulfilled;
+          } catch {
+            return;
+          }
+          for (const { endpointName, originalArgs } of documentsApi.util.selectInvalidatedBy(getState(), [{ type: DOCUMENTS_TAG, id }])) {
+            if (endpointName !== "listDocuments") continue;
+            dispatch(documentsApi.util.updateQueryData("listDocuments", originalArgs as DocumentsFilter | void, (list) => withoutDocument(list, id)));
+          }
+        },
         invalidatesTags: (_result, _err, id) => [
           { type: DOCUMENTS_TAG, id },
           { type: DOCUMENTS_TAG, id: "LIST" },

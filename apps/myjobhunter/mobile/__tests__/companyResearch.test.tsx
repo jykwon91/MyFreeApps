@@ -2,7 +2,7 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
 import { Linking } from "react-native";
 import { COMPANY_RESEARCH_MESSAGES as MESSAGES } from "../src/constants/companyResearch";
-import { formatShortDate } from "../src/lib/formatShortDate";
+import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
 import { store } from "../src/lib/store";
 import { companyDetailRoutes } from "../test-support/companyDetailRoutes";
 import { companyRecord } from "../test-support/companyRecord";

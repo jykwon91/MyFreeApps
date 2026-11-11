@@ -6,7 +6,7 @@ import { Alert, Linking, StyleSheet } from "react-native";
 import { APPLICATION_SORTS } from "../src/constants/applicationSorts";
 import { COMPANY_APPLICATION_SORT_KEYS, COMPANY_APPLICATIONS_MESSAGES as APPS } from "../src/constants/companyApplications";
 import { COMPANY_DETAIL_MESSAGES as MESSAGES } from "../src/constants/companyDetail";
-import { formatShortDate } from "../src/lib/formatShortDate";
+import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
 import { store } from "../src/lib/store";
 import { alertButton } from "../test-support/alertButton";
 import { applicationRecord } from "../test-support/applicationRecord";

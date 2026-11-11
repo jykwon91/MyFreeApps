@@ -8,13 +8,13 @@ import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
 import { FormField, FormSheet, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
-import { APPLICATION_DOCUMENT_MESSAGES as MESSAGES } from "../../constants/applicationDocuments";
+import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
 import { writeFailure } from "../../lib/writeFailure";
 import type { DocumentSheetProps } from "../../types/DocumentSheetProps";
-import ChoiceGroup from "./ChoiceGroup";
-import SheetButtons from "./SheetButtons";
+import ChoiceGroup from "../../components/forms/ChoiceGroup";
+import SheetButtons from "../../components/forms/SheetButtons";
 
-/** Writes a text document for this application, or edits one: its title, type and (for text) content. */
+/** Writes a text document, linked to the application when given, or edits one: its title, type and (for text) content. */
 export default function DocumentSheet({ applicationId, document, onClose }: DocumentSheetProps) {
   const { colors, fontSize } = useTheme();
   const { showToast } = useToast();
@@ -43,7 +43,7 @@ export default function DocumentSheet({ applicationId, document, onClose }: Docu
           showToast(MESSAGES.updated);
         }
       } else {
-        await createDocument({ title, kind, application_id: applicationId, body }).unwrap();
+        await createDocument({ title, kind, application_id: applicationId ?? null, body }).unwrap();
         showToast(MESSAGES.created);
       }
       onClose();

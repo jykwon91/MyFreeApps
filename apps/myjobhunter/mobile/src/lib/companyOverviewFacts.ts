@@ -2,7 +2,7 @@ import type { Company } from "@myjobhunter/api-client/types/company";
 import { companyFieldText } from "@myjobhunter/api-client/utils/companyFieldText";
 import { COMPANY_DETAIL_MESSAGES as MESSAGES } from "../constants/companyDetail";
 import type { OverviewFactProps } from "../types/OverviewFactProps";
-import { formatShortDate } from "./formatShortDate";
+import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
 
 /** The website's company facts, in its order, with a dash for whatever the company doesn't have. */
 export function companyOverviewFacts(company: Company): OverviewFactProps[] {

@@ -6,7 +6,7 @@ import { Keyboard, Platform, Text, View } from "react-native";
 import { DATE_TIME_FIELD_MESSAGES as MESSAGES } from "../../constants/dateTimeField";
 import { formatDateTime } from "../../lib/formatDateTime";
 import type { DateTimeFieldProps } from "../../types/DateTimeFieldProps";
-import FieldError from "./FieldError";
+import FieldError from "../../components/forms/FieldError";
 
 /**
  * A day and a time. iOS spins both in place under a Done button; Android has no
