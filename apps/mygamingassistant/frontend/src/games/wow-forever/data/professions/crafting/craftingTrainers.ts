@@ -180,6 +180,8 @@ export type RankTrainers =
   | {
       kind: "book";
       book: string;
+      /** The book's item id, for its icon. */
+      bookItemId: number;
       price: string;
       vendors: Readonly<Record<PlayerFaction, TrainerNpc>>;
       trip: Readonly<Record<PlayerFaction, string>>;

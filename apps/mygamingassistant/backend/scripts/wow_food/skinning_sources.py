@@ -114,6 +114,16 @@ class SkinningSources:
         rows.sort(key=lambda r: (int(str(r[4])), int(str(r[1])), str(r[0])))
         return rows
 
+    def leather_item_ids(self) -> dict[str, int]:
+        """Item id of every leather a skinnable mob can give, by the name the rows use — so pages can show its icon."""
+        ids: dict[str, int] = {}
+        for npc in self._skinnable():
+            for item, _chance in self._skin_loot[_i(self._npcs[npc]["SkinningLootId"])]:
+                name = self._item_names.get(item)
+                if name:
+                    ids.setdefault(name, item)
+        return dict(sorted(ids.items()))
+
     def leather_by_level(self) -> list[list[object]]:
         """What skinning a mob of each level gives, weighted by how many of them spawn (``leather_brackets``)."""
         weights: dict[int, Counter[str]] = defaultdict(Counter)

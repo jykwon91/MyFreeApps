@@ -88,9 +88,9 @@ describe("recipe picker", () => {
 
   it("orders recipes by the skill they turn yellow at and labels them with it", () => {
     expect(options).toEqual([
-      { spell: 2, label: "Enchant Bracer - Minor Health (1)" },
-      { spell: 1, label: "Runed Copper Rod (5)" },
-      { spell: 3, label: "Minor Wizard Oil (45)" },
+      { spell: 2, label: "Enchant Bracer - Minor Health (1)", icon: null },
+      { spell: 1, label: "Runed Copper Rod (5)", icon: expect.anything() },
+      { spell: 3, label: "Minor Wizard Oil (45)", icon: expect.anything() },
     ]);
   });
 

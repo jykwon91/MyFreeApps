@@ -6,6 +6,7 @@ import WowProfessionsPage from "@/games/wow-forever/pages/WowProfessionsPage";
 import { CRAFT_SKILL_STORAGE_KEY } from "@/games/wow-forever/hooks/useCraftingSkill";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { FACTION, type PlayerFaction } from "@/games/wow-forever/types/worldMap";
+import { iconSources, itemIconFile } from "./wowIconFiles";
 
 vi.mock("@/games/wow-forever/api/wowPricesApi", async () => {
   const stub = await import("@/test/auctionPricesStub");
@@ -95,5 +96,17 @@ describe("Skinning guide", () => {
     const { container } = renderAt("/wow-forever/professions?p=skinning");
     await skinNowCard();
     expect(container.textContent).not.toMatch(/tag|your own kill|Bountiful Harvest|Legacy/i);
+  });
+});
+
+describe("Skinning guide icons", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("shows a leather icon before the leathers a mob drops", async () => {
+    setPlayer(FACTION.alliance, 18);
+    renderAt("/wow-forever/professions?p=skinning&skill=115");
+    const card = await skinNowCard();
+    expect(card.getAllByTestId("game-icon").length).toBeGreaterThan(0);
+    expect(iconSources(await screen.findByTestId("leather-table")).some((s) => s.includes(`/${itemIconFile(2318)}.webp`))).toBe(true);
   });
 });

@@ -4,6 +4,7 @@ import { render as rtlRender, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import GearItemRow from "@/games/wow-forever/components/gear/GearItemRow";
 import type { RankedGearItem } from "@/games/wow-forever/types/rankedGearItem";
+import { iconSources, itemIconFile } from "./wowIconFiles";
 
 const RANKED: RankedGearItem = {
   item: {
@@ -77,5 +78,13 @@ describe("GearItemRow", () => {
   it("shows 'Top pick · known source' when close rule applied", () => {
     render(<GearItemRow ranked={RANKED} isTop closeRuleApplied />);
     expect(screen.getByText(/Top pick · known source/)).toBeInTheDocument();
+  });
+});
+
+describe("GearItemRow icon", () => {
+  it("shows the item's in-game icon before its name", () => {
+    render(<GearItemRow ranked={RANKED} isTop={false} />);
+    expect(screen.getAllByTestId("game-icon").length).toBeGreaterThan(0);
+    expect(iconSources()[0]).toContain(`/${itemIconFile(14152)}.webp`);
   });
 });

@@ -27,6 +27,8 @@ export interface GoldFarm {
   vendor: number;
   killsPerHour: number;
   cloth: string;
+  /** The cloth's item id (0 = none), for its icon. */
+  clothId: number;
   clothPerKill: number;
   greensPerKill: number;
   bluesPerKill: number;
@@ -34,6 +36,8 @@ export interface GoldFarm {
   /** What Skinning gives ("" when it can't be skinned), and its vendor value in copper. */
   skin: string;
   skinVendor: number;
+  /** The skin's item id (0 = none), for its icon. */
+  skinId: number;
 }
 
 export const FARM_SORT = { gold: "gold", cloth: "cloth" } as const;
@@ -67,12 +71,14 @@ export function decodeGoldFarms(file: GoldFarmsFile): GoldFarm[] {
       vendor: Number(r.vendor),
       killsPerHour: Number(r.killsPerHour),
       cloth: String(r.cloth),
+      clothId: Number(r.clothId ?? 0),
       clothPerKill: Number(r.clothPerKill),
       greensPerKill: Number(r.greensPerKill),
       bluesPerKill: Number(r.bluesPerKill),
       recipesPerKill: Number(r.recipesPerKill),
       skin: String(r.skin),
       skinVendor: Number(r.skinVendor),
+      skinId: Number(r.skinId ?? 0),
     };
   });
 }

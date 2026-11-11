@@ -21,7 +21,7 @@ const QUESTS_FILE = "dungeonQuests.json";
 const SEEN_FILE = "dungeonQuestsSeen.json";
 const QUEST_COLUMNS = ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders"] as const;
 const SEEN_COLUMNS = ["title", "level", "minLevel", "objectives", "rewards", "choices"] as const;
-const GIVER_COLUMNS = ["kind", "name", "zone", "subzone", "x", "y", "instance"] as const;
+const GIVER_COLUMNS = ["kind", "id", "name", "zone", "subzone", "x", "y", "instance"] as const;
 const OBJECTIVE_COLUMNS = ["kind", "id", "count"] as const;
 const TARGET_COLUMNS = ["name", "instance"] as const;
 
@@ -75,7 +75,7 @@ export function decodeDungeonQuests(
       const kind = targetKind(o[objCol.kind]);
       const found = kind ? target(`${kind}:${Number(o[objCol.id])}`) : null;
       if (!kind || !found) return [];
-      return [{ kind, name: found.name, count: Number(o[objCol.count]), insideDungeon: found.instance === instanceId }];
+      return [{ kind, id: Number(o[objCol.id]), name: found.name, count: Number(o[objCol.count]), insideDungeon: found.instance === instanceId }];
     });
 
   // A reward the names file lacks is dropped, never shown nameless.
@@ -96,7 +96,7 @@ export function decodeDungeonQuests(
         zoneId !== null && x !== null && y !== null
           ? { zoneId, zoneName: zones.get(zoneId)?.name ?? "", subzone: String(g[giverCol.subzone] ?? ""), x, y }
           : null;
-      return [{ kind, name: String(g[giverCol.name]), place, insideDungeon: numberOrNull(g[giverCol.instance]) === instanceId }];
+      return [{ kind, id: Number(g[giverCol.id]), name: String(g[giverCol.name]), place, insideDungeon: numberOrNull(g[giverCol.instance]) === instanceId }];
     });
 
   const seen = (id: number): Row | null => files.seenQuests.quests[String(id)] ?? null;

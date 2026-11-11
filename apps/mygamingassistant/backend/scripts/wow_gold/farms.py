@@ -67,7 +67,7 @@ FARM_COLUMNS = [
     "npcId", "name", "minLevel", "maxLevel", "type", "zone", "subzone", "x", "y",
     "pack", "respawnSec", "coin", "vendor", "killsPerHour",
     "cloth", "clothPerKill", "greensPerKill", "bluesPerKill", "recipesPerKill",
-    "skin", "skinVendor",
+    "skin", "skinVendor", "clothId", "skinId",
 ]
 
 CREATURE_TYPES = {1: "beast", 2: "dragonkin", 3: "demon", 4: "elemental", 5: "giant", 6: "undead", 7: "humanoid", 9: "mechanical"}
@@ -250,6 +250,7 @@ class GoldFarms:
                 self.item_name(cloth_item) if cloth_item else "", round(cloth_n, 2),
                 round(haul.greens, 3), round(haul.blues, 4), round(haul.recipes, 4),
                 self.item_name(skin_item) if skin_item else "", skin_vendor,
+                cloth_item or 0, skin_item or 0,
             ])
         return rows
 

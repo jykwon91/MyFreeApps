@@ -89,4 +89,11 @@ def test_known_classic_camps_are_listed(farms: list[dict]) -> None:
     assert {"Twilight Geolord", "Winterfall Ursa", "Monstrous Plaguebat"} <= names
     runecloth = next(f for f in farms if f["name"] == "Twilight Geolord")
     assert runecloth["cloth"] == "Runecloth"
+    assert runecloth["clothId"] == 14047
     assert runecloth["clothPerKill"] > 0.5
+
+
+def test_named_cloth_and_skin_carry_their_item_id(farms: list[dict]) -> None:
+    for f in farms:
+        assert bool(f["cloth"]) == (f["clothId"] > 0)
+        assert bool(f["skin"]) == (f["skinId"] > 0)

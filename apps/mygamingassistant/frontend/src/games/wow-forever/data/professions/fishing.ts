@@ -104,12 +104,12 @@ export const FISHING_STEPS: readonly HowToStep[] = [
 
 /** Cooking skill needed to cook each fish. Level both together. */
 export const FISH_RECIPES: readonly FishRecipe[] = [
-  { skill: 1, fish: "Brilliant Smallfish, Slitherskin Mackerel" },
-  { skill: 50, fish: "Longjaw Mud Snapper, Rainbow Fin Albacore, Loch Frenzy" },
-  { skill: 80, fish: "Sagefish" },
-  { skill: 100, fish: "Bristle Whisker Catfish" },
-  { skill: 175, fish: "Mithril Head Trout, Rockscale Cod, Greater Sagefish" },
-  { skill: 225, fish: "Spotted Yellowtail, Glossy Mightfish, Redgill" },
-  { skill: 250, fish: "Nightfin Snapper, Sunscale Salmon" },
-  { skill: 275, fish: "Whitescale Salmon, Darkclaw Lobster, Large Raw Mightfish" },
+  { skill: 1, fish: [{ id: 6291, name: "Brilliant Smallfish" }, { id: 6303, name: "Slitherskin Mackerel" }] },
+  { skill: 50, fish: [{ id: 6289, name: "Longjaw Mud Snapper" }, { id: 6361, name: "Rainbow Fin Albacore" }, { id: 6317, name: "Loch Frenzy" }] },
+  { skill: 80, fish: [{ id: 21071, name: "Sagefish" }] },
+  { skill: 100, fish: [{ id: 6308, name: "Bristle Whisker Catfish" }] },
+  { skill: 175, fish: [{ id: 8365, name: "Mithril Head Trout" }, { id: 6362, name: "Rockscale Cod" }, { id: 21153, name: "Greater Sagefish" }] },
+  { skill: 225, fish: [{ id: 4603, name: "Spotted Yellowtail" }, { id: 13754, name: "Glossy Mightfish" }, { id: 13758, name: "Redgill" }] },
+  { skill: 250, fish: [{ id: 13759, name: "Nightfin Snapper" }, { id: 13760, name: "Sunscale Salmon" }] },
+  { skill: 275, fish: [{ id: 13889, name: "Whitescale Salmon" }, { id: 13888, name: "Darkclaw Lobster" }, { id: 13893, name: "Large Raw Mightfish" }] },
 ];

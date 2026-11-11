@@ -1,6 +1,7 @@
 import CraftColorsLine from "@/games/wow-forever/components/crafting/CraftColorsLine";
 import SourceUnknownChip from "@/games/wow-forever/components/crafting/SourceUnknownChip";
 import { sourceUnknown } from "@/games/wow-forever/crafting/craftRoute";
+import ItemCountList from "@/games/wow-forever/components/shared/ItemCountList";
 import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import { recipeIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import type { SmeltRecipe } from "@/games/wow-forever/types/crafting";
@@ -26,7 +27,7 @@ export default function MiningSmeltRow({ recipe, where }: MiningSmeltRowProps) {
         {unknown && <SourceUnknownChip />}
       </p>
       <p className="text-sm text-muted-foreground">
-        {recipe.reagents.map((r) => `${r.count} ${r.name}`).join(" + ")}
+        <ItemCountList items={recipe.reagents} separator=" + " />
         {!unknown && ` · learn at ${recipe.skill}`} {where}
       </p>
       <CraftColorsLine recipe={recipe} />

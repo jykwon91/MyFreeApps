@@ -23,6 +23,8 @@ import type { DungeonQuest } from "@/games/wow-forever/types/dungeons/dungeonQue
 import type { LootItemInfo } from "@/games/wow-forever/types/dungeons/lootItemInfo";
 import type { WorldZone } from "@/games/wow-forever/types/worldMap";
 import { decodeMapViewFragment } from "@/games/wow-forever/worldMap/mapViewShare";
+import QuestObjectiveText from "@/games/wow-forever/components/dungeons/quests/QuestObjectiveText";
+import { iconSources, itemIconFile } from "./wowIconFiles";
 
 const KEEP = 10;
 const QUEST_COLUMNS = ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders"];
@@ -82,7 +84,7 @@ describe("decodeDungeonQuests", () => {
     const [quest] = decoded();
     expect(quest.title).toBe("Into the Keep!");
     expect(quest.level).toBe(23);
-    expect(quest.objectives).toEqual([{ kind: "npc", name: "Keep Lord", count: 1, insideDungeon: true }]);
+    expect(quest.objectives).toEqual([{ kind: "npc", id: 50, name: "Keep Lord", count: 1, insideDungeon: true }]);
     expect(quest.rewards).toEqual([{ id: 9002, name: "Keep Shield", count: 3 }]);
     expect(quest.choices).toEqual([]);
     expect(quest.seenOn).toBe("2026-11-07");
@@ -106,7 +108,7 @@ describe("decodeDungeonQuests", () => {
   it("places givers on their zone, marks inside ones, and names the chain and enders", () => {
     const [quest, letter] = decoded();
     expect(quest.givers).toEqual([
-      { kind: "npc", name: "Captain Hale", place: { zoneId: 100, zoneName: "Hillshire", subzone: "Old Hill", x: 56.3, y: 47.5 }, insideDungeon: false },
+      { kind: "npc", id: 7, name: "Captain Hale", place: { zoneId: 100, zoneName: "Hillshire", subzone: "Old Hill", x: 56.3, y: 47.5 }, insideDungeon: false },
     ]);
     expect(quest.chain).toEqual([
       { id: 1, title: "Lead In", level: 18, giver: "Old Scout" },
@@ -114,7 +116,7 @@ describe("decodeDungeonQuests", () => {
     ]);
     expect(quest.enders).toEqual(["Captain Hale"]);
     expect(quest.classes).toEqual(["warrior"]);
-    expect(letter.givers).toEqual([{ kind: "item", name: "Torn Letter", place: null, insideDungeon: true }]);
+    expect(letter.givers).toEqual([{ kind: "item", id: 61, name: "Torn Letter", place: null, insideDungeon: true }]);
     expect(letter.side).toBe("N");
   });
 
@@ -225,5 +227,27 @@ describe("the committed quest data", () => {
     expect(vc?.choices.map((c) => c.id)).toContain(6087);
     const gnomeregan = findDungeon(data, "gnomeregan")?.quests ?? [];
     expect(gnomeregan.filter((q) => q.title === "The Sparklematic 5200!")).toHaveLength(1);
+  });
+});
+
+describe("quest item icons", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("shows the item's icon on an item giver", async () => {
+    render(
+      <MemoryRouter>
+        <DungeonQuests dungeon={{ quests: decoded() }} />
+      </MemoryRouter>,
+    );
+    const row = screen.getAllByTestId("dungeon-quest-row").find((r) => r.getAttribute("data-quest-id") === "5") as HTMLElement;
+    await userEvent.click(within(row).getByTestId("dungeon-quest-toggle"));
+    const sources = iconSources(within(row).getByTestId("dungeon-quest-details"));
+    expect(sources.some((s) => s.includes(`/${itemIconFile(61)}.webp`))).toBe(true);
+  });
+
+  it("shows the item's icon on an item objective", () => {
+    const objective = { kind: "item", id: 60, name: "Red Bandana", count: 10, insideDungeon: false } as DungeonQuest["objectives"][number];
+    const { container } = render(<QuestObjectiveText objective={objective} />);
+    expect(iconSources(container)[0]).toContain(`/${itemIconFile(60)}.webp`);
   });
 });

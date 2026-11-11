@@ -9,6 +9,7 @@ import { CITY_TRAINERS } from "@/games/wow-forever/data/professions/trainers";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { CRAFT_SKILL_STORAGE_KEY } from "@/games/wow-forever/hooks/useCraftingSkill";
 import { PROVENANCE_LABEL } from "@/games/wow-forever/data/provenance/provenanceLabels";
+import { iconSources, itemIconFile } from "./wowIconFiles";
 
 // Auction prices come from the API; these tests don't look at them, so they stay loading.
 vi.mock("@/games/wow-forever/api/wowPricesApi", async () => {
@@ -192,5 +193,14 @@ describe("Professions page", () => {
     await userEvent.type(input, "120");
     expect(await route().findByText("You are here")).toBeInTheDocument();
     expect(JSON.parse(window.localStorage.getItem(CRAFT_SKILL_STORAGE_KEY) ?? "{}").enchanting).toBe(120);
+  });
+});
+
+describe("Professions page icons", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("shows the raw fish icons on the Fishing recipes", () => {
+    renderAt("/wow-forever/professions?p=fishing");
+    expect(iconSources().some((s) => s.includes(`/${itemIconFile(6291)}.webp`))).toBe(true);
   });
 });

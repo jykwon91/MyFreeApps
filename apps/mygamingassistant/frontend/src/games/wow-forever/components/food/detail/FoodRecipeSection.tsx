@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import ItemIcon from "@/games/wow-forever/components/shared/ItemIcon";
 import FoodSourceList from "@/games/wow-forever/components/food/detail/FoodSourceList";
 import { DETAIL_LINK, DETAIL_SECTION } from "@/games/wow-forever/components/food/detail/detailStyles";
 import { hasSources, skillLine, unknownSource } from "@/games/wow-forever/food/recipeSources";
@@ -49,7 +50,10 @@ function RecipeSourceBody({ food, sources, faction, zoneId, level }: RecipeSourc
   const recipeId = learn.recipeItem ?? food.id;
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Needs the item {learn.recipe}.</p>
+      <p className="text-sm text-muted-foreground">
+        Needs the item {learn.recipeItem === null ? null : <ItemIcon itemId={learn.recipeItem} />}
+        {learn.recipe}.
+      </p>
       {hasSources(sources) ? (
         <FoodSourceList sources={sources} faction={faction} zoneId={zoneId} level={level} />
       ) : (

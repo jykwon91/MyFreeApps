@@ -12,6 +12,7 @@ import { runAskTool } from "@/games/wow-forever/lib/ask/runAskTool";
 import type { AskCard } from "@/games/wow-forever/types/ask/askCard";
 import type { AskToolName } from "@/games/wow-forever/types/ask/askToolName";
 import { askToolData } from "./wowAskWorld";
+import { iconSources } from "./wowIconFiles";
 
 async function cardFor<K extends AskCard["kind"]>(
   kind: K,
@@ -73,6 +74,9 @@ describe("ProfessionCard", () => {
     inRouter(<ProfessionCard card={card} />);
     expect(screen.getByRole("region", { name: "Tailoring from skill 150" })).toBeTruthy();
     expect(screen.getByText(card.rows[0].name)).toBeTruthy();
+    const first = card.rows[0].icon;
+    expect(first).not.toBeNull();
+    expect(iconSources()[0]).toContain(`/${first?.fileDataId}.webp`);
     expect(screen.getByText(/cheapest route from auction prices/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Open the Tailoring guide" }).getAttribute("href")).toBe(
       "/wow-forever/professions?p=tailoring&skill=150",

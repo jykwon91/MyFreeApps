@@ -23,6 +23,7 @@ import type { ServerStatusResponse } from "@/games/wow-forever/types/serverStatu
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 import { priceList, STUB_QUANTITY } from "@/test/auctionPricesStub";
 import { askToolData } from "./wowAskWorld";
+import { itemIconFile } from "./wowIconFiles";
 
 const NOW = Date.parse("2026-11-08T12:00:00Z");
 const TWO_HOURS_AGO = "2026-11-08T10:00:00Z";
@@ -219,6 +220,8 @@ describe("PricesCard", () => {
     expect(screen.getByRole("region", { name: "Auction prices · PvP · Alliance AH" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Linen Cloth" })).toBeTruthy();
     expect(screen.getByText("12s")).toBeTruthy();
+    expect(screen.getAllByTestId("game-icon")).toHaveLength(2);
+    expect(screen.getByRole("link", { name: "Linen Cloth" }).querySelector("img")?.getAttribute("src")).toContain(`/${itemIconFile(2589)}.webp`);
     expect(screen.getAllByText("On sale: 40 in 5 auctions").length).toBeGreaterThan(0);
     expect(screen.getByTestId("price-credit").textContent).toBe("Prices from Blizzard (PvP · Alliance AH, US) · updated 2 hours ago");
     expect(screen.getByRole("link", { name: "Open the Auction house" }).getAttribute("href")).toBe(

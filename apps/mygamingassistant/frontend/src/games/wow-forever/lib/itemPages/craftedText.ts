@@ -17,11 +17,6 @@ export function craftedLine(crafted: CraftedBy): string {
   return [`${professionLabel(crafted.profession)} ${crafted.skill}`, learn].filter(Boolean).join(" · ");
 }
 
-/** "2 × Bolt of Silk Cloth, 1 × Spool of Silk Thread". */
-export function reagentsLine(crafted: CraftedBy): string {
-  return crafted.reagents.map((r) => `${r.count} × ${r.name}`).join(", ");
-}
-
 /** The crafting guide at the recipe's skill. */
 export function craftingGuideHref(crafted: CraftedBy): string {
   return `/wow-forever/professions?p=${crafted.profession}&skill=${crafted.skill}`;

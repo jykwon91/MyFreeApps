@@ -6,6 +6,7 @@ import WowProfessionsPage from "@/games/wow-forever/pages/WowProfessionsPage";
 import { CRAFT_SKILL_STORAGE_KEY } from "@/games/wow-forever/hooks/useCraftingSkill";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { FACTION, type PlayerFaction } from "@/games/wow-forever/types/worldMap";
+import { iconSources } from "./wowIconFiles";
 
 vi.mock("@/games/wow-forever/api/wowPricesApi", async () => {
   const stub = await import("@/test/auctionPricesStub");
@@ -103,5 +104,16 @@ describe("Mining guide", () => {
     expect(azerothium.queryByText(/learn at/)).toBeNull();
     const tin = within(crafts.getByText("Smelt Tin").closest("li") as HTMLElement);
     expect(tin.getByText(/learn at 50/)).toBeInTheDocument();
+  });
+});
+
+describe("Mining guide icons", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("shows the ore's icon on the node you can mine now", async () => {
+    renderAt("/wow-forever/professions?p=mining");
+    const card = await gatherNowCard();
+    expect(card.getAllByTestId("game-icon").length).toBeGreaterThan(0);
+    expect(iconSources(await screen.findByTestId("node-table")).length).toBeGreaterThan(0);
   });
 });

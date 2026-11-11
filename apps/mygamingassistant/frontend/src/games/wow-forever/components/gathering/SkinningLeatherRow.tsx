@@ -1,3 +1,4 @@
+import ItemNameList from "@/games/wow-forever/components/shared/ItemNameList";
 import { levelRange } from "@/games/wow-forever/food/recipeSources";
 import { skillToSkinRange } from "@/games/wow-forever/gathering/skinBandText";
 import type { LeatherBracket } from "@/games/wow-forever/types/gathering/leatherBracket";
@@ -14,7 +15,9 @@ export default function SkinningLeatherRow({ bracket, yours }: SkinningLeatherRo
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3" aria-current={yours || undefined}>
       <span className="font-medium capitalize">{levelRange([bracket.minLevel, bracket.maxLevel])}</span>
       <span className="text-sm text-muted-foreground">{skillToSkinRange(bracket.minLevel, bracket.maxLevel)}</span>
-      <span className="text-sm">{bracket.leathers.join(", ")}</span>
+      <span className="text-sm">
+        <ItemNameList items={bracket.leathers} />
+      </span>
       {yours && <span className="text-xs text-muted-foreground">your range</span>}
     </li>
   );

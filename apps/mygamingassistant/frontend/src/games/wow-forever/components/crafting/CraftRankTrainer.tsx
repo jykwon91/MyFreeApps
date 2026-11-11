@@ -1,4 +1,5 @@
 import { AlertTriangle } from "lucide-react";
+import ItemIcon from "@/games/wow-forever/components/shared/ItemIcon";
 import RankTrainerList from "@/games/wow-forever/components/professions/RankTrainerList";
 import CraftMapLink from "@/games/wow-forever/components/crafting/CraftMapLink";
 import CraftRankErrand from "@/games/wow-forever/components/crafting/CraftRankErrand";
@@ -19,7 +20,12 @@ export default function CraftRankTrainer({ rank, faction, professionLabel, zoneI
     return <RankTrainerList label={`${rank.name} ${professionLabel}`} trainers={t.trainers[faction]} zoneId={zoneId} />;
   }
   if (t.kind === "book") {
-    return <CraftRankErrand action={`Buy ${t.book} (${t.price}) from`} npc={t.vendors[faction]} trip={t.trip[faction]} />;
+    return <CraftRankErrand action={
+          <>
+            Buy <ItemIcon itemId={t.bookItemId} />
+            {t.book} ({t.price}) from
+          </>
+        } npc={t.vendors[faction]} trip={t.trip[faction]} />;
   }
   if (t.kind === "quest") {
     return (

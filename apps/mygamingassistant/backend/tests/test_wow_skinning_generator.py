@@ -63,5 +63,10 @@ class TestCommittedSkinning:
         for a, b in zip(data["leather"], data["leather"][1:]):
             assert b[0] == a[1] + 1  # no gaps
 
+    def test_every_leather_named_has_its_item_id(self, data: dict) -> None:
+        named = {m[8] for m in data["mobs"]} | {name for b in data["leather"] for name in b[2]}
+        assert named <= set(data["leatherIds"])
+        assert data["leatherIds"]["Light Leather"] == 2318 and data["leatherIds"]["Rugged Leather"] == 8170
+
     def test_territory_for_both_starting_sides(self, data: dict) -> None:
         assert set(data["territory"].values()) >= {"alliance", "horde", "contested"}

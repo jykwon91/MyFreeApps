@@ -15,6 +15,7 @@ import {
 } from "@/games/wow-forever/gold/goldFarms";
 import { goldFarms } from "@/games/wow-forever/gold/goldFarmsData";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { iconSources, itemIconFile } from "./wowIconFiles";
 
 // Auction prices come from the API; these tests don't look at them, so they stay loading.
 vi.mock("@/games/wow-forever/api/wowPricesApi", async () => {
@@ -186,5 +187,14 @@ describe("Making gold page", () => {
     // No prices before launch.
     const text = JSON.stringify([BAND_TIPS, CLASS_GOLD_TIPS, SELL_ITEMS, VENDOR_ITEMS, GOLD_DONT_DO]);
     expect(text).not.toMatch(/\d+\s*(g|gold|s|silver)\b/i);
+  });
+});
+
+describe("Making gold farm icons", () => {
+  it("shows an icon before the cloth and skin a farm drops", () => {
+    savePlayer(58, "warlock");
+    renderAt("/wow-forever/gold");
+    expect(screen.getAllByTestId("game-icon").length).toBeGreaterThan(0);
+    expect(iconSources().some((s) => s.includes(`/${itemIconFile(14047)}.webp`))).toBe(true);
   });
 });

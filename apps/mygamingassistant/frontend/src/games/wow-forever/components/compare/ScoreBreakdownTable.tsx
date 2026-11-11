@@ -1,3 +1,4 @@
+import ItemIcon from "@/games/wow-forever/components/shared/ItemIcon";
 import BreakdownCell from "@/games/wow-forever/components/compare/BreakdownCell";
 import type { BreakdownLine, RankedItem } from "@/games/wow-forever/scoring/scoreTypes";
 
@@ -17,6 +18,7 @@ export default function ScoreBreakdownTable({ ranked, breakdown }: ScoreBreakdow
             <th scope="col" className="p-2 font-medium">Stat</th>
             {ranked.map(({ item }) => (
               <th key={item.id} scope="col" className="p-2 font-medium min-w-32">
+                {item.origin ? <ItemIcon itemId={item.origin.itemId} /> : null}
                 {item.name}
               </th>
             ))}

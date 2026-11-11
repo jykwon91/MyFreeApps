@@ -1,3 +1,4 @@
+import ItemNameList from "@/games/wow-forever/components/shared/ItemNameList";
 import FoodDirectionsLink from "@/games/wow-forever/components/food/detail/FoodDirectionsLink";
 import { placeLabel } from "@/games/wow-forever/food/recipeSources";
 import { zoneLevelNote } from "@/games/wow-forever/gathering/zoneLevelNote";
@@ -11,7 +12,7 @@ export default function GatheringZoneRow({ zone }: { zone: GatheringZone }) {
       <div className="min-w-0 space-y-0.5">
         <p className="font-semibold">{zone.zoneName}</p>
         <p className="text-sm text-muted-foreground">
-          {zone.nodes.join(", ")} · {zone.count} spawn points, most near {placeLabel(zone.spot)}
+          <ItemNameList items={zone.nodes} /> · {zone.count} spawn points, most near {placeLabel(zone.spot)}
         </p>
         {note && <p className="text-xs text-muted-foreground">{note}</p>}
       </div>

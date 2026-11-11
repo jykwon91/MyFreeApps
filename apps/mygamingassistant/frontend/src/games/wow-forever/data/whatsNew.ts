@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-11",
+    title: "In-game icons on every item",
+    summary:
+      "Every item the site names now shows its in-game icon: auction prices, crafting routes and materials, food, gathering, gold farms, gear, Item Compare, quests and Ask answers.",
+    to: "/wow-forever",
+  },
+  {
+    date: "2026-11-11",
     title: "Trainers: in-game icons",
     summary:
       "The Trainers page now shows each class's and profession's in-game icon in the picker, and every spell you can learn has its in-game icon next to its name.",

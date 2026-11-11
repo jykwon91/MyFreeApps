@@ -3,11 +3,12 @@ import { ExternalLink } from "lucide-react";
 import InsideDungeonChip from "@/games/wow-forever/components/dungeons/quests/InsideDungeonChip";
 import QuestFact from "@/games/wow-forever/components/dungeons/quests/QuestFact";
 import QuestGiverLine from "@/games/wow-forever/components/dungeons/quests/QuestGiverLine";
+import QuestObjectiveText from "@/games/wow-forever/components/dungeons/quests/QuestObjectiveText";
 import QuestRewards from "@/games/wow-forever/components/dungeons/quests/QuestRewards";
 import QuestChainLinks from "@/games/wow-forever/components/quests/QuestChainLinks";
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import { DETAIL_LINK, FACTION_NAME } from "@/games/wow-forever/components/food/detail/detailStyles";
-import { questClassesText, questLevelText, objectiveText } from "@/games/wow-forever/lib/dungeons/describeQuest";
+import { questClassesText, questLevelText } from "@/games/wow-forever/lib/dungeons/describeQuest";
 import { dungeonPageHref } from "@/games/wow-forever/lib/dungeons/dungeonHref";
 import { questProvenance } from "@/games/wow-forever/lib/provenance/questProvenance";
 import type { QuestPageResult } from "@/games/wow-forever/types/quests/questPageResult";
@@ -77,7 +78,7 @@ export default function QuestDetailView({ quest, dungeonSlug }: QuestDetailViewP
                   className="flex flex-wrap items-center gap-2 text-sm"
                   data-testid="quest-objective"
                 >
-                  {objectiveText(o)}
+                  <QuestObjectiveText objective={o} />
                   {o.insideDungeon ? <InsideDungeonChip /> : null}
                 </li>
               ))}

@@ -1,3 +1,4 @@
+import ItemNameList from "@/games/wow-forever/components/shared/ItemNameList";
 import { FISH_RECIPES } from "@/games/wow-forever/data/professions/fishing";
 
 /** Every fish you catch has a cooking recipe — level both together. */
@@ -11,7 +12,9 @@ export default function FishRecipesList() {
         {FISH_RECIPES.map((r) => (
           <li key={r.skill} className="grid grid-cols-[3rem_1fr] gap-2">
             <span className="font-semibold">{r.skill}</span>
-            <span>{r.fish}</span>
+            <span>
+              <ItemNameList items={r.fish} />
+            </span>
           </li>
         ))}
       </ul>

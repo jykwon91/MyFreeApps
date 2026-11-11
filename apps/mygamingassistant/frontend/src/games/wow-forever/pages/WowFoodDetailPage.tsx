@@ -6,6 +6,7 @@ import FoodEffectSection from "@/games/wow-forever/components/food/detail/FoodEf
 import FoodReagentsSection from "@/games/wow-forever/components/food/detail/FoodReagentsSection";
 import FoodRecipeSection from "@/games/wow-forever/components/food/detail/FoodRecipeSection";
 import { DETAIL_CHIP, DETAIL_LINK, FACTION_NAME } from "@/games/wow-forever/components/food/detail/detailStyles";
+import ItemIcon from "@/games/wow-forever/components/shared/ItemIcon";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { FOOD_DATA_BUILD, FOODS, TRAINER_SKILLS } from "@/games/wow-forever/data/food/foodData";
 import { RECIPE_SOURCE_DATA, recipeSourcesFor } from "@/games/wow-forever/data/food/recipeSourceData";
@@ -46,6 +47,7 @@ export default function WowFoodDetailPage() {
     <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader
         title={food.name}
+        icon={<ItemIcon itemId={food.id} size={32} />}
         subtitle={getItSummary(food, sources, faction, zoneId)}
         backTo={backTo}
         backLabel="Back to What should I eat?"

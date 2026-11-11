@@ -1,3 +1,5 @@
+import ItemCountList from "@/games/wow-forever/components/shared/ItemCountList";
+import ItemIcon from "@/games/wow-forever/components/shared/ItemIcon";
 import type { ShoppingLine } from "@/games/wow-forever/types/crafting";
 
 interface CraftMakeLinesProps {
@@ -14,9 +16,12 @@ export default function CraftMakeLines({ title, lines }: CraftMakeLinesProps) {
       <ul className="text-sm space-y-0.5">
         {lines.map((l) => (
           <li key={l.id}>
-            {l.smeltSkill === undefined ? `${l.count} more ${l.name}` : `${l.count} ${l.name} (Mining ${l.smeltSkill})`}{" "}
+            {l.count} {l.smeltSkill === undefined ? "more " : null}
+            <ItemIcon itemId={l.id} />
+            {l.name}
+            {l.smeltSkill === undefined ? null : ` (Mining ${l.smeltSkill})`}{" "}
             <span className="text-muted-foreground">
-              (= {(l.makesFrom ?? []).map((r) => `${r.count} ${r.name}`).join(", ")}, counted above)
+              (= <ItemCountList items={l.makesFrom ?? []} />, counted above)
             </span>
           </li>
         ))}

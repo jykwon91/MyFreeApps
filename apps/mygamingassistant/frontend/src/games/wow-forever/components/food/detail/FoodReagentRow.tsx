@@ -1,3 +1,4 @@
+import ItemIcon from "@/games/wow-forever/components/shared/ItemIcon";
 import AuctionPriceTag from "@/games/wow-forever/components/prices/AuctionPriceTag";
 import FoodSourceList from "@/games/wow-forever/components/food/detail/FoodSourceList";
 import { reagentSourcesFor } from "@/games/wow-forever/data/food/recipeSourceData";
@@ -19,7 +20,8 @@ export default function FoodReagentRow({ reagent, faction, zoneId, level }: Food
   return (
     <li className="space-y-2 border-t pt-3 first:border-t-0 first:pt-0">
       <h3 className="text-sm font-semibold">
-        {reagent.count}× {reagent.name}
+        {reagent.count}× <ItemIcon itemId={reagent.id} />
+        {reagent.name}
         <AuctionPriceTag itemId={reagent.id} count={reagent.count} />
       </h3>
       {hasSources(sources) ? (

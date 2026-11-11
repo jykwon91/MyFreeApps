@@ -1,3 +1,4 @@
+import type { ItemRef } from "@/games/wow-forever/types/itemRef";
 import type { MobSpot } from "@/games/wow-forever/types/recipeSources";
 
 /** A mob you can skin, in one zone it has a pack in (Classic data). */
@@ -10,5 +11,5 @@ export interface SkinnableMob {
   /** Its densest pack in this zone — Directions go here. */
   spot: MobSpot;
   /** What it skins into most. */
-  leather: string;
+  leather: ItemRef;
 }

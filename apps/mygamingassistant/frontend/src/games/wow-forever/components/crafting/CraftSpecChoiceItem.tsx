@@ -1,6 +1,9 @@
 import clsx from "clsx";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import ItemCountList from "@/games/wow-forever/components/shared/ItemCountList";
 import FoodDirectionsLink from "@/games/wow-forever/components/food/detail/FoodDirectionsLink";
 import { placeLabel } from "@/games/wow-forever/food/recipeSources";
+import { spellIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import type { SourceLookup } from "@/games/wow-forever/data/sourceDecode";
 import type { CraftSpecRecord } from "@/games/wow-forever/types/crafting";
 import type { CraftingSpecChoice } from "@/games/wow-forever/types/craftingSpecs";
@@ -24,6 +27,7 @@ export default function CraftSpecChoiceItem({ choice, record, sources, faction, 
   return (
     <li className={clsx("rounded-lg border bg-card p-3 space-y-1.5", chosen && "border-primary")} data-testid={`spec-${choice.id}`}>
       <p className="font-medium">
+        {record ? <GameIcon icon={spellIcon(record.spell)} size={24} alt="" className="mr-2" /> : null}
         {record?.name ?? choice.label}
         {chosen ? <span className="ml-2 rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">Your choice</span> : null}
       </p>
@@ -40,7 +44,7 @@ export default function CraftSpecChoiceItem({ choice, record, sources, faction, 
                   </span>
                   {giver ? ` from ${giver.name}, ${placeLabel(giver)}` : ""}.
                 </p>
-                <p className="text-xs text-muted-foreground">Hand in: {items.map((i) => `${i.count} ${i.name}`).join(", ")}.</p>
+                <p className="text-xs text-muted-foreground">Hand in: <ItemCountList items={items} />.</p>
                 {giver ? <FoodDirectionsLink spot={giver} name={giver.name} /> : null}
               </div>
             );

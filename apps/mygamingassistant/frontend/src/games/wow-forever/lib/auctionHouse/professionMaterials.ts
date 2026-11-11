@@ -1,4 +1,5 @@
 /** A crafting profession's materials and recipes, priced on one auction house. Pure. */
+import { recipeIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { searchAuctionItems, SEARCH_LIMIT } from "@/games/wow-forever/prices/auctionSearch";
 import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
 import type { ProfessionMaterialsResult } from "@/games/wow-forever/types/auctionHouse/professionMaterialsResult";
@@ -39,7 +40,7 @@ export function searchProfessionMaterials(
 export function recipeOptions(recipes: Iterable<CraftRecipe>): RecipeOption[] {
   return [...recipes]
     .sort((a, b) => a.yellow - b.yellow || a.name.localeCompare(b.name) || a.spell - b.spell)
-    .map((r) => ({ spell: r.spell, label: `${r.name} (${r.yellow})` }));
+    .map((r) => ({ spell: r.spell, label: `${r.name} (${r.yellow})`, icon: recipeIcon(r) }));
 }
 
 /** One craft's materials at this house's market values, and the made item's price. */

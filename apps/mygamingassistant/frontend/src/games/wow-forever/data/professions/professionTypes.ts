@@ -85,7 +85,8 @@ export type TownTrainers = Readonly<Record<SecondaryProfession, readonly Trainer
 
 export interface FishRecipe {
   skill: number;
-  fish: string;
+  /** The raw fish; each cooks into a food. */
+  fish: readonly MatRef[];
 }
 
 export interface ForeverChange {
