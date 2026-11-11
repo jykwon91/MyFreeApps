@@ -136,13 +136,13 @@ describe("demonUnlocks", () => {
     const levels = ladder.map((l) => l.level);
     expect(levels).toEqual([...levels].sort((a, b) => a - b));
     const eight = ladder.find((l) => l.level === 8)?.unlocks.find((u) => u.name === "Firebolt");
-    expect(eight).toMatchObject({ demon: "Imp", rank: "Rank 2", knownOnSummon: false });
+    expect(eight).toMatchObject({ demon: "Imp", rank: "Rank 2", knownOnSummon: false, grimoire: true });
     const torment = ladder.find((l) => l.level === 10)?.unlocks.find((u) => u.name === "Torment");
-    expect(torment).toMatchObject({ demon: "Voidwalker", knownOnSummon: true });
+    expect(torment).toMatchObject({ demon: "Voidwalker", knownOnSummon: true, grimoire: false });
   });
 
   it("is empty for a class with no demons, and class spells carry no demon", () => {
     expect(demonUnlocks([])).toEqual([]);
-    expect(LADDER.flatMap((l) => l.unlocks).every((u) => u.demon === null && !u.knownOnSummon)).toBe(true);
+    expect(LADDER.flatMap((l) => l.unlocks).every((u) => u.demon === null && !u.knownOnSummon && !u.grimoire)).toBe(true);
   });
 });

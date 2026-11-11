@@ -68,8 +68,8 @@ export default function ClassTrainersView({ classId, className, faction, level, 
             What your demons learn at each level
           </h2>
           <p className="text-sm text-muted-foreground">
-            Buy each rank&apos;s Grimoire from a Demon trainer once you reach its level, summon that demon and use the
-            Grimoire. Levels and Grimoires are from the Forever game files ({book.data.clientBuild}).
+            A demon knows its first ranks when summoned. Buy each later rank&apos;s Grimoire from a Demon trainer once you
+            reach its level, summon that demon and use the Grimoire. Levels and Grimoires are from the Forever game files ({book.data.clientBuild}).
           </p>
           <LevelUnlockLadder ladder={demonLadder} level={level} />
         </section>

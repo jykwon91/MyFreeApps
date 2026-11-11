@@ -26,6 +26,7 @@ export function levelUnlocks(book: SpellbookClass): readonly LevelUnlocks[] {
         levelClassic: rank.levelClassic,
         demon: null,
         knownOnSummon: false,
+        grimoire: false,
       });
       byLevel.set(rank.level, list);
     }
@@ -50,6 +51,7 @@ export function demonUnlocks(demons: readonly SpellbookDemon[]): readonly LevelU
           levelClassic: false,
           demon: demon.name,
           knownOnSummon: rank.known === true,
+          grimoire: rank.grimoire !== undefined,
         });
         byLevel.set(rank.level, list);
       }

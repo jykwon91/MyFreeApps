@@ -15,7 +15,7 @@ export default function LevelUnlockItem({ unlock }: { unlock: LevelUnlock }) {
       </span>
       {unlock.demon ? <span className={TAG}>{unlock.demon}</span> : null}
       {unlock.demon && unlock.knownOnSummon ? <span className={TAG}>Knows it when summoned</span> : null}
-      {unlock.demon && !unlock.knownOnSummon ? <span className={TAG}>Grimoire</span> : null}
+      {unlock.grimoire ? <span className={TAG}>Grimoire</span> : null}
       {unlock.learnedBy === "quest" ? <span className={TAG}>Quest</span> : null}
       {unlock.learnedBy === "book" ? <span className={TAG}>Book</span> : null}
       {unlock.races.length ? <span className={TAG}>{unlock.races.join(", ")} only</span> : null}

@@ -17,4 +17,6 @@ export interface LevelUnlock {
   demon: string | null;
   /** The demon has it when summoned — no Grimoire to buy. */
   knownOnSummon: boolean;
+  /** A Grimoire in the Forever files teaches this demon rank. */
+  grimoire: boolean;
 }
