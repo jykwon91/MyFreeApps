@@ -1,12 +1,10 @@
-import { Select } from "@platform/ui";
 import GoldTipList from "@/games/wow-forever/components/gold/GoldTipList";
 import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import GuideSection from "@/games/wow-forever/components/shared/GuideSection";
-import { findClass, WOW_CLASSES, type WowClassId } from "@/games/wow-forever/data/classes";
+import { findClass, type WowClassId } from "@/games/wow-forever/data/classes";
 import { CLASS_GOLD_TIPS } from "@/games/wow-forever/data/gold/goldTips";
 import { classIcon } from "@/games/wow-forever/lib/icons/wowIcons";
-
-const ALL_CLASSES = "all";
+import ClassSelect from "@/games/wow-forever/components/shared/ClassSelect";
 
 interface GoldClassSectionProps {
   classId: WowClassId;
@@ -24,24 +22,13 @@ export default function GoldClassSection({ classId, showAll, onClassChange, onSh
         <label htmlFor="gold-class" className="text-sm font-medium">
           Class
         </label>
-        <div>
-          <Select
+        <div className="max-w-xs">
+          <ClassSelect
             id="gold-class"
-            value={showAll ? ALL_CLASSES : classId}
-            onChange={(e) => {
-              const cls = findClass(e.target.value);
-              if (cls) onClassChange(cls.id);
-              else onShowAll();
-            }}
-            className="min-h-[44px] bg-card"
-          >
-            {WOW_CLASSES.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-            <option value={ALL_CLASSES}>All classes</option>
-          </Select>
+            value={showAll ? null : classId}
+            onChange={onClassChange}
+            allOption={{ label: "All classes", onSelect: onShowAll }}
+          />
         </div>
       </div>
       {shown.map((c) => (

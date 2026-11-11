@@ -2,10 +2,11 @@ import { Select } from "@platform/ui";
 import LevelCapNote from "@/games/wow-forever/components/shared/LevelCapNote";
 import NumberField from "@/games/wow-forever/components/shared/NumberField";
 import SegmentedToggle from "@/games/wow-forever/components/shared/SegmentedToggle";
-import { findClass, WOW_CLASSES, type WowClassId } from "@/games/wow-forever/data/classes";
+import { findClass } from "@/games/wow-forever/data/classes";
 import { levelCap, playerLevel } from "@/games/wow-forever/data/levelCap";
 import { PLAYER_FACTION_OPTIONS } from "@/games/wow-forever/data/playerFactionOptions";
 import type { GearSettings } from "@/games/wow-forever/types/gearSettings";
+import ClassSelect from "@/games/wow-forever/components/shared/ClassSelect";
 
 interface GearSettingsBarProps {
   settings: GearSettings;
@@ -22,17 +23,7 @@ export default function GearSettingsBar({ settings, onChange }: GearSettingsBarP
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <label className="flex flex-col gap-1">
           <span className={FIELD_LABEL}>Class</span>
-          <Select
-            value={settings.classId}
-            onChange={(e) => onChange({ classId: e.target.value as WowClassId })}
-            className="min-h-[44px] bg-card"
-          >
-            {WOW_CLASSES.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
+          <ClassSelect value={settings.classId} onChange={(classId) => onChange({ classId })} />
         </label>
         <label className="flex flex-col gap-1">
           <span className={FIELD_LABEL}>Spec</span>
