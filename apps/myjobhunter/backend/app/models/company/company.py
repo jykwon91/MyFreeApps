@@ -12,8 +12,9 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
+from app.core.company_domain import normalize_company_domain
 from app.db.base import Base
 
 
@@ -59,6 +60,11 @@ class Company(Base):
         # instead of the ORM trying to NULL the (non-null) FK on delete.
         passive_deletes="all",
     )
+
+    @validates("primary_domain")
+    def _normalize_primary_domain(self, _key: str, value: str | None) -> str | None:
+        """Every ORM write stores the normalised host (see ``app.core.company_domain``)."""
+        return normalize_company_domain(value)
 
     __table_args__ = (
         CheckConstraint(

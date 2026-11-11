@@ -97,8 +97,9 @@ _NO_LENGTH_LIMITED_COLUMNS: frozenset[str] = frozenset({
 })
 
 # Fields restricted to a fixed allowlist by a validator (enum / frozenset
-# membership), or typed ``EmailStr`` (RFC cap of 254 < the 320 column), which
-# bounds them below the column length by construction. ``Literal`` fields are
+# membership), typed ``EmailStr`` (RFC cap of 254 < the 320 column), or
+# normalised by a validator to a capped form, which bounds them below the
+# column length by construction. ``Literal`` fields are
 # checked against the column length directly, not listed here.
 _ALLOWLIST_VALIDATED: frozenset[tuple[str, str]] = frozenset({
     ("ApplicationContactCreateRequest", "email"),
@@ -109,6 +110,11 @@ _ALLOWLIST_VALIDATED: frozenset[tuple[str, str]] = frozenset({
     ("ApplicationUpdateRequest", "source"),
     ("ApplicationUpdateRequest", "posted_salary_period"),
     ("ApplicationUpdateRequest", "remote_type"),
+    # Normalised to a bare hostname capped at 253 characters
+    # (``app.core.company_domain._MAX_HOSTNAME_LEN``), under the String(255)
+    # column; the raw input bound is higher because a full website URL is accepted.
+    ("CompanyCreateRequest", "primary_domain"),
+    ("CompanyUpdateRequest", "primary_domain"),
     ("ProfileUpdateRequest", "work_auth_status"),
     ("ProfileUpdateRequest", "salary_period"),
     ("ProfileUpdateRequest", "remote_preference"),

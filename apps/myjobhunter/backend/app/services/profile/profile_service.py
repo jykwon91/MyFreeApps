@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
 from app.core.screening_questions import ALLOWED_KEYS, is_eeoc as _is_eeoc
+from app.db.violated_constraint import violated_constraint_name
 from app.models.profile.education import Education
 from app.models.profile.profile import Profile
 from app.models.profile.screening_answer import ScreeningAnswer
@@ -52,6 +53,9 @@ from app.schemas.profile.work_history_update_request import WorkHistoryUpdateReq
 
 
 logger = logging.getLogger(__name__)
+
+SKILL_NAME_UNIQUE_NAME = "uq_skill_user_name"
+SCREENING_ANSWER_UNIQUE_NAME = "uq_screening_answer"
 
 
 # ---------------------------------------------------------------------------
@@ -343,6 +347,8 @@ async def create_skill(
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
+        if violated_constraint_name(exc) != SKILL_NAME_UNIQUE_NAME:
+            raise
         raise DuplicateSkillError(
             f"A skill named {request.name!r} already exists (case-insensitive).",
         ) from exc
@@ -405,6 +411,8 @@ async def create_screening_answer(
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
+        if violated_constraint_name(exc) != SCREENING_ANSWER_UNIQUE_NAME:
+            raise
         raise DuplicateScreeningAnswerError(
             f"An answer for question_key={request.question_key!r} already exists. "
             "Use PATCH to update it.",

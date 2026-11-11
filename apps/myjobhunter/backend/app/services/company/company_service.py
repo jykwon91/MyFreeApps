@@ -19,6 +19,7 @@ import uuid
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.violated_constraint import violated_constraint_name
 from app.models.company.company import Company
 from app.models.company.company_research import CompanyResearch
 from app.repositories.application import application_repository
@@ -28,6 +29,7 @@ from app.schemas.company.company_update_request import CompanyUpdateRequest
 
 
 APPLICATIONS_COMPANY_FK_NAME = "applications_company_id_fkey"
+COMPANY_USER_DOMAIN_UNIQUE_NAME = "uq_company_user_domain"
 
 
 class DuplicatePrimaryDomainError(ValueError):
@@ -92,8 +94,7 @@ async def create_company(
     # input validation. In Pydantic v2 that's a ``Url`` wrapper object,
     # NOT a str subclass — passing it directly to SQLAlchemy / asyncpg
     # raises at parameter-bind time (HTTP 500). Coerce to plain str
-    # before persistence. Same for ``primary_domain`` defensively even
-    # though that field is ``str | None`` today (matches the pattern).
+    # before persistence.
     company = Company(
         user_id=user_id,
         name=request.name,
@@ -112,9 +113,8 @@ async def create_company(
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        # The unique index is on (user_id, lower(primary_domain)). Any other
-        # IntegrityError shouldn't reach here for a single-row create with
-        # only allowlisted fields, so surface it as a domain collision.
+        if not _is_domain_unique_violation(exc):
+            raise
         raise DuplicatePrimaryDomainError(
             f"A company with primary_domain={request.primary_domain!r} already exists.",
         ) from exc
@@ -151,6 +151,8 @@ async def update_company(
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
+        if not _is_domain_unique_violation(exc):
+            raise
         raise DuplicatePrimaryDomainError(
             f"A company with primary_domain={updates.get('primary_domain')!r} already exists.",
         ) from exc
@@ -201,10 +203,12 @@ async def delete_company(
 
 def _is_applications_fk_violation(exc: IntegrityError) -> bool:
     """True iff ``exc`` is the ``applications.company_id`` foreign-key violation."""
-    # SQLAlchemy's asyncpg adapter wraps the driver error; the original
-    # asyncpg exception (carrying ``constraint_name``) is its ``__cause__``.
-    driver_error = getattr(exc.orig, "__cause__", None) or exc.orig
-    return getattr(driver_error, "constraint_name", None) == APPLICATIONS_COMPANY_FK_NAME
+    return violated_constraint_name(exc) == APPLICATIONS_COMPANY_FK_NAME
+
+
+def _is_domain_unique_violation(exc: IntegrityError) -> bool:
+    """True iff ``exc`` is the per-user ``primary_domain`` uniqueness violation."""
+    return violated_constraint_name(exc) == COMPANY_USER_DOMAIN_UNIQUE_NAME
 
 
 async def get_company_research(
