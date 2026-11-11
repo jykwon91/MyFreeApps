@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { showError, extractErrorMessage } from "@platform/ui";
 import { useLazyGetDocumentDownloadUrlQuery } from "@myjobhunter/api-client/store/documentsApi";
+import { documentDownloadUrl } from "@myjobhunter/api-client/utils/documentDownloadUrl";
+import { DOCUMENT_DOWNLOAD_MESSAGES as MESSAGES } from "@/constants/document-download-messages";
 
 export interface UseDocumentDownloadResult {
   /** Call from a click handler — must run inside the user gesture. */
@@ -14,8 +16,9 @@ export interface UseDocumentDownloadResult {
  *
  * A blank tab is opened synchronously (while the click's user activation is
  * still live, so popup blockers allow it) and navigated to the URL once a
- * fresh one is fetched. The tab is closed again if the fetch fails. The
- * opener link is severed so the file host can't reach back into the app.
+ * fresh one is fetched. The tab is closed again if the fetch fails or the
+ * link isn't http(s). The opener link is severed so the file host can't
+ * reach back into the app.
  */
 export function useDocumentDownload(documentId: string): UseDocumentDownloadResult {
   const [fetchUrl] = useLazyGetDocumentDownloadUrlQuery();
@@ -31,7 +34,12 @@ export function useDocumentDownload(documentId: string): UseDocumentDownloadResu
     if (win) win.opener = null;
 
     try {
-      const { url } = await fetchUrl(documentId).unwrap();
+      const url = documentDownloadUrl(await fetchUrl(documentId).unwrap());
+      if (!url) {
+        win?.close();
+        showError(MESSAGES.unsafeLink);
+        return;
+      }
       if (win) {
         win.location.href = url;
       } else {
@@ -41,7 +49,7 @@ export function useDocumentDownload(documentId: string): UseDocumentDownloadResu
       }
     } catch (err) {
       win?.close();
-      showError(`Couldn't download the file: ${extractErrorMessage(err)}`);
+      showError(MESSAGES.failed(extractErrorMessage(err)));
     } finally {
       inFlight.current = false;
       setIsDownloading(false);

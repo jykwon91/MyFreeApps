@@ -1,5 +1,5 @@
-/** Copy for the application's documents and the add/edit document sheet. */
-export const APPLICATION_DOCUMENT_MESSAGES = {
+/** Copy for a document card and the write, upload and edit sheets, wherever documents are listed. */
+export const DOCUMENT_MESSAGES = {
   title: "Documents",
   add: "Write a document",
   upload: "Upload a file",
@@ -9,9 +9,13 @@ export const APPLICATION_DOCUMENT_MESSAGES = {
   tryAgain: "Try again",
   loading: "Loading the documents",
   file: "File",
+  application: "Application",
+  openApplicationFor: (title: string) => `Open the application for ${title}`,
+  opensApplication: "Opens the application this document is for",
   open: "Open",
   opening: "Opening…",
   couldntOpen: "I couldn't open that file. Want to try again?",
+  unsafeLink: "I couldn't open the file: its download link wasn't a web address.",
   edit: "Edit",
   delete: "Delete",
   deleting: "Deleting…",

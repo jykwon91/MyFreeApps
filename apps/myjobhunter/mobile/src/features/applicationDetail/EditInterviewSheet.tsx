@@ -9,7 +9,7 @@ import { APPLICATION_EVENT_MESSAGES as MESSAGES } from "../../constants/applicat
 import { writeFailure } from "../../lib/writeFailure";
 import type { EditInterviewSheetProps } from "../../types/EditInterviewSheetProps";
 import InterviewDetailsFields from "./InterviewDetailsFields";
-import SheetButtons from "./SheetButtons";
+import SheetButtons from "../../components/forms/SheetButtons";
 import { useEventForm } from "./useEventForm";
 
 /** An interview's details and note are the only parts of an event that can change afterwards. */

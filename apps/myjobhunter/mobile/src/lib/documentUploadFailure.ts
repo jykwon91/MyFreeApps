@@ -1,6 +1,6 @@
 import type { DocumentUploadProblem } from "@myjobhunter/api-client/types/document/document-upload-problem";
 import { uploadRejection } from "@myjobhunter/api-client/utils/uploadRejection";
-import { APPLICATION_DOCUMENT_MESSAGES as MESSAGES } from "../constants/applicationDocuments";
+import { DOCUMENT_MESSAGES as MESSAGES } from "../constants/documents";
 
 const PROBLEM_MESSAGES: Record<DocumentUploadProblem, string> = {
   type: MESSAGES.badType,

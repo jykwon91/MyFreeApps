@@ -10,7 +10,7 @@ import { FormField, FormSheet, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { COMPANY_MESSAGES as MESSAGES } from "../../constants/companies";
 import type { AddCompanySheetProps } from "../../types/AddCompanySheetProps";
-import SheetButtons from "../applicationDetail/SheetButtons";
+import SheetButtons from "../../components/forms/SheetButtons";
 
 /**
  * The website's Add company dialog: name, domain, industry and HQ. Problems show under their

@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Edit2, ExternalLink, Trash2 } from "lucide-react";
-import { Badge, EmptyState, Skeleton, showError, showSuccess, extractErrorMessage, formatFileSize } from "@platform/ui";
-import DocumentKindBadge from "@/features/documents/DocumentKindBadge";
-import DocumentDownloadButton from "@/features/documents/DocumentDownloadButton";
+import { EmptyState, Skeleton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import DocumentRow from "@/features/documents/DocumentRow";
 import DocumentEditDialog from "@/features/documents/DocumentEditDialog";
 import type { Document } from "@myjobhunter/api-client/types/document/document";
-import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
-import { DOCUMENT_KIND_OPTIONS } from "@myjobhunter/api-client/constants/documentKindOptions";
+import type { DocumentKindFilter } from "@myjobhunter/api-client/types/document/document-kind-filter";
+import { DOCUMENT_KIND_FILTER_OPTIONS } from "@myjobhunter/api-client/constants/documentKindFilterOptions";
+import { documentsFilter } from "@myjobhunter/api-client/utils/documentsFilter";
 import {
   useListDocumentsQuery,
   useDeleteDocumentMutation,
@@ -20,76 +18,12 @@ export interface DocumentListProps {
   hideKindFilter?: boolean;
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-interface DocumentRowProps {
-  doc: Document;
-  onEdit: (doc: Document) => void;
-  onDelete: (doc: Document) => void;
-}
-
-function DocumentRow({ doc, onEdit, onDelete }: DocumentRowProps) {
-  return (
-    <div className="flex items-start justify-between gap-3 p-3 border rounded-lg hover:bg-muted/30 transition-colors">
-      <div className="flex-1 min-w-0 space-y-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <DocumentKindBadge kind={doc.kind as DocumentKind} />
-          {doc.filename ? (
-            <Badge label="File" color="gray" />
-          ) : null}
-        </div>
-        <p className="text-sm font-medium truncate">{doc.title}</p>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-          <span>{formatDate(doc.updated_at)}</span>
-          {doc.size_bytes ? <span>{formatFileSize(doc.size_bytes)}</span> : null}
-          {doc.application_id ? (
-            <Link
-              to={`/applications/${doc.application_id}`}
-              className="inline-flex items-center gap-1 hover:text-foreground"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ExternalLink size={10} />
-              Application
-            </Link>
-          ) : null}
-        </div>
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
-        {doc.has_file ? <DocumentDownloadButton documentId={doc.id} /> : null}
-        <button
-          onClick={() => onEdit(doc)}
-          title="Edit"
-          className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-        >
-          <Edit2 size={14} />
-        </button>
-        <button
-          onClick={() => onDelete(doc)}
-          title="Delete"
-          className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 size={14} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function DocumentList({ applicationId, hideKindFilter }: DocumentListProps) {
-  const [kindFilter, setKindFilter] = useState<string>("");
+  const [kindFilter, setKindFilter] = useState<DocumentKindFilter>("all");
   const [editingDoc, setEditingDoc] = useState<Document | null>(null);
   const [deleteDocument] = useDeleteDocumentMutation();
 
-  const { data, isLoading, isError } = useListDocumentsQuery({
-    application_id: applicationId,
-    kind: kindFilter || undefined,
-  });
+  const { data, isLoading, isError } = useListDocumentsQuery(documentsFilter(kindFilter, applicationId));
 
   const documents = data?.items ?? [];
 
@@ -127,11 +61,10 @@ export default function DocumentList({ applicationId, hideKindFilter }: Document
         <div className="flex items-center gap-2">
           <select
             value={kindFilter}
-            onChange={(e) => setKindFilter(e.target.value)}
+            onChange={(e) => setKindFilter(e.target.value as DocumentKindFilter)}
             className="text-sm border rounded-md px-2 py-1 bg-background"
           >
-            <option value="">All types</option>
-            {DOCUMENT_KIND_OPTIONS.map(({ value, label }) => (
+            {DOCUMENT_KIND_FILTER_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value}>
                 {label}
               </option>

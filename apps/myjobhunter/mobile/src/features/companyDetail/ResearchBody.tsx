@@ -2,7 +2,7 @@ import { researchSentimentLabel, researchSentimentTone } from "@myjobhunter/api-
 import { Chip, LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { COMPANY_RESEARCH_MESSAGES as MESSAGES } from "../../constants/companyResearch";
-import { formatShortDate } from "../../lib/formatShortDate";
+import { formatShortDate } from "@myjobhunter/api-client/utils/formatShortDate";
 import type { ResearchBodyProps } from "../../types/ResearchBodyProps";
 import ResearchFailed from "./ResearchFailed";
 import ResearchReady from "./ResearchReady";

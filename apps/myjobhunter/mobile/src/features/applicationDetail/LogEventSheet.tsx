@@ -9,10 +9,10 @@ import { APPLICATION_EVENT_MESSAGES as MESSAGES } from "../../constants/applicat
 import { LOGGABLE_EVENT_OPTIONS } from "../../constants/eventOptions";
 import { writeFailure } from "../../lib/writeFailure";
 import type { LogEventSheetProps } from "../../types/LogEventSheetProps";
-import ChoiceGroup from "./ChoiceGroup";
+import ChoiceGroup from "../../components/forms/ChoiceGroup";
 import DateTimeField from "./DateTimeField";
 import InterviewDetailsFields from "./InterviewDetailsFields";
-import SheetButtons from "./SheetButtons";
+import SheetButtons from "../../components/forms/SheetButtons";
 import { useEventForm } from "./useEventForm";
 
 /** Any event the website can log, with interview details for an interview. Opens on now. */

@@ -10,15 +10,15 @@ import { formatFileSize } from "@platform/core/utils/fileSize";
 import { filePart, FormField, FormSheet, LoadingButton, useTheme, useToast, type FileForUpload } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { APPLICATION_DOCUMENT_MESSAGES as MESSAGES } from "../../constants/applicationDocuments";
+import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
 import { documentUploadFailure } from "../../lib/documentUploadFailure";
 import { pickDocumentFile } from "../../lib/pickDocumentFile";
 import type { DocumentUploadSheetProps } from "../../types/DocumentUploadSheetProps";
-import ChoiceGroup from "./ChoiceGroup";
-import FieldError from "./FieldError";
-import SheetButtons from "./SheetButtons";
+import ChoiceGroup from "../../components/forms/ChoiceGroup";
+import FieldError from "../../components/forms/FieldError";
+import SheetButtons from "../../components/forms/SheetButtons";
 
-/** The website's file upload: a PDF, DOCX or TXT up to 25 MB, with a title and type, for this application. */
+/** The website's file upload: a PDF, DOCX or TXT up to 25 MB, with a title and type, linked to the application when given. */
 export default function DocumentUploadSheet({ applicationId, onClose }: DocumentUploadSheetProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
@@ -60,7 +60,7 @@ export default function DocumentUploadSheet({ applicationId, onClose }: Document
     setFailure(null);
     const form = new FormData();
     // React Native's FormData sends a { uri, name, type } part, which its types call a string.
-    fillDocumentUploadForm<string>(form, { title: title.trim(), kind, application_id: applicationId, file: filePart(file) });
+    fillDocumentUploadForm<string>(form, { title: title.trim(), kind, application_id: applicationId ?? null, file: filePart(file) });
     try {
       await uploadDocument(form).unwrap();
       onClose();

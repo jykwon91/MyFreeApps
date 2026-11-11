@@ -203,6 +203,24 @@ describe("DocumentList", () => {
       expect(screen.getByRole("combobox")).toBeInTheDocument();
     });
 
+    it("asks the server for every type at first, then only the type picked", async () => {
+      const user = userEvent.setup();
+      mockUseListDocumentsQuery.mockReturnValue({
+        data: { items: [], total: 0 },
+        isLoading: false,
+        isError: false,
+      } as unknown as ReturnType<typeof useListDocumentsQuery>);
+
+      renderList({ applicationId: "app-1" });
+      expect(mockUseListDocumentsQuery).toHaveBeenLastCalledWith({ application_id: "app-1" });
+
+      await user.selectOptions(screen.getByRole("combobox"), "Job Description");
+      expect(mockUseListDocumentsQuery).toHaveBeenLastCalledWith({ application_id: "app-1", kind: "job_description" });
+
+      await user.selectOptions(screen.getByRole("combobox"), "All types");
+      expect(mockUseListDocumentsQuery).toHaveBeenLastCalledWith({ application_id: "app-1" });
+    });
+
     it("hides the kind filter when hideKindFilter is true", () => {
       mockUseListDocumentsQuery.mockReturnValue({
         data: { items: [], total: 0 },
@@ -360,6 +378,21 @@ describe("DocumentList", () => {
       await waitFor(() => expect(button).toBeEnabled());
       expect(trigger).toHaveBeenCalledTimes(1);
       expect(openSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("closes the blank window and opens nothing when the link isn't http(s)", async () => {
+      const user = userEvent.setup();
+      const { popup } = stubPopup();
+      mockTrigger(() => Promise.resolve({ url: "javascript:alert(1)" }));
+      mockFileDoc();
+
+      renderList();
+      await user.click(screen.getByTitle("Download file"));
+
+      await waitFor(() => expect(mockShowError).toHaveBeenCalledTimes(1));
+      expect(mockShowError.mock.calls[0][0]).toMatch(/couldn't download/i);
+      expect(popup.close).toHaveBeenCalledTimes(1);
+      expect(popup.location.href).toBe("");
     });
 
     it("closes the blank window and shows an error toast when the fetch fails", async () => {

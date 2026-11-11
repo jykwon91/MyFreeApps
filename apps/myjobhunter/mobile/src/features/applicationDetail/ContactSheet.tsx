@@ -15,8 +15,8 @@ import { CONTACT_ROLE_CHOICES } from "../../constants/contactRoleChoices";
 import { contactFieldMessage } from "../../lib/contactFieldMessage";
 import { writeFailure } from "../../lib/writeFailure";
 import type { ContactSheetProps } from "../../types/ContactSheetProps";
-import ChoiceGroup from "./ChoiceGroup";
-import SheetButtons from "./SheetButtons";
+import ChoiceGroup from "../../components/forms/ChoiceGroup";
+import SheetButtons from "../../components/forms/SheetButtons";
 
 /**
  * Adds a person to this application. Problems show under their fields, the server's 422 reasons
