@@ -142,6 +142,11 @@ async def test_navigate_cache_hit_skips_claude_call() -> None:
         # silently went stale when session_service was split in #478.)
         patch.object(session_turn_service, "_load_active", new=fake_load_active),
         patch.object(
+            session_turn_service,
+            "_load_usable_cached_entry",
+            new=AsyncMock(return_value=cached_session.proposal_cache["1"]),
+        ),
+        patch.object(
             session_service.session_repo,
             "set_target_index",
             new=fake_set_target_index,
@@ -193,14 +198,14 @@ async def test_navigate_cache_miss_falls_through_to_generation() -> None:
     with (
         patch.object(session_turn_service, "_load_active", new=fake_load_active),
         patch.object(
-            session_service.session_repo,
-            "set_target_index",
-            new=fake_set_target_index,
+            session_turn_service,
+            "_load_usable_cached_entry",
+            new=AsyncMock(return_value=None),  # cache miss
         ),
         patch.object(
             session_service.session_repo,
-            "hydrate_pending_from_cache",
-            new=AsyncMock(return_value=None),  # cache miss
+            "set_target_index",
+            new=fake_set_target_index,
         ),
         patch.object(session_turn_service, "_generate_next_proposal", new=generate_mock),
         patch.object(
@@ -217,6 +222,7 @@ async def test_navigate_cache_miss_falls_through_to_generation() -> None:
         )
 
     generate_mock.assert_awaited_once()
+    assert generate_mock.await_args.kwargs["use_cache"] is False
 
 
 # ---------------------------------------------------------------------------

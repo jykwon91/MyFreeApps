@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.resume_refinement.session import ResumeRefinementSession
 from app.repositories.resume_refinement import session_repo, turn_repo
 from app.services.resume_refinement import rewrite_service
+from app.services.resume_refinement.cached_proposal import is_cached_proposal_usable
 from app.services.resume_refinement.errors import (
     SessionNotActive,
     SessionNotFound,
@@ -64,6 +65,36 @@ async def _load_active(
     return session
 
 
+def _context_entry(turn: Any) -> dict[str, Any] | None:
+    """The ``prior_context`` item a turn contributes, or None if it carries
+    no signal. The single inclusion rule behind both ``_build_prior_context``
+    and ``_prior_context_marker`` — keep them in lockstep by editing only here.
+    """
+    role = turn.role
+    section = turn.target_section
+    if role == "ai_critique":
+        text = (turn.rationale or "").strip()
+        if text:
+            return {"kind": "ai_critique", "section": None, "text": text}
+    elif role == "ai_proposal":
+        text = (turn.clarifying_question or "").strip()
+        if text:
+            return {
+                "kind": "ai_clarification_question",
+                "section": section,
+                "text": text,
+            }
+    elif role == "user_custom":
+        text = (turn.user_text or "").strip()
+        if text:
+            return {"kind": "user_custom_rewrite", "section": section, "text": text}
+    elif role == "user_request_alternative":
+        text = (turn.user_text or "").strip()
+        if text:
+            return {"kind": "user_hint", "section": section, "text": text}
+    return None
+
+
 def _build_prior_context(turns: list[Any]) -> list[dict[str, Any]]:
     """Distill turn rows into the lightweight ``prior_context`` shape the
     rewrite service feeds into Claude's user content.
@@ -80,40 +111,24 @@ def _build_prior_context(turns: list[Any]) -> list[dict[str, Any]]:
     (no info), and ``session_complete`` (terminal). Keeping the list
     narrow controls token cost — full transcripts grow linearly with
     target count and would cost ~2x by the end of a 14-target session.
+
+    The same inclusion rule drives ``_prior_context_marker``: a cached
+    proposal is only reusable while no new turn has joined this list, so
+    changing what is included here changes when the cache is invalidated.
     """
-    out: list[dict[str, Any]] = []
-    for turn in turns:
-        role = turn.role
-        section = turn.target_section
-        if role == "ai_critique":
-            text = (turn.rationale or "").strip()
-            if text:
-                out.append({"kind": "ai_critique", "section": None, "text": text})
-        elif role == "ai_proposal":
-            text = (turn.clarifying_question or "").strip()
-            if text:
-                out.append({
-                    "kind": "ai_clarification_question",
-                    "section": section,
-                    "text": text,
-                })
-        elif role == "user_custom":
-            text = (turn.user_text or "").strip()
-            if text:
-                out.append({
-                    "kind": "user_custom_rewrite",
-                    "section": section,
-                    "text": text,
-                })
-        elif role == "user_request_alternative":
-            text = (turn.user_text or "").strip()
-            if text:
-                out.append({
-                    "kind": "user_hint",
-                    "section": section,
-                    "text": text,
-                })
-    return out
+    entries = (_context_entry(turn) for turn in turns)
+    return [entry for entry in entries if entry is not None]
+
+
+def _prior_context_marker(turns: list[Any]) -> int:
+    """Index of the newest turn that ``_build_prior_context`` includes
+    (-1 when none). Stored on each cache entry; an entry generated under
+    an older marker saw less context than a fresh Claude call would.
+    """
+    return max(
+        (turn.turn_index for turn in turns if _context_entry(turn) is not None),
+        default=-1,
+    )
 
 
 def _current_target(session: ResumeRefinementSession) -> dict | None:
@@ -123,19 +138,52 @@ def _current_target(session: ResumeRefinementSession) -> dict | None:
     return targets[session.target_index]
 
 
+def _usable_cached_entry(
+    session: ResumeRefinementSession, turns: list[Any],
+) -> dict[str, Any] | None:
+    """The cached entry for the session's current target, if still valid."""
+    target = _current_target(session)
+    entry = (session.proposal_cache or {}).get(str(session.target_index))
+    if target is None or not is_cached_proposal_usable(
+        entry,
+        target=target,
+        current_draft=session.current_draft,
+        context_marker=_prior_context_marker(turns),
+        confirmed_facts_count=len(session.confirmed_facts or []),
+    ):
+        return None
+    return entry
+
+
+async def _load_usable_cached_entry(
+    db: AsyncSession, session: ResumeRefinementSession,
+) -> dict[str, Any] | None:
+    """``_usable_cached_entry`` for callers that haven't loaded the turns
+    (navigate, jump-to-target) — they hydrate from the cache themselves."""
+    turns = await turn_repo.list_for_session(db, session.id)
+    return _usable_cached_entry(session, turns)
+
+
 async def _generate_next_proposal(
     db: AsyncSession,
     session: ResumeRefinementSession,
     *,
     user_id: uuid.UUID,
     hint: str | None,
+    use_cache: bool,
 ) -> ResumeRefinementSession:
-    """If a target remains, ask Claude for a proposal. Otherwise mark complete-ready.
+    """If a target remains, produce a proposal. Otherwise mark complete-ready.
 
     "Complete-ready" means the session has consumed all critique
     targets but the user hasn't explicitly clicked Done. We don't
     auto-complete — the user always presses the button. We just clear
     pending state.
+
+    With ``use_cache=True`` a still-valid ``proposal_cache`` entry for the
+    target (prefetched at session start) is served with no Claude call;
+    a miss or stale entry generates as usual. Pass ``use_cache=False``
+    when the caller wants a fresh generation regardless
+    (``request_alternative``) or has already ruled the cache out.
     """
     target = _current_target(session)
     if target is None:
@@ -143,6 +191,14 @@ async def _generate_next_proposal(
         return await session_repo.clear_pending_state(db, session)
 
     prior_turns = await turn_repo.list_for_session(db, session.id)
+
+    if use_cache:
+        entry = _usable_cached_entry(session, prior_turns)
+        if entry is not None:
+            return await _serve_cached_proposal(
+                db, session, target, entry, prior_turns,
+            )
+
     prior_context = _build_prior_context(prior_turns)
 
     try:
@@ -191,22 +247,7 @@ async def _generate_next_proposal(
             db, session, target_index=session.target_index,
         )
 
-    # Cache the proposal so navigating back to this target_index later
-    # is instant. ``request_alternative`` invalidates this entry before
-    # asking us to regenerate.
-    session = await session_repo.cache_proposal(
-        db,
-        session,
-        target_index=session.target_index,
-        target_section=session.pending_target_section,
-        proposal=session.pending_proposal,
-        rationale=session.pending_rationale,
-        clarifying_question=session.pending_clarifying_question,
-        guard_flagged=session.pending_guard_flagged,
-        flagged_proposal=session.pending_flagged_proposal,
-    )
-
-    await turn_repo.append(
+    ai_turn = await turn_repo.append(
         db,
         session_id=session.id,
         turn_index=session.turn_count,
@@ -219,6 +260,56 @@ async def _generate_next_proposal(
         tokens_out=rewrite["output_tokens"],
     )
 
+    # Cache the proposal so navigating back to this target_index later
+    # is instant. ``request_alternative`` invalidates this entry before
+    # asking us to regenerate. Written after the turn so the marker
+    # already counts this proposal's own clarify question — otherwise the
+    # entry would look stale the moment the user navigated back to it.
+    return await session_repo.cache_proposal(
+        db,
+        session,
+        target_index=session.target_index,
+        target_section=session.pending_target_section,
+        target_text=target.get("current_text"),
+        context_marker=_prior_context_marker([*prior_turns, ai_turn]),
+        proposal=session.pending_proposal,
+        rationale=session.pending_rationale,
+        clarifying_question=session.pending_clarifying_question,
+        guard_flagged=session.pending_guard_flagged,
+        flagged_proposal=session.pending_flagged_proposal,
+    )
+
+
+async def _serve_cached_proposal(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+    target: dict[str, Any],
+    entry: dict[str, Any],
+    prior_turns: list[Any],
+) -> ResumeRefinementSession:
+    """Serve a valid cache ``entry`` as the next proposal, recording the
+    same ``ai_proposal`` turn a generation would — with zero tokens, since
+    the spend was recorded when the entry was made.
+    """
+    session = await session_repo.apply_cached_proposal(
+        db, session, target_index=session.target_index, entry=entry,
+    )
+    ai_turn = await turn_repo.append(
+        db,
+        session_id=session.id,
+        turn_index=session.turn_count,
+        role="ai_proposal",
+        target_section=target.get("section"),
+        proposed_text=session.pending_proposal,
+        rationale=session.pending_rationale,
+        clarifying_question=session.pending_clarifying_question,
+    )
+    marker = _prior_context_marker([*prior_turns, ai_turn])
+    if marker != entry["context_marker"]:
+        # The turn just appended carries this entry's own clarify question.
+        session = await session_repo.update_cached_context_marker(
+            db, session, target_index=session.target_index, context_marker=marker,
+        )
     return session
 
 
@@ -291,7 +382,7 @@ async def _prefetch_all_proposals(
     # mutation is not safe across concurrent transactions on the same
     # row. Each write is fast (single round-trip) so the sequential
     # cost is negligible.
-    flag_counts = dict(session.guard_flag_counts or {})
+    context_marker = _prior_context_marker(prior_turns)
     for entry in results:
         if entry is None:
             continue
@@ -311,24 +402,24 @@ async def _prefetch_all_proposals(
             session.total_cost_usd or Decimal("0")
         ) + rewrite["cost_usd"]
 
-        if flagged:
-            key = str(entry["target_index"])
-            flag_counts[key] = int(flag_counts.get(key, 0)) + 1
-
+        # Flags are deliberately NOT counted here: the user hasn't seen
+        # this proposal yet. The counter moves when a flagged entry is
+        # first shown (cache hydration) or when a flagged proposal is
+        # generated on demand.
         session = await session_repo.cache_proposal(
             db,
             session,
             target_index=entry["target_index"],
             target_section=target.get("section"),
+            target_text=target.get("current_text"),
+            context_marker=context_marker,
             proposal=rewrite["rewritten_text"] if is_proposal else None,
             rationale=rewrite["rationale"] if is_proposal else None,
             clarifying_question=rewrite["question"] if is_clarify else None,
             guard_flagged=flagged or None,
             flagged_proposal=rewrite["rewritten_text"] if flagged else None,
         )
-    return await session_repo.persist_prefetch_results(
-        db, session, guard_flag_counts=flag_counts,
-    )
+    return session
 
 
 def _apply_rewrite(

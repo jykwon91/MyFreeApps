@@ -179,7 +179,7 @@ async def prepare_session(
         session = hydrated
     else:
         session = await _generate_next_proposal(
-            db, session, user_id=user_id, hint=None,
+            db, session, user_id=user_id, hint=None, use_cache=False,
         )
 
     # Unlock gate: never flip to active without real content for the
