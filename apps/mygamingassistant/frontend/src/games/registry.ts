@@ -141,6 +141,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Every spell each class can train in Forever: ranks, learn levels, trainer costs, tooltips and what changed from Classic.",
       },
       {
+        path: "/wow-forever/trainers",
+        title: "Trainers",
+        iconName: "Users",
+        description: "What every class and profession unlocks at each level, and where its trainers are for your faction.",
+      },
+      {
         path: "/wow-forever/downrank",
         title: "Downrank calculator",
         iconName: "Gauge",

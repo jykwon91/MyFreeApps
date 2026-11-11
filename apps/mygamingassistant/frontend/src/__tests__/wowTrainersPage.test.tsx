@@ -1,0 +1,71 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import WowTrainersPage from "@/games/wow-forever/pages/WowTrainersPage";
+import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
+
+function renderPage(url: string) {
+  return render(
+    <MemoryRouter initialEntries={[url]}>
+      <Routes>
+        <Route path="/wow-forever/trainers" element={<WowTrainersPage />} />
+        <Route path="/wow-forever/trainers/:subject" element={<WowTrainersPage />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+function savePlayer(faction: "A" | "H", level: number | null) {
+  window.localStorage.setItem(PLAYER_SETTINGS_STORAGE_KEY, JSON.stringify({ faction, classId: "warlock", zoneId: null, level, position: null }));
+}
+
+describe("Trainers page", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("asks you to pick when nothing is picked", () => {
+    renderPage("/wow-forever/trainers");
+    expect(screen.getByRole("heading", { level: 1, name: "Trainers" })).toBeInTheDocument();
+    expect(screen.getByText("Pick a class or profession to see what it unlocks and where to train it.")).toBeInTheDocument();
+    expect(within(screen.getByTestId("trainers-picker")).getByRole("link", { name: "Warlock" })).toHaveAttribute("href", "/wow-forever/trainers/warlock");
+  });
+
+  it("says so for an unknown class or profession", () => {
+    renderPage("/wow-forever/trainers/bard");
+    expect(screen.getByText(`There's no class or profession called "bard". Pick one above.`)).toBeInTheDocument();
+  });
+
+  it("a class: levels below yours fold away, the next one is marked, your faction's trainers are listed", async () => {
+    const user = userEvent.setup();
+    savePlayer("H", 6);
+    renderPage("/wow-forever/trainers/warlock");
+    expect(screen.getByTestId("trainers-skeleton")).toBeInTheDocument();
+    const levels = await screen.findAllByTestId("trainers-level");
+    expect(within(levels[0]).getByText("Next")).toBeInTheDocument();
+    expect(within(levels[0]).getByRole("list", { name: "Level 6" })).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Level 4" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Show levels 1–4 (below yours)" }));
+    expect(screen.getByRole("list", { name: "Level 4" })).toBeInTheDocument();
+
+    const trainers = screen.getByRole("list", { name: "Warlock trainers" });
+    await user.click(within(trainers.parentElement as HTMLElement).getByRole("button", { name: /^Show all \d+ trainers$/ }));
+    expect(within(trainers).getByText("Dhugru Gorelust", { exact: false })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Demon trainers" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Spell details and costs" })).toHaveAttribute("href", "/wow-forever/spellbook/warlock");
+  });
+
+  it("a Horde Paladin is told Forever's trainers aren't in the data yet", async () => {
+    savePlayer("H", null);
+    renderPage("/wow-forever/trainers/paladin");
+    expect(await screen.findByText(/Forever added Horde Paladin trainers/)).toBeInTheDocument();
+  });
+
+  it("a profession: the rank ladder, your faction's trainers and a link to its guide", async () => {
+    savePlayer("A", null);
+    renderPage("/wow-forever/trainers/tailoring");
+    const ranks = await screen.findAllByTestId("trainers-rank");
+    expect(ranks.map((r) => within(r).getByRole("heading", { level: 3 }).textContent)).toEqual(["Apprentice", "Journeyman", "Expert", "Artisan"]);
+    expect(screen.getByRole("heading", { level: 3, name: "Tailoring trainers" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Tailoring guide: fastest route to 300" })).toHaveAttribute("href", "/wow-forever/professions?p=tailoring");
+  });
+});
