@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/library`, `/wow-forever/legacy`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/spellbook`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/library`, `/wow-forever/legacy`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/spellbook`, `/wow-forever/trainers`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -893,6 +893,26 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `lib/spellbook/loadSpellbookClass.ts`). Spell icons go into `wowIcons.json` `files`
   (publish them with `wow_icons.publish`). Tests: `tests/test_wow_spellbook_generator.py`,
   `src/__tests__/wowSpellbook.test.ts`, `e2e/wow-forever-spellbook.spec.ts`.
+
+#### Trainers (`/wow-forever/trainers`, `/wow-forever/trainers/:subject`)
+
+- `pages/WowTrainersPage.tsx`: one grouped picker (Classes, then the Professions page's
+  groups; `data/trainers/trainerSubjects.ts`), faction + "Your level" (`usePlayerSettings`),
+  then the class or profession view (`components/trainers/`). A slug is a class id or a
+  `GuideProfession` (`firstaid`).
+- Class: "What you can learn at each level", built from the spellbook data
+  (`lib/trainers/levelUnlocks.ts`, talent ranks left out) with the levels below yours folded
+  away and the next one marked; then "Where to train": the class trainers and, for hunters
+  and warlocks, pet / demon trainers (`CLASS_EXTRA_TRAINERS`). No costs: Classic costs are
+  wrong for Forever. Links to the spellbook for spell details.
+- Profession: each rank's skill, level and cap (`lib/trainers/professionRankSteps.ts`:
+  crafting from `CRAFTING_RANKS`, gathering from `GATHERING_RANKS`, Cooking / Fishing from
+  their route milestones), then every trainer for your faction, and a link to its guide.
+- Trainer NPCs are the World Map's `classicServices.json` (cmangos Classic,
+  `lib/trainers/serviceTrainers.ts`, capitals first). Forever added trainers Classic doesn't
+  have (Horde Paladin, Alliance Shaman, …): an empty list says so, never invents one.
+  Tests: `src/__tests__/wowTrainers.test.ts`, `wowTrainersPage.test.tsx`,
+  `e2e/wow-forever-trainers.spec.ts`.
 
 #### Downrank calculator (`/wow-forever/downrank`)
 

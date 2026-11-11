@@ -5,3 +5,8 @@ export const PLAYER_FACTION_OPTIONS: readonly { id: PlayerFaction; label: string
   { id: FACTION.alliance, label: "Alliance" },
   { id: FACTION.horde, label: "Horde" },
 ];
+
+/** "Alliance" / "Horde" for a player faction. */
+export function playerFactionLabel(faction: PlayerFaction): string {
+  return PLAYER_FACTION_OPTIONS.find((o) => o.id === faction)?.label ?? faction;
+}

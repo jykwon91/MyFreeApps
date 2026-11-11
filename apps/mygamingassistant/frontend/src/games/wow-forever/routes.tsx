@@ -26,6 +26,7 @@ const WowLegacyPage = lazy(() => import("@/games/wow-forever/pages/WowLegacyPage
 const WowTalentsPage = lazy(() => import("@/games/wow-forever/pages/WowTalentsPage"));
 const WowRacesPage = lazy(() => import("@/games/wow-forever/pages/WowRacesPage"));
 const WowSpellbookPage = lazy(() => import("@/games/wow-forever/pages/WowSpellbookPage"));
+const WowTrainersPage = lazy(() => import("@/games/wow-forever/pages/WowTrainersPage"));
 const WowDownrankPage = lazy(() => import("@/games/wow-forever/pages/WowDownrankPage"));
 const WowChangesPage = lazy(() => import("@/games/wow-forever/pages/WowChangesPage"));
 const WowServerStatusPage = lazy(() => import("@/games/wow-forever/pages/WowServerStatusPage"));
@@ -97,6 +98,8 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/classes/:class", element: withSuggestFooter(<WowClassPage />, "class_guides") },
   { path: "/wow-forever/spellbook", element: withSuggestFooter(<WowSpellbookPage />, "class_guides") },
   { path: "/wow-forever/spellbook/:class", element: withSuggestFooter(<WowSpellbookPage />, "class_guides") },
+  { path: "/wow-forever/trainers", element: withSuggestFooter(<WowTrainersPage />, "class_guides") },
+  { path: "/wow-forever/trainers/:subject", element: withSuggestFooter(<WowTrainersPage />, "class_guides") },
   { path: "/wow-forever/downrank", element: withSuggestFooter(<WowDownrankPage />, "class_guides") },
   { path: "/wow-forever/changes", element: withSuggestFooter(<WowChangesPage />, "class_guides") },
   { path: "/wow-forever/server-status", element: withSuggestFooter(<WowServerStatusPage />, "site_app") },

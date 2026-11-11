@@ -1,0 +1,19 @@
+import type { LevelUnlock } from "@/games/wow-forever/types/trainers/levelUnlock";
+
+const TAG = "rounded border px-1.5 py-0.5 text-xs text-muted-foreground";
+
+/** "Fireball (Rank 3)" with how you learn it when it isn't the trainer, and who can. */
+export default function LevelUnlockItem({ unlock }: { unlock: LevelUnlock }) {
+  return (
+    <li className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+      <span>
+        <span className="font-medium">{unlock.name}</span>
+        {unlock.rank ? <span className="text-muted-foreground"> ({unlock.rank})</span> : null}
+      </span>
+      {unlock.learnedBy === "quest" ? <span className={TAG}>Quest</span> : null}
+      {unlock.learnedBy === "book" ? <span className={TAG}>Book</span> : null}
+      {unlock.races.length ? <span className={TAG}>{unlock.races.join(", ")} only</span> : null}
+      {unlock.levelClassic ? <span className={TAG}>Classic level</span> : null}
+    </li>
+  );
+}

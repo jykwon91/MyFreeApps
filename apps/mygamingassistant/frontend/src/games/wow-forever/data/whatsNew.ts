@@ -12,6 +12,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
  */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
+    date: "2026-11-11",
+    title: "Trainers: what unlocks when",
+    summary:
+      "Pick a class to see every spell you can learn at each level, with your next training visit marked, or a profession to see each rank's skill and level needs, plus where every trainer for your faction stands.",
+    to: "/wow-forever/trainers",
+  },
+  {
     date: "2026-11-09",
     title: "Addon: prices on chat links",
     summary:

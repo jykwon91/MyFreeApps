@@ -7,7 +7,8 @@
 import { ASK_COPY } from "@/games/wow-forever/data/ask/askCopy";
 import { currentEntryIndex, expectedCrafts } from "@/games/wow-forever/crafting/craftRoute";
 import { learnText } from "@/games/wow-forever/crafting/learnText";
-import type { FactionText, RouteStep } from "@/games/wow-forever/data/professions/professionTypes";
+import type { RouteStep } from "@/games/wow-forever/data/professions/professionTypes";
+import { forFaction } from "@/games/wow-forever/lib/forFaction";
 import { routeStepEnd } from "@/games/wow-forever/lib/professions/routeStepEnd";
 import type { AskGuideRow } from "@/games/wow-forever/types/ask/askGuideRow";
 import type { AskProfessionRoute } from "@/games/wow-forever/types/ask/askProfessionRoute";
@@ -19,10 +20,6 @@ import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
 function badge(confidence: "confirmed" | "unconfirmed"): ProvenanceTag | null {
   return confidence === "unconfirmed" ? { provenance: PROVENANCE.unconfirmed } : null;
-}
-
-function forFaction(text: FactionText, faction: PlayerFaction): string {
-  return typeof text === "string" ? text : text[faction];
 }
 
 function craftingRow(entry: ResolvedRouteEntry, skill: number | null, label: string): AskGuideRow {
