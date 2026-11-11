@@ -4,3 +4,6 @@
 vite.config.js
 vite.config.d.ts
 postcss.config.d.ts
+
+# Built MGA Prices updater (npm run build:prices-updater).
+dist-updater/
