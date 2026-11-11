@@ -8,13 +8,12 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Discover from "@/pages/Discover";
 
 // ---------------------------------------------------------------------------
-// Mock RTK Query hooks — only the two query hooks are used directly by
+// Mock RTK Query hooks — only the sources query hook is used directly by
 // Discover.tsx; mutations live in sub-components that are mocked below.
 // ---------------------------------------------------------------------------
 
 vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useListDiscoverySourcesQuery: vi.fn(),
-  useListDiscoveredJobsQuery: vi.fn(),
 }));
 
 // Sub-components with their own RTK wiring are mocked so this test file
@@ -47,13 +46,9 @@ vi.mock("@platform/ui", async (importOriginal) => {
   };
 });
 
-import {
-  useListDiscoverySourcesQuery,
-  useListDiscoveredJobsQuery,
-} from "@myjobhunter/api-client/store/discoverApi";
+import { useListDiscoverySourcesQuery } from "@myjobhunter/api-client/store/discoverApi";
 
 const mockListSources = vi.mocked(useListDiscoverySourcesQuery);
-const mockListJobs = vi.mocked(useListDiscoveredJobsQuery);
 
 function renderDiscover(initialUrl = "/discover") {
   return render(
@@ -88,11 +83,6 @@ function stubQueries(opts: { hasSources?: boolean } = {}) {
     isLoading: false,
     isError: false,
   } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
-  mockListJobs.mockReturnValue({
-    data: { items: [], total: 0 },
-    isLoading: false,
-    isError: false,
-  } as unknown as ReturnType<typeof useListDiscoveredJobsQuery>);
 }
 
 describe("Discover page", () => {

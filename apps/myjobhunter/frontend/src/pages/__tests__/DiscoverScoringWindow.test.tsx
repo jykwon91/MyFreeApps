@@ -10,10 +10,11 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Discover from "@/pages/Discover";
 import { INBOX_POLL_INTERVAL_MS } from "@myjobhunter/api-client/constants/discoverScoring";
 import {
-  useListDiscoveredJobsQuery,
   useListDiscoverySourcesQuery,
   useRefreshDiscoverySourceMutation,
 } from "@myjobhunter/api-client/store/discoverApi";
+import { useDiscoveredJobsPages } from "@myjobhunter/api-client/hooks/useDiscoveredJobsPages";
+import type { DiscoveredJobsPagesState } from "@myjobhunter/api-client/types/discovery/discovered-jobs-pages-state";
 import type { DiscoveredJob } from "@myjobhunter/api-client/types/discovery/discovered-job";
 import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
 
@@ -21,7 +22,6 @@ const idleMutation = () => [vi.fn(), { isLoading: false }];
 
 vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useListDiscoverySourcesQuery: vi.fn(),
-  useListDiscoveredJobsQuery: vi.fn(),
   useRefreshDiscoverySourceMutation: vi.fn(),
   useDeactivateDiscoverySourceMutation: () => idleMutation(),
   useUpdateDiscoverySourceMutation: () => idleMutation(),
@@ -31,6 +31,8 @@ vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useUndoDismissDiscoveredJobMutation: () => idleMutation(),
   usePromoteDiscoveredJobMutation: () => idleMutation(),
 }));
+
+vi.mock("@myjobhunter/api-client/hooks/useDiscoveredJobsPages", () => ({ useDiscoveredJobsPages: vi.fn() }));
 
 vi.mock("@myjobhunter/api-client/store/profileApi", () => ({
   useGetProfileQuery: () => ({ data: undefined }),
@@ -92,7 +94,7 @@ const UNSCORED = {
 } as unknown as DiscoveredJob;
 
 const mockSources = vi.mocked(useListDiscoverySourcesQuery);
-const mockJobs = vi.mocked(useListDiscoveredJobsQuery);
+const mockJobs = vi.mocked(useDiscoveredJobsPages);
 const mockRefresh = vi.mocked(useRefreshDiscoverySourceMutation);
 const refresh = vi.fn();
 
@@ -111,7 +113,7 @@ function renderPage() {
 /** The polling interval the inbox last asked RTK Query for. */
 function lastPollingInterval(): number | undefined {
   const calls = mockJobs.mock.calls;
-  return calls[calls.length - 1]?.[1]?.pollingInterval;
+  return calls[calls.length - 1]?.[1];
 }
 
 describe("Discover page — a refresh and the inbox's scoring window", () => {
@@ -119,11 +121,17 @@ describe("Discover page — a refresh and the inbox's scoring window", () => {
     vi.clearAllMocks();
     mockSources.mockReturnValue({ data: [SOURCE], isLoading: false, isError: false } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
     mockJobs.mockReturnValue({
-      data: { items: [UNSCORED], total: 1, has_more: false, state: "inbox", scored_count: 0, total_count: 1 },
+      jobs: [UNSCORED],
+      total: 1,
+      scoredCount: 0,
+      totalCount: 1,
       isLoading: false,
-      isError: false,
-      isFetching: false,
-    } as unknown as ReturnType<typeof useListDiscoveredJobsQuery>);
+      isFiltering: false,
+      loadError: undefined,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isLoadMoreError: false,
+    } as unknown as DiscoveredJobsPagesState);
     mockRefresh.mockReturnValue([refresh, { isLoading: false }] as unknown as ReturnType<typeof useRefreshDiscoverySourceMutation>);
   });
 

@@ -4,6 +4,8 @@ export interface InfinitePagesQuery<Page> {
   data?: { pages: readonly Page[] };
   /** The store's pages for the current argument; undefined while a new argument loads or after it failed. */
   currentData?: { pages: readonly Page[] };
+  /** The argument this result is for; a queued load-more only applies while it is unchanged. */
+  originalArgs?: unknown;
   isLoading: boolean;
   isFetching: boolean;
   isError: boolean;

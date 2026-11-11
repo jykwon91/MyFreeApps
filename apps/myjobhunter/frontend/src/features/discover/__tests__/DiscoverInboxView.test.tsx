@@ -12,13 +12,13 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DiscoverInboxView from "@/features/discover/DiscoverInboxView";
 import type { DiscoveredJob } from "@myjobhunter/api-client/types/discovery/discovered-job";
-import type { DiscoveredJobListResponse } from "@myjobhunter/api-client/types/discovery/discovered-job-list-response";
 import { useGetProfileQuery } from "@myjobhunter/api-client/store/profileApi";
 import { useListSkillsQuery } from "@myjobhunter/api-client/store/skillsApi";
 import type { ScoringWindow } from "@myjobhunter/api-client/types/discovery/scoring-window";
 
+vi.mock("@myjobhunter/api-client/hooks/useDiscoveredJobsPages", () => ({ useDiscoveredJobsPages: vi.fn() }));
+
 vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
-  useListDiscoveredJobsQuery: vi.fn(),
   useListDiscoverySourcesQuery: vi.fn(),
 }));
 
@@ -30,17 +30,9 @@ vi.mock("@myjobhunter/api-client/store/skillsApi", () => ({
   useListSkillsQuery: vi.fn(() => ({ data: undefined })),
 }));
 
-vi.mock("@platform/ui", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   EmptyState: ({ heading }: { heading: string }) => <div>{heading}</div>,
-  // Minimal LoadingButton: render children (or loadingText while loading) and
-  // pass through data-testid / onClick. Strip variant/size so React doesn't
-  // warn about unknown DOM attributes.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  LoadingButton: ({ children, loadingText, isLoading, disabled, variant: _variant, size: _size, ...props }: any) => (
-    <button disabled={disabled || isLoading} {...props}>
-      {isLoading ? loadingText ?? children : children}
-    </button>
-  ),
 }));
 
 vi.mock("@/features/discover/DiscoveredJobsSkeleton", () => ({
@@ -63,12 +55,11 @@ vi.mock("@/features/discover/DiscoveredJobCard", () => ({
   },
 }));
 
-import {
-  useListDiscoveredJobsQuery,
-  useListDiscoverySourcesQuery,
-} from "@myjobhunter/api-client/store/discoverApi";
+import { useDiscoveredJobsPages } from "@myjobhunter/api-client/hooks/useDiscoveredJobsPages";
+import type { DiscoveredJobsPagesState } from "@myjobhunter/api-client/types/discovery/discovered-jobs-pages-state";
+import { useListDiscoverySourcesQuery } from "@myjobhunter/api-client/store/discoverApi";
 
-const mockListJobs = vi.mocked(useListDiscoveredJobsQuery);
+const mockListJobs = vi.mocked(useDiscoveredJobsPages);
 const mockListSources = vi.mocked(useListDiscoverySourcesQuery);
 
 function makeJob(overrides: Partial<DiscoveredJob> = {}): DiscoveredJob {
@@ -101,16 +92,22 @@ function makeJob(overrides: Partial<DiscoveredJob> = {}): DiscoveredJob {
   };
 }
 
-function makeResponse(
-  overrides: Partial<DiscoveredJobListResponse> = {},
-): DiscoveredJobListResponse {
+function makeResponse(overrides: Partial<DiscoveredJobsPagesState> = {}): DiscoveredJobsPagesState {
   return {
-    items: [makeJob()],
+    jobs: [makeJob()],
     total: 1,
-    has_more: false,
-    state: "inbox",
-    scored_count: 0,
-    total_count: 1,
+    scoredCount: 0,
+    totalCount: 1,
+    isLoading: false,
+    hasData: true,
+    isFiltering: false,
+    loadError: undefined,
+    error: undefined,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    isLoadMoreError: false,
+    loadMore: vi.fn(),
+    refetch: vi.fn(),
     ...overrides,
   };
 }
@@ -125,10 +122,7 @@ function renderInbox(scoringWindow: ScoringWindow = CLOSED_WINDOW) {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function jobsResult(data: DiscoveredJobListResponse): any {
-  return { data, isLoading: false, isError: false, isFetching: false };
-}
+const jobsResult = (state: DiscoveredJobsPagesState) => state;
 
 describe("DiscoverInboxView — bounded scoring window", () => {
   beforeEach(() => {
@@ -139,21 +133,18 @@ describe("DiscoverInboxView — bounded scoring window", () => {
 
   it("does NOT poll in the steady state (a permanently-unscored tail must not poll forever)", () => {
     mockListJobs.mockReturnValue(
-      jobsResult(makeResponse({ scored_count: 20, total_count: 100 })),
+      jobsResult(makeResponse({ scoredCount: 20, totalCount: 100 })),
     );
     renderInbox();
 
-    // The second positional arg to useListDiscoveredJobsQuery is the
-    // options bag. On first render (no fresh fetch detected) the window is
-    // closed → pollingInterval must be 0 (RTK Query: 0 disables polling).
+    // The second arg is the polling interval; a closed window means 0 (no polling).
     expect(mockListJobs).toHaveBeenCalled();
-    const optionsArg = mockListJobs.mock.calls[0][1];
-    expect(optionsArg).toMatchObject({ pollingInterval: 0 });
+    expect(mockListJobs.mock.calls[0][1]).toBe(0);
   });
 
   it("passes a static (false) isScoringInFlight to cards in the steady state", () => {
     mockListJobs.mockReturnValue(
-      jobsResult(makeResponse({ scored_count: 0, total_count: 1 })),
+      jobsResult(makeResponse({ scoredCount: 0, totalCount: 1 })),
     );
     renderInbox();
     // Every card render in the steady state must receive false → static
@@ -163,15 +154,15 @@ describe("DiscoverInboxView — bounded scoring window", () => {
   });
 
   it("polls and shows cards as scoring while the page's window is open", () => {
-    mockListJobs.mockReturnValue(jobsResult(makeResponse({ scored_count: 0, total_count: 1 })));
+    mockListJobs.mockReturnValue(jobsResult(makeResponse({ scoredCount: 0, totalCount: 1 })));
     renderInbox({ isOpen: true, pollingInterval: 4000, open: vi.fn(), observe: vi.fn() });
-    expect(mockListJobs.mock.calls[0][1]).toMatchObject({ pollingInterval: 4000 });
+    expect(mockListJobs.mock.calls[0][1]).toBe(4000);
     expect(cardSpy.mock.calls.every(([flag]) => flag === true)).toBe(true);
   });
 
   it("renders the coverage line 'Scored N of M' from the response counts", () => {
     mockListJobs.mockReturnValue(
-      jobsResult(makeResponse({ scored_count: 20, total_count: 100 })),
+      jobsResult(makeResponse({ scoredCount: 20, totalCount: 100 })),
     );
     renderInbox();
     const coverage = screen.getByTestId("inbox-scoring-coverage");
@@ -183,7 +174,7 @@ describe("DiscoverInboxView — bounded scoring window", () => {
 
   it("omits the unscored-tail framing when every row is scored", () => {
     mockListJobs.mockReturnValue(
-      jobsResult(makeResponse({ scored_count: 5, total_count: 5 })),
+      jobsResult(makeResponse({ scoredCount: 5, totalCount: 5 })),
     );
     renderInbox();
     const coverage = screen.getByTestId("inbox-scoring-coverage");
@@ -193,76 +184,64 @@ describe("DiscoverInboxView — bounded scoring window", () => {
 
   it("hides the coverage line when counts are absent (saved/all views)", () => {
     mockListJobs.mockReturnValue(
-      jobsResult(makeResponse({ scored_count: null, total_count: null })),
+      jobsResult(makeResponse({ scoredCount: null, totalCount: null })),
     );
     renderInbox();
     expect(screen.queryByTestId("inbox-scoring-coverage")).toBeNull();
   });
 });
 
-describe("DiscoverInboxView — load more", () => {
+describe("DiscoverInboxView — list states", () => {
   beforeEach(() => {
-    cardSpy.mockClear();
+    mockListJobs.mockReset();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockListSources.mockReturnValue({ data: [] } as any);
   });
 
-  it("renders the Load more control when the server reports more rows", () => {
-    mockListJobs.mockReturnValue(
-      jobsResult(
-        makeResponse({ has_more: true, total: 120, total_count: 120, scored_count: 20 }),
-      ),
+  it("asks for the inbox, narrowed to the active saved search", () => {
+    mockListJobs.mockReturnValue(makeResponse());
+    render(
+      <MemoryRouter>
+        <DiscoverInboxView hasSources activeSourceId="s1" scoringWindow={CLOSED_WINDOW} />
+      </MemoryRouter>,
     );
-    renderInbox();
-    expect(screen.getByTestId("inbox-load-more")).toHaveTextContent("Load more");
-    expect(screen.queryByTestId("inbox-load-more-cap")).toBeNull();
+    expect(mockListJobs).toHaveBeenCalledWith({ state: "inbox", source_id: "s1" }, 0);
   });
 
-  it("hides the Load more control when there are no more rows", () => {
-    mockListJobs.mockReturnValue(jobsResult(makeResponse({ has_more: false })));
+  it("offers Load more only when another page exists, and loads it", () => {
+    const loadMore = vi.fn();
+    mockListJobs.mockReturnValue(makeResponse({ hasNextPage: true, total: 120, loadMore }));
     renderInbox();
-    expect(screen.queryByTestId("inbox-load-more")).toBeNull();
-    expect(screen.queryByTestId("inbox-load-more-cap")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    expect(loadMore).toHaveBeenCalledTimes(1);
   });
 
-  it("requests a larger limit (by one page) when Load more is clicked", () => {
-    mockListJobs.mockReturnValue(
-      jobsResult(makeResponse({ has_more: true, total: 300, total_count: 300 })),
-    );
+  it("hides Load more when everything is loaded", () => {
+    mockListJobs.mockReturnValue(makeResponse());
     renderInbox();
-    // First render queries the first page (limit 50, the default page size).
-    expect(mockListJobs).toHaveBeenLastCalledWith(
-      expect.objectContaining({ state: "inbox", limit: 50 }),
-      expect.anything(),
-    );
-    fireEvent.click(screen.getByTestId("inbox-load-more"));
-    // Clicking grows the window to the next page (limit 100), in place.
-    expect(mockListJobs).toHaveBeenLastCalledWith(
-      expect.objectContaining({ state: "inbox", limit: 100 }),
-      expect.anything(),
-    );
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
-  it("replaces the button with a legible note at the 200-row cap instead of truncating silently", () => {
-    // Server always says there's more; the frontend ceiling (200) is what
-    // stops the growth. Three clicks: 50 → 100 → 150 → 200.
-    mockListJobs.mockReturnValue(
-      jobsResult(makeResponse({ has_more: true, total: 999, total_count: 999 })),
-    );
+  it("shows the skeleton, not the last search's postings, while a new filter loads", () => {
+    mockListJobs.mockReturnValue(makeResponse({ isFiltering: true }));
     renderInbox();
-    fireEvent.click(screen.getByTestId("inbox-load-more"));
-    fireEvent.click(screen.getByTestId("inbox-load-more"));
-    fireEvent.click(screen.getByTestId("inbox-load-more"));
-    // At the cap the button is gone and the note explains the ceiling.
-    expect(screen.queryByTestId("inbox-load-more")).toBeNull();
-    expect(screen.getByTestId("inbox-load-more-cap")).toHaveTextContent(
-      /showing the first 200/i,
-    );
-    // Never requests beyond the backend's max limit.
-    expect(mockListJobs).toHaveBeenLastCalledWith(
-      expect.objectContaining({ limit: 200 }),
-      expect.anything(),
-    );
+    expect(screen.getByTestId("skeleton")).toBeInTheDocument();
+    expect(screen.queryByTestId("job-card")).toBeNull();
+  });
+
+  it("shows the empty state when nothing is in the inbox", () => {
+    mockListJobs.mockReturnValue(makeResponse({ jobs: [], total: 0 }));
+    renderInbox();
+    expect(screen.getByText("Inbox empty")).toBeInTheDocument();
+  });
+
+  it("offers Retry when the inbox can't load, and retries", () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    mockListJobs.mockReturnValue(makeResponse({ loadError: { status: 500 }, refetch }));
+    renderInbox();
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't load the inbox.");
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
 
