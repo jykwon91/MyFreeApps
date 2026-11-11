@@ -6,7 +6,7 @@ export const MORE_MENU: readonly MoreMenuGroup[] = [
     items: [
       { label: "Analyze a job", webPath: "/analyze" },
       { label: "Discovery", webPath: "/discover" },
-      { label: "Companies", webPath: "/companies" },
+      { label: "Companies", webPath: "/companies", screen: "/companies" },
     ],
   },
   {

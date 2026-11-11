@@ -1,25 +1,10 @@
 import { useEffect, useId } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { LoadingButton } from "@platform/ui";
-import type { CompanyCreateRequest } from "@myjobhunter/api-client/types/company-create-request";
-
-export interface CompanyFormValues {
-  name: string;
-  primary_domain: string;
-  industry: string;
-  hq_location: string;
-}
-
-export interface CompanyFormProps {
-  onSubmit: (request: CompanyCreateRequest) => Promise<void>;
-  onCancel: () => void;
-  submitLabel?: string;
-  submitting?: boolean;
-  /** Pre-fill fields — intended for future edit-in-place; no consumer uses this yet. */
-  initialValues?: Partial<CompanyFormValues>;
-  /** If true, focuses the name field on mount (default: true). */
-  autoFocus?: boolean;
-}
+import { companyCreateRequest } from "@myjobhunter/api-client/utils/companyCreateRequest";
+import type { CompanyFormValues } from "@myjobhunter/api-client/types/company/company-form-values";
+import type { CompanyFormProps } from "@/types/company/company-form-props";
+import { companyFieldValidator } from "./companyFieldValidator";
 
 export default function CompanyForm({
   onSubmit,
@@ -43,6 +28,7 @@ export default function CompanyForm({
     handleSubmit,
     formState: { errors },
     reset,
+    setError,
   } = useForm<CompanyFormValues>({
     defaultValues: {
       name: initialValues?.name ?? "",
@@ -65,12 +51,10 @@ export default function CompanyForm({
   }, [initialValues, reset]);
 
   const handleFormSubmit: SubmitHandler<CompanyFormValues> = async (values) => {
-    await onSubmit({
-      name: values.name.trim(),
-      primary_domain: values.primary_domain.trim() || null,
-      industry: values.industry.trim() || null,
-      hq_location: values.hq_location.trim() || null,
-    });
+    const refused = await onSubmit(companyCreateRequest(values));
+    for (const [field, message] of Object.entries(refused ?? {}) as [keyof CompanyFormValues, string][]) {
+      setError(field, { type: "server", message });
+    }
   };
 
   return (
@@ -82,7 +66,7 @@ export default function CompanyForm({
         <input
           id={nameId}
           type="text"
-          {...register("name", { required: "Name is required", minLength: 1 })}
+          {...register("name", { validate: companyFieldValidator("name") })}
           className="w-full border rounded-md px-3 py-2 text-sm bg-background"
           placeholder="e.g. Acme Corp"
           autoFocus={autoFocus}
@@ -99,13 +83,17 @@ export default function CompanyForm({
         <input
           id={domainId}
           type="text"
-          {...register("primary_domain")}
+          {...register("primary_domain", { validate: companyFieldValidator("primary_domain") })}
           className="w-full border rounded-md px-3 py-2 text-sm bg-background"
           placeholder="acme.com"
         />
-        <p className="text-xs text-muted-foreground mt-1">
-          Optional — must be unique across your companies if set.
-        </p>
+        {errors.primary_domain ? (
+          <p className="text-xs text-destructive mt-1">{errors.primary_domain.message}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground mt-1">
+            Optional — must be unique across your companies if set.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -116,10 +104,13 @@ export default function CompanyForm({
           <input
             id={industryId}
             type="text"
-            {...register("industry")}
+            {...register("industry", { validate: companyFieldValidator("industry") })}
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
             placeholder="e.g. SaaS"
           />
+          {errors.industry ? (
+            <p className="text-xs text-destructive mt-1">{errors.industry.message}</p>
+          ) : null}
         </div>
         <div>
           <label htmlFor={hqId} className="block text-sm font-medium mb-1">
@@ -128,10 +119,13 @@ export default function CompanyForm({
           <input
             id={hqId}
             type="text"
-            {...register("hq_location")}
+            {...register("hq_location", { validate: companyFieldValidator("hq_location") })}
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
             placeholder="e.g. SF, NYC"
           />
+          {errors.hq_location ? (
+            <p className="text-xs text-destructive mt-1">{errors.hq_location.message}</p>
+          ) : null}
         </div>
       </div>
 

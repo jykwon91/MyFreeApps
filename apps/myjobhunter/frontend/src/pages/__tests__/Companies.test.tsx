@@ -299,6 +299,32 @@ describe("Companies page", () => {
       expect(columnValues(3)).toEqual(["Chicago, IL", "Boston, MA", "Austin, TX", "—"]);
     });
 
+    it("sorts accented and numbered names as the phone does, not by character code", () => {
+      // Without the shared comparator the table would sort "Éclair" after "Studio" and, by
+      // first-ten-rows guesswork, could put "Studio 10" before "Studio 9".
+      const tricky = [
+        company("t1", "Studio 10", null, "Studio 10", null),
+        company("t2", "Éclair", null, "Éclair", null),
+        company("t3", "beta", null, "beta", null),
+        company("t4", "Studio 9", null, "Studio 9", null),
+      ];
+      mockUseListCompaniesQuery.mockReturnValue({
+        data: { items: tricky, total: tricky.length },
+        isLoading: false,
+        isError: false,
+        error: undefined,
+      } as unknown as ReturnType<typeof useListCompaniesQuery>);
+      renderCompanies();
+
+      sortTableBy(/name/i, "ascending");
+      expect(columnValues(0)).toEqual(["beta", "Éclair", "Studio 9", "Studio 10"]);
+      sortTableBy(/name/i, "descending");
+      expect(columnValues(0)).toEqual(["Studio 10", "Studio 9", "Éclair", "beta"]);
+
+      sortTableBy(/industry/i, "ascending");
+      expect(columnValues(2)).toEqual(["beta", "Éclair", "Studio 9", "Studio 10"]);
+    });
+
     it("sorts Domain with null and blank domains last, both ways", () => {
       renderCompanies();
 

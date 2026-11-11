@@ -1,11 +1,13 @@
 import { APPLICATION_NOTES_MAX_LENGTH } from "./textFieldLimits";
 
+// The company name limit lives with the other company limits; re-exported for the add-application flow.
+export { COMPANY_NAME_MAX_LENGTH } from "./companyFieldLimits";
+
 // Notes share APPLICATION_NOTES_MAX_LENGTH. Bounds mirror ApplicationCreateRequest, CompanyCreateRequest and JdParseRequest on the backend.
 export const ROLE_TITLE_MAX_LENGTH = 200;
 export const LOCATION_MAX_LENGTH = 200;
 export const JOB_URL_MAX_LENGTH = 2048;
 export const JD_TEXT_MAX_LENGTH = 50000;
-export const COMPANY_NAME_MAX_LENGTH = 200;
 
 /** A whole pasted value that is a job-posting link, so it can be read without a button press. */
 export const JOB_URL_PATTERN = /^https?:\/\/\S+$/i;

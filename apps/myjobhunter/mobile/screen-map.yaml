@@ -8,8 +8,10 @@ routes:
     screen: (app)/(tabs)/applications
   /applications/:id:
     screen: (app)/applications/[id]
+  # On More rather than a tab: the website's own phone tab bar leaves it out too. Its Add company
+  # dialog is a sheet on this screen.
   /companies:
-    not_on_mobile: Not built yet.
+    screen: (app)/companies/index
   /companies/:id:
     not_on_mobile: Not built yet.
   /dashboard:
