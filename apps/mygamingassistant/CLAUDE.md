@@ -904,7 +904,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`lib/trainers/levelUnlocks.ts`, talent ranks left out) with the levels below yours folded
   away and the next one marked; then "Where to train": the class trainers and, for hunters
   and warlocks, pet / demon trainers (`CLASS_EXTRA_TRAINERS`). No costs: Classic costs are
-  wrong for Forever. Links to the spellbook for spell details.
+  wrong for Forever. Links to the spellbook for spell details. Warlock adds "What your demons
+  learn at each level" between the two (`demonUnlocks`, same ladder; each unlock tagged with its
+  demon and "Grimoire" or "Knows it when summoned"), from `demons` in `data/spellbook/warlock.json`
+  (`scripts/wow_spellbook/demons.py`: the `PET_LINES` skill lines, `SpellLevels` = the level the
+  Grimoire asks, `AcquireMethod` 2 = known on summon, Grimoire items matched by name from
+  Forever's `ItemSparse`; demon icons go into `wowIcons.json` via `spellbook_icon_files`).
 - Profession: each rank's skill, level and cap (`lib/trainers/professionRankSteps.ts`:
   crafting from `CRAFTING_RANKS`, gathering from `GATHERING_RANKS`, Cooking / Fishing from
   their route milestones), then every trainer for your faction, and a link to its guide.

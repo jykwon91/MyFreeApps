@@ -9,7 +9,7 @@ import { findTrainerSubject, TRAINER_SUBJECT_GROUPS } from "@/games/wow-forever/
 import { PROFESSION_SERVICE_TAG } from "@/games/wow-forever/data/trainers/trainersConfig";
 import { SERVICE_KIND } from "@/games/wow-forever/data/worldMap/serviceKinds";
 import { decodeSpellbook } from "@/games/wow-forever/lib/spellbook/decodeSpellbook";
-import { levelUnlocks, splitAtLevel } from "@/games/wow-forever/lib/trainers/levelUnlocks";
+import { demonUnlocks, levelUnlocks, splitAtLevel } from "@/games/wow-forever/lib/trainers/levelUnlocks";
 import { professionRankSteps } from "@/games/wow-forever/lib/trainers/professionRankSteps";
 import { rankFacts } from "@/games/wow-forever/lib/trainers/rankFacts";
 import { serviceTrainers } from "@/games/wow-forever/lib/trainers/serviceTrainers";
@@ -124,5 +124,25 @@ describe("professionRankSteps", () => {
       expect(steps.length, profession).toBeGreaterThan(3);
       expect(steps.slice(1).every((s) => s.milestone !== null), profession).toBe(true);
     }
+  });
+});
+
+describe("demonUnlocks", () => {
+  const ladder = demonUnlocks(WARLOCK.demons);
+
+  it("puts every demon ability rank at its Grimoire's level, each tagged with its demon", () => {
+    const ranks = WARLOCK.demons.flatMap((d) => d.abilities.flatMap((a) => a.ranks));
+    expect(ladder.flatMap((l) => l.unlocks)).toHaveLength(ranks.length);
+    const levels = ladder.map((l) => l.level);
+    expect(levels).toEqual([...levels].sort((a, b) => a - b));
+    const eight = ladder.find((l) => l.level === 8)?.unlocks.find((u) => u.name === "Firebolt");
+    expect(eight).toMatchObject({ demon: "Imp", rank: "Rank 2", knownOnSummon: false });
+    const torment = ladder.find((l) => l.level === 10)?.unlocks.find((u) => u.name === "Torment");
+    expect(torment).toMatchObject({ demon: "Voidwalker", knownOnSummon: true });
+  });
+
+  it("is empty for a class with no demons, and class spells carry no demon", () => {
+    expect(demonUnlocks([])).toEqual([]);
+    expect(LADDER.flatMap((l) => l.unlocks).every((u) => u.demon === null && !u.knownOnSummon)).toBe(true);
   });
 });

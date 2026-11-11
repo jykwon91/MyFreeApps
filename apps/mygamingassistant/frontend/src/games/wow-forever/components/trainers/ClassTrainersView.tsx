@@ -11,7 +11,7 @@ import { SERVICE_KIND } from "@/games/wow-forever/data/worldMap/serviceKinds";
 import { playerFactionLabel } from "@/games/wow-forever/data/playerFactionOptions";
 import { useSpellbookClass } from "@/games/wow-forever/hooks/useSpellbookClass";
 import { useTrainerServices } from "@/games/wow-forever/hooks/useTrainerServices";
-import { levelUnlocks } from "@/games/wow-forever/lib/trainers/levelUnlocks";
+import { demonUnlocks, levelUnlocks } from "@/games/wow-forever/lib/trainers/levelUnlocks";
 import { serviceTrainers } from "@/games/wow-forever/lib/trainers/serviceTrainers";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
@@ -31,6 +31,7 @@ export default function ClassTrainersView({ classId, className, faction, level, 
   const servicesData = services.status === "ready" ? services.data : null;
   const extra = CLASS_EXTRA_TRAINERS[classId];
   const ladder = useMemo(() => (bookData ? levelUnlocks(bookData) : []), [bookData]);
+  const demonLadder = useMemo(() => (bookData ? demonUnlocks(bookData.demons) : []), [bookData]);
   const classTrainers = useMemo(
     () => (servicesData ? serviceTrainers(servicesData, SERVICE_KIND.classTrainer, classId, faction) : []),
     [servicesData, classId, faction],
@@ -61,6 +62,18 @@ export default function ClassTrainersView({ classId, className, faction, level, 
         </p>
         <LevelUnlockLadder ladder={ladder} level={level} />
       </section>
+      {demonLadder.length ? (
+        <section className="space-y-3" aria-labelledby="trainers-demons">
+          <h2 id="trainers-demons" className="text-lg font-semibold">
+            What your demons learn at each level
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Buy each rank&apos;s Grimoire from a Demon trainer once you reach its level, summon that demon and use the
+            Grimoire. Levels and Grimoires are from the Forever game files ({book.data.clientBuild}).
+          </p>
+          <LevelUnlockLadder ladder={demonLadder} level={level} />
+        </section>
+      ) : null}
       <section className="space-y-3" aria-labelledby="trainers-where">
         <h2 id="trainers-where" className="text-lg font-semibold">
           Where to train
