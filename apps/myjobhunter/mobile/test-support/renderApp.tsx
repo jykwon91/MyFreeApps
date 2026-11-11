@@ -14,6 +14,8 @@ import CompaniesRoute from "../app/(app)/companies/index";
 import DeleteAccountRoute from "../app/(app)/delete-account";
 import DiscoverRoute from "../app/(app)/discover";
 import DocumentsRoute from "../app/(app)/documents";
+import SecurityRoute from "../app/(app)/security/index";
+import SecurityTurnOnRoute from "../app/(app)/security/turn-on";
 import SignInRoute from "../app/sign-in";
 
 /** The app's own layouts and screens, as expo-router would find them under app/. */
@@ -29,6 +31,8 @@ export const APP_ROUTES = {
   "(app)/delete-account": DeleteAccountRoute,
   "(app)/discover": DiscoverRoute,
   "(app)/documents": DocumentsRoute,
+  "(app)/security/index": SecurityRoute,
+  "(app)/security/turn-on": SecurityTurnOnRoute,
   "(app)/(tabs)/_layout": TabsLayout,
   "(app)/(tabs)/index": Dashboard,
   "(app)/(tabs)/applications": Applications,

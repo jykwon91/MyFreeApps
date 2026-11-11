@@ -42,8 +42,10 @@ routes:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /resume:
     not_on_mobile: Not built yet.
+  # On More. Its Turn on dialog is a screen of its own, (app)/security/turn-on; the Turn off dialog is a
+  # sheet; the export downloads to the share sheet; Delete account opens (app)/delete-account.
   /security:
-    not_on_mobile: Not built yet.
+    screen: (app)/security/index
   /settings:
     screen: (app)/(tabs)/more
   /support-myfreeapps:

@@ -2,9 +2,9 @@ import { useGetProfileQuery } from "@myjobhunter/api-client/store/profileApi";
 import { useListSkillsQuery } from "@myjobhunter/api-client/store/skillsApi";
 import { useOpenWebsite } from "@platform/mobile";
 import { WEB_BASE_URL } from "../../constants/api";
-import { PROFILE_WEB_PATH } from "../../constants/profileBanner";
+import { PROFILE_BANNER_DISMISSED_KEY, PROFILE_WEB_PATH } from "../../constants/profileBanner";
+import { useDismissal } from "../../hooks/useDismissal";
 import ProfileCompletenessBanner from "./ProfileCompletenessBanner";
-import { useProfileBannerDismissal } from "./useProfileBannerDismissal";
 
 /**
  * The profile reminder above the inbox, once the profile and skills have loaded and show neither a
@@ -13,7 +13,7 @@ import { useProfileBannerDismissal } from "./useProfileBannerDismissal";
 export default function InboxProfileReminder() {
   const { data: profile } = useGetProfileQuery();
   const { data: skills } = useListSkillsQuery();
-  const { isDismissed, dismiss } = useProfileBannerDismissal();
+  const { isDismissed, dismiss } = useDismissal(PROFILE_BANNER_DISMISSED_KEY);
   const openWebsite = useOpenWebsite();
   if (!profile || !skills || isDismissed !== false) return null;
   if (profile.resume_file_path != null || skills.total > 0) return null;

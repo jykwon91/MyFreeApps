@@ -5,7 +5,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import * as DocumentPicker from "expo-document-picker";
 import NewPolicyScreen from "../src/features/insurance/NewPolicyScreen";
 import { formParts } from "../test-support/applicantsServer";
-import { File, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { aDocument, aDraft, lastInsuranceWrite, startInsuranceServer } from "../test-support/insuranceServer";
 import { POLICY_READER_MESSAGES as MESSAGES } from "../src/constants/insuranceForm";
 import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsurance";
@@ -18,7 +18,7 @@ jest.mock("@react-native-community/datetimepicker", () => {
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
 jest.mock("expo-image-picker", () => ({ launchImageLibraryAsync: jest.fn(), launchCameraAsync: jest.fn(), requestCameraPermissionsAsync: jest.fn() }));
 jest.mock("expo-image-manipulator", () => ({ SaveFormat: { JPEG: "jpeg" }, ImageManipulator: { manipulate: jest.fn() } }));
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock("react-native/Libraries/Modal/Modal", () => ({
   __esModule: true,

@@ -19,7 +19,7 @@ export const MORE_MENU: readonly MoreMenuGroup[] = [
   {
     title: "Account",
     items: [
-      { label: "Security", webPath: "/security" },
+      { label: "Security", webPath: "/security", screen: "/security" },
       { label: "Support MyFreeApps", webPath: "/support-myfreeapps" },
     ],
   },

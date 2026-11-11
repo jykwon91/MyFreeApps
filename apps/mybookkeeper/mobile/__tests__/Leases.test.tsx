@@ -19,7 +19,7 @@ import TenantLeases from "../src/features/leases/TenantLeases";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
-import { fakeDownloads, fakeFiles, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { fakeDownloads, fakeFiles, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -29,7 +29,7 @@ jest.mock("expo-router", () => ({
   router: { push: (path: string) => mockPush(path), back: () => mockBack() },
 }));
 jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-local-authentication", () => ({ SecurityLevel: { NONE: 0 }, authenticateAsync: jest.fn(), getEnrolledLevelAsync: jest.fn() }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 

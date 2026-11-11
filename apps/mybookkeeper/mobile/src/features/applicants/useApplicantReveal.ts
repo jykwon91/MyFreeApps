@@ -1,12 +1,12 @@
 import { useRevealApplicantSensitiveMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantSensitive } from "@mybookkeeper/api-client/types/applicant/applicant-sensitive";
 import { applicantRevealFailure } from "@mybookkeeper/api-client/utils/applicantRevealFailure";
+import { confirmOwner } from "@platform/mobile";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { REVEAL_HIDES_AFTER_MS, REVEAL_MESSAGES } from "../../constants/applicantReveal";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { confirmOwner } from "../../lib/confirmOwner";
 
 export interface ApplicantReveal {
   details: ApplicantSensitive | undefined;
@@ -70,7 +70,7 @@ export function useApplicantReveal(id: string): ApplicantReveal {
     setConfirmProblem(null);
     latestReset.current();
     setIsConfirming(true);
-    const { confirmed, problem } = await confirmOwner();
+    const { confirmed, problem } = await confirmOwner(REVEAL_MESSAGES.prompt);
     setIsConfirming(false);
     if (isFocused.current) {
       setConfirmProblem(problem);

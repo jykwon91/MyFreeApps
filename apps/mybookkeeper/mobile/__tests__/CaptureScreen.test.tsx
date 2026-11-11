@@ -10,7 +10,7 @@ import { uploadStatusDismissed } from "../src/features/capture/uploadsSlice";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
-import { fakeFiles, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { fakeFiles, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 
 const mockDismissTo = jest.fn();
 const mockTakePicture = jest.fn();
@@ -20,7 +20,7 @@ const mockResize = jest.fn();
 let mockPermission: { granted: boolean; canAskAgain: boolean } | null;
 const mockRequestPermission = jest.fn();
 
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
 jest.mock("../src/features/aiPermission/aiPermission", () => ({
   ...jest.requireActual("../src/features/aiPermission/aiPermission"),

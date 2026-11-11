@@ -12,7 +12,7 @@ import { removeHeldFileLabel, UPLOAD_MESSAGES } from "../src/constants/uploads";
 import WelcomeManualPhotosScreen from "../src/features/welcomeManuals/WelcomeManualPhotosScreen";
 import { preparePhoto } from "../src/features/capture/preparePhoto";
 import { aManual, anImage, aSection } from "../test-support/aWelcomeManual";
-import { fakeFiles, File, resetFakeFiles, setFakeFileSize } from "../test-support/fakeFileSystem";
+import { fakeFiles, File, resetFakeFiles, setFakeFileSize } from "@platform/mobile/test-support/fakeFileSystem";
 import { pressAlertButton } from "../test-support/pressAlertButton";
 import { renderScreen, resetSignedInStore } from "../test-support/renderScreen";
 import { startWelcomeManualsServer } from "../test-support/welcomeManualsServer";
@@ -24,7 +24,7 @@ jest.mock("expo-router", () => ({
   usePreventRemove: () => undefined,
 }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-image-picker", () => ({ launchImageLibraryAsync: jest.fn(), launchCameraAsync: jest.fn(), requestCameraPermissionsAsync: jest.fn() }));
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
 jest.mock("../src/features/capture/preparePhoto", () => ({ preparePhoto: jest.fn(async (uri: string) => uri) }));

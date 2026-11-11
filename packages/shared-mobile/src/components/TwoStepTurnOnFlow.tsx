@@ -1,10 +1,14 @@
-import { TWO_STEP_MESSAGES as MESSAGES, type TwoStepLeaveRisk, TwoStepTurnOnScreen, useConfirmLeave } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
-import { APP_NAME, SECURITY_ROUTE } from "../../constants/security";
+import { TWO_STEP_MESSAGES as MESSAGES } from "../constants/twoStep";
+import { useConfirmLeave } from "../hooks/useConfirmLeave";
+import type { TwoStepLeaveRisk } from "../types/TwoStepLeaveRisk";
+import type { TwoStepTurnOnFlowProps } from "../types/TwoStepTurnOnFlowProps";
+import TwoStepTurnOnScreen from "./TwoStepTurnOnScreen";
 
-export default function SecurityTurnOnScreen() {
+/** The turn-on screen as a route: it asks before leaving with codes unsaved, and goes back when done. */
+export default function TwoStepTurnOnFlow({ appName, securityRoute }: TwoStepTurnOnFlowProps) {
   const [leaveRisk, setLeaveRisk] = useState<TwoStepLeaveRisk>("none");
   const [isFinished, setIsFinished] = useState(false);
 
@@ -23,8 +27,8 @@ export default function SecurityTurnOnScreen() {
   useEffect(() => {
     if (!isFinished) return;
     if (router.canGoBack()) router.back();
-    else router.replace(SECURITY_ROUTE);
-  }, [isFinished]);
+    else router.replace(securityRoute);
+  }, [isFinished, securityRoute]);
 
-  return <TwoStepTurnOnScreen appName={APP_NAME} onFinished={() => setIsFinished(true)} onLeaveRiskChange={setLeaveRisk} />;
+  return <TwoStepTurnOnScreen appName={appName} onFinished={() => setIsFinished(true)} onLeaveRiskChange={setLeaveRisk} />;
 }

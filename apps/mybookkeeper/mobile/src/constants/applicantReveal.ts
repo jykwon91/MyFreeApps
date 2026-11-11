@@ -8,7 +8,6 @@ export const REVEAL_MESSAGES = {
   shownAnnouncement: "Private details shown.",
   hiddenAnnouncement: "Private details hidden.",
   prompt: "Show private details",
-  couldntConfirm: "I couldn't confirm it's you. Want me to try again?",
   offline: "I'm offline right now. I don't keep applicant details on your phone, so I need a connection.",
   nothingOnFile: "Nothing private on file.",
   reportMissing: "That report file is missing.",
@@ -16,6 +15,3 @@ export const REVEAL_MESSAGES = {
   openReport: "Open report",
   screeningReport: "Screening report",
 } as const;
-
-/** The person backed out of the prompt, or the system took it away: nothing went wrong. */
-export const REVEAL_QUIET_AUTH_ERRORS: readonly string[] = ["user_cancel", "system_cancel", "app_cancel"];

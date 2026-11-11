@@ -5,7 +5,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { Alert } from "react-native";
 import PolicyDetailScreen from "../src/features/insurance/PolicyDetailScreen";
 import { formParts, formValue } from "../test-support/applicantsServer";
-import { File, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { aPolicyDetail, anAttachment, lastInsuranceWrite, startInsuranceServer } from "../test-support/insuranceServer";
 import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsurance";
 
@@ -16,7 +16,7 @@ jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
 jest.mock("expo-image-picker", () => ({ launchImageLibraryAsync: jest.fn(), launchCameraAsync: jest.fn(), requestCameraPermissionsAsync: jest.fn() }));
 jest.mock("expo-image-manipulator", () => ({ SaveFormat: { JPEG: "jpeg" }, ImageManipulator: { manipulate: jest.fn() } }));
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock("react-native/Libraries/Modal/Modal", () => ({
   __esModule: true,

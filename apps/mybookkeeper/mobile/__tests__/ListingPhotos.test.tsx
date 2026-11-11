@@ -11,11 +11,11 @@ import { LISTING_MESSAGES } from "../src/constants/listings";
 import ListingPhotosScreen from "../src/features/listings/ListingPhotosScreen";
 import { preparePhoto } from "../src/features/capture/preparePhoto";
 import { formParts } from "../test-support/applicantsServer";
-import { fakeDownloads, fakeFiles, File, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { fakeDownloads, fakeFiles, File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { aListing, aPhoto, startListingsServer, writesTo } from "../test-support/listingsServer";
 import { mockPreventRemove, pressAlertButton, restoreApi, show, signInToWorkspace } from "../test-support/listingsHarness";
 
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-router", () => jest.requireActual("../test-support/listingsHarness").expoRouterMock());
 jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
 jest.mock("expo-image-picker", () => ({ launchImageLibraryAsync: jest.fn(), launchCameraAsync: jest.fn(), requestCameraPermissionsAsync: jest.fn() }));

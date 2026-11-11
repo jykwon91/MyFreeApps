@@ -17,7 +17,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { anApplicant, formParts, formValue, SAMPLE_PROVIDER, startApplicantServer } from "../test-support/applicantsServer";
 import type { FakeApplicantServer } from "../test-support/applicantsServer";
-import { Directory, fakeFiles, File, Paths, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { Directory, fakeFiles, File, Paths, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 
 const mockRender = jest.fn();
 function photoRendersFine(): void {
@@ -31,7 +31,7 @@ function photoRendersFine(): void {
   }));
 }
 
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn() } }));
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
 jest.mock("expo-image-picker", () => ({

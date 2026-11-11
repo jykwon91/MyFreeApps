@@ -18,10 +18,10 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { makeStore } from "../src/lib/store";
 import { formParts } from "../test-support/applicantsServer";
-import { File, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { aProperty, startTransactionServer, type FakeTransactionServer } from "../test-support/transactionsServer";
 
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
 jest.mock("expo-image-picker", () => ({ launchImageLibraryAsync: jest.fn(), launchCameraAsync: jest.fn(), requestCameraPermissionsAsync: jest.fn() }));
 jest.mock("expo-image-manipulator", () => ({ SaveFormat: { JPEG: "jpeg" }, ImageManipulator: { manipulate: jest.fn() } }));

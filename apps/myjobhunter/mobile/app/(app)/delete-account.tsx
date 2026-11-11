@@ -5,7 +5,7 @@ import { DELETE_ACCOUNT_WARNING } from "../../src/constants/deleteAccount";
 export default function DeleteAccountRoute() {
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: "Delete account", headerBackTitle: "More" }} />
+      <Stack.Screen options={{ headerShown: true, title: "Delete account" }} />
       <DeleteAccountScreen warning={DELETE_ACCOUNT_WARNING} />
     </>
   );

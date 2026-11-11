@@ -18,7 +18,7 @@ import UploadStatus from "../src/features/capture/UploadStatus";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
-import { Directory, fakeFiles, File, resetFakeFiles } from "../test-support/fakeFileSystem";
+import { Directory, fakeFiles, File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 
 jest.mock("@platform/mobile", () => ({
   ...jest.requireActual("@platform/mobile"),
@@ -26,7 +26,7 @@ jest.mock("@platform/mobile", () => ({
 }));
 const mockDismissTo = jest.fn();
 const mockPush = jest.fn();
-jest.mock("expo-file-system", () => jest.requireActual("../test-support/fakeFileSystem"));
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
 jest.mock("expo-router", () => ({
   Redirect: () => null,
