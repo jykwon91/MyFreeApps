@@ -1008,6 +1008,11 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   icon. Print an item name with its icon via `ItemIcon` / `ItemNameList` / `ItemCountList`
   (`components/shared/`) or `ItemNameLink withIcon`; a name with no id is a data bug —
   make the generator emit the id (skinning `leatherIds`, gold farms `clothId`/`skinId`).
+  Classes and professions show their icon wherever they are picked or headed (class
+  links and chips, macro / gold class headings, profession picker, gold gathering
+  tiles); `SegmentedToggle` options take an optional `icon` (`types/segmentedOption.ts`).
+  Talent trees, talents, racials and pet abilities use `fileIcon` on their generated
+  `icon`; `wowPickerIcons.test.tsx` fails if one of those ids isn't published.
 - Images are the client's BLP icons as 64px WebP, uploaded by
   `python -m scripts.wow_icons.publish --to r2` (needs `scripts/.env.r2`;
   skips what's already there) to `wow/{build}/icons/{fdid}.webp`, and served

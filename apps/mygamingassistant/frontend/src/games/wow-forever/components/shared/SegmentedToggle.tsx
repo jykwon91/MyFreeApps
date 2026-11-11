@@ -1,9 +1,11 @@
 import clsx from "clsx";
 import { cn } from "@platform/ui";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import type { SegmentedOption } from "@/games/wow-forever/types/segmentedOption";
 
 interface SegmentedToggleProps<T extends string> {
   label: string;
-  options: readonly { id: T; label: string }[];
+  options: readonly SegmentedOption<T>[];
   /** Null = none of these options is picked (another group holds the choice). */
   value: T | null;
   onChange: (value: T) => void;
@@ -27,12 +29,13 @@ export default function SegmentedToggle<T extends string>({ label, options, valu
           aria-checked={o.id === value}
           onClick={() => onChange(o.id)}
           className={clsx(
-            "rounded-md min-h-[44px] sm:min-h-[36px] transition-colors",
+            "inline-flex items-center justify-center gap-1.5 rounded-md min-h-[44px] sm:min-h-[36px] transition-colors",
             compact ? "px-1 text-xs sm:px-3 sm:text-sm" : "px-3 text-sm",
             o.id === value && "bg-primary text-primary-foreground",
             o.id !== value && "hover:bg-muted/40",
           )}
         >
+          {o.icon !== undefined && <GameIcon icon={o.icon} size={16} alt="" />}
           {o.label}
         </button>
       ))}

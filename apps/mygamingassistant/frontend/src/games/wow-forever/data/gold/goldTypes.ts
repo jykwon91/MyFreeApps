@@ -1,4 +1,5 @@
 import type { WowClassId } from "@/games/wow-forever/data/classes";
+import type { GatheringProfession } from "@/games/wow-forever/types/gathering/gatheringProfession";
 
 /**
  * How sure a gold tip is for Forever:
@@ -34,6 +35,8 @@ export interface ClassGoldTips {
 }
 
 export interface GatheringTip {
+  /** Which profession — its in-game icon. */
+  id: GatheringProfession;
   profession: string;
   what: string;
   pairsWith: string;

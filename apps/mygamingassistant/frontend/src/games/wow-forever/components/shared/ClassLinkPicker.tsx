@@ -1,6 +1,8 @@
 import clsx from "clsx";
 import { Link } from "react-router-dom";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import { WOW_CLASSES, type WowClassId } from "@/games/wow-forever/data/classes";
+import { classIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 
 interface ClassLinkPickerProps {
   /** The page a class is under: each class links to `${basePath}/<class id>`. */
@@ -20,11 +22,12 @@ export default function ClassLinkPicker({ basePath, current, testId }: ClassLink
           to={`${basePath}/${c.id}`}
           aria-current={c.id === current ? "page" : undefined}
           className={clsx(
-            "inline-flex items-center rounded-md border px-3 text-sm min-h-[44px] transition-colors",
+            "inline-flex items-center gap-2 rounded-md border px-3 text-sm min-h-[44px] transition-colors",
             c.id === current && "bg-primary text-primary-foreground",
             c.id !== current && "bg-card hover:bg-muted/40",
           )}
         >
+          <GameIcon icon={classIcon(c.id)} size={24} alt="" />
           {c.name}
         </Link>
       ))}

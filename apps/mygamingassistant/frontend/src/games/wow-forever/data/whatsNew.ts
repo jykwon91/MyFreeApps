@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-11",
+    title: "Class and profession icons",
+    summary:
+      "Classes, professions, talent trees, racials and pet abilities now show their in-game icons in pickers, headings and lists: Professions, Talents, Macros, Races, Hunter pets and Making gold.",
+    to: "/wow-forever/professions",
+  },
+  {
+    date: "2026-11-11",
     title: "In-game icons on every item",
     summary:
       "Every item the site names now shows its in-game icon: auction prices, crafting routes and materials, food, gathering, gold farms, gear, Item Compare, quests and Ask answers.",

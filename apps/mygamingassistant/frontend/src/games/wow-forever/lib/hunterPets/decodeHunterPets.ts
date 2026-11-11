@@ -34,6 +34,7 @@ export function decodeHunterPets(files: HunterPetsDataFiles): HunterPetsData {
         spell: rank.spell,
         abilitySlug: ability.slug,
         abilityName: ability.name,
+        icon: ability.icon,
         rank: rank.rank,
       });
     }

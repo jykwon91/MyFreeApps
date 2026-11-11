@@ -1,7 +1,9 @@
 import type { Placement } from "@floating-ui/react-dom";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import TalentRankText from "@/games/wow-forever/components/talents/TalentRankText";
+import { fileIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { talentRankLines } from "@/games/wow-forever/lib/talents/talentRankLines";
 import type { Talent } from "@/games/wow-forever/types/talents/talent";
 
@@ -38,11 +40,14 @@ export default function TalentTooltip({
       style={{ ...floatingStyles, visibility: isPositioned ? "visible" : "hidden" }}
       className="pointer-events-none z-50 w-72 max-w-[calc(100vw-16px)] space-y-2 rounded-lg border bg-card p-3 shadow-lg"
     >
-      <div>
-        <p className="font-semibold">{talent.name}</p>
-        <p className="text-xs text-muted-foreground">
-          Rank {rank}/{talent.ranks.length}
-        </p>
+      <div className="flex items-center gap-2">
+        <GameIcon icon={fileIcon(talent.icon)} size={32} alt="" />
+        <div>
+          <p className="font-semibold">{talent.name}</p>
+          <p className="text-xs text-muted-foreground">
+            Rank {rank}/{talent.ranks.length}
+          </p>
+        </div>
       </div>
       <TalentRankText lines={talentRankLines(talent, rank)} badges={false} />
       {blocked ? <p className="text-xs text-red-600 dark:text-red-400">{blocked}</p> : null}
