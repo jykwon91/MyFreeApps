@@ -1,5 +1,6 @@
 import CorrectionCard from "@/features/session/CorrectionCard";
 import type { CorrectionItem } from "@mylanguagetutor/api-client/types/tutor/correction-item";
+import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 
 interface CorrectionListProps {
   corrections: CorrectionItem[];
@@ -10,7 +11,7 @@ interface CorrectionListProps {
 export default function CorrectionList({ corrections, languageName }: CorrectionListProps) {
   if (corrections.length === 0) return null;
   return (
-    <ul className="space-y-2" aria-label="Suggestions">
+    <ul className="space-y-2" aria-label={PRACTICE_COPY.suggestionsLabel}>
       {corrections.map((correction, index) => (
         <CorrectionCard
           key={`${correction.error_span}-${index}`}

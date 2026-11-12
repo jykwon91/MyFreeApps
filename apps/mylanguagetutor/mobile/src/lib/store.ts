@@ -26,7 +26,7 @@ export function makeStore() {
 
 export const store = makeStore();
 
-// Practice happens on the website, so coming back to the app should show fresh usage.
+// Practice on the website uses time too, so coming back to the app should show fresh usage.
 refetchOnForeground(store.dispatch);
 
 resetCacheOnAccountChange(session, () => store.dispatch(baseApi.util.resetApiState()));

@@ -1,4 +1,5 @@
 import { Button } from "@platform/ui";
+import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 
 interface RetryPromptProps {
   prompt: string;
@@ -15,10 +16,10 @@ export default function RetryPrompt({ prompt, disabled, onTry, onSkip }: RetryPr
       <p>{prompt}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         <Button variant="secondary" size="sm" onClick={onTry} disabled={disabled}>
-          Try it
+          {PRACTICE_COPY.tryIt}
         </Button>
         <Button variant="ghost" size="sm" onClick={onSkip} className="min-h-[44px]">
-          Skip
+          {PRACTICE_COPY.skip}
         </Button>
       </div>
     </div>

@@ -2,7 +2,8 @@ const { transformIgnorePatterns } = require("jest-expo/jest-preset");
 
 // These publish ES modules to React Native's export condition, which is the one Jest
 // resolves here, so they need transforming like the packages the preset already allows.
-const ES_MODULE_PACKAGES = "(?:react-redux|@reduxjs/toolkit|immer|reselect|redux|redux-thunk|axios)";
+// eventsource-parser publishes only ES modules; it reads the tutor's streamed reply.
+const ES_MODULE_PACKAGES = "(?:react-redux|@reduxjs/toolkit|immer|reselect|redux|redux-thunk|axios|eventsource-parser)";
 
 module.exports = {
   preset: "jest-expo",

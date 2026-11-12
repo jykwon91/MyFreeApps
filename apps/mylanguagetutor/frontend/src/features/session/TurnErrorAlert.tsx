@@ -1,6 +1,7 @@
 import { AlertBox } from "@platform/ui";
 import { turnErrorCopy } from "@mylanguagetutor/api-client/utils/turnErrorCopy";
 import type { TurnFailure } from "@mylanguagetutor/api-client/types/session/turn-failure";
+import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 
 interface TurnErrorAlertProps {
   failure: TurnFailure;
@@ -19,11 +20,11 @@ export default function TurnErrorAlert({ failure, onRetry, onDismiss }: TurnErro
         <div className="flex gap-1">
           {failure.retryable && (
             <button type="button" onClick={onRetry} className={ACTION_CLASS}>
-              Try again
+              {PRACTICE_COPY.tryAgain}
             </button>
           )}
           <button type="button" onClick={onDismiss} className={ACTION_CLASS}>
-            Dismiss
+            {PRACTICE_COPY.dismiss}
           </button>
         </div>
       </div>

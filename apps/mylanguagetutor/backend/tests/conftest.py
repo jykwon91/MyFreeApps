@@ -173,6 +173,8 @@ class FakeClaude:
     ``reply_chunks`` stream as text deltas. ``reply_error`` raises either on
     stream open (``reply_error_after is None`` -- before any token, like a
     real 429/529) or after that many chunks (mid-stream failure).
+    ``create_gate``, when set, holds the corrections and translation calls until
+    it is set, like a slow Sonnet call.
     """
 
     reply_chunks: list[str] = _field(default_factory=lambda: ["¡Hola! ", "¿Qué quieres tomar?"])
@@ -185,6 +187,7 @@ class FakeClaude:
     translation_usage: SimpleNamespace = _field(default_factory=lambda: _usage(50, 10))
     stream_calls: list[dict[str, Any]] = _field(default_factory=list)
     create_calls: list[dict[str, Any]] = _field(default_factory=list)
+    create_gate: asyncio.Event | None = None
 
     @property
     def messages(self) -> "FakeClaude":
@@ -200,6 +203,8 @@ class FakeClaude:
 
     async def create(self, **kwargs: Any) -> SimpleNamespace:
         self.create_calls.append(kwargs)
+        if self.create_gate is not None:
+            await self.create_gate.wait()
         if "output_config" in kwargs:
             return _message(self.corrections_json, self.corrections_usage)
         return _message(self.translation_text, self.translation_usage)

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { PartyPopper } from "lucide-react";
+import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 
 interface ScenarioCompleteBannerProps {
   onKeepTalking: () => void;
@@ -14,19 +15,19 @@ export default function ScenarioCompleteBanner({ onKeepTalking }: ScenarioComple
     >
       <div className="flex items-center gap-2 font-semibold">
         <PartyPopper className="h-5 w-5" aria-hidden="true" />
-        <span>Scenario complete</span>
+        <span>{PRACTICE_COPY.scenarioComplete}</span>
       </div>
-      <p className="mt-1">You covered everything this conversation was about. Nice work.</p>
+      <p className="mt-1">{PRACTICE_COPY.scenarioCompleteBody}</p>
       <div className="mt-2 flex flex-wrap gap-3">
         <Link to="/scenarios" className="inline-flex min-h-[44px] items-center font-medium underline">
-          Next scenario
+          {PRACTICE_COPY.nextScenario}
         </Link>
         <button
           type="button"
           onClick={onKeepTalking}
           className="inline-flex min-h-[44px] items-center font-medium underline"
         >
-          Keep talking
+          {PRACTICE_COPY.keepTalking}
         </button>
       </div>
     </section>

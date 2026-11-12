@@ -13,13 +13,14 @@ routes:
   # The language step's next step, and the scenario list's Change level.
   /onboarding/level:
     screen: (app)/onboarding/level
+  # A typed conversation, opened from a scenario on the Practice tab.
   /practice:
-    not_on_mobile: Not built yet.
+    screen: (app)/practice
   /register:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /reset-password:
     not_on_mobile: Done on the website, which the sign-in screen links to.
-  # The Practice tab. A scenario opens /practice on the website until the app has it.
+  # The Practice tab. A scenario opens /practice.
   /scenarios:
     screen: (app)/(tabs)/index
   /security:

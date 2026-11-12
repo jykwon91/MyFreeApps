@@ -3,13 +3,12 @@ import { Pressable, Text, View } from "react-native";
 import type { CatalogCardProps } from "../../types/CatalogCardProps";
 
 /** One choice in a list: a language to learn, or a scenario to practice. */
-export default function CatalogCard({ title, detail, prefix, accessibilityRole, accessibilityHint, onPress }: CatalogCardProps) {
+export default function CatalogCard({ title, detail, prefix, onPress }: CatalogCardProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
   return (
     <Pressable
-      accessibilityHint={accessibilityHint}
       accessibilityLabel={[prefix, title, detail].filter(Boolean).join(" ")}
-      accessibilityRole={accessibilityRole}
+      accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => ({
         minHeight: MIN_TOUCH_TARGET,

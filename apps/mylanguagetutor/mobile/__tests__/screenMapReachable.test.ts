@@ -10,10 +10,6 @@ import { APP_ROUTES } from "../test-support/renderApp";
 
 const SCREEN_MAP = parse(fs.readFileSync(path.join(__dirname, "..", "screen-map.yaml"), "utf8")) as ScreenMap;
 const ROUTES = Object.entries(SCREEN_MAP.routes);
-/** Pages no tab or link opens, because the website reaches them only from another page. */
-const REACHED_IN_FLOW: Record<string, string> = {
-  "/practice": "Needs a scenario, chosen on /scenarios (the Practice tab).",
-};
 const SETTINGS_WEB_PATHS = SETTINGS_MENU.flatMap((group) => group.items.flatMap((item) => (item.webPath ? [item.webPath] : [])));
 
 describe("the app the tests render", () => {
@@ -46,16 +42,11 @@ describe("screen-map.yaml", () => {
     expect(missing).toEqual([]);
   });
 
-  it("sends every page that isn't built yet somewhere: a tab, a link on Settings, or a step in the practice flow", () => {
-    const linked = new Set<string>([...SETTINGS_WEB_PATHS, ...TABS.map((tab) => tab.webPath), ...Object.keys(REACHED_IN_FLOW)]);
+  it("sends every page that isn't built yet somewhere: a tab or a link on Settings", () => {
+    const linked = new Set<string>([...SETTINGS_WEB_PATHS, ...TABS.map((tab) => tab.webPath)]);
     const unreachable = ROUTES.filter(
       ([route, { not_on_mobile }]) => not_on_mobile === "Not built yet." && !route.includes(":") && route !== "/" && !linked.has(route),
     ).map(([route]) => route);
     expect(unreachable).toEqual([]);
-  });
-
-  it("only excuses flow steps the website still has and the phone hasn't built", () => {
-    const stale = Object.keys(REACHED_IN_FLOW).filter((route) => SCREEN_MAP.routes[route]?.not_on_mobile !== "Not built yet.");
-    expect(stale).toEqual([]);
   });
 });

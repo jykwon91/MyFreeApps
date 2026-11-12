@@ -1,4 +1,5 @@
 import type { CorrectionItem } from "@mylanguagetutor/api-client/types/tutor/correction-item";
+import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 
 interface CorrectionCardProps {
   correction: CorrectionItem;
@@ -14,8 +15,8 @@ export default function CorrectionCard({ correction, languageName }: CorrectionC
   return (
     <li className="rounded-md border bg-card px-3 py-2 text-sm">
       <p>
-        It looked like you said <span className="font-medium">"{correction.error_span}"</span>
-        {" "}— natural {languageName}:{" "}
+        {PRACTICE_COPY.correctionSaid} <span className="font-medium">"{correction.error_span}"</span>
+        {" "}{PRACTICE_COPY.correctionNatural} {languageName}:{" "}
         <span className="font-medium text-primary">"{correction.corrected_span}"</span>
       </p>
       {correction.explanation && (

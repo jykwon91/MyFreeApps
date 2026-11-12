@@ -15,25 +15,19 @@ import TurnErrorAlert from "@/features/session/TurnErrorAlert";
 import ScenarioGoals from "@/features/session/ScenarioGoals";
 import ScenarioCompleteBanner from "@/features/session/ScenarioCompleteBanner";
 import { useGetUsageTodayQuery } from "@mylanguagetutor/api-client/store/usageApi";
+import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
+import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/startConversationPrompt";
+import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedAnswerPlaceholder";
+import { usageBlock } from "@mylanguagetutor/api-client/utils/usageBlock";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 import type { Level } from "@mylanguagetutor/api-client/types/tutor/level";
 import type { InputMode } from "@mylanguagetutor/api-client/types/session/input-mode";
-import type { SessionBlock } from "@mylanguagetutor/api-client/types/session/session-block";
-import type { UsageToday } from "@mylanguagetutor/api-client/types/tutor/usage-today";
 
 interface PracticeSessionProps {
   language: Language;
   scenario: Scenario;
   level: Level;
-}
-
-/** Up-front budget check, so a capped learner isn't asked to record first. */
-function usageBlock(usage: UsageToday | undefined): SessionBlock | null {
-  if (!usage) return null;
-  if (!usage.tutor_available) return "unavailable";
-  if (usage.cap_reached) return "daily_limit";
-  return null;
 }
 
 /**
@@ -108,7 +102,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
       <div className="flex-1">
         {session.entries.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Say hello in {language.display_name} to start the conversation.
+            {startConversationPrompt(language.display_name)}
           </p>
         ) : (
           <TranscriptList
@@ -152,8 +146,8 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
         {!block && mode === "text" && (
           <div className="space-y-2">
             <TextFallbackInput
-              label={recognition.supported ? "Type your answer" : "Typing practice (not speaking)"}
-              placeholder={`Write in ${language.display_name}…`}
+              label={recognition.supported ? PRACTICE_COPY.typeYourAnswer : PRACTICE_COPY.typingOnlyLabel}
+              placeholder={typedAnswerPlaceholder(language.display_name)}
               busy={busy}
               disabled={busy}
               onSend={session.send}

@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type RefObject } from "react";
 import { LoadingButton } from "@platform/ui";
 import { MAX_TURN_CHARS } from "@mylanguagetutor/api-client/constants/turnLimits";
+import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 
 interface TextFallbackInputProps {
   label: string;
@@ -48,8 +49,8 @@ export default function TextFallbackInput({
           autoComplete="off"
           className="min-h-[44px] flex-1 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
         />
-        <LoadingButton type="submit" isLoading={busy} loadingText="Sending" disabled={disabled || !trimmed}>
-          Send
+        <LoadingButton type="submit" isLoading={busy} loadingText={PRACTICE_COPY.sending} disabled={disabled || !trimmed}>
+          {PRACTICE_COPY.send}
         </LoadingButton>
       </div>
     </form>

@@ -155,6 +155,176 @@ describe("usePracticeSession", () => {
     expect(result.current.entries[0]).toMatchObject({ replyText: "Hola", status: "partial" });
   });
 
+  /** Streams the first words, then holds the turn open until it is aborted. */
+  function holdingOpen({ onEvent, signal }: StreamTurnOptions) {
+    onEvent({ type: "reply.delta", text: "¡Hola! Bienvenido" });
+    return new Promise<void>((_resolve, reject) => {
+      signal?.addEventListener("abort", () => reject(new Error("aborted")));
+    });
+  }
+
+  it("an interrupted turn keeps the words so far, unspoken, and retry sends the same text", async () => {
+    streamTurn.mockImplementationOnce(holdingOpen);
+    const { result, speak } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.requestPhase).toBe("replying"));
+    act(() => result.current.interrupt());
+
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    expect(streamTurn.mock.calls[0][0].signal?.aborted).toBe(true);
+    expect(result.current.failure).toMatchObject({ code: "connection_lost", text: "hola", retryable: true });
+    expect(result.current.entries[0]).toMatchObject({ replyText: "¡Hola! Bienvenido", status: "failed" });
+    // "¡Hola!" was a finished sentence; the rest was cut off, so it isn't read out.
+    expect(speak.mock.calls.map((call) => call[0])).toEqual(["¡Hola!"]);
+
+    streamTurn.mockImplementation(emitting(COMPLETE_TURN));
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.entries[0]?.status).toBe("complete"));
+    expect(result.current.entries).toHaveLength(1);
+    expect(streamTurn.mock.calls[1][0].text).toBe("hola");
+  });
+
+  /** Streams the whole reply, then holds the turn open for its corrections until `finish` or `drop`. */
+  function replyThenHold() {
+    let finish: () => void = () => {};
+    let drop: (err?: Error) => void = () => {};
+    const stream = ({ onEvent, signal }: StreamTurnOptions) => {
+      COMPLETE_TURN.slice(0, 4).forEach(onEvent);
+      return new Promise<void>((resolve, reject) => {
+        signal?.addEventListener("abort", () => reject(new Error("aborted")));
+        finish = () => {
+          COMPLETE_TURN.slice(4).forEach(onEvent);
+          resolve();
+        };
+        drop = (err) => (err ? reject(err) : resolve());
+      });
+    };
+    return { stream, finish: () => finish(), drop: (err?: Error) => drop(err) };
+  }
+
+  it("lets a turn whose whole reply has arrived finish when interrupted", async () => {
+    const turn = replyThenHold();
+    streamTurn.mockImplementationOnce(turn.stream);
+    const { result } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.entries[0]?.replyText).toBe("¡Hola! ¿Qué quieres?"));
+    act(() => result.current.interrupt());
+    expect(streamTurn.mock.calls[0][0].signal?.aborted).toBe(false);
+
+    act(() => turn.finish());
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    expect(result.current.entries[0]).toMatchObject({ status: "complete", correctionsMissing: false, retryPrompt: "Try: Quiero un café." });
+    expect(result.current.failure).toBeNull();
+    expect(streamTurn).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["closes", undefined],
+    ["breaks", new TurnRequestError(0, "network_error")],
+  ])("keeps a whole reply when the stream %s before its corrections, with nothing to resend", async (_how, err) => {
+    const turn = replyThenHold();
+    streamTurn.mockImplementationOnce(turn.stream);
+    const { result } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.entries[0]?.replyText).toBe("¡Hola! ¿Qué quieres?"));
+    act(() => turn.drop(err));
+
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    expect(result.current.entries).toHaveLength(1);
+    expect(result.current.entries[0]).toMatchObject({ replyText: "¡Hola! ¿Qué quieres?", status: "complete", correctionsMissing: true });
+    expect(result.current.failure).toBeNull();
+  });
+
+  it("stops waiting on the interrupted turn's corrections when asked: complete, with them marked missing", async () => {
+    const turn = replyThenHold();
+    streamTurn.mockImplementationOnce(turn.stream);
+    const { result } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.entries[0]?.replyText).toBe("¡Hola! ¿Qué quieres?"));
+    act(() => result.current.interrupt());
+    act(() => result.current.stopWaitingForCorrections());
+
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    expect(streamTurn.mock.calls[0][0].signal?.aborted).toBe(true);
+    expect(result.current.entries[0]).toMatchObject({ status: "complete", correctionsMissing: true });
+    expect(result.current.failure).toBeNull();
+  });
+
+  it("leaves a turn sent after the interrupt alone", async () => {
+    const first = replyThenHold();
+    const second = replyThenHold();
+    streamTurn.mockImplementationOnce(first.stream).mockImplementationOnce(second.stream);
+    const { result } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.entries[0]?.replyText).toBe("¡Hola! ¿Qué quieres?"));
+    act(() => result.current.interrupt());
+    act(() => first.finish());
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    act(() => result.current.send("un café"));
+    await waitFor(() => expect(result.current.entries[1]?.replyText).toBe("¡Hola! ¿Qué quieres?"));
+    act(() => result.current.stopWaitingForCorrections());
+
+    expect(streamTurn.mock.calls[1][0].signal?.aborted).toBe(false);
+    act(() => second.finish());
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    expect(result.current.entries[1]).toMatchObject({ status: "complete", correctionsMissing: false });
+  });
+
+  it("doesn't stop waiting on a turn whose reply is still arriving", async () => {
+    streamTurn.mockImplementationOnce(holdingOpen);
+    const { result } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(streamTurn).toHaveBeenCalledTimes(1));
+    act(() => result.current.stopWaitingForCorrections());
+
+    expect(streamTurn.mock.calls[0][0].signal?.aborted).toBe(false);
+    expect(result.current.requestPhase).not.toBe("idle");
+  });
+
+  it("an interrupted turn still waiting for its first words ends like a dropped connection", async () => {
+    streamTurn.mockImplementationOnce(
+      ({ signal }) => new Promise<void>((_resolve, reject) => signal?.addEventListener("abort", () => reject(new Error("aborted")))),
+    );
+    const { result } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(streamTurn).toHaveBeenCalledTimes(1));
+    act(() => result.current.interrupt());
+
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    expect(streamTurn.mock.calls[0][0].signal?.aborted).toBe(true);
+    expect(result.current.failure).toMatchObject({ code: "connection_lost", text: "hola", retryable: true });
+    expect(result.current.entries[0]).toMatchObject({ replyText: "", status: "failed" });
+
+    streamTurn.mockImplementation(emitting(COMPLETE_TURN));
+    act(() => result.current.retry());
+    await waitFor(() => expect(result.current.entries[0]?.status).toBe("complete"));
+    expect(result.current.entries).toHaveLength(1);
+  });
+
+  it("interrupting with no turn in flight does nothing", () => {
+    const { result } = setup();
+    act(() => result.current.interrupt());
+    expect(result.current.failure).toBeNull();
+  });
+
+  it("leaving aborts the turn in flight", async () => {
+    streamTurn.mockImplementationOnce(holdingOpen);
+    const { result, unmount } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.requestPhase).toBe("replying"));
+    unmount();
+
+    expect(streamTurn.mock.calls[0][0].signal?.aborted).toBe(true);
+  });
+
   it("ignores empty input", () => {
     const { result } = setup();
     act(() => result.current.send("   "));

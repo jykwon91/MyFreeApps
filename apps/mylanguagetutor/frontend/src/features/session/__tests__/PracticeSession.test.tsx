@@ -85,6 +85,8 @@ describe("PracticeSession", () => {
       scenarioState: { goals_met: [], complete: false },
       send,
       retry: vi.fn(),
+      interrupt: vi.fn(),
+      stopWaitingForCorrections: vi.fn(),
       dismissFailure: vi.fn(),
       dismissRetryPrompt: vi.fn(),
     };
@@ -182,5 +184,29 @@ describe("CorrectionCard", () => {
     expect(item).toHaveTextContent(
       'It looked like you said "yo quiero un cafe caliente" — natural Spanish: "quiero un café caliente"',
     );
+  });
+
+  it("keeps a whole reply whose corrections didn't load, with a quiet note and nothing to resend", () => {
+    sessionState = {
+      ...sessionState,
+      entries: [
+        {
+          key: "turn-1",
+          learnerText: "hola",
+          replyText: "¡Hola! ¿Qué quieres?",
+          translation: null,
+          corrections: [],
+          retryPrompt: null,
+          status: "complete",
+          correctionsMissing: true,
+        },
+      ],
+    };
+    renderScreen();
+
+    expect(screen.getByText("¡Hola! ¿Qué quieres?")).toBeInTheDocument();
+    expect(screen.getByText("Suggestions for this reply didn't load.")).toBeInTheDocument();
+    expect(screen.queryByText("The reply was cut off.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
   });
 });

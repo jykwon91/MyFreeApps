@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createStreamTurn } from "../utils/createStreamTurn";
 import { TurnRequestError } from "../errors/TurnRequestError";
+import type { SentSession, SessionRenewal } from "@platform/core";
 import type { StreamTurnConfig } from "../types/stream/stream-turn-config";
 import type { TurnFetch } from "../types/stream/turn-fetch";
 import type { TurnFetchInit } from "../types/stream/turn-fetch-init";
@@ -155,5 +156,76 @@ describe("createStreamTurn", () => {
       status: 200,
       detail: "no_stream",
     });
+  });
+});
+
+describe("createStreamTurn with a renewable sign-in", () => {
+  function unauthorized() {
+    return new Response(JSON.stringify({ detail: "Unauthorized" }), { status: 401 });
+  }
+
+  function setupRenewing(fetch: TurnFetch, renewal: SessionRenewal) {
+    let token = "old-token";
+    const onUnauthorized = vi.fn<StreamTurnConfig["onUnauthorized"]>();
+    const renewSession = vi.fn(async (_sent: SentSession) => {
+      if (renewal === "renewed") token = "new-token";
+      return renewal;
+    });
+    const streamTurn = createStreamTurn({
+      fetch,
+      baseUrl: "/api",
+      getToken: () => token,
+      currentAccount: () => "learner-1",
+      renewSession,
+      onUnauthorized,
+    });
+    return { streamTurn, renewSession, onUnauthorized };
+  }
+
+  it("renews the sign-in after a 401 and sends the turn again with the new token", async () => {
+    const fetch = vi
+      .fn<TurnFetch>()
+      .mockResolvedValueOnce(unauthorized())
+      .mockResolvedValueOnce(new Response(sseBody(['event: reply.delta\ndata: {"text":"Hola"}\n\n']), { status: 200 }));
+    const { streamTurn, renewSession, onUnauthorized } = setupRenewing(fetch, "renewed");
+    const events: TurnStreamEvent[] = [];
+
+    await streamTurn({ sessionId: "s1", text: "hola", onEvent: (e) => events.push(e) });
+
+    expect(renewSession).toHaveBeenCalledWith({ token: "old-token", account: "learner-1" });
+    expect(fetch.mock.calls.map(([, init]) => init.headers.Authorization)).toEqual(["Bearer old-token", "Bearer new-token"]);
+    expect(events).toEqual([{ type: "reply.delta", text: "Hola" }]);
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it("renews only once: a second 401 goes to onUnauthorized", async () => {
+    const fetch = vi.fn<TurnFetch>().mockImplementation(async () => unauthorized());
+    const { streamTurn, renewSession, onUnauthorized } = setupRenewing(fetch, "renewed");
+
+    await expect(streamTurn({ sessionId: "s1", text: "hola", onEvent: () => {} })).rejects.toMatchObject({ status: 401 });
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(renewSession).toHaveBeenCalledTimes(1);
+    expect(onUnauthorized).toHaveBeenCalledWith("new-token");
+  });
+
+  it("tells onUnauthorized when the sign-in has ended", async () => {
+    const { streamTurn, onUnauthorized } = setupRenewing(answering(unauthorized()), "ended");
+
+    await expect(streamTurn({ sessionId: "s1", text: "hola", onEvent: () => {} })).rejects.toMatchObject({
+      status: 401,
+      detail: "Unauthorized",
+    });
+    expect(onUnauthorized).toHaveBeenCalledWith("old-token");
+  });
+
+  it("is a network_error, and keeps the learner signed in, when the renewal gets no answer", async () => {
+    const { streamTurn, onUnauthorized } = setupRenewing(answering(unauthorized()), "unreachable");
+
+    await expect(streamTurn({ sessionId: "s1", text: "hola", onEvent: () => {} })).rejects.toMatchObject({
+      status: 0,
+      detail: "network_error",
+    });
+    expect(onUnauthorized).not.toHaveBeenCalled();
   });
 });
