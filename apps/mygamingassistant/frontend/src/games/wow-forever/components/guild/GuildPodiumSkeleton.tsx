@@ -11,7 +11,7 @@ export default function GuildPodiumSkeleton() {
         {Array.from({ length: LEADERBOARD_PODIUM_SIZE }, (_, i) => (
           <div
             key={i}
-            className={clsx(PODIUM_SLOTS[i], "rounded-xl bg-muted animate-pulse", i === 0 ? "h-[92px] sm:h-[220px]" : "h-[90px] sm:h-[198px]")}
+            className={clsx(PODIUM_SLOTS[i], "rounded-xl bg-muted animate-pulse", i === 0 ? "h-[108px] sm:h-[220px]" : "h-[102px] sm:h-[198px]")}
           />
         ))}
       </div>

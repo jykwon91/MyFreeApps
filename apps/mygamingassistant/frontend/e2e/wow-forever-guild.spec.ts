@@ -236,6 +236,16 @@ test("leaderboards look like a game's: a podium with 1st in the middle, medals, 
   expect(second!.x).toBeLessThan(first!.x);
   expect(first!.x).toBeLessThan(third!.x);
   expect(first!.height).toBeGreaterThan(second!.height);
+  // Each card's bar sits inside it, under the number.
+  for (const [i, value] of ["112", "40", "40"].entries()) {
+    const card = (await cards.nth(i).boundingBox())!;
+    const bar = (await cards.nth(i).locator("span[style*='width']").boundingBox())!;
+    const number = (await cards.nth(i).getByText(value, { exact: true }).boundingBox())!;
+    expect(bar.y).toBeGreaterThan(number.y + number.height - 1);
+    expect(bar.x).toBeGreaterThanOrEqual(card.x);
+    expect(bar.x + bar.width).toBeLessThanOrEqual(card.x + card.width);
+    expect(bar.y + bar.height).toBeLessThanOrEqual(card.y + card.height);
+  }
   // Names wear their class colour (Tiny John is a Mage).
   const mageName = cards.nth(0).getByRole("link", { name: "Tiny John" });
   await expect(mageName).not.toHaveCSS("color", await page.locator("body").evaluate((b) => getComputedStyle(b).color));
@@ -254,6 +264,18 @@ test("leaderboards look like a game's: a podium with 1st in the middle, medals, 
   expect(Math.abs(stacked[0]!.x - stacked[1]!.x)).toBeLessThan(2);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+  // The section fits the screen (the page clips sideways overflow, so check the box), the select too.
+  const section = await page.getByRole("region", { name: "Leaderboards" }).boundingBox();
+  expect(section!.x + section!.width).toBeLessThanOrEqual(375);
+  const select = await page.getByLabel("Rank members by").boundingBox();
+  expect(select!.x + select!.width).toBeLessThanOrEqual(section!.x + section!.width);
+  // On each card the name has room: it stays left of the number, on one line.
+  for (const [i, value] of ["112", "40", "40"].entries()) {
+    const name = await cards.nth(i).getByRole("link").boundingBox();
+    const number = await cards.nth(i).getByText(value, { exact: true }).boundingBox();
+    expect(name!.x + name!.width).toBeLessThanOrEqual(number!.x);
+    expect(name!.height).toBeLessThanOrEqual(46);
+  }
 });
 
 function gainsGuild() {

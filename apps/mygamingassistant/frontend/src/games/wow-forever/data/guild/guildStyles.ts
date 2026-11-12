@@ -8,8 +8,13 @@ export const LEADERBOARD_ROW =
   "flex min-h-[44px] items-center gap-3 rounded-lg border bg-card px-3 py-1.5 sm:col-span-3";
 /** The viewer's own row or card: a ring and tint, never colour alone (it also says "You"). */
 export const LEADERBOARD_MINE = "ring-2 ring-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.1)]";
-/** A podium card; 1st is taller, with a gold border and glow. */
-export const PODIUM_CARD = "flex items-center gap-3 rounded-xl border bg-card p-3 sm:flex-col sm:justify-end sm:gap-2 sm:p-4 sm:text-center";
+/**
+ * The board picker's grid. ``grid-cols-1`` (``minmax(0, 1fr)``) on a phone: an implicit column would grow to the
+ * chips row's full width and push the card off the screen.
+ */
+export const LEADERBOARD_PICKER_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2";
+/** A podium card: a row on a phone (its bar wraps to a line of its own); 1st is taller, with a gold border and glow. */
+export const PODIUM_CARD = "flex flex-wrap items-center gap-3 rounded-xl border bg-card p-3 sm:flex-col sm:justify-end sm:gap-2 sm:p-4 sm:text-center";
 export const PODIUM_CARD_FIRST = "border-2 bg-gradient-to-b from-[#F2C94C]/25 to-[hsl(var(--card))] sm:min-h-[208px]";
 export const PODIUM_CARD_OTHER = "sm:min-h-[172px]";
 /** Where each podium card stands on wide screens: the first in the middle, the second left, the third right. */

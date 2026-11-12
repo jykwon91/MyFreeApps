@@ -3,6 +3,7 @@ import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import GuildFactionPicker from "@/games/wow-forever/components/guild/GuildFactionPicker";
 import GuildLeaderboardList from "@/games/wow-forever/components/guild/GuildLeaderboardList";
 import GuildPodiumSkeleton from "@/games/wow-forever/components/guild/GuildPodiumSkeleton";
+import { LEADERBOARD_PICKER_GRID } from "@/games/wow-forever/data/guild/guildStyles";
 import { useGetGuildReputationsQuery } from "@/games/wow-forever/api/wowGuildApi";
 import { LEADERBOARD_COPY } from "@/games/wow-forever/data/guild/leaderboardConfig";
 import { useFactionParam } from "@/games/wow-forever/hooks/useFactionParam";
@@ -41,7 +42,7 @@ export default function GuildFactionBoard({ slug, members, board, me, picker }: 
 
   return (
     <div className="space-y-3" aria-busy={isFetching}>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className={LEADERBOARD_PICKER_GRID}>
         {picker}
         {noFactions ? null : (
           <GuildFactionPicker factions={data?.factions ?? null} value={faction ?? data?.faction_id ?? null} onChange={setFaction} />
