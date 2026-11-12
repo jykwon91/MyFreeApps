@@ -1,4 +1,5 @@
 import { useState } from "react";
+import CharacterSectionNote from "@/games/wow-forever/components/character/CharacterSectionNote";
 import CharacterProfessionGroup from "@/games/wow-forever/components/character/CharacterProfessionGroup";
 import { characterProfessionsNote } from "@/games/wow-forever/lib/character/characterProfessions";
 import type { CharacterResponse } from "@/games/wow-forever/types/character/characterResponse";
@@ -22,9 +23,7 @@ export default function CharacterProfessionsPanel({ character }: { character: Ch
         Professions
       </h2>
       {note && (
-        <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground" data-testid="character-professions-note">
-          {note}
-        </p>
+        <CharacterSectionNote testId="character-professions-note">{note}</CharacterSectionNote>
       )}
       {!note && (
         <>

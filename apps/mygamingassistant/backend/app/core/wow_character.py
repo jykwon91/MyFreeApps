@@ -34,9 +34,18 @@ CHARACTER_RENDER_PADDING: Final = 0.06
 # decoded (a small PNG can inflate to gigabytes of pixels).
 CHARACTER_RENDER_MAX_PIXELS: Final = 3200 * 2400
 
-# Lookups per IP: each uncached one is up to five Blizzard calls (token, profile, media, equipment, statistics).
+# Lookups per IP: each uncached one is up to ten Blizzard calls (token, profile, media, equipment and the
+# optional parts).
 CHARACTER_RATE_LIMIT: Final = 30
 CHARACTER_RATE_WINDOW_SECONDS: Final = 60
+
+# Statistic ids in Blizzard's ``/achievements/statistics`` (the client's Achievement
+# rows; the same ids in every character's answer, checked 2026-11-12). A statistic
+# the character has never moved is left out of the answer, so absent = 0.
+STATISTIC_DEATHS_FROM_PLAYERS: Final = 1501
+STATISTIC_DEATHS_FROM_OPPOSITE_FACTION: Final = 318
+# Its quantity is the kills there; its description names the continent.
+STATISTIC_TOP_HONOR_CONTINENT: Final = 1458
 
 # An item under this share of its durability is flagged "repair soon".
 CHARACTER_DURABILITY_LOW_SHARE: Final = 0.5

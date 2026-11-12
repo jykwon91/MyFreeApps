@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-12",
+    title: "Your character: PvP",
+    summary:
+      "Your character page now shows your PvP rank, honorable kills and where you made most of them, and how often other players have killed you.",
+    to: "/wow-forever/character",
+  },
+  {
+    date: "2026-11-12",
     title: "Your character: reputation",
     summary:
       "Your character page now shows your standing with every faction you've met, grouped as in game with progress to the next level, and warns when a goblin town's guards will attack you.",

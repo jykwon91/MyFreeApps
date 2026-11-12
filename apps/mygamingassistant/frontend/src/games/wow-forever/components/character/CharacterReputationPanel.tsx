@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import CharacterReputationGroup from "@/games/wow-forever/components/character/CharacterReputationGroup";
+import CharacterSectionNote from "@/games/wow-forever/components/character/CharacterSectionNote";
 import { characterReputationsNote, groupReputations } from "@/games/wow-forever/lib/character/characterReputation";
 import type { CharacterResponse } from "@/games/wow-forever/types/character/characterResponse";
 
@@ -30,9 +31,7 @@ export default function CharacterReputationPanel({ character }: { character: Cha
         Reputation
       </h2>
       {note && (
-        <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground" data-testid="character-reputations-note">
-          {note}
-        </p>
+        <CharacterSectionNote testId="character-reputations-note">{note}</CharacterSectionNote>
       )}
       {groups.map((group) => (
         <CharacterReputationGroup key={group.id} group={group} open={open.has(group.id)} onToggle={() => toggle(group.id)} />

@@ -9,6 +9,9 @@
 * ``GET /profile/wow/character/{slug}/specializations`` → talent ranks per saved set.
 * ``GET /profile/wow/character/{slug}/professions`` → skill and known recipes
   per profession.
+* ``GET /profile/wow/character/{slug}/pvp-summary`` → honorable kills and PvP rank.
+* ``GET /profile/wow/character/{slug}/achievements/statistics`` → the game's
+  statistics pane (deaths from players, boss kills…), by statistic id.
 * ``GET /profile/wow/character/{slug}/reputations`` → standing with each
   faction the character has met.
 
@@ -135,6 +138,12 @@ class BlizzardCharacterClient:
 
     async def reputations(self, slug: str) -> dict[str, Any] | None:
         return await self._optional_json(f"{slug}/reputations")
+
+    async def pvp_summary(self, slug: str) -> dict[str, Any] | None:
+        return await self._optional_json(f"{slug}/pvp-summary")
+
+    async def achievement_statistics(self, slug: str) -> dict[str, Any] | None:
+        return await self._optional_json(f"{slug}/achievements/statistics")
 
     async def render(self, url: str) -> bytes | None:
         """The render PNG — only from Blizzard's render host, over HTTPS (404 → None)."""

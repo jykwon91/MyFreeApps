@@ -1,5 +1,5 @@
 import { RESISTANCE_LABELS } from "@/games/wow-forever/data/character/characterStatsConfig";
-import { formatWhole } from "@/games/wow-forever/lib/character/characterStats";
+import { formatWhole } from "@/games/wow-forever/lib/character/formatWhole";
 import type { CharacterResistances } from "@/games/wow-forever/types/character/characterResistances";
 
 /** Total resistance to each school, in the game pane's order. */

@@ -20,6 +20,7 @@ import {
   recipeColorAt,
   recipeSpell,
 } from "@/games/wow-forever/lib/character/characterProfessions";
+import { pvpRankLabel, pvpSummary } from "@/games/wow-forever/lib/character/characterPvp";
 import { groupReputations, standingPercent } from "@/games/wow-forever/lib/character/characterReputation";
 import { pickedTalent } from "@/games/wow-forever/lib/character/characterTalents";
 import { characterNameFromSlug, characterSlugFromName } from "@/games/wow-forever/lib/character/characterSlug";
@@ -193,6 +194,14 @@ const CHARACTER: CharacterResponse = {
     { id: 2740, name: "Kirin Tor", standing: "Neutral", tier: 3, value: 250, max: 3000 },
     { id: 469, name: "Alliance", standing: "Revered", tier: 6, value: 0, max: 21000 },
   ],
+  pvp: {
+    rank: 0,
+    honorable_kills: 21,
+    deaths_from_players: 31,
+    deaths_from_opposite_faction: 30,
+    top_honor_continent: "Eastern Kingdoms",
+    top_honor_continent_kills: 17,
+  },
 };
 
 function query(extra: Record<string, unknown>) {
@@ -736,5 +745,62 @@ describe("WowCharacterPage reputation", () => {
     expect(groups.flatMap((group) => group.reputations).some((rep) => rep.id === 469)).toBe(false);
     expect(standingPercent({ id: 1, name: "x", standing: "Honored", tier: 5, value: 6000, max: 12000 })).toBe(50);
     expect(standingPercent({ id: 1, name: "x", standing: "Honored", tier: 5, value: -5, max: 12000 })).toBe(0);
+  });
+});
+
+describe("WowCharacterPage PvP", () => {
+  function pvpFor(data: CharacterResponse) {
+    mockQuery.mockReturnValue(query({ data }));
+    renderAt("/wow-forever/character/jason-kwon");
+    return screen.getByRole("region", { name: "PvP" });
+  }
+
+  it("starts closed with the rank and kills in the heading, and opens to the record", () => {
+    const panel = pvpFor(CHARACTER);
+    const toggle = within(panel).getByRole("button", { name: /PvP/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(within(panel).getByTestId("character-pvp-summary")).toHaveTextContent("Unranked · 21 honorable kills");
+    expect(within(panel).getByTestId("character-pvp-rank")).not.toBeVisible();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(within(panel).getByTestId("character-pvp-rank")).toHaveTextContent("Ranks come from battlegrounds");
+    expect(within(panel).getByTestId("character-pvp-kills")).toHaveTextContent("Most in Eastern Kingdoms (17)");
+    expect(panel).toHaveTextContent("Deaths to players31");
+    expect(panel).toHaveTextContent("Deaths to the other faction30");
+    expect(within(panel).queryByTestId("character-pvp-none")).not.toBeInTheDocument();
+  });
+
+  it("says Blizzard sent no PvP record", () => {
+    const failed = pvpFor({ ...CHARACTER, pvp: null });
+    expect(within(failed).getByTestId("character-pvp-summary")).toHaveTextContent("Couldn't load");
+    expect(within(failed).getByTestId("character-pvp-note")).toHaveTextContent("Blizzard didn't send");
+  });
+
+  it("leaves out deaths Blizzard didn't send, and doesn't call unknown deaths no PvP", () => {
+    const unknown = {
+      rank: 0, honorable_kills: 0, deaths_from_players: null, deaths_from_opposite_faction: null,
+      top_honor_continent: null, top_honor_continent_kills: null,
+    };
+    const panel = pvpFor({ ...CHARACTER, pvp: unknown });
+    fireEvent.click(within(panel).getByRole("button", { name: /PvP/ }));
+    expect(panel).not.toHaveTextContent("Deaths to players");
+    expect(within(panel).queryByTestId("character-pvp-none")).not.toBeInTheDocument();
+    expect(within(panel).getByTestId("character-pvp-kills")).toHaveTextContent("0");
+  });
+
+  it("says when there's no PvP yet", () => {
+    const quiet = {
+      rank: 0, honorable_kills: 0, deaths_from_players: 0, deaths_from_opposite_faction: 0,
+      top_honor_continent: null, top_honor_continent_kills: null,
+    };
+    const panel = pvpFor({ ...CHARACTER, pvp: quiet });
+    fireEvent.click(within(panel).getByRole("button", { name: /PvP/ }));
+    expect(within(panel).getByTestId("character-pvp-none")).toHaveTextContent("No PvP recorded yet");
+  });
+
+  it("labels ranks without guessing titles", () => {
+    expect(pvpRankLabel(0)).toBe("Unranked");
+    expect(pvpRankLabel(3)).toBe("Rank 3");
+    expect(pvpSummary({ ...CHARACTER.pvp!, rank: 2, honorable_kills: 1 })).toBe("Rank 2 · 1 honorable kill");
   });
 });

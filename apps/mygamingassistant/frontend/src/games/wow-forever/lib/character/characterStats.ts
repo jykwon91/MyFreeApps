@@ -6,17 +6,12 @@ import {
   NORMAL_MOVEMENT_SPEED,
 } from "@/games/wow-forever/data/character/characterStatsConfig";
 import { characterClassId } from "@/games/wow-forever/lib/character/characterClassId";
+import { formatWhole } from "@/games/wow-forever/lib/character/formatWhole";
 import type { CharacterStatLine } from "@/games/wow-forever/types/character/characterStatLine";
 import type { CharacterStats } from "@/games/wow-forever/types/character/characterStats";
 import type { CharacterStatsTab } from "@/games/wow-forever/types/character/characterStatsTab";
 import type { CharacterStatValue } from "@/games/wow-forever/types/character/characterStatValue";
 import type { CharacterWeaponDamage } from "@/games/wow-forever/types/character/characterWeaponDamage";
-
-const whole = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
-
-export function formatWhole(value: number): string {
-  return whole.format(value);
-}
 
 /** 4.9312 → "4.93%". */
 export function formatPercent(value: number): string {

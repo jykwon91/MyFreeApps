@@ -1,4 +1,5 @@
 import CharacterResistanceList from "@/games/wow-forever/components/character/CharacterResistanceList";
+import CharacterSectionNote from "@/games/wow-forever/components/character/CharacterSectionNote";
 import CharacterStatList from "@/games/wow-forever/components/character/CharacterStatList";
 import CharacterStatsTabs from "@/games/wow-forever/components/character/CharacterStatsTabs";
 import { attributeLines, summaryLines } from "@/games/wow-forever/lib/character/characterStats";
@@ -29,9 +30,9 @@ export default function CharacterStatsPanel({ character }: { character: Characte
           </p>
         </>
       ) : (
-        <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">
+        <CharacterSectionNote>
           Blizzard doesn&apos;t have this character&apos;s stats yet. Log in and out once, then look again.
-        </p>
+        </CharacterSectionNote>
       )}
     </section>
   );

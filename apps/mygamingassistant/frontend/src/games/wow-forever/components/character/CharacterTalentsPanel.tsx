@@ -1,3 +1,4 @@
+import CharacterSectionNote from "@/games/wow-forever/components/character/CharacterSectionNote";
 import CharacterTalentSetView from "@/games/wow-forever/components/character/CharacterTalentSetView";
 import { characterClassId } from "@/games/wow-forever/lib/character/characterClassId";
 import { characterTalentsNote, talentSetLabel } from "@/games/wow-forever/lib/character/characterTalents";
@@ -17,11 +18,8 @@ export default function CharacterTalentsPanel({ character }: { character: Charac
       <h2 id="character-talents-heading" className="text-lg font-semibold">
         Talents
       </h2>
-      {note || !classId ? (
-        <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground" data-testid="character-talents-note">
-          {note}
-        </p>
-      ) : (
+      {note && <CharacterSectionNote testId="character-talents-note">{note}</CharacterSectionNote>}
+      {!note && classId !== undefined && (
         <>
           {groups.map((group, i) => (
             <CharacterTalentSetView

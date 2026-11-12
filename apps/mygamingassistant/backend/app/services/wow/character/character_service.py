@@ -5,10 +5,10 @@ render is cached beside it. Both expire after ``CHARACTER_CACHE_SECONDS``, so a
 player who logs out with new gear sees it within minutes, and a page that
 loads the sheet and the picture asks Blizzard once.
 
-Stats, talents, professions and reputations are the optional parts: if
-Blizzard fails on ``/statistics``, ``/specializations``, ``/professions`` or
-``/reputations`` the sheet still shows (that part null), the failure is logged,
-and the answer is not cached so the next look-up asks again.
+Everything past the profile, media and equipment is an optional part
+(``_OPTIONAL_PARTS``): if Blizzard fails on one, the sheet still shows (that
+part null), the failure is logged, and the answer is not cached so the next
+look-up asks again.
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ import asyncio
 import logging
 import time
 from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar
+from typing import Any, Final, TypeVar
 
 from app.core.config import settings
 from app.core.wow_character import (
@@ -35,6 +35,21 @@ from app.services.wow.character.character_render_crop import crop_render
 T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
+
+_Fetch = Callable[[BlizzardCharacterClient, str], Awaitable[dict[str, Any] | None]]
+
+# CharacterProfile field → (the name logged when Blizzard fails on it, the client call).
+_OPTIONAL_PARTS: Final[dict[str, tuple[str, _Fetch]]] = {
+    "statistics": ("statistics", BlizzardCharacterClient.statistics),
+    "specializations": ("talents", BlizzardCharacterClient.specializations),
+    "professions": ("professions", BlizzardCharacterClient.professions),
+    "reputations": ("reputations", BlizzardCharacterClient.reputations),
+    "pvp_summary": ("PvP summary", BlizzardCharacterClient.pvp_summary),
+    "achievement_statistics": ("achievement statistics", BlizzardCharacterClient.achievement_statistics),
+}
+# Parts Blizzard 404s when the character simply has none yet (no talent spent, no
+# profession learned, no faction met…): that is an empty answer, not a failure.
+_EMPTY_WHEN_MISSING: Final = frozenset(_OPTIONAL_PARTS) - {"statistics"}
 
 _tokens = BlizzardTokenCache()
 _profiles: dict[str, tuple[CharacterProfile, float]] = {}
@@ -63,11 +78,11 @@ def _store(cache: dict[str, tuple[T, float]], slug: str, value: T, max_entries: 
 
 
 async def _optional_part(
-    part: str, slug: str, fetch: Callable[[str], Awaitable[dict[str, Any] | None]],
+    client: BlizzardCharacterClient, slug: str, part: str, fetch: _Fetch,
 ) -> tuple[dict[str, Any] | None, bool]:
     """One optional sub-resource, and whether Blizzard answered (a failure must not blank the sheet)."""
     try:
-        return await fetch(slug), True
+        return await fetch(client, slug), True
     except CharacterLookupError as exc:
         logger.warning("Character %s unavailable for %s: status=%s %s", part, slug, exc.status_code, exc)
         return None, False
@@ -79,40 +94,16 @@ async def _profile(slug: str) -> CharacterProfile:
         return cached
     async with _new_client() as client:
         profile = await client.profile(slug)
-        (
-            media,
-            equipment,
-            (statistics, stats_answered),
-            (specializations, talents_answered),
-            (professions, professions_answered),
-            (reputations, reputations_answered),
-        ) = await asyncio.gather(
+        media, equipment, *answers = await asyncio.gather(
             client.media(slug),
             client.equipment(slug),
-            _optional_part("statistics", slug, client.statistics),
-            _optional_part("talents", slug, client.specializations),
-            _optional_part("professions", slug, client.professions),
-            _optional_part("reputations", slug, client.reputations),
+            *(_optional_part(client, slug, part, fetch) for part, fetch in _OPTIONAL_PARTS.values()),
         )
-    if talents_answered and specializations is None:
-        # Blizzard 404s a character that has never spent a point: no talents, not a failure.
-        specializations = {}
-    if professions_answered and professions is None:
-        # Likewise a character that has learned no profession.
-        professions = {}
-    if reputations_answered and reputations is None:
-        # And one that has met no faction yet.
-        reputations = {}
-    data = CharacterProfile(
-        profile=profile,
-        media=media,
-        equipment=equipment,
-        statistics=statistics,
-        specializations=specializations,
-        professions=professions,
-        reputations=reputations,
-    )
-    if stats_answered and talents_answered and professions_answered and reputations_answered:
+    parts: dict[str, dict[str, Any] | None] = {}
+    for field, (value, answered) in zip(_OPTIONAL_PARTS, answers):
+        parts[field] = {} if answered and value is None and field in _EMPTY_WHEN_MISSING else value
+    data = CharacterProfile(profile=profile, media=media, equipment=equipment, **parts)
+    if all(answered for _, answered in answers):
         _store(_profiles, slug, data, CHARACTER_CACHE_MAX_ENTRIES)
     return data
 
