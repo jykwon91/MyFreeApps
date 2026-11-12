@@ -15,6 +15,8 @@ export const VOICE_COPY = {
   /** Shown while listening, before any words have been heard. */
   listening: "Listening…",
   noSpeech: "Didn't catch anything. Tap the microphone and try again.",
+  /** A call or another app took the microphone mid-answer: nothing was sent. */
+  interrupted: "Listening was interrupted, so nothing was sent. Tap the microphone when you're ready.",
   unavailable: "Speech recognition isn't working right now. You can type instead.",
   typeInstead: "Type instead",
   useMicrophone: "Use the microphone",

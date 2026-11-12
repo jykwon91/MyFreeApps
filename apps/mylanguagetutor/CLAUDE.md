@@ -101,15 +101,30 @@ burst limiter, 503 `tutor_unavailable` (global cap, kill switch, or no key).
   is never heard as the learner's answer. The api-client's
   `hooks/useVoiceInput` owns the mode, phase and which composer shows
   (`utils/composerView`), with the shared copy in `constants/voiceCopy` and the
-  error mapping in `utils/recognitionFailure`; each app only wraps its
+  error mapping in `utils/recognitionFailure`. One rule on both platforms,
+  decided per attempt (`types/speech/recognition-attempt`: anything heard, a
+  final result, a stop asked for): what was heard is sent when the recognizer
+  ran out of speech (`no-speech`, `speech-timeout`) or the answer ended
+  normally (`utils/endedNormally`: the learner's own stop -- tap, or "Type
+  instead" -- or a final result already arrived). An error after a normal end
+  still sends and shows no failure, only a refused microphone (some Android
+  phones answer stop with `client` or a no-match, or deliver an error queued
+  behind the final result); a stop with nothing heard ends quietly. Any other
+  error drops what was heard (`utils/keepsHeardSpeech`), and an abort always
+  does. iOS `interrupted`, or `audio-capture` / `client` / `busy` after words
+  were heard (Android has no interruption signal), is the `interrupted`
+  failure, shown as the calm `VOICE_COPY.interrupted` ("Listening was
+  interrupted, so nothing was sent..."). With nothing heard those codes are
+  `unavailable`: a missing or blocked microphone fails after the recognizer
+  starts (Chrome; iOS maps unknown errors to `audio-capture`). Each app only wraps its
   recognizer. The phone uses `expo-speech-recognition` (exact pin; its major
   tracks the Expo SDK, so it moves by hand in an SDK upgrade) via
   `mobile/src/hooks/useSpeechInput.ts`. It requires on-device recognition where
   the phone has it for the language (Android: `installedLocales`; iOS can't say
   per language, so it's always requested and applied natively where available),
   and its privacy notice says which; the read notice is kept per privacy level
-  in SecureStore. Listening is aborted (nothing sent) in the background, on
-  leaving the screen and on an iOS audio interruption; iOS listens in
+  in SecureStore. Listening is aborted (nothing sent) in the background and on
+  leaving the screen; iOS listens in
   `playAndRecord` + `defaultToSpeaker` (`LISTENING_AUDIO_SESSION`) and lets the
   session go once listening ends (also after the screen closes mid-utterance). iOS runs
   start/stop/abort in no fixed order, so each tap is an attempt whose events count

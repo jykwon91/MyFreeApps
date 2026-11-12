@@ -8,6 +8,8 @@ class FakeRecognition implements Recognition {
   static instances: FakeRecognition[] = [];
   /** The browser throws on start, as it does when it can't listen. */
   static refuses = false;
+  /** The browser answers stop with this error, then the end, instead of settling on the words. */
+  static stopFailsWith: string | null = null;
   lang = "";
   continuous = true;
   interimResults = false;
@@ -19,8 +21,12 @@ class FakeRecognition implements Recognition {
   start = vi.fn(() => {
     if (FakeRecognition.refuses) throw new Error("InvalidStateError");
   });
-  stop = vi.fn(() => this.onend?.());
-  abort = vi.fn();
+  stop = vi.fn(() => {
+    if (FakeRecognition.stopFailsWith) this.fail(FakeRecognition.stopFailsWith);
+    else this.onend?.();
+  });
+  /** As the browser does: an ``aborted`` error, then the end, with nothing final. */
+  abort = vi.fn(() => this.fail("aborted"));
 
   constructor() {
     FakeRecognition.instances.push(this);
@@ -54,6 +60,7 @@ function listen() {
 beforeEach(() => {
   FakeRecognition.instances = [];
   FakeRecognition.refuses = false;
+  FakeRecognition.stopFailsWith = null;
   vi.stubGlobal("SpeechRecognition", FakeRecognition);
 });
 
@@ -145,9 +152,110 @@ describe("useSpeechRecognition", () => {
     expect(result.current).toMatchObject({ failure: "unavailable", listening: false });
   });
 
-  it("aborts when the screen closes", () => {
-    const { unmount } = listen();
+  it("aborts when the screen closes, sending nothing of what was heard", () => {
+    const { unmount, onFinal } = listen();
+    act(() => latest().hear(["Quiero un ca", false]));
     unmount();
     expect(latest().abort).toHaveBeenCalledTimes(1);
+    expect(onFinal).not.toHaveBeenCalled();
+  });
+
+  it("sends what was heard when the browser says it heard nothing after hearing words", () => {
+    const { result, onFinal } = listen();
+    act(() => latest().hear(["Quiero un café", false]));
+    act(() => latest().fail("no-speech"));
+    expect(onFinal).toHaveBeenCalledWith("Quiero un café");
+    expect(result.current.listening).toBe(false);
+  });
+
+  it("drops what was heard, calmly, when the microphone is lost mid-answer", () => {
+    const { result, onFinal } = listen();
+    act(() => latest().hear(["Quiero", false]));
+    act(() => latest().fail("audio-capture"));
+    expect(onFinal).not.toHaveBeenCalled();
+    expect(result.current).toMatchObject({ failure: "interrupted", listening: false });
+  });
+
+  it("sends what was heard when the browser answers the learner's stop with a client error", () => {
+    FakeRecognition.stopFailsWith = "client";
+    const { result, onFinal } = listen();
+    act(() => latest().hear(["Quiero un café", false]));
+    act(() => result.current.stop());
+    expect(onFinal).toHaveBeenCalledWith("Quiero un café");
+    expect(result.current).toMatchObject({ failure: null, listening: false });
+  });
+
+  it("drops what was heard, calmly, on a client error mid-answer with no stop asked for", () => {
+    const { result, onFinal } = listen();
+    act(() => latest().hear(["Quiero", false]));
+    act(() => latest().fail("client"));
+    expect(onFinal).not.toHaveBeenCalled();
+    expect(result.current).toMatchObject({ failure: "interrupted", listening: false });
+  });
+
+  it("drops what was heard when the screen closes after the learner asked to send", () => {
+    FakeRecognition.stopFailsWith = "client";
+    const { result, unmount, onFinal } = listen();
+    act(() => latest().hear(["Quiero", false]));
+    const recognition = latest();
+    recognition.stop = vi.fn();
+    act(() => result.current.stop());
+    unmount();
+    expect(recognition.abort).toHaveBeenCalledTimes(1);
+    expect(onFinal).not.toHaveBeenCalled();
+  });
+
+  it("drops what was heard when the speech service fails mid-answer", () => {
+    const { result, onFinal } = listen();
+    act(() => latest().hear(["Quiero", false]));
+    act(() => latest().fail("network"));
+    expect(onFinal).not.toHaveBeenCalled();
+    expect(result.current.failure).toBe("unavailable");
+  });
+
+  it("says recognition isn't working when there's no microphone: Chrome starts, then can't record", () => {
+    const { result } = listen();
+    act(() => latest().fail("audio-capture"));
+    expect(result.current).toMatchObject({ failure: "unavailable", listening: false });
+  });
+
+  it("says recognition isn't working when the microphone can't record before listening begins", () => {
+    const { result } = listen();
+    act(() => latest().fail("audio-capture"));
+    expect(result.current.failure).toBe("unavailable");
+  });
+
+  it("sends a finished answer when an error arrives after its final result", () => {
+    const { result, onFinal } = listen();
+    act(() => latest().hear(["Quiero un café", true]));
+    act(() => latest().fail("client"));
+    expect(onFinal).toHaveBeenCalledWith("Quiero un café");
+    expect(result.current.failure).toBeNull();
+  });
+
+  it("drops a finished answer when the screen closes before the browser ends", () => {
+    const { unmount, onFinal } = listen();
+    act(() => latest().hear(["Quiero un café", true]));
+    unmount();
+    expect(onFinal).not.toHaveBeenCalled();
+  });
+
+  it.each(["client", "no-speech"])("shows nothing when the learner stops with nothing heard and the browser answers with %s", (error) => {
+    FakeRecognition.stopFailsWith = error;
+    const { result, onFinal } = listen();
+    act(() => result.current.stop());
+    expect(onFinal).not.toHaveBeenCalled();
+    expect(result.current).toMatchObject({ failure: null, listening: false });
+  });
+
+  it("listens afresh after a dropped answer, and sends the next one", () => {
+    const { result, onFinal } = listen();
+    act(() => latest().hear(["Quiero", false]));
+    act(() => latest().fail("audio-capture"));
+    act(() => result.current.start());
+    act(() => latest().hear(["Quiero un café", true]));
+    act(() => latest().onend?.());
+    expect(onFinal).toHaveBeenCalledTimes(1);
+    expect(onFinal).toHaveBeenCalledWith("Quiero un café");
   });
 });

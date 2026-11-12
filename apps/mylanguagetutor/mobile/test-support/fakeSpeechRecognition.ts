@@ -27,6 +27,7 @@ const NO_RECOGNIZER: FakeRecognizer = {
   permission: "granted",
   startsLate: false,
   abortsLate: false,
+  stopFailsWith: null,
 };
 
 let recognizer: FakeRecognizer = NO_RECOGNIZER;
@@ -150,6 +151,18 @@ export function goQuiet(words: string = heard): Promise<void> {
   });
 }
 
+/** The recognizer settles on `words` (or what it heard) as final, without ending yet. */
+export function settle(words: string = heard): Promise<void> {
+  return later(() => result(words, true));
+}
+
+/** As Android's ERROR_NO_MATCH: a nomatch, the `no-speech` error, then the end. */
+function noMatch(): void {
+  emit("nomatch", null);
+  emit("error", { error: "no-speech", message: "no-speech" });
+  end();
+}
+
 /** The recognizer heard nothing it could make words of, and ends. */
 export function hearNothing(): Promise<void> {
   return later(() => {
@@ -205,9 +218,14 @@ export const ExpoSpeechRecognitionModule = {
     resetRunning();
     recording();
   },
-  /** As the phone does: what was heard becomes final, then it ends. Before recording, it just ends. */
+  /**
+   * As the phone does: what was heard becomes final, then it ends (or, with `stopFailsWith`, an error
+   * and the end). Before recording, it just ends.
+   */
   stop: () => {
-    if (running) void goQuiet();
+    if (running && recognizer.stopFailsWith === "no-speech") void later(noMatch);
+    else if (running && recognizer.stopFailsWith) void failWith(recognizer.stopFailsWith);
+    else if (running) void goQuiet();
     else if (pendingStarts > 0) void later(() => emit("end", null));
   },
   /** As the phone does: an `aborted` error, then the end, with nothing final. */

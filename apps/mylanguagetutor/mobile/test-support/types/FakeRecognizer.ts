@@ -1,3 +1,5 @@
+import type { ExpoSpeechRecognitionErrorCode } from "expo-speech-recognition";
+
 /** The phone's speech recognizer, as a test sets it up. */
 export interface FakeRecognizer {
   /** The phone has a speech recognition service at all. */
@@ -15,4 +17,9 @@ export interface FakeRecognizer {
   startsLate: boolean;
   /** The phone carries out an abort only at `finishAborting`, as iOS's own task can lag. */
   abortsLate: boolean;
+  /**
+   * The phone answers a stop with this error, then the end, instead of a final result, as some Android
+   * phones do with `client`. `no-speech` comes as Android's no-match: a nomatch event first.
+   */
+  stopFailsWith: ExpoSpeechRecognitionErrorCode | null;
 }
