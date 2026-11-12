@@ -3,3 +3,5 @@ export const TRANSACTION_PAGE_SIZE = 50;
 export const TRANSACTION_LIST_LIMIT = 5000;
 /** Shown above a drill-down whose list reached the limit, so a total that may be short says so. */
 export const DRILL_DOWN_TRUNCATED_MESSAGE = "That's the most I can load at once, so there may be more than this.";
+/** How many drill-down rows the web panel draws at a time; "Show more" reveals the next page. */
+export const DRILL_DOWN_PAGE_SIZE = 100;

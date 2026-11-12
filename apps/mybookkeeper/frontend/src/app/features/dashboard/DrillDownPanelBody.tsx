@@ -3,6 +3,7 @@ import { useToast } from "@/shared/hooks/useToast";
 import TransactionPanel from "@/app/features/transactions/TransactionPanel";
 import DrillDownEmptyState from "./DrillDownEmptyState";
 import DrillDownList from "./DrillDownList";
+import DrillDownShowMore from "./DrillDownShowMore";
 import DrillDownLoadingState from "./DrillDownLoadingState";
 import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
 import type { DrillDownBodyMode } from "@/shared/types/dashboard/drill-down-body-mode";
@@ -11,7 +12,11 @@ import type { Property } from "@mybookkeeper/api-client/types/property/property"
 
 export interface DrillDownPanelBodyProps {
   mode: DrillDownBodyMode;
+  /** The rows drawn so far (one page at a time). */
   transactions: Transaction[];
+  /** Filtered rows not drawn yet. */
+  remaining: number;
+  onShowMore: () => void;
   selectedTxn: Transaction | null;
   properties: readonly Property[];
   onSelectTxn: (txn: Transaction) => void;
@@ -24,6 +29,8 @@ export interface DrillDownPanelBodyProps {
 export default function DrillDownPanelBody({
   mode,
   transactions,
+  remaining,
+  onShowMore,
   selectedTxn,
   properties,
   onSelectTxn,
@@ -66,6 +73,7 @@ export default function DrillDownPanelBody({
       return (
         <div className="flex-1 overflow-y-auto">
           <DrillDownList transactions={transactions} onSelectTxn={onSelectTxn} />
+          {remaining > 0 ? <DrillDownShowMore remaining={remaining} onShowMore={onShowMore} /> : null}
         </div>
       );
   }

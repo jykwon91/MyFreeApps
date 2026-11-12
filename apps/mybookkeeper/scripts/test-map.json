@@ -1922,6 +1922,7 @@
         "DashboardFilterBar.test.tsx",
         "DashboardSkeleton.test.tsx",
         "DrillDownPanel.test.tsx",
+        "DrillDownPaging.test.tsx",
         "DrillDownPanelMode.test.tsx",
         "MergeFieldRow.test.tsx",
         "ExportDropdown.test.tsx",
