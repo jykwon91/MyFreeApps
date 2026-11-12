@@ -445,7 +445,7 @@ describe("two taps at once", () => {
     expect(result.current.state).toEqual({ step: "preview", photo: { uri: PREPARED }, problem: null });
   });
 
-  it("calls the read off when a different photo is chosen as it starts, and its answer goes nowhere", async () => {
+  it("calls the read off when a different photo is chosen as it starts, and nothing is sent", async () => {
     const held = heldExtractions();
     sent = serve({ "POST /recipes/extract": held.route });
     const { result } = await renderPhotoImport();
@@ -458,16 +458,14 @@ describe("two taps at once", () => {
       // A second Extract from the same render finds nothing left to send.
       await result.current.extract();
     });
+    await act(async () => reading);
 
-    await waitFor(() => expect(held.count()).toBe(1));
-    expect(abortedExtractions()).toBe(1);
+    await waitFor(() => expect(abortedExtractions()).toBe(1));
+    // Calling the read off cancels the request itself, so it never reaches the server.
+    expect(held.count()).toBe(0);
+    expect(extractions()).toHaveLength(0);
     expect(fakeFiles()).toEqual([]);
     expect(result.current.state).toEqual({ step: "choose", problem: null });
-
-    await held.answer(0, reply(200, DRAFT));
-    await act(async () => reading);
-    expect(result.current.state).toEqual({ step: "choose", problem: null });
-    expect(extractions()).toHaveLength(1);
   });
 
   it("sends one read when Extract runs twice from the same render", async () => {
