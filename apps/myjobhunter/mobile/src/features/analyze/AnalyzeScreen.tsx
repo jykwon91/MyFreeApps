@@ -1,5 +1,4 @@
-import { Banner, useDiscardPrompt, useTheme } from "@platform/mobile";
-import { ScrollView } from "react-native";
+import { Banner, KeyboardAwareScroll, useDiscardPrompt, useTheme } from "@platform/mobile";
 import AnalysisResult from "./AnalysisResult";
 import AnalyzeInputStep from "./AnalyzeInputStep";
 import AnalyzeProgress from "./AnalyzeProgress";
@@ -12,8 +11,7 @@ export default function AnalyzeScreen() {
   useDiscardPrompt(flow.hasUnsavedInput, false);
 
   return (
-    <ScrollView
-      automaticallyAdjustKeyboardInsets
+    <KeyboardAwareScroll
       contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
       contentInsetAdjustmentBehavior="automatic"
       keyboardDismissMode="interactive"
@@ -48,6 +46,6 @@ export default function AnalyzeScreen() {
           />
         </>
       )}
-    </ScrollView>
+    </KeyboardAwareScroll>
   );
 }

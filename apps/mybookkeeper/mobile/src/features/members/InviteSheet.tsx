@@ -1,8 +1,8 @@
 import { INVITE_ROLE_OPTIONS } from "@mybookkeeper/api-client/constants/orgRoles";
 import type { AssignableRole } from "@mybookkeeper/api-client/types/organization/AssignableRole";
-import { Banner, FormField, LoadingButton, SegmentedControl, useTheme } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, SegmentedControl, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
-import { Modal, ScrollView, Text, View } from "react-native";
+import { Modal, Text, View } from "react-native";
 import { MEMBERS_MESSAGES as MESSAGES } from "../../constants/members";
 import { isLikelyEmail } from "../../utils/isLikelyEmail";
 
@@ -52,7 +52,7 @@ export default function InviteSheet({ orgName, initialEmail, initialRole, onClos
   return (
     <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+        <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {MESSAGES.inviteTitle}
           </Text>
@@ -77,7 +77,7 @@ export default function InviteSheet({ orgName, initialEmail, initialRole, onClos
           <LoadingButton disabled={isSending} onPress={close} variant="ghost">
             {MESSAGES.cancel}
           </LoadingButton>
-        </ScrollView>
+        </KeyboardAwareScroll>
       </View>
     </Modal>
   );

@@ -26,3 +26,10 @@ export const TAX_FIELD_OVERRIDE_MESSAGES = {
   recalculateNote: "Recalculate the return afterwards so everything else catches up.",
   saveFailed: "I couldn't save that override. Want to try again?",
 } as const;
+
+export const TAX_FIELD_OVERRIDE_YES_NO = [
+  { value: "true", label: TAX_FIELD_OVERRIDE_MESSAGES.yes },
+  { value: "false", label: TAX_FIELD_OVERRIDE_MESSAGES.no },
+];
+
+export const TAX_FIELD_OVERRIDE_ACTION = { save: "save", clear: "clear" } as const;

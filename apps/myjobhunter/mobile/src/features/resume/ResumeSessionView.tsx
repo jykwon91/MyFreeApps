@@ -2,9 +2,8 @@ import { useDraftLinePicker } from "@myjobhunter/api-client/hooks/useDraftLinePi
 import { useRefinementProposal } from "@myjobhunter/api-client/hooks/useRefinementProposal";
 import type { PickedDraftLine } from "@myjobhunter/api-client/types/resume-refinement/picked-draft-line";
 import { SuggestionMode } from "@myjobhunter/api-client/types/resume-refinement/suggestion-mode";
-import { Banner, SegmentedControl, SHOWING_LAST_LOADED_MESSAGE, useToast } from "@platform/mobile";
+import { Banner, type KeyboardAwareScrollRef, SegmentedControl, SHOWING_LAST_LOADED_MESSAGE, useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
-import type { ScrollViewInstance } from "react-native";
 import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
 import { RESUME_PANES } from "../../constants/resumePanes";
 import { RESUME_HIGHLIGHT_SCROLL_MARGIN } from "../../constants/resumeScroll";
@@ -28,7 +27,7 @@ export default function ResumeSessionView({ session, onStartNew, isStale, renewS
   const { showToast } = useToast();
   const [pane, setPane] = useState<ResumePane>("review");
   const [customFailure, setCustomFailure] = useState<string | null>(null);
-  const scroll = useRef<ScrollViewInstance>(null);
+  const scroll = useRef<KeyboardAwareScrollRef>(null);
   const draftTop = useRef(0);
   // A failure while Write my own is open shows in its sheet, where a toast would sit behind it.
   const isCustomOpen = useRef(false);

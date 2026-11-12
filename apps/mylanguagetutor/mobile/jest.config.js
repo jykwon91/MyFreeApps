@@ -7,10 +7,16 @@ const ES_MODULE_PACKAGES = "(?:react-redux|@reduxjs/toolkit|immer|reselect|redux
 
 module.exports = {
   preset: "jest-expo",
-  setupFiles: ["<rootDir>/../../../packages/shared-mobile/jest/animationFrame.js"],
+  resolver: "<rootDir>/../../../packages/shared-mobile/jest/resolver.js",
+  setupFiles: [
+    "<rootDir>/../../../packages/shared-mobile/jest/animationFrame.js",
+    "<rootDir>/../../../packages/shared-mobile/jest/reanimated.js",
+    "<rootDir>/../../../packages/shared-mobile/jest/keyboardController.js",
+  ],
   setupFilesAfterEnv: [
     "<rootDir>/../../../packages/shared-mobile/test-support/flushTimersAfterEach.ts",
     "<rootDir>/../../../packages/shared-mobile/test-support/resetStoresAfterAll.ts",
+    "<rootDir>/../../../packages/shared-mobile/test-support/resetMockKeyboardBeforeEach.ts",
   ],
   // The preset turns this on, which would pass a project whose tests all went missing.
   passWithNoTests: false,

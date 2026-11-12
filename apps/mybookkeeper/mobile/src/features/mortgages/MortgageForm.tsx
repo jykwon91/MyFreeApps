@@ -4,9 +4,9 @@ import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage
 import { applyMortgageDraftToForm } from "@mybookkeeper/api-client/utils/mortgageDraft";
 import { EMPTY_MORTGAGE_FORM, mortgageToFormValues } from "@mybookkeeper/api-client/utils/mortgageForm";
 import { mortgageFormProblems } from "@mybookkeeper/api-client/utils/mortgageFormProblems";
-import { Banner, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
+import { Banner, KeyboardAwareScroll, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { Alert, ScrollView } from "react-native";
+import { Alert } from "react-native";
 import { MORTGAGE_FORM_MESSAGES as MESSAGES, MORTGAGE_STATEMENT_MESSAGES, MORTGAGE_STATEMENT_PHOTO_NAME } from "../../constants/mortgageForm";
 import DocumentDraftNotices from "../documentReader/DocumentDraftNotices";
 import DocumentReader from "../documentReader/DocumentReader";
@@ -48,7 +48,7 @@ export default function MortgageForm({ original }: { original: Mortgage | null }
   }
 
   return (
-    <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
       {failure ? <Banner message={failure} /> : null}
       {original ? (
         <TransactionFact label={MESSAGES.property} value={original.property_name ?? ""} />
@@ -77,6 +77,6 @@ export default function MortgageForm({ original }: { original: Mortgage | null }
       <LoadingButton disabled={isBusy || isLeaving} isLoading={isBusy} loadingText={MESSAGES.saving} onPress={submit}>
         {original ? MESSAGES.saveEdit : MESSAGES.saveNew}
       </LoadingButton>
-    </ScrollView>
+    </KeyboardAwareScroll>
   );
 }

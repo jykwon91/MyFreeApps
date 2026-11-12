@@ -4,11 +4,10 @@ import { LEASE_DOCUMENTS_LOCKED_MESSAGE, LEASE_VALUE_LOCKED_MESSAGE, LEASE_VALUE
 import { isLeaseDocumentsLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseDocumentsLockedFailure";
 import { isLeaseValueLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseValueLockedFailure";
 import { prefillItemsToAsk, prefillProblems, prefillProvenanceLabel } from "@mybookkeeper/api-client/utils/leasePrefill";
-import { Banner, HeaderKeyboardAvoidingView, LoadingButton, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
+import { Banner, HeaderKeyboardAvoidingView, LoadingButton, PinnedBar, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { documentsMade, LEASE_DOCUMENT_MESSAGES as MESSAGES, prefillCaption } from "../../constants/leaseDocuments";
 import { PLACEHOLDER_PROBLEM_MESSAGES } from "../../constants/placeholderProblems";
 import { useWrite } from "../../lib/useWrite";
@@ -30,7 +29,6 @@ interface AddDocumentFormProps {
 
 export default function AddDocumentForm({ leaseId, templateIds, isRemake, items, onPrefillStale }: AddDocumentFormProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const [addTemplates] = useAddSignedLeaseTemplatesMutation();
   const { refetch: refetchLease } = useGetSignedLeaseByIdQuery(leaseId);
@@ -105,11 +103,11 @@ export default function AddDocumentForm({ leaseId, templateIds, isRemake, items,
           );
         })}
       </ScrollView>
-      <View
+      <PinnedBar
+        bottomSpacing={spacing.md}
         style={{
           paddingHorizontal: spacing.lg,
           paddingTop: spacing.md,
-          paddingBottom: insets.bottom + spacing.md,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           backgroundColor: colors.background,
@@ -118,7 +116,7 @@ export default function AddDocumentForm({ leaseId, templateIds, isRemake, items,
         <LoadingButton disabled={locked} isLoading={write.isBusy} loadingText={MESSAGES.making} onPress={() => void make()}>
           {MESSAGES.make}
         </LoadingButton>
-      </View>
+      </PinnedBar>
     </HeaderKeyboardAvoidingView>
   );
 }

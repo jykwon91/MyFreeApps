@@ -3,16 +3,12 @@ import type { FieldOverrideProblems } from "@mybookkeeper/api-client/types/tax/F
 import type { TaxFormField } from "@mybookkeeper/api-client/types/tax/TaxFormField";
 import { formatTaxFieldValue } from "@mybookkeeper/api-client/utils/formatTaxFieldValue";
 import { TAX_FIELD_LIMITS } from "@mybookkeeper/api-client/constants/taxFieldLimits";
-import { Banner, FormField, LoadingButton, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { ScrollView, Text } from "react-native";
-import { TAX_FIELD_OVERRIDE_MESSAGES as MESSAGES } from "../../constants/taxFieldOverride";
+import { Text } from "react-native";
+import { TAX_FIELD_OVERRIDE_ACTION, TAX_FIELD_OVERRIDE_MESSAGES as MESSAGES, TAX_FIELD_OVERRIDE_YES_NO } from "../../constants/taxFieldOverride";
+import type { TaxFieldOverrideAction } from "../../types/TaxFieldOverrideAction";
 import { useOverrideTaxField } from "./useOverrideTaxField";
-
-const YES_NO = [
-  { value: "true", label: MESSAGES.yes },
-  { value: "false", label: MESSAGES.no },
-];
 
 /** Changes one field's value by hand, with the reason it's being changed. */
 export default function TaxFieldOverrideForm({ returnId, field }: { returnId: string; field: TaxFormField }) {
@@ -22,7 +18,7 @@ export default function TaxFieldOverrideForm({ returnId, field }: { returnId: st
   const [reason, setReason] = useState("");
   const [problems, setProblems] = useState<FieldOverrideProblems>({});
   const { save, isBusy, isLeaving, failure } = useOverrideTaxField(returnId);
-  const [action, setAction] = useState<"save" | "clear" | null>(null);
+  const [action, setAction] = useState<TaxFieldOverrideAction | null>(null);
   const locked = isBusy || isLeaving;
   const isBoolean = field.type === "boolean";
   const canClear = !isBoolean && field.value !== null;
@@ -36,19 +32,19 @@ export default function TaxFieldOverrideForm({ returnId, field }: { returnId: st
     if (Object.keys(found).length > 0) return;
     const override = parseTaxFieldOverride(field.type, clear ? "" : text, clear);
     if (!override) return;
-    setAction(clear ? "clear" : "save");
+    setAction(clear ? TAX_FIELD_OVERRIDE_ACTION.clear : TAX_FIELD_OVERRIDE_ACTION.save);
     void save({ fieldId: field.id, reason, ...override });
   }
 
   return (
-    <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
       {failure ? <Banner message={failure} /> : null}
       <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "700", color: colors.foreground }}>
         {field.label}
       </Text>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`${MESSAGES.currentValue}: ${formatTaxFieldValue(field)}`}</Text>
       {isBoolean ? (
-        <SegmentedControl accessibilityLabel={MESSAGES.booleanLabel} onChange={(value) => !locked && setText(value)} segments={YES_NO} value={text === "true" ? "true" : "false"} />
+        <SegmentedControl accessibilityLabel={MESSAGES.booleanLabel} onChange={(value) => !locked && setText(value)} segments={TAX_FIELD_OVERRIDE_YES_NO} value={text === "true" ? "true" : "false"} />
       ) : (
         <FormField
           editable={!locked}
@@ -78,14 +74,14 @@ export default function TaxFieldOverrideForm({ returnId, field }: { returnId: st
         value={reason}
       />
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.recalculateNote}</Text>
-      <LoadingButton disabled={locked} isLoading={isBusy && action === "save"} loadingText={MESSAGES.saving} onPress={() => submit(false)}>
+      <LoadingButton disabled={locked} isLoading={isBusy && action === TAX_FIELD_OVERRIDE_ACTION.save} loadingText={MESSAGES.saving} onPress={() => submit(false)}>
         {MESSAGES.save}
       </LoadingButton>
       {canClear ? (
-        <LoadingButton disabled={locked} isLoading={isBusy && action === "clear"} loadingText={MESSAGES.clearing} onPress={() => submit(true)} variant="secondary">
+        <LoadingButton disabled={locked} isLoading={isBusy && action === TAX_FIELD_OVERRIDE_ACTION.clear} loadingText={MESSAGES.clearing} onPress={() => submit(true)} variant="secondary">
           {MESSAGES.clear}
         </LoadingButton>
       ) : null}
-    </ScrollView>
+    </KeyboardAwareScroll>
   );
 }

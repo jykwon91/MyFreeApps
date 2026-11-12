@@ -73,6 +73,20 @@ skips its version check, which would otherwise fail on every Expo patch release.
 react-native stay exact. Web Dockerfiles leave `packages/shared-mobile` out on purpose: that
 keeps react-native out of their `npm ci`. Web code must not import `@platform/mobile`.
 
+Phone apps run only in a development build, never Expo Go: react-native-keyboard-controller (which
+keeps fields above the Android keyboard) is a native module Expo Go doesn't include, and it throws when
+it's imported, so the app dies at its root layout. Install one once per device with
+`eas build --profile development` (each app's `eas.json`) or `npx expo run:android` / `npx expo run:ios`,
+and rebuild it after adding a native dependency. Then `npm start` (`expo start`) serves JavaScript to it;
+expo-dev-client makes that the default target.
+
+Before the first `eas build` in MyJobHunter, MyLanguageTutor or MyRecipes, run `npx eas-cli init` once in
+its `mobile/` directory, interactively, as owner `jykwon91`. It links the EAS project and writes its id
+into `app.json`: commit that change. MyBookkeeper is already linked. An internal iOS build for a device
+installs only on registered devices, so run `npx eas-cli device:create` and register the iPhone first;
+`eas build --profile development-simulator --platform ios` builds for the iOS Simulator, which needs no registered
+device.
+
 An app with a mobile version keeps its API types and endpoints in `apps/<slug>/api-client`, shared by its web and mobile code and held to the same platform-neutral rules as `@platform/core`. The render step copies it into the web image when `package.json` is present.
 
 **Per-app commands**: See each app's own CLAUDE.md.

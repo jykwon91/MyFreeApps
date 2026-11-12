@@ -1,4 +1,4 @@
-import { clearDataExportFiles, SessionProvider } from "@platform/mobile";
+import { clearDataExportFiles, RootProviders } from "@platform/mobile";
 import { StatusBar } from "expo-status-bar";
 import { Provider } from "react-redux";
 import RootStack from "../src/features/account/RootStack";
@@ -17,10 +17,10 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <SessionProvider session={session}>
+      <RootProviders session={session}>
         <StatusBar style="auto" />
         <RootStack />
-      </SessionProvider>
+      </RootProviders>
     </Provider>
   );
 }

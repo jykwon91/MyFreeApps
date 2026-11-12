@@ -1199,6 +1199,61 @@ class TestReactVersionAlignment:
                 )
 
 
+class TestMobileRootTracksTheKeyboard:
+    """Android draws edge to edge, so its window no longer shrinks for the keyboard. The shared keyboard-aware
+    scroll view, the header's keyboard-avoiding view and the toast move fields clear of it only under the
+    keyboard controller's provider, which @platform/mobile's RootProviders puts around the app. A root layout
+    that wraps in SessionProvider alone still runs, with every form's last fields under the keyboard."""
+
+    _LAYOUTS = [
+        _REPO_ROOT / "infra" / "templates" / "scaffold-mobile" / "app" / "_layout.tsx",
+        *sorted(_REPO_ROOT.glob("apps/*/mobile/app/_layout.tsx")),
+    ]
+
+    def test_there_are_phone_apps_to_check(self) -> None:
+        assert len(self._LAYOUTS) > 1, "No apps/*/mobile/app/_layout.tsx found, so the check below would pass on nothing."
+
+    @pytest.mark.parametrize("layout", _LAYOUTS, ids=lambda path: path.relative_to(_REPO_ROOT).as_posix())
+    def test_root_layout_wraps_the_app_in_root_providers(self, layout: Path) -> None:
+        source = re.sub(r"/\*.*?\*/|//[^\n]*", "", layout.read_text(encoding="utf-8"), flags=re.DOTALL)
+        rel = layout.relative_to(_REPO_ROOT).as_posix()
+        assert re.search(r"<RootProviders\b", source), (
+            f"{rel} must wrap the app in RootProviders from @platform/mobile, which tracks the keyboard."
+        )
+        assert not re.search(r"<SessionProvider\b", source), (
+            f"{rel} uses SessionProvider directly; RootProviders already holds it, along with the keyboard tracking."
+        )
+
+    @pytest.mark.parametrize(
+        "mobile_dir",
+        [layout.parents[1] for layout in _LAYOUTS],
+        ids=lambda path: path.relative_to(_REPO_ROOT).as_posix(),
+    )
+    def test_app_runs_in_a_development_build(self, mobile_dir: Path) -> None:
+        """The keyboard controller is a native module Expo Go doesn't ship, and it throws when it's
+        imported, so RootProviders takes the whole app down there. Development needs a build with
+        expo-dev-client, which `eas build --profile development` makes."""
+        rel = mobile_dir.relative_to(_REPO_ROOT).as_posix()
+        manifest = json.loads((mobile_dir / "package.json").read_text(encoding="utf-8"))
+        assert "expo-dev-client" in manifest.get("dependencies", {}), (
+            f"{rel}/package.json must list expo-dev-client, so `expo start` opens a development build, not Expo Go."
+        )
+        eas_path = mobile_dir / "eas.json"
+        assert eas_path.is_file(), f"{rel} has no eas.json, so it can't make a development build."
+        builds = json.loads(eas_path.read_text(encoding="utf-8"))["build"]
+        development = builds.get("development", {})
+        assert development.get("developmentClient") is True, (
+            f"{rel}/eas.json needs a development build profile with developmentClient: true."
+        )
+        assert development.get("distribution") == "internal", (
+            f"{rel}/eas.json's development profile must use internal distribution, so it installs on a test phone."
+        )
+        # An iOS device build needs the device registered first; a simulator build needs nothing.
+        assert builds.get("development-simulator") == {"extends": "development", "ios": {"simulator": True}}, (
+            f"{rel}/eas.json needs a development-simulator profile extending development with ios.simulator: true."
+        )
+
+
 class TestMobileManifestsGetDependabotUpdates:
     """Dependabot only updates directories it's told about, so an app's mobile code
     with no entry would never get a dependency update and nothing would say so."""

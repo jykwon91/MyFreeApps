@@ -3,11 +3,10 @@ import {
   RECONCILIATION_SOURCE_TYPES,
 } from "@mybookkeeper/api-client/constants/reconciliationSourceTypes";
 import { useUpload1099Mutation } from "@mybookkeeper/api-client/store/reconciliationApi";
-import { Banner, FormField, LoadingButton, OptionSheet, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
-import { Text } from "react-native";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, ScrollView } from "react-native";
+import { Alert, Text } from "react-native";
 import { DOCUMENTS_LINK, ISSUER_MAX_LENGTH, RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import PickerField from "../transactions/PickerField";
 import { reportedAmountError, sourceTypeLabel } from "./reconciliationDisplay";
@@ -64,8 +63,7 @@ export default function ReconciliationAddForm({ year }: { year: number }) {
 
   return (
     <>
-      <ScrollView
-        automaticallyAdjustKeyboardInsets
+      <KeyboardAwareScroll
         contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
@@ -87,7 +85,7 @@ export default function ReconciliationAddForm({ year }: { year: number }) {
         <LoadingButton disabled={isLoading || isLeaving} onPress={() => router.push(DOCUMENTS_LINK)} variant="ghost">
           {MESSAGES.openDocuments}
         </LoadingButton>
-      </ScrollView>
+      </KeyboardAwareScroll>
       <OptionSheet
         isOpen={isChoosingType}
         onClose={() => setIsChoosingType(false)}

@@ -6,8 +6,9 @@ const ES_MODULE_PACKAGES = "(?:axios|react-redux|@reduxjs/toolkit|immer|reselect
 
 module.exports = {
   preset: "jest-expo",
-  setupFiles: ["<rootDir>/jest/animationFrame.js"],
-  setupFilesAfterEnv: ["<rootDir>/test-support/resetStoresAfterAll.ts"],
+  resolver: "<rootDir>/jest/resolver.js",
+  setupFiles: ["<rootDir>/jest/animationFrame.js", "<rootDir>/jest/reanimated.js", "<rootDir>/jest/keyboardController.js"],
+  setupFilesAfterEnv: ["<rootDir>/test-support/resetStoresAfterAll.ts", "<rootDir>/test-support/resetMockKeyboardBeforeEach.ts"],
   // The preset turns this on, which would pass a project whose tests all went missing.
   passWithNoTests: false,
   // The first test in each file also pays for loading React Native, which is slow on CI.

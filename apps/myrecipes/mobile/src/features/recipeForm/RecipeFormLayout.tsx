@@ -1,5 +1,4 @@
-import { useTheme } from "@platform/mobile";
-import { ScrollView } from "react-native";
+import { KeyboardAwareScroll, useTheme } from "@platform/mobile";
 import type { RecipeFormLayoutProps } from "../../types/RecipeFormLayoutProps";
 
 /** A recipe form's scrolling page, lifted clear of the keyboard. */
@@ -7,8 +6,7 @@ export default function RecipeFormLayout({ children, testID }: RecipeFormLayoutP
   const { spacing } = useTheme();
 
   return (
-    <ScrollView
-      automaticallyAdjustKeyboardInsets
+    <KeyboardAwareScroll
       contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
       contentInsetAdjustmentBehavior="automatic"
       keyboardDismissMode="interactive"
@@ -16,6 +14,6 @@ export default function RecipeFormLayout({ children, testID }: RecipeFormLayoutP
       testID={testID}
     >
       {children}
-    </ScrollView>
+    </KeyboardAwareScroll>
   );
 }

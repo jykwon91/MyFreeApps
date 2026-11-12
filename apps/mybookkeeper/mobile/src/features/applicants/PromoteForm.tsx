@@ -8,11 +8,10 @@ import {
 import { usePromoteFromInquiryMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import { promoteConflictDetail } from "@mybookkeeper/api-client/utils/applicantPromoteConflict";
-import { Banner, FormField, HeaderKeyboardAvoidingView, LoadingButton, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { Banner, FormField, HeaderKeyboardAvoidingView, LoadingButton, PinnedBar, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DOB_PICKER_STARTS_YEARS_AGO, PROMOTE_MESSAGES, SMOKER_SEGMENTS } from "../../constants/promote";
 import type { PromoteValues } from "../../types/PromoteValues";
 import OptionalDateField from "../shell/OptionalDateField";
@@ -22,7 +21,6 @@ import { isOldEnough, promoteRequest, promoteValuesFrom } from "./promoteValues"
 export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
-  const insets = useSafeAreaInsets();
   const [promote, { isLoading }] = usePromoteFromInquiryMutation();
   const [initial] = useState(() => promoteValuesFrom(inquiry));
   const [values, setValues] = useState<PromoteValues>(initial);
@@ -120,11 +118,11 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
         />
         <FormField label="Referred by" maxLength={APPLICANT_REFERRED_BY_MAX} onChangeText={(referredBy) => update({ referredBy })} value={values.referredBy} />
       </ScrollView>
-      <View
+      <PinnedBar
+        bottomSpacing={spacing.md}
         style={{
           paddingHorizontal: spacing.lg,
           paddingTop: spacing.md,
-          paddingBottom: insets.bottom + spacing.md,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           backgroundColor: colors.background,
@@ -133,7 +131,7 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
         <LoadingButton disabled={isNotPromotable} isLoading={isLoading} loadingText="Promoting…" onPress={() => void submit()}>
           Promote
         </LoadingButton>
-      </View>
+      </PinnedBar>
     </HeaderKeyboardAvoidingView>
   );
 }

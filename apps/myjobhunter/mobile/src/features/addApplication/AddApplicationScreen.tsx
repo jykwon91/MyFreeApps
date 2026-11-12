@@ -1,6 +1,6 @@
-import { Banner, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, KeyboardAwareScroll, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { ScrollView } from "react-native";
+
 import CompanyPickerSheet from "./CompanyPickerSheet";
 import ReviewStep from "./ReviewStep";
 import SourceStep from "./SourceStep";
@@ -27,8 +27,7 @@ export default function AddApplicationScreen() {
 
   return (
     <>
-      <ScrollView
-        automaticallyAdjustKeyboardInsets
+      <KeyboardAwareScroll
         contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardDismissMode="interactive"
@@ -67,7 +66,7 @@ export default function AddApplicationScreen() {
             />
           </>
         )}
-      </ScrollView>
+      </KeyboardAwareScroll>
       <CompanyPickerSheet
         key={pickerOpenings}
         initialQuery={flow.review?.company.name ?? ""}

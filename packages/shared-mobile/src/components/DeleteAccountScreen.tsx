@@ -1,5 +1,5 @@
 import { type ComponentRef, useRef, useState } from "react";
-import { ScrollView, Text, type TextInput, View } from "react-native";
+import { Text, type TextInput, View } from "react-native";
 import { fetchDevices, requestDeleteAccount } from "../auth/mobileAuthApi";
 import { useSecondFactorCode } from "../hooks/useSecondFactorCode";
 import { useSession } from "../hooks/useSession";
@@ -7,6 +7,7 @@ import { useTwoStepStatus } from "../hooks/useTwoStepStatus";
 import { useTheme } from "../theme/useTheme";
 import Banner from "./Banner";
 import FormField from "./FormField";
+import KeyboardAwareScroll from "./KeyboardAwareScroll";
 import LoadingButton from "./LoadingButton";
 import SecondFactorCodeField from "./SecondFactorCodeField";
 import Skeleton from "./Skeleton";
@@ -111,8 +112,7 @@ export default function DeleteAccountScreen({ warning }: { warning: string }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView
-        automaticallyAdjustKeyboardInsets
+      <KeyboardAwareScroll
         contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
@@ -174,7 +174,7 @@ export default function DeleteAccountScreen({ warning }: { warning: string }) {
             Delete my account forever
           </LoadingButton>
         )}
-      </ScrollView>
+      </KeyboardAwareScroll>
     </View>
   );
 }

@@ -1,8 +1,8 @@
 import { APPLICANT_STAGE_NOTE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/applicantStageNote";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
-import { Banner, FormField, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
-import { Modal, ScrollView, Text, View } from "react-native";
+import { Modal, Text, View } from "react-native";
 import { applicantStageLabel } from "./applicantDisplay";
 
 export default function ApplicantStageSheet({
@@ -52,7 +52,7 @@ export default function ApplicantStageSheet({
     <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         {stage ? (
-          <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+          <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
             <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
               {`Move to ${applicantStageLabel(stage)}?`}
             </Text>
@@ -74,7 +74,7 @@ export default function ApplicantStageSheet({
             <LoadingButton disabled={isMoving} onPress={close} variant="ghost">
               Cancel
             </LoadingButton>
-          </ScrollView>
+          </KeyboardAwareScroll>
         ) : null}
       </View>
     </Modal>

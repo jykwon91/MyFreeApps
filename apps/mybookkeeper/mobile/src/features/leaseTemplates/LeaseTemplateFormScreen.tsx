@@ -1,8 +1,8 @@
 import { LEASE_TEMPLATE_NAME_MAX_LENGTH, LEASE_TEMPLATE_UPLOAD_PROBLEMS } from "@mybookkeeper/api-client/constants/leaseTemplateUpload";
 import { leaseTemplateUploadProblems } from "@mybookkeeper/api-client/utils/leaseTemplateUploadForm";
-import { Banner, FormField, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { ScrollView, Text } from "react-native";
+import { Text } from "react-native";
 import { LEASE_TEMPLATE_DESCRIPTION_MIN_HEIGHT, LEASE_TEMPLATE_FORM_MESSAGES as MESSAGES, LEASE_TEMPLATE_PICKER_TYPES } from "../../constants/leaseTemplateForm";
 import { chooseHeldFile } from "../uploads/pickHeldFile";
 import HeldFilesList from "../uploads/HeldFilesList";
@@ -40,7 +40,7 @@ export default function LeaseTemplateFormScreen() {
   const failure = message ?? pickFailure;
 
   return (
-    <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
       {failure ? <Banner message={failure} /> : null}
       <FormField
         editable={!locked}
@@ -77,6 +77,6 @@ export default function LeaseTemplateFormScreen() {
       <LoadingButton disabled={locked || isPicking} isLoading={isBusy} loadingText={MESSAGES.uploading} onPress={send}>
         {MESSAGES.upload}
       </LoadingButton>
-    </ScrollView>
+    </KeyboardAwareScroll>
   );
 }

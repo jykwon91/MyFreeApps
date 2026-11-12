@@ -1,26 +1,17 @@
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { MIN_TOUCH_TARGET, PinnedBar, useTheme } from "@platform/mobile";
+import { Pressable, ScrollView, Text } from "react-native";
 import { REPLY_TEMPLATE_MESSAGES, REPLY_TEMPLATE_VARIABLES } from "../../constants/replyTemplates";
-import type { ReplyTemplateField } from "../../types/ReplyTemplateField";
-
-interface ReplyTemplateVariableBarProps {
-  field: ReplyTemplateField;
-  onInsert: (token: string) => void;
-  /** Off while saving, so what's kept on a failed save is what was sent. */
-  disabled: boolean;
-}
+import type { ReplyTemplateVariableBarProps } from "../../types/ReplyTemplateVariableBarProps";
 
 /** Sits above the keyboard. A tap here leaves the keyboard up, so a variable lands where the cursor is. */
 export default function ReplyTemplateVariableBar({ field, onInsert, disabled }: ReplyTemplateVariableBarProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
-  const insets = useSafeAreaInsets();
   return (
-    <View
+    <PinnedBar
+      bottomSpacing={spacing.sm}
       style={{
         gap: spacing.xs,
         paddingTop: spacing.sm,
-        paddingBottom: insets.bottom + spacing.sm,
         borderTopWidth: 1,
         borderTopColor: colors.border,
         backgroundColor: colors.background,
@@ -54,6 +45,6 @@ export default function ReplyTemplateVariableBar({ field, onInsert, disabled }: 
           </Pressable>
         ))}
       </ScrollView>
-    </View>
+    </PinnedBar>
   );
 }

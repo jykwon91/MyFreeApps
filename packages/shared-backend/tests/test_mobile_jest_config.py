@@ -47,6 +47,28 @@ def test_template_lists_the_shared_setup_files() -> None:
         "starts with Jest workers that can't exit."
     )
     assert "packages/shared-mobile/test-support/flushTimersAfterEach.ts" in listed
+    assert "packages/shared-mobile/jest/keyboardController.js" in listed, (
+        f"{_TEMPLATE.relative_to(_REPO_ROOT)} must list keyboardController.js: react-native-keyboard-controller "
+        "has native views that don't exist under Jest, so any screen with a form fails to render without its mock."
+    )
+    assert "packages/shared-mobile/test-support/resetMockKeyboardBeforeEach.ts" in listed, (
+        f"{_TEMPLATE.relative_to(_REPO_ROOT)} must list resetMockKeyboardBeforeEach.ts: the mock keyboard lasts a "
+        "whole test file, so a test that opens it would leave the next one starting with the keyboard open."
+    )
+    assert "packages/shared-mobile/jest/reanimated.js" in listed, (
+        f"{_TEMPLATE.relative_to(_REPO_ROOT)} must list reanimated.js: Reanimated needs native modules that don't "
+        "exist under Jest, so a pinned bar, which animates with the keyboard, fails to render without its mock."
+    )
+
+
+@pytest.mark.parametrize("config", [_TEMPLATE, *_APP_CONFIGS], ids=lambda path: path.parents[1].name)
+def test_config_resolves_reanimated_for_jest(config: Path) -> None:
+    """Reanimated's Jest mock loads its web implementation, which only its resolver points Jest at."""
+    source = _COMMENT.sub("", config.read_text(encoding="utf-8"))
+    assert re.search(r'resolver:\s*"<rootDir>/\.\./\.\./\.\./packages/shared-mobile/jest/resolver\.js"', source), (
+        f"{config.relative_to(_REPO_ROOT)} must set resolver to packages/shared-mobile/jest/resolver.js, or "
+        "every test that renders a pinned bar fails to load Reanimated."
+    )
 
 
 def test_there_are_phone_apps_to_check() -> None:
@@ -68,3 +90,15 @@ def test_shared_mobile_resets_its_own_stores() -> None:
     # hearing updates, and shared-mobile's tests each build their own store.
     config = (_REPO_ROOT / "packages" / "shared-mobile" / "jest.config.js").read_text(encoding="utf-8")
     assert "test-support/resetStoresAfterAll.ts" in config
+
+
+def test_shared_mobile_mocks_the_keyboard_controller() -> None:
+    config = _COMMENT.sub("", (_REPO_ROOT / "packages" / "shared-mobile" / "jest.config.js").read_text(encoding="utf-8"))
+    assert "jest/keyboardController.js" in config
+    assert "test-support/resetMockKeyboardBeforeEach.ts" in config
+
+
+def test_shared_mobile_mocks_reanimated() -> None:
+    config = _COMMENT.sub("", (_REPO_ROOT / "packages" / "shared-mobile" / "jest.config.js").read_text(encoding="utf-8"))
+    assert "jest/reanimated.js" in config
+    assert re.search(r'resolver:\s*"<rootDir>/jest/resolver\.js"', config)

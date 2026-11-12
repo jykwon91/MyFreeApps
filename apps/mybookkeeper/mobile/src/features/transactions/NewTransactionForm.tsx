@@ -1,10 +1,10 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { FormField, LoadingButton, MIN_TOUCH_TARGET, OptionSheet, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { FormField, KeyboardAwareScroll, LoadingButton, MIN_TOUCH_TARGET, OptionSheet, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, Switch, Text, View } from "react-native";
+import { Alert, Switch, Text, View } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
 import { DEFAULT_CATEGORY, NO_PROPERTY_OPTION } from "../../constants/transactionEdit";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
@@ -103,8 +103,7 @@ export default function NewTransactionForm() {
 
   return (
     <>
-      <ScrollView
-        automaticallyAdjustKeyboardInsets
+      <KeyboardAwareScroll
         contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
@@ -150,7 +149,7 @@ export default function NewTransactionForm() {
         <LoadingButton isLoading={isSaving} loadingText="Adding…" onPress={save}>
           Add transaction
         </LoadingButton>
-      </ScrollView>
+      </KeyboardAwareScroll>
 
       <OptionSheet
         isOpen={sheet !== null}

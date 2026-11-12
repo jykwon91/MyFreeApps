@@ -2,9 +2,9 @@ import { WELCOME_MANUAL_RECIPIENT_NAME_MAX_LENGTH } from "@mybookkeeper/api-clie
 import type { WelcomeManualEmailFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-email-form-values";
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 import { emailProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
-import { Banner, FormField, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState, type ReactElement } from "react";
-import { type RefreshControlProps, ScrollView, Text, View } from "react-native";
+import { type RefreshControlProps, Text, View } from "react-native";
 import { WELCOME_MANUAL_EMAIL_EMPTY_VALUES, WELCOME_MANUAL_EMAIL_MESSAGES as MESSAGES } from "../../constants/welcomeManualForms";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import WelcomeManualEmailOutcome from "./WelcomeManualEmailOutcome";
@@ -31,7 +31,7 @@ export default function WelcomeManualEmailForm({ manual, refreshControl }: Welco
 
   return (
     <>
-      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
+      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
         {failure ? <Banner message={failure} /> : null}
         <FormField autoCapitalize="none" editable={!isBusy} error={form.errorFor("recipient_email")} keyboardType="email-address" label={MESSAGES.emailLabel} onChangeText={(text) => edit("recipient_email", text)} required value={values.recipient_email} />
         <FormField editable={!isBusy} error={form.errorFor("recipient_name")} label={MESSAGES.nameLabel} maxLength={WELCOME_MANUAL_RECIPIENT_NAME_MAX_LENGTH} onChangeText={(text) => edit("recipient_name", text)} value={values.recipient_name} />
@@ -48,7 +48,7 @@ export default function WelcomeManualEmailForm({ manual, refreshControl }: Welco
         <LoadingButton disabled={isBusy} isLoading={isBusy} loadingText={MESSAGES.sending} onPress={() => { if (form.validate()) void send(values); }}>
           {MESSAGES.send}
         </LoadingButton>
-      </ScrollView>
+      </KeyboardAwareScroll>
       <OptionSheet
         isOpen={isPickerOpen}
         onClose={() => setIsPickerOpen(false)}

@@ -225,7 +225,8 @@ npm test
 
 **Mobile** (from `apps/mylanguagetutor/mobile/`; needs Node 22):
 ```bash
-npx expo start    # Against the live API; set EXPO_PUBLIC_API_BASE_URL / EXPO_PUBLIC_WEB_BASE_URL for a local backend
+npx eas-cli build --profile development   # Once per device (or npx expo run:android / run:ios); not Expo Go, see the root CLAUDE.md
+npx expo start    # Serves the development build. Against the live API; set EXPO_PUBLIC_API_BASE_URL / EXPO_PUBLIC_WEB_BASE_URL for a local backend
 npm run typecheck
 npm run lint
 npm test

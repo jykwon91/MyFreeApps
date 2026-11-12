@@ -1,9 +1,9 @@
 import { LEASE_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { LeaseImportFormValues } from "@mybookkeeper/api-client/types/lease/lease-import-form-values";
 import { EMPTY_LEASE_IMPORT_FORM, leaseImportProblems } from "@mybookkeeper/api-client/utils/leaseImportForm";
-import { Banner, FormField, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { ScrollView, Text } from "react-native";
+import { Text } from "react-native";
 import { LEASE_IMPORT_MESSAGES as MESSAGES, LEASE_IMPORT_PROBLEM_MESSAGES, notesLeft } from "../../constants/leaseImport";
 import { LEASE_FILE_TYPES } from "../../constants/leases";
 import OptionalDateField from "../shell/OptionalDateField";
@@ -33,7 +33,6 @@ export default function LeaseImportBody() {
 
   useDiscardPrompt(isDirty && !isLeaving, isBusy);
 
-
   function edit<Field extends keyof LeaseImportFormValues>(field: Field, value: LeaseImportFormValues[Field]): void {
     setValues((current) => ({ ...current, [field]: value }));
   }
@@ -45,7 +44,7 @@ export default function LeaseImportBody() {
   }
 
   return (
-    <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" testID="lease-import">
+    <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" testID="lease-import">
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.intro}</Text>
       {banner ? <Banner message={banner} /> : null}
       <LeaseApplicantField disabled={locked} error={problemFor("applicantId")} onChange={(applicantId) => edit("applicantId", applicantId)} value={values.applicantId} />
@@ -88,6 +87,6 @@ export default function LeaseImportBody() {
       <LoadingButton disabled={locked || held.isPicking} isLoading={isBusy} loadingText={MESSAGES.submitting} onPress={importLease}>
         {MESSAGES.submit}
       </LoadingButton>
-    </ScrollView>
+    </KeyboardAwareScroll>
   );
 }

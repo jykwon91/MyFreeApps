@@ -2,9 +2,9 @@ import { useUpsertInsuranceBenchmarkMutation } from "@mybookkeeper/api-client/st
 import type { InsuranceBenchmark } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark";
 import type { InsuranceBenchmarkFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark-form-values";
 import { benchmarkFormPayload, benchmarkToFormValues } from "@mybookkeeper/api-client/utils/insuranceBenchmarkForm";
-import { Banner, FormField, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
-import { Alert, Modal, ScrollView, Text, View } from "react-native";
+import { Alert, Modal, Text, View } from "react-native";
 import { MARKET_MESSAGES } from "../../constants/insuranceMarket";
 import { dateFromIso } from "../../lib/localDate";
 import { useTodayIso } from "../../lib/useTodayIso";
@@ -57,7 +57,7 @@ export default function MarketPremiumSheet({ existing, onClose }: MarketPremiumS
   return (
     <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+        <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {existing ? MARKET_MESSAGES.update : MARKET_MESSAGES.record}
           </Text>
@@ -75,7 +75,7 @@ export default function MarketPremiumSheet({ existing, onClose }: MarketPremiumS
           <LoadingButton disabled={isBusy} onPress={close} variant="ghost">
             {MARKET_MESSAGES.cancel}
           </LoadingButton>
-        </ScrollView>
+        </KeyboardAwareScroll>
       </View>
     </Modal>
   );

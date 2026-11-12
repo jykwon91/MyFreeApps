@@ -18,4 +18,6 @@ export default tseslint.config(
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
   },
+  // Jest loads its resolver with Node's require, outside its own module system, like the *.config.js files.
+  { files: ["jest/resolver.js"], rules: { "@typescript-eslint/no-require-imports": "off" } },
 );

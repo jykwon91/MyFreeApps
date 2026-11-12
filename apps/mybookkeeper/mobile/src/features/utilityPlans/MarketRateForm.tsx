@@ -3,9 +3,9 @@ import type { MarketRateFormValues } from "@mybookkeeper/api-client/types/utilit
 import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import { isFlatService, isMarketRateFigureValid, marketRateToFormValues } from "@mybookkeeper/api-client/utils/marketRateForm";
-import { Banner, FormField, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
-import { ScrollView } from "react-native";
+
 import { MARKET_RATE_MESSAGES as MESSAGES, MARKET_RATE_SOURCE_MAX_LENGTH } from "../../constants/marketRates";
 import { sameFormValues } from "../../lib/sameFormValues";
 import { askOnce } from "../../lib/askOnce";
@@ -40,7 +40,7 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
   }
 
   return (
-    <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
       {failure ? <Banner message={failure} /> : null}
       <FormField
         editable={!locked}
@@ -78,6 +78,6 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
           {MESSAGES.remove}
         </LoadingButton>
       ) : null}
-    </ScrollView>
+    </KeyboardAwareScroll>
   );
 }

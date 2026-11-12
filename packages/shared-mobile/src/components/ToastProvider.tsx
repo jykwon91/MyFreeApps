@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { View } from "react-native";
-import { useKeyboardHeight } from "../hooks/useKeyboardHeight";
+import { useKeyboardState } from "react-native-keyboard-controller";
 import { useTheme } from "../theme/useTheme";
 import type { ToastAction } from "../types/ToastAction";
 import type { ToastProviderProps } from "../types/ToastProviderProps";
@@ -11,7 +11,8 @@ import { ToastContext } from "./ToastContext";
 /** Holds the toast above the screens, so a message outlives the screen that sent it. */
 export default function ToastProvider({ children, bottomOffset }: ToastProviderProps) {
   const { spacing } = useTheme();
-  const keyboardHeight = useKeyboardHeight();
+  // From the bottom of the screen, nav bar included: Android draws edge to edge, so the toast is measured from there.
+  const keyboardHeight = useKeyboardState((keyboard) => (keyboard.isVisible ? keyboard.height : 0));
   const [toast, setToast] = useState<{ id: number; message: string; variant: ToastVariant; action?: ToastAction } | null>(null);
   const value = useMemo(
     () => ({

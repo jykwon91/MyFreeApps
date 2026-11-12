@@ -5,9 +5,9 @@ import { UTILITY_SERVICE_TYPES, UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeepe
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/utilityPlanDraft";
 import { EMPTY_UTILITY_PLAN_FORM, toUtilityPlanFormValues, utilityPlanFormProblems } from "@mybookkeeper/api-client/utils/utilityPlanForm";
-import { Banner, LoadingButton, OptionSheet, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, KeyboardAwareScroll, LoadingButton, OptionSheet, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { ScrollView } from "react-native";
+
 import {
   UTILITY_PLAN_FORM_MESSAGES as MESSAGES,
   UTILITY_PLAN_PHOTO_NAME,
@@ -55,7 +55,7 @@ export default function UtilityPlanForm({ original }: { original: UtilityPlanDet
 
   return (
     <>
-      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         {original ? (
           <TransactionFact label={MESSAGES.property} value={original.property_name ?? ""} />
@@ -85,7 +85,7 @@ export default function UtilityPlanForm({ original }: { original: UtilityPlanDet
         <LoadingButton disabled={locked} isLoading={isBusy} loadingText={MESSAGES.saving} onPress={submit}>
           {original ? MESSAGES.saveEdit : MESSAGES.saveNew}
         </LoadingButton>
-      </ScrollView>
+      </KeyboardAwareScroll>
       <OptionSheet<UtilityServiceType>
         isOpen={isPickingService}
         onClose={() => setIsPickingService(false)}

@@ -1,4 +1,4 @@
-import { clearDataExportFiles, SessionProvider, TOAST_CLEARANCE, ToastProvider, useStackScreenOptions } from "@platform/mobile";
+import { clearDataExportFiles, RootProviders, TOAST_CLEARANCE, ToastProvider, useStackScreenOptions } from "@platform/mobile";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -26,7 +26,7 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <SessionProvider session={session}>
+      <RootProviders session={session}>
         <ToastProvider bottomOffset={insets.bottom + TOAST_CLEARANCE}>
           <StatusBar style="auto" />
           <Stack screenOptions={stackOptions}>
@@ -36,7 +36,7 @@ export default function RootLayout() {
           </Stack>
           <AccountNotice />
         </ToastProvider>
-      </SessionProvider>
+      </RootProviders>
     </Provider>
   );
 }

@@ -5,10 +5,10 @@ import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/i
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/insurancePolicyDraft";
 import { EMPTY_POLICY_FORM, policyToFormValues, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
 import { INSURANCE_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/insuranceUploads";
-import { Banner, LoadingButton, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
+import { Banner, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { ScrollView } from "react-native";
+
 import { POLICY_FORM_MESSAGES, POLICY_PHOTO_NAME, POLICY_PROPERTY_MESSAGES, POLICY_READER_MESSAGES } from "../../constants/insuranceForm";
 import { sameFormValues } from "../../lib/sameFormValues";
 import type { PolicyFormErrors } from "../../types/PolicyFormErrors";
@@ -78,7 +78,7 @@ export default function PolicyForm({ policy }: { policy?: InsurancePolicyDetail 
   }
 
   return (
-    <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
       {failure ? <Banner message={failure} /> : null}
       {policy ? (
         <PickerField disabled label={POLICY_FORM_MESSAGES.property} onPress={() => undefined} value={policy.property_name ?? ""} />
@@ -106,6 +106,6 @@ export default function PolicyForm({ policy }: { policy?: InsurancePolicyDetail 
       <LoadingButton disabled={locked} isLoading={isBusy} loadingText={POLICY_FORM_MESSAGES.saving} onPress={() => void save()}>
         {policy ? POLICY_FORM_MESSAGES.saveChanges : POLICY_FORM_MESSAGES.save}
       </LoadingButton>
-    </ScrollView>
+    </KeyboardAwareScroll>
   );
 }
