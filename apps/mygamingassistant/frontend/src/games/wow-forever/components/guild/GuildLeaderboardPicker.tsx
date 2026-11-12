@@ -19,7 +19,7 @@ export default function GuildLeaderboardPicker({ board, onChange }: GuildLeaderb
   const boards = groups.get(board.group) ?? [];
   return (
     <>
-      <div className="sm:col-span-2">
+      <div className="min-w-0 sm:col-span-2">
         <GuildLeaderboardCategories
           categories={[...groups.keys()]}
           current={board.group}

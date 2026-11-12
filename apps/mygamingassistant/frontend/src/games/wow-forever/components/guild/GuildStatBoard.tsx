@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import GuildLeaderboardList from "@/games/wow-forever/components/guild/GuildLeaderboardList";
+import { LEADERBOARD_PICKER_GRID } from "@/games/wow-forever/data/guild/guildStyles";
 import { formatCount } from "@/games/wow-forever/lib/character/formatCount";
 import { LEADERBOARD_COPY } from "@/games/wow-forever/data/guild/leaderboardConfig";
 import {
@@ -41,7 +42,7 @@ export default function GuildStatBoard({ members, board, me, gainsWindowDays, pi
 
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2">{picker}</div>
+      <div className={LEADERBOARD_PICKER_GRID}>{picker}</div>
       <div role="status" aria-live="polite" className="text-sm text-muted-foreground">
         {boardStatus(board, shownCount, ranked.length, atCap)}
       </div>

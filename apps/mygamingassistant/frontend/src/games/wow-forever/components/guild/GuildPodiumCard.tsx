@@ -35,7 +35,7 @@ export default function GuildPodiumCard({ entry, mine, slot, barPercent }: Guild
       </span>
       <span className="shrink-0 text-2xl font-bold tabular-nums">{entry.display}</span>
       {barPercent === null ? null : (
-        <span className="block w-full">
+        <span className="block basis-full sm:w-full sm:basis-auto">
           <GuildLeaderboardBar percent={barPercent} />
         </span>
       )}
