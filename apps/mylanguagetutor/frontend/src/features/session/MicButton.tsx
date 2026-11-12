@@ -1,5 +1,6 @@
 import { Mic, Square } from "lucide-react";
 import { cn } from "@platform/ui";
+import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 import type { VoicePhase } from "@mylanguagetutor/api-client/types/session/voice-phase";
 
 interface MicButtonProps {
@@ -10,14 +11,6 @@ interface MicButtonProps {
   onStop: () => void;
 }
 
-const LABELS: Record<VoicePhase, string> = {
-  idle: "Tap to speak",
-  listening: "Tap when you're done",
-  waiting: "Waiting for the tutor",
-  replying: "The tutor is answering",
-  speaking: "Tap to interrupt and speak",
-};
-
 /**
  * The one big control of the practice screen. Tapping while the tutor is
  * speaking interrupts it (barge-in). Disabled -- never hidden -- while a turn
@@ -25,7 +18,7 @@ const LABELS: Record<VoicePhase, string> = {
  */
 export default function MicButton({ phase, disabled, onStart, onStop }: MicButtonProps) {
   const listening = phase === "listening";
-  const label = LABELS[phase];
+  const label = VOICE_COPY.micLabels[phase];
   return (
     <div className="flex flex-col items-center gap-2">
       <button

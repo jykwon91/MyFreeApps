@@ -1,25 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getRecognitionConstructor } from "@/features/speech/speechSupport";
+import { NOTHING_HEARD } from "@mylanguagetutor/api-client/constants/heardSpeech";
+import { finalTranscript } from "@mylanguagetutor/api-client/utils/finalTranscript";
+import { liveTranscript } from "@mylanguagetutor/api-client/utils/liveTranscript";
+import { recognitionFailure } from "@mylanguagetutor/api-client/utils/recognitionFailure";
 import type { Recognition, RecognitionResultEvent } from "@/types/speech/speech-recognition";
-import type { RecognitionFailure } from "@/types/speech/recognition-failure";
+import type { HeardSpeech } from "@mylanguagetutor/api-client/types/speech/heard-speech";
+import type { RecognitionFailure } from "@mylanguagetutor/api-client/types/speech/recognition-failure";
+import type { SpeechRecognitionControls } from "@mylanguagetutor/api-client/types/speech/speech-recognition-controls";
 
-const DENIED_ERRORS = new Set(["not-allowed", "service-not-allowed"]);
-const IGNORED_ERRORS = new Set(["aborted"]);
-
-export interface SpeechRecognitionControls {
-  supported: boolean;
-  listening: boolean;
-  /** Live (not yet final) transcript while listening. */
-  interim: string;
-  failure: RecognitionFailure | null;
-  /** Open the microphone. The browser asks for permission on first use. */
-  start: () => void;
-  /** Stop listening; whatever was heard so far is delivered as final. */
-  stop: () => void;
-  clearFailure: () => void;
-}
-
-function readResults(event: RecognitionResultEvent): { finalText: string; interimText: string } {
+function readResults(event: RecognitionResultEvent): HeardSpeech {
   let finalText = "";
   let interimText = "";
   for (let i = 0; i < event.results.length; i += 1) {
@@ -45,10 +35,7 @@ export function useSpeechRecognition(
   const [interim, setInterim] = useState("");
   const [failure, setFailure] = useState<RecognitionFailure | null>(null);
   const recognition = useRef<Recognition | null>(null);
-  const heard = useRef("");
-  // Some browsers end without promoting the last interim result to final
-  // when the learner taps stop; fall back to it rather than lose the turn.
-  const lastInterim = useRef("");
+  const heard = useRef<HeardSpeech>(NOTHING_HEARD);
   const onFinalRef = useRef(onFinal);
 
   useEffect(() => {
@@ -64,27 +51,21 @@ export function useSpeechRecognition(
     rec.continuous = false;
     rec.interimResults = true;
     rec.maxAlternatives = 1;
-    heard.current = "";
-    lastInterim.current = "";
+    heard.current = NOTHING_HEARD;
     rec.onresult = (event) => {
-      const { finalText, interimText } = readResults(event);
-      heard.current = finalText;
-      lastInterim.current = `${finalText}${interimText}`;
-      setInterim(`${finalText}${interimText}`);
+      heard.current = readResults(event);
+      setInterim(liveTranscript(heard.current));
     };
     rec.onerror = (event) => {
-      if (IGNORED_ERRORS.has(event.error)) return;
-      if (DENIED_ERRORS.has(event.error)) setFailure("denied");
-      else if (event.error === "no-speech") setFailure("no_speech");
-      else setFailure("unavailable");
+      const next = recognitionFailure(event.error);
+      if (next) setFailure(next);
     };
     rec.onend = () => {
       recognition.current = null;
       setListening(false);
       setInterim("");
-      const text = (heard.current || lastInterim.current).trim();
-      heard.current = "";
-      lastInterim.current = "";
+      const text = finalTranscript(heard.current);
+      heard.current = NOTHING_HEARD;
       if (text) onFinalRef.current(text);
     };
     recognition.current = rec;

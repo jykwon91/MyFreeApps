@@ -1,9 +1,9 @@
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useSpeechSynthesis } from "@/features/speech/useSpeechSynthesis";
 import { useSpeechRecognition } from "@/features/speech/useSpeechRecognition";
 import { usePracticeSession } from "@mylanguagetutor/api-client/hooks/usePracticeSession";
 import { streamTurn } from "@/features/tutor-stream/streamTurn";
-import { voicePhase } from "@mylanguagetutor/api-client/utils/voicePhase";
+import { useVoiceInput } from "@mylanguagetutor/api-client/hooks/useVoiceInput";
 import { ackVoicePrivacy, hasAckedVoicePrivacy } from "@/features/session/privacyAck";
 import TranscriptList from "@/features/session/TranscriptList";
 import VoiceComposer from "@/features/session/VoiceComposer";
@@ -15,21 +15,13 @@ import TurnErrorAlert from "@/features/session/TurnErrorAlert";
 import ScenarioGoals from "@/features/session/ScenarioGoals";
 import ScenarioCompleteBanner from "@/features/session/ScenarioCompleteBanner";
 import { useGetUsageTodayQuery } from "@mylanguagetutor/api-client/store/usageApi";
-import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
+import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/startConversationPrompt";
+import { typedAnswerLabel } from "@mylanguagetutor/api-client/utils/typedAnswerLabel";
 import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedAnswerPlaceholder";
 import { usageBlock } from "@mylanguagetutor/api-client/utils/usageBlock";
 import { replayRate } from "@mylanguagetutor/api-client/utils/replayRate";
-import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
-import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
-import type { Level } from "@mylanguagetutor/api-client/types/tutor/level";
-import type { InputMode } from "@mylanguagetutor/api-client/types/session/input-mode";
-
-interface PracticeSessionProps {
-  language: Language;
-  scenario: Scenario;
-  level: Level;
-}
+import type { PracticeSessionProps } from "@/types/session/practice-session-props";
 
 /**
  * The practice screen's conversation loop: listen -> send -> stream the
@@ -49,48 +41,32 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
   });
   const recognition = useSpeechRecognition(language.stt_locale, session.send);
   const usage = useGetUsageTodayQuery();
-  const [mode, setMode] = useState<InputMode>(recognition.supported ? "voice" : "text");
   const [privacyAcked, setPrivacyAcked] = useState(hasAckedVoicePrivacy);
   const [completeDismissed, setCompleteDismissed] = useState(false);
   const textInput = useRef<HTMLInputElement>(null);
-
-  const phase = voicePhase({
-    listening: recognition.listening,
-    requestPhase: session.requestPhase,
+  const block = session.block ?? usageBlock(usage.data);
+  const voice = useVoiceInput({
+    recognition,
     speaking: synthesis.speaking,
+    stopSpeaking: synthesis.cancel,
+    requestPhase: session.requestPhase,
+    block,
+    privacyAcked,
+    ackPrivacy: () => {
+      ackVoicePrivacy();
+      setPrivacyAcked(true);
+    },
   });
   const busy = session.requestPhase !== "idle";
-  const block = session.block ?? usageBlock(usage.data);
-
-  const startListening = useCallback(() => {
-    if (block || busy) return;
-    synthesis.cancel(); // barge-in: talking over the tutor stops it
-    recognition.start();
-  }, [block, busy, recognition, synthesis]);
-
-  const acceptPrivacy = () => {
-    ackVoicePrivacy();
-    setPrivacyAcked(true);
-    startListening();
-  };
-
-  const switchToText = () => {
-    recognition.stop();
-    recognition.clearFailure();
-    setMode("text");
-  };
 
   const replay = (text: string, slow: boolean) => {
     synthesis.speakAll(text, replayRate(slow));
   };
 
   const tryRetryPrompt = () => {
-    if (mode === "voice") startListening();
+    if (voice.mode === "voice") voice.startListening();
     else textInput.current?.focus();
   };
-
-  const showDenied = mode === "voice" && recognition.failure === "denied";
-  const showPrivacy = mode === "voice" && !privacyAcked && !block;
 
   return (
     <div className="flex min-h-[60vh] flex-col gap-4">
@@ -129,25 +105,25 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
 
       <div className="sticky bottom-0 space-y-3 border-t bg-background py-4">
         {block && <SessionBlockNotice block={block} />}
-        {!block && showDenied && <MicDeniedState onTypeInstead={switchToText} />}
-        {!block && !showDenied && showPrivacy && (
-          <PrivacyNotice onContinue={acceptPrivacy} onTypeInstead={switchToText} />
+        {voice.view === "denied" && <MicDeniedState onTypeInstead={voice.switchToText} />}
+        {voice.view === "privacy" && (
+          <PrivacyNotice onContinue={voice.acceptPrivacy} onTypeInstead={voice.switchToText} />
         )}
-        {!block && !showDenied && !showPrivacy && mode === "voice" && (
+        {voice.view === "voice" && (
           <VoiceComposer
-            phase={phase}
+            phase={voice.phase}
             interim={recognition.interim}
             failure={recognition.failure}
             micDisabled={busy}
-            onStart={startListening}
+            onStart={voice.startListening}
             onStop={recognition.stop}
-            onTypeInstead={switchToText}
+            onTypeInstead={voice.switchToText}
           />
         )}
-        {!block && mode === "text" && (
+        {voice.view === "text" && (
           <div className="space-y-2">
             <TextFallbackInput
-              label={recognition.supported ? PRACTICE_COPY.typeYourAnswer : PRACTICE_COPY.typingOnlyLabel}
+              label={typedAnswerLabel(recognition.supported)}
               placeholder={typedAnswerPlaceholder(language.display_name)}
               busy={busy}
               disabled={busy}
@@ -163,10 +139,10 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
             {recognition.supported && (
               <button
                 type="button"
-                onClick={() => setMode("voice")}
+                onClick={voice.switchToVoice}
                 className="min-h-[44px] px-2 text-xs text-muted-foreground underline"
               >
-                Use the microphone
+                {VOICE_COPY.useMicrophone}
               </button>
             )}
           </div>

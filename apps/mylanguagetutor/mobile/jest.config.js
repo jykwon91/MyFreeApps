@@ -13,6 +13,8 @@ module.exports = {
   passWithNoTests: false,
   // The first test in each file also pays for loading React Native, which is slow on CI.
   testTimeout: 30000,
+  // The phone's speech recognizer has no native module under Jest: tests get the fake, set up per test.
+  moduleNameMapper: { "^expo-speech-recognition$": "<rootDir>/test-support/fakeSpeechRecognition.ts" },
   testMatch: ["<rootDir>/__tests__/**/*.test.{ts,tsx}"],
   transformIgnorePatterns: transformIgnorePatterns.map((pattern) =>
     pattern.replace("/node_modules/(?!", `/node_modules/(?!${ES_MODULE_PACKAGES}/|`),
