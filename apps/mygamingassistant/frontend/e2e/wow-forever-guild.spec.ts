@@ -17,7 +17,7 @@
  *
  * Run: npm run test:e2e -- wow-forever-guild
  */
-import { test, expect, type Page, type Route } from "@playwright/test";
+import { test, expect, type Locator, type Page, type Route } from "@playwright/test";
 
 const GUILD_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+$/.test(url.pathname);
 const RECIPES_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+\/recipes$/.test(url.pathname);
@@ -163,6 +163,9 @@ test("skeleton while loading, then the member list in the same place", async ({ 
   await expect(page.getByTestId("guild-leaderboard-skeleton")).toBeVisible();
   await expect(page.getByTestId("guild-podium-skeleton")).toBeVisible();
   const skeletonBox = await skeleton.boundingBox();
+  const podiumHeights = async (cards: Locator) =>
+    cards.evaluateAll((els) => els.slice(0, 2).map((e) => e.getBoundingClientRect().height));
+  const skeletonCards = await podiumHeights(page.getByTestId("guild-podium-skeleton").locator(":scope > div:first-child > div"));
 
   release();
   await expect(skeleton).toHaveCount(0);
@@ -172,6 +175,9 @@ test("skeleton while loading, then the member list in the same place", async ({ 
   expect(Math.abs((summaryBox?.x ?? 0) - (skeletonBox?.x ?? 0))).toBeLessThan(2);
   await expect(memberNames(page)).toHaveCount(3);
   await expect(page.getByRole("region", { name: "Leaderboards" })).toBeVisible();
+  // The podium skeleton is the loaded podium's size, so the board doesn't jump when it arrives.
+  const loadedCards = await podiumHeights(page.getByRole("list", { name: "Level leaderboard" }).locator("li"));
+  loadedCards.forEach((height, i) => expect(Math.abs(height - skeletonCards[i])).toBeLessThan(4));
   await expect(page.getByRole("region", { name: "Who can craft this?" })).toBeVisible();
 });
 

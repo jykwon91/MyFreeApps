@@ -9,6 +9,7 @@ import {
   PODIUM_CARD_FIRST,
   PODIUM_CARD_OTHER,
 } from "@/games/wow-forever/data/guild/guildStyles";
+import { GOLD_BORDER, GOLD_TEXT } from "@/games/wow-forever/data/guild/medalStyles";
 import type { LeaderboardEntry } from "@/games/wow-forever/types/guild/leaderboardEntry";
 
 interface GuildPodiumCardProps {
@@ -24,9 +25,9 @@ interface GuildPodiumCardProps {
 export default function GuildPodiumCard({ entry, mine, slot, barPercent }: GuildPodiumCardProps) {
   const first = entry.rank === 1;
   return (
-    <li className={clsx(PODIUM_CARD, slot, first ? PODIUM_CARD_FIRST : PODIUM_CARD_OTHER, mine && LEADERBOARD_MINE)}>
+    <li className={clsx(PODIUM_CARD, slot, first ? [PODIUM_CARD_FIRST, GOLD_BORDER] : PODIUM_CARD_OTHER, mine && LEADERBOARD_MINE)}>
       <span className="flex shrink-0 flex-col items-center">
-        {first ? <Crown aria-hidden className="h-5 w-5 text-[#B8902A]" /> : null}
+        {first ? <Crown aria-hidden className={clsx("h-5 w-5", GOLD_TEXT)} /> : null}
         <GuildRankMedal rank={entry.rank} tied={entry.tied} size="podium" />
       </span>
       <span className="min-w-0 flex-1 sm:w-full sm:flex-none">
@@ -34,7 +35,7 @@ export default function GuildPodiumCard({ entry, mine, slot, barPercent }: Guild
       </span>
       <span className="shrink-0 text-2xl font-bold tabular-nums">{entry.display}</span>
       {barPercent === null ? null : (
-        <span className="hidden w-full sm:block">
+        <span className="block w-full">
           <GuildLeaderboardBar percent={barPercent} />
         </span>
       )}

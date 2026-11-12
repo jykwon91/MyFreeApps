@@ -48,7 +48,7 @@ export default function GuildFactionBoard({ slug, members, board, me, picker }: 
         )}
       </div>
       {data === undefined && !isError ? (
-        <div aria-hidden data-testid="guild-faction-skeleton">
+        <div data-testid="guild-faction-skeleton">
           <GuildPodiumSkeleton />
         </div>
       ) : null}

@@ -20,7 +20,7 @@ export default function GuildLeaderboards({ slug, members, gainsWindowDays }: Gu
   const picker = <GuildLeaderboardPicker board={board} onChange={setBoard} />;
 
   return (
-    <section aria-labelledby={headingId} className="space-y-3 rounded-xl border bg-card/50 p-3 sm:p-4">
+    <section aria-labelledby={headingId} className="space-y-3 rounded-xl border bg-card p-3 sm:p-4">
       <h2 id={headingId} className="text-lg font-semibold">
         Leaderboards
       </h2>

@@ -10,7 +10,7 @@ interface GuildLeaderboardCategoriesProps {
 /** The board categories as chips (Character, PvP, Reputation, This week, Professions); one row that scrolls on a phone. */
 export default function GuildLeaderboardCategories({ categories, current, onPick }: GuildLeaderboardCategoriesProps) {
   return (
-    <div role="group" aria-label="Board category" className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+    <div role="group" aria-label="Board category" className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 py-1">
       {categories.map((category) => (
         <button
           key={category}

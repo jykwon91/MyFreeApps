@@ -11,11 +11,11 @@ export default function GuildPodiumSkeleton() {
         {Array.from({ length: LEADERBOARD_PODIUM_SIZE }, (_, i) => (
           <div
             key={i}
-            className={clsx(PODIUM_SLOTS[i], "h-[68px] rounded-xl bg-muted animate-pulse", i === 0 ? "sm:h-[208px]" : "sm:h-[172px]")}
+            className={clsx(PODIUM_SLOTS[i], "rounded-xl bg-muted animate-pulse", i === 0 ? "h-[92px] sm:h-[220px]" : "h-[90px] sm:h-[198px]")}
           />
         ))}
       </div>
-      <CharacterRowSkeletons count={LEADERBOARD_SKELETON_ROWS} height="h-[58px]" />
+      <CharacterRowSkeletons count={LEADERBOARD_SKELETON_ROWS} height="h-[82px]" />
     </div>
   );
 }
