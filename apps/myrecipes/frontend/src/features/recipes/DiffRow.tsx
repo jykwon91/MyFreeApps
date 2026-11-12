@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import { DIFF_CHANGE_DISPLAY } from "@myrecipes/api-client/constants/versions";
 import type { DiffChangeKind } from "@myrecipes/api-client/types/recipe/diff";
 import { CHANGE_STYLES } from "@/features/recipes/diff-display";
 
@@ -13,10 +14,12 @@ interface Props {
 /**
  * One diff line. Added rows show only the after text; removed rows show only
  * the before text (struck through); changed rows show before -> after so the
- * edit is obvious at a glance. Color + symbol come from CHANGE_STYLES.
+ * edit is obvious at a glance. Color comes from CHANGE_STYLES; the symbol and
+ * label from DIFF_CHANGE_DISPLAY.
  */
 export default function DiffRow({ change, before, after }: Props) {
   const style = CHANGE_STYLES[change];
+  const display = DIFF_CHANGE_DISPLAY[change];
 
   return (
     <li className={`flex items-start gap-2 rounded-md border p-2.5 text-sm ${style.container}`}>
@@ -24,9 +27,9 @@ export default function DiffRow({ change, before, after }: Props) {
         className={`mt-0.5 w-4 shrink-0 text-center font-semibold ${style.symbolClass}`}
         aria-hidden
       >
-        {style.symbol}
+        {display.symbol}
       </span>
-      <span className="sr-only">{style.label}:</span>
+      <span className="sr-only">{display.label}:</span>
       {change === "changed" ? (
         <span className="flex flex-1 flex-wrap items-center gap-2">
           <span className="text-muted-foreground line-through">{before}</span>

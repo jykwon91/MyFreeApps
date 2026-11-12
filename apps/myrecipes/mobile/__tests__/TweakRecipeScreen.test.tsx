@@ -16,22 +16,33 @@ import { NEW_RECIPE_MESSAGES } from "../src/constants/newRecipe";
 import { TWEAK_RECIPE_MESSAGES as MESSAGES } from "../src/constants/tweakRecipe";
 import TweakRecipeScreen from "../src/features/tweakRecipe/TweakRecipeScreen";
 import { makeStore } from "../src/lib/store";
+import { type FakeStack, fakeStack } from "./support/fakeStack";
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
 const mockRepeat = jest.fn();
-let mockCanGoBack = true;
+// Tabs, then the recipe, then this form; a test opened by a link has only the form.
+const ON_RECIPE = [{ name: "(tabs)" }, { name: "recipes/[id]", params: { id: "r1" } }, { name: "recipes/[id]/tweak", params: { id: "r1" } }];
+let mockStack: FakeStack;
 // What the screen last told the navigator about leaving: whether to stop it, and what to do instead.
 const mockGuard: { prevent: boolean; ask: ((event: { repeat: () => void }) => void) | null } = { prevent: false, ask: null };
 jest.mock("expo-router", () => ({
   router: {
-    back: (...args: unknown[]) => mockBack(...args),
-    canGoBack: () => mockCanGoBack,
-    replace: (...args: unknown[]) => mockReplace(...args),
+    back: () => {
+      mockBack();
+      mockStack.back();
+    },
+    canGoBack: () => mockStack.canGoBack(),
+    dismiss: (count?: number) => mockStack.dismiss(count),
+    replace: (href: string) => {
+      mockReplace(href);
+      mockStack.replace(href);
+    },
   },
   useLocalSearchParams: () => ({ id: "r1" }),
-  useRouter: () => ({ back: mockBack, canGoBack: () => mockCanGoBack, push: mockPush, replace: mockReplace }),
+  useNavigation: () => ({ getState: () => mockStack.state() }),
+  useRouter: () => ({ back: mockBack, canGoBack: () => mockStack.canGoBack(), push: mockPush, replace: mockReplace }),
   usePreventRemove: (prevent: boolean, ask: (event: { repeat: () => void }) => void) => {
     mockGuard.prevent = prevent;
     mockGuard.ask = ask;
@@ -166,7 +177,7 @@ function posts(): SentRequest[] {
 
 beforeEach(() => {
   sent = serve({ "GET /recipes/r1": () => reply(200, SOUP), "POST /recipes/r1/versions": () => reply(201, SAVED) });
-  mockCanGoBack = true;
+  mockStack = fakeStack(ON_RECIPE);
   mockDecimalSeparator = ".";
   mockGuard.prevent = false;
   mockGuard.ask = null;
@@ -263,7 +274,7 @@ describe("opening", () => {
     await press(MESSAGES.backToRecipe);
     expect(mockBack).toHaveBeenCalledTimes(1);
 
-    mockCanGoBack = false;
+    mockStack = fakeStack([ON_RECIPE[2]]);
     await press(MESSAGES.backToRecipe);
     expect(mockReplace).toHaveBeenCalledWith({ pathname: "/recipes/[id]", params: { id: "r1" } });
   });
@@ -442,17 +453,6 @@ describe("saving", () => {
         { name: "salt", quantity: 0.75, unit: "tsp", note: null, lineage_key: "lk-salt" },
       ],
     });
-  });
-
-  it("opens the recipe in its place when there's nothing to go back to", async () => {
-    mockCanGoBack = false;
-    await showForm();
-    await type(NOTE, "More salt");
-
-    await press(MESSAGES.save);
-
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: "/recipes/[id]", params: { id: "r1" } }));
-    expect(mockBack).not.toHaveBeenCalled();
   });
 
   it.each([

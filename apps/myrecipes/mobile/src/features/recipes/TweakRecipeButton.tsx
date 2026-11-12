@@ -1,25 +1,15 @@
 import { LoadingButton } from "@platform/mobile";
-import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useRef } from "react";
+import { useRouter } from "expo-router";
 import { TWEAK_RECIPE_MESSAGES as MESSAGES } from "../../constants/tweakRecipe";
+import { useOpenOnce } from "../../hooks/useOpenOnce";
 import type { TweakRecipeButtonProps } from "../../types/TweakRecipeButtonProps";
 
 /** Opens the tweak form, for the recipe's owner. Two quick taps open it once. */
-export default function TweakRecipeButton({ recipeId }: TweakRecipeButtonProps) {
+export default function TweakRecipeButton({ recipeId, from }: TweakRecipeButtonProps) {
   const router = useRouter();
-  const isOpening = useRef(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      isOpening.current = false;
-    }, []),
+  const open = useOpenOnce(() =>
+    router.push({ pathname: "/recipes/[id]/tweak", params: from ? { id: recipeId, from } : { id: recipeId } }),
   );
-
-  function open(): void {
-    if (isOpening.current) return;
-    isOpening.current = true;
-    router.push({ pathname: "/recipes/[id]/tweak", params: { id: recipeId } });
-  }
 
   return (
     <LoadingButton accessibilityHint={MESSAGES.tweakHint} onPress={open} variant="secondary">

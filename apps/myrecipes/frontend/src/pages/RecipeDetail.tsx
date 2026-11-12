@@ -16,6 +16,9 @@ import {
   useListRecipeCooksQuery,
   useDeleteRecipeMutation,
 } from "@myrecipes/api-client/store/recipesApi";
+import { COMPARE_VERSION_COUNT } from "@myrecipes/api-client/constants/versions";
+import { orderForCompare } from "@myrecipes/api-client/utils/orderForCompare";
+import { toggleCompareId } from "@myrecipes/api-client/utils/toggleCompareId";
 import RecipeDetailSkeleton from "@/features/recipes/RecipeDetailSkeleton";
 import VersionTimeline from "@/features/recipes/VersionTimeline";
 import VersionBody from "@/features/recipes/VersionBody";
@@ -63,24 +66,15 @@ export default function RecipeDetail() {
   }, [versionsQuery.data]);
 
   function toggleCompare(versionId: string) {
-    setCompareIds((prev) => {
-      if (prev.includes(versionId)) return prev.filter((x) => x !== versionId);
-      if (prev.length >= 2) return prev;
-      return [...prev, versionId];
-    });
+    setCompareIds((prev) => toggleCompareId(prev, versionId));
   }
 
   function runCompare() {
-    if (compareIds.length !== 2) return;
-    const nums = compareIds.map((cid) => versionNumberById[cid] ?? 0);
-    // Diff newer-vs-older reads most naturally: target = newer, against = older.
-    const [aId, bId] = compareIds;
-    const newerIsA = (nums[0] ?? 0) >= (nums[1] ?? 0);
-    const targetId = newerIsA ? aId : bId;
-    const againstId = newerIsA ? bId : aId;
-    navigate(
-      `/recipes/${recipeId}/versions/${targetId}/diff?against=${againstId}`,
-    );
+    const picked = (versionsQuery.data ?? []).filter((v) => compareIds.includes(v.id));
+    const [a, b] = picked;
+    if (picked.length !== COMPARE_VERSION_COUNT || !a || !b) return;
+    const { versionId, against } = orderForCompare(a, b);
+    navigate(`/recipes/${recipeId}/versions/${versionId}/diff?against=${against}`);
   }
 
   async function handleDelete() {

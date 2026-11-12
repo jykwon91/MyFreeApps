@@ -1,16 +1,12 @@
-import { useMemo } from "react";
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { ArrowLeft, GitCompare } from "lucide-react";
 import { EmptyState, LoadingButton, Skeleton } from "@platform/ui";
 import { useGetDiffQuery, useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
+import { VERSION_COPY } from "@myrecipes/api-client/constants/versions";
+import { diffErrorMessage } from "@myrecipes/api-client/utils/diffErrorMessage";
+import { diffSummary } from "@myrecipes/api-client/utils/diffSummary";
+import { ingredientChangeLine } from "@myrecipes/api-client/utils/ingredientChangeLine";
 import DiffRow from "@/features/recipes/DiffRow";
-import { formatIngredientLine } from "@myrecipes/api-client/utils/formatIngredientLine";
-import type { IngredientChange } from "@myrecipes/api-client/types/recipe/diff";
-
-function ingredientLine(change: IngredientChange, side: "before" | "after"): string | null {
-  const snapshot = change[side];
-  return snapshot ? formatIngredientLine(snapshot) : null;
-}
 
 /**
  * The version diff — the signature screen. Renders ingredient_changes and
@@ -26,7 +22,7 @@ export default function VersionDiff() {
   const against = searchParams.get("against") ?? undefined;
   const navigate = useNavigate();
 
-  const { data, isLoading, isError } = useGetDiffQuery(
+  const { data, error, isLoading, isError } = useGetDiffQuery(
     { recipeId, versionId, against },
     { skip: !recipeId || !versionId },
   );
@@ -35,11 +31,6 @@ export default function VersionDiff() {
   // owner. Fetch the recipe to read is_owner (cached from the detail page).
   const recipeQuery = useGetRecipeQuery(recipeId, { skip: !recipeId });
   const isOwner = recipeQuery.data?.is_owner ?? false;
-
-  const totalChanges = useMemo(
-    () => (data ? data.ingredient_changes.length + data.step_changes.length : 0),
-    [data],
-  );
 
   const backLink = (
     <Link
@@ -68,8 +59,8 @@ export default function VersionDiff() {
         {backLink}
         <EmptyState
           icon={<GitCompare className="w-12 h-12 text-destructive" />}
-          heading="Couldn't load this comparison"
-          body="One of these versions may not exist. Go back and pick two versions to compare."
+          heading={VERSION_COPY.loadFailedHeading}
+          body={diffErrorMessage(error)}
           action={{
             label: "Back to recipe",
             onClick: () => navigate(`/recipes/${recipeId}`),
@@ -79,8 +70,7 @@ export default function VersionDiff() {
     );
   }
 
-  const fromLabel =
-    data.from_version_number === null ? "nothing" : `v${data.from_version_number}`;
+  const summary = diffSummary(data);
 
   return (
     <main className="p-4 sm:p-8 space-y-6">
@@ -89,29 +79,25 @@ export default function VersionDiff() {
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold flex items-center gap-2">
           <GitCompare className="w-6 h-6 text-primary" aria-hidden />
-          {fromLabel} <span className="text-muted-foreground">to</span> v
-          {data.to_version_number}
+          {summary.fromLabel} <span className="text-muted-foreground">{VERSION_COPY.to}</span>{" "}
+          {summary.toLabel}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          {totalChanges === 0
-            ? "No differences between these versions."
-            : `${totalChanges} change${totalChanges === 1 ? "" : "s"} — ${data.ingredient_changes.length} ingredient, ${data.step_changes.length} step.`}
-        </p>
+        <p className="text-sm text-muted-foreground">{summary.subtitle}</p>
       </header>
 
-      {totalChanges === 0 ? (
+      {summary.isIdentical ? (
         <EmptyState
           icon={<GitCompare className="w-12 h-12" />}
-          heading="Identical"
-          body="These two versions have the same ingredients and steps."
+          heading={VERSION_COPY.identicalHeading}
+          body={VERSION_COPY.identicalBody}
         />
       ) : (
         <div className="space-y-6">
           <section className="bg-card border rounded-lg p-6">
-            <h2 className="text-base font-medium mb-3">Ingredients</h2>
+            <h2 className="text-base font-medium mb-3">{VERSION_COPY.ingredients}</h2>
             {data.ingredient_changes.length === 0 ? (
               <p className="text-sm text-muted-foreground italic">
-                No ingredient changes.
+                {VERSION_COPY.noIngredientChanges}
               </p>
             ) : (
               <ul className="space-y-2">
@@ -119,8 +105,8 @@ export default function VersionDiff() {
                   <DiffRow
                     key={change.lineage_key}
                     change={change.change}
-                    before={ingredientLine(change, "before")}
-                    after={ingredientLine(change, "after")}
+                    before={ingredientChangeLine(change, "before")}
+                    after={ingredientChangeLine(change, "after")}
                   />
                 ))}
               </ul>
@@ -128,9 +114,9 @@ export default function VersionDiff() {
           </section>
 
           <section className="bg-card border rounded-lg p-6">
-            <h2 className="text-base font-medium mb-3">Steps</h2>
+            <h2 className="text-base font-medium mb-3">{VERSION_COPY.steps}</h2>
             {data.step_changes.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">No step changes.</p>
+              <p className="text-sm text-muted-foreground italic">{VERSION_COPY.noStepChanges}</p>
             ) : (
               <ul className="space-y-2">
                 {data.step_changes.map((change) => (

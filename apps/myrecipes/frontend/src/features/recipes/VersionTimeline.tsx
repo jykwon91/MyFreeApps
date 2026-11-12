@@ -1,7 +1,10 @@
 import { GitCompare } from "lucide-react";
 import { Button, formatDate } from "@platform/ui";
 import StarRating from "@/features/recipes/StarRating";
+import { COMPARE_VERSION_COUNT, VERSION_COPY } from "@myrecipes/api-client/constants/versions";
 import type { VersionSummary } from "@myrecipes/api-client/types/recipe/version";
+import { newestFirst } from "@myrecipes/api-client/utils/newestFirst";
+import { versionNote } from "@myrecipes/api-client/utils/versionNote";
 
 interface Props {
   versions: VersionSummary[];
@@ -32,8 +35,7 @@ export default function VersionTimeline({
   onToggleCompare,
   onCompare,
 }: Props) {
-  // Newest first for the rail; the API returns oldest-first.
-  const ordered = [...versions].sort((a, b) => b.version_number - a.version_number);
+  const ordered = newestFirst(versions);
 
   return (
     <div className="bg-card border rounded-lg p-5 space-y-4">
@@ -43,16 +45,16 @@ export default function VersionTimeline({
           variant="secondary"
           size="sm"
           onClick={onCompare}
-          disabled={compareIds.length !== 2}
+          disabled={compareIds.length !== COMPARE_VERSION_COUNT}
           title={
-            compareIds.length === 2
+            compareIds.length === COMPARE_VERSION_COUNT
               ? "Compare the two selected versions"
               : "Select two versions to compare"
           }
         >
           <span className="inline-flex items-center gap-1.5">
             <GitCompare className="w-4 h-4" />
-            Compare
+            {VERSION_COPY.compare}
           </span>
         </Button>
       </div>
@@ -61,7 +63,8 @@ export default function VersionTimeline({
         {ordered.map((version, idx) => {
           const isSelected = version.id === selectedId;
           const isChecked = compareIds.includes(version.id);
-          const checkboxDisabled = !isChecked && compareIds.length >= 2;
+          const checkboxDisabled = !isChecked && compareIds.length >= COMPARE_VERSION_COUNT;
+          const note = versionNote(version);
           return (
             <li key={version.id} className="relative">
               <div
@@ -91,19 +94,17 @@ export default function VersionTimeline({
                         v{version.version_number}
                         {idx === 0 ? (
                           <span className="ml-2 text-xs font-normal text-primary">
-                            latest
+                            {VERSION_COPY.latest}
                           </span>
                         ) : null}
                       </span>
                       <StarRating value={version.best_rating} size={14} showEmptyDash />
                     </div>
                     <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-                      {version.change_note ?? (
-                        <span className="italic text-muted-foreground/60">
-                          {version.version_number === 1
-                            ? "Original recipe"
-                            : "No change note"}
-                        </span>
+                      {note.isPlaceholder ? (
+                        <span className="italic text-muted-foreground/60">{note.text}</span>
+                      ) : (
+                        note.text
                       )}
                     </p>
                     <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">

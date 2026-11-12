@@ -14,8 +14,10 @@ routes:
   # Owner only, opened from the recipe's "Tweak this recipe" button, as on the website.
   /recipes/:id/tweak:
     screen: recipes/[id]/tweak
+  # Opened from the recipe's Version history (recipes/[id]/versions, which the website shows on the
+  # recipe page itself): tap a version for its changes, or pick two to compare.
   /recipes/:id/versions/:vid/diff:
-    not_on_mobile: Not built yet.
+    screen: recipes/[id]/versions/[vid]/diff
   /recipes/import:
     screen: recipes/import
   /recipes/new:
