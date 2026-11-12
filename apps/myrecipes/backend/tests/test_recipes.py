@@ -173,6 +173,43 @@ class TestTweakAndDiff:
         assert any("longer" in (s["after"] or "") for s in added_steps)
 
     @pytest.mark.asyncio
+    async def test_tweak_null_clears_servings_and_times(self, user_factory, as_user) -> None:
+        # The tweak form sends every field; a field the user emptied arrives as
+        # null and must be saved as cleared, not silently kept from the base.
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            created = (await authed.post("/recipes", json=_recipe_payload())).json()
+            resp = await authed.post(
+                f"/recipes/{created['id']}/versions",
+                json={
+                    "change_note": "No fixed yield",
+                    "servings": None,
+                    "prep_minutes": None,
+                    "cook_minutes": None,
+                    "ingredients": [],
+                    "steps": [],
+                },
+            )
+            latest = (await authed.get(f"/recipes/{created['id']}")).json()["latest_version"]
+        assert resp.status_code == 201, resp.text
+        body = resp.json()
+        assert (body["servings"], body["prep_minutes"], body["cook_minutes"]) == (None, None, None)
+        assert (latest["servings"], latest["prep_minutes"], latest["cook_minutes"]) == (None, None, None)
+
+    @pytest.mark.asyncio
+    async def test_tweak_omitting_fields_inherits_from_base(self, user_factory, as_user) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            created = (await authed.post("/recipes", json=_recipe_payload())).json()
+            body = (
+                await authed.post(
+                    f"/recipes/{created['id']}/versions",
+                    json={"change_note": "steps only", "cook_minutes": 13, "ingredients": [], "steps": []},
+                )
+            ).json()
+        assert (body["servings"], body["prep_minutes"], body["cook_minutes"]) == ("24", 15, 13)
+
+    @pytest.mark.asyncio
     async def test_timeline_lists_versions(self, user_factory, as_user) -> None:
         user = await user_factory()
         async with await as_user(user) as authed:
