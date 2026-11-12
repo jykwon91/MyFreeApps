@@ -1,19 +1,8 @@
-import { Link } from "react-router-dom";
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
-import CharacterTalentSplit from "@/games/wow-forever/components/character/CharacterTalentSplit";
-import CharacterTalentTree from "@/games/wow-forever/components/character/CharacterTalentTree";
+import CharacterTalentSetBody from "@/games/wow-forever/components/character/CharacterTalentSetBody";
 import CharacterTalentsSkeleton from "@/games/wow-forever/components/character/CharacterTalentsSkeleton";
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 import { useTalentClass } from "@/games/wow-forever/hooks/useTalentClass";
-import {
-  calculatorLink,
-  characterTalentSet,
-  formatUnknownTalents,
-  treesByPoints,
-  unspentPoints,
-} from "@/games/wow-forever/lib/character/characterTalents";
-import { formatPoints } from "@/games/wow-forever/lib/talents/formatPoints";
-import { totalPoints } from "@/games/wow-forever/lib/talents/talentRules";
 import type { CharacterTalentGroup } from "@/games/wow-forever/types/character/characterTalentGroup";
 
 interface CharacterTalentSetViewProps {
@@ -24,51 +13,12 @@ interface CharacterTalentSetViewProps {
   label: string | null;
 }
 
-/** One saved set read against MGA's copy of the class's trees, with a link to open it in the talent calculator. */
+/** One saved set, once the class's trees (their own chunk) have loaded. */
 export default function CharacterTalentSetView({ classId, group, level, label }: CharacterTalentSetViewProps) {
   const state = useTalentClass(classId);
   if (state.status === "loading") return <CharacterTalentsSkeleton />;
   if (state.status === "error") {
     return <LoadErrorRetry message="Couldn't load the talent trees." onRetry={state.retry} retrying={state.retrying} />;
   }
-  const { trees } = state.data;
-  const set = characterTalentSet(trees, group.picks);
-  const link = calculatorLink(classId, trees, set, level);
-  const unspent = group.active ? unspentPoints(set.build, level) : 0;
-  const empty = totalPoints(set.build) === 0 && set.unknown === 0;
-  return (
-    <div className="space-y-3" data-testid="character-talent-set">
-      {label && <h3 className="text-base font-semibold">{label}</h3>}
-      <div className="flex flex-wrap items-center gap-2">
-        <CharacterTalentSplit trees={set.trees} />
-        {link.kind === "link" && (
-          <Link
-            to={link.href}
-            className="inline-flex min-h-[44px] items-center rounded-md border px-3 text-sm font-medium hover:bg-muted sm:ml-auto"
-            data-testid="character-talents-calculator-link"
-          >
-            Open in the talent calculator
-          </Link>
-        )}
-        {link.kind === "none" && link.reason && (
-          <p className="text-xs text-muted-foreground sm:ml-auto" data-testid="character-talents-no-link">
-            {link.reason}
-          </p>
-        )}
-      </div>
-      {empty && <p className="text-sm text-muted-foreground">No points spent in this set yet.</p>}
-      {unspent > 0 && (
-        <p className="text-sm" data-testid="character-talents-unspent">
-          {formatPoints(unspent)} not spent yet.
-        </p>
-      )}
-      {!empty &&
-        treesByPoints(set.trees).map((tree) => <CharacterTalentTree key={tree.name} tree={tree} nested={label !== null} />)}
-      {set.unknown > 0 && (
-        <p className="text-xs text-muted-foreground" data-testid="character-talents-unknown">
-          {formatUnknownTalents(set.unknown)} in our copy of the trees yet.
-        </p>
-      )}
-    </div>
-  );
+  return <CharacterTalentSetBody classId={classId} trees={state.data.trees} group={group} level={level} label={label} />;
 }
