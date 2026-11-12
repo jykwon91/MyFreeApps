@@ -6,6 +6,7 @@ addresses them as ``/profile/wow/character/{first}-{surname}`` in the
 (checked 2026-11-11 against a real character).
 """
 import re
+from collections.abc import Mapping
 from datetime import timedelta
 from typing import Final
 
@@ -70,6 +71,20 @@ CHARACTER_METRIC_RETENTION: Final = timedelta(days=400)
 CHARACTER_METRIC_PURGE_INTERVAL_HOURS: Final = 24
 # ``wow_character.last_error``'s size; a longer error is cut to it.
 CHARACTER_ERROR_MAX_LENGTH: Final = 500
+
+# Blizzard's playable class ids (Classic Era) → the name its API gives; the
+# guild page names members from ``wow_character.class_id``, never the stored sheet.
+CLASS_NAMES_BY_ID: Final[Mapping[int, str]] = {
+    1: "Warrior",
+    2: "Paladin",
+    3: "Hunter",
+    4: "Rogue",
+    5: "Priest",
+    7: "Shaman",
+    8: "Mage",
+    9: "Warlock",
+    11: "Druid",
+}
 
 # ``wow_recipe.name``'s size; a longer recipe name is cut to it.
 RECIPE_NAME_MAX_LENGTH: Final = 120

@@ -39,7 +39,7 @@ from app.services.wow.character.character_sheet_codec import read_sheet, to_shee
 from app.services.wow.character.character_sheet_merge import merge_sheet
 
 # Bump with CHARACTER_SHEET_VERSION when CharacterResponse changes (see app/core/wow_character.py).
-SHEET_SCHEMA_HASH = "d89bf789936beb24ca4e9e655a138b5b1f26aca89bf042faf1f854f9a87cbb08"
+SHEET_SCHEMA_HASH = "cd9336409b8d3d591e310217b1cfcf603ee8e8b6c96ee54131d1b6aa41774d81"
 
 NOW = datetime(2026, 11, 12, 18, 0, tzinfo=timezone.utc)
 PROFILE: dict[str, Any] = {

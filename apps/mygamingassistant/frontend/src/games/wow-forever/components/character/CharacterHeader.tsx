@@ -1,12 +1,13 @@
+import { Link } from "react-router-dom";
 import { Button } from "@platform/ui";
 import { Check } from "lucide-react";
 import { FACTION_LABELS } from "@/games/wow-forever/data/character/characterConfig";
+import { GUILD_PAGE_PATH } from "@/games/wow-forever/data/guild/guildConfig";
+import { BADGE } from "@/games/wow-forever/data/badgeStyles";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { playerSettingsFromCharacter, settingsMatchCharacter } from "@/games/wow-forever/lib/character/characterPlayerSettings";
 import { relativeTime } from "@/games/wow-forever/lib/serverStatusTime";
 import type { CharacterResponse } from "@/games/wow-forever/types/character/characterResponse";
-
-const BADGE = "rounded-full border px-2 py-0.5 text-xs";
 
 /** Who the character is, when Blizzard last saw them, and a way to set MGA's pages to them. */
 export default function CharacterHeader({ character }: { character: CharacterResponse }) {
@@ -14,7 +15,11 @@ export default function CharacterHeader({ character }: { character: CharacterRes
   const wanted = playerSettingsFromCharacter(character);
   const inUse = wanted !== null && settingsMatchCharacter(settings, wanted);
   const guild = character.guild ? `<${character.guild}>` : null;
-  const badges = [FACTION_LABELS[character.faction], character.ruleset, guild].filter((b): b is string => Boolean(b));
+  // A guild with a page is a link there; the badge stays plain text otherwise.
+  const guildLinked = guild !== null && character.guild_slug !== null;
+  const badges = [FACTION_LABELS[character.faction], character.ruleset, guildLinked ? null : guild].filter(
+    (b): b is string => Boolean(b),
+  );
   return (
     <section className="space-y-2" aria-label="Character">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -45,6 +50,15 @@ export default function CharacterHeader({ character }: { character: CharacterRes
             {badge}
           </span>
         ))}
+        {guildLinked ? (
+          <Link
+            to={`${GUILD_PAGE_PATH}/${character.guild_slug}`}
+            className="inline-flex min-h-[44px] items-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Guild ${character.guild}: see its members`}
+          >
+            <span className={`${BADGE} hover:bg-muted/40 underline-offset-2 hover:underline`}>{guild}</span>
+          </Link>
+        ) : null}
         {character.last_login ? (
           <span className="text-xs text-muted-foreground">From their last log out, {relativeTime(character.last_login)}</span>
         ) : null}

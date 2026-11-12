@@ -10,7 +10,7 @@ unreadable answer.
 from __future__ import annotations
 
 import dataclasses
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any
 
 import httpx
@@ -28,48 +28,11 @@ from app.services.wow.blizzard.blizzard_token_cache import BlizzardTokenCache
 from app.services.wow.character import character_lookup_service, character_service, character_store_service
 from app.services.wow.character.blizzard_character_client import BlizzardCharacterClient
 from app.services.wow.character.character_fetch import CharacterFetch
-from app.services.wow.character.character_mapper import to_character_response
-from app.services.wow.character.character_profile import CharacterProfile
 from app.services.wow.guild import guild_roster_service
 from app.services.wow.guild.guild_mapper import to_guild_identity, to_roster
 from app.services.wow.guild.guild_refresh_outcome import GuildRefreshOutcome
 
-NOW = datetime(2026, 11, 12, 18, 0, tzinfo=timezone.utc)
-GUILD: dict[str, Any] = {
-    "id": 230059, "name": "topdeadcenter", "slug": "topdeadcenter", "faction": {"type": "ALLIANCE", "name": "Alliance"},
-}
-OTHER_GUILD: dict[str, Any] = {**GUILD, "id": 999, "name": "Other Guild", "slug": "other-guild"}
-
-
-def _professions(*recipes: tuple[int, str]) -> dict[str, Any]:
-    return {"primaries": [{"profession": {"name": "Tailoring", "id": 197}, "tiers": [
-        {"skill_points": 148, "max_skill_points": 225,
-         "known_recipes": [{"id": rid, "name": name} for rid, name in recipes]},
-    ]}], "secondaries": []}
-
-
-def _profile_json(slug: str, blizzard_id: int, guild: dict[str, Any] | None) -> dict[str, Any]:
-    first, surname = (part.capitalize() for part in slug.split("-"))
-    body: dict[str, Any] = {
-        "id": blizzard_id, "name": first, "surname": surname, "level": 30,
-        "race": {"name": "Gnome", "id": 7}, "character_class": {"name": "Warlock", "id": 9},
-        "gender": {"type": "FEMALE", "name": "Female"}, "faction": {"type": "ALLIANCE", "name": "Alliance"},
-    }
-    if guild is not None:
-        body["guild"] = guild
-    return body
-
-
-def _fetch(
-    slug: str = "jason-kwon", blizzard_id: int = 1, guild: dict[str, Any] | None = GUILD,
-    professions: dict[str, Any] | None = None,
-) -> CharacterFetch:
-    profile = CharacterProfile(
-        profile=_profile_json(slug, blizzard_id, guild), media=None, equipment=None, statistics=None,
-        specializations={}, professions=professions, reputations=None, pvp_summary=None,
-        achievement_statistics=None, mounts={}, pets={},
-    )
-    return CharacterFetch(response=to_character_response(slug, profile), profile=profile, fresh=True)
+from wow_guild_fixtures import GUILD, NOW, OTHER_GUILD, make_fetch, professions_json, profile_json
 
 
 async def _character(db: AsyncSession, slug: str) -> WowCharacter:
@@ -118,7 +81,7 @@ def test_a_roster_entry_without_an_id_or_a_sane_rank_is_skipped_and_a_bad_slug_i
 
 async def test_a_look_up_stores_the_guild_and_joins_it(bound_unit_of_work: AsyncSession) -> None:
     db = bound_unit_of_work
-    await character_store_service.record(_fetch(), now=NOW, viewed=True)
+    await character_store_service.record(make_fetch(), now=NOW, viewed=True)
     guild = await _guild(db)
     assert (guild.slug, guild.name, guild.faction, guild.last_viewed_at) == ("topdeadcenter", "topdeadcenter", "ALLIANCE", NOW)
     assert (await _character(db, "jason-kwon")).guild_id == guild.id
@@ -126,27 +89,27 @@ async def test_a_look_up_stores_the_guild_and_joins_it(bound_unit_of_work: Async
 
 async def test_only_a_persons_look_up_keeps_a_guild_watched(bound_unit_of_work: AsyncSession) -> None:
     db = bound_unit_of_work
-    await character_store_service.record(_fetch(), now=NOW)
+    await character_store_service.record(make_fetch(), now=NOW)
     assert (await _guild(db)).last_viewed_at is None
-    await character_store_service.record(_fetch(), now=NOW, viewed=True)
+    await character_store_service.record(make_fetch(), now=NOW, viewed=True)
     later = NOW + timedelta(hours=1)
-    await character_store_service.record(_fetch(), now=later)
+    await character_store_service.record(make_fetch(), now=later)
     assert (await _guild(db)).last_viewed_at == NOW
 
 
 async def test_leaving_a_guild_clears_membership_and_rank(bound_unit_of_work: AsyncSession) -> None:
     db = bound_unit_of_work
-    await character_store_service.record(_fetch(), now=NOW, viewed=True)
+    await character_store_service.record(make_fetch(), now=NOW, viewed=True)
     character = await _character(db, "jason-kwon")
     character.guild_rank = 3
     await db.flush()
-    await character_store_service.record(_fetch(), now=NOW)
+    await character_store_service.record(make_fetch(), now=NOW)
     assert (await _character(db, "jason-kwon")).guild_rank == 3  # same guild: rank kept
 
-    await character_store_service.record(_fetch(guild=OTHER_GUILD), now=NOW)
+    await character_store_service.record(make_fetch(guild=OTHER_GUILD), now=NOW)
     moved = await _character(db, "jason-kwon")
     assert moved.guild_id != (await _guild(db)).id and moved.guild_rank is None
-    await character_store_service.record(_fetch(guild=None), now=NOW)
+    await character_store_service.record(make_fetch(guild=None), now=NOW)
     assert (await _character(db, "jason-kwon")).guild_id is None
 
 
@@ -154,19 +117,19 @@ async def test_known_recipes_are_stored_and_kept_when_blizzard_fails_to_send_the
     bound_unit_of_work: AsyncSession,
 ) -> None:
     db = bound_unit_of_work
-    await character_store_service.record(_fetch(professions=_professions((3915, "Brown Linen Shirt"), (2389, "Red Linen Robe"))), now=NOW)
+    await character_store_service.record(make_fetch(professions=professions_json((3915, "Brown Linen Shirt"), (2389, "Red Linen Robe"))), now=NOW)
     assert await _known(db, "jason-kwon") == {3915, 2389}
     names = dict((await db.execute(select(WowRecipe.id, WowRecipe.name))).tuples().all())
     assert names == {3915: "Brown Linen Shirt", 2389: "Red Linen Robe"}
 
-    await character_store_service.record(_fetch(professions=None), now=NOW)
+    await character_store_service.record(make_fetch(professions=None), now=NOW)
     assert await _known(db, "jason-kwon") == {3915, 2389}
 
-    await character_store_service.record(_fetch(professions=_professions((3915, "Brown Linen Shirt"))), now=NOW)
+    await character_store_service.record(make_fetch(professions=professions_json((3915, "Brown Linen Shirt"))), now=NOW)
     assert await _known(db, "jason-kwon") == {3915}
     # Another character knowing the same recipe shares its row.
     await character_store_service.record(
-        _fetch("tiny-john", 2, professions=_professions((3915, "Brown Linen Shirt"))), now=NOW,
+        make_fetch("tiny-john", 2, professions=professions_json((3915, "Brown Linen Shirt"))), now=NOW,
     )
     assert await _known(db, "tiny-john") == {3915}
 
@@ -180,8 +143,8 @@ async def test_a_guild_is_due_while_watched_and_stale(bound_unit_of_work: AsyncS
         )
         return [guild.slug for guild in rows]
 
-    await character_store_service.record(_fetch(guild=OTHER_GUILD), now=NOW)  # only the scheduler saw it
-    await character_store_service.record(_fetch("tiny-john", 2), now=NOW, viewed=True)
+    await character_store_service.record(make_fetch(guild=OTHER_GUILD), now=NOW)  # only the scheduler saw it
+    await character_store_service.record(make_fetch("tiny-john", 2), now=NOW, viewed=True)
     assert await due(NOW) == ["topdeadcenter"]
 
     guild = await _guild(db)
@@ -205,7 +168,7 @@ def _blizzard(
         ]},
     }
     for slug, blizzard_id, _ in members:
-        routes[f"/profile/wow/character/{slug}"] = _profile_json(slug, blizzard_id, GUILD)
+        routes[f"/profile/wow/character/{slug}"] = profile_json(slug, blizzard_id, GUILD)
 
     def handle(request: httpx.Request) -> httpx.Response:
         if request.url.host == "oauth.battle.net":
@@ -234,7 +197,7 @@ def _one_member_at_a_time(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 async def _watched_guild_with_jason(db: AsyncSession) -> WowGuild:
-    await character_store_service.record(_fetch(), now=NOW, viewed=True)
+    await character_store_service.record(make_fetch(), now=NOW, viewed=True)
     return await _guild(db)
 
 
@@ -243,7 +206,7 @@ async def test_a_refresh_stores_every_member_with_its_rank_and_drops_who_left(
 ) -> None:
     db = bound_unit_of_work
     guild = await _watched_guild_with_jason(db)
-    await character_store_service.record(_fetch("left-guy", 9), now=NOW)  # stored member no longer on the roster
+    await character_store_service.record(make_fetch("left-guy", 9), now=NOW)  # stored member no longer on the roster
     monkeypatch.setattr(character_service, "new_client", lambda: _blizzard([("jason-kwon", 1, 0), ("tiny-john", 2, 4)]))
 
     assert await guild_roster_service.refresh_due(now=NOW) == 1
@@ -376,8 +339,8 @@ async def test_one_guild_failing_unexpectedly_is_recorded_and_the_next_still_ref
     bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     db = bound_unit_of_work
-    await character_store_service.record(_fetch(), now=NOW, viewed=True)
-    await character_store_service.record(_fetch("tiny-john", 2, guild=OTHER_GUILD), now=NOW, viewed=True)
+    await character_store_service.record(make_fetch(), now=NOW, viewed=True)
+    await character_store_service.record(make_fetch("tiny-john", 2, guild=OTHER_GUILD), now=NOW, viewed=True)
     calls: list[str] = []
 
     async def first_one_breaks(guild: WowGuild, *, budget: int, now: datetime | None = None) -> GuildRefreshOutcome:
@@ -398,8 +361,8 @@ async def test_a_429_from_blizzard_ends_the_run(
     bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     db = bound_unit_of_work
-    await character_store_service.record(_fetch(), now=NOW, viewed=True)
-    await character_store_service.record(_fetch("tiny-john", 2, guild=OTHER_GUILD), now=NOW, viewed=True)
+    await character_store_service.record(make_fetch(), now=NOW, viewed=True)
+    await character_store_service.record(make_fetch("tiny-john", 2, guild=OTHER_GUILD), now=NOW, viewed=True)
     monkeypatch.setattr(character_service, "new_client", lambda: _blizzard([], guild_status=429))
     assert await guild_roster_service.refresh_due(now=NOW) == 1
     checked = (await db.execute(select(WowGuild).where(WowGuild.roster_checked_at.is_not(None)))).scalars().all()
@@ -410,9 +373,9 @@ async def test_a_look_up_served_from_the_cache_still_keeps_the_guild_watched(
     bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     db = bound_unit_of_work
-    await character_store_service.record(_fetch(), now=NOW)  # stored by the scheduler only
+    await character_store_service.record(make_fetch(), now=NOW)  # stored by the scheduler only
     assert (await _guild(db)).last_viewed_at is None
-    cached = dataclasses.replace(_fetch(), fresh=False)
+    cached = dataclasses.replace(make_fetch(), fresh=False)
 
     async def from_cache(slug: str) -> CharacterFetch:
         return cached

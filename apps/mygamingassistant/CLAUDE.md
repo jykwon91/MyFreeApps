@@ -1070,6 +1070,20 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   unexpectedly is recorded and the run goes on; a 429 ends the run.
   Live: topdeadcenter = 52 on the roster, ~40 profiles answer, ~18 s per run.
   Tests: `tests/test_wow_guild_roster.py`.
+- Guild page (`GET /api/wow/guilds/{slug}`, `api/wow_guilds.py`, own per-IP
+  limit `GUILD_RATE_LIMIT`/min): stored data only, never calls Blizzard. 404
+  `guild_not_found` for a slug never stored or impossible. `guild_repo.members`
+  joins each member's newest daily metric (level, item level) with a LATERAL
+  one-row index read, and names the class from `class_id`
+  (`CLASS_NAMES_BY_ID`) — never from the stored sheet; the live guild
+  wins over a gone one with the same slug. `refresh_failed` = `last_error` on a
+  live guild; a gone guild lists nobody. The character sheet carries
+  `guild_slug` so its guild badge links there. Frontend:
+  `pages/WowGuildPage.tsx`, `components/guild/`, `lib/guild/guildMembers.ts`
+  (filter/sort; a missing value always sorts last, never as 0); search, class,
+  level band and sort live in the URL (`GUILD_PARAMS`, defaults left out,
+  `replace` so Back skips keystrokes). Tests: `tests/test_wow_guild_page.py`,
+  `src/__tests__/wowGuildPage.test.tsx`, `e2e/wow-forever-guild.spec.ts`.
 - Frontend: `pages/WowCharacterPage.tsx`, `components/character/`,
   `lib/character/`. Names are remembered per browser only after a successful
   load (`mga.wowForever.character.v1`, 5 max); `/wow-forever/character`
