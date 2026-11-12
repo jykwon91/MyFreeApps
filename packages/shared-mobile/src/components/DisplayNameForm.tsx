@@ -1,5 +1,3 @@
-import { DISPLAY_NAME_MAX_LENGTH } from "@platform/core/constants/displayName";
-import { useUpdateCurrentUserMutation } from "@platform/core/store/userApi";
 import { characterCounter } from "@platform/core/utils/characterCounter";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { useState } from "react";
@@ -12,23 +10,27 @@ import FormField from "./FormField";
 import LoadingButton from "./LoadingButton";
 
 /** The name, saved with its own button as on the website. A failed save keeps what was typed. */
-export default function DisplayNameForm({ initialName }: DisplayNameFormProps) {
+export default function DisplayNameForm({ initialName, source }: DisplayNameFormProps) {
   const { spacing } = useTheme();
   const { showToast } = useToast();
-  const [updateCurrentUser, { isLoading: isSaving }] = useUpdateCurrentUserMutation();
+  const { save: saveName, maxLength } = source;
   const [name, setName] = useState(initialName);
   const [savedName, setSavedName] = useState(initialName);
+  const [isSaving, setIsSaving] = useState(false);
 
   const trimmed = name.trim();
-  const problem = tooLongProblem(trimmed, DISPLAY_NAME_MAX_LENGTH);
+  const problem = tooLongProblem(trimmed, maxLength);
 
   async function save(): Promise<void> {
+    setIsSaving(true);
     try {
-      await updateCurrentUser({ display_name: trimmed }).unwrap();
+      await saveName(trimmed);
       setSavedName(trimmed);
       showToast(MESSAGES.displayNameSaved, "success");
     } catch {
       showToast(MESSAGES.displayNameSaveFailed, "error");
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -37,7 +39,7 @@ export default function DisplayNameForm({ initialName }: DisplayNameFormProps) {
       <FormField
         autoCapitalize="words"
         autoComplete="name"
-        counter={characterCounter(trimmed, DISPLAY_NAME_MAX_LENGTH)}
+        counter={characterCounter(trimmed, maxLength)}
         editable={!isSaving}
         error={problem}
         label={MESSAGES.displayNameLabel}

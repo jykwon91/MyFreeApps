@@ -57,7 +57,7 @@ export const MORE_MENU: readonly MoreMenuGroup<MoreDestination>[] = [
     items: [
       { label: "Integrations", screen: "/integrations", keywords: ["gmail", "email", "connect", "sync", "accounts"] },
       { label: "Members", screen: "/members", access: "admin", keywords: ["team", "invite", "users", "roles", "access", "co-owner"] },
-      { label: "Security", screen: "/security", keywords: ["two-factor", "2fa", "totp", "password", "recovery codes", "sign in", "passkey"] },
+      { label: "Security", screen: "/security", keywords: ["two-factor", "2fa", "totp", "password", "recovery codes", "sign in", "passkey", "export", "data", "download", "name"] },
     ],
   },
 ];

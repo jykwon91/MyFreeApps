@@ -1,6 +1,6 @@
 import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { baseApi } from "@platform/core/store/baseApi";
-import { assertSecureApiUrl, onAccountLeft, refetchOnForeground, resetCacheOnAccountChange } from "@platform/mobile";
+import { assertSecureApiUrl, clearDataExportFiles, onAccountLeft, refetchOnForeground, resetCacheOnAccountChange } from "@platform/mobile";
 import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
 import { stopAi } from "../features/aiPermission/aiPermission";
@@ -42,7 +42,7 @@ onAccountLeft(session, () => {
   store.dispatch(uploadStatusDismissed());
   // Each has to run whatever the others do: these are someone's records. Nothing may
   // escape either, or the session's next listener, which clears the cache, never runs.
-  for (const clear of [clearDocumentFiles, clearUploadQueue, clearReplyDrafts, clearReplyRequestIds, clearHeldFiles, stopAi]) {
+  for (const clear of [clearDocumentFiles, clearDataExportFiles, clearUploadQueue, clearReplyDrafts, clearReplyRequestIds, clearHeldFiles, stopAi]) {
     try {
       clear();
     } catch (error) {

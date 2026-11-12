@@ -1,26 +1,36 @@
-import { confirmSecurityChange, TwoStepScreen, useRefocusSignal } from "@platform/mobile";
+import { SECURITY_MESSAGES, SecurityScreen, useRefocusSignal } from "@platform/mobile";
 import { router, Stack } from "expo-router";
-import { WEB_BASE_URL } from "../../../src/constants/api";
+import { API_BASE_URL } from "../../../src/constants/api";
+import { DATA_EXPORT_FILE_PREFIX } from "../../../src/constants/dataExport";
+import { DELETE_ACCOUNT_FROM_SECURITY } from "../../../src/constants/deleteAccount";
 import {
+  DELETE_ACCOUNT_ROUTE,
   SECURITY_BACK_TITLE,
-  SECURITY_SCREEN_TITLE,
-  WHAT_TWO_STEP_PROTECTS,
+  SECURITY_CONTENT,
+  SECURITY_INTRO_DISMISSED_KEY,
+  SECURITY_TURN_ON_ROUTE,
 } from "../../../src/constants/security";
+import { useFileRequestHeaders } from "../../../src/features/documents/useFileRequestHeaders";
+import { useAccountName } from "../../../src/features/security/useAccountName";
+import { session } from "../../../src/lib/session";
 
 export default function SecurityRoute() {
   // The screen has already loaded on first focus. After that, turning on may have changed it.
   const reloadSignal = useRefocusSignal();
+  // The export is of the workspace the phone is in, so it carries the workspace as well as the sign-in.
+  const headers = useFileRequestHeaders();
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: SECURITY_SCREEN_TITLE, headerBackTitle: SECURITY_BACK_TITLE }} />
-      <TwoStepScreen
-        confirmOwner={confirmSecurityChange}
-        onTurnOn={() => router.push("/security/turn-on")}
+      <Stack.Screen options={{ headerShown: true, title: SECURITY_MESSAGES.screenTitle, headerBackTitle: SECURITY_BACK_TITLE }} />
+      <SecurityScreen
+        content={SECURITY_CONTENT}
+        dataExport={{ apiBaseUrl: API_BASE_URL, session, filePrefix: DATA_EXPORT_FILE_PREFIX, headers }}
+        introDismissedKey={SECURITY_INTRO_DISMISSED_KEY}
+        onDeleteAccount={() => router.push({ pathname: DELETE_ACCOUNT_ROUTE, params: { from: DELETE_ACCOUNT_FROM_SECURITY } })}
+        onTurnOn={() => router.push(SECURITY_TURN_ON_ROUTE)}
         reloadSignal={reloadSignal}
-        webBaseUrl={WEB_BASE_URL}
-        webPath="/security"
-        whatItProtects={WHAT_TWO_STEP_PROTECTS}
+        useDisplayName={useAccountName}
       />
     </>
   );

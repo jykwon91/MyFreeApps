@@ -6,4 +6,9 @@ export interface DataExportSource {
   session: MobileSession;
   /** As the website names the download, e.g. "myrecipes-export". */
   filePrefix: string;
+  /**
+   * The download's headers, read as it starts, for a backend that needs more than the sign-in,
+   * such as MyBookkeeper's workspace. Without it the download sends only the sign-in.
+   */
+  headers?: () => Record<string, string>;
 }

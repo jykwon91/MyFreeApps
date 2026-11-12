@@ -19,8 +19,6 @@ export const TWO_STEP_MESSAGES = {
   onCodesNote:
     "I only show recovery codes once, when you turn this on. To get new ones, turn two-step sign-in off, then on again.",
   turnOff: "Turn off two-step sign-in",
-  websiteNote: "Display name and data export are on the website.",
-  openWebsite: "Open on the website",
 
   loadFailed: "I couldn't load your security settings.",
   loadFailedServer: "Something went wrong on my side. Try again in a moment.",
