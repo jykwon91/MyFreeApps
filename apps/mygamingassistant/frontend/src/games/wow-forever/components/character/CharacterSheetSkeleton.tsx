@@ -1,3 +1,4 @@
+import CharacterProfessionsSkeleton from "@/games/wow-forever/components/character/CharacterProfessionsSkeleton";
 import CharacterRowSkeletons from "@/games/wow-forever/components/character/CharacterRowSkeletons";
 import CharacterTalentsSkeleton from "@/games/wow-forever/components/character/CharacterTalentsSkeleton";
 
@@ -6,7 +7,7 @@ const WEAPON_ROWS = 3;
 const STAT_ROWS = 7;
 const STAT_TAB_ROWS = 6;
 
-/** The character sheet's shape while Blizzard answers: header, picture between two slot columns, weapons, stats, talents. */
+/** The character sheet's shape while Blizzard answers: header, picture between two slot columns, weapons, stats, professions, talents. */
 export default function CharacterSheetSkeleton() {
   return (
     <div className="space-y-4" aria-busy="true" aria-label="Loading the character" data-testid="character-sheet-skeleton">
@@ -40,6 +41,7 @@ export default function CharacterSheetSkeleton() {
         <div className="h-[62px] rounded-xl bg-muted/40 animate-pulse" />
         <div className="h-4 w-3/4 rounded-md bg-muted/40 animate-pulse" />
       </div>
+      <CharacterProfessionsSkeleton />
       <div className="space-y-3" aria-hidden>
         <div className="h-7 w-24 rounded-md bg-muted/40 animate-pulse" />
         <CharacterTalentsSkeleton />

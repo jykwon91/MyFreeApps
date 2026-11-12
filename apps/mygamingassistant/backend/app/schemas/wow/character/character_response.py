@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from app.schemas.wow.character.character_item import CharacterItem
+from app.schemas.wow.character.character_professions import CharacterProfessions
 from app.schemas.wow.character.character_stats import CharacterStats
 from app.schemas.wow.character.character_talents import CharacterTalents
 
@@ -30,3 +31,5 @@ class CharacterResponse(BaseModel):
     stats: CharacterStats | None
     # None when Blizzard failed to send the talents (the rest of the sheet still shows).
     talents: CharacterTalents | None
+    # None when Blizzard failed to send the professions (the rest of the sheet still shows).
+    professions: CharacterProfessions | None

@@ -5,9 +5,9 @@ render is cached beside it. Both expire after ``CHARACTER_CACHE_SECONDS``, so a
 player who logs out with new gear sees it within minutes, and a page that
 loads the sheet and the picture asks Blizzard once.
 
-Stats and talents are the optional parts: if Blizzard fails on
-``/statistics`` or ``/specializations`` the sheet still shows (``stats`` /
-``talents`` null), the failure is logged, and the answer is not cached so the
+Stats, talents and professions are the optional parts: if Blizzard fails on
+``/statistics``, ``/specializations`` or ``/professions`` the sheet still
+shows (that part null), the failure is logged, and the answer is not cached so the
 next look-up asks again.
 """
 from __future__ import annotations
@@ -79,19 +79,34 @@ async def _profile(slug: str) -> CharacterProfile:
         return cached
     async with _new_client() as client:
         profile = await client.profile(slug)
-        media, equipment, (statistics, stats_answered), (specializations, talents_answered) = await asyncio.gather(
+        (
+            media,
+            equipment,
+            (statistics, stats_answered),
+            (specializations, talents_answered),
+            (professions, professions_answered),
+        ) = await asyncio.gather(
             client.media(slug),
             client.equipment(slug),
             _optional_part("statistics", slug, client.statistics),
             _optional_part("talents", slug, client.specializations),
+            _optional_part("professions", slug, client.professions),
         )
     if talents_answered and specializations is None:
         # Blizzard 404s a character that has never spent a point: no talents, not a failure.
         specializations = {}
+    if professions_answered and professions is None:
+        # Likewise a character that has learned no profession.
+        professions = {}
     data = CharacterProfile(
-        profile=profile, media=media, equipment=equipment, statistics=statistics, specializations=specializations,
+        profile=profile,
+        media=media,
+        equipment=equipment,
+        statistics=statistics,
+        specializations=specializations,
+        professions=professions,
     )
-    if stats_answered and talents_answered:
+    if stats_answered and talents_answered and professions_answered:
         _store(_profiles, slug, data, CHARACTER_CACHE_MAX_ENTRIES)
     return data
 

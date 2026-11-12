@@ -85,6 +85,25 @@ function character() {
         },
       ],
     },
+    professions: {
+      primaries: [
+        {
+          id: 197, name: "Tailoring", skill: 148, max_skill: 225,
+          recipes: [
+            { id: 2963, name: "Bolt of Linen Cloth" }, { id: 3914, name: "Brown Linen Pants" },
+            { id: 3842, name: "Handstitched Linen Britches" },
+          ],
+        },
+        {
+          id: 333, name: "Enchanting", skill: 128, max_skill: 225,
+          recipes: [{ id: 13262, name: "Disenchant" }, { id: 7418, name: "Enchant Bracer - Minor Health" }],
+        },
+      ],
+      secondaries: [
+        { id: 185, name: "Cooking", skill: 187, max_skill: 225, recipes: [{ id: 3964, name: "Boiled Clams" }, { id: 2795, name: "Beer Basted Boar Ribs" }] },
+        { id: 356, name: "Fishing", skill: 1, max_skill: 75, recipes: [{ id: 7620, name: "Fishing" }] },
+      ],
+    },
   };
 }
 
@@ -207,6 +226,24 @@ test("the talents section shows the point split and opens the build in the talen
   await panel.getByRole("link", { name: "Open in the talent calculator" }).click();
   await expect(page).toHaveURL(/\/wow-forever\/talents\/warlock\?b=2-0250032003510133--&lvl=37/);
   await expect(page.getByText("28 of 28")).toBeVisible();
+});
+
+test("the professions section lists the recipes a profession knows and opens its guide at the character's skill", async ({ page }) => {
+  await stubCharacter(page);
+  await page.goto("/wow-forever/character/jason-kwon");
+  const panel = page.getByRole("region", { name: "Professions" });
+  await expect(panel.getByTestId("character-profession")).toHaveCount(4);
+  await expect(panel.getByRole("button", { name: /Fishing/ })).toHaveCount(0);
+
+  await panel.getByRole("button", { name: /Tailoring/ }).click();
+  const recipes = panel.getByRole("region", { name: "Tailoring recipes" });
+  // At 148 Tailoring these three are all gray: known, but no more skill-ups.
+  await expect(recipes.getByTestId("character-recipe-group")).toHaveCount(1);
+  await expect(recipes.locator('[data-color="grey"]')).toContainText("Gray · 3");
+  await expect(recipes.locator('[data-color="grey"]')).toContainText("Handstitched Linen Britches");
+
+  await recipes.getByRole("link", { name: "Tailoring guide from 148" }).click();
+  await expect(page).toHaveURL(/\/wow-forever\/professions\?p=tailoring&skill=148/);
 });
 
 test("a talents failure keeps the rest of the sheet", async ({ page }) => {

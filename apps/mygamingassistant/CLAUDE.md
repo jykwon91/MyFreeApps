@@ -1005,8 +1005,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Profile API serves Forever characters at `/profile/wow/character/{first-surname}`
   (namespace `profile-forever-us`, US only) with the app's client token.
 - Backend: `app/api/wow_characters.py` — `GET /api/wow/characters/{slug}`
-  (profile + equipment + statistics + specializations, mapped by `services/wow/character/character_mapper.py`;
-  `stats` by `character_stats_mapper.py`, `talents` by `character_talents_mapper.py`)
+  (profile + equipment + statistics + specializations + professions, mapped by `services/wow/character/character_mapper.py`;
+  `stats` by `character_stats_mapper.py`, `talents` by `character_talents_mapper.py`,
+  `professions` by `character_professions_mapper.py`)
   and `/{slug}/render.png` (Blizzard's `main-raw` render, fetched only from
   `render.worldofwarcraft.com`, refused over 3200x2400 px before decoding,
   cropped to the figure with Pillow). Per-IP limit 30/min on each route
@@ -1050,6 +1051,21 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   level has the points — otherwise a note says why. `talents: null` = the call
   failed (logged, not cached; the sheet still shows); a 404 = no points yet
   (`groups: []`). Unknown ids are counted in a footnote, never guessed.
+- Professions (`CharacterProfessionsPanel`, `lib/character/characterProfessions.ts`),
+  between Stats and Talents: `/professions` gives each profession's skill, its
+  rank's cap and the known recipes (`{id, name}`, id = recipe spell id). Main
+  and secondary groups; one card open at a time, a card opens only when it
+  lists more than one entry (Fishing knows just "Fishing"). A crafting
+  profession's recipes are coloured at the character's skill from its recipe
+  file (`useCraftingData`, loaded when the card opens; `recipeColorAt` on
+  `skillColors`): Orange / Yellow / Green / Gray groups, then "Other" for ids
+  not in the file and for `NOT_A_RECIPE_SPELLS` (Disenchant gives no
+  skill-ups). Cooking has no spell-id join yet (`foods.json` is keyed by food
+  item), so it and any other non-crafting profession list their recipes
+  uncoloured — never matched by name. Each open card links our guide
+  (`?p=<guide>`, plus `&skill=` for crafting guides). Blizzard ids map to
+  guides through `PROFESSION_SKILL_LINES`. `professions: null` = the call failed
+  (logged, not cached); a 404 = none learned (empty lists).
 
 #### In-game icons (`GameIcon`)
 
