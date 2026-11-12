@@ -1,10 +1,6 @@
-type ToastVariant = "error" | "success";
-
-interface ToastEvent {
-  id: string;
-  message: string;
-  variant: ToastVariant;
-}
+import type { ToastAction } from "../types/toast-action";
+import type { ToastEvent } from "../types/toast-event";
+import type { ToastVariant } from "../types/toast-variant";
 
 type Listener = (toast: ToastEvent) => void;
 
@@ -15,22 +11,23 @@ function subscribe(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
-function dispatch(message: string, variant: ToastVariant): void {
+function dispatch(message: string, variant: ToastVariant, action?: ToastAction): void {
   const event: ToastEvent = {
     id: crypto.randomUUID(),
     message,
     variant,
+    action,
   };
   listeners.forEach((listener) => listener(event));
 }
 
-function showError(message: string): void {
-  dispatch(message, "error");
+function showError(message: string, action?: ToastAction): void {
+  dispatch(message, "error", action);
 }
 
-function showSuccess(message: string): void {
-  dispatch(message, "success");
+/** An `action` adds a button such as "Undo". */
+function showSuccess(message: string, action?: ToastAction): void {
+  dispatch(message, "success", action);
 }
 
 export { subscribe, showError, showSuccess };
-export type { ToastEvent, ToastVariant };

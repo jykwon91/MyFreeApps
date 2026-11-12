@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import * as Toast from "@radix-ui/react-toast";
 import { XCircle, CheckCircle2, X } from "lucide-react";
+import ToastActionButton from "./ToastActionButton";
 import { subscribe } from "../../lib/toast-store";
-import type { ToastEvent } from "../../lib/toast-store";
+import type { ToastEvent } from "../../types/toast-event";
 import { TOAST_INTERACTIVE_STYLE } from "../../constants/toast-interactive-style";
 
 const DURATION_MS = 6000;
@@ -44,6 +45,9 @@ export default function Toaster() {
           <Toast.Description className="flex-1">
             {toast.message}
           </Toast.Description>
+          {toast.action && (
+            <ToastActionButton action={toast.action} onDone={() => handleOpenChange(false, toast.id)} />
+          )}
           <Toast.Close
             aria-label="Dismiss notification"
             className="shrink-0 text-current opacity-50 hover:opacity-100"

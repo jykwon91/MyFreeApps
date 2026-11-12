@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import { Bookmark, Briefcase, Check, ExternalLink, Loader2, X } from "lucide-react";
 import { Badge, Button, Card, LoadingButton, showError, showSuccess } from "@platform/ui";
@@ -7,6 +8,8 @@ import {
   usePromoteDiscoveredJobMutation,
   useSaveDiscoveredJobMutation,
 } from "@myjobhunter/api-client/store/discoverApi";
+import { undoDismissDiscoveredJob } from "@myjobhunter/api-client/store/undoDismissDiscoveredJob";
+import type { DiscoverCacheDispatch } from "@myjobhunter/api-client/types/discovery/discover-cache-dispatch";
 import type { DismissalReason } from "@myjobhunter/api-client/types/discovery/dismissal-reason";
 import type { DiscoveredJob } from "@myjobhunter/api-client/types/discovery/discovered-job";
 import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
@@ -16,7 +19,6 @@ import { discoveredJobUrl } from "@myjobhunter/api-client/utils/discoveredJobUrl
 import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
 import { STATUS_TONE_BADGE_COLORS } from "@/constants/statusToneBadgeColors";
 import DismissReasonPopover from "./DismissReasonPopover";
-import UndoDismissToast from "./UndoDismissToast";
 
 interface DiscoveredJobCardProps {
   job: DiscoveredJob;
@@ -64,14 +66,30 @@ export default function DiscoveredJobCard({
   const [dismiss, { isLoading: isDismissing }] = useDismissDiscoveredJobMutation();
   const [save, { isLoading: isSaving }] = useSaveDiscoveredJobMutation();
   const [promote, { isLoading: isPromoting }] = usePromoteDiscoveredJobMutation();
+  const dispatch = useDispatch<DiscoverCacheDispatch>();
   const [showReasons, setShowReasons] = useState(false);
-  const [undoToastOpen, setUndoToastOpen] = useState(false);
+
+  async function handleUndo(): Promise<void> {
+    try {
+      await dispatch(undoDismissDiscoveredJob(job.id));
+      showSuccess(DISCOVER_ACTION_MESSAGES.undone);
+    } catch (err) {
+      showError(discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.undoFailed));
+    }
+  }
 
   async function doDismiss(reason?: DismissalReason) {
     try {
       await dismiss({ jobId: job.id, reason }).unwrap();
       setShowReasons(false);
-      setUndoToastOpen(true);
+      // The shared Toaster owns the Undo toast, so it outlives this card, which
+      // unmounts as soon as the refetched inbox drops the dismissed posting.
+      showSuccess(DISCOVER_ACTION_MESSAGES.dismissed, {
+        label: DISCOVER_ACTION_MESSAGES.undo,
+        pendingLabel: DISCOVER_ACTION_MESSAGES.undoing,
+        altText: DISCOVER_ACTION_MESSAGES.undoHint,
+        onClick: handleUndo,
+      });
     } catch (err) {
       showError(discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.dismissFailed));
     }
@@ -110,12 +128,6 @@ export default function DiscoveredJobCard({
   const postingUrl = discoveredJobUrl(job);
 
   return (
-    <>
-    <UndoDismissToast
-      jobId={job.id}
-      open={undoToastOpen}
-      onOpenChange={setUndoToastOpen}
-    />
     <Card className="p-4 sm:p-5 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -275,6 +287,5 @@ export default function DiscoveredJobCard({
         </div>
       )}
     </Card>
-    </>
   );
 }

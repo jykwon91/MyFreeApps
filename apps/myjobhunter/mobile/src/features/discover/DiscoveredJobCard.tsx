@@ -3,8 +3,9 @@ import {
   useDismissDiscoveredJobMutation,
   usePromoteDiscoveredJobMutation,
   useSaveDiscoveredJobMutation,
-  useUndoDismissDiscoveredJobMutation,
 } from "@myjobhunter/api-client/store/discoverApi";
+import { undoDismissDiscoveredJob } from "@myjobhunter/api-client/store/undoDismissDiscoveredJob";
+import type { DiscoverCacheDispatch } from "@myjobhunter/api-client/types/discovery/discover-cache-dispatch";
 import type { DismissalReason } from "@myjobhunter/api-client/types/discovery/dismissal-reason";
 import { discoveredJobFacts } from "@myjobhunter/api-client/utils/discoveredJobFacts";
 import { discoveredJobUrl } from "@myjobhunter/api-client/utils/discoveredJobUrl";
@@ -12,6 +13,7 @@ import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFa
 import { Chip, LoadingButton, OptionSheet, useOpenLink, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
+import { useDispatch } from "react-redux";
 import { Text, View } from "react-native";
 import { DISCOVERED_JOB_MESSAGES as MESSAGES, DISMISS_SHEET_OPTIONS, SKIP_DISMISS_REASON } from "../../constants/discoveredJob";
 import type { DiscoveredJobCardProps } from "../../types/DiscoveredJobCardProps";
@@ -24,7 +26,7 @@ export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isSc
   const [promote, { isLoading: isPromoting }] = usePromoteDiscoveredJobMutation();
   const [save, { isLoading: isSaving }] = useSaveDiscoveredJobMutation();
   const [dismiss, { isLoading: isDismissing }] = useDismissDiscoveredJobMutation();
-  const [undoDismiss] = useUndoDismissDiscoveredJobMutation();
+  const dispatch = useDispatch<DiscoverCacheDispatch>();
   const [isChoosingReason, setIsChoosingReason] = useState(false);
   const facts = discoveredJobFacts(job, profileUpdatedAt, sources);
   const postingUrl = discoveredJobUrl(job);
@@ -52,8 +54,8 @@ export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isSc
 
   async function undo(): Promise<void> {
     try {
-      await undoDismiss(job.id).unwrap();
-      showToast(MESSAGES.undone);
+      await dispatch(undoDismissDiscoveredJob(job.id));
+      showToast(ACTIONS.undone);
     } catch (error) {
       showToast(discoverFailureMessage(error, ACTIONS.undoFailed), "error");
     }
@@ -62,7 +64,7 @@ export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isSc
   async function dismissFor(reason: DismissalReason | undefined): Promise<void> {
     try {
       await dismiss({ jobId: job.id, reason }).unwrap();
-      showToast(ACTIONS.dismissed, "success", { label: MESSAGES.undo, accessibilityHint: MESSAGES.undoHint, onPress: () => void undo() });
+      showToast(ACTIONS.dismissed, "success", { label: ACTIONS.undo, accessibilityHint: ACTIONS.undoHint, onPress: () => void undo() });
     } catch (error) {
       showToast(discoverFailureMessage(error, ACTIONS.dismissFailed), "error");
     }

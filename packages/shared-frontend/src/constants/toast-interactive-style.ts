@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
-// Pass as `style` to every Radix Toast.Root (the shared Toaster's and any custom
-// one, such as an action toast). A toast already showing when a modal opens is
+// The `style` of every Radix Toast.Root the shared Toaster renders, action toasts
+// included (show those with showSuccess/showError and an `action`). A toast already showing when a modal opens is
 // an older Radix layer than the modal, so Radix gives it an inline
 // `pointer-events: none`; a click on it then falls through to the modal's
 // backdrop and closes the modal instead of the toast. Toast.Root's own style

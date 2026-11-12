@@ -28,10 +28,10 @@ vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useCreateDiscoverySourceMutation: () => idleMutation(),
   useSaveDiscoveredJobMutation: () => idleMutation(),
   useDismissDiscoveredJobMutation: () => idleMutation(),
-  useUndoDismissDiscoveredJobMutation: () => idleMutation(),
   usePromoteDiscoveredJobMutation: () => idleMutation(),
 }));
 
+vi.mock("react-redux", () => ({ useDispatch: () => vi.fn() }));
 vi.mock("@myjobhunter/api-client/hooks/useDiscoveredJobsPages", () => ({ useDiscoveredJobsPages: vi.fn() }));
 
 vi.mock("@myjobhunter/api-client/store/profileApi", () => ({

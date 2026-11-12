@@ -171,12 +171,15 @@ describe("a discovered posting's actions", () => {
     expect(posted(sent, "POST /discover/j1/dismiss").map(({ body }) => body)).toEqual([{ reason: "wrong_stack" }]);
     await waitFor(() => expect(screen.queryByTestId("discovered-job-j1")).toBeNull());
 
-    const undo = screen.getByRole("button", { name: JOB.undo });
-    expect(undo.props.accessibilityHint).toBe(JOB.undoHint);
+    const undo = screen.getByRole("button", { name: ACTIONS.undo });
+    expect(undo.props.accessibilityHint).toBe(ACTIONS.undoHint);
     await fireEvent.press(undo);
 
-    expect(await screen.findByText(JOB.undone)).toBeTruthy();
+    expect(await screen.findByText(ACTIONS.undone)).toBeTruthy();
     expect(posted(sent, "POST /discover/j1/undo-dismiss")).toHaveLength(1);
+    // Undo runs after the card unmounted, so it must leave no mutation record behind.
+    const mutations = Object.values(store.getState()[baseApi.reducerPath].mutations);
+    expect(mutations.filter((entry) => entry?.endpointName === "undoDismissDiscoveredJob")).toEqual([]);
     const back = await screen.findByTestId("discovered-job-j1");
     // Bringing an unscored posting back isn't a refresh: nothing new is being scored.
     expect(within(back).getByText(JOB.notScored)).toBeTruthy();
@@ -218,7 +221,7 @@ describe("a discovered posting's actions", () => {
 
     dismissReply = { status: 204 };
     await dismissFor("Not interested");
-    await fireEvent.press(await screen.findByRole("button", { name: JOB.undo }));
+    await fireEvent.press(await screen.findByRole("button", { name: ACTIONS.undo }));
     expect(await screen.findByText(ACTIONS.undoFailed)).toBeTruthy();
   });
 
