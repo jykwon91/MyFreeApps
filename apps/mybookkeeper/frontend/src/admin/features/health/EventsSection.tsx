@@ -2,7 +2,7 @@ import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 import Badge from "@/shared/components/ui/Badge";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import { timeAgo } from "@/shared/utils/date";
+import { timeSince } from "@platform/core/utils/timeSince";
 import type { SystemEvent } from "@/shared/types/health/health-summary";
 import { SEVERITY_BADGE_COLOR } from "@/admin/features/health/severity";
 
@@ -101,7 +101,7 @@ export default function EventsSection({
                   )}
                 >
                   <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                    {timeAgo(event.created_at)}
+                    {timeSince(event.created_at)}
                   </td>
                   <td className="px-4 py-3">
                     <Badge label={event.event_type.replace(/_/g, " ")} color="gray" />

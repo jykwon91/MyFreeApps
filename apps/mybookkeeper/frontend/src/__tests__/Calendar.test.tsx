@@ -282,7 +282,7 @@ describe("Calendar page", () => {
     expect(lastSynced).toBeInTheDocument();
     // Latest event was on 2026-05-02 — relative time depends on `new Date()`
     // at test runtime; just assert the bare presence of "ago" or "now".
-    expect(lastSynced.textContent).toMatch(/(ago|now|—)/);
+    expect(lastSynced.textContent).toMatch(/(ago|now)/);
   });
 
   it('shows "—" for last-synced when there are no events', () => {

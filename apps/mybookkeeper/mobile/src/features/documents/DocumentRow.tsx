@@ -3,7 +3,7 @@ import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { DOCUMENT_BULK_MESSAGES } from "../../constants/documentBulk";
 import { DOCUMENT_LIST_MESSAGES } from "../../constants/documents";
-import { timeAgo } from "../../utils/timeAgo";
+import { timeSince } from "@platform/core/utils/timeSince";
 import { documentName, documentSourceLabel, documentStatusLabel, documentStatusLine, documentTypeLabel } from "./documentDisplay";
 import DocumentReferenceChip from "./DocumentReferenceChip";
 import DocumentStatusChip from "./DocumentStatusChip";
@@ -28,7 +28,7 @@ export default function DocumentRow({
   const { colors, spacing, fontSize } = useTheme();
   const name = documentName(document);
   const type = documentTypeLabel(document);
-  const when = timeAgo(document.created_at);
+  const when = timeSince(document.created_at);
   const statusLine = documentStatusLine(document);
   const source = documentSourceLabel(document);
   const details = [type, source, when].join(" · ");

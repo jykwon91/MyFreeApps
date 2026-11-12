@@ -4,7 +4,8 @@ import { createColumnHelper } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { type AppTableFeatures } from "@/shared/lib/table-features";
 import { FileCheck } from "lucide-react";
-import { formatDate, timeAgo } from "@/shared/utils/date";
+import { timeSince } from "@platform/core/utils/timeSince";
+import { formatDate } from "@/shared/utils/date";
 import { DOCUMENT_TYPE_LABELS } from "@/shared/lib/constants";
 import type { Document } from "@mybookkeeper/api-client/types/document/document";
 import { matchesChoice } from "@mybookkeeper/api-client/utils/documentListView";
@@ -125,7 +126,7 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<AppTableFe
         },
         cell: ({ getValue }) => (
           <span className="text-muted-foreground" title={formatDate(getValue())}>
-            {timeAgo(getValue())}
+            {timeSince(getValue())}
           </span>
         ),
       }),

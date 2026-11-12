@@ -22,9 +22,10 @@ function findColumnByAccessorKey(columns: ColumnDef<AppTableFeatures, Document, 
   return col as unknown as ColumnWithFilter;
 }
 
+vi.mock("@platform/core/utils/timeSince", () => ({ timeSince: (s: string) => s }));
+
 vi.mock("@/shared/utils/date", () => ({
   formatDate: (s: string) => s,
-  timeAgo: (s: string) => s,
 }))
 
 vi.mock("@/app/features/documents/StatusBadge", () => ({

@@ -1,4 +1,5 @@
-import { lastSyncedAt, relativeTime } from "@mybookkeeper/api-client/utils/calendarSync";
+import { timeSince } from "@platform/core/utils/timeSince";
+import { lastSyncedAt } from "@mybookkeeper/api-client/utils/calendarSync";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 
 export interface CalendarLastSyncedProps {
@@ -21,7 +22,7 @@ export default function CalendarLastSynced({ events }: CalendarLastSyncedProps) 
       data-testid="calendar-last-synced"
       title={latest ?? undefined}
     >
-      Last synced: <span className="font-medium">{latest ? relativeTime(latest) : "—"}</span>
+      Last synced: <span className="font-medium">{latest ? timeSince(latest) : "—"}</span>
     </div>
   );
 }

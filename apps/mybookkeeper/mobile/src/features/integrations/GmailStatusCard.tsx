@@ -6,7 +6,7 @@ import { Text, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
 import { INTEGRATIONS_MESSAGES as MESSAGES, INTEGRATIONS_WEB_PATH } from "../../constants/integrations";
 import type { GmailConnection } from "../../types/GmailConnection";
-import { timeAgo } from "../../utils/timeAgo";
+import { timeSince } from "@platform/core/utils/timeSince";
 import SyncProgressBar from "./SyncProgressBar";
 
 interface GmailStatusCardProps {
@@ -40,7 +40,7 @@ export default function GmailStatusCard({ connection, gmail, runningSync }: Gmai
       ) : null}
       {connection === "connected" ? (
         <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>
-          {MESSAGES.connected} · {MESSAGES.lastSynced(gmail?.last_synced_at ? timeAgo(gmail.last_synced_at) : null)}
+          {MESSAGES.connected} · {MESSAGES.lastSynced(gmail?.last_synced_at ? timeSince(gmail.last_synced_at) : null)}
         </Text>
       ) : null}
       {runningSync ? (

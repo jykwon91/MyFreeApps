@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   deriveImportStatus,
-  formatLastImportedAt,
 } from "../utils/channelImport";
 import type { ChannelListing } from "../types/listing/channel-listing";
 
@@ -56,36 +55,5 @@ describe("deriveImportStatus", () => {
         last_import_error: null,
       }),
     ).toBe("ok");
-  });
-});
-
-describe("formatLastImportedAt", () => {
-  it("returns null for null input", () => {
-    expect(formatLastImportedAt(null)).toBeNull();
-  });
-
-  it("renders 'Just now' within 60 seconds", () => {
-    const now = new Date(Date.now() - 30_000).toISOString();
-    expect(formatLastImportedAt(now)).toBe("Just now");
-  });
-
-  it("renders minutes ago for sub-hour durations", () => {
-    const time = new Date(Date.now() - 5 * 60_000).toISOString();
-    expect(formatLastImportedAt(time)).toBe("5 min ago");
-  });
-
-  it("renders hours ago for sub-day durations", () => {
-    const time = new Date(Date.now() - 3 * 60 * 60_000).toISOString();
-    expect(formatLastImportedAt(time)).toBe("3 hr ago");
-  });
-
-  it("renders days ago for older durations", () => {
-    const time = new Date(Date.now() - 5 * 24 * 60 * 60_000).toISOString();
-    expect(formatLastImportedAt(time)).toBe("5 days ago");
-  });
-
-  it("uses singular 'day' for exactly 1 day", () => {
-    const time = new Date(Date.now() - 26 * 60 * 60_000).toISOString();
-    expect(formatLastImportedAt(time)).toBe("1 day ago");
   });
 });
