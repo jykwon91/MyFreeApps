@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { TurnAbortedError } from "../errors/TurnAbortedError";
 import { readTurnStream } from "../utils/readTurnStream";
 import type { TurnByteStream } from "../types/stream/turn-byte-stream";
 import type { TurnStreamEvent } from "../types/tutor/turn-stream-event";
@@ -56,5 +57,41 @@ describe("readTurnStream", () => {
     const abort = new Error("aborted");
 
     await expect(readTurnStream(failingBody(abort), () => {}, controller.signal)).rejects.toBe(abort);
+  });
+
+  it("delivers nothing from a read that finished after the caller aborted", async () => {
+    const controller = new AbortController();
+    const onEvent = vi.fn();
+    const body: TurnByteStream = {
+      getReader: () => ({
+        read: async () => {
+          // The bytes had arrived, but the caller aborted before this read's result was handled.
+          controller.abort();
+          return { done: false, value: new TextEncoder().encode('event: reply.delta\ndata: {"text":"¡Hola!"}\n\n') };
+        },
+        releaseLock: () => {},
+      }),
+    };
+
+    await expect(readTurnStream(body, onEvent, controller.signal)).rejects.toBeInstanceOf(TurnAbortedError);
+    expect(onEvent).not.toHaveBeenCalled();
+  });
+
+  it("stops delivering a chunk's events once the caller aborts partway through it", async () => {
+    const controller = new AbortController();
+    const delivered: TurnStreamEvent[] = [];
+    const chunk = 'event: reply.delta\ndata: {"text":"Uno."}\n\nevent: reply.delta\ndata: {"text":" Dos."}\n\n';
+
+    const read = readTurnStream(
+      sseBody([chunk]),
+      (event) => {
+        delivered.push(event);
+        controller.abort();
+      },
+      controller.signal,
+    );
+
+    await expect(read).rejects.toBeInstanceOf(TurnAbortedError);
+    expect(delivered).toEqual([{ type: "reply.delta", text: "Uno." }]);
   });
 });

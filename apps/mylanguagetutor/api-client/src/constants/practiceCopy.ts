@@ -8,6 +8,14 @@ export const PRACTICE_COPY = {
   replyCutOff: "The reply was cut off.",
   /** A whole reply whose stream ended before its corrections: nothing to resend. */
   correctionsMissing: "Suggestions for this reply didn't load.",
+  /**
+   * Under a reply: play it again at the normal pace, or slower. The button's name is its visible word, so
+   * voice control can say it; the hint is what screen readers add.
+   */
+  replay: "Replay",
+  replayHint: "Plays the reply again",
+  replaySlow: "Slow",
+  replaySlowHint: "Plays the reply again, slowly",
   showTranslation: "Show translation",
   hideTranslation: "Hide translation",
   suggestionsLabel: "Suggestions",

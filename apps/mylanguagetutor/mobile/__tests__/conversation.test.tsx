@@ -4,22 +4,19 @@ import { CONNECTION_LOST, NETWORK_ERROR, SESSION_NOT_FOUND } from "@mylanguagetu
 import { practicePath } from "@mylanguagetutor/api-client/utils/practicePath";
 import { turnErrorCopy } from "@mylanguagetutor/api-client/utils/turnErrorCopy";
 import { baseApi } from "@platform/core/store/baseApi";
-import { serve } from "@platform/mobile/test-support/fakeServer";
 import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
-import { storeSession, tokens } from "@platform/mobile/test-support/storedSession";
-import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
-import type { SentRequest } from "@platform/mobile/test-support/types/SentRequest";
+import { storeSession } from "@platform/mobile/test-support/storedSession";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
-import { AccessibilityInfo, AppState, ScrollView } from "react-native";
-import type { AppStateStatus } from "react-native";
+import { AccessibilityInfo, ScrollView } from "react-native";
 import { CORRECTIONS_GRACE_MS, KEEP_AWAKE_IDLE_MS, SCENARIO_COMPLETE_MESSAGE } from "../src/constants/conversation";
 import { store } from "../src/lib/store";
+import { finish, finishAfterReply, moveApp, openCafe, refreshCount, serveConversation, serverWrites, write } from "../test-support/conversation";
 import { serveTurns, turnStream } from "../test-support/fakeExpoFetch";
-import { ONBOARDED_LEARNER_ROUTES, PRACTICE_HEADING } from "../test-support/onboardedLearner";
+import { resetSpeech } from "../test-support/fakeSpeech";
+import { PRACTICE_HEADING } from "../test-support/onboardedLearner";
 import { renderApp } from "../test-support/renderApp";
 import { CORRECTION, TUTOR_SESSION, USAGE_LEFT, USAGE_USED_UP } from "../test-support/tutorRecords";
-import type { FakeTurnStream } from "../test-support/types/FakeTurnStream";
 
 const mockKeepAwake = { active: 0 };
 
@@ -28,6 +25,7 @@ jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-su
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 jest.mock("expo/fetch", () => jest.requireActual("../test-support/fakeExpoFetch"));
+jest.mock("expo-speech", () => jest.requireActual("../test-support/fakeSpeech"));
 jest.mock("expo-keep-awake", () => {
   const { useEffect } = jest.requireActual<typeof import("react")>("react");
   return {
@@ -42,67 +40,11 @@ jest.mock("expo-keep-awake", () => {
 });
 
 const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions");
-let refreshes = 0;
-
-/** A learner who has onboarded, with a conversation the server opens on the first turn, plus any overrides. */
-function serveConversation(overrides: Record<string, FakeRoute> = {}): SentRequest[] {
-  return serve({
-    "POST /auth/mobile/refresh": () => {
-      refreshes += 1;
-      return { status: 200, data: tokens(refreshes) };
-    },
-    ...ONBOARDED_LEARNER_ROUTES,
-    "POST /sessions": () => ({ status: 201, data: TUTOR_SESSION }),
-    ...overrides,
-  });
-}
-
-/** Tells every listener the app moved to `state`, as the phone does when the learner leaves or comes back. */
-async function moveApp(state: AppStateStatus): Promise<void> {
-  const listeners = jest
-    .mocked(AppState.addEventListener)
-    .mock.calls.flatMap(([type, listener]) => (type === "change" ? [listener as (next: AppStateStatus) => void] : []));
-  await act(async () => listeners.forEach((listener) => listener(state)));
-}
-
-async function openCafe(): Promise<void> {
-  await renderApp(practicePath("cafe"));
-  expect(await screen.findByRole("header", { name: "At the cafe" })).toBeTruthy();
-}
-
-async function write(text: string): Promise<void> {
-  await fireEvent.changeText(screen.getByLabelText(PRACTICE_COPY.typingOnlyLabel), text);
-  await fireEvent.press(screen.getByRole("button", { name: PRACTICE_COPY.send }));
-}
-
-/** The server writes to a reply the screen is reading. */
-async function serverWrites(writeReply: () => void): Promise<void> {
-  await act(async () => writeReply());
-}
-
-/** The rest of a reply after its first words: the end, the corrections, and done. */
-async function finish(stream: FakeTurnStream, { complete = false } = {}): Promise<void> {
-  await serverWrites(() => stream.emit("reply.done", {}));
-  await finishAfterReply(stream, { complete });
-}
-
-/** What follows a whole reply: the corrections, and done. */
-async function finishAfterReply(stream: FakeTurnStream, { complete = false } = {}): Promise<void> {
-  await serverWrites(() => {
-    stream.emit("corrections", {
-      items: [CORRECTION],
-      retry_prompt: "Try saying: Quiero un café.",
-      scenario_state: { goals_met: complete ? [0] : [], complete },
-      translation: "Hi! What would you like?",
-    });
-    stream.emit("done", { status: "complete", usage: { remaining_fraction: 0.5 } });
-    stream.close();
-  });
-}
 
 beforeEach(() => {
   storedItems.clear();
   storeSession();
+  resetSpeech();
   announce.mockClear();
   store.dispatch(baseApi.util.resetApiState());
 });
@@ -322,14 +264,14 @@ describe("a typed conversation", () => {
       return { status: 401, data: { detail: "Unauthorized" } };
     });
     await openCafe();
-    const before = refreshes;
+    const before = refreshCount();
 
     await write("Hola");
     await serverWrites(() => stream.emit("reply.delta", { text: "¡Hola!" }));
     await finish(stream);
 
     expect(screen.getByText("¡Hola!")).toBeTruthy();
-    expect(refreshes).toBe(before + 1);
+    expect(refreshCount()).toBe(before + 1);
     expect(turns.map((turn) => turn.authorization)).toEqual([`Bearer a${before}`, `Bearer a${before + 1}`]);
     expect(screen).toHavePathname("/practice");
   });

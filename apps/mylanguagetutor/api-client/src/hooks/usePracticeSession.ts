@@ -143,6 +143,9 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
         const chunker = createSentenceChunker(ttsLocale);
         const outcome: StreamOutcome = { error: null, replyDone: false, finished: false };
         const onEvent = (event: TurnStreamEvent) => {
+          // A stopped turn takes nothing more, whatever a platform's ``streamTurn`` still delivers:
+          // speech stopped with it must not start again.
+          if (controller.signal.aborted) return;
           switch (event.type) {
             case "reply.delta":
               setRequestPhase("replying");

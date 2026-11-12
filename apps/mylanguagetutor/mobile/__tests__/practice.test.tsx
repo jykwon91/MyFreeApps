@@ -25,6 +25,7 @@ jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-su
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 jest.mock("expo-keep-awake", () => ({ useKeepAwake: () => {} }));
+jest.mock("expo-speech", () => jest.requireActual("../test-support/fakeSpeech"));
 
 const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
 // The store tells the API layer when the app comes back to the foreground, through the listener it adds as it loads.

@@ -3,4 +3,6 @@ export interface TutorBubbleProps {
   translation: string | null;
   /** Cut off mid-reply: the connection dropped, or the tutor failed after starting. */
   partial: boolean;
+  onReplay: () => void;
+  onReplaySlow: () => void;
 }

@@ -23,8 +23,6 @@ vi.mock("@/features/speech/useSpeechRecognition", () => ({
   useSpeechRecognition: () => recognition,
 }));
 vi.mock("@/features/speech/useSpeechSynthesis", () => ({
-  NORMAL_RATE: 1,
-  SLOW_RATE: 0.7,
   useSpeechSynthesis: () => ({
     supported: true,
     speaking: false,

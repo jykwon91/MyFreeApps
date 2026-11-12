@@ -5,7 +5,7 @@ import TranscriptItem from "./TranscriptItem";
 import TypingDots from "./TypingDots";
 
 /** The conversation so far. */
-export default function Transcript({ entries, languageName, waiting, busy, onTryRetry, onSkipRetry }: TranscriptProps) {
+export default function Transcript({ entries, languageName, waiting, busy, onReplay, onTryRetry, onSkipRetry }: TranscriptProps) {
   const { spacing } = useTheme();
   const last = entries[entries.length - 1];
   return (
@@ -16,6 +16,7 @@ export default function Transcript({ entries, languageName, waiting, busy, onTry
           entry={entry}
           key={entry.key}
           languageName={languageName}
+          onReplay={onReplay}
           onSkipRetry={onSkipRetry}
           onTryRetry={onTryRetry}
           showRetryPrompt={entry === last}

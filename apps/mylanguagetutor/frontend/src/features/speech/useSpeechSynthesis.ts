@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { hasSpeechSynthesis } from "@/features/speech/speechSupport";
-import { createSentenceChunker } from "@mylanguagetutor/api-client/utils/sentenceChunker";
+import { NORMAL_RATE } from "@mylanguagetutor/api-client/constants/speechRates";
 import { speakableText } from "@mylanguagetutor/api-client/utils/speakableText";
-import { voiceForLocale } from "@/features/speech/voiceForLocale";
-
-/** Normal and "slow" speaking rates. Slow is a real lower rate, not a pause. */
-export const NORMAL_RATE = 1;
-export const SLOW_RATE = 0.7;
+import { spokenSentences } from "@mylanguagetutor/api-client/utils/spokenSentences";
+import { voiceForLocale } from "@mylanguagetutor/api-client/utils/voiceForLocale";
 
 export interface SpeechSynthesisControls {
   supported: boolean;
@@ -84,10 +81,7 @@ export function useSpeechSynthesis(locale: string): SpeechSynthesisControls {
   const speakAll = useCallback(
     (text: string, rate: number = NORMAL_RATE) => {
       cancel();
-      const chunker = createSentenceChunker(locale);
-      for (const sentence of [...chunker.push(text), ...chunker.flush()]) {
-        enqueue(sentence, rate);
-      }
+      for (const sentence of spokenSentences(text, locale)) enqueue(sentence, rate);
     },
     [cancel, enqueue, locale],
   );

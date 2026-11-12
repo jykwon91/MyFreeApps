@@ -3,16 +3,19 @@
 import type { TurnFetch } from "@mylanguagetutor/api-client/types/stream/turn-fetch";
 import type { TurnFetchResponse } from "@mylanguagetutor/api-client/types/stream/turn-fetch-response";
 import { API_BASE_URL } from "../src/constants/api";
+import type { FakeTurnEvent } from "./types/FakeTurnEvent";
 import type { FakeTurnRequest } from "./types/FakeTurnRequest";
 import type { FakeTurnRoute } from "./types/FakeTurnRoute";
 import type { FakeTurnStream } from "./types/FakeTurnStream";
+import type { FakeTurnStreamOptions } from "./types/FakeTurnStreamOptions";
 
 const encoder = new TextEncoder();
 let route: FakeTurnRoute | null = null;
 
 /** A reply to stream. Each read waits for the next event, the end, a broken connection or an abort. */
-export function turnStream(): FakeTurnStream {
+export function turnStream({ arrivesAsStopped }: FakeTurnStreamOptions = {}): FakeTurnStream {
   const chunks: Uint8Array[] = [];
+  const write = ({ event, data }: FakeTurnEvent) => chunks.push(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
   let isClosed = false;
   let isBroken = false;
   let reader: AbortSignal | undefined;
@@ -24,7 +27,7 @@ export function turnStream(): FakeTurnStream {
 
   return {
     emit: (event, data) => {
-      chunks.push(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      write({ event, data });
       notify();
     },
     close: () => {
@@ -38,14 +41,18 @@ export function turnStream(): FakeTurnStream {
     isAborted: () => reader?.aborted === true,
     open: (signal) => {
       reader = signal;
-      signal?.addEventListener("abort", notify);
+      signal?.addEventListener("abort", () => {
+        if (arrivesAsStopped) write(arrivesAsStopped);
+        notify();
+      });
       return {
         getReader: () => ({
           read: async () => {
             for (;;) {
-              if (signal?.aborted) throw new Error("Aborted");
+              if (signal?.aborted && !arrivesAsStopped) throw new Error("Aborted");
               const value = chunks.shift();
               if (value) return { done: false, value };
+              if (signal?.aborted) throw new Error("Aborted");
               if (isBroken) throw new TypeError("Network request failed");
               if (isClosed) return { done: true };
               await new Promise<void>((resolve) => {
