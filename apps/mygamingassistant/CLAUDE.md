@@ -1005,9 +1005,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Profile API serves Forever characters at `/profile/wow/character/{first-surname}`
   (namespace `profile-forever-us`, US only) with the app's client token.
 - Backend: `app/api/wow_characters.py` — `GET /api/wow/characters/{slug}`
-  (profile + equipment + statistics + specializations + professions + reputations, mapped by `services/wow/character/character_mapper.py`;
+  (profile + equipment + statistics + specializations + professions + reputations + pvp-summary + achievements/statistics, mapped by `services/wow/character/character_mapper.py`;
   `stats` by `character_stats_mapper.py`, `talents` by `character_talents_mapper.py`,
-  `professions` by `character_professions_mapper.py`, `reputations` by `character_reputations_mapper.py`)
+  `professions` by `character_professions_mapper.py`, `reputations` by `character_reputations_mapper.py`,
+  `pvp` by `character_pvp_mapper.py`)
   and `/{slug}/render.png` (Blizzard's `main-raw` render, fetched only from
   `render.worldofwarcraft.com`, refused over 3200x2400 px before decoding,
   cropped to the figure with Pillow). Per-IP limit 30/min on each route
@@ -1083,6 +1084,18 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   the file, goes in "Other" — never dropped. First header open, others open
   beside it. A Steamwheedle town at Hostile or worse warns its guards attack.
   `reputations: null` = the call failed (logged, not cached); a 404 = none met.
+
+- PvP (`CharacterPvpPanel`, `lib/character/characterPvp.ts`), last on the
+  sheet and closed by default (`CharacterCollapsibleSection`; the heading
+  carries "Unranked · 21 honorable kills"). `/pvp-summary` gives `pvp_rank` and
+  honorable kills; deaths to players (statistic 1501), to the other faction
+  (318) and the continent with the most kills (1458, name in `description`)
+  come from `/achievements/statistics`, read by id
+  (`character_achievement_statistics.py`). A statistic the character never moved
+  is absent = 0; the whole pane failing = those fields null (left out of the
+  list), never 0. Rank shows "Rank N" with no title until a ranked Forever
+  character shows its scale. `pvp: null` = the summary call failed (logged, not
+  cached); 404s = zeros. Empty-section notes use `CharacterSectionNote`.
 
 #### In-game icons (`GameIcon`)
 

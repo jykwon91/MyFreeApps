@@ -111,6 +111,14 @@ function character() {
       { id: 68, name: "Undercity", standing: "Hated", tier: 0, value: 0, max: 36000 },
       { id: 2740, name: "Kirin Tor", standing: "Neutral", tier: 3, value: 250, max: 3000 },
     ],
+    pvp: {
+      rank: 0,
+      honorable_kills: 21,
+      deaths_from_players: 31,
+      deaths_from_opposite_faction: 30,
+      top_honor_continent: "Eastern Kingdoms",
+      top_honor_continent_kills: 17,
+    },
   };
 }
 
@@ -181,6 +189,7 @@ test("skeleton while Blizzard answers, then the sheet in the same places", async
   await expect(skeleton).toBeVisible();
   await expect(skeleton.getByTestId("character-talents-skeleton")).toBeVisible();
   await expect(skeleton.getByTestId("character-reputations-skeleton")).toBeVisible();
+  await expect(skeleton.getByTestId("character-pvp-skeleton")).toBeVisible();
   const skeletonBox = await skeleton.boundingBox();
 
   release();
@@ -271,6 +280,29 @@ test("the reputation section groups factions as the game does, own side open fir
   await expect(alliance).toHaveAttribute("aria-expanded", "true");
   await expect(panel.getByRole("list", { name: "Steamwheedle Cartel factions" })).toContainText("Its guards attack you on sight");
   await expect(panel.getByRole("button").last()).toContainText("Other");
+});
+
+test("the PvP section starts closed with rank and kills, and opens to deaths to players", async ({ page }) => {
+  await stubCharacter(page);
+  await page.goto("/wow-forever/character/jason-kwon");
+  const panel = page.getByRole("region", { name: "PvP" });
+  const toggle = panel.getByRole("button", { name: /PvP/ });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toContainText("Unranked · 21 honorable kills");
+  await expect(panel.getByTestId("character-pvp-rank")).toBeHidden();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(panel.getByTestId("character-pvp-kills")).toContainText("Most in Eastern Kingdoms (17)");
+  await expect(panel).toContainText("Deaths to players");
+});
+
+test("a PvP failure keeps the rest of the sheet", async ({ page }) => {
+  await page.route(SHEET_PATTERN, (route) => json(route, { ...character(), pvp: null }));
+  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }));
+  await page.goto("/wow-forever/character/jason-kwon");
+  const panel = page.getByRole("region", { name: "PvP" });
+  await expect(panel.getByRole("button", { name: /PvP/ })).toContainText("Couldn't load");
+  await expect(page.getByRole("region", { name: "Reputation" })).toBeVisible();
 });
 
 test("a reputations failure keeps the rest of the sheet", async ({ page }) => {

@@ -15,3 +15,7 @@ class CharacterProfile:
     professions: dict[str, Any] | None
     # None when Blizzard failed on /reputations; {} when the character has met no faction.
     reputations: dict[str, Any] | None
+    # None when Blizzard failed on /pvp-summary; {} when it has nothing for the character.
+    pvp_summary: dict[str, Any] | None
+    # None when Blizzard failed on /achievements/statistics; {} when it has none yet.
+    achievement_statistics: dict[str, Any] | None

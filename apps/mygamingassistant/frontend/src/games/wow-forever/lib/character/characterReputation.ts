@@ -9,6 +9,7 @@ import {
   STANDING_TONES,
   STEAMWHEEDLE_GROUP_ID,
 } from "@/games/wow-forever/data/character/characterReputationConfig";
+import { formatWhole } from "@/games/wow-forever/lib/character/formatWhole";
 import type { CharacterReputation } from "@/games/wow-forever/types/character/characterReputation";
 import type { CharacterReputationGroup } from "@/games/wow-forever/types/character/characterReputationGroup";
 import type { ReputationGroupData } from "@/games/wow-forever/types/character/reputationGroupData";
@@ -20,8 +21,6 @@ const GROUP_BY_FACTION: ReadonlyMap<number, ReputationGroupData> = new Map(
 );
 
 const HEADER_IDS: ReadonlySet<number> = new Set(GROUPS.map((group) => group.id));
-
-const whole = new Intl.NumberFormat("en-US");
 
 /** The character's own side first, then headers both sides share, then the other side's. */
 function groupRank(group: ReputationGroupData, side: string): number {
@@ -79,7 +78,7 @@ export function standingPercent(reputation: CharacterReputation): number {
 
 /** "7,888 / 12,000". */
 export function formatStandingProgress(reputation: CharacterReputation): string {
-  return `${whole.format(reputation.value)} / ${whole.format(reputation.max)}`;
+  return `${formatWhole(reputation.value)} / ${formatWhole(reputation.max)}`;
 }
 
 /** The standing label's colours. */

@@ -20,6 +20,7 @@ from app.services.wow.character.character_json import as_dict, as_int, as_list, 
 from app.services.wow.character.character_profile import CharacterProfile
 from app.services.wow.character.character_stats_mapper import to_character_stats
 from app.services.wow.character.character_professions_mapper import to_character_professions
+from app.services.wow.character.character_pvp_mapper import to_character_pvp
 from app.services.wow.character.character_reputations_mapper import to_character_reputations
 from app.services.wow.character.character_talents_mapper import to_character_talents
 
@@ -133,4 +134,5 @@ def to_character_response(slug: str, data: CharacterProfile) -> CharacterRespons
         talents=to_character_talents(data.specializations),
         professions=to_character_professions(data.professions),
         reputations=to_character_reputations(data.reputations),
+        pvp=to_character_pvp(data.pvp_summary, data.achievement_statistics),
     )
