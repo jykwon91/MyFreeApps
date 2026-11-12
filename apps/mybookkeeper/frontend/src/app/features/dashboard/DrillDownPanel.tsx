@@ -10,6 +10,7 @@ import type { DrillDownFilter } from "@mybookkeeper/api-client/types/analytics/d
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import { DRILL_DOWN_TRUNCATED_MESSAGE } from "@mybookkeeper/api-client/constants/transactionPaging";
 import { useDrillDownBodyMode } from "./useDrillDownBodyMode";
+import { useDrillDownPaging } from "./useDrillDownPaging";
 import DrillDownPanelBody from "./DrillDownPanelBody";
 import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
 
@@ -31,6 +32,8 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
     () => filterDrillDownTransactions(allTransactions, filter),
     [allTransactions, filter],
   );
+
+  const paging = useDrillDownPaging(transactions, JSON.stringify(filter));
 
   const total = drillDownTotal(transactions);
   const truncated = isDrillDownTruncated(allTransactions);
@@ -93,7 +96,9 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
       {/* Content: dispatched to sub-components via mode */}
       <DrillDownPanelBody
         mode={mode}
-        transactions={transactions}
+        transactions={paging.visible}
+        remaining={paging.remaining}
+        onShowMore={paging.showMore}
         selectedTxn={selectedTxn}
         properties={properties}
         onSelectTxn={setSelectedTxn}
