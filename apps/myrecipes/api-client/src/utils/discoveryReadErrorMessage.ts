@@ -1,8 +1,8 @@
-import { discoveryErrorStatus } from "./discoveryErrorStatus";
+import { requestErrorStatus } from "./requestErrorStatus";
 
 /** What to tell the user when opening one discovered recipe fails. */
 export function discoveryReadErrorMessage(error: unknown): string {
-  switch (discoveryErrorStatus(error)) {
+  switch (requestErrorStatus(error)) {
     case 422:
       return "We couldn't read a recipe off that page. Open the original to see it.";
     case 400:

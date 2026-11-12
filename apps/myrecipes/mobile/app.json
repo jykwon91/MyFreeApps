@@ -19,6 +19,14 @@
     "plugins": [
       "expo-router",
       "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "I need your photos to read the recipe you choose.",
+          "cameraPermission": "I need camera access to take a photo of a recipe for you to import.",
+          "microphonePermission": false
+        }
+      ],
       ["expo-notifications", { "enableRemoteNotifications": false }],
       ["expo-local-authentication", { "faceIDPermission": "I use Face ID to confirm it's you before changing your sign-in security." }]
     ]

@@ -1,4 +1,9 @@
 import { Button, FileUploadDropzone } from "@platform/ui";
+import {
+  PHOTO_IMPORT_MAX_BYTES,
+  PHOTO_IMPORT_MAX_MEGABYTES,
+  PHOTO_IMPORT_MEDIA_TYPES,
+} from "@myrecipes/api-client/constants/photoImport";
 
 interface Props {
   file: File | null;
@@ -8,8 +13,7 @@ interface Props {
   onExtract: () => void;
 }
 
-const ACCEPT = "image/jpeg,image/png,image/webp";
-const MAX_BYTES = 15 * 1024 * 1024;
+const ACCEPT = PHOTO_IMPORT_MEDIA_TYPES.join(",");
 
 /**
  * Step 1 of photo import: pick a photo (drag/drop, browse, or — on mobile —
@@ -28,9 +32,9 @@ export default function RecipeImportUploadStep({
     return (
       <FileUploadDropzone
         accept={ACCEPT}
-        maxSizeBytes={MAX_BYTES}
+        maxSizeBytes={PHOTO_IMPORT_MAX_BYTES}
         label="Drop a recipe photo here, or click to browse"
-        helperText="JPG, PNG, or WebP, max 15 MB"
+        helperText={`JPG, PNG, or WebP, max ${PHOTO_IMPORT_MAX_MEGABYTES} MB`}
         onFilesSelected={(files) => {
           if (files[0]) onSelect(files[0]);
         }}

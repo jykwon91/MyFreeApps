@@ -5,6 +5,7 @@ import { View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { DISCOVER_ROUTE, DISCOVERY_MISSING_RESULT } from "../../constants/discovery";
 import type { RootState } from "../../lib/store";
+import type { NewRecipeSeed } from "../../types/NewRecipeSeed";
 import { recipeSaved } from "../discovery/discoverySlice";
 import NewRecipeForm from "./NewRecipeForm";
 
@@ -33,9 +34,10 @@ export default function NewRecipeFromDiscovery({ resultId }: { resultId: string 
     );
   }
 
-  const seed = {
+  const seed: NewRecipeSeed = {
     draft: discoveredRecipeDraft(read.detail),
-    from: "discover" as const,
+    origin: "discover",
+    from: "discover",
     onCreated: (recipeId: string) => dispatch(recipeSaved({ resultId, recipeId, generation })),
   };
   return <NewRecipeForm seed={seed} />;

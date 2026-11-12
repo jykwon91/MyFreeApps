@@ -7,22 +7,10 @@ import RecipeExtractionProgress from "@/features/recipes/RecipeExtractionProgres
 import RecipeImportUploadStep from "@/features/recipes/RecipeImportUploadStep";
 import { useExtractRecipeFromPhotoMutation } from "@myrecipes/api-client/store/recipesApi";
 import type { RecipeExtractionDraft } from "@myrecipes/api-client/types/recipe/extraction";
+import { PHOTO_IMPORT_COPY } from "@myrecipes/api-client/constants/photoImport";
+import { photoImportErrorMessage } from "@myrecipes/api-client/utils/photoImportErrorMessage";
 
 type ImportStep = "upload" | "extracting" | "review";
-
-function messageForError(err: unknown): string {
-  const status = (err as { status?: number } | null)?.status;
-  if (status === 422) {
-    return "We couldn't read a recipe from that photo. Try a clearer or better-lit photo.";
-  }
-  if (status === 503) {
-    return "Photo import isn't available right now.";
-  }
-  if (status === 413) {
-    return "That photo is too large (max 15 MB). Try a smaller or compressed version.";
-  }
-  return "Something went wrong — please try again.";
-}
 
 /**
  * Photo import flow, all on one route (/recipes/import) with internal step
@@ -85,7 +73,7 @@ export default function RecipeImport() {
       setDraft(result);
       setStep("review");
     } catch (err) {
-      setExtractError(messageForError(err));
+      setExtractError(photoImportErrorMessage(err));
       clearFile();
       setStep("upload");
     }
@@ -94,7 +82,7 @@ export default function RecipeImport() {
   if (step === "extracting") {
     return (
       <main className="p-4 sm:p-8 space-y-6">
-        <EditorHeader backTo="/" backLabel="Recipes" title="Import from photo" />
+        <EditorHeader backTo="/" backLabel="Recipes" title={PHOTO_IMPORT_COPY.title} />
         <RecipeExtractionProgress />
       </main>
     );
@@ -106,7 +94,7 @@ export default function RecipeImport() {
         <EditorHeader
           backTo="/"
           backLabel="Recipes"
-          title="Import from photo"
+          title={PHOTO_IMPORT_COPY.title}
           subtitle="We've pre-filled what we could from your photo — edit anything that looks off, then save."
         />
         <RecipeEditorForm mode="create" initialDraft={draft} onCancel={() => setStep("upload")} />
@@ -119,7 +107,7 @@ export default function RecipeImport() {
       <EditorHeader
         backTo="/"
         backLabel="Recipes"
-        title="Import from photo"
+        title={PHOTO_IMPORT_COPY.title}
         subtitle="Snap or upload a photo of a recipe and we'll fill in the details for you to review."
       />
       {extractError ? <AlertBox variant="warning">{extractError}</AlertBox> : null}

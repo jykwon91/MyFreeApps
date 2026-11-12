@@ -1,9 +1,9 @@
-import { draftNeedsReview } from "@myrecipes/api-client/utils/draftNeedsReview";
 import { Banner, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
 import type { NewRecipeSeed } from "../../types/NewRecipeSeed";
+import { draftNotice } from "../../utils/draftNotice";
 import RecipeSectionHeading from "../recipes/RecipeSectionHeading";
 import IngredientRowEditor from "./IngredientRowEditor";
 import RecipeDetailsFields from "./RecipeDetailsFields";
@@ -20,6 +20,7 @@ export default function NewRecipeForm({ seed }: { seed?: NewRecipeSeed }) {
   const locked = form.isSaving || form.isLeaving;
   useDiscardPrompt(form.isDirty && !form.isLeaving, form.isSaving);
   const { ingredients, steps } = form.values;
+  const notice = seed ? draftNotice(seed) : null;
 
   return (
     <KeyboardAvoidingView
@@ -34,7 +35,7 @@ export default function NewRecipeForm({ seed }: { seed?: NewRecipeSeed }) {
         keyboardShouldPersistTaps="handled"
         testID="new-recipe"
       >
-        {seed && draftNeedsReview(seed.draft) ? <Banner message={MESSAGES.draftNeedsReview} /> : null}
+        {notice ? <Banner message={notice.message} tone={notice.tone} /> : null}
         <RecipeDetailsFields
           disabled={locked}
           focusTitle={seed != null && seed.draft.title.trim() === ""}

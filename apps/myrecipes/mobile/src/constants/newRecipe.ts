@@ -1,3 +1,5 @@
+import type { DraftOrigin } from "../types/DraftOrigin";
+
 /** Copy for creating a recipe on the phone. Problems with what's typed come from the API client. */
 export const NEW_RECIPE_MESSAGES = {
   screenTitle: "New recipe",
@@ -38,8 +40,19 @@ export const NEW_RECIPE_MESSAGES = {
   creating: "Creating…",
   created: "Recipe created.",
   couldntCreate: "Couldn't create this recipe. Please try again.",
-  draftNeedsReview: "We filled in what we could from the page. Check everything before creating it.",
 } as const;
+
+/** Over a draft that came back thin, so it's checked before it's created. */
+export const DRAFT_NEEDS_REVIEW: Record<DraftOrigin, string> = {
+  discover: "We filled in what we could from the page. Check everything before creating it.",
+  photo: "We filled in what we could from your photo. Check everything before creating it.",
+};
+
+/** Over a draft that came back whole. Discover's own screen has already said where it's from. */
+export const DRAFT_FILLED_IN: Record<DraftOrigin, string | null> = {
+  discover: null,
+  photo: "We've filled this in from your photo. Edit anything that looks off, then create it.",
+};
 
 /** How tall a box for a description or a step starts, so it reads as somewhere to write. */
 export const MULTILINE_MIN_HEIGHT = 96;

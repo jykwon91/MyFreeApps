@@ -1,4 +1,4 @@
-import { LoadingButton, Toast, useTheme } from "@platform/mobile";
+import { discardFile, LoadingButton, Toast, useTheme } from "@platform/mobile";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
@@ -13,7 +13,7 @@ import PhotoReview from "./PhotoReview";
 import { pickPdfs, pickPhotos } from "./pickFiles";
 import { preparePhoto } from "./preparePhoto";
 import { pdfFileName, photoName } from "./uploadFileNames";
-import { addToQueue, discardFile } from "./uploadQueueFiles";
+import { addToQueue } from "./uploadQueueFiles";
 import UploadStatus from "./UploadStatus";
 
 export default function CaptureScreen() {
@@ -36,7 +36,7 @@ export default function CaptureScreen() {
     const workspace = requireWorkspace();
     try {
       for (const picked of photos) {
-        addToQueue(workspace, await preparePhoto(picked.uri, picked.width, picked.height), photoName());
+        addToQueue(workspace, await preparePhoto(picked.uri), photoName());
         discardFile(picked.uri);
         setAddedCount((count) => count + 1);
       }

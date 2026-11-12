@@ -142,7 +142,7 @@ export function useNewRecipeForm(seed?: NewRecipeSeed) {
       const recipe = await createRecipe(buildRecipeCreateRequest(values, decimalSeparator)).unwrap();
       // The recipe opens straight away, with no skeleton while it's asked for again.
       dispatch(recipesApi.util.upsertQueryData("getRecipe", recipe.id, recipe));
-      seed?.onCreated(recipe.id);
+      seed?.onCreated?.(recipe.id);
       showToast(MESSAGES.created);
       if (isMounted.current) setCreated({ id: recipe.id, title: recipe.title, owner: recipe.owner_display_name });
     } catch {

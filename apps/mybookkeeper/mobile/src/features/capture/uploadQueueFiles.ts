@@ -1,3 +1,4 @@
+import { discardFile } from "@platform/mobile";
 import { nanoid } from "@reduxjs/toolkit";
 import { Directory, File, Paths } from "expo-file-system";
 import { UPLOAD_QUEUE_DIRECTORY } from "../../constants/capture";
@@ -48,11 +49,6 @@ export function removeFromQueue(upload: PendingUpload): void {
 }
 
 /** Also for the camera's and the pickers' own copies, which still hold the photo's location. */
-export function discardFile(uri: string): void {
-  const file = new File(uri);
-  if (file.exists) file.delete();
-}
-
 export function clearUploadQueue(): void {
   const root = queueRoot();
   if (root.exists) root.delete();
