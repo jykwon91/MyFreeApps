@@ -219,6 +219,9 @@ The phone app signs in through the shared `/auth/mobile/*` routes; registration,
 password resets and email verification stay on the website, which the sign-in
 screen links to. `mobile/screen-map.yaml` gives every web route a phone screen
 or a reason it isn't on the phone -- update it when adding or renaming a page.
+Security is a phone screen too (the shared `SecurityScreen` from `@platform/mobile`, mirroring
+MyJobHunter): display name, two-step sign-in, data export and Delete account. Its calls are
+`GET|PATCH /users/me`, `/auth/totp/*` and `GET /users/me/export`, all served today.
 
 **API client** (from the monorepo root):
 ```bash
