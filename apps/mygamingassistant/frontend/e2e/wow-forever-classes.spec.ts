@@ -69,6 +69,8 @@ test("the mage class hub shows Mana resource and spellbook / downrank links", as
 
 test("the warrior class hub does NOT show a downrank link", async ({ page }) => {
   await page.goto(WARRIOR);
+  // Wait for the hub itself: a zero count on a page still loading proves nothing.
+  await expect(page.getByTestId("class-resource")).toBeVisible();
   // Warrior has no caster/healer specs — downrank is not useful. (The side menu's
   // Downrank calculator link is outside main.)
   await expect(page.locator("main").getByRole("link", { name: /downrank/i })).toHaveCount(0);
