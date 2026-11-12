@@ -72,6 +72,19 @@ function character() {
       resistances: { arcane: 0, fire: 0, frost: 0, nature: 0, shadow: 10 },
       movement_speed: 100,
     },
+    // A real level 37 Affliction warlock's 28 points.
+    talents: {
+      groups: [
+        {
+          active: true,
+          picks: [
+            { id: 135456, rank: 2 }, { id: 135455, rank: 5 }, { id: 135451, rank: 3 }, { id: 135450, rank: 2 },
+            { id: 135448, rank: 3 }, { id: 142628, rank: 5 }, { id: 135445, rank: 1 }, { id: 135443, rank: 1 },
+            { id: 135442, rank: 3 }, { id: 135441, rank: 3 },
+          ],
+        },
+      ],
+    },
   };
 }
 
@@ -140,6 +153,7 @@ test("skeleton while Blizzard answers, then the sheet in the same places", async
 
   const skeleton = page.getByTestId("character-sheet-skeleton");
   await expect(skeleton).toBeVisible();
+  await expect(skeleton.getByTestId("character-talents-skeleton")).toBeVisible();
   const skeletonBox = await skeleton.boundingBox();
 
   release();
@@ -177,6 +191,30 @@ test("the stats panel opens a warlock on Spell and remembers a picked tab", asyn
   await expect(page.getByRole("region", { name: "Character stats" }).getByRole("tab", { name: "Melee" })).toHaveAttribute("aria-selected", "true");
 });
 
+test("the talents section shows the point split and opens the build in the talent calculator", async ({ page }) => {
+  await stubCharacter(page);
+  await page.goto("/wow-forever/character/jason-kwon");
+  const panel = page.getByRole("region", { name: "Talents" });
+  await expect(panel.getByTestId("character-talent-split")).toContainText("Affliction 28");
+  await expect(panel.getByTestId("character-talent")).toHaveCount(10);
+
+  const suppression = panel.getByTestId("character-talent").filter({ hasText: "Suppression" });
+  await suppression.getByRole("button").click();
+  await expect(suppression.getByTestId("character-talent-text")).toBeVisible();
+
+  await panel.getByRole("link", { name: "Open in the talent calculator" }).click();
+  await expect(page).toHaveURL(/\/wow-forever\/talents\/warlock\?b=2-0250032003510133--&lvl=37/);
+  await expect(page.getByText("28 of 28")).toBeVisible();
+});
+
+test("a talents failure keeps the rest of the sheet", async ({ page }) => {
+  await page.route(SHEET_PATTERN, (route) => json(route, { ...character(), talents: null }));
+  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }));
+  await page.goto("/wow-forever/character/jason-kwon");
+  await expect(page.getByRole("region", { name: "Talents" })).toContainText("Blizzard didn't send this character's talents");
+  await expect(page.getByRole("region", { name: "Character stats" })).toBeVisible();
+});
+
 test("375px phone layout: the picture comes first and nothing overflows", async ({ page }) => {
   await stubCharacter(page);
   await page.setViewportSize({ width: 375, height: 812 });
@@ -187,6 +225,9 @@ test("375px phone layout: the picture comes first and nothing overflows", async 
   const firstRow = await page.getByRole("list", { name: "Left side" }).locator("li").first().boundingBox();
   expect(pictureBox?.y ?? 0).toBeLessThan(firstRow?.y ?? 0);
   await expect(page.getByRole("tab", { name: "Defenses" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Talents" }).getByTestId("character-talent")).toHaveCount(10);
+  const link = await page.getByRole("link", { name: "Open in the talent calculator" }).boundingBox();
+  expect(link?.height ?? 0).toBeGreaterThanOrEqual(44);
   const tab = await page.getByRole("tab", { name: "Defenses" }).boundingBox();
   expect(tab?.height ?? 0).toBeGreaterThanOrEqual(44);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

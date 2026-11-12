@@ -32,6 +32,7 @@ from app.services.wow.character.character_profile import CharacterProfile
 from app.services.wow.character.character_render_crop import crop_render
 from app.services.wow.character.character_slug import normalize_character_slug
 from app.services.wow.character.character_stats_mapper import to_character_stats
+from app.services.wow.character.character_talents_mapper import to_character_talents
 
 RENDER_URL = "https://render.worldofwarcraft.com/forever-us/character/101/6299749-main-raw.png"
 PROFILE: dict[str, Any] = {
@@ -125,6 +126,31 @@ STATISTICS: dict[str, Any] = {
     "movement_speed": 100.0, "expertise": 0.0,
 }
 
+SPECIALIZATIONS = {
+    "specialization_groups": [
+        {
+            "is_active": False,
+            "specializations": [
+                {"specialization": {"name": "Destruction", "id": 357}, "spent_points": 1,
+                 "talents": [{"talent": {"name": "Bane", "id": 135500}, "talent_rank": 1}]},
+            ],
+        },
+        {
+            "is_active": True,
+            "specializations": [
+                {"specialization": {"name": "Affliction", "id": 355}, "spent_points": 7, "talents": [
+                    {"talent": {"name": "Suppression", "id": 135456}, "talent_rank": 2,
+                     "spell_tooltip": {"description": "Improves your chance to hit by 2%."}},
+                    {"talent": {"name": "Improved Corruption", "id": 135455}, "talent_rank": 5},
+                    {"talent": {"name": "Broken", "id": "x"}, "talent_rank": 1},
+                    {"talent": {"name": "Unranked", "id": 135449}, "talent_rank": 0},
+                ]},
+            ],
+        },
+        {"is_active": False, "specializations": []},
+    ],
+}
+
 Handler = Callable[[httpx.Request], httpx.Response]
 
 
@@ -151,6 +177,7 @@ def _blizzard(
         "/profile/wow/character/jason-kwon/character-media": _json(MEDIA),
         "/profile/wow/character/jason-kwon/equipment": _json(EQUIPMENT),
         "/profile/wow/character/jason-kwon/statistics": _json(STATISTICS),
+        "/profile/wow/character/jason-kwon/specializations": _json(SPECIALIZATIONS),
         **(answers or {}),
     }
 
@@ -268,7 +295,7 @@ def test_missing_credentials_fail_before_any_request() -> None:
 
 
 def test_the_sheet_keeps_the_games_own_tooltip_lines() -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS))
     assert (sheet.name, sheet.surname, sheet.level, sheet.race, sheet.class_name) == ("Jason", "Kwon", 37, "Gnome", "Warlock")
     assert (sheet.faction, sheet.guild, sheet.ruleset, sheet.has_render) == ("alliance", "Tinker Town", "PvP", True)
     assert sheet.last_login is not None and sheet.last_login.year == 2026
@@ -286,7 +313,7 @@ def test_the_sheet_keeps_the_games_own_tooltip_lines() -> None:
 
 
 def test_a_character_without_media_or_gear_has_an_empty_sheet() -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=None, equipment=None, statistics=None))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=None, equipment=None, statistics=None, specializations=None))
     assert sheet.has_render is False
     assert sheet.items == []
 
@@ -381,12 +408,12 @@ async def test_the_sheet_and_render_ask_blizzard_once(monkeypatch: pytest.Monkey
     await character_service.get_character_render("jason-kwon")
     assert render is not None and Image.open(BytesIO(render)).size[0] < 400
     api_calls = [r.url.path for r in seen if r.url.host == "us.api.blizzard.com"]
-    assert len(api_calls) == 4
+    assert len(api_calls) == 5
     assert [r.url.host for r in seen].count("render.worldofwarcraft.com") == 1
 
 
 async def test_route_returns_the_sheet(client: AsyncClient) -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS))
     with patch.object(character_service, "get_character", AsyncMock(return_value=sheet)) as get:
         resp = await client.get("/wow/characters/Jason-Kwon")
     assert resp.status_code == 200
@@ -439,3 +466,52 @@ async def test_render_route_has_its_own_per_ip_limit(client: AsyncClient, monkey
         second = await client.get("/wow/characters/jason-kwon/render.png")
     assert (first.status_code, second.status_code) == (404, 429)
     get.assert_awaited_once()
+
+
+def test_the_talents_are_ids_and_ranks_with_the_active_set_first() -> None:
+    talents = to_character_talents(SPECIALIZATIONS)
+    assert talents is not None
+    assert [group.active for group in talents.groups] == [True, False]  # the empty set is dropped
+    assert [(p.id, p.rank) for p in talents.groups[0].picks] == [(135456, 2), (135455, 5)]
+    assert [(p.id, p.rank) for p in talents.groups[1].picks] == [(135500, 1)]
+
+
+def test_an_empty_active_set_is_kept_so_the_other_set_isnt_shown_as_current() -> None:
+    respecced = {"specialization_groups": [
+        {"is_active": True, "specializations": []},
+        SPECIALIZATIONS["specialization_groups"][1] | {"is_active": False},
+    ]}
+    talents = to_character_talents(respecced)
+    assert talents is not None
+    assert [(group.active, len(group.picks)) for group in talents.groups] == [(True, 0), (False, 2)]
+
+
+def test_no_talents_is_an_empty_list_and_a_failure_is_none() -> None:
+    assert to_character_talents({}) is not None and to_character_talents({}).groups == []
+    assert to_character_talents(None) is None
+
+
+async def test_a_character_blizzard_has_no_talents_for_has_none_not_an_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    missing = {"/profile/wow/character/jason-kwon/specializations": _json({"code": 404}, 404)}
+    seen: list[httpx.Request] = []
+    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing, seen=seen)))
+    sheet = await character_service.get_character("jason-kwon")
+    assert sheet.talents is not None and sheet.talents.groups == []
+    await character_service.get_character("jason-kwon")
+    profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
+    assert len(profile_calls) == 1  # an answer, so it's cached
+
+
+async def test_a_talents_failure_still_shows_the_sheet_and_is_not_cached(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    seen: list[httpx.Request] = []
+    failing = {"/profile/wow/character/jason-kwon/specializations": _json({"code": 503}, 503)}
+    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
+    sheet = await character_service.get_character("jason-kwon")
+    assert sheet.talents is None
+    assert sheet.stats is not None and len(sheet.items) > 0
+    assert "Character talents unavailable" in caplog.text
+    await character_service.get_character("jason-kwon")
+    profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
+    assert len(profile_calls) == 2

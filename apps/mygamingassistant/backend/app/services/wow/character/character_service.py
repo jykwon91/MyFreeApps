@@ -5,15 +5,17 @@ render is cached beside it. Both expire after ``CHARACTER_CACHE_SECONDS``, so a
 player who logs out with new gear sees it within minutes, and a page that
 loads the sheet and the picture asks Blizzard once.
 
-Stats are the one optional part: if Blizzard fails on ``/statistics`` the
-sheet still shows (``stats: null``), the failure is logged, and the answer is
-not cached so the next look-up asks again.
+Stats and talents are the optional parts: if Blizzard fails on
+``/statistics`` or ``/specializations`` the sheet still shows (``stats`` /
+``talents`` null), the failure is logged, and the answer is not cached so the
+next look-up asks again.
 """
 from __future__ import annotations
 
 import asyncio
 import logging
 import time
+from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
 from app.core.config import settings
@@ -60,12 +62,14 @@ def _store(cache: dict[str, tuple[T, float]], slug: str, value: T, max_entries: 
     cache[slug] = (value, time.monotonic())
 
 
-async def _statistics(client: BlizzardCharacterClient, slug: str) -> tuple[dict[str, Any] | None, bool]:
-    """The character's statistics, and whether Blizzard answered (a failure must not blank the sheet)."""
+async def _optional_part(
+    part: str, slug: str, fetch: Callable[[str], Awaitable[dict[str, Any] | None]],
+) -> tuple[dict[str, Any] | None, bool]:
+    """One optional sub-resource, and whether Blizzard answered (a failure must not blank the sheet)."""
     try:
-        return await client.statistics(slug), True
+        return await fetch(slug), True
     except CharacterLookupError as exc:
-        logger.warning("Character statistics unavailable for %s: status=%s %s", slug, exc.status_code, exc)
+        logger.warning("Character %s unavailable for %s: status=%s %s", part, slug, exc.status_code, exc)
         return None, False
 
 
@@ -75,11 +79,19 @@ async def _profile(slug: str) -> CharacterProfile:
         return cached
     async with _new_client() as client:
         profile = await client.profile(slug)
-        media, equipment, (statistics, answered) = await asyncio.gather(
-            client.media(slug), client.equipment(slug), _statistics(client, slug),
+        media, equipment, (statistics, stats_answered), (specializations, talents_answered) = await asyncio.gather(
+            client.media(slug),
+            client.equipment(slug),
+            _optional_part("statistics", slug, client.statistics),
+            _optional_part("talents", slug, client.specializations),
         )
-    data = CharacterProfile(profile=profile, media=media, equipment=equipment, statistics=statistics)
-    if answered:
+    if talents_answered and specializations is None:
+        # Blizzard 404s a character that has never spent a point: no talents, not a failure.
+        specializations = {}
+    data = CharacterProfile(
+        profile=profile, media=media, equipment=equipment, statistics=statistics, specializations=specializations,
+    )
+    if stats_answered and talents_answered:
         _store(_profiles, slug, data, CHARACTER_CACHE_MAX_ENTRIES)
     return data
 

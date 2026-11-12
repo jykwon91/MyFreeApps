@@ -122,6 +122,9 @@ class BlizzardCharacterClient:
     async def statistics(self, slug: str) -> dict[str, Any] | None:
         return await self._optional_json(f"{slug}/statistics")
 
+    async def specializations(self, slug: str) -> dict[str, Any] | None:
+        return await self._optional_json(f"{slug}/specializations")
+
     async def render(self, url: str) -> bytes | None:
         """The render PNG — only from Blizzard's render host, over HTTPS (404 → None)."""
         parts = urlsplit(url)

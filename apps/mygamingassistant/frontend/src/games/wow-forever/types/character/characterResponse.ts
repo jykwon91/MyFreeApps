@@ -1,5 +1,6 @@
 import type { CharacterItem } from "@/games/wow-forever/types/character/characterItem";
 import type { CharacterStats } from "@/games/wow-forever/types/character/characterStats";
+import type { CharacterTalents } from "@/games/wow-forever/types/character/characterTalents";
 
 /** A WoW Forever character as Blizzard saw it at their last log out (`GET /wow/characters/{slug}`). */
 export interface CharacterResponse {
@@ -22,4 +23,6 @@ export interface CharacterResponse {
   items: CharacterItem[];
   /** Null until Blizzard has the character's numbers. */
   stats: CharacterStats | null;
+  /** Null when Blizzard failed to send the talents; the rest of the sheet still shows. */
+  talents: CharacterTalents | null;
 }
