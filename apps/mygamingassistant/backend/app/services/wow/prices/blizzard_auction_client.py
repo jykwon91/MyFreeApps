@@ -16,7 +16,6 @@ refresh can log why. The credentials are never logged or put in an error.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from datetime import datetime
 from email.utils import parsedate_to_datetime
@@ -32,39 +31,14 @@ from app.core.wow_prices import (
     BLIZZARD_NAMESPACE,
     BLIZZARD_RULESET_ID,
     BLIZZARD_TIMEOUT_SECONDS,
-    BLIZZARD_TOKEN_URL,
     HOUSE_NAME_FACTIONS,
 )
+from app.services.wow.blizzard.blizzard_http import USER_AGENT, fetch_client_token, json_object, send
 from app.services.wow.prices.auction_house import AuctionHouse
 from app.services.wow.prices.house_auctions import HouseAuctions
 from app.services.wow.prices.price_fetch_error import PriceFetchError
 
 logger = logging.getLogger(__name__)
-
-USER_AGENT = "MyGamingAssistant/1.0 (+https://mygamingassistant.myfreeapps.org/wow-forever)"
-_REASON_MAX = 200
-
-
-def _error_from(response: httpx.Response) -> PriceFetchError:
-    """Blizzard's error body → a PriceFetchError with its code, whatever shape it came in."""
-    code: str | None = None
-    reason = response.reason_phrase or "request failed"
-    try:
-        body = response.json()
-    except ValueError:
-        body = None
-    if isinstance(body, dict):
-        # Game Data API: {"code": 404, "type": "BLZWEBAPI00000404", "detail": "Not Found"}
-        # OAuth: {"error": "invalid_client", "error_description": "..."}
-        raw_code = body.get("type") or body.get("error")
-        code = str(raw_code) if raw_code else None
-        detail = body.get("detail") or body.get("error_description")
-        if detail:
-            reason = str(detail)
-    elif response.text:
-        reason = response.text
-    return PriceFetchError(reason[:_REASON_MAX], status_code=response.status_code, code=code)
-
 
 def _snapshot_time(response: httpx.Response) -> datetime | None:
     raw = response.headers.get("Last-Modified")
@@ -120,36 +94,21 @@ class BlizzardAuctionClient:
     async def _send(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
         if self._http is None:
             raise RuntimeError("BlizzardAuctionClient used outside `async with`")
-        try:
-            response = await self._http.request(method, url, **kwargs)
-        except httpx.HTTPError as exc:
-            raise PriceFetchError(f"request failed: {type(exc).__name__}") from exc
-        if response.status_code != httpx.codes.OK:
-            raise _error_from(response)
-        if len(response.content) > BLIZZARD_MAX_BYTES:
-            raise PriceFetchError(
-                f"answer is {len(response.content)} bytes, over the {BLIZZARD_MAX_BYTES} cap", status_code=200,
-            )
-        return response
+        return await send(
+            self._http, method, url, error_cls=PriceFetchError, max_bytes=BLIZZARD_MAX_BYTES, **kwargs,
+        )
 
     @staticmethod
     def _json(response: httpx.Response) -> dict[str, Any]:
-        try:
-            body = json.loads(response.content)
-        except ValueError as exc:
-            raise PriceFetchError("answer is not JSON", status_code=response.status_code) from exc
-        if not isinstance(body, dict):
-            raise PriceFetchError("answer is not a JSON object", status_code=response.status_code)
-        return body
+        return json_object(response, PriceFetchError)
 
     async def _fetch_token(self) -> str:
-        response = await self._send(
-            "POST", BLIZZARD_TOKEN_URL, data={"grant_type": "client_credentials"}, auth=self._credentials,
+        if self._http is None:
+            raise RuntimeError("BlizzardAuctionClient used outside `async with`")
+        token = await fetch_client_token(
+            self._http, self._credentials, error_cls=PriceFetchError, max_bytes=BLIZZARD_MAX_BYTES,
         )
-        token = self._json(response).get("access_token")
-        if not isinstance(token, str) or not token:
-            raise PriceFetchError("token answer has no access_token", status_code=response.status_code)
-        return token
+        return token.value
 
     async def _get(self, path: str) -> httpx.Response:
         return await self._send(

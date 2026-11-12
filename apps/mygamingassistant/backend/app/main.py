@@ -40,6 +40,7 @@ from app.api import (
     scheduler,
     sources,
     totp,
+    wow_characters,
     wow_chat,
     wow_feature_triage,
     wow_features,
@@ -215,6 +216,7 @@ def _mount_public_routes(app: FastAPI) -> None:
     app.include_router(wow_prices.router)  # auction-house prices, filled by the scheduler
     app.include_router(wow_icons.router)  # in-game icons, from object storage
     app.include_router(wow_server_status.router)  # Server-cached Blizzard status
+    app.include_router(wow_characters.router)  # Your character: per-IP + cached Blizzard profile
     app.include_router(wow_features.public_router)  # submit: Turnstile + per-IP + daily-capped
     app.include_router(wow_chat.router)  # Ask chat relay: body cap + ticket + per-IP + Turnstile + token caps
 
