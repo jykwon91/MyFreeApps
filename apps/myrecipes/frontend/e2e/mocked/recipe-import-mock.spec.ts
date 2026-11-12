@@ -6,8 +6,9 @@
 import { test, expect, type Page } from "@playwright/test";
 import { json } from "@platform/ui/testing/mockResponse";
 import { stubSignedInShell, TEST_USER } from "@platform/ui/testing/mockSession";
+import { recipeIdAt } from "./fixtures/recipeFixtures";
 
-const CREATED_ID = "22222222-2222-2222-2222-222222222222";
+const CREATED_ID = recipeIdAt(2);
 const DRAFT = {
   title: "Grandma's tomato soup",
   description: null,
@@ -79,7 +80,7 @@ test("reads a photo into the editor, then creates the recipe from it", async ({ 
   await pickPhoto(page);
   await page.getByRole("button", { name: "Extract recipe" }).click();
 
-  await expect(page.getByLabel("Title")).toHaveValue(DRAFT.title);
+  await expect(page.getByLabel(/^Title/)).toHaveValue(DRAFT.title);
   await expect(page.getByLabel("Source")).toHaveValue(DRAFT.source);
   await expect(page.getByLabel("Ingredient name").first()).toHaveValue("tomatoes");
   expect(extracts).toEqual([expect.stringContaining("multipart/form-data")]);
@@ -104,6 +105,6 @@ test("a failed read says why and goes back to picking a photo", async ({ page })
 
   await pickPhoto(page);
   await page.getByRole("button", { name: "Extract recipe" }).click();
-  await expect(page.getByLabel("Title")).toHaveValue(DRAFT.title);
+  await expect(page.getByLabel(/^Title/)).toHaveValue(DRAFT.title);
   expect(extracts).toHaveLength(3);
 });
