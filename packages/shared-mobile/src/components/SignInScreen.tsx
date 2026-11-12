@@ -1,5 +1,5 @@
 import { type ComponentRef, useEffect, useRef, useState } from "react";
-import { BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { BackHandler, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signInFailureMessage } from "../auth/signInFailureMessage";
 import { useSession } from "../hooks/useSession";
@@ -82,8 +82,9 @@ export default function SignInScreen({ appName, webBaseUrl, onSignedIn }: SignIn
   // Its own toasts, as sign-in shows before the app's screens and, as a modal, above them.
   return (
     <ToastProvider bottomOffset={bottom + spacing.lg}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
         <ScrollView
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
@@ -165,7 +166,7 @@ export default function SignInScreen({ appName, webBaseUrl, onSignedIn }: SignIn
             </>
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </ToastProvider>
   );
 }

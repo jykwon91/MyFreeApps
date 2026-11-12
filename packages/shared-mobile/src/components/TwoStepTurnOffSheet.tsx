@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text } from "react-native";
+import { Modal, ScrollView, Text, View } from "react-native";
 import { requestTwoStepDisable } from "../auth/twoStepApi";
 import { TWO_STEP_MESSAGES as MESSAGES } from "../constants/twoStep";
 import { useSecondFactorCode } from "../hooks/useSecondFactorCode";
@@ -42,8 +42,8 @@ export default function TwoStepTurnOffSheet({ onClose, onSettled }: TwoStepTurnO
 
   return (
     <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
           <Text accessibilityRole="header" style={{ color: colors.foreground, fontSize: fontSize.lg, fontWeight: "600" }}>
             {MESSAGES.turnOffCodeHeading}
           </Text>
@@ -73,7 +73,7 @@ export default function TwoStepTurnOffSheet({ onClose, onSettled }: TwoStepTurnO
           </LoadingButton>
           <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{MESSAGES.turnOffNote}</Text>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
