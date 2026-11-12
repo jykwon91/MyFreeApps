@@ -3,7 +3,7 @@ import { useExtendSignedLeaseMutation, useGetSignedLeaseByIdQuery } from "@myboo
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import { Banner, FormField, LoadingButton, MIN_TOUCH_TARGET, useTheme, useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, type ScrollViewInstance, Switch, Text, View } from "react-native";
+import { Alert, Modal, ScrollView, type ScrollViewInstance, Switch, Text, View } from "react-native";
 import {
   alreadyEnds,
   emailAddendumLabel,
@@ -124,8 +124,9 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
   const longEnd = formatLongDate(endsOn);
   return (
     <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
         <ScrollView
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
@@ -174,7 +175,7 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
             {LEASE_MESSAGES.cancel}
           </LoadingButton>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }

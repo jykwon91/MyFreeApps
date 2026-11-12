@@ -1,9 +1,9 @@
 import { useLazyGetSignedLeaseByIdQuery, useCreateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { MergedPlaceholder } from "@mybookkeeper/api-client/types/lease/merged-placeholder";
-import { Banner, LoadingButton, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { Banner, HeaderKeyboardAvoidingView, LoadingButton, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
+import { Alert, Keyboard, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PLACEHOLDER_PROBLEM_MESSAGES } from "../../constants/placeholderProblems";
 import { draftMade, leaseFor, NEW_LEASE_MESSAGES as MESSAGES, PROVENANCE_CAPTIONS, usedIn } from "../../constants/newLease";
@@ -133,7 +133,7 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+    <HeaderKeyboardAvoidingView>
       <ScrollView
         contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
@@ -197,6 +197,6 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
           {MESSAGES.createDraft}
         </LoadingButton>
       </View>
-    </KeyboardAvoidingView>
+    </HeaderKeyboardAvoidingView>
   );
 }

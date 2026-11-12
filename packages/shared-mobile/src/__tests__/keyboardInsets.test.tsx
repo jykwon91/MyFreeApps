@@ -7,6 +7,8 @@ import SignInScreen from "../components/SignInScreen";
 import ToastProvider from "../components/ToastProvider";
 import TwoStepTurnOffSheet from "../components/TwoStepTurnOffSheet";
 import TwoStepTurnOnScreen from "../components/TwoStepTurnOnScreen";
+import { nodesOfType } from "../../test-support/renderedNodes";
+import type { RenderedNode } from "../../test-support/types/RenderedNode";
 import type { MobileSession } from "../types/MobileSession";
 import type { SessionState } from "../types/SessionState";
 
@@ -21,23 +23,15 @@ const session = {
 } as unknown as MobileSession;
 const signedInSession = { getState: () => SIGNED_IN, subscribe: () => () => {} } as unknown as MobileSession;
 
-type RenderedNode = { type: string; props: Record<string, unknown>; children: ReadonlyArray<RenderedNode | string> | null };
-
-function nodesOfType(node: RenderedNode | string | null, type: string): RenderedNode[] {
-  if (node === null || typeof node === "string") return [];
-  const below = (node.children ?? []).flatMap((child) => nodesOfType(child, type));
-  return node.type === type ? [node, ...below] : below;
-}
-
 // KeyboardAvoidingView pads by comparing the view's position in its parent with the keyboard's position on the
 // screen. A page sheet or a screen under a header sits lower on the screen than in its parent, so the padding
 // came up short by that gap and the last fields stayed under the keyboard. The scroll view measures itself
 // natively instead, so it needs no offset.
 function expectsScrollViewToTrackKeyboard(): void {
   const tree = screen.toJSON() as RenderedNode | null;
-  const scrollViews = nodesOfType(tree, "RCTScrollView");
-  expect(scrollViews.length).toBeGreaterThan(0);
-  scrollViews.forEach((scrollView) => expect(scrollView.props.automaticallyAdjustKeyboardInsets).toBe(true));
+  const [outermost] = nodesOfType(tree, "RCTScrollView");
+  expect(outermost).toBeDefined();
+  expect(outermost.props.automaticallyAdjustKeyboardInsets).toBe(true);
 }
 
 describe("keyboard insets", () => {

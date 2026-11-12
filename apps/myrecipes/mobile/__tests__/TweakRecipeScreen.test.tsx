@@ -48,7 +48,6 @@ jest.mock("expo-router", () => ({
     mockGuard.ask = ask;
   },
 }));
-jest.mock("expo-router/react-navigation", () => ({ useHeaderHeight: () => 0 }));
 // The device locale's decimal separator; "." unless a test is in a comma-decimal locale.
 let mockDecimalSeparator: "." | "," = ".";
 jest.mock("../src/utils/deviceDecimalSeparator", () => ({ deviceDecimalSeparator: () => mockDecimalSeparator }));

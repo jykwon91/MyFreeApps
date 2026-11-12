@@ -26,7 +26,6 @@ jest.mock("expo-router", () => ({
   useRouter: () => ({ back: jest.fn(), canGoBack: () => true, push: jest.fn(), replace: jest.fn() }),
   usePreventRemove: () => undefined,
 }));
-jest.mock("expo-router/react-navigation", () => ({ useHeaderHeight: () => 0 }));
 
 const VERSION: VersionResponse = {
   id: "v2",

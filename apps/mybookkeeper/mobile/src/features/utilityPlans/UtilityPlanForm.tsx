@@ -7,7 +7,7 @@ import { applyDraftToForm } from "@mybookkeeper/api-client/utils/utilityPlanDraf
 import { EMPTY_UTILITY_PLAN_FORM, toUtilityPlanFormValues, utilityPlanFormProblems } from "@mybookkeeper/api-client/utils/utilityPlanForm";
 import { Banner, LoadingButton, OptionSheet, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import {
   UTILITY_PLAN_FORM_MESSAGES as MESSAGES,
   UTILITY_PLAN_PHOTO_NAME,
@@ -54,8 +54,8 @@ export default function UtilityPlanForm({ original }: { original: UtilityPlanDet
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <>
+      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         {original ? (
           <TransactionFact label={MESSAGES.property} value={original.property_name ?? ""} />
@@ -97,6 +97,6 @@ export default function UtilityPlanForm({ original }: { original: UtilityPlanDet
         title={MESSAGES.serviceSheetTitle}
         value={values.serviceType}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

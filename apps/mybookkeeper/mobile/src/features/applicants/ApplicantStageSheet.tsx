@@ -2,7 +2,7 @@ import { APPLICANT_STAGE_NOTE_MAX_LENGTH } from "@mybookkeeper/api-client/consta
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import { Banner, FormField, LoadingButton, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text } from "react-native";
+import { Modal, ScrollView, Text, View } from "react-native";
 import { applicantStageLabel } from "./applicantDisplay";
 
 export default function ApplicantStageSheet({
@@ -50,9 +50,9 @@ export default function ApplicantStageSheet({
 
   return (
     <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
         {stage ? (
-          <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+          <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
             <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
               {`Move to ${applicantStageLabel(stage)}?`}
             </Text>
@@ -76,7 +76,7 @@ export default function ApplicantStageSheet({
             </LoadingButton>
           </ScrollView>
         ) : null}
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }

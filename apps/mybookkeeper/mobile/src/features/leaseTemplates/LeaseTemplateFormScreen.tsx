@@ -2,7 +2,7 @@ import { LEASE_TEMPLATE_NAME_MAX_LENGTH, LEASE_TEMPLATE_UPLOAD_PROBLEMS } from "
 import { leaseTemplateUploadProblems } from "@mybookkeeper/api-client/utils/leaseTemplateUploadForm";
 import { Banner, FormField, LoadingButton, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
+import { ScrollView, Text } from "react-native";
 import { LEASE_TEMPLATE_DESCRIPTION_MIN_HEIGHT, LEASE_TEMPLATE_FORM_MESSAGES as MESSAGES, LEASE_TEMPLATE_PICKER_TYPES } from "../../constants/leaseTemplateForm";
 import { chooseHeldFile } from "../uploads/pickHeldFile";
 import HeldFilesList from "../uploads/HeldFilesList";
@@ -40,45 +40,43 @@ export default function LeaseTemplateFormScreen() {
   const failure = message ?? pickFailure;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
-        {failure ? <Banner message={failure} /> : null}
-        <FormField
-          editable={!locked}
-          error={nameProblem}
-          label={MESSAGES.name}
-          maxLength={LEASE_TEMPLATE_NAME_MAX_LENGTH}
-          onChangeText={setName}
-          placeholder={MESSAGES.namePlaceholder}
-          required
-          value={name}
-        />
-        <FormField
-          editable={!locked}
-          hint={MESSAGES.descriptionHint}
-          inputStyle={{ minHeight: LEASE_TEMPLATE_DESCRIPTION_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
-          label={MESSAGES.description}
-          multiline
-          onChangeText={setDescription}
-          value={description}
-        />
-        <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
-          {MESSAGES.files}
+    <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+      {failure ? <Banner message={failure} /> : null}
+      <FormField
+        editable={!locked}
+        error={nameProblem}
+        label={MESSAGES.name}
+        maxLength={LEASE_TEMPLATE_NAME_MAX_LENGTH}
+        onChangeText={setName}
+        placeholder={MESSAGES.namePlaceholder}
+        required
+        value={name}
+      />
+      <FormField
+        editable={!locked}
+        hint={MESSAGES.descriptionHint}
+        inputStyle={{ minHeight: LEASE_TEMPLATE_DESCRIPTION_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
+        label={MESSAGES.description}
+        multiline
+        onChangeText={setDescription}
+        value={description}
+      />
+      <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
+        {MESSAGES.files}
+      </Text>
+      <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.filesHint}</Text>
+      <HeldFilesList emptyText={MESSAGES.noFilesYet} files={files} isDisabled={locked} onRemove={drop} />
+      {filesProblem ? (
+        <Text accessibilityRole="alert" style={{ fontSize: fontSize.xs, color: colors.destructiveText }}>
+          {filesProblem}
         </Text>
-        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.filesHint}</Text>
-        <HeldFilesList emptyText={MESSAGES.noFilesYet} files={files} isDisabled={locked} onRemove={drop} />
-        {filesProblem ? (
-          <Text accessibilityRole="alert" style={{ fontSize: fontSize.xs, color: colors.destructiveText }}>
-            {filesProblem}
-          </Text>
-        ) : null}
-        <LoadingButton disabled={locked} isLoading={isPicking} onPress={() => void pick(() => chooseHeldFile(LEASE_TEMPLATE_PICKER_TYPES))} variant="secondary">
-          {files.length > 0 ? MESSAGES.addAnotherFile : MESSAGES.addFile}
-        </LoadingButton>
-        <LoadingButton disabled={locked || isPicking} isLoading={isBusy} loadingText={MESSAGES.uploading} onPress={send}>
-          {MESSAGES.upload}
-        </LoadingButton>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      ) : null}
+      <LoadingButton disabled={locked} isLoading={isPicking} onPress={() => void pick(() => chooseHeldFile(LEASE_TEMPLATE_PICKER_TYPES))} variant="secondary">
+        {files.length > 0 ? MESSAGES.addAnotherFile : MESSAGES.addFile}
+      </LoadingButton>
+      <LoadingButton disabled={locked || isPicking} isLoading={isBusy} loadingText={MESSAGES.uploading} onPress={send}>
+        {MESSAGES.upload}
+      </LoadingButton>
+    </ScrollView>
   );
 }

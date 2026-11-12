@@ -5,7 +5,7 @@ import type { ChannelListingFormValues } from "@mybookkeeper/api-client/types/li
 import { channelListingFormProblems, channelListingToFormValues, emptyChannelListingForm, sameChannelListingForm } from "@mybookkeeper/api-client/utils/channelListingForm";
 import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
+import { ScrollView, Text } from "react-native";
 import { copyOutboundLabel, LISTING_CHANNEL_MESSAGES as MESSAGES } from "../../constants/listingChannels";
 import { useCopyText } from "../../lib/useCopyText";
 import { useSaveChannelListing } from "./useSaveChannelListing";
@@ -52,8 +52,8 @@ export default function ChannelListingFormScreen({ listingId, available, origina
   const channelName = channel?.name ?? values.channel_id;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <>
+      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <PickerField disabled={locked || original !== null} label={MESSAGES.channel} onPress={() => setIsPicking(true)} valueLabel={channelName} />
         <FormField
@@ -106,6 +106,6 @@ export default function ChannelListingFormScreen({ listingId, available, origina
         title={MESSAGES.chooseChannel}
         value={values.channel_id}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

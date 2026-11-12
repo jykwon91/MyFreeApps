@@ -33,6 +33,7 @@ jest.mock("expo-router", () => ({
   },
 }));
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
+jest.mock("expo-router/react-navigation", () => ({ useHeaderHeight: () => 0 }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 const mockModal: { onDismiss?: () => void } = {};
 jest.mock("react-native/Libraries/Modal/Modal", () => ({

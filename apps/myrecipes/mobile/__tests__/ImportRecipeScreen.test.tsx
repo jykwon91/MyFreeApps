@@ -33,7 +33,6 @@ jest.mock("expo-router", () => ({
     mockGuard.ask = ask;
   },
 }));
-jest.mock("expo-router/react-navigation", () => ({ useHeaderHeight: () => 0 }));
 jest.mock("../src/utils/deviceDecimalSeparator", () => ({ deviceDecimalSeparator: () => "." }));
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-keep-awake", () => ({ useKeepAwake: () => mockKeepAwake() }));

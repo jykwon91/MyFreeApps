@@ -4,11 +4,11 @@ import {
   useLazyRenderReplyTemplateQuery,
 } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
-import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, useAnnouncement, useOpenWebsite, useTheme, useToast } from "@platform/mobile";
+import { Banner, EmptyState, FormField, HeaderKeyboardAvoidingView, LoadingButton, OptionSheet, useAnnouncement, useOpenWebsite, useTheme, useToast } from "@platform/mobile";
 import { router, usePreventRemove } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useReplySend } from "@mybookkeeper/api-client/hooks/useReplySend";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WEB_BASE_URL } from "../../constants/api";
 import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
@@ -168,7 +168,7 @@ export default function InquiryReplyBody({ id }: { id: string }) {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+    <HeaderKeyboardAvoidingView>
       <ScrollView
         contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
@@ -266,6 +266,6 @@ export default function InquiryReplyBody({ id }: { id: string }) {
         title="Choose a template"
         value={draft.templateId ?? WRITE_MY_OWN_OPTION}
       />
-    </KeyboardAvoidingView>
+    </HeaderKeyboardAvoidingView>
   );
 }

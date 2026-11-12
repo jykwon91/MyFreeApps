@@ -8,10 +8,10 @@ import {
 import { usePromoteFromInquiryMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import { promoteConflictDetail } from "@mybookkeeper/api-client/utils/applicantPromoteConflict";
-import { Banner, FormField, LoadingButton, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { Banner, FormField, HeaderKeyboardAvoidingView, LoadingButton, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
+import { Alert, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DOB_PICKER_STARTS_YEARS_AGO, PROMOTE_MESSAGES, SMOKER_SEGMENTS } from "../../constants/promote";
 import type { PromoteValues } from "../../types/PromoteValues";
@@ -85,7 +85,7 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+    <HeaderKeyboardAvoidingView>
       <ScrollView
         contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
@@ -134,6 +134,6 @@ export default function PromoteForm({ inquiry }: { inquiry: InquiryResponse }) {
           Promote
         </LoadingButton>
       </View>
-    </KeyboardAvoidingView>
+    </HeaderKeyboardAvoidingView>
   );
 }

@@ -8,7 +8,7 @@ import { INSURANCE_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/
 import { Banner, LoadingButton, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import { POLICY_FORM_MESSAGES, POLICY_PHOTO_NAME, POLICY_PROPERTY_MESSAGES, POLICY_READER_MESSAGES } from "../../constants/insuranceForm";
 import { sameFormValues } from "../../lib/sameFormValues";
 import type { PolicyFormErrors } from "../../types/PolicyFormErrors";
@@ -78,36 +78,34 @@ export default function PolicyForm({ policy }: { policy?: InsurancePolicyDetail 
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
-        {failure ? <Banner message={failure} /> : null}
-        {policy ? (
-          <PickerField disabled label={POLICY_FORM_MESSAGES.property} onPress={() => undefined} value={policy.property_name ?? ""} />
-        ) : (
-          <>
-            <DocumentReader
-              fileTypes={INSURANCE_UPLOAD_MIME_TYPES}
-              isDisabled={locked}
-              messages={POLICY_READER_MESSAGES}
-              onRead={read}
-              photoName={POLICY_PHOTO_NAME}
-              readers={readers}
-            />
-            {draft ? <DocumentDraftNotices draft={draft} messages={POLICY_READER_MESSAGES} /> : null}
-            <PropertyChoiceField
-              disabled={locked}
-              error={errors.propertyId}
-              messages={POLICY_PROPERTY_MESSAGES}
-              onChange={setPropertyId}
-              value={propertyId}
-            />
-          </>
-        )}
-        <PolicyFormFields errors={errors} onChange={(next) => { clearFailure(); change(next); }} values={values} />
-        <LoadingButton disabled={locked} isLoading={isBusy} loadingText={POLICY_FORM_MESSAGES.saving} onPress={() => void save()}>
-          {policy ? POLICY_FORM_MESSAGES.saveChanges : POLICY_FORM_MESSAGES.save}
-        </LoadingButton>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+      {failure ? <Banner message={failure} /> : null}
+      {policy ? (
+        <PickerField disabled label={POLICY_FORM_MESSAGES.property} onPress={() => undefined} value={policy.property_name ?? ""} />
+      ) : (
+        <>
+          <DocumentReader
+            fileTypes={INSURANCE_UPLOAD_MIME_TYPES}
+            isDisabled={locked}
+            messages={POLICY_READER_MESSAGES}
+            onRead={read}
+            photoName={POLICY_PHOTO_NAME}
+            readers={readers}
+          />
+          {draft ? <DocumentDraftNotices draft={draft} messages={POLICY_READER_MESSAGES} /> : null}
+          <PropertyChoiceField
+            disabled={locked}
+            error={errors.propertyId}
+            messages={POLICY_PROPERTY_MESSAGES}
+            onChange={setPropertyId}
+            value={propertyId}
+          />
+        </>
+      )}
+      <PolicyFormFields errors={errors} onChange={(next) => { clearFailure(); change(next); }} values={values} />
+      <LoadingButton disabled={locked} isLoading={isBusy} loadingText={POLICY_FORM_MESSAGES.saving} onPress={() => void save()}>
+        {policy ? POLICY_FORM_MESSAGES.saveChanges : POLICY_FORM_MESSAGES.save}
+      </LoadingButton>
+    </ScrollView>
   );
 }

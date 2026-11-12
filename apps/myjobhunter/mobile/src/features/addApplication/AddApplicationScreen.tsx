@@ -1,7 +1,6 @@
 import { Banner, useDiscardPrompt, useTheme } from "@platform/mobile";
-import { useHeaderHeight } from "expo-router/react-navigation";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import CompanyPickerSheet from "./CompanyPickerSheet";
 import ReviewStep from "./ReviewStep";
 import SourceStep from "./SourceStep";
@@ -9,10 +8,8 @@ import { useAddApplicationFlow } from "./useAddApplicationFlow";
 
 /** Adds an application from a link, pasted text or by hand, then goes back to the list, as the website's dialog does. */
 export default function AddApplicationScreen() {
-  const { colors, spacing } = useTheme();
+  const { spacing } = useTheme();
   const flow = useAddApplicationFlow();
-  // The stack's header sits over the screen, so the keyboard's lift has to clear it too.
-  const headerHeight = useHeaderHeight();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   // Each opening is a fresh picker, starting on the company named so far.
   const [pickerOpenings, setPickerOpenings] = useState(0);
@@ -29,11 +26,9 @@ export default function AddApplicationScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={headerHeight}
-      style={{ flex: 1, backgroundColor: colors.background }}>
+    <>
       <ScrollView
+        automaticallyAdjustKeyboardInsets
         contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardDismissMode="interactive"
@@ -84,6 +79,6 @@ export default function AddApplicationScreen() {
           setIsPickerOpen(false);
         }}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

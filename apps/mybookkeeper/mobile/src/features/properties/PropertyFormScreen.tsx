@@ -7,7 +7,7 @@ import type { PropertyType } from "@mybookkeeper/api-client/types/property/Prope
 import { blankForm, fromProperty, isBlank, propertyChanges, propertyFormProblems, withClassification } from "@mybookkeeper/api-client/utils/propertyForm";
 import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { PROPERTY_FORM_MESSAGES as MESSAGES, PROPERTY_TYPE_SEGMENTS } from "../../constants/propertyForm";
 import { useSaveProperty } from "./useSaveProperty";
 
@@ -40,8 +40,8 @@ export default function PropertyFormScreen({ original }: { original: Property | 
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <>
+      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <FormField
           editable={!locked}
@@ -135,6 +135,6 @@ export default function PropertyFormScreen({ original }: { original: Property | 
         title={MESSAGES.chooseClassification}
         value={form.classification}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

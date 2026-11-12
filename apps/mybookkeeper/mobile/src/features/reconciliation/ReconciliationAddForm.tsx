@@ -7,7 +7,7 @@ import { Banner, FormField, LoadingButton, OptionSheet, useConfirmLeave, useThem
 import { Text } from "react-native";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { Alert, ScrollView } from "react-native";
 import { DOCUMENTS_LINK, ISSUER_MAX_LENGTH, RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import PickerField from "../transactions/PickerField";
 import { reportedAmountError, sourceTypeLabel } from "./reconciliationDisplay";
@@ -63,8 +63,9 @@ export default function ReconciliationAddForm({ year }: { year: number }) {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+    <>
       <ScrollView
+        automaticallyAdjustKeyboardInsets
         contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
@@ -98,6 +99,6 @@ export default function ReconciliationAddForm({ year }: { year: number }) {
         title={MESSAGES.type}
         value={sourceType}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }
