@@ -2,7 +2,8 @@
 
 The page always shows Blizzard's answer (through ``character_service``'s
 few-minute cache), exactly as before storing existed. Storing happens after a
-fresh fetch, a 404 or a failure, and never breaks the page: a database error
+fresh fetch, a 404 or a failure (a page served from the cache only keeps the
+character's guild watched), and never breaks the page: a database error
 there is logged with its traceback and the sheet is still returned.
 """
 from __future__ import annotations
@@ -25,8 +26,12 @@ async def _store_quietly(slug: str, write: Awaitable[None]) -> None:
         logger.exception("Character %s: storing the look-up failed (the page is still served)", slug)
 
 
-async def get_character(slug: str) -> CharacterResponse:
-    """Raises ``CharacterLookupError`` (status 404 = no character by that name)."""
+async def get_character(slug: str, *, viewed: bool = True) -> CharacterResponse:
+    """Raises ``CharacterLookupError`` (status 404 = no character by that name).
+
+    ``viewed`` is False for the scheduler's guild refresh: only a person's
+    look-up keeps a guild refreshed.
+    """
     try:
         fetch = await character_service.fetch_character(slug)
     except CharacterLookupError as exc:
@@ -36,7 +41,9 @@ async def get_character(slug: str) -> CharacterResponse:
             await _store_quietly(slug, character_store_service.record_failure(slug, exc.summary()))
         raise
     if fetch.fresh:
-        await _store_quietly(slug, character_store_service.record(fetch))
+        await _store_quietly(slug, character_store_service.record(fetch, viewed=viewed))
+    elif viewed:
+        await _store_quietly(slug, character_store_service.record_view(fetch))
     return fetch.response
 
 

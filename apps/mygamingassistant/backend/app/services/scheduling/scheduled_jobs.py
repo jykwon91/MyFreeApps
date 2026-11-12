@@ -15,6 +15,7 @@ from app.repositories.game.source_repo import list_sources
 from app.services.ingestion import ingestion_orchestrator
 from app.services.wow import raid_notification_worker
 from app.services.wow.character import character_store_service
+from app.services.wow.guild import guild_roster_service
 from app.services.wow.feature_requests import feature_retention_service
 from app.services.wow.prices import price_refresh_service
 from app.services.wow.server_status import server_status_history_service
@@ -126,6 +127,15 @@ async def run_purge_character_metrics() -> None:
     except Exception:
         # Retried on the next run; logged so a persistent failure is visible.
         logger.exception("scheduler_service: purge_wow_character_metrics: run failed")
+
+
+async def run_refresh_guild_rosters() -> None:
+    """Watched WoW Forever guilds: roster and every member's character."""
+    try:
+        await guild_roster_service.refresh_due()
+    except Exception:
+        # Retried on the next run; logged so a persistent failure is visible.
+        logger.exception("scheduler_service: refresh_wow_guild_rosters: run failed")
 
 
 async def run_purge_feature_submissions() -> None:

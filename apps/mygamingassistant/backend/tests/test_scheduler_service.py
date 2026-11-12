@@ -25,6 +25,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.core.scheduler_constants import (
     JOB_CLEANUP_DOWNLOADS,
     JOB_PURGE_CHARACTER_METRICS,
+    JOB_REFRESH_GUILD_ROSTERS,
     JOB_PURGE_FEATURE_SUBMISSIONS,
     JOB_PURGE_SERVER_STATUS,
     JOB_RAID_NOTIFICATIONS,
@@ -50,11 +51,13 @@ _JOB_BODIES = (
     "run_record_server_status",
     "run_purge_server_status_history",
     "run_purge_character_metrics",
+    "run_refresh_guild_rosters",
     "run_purge_feature_submissions",
     "run_cleanup_downloads",
 )
-_PURGES = {JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS, JOB_PURGE_CHARACTER_METRICS}
-_ALL_JOBS = _PURGES | {
+# The jobs with no switch.
+_ALWAYS_ON = {JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS, JOB_PURGE_CHARACTER_METRICS, JOB_REFRESH_GUILD_ROSTERS}
+_ALL_JOBS = _ALWAYS_ON | {
     JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS, JOB_RAID_NOTIFICATIONS,
     JOB_REFRESH_WOW_PRICES, JOB_RECORD_SERVER_STATUS,
 }
@@ -113,20 +116,20 @@ async def test_every_switch_on_registers_every_job() -> None:
 @pytest.mark.asyncio
 async def test_retention_purges_run_with_every_switch_off() -> None:
     _start(source_jobs=False, price_refresh=False, server_status_recording=False, raid_notifications=True)
-    assert _job_ids() == _PURGES
+    assert _job_ids() == _ALWAYS_ON
 
 
 @pytest.mark.asyncio
 async def test_serve_only_prod_keeps_prices_and_server_status() -> None:
     # SCHEDULER_ENABLED=false must stop neither the prices nor the history.
     _start(source_jobs=False, raid_notifications=True)
-    assert _job_ids() == _PURGES | {JOB_REFRESH_WOW_PRICES, JOB_RECORD_SERVER_STATUS}
+    assert _job_ids() == _ALWAYS_ON | {JOB_REFRESH_WOW_PRICES, JOB_RECORD_SERVER_STATUS}
 
 
 @pytest.mark.asyncio
 async def test_source_jobs_run_without_the_price_refresh() -> None:
     _start(price_refresh=False, server_status_recording=False, raid_notifications=True)
-    assert _job_ids() == _PURGES | {JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS, JOB_RAID_NOTIFICATIONS}
+    assert _job_ids() == _ALWAYS_ON | {JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS, JOB_RAID_NOTIFICATIONS}
 
 
 @pytest.mark.asyncio
@@ -151,6 +154,7 @@ async def test_raid_notifications_only_when_discord_is_on() -> None:
         (JOB_PURGE_FEATURE_SUBMISSIONS, timedelta(hours=24), 3600),
         (JOB_PURGE_SERVER_STATUS, timedelta(hours=24), 3600),
         (JOB_PURGE_CHARACTER_METRICS, timedelta(hours=24), 3600),
+        (JOB_REFRESH_GUILD_ROSTERS, timedelta(minutes=30), 1800),
     ],
 )
 async def test_each_job_runs_on_its_interval_once_at_a_time(
@@ -217,7 +221,7 @@ async def test_a_shortened_interval_caps_the_resumed_run() -> None:
 async def test_snapshot_lists_every_job_by_id() -> None:
     _start(source_jobs=False, price_refresh=False)
     snapshots = snapshot_jobs()
-    assert [s.job_id for s in snapshots] == sorted([*_PURGES, JOB_RECORD_SERVER_STATUS])
+    assert [s.job_id for s in snapshots] == sorted([*_ALWAYS_ON, JOB_RECORD_SERVER_STATUS])
     for snapshot in snapshots:
         assert snapshot.trigger.startswith("interval[")
         assert snapshot.next_run_at is not None
@@ -241,7 +245,7 @@ async def test_run_now_actually_runs_the_job(fake_job_bodies: dict[str, AsyncMoc
     later = datetime.now(timezone.utc) + timedelta(hours=10)
     _start(
         source_jobs=False, server_status_recording=False,
-        resume_from={JOB_REFRESH_WOW_PRICES: later, **{p: later for p in _PURGES}},
+        resume_from={JOB_REFRESH_WOW_PRICES: later, **{p: later for p in _ALWAYS_ON}},
     )
     body = fake_job_bodies["run_refresh_wow_prices"]
     assert body.await_count == 0
@@ -267,7 +271,7 @@ async def test_run_now_leaves_a_running_job_alone(fake_job_bodies: dict[str, Asy
     later = datetime.now(timezone.utc) + timedelta(hours=10)
     scheduler = _start(
         source_jobs=False, server_status_recording=False,
-        resume_from={p: later for p in _PURGES},
+        resume_from={p: later for p in _ALWAYS_ON},
     )
     for _ in range(100):
         if JOB_REFRESH_WOW_PRICES in running_job_ids():

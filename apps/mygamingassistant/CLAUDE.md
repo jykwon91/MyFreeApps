@@ -1043,6 +1043,33 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     `last_error`. A storage error is logged and never breaks the page.
   - `purge_wow_character_metrics` (daily, always on): rows older than 400 days,
     each character's newest kept. Tests: `tests/test_wow_character_store.py`.
+  - Guild + recipes (migration 0055): each store upserts the profile's guild
+    (`wow_guild`, keyed by Blizzard's guild id, slug unique among live) and sets
+    `wow_character.guild_id` (`guild_rank` kept only while the guild is the
+    same); recipes go to `wow_recipe` (id + name, shared) + `wow_character_recipe`
+    (replaced only when Blizzard sent the professions).
+- Guild roster refresh (`services/wow/guild/guild_roster_service.py`, job
+  `refresh_wow_guild_rosters`, every 30 min, always on): a guild is WATCHED
+  while a person looked up a member within 14 days (`last_viewed_at`, set only
+  by `get_character(viewed=True)` — the job's own look-ups pass `viewed=False`,
+  so a member moving to another guild never starts watching it; a page
+  look-up served from the cache still stamps it via `record_view`). Up to 5
+  due guilds per run (roster older than 6 h, never-asked first): Blizzard
+  `/data/wow/guild/{slug}` + `/roster` (namespace `profile-forever-us`, no
+  realm), then the members NOT refreshed in the last 6 h through
+  `character_lookup_service` 4 at a time, at most 200 member fetches per run
+  across guilds (`GUILD_ROSTER_MAX_MEMBER_FETCHES_PER_RUN`; ~11 Blizzard calls
+  each, quota shared with AH prices and page look-ups — a big guild finishes
+  over later refreshes), then one transaction: member count (entries listed)
+  + `character_repo.apply_roster` (members = exactly the roster by Blizzard
+  id, with rank — an entry with an unusable slug keeps its member, just isn't
+  fetched; members not stored because their profile 404s are skipped).
+  Two 404s in a row (`GUILD_NOT_FOUND_ERROR` in `last_error`) or the name given
+  to another guild → guild gone, members guildless; other failures, or a
+  roster under half readable → `last_error`, roster kept. A guild raising
+  unexpectedly is recorded and the run goes on; a 429 ends the run.
+  Live: topdeadcenter = 52 on the roster, ~40 profiles answer, ~18 s per run.
+  Tests: `tests/test_wow_guild_roster.py`.
 - Frontend: `pages/WowCharacterPage.tsx`, `components/character/`,
   `lib/character/`. Names are remembered per browser only after a successful
   load (`mga.wowForever.character.v1`, 5 max); `/wow-forever/character`
