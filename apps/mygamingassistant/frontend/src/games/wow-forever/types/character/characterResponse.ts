@@ -1,4 +1,5 @@
 import type { CharacterItem } from "@/games/wow-forever/types/character/characterItem";
+import type { CharacterCollections } from "@/games/wow-forever/types/character/characterCollections";
 import type { CharacterProfessions } from "@/games/wow-forever/types/character/characterProfessions";
 import type { CharacterPvp } from "@/games/wow-forever/types/character/characterPvp";
 import type { CharacterReputation } from "@/games/wow-forever/types/character/characterReputation";
@@ -34,4 +35,6 @@ export interface CharacterResponse {
   reputations: CharacterReputation[] | null;
   /** Null when Blizzard failed to send the PvP summary; the rest of the sheet still shows. */
   pvp: CharacterPvp | null;
+  /** Mounts and pets; each list null when Blizzard failed to send it. */
+  collections: CharacterCollections;
 }

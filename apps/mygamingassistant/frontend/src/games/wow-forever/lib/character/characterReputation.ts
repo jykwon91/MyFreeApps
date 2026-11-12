@@ -9,6 +9,7 @@ import {
   STANDING_TONES,
   STEAMWHEEDLE_GROUP_ID,
 } from "@/games/wow-forever/data/character/characterReputationConfig";
+import { formatCount } from "@/games/wow-forever/lib/character/formatCount";
 import { formatWhole } from "@/games/wow-forever/lib/character/formatWhole";
 import type { CharacterReputation } from "@/games/wow-forever/types/character/characterReputation";
 import type { CharacterReputationGroup } from "@/games/wow-forever/types/character/characterReputationGroup";
@@ -98,6 +99,5 @@ export function guardsAttack(groupId: number, tier: number): boolean {
 
 /** "4 factions" / "1 faction". */
 export function formatFactionCount(count: number): string {
-  const noun = count === 1 ? "faction" : "factions";
-  return `${count} ${noun}`;
+  return formatCount(count, "faction", "factions");
 }

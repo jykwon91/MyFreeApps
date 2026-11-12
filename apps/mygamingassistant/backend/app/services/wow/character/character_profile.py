@@ -19,3 +19,7 @@ class CharacterProfile:
     pvp_summary: dict[str, Any] | None
     # None when Blizzard failed on /achievements/statistics; {} when it has none yet.
     achievement_statistics: dict[str, Any] | None
+    # None when Blizzard failed on /collections/mounts; {} when the character has none.
+    mounts: dict[str, Any] | None
+    # None when Blizzard failed on /collections/pets; {} when the character has none.
+    pets: dict[str, Any] | None
