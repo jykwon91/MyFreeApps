@@ -1,10 +1,10 @@
 import { useEffect, useMemo, type ReactNode } from "react";
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
-import CharacterRowSkeletons from "@/games/wow-forever/components/character/CharacterRowSkeletons";
 import GuildFactionPicker from "@/games/wow-forever/components/guild/GuildFactionPicker";
 import GuildLeaderboardList from "@/games/wow-forever/components/guild/GuildLeaderboardList";
+import GuildPodiumSkeleton from "@/games/wow-forever/components/guild/GuildPodiumSkeleton";
 import { useGetGuildReputationsQuery } from "@/games/wow-forever/api/wowGuildApi";
-import { LEADERBOARD_COPY, LEADERBOARD_SKELETON_ROWS } from "@/games/wow-forever/data/guild/leaderboardConfig";
+import { LEADERBOARD_COPY } from "@/games/wow-forever/data/guild/leaderboardConfig";
 import { useFactionParam } from "@/games/wow-forever/hooks/useFactionParam";
 import { topEntries, viewerIsUnranked } from "@/games/wow-forever/lib/guild/guildLeaderboards";
 import { factionUnrankedNote, rankStandings, standingStatus } from "@/games/wow-forever/lib/guild/guildStandings";
@@ -49,7 +49,7 @@ export default function GuildFactionBoard({ slug, members, board, me, picker }: 
       </div>
       {data === undefined && !isError ? (
         <div aria-hidden data-testid="guild-faction-skeleton">
-          <CharacterRowSkeletons count={LEADERBOARD_SKELETON_ROWS} height="h-[54px]" />
+          <GuildPodiumSkeleton />
         </div>
       ) : null}
       {isError ? <LoadErrorRetry message={LEADERBOARD_COPY.faction.problem} onRetry={refetch} retrying={isFetching} /> : null}
@@ -66,6 +66,7 @@ export default function GuildFactionBoard({ slug, members, board, me, picker }: 
             empty={LEADERBOARD_COPY.faction.empty}
             me={me}
             viewerNote={viewerUnranked ? LEADERBOARD_COPY.faction.viewerUnranked(chosen.name) : null}
+            showBar={board.showBar}
           />
           {unranked > 0 ? (
             <p className="text-xs text-muted-foreground">{factionUnrankedNote(unranked, chosen.name)}</p>
