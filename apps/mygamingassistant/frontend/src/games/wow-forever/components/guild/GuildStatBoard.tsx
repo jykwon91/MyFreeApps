@@ -53,6 +53,7 @@ export default function GuildStatBoard({ members, board, me, gainsWindowDays, pi
         empty={gains ? LEADERBOARD_COPY.gains.empty : LEADERBOARD_COPY.other.empty(board.label)}
         me={me}
         viewerNote={viewerUnranked ? copy.viewerUnranked : null}
+        showBar={board.showBar}
       />
       {noGain > 0 ? (
         <p className="text-xs text-muted-foreground">

@@ -11,8 +11,15 @@ export const LEADERBOARD_PARAMS = { board: "board", me: "me", faction: "faction"
 export const LEADERBOARD_TOP = 10;
 /** …unless the tie is this big (the level board once most are 60): then just the first 10, and "Show all". */
 export const LEADERBOARD_TIE_LIMIT = 20;
-/** Rows of the leaderboard skeleton. */
-export const LEADERBOARD_SKELETON_ROWS = 5;
+/** Rows under the skeleton podium (a top 10 is three cards and seven rows). */
+export const LEADERBOARD_SKELETON_ROWS = 7;
+/** Category chips in the page skeleton (Character, PvP, Reputation, This week, Professions). */
+export const LEADERBOARD_SKELETON_CHIPS = 5;
+/** The podium: members ranked this high or better, at most this many cards. */
+export const LEADERBOARD_PODIUM_RANK = 3;
+export const LEADERBOARD_PODIUM_SIZE = 3;
+/** The shortest bar, so a small number still shows one. */
+export const LEADERBOARD_BAR_MIN_PERCENT = 2;
 
 export const LEADERBOARD_SOURCE_KIND = { stat: "stat", gain: "gain", profession: "profession", faction: "faction" } as const;
 
@@ -72,7 +79,8 @@ const GROUP_THIS_WEEK = "This week";
 
 function stat(id: string, label: string, group: string, field: GuildStatField, extra?: Partial<LeaderboardBoard>): LeaderboardBoard {
   return {
-    id, label, group, source: { kind: LEADERBOARD_SOURCE_KIND.stat, field }, ascending: false, maxLevelOnly: false, ...extra,
+    id, label, group, source: { kind: LEADERBOARD_SOURCE_KIND.stat, field }, ascending: false, maxLevelOnly: false,
+    showBar: !extra?.ascending, ...extra,
   };
 }
 
@@ -97,12 +105,14 @@ const STAT_BOARDS: readonly LeaderboardBoard[] = [
     source: { kind: LEADERBOARD_SOURCE_KIND.faction },
     ascending: false,
     maxLevelOnly: false,
+    showBar: false,
   },
 ];
 
 function gain(id: string, label: string, field: GuildGainField): LeaderboardBoard {
   return {
     id, label, group: GROUP_THIS_WEEK, source: { kind: LEADERBOARD_SOURCE_KIND.gain, field }, ascending: false, maxLevelOnly: false,
+    showBar: true,
   };
 }
 
@@ -122,6 +132,7 @@ const PROFESSION_BOARDS: readonly LeaderboardBoard[] = PROFESSION_GROUPS.flatMap
     source: { kind: LEADERBOARD_SOURCE_KIND.profession, professionId: PROFESSION_SKILL_LINES[option.id] },
     ascending: false,
     maxLevelOnly: false,
+    showBar: true,
   })),
 );
 

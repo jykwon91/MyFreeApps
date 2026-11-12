@@ -12,4 +12,6 @@ export interface LeaderboardBoard {
   ascending: boolean;
   /** Only characters at the level cap are ranked (a fresh alt would top "fewest deaths"). */
   maxLevelOnly: boolean;
+  /** Rows show a bar against the leader's number: off for fewest-first boards and standings (a tier score). */
+  showBar: boolean;
 }

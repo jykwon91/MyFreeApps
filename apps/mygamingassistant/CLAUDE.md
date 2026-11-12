@@ -1121,6 +1121,19 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `data`, which is still the last faction's answer while loading). Ranked by
   tier, then value (`standingScore`); the row shows the tier name with
   "value / max" underneath.
+- Guild leaderboard look (`GuildLeaderboardList`): one `<ol>` in rank order —
+  `splitPodium` puts the leading entries ranked 1-3 (by rank, never position;
+  capped at 3 cards) on podium cards, the rest are rows. On `sm+` the list is a
+  3-column `grid-flow-row-dense` grid: card 1 at `col-start-2`, 2 left, 3 right
+  (`PODIUM_SLOTS`), rows `col-span-3`; on a phone it stacks 1-2-3. Medals:
+  `GuildRankMedal` (sr-only "2nd place (tied)"). Names use `CLASS_COLORS` via
+  CSS vars (`memberClassStyle` + `CLASS_NAME_TEXT`); light values are darkened
+  for 4.5:1 on white. Bars (`barPercent`, value / leader) only on boards with
+  `showBar` (off for fewest-first and faction standings). The picker is
+  category chips (`aria-pressed`; a chip picks its group's first board) plus
+  "Rank members by" listing only that group. This app's colour utilities are
+  hand-written in `src/index.css`: `ring-primary`, `bg-primary/10`,
+  `bg-muted/40` are NO-OPS — use `ring-[hsl(var(--primary))]` style values.
 - Guild recipe search ("Who can craft this?", above the leaderboards,
   `GuildRecipeSearch`): `GET /wow/guilds/{slug}/recipes?q=` — a server-side
   ILIKE (LIKE wildcards escaped) over `wow_recipe.name`, limited to recipes a

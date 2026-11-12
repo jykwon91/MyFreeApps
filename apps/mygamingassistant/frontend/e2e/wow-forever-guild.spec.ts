@@ -17,7 +17,7 @@
  *
  * Run: npm run test:e2e -- wow-forever-guild
  */
-import { test, expect, type Page, type Route } from "@playwright/test";
+import { test, expect, type Locator, type Page, type Route } from "@playwright/test";
 
 const GUILD_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+$/.test(url.pathname);
 const RECIPES_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+\/recipes$/.test(url.pathname);
@@ -161,7 +161,11 @@ test("skeleton while loading, then the member list in the same place", async ({ 
   await expect(skeleton).toBeVisible();
   await expect(page.getByTestId("guild-recipe-search-skeleton")).toBeVisible();
   await expect(page.getByTestId("guild-leaderboard-skeleton")).toBeVisible();
+  await expect(page.getByTestId("guild-podium-skeleton")).toBeVisible();
   const skeletonBox = await skeleton.boundingBox();
+  const podiumHeights = async (cards: Locator) =>
+    cards.evaluateAll((els) => els.slice(0, 2).map((e) => e.getBoundingClientRect().height));
+  const skeletonCards = await podiumHeights(page.getByTestId("guild-podium-skeleton").locator(":scope > div:first-child > div"));
 
   release();
   await expect(skeleton).toHaveCount(0);
@@ -171,6 +175,9 @@ test("skeleton while loading, then the member list in the same place", async ({ 
   expect(Math.abs((summaryBox?.x ?? 0) - (skeletonBox?.x ?? 0))).toBeLessThan(2);
   await expect(memberNames(page)).toHaveCount(3);
   await expect(page.getByRole("region", { name: "Leaderboards" })).toBeVisible();
+  // The podium skeleton is the loaded podium's size, so the board doesn't jump when it arrives.
+  const loadedCards = await podiumHeights(page.getByRole("list", { name: "Level leaderboard" }).locator("li"));
+  loadedCards.forEach((height, i) => expect(Math.abs(height - skeletonCards[i])).toBeLessThan(4));
   await expect(page.getByRole("region", { name: "Who can craft this?" })).toBeVisible();
 });
 
@@ -190,6 +197,8 @@ test("leaderboards: pick a board, ties share a rank, and the board survives Back
   await stubAll(page);
   await page.goto("/wow-forever/guild/topdeadcenter");
 
+  await page.getByRole("button", { name: "PvP" }).click();
+  await expect(page.getByRole("button", { name: "PvP" })).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel("Rank members by").selectOption("honorable-kills");
   await expect(page).toHaveURL(/board=honorable-kills/);
   const rows = page.getByRole("list", { name: "Honorable kills leaderboard" }).locator("li");
@@ -200,6 +209,7 @@ test("leaderboards: pick a board, ties share a rank, and the board survives Back
   await expect(rows.nth(1)).toContainText(/^2.*Big Sue/);
   await expect(rows.nth(2)).toContainText(/^2.*Jason Kwon/);
 
+  await page.getByRole("button", { name: "Professions" }).click();
   await page.getByLabel("Rank members by").selectOption("prof-tailoring");
   const tailors = page.getByRole("list", { name: "Tailoring leaderboard" }).locator("li");
   await expect(tailors).toHaveCount(1);
@@ -209,6 +219,41 @@ test("leaderboards: pick a board, ties share a rank, and the board survives Back
   await expect(page).toHaveURL(/\/wow-forever\/character\/jason-kwon$/);
   await page.goBack();
   await expect(page.getByLabel("Rank members by")).toHaveValue("prof-tailoring");
+});
+
+test("leaderboards look like a game's: a podium with 1st in the middle, medals, class colours; stacked on a phone", async ({ page }) => {
+  await stubAll(page);
+  await page.goto("/wow-forever/guild/topdeadcenter?board=honorable-kills");
+
+  const board = page.getByRole("list", { name: "Honorable kills leaderboard" });
+  const cards = board.locator("li");
+  await expect(cards).toHaveCount(3);
+  // Reading order stays 1st, 2nd, 2nd; screen readers hear the place.
+  await expect(cards.nth(0)).toContainText("1st place");
+  await expect(cards.nth(1)).toContainText("2nd place (tied)");
+  const [first, second, third] = await Promise.all([0, 1, 2].map((i) => cards.nth(i).boundingBox()));
+  // Wide screens: 1st stands in the middle, taller than the cards beside it.
+  expect(second!.x).toBeLessThan(first!.x);
+  expect(first!.x).toBeLessThan(third!.x);
+  expect(first!.height).toBeGreaterThan(second!.height);
+  // Names wear their class colour (Tiny John is a Mage).
+  const mageName = cards.nth(0).getByRole("link", { name: "Tiny John" });
+  await expect(mageName).not.toHaveCSS("color", await page.locator("body").evaluate((b) => getComputedStyle(b).color));
+
+  // Picking a category picks its first board.
+  await page.getByRole("button", { name: "Reputation" }).click();
+  await expect(page).toHaveURL(/board=exalted/);
+  await expect(page.getByLabel("Rank members by")).toHaveValue("exalted");
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.getByRole("button", { name: "PvP" }).click();
+  const stacked = await Promise.all([0, 1, 2].map((i) => cards.nth(i).boundingBox()));
+  // A phone: one column, in rank order.
+  expect(stacked[0]!.y).toBeLessThan(stacked[1]!.y);
+  expect(stacked[1]!.y).toBeLessThan(stacked[2]!.y);
+  expect(Math.abs(stacked[0]!.x - stacked[1]!.x)).toBeLessThan(2);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
 });
 
 function gainsGuild() {
@@ -232,6 +277,7 @@ test("gains board: who gained what since when, who isn't ranked and why, on a ph
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/wow-forever/guild/topdeadcenter?me=big-sue");
 
+  await page.getByRole("button", { name: "This week" }).click();
   await page.getByLabel("Rank members by").selectOption("honorable-kills-gained");
   await expect(page).toHaveURL(/board=honorable-kills-gained/);
   const rows = page.getByRole("list", { name: "Honorable kills gained leaderboard" }).locator("li");
