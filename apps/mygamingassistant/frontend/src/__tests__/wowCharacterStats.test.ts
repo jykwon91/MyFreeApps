@@ -65,15 +65,19 @@ describe("stat lines", () => {
     expect(labels(tabLines(STATS, "ranged"))).not.toContain("Ranged damage");
   });
 
-  it("shows spell penetration only when gear gives some", () => {
-    expect(labels(tabLines(STATS, "spell"))).toContain("Spell penetration");
+  it("shows spell penetration only when gear gives some, and mana regen only for mana users", () => {
+    const spell = labels(tabLines(STATS, "spell"));
+    expect(spell).toContain("Spell penetration");
+    expect(spell).not.toContain("Mana regen (per 5 sec)");
+    expect(labels(tabLines({ ...STATS, power_type: "Mana" }, "spell"))).toContain("Mana regen while casting");
   });
 
   it("names the class's power and shows run speed only when it isn't normal", () => {
     const summary = summaryLines(STATS);
     expect(summary[1]).toMatchObject({ label: "Rage", value: "100" });
     expect(summary[summary.length - 1]).toMatchObject({ label: "Run speed", value: "108%" });
-    expect(summary[2]).toMatchObject({ label: "Armor", value: "900", bonus: "+780" });
+    expect(labels(summary)).not.toContain("Armor");
+    expect(tabLines(STATS, "defenses")[0]).toMatchObject({ label: "Armor", value: "900", bonus: "+780" });
   });
 });
 

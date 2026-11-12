@@ -272,6 +272,7 @@ describe("the stats panel", () => {
     expect(within(attributes).getByText("92")).toBeInTheDocument();
     expect(within(attributes).getByText(/\+18/)).toHaveTextContent("(+18 from gear, talents and buffs)");
     expect(within(panel).getByLabelText("Summary")).toHaveTextContent("Mana1,295");
+    expect(within(panel).getByLabelText("Summary")).not.toHaveTextContent("Armor");
     expect(within(panel).queryByText("Run speed")).not.toBeInTheDocument();
     expect(within(panel).getByLabelText("Resistances")).toHaveTextContent("Shadow10");
   });
@@ -285,6 +286,19 @@ describe("the stats panel", () => {
     expect(melee).toHaveTextContent("Main hand DPS19.9");
     expect(melee).not.toHaveTextContent("Off hand");
     expect(JSON.parse(window.localStorage.getItem(CHARACTER_STATS_TAB_STORAGE_KEY) ?? "null")).toBe("melee");
+  });
+
+  it("moves between tabs with the arrow keys", () => {
+    mockQuery.mockReturnValue(query({ data: CHARACTER }));
+    renderAt("/wow-forever/character/jason-kwon");
+    const spell = screen.getByRole("tab", { name: "Spell" });
+    fireEvent.keyDown(spell, { key: "ArrowRight" });
+    expect(screen.getByRole("tab", { name: "Defenses" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Defenses" })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Defenses" }), { key: "ArrowRight" });
+    expect(screen.getByRole("tab", { name: "Melee" })).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Melee" }), { key: "End" });
+    expect(screen.getByRole("tab", { name: "Defenses" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("opens a hunter on Ranged and a warrior on Melee", () => {

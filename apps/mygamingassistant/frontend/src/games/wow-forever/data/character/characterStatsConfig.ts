@@ -23,6 +23,9 @@ export const CHARACTER_STATS_CLASS_TAB: Readonly<Partial<Record<WowClassId, Char
 
 export const CHARACTER_STATS_DEFAULT_TAB: CharacterStatsTab = "melee";
 
+/** Blizzard's power type for classes whose Spell tab shows mana regen. */
+export const MANA_POWER_TYPE = "Mana";
+
 /** Run speed with no speed bonus, as Blizzard reports it. */
 export const NORMAL_MOVEMENT_SPEED = 100;
 

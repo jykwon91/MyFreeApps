@@ -1022,7 +1022,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   in the mapper. Weapon damage only for a hand that holds a weapon (Blizzard
   reports an unarmed off hand behind a two-hander). Green "+N" = effective −
   base (gear, talents, buffs). Haste, expertise, penetration show only when
-  non-zero; run speed only when not 100%. Tab default by class (casters Spell,
+  non-zero; run speed only when not 100%; mana regen only for mana users.
+  Armor/Defense live in the Defenses tab only. A failed `/statistics` call
+  gives `stats: null` (logged, not cached) instead of failing the sheet. Tab default by class (casters Spell,
   hunter Ranged, else Melee); a picked tab is remembered
   (`mga.wowForever.character.statsTab.v1`). `stats: null` = Blizzard has none
   yet. Tests:

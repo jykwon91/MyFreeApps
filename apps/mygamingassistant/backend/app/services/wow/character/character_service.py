@@ -4,12 +4,17 @@ One cached entry per character holds Blizzard's raw answers; the cropped
 render is cached beside it. Both expire after ``CHARACTER_CACHE_SECONDS``, so a
 player who logs out with new gear sees it within minutes, and a page that
 loads the sheet and the picture asks Blizzard once.
+
+Stats are the one optional part: if Blizzard fails on ``/statistics`` the
+sheet still shows (``stats: null``), the failure is logged, and the answer is
+not cached so the next look-up asks again.
 """
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from app.core.config import settings
 from app.core.wow_character import (
@@ -20,11 +25,14 @@ from app.core.wow_character import (
 from app.schemas.wow.character.character_response import CharacterResponse
 from app.services.wow.blizzard.blizzard_token_cache import BlizzardTokenCache
 from app.services.wow.character.blizzard_character_client import BlizzardCharacterClient
+from app.services.wow.character.character_lookup_error import CharacterLookupError
 from app.services.wow.character.character_mapper import render_url, to_character_response
 from app.services.wow.character.character_profile import CharacterProfile
 from app.services.wow.character.character_render_crop import crop_render
 
 T = TypeVar("T")
+
+logger = logging.getLogger(__name__)
 
 _tokens = BlizzardTokenCache()
 _profiles: dict[str, tuple[CharacterProfile, float]] = {}
@@ -52,17 +60,27 @@ def _store(cache: dict[str, tuple[T, float]], slug: str, value: T, max_entries: 
     cache[slug] = (value, time.monotonic())
 
 
+async def _statistics(client: BlizzardCharacterClient, slug: str) -> tuple[dict[str, Any] | None, bool]:
+    """The character's statistics, and whether Blizzard answered (a failure must not blank the sheet)."""
+    try:
+        return await client.statistics(slug), True
+    except CharacterLookupError as exc:
+        logger.warning("Character statistics unavailable for %s: status=%s %s", slug, exc.status_code, exc)
+        return None, False
+
+
 async def _profile(slug: str) -> CharacterProfile:
     cached = _fresh(_profiles, slug)
     if cached is not None:
         return cached
     async with _new_client() as client:
         profile = await client.profile(slug)
-        media, equipment, statistics = await asyncio.gather(
-            client.media(slug), client.equipment(slug), client.statistics(slug),
+        media, equipment, (statistics, answered) = await asyncio.gather(
+            client.media(slug), client.equipment(slug), _statistics(client, slug),
         )
     data = CharacterProfile(profile=profile, media=media, equipment=equipment, statistics=statistics)
-    _store(_profiles, slug, data, CHARACTER_CACHE_MAX_ENTRIES)
+    if answered:
+        _store(_profiles, slug, data, CHARACTER_CACHE_MAX_ENTRIES)
     return data
 
 

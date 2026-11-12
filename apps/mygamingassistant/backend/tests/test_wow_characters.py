@@ -302,6 +302,8 @@ def test_the_stats_are_blizzards_totals_without_retail_leftovers() -> None:
     assert stats.spell.crit == pytest.approx(4.9376) and stats.spell.power == 81 and stats.spell.healing == 102
     assert stats.spell.mana_regen_casting == 0.0
     assert (stats.defenses.armor.effective, stats.defenses.defense.effective) == (364, 172)
+    assert stats.defenses.armor.base == 0  # all of it from gear: a real 0 base is kept, not replaced
+    assert stats.spirit.base == 70
     assert stats.resistances.shadow == 10 and stats.resistances.arcane == 0
     assert stats.ranged.damage is not None and stats.ranged.damage.max == 57.0  # the wand is in the ranged slot
     assert not {"mastery", "versatility", "lifesteal", "avoidance"} & set(stats.model_dump())
@@ -352,6 +354,21 @@ async def test_a_render_the_render_host_doesnt_have_is_no_picture(monkeypatch: p
 
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(handle))
     assert await character_service.get_character_render("jason-kwon") is None
+
+
+async def test_a_statistics_failure_still_shows_the_sheet_and_is_not_cached(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    seen: list[httpx.Request] = []
+    failing = {"/profile/wow/character/jason-kwon/statistics": _json({"code": 503}, 503)}
+    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
+    sheet = await character_service.get_character("jason-kwon")
+    assert sheet.stats is None
+    assert len(sheet.items) > 0
+    assert "Character statistics unavailable" in caplog.text
+    await character_service.get_character("jason-kwon")
+    profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
+    assert len(profile_calls) == 2
 
 
 async def test_the_sheet_and_render_ask_blizzard_once(monkeypatch: pytest.MonkeyPatch) -> None:

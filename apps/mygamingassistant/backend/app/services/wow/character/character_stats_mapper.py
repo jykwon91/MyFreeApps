@@ -37,7 +37,9 @@ def _percent(stats: dict[str, Any], key: str) -> float:
 def _value(stats: dict[str, Any], key: str) -> CharacterStatValue:
     raw = as_dict(stats.get(key))
     effective = as_int(raw.get("effective")) or 0
-    return CharacterStatValue(base=as_int(raw.get("base")) or effective, effective=effective)
+    base = as_int(raw.get("base"))
+    # A real base of 0 (armor is all from gear) must stay 0; only a missing base falls back.
+    return CharacterStatValue(base=effective if base is None else base, effective=effective)
 
 
 def _weapon_slots(equipment: dict[str, Any] | None) -> set[str]:

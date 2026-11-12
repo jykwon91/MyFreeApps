@@ -2,6 +2,7 @@ import {
   CHARACTER_STATS_CLASS_TAB,
   CHARACTER_STATS_DEFAULT_TAB,
   CHARACTER_STATS_TABS,
+  MANA_POWER_TYPE,
   NORMAL_MOVEMENT_SPEED,
 } from "@/games/wow-forever/data/character/characterStatsConfig";
 import { characterClassId } from "@/games/wow-forever/lib/character/characterClassId";
@@ -66,14 +67,9 @@ export function attributeLines(stats: CharacterStats): CharacterStatLine[] {
   ];
 }
 
-/** The always-shown summary: health, power, armor, defense, and run speed when it isn't normal. */
+/** The always-shown summary: health, power, and run speed when it isn't normal (armor lives in Defenses). */
 export function summaryLines(stats: CharacterStats): CharacterStatLine[] {
-  const lines = [
-    line("Health", formatWhole(stats.health)),
-    line(stats.power_type, formatWhole(stats.power)),
-    valueLine("Armor", stats.defenses.armor),
-    valueLine("Defense", stats.defenses.defense),
-  ];
+  const lines = [line("Health", formatWhole(stats.health)), line(stats.power_type, formatWhole(stats.power))];
   if (stats.movement_speed !== NORMAL_MOVEMENT_SPEED) {
     lines.push(line("Run speed", `${formatWhole(stats.movement_speed)}%`));
   }
@@ -104,6 +100,14 @@ function rangedLines(stats: CharacterStats): CharacterStatLine[] {
   ];
 }
 
+function manaRegenLines(stats: CharacterStats): CharacterStatLine[] {
+  if (stats.power_type !== MANA_POWER_TYPE) return [];
+  return [
+    line("Mana regen (per 5 sec)", formatWhole(stats.spell.mana_regen)),
+    line("Mana regen while casting", formatWhole(stats.spell.mana_regen_casting)),
+  ];
+}
+
 function spellLines(stats: CharacterStats): CharacterStatLine[] {
   const spell = stats.spell;
   return [
@@ -113,8 +117,7 @@ function spellLines(stats: CharacterStats): CharacterStatLine[] {
     line("Hit chance", formatPercent(spell.hit)),
     ...nonZero("Haste", spell.haste, formatPercent),
     ...nonZero("Spell penetration", spell.penetration, formatWhole),
-    line("Mana regen (per 5 sec)", formatWhole(spell.mana_regen)),
-    line("Mana regen while casting", formatWhole(spell.mana_regen_casting)),
+    ...manaRegenLines(stats),
   ];
 }
 

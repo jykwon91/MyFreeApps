@@ -2,8 +2,8 @@ import CharacterRowSkeletons from "@/games/wow-forever/components/character/Char
 
 const SIDE_ROWS = 8;
 const WEAPON_ROWS = 3;
-const STAT_ROWS = 9;
-const STAT_TAB_ROWS = 8;
+const STAT_ROWS = 7;
+const STAT_TAB_ROWS = 6;
 
 /** The character sheet's shape while Blizzard answers: header, picture between two slot columns, weapons. */
 export default function CharacterSheetSkeleton() {
@@ -36,6 +36,8 @@ export default function CharacterSheetSkeleton() {
             <CharacterRowSkeletons count={STAT_TAB_ROWS} height="h-11" />
           </div>
         </div>
+        <div className="h-[62px] rounded-xl bg-muted/40 animate-pulse" />
+        <div className="h-4 w-3/4 rounded-md bg-muted/40 animate-pulse" />
       </div>
     </div>
   );
