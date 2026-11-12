@@ -15,7 +15,7 @@ export default function TalentClassView({ classId }: { classId: WowClassId }) {
   return (
     <>
       <TalentCalculator key={classId} data={state.data} />
-      <TalentFootnote clientBuild={state.data.clientBuild} />
+      <TalentFootnote apiBuild={state.data.apiBuild} />
     </>
   );
 }

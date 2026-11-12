@@ -1,34 +1,44 @@
-"""Talent trees from the client's ``Talent`` and ``TalentTab`` rows (pure).
+"""Talent trees from Blizzard's Game Data API, and their Classic comparison (pure).
 
-A tree is a ``TalentTab`` (its ``ClassMask`` names the class, ``OrderIndex``
-its place left to right). A talent sits at ``TierID`` (row, 0-6) and
-``ColumnIndex`` (0-3); its ranks are the non-zero ``SpellRank_N`` spells and
-its prerequisites ``PrereqTalent_N`` at ``PrereqRank_N`` — 0-based, so 0 means
-"rank 1".
+The live server's trees are Blizzard's ``/data/wow/talent-tree/{tree}/
+playable-specialization/{spec}`` answers (``static-forever-us``): one per
+spec, each talent a node with ``display_row`` (1-7) and ``display_col``. A
+class's three trees share one column scale — the first tree's talents sit in
+columns 1-4, the second's in 7-10, the third's in 14-17 — so the band a tree's
+talents sit in is its place left to right, and ``display_col`` minus the
+band's first column is the talent's column in its tree. A node outside the
+7 x 4 grid (a stray copy Blizzard keeps at row 63 or column 170) isn't in the
+game's tree and is left out; the run reports it.
 
-A rank's text is its spell's tooltip, evaluated. The Forever server sends
-most rank spells only when a client asks for them, so many aren't in any
-file yet: those ranks are ``None``, never worked out from their neighbours
-(Forever's ranks don't step evenly — Natural Grace goes -30, -10, -15). The
-calculator shows Classic's text for them instead, badged as Classic data
-(``classic_fallback``).
+A node's ranks carry the talent (id, name) and the rank-1 spell (every rank
+names the same spell) with that rank's tooltip, numbers filled in by
+Blizzard. ``locked_by`` lists the nodes it needs — at their max rank, the
+Classic rule. A "requirement" on a lower row (Intimidation lists Bestial
+Wrath, the talent it unlocks) is the link read backwards and is dropped.
+
+The Classic comparison pairs a talent with the Classic Era talent whose rank-1
+spell it shares, else the one of its class with its name; a talent with
+neither is new in Forever.
 """
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
+from typing import Any
 
 from scripts.wow_food.tooltip import SpellBook, evaluate, unresolved_tokens
 
 Row = Mapping[str, str]
+Payload = Mapping[str, Any]
 
 MAX_RANKS = 9
-MAX_PREREQS = 3
 TIERS = 7
 COLUMNS = 4
-_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+")
-# Talent tab ClassMask bit -> the frontend's class id (``data/classes.ts``).
+# The first ``display_col`` of each of a class's trees, left to right.
+TREE_COLUMN_BASES = (1, 7, 14)
+_LINE_END = re.compile(r"[.!?:]$")
+# Talent tab ClassMask bit -> the frontend's class id (``data/classes.ts``), for the Classic Era client.
 CLASS_MASKS: dict[int, str] = {
     1: "warrior",
     2: "paladin",
@@ -40,6 +50,18 @@ CLASS_MASKS: dict[int, str] = {
     256: "warlock",
     1024: "druid",
 }
+# Blizzard's playable class id -> the frontend's class id.
+CLASS_IDS: dict[int, str] = {
+    1: "warrior",
+    2: "paladin",
+    3: "hunter",
+    4: "rogue",
+    5: "priest",
+    7: "shaman",
+    8: "mage",
+    9: "warlock",
+    11: "druid",
+}
 
 
 @dataclass(frozen=True)
@@ -49,40 +71,46 @@ class Talent:
     tier: int
     column: int
     icon: int
-    rank_spells: tuple[int, ...]
-    ranks: tuple[str | None, ...]
+    # The rank-1 spell: Blizzard names it on every rank.
+    spell: int
+    ranks: tuple[str, ...]
+    # ``(talent id, rank needed)``, the rank 1-based.
     prereqs: tuple[tuple[int, int], ...]
-    # True when no rank is in the Forever client yet, so the name is the Classic Era client's.
-    classic_name: bool = False
-
-
-@dataclass(frozen=True)
-class Fallback:
-    """The Classic Era client's names and icons, for talents with no rank in the Forever client.
-
-    ``icons`` should only hold icon files the Forever client uses too, so the
-    icon publish (which reads the Forever client) finds them.
-    """
-
-    names: Mapping[int, str] = field(default_factory=dict)
-    icons: Mapping[int, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
 class Tree:
+    # Blizzard's playable specialization id.
     id: int
     name: str
     icon: int
     talents: tuple[Talent, ...]
 
 
+@dataclass(frozen=True)
+class ClassicTalent:
+    """A Classic Era client talent: its name (the rank-1 spell's) and rank spells."""
+
+    name: str
+    rank_spells: tuple[int, ...]
+
+
+@dataclass
+class Comparison:
+    """A class's talents against Classic: Classic's text per changed rank, and the talents Classic has no match for."""
+
+    changes: dict[int, list[str | None]] = field(default_factory=dict)
+    new: set[int] = field(default_factory=set)
+
+
 @dataclass
 class Gaps:
-    """What the client data couldn't fill, for the run's report."""
+    """What the API data didn't fit, for the run's report."""
 
-    missing_ranks: int = 0
-    nameless: list[int] = field(default_factory=list)
-    unresolved: dict[int, list[str]] = field(default_factory=dict)
+    off_grid: list[str] = field(default_factory=list)
+    backward_prereqs: list[str] = field(default_factory=list)
+    lost_prereqs: list[str] = field(default_factory=list)
+    no_icon: list[str] = field(default_factory=list)
 
 
 def _int(value: str | None) -> int:
@@ -93,152 +121,143 @@ def _int(value: str | None) -> int:
 
 
 def rank_spells(row: Row) -> tuple[int, ...]:
-    """A talent's rank spells, rank 1 first."""
+    """A client ``Talent`` row's rank spells, rank 1 first."""
     spells = [_int(row.get(f"SpellRank_{i}")) for i in range(MAX_RANKS)]
     return tuple(s for s in spells if s)
 
 
-def prerequisites(row: Row) -> tuple[tuple[int, int], ...]:
-    """``(talent id, rank needed)`` pairs, the rank 1-based."""
-    pairs = []
-    for i in range(MAX_PREREQS):
-        talent = _int(row.get(f"PrereqTalent_{i}"))
-        if talent:
-            pairs.append((talent, _int(row.get(f"PrereqRank_{i}")) + 1))
-    return tuple(pairs)
+def rank_text(description: str) -> str:
+    """Blizzard's tooltip as one paragraph: its lines joined, a line without an ending getting a full stop.
 
-
-def tidy(text: str) -> str:
-    """A rank text as shown: a sentence with a token the evaluator couldn't fill is left out.
-
-    The few left (``$SPFR``, ``$proccooldown``) read values the client files
-    don't carry. Half a sentence ("can only happen once every sec.") would be
-    wrong, so the whole sentence goes; the run reports which ranks lost one.
+    ``"Requires Bear Form\\r\\nCharge an enemy."`` → ``"Requires Bear Form. Charge an enemy."``
     """
-    sentences = _SENTENCE_BREAK.split(re.sub(r"\s+", " ", text).strip())
-    return " ".join(s for s in sentences if not unresolved_tokens(s))
+    lines = [re.sub(r"\s+", " ", line).strip() for line in description.splitlines()]
+    lines = [line for line in lines if line]
+    return " ".join(line if _LINE_END.search(line) or i == len(lines) - 1 else f"{line}." for i, line in enumerate(lines))
 
 
-def rank_text(book: SpellBook, spell: int, gaps: Gaps | None = None) -> str | None:
-    """A rank spell's tooltip, or None when the spell isn't in the book."""
-    if spell not in book.descriptions:
+def _node_talent(node: Payload) -> Payload:
+    return node["ranks"][0]["tooltip"]["talent"]
+
+
+def node_spell(node: Payload) -> int:
+    return int(node["ranks"][0]["tooltip"]["spell_tooltip"]["spell"]["id"])
+
+
+def tree_spells(payloads: Iterable[Payload]) -> set[int]:
+    """Every talent's rank-1 spell across the spec trees, for the icon lookup."""
+    return {node_spell(n) for p in payloads for n in p["spec_talent_nodes"]}
+
+
+def tree_band(nodes: Sequence[Payload]) -> int:
+    """The tree's place in its class (0-2): the column band most of its talents sit in."""
+    counts = [
+        sum(1 for n in nodes if base <= int(n["display_col"]) < base + COLUMNS) for base in TREE_COLUMN_BASES
+    ]
+    return counts.index(max(counts))
+
+
+def _on_grid(node: Payload, base: int) -> bool:
+    return 1 <= int(node["display_row"]) <= TIERS and base <= int(node["display_col"]) < base + COLUMNS
+
+
+def spec_tree(payload: Payload, icons: Mapping[int, int], tree_icon: int, gaps: Gaps) -> tuple[str, int, Tree] | None:
+    """``(class id, place left to right, tree)`` for one spec answer; None for a class the site doesn't list."""
+    class_id = CLASS_IDS.get(int(payload["playable_class"]["id"]))
+    if class_id is None:
         return None
-    text = evaluate(book, spell, conditional_else=True)
-    left = unresolved_tokens(text)
-    if left and gaps is not None:
-        gaps.unresolved[spell] = left
-    return tidy(text)
+    name = payload["name"]
+    nodes = payload["spec_talent_nodes"]
+    band = tree_band(nodes)
+    base = TREE_COLUMN_BASES[band]
+    kept = []
+    for node in nodes:
+        if _on_grid(node, base):
+            kept.append(node)
+        else:
+            gaps.off_grid.append(
+                f"{class_id} {name}: {_node_talent(node)['name']} at row {node['display_row']}, column {node['display_col']}"
+            )
+    kept.sort(key=lambda n: (int(n["display_row"]), int(n["display_col"])))
+    by_node = {int(n["id"]): n for n in kept}
+    talents = []
+    for node in kept:
+        talent = _node_talent(node)
+        spell = node_spell(node)
+        prereqs = []
+        for required in node.get("locked_by") or []:
+            before = by_node.get(int(required))
+            if before is None:
+                gaps.lost_prereqs.append(f"{class_id} {name}: {talent['name']} needs node {required}, not on the grid")
+                continue
+            if int(before["display_row"]) > int(node["display_row"]):
+                gaps.backward_prereqs.append(f"{class_id} {name}: {talent['name']} -> {_node_talent(before)['name']}")
+                continue
+            prereqs.append((int(_node_talent(before)["id"]), len(before["ranks"])))
+        icon = icons.get(spell, 0)
+        if not icon:
+            gaps.no_icon.append(f"{class_id} {name}: {talent['name']} (spell {spell})")
+        talents.append(Talent(
+            id=int(talent["id"]),
+            name=talent["name"],
+            tier=int(node["display_row"]) - 1,
+            column=int(node["display_col"]) - base,
+            icon=icon,
+            spell=spell,
+            ranks=tuple(rank_text(r["tooltip"]["spell_tooltip"]["description"]) for r in node["ranks"]),
+            prereqs=tuple(prereqs),
+        ))
+    tree = Tree(id=int(payload["playable_specialization"]["id"]), name=name, icon=tree_icon, talents=tuple(talents))
+    return class_id, band, tree
 
 
 def build_trees(
-    tabs: Iterable[Row],
-    talents: Iterable[Row],
-    book: SpellBook,
+    payloads: Iterable[Payload],
     icons: Mapping[int, int],
+    tree_icons: Mapping[int, int],
     gaps: Gaps,
-    fallback: Fallback | None = None,
 ) -> dict[str, list[Tree]]:
-    """Class id -> its three trees, left to right, each talent in tier then column order."""
-    by_tab: dict[int, list[Row]] = {}
-    for row in talents:
-        by_tab.setdefault(_int(row["TabID"]), []).append(row)
+    """Class id -> its trees, left to right, each talent in tier then column order."""
     classes: dict[str, list[tuple[int, Tree]]] = {}
-    for tab in tabs:
-        class_id = CLASS_MASKS.get(_int(tab["ClassMask"]))
-        if class_id is None:
+    for payload in payloads:
+        spec = int(payload["playable_specialization"]["id"])
+        parsed = spec_tree(payload, icons, tree_icons.get(spec, 0), gaps)
+        if parsed is None:
             continue
-        rows = sorted(by_tab.get(_int(tab["ID"]), []), key=lambda r: (_int(r["TierID"]), _int(r["ColumnIndex"])))
-        tree = Tree(
-            id=_int(tab["ID"]),
-            name=tab["Name_lang"],
-            icon=_int(tab["SpellIconID"]),
-            talents=tuple(_talent(row, book, icons, gaps, fallback or Fallback()) for row in rows),
-        )
-        classes.setdefault(class_id, []).append((_int(tab["OrderIndex"]), tree))
+        class_id, band, tree = parsed
+        classes.setdefault(class_id, []).append((band, tree))
+    for class_id, trees in classes.items():
+        bands = [band for band, _ in trees]
+        if len(bands) != len(set(bands)):
+            names = ", ".join(f"{t.name} (band {b})" for b, t in trees)
+            raise ValueError(f"{class_id}: two trees sit in the same column band, so their order is unknown: {names}")
     return {cid: [t for _, t in sorted(trees, key=lambda p: p[0])] for cid, trees in sorted(classes.items())}
 
 
-def _first_name(spells: Iterable[int], names: Mapping[int, str]) -> str:
-    return next((names[s] for s in spells if names.get(s)), "")
-
-
-def _first_icon(spells: Iterable[int], icons: Mapping[int, int]) -> int:
-    return next((icons[s] for s in spells if icons.get(s)), 0)
-
-
-def _talent(row: Row, book: SpellBook, icons: Mapping[int, int], gaps: Gaps, fallback: Fallback) -> Talent:
-    spells = rank_spells(row)
-    ranks = tuple(rank_text(book, s, gaps) for s in spells)
-    gaps.missing_ranks += sum(1 for r in ranks if r is None)
-    # A talent's name and icon are its rank-1 spell's; when the server hasn't sent
-    # that one, any rank it has sent carries the same.
-    name = _first_name(spells, book.names)
-    icon = _first_icon(spells, icons)
-    talent_id = _int(row["ID"])
-    classic_name = not name
-    if classic_name:
-        gaps.nameless.append(talent_id)
-        name = _first_name(spells, fallback.names)
-        icon = icon or _first_icon(spells, fallback.icons)
-    return Talent(
-        id=talent_id,
-        name=name,
-        tier=_int(row["TierID"]),
-        column=_int(row["ColumnIndex"]),
-        icon=icon,
-        rank_spells=spells,
-        ranks=ranks,
-        prereqs=prerequisites(row),
-        classic_name=classic_name,
-    )
+def classic_talents(tabs: Iterable[Row], talents: Iterable[Row], names: Mapping[int, str]) -> dict[str, list[ClassicTalent]]:
+    """Class id -> the Classic Era client's talents, from its ``TalentTab`` / ``Talent`` rows."""
+    tab_class = {_int(t["ID"]): CLASS_MASKS.get(_int(t["ClassMask"])) for t in tabs}
+    out: dict[str, list[ClassicTalent]] = {}
+    for row in talents:
+        class_id = tab_class.get(_int(row["TabID"]))
+        spells = rank_spells(row)
+        if class_id is None or not spells:
+            continue
+        out.setdefault(class_id, []).append(ClassicTalent(names.get(spells[0], ""), spells))
+    return out
 
 
 def _normalised(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().lower()
 
 
-def classic_changes(trees: Iterable[Tree], classic: SpellBook, gaps: Gaps) -> dict[int, list[str | None]]:
-    """Talent id -> Classic's text per rank, for the talents whose Forever text differs.
-
-    A rank counts as changed only when both sides read in full (no token
-    left) and their texts still differ; a rank with no Forever text yet
-    can't be compared and isn't marked.
-    """
-    changes: dict[int, list[str | None]] = {}
-    for tree in trees:
-        for talent in tree.talents:
-            texts: list[str | None] = []
-            changed = False
-            for spell, forever in zip(talent.rank_spells, talent.ranks):
-                was = _classic_text(classic, spell)
-                full = forever is not None and spell not in gaps.unresolved
-                if full and was is not None and _normalised(forever or "") != _normalised(was):
-                    texts.append(was)
-                    changed = True
-                else:
-                    texts.append(None)
-            if changed:
-                changes[talent.id] = texts
-    return changes
-
-
-def classic_fallback(trees: Iterable[Tree], classic: SpellBook) -> dict[int, list[str | None]]:
-    """Talent id -> Classic's text for each rank the Forever client doesn't have yet.
-
-    Shown badged as Classic data in place of the missing rank — never a value
-    worked out from the Forever ranks around it. ``None`` for a rank Forever
-    has, or that Classic can't fill either.
-    """
-    fallback: dict[int, list[str | None]] = {}
-    for tree in trees:
-        for talent in tree.talents:
-            texts = [
-                (rank_text(classic, spell) or None) if forever is None else None
-                for spell, forever in zip(talent.rank_spells, talent.ranks)
-            ]
-            if any(texts):
-                fallback[talent.id] = texts
-    return fallback
+def match_classic(talent: Talent, candidates: Iterable[ClassicTalent]) -> ClassicTalent | None:
+    """The Classic talent sharing the rank-1 spell, else the one with the same name; None when Classic has neither."""
+    pool = list(candidates)
+    by_spell = next((c for c in pool if c.rank_spells[0] == talent.spell), None)
+    if by_spell is not None:
+        return by_spell
+    return next((c for c in pool if c.name and _normalised(c.name) == _normalised(talent.name)), None)
 
 
 def _classic_text(book: SpellBook, spell: int) -> str | None:
@@ -248,7 +267,30 @@ def _classic_text(book: SpellBook, spell: int) -> str | None:
     return None if unresolved_tokens(text) else re.sub(r"\s+", " ", text).strip()
 
 
-def tree_doc(tree: Tree) -> dict[str, object]:
+def compare_with_classic(trees: Iterable[Tree], candidates: Iterable[ClassicTalent], classic: SpellBook) -> Comparison:
+    """Each talent against its Classic match, rank for rank.
+
+    A rank counts as changed only when Classic's text reads in full (no
+    token left) and still differs; a rank Classic doesn't have isn't marked.
+    """
+    pool = list(candidates)
+    out = Comparison()
+    for tree in trees:
+        for talent in tree.talents:
+            match = match_classic(talent, pool)
+            if match is None:
+                out.new.add(talent.id)
+                continue
+            texts: list[str | None] = []
+            for i, forever in enumerate(talent.ranks):
+                was = _classic_text(classic, match.rank_spells[i]) if i < len(match.rank_spells) else None
+                texts.append(was if was is not None and _normalised(forever) != _normalised(was) else None)
+            if any(texts):
+                out.changes[talent.id] = texts
+    return out
+
+
+def tree_doc(tree: Tree, new: set[int]) -> dict[str, object]:
     return {
         "id": tree.id,
         "name": tree.name,
@@ -260,9 +302,10 @@ def tree_doc(tree: Tree) -> dict[str, object]:
                 "tier": t.tier,
                 "column": t.column,
                 "icon": t.icon,
+                "spell": t.spell,
                 "ranks": list(t.ranks),
                 "prereqs": [list(p) for p in t.prereqs],
-                **({"classicName": True} if t.classic_name else {}),
+                **({"newInForever": True} if t.id in new else {}),
             }
             for t in tree.talents
         ],

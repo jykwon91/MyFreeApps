@@ -101,7 +101,7 @@ test("a #spell- link scrolls to the spell with its ranks open; its links go to t
   );
   await expect(card(page, "Shadowburn").getByTestId("spell-talent-link")).toHaveAttribute(
     "href",
-    "/wow-forever/talents/warlock?talent=963",
+    "/wow-forever/talents/warlock?talent=135415",
   );
 
   // Other spells' ranks start closed and open on a tap.

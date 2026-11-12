@@ -60,6 +60,14 @@ and run it again. The game only caches items it has seen, so playing (opening
 vendors, loot, the auction house) is what fills the item list in. A generator failing stops the run: fix the cause or leave
 it for a person, and never hand-edit generated JSON.
 
+The talent calculator (`/wow-forever/talents`) comes from `scripts.wow_talents.build`. The
+trees are the live server's, read from Blizzard's Game Data API (`static-forever-us`), so
+the run needs `BLIZZARD_CLIENT_ID` / `BLIZZARD_CLIENT_SECRET` in `backend/.env`; `apply`
+stops before repinning if they're missing. The client's own Talent rows are the old Classic
+trees and aren't used. Icons come from the client's SpellMisc, else Blizzard's spell media,
+so a new talent can mean icons to publish. The run prints nodes outside the 7 x 4 grid and
+requirements read backwards; both are left out.
+
 The Changes vs Classic feed (`/wow-forever/changes`) comes from `scripts.wow_changes.build`,
 which runs after the talents: it diffs the Forever client against the Classic Era client
 (talents from the talent output, items from `items.json`, class spells, quests, zones and

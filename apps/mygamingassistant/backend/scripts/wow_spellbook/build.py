@@ -1,6 +1,6 @@
 """Build the WoW Forever Spellbook's data (``/wow-forever/spellbook/:class``).
 
-Usage (from ``apps/mygamingassistant/backend``, after the Changes and Downrank builds)::
+Usage (from ``apps/mygamingassistant/backend``, after the Talent, Changes and Downrank builds)::
 
     python -m scripts.wow_spellbook.build [--hotfix-cache <DBCache.bin>]
 
@@ -10,7 +10,8 @@ from the Forever client with the hotfix layers the item build uses
 path; the run stops without it): names, ranks, levels (``SpellLevels``), icons
 (``SpellMisc``), and each rank's tooltip with its tokens filled. A spell the
 Changes vs Classic feed lists is marked changed / new; a spell with a downrank
-family links to it; a talent's spell links to the talent calculator.
+family links to it; a talent's spell links to the talent calculator (the live
+talent sharing its spell — none when the live trees dropped the talent).
 
 Writes:
 
@@ -58,6 +59,7 @@ SPELLBOOK_DIR = WOW_DATA_DIR / "spellbook"
 CLASSIC_DIR = SPELLBOOK_DIR / "classic"
 CHANGED_SPELLS_FILE = WOW_DATA_DIR / "changes" / "classic" / "spells.json"
 DOWNRANK_FILE = WOW_DATA_DIR / "downrank" / "spells.json"
+TALENTS_DIR = WOW_DATA_DIR / "talents"
 FOREVER_TABLES = (*FOREVER_BOOK_TABLES, "SpellLevels", "SkillLineAbility", "Talent", "ItemSparse")
 
 CLASSIC_README = """# Spellbook — Classic trainer data and text
@@ -98,6 +100,16 @@ def tab_docs(class_id: str) -> list[dict[str, Any]]:
     return [{"id": line, "name": name} for line, name in CLASS_LINES[class_id].items()]
 
 
+def live_talents() -> dict[int, int]:
+    """Each live talent's rank-1 spell -> its id, from the talent calculator's files."""
+    return {
+        talent["spell"]: talent["id"]
+        for path in sorted(TALENTS_DIR.glob("*.json"))
+        for tree in _read(path)["trees"]
+        for talent in tree["talents"]
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build the WoW Forever Spellbook's data.")
     parser.add_argument("--hotfix-cache", help="the Forever client's _forever_/Cache/ADB/enUS/DBCache.bin")
@@ -130,7 +142,7 @@ def main() -> None:
         trainer=frozenset(costs),
         quest=frozenset(quests),
         book=frozenset(books),
-        talent_of=talent_spells(tables["Talent"]),
+        talent_of=talent_spells(tables["Talent"], live_talents()),
     )
 
     classic_ids = frozenset(int(r["Id"]) for r in dump["spell_template"])

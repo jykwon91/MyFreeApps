@@ -36,7 +36,7 @@ from scripts.wow_changes.entry import KIND_CHANGED, KIND_NEW, Change
 from scripts.wow_changes.items import item_changes, new_other_items
 from scripts.wow_changes.spells import SpellGaps, class_spells, spell_changes
 from scripts.wow_changes.stamp import previous_build, stamp
-from scripts.wow_changes.talents import talent_changes
+from scripts.wow_changes.talents import live_talent_spells, talent_changes
 from scripts.wow_changes.world import quest_changes, zone_changes
 from scripts.wow_dungeons.quest_cache import quest_cache_path, read_quest_cache
 from scripts.wow_food.build import CLASSIC_LICENSE, WOW_DATA_DIR
@@ -48,8 +48,7 @@ from scripts.wow_items.forever_items import (
     load_forever_tables,
 )
 from scripts.wow_macros.build import CLASS_LINES
-from scripts.wow_talents.books import classic_book, forever_book
-from scripts.wow_talents.build import FOREVER_TABLES
+from scripts.wow_talents.books import FOREVER_BOOK_TABLES, classic_book, forever_book
 from scripts.wow_talents.talents import rank_spells
 from scripts.wow_world_map.sources import (
     CMANGOS_COMMIT,
@@ -65,6 +64,8 @@ CHANGES_DIR = WOW_DATA_DIR / "changes"
 CLASSIC_DIR = CHANGES_DIR / "classic"
 INDEX_PATH = CHANGES_DIR / "index.json"
 TALENTS_DIR = WOW_DATA_DIR / "talents"
+# The spell books both sides of the class-spell diff read, and the client's talent ranks it leaves out.
+FOREVER_TABLES = ("Talent", *FOREVER_BOOK_TABLES)
 ITEMS_PATH = WOW_DATA_DIR / "items" / "items.json"
 ZONES_PATH = WOW_DATA_DIR / "worldMap" / "zones.json"
 
@@ -155,11 +156,9 @@ def main() -> None:
         wago_table("SpellRange", **era),
         read_dump(cmangos_dump(), {"spell_template"})["spell_template"],
     )
-    era_talents = wago_table("Talent", **era)
-
     print("Diffing talents...", flush=True)
     forever_talents, classic_talents = _talent_docs()
-    talents = talent_changes(forever_talents, classic_talents, _ids(era_talents))
+    talents = talent_changes(forever_talents, classic_talents)
 
     print("Diffing class spells...", flush=True)
     line_class = _line_class()
@@ -170,7 +169,7 @@ def main() -> None:
             line_class,
             book.names,
             {int(r["ID"]): r.get("NameSubtext_lang") or "" for r in forever.table("Spell")},
-            {s for r in forever.table("Talent") for s in rank_spells(r)},
+            {s for r in forever.table("Talent") for s in rank_spells(r)} | live_talent_spells(forever_talents.values()),
         ),
         class_spells(
             wago_table("SkillLineAbility", **era),

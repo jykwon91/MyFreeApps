@@ -1,6 +1,5 @@
 import { Minus, Plus } from "lucide-react";
 import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
-import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import TalentRankText from "@/games/wow-forever/components/talents/TalentRankText";
 import { fileIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { talentBlockMessage } from "@/games/wow-forever/lib/talents/talentBlockMessage";
@@ -19,9 +18,6 @@ interface TalentDetailsProps {
   onAdd: () => void;
   onRemove: () => void;
 }
-
-const CLASSIC_NAME_DETAIL =
-  "No rank of this talent is in the Forever game files yet, so its name is the Classic Era one.";
 
 /**
  * The picked talent: what each rank does, what it needs, and − / + buttons —
@@ -58,15 +54,7 @@ export default function TalentDetails({
       <header className="flex items-start gap-3">
         <GameIcon icon={fileIcon(talent.icon)} size={48} alt="" />
         <div className="min-w-0 flex-1">
-          <h2 className="font-semibold">
-            {talent.name}
-            {talent.classicName ? (
-              <>
-                {" "}
-                <ProvenanceBadge provenance="classic" detail={CLASSIC_NAME_DETAIL} />
-              </>
-            ) : null}
-          </h2>
+          <h2 className="font-semibold">{talent.name}</h2>
           <p className="text-sm text-muted-foreground">
             {tree.name} · row {talent.tier + 1} ·{" "}
             <span className="tabular-nums" data-testid="talent-details-rank">
@@ -75,6 +63,11 @@ export default function TalentDetails({
             {compareMode && changed ? (
               <span className="ml-2 rounded-sm bg-indigo-100 px-1.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" data-testid="talent-compare-changed-badge">
                 Changed in Forever
+              </span>
+            ) : null}
+            {compareMode && talent.newInForever ? (
+              <span className="ml-2 rounded-sm bg-indigo-100 px-1.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" data-testid="talent-compare-new-badge">
+                New in Forever
               </span>
             ) : null}
           </p>
@@ -109,7 +102,7 @@ export default function TalentDetails({
       {removeReason ? (
         <p className="text-sm text-muted-foreground">{removeReason}</p>
       ) : null}
-      {compareMode && !changed && !talent.classicName ? (
+      {compareMode && !changed && !talent.newInForever ? (
         <p className="text-xs text-muted-foreground" data-testid="talent-compare-unchanged">
           Same as Classic Era.
         </p>

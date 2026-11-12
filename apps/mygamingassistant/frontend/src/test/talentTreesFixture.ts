@@ -11,9 +11,8 @@ function talent(id: number, tier: number, column: number, ranks: number, prereqs
     icon: 0,
     ranks: Array.from({ length: ranks }, (_, i) => `Rank ${i + 1} of talent ${id}.`),
     prereqs,
-    classicName: false,
+    newInForever: false,
     classicRanks: null,
-    classicFallback: null,
   };
 }
 

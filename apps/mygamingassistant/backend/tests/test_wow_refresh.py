@@ -8,7 +8,9 @@ from pathlib import Path
 
 import pytest
 
+from scripts.wow_refresh import __main__ as refresh
 from scripts.wow_refresh.__main__ import APP_DIR, newest_build, repin, write_data_refresh
+from scripts.wow_talents import blizzard_api
 from scripts.wow_refresh.report import (
     DATA_REFRESH_FILE,
     SECTIONS,
@@ -126,3 +128,14 @@ def test_the_refresh_date_alone_is_not_a_data_change(tmp_path: Path) -> None:
 
     write_data_refresh(refresh, build="2", on=date(2026, 11, 9))
     assert _changed_generated_files(tmp_path) == []
+
+
+def test_apply_stops_before_repinning_without_blizzard_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(blizzard_api.settings, "blizzard_client_secret", "")
+
+    def no_network() -> None:
+        raise AssertionError("apply fetched builds before checking the credentials")
+
+    monkeypatch.setattr(refresh, "fetch_builds", no_network)
+    with pytest.raises(SystemExit, match="BLIZZARD_CLIENT_ID / BLIZZARD_CLIENT_SECRET are not set"):
+        refresh.apply(art=False, hotfix_cache=None, quest_cache=None, creature_cache=None)

@@ -15,7 +15,7 @@ from scripts.wow_changes.describe import (
     describe_text,
     number_changes,
 )
-from scripts.wow_changes.entry import KIND_CHANGED, KIND_NEW, PROVENANCE_SEEN, Change
+from scripts.wow_changes.entry import KIND_CHANGED, KIND_NEW, PROVENANCE_PUBLISHED, PROVENANCE_SEEN, Change
 from scripts.wow_changes.items import (
     classic_stats,
     compare_item,
@@ -29,7 +29,7 @@ from scripts.wow_changes.spells import (
     spell_changes,
 )
 from scripts.wow_changes.stamp import previous_build, stamp
-from scripts.wow_changes.talents import talent_changes
+from scripts.wow_changes.talents import live_talent_spells, talent_changes
 from scripts.wow_changes.world import quest_changes, zone_changes
 from scripts.wow_dungeons.quest_cache import CachedQuest
 from scripts.wow_food.tooltip import SpellBook
@@ -72,12 +72,12 @@ def _talent_file(*talents: dict[str, Any]) -> dict[str, Any]:
 
 def test_talents_report_changed_ranks_and_new_talents_but_not_unchanged_ones() -> None:
     forever = {"warrior": _talent_file(
-        {"id": 10, "name": "Same", "icon": 5, "ranks": ["Does a thing."]},
-        {"id": 11, "name": "Moved", "icon": 6, "ranks": ["Hits for 15%.", "Hits for 30%."]},
-        {"id": 900, "name": "Brand New", "icon": 7, "ranks": ["New thing.", None]},
+        {"id": 10, "name": "Same", "icon": 5, "spell": 100, "ranks": ["Does a thing."]},
+        {"id": 11, "name": "Moved", "icon": 6, "spell": 110, "ranks": ["Hits for 15%.", "Hits for 30%."]},
+        {"id": 900, "name": "Brand New", "icon": 7, "spell": 900, "ranks": ["New thing.", "Newer thing."], "newInForever": True},
     )}
     classic = {"warrior": {"talents": {"11": [None, "Hits for 20%."]}}}
-    changes = {c.key: c for c in talent_changes(forever, classic, classic_talent_ids={10, 11})}
+    changes = {c.key: c for c in talent_changes(forever, classic)}
     assert set(changes) == {"talent:warrior:11", "talent:warrior:900"}
     moved = changes["talent:warrior:11"]
     assert moved.kind == KIND_CHANGED
@@ -88,6 +88,14 @@ def test_talents_report_changed_ranks_and_new_talents_but_not_unchanged_ones() -
     assert new.kind == KIND_NEW
     assert new.summary == "New talent with 2 ranks."
     assert new.rows == (("Rank 1", None, "New thing."),)
+    # The live trees are Blizzard's Game Data API, so both rows carry its badge.
+    assert {c.provenance for c in changes.values()} == {PROVENANCE_PUBLISHED}
+    assert moved.doc()["provenance"] == "published"
+
+
+def test_live_talent_spells_are_every_talents_rank_one_spell() -> None:
+    forever = {"warrior": _talent_file({"id": 10, "spell": 100}, {"id": 11, "spell": 110})}
+    assert live_talent_spells(forever.values()) == {100, 110}
 
 
 # --- class spells --------------------------------------------------------------------------------

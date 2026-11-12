@@ -21,9 +21,8 @@ function decodeTree(tree: TalentFileTree, classic: ClassicTalentFile): TalentTre
       // The generator's test keeps every prerequisite inside its tree; anything else is ignored.
       return talentIndex === undefined ? [] : [{ talentIndex, rank }];
     }),
-    classicName: t.classicName === true,
+    newInForever: t.newInForever === true,
     classicRanks: classic.talents[String(t.id)] ?? null,
-    classicFallback: classic.fallback[String(t.id)] ?? null,
   }));
   return { id: tree.id, name: tree.name, icon: tree.icon, talents };
 }
@@ -32,7 +31,7 @@ function decodeTree(tree: TalentFileTree, classic: ClassicTalentFile): TalentTre
 export function decodeTalentClass(classId: WowClassId, file: TalentFile, classic: ClassicTalentFile): TalentClassData {
   return {
     classId,
-    clientBuild: file.clientBuild,
+    apiBuild: file.apiBuild,
     trees: file.trees.map((tree) => decodeTree(tree, classic)),
   };
 }

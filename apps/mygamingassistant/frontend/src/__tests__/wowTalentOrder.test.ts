@@ -25,9 +25,8 @@ function makeTree(id: number, name: string, talentCount: number): TalentTree {
     icon: 0,
     ranks: ["Rank 1"],
     prereqs: [],
-    classicName: false,
+    newInForever: false,
     classicRanks: null,
-    classicFallback: null,
   }));
   return { id, name, icon: 0, talents };
 }
@@ -128,9 +127,8 @@ function makeTieredTree(id: number): TalentTree {
     icon: 0,
     ranks: ["Rank 1", "Rank 2"],
     prereqs: [],
-    classicName: false,
+    newInForever: false,
     classicRanks: null,
-    classicFallback: null,
   }));
   return { id, name: `Tree ${id}`, icon: 0, talents };
 }

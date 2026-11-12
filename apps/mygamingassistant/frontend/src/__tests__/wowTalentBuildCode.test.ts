@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { WOW_CLASSES } from "@/games/wow-forever/data/classes";
-import { TALENT_COLUMNS, TALENT_TIERS } from "@/games/wow-forever/data/talents/talentConfig";
+import { TALENT_BUILD_CODE_VERSION, TALENT_COLUMNS, TALENT_TIERS } from "@/games/wow-forever/data/talents/talentConfig";
 import { loadTalentClass } from "@/games/wow-forever/lib/talents/loadTalentClass";
 import { decodeTalentBuild, decodeTalentLevel, encodeTalentBuild } from "@/games/wow-forever/lib/talents/talentBuildCode";
 import { talentArrows } from "@/games/wow-forever/lib/talents/talentArrows";
@@ -30,11 +30,11 @@ describe("build code", () => {
   });
 
   it("writes one digit per talent and drops trailing zeros", () => {
-    expect(encodeTalentBuild([[5, 0, 1, 0, 0], [0], [3]])).toBe("1-501--3");
+    expect(encodeTalentBuild([[5, 0, 1, 0, 0], [0], [3]])).toBe("2-501--3");
   });
 
   it("needs no escaping in a query", () => {
-    expect(new URLSearchParams({ b: "1-501--3" }).toString()).toBe("b=1-501--3");
+    expect(new URLSearchParams({ b: "2-501--3" }).toString()).toBe("b=2-501--3");
   });
 
   it("round-trips", () => {
@@ -43,17 +43,23 @@ describe("build code", () => {
   });
 
   it("rejects a wrong version, tree count, character or length", () => {
-    expect(decodeTalentBuild("2-5--", TREES)).toBeNull();
-    expect(decodeTalentBuild("1-5-", TREES)).toBeNull();
-    expect(decodeTalentBuild("1-5a--", TREES)).toBeNull();
-    expect(decodeTalentBuild("1-500000--", TREES)).toBeNull();
-    expect(decodeTalentBuild(`1-${"0".repeat(200)}--`, TREES)).toBeNull();
+    expect(decodeTalentBuild("3-5--", TREES)).toBeNull();
+    expect(decodeTalentBuild("2-5-", TREES)).toBeNull();
+    expect(decodeTalentBuild("2-5a--", TREES)).toBeNull();
+    expect(decodeTalentBuild("2-500000--", TREES)).toBeNull();
+    expect(decodeTalentBuild(`2-${"0".repeat(200)}--`, TREES)).toBeNull();
+  });
+
+  it("reads a version-1 link (the client's old Classic trees) as no build", () => {
+    expect(TALENT_BUILD_CODE_VERSION).toBe("2");
+    expect(decodeTalentBuild("1-5--", TREES)).toBeNull();
+    expect(decodeTalentBuild("1-501--3", TREES)).toBeNull();
   });
 
   it("rejects a build no character could have", () => {
-    expect(decodeTalentBuild("1-6--", TREES)).toBeNull();
-    expect(decodeTalentBuild("1-401--", TREES)).toBeNull();
-    expect(decodeTalentBuild("1-5521--", TREES)).toBeNull();
+    expect(decodeTalentBuild("2-6--", TREES)).toBeNull();
+    expect(decodeTalentBuild("2-401--", TREES)).toBeNull();
+    expect(decodeTalentBuild("2-5521--", TREES)).toBeNull();
   });
 
   it("reads a level from 10 to 60 only", () => {
@@ -68,6 +74,7 @@ describe("build code", () => {
 describe("every class's real trees", () => {
   it.each(WOW_CLASSES.map((c) => c.id))("%s: three trees in the grid, a full build round-trips", async (classId) => {
     const data = await loadTalentClass(classId);
+    expect(data.apiBuild).toMatch(/^\d+\.\d+\.\d+\.\d+$/);
     expect(data.trees).toHaveLength(3);
     for (const tree of data.trees) {
       for (const talent of tree.talents) {
@@ -75,6 +82,7 @@ describe("every class's real trees", () => {
         expect(talent.column).toBeLessThan(TALENT_COLUMNS);
         expect(talent.ranks.length).toBeGreaterThan(0);
         expect(talent.ranks.length).toBeLessThanOrEqual(9);
+        expect(talent.ranks.every((text) => text.length > 0)).toBe(true);
       }
       expect(talentArrows(tree)).toHaveLength(tree.talents.reduce((n, t) => n + t.prereqs.length, 0));
     }
@@ -82,5 +90,19 @@ describe("every class's real trees", () => {
     expect(isLegalBuild(data.trees, full)).toBe(true);
     expect(full.flat().reduce((a, b) => a + b, 0)).toBe(51);
     expect(decodeTalentBuild(encodeTalentBuild(full), data.trees)).toEqual(full);
+  });
+});
+
+describe("the live trees", () => {
+  it("are Forever's: Warlock Affliction has its new talents in game order", async () => {
+    const data = await loadTalentClass("warlock");
+    expect(data.trees.map((t) => t.name)).toEqual(["Affliction", "Demonology", "Destruction"]);
+    const affliction = new Map(data.trees[0].talents.map((t) => [t.name, t]));
+    for (const name of ["Soul Harvest", "Improved Drains", "Pandemic", "Malevolence", "Wrack"]) {
+      expect(affliction.get(name)?.newInForever).toBe(true);
+    }
+    expect(affliction.get("Suppression")?.newInForever).toBe(false);
+    const pandemic = affliction.get("Pandemic");
+    expect([pandemic?.tier, pandemic?.column]).toEqual([2, 3]);
   });
 });
