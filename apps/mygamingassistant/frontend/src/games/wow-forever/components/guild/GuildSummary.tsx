@@ -36,7 +36,8 @@ export default function GuildSummary({ guild }: { guild: GuildResponse }) {
       ) : null}
       {stale ? (
         <p className="text-xs text-muted-foreground">
-          The roster updates again when someone looks up a member of this guild on Your character.
+          The roster refreshes every hour while someone keeps looking up its members. Look one up on Your
+          character to start it again.
         </p>
       ) : null}
     </section>

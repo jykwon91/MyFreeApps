@@ -1054,9 +1054,11 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   by `get_character(viewed=True)` — the job's own look-ups pass `viewed=False`,
   so a member moving to another guild never starts watching it; a page
   look-up served from the cache still stamps it via `record_view`). Up to 5
-  due guilds per run (roster older than 6 h, never-asked first): Blizzard
+  due guilds per run (roster refreshed HOURLY: due 45 min after its last run, half a
+  job interval short of the hour so on-the-hour runs never count last hour as fresh
+  — `GUILD_ROSTER_STALE_AFTER`; members use the same cut-off; never-asked first): Blizzard
   `/data/wow/guild/{slug}` + `/roster` (namespace `profile-forever-us`, no
-  realm), then the members NOT refreshed in the last 6 h through
+  realm), then the members NOT refreshed since that same cut-off through
   `character_lookup_service` 4 at a time, at most 200 member fetches per run
   across guilds (`GUILD_ROSTER_MAX_MEMBER_FETCHES_PER_RUN`; ~11 Blizzard calls
   each, quota shared with AH prices and page look-ups — a big guild finishes
