@@ -12,6 +12,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
  */
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
+    date: "2026-11-12",
+    title: "Your character: professions and recipes",
+    summary:
+      "Your character page now shows your professions and every recipe and enchant you know, coloured by whether it still gives you skill points, with a link to the guide from your skill.",
+    to: "/wow-forever/character",
+  },
+  {
     date: "2026-11-11",
     title: "Your character: talent trees like in game",
     summary:

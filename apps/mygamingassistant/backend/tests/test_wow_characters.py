@@ -32,6 +32,7 @@ from app.services.wow.character.character_profile import CharacterProfile
 from app.services.wow.character.character_render_crop import crop_render
 from app.services.wow.character.character_slug import normalize_character_slug
 from app.services.wow.character.character_stats_mapper import to_character_stats
+from app.services.wow.character.character_professions_mapper import to_character_professions
 from app.services.wow.character.character_talents_mapper import to_character_talents
 
 RENDER_URL = "https://render.worldofwarcraft.com/forever-us/character/101/6299749-main-raw.png"
@@ -151,6 +152,28 @@ SPECIALIZATIONS = {
     ],
 }
 
+PROFESSIONS = {
+    "primaries": [
+        {"profession": {"name": "Tailoring", "id": 197}, "tiers": [
+            {"skill_points": 148, "max_skill_points": 225, "tier": {"name": "Tailoring", "id": 197},
+             "known_recipes": [
+                 {"name": "Bolt of Linen Cloth", "id": 2963},
+                 {"name": "Brown Linen Pants", "id": 3914},
+                 {"name": "Broken", "id": "x"},
+             ]},
+        ]},
+        {"profession": {"name": "Enchanting", "id": 333}, "tiers": [
+            {"skill_points": 128, "max_skill_points": 225, "known_recipes": [{"name": "Disenchant", "id": 13262}]},
+        ]},
+        {"profession": {"name": "No skill", "id": 999}, "tiers": [{"known_recipes": []}]},
+    ],
+    "secondaries": [
+        {"profession": {"name": "Fishing", "id": 356}, "tiers": [
+            {"skill_points": 1, "max_skill_points": 75, "known_recipes": [{"name": "Fishing", "id": 7620}]},
+        ]},
+    ],
+}
+
 Handler = Callable[[httpx.Request], httpx.Response]
 
 
@@ -178,6 +201,7 @@ def _blizzard(
         "/profile/wow/character/jason-kwon/equipment": _json(EQUIPMENT),
         "/profile/wow/character/jason-kwon/statistics": _json(STATISTICS),
         "/profile/wow/character/jason-kwon/specializations": _json(SPECIALIZATIONS),
+        "/profile/wow/character/jason-kwon/professions": _json(PROFESSIONS),
         **(answers or {}),
     }
 
@@ -295,7 +319,7 @@ def test_missing_credentials_fail_before_any_request() -> None:
 
 
 def test_the_sheet_keeps_the_games_own_tooltip_lines() -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS, professions=PROFESSIONS))
     assert (sheet.name, sheet.surname, sheet.level, sheet.race, sheet.class_name) == ("Jason", "Kwon", 37, "Gnome", "Warlock")
     assert (sheet.faction, sheet.guild, sheet.ruleset, sheet.has_render) == ("alliance", "Tinker Town", "PvP", True)
     assert sheet.last_login is not None and sheet.last_login.year == 2026
@@ -313,7 +337,7 @@ def test_the_sheet_keeps_the_games_own_tooltip_lines() -> None:
 
 
 def test_a_character_without_media_or_gear_has_an_empty_sheet() -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=None, equipment=None, statistics=None, specializations=None))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=None, equipment=None, statistics=None, specializations=None, professions=None))
     assert sheet.has_render is False
     assert sheet.items == []
 
@@ -408,12 +432,12 @@ async def test_the_sheet_and_render_ask_blizzard_once(monkeypatch: pytest.Monkey
     await character_service.get_character_render("jason-kwon")
     assert render is not None and Image.open(BytesIO(render)).size[0] < 400
     api_calls = [r.url.path for r in seen if r.url.host == "us.api.blizzard.com"]
-    assert len(api_calls) == 5
+    assert len(api_calls) == 6  # profile, media, equipment, statistics, specializations, professions
     assert [r.url.host for r in seen].count("render.worldofwarcraft.com") == 1
 
 
 async def test_route_returns_the_sheet(client: AsyncClient) -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS, professions=PROFESSIONS))
     with patch.object(character_service, "get_character", AsyncMock(return_value=sheet)) as get:
         resp = await client.get("/wow/characters/Jason-Kwon")
     assert resp.status_code == 200
@@ -512,6 +536,60 @@ async def test_a_talents_failure_still_shows_the_sheet_and_is_not_cached(
     assert sheet.talents is None
     assert sheet.stats is not None and len(sheet.items) > 0
     assert "Character talents unavailable" in caplog.text
+    await character_service.get_character("jason-kwon")
+    profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
+    assert len(profile_calls) == 2
+
+
+def test_the_professions_keep_skill_cap_and_known_recipes() -> None:
+    professions = to_character_professions(PROFESSIONS)
+    assert professions is not None
+    tailoring, enchanting = professions.primaries  # a profession with no skill is dropped
+    assert (tailoring.id, tailoring.name, tailoring.skill, tailoring.max_skill) == (197, "Tailoring", 148, 225)
+    assert [(r.id, r.name) for r in tailoring.recipes] == [(2963, "Bolt of Linen Cloth"), (3914, "Brown Linen Pants")]
+    assert [r.id for r in enchanting.recipes] == [13262]
+    assert [(p.name, p.skill, p.max_skill) for p in professions.secondaries] == [("Fishing", 1, 75)]
+
+
+def test_two_tiers_show_the_highest_skill_and_merge_the_recipes() -> None:
+    raw = {"primaries": [{"profession": {"name": "Tailoring", "id": 197}, "tiers": [
+        {"skill_points": 40, "max_skill_points": 75, "known_recipes": [{"name": "A", "id": 1}]},
+        {"skill_points": 148, "max_skill_points": 225, "known_recipes": [{"name": "A", "id": 1}, {"name": "B", "id": 2}]},
+    ]}]}
+    professions = to_character_professions(raw)
+    assert professions is not None
+    (tailoring,) = professions.primaries
+    assert (tailoring.skill, tailoring.max_skill) == (148, 225)
+    assert [r.id for r in tailoring.recipes] == [1, 2]
+
+
+def test_no_professions_is_two_empty_lists_and_a_failure_is_none() -> None:
+    empty = to_character_professions({})
+    assert empty is not None and empty.primaries == [] and empty.secondaries == []
+    assert to_character_professions(None) is None
+
+
+async def test_a_character_with_no_professions_has_none_not_an_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    missing = {"/profile/wow/character/jason-kwon/professions": _json({"code": 404}, 404)}
+    seen: list[httpx.Request] = []
+    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing, seen=seen)))
+    sheet = await character_service.get_character("jason-kwon")
+    assert sheet.professions is not None and sheet.professions.primaries == []
+    await character_service.get_character("jason-kwon")
+    profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
+    assert len(profile_calls) == 1  # an answer, so it's cached
+
+
+async def test_a_professions_failure_still_shows_the_sheet_and_is_not_cached(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    seen: list[httpx.Request] = []
+    failing = {"/profile/wow/character/jason-kwon/professions": _json({"code": 503}, 503)}
+    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
+    sheet = await character_service.get_character("jason-kwon")
+    assert sheet.professions is None
+    assert sheet.talents is not None and len(sheet.items) > 0
+    assert "Character professions unavailable" in caplog.text
     await character_service.get_character("jason-kwon")
     profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
     assert len(profile_calls) == 2

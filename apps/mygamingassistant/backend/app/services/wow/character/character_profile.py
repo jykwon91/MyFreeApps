@@ -11,3 +11,5 @@ class CharacterProfile:
     statistics: dict[str, Any] | None
     # None when Blizzard failed on /specializations; {} when the character has none yet.
     specializations: dict[str, Any] | None
+    # None when Blizzard failed on /professions; {} when the character has none yet.
+    professions: dict[str, Any] | None

@@ -12,6 +12,7 @@ import { RECENT_CHARACTERS_STORAGE_KEY } from "@/games/wow-forever/data/characte
 import { CHARACTER_STATS_TAB_STORAGE_KEY } from "@/games/wow-forever/data/character/characterStatsConfig";
 import { CALCULATOR_ILLEGAL_REASON, CALCULATOR_UNKNOWN_REASON } from "@/games/wow-forever/data/character/characterTalentsConfig";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { guideProfession, professionGuideHref, recipeColorAt } from "@/games/wow-forever/lib/character/characterProfessions";
 import { pickedTalent } from "@/games/wow-forever/lib/character/characterTalents";
 import { characterNameFromSlug, characterSlugFromName } from "@/games/wow-forever/lib/character/characterSlug";
 import { withRecentCharacter } from "@/games/wow-forever/lib/character/recentCharacters";
@@ -134,6 +135,46 @@ const CHARACTER: CharacterResponse = {
   ],
   stats: STATS,
   talents: { groups: [{ active: true, picks: PICKS }] },
+  professions: {
+    primaries: [
+      {
+        id: 197,
+        name: "Tailoring",
+        skill: 60,
+        max_skill: 150,
+        recipes: [
+          { id: 2963, name: "Bolt of Linen Cloth" },
+          { id: 3914, name: "Brown Linen Pants" },
+          { id: 2385, name: "Brown Linen Vest" },
+          { id: 3842, name: "Handstitched Linen Britches" },
+          { id: 999999, name: "Mystery Weave" },
+        ],
+      },
+      {
+        id: 333,
+        name: "Enchanting",
+        skill: 30,
+        max_skill: 75,
+        recipes: [
+          { id: 13262, name: "Disenchant" },
+          { id: 7418, name: "Enchant Bracer - Minor Health" },
+        ],
+      },
+    ],
+    secondaries: [
+      {
+        id: 185,
+        name: "Cooking",
+        skill: 187,
+        max_skill: 225,
+        recipes: [
+          { id: 3964, name: "Boiled Clams" },
+          { id: 2795, name: "Beer Basted Boar Ribs" },
+        ],
+      },
+      { id: 356, name: "Fishing", skill: 1, max_skill: 75, recipes: [{ id: 7620, name: "Fishing" }] },
+    ],
+  },
 };
 
 function query(extra: Record<string, unknown>) {
@@ -480,5 +521,106 @@ describe("the talents panel", () => {
   it("says no points are spent for a character under level 10", async () => {
     const panel = await talentsFor({ ...CHARACTER, level: 8, talents: { groups: [] } });
     expect(within(panel).getByTestId("character-talents-note")).toHaveTextContent("No talent points spent yet");
+  });
+});
+
+describe("the professions panel", () => {
+  function professionsFor(data: CharacterResponse) {
+    mockQuery.mockReturnValue(query({ data }));
+    renderAt("/wow-forever/character/jason-kwon");
+    return screen.getByRole("region", { name: "Professions" });
+  }
+
+  it("lists each profession's skill out of its rank's cap, all closed", () => {
+    const panel = professionsFor(CHARACTER);
+    expect(within(panel).getByRole("heading", { name: "Main professions" })).toBeInTheDocument();
+    expect(within(panel).getByRole("heading", { name: "Secondary" })).toBeInTheDocument();
+    const skills = within(panel).getAllByTestId("character-profession-skill").map((el) => el.textContent);
+    expect(skills).toEqual(["60 / 150", "30 / 75", "187 / 225", "1 / 75"]);
+    const tailoring = within(panel).getByRole("button", { name: /Tailoring/ });
+    expect(tailoring).toHaveAttribute("aria-expanded", "false");
+    expect(tailoring).toHaveTextContent("5 recipes known");
+    // Fishing knows only "Fishing": nothing to open.
+    expect(within(panel).queryByRole("button", { name: /Fishing/ })).not.toBeInTheDocument();
+  });
+
+  it("opens a crafting profession to its recipes by colour at the character's skill, and closes it", async () => {
+    const panel = professionsFor(CHARACTER);
+    const button = within(panel).getByRole("button", { name: /Tailoring/ });
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    const recipes = within(panel).getByRole("region", { name: "Tailoring recipes" });
+    await waitFor(() => expect(within(recipes).getAllByTestId("character-recipe-group")).toHaveLength(5));
+    const groups = within(recipes).getAllByTestId("character-recipe-group");
+    expect(groups.map((group) => group.dataset.color)).toEqual(["orange", "yellow", "green", "grey", "other"]);
+    expect(groups[0]).toHaveTextContent("Orange · 1");
+    expect(groups[0]).toHaveTextContent("Handstitched Linen Britches");
+    expect(groups[1]).toHaveTextContent("Brown Linen Pants");
+    expect(groups[2]).toHaveTextContent("Brown Linen Vest");
+    expect(groups[3]).toHaveTextContent("Gray · 1");
+    expect(groups[4]).toHaveTextContent("Other · 1");
+    expect(groups[4]).toHaveTextContent("Mystery Weave");
+    expect(within(recipes).getByRole("link", { name: "Tailoring guide from 60" })).toHaveAttribute(
+      "href",
+      "/wow-forever/professions?p=tailoring&skill=60",
+    );
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("keeps one profession open at a time", () => {
+    const panel = professionsFor(CHARACTER);
+    fireEvent.click(within(panel).getByRole("button", { name: /Tailoring/ }));
+    fireEvent.click(within(panel).getByRole("button", { name: /Cooking/ }));
+    expect(within(panel).getByRole("button", { name: /Tailoring/ })).toHaveAttribute("aria-expanded", "false");
+    expect(within(panel).getByRole("button", { name: /Cooking/ })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("doesn't colour Disenchant: it gives no skill-ups", async () => {
+    const panel = professionsFor(CHARACTER);
+    fireEvent.click(within(panel).getByRole("button", { name: /Enchanting/ }));
+    const recipes = within(panel).getByRole("region", { name: "Enchanting recipes" });
+    await waitFor(() => expect(within(recipes).getAllByTestId("character-recipe-group").length).toBeGreaterThan(1));
+    const other = within(recipes).getAllByTestId("character-recipe-group").find((group) => group.dataset.color === "other");
+    expect(other).toHaveTextContent("Disenchant");
+  });
+
+  it("lists a profession we can't colour yet as one plain list, linking its guide", () => {
+    const panel = professionsFor(CHARACTER);
+    fireEvent.click(within(panel).getByRole("button", { name: /Cooking/ }));
+    const recipes = within(panel).getByRole("region", { name: "Cooking recipes" });
+    const groups = within(recipes).getAllByTestId("character-recipe-group");
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toHaveTextContent("Known recipes · 2");
+    expect(within(groups[0]).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "Beer Basted Boar Ribs",
+      "Boiled Clams",
+    ]);
+    expect(within(recipes).getByRole("link", { name: "Cooking guide from 187" })).toHaveAttribute(
+      "href",
+      "/wow-forever/professions?p=cooking",
+    );
+  });
+
+  it("says Blizzard sent no professions, or that the character has none", () => {
+    const failed = professionsFor({ ...CHARACTER, professions: null });
+    expect(within(failed).getByTestId("character-professions-note")).toHaveTextContent("Blizzard didn't send");
+    expect(screen.getByRole("region", { name: "Talents" })).toBeInTheDocument();
+  });
+
+  it("says a character with no professions has learned none", () => {
+    const panel = professionsFor({ ...CHARACTER, professions: { primaries: [], secondaries: [] } });
+    expect(within(panel).getByTestId("character-professions-note")).toHaveTextContent("hasn't learned a profession");
+  });
+
+  it("colours a recipe as the game does: orange below yellow, green from half-way, gray at grey", () => {
+    const pants = { yellow: 50, grey: 85 };
+    expect(recipeColorAt(pants, 49)).toBe("orange");
+    expect(recipeColorAt(pants, 50)).toBe("yellow");
+    expect(recipeColorAt(pants, 68)).toBe("green");
+    expect(recipeColorAt(pants, 85)).toBe("grey");
+    expect(guideProfession(197)).toBe("tailoring");
+    expect(guideProfession(12345)).toBeNull();
+    expect(professionGuideHref("enchanting", 128)).toBe("/wow-forever/professions?p=enchanting&skill=128");
   });
 });
