@@ -1,10 +1,6 @@
 import { useRef, useState, type KeyboardEvent } from "react";
-import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
-import TalentArrows from "@/games/wow-forever/components/talents/TalentArrows";
 import TalentCell from "@/games/wow-forever/components/talents/TalentCell";
-import { TALENT_GRID_HEIGHT_PX, TALENT_GRID_WIDTH_PX } from "@/games/wow-forever/data/talents/talentGridLayout";
-import { fileIcon } from "@/games/wow-forever/lib/icons/wowIcons";
-import { formatPoints as points } from "@/games/wow-forever/lib/talents/formatPoints";
+import TalentTreeCard from "@/games/wow-forever/components/talents/TalentTreeCard";
 import { talentCellOffset } from "@/games/wow-forever/lib/talents/talentArrows";
 import { talentBlockMessage } from "@/games/wow-forever/lib/talents/talentBlockMessage";
 import { talentCellState } from "@/games/wow-forever/lib/talents/talentCellState";
@@ -48,7 +44,6 @@ export default function TalentTreeView({
   const ranks = build[treeIndex];
   const [focused, setFocused] = useState(0);
   const cells = useRef<(HTMLButtonElement | null)[]>([]);
-  const spent = treePoints(build, treeIndex);
 
   function onKeyDown(index: number, event: KeyboardEvent<HTMLButtonElement>) {
     const direction = talentGridDirection(event.key);
@@ -68,53 +63,44 @@ export default function TalentTreeView({
   }
 
   return (
-    <section aria-label={`${tree.name} talents`} className="rounded-xl border bg-card p-4 space-y-4" data-testid="talent-tree">
-      <header className="flex items-center gap-2">
-        <GameIcon icon={fileIcon(tree.icon)} size={24} alt="" />
-        <h2 className="font-semibold">{tree.name}</h2>
-        <span className="ml-auto text-sm tabular-nums text-muted-foreground" data-testid="talent-tree-points">
-          {points(spent)}
-        </span>
-      </header>
-      <div
-        role="group"
-        aria-label={`${tree.name} grid. Arrow keys move, Enter adds a point, Shift+Enter removes one.`}
-        className="relative mx-auto"
-        style={{ width: TALENT_GRID_WIDTH_PX, height: TALENT_GRID_HEIGHT_PX }}
-      >
-        <TalentArrows tree={tree} ranks={ranks} />
-        {tree.talents.map((talent, i) => {
-          const block = addBlock(trees, build, treeIndex, i, level);
-          const { left, top } = talentCellOffset(talent.tier, talent.column);
-          const compareChanged = compareMode
-            ? isChangedInForever(talent) || talent.newInForever
-            : null;
-          return (
-            <TalentCell
-              key={talent.id}
-              talent={talent}
-              rank={ranks[i]}
-              state={talentCellState(trees, build, treeIndex, i, level)}
-              blocked={block && block.kind !== "maxed" ? talentBlockMessage(block, tree) : null}
-              left={left}
-              top={top}
-              tabbable={i === focused}
-              selected={i === selected}
-              compareChanged={compareChanged}
-              buttonRef={(node) => {
-                cells.current[i] = node;
-              }}
-              onAdd={() => onAdd(i)}
-              onRemove={() => onRemove(i)}
-              onFocusCell={() => {
-                setFocused(i);
-                onSelect(i);
-              }}
-              onKeyDown={(event) => onKeyDown(i, event)}
-            />
-          );
-        })}
-      </div>
-    </section>
+    <TalentTreeCard
+      tree={tree}
+      ranks={ranks}
+      points={treePoints(build, treeIndex)}
+      heading="h2"
+      gridLabel={`${tree.name} grid. Arrow keys move, Enter adds a point, Shift+Enter removes one.`}
+    >
+      {tree.talents.map((talent, i) => {
+        const block = addBlock(trees, build, treeIndex, i, level);
+        const { left, top } = talentCellOffset(talent.tier, talent.column);
+        const compareChanged = compareMode
+          ? isChangedInForever(talent) || talent.newInForever
+          : null;
+        return (
+          <TalentCell
+            key={talent.id}
+            talent={talent}
+            rank={ranks[i]}
+            state={talentCellState(trees, build, treeIndex, i, level)}
+            blocked={block && block.kind !== "maxed" ? talentBlockMessage(block, tree) : null}
+            left={left}
+            top={top}
+            tabbable={i === focused}
+            selected={i === selected}
+            compareChanged={compareChanged}
+            buttonRef={(node) => {
+              cells.current[i] = node;
+            }}
+            onAdd={() => onAdd(i)}
+            onRemove={() => onRemove(i)}
+            onFocusCell={() => {
+              setFocused(i);
+              onSelect(i);
+            }}
+            onKeyDown={(event) => onKeyDown(i, event)}
+          />
+        );
+      })}
+    </TalentTreeCard>
   );
 }

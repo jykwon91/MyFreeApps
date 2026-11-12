@@ -11,8 +11,12 @@ import type { WowClassId } from "@/games/wow-forever/data/classes";
 import type { CharacterCalculatorLink } from "@/games/wow-forever/types/character/characterCalculatorLink";
 import type { CharacterTalents } from "@/games/wow-forever/types/character/characterTalents";
 import type { CharacterTalentPick } from "@/games/wow-forever/types/character/characterTalentPick";
+import type { CharacterTalentPicked } from "@/games/wow-forever/types/character/characterTalentPicked";
 import type { CharacterTalentSet } from "@/games/wow-forever/types/character/characterTalentSet";
+import type { Talent } from "@/games/wow-forever/types/talents/talent";
 import type { TalentBuild } from "@/games/wow-forever/types/talents/talentBuild";
+import type { TalentCellState } from "@/games/wow-forever/types/talents/talentCellState";
+import type { TalentPosition } from "@/games/wow-forever/types/talents/talentPosition";
 import type { TalentTree } from "@/games/wow-forever/types/talents/talentTree";
 
 /** Blizzard's picks laid on the class's trees: a build in the calculator's shape, and how many ids weren't found. */
@@ -32,11 +36,7 @@ export function characterTalentSet(trees: readonly TalentTree[], picks: readonly
   return {
     build,
     unknown,
-    trees: trees.map((tree, t) => ({
-      name: tree.name,
-      points: treePoints(build, t),
-      lines: tree.talents.flatMap((talent, i) => (build[t][i] > 0 ? [{ talent, rank: build[t][i] }] : [])),
-    })),
+    trees: trees.map((tree, t) => ({ name: tree.name, points: treePoints(build, t) })),
   };
 }
 
@@ -67,9 +67,18 @@ export function formatUnknownTalents(n: number): string {
   return n === 1 ? "1 talent isn't" : `${n} talents aren't`;
 }
 
-/** The trees with the most points first (the spec the character plays), ties in the class's order. */
-export function treesByPoints<T extends { points: number }>(trees: readonly T[]): T[] {
-  return [...trees].sort((a, b) => b.points - a.points);
+/** A read-only cell's screen-reader name: "Pandemic, rank 3 of 3", plus "not open yet" while its row or prerequisite is missing. */
+export function characterTalentCellLabel(talent: Talent, rank: number, state: TalentCellState): string {
+  const label = `${talent.name}, rank ${rank} of ${talent.ranks.length}`;
+  if (state === "locked") return `${label}, not open yet`;
+  return label;
+}
+
+/** The opened talent and the character's rank in it, or null when none is open. */
+export function pickedTalent(trees: readonly TalentTree[], build: TalentBuild, picked: TalentPosition | null): CharacterTalentPicked | null {
+  const talent = picked && trees[picked.tree]?.talents[picked.talent];
+  if (!picked || !talent) return null;
+  return { talent, rank: build[picked.tree][picked.talent] };
 }
 
 /** Why the talents section has no talents to list, or null when it does. */

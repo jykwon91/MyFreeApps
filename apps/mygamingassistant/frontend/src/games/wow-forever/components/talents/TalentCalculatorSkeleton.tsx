@@ -1,8 +1,6 @@
-import clsx from "clsx";
 import { Skeleton } from "@platform/ui";
-import { TALENT_SKELETON_CELLS, TALENT_TREE_COUNT } from "@/games/wow-forever/data/talents/talentConfig";
-import { TALENT_CELL_PX, TALENT_GRID_HEIGHT_PX, TALENT_GRID_WIDTH_PX } from "@/games/wow-forever/data/talents/talentGridLayout";
-import { talentCellOffset } from "@/games/wow-forever/lib/talents/talentArrows";
+import TalentTreeSkeleton from "@/games/wow-forever/components/talents/TalentTreeSkeleton";
+import { TALENT_TREE_COUNT } from "@/games/wow-forever/data/talents/talentConfig";
 
 /**
  * Stand-in while a class's trees load: the settings card, the tabs (below
@@ -20,31 +18,7 @@ export default function TalentCalculatorSkeleton() {
       <Skeleton className="h-[54px] w-full lg:hidden" />
       <div className="grid gap-4 lg:grid-cols-3">
         {Array.from({ length: TALENT_TREE_COUNT }, (_, t) => (
-          <div
-            key={t}
-            className={clsx("rounded-xl border bg-card p-4 space-y-4", t > 0 && "hidden lg:block")}
-            data-testid="talent-tree-skeleton"
-          >
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-6 w-6" />
-              <Skeleton className="h-5 w-24" />
-              <Skeleton className="ml-auto h-4 w-16" />
-            </div>
-            <div className="relative mx-auto" style={{ width: TALENT_GRID_WIDTH_PX, height: TALENT_GRID_HEIGHT_PX }}>
-              {TALENT_SKELETON_CELLS.map(([tier, column]) => {
-                const { left, top } = talentCellOffset(tier, column);
-                return (
-                  <div
-                    key={`${tier}-${column}`}
-                    className="absolute"
-                    style={{ left, top, width: TALENT_CELL_PX, height: TALENT_CELL_PX }}
-                  >
-                    <Skeleton className="h-full w-full rounded-md" />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <TalentTreeSkeleton key={t} index={t} />
         ))}
       </div>
       <Skeleton className="h-20 w-full rounded-xl" />

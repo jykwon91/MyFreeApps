@@ -12,20 +12,11 @@ import TalentTreeView from "@/games/wow-forever/components/talents/TalentTreeVie
 import { TALENT_PICK_PARAM } from "@/games/wow-forever/data/talents/talentConfig";
 import { useTalentBuild } from "@/games/wow-forever/hooks/useTalentBuild";
 import { findTalentPosition } from "@/games/wow-forever/lib/talents/findTalentPosition";
+import { mainTree } from "@/games/wow-forever/lib/talents/mainTree";
 import { formatPoints } from "@/games/wow-forever/lib/talents/formatPoints";
 import { pointsForLevel, totalPoints, treePoints } from "@/games/wow-forever/lib/talents/talentRules";
-import type { TalentBuild } from "@/games/wow-forever/types/talents/talentBuild";
 import type { TalentClassData } from "@/games/wow-forever/types/talents/talentClassData";
 import type { TalentPosition } from "@/games/wow-forever/types/talents/talentPosition";
-
-/** The tree with the most points (a shared build opens on its main tree), else the first. */
-function mainTree(build: TalentBuild): number {
-  let best = 0;
-  build.forEach((_ranks, i) => {
-    if (treePoints(build, i) > treePoints(build, best)) best = i;
-  });
-  return best;
-}
 
 /** One class's three trees, the level, points left, the picked talent and the share bar. */
 export default function TalentCalculator({ data }: { data: TalentClassData }) {

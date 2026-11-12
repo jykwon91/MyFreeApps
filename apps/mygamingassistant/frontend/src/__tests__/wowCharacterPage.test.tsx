@@ -12,6 +12,7 @@ import { RECENT_CHARACTERS_STORAGE_KEY } from "@/games/wow-forever/data/characte
 import { CHARACTER_STATS_TAB_STORAGE_KEY } from "@/games/wow-forever/data/character/characterStatsConfig";
 import { CALCULATOR_ILLEGAL_REASON, CALCULATOR_UNKNOWN_REASON } from "@/games/wow-forever/data/character/characterTalentsConfig";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { pickedTalent } from "@/games/wow-forever/lib/character/characterTalents";
 import { characterNameFromSlug, characterSlugFromName } from "@/games/wow-forever/lib/character/characterSlug";
 import { withRecentCharacter } from "@/games/wow-forever/lib/character/recentCharacters";
 import WowCharacterPage from "@/games/wow-forever/pages/WowCharacterPage";
@@ -345,15 +346,20 @@ describe("the talents panel", () => {
     return panel;
   }
 
-  it("shows the point split, the talents taken and a calculator link at the character's level", async () => {
+  it("draws each tree as the game's grid with the character's ranks and a calculator link", async () => {
     const panel = await talentsFor(CHARACTER);
     const split = within(panel).getByTestId("character-talent-split");
     expect(split).toHaveTextContent("Affliction 28");
     expect(split).toHaveTextContent("Demonology 0");
     expect(split).toHaveTextContent("Destruction 0");
-    expect(within(panel).getAllByTestId("character-talent")).toHaveLength(10);
-    expect(within(panel).getByRole("heading", { level: 3, name: /Affliction/ })).toBeInTheDocument();
-    expect(within(panel).getByText("Demonology: 0 points")).toBeInTheDocument();
+    const cells = within(panel).getAllByTestId("character-talent-cell");
+    expect(cells.filter((cell) => cell.dataset.rank !== "0")).toHaveLength(10);
+    expect(within(panel).getAllByTestId("talent-tree")).toHaveLength(3);
+    expect(within(panel).getByRole("heading", { level: 3, name: "Affliction" })).toBeInTheDocument();
+    const demonology = within(panel).getByRole("region", { name: "Demonology talents" });
+    expect(within(demonology).getByTestId("talent-tree-points")).toHaveTextContent("0 points");
+    expect(within(panel).getByRole("button", { name: "Suppression, rank 2 of 5" })).toHaveAttribute("data-state", "partial");
+    expect(within(panel).getByRole("button", { name: "Improved Corruption, rank 5 of 5" })).toHaveAttribute("data-state", "maxed");
     expect(within(panel).getByRole("link", { name: "Open in the talent calculator" })).toHaveAttribute(
       "href",
       "/wow-forever/talents/warlock?b=2-0250032003510133--&lvl=37",
@@ -361,15 +367,63 @@ describe("the talents panel", () => {
     expect(within(panel).queryByTestId("character-talents-unspent")).not.toBeInTheDocument();
   });
 
-  it("opens a talent to the text of the rank the character has", async () => {
+  it("opens a talent to the text of the rank the character has, and closes it again", async () => {
     const panel = await talentsFor(CHARACTER);
-    const row = within(panel).getAllByTestId("character-talent")[0];
-    expect(row).toHaveTextContent("Suppression");
-    expect(row).toHaveTextContent("rank 2 of 5");
-    const button = within(row).getByRole("button");
-    fireEvent.click(button);
-    expect(button).toHaveAttribute("aria-expanded", "true");
-    expect(within(row).getByTestId("character-talent-text")).toHaveTextContent(/2%/);
+    const details = within(panel).getByTestId("character-talent-details");
+    expect(details).toHaveTextContent("Tap a talent to see what it does.");
+    const suppression = within(panel).getByRole("button", { name: "Suppression, rank 2 of 5" });
+    fireEvent.click(suppression);
+    expect(suppression).toHaveAttribute("aria-pressed", "true");
+    expect(details).toHaveTextContent("Suppression");
+    expect(details).toHaveTextContent("Rank 2/5");
+    expect(details).toHaveTextContent(/2%/);
+    fireEvent.click(suppression);
+    expect(suppression).toHaveAttribute("aria-pressed", "false");
+    expect(details).toHaveTextContent("Tap a talent to see what it does.");
+    fireEvent.click(suppression);
+    fireEvent.keyDown(suppression, { key: "Escape" });
+    expect(details).toHaveTextContent("Tap a talent to see what it does.");
+  });
+
+  it("starts fresh on another character: nothing open", async () => {
+    const answers: Record<string, ReturnType<typeof query>> = {
+      "jason-kwon": query({ data: CHARACTER }),
+      "someone-else": query({ data: { ...CHARACTER, slug: "someone-else" } }),
+    };
+    mockQuery.mockImplementation((slug: string) => answers[slug] ?? query({}));
+    renderAt("/wow-forever/character/jason-kwon");
+    const panel = screen.getByRole("region", { name: "Talents" });
+    fireEvent.click(await within(panel).findByRole("button", { name: "Suppression, rank 2 of 5" }));
+    expect(within(panel).getByTestId("character-talent-details")).toHaveTextContent("Rank 2/5");
+    fireEvent.change(screen.getByLabelText(/character name/i), { target: { value: "Someone Else" } });
+    fireEvent.click(screen.getByRole("button", { name: "Look up" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/wow-forever/character/someone-else");
+    const details = await within(screen.getByRole("region", { name: "Talents" })).findByTestId("character-talent-details");
+    expect(details).toHaveTextContent("Tap a talent to see what it does.");
+  });
+
+  it("opens nothing for a talent position the trees don't have", () => {
+    const trees = [{ talents: [] }] as unknown as Parameters<typeof pickedTalent>[0];
+    expect(pickedTalent(trees, [[]], { tree: 0, talent: 4 })).toBeNull();
+    expect(pickedTalent(trees, [[]], { tree: 2, talent: 0 })).toBeNull();
+  });
+
+  it("names a talent whose row isn't open yet for screen readers", async () => {
+    const panel = await talentsFor(CHARACTER);
+    const demonology = within(panel).getByRole("region", { name: "Demonology talents" });
+    const locked = within(demonology).getAllByRole("button").filter((cell) => cell.dataset.state === "locked");
+    expect(locked.length).toBeGreaterThan(0);
+    expect(locked[0]).toHaveAccessibleName(/, rank 0 of \d, not open yet$/);
+  });
+
+  it("can't add or remove points: a click only opens the talent", async () => {
+    const panel = await talentsFor(CHARACTER);
+    const demonology = within(panel).getByRole("region", { name: "Demonology talents" });
+    const open = within(demonology).getAllByRole("button").find((cell) => cell.dataset.state === "open");
+    fireEvent.click(open!);
+    fireEvent.contextMenu(open!);
+    expect(open).toHaveAttribute("data-rank", "0");
+    expect(within(demonology).getByTestId("talent-tree-points")).toHaveTextContent("0 points");
   });
 
   it("counts points not spent yet and links at the character's level", async () => {

@@ -196,11 +196,13 @@ test("the talents section shows the point split and opens the build in the talen
   await page.goto("/wow-forever/character/jason-kwon");
   const panel = page.getByRole("region", { name: "Talents" });
   await expect(panel.getByTestId("character-talent-split")).toContainText("Affliction 28");
-  await expect(panel.getByTestId("character-talent")).toHaveCount(10);
+  await expect(panel.getByTestId("talent-tree")).toHaveCount(3);
+  await expect(panel.locator('[data-testid="character-talent-cell"]:not([data-rank="0"])')).toHaveCount(10);
 
-  const suppression = panel.getByTestId("character-talent").filter({ hasText: "Suppression" });
-  await suppression.getByRole("button").click();
-  await expect(suppression.getByTestId("character-talent-text")).toBeVisible();
+  const suppression = panel.getByRole("button", { name: "Suppression, rank 2 of 5" });
+  await suppression.click();
+  await expect(suppression).toHaveAttribute("aria-pressed", "true");
+  await expect(panel.getByTestId("character-talent-details")).toContainText("Rank 2/5");
 
   await panel.getByRole("link", { name: "Open in the talent calculator" }).click();
   await expect(page).toHaveURL(/\/wow-forever\/talents\/warlock\?b=2-0250032003510133--&lvl=37/);
@@ -225,7 +227,12 @@ test("375px phone layout: the picture comes first and nothing overflows", async 
   const firstRow = await page.getByRole("list", { name: "Left side" }).locator("li").first().boundingBox();
   expect(pictureBox?.y ?? 0).toBeLessThan(firstRow?.y ?? 0);
   await expect(page.getByRole("tab", { name: "Defenses" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Talents" }).getByTestId("character-talent")).toHaveCount(10);
+  const talents = page.getByRole("region", { name: "Talents" });
+  // One tree at a time behind tabs, opening on the main tree.
+  await expect(talents.getByRole("region", { name: "Affliction talents" })).toBeVisible();
+  await expect(talents.getByRole("region", { name: "Demonology talents" })).toBeHidden();
+  await talents.getByRole("radio", { name: /Demonology/ }).click();
+  await expect(talents.getByRole("region", { name: "Demonology talents" })).toBeVisible();
   const link = await page.getByRole("link", { name: "Open in the talent calculator" }).boundingBox();
   expect(link?.height ?? 0).toBeGreaterThanOrEqual(44);
   const tab = await page.getByRole("tab", { name: "Defenses" }).boundingBox();

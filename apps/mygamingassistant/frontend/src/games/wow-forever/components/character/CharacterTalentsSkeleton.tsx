@@ -1,20 +1,24 @@
-import CharacterRowSkeletons from "@/games/wow-forever/components/character/CharacterRowSkeletons";
+import { Skeleton } from "@platform/ui";
+import TalentTreeSkeleton from "@/games/wow-forever/components/talents/TalentTreeSkeleton";
+import { TALENT_TREE_COUNT } from "@/games/wow-forever/data/talents/talentConfig";
 
-const TREE_CHIPS = 3;
-const TALENT_ROWS = 6;
-
-/** The talents section's shape while it loads: the point split, the link, then talent rows. */
+/** The talents section's shape while it loads: the point split and link, the tabs (below `lg`), the three trees and the details card. */
 export default function CharacterTalentsSkeleton() {
   return (
     <div className="space-y-3" aria-hidden data-testid="character-talents-skeleton">
       <div className="flex flex-wrap items-center gap-2">
-        {Array.from({ length: TREE_CHIPS }, (_, i) => (
-          <div key={i} className="h-8 w-28 rounded-full bg-muted/40 animate-pulse" />
+        {Array.from({ length: TALENT_TREE_COUNT }, (_, i) => (
+          <Skeleton key={i} className="h-8 w-28 rounded-full" />
         ))}
-        <div className="h-11 w-48 rounded-md bg-muted/40 animate-pulse sm:ml-auto" />
+        <Skeleton className="h-11 w-48 sm:ml-auto" />
       </div>
-      <div className="h-5 w-40 rounded-md bg-muted/40 animate-pulse" />
-      <CharacterRowSkeletons count={TALENT_ROWS} height="h-[62px]" />
+      <Skeleton className="h-[54px] w-full lg:hidden" />
+      <div className="grid gap-4 lg:grid-cols-3">
+        {Array.from({ length: TALENT_TREE_COUNT }, (_, t) => (
+          <TalentTreeSkeleton key={t} index={t} />
+        ))}
+      </div>
+      <Skeleton className="h-14 w-full rounded-xl" />
     </div>
   );
 }
