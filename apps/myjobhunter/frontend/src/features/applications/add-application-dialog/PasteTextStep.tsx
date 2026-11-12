@@ -5,7 +5,7 @@
  * postings, copy-pasted email job descriptions).
  */
 import { JD_TEXT_MAX_LENGTH } from "@myjobhunter/api-client/constants/addApplicationForm";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { AlertBox, FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
 import type { DialogInputMode } from "../useAddApplicationDialogState";
 

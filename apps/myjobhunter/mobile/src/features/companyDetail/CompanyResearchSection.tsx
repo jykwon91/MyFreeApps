@@ -2,12 +2,11 @@ import { useGetCompanyResearchQuery, useTriggerCompanyResearchMutation } from "@
 import { companyResearchMode } from "@myjobhunter/api-client/utils/companyResearchMode";
 import { researchRunFailure } from "@myjobhunter/api-client/utils/researchRunFailure";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { useTheme, useToast } from "@platform/mobile";
+import { SectionError, useTheme, useToast } from "@platform/mobile";
 import { View } from "react-native";
 import { COMPANY_RESEARCH_MESSAGES as MESSAGES } from "../../constants/companyResearch";
 import { researchFailureMessage } from "../../lib/researchFailureMessage";
 import type { CompanyResearchSectionProps } from "../../types/CompanyResearchSectionProps";
-import SectionError from "../applicationDetail/SectionError";
 import SectionHeading from "../applicationDetail/SectionHeading";
 import ResearchBody from "./ResearchBody";
 import ResearchSkeleton from "./ResearchSkeleton";

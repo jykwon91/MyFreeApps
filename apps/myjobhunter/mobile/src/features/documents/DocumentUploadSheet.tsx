@@ -3,10 +3,10 @@ import { DOCUMENT_KIND_OPTIONS } from "@myjobhunter/api-client/constants/documen
 import { DOCUMENT_UPLOAD_MIME_TYPES } from "@myjobhunter/api-client/constants/documentUploadLimits";
 import { useUploadDocumentMutation } from "@myjobhunter/api-client/store/documentsApi";
 import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { documentUploadProblem } from "@myjobhunter/api-client/utils/documentUploadProblem";
 import { fillDocumentUploadForm } from "@myjobhunter/api-client/utils/fillDocumentUploadForm";
-import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { formatFileSize } from "@platform/core/utils/fileSize";
 import { filePart, FormField, FormSheet, LoadingButton, useTheme, useToast, type FileForUpload } from "@platform/mobile";
 import { useState } from "react";

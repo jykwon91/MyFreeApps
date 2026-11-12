@@ -12,19 +12,19 @@ import { APPLICATION_CONTACT_MESSAGES as CONTACTS } from "../src/constants/appli
 import { APPLICATION_DETAIL_MESSAGES } from "../src/constants/applicationDetail";
 import { CONTACT_FIELD_PROBLEMS as PROBLEMS } from "../src/constants/contactFieldProblems";
 import { store } from "../src/lib/store";
-import { alertButton } from "../test-support/alertButton";
+import { alertButton } from "@platform/mobile/test-support/alertButton";
 import { applicationDetailRecord } from "../test-support/applicationDetailRecord";
 import { applicationDetailRoutes } from "../test-support/applicationDetailRoutes";
 import { contactRecord } from "../test-support/contactRecord";
-import { serve } from "../test-support/fakeServer";
-import { storedItems } from "../test-support/memorySecureStore";
+import { serve } from "@platform/mobile/test-support/fakeServer";
+import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
 import { renderApplicationDetail } from "../test-support/renderApplicationDetail";
-import { storeSession } from "../test-support/storedSession";
-import type { FakeReply } from "../test-support/types/FakeReply";
-import type { FakeRoute } from "../test-support/types/FakeRoute";
+import { storeSession } from "@platform/mobile/test-support/storedSession";
+import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
+import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 
-jest.mock("expo-secure-store", () => jest.requireActual("../test-support/memorySecureStore"));
-jest.mock("expo-application", () => jest.requireActual("../test-support/fakeApplication"));
+jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
+jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 jest.mock("@react-native-community/datetimepicker", () => {

@@ -1,6 +1,7 @@
-import { SessionProvider, TOAST_CLEARANCE, ToastProvider, useStackScreenOptions } from "@platform/mobile";
+import { clearDataExportFiles, SessionProvider, TOAST_CLEARANCE, ToastProvider, useStackScreenOptions } from "@platform/mobile";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Provider } from "react-redux";
 import AccountNotice from "../src/features/account/AccountNotice";
@@ -18,6 +19,10 @@ export default function RootLayout() {
   const stackOptions = useStackScreenOptions();
   const insets = useSafeAreaInsets();
   useCookTimerAlertTaps();
+  // A copy left behind if the app was killed while the share sheet had it.
+  useEffect(() => {
+    clearDataExportFiles();
+  }, []);
 
   return (
     <Provider store={store}>

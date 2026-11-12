@@ -21,8 +21,10 @@ routes:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /reset-password:
     not_on_mobile: Done on the website, which the sign-in screen links to.
+  # In Settings, when signed in. Its Turn on dialog is a screen of its own, security/turn-on; the Turn off
+  # dialog is a sheet; the export downloads to the share sheet; Delete account opens delete-account.
   /security:
-    not_on_mobile: Not built yet.
+    screen: security/index
   /settings:
     screen: (tabs)/settings
   /support-myfreeapps:

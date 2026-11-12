@@ -1,6 +1,9 @@
-import { AccountSettings, AppVersion, LoadingButton, Skeleton, UnreadableSession, useSession, useTheme } from "@platform/mobile";
+import { AccountSettings, AppVersion, LoadingButton, MoreRow, Skeleton, UnreadableSession, useSession, useTheme } from "@platform/mobile";
 import { useRouter } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
+import { WEB_BASE_URL } from "../../constants/api";
+import { APP_NAME } from "../../constants/app";
+import { DELETE_ACCOUNT_ROUTE, SECURITY_MENU_ITEM, SECURITY_ROUTE } from "../../constants/security";
 
 export default function SettingsScreen() {
   const { colors, spacing, fontSize } = useTheme();
@@ -25,8 +28,11 @@ export default function SettingsScreen() {
           </View>
         ) : null}
         {state.status === "signedIn" ? (
-          // Keyed so another account starts with its own device list.
-          <AccountSettings appName="MyRecipes" key={state.email} onDeleteAccount={() => router.push("/delete-account")} />
+          <>
+            <MoreRow item={SECURITY_MENU_ITEM} onPress={() => router.push(SECURITY_ROUTE)} webBaseUrl={WEB_BASE_URL} />
+            {/* Keyed so another account starts with its own device list. */}
+            <AccountSettings appName={APP_NAME} key={state.email} onDeleteAccount={() => router.push(DELETE_ACCOUNT_ROUTE)} />
+          </>
         ) : null}
         <AppVersion />
       </ScrollView>

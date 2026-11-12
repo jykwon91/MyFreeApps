@@ -1,12 +1,15 @@
-import { DISPLAY_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
-import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import { DISPLAY_NAME_MAX_LENGTH } from "@platform/core/constants/displayName";
 import { useUpdateCurrentUserMutation } from "@platform/core/store/userApi";
-import { FormField, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { characterCounter } from "@platform/core/utils/characterCounter";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { useState } from "react";
 import { View } from "react-native";
-import { SECURITY_MESSAGES as MESSAGES } from "../../constants/security";
-import type { DisplayNameFormProps } from "../../types/DisplayNameFormProps";
+import { SECURITY_MESSAGES as MESSAGES } from "../constants/security";
+import { useToast } from "../hooks/useToast";
+import { useTheme } from "../theme/useTheme";
+import type { DisplayNameFormProps } from "../types/DisplayNameFormProps";
+import FormField from "./FormField";
+import LoadingButton from "./LoadingButton";
 
 /** The name, saved with its own button as on the website. A failed save keeps what was typed. */
 export default function DisplayNameForm({ initialName }: DisplayNameFormProps) {

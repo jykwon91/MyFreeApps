@@ -2,9 +2,9 @@ import type { DiscoveredJob } from "@myjobhunter/api-client/types/discovery/disc
 import type { DiscoverySource } from "@myjobhunter/api-client/types/discovery/discovery-source";
 import type { Profile } from "@myjobhunter/api-client/types/profile/profile";
 import { profileRecord } from "./profileRecord";
-import type { FakeParams } from "./types/FakeParams";
-import type { FakeReply } from "./types/FakeReply";
-import type { FakeRoute } from "./types/FakeRoute";
+import type { FakeParams } from "@platform/mobile/test-support/types/FakeParams";
+import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
+import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 
 /** GET /discover's page of `jobs` for these params, as the server pages it, with the inbox's scoring coverage. */
 export function discoverPage(jobs: readonly DiscoveredJob[], params: FakeParams): FakeReply {

@@ -1,8 +1,8 @@
 import type { RefinementSession } from "@myjobhunter/api-client/types/resume-refinement/refinement-session";
 import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
 import { analyzeRoutes } from "./analyzeRoutes";
-import type { FakeReply } from "./types/FakeReply";
-import type { FakeRoute } from "./types/FakeRoute";
+import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
+import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 
 /** The session the fake server holds; a test changes `current` to have the next poll or refetch return it. */
 export interface HeldRefinementSession {

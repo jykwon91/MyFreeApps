@@ -1,5 +1,5 @@
 import type { Document } from "@myjobhunter/api-client/types/document/document";
-import { EmptyState, LoadMoreFooter, LoadingButton, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, LoadMoreFooter, SectionError, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { View } from "react-native";
 import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
@@ -8,7 +8,6 @@ import type { DocumentsSectionProps } from "../../types/DocumentsSectionProps";
 import DocumentCard from "../documents/DocumentCard";
 import DocumentSheet from "../documents/DocumentSheet";
 import DocumentUploadSheet from "../documents/DocumentUploadSheet";
-import SectionError from "./SectionError";
 import SectionHeading from "./SectionHeading";
 import SectionSkeletonCards from "./SectionSkeletonCards";
 

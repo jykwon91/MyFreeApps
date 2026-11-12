@@ -9,7 +9,7 @@ import {
 import { PROFILE_FORM_PROBLEMS as PROBLEMS } from "../constants/profileFormProblems";
 import type { EducationFormProblems } from "../types/education/education-form-problems";
 import type { EducationFormValues } from "../types/education/education-form-values";
-import { tooLongProblem } from "./tooLongProblem";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 
 const WHOLE_YEAR = /^\d{4}$/;
 /** What the server's two-decimal GPA column holds: "3", "3.8", "3.85". */

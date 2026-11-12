@@ -1,5 +1,5 @@
 import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { FieldFeedback, fieldFeedbackAria } from "@platform/ui";
 
 interface DocumentTitleFieldProps {

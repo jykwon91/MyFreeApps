@@ -2,7 +2,7 @@ import { APPLICATION_NOTES_MAX_LENGTH } from "../constants/textFieldLimits";
 import type { HtmlTextContent } from "../types/application/html-text-content";
 import type { JdUrlExtractResponse } from "../types/application/jd-url-extract-response";
 import { htmlToPlainText } from "./htmlToPlainText";
-import { textLength } from "./textLength";
+import { textLength } from "@platform/core/utils/textLength";
 
 /** The notes a read link starts with: its summary, description and requirements, within the notes limit. */
 export function combineNotes(result: JdUrlExtractResponse, textContent: HtmlTextContent): string | null {

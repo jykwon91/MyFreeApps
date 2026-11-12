@@ -2,8 +2,8 @@ import { FieldFeedback, fieldFeedbackAria } from "@platform/ui";
 import type { FieldErrors, UseFormRegister, UseFormWatch } from "react-hook-form";
 import { EVENT_NOTE_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import type { LogEventFormValues } from "@myjobhunter/api-client/types/log-event-form-values";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
-import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import { characterCounter } from "@platform/core/utils/characterCounter";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 
 interface EventNoteFieldProps {
   id: string;

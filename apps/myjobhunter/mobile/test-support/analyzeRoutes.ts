@@ -1,7 +1,7 @@
 import { EMPTY_BOARD } from "./emptyBoard";
-import type { FakeReply } from "./types/FakeReply";
-import type { FakeRoute } from "./types/FakeRoute";
-import { tokens } from "./storedSession";
+import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
+import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
+import { tokens } from "@platform/mobile/test-support/storedSession";
 
 const DEVICES = [{ id: "s1", device_name: "Test Phone", created_at: "2026-10-01T00:00:00Z", last_used_at: "2026-11-01T00:00:00Z" }];
 

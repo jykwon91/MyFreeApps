@@ -3,7 +3,7 @@ import {
   JD_TEXT_MAX_LENGTH,
   JOB_URL_MAX_LENGTH,
 } from "../constants/addApplicationForm";
-import { textLength } from "./textLength";
+import { textLength } from "@platform/core/utils/textLength";
 
 /** Why a job link can't be read yet: longer than the backend accepts. Undefined when it fits. */
 export function jobLinkLengthProblem(url: string): string | undefined {

@@ -10,14 +10,14 @@ import { RESUME_EXPORT_DIRECTORY, RESUME_SESSION_ID_KEY } from "../src/constants
 import { PROFILE_TAB, TABS } from "../src/constants/tabs";
 import type { AppTab } from "../src/types/AppTab";
 import { EMPTY_BOARD } from "../test-support/emptyBoard";
-import { serve } from "../test-support/fakeServer";
+import { serve } from "@platform/mobile/test-support/fakeServer";
 import { profileRoutes } from "../test-support/profileRoutes";
-import { storedItems } from "../test-support/memorySecureStore";
+import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
 import { renderApp } from "../test-support/renderApp";
-import { ACCOUNT_EMAIL, storeSession, storedSession, tokens } from "../test-support/storedSession";
+import { ACCOUNT_EMAIL, storeSession, storedSession, tokens } from "@platform/mobile/test-support/storedSession";
 
-jest.mock("expo-secure-store", () => jest.requireActual("../test-support/memorySecureStore"));
-jest.mock("expo-application", () => jest.requireActual("../test-support/fakeApplication"));
+jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
+jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));

@@ -2,7 +2,7 @@ import { educationRecord } from "./educationRecord";
 import { profileRecord } from "./profileRecord";
 import { screeningAnswerRecord } from "./screeningAnswerRecord";
 import { skillRecord } from "./skillRecord";
-import type { FakeRoute } from "./types/FakeRoute";
+import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 import type { ProfileSeed } from "./types/ProfileSeed";
 import { workHistoryRecord } from "./workHistoryRecord";
 

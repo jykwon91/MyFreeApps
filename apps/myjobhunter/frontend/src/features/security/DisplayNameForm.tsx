@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
-import { DISPLAY_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
-import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { DISPLAY_NAME_MAX_LENGTH } from "@platform/core/constants/displayName";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { FieldFeedback, fieldFeedbackAria, showError, showSuccess } from "@platform/ui";
 import { useUpdateCurrentUserMutation } from "@platform/ui/store/userApi";
 

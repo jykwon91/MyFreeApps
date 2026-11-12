@@ -1,8 +1,8 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { DISPLAY_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
-import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import { DISPLAY_NAME_MAX_LENGTH } from "@platform/core/constants/displayName";
+import { characterCounter } from "@platform/core/utils/characterCounter";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
 
 export interface CreateDemoDialogProps {

@@ -1,5 +1,5 @@
 import { INTERVIEW_LOCATION_MAX_LENGTH } from "@myjobhunter/api-client/constants/interviewDetailLimits";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { FormField, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { APPLICATION_EVENT_MESSAGES as MESSAGES } from "../../constants/applicationEvents";

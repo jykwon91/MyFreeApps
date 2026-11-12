@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { SAVED_SEARCH_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { FieldFeedback, fieldFeedbackAria } from "@platform/ui";
 
 interface SavedSearchNameFieldProps {

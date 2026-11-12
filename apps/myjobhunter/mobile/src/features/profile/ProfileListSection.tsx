@@ -1,7 +1,6 @@
-import { EmptyState, LoadingButton, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, SectionError, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import type { ProfileListSectionProps } from "../../types/ProfileListSectionProps";
-import SectionError from "../applicationDetail/SectionError";
 import SectionHeading from "../applicationDetail/SectionHeading";
 import SectionSkeletonCards from "../applicationDetail/SectionSkeletonCards";
 

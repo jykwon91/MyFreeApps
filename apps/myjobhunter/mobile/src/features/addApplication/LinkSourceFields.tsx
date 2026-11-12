@@ -1,5 +1,5 @@
 import { JOB_URL_MAX_LENGTH } from "@myjobhunter/api-client/constants/addApplicationForm";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { FormField, LoadingButton } from "@platform/mobile";
 import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../../constants/addApplication";
 import type { LinkSourceFieldsProps } from "../../types/LinkSourceFieldsProps";

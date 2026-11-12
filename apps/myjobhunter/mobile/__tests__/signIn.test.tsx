@@ -2,14 +2,14 @@ import api from "@platform/core/lib/api";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { DASHBOARD_MESSAGES } from "../src/constants/dashboard";
 import { EMPTY_BOARD } from "../test-support/emptyBoard";
-import { serve } from "../test-support/fakeServer";
-import { storedItems } from "../test-support/memorySecureStore";
+import { serve } from "@platform/mobile/test-support/fakeServer";
+import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
 import { renderApp } from "../test-support/renderApp";
-import { ACCOUNT_EMAIL, storedSession, tokens } from "../test-support/storedSession";
+import { ACCOUNT_EMAIL, storedSession, tokens } from "@platform/mobile/test-support/storedSession";
 import { session } from "../src/lib/session";
 
-jest.mock("expo-secure-store", () => jest.requireActual("../test-support/memorySecureStore"));
-jest.mock("expo-application", () => jest.requireActual("../test-support/fakeApplication"));
+jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
+jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 

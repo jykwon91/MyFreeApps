@@ -2,8 +2,8 @@ import type { ApplicationDetail } from "@myjobhunter/api-client/types/applicatio
 import type { ApplicationEvent } from "@myjobhunter/api-client/types/application-event";
 import type { Document } from "@myjobhunter/api-client/types/document/document";
 import { companyRecord } from "./companyRecord";
-import type { FakeReply } from "./types/FakeReply";
-import type { FakeRoute } from "./types/FakeRoute";
+import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
+import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 
 const ok = (data: unknown): FakeRoute => () => ({ status: 200, data }) satisfies FakeReply;
 

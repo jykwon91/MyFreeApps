@@ -1,6 +1,6 @@
 import { SKILL_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/profileFieldLimits";
 import { useCreateSkillMutation } from "@myjobhunter/api-client/store/skillsApi";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { isConflict } from "@myjobhunter/api-client/utils/isConflict";
 import { skillCreateRequest } from "@myjobhunter/api-client/utils/skillCreateRequest";
 import { skillNameProblem } from "@myjobhunter/api-client/utils/skillNameProblem";

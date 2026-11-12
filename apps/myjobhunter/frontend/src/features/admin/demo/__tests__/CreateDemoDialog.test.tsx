@@ -11,7 +11,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DISPLAY_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
+import { DISPLAY_NAME_MAX_LENGTH } from "@platform/core/constants/displayName";
 import CreateDemoDialog from "../CreateDemoDialog";
 
 vi.mock("@radix-ui/react-dialog", async (importOriginal) => {

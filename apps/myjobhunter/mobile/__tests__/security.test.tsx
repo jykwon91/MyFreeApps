@@ -1,5 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
-import { TWO_STEP_MESSAGES as TWO_STEP } from "@platform/mobile";
+import { SECURITY_MESSAGES as MESSAGES, TWO_STEP_MESSAGES as TWO_STEP } from "@platform/mobile";
 import { fakeFiles, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { File } from "expo-file-system";
@@ -7,17 +7,17 @@ import * as Sharing from "expo-sharing";
 import { Alert } from "react-native";
 import { API_BASE_URL } from "../src/constants/api";
 import { DELETE_ACCOUNT_WARNING } from "../src/constants/deleteAccount";
-import { SECURITY_INTRO_DISMISSED_KEY, SECURITY_MESSAGES as MESSAGES, WHAT_TWO_STEP_PROTECTS } from "../src/constants/security";
+import { SECURITY_CONTENT, SECURITY_INTRO_DISMISSED_KEY } from "../src/constants/security";
 import { store } from "../src/lib/store";
-import { alertButton } from "../test-support/alertButton";
-import { serve } from "../test-support/fakeServer";
-import { storedItems } from "../test-support/memorySecureStore";
+import { alertButton } from "@platform/mobile/test-support/alertButton";
+import { serve } from "@platform/mobile/test-support/fakeServer";
+import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
 import { renderApp } from "../test-support/renderApp";
-import { ACCOUNT_EMAIL, storeSession, tokens } from "../test-support/storedSession";
-import type { FakeRoute } from "../test-support/types/FakeRoute";
+import { ACCOUNT_EMAIL, storeSession, tokens } from "@platform/mobile/test-support/storedSession";
+import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 
-jest.mock("expo-secure-store", () => jest.requireActual("../test-support/memorySecureStore"));
-jest.mock("expo-application", () => jest.requireActual("../test-support/fakeApplication"));
+jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
+jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
@@ -85,10 +85,10 @@ describe("the two-step intro", () => {
   it("goes when dismissed, and the phone keeps the dismissal", async () => {
     securityRoutes();
     await openSecurity();
-    expect(await screen.findByText(MESSAGES.intro)).toBeTruthy();
+    expect(await screen.findByText(SECURITY_CONTENT.intro)).toBeTruthy();
 
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.dismissIntro }));
-    expect(screen.queryByText(MESSAGES.intro)).toBeNull();
+    expect(screen.queryByText(SECURITY_CONTENT.intro)).toBeNull();
     await waitFor(() => expect(storedItems.get(SECURITY_INTRO_DISMISSED_KEY)).toBe("true"));
   });
 
@@ -97,7 +97,7 @@ describe("the two-step intro", () => {
     securityRoutes();
     await openSecurity();
     await screen.findByDisplayValue(USER.display_name);
-    expect(screen.queryByText(MESSAGES.intro)).toBeNull();
+    expect(screen.queryByText(SECURITY_CONTENT.intro)).toBeNull();
   });
 });
 
@@ -143,7 +143,7 @@ describe("two-step sign-in", () => {
   it("turns on through the recovery codes, then shows it's on", async () => {
     const sent = securityRoutes(false);
     await openSecurity();
-    expect(screen.getByText(TWO_STEP.offBody(WHAT_TWO_STEP_PROTECTS))).toBeTruthy();
+    expect(screen.getByText(TWO_STEP.offBody(SECURITY_CONTENT.whatTwoStepProtects))).toBeTruthy();
 
     await fireEvent.press(screen.getByRole("button", { name: TWO_STEP.turnOn }));
     await waitFor(() => expect(screen).toHavePathname("/security/turn-on"));
@@ -175,7 +175,7 @@ describe("two-step sign-in", () => {
     await fireEvent.changeText(await screen.findByLabelText(TWO_STEP.turnOffCodeLabel), "654321");
     await fireEvent.press(screen.getByRole("button", { name: TWO_STEP.confirmTurnOff }));
     expect(await screen.findByText(TWO_STEP.turnedOff)).toBeTruthy();
-    expect(await screen.findByText(TWO_STEP.offBody(WHAT_TWO_STEP_PROTECTS))).toBeTruthy();
+    expect(await screen.findByText(TWO_STEP.offBody(SECURITY_CONTENT.whatTwoStepProtects))).toBeTruthy();
     expect(sent).toContainEqual(expect.objectContaining({ route: "POST /auth/totp/disable", body: { code: "654321" } }));
   });
 });

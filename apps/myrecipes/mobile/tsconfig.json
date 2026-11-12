@@ -7,5 +7,5 @@
     "noEmit": true,
     "types": ["jest"]
   },
-  "include": ["app", "src", "__tests__"]
+  "include": ["app", "src", "__tests__", "test-support"]
 }

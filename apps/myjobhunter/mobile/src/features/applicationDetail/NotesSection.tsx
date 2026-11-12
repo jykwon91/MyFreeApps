@@ -1,7 +1,7 @@
 import { APPLICATION_NOTES_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import { useUpdateApplicationMutation } from "@myjobhunter/api-client/store/applicationsApi";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
-import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import { characterCounter } from "@platform/core/utils/characterCounter";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { FormField, LoadingButton, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Alert, View } from "react-native";

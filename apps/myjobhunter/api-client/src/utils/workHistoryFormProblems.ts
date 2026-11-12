@@ -8,8 +8,8 @@ import { PROFILE_FORM_PROBLEMS as PROBLEMS } from "../constants/profileFormProbl
 import type { WorkHistoryFormProblems } from "../types/work-history/work-history-form-problems";
 import type { WorkHistoryFormValues } from "../types/work-history/work-history-form-values";
 import { bulletsFromText } from "./bulletsFromText";
-import { textLength } from "./textLength";
-import { tooLongProblem } from "./tooLongProblem";
+import { textLength } from "@platform/core/utils/textLength";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 
 /** What stops a role saving, checked on what is sent. Empty when it can be saved. */
 export function workHistoryFormProblems(values: WorkHistoryFormValues): WorkHistoryFormProblems {

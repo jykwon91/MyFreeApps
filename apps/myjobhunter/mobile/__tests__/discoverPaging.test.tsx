@@ -8,14 +8,14 @@ import { store } from "../src/lib/store";
 import { discoveredJobRecord } from "../test-support/discoveredJobRecord";
 import { discoverPage, discoverRoutes, jobsFor } from "../test-support/discoverRoutes";
 import { discoverySourceRecord } from "../test-support/discoverySourceRecord";
-import { serve } from "../test-support/fakeServer";
-import { storedItems } from "../test-support/memorySecureStore";
+import { serve } from "@platform/mobile/test-support/fakeServer";
+import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
 import { renderDiscover } from "../test-support/renderDiscover";
-import { storeSession } from "../test-support/storedSession";
-import type { SentRequest } from "../test-support/types/SentRequest";
+import { storeSession } from "@platform/mobile/test-support/storedSession";
+import type { SentRequest } from "@platform/mobile/test-support/types/SentRequest";
 
-jest.mock("expo-secure-store", () => jest.requireActual("../test-support/memorySecureStore"));
-jest.mock("expo-application", () => jest.requireActual("../test-support/fakeApplication"));
+jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
+jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 // A short page keeps every card inside the list's first render window.
