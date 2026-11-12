@@ -1,6 +1,7 @@
 import CharacterGear from "@/games/wow-forever/components/character/CharacterGear";
 import CharacterHeader from "@/games/wow-forever/components/character/CharacterHeader";
 import CharacterProfessionsPanel from "@/games/wow-forever/components/character/CharacterProfessionsPanel";
+import CharacterReputationPanel from "@/games/wow-forever/components/character/CharacterReputationPanel";
 import CharacterStatsPanel from "@/games/wow-forever/components/character/CharacterStatsPanel";
 import CharacterTalentsPanel from "@/games/wow-forever/components/character/CharacterTalentsPanel";
 import CharacterSheetSkeleton from "@/games/wow-forever/components/character/CharacterSheetSkeleton";
@@ -28,6 +29,8 @@ export default function CharacterSheet({ slug, rawSlug, shown, error, isFetching
         <CharacterStatsPanel character={shown} />
         {/* Keyed by character so another lookup starts with every profession closed. */}
         <CharacterProfessionsPanel key={shown.slug} character={shown} />
+        {/* Keyed likewise, so another lookup opens its own first group. */}
+        <CharacterReputationPanel key={`reputation-${shown.slug}`} character={shown} />
         <CharacterTalentsPanel character={shown} />
       </>
     );

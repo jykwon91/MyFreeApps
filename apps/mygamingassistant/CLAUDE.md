@@ -1005,9 +1005,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Profile API serves Forever characters at `/profile/wow/character/{first-surname}`
   (namespace `profile-forever-us`, US only) with the app's client token.
 - Backend: `app/api/wow_characters.py` — `GET /api/wow/characters/{slug}`
-  (profile + equipment + statistics + specializations + professions, mapped by `services/wow/character/character_mapper.py`;
+  (profile + equipment + statistics + specializations + professions + reputations, mapped by `services/wow/character/character_mapper.py`;
   `stats` by `character_stats_mapper.py`, `talents` by `character_talents_mapper.py`,
-  `professions` by `character_professions_mapper.py`)
+  `professions` by `character_professions_mapper.py`, `reputations` by `character_reputations_mapper.py`)
   and `/{slug}/render.png` (Blizzard's `main-raw` render, fetched only from
   `render.worldofwarcraft.com`, refused over 3200x2400 px before decoding,
   cropped to the figure with Pillow). Per-IP limit 30/min on each route
@@ -1070,6 +1070,19 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`?p=<guide>`, plus `&skill=` for crafting guides). Blizzard ids map to
   guides through `PROFESSION_SKILL_LINES`. `professions: null` = the call failed
   (logged, not cached); a 404 = none learned (empty lists).
+
+- Reputation (`CharacterReputationPanel`, `lib/character/characterReputation.ts`),
+  after Professions: `/reputations` gives each faction met with its standing
+  (`tier` 0 Hated … 7 Exalted) and progress (`value` / `max`; `max` 0 = at the
+  cap, so no bar or numbers). Grouped under the game's reputation-pane headers
+  from `data/character/reputationGroups.json` — **GENERATED** by
+  `python -m scripts.wow_reputation.build` from Forever's own Game Data API
+  (`reputation-faction` index, header `side` from `player_faction`; runs in the
+  data refresh). The character's side first, then shared headers
+  (Steamwheedle), then the other side; a faction under no header, or newer than
+  the file, goes in "Other" — never dropped. First header open, others open
+  beside it. A Steamwheedle town at Hostile or worse warns its guards attack.
+  `reputations: null` = the call failed (logged, not cached); a 404 = none met.
 
 #### In-game icons (`GameIcon`)
 

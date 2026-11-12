@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from app.schemas.wow.character.character_item import CharacterItem
 from app.schemas.wow.character.character_professions import CharacterProfessions
+from app.schemas.wow.character.character_reputation import CharacterReputation
 from app.schemas.wow.character.character_stats import CharacterStats
 from app.schemas.wow.character.character_talents import CharacterTalents
 
@@ -33,3 +34,5 @@ class CharacterResponse(BaseModel):
     talents: CharacterTalents | None
     # None when Blizzard failed to send the professions (the rest of the sheet still shows).
     professions: CharacterProfessions | None
+    # None when Blizzard failed to send the reputations (the rest of the sheet still shows).
+    reputations: list[CharacterReputation] | None

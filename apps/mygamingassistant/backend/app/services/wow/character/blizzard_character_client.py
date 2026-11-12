@@ -9,6 +9,8 @@
 * ``GET /profile/wow/character/{slug}/specializations`` → talent ranks per saved set.
 * ``GET /profile/wow/character/{slug}/professions`` → skill and known recipes
   per profession.
+* ``GET /profile/wow/character/{slug}/reputations`` → standing with each
+  faction the character has met.
 
 All in the ``profile-forever-us`` namespace with a client-credentials token
 (no player login). Every failure becomes a ``CharacterLookupError`` carrying
@@ -130,6 +132,9 @@ class BlizzardCharacterClient:
 
     async def professions(self, slug: str) -> dict[str, Any] | None:
         return await self._optional_json(f"{slug}/professions")
+
+    async def reputations(self, slug: str) -> dict[str, Any] | None:
+        return await self._optional_json(f"{slug}/reputations")
 
     async def render(self, url: str) -> bytes | None:
         """The render PNG — only from Blizzard's render host, over HTTPS (404 → None)."""
