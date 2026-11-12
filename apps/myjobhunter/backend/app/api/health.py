@@ -1,8 +1,7 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
 
-from app.db.session import AsyncSessionLocal
+from app.services.system import health_service
 
 router = APIRouter()
 
@@ -18,12 +17,9 @@ async def health_check():
     # Lazy import to avoid a circular dep on app.main at module import time.
     from app.main import GIT_COMMIT
 
-    try:
-        async with AsyncSessionLocal() as db:
-            await db.execute(text("SELECT 1"))
+    if await health_service.check_database():
         return {"status": "ok", "database": "connected", "version": GIT_COMMIT}
-    except Exception:
-        return JSONResponse(
-            status_code=503,
-            content={"status": "degraded", "database": "unreachable", "version": GIT_COMMIT},
-        )
+    return JSONResponse(
+        status_code=503,
+        content={"status": "degraded", "database": "unreachable", "version": GIT_COMMIT},
+    )

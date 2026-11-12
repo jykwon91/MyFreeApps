@@ -7,7 +7,9 @@ class) to match the rest of MJH's repository layer and to make patching
 easy in tests.
 """
 import uuid
+from typing import Literal
 
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.repositories.user_repo import (
@@ -31,3 +33,15 @@ async def get_by_email(db: AsyncSession, email: str) -> User | None:
 
 async def get_by_email_ci(db: AsyncSession, email: str) -> User | None:
     return await _shared_get_by_email_ci(db, email, user_model=User)
+
+
+async def set_flag_by_email(
+    db: AsyncSession,
+    email: str,
+    flag: Literal["is_verified", "is_superuser"],
+) -> bool:
+    """Set a boolean user flag TRUE by email. Returns False when no user matches."""
+    result = await db.execute(
+        update(User).where(User.email == email).values(**{flag: True}).returning(User.id)
+    )
+    return result.first() is not None

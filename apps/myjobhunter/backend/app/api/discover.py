@@ -12,7 +12,7 @@ Endpoints:
 
 Auth: every endpoint requires an authenticated user via
 ``current_active_user``. Tenant scoping is mandatory — all queries
-filter by ``user_id`` at the repository layer.
+filter by ``user_id`` at the repository layer (reached via services).
 
 Rate-limit: ``POST /discover/sources/{id}/refresh`` calls JSearch which
 is paid + per-month-quota. Cap at 30 / 5 min per user. The other endpoints
@@ -30,10 +30,6 @@ from app.core.config import settings
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
-from app.repositories.discovery import (
-    discovery_inbox_repository,
-    discovery_repository,
-)
 from app.schemas.application.application_response import ApplicationResponse
 from app.schemas.discovery.discovery_schemas import (
     DiscoveredJobDismissRequest,
@@ -132,8 +128,8 @@ async def list_sources(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> list[DiscoverySourceResponse]:
-    rows = await discovery_repository.list_sources(
-        db, user.id, active_only=not include_inactive,
+    rows = await discovery_source_service.list_sources(
+        db, user.id, include_inactive=include_inactive,
     )
     return [DiscoverySourceResponse.model_validate(r) for r in rows]
 
@@ -288,36 +284,17 @@ async def list_discovered(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> DiscoveredJobListResponse:
-    rows = await discovery_repository.list_discovered(
+    page = await discovery_inbox_service.list_discovered_page(
         db, user.id, state=state, limit=limit, offset=offset, source_id=source_id,
     )
 
-    # Coverage is only meaningful for the triage inbox: most fetched rows
-    # stay unscored (the scorer only rates the prefilter top-N per day),
-    # and the frontend surfaces "Scored N of M" so that tail reads as
-    # "daily limit reached" rather than "broken". The saved/all views
-    # don't carry the framing, so leave the counts null there.
-    scored_count: int | None = None
-    total_count: int | None = None
-    if state == "inbox":
-        scored_count, total_count = await discovery_inbox_repository.count_inbox_coverage(
-            db, user.id, source_id=source_id,
-        )
-        # The inbox pagination total IS the active-inbox row count, which
-        # count_inbox_coverage already computed — reuse it (no second COUNT).
-        total = total_count
-    else:
-        total = await discovery_inbox_repository.count_discovered(
-            db, user.id, state=state, source_id=source_id,
-        )
-
     return DiscoveredJobListResponse(
-        items=[DiscoveredJobResponse.model_validate(r) for r in rows],
-        total=total,
-        has_more=offset + len(rows) < total,
+        items=[DiscoveredJobResponse.model_validate(r) for r in page.rows],
+        total=page.total,
+        has_more=offset + len(page.rows) < page.total,
         state=state,
-        scored_count=scored_count,
-        total_count=total_count,
+        scored_count=page.scored_count,
+        total_count=page.total_count,
     )
 
 
