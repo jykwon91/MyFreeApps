@@ -13,5 +13,7 @@ export interface GuildResponse {
   refresh_failed: boolean;
   /** Blizzard no longer has this guild. */
   gone: boolean;
+  /** The gains boards' window: each member's baseline is their newest stored day at least this many days old. */
+  gains_window_days: number;
   members: GuildMember[];
 }

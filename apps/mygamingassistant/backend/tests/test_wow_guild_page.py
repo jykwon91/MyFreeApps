@@ -1,7 +1,7 @@
 """The guild page's API: GET /wow/guilds/{slug}, read from stored guilds only."""
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from httpx import AsyncClient
@@ -49,6 +49,7 @@ async def test_the_page_lists_stored_members_with_level_class_item_level_and_ran
         "topdeadcenter", "topdeadcenter", "alliance", 52,
     )
     assert body["refresh_failed"] is False and body["gone"] is False
+    assert body["gains_window_days"] == 7
     assert [(m["slug"], m["class_name"], m["level"], m["rank"]) for m in body["members"]] == [
         ("jason-kwon", "Warlock", 30, 0),
         ("tiny-john", "Warlock", 30, None),
@@ -167,3 +168,39 @@ def test_the_character_sheet_carries_its_guilds_slug() -> None:
     fetch = make_fetch()
     assert to_character_response("jason-kwon", fetch.profile).guild_slug == "topdeadcenter"
     assert to_character_response("jason-kwon", make_fetch(guild=None).profile).guild_slug is None
+
+
+async def _days(db: AsyncSession, slug: str, *days_ago_and_hk: tuple[int, int]) -> None:
+    """Replace the character's stored days: (days before today, honorable kills)."""
+    character = await _character(db, slug)
+    await db.execute(delete(WowCharacterDailyMetric).where(WowCharacterDailyMetric.character_id == character.id))
+    today = datetime.now(timezone.utc).date()
+    db.add_all([
+        WowCharacterDailyMetric(
+            character_id=character.id, day=today - timedelta(days=ago), level=20 + hk, honorable_kills=hk,
+        )
+        for ago, hk in days_ago_and_hk
+    ])
+    await db.flush()
+
+
+async def test_the_gains_baseline_is_the_newest_day_a_week_old_else_the_earliest(
+    client: AsyncClient, db: AsyncSession,
+) -> None:
+    for i, slug in enumerate(("jason-kwon", "tiny-john", "lone-day", "went-quiet"), start=1):
+        await character_store_service.record(make_fetch(slug, i), now=NOW, viewed=i == 1)
+    await _days(db, "jason-kwon", (30, 1), (8, 5), (3, 9), (0, 12))
+    await _days(db, "tiny-john", (4, 2), (2, 3), (0, 7))
+    await _days(db, "lone-day", (0, 4))
+    await _days(db, "went-quiet", (20, 1), (9, 6))
+
+    members = {m["slug"]: m for m in (await client.get("/wow/guilds/topdeadcenter")).json()["members"]}
+
+    today = datetime.now(timezone.utc).date()
+    jason = members["jason-kwon"]["baseline"]
+    assert (jason["day"], jason["honorable_kills"], jason["level"]) == (str(today - timedelta(days=8)), 5, 25)
+    tiny = members["tiny-john"]["baseline"]
+    assert (tiny["day"], tiny["honorable_kills"]) == (str(today - timedelta(days=4)), 2)
+    # One stored day: nothing to count from. Nobody looked them up this week: no gain seen.
+    assert members["lone-day"]["baseline"] is None
+    assert members["went-quiet"]["baseline"] is None

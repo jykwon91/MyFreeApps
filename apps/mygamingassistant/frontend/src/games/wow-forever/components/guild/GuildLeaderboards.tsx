@@ -4,11 +4,28 @@ import GuildLeaderboardPicker from "@/games/wow-forever/components/guild/GuildLe
 import GuildLeaderboardRow from "@/games/wow-forever/components/guild/GuildLeaderboardRow";
 import { useLeaderboardParams } from "@/games/wow-forever/hooks/useLeaderboardParams";
 import { formatCount } from "@/games/wow-forever/lib/character/formatCount";
-import { boardStatus, levelCapCount, missingCount, rankBoard, topEntries } from "@/games/wow-forever/lib/guild/guildLeaderboards";
+import { LEADERBOARD_COPY } from "@/games/wow-forever/data/guild/leaderboardConfig";
+import {
+  boardStatus,
+  gainsNote,
+  isGainBoard,
+  levelCapCount,
+  missingCount,
+  noBaselineCount,
+  noGainCount,
+  rankBoard,
+  topEntries,
+} from "@/games/wow-forever/lib/guild/guildLeaderboards";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
 
+interface GuildLeaderboardsProps {
+  members: readonly GuildMember[];
+  /** The gains boards' window (the guild response's ``gains_window_days``). */
+  gainsWindowDays: number;
+}
+
 /** The guild's leaderboards: one board at a time, its top 10 (ties kept), the viewer's own row pinned below. */
-export default function GuildLeaderboards({ members }: { members: readonly GuildMember[] }) {
+export default function GuildLeaderboards({ members, gainsWindowDays }: GuildLeaderboardsProps) {
   const headingId = useId();
   const { board, me, setBoard } = useLeaderboardParams();
   const [expandedBoard, setExpandedBoard] = useState<string | null>(null);
@@ -22,6 +39,9 @@ export default function GuildLeaderboards({ members }: { members: readonly Guild
   const viewerUnranked = !mine && members.some((m) => m.slug === me);
   const missing = missingCount(members, board, ranked.length);
   const atCap = levelCapCount(members, board);
+  const gains = isGainBoard(board);
+  const noGain = noGainCount(members, board);
+  const noBaseline = noBaselineCount(members, board);
 
   return (
     <section aria-labelledby={headingId} className="space-y-3 rounded-xl border bg-card/50 p-3 sm:p-4">
@@ -32,9 +52,12 @@ export default function GuildLeaderboards({ members }: { members: readonly Guild
       <div role="status" aria-live="polite" className="text-sm text-muted-foreground">
         {boardStatus(board, shown.length, ranked.length, atCap)}
       </div>
+      {gains ? <p className="text-xs text-muted-foreground">{gainsNote(gainsWindowDays)}</p> : null}
       {ranked.length === 0 ? (
         <p className="rounded-lg border border-dashed p-4 text-sm">
-          Nobody in the guild has a number for {board.label} yet. It fills in as members&apos; characters are looked up.
+          {gains
+            ? LEADERBOARD_COPY.gains.empty
+            : `Nobody in the guild has a number for ${board.label} yet. It fills in as members' characters are looked up.`}
         </p>
       ) : (
         <ol className="space-y-1" aria-label={`${board.label} leaderboard`}>
@@ -49,7 +72,9 @@ export default function GuildLeaderboards({ members }: { members: readonly Guild
         </ol>
       ) : null}
       {viewerUnranked ? (
-        <p className="text-sm text-muted-foreground">Your character isn&apos;t on this board: we have no number for them here.</p>
+        <p className="text-sm text-muted-foreground">
+          {gains ? LEADERBOARD_COPY.gains.viewerUnranked : LEADERBOARD_COPY.other.viewerUnranked}
+        </p>
       ) : null}
       {ranked.length > top.length ? (
         <Button
@@ -61,6 +86,16 @@ export default function GuildLeaderboards({ members }: { members: readonly Guild
         >
           {expanded ? "Show top 10" : `Show all ${ranked.length}`}
         </Button>
+      ) : null}
+      {noGain > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {formatCount(noGain, "member", "members")} had no gain, so they&apos;re not ranked.
+        </p>
+      ) : null}
+      {noBaseline > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {formatCount(noBaseline, "member needs", "members need")} a second lookup on another day to show a gain.
+        </p>
       ) : null}
       {missing > 0 ? (
         <p className="text-xs text-muted-foreground">

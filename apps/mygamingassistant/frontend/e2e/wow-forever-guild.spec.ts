@@ -4,6 +4,7 @@
  *   - the guild badge on a character's sheet opens the guild page, marking that character
  *   - recipe search: who knows a recipe, with their skill; the search lives in the URL
  *   - leaderboards: pick a board, ties share a rank, the board lives in the URL
+ *   - gains boards ("This week"): who gained what since when, and who isn't ranked
  *   - members by rank; a name opens that member's character page
  *   - search, class filter and column sort, kept in the URL across Back
  *   - nothing matches → Clear filters brings everyone back
@@ -41,6 +42,7 @@ function member(slug: string, name: string, surname: string, className: string, 
     total_deaths: null,
     dungeons_done: null,
     exalted_reputations: null,
+    baseline: null,
     professions: [] as { id: number; skill: number; max_skill: number }[],
     rank,
     refreshed_at: new Date(Date.now() - 3_600_000).toISOString(),
@@ -56,6 +58,7 @@ function guild() {
     roster_updated_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
     refresh_failed: false,
     gone: false,
+    gains_window_days: 7,
     members: [
       { ...member("jason-kwon", "Jason", "Kwon", "Warlock", 37, 28, 0), honorable_kills: 40,
         professions: [{ id: 197, skill: 148, max_skill: 225 }] },
@@ -205,6 +208,44 @@ test("leaderboards: pick a board, ties share a rank, and the board survives Back
   await expect(page).toHaveURL(/\/wow-forever\/character\/jason-kwon$/);
   await page.goBack();
   await expect(page.getByLabel("Rank members by")).toHaveValue("prof-tailoring");
+});
+
+function gainsGuild() {
+  const base = guild();
+  const since = (hk: number) => ({
+    day: "2026-11-12", level: null, honorable_kills: hk, killing_blows: null, total_kills: null, dungeons_done: null,
+  });
+  return {
+    ...base,
+    members: [
+      { ...base.members[0], baseline: since(40) },
+      base.members[1],
+      { ...base.members[2], baseline: since(100) },
+    ],
+  };
+}
+
+test("gains board: who gained what since when, who isn't ranked and why, on a phone too", async ({ page }) => {
+  await stubAll(page);
+  await page.route(GUILD_PATTERN, (route) => json(route, gainsGuild()));
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/wow-forever/guild/topdeadcenter?me=big-sue");
+
+  await page.getByLabel("Rank members by").selectOption("honorable-kills-gained");
+  await expect(page).toHaveURL(/board=honorable-kills-gained/);
+  const rows = page.getByRole("list", { name: "Honorable kills gained leaderboard" }).locator("li");
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText("Tiny John");
+  await expect(rows.first()).toContainText("Mage · since Nov 12");
+  await expect(rows.first()).toContainText("+12");
+  await expect(page.getByText("1 member had no gain, so they're not ranked.")).toBeVisible();
+  await expect(page.getByText("1 member needs a second lookup on another day to show a gain.")).toBeVisible();
+  await expect(page.getByText(/Your character has no gain here yet/)).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+
+  await page.getByLabel("Rank members by").selectOption("levels-gained");
+  await expect(page.getByText(/No gains to show yet/)).toBeVisible();
 });
 
 function recipeSearch(query: string) {

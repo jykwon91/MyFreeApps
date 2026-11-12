@@ -44,7 +44,7 @@ export default function GuildPageBody({ guild, error, isFetching, onRetry }: Gui
       {guild.members.length > 0 ? (
         <>
           <GuildRecipeSearch slug={guild.slug} />
-          <GuildLeaderboards members={guild.members} />
+          <GuildLeaderboards members={guild.members} gainsWindowDays={guild.gains_window_days} />
           <GuildMembersSection members={guild.members} rosterUpdatedAt={guild.roster_updated_at} />
         </>
       ) : null}

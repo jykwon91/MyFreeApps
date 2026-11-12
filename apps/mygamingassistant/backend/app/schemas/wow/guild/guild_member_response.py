@@ -3,6 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.schemas.wow.guild.guild_member_baseline_response import GuildMemberBaselineResponse
 from app.schemas.wow.guild.guild_member_skill_response import GuildMemberSkillResponse
 
 
@@ -24,6 +25,9 @@ class GuildMemberResponse(BaseModel):
     # Tracked dungeons with a final-boss kill.
     dungeons_done: int | None
     exalted_reputations: int | None
+    # What the gains boards count from: the newest stored day at least a week
+    # old, else the earliest; None when there is no older day to count from.
+    baseline: GuildMemberBaselineResponse | None
     # From the newest stored day that has professions; [] when none is stored.
     professions: list[GuildMemberSkillResponse]
     # 0 = guild master; None until the roster refresh has ranked the member.

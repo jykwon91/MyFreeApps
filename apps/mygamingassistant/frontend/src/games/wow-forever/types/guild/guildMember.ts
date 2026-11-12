@@ -1,3 +1,4 @@
+import type { GuildMemberBaseline } from "@/games/wow-forever/types/guild/guildMemberBaseline";
 import type { GuildMemberSkill } from "@/games/wow-forever/types/guild/guildMemberSkill";
 
 /**
@@ -20,6 +21,11 @@ export interface GuildMember {
   /** Tracked dungeons with a final-boss kill. */
   dungeons_done: number | null;
   exalted_reputations: number | null;
+  /**
+   * What the gains boards count from: the newest stored day at least a week
+   * old, else the earliest; null when there's no older day to count from.
+   */
+  baseline: GuildMemberBaseline | null;
   /** From the newest stored day that has professions; [] when none is stored. */
   professions: GuildMemberSkill[];
   /** 0 = guild master; null until the roster refresh ranks the member. */

@@ -1095,8 +1095,19 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   every death, so a fresh alt would win). `?board=` picks the board, `?me=`
   (set by the character page's guild badge) marks the viewer's row "You" and
   pins it under the top 10; the member filters keep these params and vice
-  versa. Not built (ideas): first to 60, this week's gains, raid attendance,
-  one chosen faction's reputation, mounts/pets.
+  versa.
+- Guild gains boards (picker group "This week"): each member also carries a
+  `baseline` from `guild_repo.members` — their newest stored day at or before
+  today − `GUILD_GAINS_WINDOW_DAYS` (7), else their earliest day; always older
+  than their newest day, and None for one stored day or when nobody looked
+  them up within the window. Gain = newest − baseline, clamped at 0; a zero
+  gain isn't ranked (counted in a footer), nor is a member with no baseline
+  ("needs a second lookup"). Each row says "since <baseline day>" — tracking
+  began 2026-11-12, so spans differ per member until a full week builds up.
+  Not built: first to 60 (Forever's achievements have no level achievement),
+  raid attendance (Blizzard has no data), mounts/pets (account-wide vs
+  per-character unresolved). One faction's reputation needs per-faction
+  standing stored first.
 - Guild recipe search ("Who can craft this?", above the leaderboards,
   `GuildRecipeSearch`): `GET /wow/guilds/{slug}/recipes?q=` — a server-side
   ILIKE (LIKE wildcards escaped) over `wow_recipe.name`, limited to recipes a

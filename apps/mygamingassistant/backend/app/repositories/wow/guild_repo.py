@@ -7,11 +7,12 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import or_, select, true, update
+from sqlalchemy import case, func, or_, select, true, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models.wow.character import WowCharacter
 from app.models.wow.character_daily_metric import WowCharacterDailyMetric
@@ -119,13 +120,37 @@ async def get_by_slug(db: AsyncSession, slug: str) -> WowGuild | None:
     return result.scalar_one_or_none()
 
 
-async def members(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildMemberRow]:
-    """The guild's live stored members, each with its newest day's numbers.
+async def members(db: AsyncSession, guild_id: uuid.UUID, *, gains_since: date) -> list[GuildMemberRow]:
+    """The guild's live stored members, each with its newest day's numbers and a gains baseline.
 
     The newest day is one index read per member (``(character_id, day)``,
     backwards) — never a sort over the 400 days of history kept.
+
+    The baseline is the member's newest day at or before ``gains_since``, else
+    their earliest day — always older than their newest day, and only for a
+    member whose newest day is after ``gains_since`` (nobody looked up in the
+    window gained nothing we saw).
     """
     m = WowCharacterDailyMetric
+    later = aliased(WowCharacterDailyMetric)
+    newest_day = (
+        select(func.max(later.day)).where(later.character_id == WowCharacter.id).correlate(WowCharacter).scalar_subquery()
+    )
+    baseline = (
+        select(
+            m.day.label("baseline_day"),
+            m.level.label("baseline_level"),
+            m.honorable_kills.label("baseline_honorable_kills"),
+            m.killing_blows.label("baseline_killing_blows"),
+            m.total_kills.label("baseline_total_kills"),
+            m.dungeons_done.label("baseline_dungeons_done"),
+        )
+        .where(m.character_id == WowCharacter.id, m.day < newest_day, newest_day > gains_since)
+        # Days in the window's past first, newest of them; else the earliest day.
+        .order_by(case((m.day <= gains_since, m.day), else_=None).desc().nulls_last(), m.day.asc())
+        .limit(1)
+        .lateral()
+    )
     newest = (
         select(
             m.level, m.item_level, m.honorable_kills, m.killing_blows, m.deaths_from_players,
@@ -145,8 +170,11 @@ async def members(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildMemberRow]
             WowCharacter.guild_rank.label("rank"),
             WowCharacter.fetched_at,
             *newest.c,
+            *baseline.c,
         )
+        .select_from(WowCharacter)
         .outerjoin(newest, true())
+        .outerjoin(baseline, true())
         .where(WowCharacter.guild_id == guild_id, WowCharacter.gone_at.is_(None))
         .order_by(WowCharacter.slug)
     )

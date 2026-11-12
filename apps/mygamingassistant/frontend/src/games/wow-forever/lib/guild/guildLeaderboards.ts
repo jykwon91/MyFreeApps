@@ -8,10 +8,12 @@ import {
 } from "@/games/wow-forever/data/guild/leaderboardConfig";
 import { formatCount } from "@/games/wow-forever/lib/character/formatCount";
 import { formatWhole } from "@/games/wow-forever/lib/character/formatWhole";
+import { formatShortDay } from "@/games/wow-forever/lib/guild/formatShortDay";
 import { memberFullName } from "@/games/wow-forever/lib/guild/guildMembers";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
 import type { LeaderboardBoard } from "@/games/wow-forever/types/guild/leaderboardBoard";
 import type { LeaderboardEntry } from "@/games/wow-forever/types/guild/leaderboardEntry";
+import type { MemberGain } from "@/games/wow-forever/types/guild/memberGain";
 
 /** The boards grouped for the picker, groups in first-seen order. */
 export function boardGroups(): [string, LeaderboardBoard[]][] {
@@ -35,17 +37,40 @@ export function boardCandidates(members: readonly GuildMember[], board: Leaderbo
   return members.filter((m) => m.level === MAX_LEVEL);
 }
 
+/** Whether a board ranks how much a stat grew. */
+export function isGainBoard(board: LeaderboardBoard): boolean {
+  return board.source.kind === LEADERBOARD_SOURCE_KIND.gain;
+}
+
+/** How much the board's stat grew since the member's baseline (never below 0), or null when there's nothing to compare. */
+function gainOf(member: GuildMember, board: LeaderboardBoard): MemberGain | null {
+  const source = board.source;
+  if (source.kind !== LEADERBOARD_SOURCE_KIND.gain || !member.baseline) return null;
+  const now = member[source.field];
+  const then = member.baseline[source.field];
+  if (now === null || then === null) return null;
+  return { value: Math.max(0, now - then), since: member.baseline.day };
+}
+
 /** The member's entry on a board before ranking, or null when we have no number for them (never ranked as 0). */
 function unranked(member: GuildMember, board: LeaderboardBoard): Omit<LeaderboardEntry, "rank" | "tied"> | null {
   const source = board.source;
   if (source.kind === LEADERBOARD_SOURCE_KIND.stat) {
     const value = member[source.field];
     if (value === null) return null;
-    return { member, value, display: formatWhole(value) };
+    return { member, value, display: formatWhole(value), detail: null };
+  }
+  if (source.kind === LEADERBOARD_SOURCE_KIND.gain) {
+    const gained = gainOf(member, board);
+    // No gain isn't ranked: a page of "+0" ties says nothing (noGainCount counts them).
+    if (gained === null || gained.value === 0) return null;
+    return {
+      member, value: gained.value, display: `+${formatWhole(gained.value)}`, detail: `since ${formatShortDay(gained.since)}`,
+    };
   }
   const skill = member.professions.find((p) => p.id === source.professionId);
   if (!skill) return null;
-  return { member, value: skill.skill, display: `${skill.skill} / ${skill.max_skill}` };
+  return { member, value: skill.skill, display: `${skill.skill} / ${skill.max_skill}`, detail: null };
 }
 
 /** Every member with a number on the board, best first; ties share a rank (1, 2, 2, 4) and read by name. */
@@ -82,10 +107,32 @@ export function boardStatus(board: LeaderboardBoard, shown: number, ranked: numb
   return parts.join(" · ");
 }
 
-/** How many members a board can rank but has no number for. Profession boards: not learned isn't missing data. */
+/**
+ * How many members a board can rank but has no number for. Profession boards:
+ * not learned isn't missing data. Gains boards: a member with an older day but
+ * no number for this stat on one of the two days (no older day at all is
+ * ``noBaselineCount``; no gain is ``noGainCount``).
+ */
 export function missingCount(members: readonly GuildMember[], board: LeaderboardBoard, ranked: number): number {
   if (board.source.kind === LEADERBOARD_SOURCE_KIND.profession) return 0;
+  if (isGainBoard(board)) return members.filter((m) => m.baseline !== null && gainOf(m, board) === null).length;
   return boardCandidates(members, board).length - ranked;
+}
+
+/** On a gains board, how many members have no older stored day to count from; 0 elsewhere. */
+export function noBaselineCount(members: readonly GuildMember[], board: LeaderboardBoard): number {
+  if (!isGainBoard(board)) return 0;
+  return members.filter((m) => m.baseline === null).length;
+}
+
+/** On a gains board, how many members we could compare but who gained nothing; 0 elsewhere. */
+export function noGainCount(members: readonly GuildMember[], board: LeaderboardBoard): number {
+  return members.filter((m) => gainOf(m, board)?.value === 0).length;
+}
+
+/** A gains board's note: what each member's gain is counted from. */
+export function gainsNote(windowDays: number): string {
+  return `Counted from each member's lookup at least ${formatCount(windowDays, "day", "days")} ago, or from their earliest lookup when we've known them for less.`;
 }
 
 /** On the level board, how many members are at the cap (once most are, the board is one big tie); 0 elsewhere. */
