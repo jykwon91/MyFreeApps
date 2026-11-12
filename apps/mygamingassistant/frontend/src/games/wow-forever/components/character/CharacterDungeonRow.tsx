@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { DUNGEON_STATUS } from "@/games/wow-forever/data/character/characterDungeonStatus";
 import CharacterDungeonName from "@/games/wow-forever/components/character/CharacterDungeonName";
 import {
   belowRequiredLevel,
@@ -36,8 +37,8 @@ export default function CharacterDungeonRow({ dungeon, level }: CharacterDungeon
         )}
         <span
           className={clsx(
-            status === "done" && "font-medium text-green-700 dark:text-green-300",
-            status !== "done" && "text-muted-foreground",
+            status === DUNGEON_STATUS.DONE && "font-medium text-green-700 dark:text-green-300",
+            status !== DUNGEON_STATUS.DONE && "text-muted-foreground",
           )}
         >
           {dungeonStatusText(dungeon)}

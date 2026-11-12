@@ -1,2 +1,3 @@
-/** Where a dungeon stands for the character: done, not done, or not something Blizzard counts. */
-export type CharacterDungeonStatus = "done" | "not-done" | "untracked";
+import type { DUNGEON_STATUS } from "@/games/wow-forever/data/character/characterDungeonStatus";
+
+export type CharacterDungeonStatus = (typeof DUNGEON_STATUS)[keyof typeof DUNGEON_STATUS];

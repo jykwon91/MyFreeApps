@@ -1,3 +1,4 @@
+import { DUNGEON_STATUS } from "@/games/wow-forever/data/character/characterDungeonStatus";
 import { DUNGEON_FIT_LEVEL_SPREAD, DUNGEON_UNTRACKED_LABEL } from "@/games/wow-forever/data/character/characterDungeonsConfig";
 import { dungeonPageHref } from "@/games/wow-forever/lib/dungeons/dungeonHref";
 import { dungeonSlug } from "@/games/wow-forever/lib/dungeons/dungeonSlug";
@@ -7,16 +8,16 @@ import type { CharacterDungeonStatus } from "@/games/wow-forever/types/character
 import type { CharacterDungeons } from "@/games/wow-forever/types/character/characterDungeons";
 
 export function dungeonStatus(dungeon: CharacterDungeon): CharacterDungeonStatus {
-  if (dungeon.kills === null) return "untracked";
-  if (dungeon.kills > 0) return "done";
-  return "not-done";
+  if (dungeon.kills === null) return DUNGEON_STATUS.UNTRACKED;
+  if (dungeon.kills > 0) return DUNGEON_STATUS.DONE;
+  return DUNGEON_STATUS.NOT_DONE;
 }
 
 /** The section's line: "8 of 26 tracked done"; "Couldn't load" when Blizzard failed. */
 export function dungeonsSummary(dungeons: CharacterDungeons | null): string {
   if (dungeons === null) return "Couldn't load";
   const tracked = dungeons.dungeons.filter((d) => d.kills !== null);
-  const done = tracked.filter((d) => dungeonStatus(d) === "done");
+  const done = tracked.filter((d) => dungeonStatus(d) === DUNGEON_STATUS.DONE);
   return `${done.length} of ${tracked.length} tracked done`;
 }
 
@@ -35,8 +36,8 @@ function dungeonLevelText(dungeon: CharacterDungeon): string {
 /** "Done · 2 kills", "Not done", or that Blizzard doesn't count it. */
 export function dungeonStatusText(dungeon: CharacterDungeon): string {
   const status = dungeonStatus(dungeon);
-  if (status === "untracked") return DUNGEON_UNTRACKED_LABEL;
-  if (status === "not-done") return "Not done";
+  if (status === DUNGEON_STATUS.UNTRACKED) return DUNGEON_UNTRACKED_LABEL;
+  if (status === DUNGEON_STATUS.NOT_DONE) return "Not done";
   return `Done · ${formatCount(dungeon.kills ?? 0, "kill", "kills")}`;
 }
 
@@ -47,7 +48,7 @@ export function belowRequiredLevel(dungeon: CharacterDungeon, level: number): bo
 
 /** A dungeon not known done that the character can enter, at about its level. */
 export function fitsNow(dungeon: CharacterDungeon, level: number): boolean {
-  if (dungeonStatus(dungeon) === "done" || belowRequiredLevel(dungeon, level)) return false;
+  if (dungeonStatus(dungeon) === DUNGEON_STATUS.DONE || belowRequiredLevel(dungeon, level)) return false;
   return level >= dungeon.level_min - DUNGEON_FIT_LEVEL_SPREAD && level <= dungeon.level_max + DUNGEON_FIT_LEVEL_SPREAD;
 }
 
