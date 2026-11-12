@@ -1,5 +1,10 @@
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
-import { RECIPE_FORM_PROBLEMS as PROBLEMS, RECIPE_MINUTES_MAX, STEP_INSTRUCTION_MAX_LENGTH } from "../constants/recipeForm";
+import {
+  RECIPE_FORM_PROBLEMS as PROBLEMS,
+  RECIPE_MINUTES_MAX,
+  RECIPE_SERVINGS_MAX_LENGTH,
+  STEP_INSTRUCTION_MAX_LENGTH,
+} from "../constants/recipeForm";
 import type { DecimalSeparator } from "../types/recipe/decimal-separator";
 import type { RecipeFormProblems } from "../types/recipe/recipe-form-problems";
 import type { RecipeFormValues } from "../types/recipe/recipe-form-values";
@@ -10,7 +15,7 @@ import { minutesInput } from "./minutesInput";
 import { recipeNumberProblem } from "./recipeNumberProblem";
 import { stepInputs } from "./stepInputs";
 
-type RecipeContent = Pick<RecipeFormValues, "prepMinutes" | "cookMinutes" | "ingredients" | "steps">;
+type RecipeContent = Pick<RecipeFormValues, "servings" | "prepMinutes" | "cookMinutes" | "ingredients" | "steps">;
 
 /** Minutes are rounded to whole minutes when sent, so "1.5" is fine; the rounded value must fit. */
 function minutesProblem(text: string, decimalSeparator: DecimalSeparator): string | undefined {
@@ -27,6 +32,9 @@ export function recipeContentProblems(
   scope: RecipeProblemScope = {},
 ): RecipeFormProblems {
   const problems: RecipeFormProblems = { rows: {}, stepRows: {} };
+
+  const servings = tooLongProblem(values.servings.trim(), RECIPE_SERVINGS_MAX_LENGTH);
+  if (servings) problems.servings = servings;
 
   for (const row of values.ingredients) {
     const rowProblems = ingredientRowProblems(row, decimalSeparator, scope);

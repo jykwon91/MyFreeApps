@@ -189,6 +189,31 @@ describe("RecipeDetailScreen", () => {
     expect(screen.getByLabelText("Step 2. Simmer it.").props.accessible).toBe(true);
   });
 
+  it("offers its owner a tweak, which opens the tweak form once for a double tap", async () => {
+    reply = { status: 200, data: { ...SOUP, is_owner: true } };
+    await show();
+
+    const tweak = await screen.findByRole("button", { name: "Tweak this recipe" });
+    expect(tweak.props.accessibilityHint).toMatch(/new version/);
+    await fireEvent.press(tweak);
+    await fireEvent.press(tweak);
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith({ pathname: "/recipes/[id]/tweak", params: { id: "r1" } });
+
+    // Coming back to the recipe lets it open again.
+    await act(async () => mockFocus.forEach((callback) => callback()));
+    await fireEvent.press(tweak);
+    expect(mockPush).toHaveBeenCalledTimes(2);
+  });
+
+  it("doesn't offer a tweak on someone else's recipe", async () => {
+    reply = { status: 200, data: { ...SOUP, is_owner: false } };
+    await show();
+
+    await screen.findByRole("button", { name: "Start cooking" });
+    expect(screen.queryByRole("button", { name: "Tweak this recipe" })).toBeNull();
+  });
+
   it("offers cooking when there are steps, and opens the cook screen", async () => {
     await show();
 

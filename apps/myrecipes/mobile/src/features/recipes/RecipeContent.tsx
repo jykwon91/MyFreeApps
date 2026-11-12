@@ -7,6 +7,7 @@ import { hasCookSteps } from "../../utils/hasCookSteps";
 import RecipeFacts from "./RecipeFacts";
 import RecipeIngredients from "./RecipeIngredients";
 import RecipeSteps from "./RecipeSteps";
+import TweakRecipeButton from "./TweakRecipeButton";
 
 export default function RecipeContent({ recipe }: { recipe: RecipeDetailResponse }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -29,6 +30,7 @@ export default function RecipeContent({ recipe }: { recipe: RecipeDetailResponse
               versionId={version.id}
             />
           ) : null}
+          {recipe.is_owner ? <TweakRecipeButton recipeId={recipe.id} /> : null}
           {version.version_number > 1 ? (
             <Text style={muted}>
               Version {version.version_number}
