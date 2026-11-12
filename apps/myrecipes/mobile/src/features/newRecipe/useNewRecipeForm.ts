@@ -6,12 +6,14 @@ import { emptyIngredientRow, emptyStepRow } from "@myrecipes/api-client/utils/em
 import { firstRecipeFormProblem } from "@myrecipes/api-client/utils/firstRecipeFormProblem";
 import { moveRow } from "@myrecipes/api-client/utils/moveRow";
 import { recipeFormProblems } from "@myrecipes/api-client/utils/recipeFormProblems";
+import { recipeFormValuesFromDraft } from "@myrecipes/api-client/utils/recipeFormValuesFromDraft";
 import { useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
 import type { AppStore } from "../../lib/store";
+import type { NewRecipeSeed } from "../../types/NewRecipeSeed";
 import { deviceDecimalSeparator } from "../../utils/deviceDecimalSeparator";
 import { nextRowKey } from "../../utils/nextRowKey";
 
@@ -44,15 +46,21 @@ function hasText(values: RecipeFormValues): boolean {
  * Creating a recipe, as the website's /recipes/new does: the same fields, checks and request.
  * A field past its limit says so as it's typed; the other problems show on their fields once
  * Create has been pressed, and the first is toasted. Once it's
- * saved, the new recipe replaces this screen, so Back goes to the list.
+ * saved, the new recipe replaces this screen, so Back goes to where the form was opened from.
+ *
+ * With a `seed`, the form starts filled in from its draft, as the website's editor does with a
+ * discovered or photographed recipe. Leaving it untouched loses nothing, so only an edit asks first.
  */
-export function useNewRecipeForm() {
+export function useNewRecipeForm(seed?: NewRecipeSeed) {
   const { showToast } = useToast();
   const dispatch = useDispatch<AppStore["dispatch"]>();
   const [createRecipe, { isLoading: isSaving }] = useCreateRecipeMutation();
-  const [values, setValues] = useState(emptyForm);
-  // Amounts and minutes are read in the device locale's decimal separator.
+  // Amounts and minutes are read in the device locale's decimal separator, and a draft's shown in it.
   const [decimalSeparator] = useState(deviceDecimalSeparator);
+  const [initialValues] = useState(() =>
+    seed ? recipeFormValuesFromDraft(seed.draft, decimalSeparator, nextRowKey) : emptyForm(),
+  );
+  const [values, setValues] = useState(initialValues);
   const [hasTried, setHasTried] = useState(false);
   // The row just added, so its first field can take focus.
   const [addedKey, setAddedKey] = useState<string | null>(null);
@@ -68,9 +76,10 @@ export function useNewRecipeForm() {
   }, []);
 
   // Waits a render after saving, or the discard question would still see the unsaved changes.
+  const from = seed?.from;
   useEffect(() => {
-    if (created) router.replace({ pathname: "/recipes/[id]", params: created });
-  }, [created]);
+    if (created) router.replace({ pathname: "/recipes/[id]", params: from ? { ...created, from } : created });
+  }, [created, from]);
 
   // A field past its limit says so as it's typed; what's missing waits for Create.
   const problems = recipeFormProblems(values, decimalSeparator, { lengthsOnly: !hasTried });
@@ -133,6 +142,7 @@ export function useNewRecipeForm() {
       const recipe = await createRecipe(buildRecipeCreateRequest(values, decimalSeparator)).unwrap();
       // The recipe opens straight away, with no skeleton while it's asked for again.
       dispatch(recipesApi.util.upsertQueryData("getRecipe", recipe.id, recipe));
+      seed?.onCreated(recipe.id);
       showToast(MESSAGES.created);
       if (isMounted.current) setCreated({ id: recipe.id, title: recipe.title, owner: recipe.owner_display_name });
     } catch {
@@ -146,7 +156,7 @@ export function useNewRecipeForm() {
     addedKey,
     isSaving,
     isLeaving: created !== null,
-    isDirty: hasText(values),
+    isDirty: seed ? values !== initialValues : hasText(values),
     edit,
     editIngredient,
     editStep,

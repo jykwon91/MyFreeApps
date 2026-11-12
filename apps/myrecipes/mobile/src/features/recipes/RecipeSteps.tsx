@@ -1,10 +1,10 @@
-import type { StepResponse } from "@myrecipes/api-client/types/recipe/step";
 import { useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
+import type { RecipeStepLine } from "../../types/RecipeStepLine";
 import { nonBlankSteps } from "../../utils/nonBlankSteps";
 import RecipeSectionHeading from "./RecipeSectionHeading";
 
-export default function RecipeSteps({ steps }: { steps: StepResponse[] }) {
+export default function RecipeSteps({ steps, emptyText = "No steps." }: { steps: RecipeStepLine[]; emptyText?: string }) {
   const { colors, spacing, radius, fontSize } = useTheme();
   const visibleSteps = nonBlankSteps(steps);
 
@@ -13,7 +13,7 @@ export default function RecipeSteps({ steps }: { steps: StepResponse[] }) {
       <RecipeSectionHeading>Steps</RecipeSectionHeading>
       {visibleSteps.length === 0 ? (
         <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm, fontStyle: "italic" }}>
-          No steps.
+          {emptyText}
         </Text>
       ) : (
         <View style={{ gap: spacing.md }}>

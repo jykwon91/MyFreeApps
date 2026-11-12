@@ -9,6 +9,9 @@ export default function SearchField({
   onClear,
   placeholder,
   accessibilityLabel,
+  onSubmit,
+  maxLength,
+  editable = true,
 }: SearchFieldProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
 
@@ -27,8 +30,10 @@ export default function SearchField({
         accessibilityLabel={accessibilityLabel}
         autoCapitalize="none"
         autoCorrect={false}
+        editable={editable}
+        maxLength={maxLength}
         onChangeText={onChangeText}
-        onSubmitEditing={Keyboard.dismiss}
+        onSubmitEditing={onSubmit ?? Keyboard.dismiss}
         placeholder={placeholder}
         placeholderTextColor={colors.mutedForeground}
         returnKeyType="search"
@@ -41,7 +46,7 @@ export default function SearchField({
         }}
         value={value}
       />
-      {value ? (
+      {value && editable ? (
         <Pressable
           accessibilityLabel="Clear search"
           accessibilityRole="button"

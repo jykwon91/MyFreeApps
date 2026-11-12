@@ -1,13 +1,13 @@
 import { Clock, Sparkles } from "lucide-react";
 import { Badge } from "@platform/ui";
 import DiscoveryThumbnail from "@/features/discovery/DiscoveryThumbnail";
+import { SOURCE_COLORS } from "@/features/discovery/discovery-display";
 import {
-  DIFFICULTY_LABELS,
-  SOURCE_COLORS,
-  SOURCE_LABELS,
-  formatTotalMinutes,
-  hostLabel,
-} from "@/features/discovery/discovery-display";
+  DISCOVERY_DIFFICULTY_LABELS,
+  DISCOVERY_SOURCE_LABELS,
+} from "@myrecipes/api-client/constants/discovery";
+import { formatTotalMinutes } from "@myrecipes/api-client/utils/formatTotalMinutes";
+import { hostLabel } from "@myrecipes/api-client/utils/hostLabel";
 import type { DiscoveredRecipe } from "@myrecipes/api-client/types/recipe/discovery";
 
 interface Props {
@@ -46,7 +46,7 @@ export default function DiscoveryCard({ recipe, onOpen }: Props) {
             {recipe.title}
           </h3>
           <Badge
-            label={SOURCE_LABELS[recipe.source_type]}
+            label={DISCOVERY_SOURCE_LABELS[recipe.source_type]}
             color={SOURCE_COLORS[recipe.source_type]}
           />
         </div>
@@ -72,7 +72,7 @@ export default function DiscoveryCard({ recipe, onOpen }: Props) {
             </span>
           ) : null}
           {recipe.difficulty ? (
-            <span>{DIFFICULTY_LABELS[recipe.difficulty]}</span>
+            <span>{DISCOVERY_DIFFICULTY_LABELS[recipe.difficulty]}</span>
           ) : null}
         </div>
       </div>

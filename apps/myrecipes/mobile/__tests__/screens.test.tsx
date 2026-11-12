@@ -1,18 +1,8 @@
-import { render, screen } from "@testing-library/react-native";
-import DiscoverScreen from "../src/features/placeholders/DiscoverScreen";
 import { COOK_SESSION_MAX_AGE_MS } from "../src/constants/cook";
 import reducer, { ingredientToggled, pageChanged, sessionFinished, sessionOpened } from "../src/features/cook/cookSessionsSlice";
 import { buildCookPages } from "../src/utils/buildCookPages";
 import { countLabel } from "../src/utils/countLabel";
 import { recipeFacts } from "../src/utils/recipeFacts";
-
-describe("placeholder screens", () => {
-  it("says Discover isn't here yet, without a date", async () => {
-    await render(<DiscoverScreen />);
-    expect(screen.getByRole("header", { name: "Discover" })).toBeTruthy();
-    expect(screen.getByText(/isn't available in the app yet/)).toBeTruthy();
-  });
-});
 
 describe("recipeFacts", () => {
   it("labels what's there and leaves out missing or zero values", () => {

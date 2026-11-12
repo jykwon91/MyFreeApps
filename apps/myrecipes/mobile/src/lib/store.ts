@@ -5,6 +5,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
 import cookSessions, { sessionsCleared } from "../features/cook/cookSessionsSlice";
 import cookTimers, { timersCleared } from "../features/cook/cookTimersSlice";
+import discovery, { discoveryCleared } from "../features/discovery/discoverySlice";
 import { cancelAllCookTimerAlerts } from "../services/cookTimerNotifications";
 import { session } from "./session";
 
@@ -22,7 +23,7 @@ configurePlatform({
 
 export function makeStore() {
   return configureStore({
-    reducer: { [baseApi.reducerPath]: baseApi.reducer, cookSessions, cookTimers },
+    reducer: { [baseApi.reducerPath]: baseApi.reducer, cookSessions, cookTimers, discovery },
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(baseApi.middleware),
   });
 }
@@ -37,6 +38,7 @@ onAccountLeft(session, () => {
   clearDataExportFiles();
   store.dispatch(timersCleared());
   store.dispatch(sessionsCleared());
+  store.dispatch(discoveryCleared());
   void cancelAllCookTimerAlerts();
 });
 

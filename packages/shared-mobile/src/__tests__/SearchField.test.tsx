@@ -45,4 +45,39 @@ describe("SearchField", () => {
     await fireEvent.press(clear);
     expect(onClear).toHaveBeenCalledTimes(1);
   });
+
+  it("runs a search from the keyboard's Search key when asked to, and caps the length", async () => {
+    const onSubmit = jest.fn();
+    await render(
+      <SearchField
+        accessibilityLabel={LABEL}
+        maxLength={200}
+        onChangeText={jest.fn()}
+        onClear={jest.fn()}
+        onSubmit={onSubmit}
+        placeholder="Search recipes"
+        value="soup"
+      />,
+    );
+    const input = screen.getByLabelText(LABEL);
+
+    expect(input.props.maxLength).toBe(200);
+    await fireEvent(input, "submitEditing");
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("can be locked, with no clear button, while a search runs", async () => {
+    await render(
+      <SearchField
+        accessibilityLabel={LABEL}
+        editable={false}
+        onChangeText={jest.fn()}
+        onClear={jest.fn()}
+        placeholder="Search recipes"
+        value="soup"
+      />,
+    );
+    expect(screen.getByLabelText(LABEL).props.editable).toBe(false);
+    expect(screen.queryByRole("button", { name: "Clear search" })).toBeNull();
+  });
 });

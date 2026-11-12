@@ -1,6 +1,6 @@
-import type { StepResponse } from "@myrecipes/api-client/types/recipe/step";
+import type { RecipeStepLine } from "../types/RecipeStepLine";
 import { byPosition } from "./byPosition";
 
-export function nonBlankSteps(steps: StepResponse[]): StepResponse[] {
+export function nonBlankSteps<T extends RecipeStepLine>(steps: readonly T[]): T[] {
   return byPosition(steps).filter((step) => step.instruction.trim().length > 0);
 }

@@ -1,11 +1,9 @@
 import { ArrowLeft, Clock, ExternalLink, Lightbulb, MessagesSquare, Users } from "lucide-react";
 import { Badge, Button } from "@platform/ui";
 import DiscoveryThumbnail from "@/features/discovery/DiscoveryThumbnail";
-import {
-  SOURCE_COLORS,
-  SOURCE_LABELS,
-  hostLabel,
-} from "@/features/discovery/discovery-display";
+import { SOURCE_COLORS } from "@/features/discovery/discovery-display";
+import { DISCOVERY_SOURCE_LABELS } from "@myrecipes/api-client/constants/discovery";
+import { hostLabel } from "@myrecipes/api-client/utils/hostLabel";
 import { formatIngredientLine } from "@myrecipes/api-client/utils/formatIngredientLine";
 import type { DiscoveredDetail } from "@myrecipes/api-client/types/recipe/discovery";
 
@@ -50,7 +48,7 @@ export default function DiscoveryDetailView({ detail, onBack, onSave }: Props) {
           <header className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge
-                label={SOURCE_LABELS[detail.source_type]}
+                label={DISCOVERY_SOURCE_LABELS[detail.source_type]}
                 color={SOURCE_COLORS[detail.source_type]}
               />
               {publisher ? (

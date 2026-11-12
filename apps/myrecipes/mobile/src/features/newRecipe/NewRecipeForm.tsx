@@ -1,7 +1,9 @@
-import { LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { draftNeedsReview } from "@myrecipes/api-client/utils/draftNeedsReview";
+import { Banner, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
+import type { NewRecipeSeed } from "../../types/NewRecipeSeed";
 import RecipeSectionHeading from "../recipes/RecipeSectionHeading";
 import IngredientRowEditor from "./IngredientRowEditor";
 import RecipeDetailsFields from "./RecipeDetailsFields";
@@ -10,9 +12,9 @@ import StepRowEditor from "./StepRowEditor";
 import { useNewRecipeForm } from "./useNewRecipeForm";
 
 /** The new-recipe form: the recipe's fields, its ingredients and steps, then Create. */
-export default function NewRecipeForm() {
+export default function NewRecipeForm({ seed }: { seed?: NewRecipeSeed }) {
   const { colors, spacing } = useTheme();
-  const form = useNewRecipeForm();
+  const form = useNewRecipeForm(seed);
   // The stack's header sits over the screen, so the keyboard's lift has to clear it too.
   const headerHeight = useHeaderHeight();
   const locked = form.isSaving || form.isLeaving;
@@ -32,7 +34,14 @@ export default function NewRecipeForm() {
         keyboardShouldPersistTaps="handled"
         testID="new-recipe"
       >
-        <RecipeDetailsFields disabled={locked} onEdit={form.edit} problems={form.problems} values={form.values} />
+        {seed && draftNeedsReview(seed.draft) ? <Banner message={MESSAGES.draftNeedsReview} /> : null}
+        <RecipeDetailsFields
+          disabled={locked}
+          focusTitle={seed != null && seed.draft.title.trim() === ""}
+          onEdit={form.edit}
+          problems={form.problems}
+          values={form.values}
+        />
 
         <RecipeSectionHeading>{MESSAGES.ingredientsHeading}</RecipeSectionHeading>
         <SectionProblem message={form.problems.ingredients} />

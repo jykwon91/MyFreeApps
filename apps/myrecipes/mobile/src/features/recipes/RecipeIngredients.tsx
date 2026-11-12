@@ -1,11 +1,17 @@
-import type { IngredientResponse } from "@myrecipes/api-client/types/recipe/ingredient";
 import { formatIngredientLine } from "@myrecipes/api-client/utils/formatIngredientLine";
 import { useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
+import type { RecipeIngredientLine } from "../../types/RecipeIngredientLine";
 import { byPosition } from "../../utils/byPosition";
 import RecipeSectionHeading from "./RecipeSectionHeading";
 
-export default function RecipeIngredients({ ingredients }: { ingredients: IngredientResponse[] }) {
+export default function RecipeIngredients({
+  ingredients,
+  emptyText = "No ingredients.",
+}: {
+  ingredients: RecipeIngredientLine[];
+  emptyText?: string;
+}) {
   const { colors, spacing, fontSize } = useTheme();
 
   return (
@@ -13,7 +19,7 @@ export default function RecipeIngredients({ ingredients }: { ingredients: Ingred
       <RecipeSectionHeading>Ingredients</RecipeSectionHeading>
       {ingredients.length === 0 ? (
         <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm, fontStyle: "italic" }}>
-          No ingredients.
+          {emptyText}
         </Text>
       ) : (
         <View>

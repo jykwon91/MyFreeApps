@@ -1,1 +1,1 @@
-export { default } from "../../src/features/placeholders/DiscoverScreen";
+export { default } from "../../src/features/discovery/DiscoverScreen";
