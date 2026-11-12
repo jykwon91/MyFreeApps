@@ -1128,6 +1128,32 @@ class TestReactVersionAlignment:
         )
 
     @pytest.mark.parametrize(
+        "manifest",
+        [m for m in _mobile_manifests() if m.parent.name != "shared-mobile"],
+        ids=lambda path: path.relative_to(_REPO_ROOT).as_posix(),
+    )
+    def test_mobile_manifest_declares_every_platform_mobile_peer(self, manifest: Path) -> None:
+        """Expo autolinks native modules only from the app's own dependencies, so a peer
+        of @platform/mobile that an app doesn't list is missing at launch even though
+        the shared barrel imports it. Every app and the scaffold must list all of them."""
+        peers = json.loads(_read("packages", "shared-mobile", "package.json"))["peerDependencies"]
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        declared = data.get("dependencies", {})
+        rel = manifest.relative_to(_REPO_ROOT).as_posix()
+
+        missing = sorted(set(peers) - set(declared))
+        assert not missing, (
+            f"{rel} is missing @platform/mobile peerDependencies {missing}. "
+            "Add them to dependencies at the versions packages/shared-mobile uses."
+        )
+        mismatched = {
+            name: (declared[name], peers[name])
+            for name in peers
+            if name.startswith(("expo-", "react-native-")) and declared[name] != peers[name]
+        }
+        assert not mismatched, f"{rel} disagrees with @platform/mobile peer ranges: {mismatched}."
+
+    @pytest.mark.parametrize(
         "manifest", _mobile_manifests(), ids=lambda path: path.relative_to(_REPO_ROOT).as_posix()
     )
     def test_mobile_manifest_pins_exact_versions(self, manifest: Path) -> None:
