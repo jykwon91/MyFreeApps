@@ -28,6 +28,6 @@ routes:
   /settings:
     screen: (tabs)/settings
   /support-myfreeapps:
-    not_on_mobile: Not built yet.
+    not_on_mobile: Opens on the website.
   /verify-email:
     not_on_mobile: Done on the website, which the sign-in screen links to.
