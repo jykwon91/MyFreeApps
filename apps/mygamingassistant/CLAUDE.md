@@ -1134,6 +1134,17 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   "Rank members by" listing only that group. This app's colour utilities are
   hand-written in `src/index.css`: `ring-primary`, `bg-primary/10`,
   `bg-muted/40` are NO-OPS — use `ring-[hsl(var(--primary))]` style values.
+- Guild titles (`GuildTitlesStrip` above the leaderboards, `GuildMemberTitles`
+  by each name in the member table/cards): frontend-only, `awardGuildTitles`
+  ranks every board with `rankBoard` and gives its `GUILD_TITLES` entry (board
+  id → title, lucide icon, "earned for") to the rank-1 entries; ties share it.
+  No title when fewer than `GUILD_TITLE_MIN_RANKED` are on the board, the lead
+  is 0 (fewest deaths excepted), a profession lead is under
+  `GUILD_TITLE_PROFESSION_FLOOR`, or everyone/too many (`titleTieLimit`) tie —
+  those are listed as skipped. A member shows one badge (all-time, then
+  professions, then "This week" — dashed) and "+N" (a 44px disclosure button).
+  None for the faction board (separate fetch). Never reuse a real in-game
+  title or rank (no "Warlord"). Labelled "Not in-game titles".
 - Guild recipe search ("Who can craft this?", above the leaderboards,
   `GuildRecipeSearch`): `GET /wow/guilds/{slug}/recipes?q=` — a server-side
   ILIKE (LIKE wildcards escaped) over `wow_recipe.name`, limited to recipes a

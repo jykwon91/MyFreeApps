@@ -162,6 +162,7 @@ test("skeleton while loading, then the member list in the same place", async ({ 
   await expect(page.getByTestId("guild-recipe-search-skeleton")).toBeVisible();
   await expect(page.getByTestId("guild-leaderboard-skeleton")).toBeVisible();
   await expect(page.getByTestId("guild-podium-skeleton")).toBeVisible();
+  await expect(page.getByTestId("guild-titles-skeleton")).toBeVisible();
   const skeletonBox = await skeleton.boundingBox();
   const podiumHeights = async (cards: Locator) =>
     cards.evaluateAll((els) => els.slice(0, 2).map((e) => e.getBoundingClientRect().height));
@@ -169,7 +170,7 @@ test("skeleton while loading, then the member list in the same place", async ({ 
 
   release();
   await expect(skeleton).toHaveCount(0);
-  const summary = page.getByRole("region", { name: "Guild" });
+  const summary = page.getByRole("region", { name: "Guild", exact: true });
   await expect(summary).toBeVisible();
   const summaryBox = await summary.boundingBox();
   expect(Math.abs((summaryBox?.x ?? 0) - (skeletonBox?.x ?? 0))).toBeLessThan(2);
@@ -276,6 +277,43 @@ test("leaderboards look like a game's: a podium with 1st in the middle, medals, 
     expect(name!.x + name!.width).toBeLessThanOrEqual(number!.x);
     expect(name!.height).toBeLessThanOrEqual(46);
   }
+});
+
+test("guild titles: a leader's badge by their name, every title and holder in the strip, '+N' for more, on a phone too", async ({ page }) => {
+  const g = guild();
+  const kb = [1, 2, 5];
+  await page.route(GUILD_PATTERN, (route) =>
+    json(route, { ...g, members: g.members.map((m, i) => ({ ...m, killing_blows: kb[i] })) }),
+  );
+  await page.route(SHEET_PATTERN, (route) => json(route, character(new URL(route.request().url()).pathname.split("/").pop() ?? "")));
+  await page.goto("/wow-forever/guild/topdeadcenter");
+
+  // The strip: Tiny John leads honorable kills (112) and killing blows; Big Sue is the only 60.
+  const strip = page.getByRole("region", { name: "Guild titles" });
+  await expect(strip).toContainText("Not in-game titles");
+  const cards = strip.getByRole("listitem");
+  await expect(cards).toHaveCount(3);
+  await expect(cards.filter({ hasText: "Trailblazer" }).getByRole("link")).toHaveText("Big Sue");
+  const bloodletter = cards.filter({ hasText: "Bloodletter" });
+  await expect(bloodletter).toContainText("most honorable kills · 112");
+  await expect(bloodletter.getByRole("link")).toHaveText("Tiny John");
+
+  // By the name in the member table: the first title, then "+1" for the other.
+  const row = page.getByRole("table").getByRole("row").filter({ hasText: "Tiny John" });
+  await expect(row).toContainText("Guild title: Bloodletter (most honorable kills)");
+  await expect(row.getByText("Deathblow", { exact: true })).toBeHidden();
+  await row.getByRole("button", { name: "Show 1 more guild title" }).click();
+  await expect(row.getByText("Deathblow", { exact: true })).toBeVisible();
+  // A member with no title gets no badge.
+  await expect(page.getByRole("table").getByRole("row").filter({ hasText: "Jason Kwon" })).not.toContainText("Guild title");
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  const card = page.getByRole("list", { name: "Guild members" }).getByRole("listitem").filter({ hasText: "Tiny John" });
+  await expect(card).toContainText("Bloodletter");
+  const more = await card.getByRole("button", { name: "Show 1 more guild title" }).boundingBox();
+  expect(more!.height).toBeGreaterThanOrEqual(44);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
 });
 
 function gainsGuild() {

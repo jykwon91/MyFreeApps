@@ -1,8 +1,6 @@
 import { Button } from "@platform/ui";
-import GuildLeaderboards from "@/games/wow-forever/components/guild/GuildLeaderboards";
-import GuildMembersSection from "@/games/wow-forever/components/guild/GuildMembersSection";
+import GuildPageSections from "@/games/wow-forever/components/guild/GuildPageSections";
 import GuildPageSkeleton from "@/games/wow-forever/components/guild/GuildPageSkeleton";
-import GuildRecipeSearch from "@/games/wow-forever/components/guild/GuildRecipeSearch";
 import GuildRefreshNotice from "@/games/wow-forever/components/guild/GuildRefreshNotice";
 import GuildStateNotice from "@/games/wow-forever/components/guild/GuildStateNotice";
 import GuildSummary from "@/games/wow-forever/components/guild/GuildSummary";
@@ -42,11 +40,7 @@ export default function GuildPageBody({ guild, error, isFetching, onRetry }: Gui
         <GuildStateNotice state={GUILD_PAGE_STATES.collecting} onRetry={onRetry} retrying={isFetching} />
       ) : null}
       {guild.members.length > 0 ? (
-        <>
-          <GuildRecipeSearch slug={guild.slug} />
-          <GuildLeaderboards slug={guild.slug} members={guild.members} gainsWindowDays={guild.gains_window_days} />
-          <GuildMembersSection members={guild.members} rosterUpdatedAt={guild.roster_updated_at} />
-        </>
+        <GuildPageSections guild={guild} />
       ) : null}
     </>
   );

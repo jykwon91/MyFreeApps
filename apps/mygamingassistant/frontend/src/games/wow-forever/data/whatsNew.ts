@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-12",
+    title: "Guild titles",
+    summary:
+      "Whoever leads a guild leaderboard earns a title and badge, like Bloodletter for the most honorable kills, shown by their name and in a new Guild titles list.",
+    to: "/wow-forever/character",
+  },
+  {
+    date: "2026-11-12",
     title: "Guild leaderboards get a podium",
     summary:
       "Your guild's top 3 now stand on a podium with gold, silver and bronze medals, names show in their class colours, and category buttons make boards quicker to find.",
