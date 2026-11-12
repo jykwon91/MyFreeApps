@@ -1,8 +1,8 @@
+import { discardFile } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import type { HeldPhotoPickerOptions } from "../../types/HeldPhotoPickerOptions";
 import type { HeldPhotoSource } from "../../types/HeldPhotoSource";
 import type { PhotoPreparing } from "../../types/PhotoPreparing";
-import { discardFile } from "../capture/uploadQueueFiles";
 import { chooseLibraryAssets } from "./chooseLibraryAssets";
 import { releaseHeldFile } from "./heldFile";
 import { holdPhoto, takeHeldPhoto } from "./pickHeldFile";

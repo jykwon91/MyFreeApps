@@ -16,7 +16,7 @@ routes:
   /recipes/:id/versions/:vid/diff:
     not_on_mobile: Not built yet.
   /recipes/import:
-    not_on_mobile: Not built yet.
+    screen: recipes/import
   /recipes/new:
     screen: recipes/new
   /register:

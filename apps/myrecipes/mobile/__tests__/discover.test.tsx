@@ -16,7 +16,7 @@ import NewRecipeRoute from "../app/recipes/new";
 import DiscoveryDetailRoute from "../app/discover/[id]";
 import { API_BASE_URL } from "../src/constants/api";
 import { DISCOVERY_DETAIL_COPY } from "../src/constants/discovery";
-import { NEW_RECIPE_MESSAGES } from "../src/constants/newRecipe";
+import { DRAFT_NEEDS_REVIEW, NEW_RECIPE_MESSAGES } from "../src/constants/newRecipe";
 import { discoveryCleared } from "../src/features/discovery/discoverySlice";
 import { readDiscoveredRecipe } from "../src/features/discovery/readDiscoveredRecipe";
 import { searchDiscoveredRecipes } from "../src/features/discovery/searchDiscoveredRecipes";
@@ -389,7 +389,7 @@ describe("saving", () => {
     expect(screen.getByLabelText("Ingredient 1 amount").props.value).toBe("1,5");
     expect(screen.getByLabelText("Ingredient 2 note").props.value).toBe("softened");
     expect(screen.getByLabelText("Step 2").props.value).toBe("Bake in a water bath.");
-    expect(screen.queryByText(NEW_RECIPE_MESSAGES.draftNeedsReview)).toBeNull();
+    expect(screen.queryByText(DRAFT_NEEDS_REVIEW.discover)).toBeNull();
     expect(sent.map(({ route }) => route)).not.toContain("POST /recipes");
   });
 
@@ -449,7 +449,7 @@ describe("saving", () => {
     expect(await screen.findByText(DISCOVERY_DETAIL_COPY.noIngredients)).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Save to my recipes" }));
 
-    expect(await screen.findByText(NEW_RECIPE_MESSAGES.draftNeedsReview)).toBeTruthy();
+    expect(await screen.findByText(DRAFT_NEEDS_REVIEW.discover)).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: NEW_RECIPE_MESSAGES.create }));
     expect(screen.getAllByText(RECIPE_FORM_PROBLEMS.ingredientsRequired).length).toBeGreaterThan(0);
     expect(screen).toHavePathname("/recipes/new");
@@ -460,7 +460,7 @@ describe("saving", () => {
     discoveryRoutes({ "POST /discovery/detail": () => reply(200, { ...DETAIL, draft: { ...DETAIL.draft, title: "" } }) });
     await openForm();
 
-    expect(screen.getByText(NEW_RECIPE_MESSAGES.draftNeedsReview)).toBeTruthy();
+    expect(screen.getByText(DRAFT_NEEDS_REVIEW.discover)).toBeTruthy();
     expect(screen.getByLabelText("Title, required").props.autoFocus).toBe(true);
   });
 

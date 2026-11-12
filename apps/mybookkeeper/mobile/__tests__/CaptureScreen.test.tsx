@@ -16,7 +16,7 @@ const mockDismissTo = jest.fn();
 const mockTakePicture = jest.fn();
 const mockPickPhotos = jest.fn();
 const mockPickDocuments = jest.fn();
-const mockResize = jest.fn();
+const mockManipulate = jest.fn();
 let mockPermission: { granted: boolean; canAskAgain: boolean } | null;
 const mockRequestPermission = jest.fn();
 
@@ -43,16 +43,18 @@ jest.mock("expo-document-picker", () => ({ getDocumentAsync: () => mockPickDocum
 jest.mock("expo-image-manipulator", () => ({
   SaveFormat: { JPEG: "jpeg" },
   ImageManipulator: {
-    manipulate: () => ({
-      resize: (size: object) => mockResize(size),
-      release: jest.fn(),
-      renderAsync: async () => ({ saveAsync: async () => ({ uri: "doc:/prepared.jpg" }), release: jest.fn() }),
-    }),
+    manipulate: (uri: string, options: object) => {
+      mockManipulate(uri, options);
+      return {
+        release: jest.fn(),
+        renderAsync: async () => ({ saveAsync: async () => ({ uri: "doc:/prepared.jpg" }), release: jest.fn() }),
+      };
+    },
   },
 }));
 
 const originalAdapter = api.defaults.adapter;
-const TAKEN = { uri: "doc:/taken.jpg", width: 4000, height: 3000 };
+const TAKEN = { uri: "doc:/taken.jpg" };
 
 function acceptUploads(): { names: string[] } {
   const record = { names: [] as string[] };
@@ -97,7 +99,7 @@ describe("CaptureScreen", () => {
     expect(await screen.findByRole("button", { name: "Take photo" })).toBeTruthy();
     await waitFor(() => expect(server.names).toHaveLength(1));
     expect(server.names[0]).toMatch(/^receipt-.*\.jpg$/);
-    expect(mockResize).toHaveBeenCalledWith({ width: 2000 });
+    expect(mockManipulate).toHaveBeenCalledWith(TAKEN.uri, { maxWidth: 2000, maxHeight: 2000 });
     expect(await screen.findByRole("button", { name: "Done (1)" })).toBeTruthy();
     expect(await screen.findByText("Got it. I'm reading it now.")).toBeTruthy();
     expect(fakeFiles()).not.toContain(TAKEN.uri);
@@ -114,13 +116,13 @@ describe("CaptureScreen", () => {
     expect(fakeFiles()).not.toContain(TAKEN.uri);
   });
 
-  it("leaves a small photo at its size", async () => {
-    mockPickPhotos.mockResolvedValue({ canceled: false, assets: [{ uri: "doc:/small.jpg", width: 800, height: 600 }] });
+  it("re-encodes a library photo at the same size limit", async () => {
+    mockPickPhotos.mockResolvedValue({ canceled: false, assets: [{ uri: "doc:/small.jpg" }] });
     const server = acceptUploads();
     await renderScreen();
     await fireEvent.press(screen.getByRole("button", { name: "Library" }));
     await waitFor(() => expect(server.names).toHaveLength(1));
-    expect(mockResize).not.toHaveBeenCalled();
+    expect(mockManipulate).toHaveBeenCalledWith("doc:/small.jpg", { maxWidth: 2000, maxHeight: 2000 });
   });
 
   it("does nothing when you cancel the library", async () => {

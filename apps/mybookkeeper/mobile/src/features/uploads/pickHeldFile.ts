@@ -1,14 +1,13 @@
 import * as DocumentPicker from "expo-document-picker";
-import type { FileForUpload } from "@platform/mobile";
+import { discardFile, type FileForUpload } from "@platform/mobile";
 import * as ImagePicker from "expo-image-picker";
 import { mimeTypeFor } from "@platform/core/utils/mimeTypeFor";
 import { preparePhoto } from "../capture/preparePhoto";
-import { discardFile } from "../capture/uploadQueueFiles";
 import { heldFileSize, holdFile } from "./heldFile";
 
 export async function holdPhoto(asset: ImagePicker.ImagePickerAsset, name: string): Promise<FileForUpload> {
   try {
-    const prepared = await preparePhoto(asset.uri, asset.width, asset.height);
+    const prepared = await preparePhoto(asset.uri);
     const uri = holdFile(prepared, name);
     return { uri, name, mimeType: "image/jpeg", size: heldFileSize(uri) };
   } finally {
