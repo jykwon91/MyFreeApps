@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { seededOrg } from "./fixtures/seeded-org";
 import { createApprovedTransaction, createProperty } from "./fixtures/seed-data";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 
 const TAX_YEAR = 2025;
 const RENT = 1800;
@@ -94,7 +94,7 @@ test.describe("Tax Return Detail", () => {
     await expect(page.getByRole("button", { name: "Recomputing..." })).toBeDisabled();
     release();
 
-    await expect(toasts(page).getByText("Recompute complete. I've recalculated everything.")).toBeVisible();
+    await expect(toastRegion(page).getByText("Recompute complete. I've recalculated everything.")).toBeVisible();
     await expect(page.getByText("Needs recompute")).toHaveCount(0);
 
     expect(await scheduleE(org().api)).toEqual({

@@ -7,10 +7,10 @@
  * offers none of them.
  */
 import { test, expect } from "@playwright/test";
-import { stubSignedInShell } from "@platform/ui/testing/mockSession";
+import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { COOK_ID, VERSION_1_ID, cookOf, recipeIdAt } from "./fixtures/recipeFixtures";
 import { stubRecipeApi } from "./fixtures/stubRecipeApi";
-import { toast, toastAboveModal } from "./fixtures/toast";
+import { toast, toastAboveModal } from "@platform/ui/test-support/toast";
 
 const RECIPE_ID = recipeIdAt(5);
 

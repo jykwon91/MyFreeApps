@@ -3,8 +3,8 @@
  * page, and a list that fails to load offers Retry.
  */
 import { test, expect } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { stubSignedInShell } from "@platform/ui/testing/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 
 const DISCOVER_ENDPOINT = /\/api\/discover(\?|$)/;
 const SOURCES_ENDPOINT = /\/api\/discover\/sources(\?|$)/;

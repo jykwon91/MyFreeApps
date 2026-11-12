@@ -6,10 +6,10 @@
  * someone else's recipe can't be tweaked.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { stubSignedInShell } from "@platform/ui/testing/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { SALT_LINEAGE_KEY, TOMATOES_LINEAGE_KEY, VERSION_1_ID, detailOf, recipeIdAt, versionOf } from "./fixtures/recipeFixtures";
-import { toast } from "./fixtures/toast";
+import { toast } from "@platform/ui/test-support/toast";
 
 const RECIPE_ID = recipeIdAt(3);
 const BASE_VERSION = versionOf(RECIPE_ID);

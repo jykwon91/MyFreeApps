@@ -4,8 +4,8 @@
  * success toast; a refused move (500) puts the card back with an error toast.
  */
 import { test, expect, devices, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { stubSignedInShell } from "@platform/ui/testing/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 
 const KANBAN_ENDPOINT = /\/api\/applications\?view=kanban/;
 const TRANSITION_ENDPOINT = /\/api\/applications\/[^/]+\/transitions/;

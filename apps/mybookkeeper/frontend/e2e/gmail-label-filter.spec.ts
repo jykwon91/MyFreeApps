@@ -5,7 +5,7 @@
  */
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { seededOrg } from "./fixtures/seeded-org";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 
 interface GmailIntegration {
   provider: string;
@@ -35,7 +35,7 @@ test.describe("Gmail label filter — connected", () => {
     await input.fill("  Receipts ");
     await save.click();
 
-    await expect(toasts(page)).toContainText(`Got it, I'll only sync emails with the "Receipts" label`);
+    await expect(toastRegion(page)).toContainText(`Got it, I'll only sync emails with the "Receipts" label`);
     await expect(page.getByText(`Currently filtering by: "Receipts"`)).toBeVisible();
     expect(await savedLabel(org().api)).toBe("Receipts");
     await page.reload();
@@ -46,7 +46,7 @@ test.describe("Gmail label filter — connected", () => {
     await input.fill("");
     await save.click();
 
-    await expect(toasts(page)).toContainText("Label filter cleared - I'll sync all emails now");
+    await expect(toastRegion(page)).toContainText("Label filter cleared - I'll sync all emails now");
     await expect(page.getByText("Leave empty to sync all emails")).toBeVisible();
     expect(await savedLabel(org().api)).toBeNull();
   });

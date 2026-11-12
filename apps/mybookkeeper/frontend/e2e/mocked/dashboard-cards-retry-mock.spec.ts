@@ -18,8 +18,9 @@
  * runs, the card must keep its error up and show the retry in progress.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 
 const COMPARISON_ERROR = "Couldn't compare your utility rates to the market.";
@@ -96,8 +97,8 @@ const CLEAR_PREMIUM_COMPARISON = {
 const EMPTY_ATTRIBUTION_QUEUE = { items: [], total: 0, pending_count: 0 };
 
 async function stubDashboard(page: Page): Promise<void> {
-  await page.route("**/api/**", (route) => route.fulfill(json(route.request().method() === "GET" ? [] : {})));
-  await stubSignedInShell(page, "admin");
+  await stubUnmatchedApi(page, { answer: "empty" });
+  await stubWorkspaceShell(page, "admin");
   // The rest of the dashboard, answered with its real (empty) shapes so the page renders.
   await page.route(/\/api\/summary(\?|$)/, (route) => route.fulfill(json(EMPTY_SUMMARY)));
   await page.route(/\/api\/dashboard\/property-pnl(\?|$)/, (route) => route.fulfill(json(EMPTY_PROPERTY_PNL)));

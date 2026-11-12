@@ -4,54 +4,15 @@
  * report. Mocks the API surface so the test runs without a backend.
  */
 import { test, expect } from "@playwright/test";
-import { VERSION_INFO } from "./fixtures/mockSession";
+import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
-async function plantValidJwtAndOrgInLocalStorage(page: import("@playwright/test").Page): Promise<void> {
-  await page.addInitScript(() => {
-    const futureExp = Math.floor(Date.now() / 1000) + 3600;
-    const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-    const payload = btoa(JSON.stringify({ sub: "test-user", exp: futureExp }));
-    window.localStorage.setItem("token", `${header}.${payload}.fake-signature`);
-    window.localStorage.setItem("v1_activeOrgId", "00000000-0000-0000-0000-000000000010");
-  });
-}
-
-async function stubAuthAndOrg(page: import("@playwright/test").Page): Promise<void> {
-  await page.route("**/api/users/me", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        id: "00000000-0000-0000-0000-000000000001",
-        email: "test@example.com",
-        name: "Test User",
-        is_active: true,
-        is_superuser: false,
-        is_verified: true,
-        role: "owner",
-      }),
-    });
-  });
-  await page.route("**/api/organizations", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify([
-        { id: "00000000-0000-0000-0000-000000000010", name: "Test Workspace", role: "owner" },
-      ]),
-    });
-  });
-  await page.route("**/api/version", (route) => {
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(VERSION_INFO) });
-  });
-  await page.route("**/api/tax-profile", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ onboarding_completed: true, tax_situations: [], filing_status: null, dependents_count: 0 }),
-    });
-  });
-}
+// Registered first, so every stub below wins over it. Any call this spec does
+// not stub (the sidebar's integrations and review-queue reads, say) gets an
+// empty answer instead of reaching the absent backend.
+test.beforeEach(async ({ page }) => {
+  await stubUnmatchedApi(page, { answer: "empty" });
+});
 
 const DOC_ID = "00000000-0000-0000-0000-000000000aaa";
 
@@ -79,14 +40,14 @@ async function stubDocumentList(page: import("@playwright/test").Page): Promise<
       });
       return;
     }
-    route.continue();
+    route.fallback();
   });
 }
 
 test.describe("DocumentViewer — failure modes surface to user", () => {
   test("zero-byte download response shows the empty-state message, not a blank iframe", async ({ page }) => {
-    await plantValidJwtAndOrgInLocalStorage(page);
-    await stubAuthAndOrg(page);
+    await plantAuth(page);
+    await stubWorkspaceShell(page, "owner");
     await stubDocumentList(page);
 
     // Critical mock: the download endpoint returns 200 with an empty body.
@@ -120,8 +81,8 @@ test.describe("DocumentViewer — failure modes surface to user", () => {
   });
 
   test("successful PDF download shows iframe AND an 'Open in new tab' fallback link", async ({ page }) => {
-    await plantValidJwtAndOrgInLocalStorage(page);
-    await stubAuthAndOrg(page);
+    await plantAuth(page);
+    await stubWorkspaceShell(page, "owner");
     await stubDocumentList(page);
 
     // Minimal valid PDF bytes (PDF header + EOF marker — enough for size > 0)

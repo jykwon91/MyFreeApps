@@ -22,9 +22,18 @@
  *   - No horizontal overflow, and the controls stay tappable at 390px
  */
 import { test, expect, type Page } from "@playwright/test";
-import { VERSION_INFO, ORG_ID, plantAuth } from "./fixtures/mockSession";
+import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import type { AttributionReviewQueueResponse } from "@mybookkeeper/api-client/types/attribution/attribution-review-queue-response";
 
-const USER_ID = "00000000-0000-0000-0000-000000000001";
+// Registered first, so every stub below wins over it. Any call this spec does
+// not stub (the sidebar's integrations and review-queue reads, say) gets an
+// empty answer instead of reaching the absent backend.
+test.beforeEach(async ({ page }) => {
+  await stubUnmatchedApi(page, { answer: "empty" });
+});
+
 const PROPERTY_ID = "00000000-0000-0000-0000-0000000000c1";
 const DOCUMENT_ID = "00000000-0000-0000-0000-0000000000d1";
 
@@ -56,48 +65,15 @@ const DRAFT = {
   unrepresented: [],
 };
 
-function json(body: unknown) {
-  return { status: 200, contentType: "application/json", body: JSON.stringify(body) };
-}
-
 async function stubShell(page: Page): Promise<void> {
-  await page.route("**/api/users/me", (route) =>
-    route.fulfill(
-      json({
-        id: USER_ID,
-        email: "test@example.com",
-        name: "Test User",
-        is_active: true,
-        is_superuser: false,
-        is_verified: true,
-        role: "owner",
-      }),
-    ),
-  );
-  await page.route("**/api/organizations", (route) =>
-    route.fulfill(json([{ id: ORG_ID, name: "Test Workspace", role: "owner" }])),
-  );
-  await page.route("**/api/version", (route) => route.fulfill(json(VERSION_INFO)));
-  await page.route("**/api/tax-profile", (route) =>
-    route.fulfill(
-      json({
-        onboarding_completed: true,
-        tax_situations: [],
-        filing_status: null,
-        dependents_count: 0,
-      }),
-    ),
-  );
+  await stubWorkspaceShell(page, "owner");
   await page.route("**/api/properties", (route) =>
     route.fulfill(json([{ id: PROPERTY_ID, name: "6734 Peerless St" }])),
   );
-  // Shell chrome, not this dialog: the Gmail reconnect banner and the
-  // attribution-review badge both fire on every authenticated page. Left
-  // unstubbed they reach a real backend, which rejects the planted token and
-  // logs the session out mid-test — the dialog never gets a chance to open.
-  await page.route("**/api/integrations", (route) => route.fulfill(json([])));
+  // The attribution-review badge reads an object, not the list the catch-all
+  // answers with, so it gets its real (empty) shape here.
   await page.route("**/api/transactions/attribution-review-queue*", (route) =>
-    route.fulfill(json({ items: [], total: 0, has_more: false })),
+    route.fulfill(json({ items: [], total: 0, pending_count: 0 } satisfies AttributionReviewQueueResponse)),
   );
 }
 

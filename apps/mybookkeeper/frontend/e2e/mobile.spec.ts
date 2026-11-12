@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures/auth";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 import { APP_PAGES } from "./fixtures/app-pages";
 import { PHONE_VIEWPORT as MOBILE_VIEWPORT } from "./fixtures/phone-viewport";
 
@@ -243,7 +243,7 @@ test.describe("Mobile responsiveness", () => {
       await expect(addBtn).toBeEnabled();
       await addBtn.click();
 
-      await expect(toasts(page).getByText("Property created", { exact: true })).toBeVisible({ timeout: 10000 });
+      await expect(toastRegion(page).getByText("Property created", { exact: true })).toBeVisible({ timeout: 10000 });
       await expect(page.locator("li").filter({ hasText: name })).toBeVisible({ timeout: 10000 });
 
       // Cleanup

@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { TestAccount } from "./fixtures/test-account";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 import { formatCost } from "../src/admin/features/costs/format";
 import type { CostSummary } from "../src/shared/types/admin/cost";
 
@@ -119,12 +119,12 @@ test.describe("Admin Dashboard", () => {
       await expect(roleSelect).toHaveValue("user", { timeout: 10000 });
 
       await roleSelect.selectOption("admin");
-      await expect(toasts(page).getByText(/role updated/i)).toBeVisible({ timeout: 5000 });
+      await expect(toastRegion(page).getByText(/role updated/i)).toBeVisible({ timeout: 5000 });
       await expect.poll(() => adminRoleOf(api, target.userId)).toBe("admin");
 
       // Both changes say "Role updated", and the first toast may still be showing.
       await roleSelect.selectOption("user");
-      await expect(toasts(page).getByText(/role updated/i)).toHaveCount(2, { timeout: 5000 });
+      await expect(toastRegion(page).getByText(/role updated/i)).toHaveCount(2, { timeout: 5000 });
       await expect.poll(() => adminRoleOf(api, target.userId)).toBe("user");
     } finally {
       await target.delete(playwright);
@@ -184,7 +184,7 @@ test.describe("System Health", () => {
       await retryBtn.click();
       // Should show success or error toast
       await expect(
-        toasts(page).getByText(/reset \d+ failed document/i).or(toasts(page).getByText(/couldn't retry/i))
+        toastRegion(page).getByText(/reset \d+ failed document/i).or(toastRegion(page).getByText(/couldn't retry/i))
       ).toBeVisible({ timeout: 10000 });
     }
     // If disabled, that means 0 failed documents — button correctly reflects state

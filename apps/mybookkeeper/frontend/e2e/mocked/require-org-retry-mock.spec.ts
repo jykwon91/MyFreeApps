@@ -12,17 +12,19 @@
  * with Try again showing it is busy, and the page must load once it succeeds.
  */
 import { test, expect } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { ORG_ID, plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
+import { ORG_ID, plantAuth, stubWorkspaceShell, workspaceOf } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 
 const LOAD_ERROR = "Something went wrong loading your organizations.";
-const ORGS = [{ id: ORG_ID, name: "Test Workspace", role: "admin", org_role: "admin" }];
+const ORGS: OrgWithRole[] = [workspaceOf(ORG_ID, "Test Workspace", "admin")];
 
 test("a retry of a failed organizations load holds the error, then opens the page", async ({ page }) => {
   await plantAuth(page);
-  await page.route("**/api/**", (route) => route.fulfill(json(route.request().method() === "GET" ? [] : {})));
-  await stubSignedInShell(page, "admin");
+  await stubUnmatchedApi(page, { answer: "empty" });
+  await stubWorkspaceShell(page, "admin");
   const orgs = await failUntilRecovered(page, /\/api\/organizations(\?|$)/, ORGS);
 
   await page.goto("/members");
@@ -44,8 +46,8 @@ test("a retry of a failed organizations load holds the error, then opens the pag
 
 test("a failed refresh of loaded organizations holds its error through Try again", async ({ page }) => {
   await plantAuth(page);
-  await page.route("**/api/**", (route) => route.fulfill(json(route.request().method() === "GET" ? [] : {})));
-  await stubSignedInShell(page, "admin");
+  await stubUnmatchedApi(page, { answer: "empty" });
+  await stubWorkspaceShell(page, "admin");
   let phase: "ok" | "failing" | "held" = "ok";
   let release!: () => void;
   const released = new Promise<void>((resolve) => {

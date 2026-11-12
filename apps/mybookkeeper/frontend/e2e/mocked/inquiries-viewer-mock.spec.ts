@@ -14,8 +14,8 @@
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
 import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
-import { json } from "@platform/ui/testing/mockResponse";
-import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { INQUIRY_DETAIL, INQUIRY_ID, INQUIRY_NOTES, INQUIRY_SUMMARY } from "./fixtures/mockInquiry";
 
 /** Answers the pages' reads and records every write, which a viewer must never send. */
@@ -26,7 +26,7 @@ async function stubApi(page: Page, orgRole: OrgRole): Promise<string[]> {
     if (request.method() !== "GET") writes.push(`${request.method()} ${new URL(request.url()).pathname}`);
     return route.fulfill(json(request.method() === "GET" ? [] : {}));
   });
-  await stubSignedInShell(page, orgRole);
+  await stubWorkspaceShell(page, orgRole);
   await page.route(/\/api\/listings(\?.*)?$/, (route) => route.fulfill(json({ items: [], total: 0, has_more: false })));
   await page.route(/\/api\/inquiries(\?.*)?$/, (route, request: Request) =>
     request.method() === "GET"

@@ -12,8 +12,9 @@
  * record lands.
  */
 import { test, expect, type Locator, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 import { LISTING, LISTING_ID } from "./fixtures/mockListing";
 import { INQUIRY_DETAIL, INQUIRY_ID } from "./fixtures/mockInquiry";
@@ -70,8 +71,8 @@ function retryButtonNextTo(page: Page, message: string, name: "Retry" | "Retryin
 async function signIn(page: Page): Promise<void> {
   await plantAuth(page);
   // Registered first so the specific routes win; the page's other reads get an empty answer.
-  await page.route("**/api/**", (route) => route.fulfill(json(route.request().method() === "GET" ? [] : {})));
-  await stubSignedInShell(page, "admin");
+  await stubUnmatchedApi(page, { answer: "empty" });
+  await stubWorkspaceShell(page, "admin");
   await page.route(/\/api\/listings(\?.*)?$/, (route) => route.fulfill(json({ items: [], total: 0, has_more: false })));
 }
 

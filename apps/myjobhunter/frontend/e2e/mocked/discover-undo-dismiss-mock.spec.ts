@@ -7,8 +7,9 @@
  */
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { stubSignedInShell } from "@platform/ui/testing/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
+import { toast } from "@platform/ui/test-support/toast";
 
 const DISCOVER_ENDPOINT = /\/api\/discover(\?|$)/;
 const SOURCES_ENDPOINT = /\/api\/discover\/sources(\?|$)/;
@@ -93,9 +94,8 @@ async function dismissThePosting(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Skip — dismiss without a reason" }).click();
 }
 
-const notifications = (page: Page) => page.getByRole("region", { name: /Notifications/ });
 const postingTitle = (page: Page) => page.getByRole("heading", { name: "Backend Engineer" });
-const dismissedToast = (page: Page) => notifications(page).getByText("Dismissed.", { exact: true });
+const dismissedToast = (page: Page) => toast(page, "Dismissed.");
 
 test("the Undo toast outlives the dismissed card, and Undo restores the posting", async ({ page }) => {
   const actions = await stubInbox(page);
@@ -108,7 +108,7 @@ test("the Undo toast outlives the dismissed card, and Undo restores the posting"
 
   await expect.poll(() => actions).toEqual(["dismiss", "undo-dismiss"]);
   await expect(dismissedToast(page)).toHaveCount(0);
-  await expect(notifications(page).getByText("Posting brought back", { exact: true })).toBeVisible();
+  await expect(toast(page, "Posting brought back")).toBeVisible();
   await expect(postingTitle(page)).toBeVisible();
 });
 
@@ -131,7 +131,7 @@ test("a refused Undo shows the server's reason, and the posting stays dismissed"
   await expect(dismissedToast(page)).toBeVisible();
   await page.getByRole("button", { name: "Undo" }).click();
 
-  await expect(notifications(page).getByText(NOT_FOUND_DETAIL, { exact: true })).toBeVisible();
+  await expect(toast(page, NOT_FOUND_DETAIL)).toBeVisible();
   await expect(dismissedToast(page)).toHaveCount(0);
   await expect(postingTitle(page)).toHaveCount(0);
   expect(actions).toEqual(["dismiss", "undo-dismiss"]);

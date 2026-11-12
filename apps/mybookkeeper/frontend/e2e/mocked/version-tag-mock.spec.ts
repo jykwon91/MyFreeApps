@@ -3,14 +3,15 @@
  * commit, so the "unknown" build can only be pinned with a mocked /version.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { VERSION_INFO, plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { VERSION_INFO, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import type { VersionInfo } from "@/shared/types/version/version-info";
 
 async function openApp(page: Page, version: VersionInfo) {
   await plantAuth(page);
-  await page.route("**/api/**", (route, request) => route.fulfill(json(request.method() === "GET" ? [] : {})));
-  await stubSignedInShell(page, "owner");
+  await stubUnmatchedApi(page, { answer: "empty" });
+  await stubWorkspaceShell(page, "owner");
   await page.route("**/api/version", (route) => route.fulfill(json(version)));
   const versionLoaded = page.waitForResponse("**/api/version");
   await page.goto("/");

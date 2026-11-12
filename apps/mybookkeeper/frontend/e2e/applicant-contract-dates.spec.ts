@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 import { deleteApplicant } from "./fixtures/applicants";
 
 /**
@@ -85,7 +85,7 @@ test.describe("Contract dates editing", () => {
       await startInput.blur();
 
       // The save is debounced after blur, so wait for its toast.
-      await expect(toasts(page).getByText("Contract date updated", { exact: true })).toBeVisible();
+      await expect(toastRegion(page).getByText("Contract date updated", { exact: true })).toBeVisible();
 
       const updated = await getApplicant(api, applicantId);
       expect(updated.contract_start).toBe("2026-07-01");

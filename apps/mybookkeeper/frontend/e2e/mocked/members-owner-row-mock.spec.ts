@@ -12,8 +12,8 @@
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
-import { json } from "@platform/ui/testing/mockResponse";
-import { ORG_ID, plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 
 const ME_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -41,7 +41,7 @@ async function stubApi(page: Page): Promise<string[]> {
     if (request.method() !== "GET") writes.push(`${request.method()} ${new URL(request.url()).pathname}`);
     return route.fulfill(json(request.method() === "GET" ? [] : {}));
   });
-  await stubSignedInShell(page, "admin");
+  await stubWorkspaceShell(page, "admin");
   await page.route(`**/api/organizations/${ORG_ID}/members`, (route) => route.fulfill(json(MEMBERS)));
   return writes;
 }

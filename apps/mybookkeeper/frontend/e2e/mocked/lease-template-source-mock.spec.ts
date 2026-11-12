@@ -9,8 +9,9 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
-import { json } from "@platform/ui/testing/mockResponse";
-import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { APPLICANT_DETAIL, APPLICANT_ID } from "./fixtures/mockApplicant";
 import { DRAFT_LEASE, LEASE_ID } from "./fixtures/mockLease";
 
@@ -30,8 +31,8 @@ async function stubLease(page: Page): Promise<{ generateCalls: () => number }> {
   let current: SignedLeaseDetail = DRAFT_LEASE;
   let calls = 0;
   await plantAuth(page);
-  await page.route("**/api/**", (route) => route.fulfill(json(route.request().method() === "GET" ? [] : {})));
-  await stubSignedInShell(page, "admin");
+  await stubUnmatchedApi(page, { answer: "empty" });
+  await stubWorkspaceShell(page, "admin");
   await page.route(new RegExp(`/api/applicants/${APPLICANT_ID}$`), (route) => route.fulfill(json(APPLICANT_DETAIL)));
   await page.route(new RegExp(`/api/signed-leases/${LEASE_ID}$`), (route) => route.fulfill(json(current)));
   await page.route(new RegExp(`/api/signed-leases/${LEASE_ID}/generate$`), (route) => {

@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures/auth";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 import { deleteProperty } from "./fixtures/seed-data";
 import type { APIRequestContext } from "@playwright/test";
 
@@ -43,7 +43,7 @@ async function createClassifiedProperty(
   }
 
   await page.getByRole("button", { name: /add property/i }).click();
-  await expect(toasts(page).getByText("Property created", { exact: true })).toBeVisible({ timeout: 10000 });
+  await expect(toastRegion(page).getByText("Property created", { exact: true })).toBeVisible({ timeout: 10000 });
 }
 
 async function cleanupProperty(api: APIRequestContext, name: string) {

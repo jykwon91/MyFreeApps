@@ -19,6 +19,7 @@
       "@/*": ["./src/*"],
       "@platform/ui": ["../../../packages/shared-frontend/src/index.ts"],
       "@platform/ui/*": ["../../../packages/shared-frontend/src/*"],
+      "@platform/ui/test-support/*": ["../../../packages/shared-frontend/test-support/*"],
       "@/shared/*": ["../../../packages/shared-frontend/src/*"]
     }
   },

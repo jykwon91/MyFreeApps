@@ -3,7 +3,7 @@ import type { Locator, Page } from "@playwright/test";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 import path from "path";
 import { fileURLToPath } from "url";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 import { deleteBlackout } from "./fixtures/blackouts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -108,7 +108,7 @@ test.describe("Calendar booking notes + attachments", () => {
     await textarea.blur();
 
     // Wait for the save success toast.
-    await expect(toasts(page).getByText("Notes saved")).toBeVisible({ timeout: 5000 });
+    await expect(toastRegion(page).getByText("Notes saved")).toBeVisible({ timeout: 5000 });
 
     // Close dialog and reload.
     await page.keyboard.press("Escape");
@@ -144,7 +144,7 @@ test.describe("Calendar booking notes + attachments", () => {
     await dialog.locator("input[type='file']").setInputFiles(IMAGE_FIXTURE);
 
     // Wait for success toast.
-    await expect(toasts(page).getByText(/uploaded/i)).toBeVisible({ timeout: 10000 });
+    await expect(toastRegion(page).getByText(/uploaded/i)).toBeVisible({ timeout: 10000 });
 
     // Image preview should appear.
     const preview = dialog.getByTestId("attachment-image-preview");
@@ -163,7 +163,7 @@ test.describe("Calendar booking notes + attachments", () => {
     // Delete the attachment.
     const deleteBtn = dialogAfterReload.getByTestId("attachment-delete-btn").first();
     await deleteBtn.click();
-    await expect(toasts(page).getByText("Attachment removed")).toBeVisible({ timeout: 5000 });
+    await expect(toastRegion(page).getByText("Attachment removed")).toBeVisible({ timeout: 5000 });
 
     // Attachment list shows empty state.
     await expect(dialogAfterReload.getByTestId("attachments-empty")).toBeVisible();
@@ -188,7 +188,7 @@ test.describe("Calendar booking notes + attachments", () => {
       buffer: Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(400, 0x4d)]),
     });
 
-    await expect(toasts(page).getByText("broken.jpg: unsupported file type.")).toBeVisible({ timeout: 10000 });
+    await expect(toastRegion(page).getByText("broken.jpg: unsupported file type.")).toBeVisible({ timeout: 10000 });
     await expect(dialog.getByTestId("attachments-empty")).toBeVisible();
     const res = await api.get(`/listings/blackouts/${blackoutId}/attachments`);
     expect(res.status(), await res.text()).toBe(200);

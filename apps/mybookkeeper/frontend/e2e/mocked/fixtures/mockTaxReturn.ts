@@ -1,6 +1,6 @@
 /** One tax return, as the detail endpoint returns it, for no-backend specs. */
 import type { Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
+import { json } from "@platform/ui/test-support/mockResponse";
 import { ORG_ID } from "./mockSession";
 
 export const TAX_RETURN_ID = "00000000-0000-0000-0000-0000000000c1";

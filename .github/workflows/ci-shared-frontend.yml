@@ -52,6 +52,12 @@ jobs:
         if: ${{ !cancelled() }}
         run: npm run typecheck --workspace=@platform/ui
 
+      - name: Typecheck @platform/ui test-support
+        # Its own step, so an e2e-helper type error and a src/ type error both
+        # show up in one red run.
+        if: ${{ !cancelled() }}
+        run: npm run typecheck:test-support --workspace=@platform/ui
+
       - name: Test @platform/core
         if: ${{ !cancelled() }}
         run: npm test --workspace=@platform/core
