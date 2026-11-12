@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type RefObject } from "react";
 import { LoadingButton } from "@platform/ui";
-import { MAX_TURN_CHARS } from "@/features/session/turnLimits";
+import { MAX_TURN_CHARS } from "@mylanguagetutor/api-client/constants/turnLimits";
 
 interface TextFallbackInputProps {
   label: string;

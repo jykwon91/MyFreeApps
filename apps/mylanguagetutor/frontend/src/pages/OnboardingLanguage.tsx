@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
-import { useListLanguagesQuery } from "@/store/catalogApi";
+import { useListLanguagesQuery } from "@mylanguagetutor/api-client/store/catalogApi";
 import CatalogError from "@/features/catalog/CatalogError";
 import PageSkeleton from "@/features/onboarding/PageSkeleton";
 

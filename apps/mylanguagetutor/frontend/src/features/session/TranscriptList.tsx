@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import TranscriptItem from "@/features/session/TranscriptItem";
 import TypingDots from "@/features/session/TypingDots";
-import type { TranscriptEntry } from "@/types/session/transcript-entry";
+import type { TranscriptEntry } from "@mylanguagetutor/api-client/types/session/transcript-entry";
 
 interface TranscriptListProps {
   entries: TranscriptEntry[];

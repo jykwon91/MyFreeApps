@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
-import type { Scenario } from "@/types/catalog/scenario";
+import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 
 interface ScenarioCardProps {
   scenario: Scenario;

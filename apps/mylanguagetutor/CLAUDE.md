@@ -67,8 +67,9 @@ burst limiter, 503 `tutor_unavailable` (global cap, kill switch, or no key).
 - **Frontend.** Speech recognition and TTS are the browser's Web Speech API
   (no audio reaches our servers). The SSE body is read with `fetch` +
   `eventsource-parser` (`features/tutor-stream/`) because `EventSource` can't
-  POST or send a bearer token. Replies are spoken sentence by sentence
-  (`features/speech/sentenceChunker.ts`). Browsers without recognition
+  POST or send a bearer token; the events are parsed by `parseTurnEvent` in the
+  api-client. Replies are spoken sentence by sentence (the api-client's
+  `utils/sentenceChunker.ts`). Browsers without recognition
   (Firefox) get labelled typed practice.
 - **Copy rules.** No pronunciation scoring, no "fluent", no "native speaker",
   no streak guilt. Corrections are hedged ("It looked like you said...")
@@ -114,7 +115,9 @@ apps/mylanguagetutor/
 |   |   |-- schemas/           Domain-per-directory Pydantic schemas
 |   |   `-- services/          Business logic services
 |   `-- tests/
+|-- api-client/             @mylanguagetutor/api-client -- platform-neutral API layer
 |-- docker/
+|-- frontend/
 |-- docker-compose.yml
 `-- CLAUDE.md
 ```
@@ -158,6 +161,22 @@ npm run typecheck
 npm run lint
 npm test
 ```
+
+**API client** (from the monorepo root):
+```bash
+npm run typecheck --workspace=@mylanguagetutor/api-client
+npm run lint --workspace=@mylanguagetutor/api-client
+npm test --workspace=@mylanguagetutor/api-client
+```
+
+RTK Query endpoints, their request/response types, the SSE turn-event parser,
+the turn refusal/error mapping, the session state types and the pure speech
+text helpers live in `apps/mylanguagetutor/api-client`
+(`@mylanguagetutor/api-client`), shared with the future phone app. Import them
+as `@mylanguagetutor/api-client/<dir>/<file>`. The package must stay
+platform-neutral: no DOM, `window`, `localStorage`, Web Speech API or
+`fetch` streaming -- those (`streamTurn`, the speech hooks, `voiceForLocale`,
+`privacyAck`) stay in the web frontend. One type per file in its `src/types/`.
 
 ## Architecture Rules
 

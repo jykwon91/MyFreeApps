@@ -1,6 +1,6 @@
 import { Mic, Square } from "lucide-react";
 import { cn } from "@platform/ui";
-import type { VoicePhase } from "@/types/session/voice-phase";
+import type { VoicePhase } from "@mylanguagetutor/api-client/types/session/voice-phase";
 
 interface MicButtonProps {
   phase: VoicePhase;

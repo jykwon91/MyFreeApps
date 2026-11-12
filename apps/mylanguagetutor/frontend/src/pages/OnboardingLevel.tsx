@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { AlertBox, LoadingButton, cn } from "@platform/ui";
-import { LEVEL_OPTIONS } from "@/features/onboarding/levelOptions";
+import { LEVEL_OPTIONS } from "@mylanguagetutor/api-client/constants/levelOptions";
 import PageSkeleton from "@/features/onboarding/PageSkeleton";
-import { useGetProfileQuery, useSaveProfileMutation } from "@/store/profileApi";
-import type { Level } from "@/types/tutor/level";
+import { useGetProfileQuery, useSaveProfileMutation } from "@mylanguagetutor/api-client/store/profileApi";
+import type { Level } from "@mylanguagetutor/api-client/types/tutor/level";
 
 /** Onboarding step 2 (and "Change level" later): how much the learner already knows. */
 export default function OnboardingLevel() {

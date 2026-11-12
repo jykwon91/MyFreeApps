@@ -152,6 +152,14 @@ jobs:
       - name: Test frontend
         run: npm test --workspace=mylanguagetutor-frontend
 
+      - name: Check API client
+        # Runs even when the website tests fail, so one red run shows both problems.
+        if: ${{ !cancelled() }}
+        run: |
+          npm run typecheck --workspace=@mylanguagetutor/api-client
+          npm run lint --workspace=@mylanguagetutor/api-client
+          npm test --workspace=@mylanguagetutor/api-client
+
   caddy-image:
     name: caddy-image / mylanguagetutor
     runs-on: ubuntu-latest

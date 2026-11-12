@@ -1,4 +1,4 @@
-import type { CorrectionItem } from "@/types/tutor/correction";
+import type { CorrectionItem } from "@mylanguagetutor/api-client/types/tutor/correction-item";
 
 interface CorrectionCardProps {
   correction: CorrectionItem;

@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import CatalogError from "@/features/catalog/CatalogError";
 import PageSkeleton from "@/features/onboarding/PageSkeleton";
-import { useGetProfileQuery } from "@/store/profileApi";
-import type { Profile } from "@/types/tutor/profile";
+import { useGetProfileQuery } from "@mylanguagetutor/api-client/store/profileApi";
+import type { Profile } from "@mylanguagetutor/api-client/types/tutor/profile";
 
 interface ProfileGateProps {
   children: (profile: Profile) => ReactNode;

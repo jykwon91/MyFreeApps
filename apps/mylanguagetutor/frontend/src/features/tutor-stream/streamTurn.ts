@@ -1,8 +1,11 @@
 import { createParser } from "eventsource-parser";
 import { notifyAuthChange } from "@platform/ui";
-import { parseTurnEvent } from "@/features/tutor-stream/parseTurnEvent";
-import { NETWORK_ERROR_STATUS, TurnRequestError } from "@/features/tutor-stream/TurnRequestError";
-import type { TurnStreamEvent } from "@/types/tutor/turn-events";
+import { parseTurnEvent } from "@mylanguagetutor/api-client/utils/parseTurnEvent";
+import { turnRefusalDetail } from "@mylanguagetutor/api-client/utils/turnRefusalDetail";
+import { NETWORK_ERROR, NO_STREAM } from "@mylanguagetutor/api-client/constants/turnFailureCodes";
+import { NETWORK_ERROR_STATUS } from "@mylanguagetutor/api-client/constants/turnRequest";
+import { TurnRequestError } from "@mylanguagetutor/api-client/errors/TurnRequestError";
+import type { TurnStreamEvent } from "@mylanguagetutor/api-client/types/tutor/turn-stream-event";
 
 const API_BASE = "/api";
 const TOKEN_KEY = "token";
@@ -14,17 +17,12 @@ export interface StreamTurnOptions {
   signal?: AbortSignal;
 }
 
-async function errorDetail(response: Response): Promise<string> {
+async function errorBody(response: Response): Promise<unknown> {
   try {
-    const body: unknown = await response.json();
-    if (body && typeof body === "object" && "detail" in body) {
-      const detail = (body as { detail: unknown }).detail;
-      if (typeof detail === "string") return detail;
-    }
+    return await response.json();
   } catch {
-    // not JSON -- fall through
+    return undefined; // not JSON
   }
-  return `http_${response.status}`;
 }
 
 /**
@@ -54,7 +52,7 @@ export async function streamTurn({ sessionId, text, onEvent, signal }: StreamTur
     });
   } catch (err) {
     if (signal?.aborted) throw err;
-    throw new TurnRequestError(NETWORK_ERROR_STATUS, "network_error");
+    throw new TurnRequestError(NETWORK_ERROR_STATUS, NETWORK_ERROR);
   }
 
   if (!response.ok) {
@@ -64,9 +62,9 @@ export async function streamTurn({ sessionId, text, onEvent, signal }: StreamTur
       localStorage.removeItem(TOKEN_KEY);
       notifyAuthChange();
     }
-    throw new TurnRequestError(response.status, await errorDetail(response));
+    throw new TurnRequestError(response.status, turnRefusalDetail(response.status, await errorBody(response)));
   }
-  if (!response.body) throw new TurnRequestError(response.status, "no_stream");
+  if (!response.body) throw new TurnRequestError(response.status, NO_STREAM);
 
   const parser = createParser({
     onEvent(message) {
@@ -85,7 +83,7 @@ export async function streamTurn({ sessionId, text, onEvent, signal }: StreamTur
     parser.feed(decoder.decode());
   } catch (err) {
     if (signal?.aborted) throw err;
-    throw new TurnRequestError(NETWORK_ERROR_STATUS, "network_error");
+    throw new TurnRequestError(NETWORK_ERROR_STATUS, NETWORK_ERROR);
   } finally {
     reader.releaseLock();
   }

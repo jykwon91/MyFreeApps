@@ -1,24 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import { createSentenceChunker } from "@/features/speech/sentenceChunker";
+import { createSentenceChunker } from "@mylanguagetutor/api-client/utils/sentenceChunker";
 import { streamTurn } from "@/features/tutor-stream/streamTurn";
-import { TurnRequestError } from "@/features/tutor-stream/TurnRequestError";
-import { blockForCode, isRetryableRefusal, normaliseRefusalCode } from "@/features/session/turnRefusal";
-import { MAX_TURN_CHARS } from "@/features/session/turnLimits";
-import { useCreateSessionMutation } from "@/store/sessionsApi";
-import { usageApiUtil } from "@/store/usageApi";
+import { TurnRequestError } from "@mylanguagetutor/api-client/errors/TurnRequestError";
+import { blockForCode, isRetryableRefusal, normaliseRefusalCode } from "@mylanguagetutor/api-client/utils/turnRefusal";
+import { MAX_TURN_CHARS } from "@mylanguagetutor/api-client/constants/turnLimits";
+import {
+  CONNECTION_LOST,
+  NETWORK_ERROR,
+  SESSION_CREATE_FAILED,
+  SESSION_NOT_FOUND,
+} from "@mylanguagetutor/api-client/constants/turnFailureCodes";
+import { useCreateSessionMutation } from "@mylanguagetutor/api-client/store/sessionsApi";
+import { usageApiUtil } from "@mylanguagetutor/api-client/store/usageApi";
 import type { AppDispatch } from "@/lib/store";
-import type { Level } from "@/types/tutor/level";
-import type { ScenarioState } from "@/types/tutor/scenario-state";
-import type { TurnStreamEvent } from "@/types/tutor/turn-events";
-import type { TranscriptEntry } from "@/types/session/transcript-entry";
-import type { TurnFailure } from "@/types/session/turn-failure";
-import type { SessionBlock } from "@/types/session/session-block";
-import type { RequestPhase } from "@/types/session/request-phase";
-
-const CONNECTION_LOST = "connection_lost";
-const SESSION_CREATE_FAILED = "session_create_failed";
-const SESSION_NOT_FOUND = "session_not_found";
+import type { Level } from "@mylanguagetutor/api-client/types/tutor/level";
+import type { ScenarioState } from "@mylanguagetutor/api-client/types/tutor/scenario-state";
+import type { TurnStreamEvent } from "@mylanguagetutor/api-client/types/tutor/turn-stream-event";
+import type { TranscriptEntry } from "@mylanguagetutor/api-client/types/session/transcript-entry";
+import type { TurnFailure } from "@mylanguagetutor/api-client/types/session/turn-failure";
+import type { SessionBlock } from "@mylanguagetutor/api-client/types/session/session-block";
+import type { RequestPhase } from "@mylanguagetutor/api-client/types/session/request-phase";
 
 export interface PracticeSessionConfig {
   languageCode: string;
@@ -115,7 +117,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
 
   const handleRefusal = useCallback((err: unknown, text: string) => {
     const refusal = err instanceof TurnRequestError ? err : null;
-    const code = refusal ? normaliseRefusalCode(refusal.status, refusal.detail) : "network_error";
+    const code = refusal ? normaliseRefusalCode(refusal.status, refusal.detail) : NETWORK_ERROR;
     const blocked = blockForCode(code);
     if (blocked) {
       setBlock(blocked);

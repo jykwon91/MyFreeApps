@@ -1,8 +1,9 @@
 """The closed vocabularies a correction is described with.
 
 Used three ways: the corrections JSON schema (``enum``), the response mapper
-(drops anything outside these), and the frontend union types in
-``frontend/src/types/tutor/correction.ts`` -- change them together.
+(drops anything outside these), and the api-client union types in
+``api-client/src/types/tutor/`` (correction-error-type, correction-severity,
+feedback-move) -- change them together.
 """
 from __future__ import annotations
 

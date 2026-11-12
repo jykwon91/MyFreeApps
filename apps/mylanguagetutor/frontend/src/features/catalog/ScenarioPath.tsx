@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
-import { useListLanguagesQuery, useListScenariosQuery } from "@/store/catalogApi";
-import { useGetUsageTodayQuery } from "@/store/usageApi";
-import { levelLabel } from "@/features/onboarding/levelOptions";
+import { useListLanguagesQuery, useListScenariosQuery } from "@mylanguagetutor/api-client/store/catalogApi";
+import { useGetUsageTodayQuery } from "@mylanguagetutor/api-client/store/usageApi";
+import { levelLabel } from "@mylanguagetutor/api-client/utils/levelLabel";
 import CatalogSkeleton from "@/features/catalog/CatalogSkeleton";
 import CatalogError from "@/features/catalog/CatalogError";
 import ScenarioCard from "@/features/catalog/ScenarioCard";
 import SessionBlockNotice from "@/features/session/SessionBlockNotice";
-import type { Profile } from "@/types/tutor/profile";
+import type { Profile } from "@mylanguagetutor/api-client/types/tutor/profile";
 
 interface ScenarioPathProps {
   profile: Profile;
