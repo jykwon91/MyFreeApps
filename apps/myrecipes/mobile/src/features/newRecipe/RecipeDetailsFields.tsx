@@ -17,17 +17,20 @@ interface RecipeDetailsFieldsProps {
   values: RecipeFormValues;
   problems: RecipeFormProblems;
   disabled: boolean;
+  /** Puts the cursor in the title, for a filled-in draft that came without one. */
+  focusTitle?: boolean;
   onEdit: (field: MetaField, text: string) => void;
 }
 
 /** The recipe's own fields: title, description, source, servings and times, as on the website. */
-export default function RecipeDetailsFields({ values, problems, disabled, onEdit }: RecipeDetailsFieldsProps) {
+export default function RecipeDetailsFields({ values, problems, disabled, focusTitle, onEdit }: RecipeDetailsFieldsProps) {
   const { spacing } = useTheme();
 
   return (
     <>
       <FormField
         autoCapitalize="sentences"
+        autoFocus={focusTitle}
         editable={!disabled}
         error={problems.title}
         label={MESSAGES.titleLabel}

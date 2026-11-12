@@ -26,6 +26,7 @@ import {
 import { browserDecimalSeparator } from "@/lib/browserDecimalSeparator";
 import { buildRecipeCreateRequest } from "@myrecipes/api-client/utils/buildRecipeCreateRequest";
 import { firstRecipeFormProblem } from "@myrecipes/api-client/utils/firstRecipeFormProblem";
+import { draftNeedsReview } from "@myrecipes/api-client/utils/draftNeedsReview";
 import { formatRecipeNumber } from "@myrecipes/api-client/utils/formatRecipeNumber";
 import { ingredientInputs } from "@myrecipes/api-client/utils/ingredientInputs";
 import { minutesInput } from "@myrecipes/api-client/utils/minutesInput";
@@ -90,11 +91,7 @@ export default function RecipeEditorForm(props: Props) {
   // The editable form doubles as the review step for photo import. Warn when
   // the extraction came back thin so the user knows to double-check, and if it
   // couldn't read a title, drop focus straight onto the title field.
-  const needsReview =
-    draft != null &&
-    (draft.title.trim() === "" ||
-      draft.ingredients.length === 0 ||
-      draft.steps.length === 0);
+  const needsReview = draft != null && draftNeedsReview(draft);
 
   const titleRef = useRef<HTMLInputElement>(null);
   useEffect(() => {

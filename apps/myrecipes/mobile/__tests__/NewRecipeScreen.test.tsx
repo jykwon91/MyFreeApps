@@ -21,6 +21,7 @@ const mockRepeat = jest.fn();
 const mockGuard: { prevent: boolean; ask: ((event: { repeat: () => void }) => void) | null } = { prevent: false, ask: null };
 jest.mock("expo-router", () => ({
   router: { replace: (...args: unknown[]) => mockReplace(...args) },
+  useLocalSearchParams: () => ({}),
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
   usePreventRemove: (prevent: boolean, ask: (event: { repeat: () => void }) => void) => {
     mockGuard.prevent = prevent;

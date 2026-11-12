@@ -11,52 +11,24 @@ import {
   useReadWebRecipeMutation,
   useSearchWebRecipesMutation,
 } from "@myrecipes/api-client/store/discoveryApi";
-import { DISCOVER_EMPTY_STATE, DISCOVER_SUGGESTIONS } from "@/constants/empty-states";
+import {
+  DISCOVERY_EMPTY_COPY,
+  DISCOVERY_INTRO,
+  DISCOVERY_QUERY_MAX_LENGTH,
+  DISCOVERY_QUERY_MIN_LENGTH,
+  DISCOVERY_QUERY_PLACEHOLDER,
+  DISCOVERY_READ_STAGES,
+  DISCOVERY_SEARCH_STAGES,
+  DISCOVERY_SUGGESTIONS,
+} from "@myrecipes/api-client/constants/discovery";
+import { discoveredRecipeDraft } from "@myrecipes/api-client/utils/discoveredRecipeDraft";
+import { discoveryReadErrorMessage } from "@myrecipes/api-client/utils/discoveryReadErrorMessage";
+import { discoverySearchErrorMessage } from "@myrecipes/api-client/utils/discoverySearchErrorMessage";
 import type {
   DiscoveredDetail,
   DiscoveredRecipe,
   DiscoveryResults,
 } from "@myrecipes/api-client/types/recipe/discovery";
-
-const SEARCH_STAGES = [
-  "Searching the web for versions of this dish...",
-  "Reading through what we found...",
-  "Comparing the versions worth cooking...",
-] as const;
-
-const READ_STAGES = [
-  "Opening the recipe...",
-  "Reading the ingredients and method...",
-  "Pulling out the tips and what cooks report...",
-] as const;
-
-function searchErrorMessage(err: unknown): string {
-  const status = (err as { status?: number } | null)?.status;
-  if (status === 422) {
-    return "We couldn't find recipes for that. Try a dish name, like “mexican flan”.";
-  }
-  if (status === 429) {
-    return "You've run a lot of searches in the last hour. Give it a few minutes and try again.";
-  }
-  if (status === 503) {
-    return "Recipe discovery isn't available right now. Try again shortly.";
-  }
-  return "Something went wrong searching — please try again.";
-}
-
-function readErrorMessage(err: unknown): string {
-  const status = (err as { status?: number } | null)?.status;
-  if (status === 422) {
-    return "We couldn't read a recipe off that page. Open the original to see it.";
-  }
-  if (status === 400) {
-    return "That page can't be opened from here.";
-  }
-  if (status === 429) {
-    return "You've opened a lot of recipes in the last hour. Give it a few minutes.";
-  }
-  return "We couldn't open that one — try another result.";
-}
 
 /**
  * Discover recipes from the web (/discover).
@@ -104,7 +76,7 @@ export default function Discover() {
 
   async function runSearch(rawQuery: string) {
     const query = rawQuery.trim();
-    if (query.length < 2 || isBusy) return;
+    if (query.length < DISCOVERY_QUERY_MIN_LENGTH || isBusy) return;
     setInput(query);
     setError(null);
     setSelected(null);
@@ -113,7 +85,7 @@ export default function Discover() {
       setResults(await searchWebRecipes(query).unwrap());
     } catch (err) {
       setResults(null);
-      setError(searchErrorMessage(err));
+      setError(discoverySearchErrorMessage(err));
     }
   }
 
@@ -135,7 +107,7 @@ export default function Discover() {
       setDetailsById((prev) => ({ ...prev, [recipe.id]: read }));
     } catch (err) {
       setSelected(null);
-      setError(readErrorMessage(err));
+      setError(discoveryReadErrorMessage(err));
     }
   }
 
@@ -148,9 +120,6 @@ export default function Discover() {
   // Save step — the editor is seeded with the read draft, with the original
   // page recorded as the source so the provenance survives the save.
   if (isSaving && detail) {
-    const attribution = detail.site_name
-      ? `${detail.site_name} (${detail.url})`
-      : detail.url;
     return (
       <main className="space-y-6 p-4 sm:p-8">
         <EditorHeader
@@ -161,10 +130,7 @@ export default function Discover() {
         />
         <RecipeEditorForm
           mode="create"
-          initialDraft={{
-            ...detail.draft,
-            source: detail.draft.source ? attribution : detail.url,
-          }}
+          initialDraft={discoveredRecipeDraft(detail)}
           onCancel={() => setIsSaving(false)}
         />
       </main>
@@ -184,7 +150,7 @@ export default function Discover() {
         ) : (
           <div className="space-y-4">
             <h1 className="text-2xl font-semibold leading-tight">{selected.title}</h1>
-            <DiscoveryStatus stages={READ_STAGES} />
+            <DiscoveryStatus stages={DISCOVERY_READ_STAGES} />
             <DiscoveryResultsSkeleton />
           </div>
         )}
@@ -196,7 +162,7 @@ export default function Discover() {
   if (isSearching) {
     content = (
       <div className="space-y-4">
-        <DiscoveryStatus stages={SEARCH_STAGES} />
+        <DiscoveryStatus stages={DISCOVERY_SEARCH_STAGES} />
         <DiscoveryResultsSkeleton />
       </div>
     );
@@ -219,8 +185,8 @@ export default function Discover() {
     content = (
       <EmptyState
         icon={<Compass className="h-12 w-12" />}
-        heading={DISCOVER_EMPTY_STATE.heading}
-        body={DISCOVER_EMPTY_STATE.body}
+        heading={DISCOVERY_EMPTY_COPY.heading}
+        body={DISCOVERY_EMPTY_COPY.body}
       />
     );
   }
@@ -229,10 +195,7 @@ export default function Discover() {
     <main className="space-y-6 p-4 sm:p-8">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Discover recipes</h1>
-        <p className="text-sm text-muted-foreground">
-          Name a dish and we'll search recipe sites, food blogs, YouTube and Reddit for
-          the versions worth cooking.
-        </p>
+        <p className="text-sm text-muted-foreground">{DISCOVERY_INTRO}</p>
       </header>
 
       <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-3">
@@ -245,7 +208,8 @@ export default function Discover() {
             type="search"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="What do you want to make?"
+            placeholder={DISCOVERY_QUERY_PLACEHOLDER}
+            maxLength={DISCOVERY_QUERY_MAX_LENGTH}
             aria-label="Dish to search the web for"
             disabled={isSearching}
             className="min-h-[44px] w-full rounded-md border bg-background py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
@@ -255,7 +219,7 @@ export default function Discover() {
           type="submit"
           isLoading={isSearching}
           loadingText="Searching..."
-          disabled={input.trim().length < 2}
+          disabled={input.trim().length < DISCOVERY_QUERY_MIN_LENGTH}
         >
           Search the web
         </LoadingButton>
@@ -264,7 +228,7 @@ export default function Discover() {
       {!results && !isSearching ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">Try:</span>
-          {DISCOVER_SUGGESTIONS.map((suggestion) => (
+          {DISCOVERY_SUGGESTIONS.map((suggestion) => (
             <button
               key={suggestion}
               type="button"

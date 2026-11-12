@@ -1,7 +1,6 @@
 /** Copy for creating a recipe on the phone. Problems with what's typed come from the API client. */
 export const NEW_RECIPE_MESSAGES = {
   screenTitle: "New recipe",
-  backTitle: "Recipes",
   newRecipe: "New recipe",
   newRecipeShort: "New",
   signInHeading: "Sign in to create a recipe",
@@ -39,6 +38,7 @@ export const NEW_RECIPE_MESSAGES = {
   creating: "Creating…",
   created: "Recipe created.",
   couldntCreate: "Couldn't create this recipe. Please try again.",
+  draftNeedsReview: "We filled in what we could from the page. Check everything before creating it.",
 } as const;
 
 /** How tall a box for a description or a step starts, so it reads as somewhere to write. */

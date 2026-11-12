@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Spinner from "@platform/ui/components/icons/Spinner";
+import { DISCOVERY_STAGE_SECONDS } from "@myrecipes/api-client/constants/discovery";
 
 interface Props {
   /** Ordered stages; each replaces the last after `stepSeconds`. */
@@ -16,7 +17,7 @@ interface Props {
  * They describe what the request is doing in order, so nothing here claims
  * knowledge of the server's actual progress that we don't have.
  */
-export default function DiscoveryStatus({ stages, stepSeconds = 9 }: Props) {
+export default function DiscoveryStatus({ stages, stepSeconds = DISCOVERY_STAGE_SECONDS }: Props) {
   const [index, setIndex] = useState(0);
 
   // One interval per mount. The stage list is fixed for a given wait and the

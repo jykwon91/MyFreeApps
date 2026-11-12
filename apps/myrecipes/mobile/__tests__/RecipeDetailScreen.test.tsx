@@ -14,9 +14,15 @@ const mockPush = jest.fn();
 const mockFocus = new Set<() => void>();
 const mockReplace = jest.fn();
 let mockCanGoBack = true;
-let mockParams: { id: string; title?: string; owner?: string };
+let mockParams: { id: string; title?: string; owner?: string; from?: string };
+let mockScreenOptions: { headerBackTitle?: string } | undefined;
 jest.mock("expo-router", () => ({
-  Stack: { Screen: () => null },
+  Stack: {
+    Screen: ({ options }: { options?: { headerBackTitle?: string } }) => {
+      mockScreenOptions = options;
+      return null;
+    },
+  },
   useFocusEffect: (callback: () => void) => {
     const { useEffect } = jest.requireActual("react");
     useEffect(() => {
@@ -141,6 +147,15 @@ describe("RecipeDetailScreen", () => {
     expect(screen.getByLabelText("Servings: 4").props.accessible).toBe(true);
     expect(screen.getByLabelText("Prep: 15 min")).toBeTruthy();
     expect(screen.queryByLabelText(/^Cook/)).toBeNull();
+  });
+
+  it("names Back for where it was opened from: Recipes, or Discover", async () => {
+    await show();
+    expect(mockScreenOptions?.headerBackTitle).toBe("Recipes");
+
+    mockParams = { id: "r1", from: "discover" };
+    await reopen();
+    expect(mockScreenOptions?.headerBackTitle).toBe("Discover");
   });
 
   it("works from a deep link with only an id, using the server's values", async () => {

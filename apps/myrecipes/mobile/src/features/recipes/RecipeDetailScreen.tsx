@@ -4,6 +4,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { useErrorSinceOpening } from "../../hooks/useErrorSinceOpening";
 import { isNotFoundError } from "../../utils/isNotFoundError";
+import { recipeBackTitle } from "../../utils/recipeBackTitle";
 import RecipeContent from "./RecipeContent";
 import RecipeDetailSkeleton from "./RecipeDetailSkeleton";
 import RecipeTitleBlock from "./RecipeTitleBlock";
@@ -12,7 +13,7 @@ export default function RecipeDetailScreen() {
   const { colors, spacing } = useTheme();
   const router = useRouter();
   // A deep link has only the id; the list passes the rest so the screen opens with them.
-  const params = useLocalSearchParams<{ id: string; title?: string; owner?: string }>();
+  const params = useLocalSearchParams<{ id: string; title?: string; owner?: string; from?: string }>();
   // Reopening always asks again, so a failure still in the cache can't stand in for the answer.
   const { currentData: recipe, error, isError, refetch } = useGetRecipeQuery(params.id, {
     refetchOnMountOrArgChange: true,
@@ -45,7 +46,7 @@ export default function RecipeDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: "Recipe", headerBackTitle: "Recipes" }} />
+      <Stack.Screen options={{ title: "Recipe", headerBackTitle: recipeBackTitle(params.from) }} />
       {isGone ? (
         <EmptyState
           action={{ label: "Back to recipes", onPress: leave }}

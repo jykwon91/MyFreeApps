@@ -1,8 +1,10 @@
 routes:
   /:
     screen: (tabs)/index
+  # Signed in only, as on the website. Opening a result pushes discover/[id], which the website
+  # shows in place on /discover rather than as a route of its own.
   /discover:
-    not_on_mobile: Not built yet.
+    screen: (tabs)/discover
   /forgot-password:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /login:
