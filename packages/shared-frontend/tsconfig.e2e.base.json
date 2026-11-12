@@ -1,0 +1,25 @@
+// Compiler options for an app's Playwright code: specs, fixtures and configs.
+//
+// Playwright runs TypeScript without type-checking it, and each app's
+// `typecheck` only covers src/, so `npm run typecheck:e2e` is the only type
+// check e2e code gets. Each app's tsconfig.e2e.json extends its own
+// tsconfig.json first (for its path aliases, which resolve relative to the app)
+// and then this file, and lists the e2e files itself (include paths resolve
+// relative to the file that declares them).
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  }
+}

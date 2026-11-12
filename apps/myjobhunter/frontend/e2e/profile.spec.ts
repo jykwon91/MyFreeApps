@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { createTestUser, deleteTestUser, loginViaUI } from "./fixtures/auth";
 
 /**
@@ -15,7 +15,7 @@ import { createTestUser, deleteTestUser, loginViaUI } from "./fixtures/auth";
  *   6. Tenant isolation — user B cannot see user A's data
  */
 
-async function navigateToProfile(page: Parameters<typeof test>[1]["page"]) {
+async function navigateToProfile(page: Page) {
   await page.getByRole("link", { name: /profile/i }).first().click();
   await page.waitForURL("**/profile");
 }
