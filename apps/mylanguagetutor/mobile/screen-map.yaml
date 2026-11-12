@@ -1,0 +1,27 @@
+routes:
+  /:
+    not_on_mobile: Not built yet.
+  /forgot-password:
+    not_on_mobile: Done on the website, which the sign-in screen links to.
+  /login:
+    screen: sign-in
+  /onboarding/language:
+    not_on_mobile: Not built yet.
+  /onboarding/level:
+    not_on_mobile: Not built yet.
+  /practice:
+    not_on_mobile: Not built yet.
+  /register:
+    not_on_mobile: Done on the website, which the sign-in screen links to.
+  /reset-password:
+    not_on_mobile: Done on the website, which the sign-in screen links to.
+  /scenarios:
+    not_on_mobile: Not built yet.
+  /security:
+    not_on_mobile: Not built yet.
+  /settings:
+    screen: (app)/(tabs)/settings
+  /support-myfreeapps:
+    not_on_mobile: Opens on the website.
+  /verify-email:
+    not_on_mobile: Done on the website, which the sign-in screen links to.

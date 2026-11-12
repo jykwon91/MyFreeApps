@@ -8,7 +8,7 @@ import { DASHBOARD_MESSAGES } from "../src/constants/dashboard";
 import { PROFILE_MESSAGES } from "../src/constants/profile";
 import { RESUME_EXPORT_DIRECTORY, RESUME_SESSION_ID_KEY } from "../src/constants/resumeStorage";
 import { PROFILE_TAB, TABS } from "../src/constants/tabs";
-import type { AppTab } from "../src/types/AppTab";
+import type { AppTab } from "@platform/mobile";
 import { EMPTY_BOARD } from "../test-support/emptyBoard";
 import { serve } from "@platform/mobile/test-support/fakeServer";
 import { profileRoutes } from "../test-support/profileRoutes";

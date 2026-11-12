@@ -125,6 +125,7 @@ apps/mylanguagetutor/
 |-- api-client/             @mylanguagetutor/api-client -- platform-neutral API layer
 |-- docker/
 |-- frontend/
+|-- mobile/                Expo phone app (screen-map.yaml maps every web route)
 |-- docker-compose.yml
 `-- CLAUDE.md
 ```
@@ -169,6 +170,20 @@ npm run lint
 npm test
 ```
 
+**Mobile** (from `apps/mylanguagetutor/mobile/`; needs Node 22):
+```bash
+npx expo start    # Against the live API; set EXPO_PUBLIC_API_BASE_URL / EXPO_PUBLIC_WEB_BASE_URL for a local backend
+npm run typecheck
+npm run lint
+npm test
+EXPO_DOCTOR_SKIP_DEPENDENCY_VERSION_CHECK=1 npm run doctor
+```
+
+The phone app signs in through the shared `/auth/mobile/*` routes; registration,
+password resets and email verification stay on the website, which the sign-in
+screen links to. `mobile/screen-map.yaml` gives every web route a phone screen
+or a reason it isn't on the phone -- update it when adding or renaming a page.
+
 **API client** (from the monorepo root):
 ```bash
 npm run typecheck --workspace=@mylanguagetutor/api-client
@@ -179,7 +194,7 @@ npm test --workspace=@mylanguagetutor/api-client
 RTK Query endpoints, their request/response types, the SSE turn-event parser,
 the turn refusal/error mapping, the session state types and the pure speech
 text helpers live in `apps/mylanguagetutor/api-client`
-(`@mylanguagetutor/api-client`), shared with the future phone app. Import them
+(`@mylanguagetutor/api-client`), shared with the phone app (`mobile/`). Import them
 as `@mylanguagetutor/api-client/<dir>/<file>`. The package must stay
 platform-neutral: no DOM, `window`, `localStorage`, Web Speech API or
 `fetch` streaming -- those (`streamTurn`, the speech hooks, `voiceForLocale`,

@@ -1,4 +1,4 @@
-import type { AppTab } from "../types/AppTab";
+import type { AppTab } from "@platform/mobile";
 
 export const DASHBOARD_TAB: AppTab = { name: "index", title: "Dashboard", webPath: "/dashboard" };
 export const APPLICATIONS_TAB: AppTab = { name: "applications", title: "Applications", webPath: "/applications" };

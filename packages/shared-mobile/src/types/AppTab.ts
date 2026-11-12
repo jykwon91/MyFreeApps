@@ -1,4 +1,4 @@
-import type { WebPath } from "@platform/mobile";
+import type { WebPath } from "./WebPath";
 
 export interface AppTab {
   /** The route file under app/(app)/(tabs), such as "index". */
