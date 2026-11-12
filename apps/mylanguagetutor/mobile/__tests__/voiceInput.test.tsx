@@ -17,6 +17,7 @@ import {
   hear,
   hearNothing,
   installRecognizer,
+  settle,
   isListening,
   permissionRequests,
   started,
@@ -241,7 +242,7 @@ describe("speaking an answer", () => {
     expect(micButton(VOICE_COPY.micLabels.idle)).toBeTruthy();
   });
 
-  it("drops what was heard when a call takes the microphone", async () => {
+  it("drops what was heard, and says so calmly, when a call takes the microphone on iOS", async () => {
     installRecognizer();
     storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
     const { sent } = await openCafeConversation();
@@ -250,9 +251,163 @@ describe("speaking an answer", () => {
     await phone(() => failWith("interrupted"));
 
     expect(sent).toHaveLength(0);
+    expect(screen.getByText(VOICE_COPY.interrupted)).toBeTruthy();
     expect(screen.queryByText(VOICE_COPY.unavailable)).toBeNull();
     expect(micButton(VOICE_COPY.micLabels.idle)).toBeTruthy();
     expect(audioSessionReleases).toEqual([false]);
+  });
+
+  // Android has no interruption signal: a call or another app taking the microphone in the foreground,
+  // once words were heard, ends the recognizer with ERROR_AUDIO, ERROR_CLIENT or ERROR_RECOGNIZER_BUSY,
+  // then an end.
+  it.each(["audio-capture", "client", "busy"] as const)(
+    "drops what was heard, and says so calmly, when Android ends listening mid-answer with %s",
+    async (error) => {
+      androidPhone();
+      installRecognizer();
+      storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+      const { sent } = await openCafeConversation();
+      await tapToSpeak();
+      await phone(() => hear("Quiero un"));
+      await phone(() => failWith(error));
+
+      expect(sent).toHaveLength(0);
+      expect(screen.getByText(VOICE_COPY.interrupted)).toBeTruthy();
+      expect(announce).toHaveBeenCalledWith(VOICE_COPY.interrupted, { queue: true });
+      expect(screen.queryByText(VOICE_COPY.unavailable)).toBeNull();
+      expect(screen.queryByTestId("heard-so-far")).toBeNull();
+      expect(micButton(VOICE_COPY.micLabels.idle)).toBeTruthy();
+    },
+  );
+
+  it("listens again after an Android interruption, clears the hint and sends the next answer", async () => {
+    androidPhone();
+    installRecognizer();
+    storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+    const { sent } = await openCafeConversation();
+    await tapToSpeak();
+    await phone(() => hear("Quiero"));
+    await phone(() => failWith("audio-capture"));
+
+    await tapToSpeak();
+    expect(screen.queryByText(VOICE_COPY.interrupted)).toBeNull();
+    await phone(() => hear("Quiero un café"));
+    await phone(() => goQuiet());
+    expect(sent.map((request) => request.text)).toEqual(["Quiero un café"]);
+  });
+
+  it("sends what was heard when Android answers the learner's stop with a client error", async () => {
+    androidPhone();
+    installRecognizer({ stopFailsWith: "client" });
+    storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+    const { sent } = await openCafeConversation();
+    await tapToSpeak();
+    await phone(() => hear("Quiero un café"));
+
+    await fireEvent.press(micButton(VOICE_COPY.micLabels.listening));
+    await waitFor(() => expect(sent.map((request) => request.text)).toEqual(["Quiero un café"]));
+    expect(screen.queryByText(VOICE_COPY.interrupted)).toBeNull();
+    expect(screen.queryByText(VOICE_COPY.noSpeech)).toBeNull();
+  });
+
+  it("sends what was heard when Android answers switching to typing with a client error", async () => {
+    androidPhone();
+    installRecognizer({ stopFailsWith: "client" });
+    storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+    const { sent } = await openCafeConversation();
+    await tapToSpeak();
+    await phone(() => hear("Hola"));
+
+    await fireEvent.press(screen.getByRole("button", { name: VOICE_COPY.typeInstead }));
+    await waitFor(() => expect(sent.map((request) => request.text)).toEqual(["Hola"]));
+  });
+
+  it("says recognition isn't working when the microphone fails after starting with nothing heard", async () => {
+    installRecognizer();
+    storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+    const { sent } = await openCafeConversation();
+    await tapToSpeak();
+    await phone(() => failWith("audio-capture"));
+
+    expect(sent).toHaveLength(0);
+    expect(screen.getByText(VOICE_COPY.unavailable)).toBeTruthy();
+    expect(screen.queryByText(VOICE_COPY.interrupted)).toBeNull();
+  });
+
+  it("sends a finished answer when Android delivers an error queued behind its final result", async () => {
+    androidPhone();
+    installRecognizer();
+    storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+    const { sent } = await openCafeConversation();
+    await tapToSpeak();
+    await phone(() => hear("Quiero un café"));
+    await phone(() => settle());
+    await phone(() => failWith("client"));
+
+    expect(sent.map((request) => request.text)).toEqual(["Quiero un café"]);
+    expect(screen.queryByText(VOICE_COPY.interrupted)).toBeNull();
+  });
+
+  it("drops a finished answer when the app goes to the background before the phone ends", async () => {
+    installRecognizer();
+    storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+    const { sent } = await openCafeConversation();
+    await tapToSpeak();
+    await phone(() => hear("Quiero un café"));
+    await phone(() => settle());
+
+    await moveApp("background");
+    await waitFor(() => expect(isListening()).toBe(false));
+    await moveApp("active");
+    expect(sent).toHaveLength(0);
+  });
+
+  it.each(["client", "no-speech"] as const)(
+    "shows no stale hint after switching to typing with nothing heard, when Android answers the stop with %s",
+    async (error) => {
+      androidPhone();
+      installRecognizer({ stopFailsWith: error });
+      storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+      const { sent } = await openCafeConversation();
+      await tapToSpeak();
+
+      await fireEvent.press(screen.getByRole("button", { name: VOICE_COPY.typeInstead }));
+      await waitFor(() => expect(isListening()).toBe(false));
+      await act(async () => {});
+      await fireEvent.press(screen.getByRole("button", { name: VOICE_COPY.useMicrophone }));
+
+      expect(micButton(VOICE_COPY.micLabels.idle)).toBeTruthy();
+      expect(screen.queryByText(VOICE_COPY.noSpeech)).toBeNull();
+      expect(screen.queryByText(VOICE_COPY.unavailable)).toBeNull();
+      expect(announce).not.toHaveBeenCalledWith(VOICE_COPY.noSpeech, expect.anything());
+      expect(sent).toHaveLength(0);
+    },
+  );
+
+  it("drops what was heard when the speech service fails mid-answer", async () => {
+    androidPhone();
+    installRecognizer();
+    storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+    const { sent } = await openCafeConversation();
+    await tapToSpeak();
+    await phone(() => hear("Quiero"));
+    await phone(() => failWith("network"));
+
+    expect(sent).toHaveLength(0);
+    expect(screen.getByText(VOICE_COPY.unavailable)).toBeTruthy();
+  });
+
+  it("sends what was heard when Android times out on silence after hearing words", async () => {
+    androidPhone();
+    installRecognizer();
+    storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+    const { sent } = await openCafeConversation();
+    await tapToSpeak();
+    await phone(() => hear("Quiero un café"));
+    await phone(() => failWith("speech-timeout"));
+
+    expect(sent.map((request) => request.text)).toEqual(["Quiero un café"]);
+    expect(screen.queryByText(VOICE_COPY.noSpeech)).toBeNull();
   });
 });
 

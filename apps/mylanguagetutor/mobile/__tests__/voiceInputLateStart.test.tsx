@@ -60,6 +60,23 @@ describe("the phone starting late", () => {
     expect(sent).toHaveLength(0);
   });
 
+  it("shows nothing for a stop tapped before recording began, when the phone answers it with a client error", async () => {
+    installRecognizer({ startsLate: true, stopFailsWith: "client" });
+    const { sent } = await openCafeConversation();
+    await tapWithLateStart();
+    await fireEvent.press(micButton(VOICE_COPY.micLabels.listening));
+    await act(async () => {});
+
+    // The deferred stop is sent once recording begins, and the phone answers it with client.
+    await phone(() => beginRecording());
+    await waitFor(() => expect(isListening()).toBe(false));
+    expect(micButton(VOICE_COPY.micLabels.idle)).toBeTruthy();
+    expect(screen.queryByText(VOICE_COPY.noSpeech)).toBeNull();
+    expect(screen.queryByText(VOICE_COPY.interrupted)).toBeNull();
+    expect(screen.queryByText(VOICE_COPY.unavailable)).toBeNull();
+    expect(sent).toHaveLength(0);
+  });
+
   it("aborts once recording has begun when the app goes to the background before it has", async () => {
     installRecognizer({ startsLate: true });
     const { sent } = await openCafeConversation();
