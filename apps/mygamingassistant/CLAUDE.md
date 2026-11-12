@@ -999,7 +999,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Profile API serves Forever characters at `/profile/wow/character/{first-surname}`
   (namespace `profile-forever-us`, US only) with the app's client token.
 - Backend: `app/api/wow_characters.py` — `GET /api/wow/characters/{slug}`
-  (profile + equipment, mapped by `services/wow/character/character_mapper.py`)
+  (profile + equipment + statistics, mapped by `services/wow/character/character_mapper.py`;
+  `stats` by `character_stats_mapper.py`)
   and `/{slug}/render.png` (Blizzard's `main-raw` render, fetched only from
   `render.worldofwarcraft.com`, refused over 3200x2400 px before decoding,
   cropped to the figure with Pillow). Per-IP limit 30/min on each route
@@ -1014,8 +1015,21 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   load (`mga.wowForever.character.v1`, 5 max); `/wow-forever/character`
   opens the newest. Gear is a paper doll (`PAPER_DOLL_*` in
   `data/character/characterConfig.ts`); "Use for MGA's pages" writes the
-  character's faction, class and level to `usePlayerSettings`. Tests:
-  `tests/test_wow_characters.py`, `src/__tests__/wowCharacterPage.test.tsx`, `e2e/wow-forever-character.spec.ts`.
+  character's faction, class and level to `usePlayerSettings`.
+- Stats panel (`CharacterStatsPanel`, lines from `lib/character/characterStats.ts`):
+  Blizzard's own totals from `/statistics` — never recomputed. Retail
+  leftovers (mastery, versatility, lifesteal, avoidance, ratings) are dropped
+  in the mapper. Weapon damage only for a hand that holds a weapon (Blizzard
+  reports an unarmed off hand behind a two-hander). Green "+N" = effective −
+  base (gear, talents, buffs). Haste, expertise, penetration show only when
+  non-zero; run speed only when not 100%; mana regen only for mana users.
+  Armor/Defense live in the Defenses tab only. A failed `/statistics` call
+  gives `stats: null` (logged, not cached) instead of failing the sheet. Tab default by class (casters Spell,
+  hunter Ranged, else Melee); a picked tab is remembered
+  (`mga.wowForever.character.statsTab.v1`). `stats: null` = Blizzard has none
+  yet. Tests:
+  `tests/test_wow_characters.py`, `src/__tests__/wowCharacterPage.test.tsx`,
+  `src/__tests__/wowCharacterStats.test.ts`, `e2e/wow-forever-character.spec.ts`.
 
 #### In-game icons (`GameIcon`)
 

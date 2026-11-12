@@ -31,6 +31,7 @@ from app.services.wow.character.character_mapper import to_character_response
 from app.services.wow.character.character_profile import CharacterProfile
 from app.services.wow.character.character_render_crop import crop_render
 from app.services.wow.character.character_slug import normalize_character_slug
+from app.services.wow.character.character_stats_mapper import to_character_stats
 
 RENDER_URL = "https://render.worldofwarcraft.com/forever-us/character/101/6299749-main-raw.png"
 PROFILE: dict[str, Any] = {
@@ -100,6 +101,29 @@ WAND: dict[str, Any] = {
     "durability": {"display_string": "Durability 60 / 65"},
 }
 EQUIPMENT: dict[str, Any] = {"equipped_items": [HAT, TRINKET, WAND, {"slot": {"type": "NECK"}}]}
+_CHANCE_ZERO: dict[str, Any] = {"rating_bonus": 0.0, "value": 0.0, "rating_normalized": 0}
+# Trimmed from the real level-37 warlock's answer, retail leftovers included.
+STATISTICS: dict[str, Any] = {
+    "health": 1003, "power": 2373, "power_type": {"name": "Mana", "id": 0},
+    "strength": {"base": 28, "effective": 28}, "agility": {"base": 39, "effective": 41},
+    "intellect": {"base": 71, "effective": 114}, "stamina": {"base": 43, "effective": 64},
+    "spirit": {"base": 70, "effective": 131},
+    "mastery": _CHANCE_ZERO, "versatility": 0.0, "lifesteal": _CHANCE_ZERO, "avoidance": _CHANCE_ZERO,
+    "attack_power": 18, "main_hand_damage_min": 58.37, "main_hand_damage_max": 85.37, "main_hand_speed": 3.4,
+    "main_hand_dps": 21.14, "off_hand_damage_min": 1.79, "off_hand_damage_max": 1.79, "off_hand_speed": 2.0,
+    "off_hand_dps": 0.89, "melee_crit": _CHANCE_ZERO, "melee_haste": _CHANCE_ZERO,
+    "melee_hit": {"rating_bonus": 0.0, "value": 2.0, "rating_normalized": 0},
+    "spell_power": 81, "spell_healing": 102, "spell_penetration": 0,
+    "spell_crit": {"rating_bonus": 0.0, "value": 4.9376, "rating_normalized": 0},
+    "spell_hit": {"rating_bonus": 0.0, "value": 2.0, "rating_normalized": 0}, "spell_haste": _CHANCE_ZERO,
+    "mana_regen": 113.0, "mana_regen_combat": 0.0,
+    "armor": {"base": 0, "effective": 364}, "defense": {"base": 172, "effective": 172},
+    "dodge": {"rating_bonus": 0.0, "value": 4.4812, "rating_normalized": 0}, "parry": _CHANCE_ZERO, "block": _CHANCE_ZERO,
+    "ranged_crit": {"rating_bonus": 0.0, "value": 4.8, "rating_normalized": 0}, "ranged_hit": _CHANCE_ZERO,
+    "ranged_haste": _CHANCE_ZERO, "ranged_attack_power": 0, "ranged_damage_min": 30.0, "ranged_damage_max": 57.0,
+    "shadow_resistance": {"base": 0, "effective": 10}, "fire_resistance": {"base": 0, "effective": 0},
+    "movement_speed": 100.0, "expertise": 0.0,
+}
 
 Handler = Callable[[httpx.Request], httpx.Response]
 
@@ -126,6 +150,7 @@ def _blizzard(
         "/profile/wow/character/jason-kwon": _json(PROFILE),
         "/profile/wow/character/jason-kwon/character-media": _json(MEDIA),
         "/profile/wow/character/jason-kwon/equipment": _json(EQUIPMENT),
+        "/profile/wow/character/jason-kwon/statistics": _json(STATISTICS),
         **(answers or {}),
     }
 
@@ -243,7 +268,7 @@ def test_missing_credentials_fail_before_any_request() -> None:
 
 
 def test_the_sheet_keeps_the_games_own_tooltip_lines() -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS))
     assert (sheet.name, sheet.surname, sheet.level, sheet.race, sheet.class_name) == ("Jason", "Kwon", 37, "Gnome", "Warlock")
     assert (sheet.faction, sheet.guild, sheet.ruleset, sheet.has_render) == ("alliance", "Tinker Town", "PvP", True)
     assert sheet.last_login is not None and sheet.last_login.year == 2026
@@ -261,12 +286,42 @@ def test_the_sheet_keeps_the_games_own_tooltip_lines() -> None:
 
 
 def test_a_character_without_media_or_gear_has_an_empty_sheet() -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=None, equipment=None))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=None, equipment=None, statistics=None))
     assert sheet.has_render is False
     assert sheet.items == []
 
 
 # --- crop ---------------------------------------------------------------------
+
+
+def test_the_stats_are_blizzards_totals_without_retail_leftovers() -> None:
+    stats = to_character_stats(STATISTICS, EQUIPMENT)
+    assert stats is not None
+    assert (stats.health, stats.power, stats.power_type) == (1003, 2373, "Mana")
+    assert (stats.intellect.base, stats.intellect.effective) == (71, 114)
+    assert stats.spell.crit == pytest.approx(4.9376) and stats.spell.power == 81 and stats.spell.healing == 102
+    assert stats.spell.mana_regen_casting == 0.0
+    assert (stats.defenses.armor.effective, stats.defenses.defense.effective) == (364, 172)
+    assert stats.defenses.armor.base == 0  # all of it from gear: a real 0 base is kept, not replaced
+    assert stats.spirit.base == 70
+    assert stats.resistances.shadow == 10 and stats.resistances.arcane == 0
+    assert stats.ranged.damage is not None and stats.ranged.damage.max == 57.0  # the wand is in the ranged slot
+    assert not {"mastery", "versatility", "lifesteal", "avoidance"} & set(stats.model_dump())
+
+
+def test_weapon_damage_shows_only_for_hands_that_hold_a_weapon() -> None:
+    # The fixture's gear has no main- or off-hand weapon: Blizzard's unarmed numbers stay hidden.
+    stats = to_character_stats(STATISTICS, EQUIPMENT)
+    assert stats is not None and stats.melee.main_hand is None and stats.melee.off_hand is None
+    staff = {"slot": {"type": "MAIN_HAND"}, "weapon": {"damage": {"display_string": "54 - 81 Damage"}}}
+    stats = to_character_stats(STATISTICS, {"equipped_items": [staff]})
+    assert stats is not None and stats.melee.main_hand is not None and stats.melee.main_hand.speed == 3.4
+    assert stats.melee.off_hand is None and stats.ranged.damage is None
+
+
+def test_no_statistics_yet_is_no_stats_panel() -> None:
+    assert to_character_stats(None, EQUIPMENT) is None
+    assert to_character_stats({}, EQUIPMENT) is None
 
 
 def test_the_crop_follows_the_figure_with_a_margin() -> None:
@@ -301,6 +356,21 @@ async def test_a_render_the_render_host_doesnt_have_is_no_picture(monkeypatch: p
     assert await character_service.get_character_render("jason-kwon") is None
 
 
+async def test_a_statistics_failure_still_shows_the_sheet_and_is_not_cached(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    seen: list[httpx.Request] = []
+    failing = {"/profile/wow/character/jason-kwon/statistics": _json({"code": 503}, 503)}
+    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
+    sheet = await character_service.get_character("jason-kwon")
+    assert sheet.stats is None
+    assert len(sheet.items) > 0
+    assert "Character statistics unavailable" in caplog.text
+    await character_service.get_character("jason-kwon")
+    profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
+    assert len(profile_calls) == 2
+
+
 async def test_the_sheet_and_render_ask_blizzard_once(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: list[httpx.Request] = []
     tokens = BlizzardTokenCache()
@@ -311,12 +381,12 @@ async def test_the_sheet_and_render_ask_blizzard_once(monkeypatch: pytest.Monkey
     await character_service.get_character_render("jason-kwon")
     assert render is not None and Image.open(BytesIO(render)).size[0] < 400
     api_calls = [r.url.path for r in seen if r.url.host == "us.api.blizzard.com"]
-    assert len(api_calls) == 3
+    assert len(api_calls) == 4
     assert [r.url.host for r in seen].count("render.worldofwarcraft.com") == 1
 
 
 async def test_route_returns_the_sheet(client: AsyncClient) -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS))
     with patch.object(character_service, "get_character", AsyncMock(return_value=sheet)) as get:
         resp = await client.get("/wow/characters/Jason-Kwon")
     assert resp.status_code == 200

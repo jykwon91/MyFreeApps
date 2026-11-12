@@ -1,5 +1,6 @@
 import CharacterGear from "@/games/wow-forever/components/character/CharacterGear";
 import CharacterHeader from "@/games/wow-forever/components/character/CharacterHeader";
+import CharacterStatsPanel from "@/games/wow-forever/components/character/CharacterStatsPanel";
 import CharacterSheetSkeleton from "@/games/wow-forever/components/character/CharacterSheetSkeleton";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import { characterLookupProblem } from "@/games/wow-forever/lib/character/characterLookupProblem";
@@ -22,6 +23,7 @@ export default function CharacterSheet({ slug, rawSlug, shown, error, isFetching
       <>
         <CharacterHeader character={shown} />
         <CharacterGear character={shown} />
+        <CharacterStatsPanel character={shown} />
       </>
     );
   }

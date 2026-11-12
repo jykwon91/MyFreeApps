@@ -47,3 +47,6 @@ export const OPTIONAL_SLOTS: ReadonlySet<string> = new Set(["AMMO"]);
 export const TWO_HAND_INVENTORY_TYPE = "TWOHWEAPON";
 export const OFF_HAND_SLOT = "OFF_HAND";
 export const MAIN_HAND_SLOT = "MAIN_HAND";
+
+/** Green for what gear adds — the game's equip-bonus colour, readable in both themes. */
+export const CHARACTER_BONUS_TEXT = "text-green-700 dark:text-green-400";
