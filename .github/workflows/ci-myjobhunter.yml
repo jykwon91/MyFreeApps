@@ -243,6 +243,10 @@ jobs:
       - name: Lint frontend
         run: npm run lint --workspace=myjobhunter-frontend
 
+      - name: Typecheck E2E tests
+        # The build only typechecks src/, and Playwright runs TS unchecked.
+        run: npm run typecheck:e2e --workspace=myjobhunter-frontend
+
       - name: Test frontend
         run: npm test --workspace=myjobhunter-frontend
 

@@ -1,24 +1,5 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "types": ["node"],
-    "paths": {
-      "@platform/ui": ["../../../packages/shared-frontend/src/index.ts"],
-      "@platform/ui/*": ["../../../packages/shared-frontend/src/*"],
-      "@/*": ["./src/*"]
-    }
-  },
+  "extends": ["./tsconfig.json", "../../../packages/shared-frontend/tsconfig.e2e.base.json"],
   "include": ["e2e", "playwright.config.ts", "playwright.layout.config.ts"],
-  "exclude": ["e2e/test-results", "e2e/playwright-report"]
+  "exclude": ["e2e/test-results*", "e2e/playwright-report"]
 }

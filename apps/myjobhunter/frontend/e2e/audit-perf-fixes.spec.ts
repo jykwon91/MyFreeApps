@@ -101,10 +101,10 @@ test.describe("CompanyDetail — server-side company_id filter (audit fix 2026-0
       const companyA = await createCompanyViaApi(request, token, "Company Alpha Filter");
       const companyB = await createCompanyViaApi(request, token, "Company Beta Filter");
 
-      const _appIdA = await createApplicationViaApi(
+      await createApplicationViaApi(
         request, token, companyA.id, "Alpha Engineer",
       );
-      const _appIdB = await createApplicationViaApi(
+      await createApplicationViaApi(
         request, token, companyB.id, "Beta Engineer",
       );
 

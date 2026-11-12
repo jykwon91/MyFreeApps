@@ -374,11 +374,11 @@ test.describe("Resume Refinement — click-to-target (mocked active session)", (
             body: JSON.stringify(sessionPayload),
           }),
       );
-      let capturedBody: { current_text?: string; section?: string } | null = null;
+      const captured: { body: { current_text?: string; section?: string } | null } = { body: null };
       await page.route(
         `**/api/resume-refinement/sessions/${SESSION_ID}/target-from-line`,
         async (route) => {
-          capturedBody = route.request().postDataJSON();
+          captured.body = route.request().postDataJSON();
           sessionPayload = afterClickSession();
           await route.fulfill({
             status: 200,
@@ -417,9 +417,9 @@ test.describe("Resume Refinement — click-to-target (mocked active session)", (
       await line.click();
 
       // The backend receives the raw line + its nearest ## section.
-      await expect.poll(() => capturedBody).not.toBeNull();
-      expect(capturedBody?.current_text).toBe("Shipped the mobile app");
-      expect(capturedBody?.section).toBe("Experience");
+      await expect.poll(() => captured.body).not.toBeNull();
+      expect(captured.body?.current_text).toBe("Shipped the mobile app");
+      expect(captured.body?.section).toBe("Experience");
 
       // The user-origin target is active: "Your pick" badge + its proposal.
       await expect(page.getByText("Your pick")).toBeVisible();

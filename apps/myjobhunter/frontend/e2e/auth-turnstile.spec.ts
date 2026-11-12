@@ -54,16 +54,9 @@ test.describe("Turnstile widget on registration", () => {
   test("Cloudflare Turnstile widget renders on the Create Account tab", async ({
     page,
   }) => {
-    // The widget renders as an iframe pointing at challenges.cloudflare.com.
-    // Use an extended timeout because Cloudflare's script needs to load
-    // from the network and inject the iframe asynchronously.
-    const widgetIframe = page.frameLocator(
-      'iframe[src*="challenges.cloudflare.com/turnstile"]',
-    );
-
     // First check whether the script loaded at all. If VITE_TURNSTILE_SITE_KEY
-    // was empty at build time, no script tag exists and the iframe never appears
-    // — skip rather than fail.
+    // was empty at build time, no script tag exists and the widget never
+    // renders — skip rather than fail.
     const scriptCount = await page
       .locator('script[src*="challenges.cloudflare.com"]')
       .count();
@@ -74,7 +67,8 @@ test.describe("Turnstile widget on registration", () => {
       );
     }
 
-    // Widget container should exist + iframe should eventually load
+    // Cloudflare's script loads from the network and injects the widget
+    // asynchronously, hence the extended timeout.
     await expect(
       page.locator('div[class*="cf-turnstile"], #cf-chl-widget, .cf-turnstile'),
     ).toBeVisible({ timeout: 10_000 });
@@ -107,11 +101,11 @@ test.describe("Turnstile widget on registration", () => {
     // before submitting.
     await page.waitForFunction(
       () => {
-        const inputs = document.querySelectorAll(
+        const inputs = document.querySelectorAll<HTMLInputElement>(
           'input[name="cf-turnstile-response"]',
         );
         for (const input of Array.from(inputs)) {
-          if ((input as HTMLInputElement).value.length > 0) return true;
+          if (input.value.length > 0) return true;
         }
         return false;
       },

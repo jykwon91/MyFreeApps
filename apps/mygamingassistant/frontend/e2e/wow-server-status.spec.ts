@@ -12,7 +12,7 @@
  *
  * Run: npm run test:e2e -- wow-server-status
  */
-import { test, expect } from "@playwright/test";
+import { test, expect, type Route } from "@playwright/test";
 
 const API_PATTERN = "**/wow/server-status**";
 
@@ -40,7 +40,7 @@ const PARTLY_DOWN = {
   ],
 };
 
-function fulfillStatus(route: Parameters<Parameters<typeof import("@playwright/test").Page["route"]>[1]>[0], body: unknown) {
+function fulfillStatus(route: Route, body: unknown) {
   return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
 }
 
@@ -100,13 +100,13 @@ test("region picker changes the API request", async ({ page }) => {
   const section = page.getByRole("region", { name: "WoW Forever server status" });
   await expect(section.getByText("All servers online")).toBeVisible();
 
-  // Switch to Europe
-  await section.getByRole("combobox", { name: "Region" }).selectOption("eu");
-
-  // The new request should have region=eu
-  await page.waitForResponse((resp) =>
-    resp.url().includes("server-status") && resp.url().includes("region=eu"),
-  );
+  // Switch to Europe; the new request should have region=eu
+  await Promise.all([
+    page.waitForResponse((resp) =>
+      resp.url().includes("server-status") && resp.url().includes("region=eu"),
+    ),
+    section.getByRole("combobox", { name: "Region" }).selectOption("eu"),
+  ]);
   expect(regions).toContain("eu");
 });
 

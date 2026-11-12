@@ -160,6 +160,10 @@ jobs:
       - name: Typecheck frontend
         run: npm run typecheck --workspace=mygamingassistant-frontend
 
+      - name: Typecheck E2E tests
+        # The build only typechecks src/, and Playwright runs TS unchecked.
+        run: npm run typecheck:e2e --workspace=mygamingassistant-frontend
+
   frontend-test:
     name: frontend-test / mygamingassistant
     runs-on: ubuntu-latest

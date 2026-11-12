@@ -19,7 +19,7 @@
  * If the backend is unavailable or fixtures are missing, the accept-flow test
  * gracefully skips via test.skip() rather than failing.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "@playwright/test";
 import { getOperatorCredentials, loginViaUI } from "./fixtures/auth";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8004";
@@ -27,13 +27,7 @@ const TEST_GAME_SLUG = "valorant";
 const TEST_MAP_SLUG = "bind";
 
 /** Obtain a JWT for direct API calls in test setup/teardown. */
-async function getAuthToken(
-  request: Parameters<typeof test>[2] extends (args: infer A) => unknown
-    ? A extends { request: infer R }
-      ? R
-      : never
-    : never,
-): Promise<string | null> {
+async function getAuthToken(request: APIRequestContext): Promise<string | null> {
   try {
     const credentials = getOperatorCredentials();
     const resp = await request.post(`${BACKEND_URL}/api/auth/jwt/login`, {
@@ -96,7 +90,8 @@ test.describe("Review queue page", () => {
     // Interact with confidence filter
     const confidenceSelect = selects.nth(1);
     await expect(confidenceSelect).toBeVisible();
-    await confidenceSelect.selectOption({ label: /Low/i });
+    await confidenceSelect.selectOption({ label: "Low (<0.5)" });
+    await expect(confidenceSelect).toHaveValue("0.49");
     // Page should still render normally after filter change
     await expect(page.getByRole("heading", { name: /review queue/i })).toBeVisible();
   });
