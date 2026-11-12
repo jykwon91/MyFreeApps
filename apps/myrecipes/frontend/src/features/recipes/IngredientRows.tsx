@@ -1,6 +1,11 @@
 import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
 import { Button } from "@platform/ui";
-import type { EditableIngredientRow } from "@/features/recipes/editor-types";
+import {
+  INGREDIENT_NAME_MAX_LENGTH,
+  INGREDIENT_NOTE_MAX_LENGTH,
+  INGREDIENT_UNIT_MAX_LENGTH,
+} from "@myrecipes/api-client/constants/recipeForm";
+import type { EditableIngredientRow } from "@myrecipes/api-client/types/recipe/editable-ingredient-row";
 
 interface Props {
   rows: EditableIngredientRow[];
@@ -34,6 +39,7 @@ export default function IngredientRows({
           <input
             aria-label="Ingredient name"
             placeholder="Ingredient"
+            maxLength={INGREDIENT_NAME_MAX_LENGTH}
             value={row.name}
             disabled={disabled}
             onChange={(e) => onChange(row.key, { name: e.target.value })}
@@ -51,6 +57,7 @@ export default function IngredientRows({
           <input
             aria-label="Unit"
             placeholder="Unit"
+            maxLength={INGREDIENT_UNIT_MAX_LENGTH}
             value={row.unit}
             disabled={disabled}
             onChange={(e) => onChange(row.key, { unit: e.target.value })}
@@ -59,6 +66,7 @@ export default function IngredientRows({
           <input
             aria-label="Note"
             placeholder="Note"
+            maxLength={INGREDIENT_NOTE_MAX_LENGTH}
             value={row.note}
             disabled={disabled}
             onChange={(e) => onChange(row.key, { note: e.target.value })}

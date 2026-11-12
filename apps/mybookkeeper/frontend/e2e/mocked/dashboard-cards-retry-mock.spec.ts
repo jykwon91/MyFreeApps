@@ -18,7 +18,7 @@
  * runs, the card must keep its error up and show the retry in progress.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "./fixtures/mockResponse";
+import { json } from "@platform/ui/testing/mockResponse";
 import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 

@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
 import { Button } from "@platform/ui";
-import type { EditableStepRow } from "@/features/recipes/editor-types";
+import { STEP_INSTRUCTION_MAX_LENGTH } from "@myrecipes/api-client/constants/recipeForm";
+import type { EditableStepRow } from "@myrecipes/api-client/types/recipe/editable-step-row";
 
 interface Props {
   rows: EditableStepRow[];
@@ -34,6 +35,7 @@ export default function StepRows({
           <textarea
             aria-label={`Step ${idx + 1}`}
             placeholder="Describe this step"
+            maxLength={STEP_INSTRUCTION_MAX_LENGTH}
             value={row.instruction}
             disabled={disabled}
             rows={2}

@@ -4,8 +4,8 @@
  * paging past the first page.
  */
 import { test, expect } from "@playwright/test";
-import { json } from "./fixtures/mockResponse";
-import { stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/testing/mockResponse";
+import { stubSignedInShell } from "@platform/ui/testing/mockSession";
 import { mockApplication } from "./fixtures/mockData";
 
 const APPLICATIONS_ENDPOINT = /\/api\/applications(\?|$)/;

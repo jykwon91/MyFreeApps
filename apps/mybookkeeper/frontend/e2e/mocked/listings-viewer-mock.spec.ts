@@ -15,7 +15,7 @@
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
 import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
-import { json } from "./fixtures/mockResponse";
+import { json } from "@platform/ui/testing/mockResponse";
 import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
 import { LISTING, LISTING_ID, LISTING_SUMMARY } from "./fixtures/mockListing";
 import { LISTING_MESSAGES } from "../../src/shared/lib/listing-messages";

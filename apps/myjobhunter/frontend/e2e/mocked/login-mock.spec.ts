@@ -4,8 +4,8 @@
  * login shows the error and keeps the user on /login.
  */
 import { test, expect } from "@playwright/test";
-import { json } from "./fixtures/mockResponse";
-import { stubSignedInShell, stubUnmatchedApi } from "./fixtures/mockSession";
+import { json } from "@platform/ui/testing/mockResponse";
+import { stubSignedInShell, stubUnmatchedApi } from "@platform/ui/testing/mockSession";
 
 const LOGIN_ENDPOINT = "**/api/auth/totp/login";
 

@@ -15,6 +15,23 @@ import {
   useCreateRecipeMutation,
   useCreateVersionMutation,
 } from "@myrecipes/api-client/store/recipesApi";
+import {
+  CHANGE_NOTE_MAX_LENGTH,
+  RECIPE_DESCRIPTION_MAX_LENGTH,
+  RECIPE_FORM_PROBLEMS,
+  RECIPE_SERVINGS_MAX_LENGTH,
+  RECIPE_SOURCE_MAX_LENGTH,
+  RECIPE_TITLE_MAX_LENGTH,
+} from "@myrecipes/api-client/constants/recipeForm";
+import { browserDecimalSeparator } from "@/lib/browserDecimalSeparator";
+import { buildRecipeCreateRequest } from "@myrecipes/api-client/utils/buildRecipeCreateRequest";
+import { firstRecipeFormProblem } from "@myrecipes/api-client/utils/firstRecipeFormProblem";
+import { formatRecipeNumber } from "@myrecipes/api-client/utils/formatRecipeNumber";
+import { ingredientInputs } from "@myrecipes/api-client/utils/ingredientInputs";
+import { minutesInput } from "@myrecipes/api-client/utils/minutesInput";
+import { recipeContentProblems } from "@myrecipes/api-client/utils/recipeContentProblems";
+import { recipeFormProblems } from "@myrecipes/api-client/utils/recipeFormProblems";
+import { stepInputs } from "@myrecipes/api-client/utils/stepInputs";
 import type { RecipeExtractionDraft } from "@myrecipes/api-client/types/recipe/extraction";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 
@@ -40,10 +57,6 @@ type Props = CreateProps | TweakProps;
 const META_INPUT =
   "w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 min-h-[44px]";
 
-function minutesToString(minutes: number | null | undefined): string {
-  return minutes != null ? String(minutes) : "";
-}
-
 function buildSeed(base?: VersionResponse, draft?: RecipeExtractionDraft) {
   if (base) return { baseVersion: base };
   if (draft) return { draft };
@@ -63,14 +76,15 @@ export default function RecipeEditorForm(props: Props) {
   const isTweak = props.mode === "tweak";
   const base = isTweak ? props.baseVersion : undefined;
   const draft = props.mode === "create" ? props.initialDraft : undefined;
-  const form = useRecipeEditorForm(buildSeed(base, draft));
+  const [decimalSeparator] = useState(browserDecimalSeparator);
+  const form = useRecipeEditorForm(buildSeed(base, draft), decimalSeparator);
 
   const [title, setTitle] = useState(draft?.title ?? "");
   const [description, setDescription] = useState(draft?.description ?? "");
   const [source, setSource] = useState(draft?.source ?? "");
   const [servings, setServings] = useState(draft?.servings ?? base?.servings ?? "");
-  const [prep, setPrep] = useState(minutesToString(draft?.prep_minutes ?? base?.prep_minutes));
-  const [cook, setCook] = useState(minutesToString(draft?.cook_minutes ?? base?.cook_minutes));
+  const [prep, setPrep] = useState(formatRecipeNumber(draft?.prep_minutes ?? base?.prep_minutes, decimalSeparator));
+  const [cook, setCook] = useState(formatRecipeNumber(draft?.cook_minutes ?? base?.cook_minutes, decimalSeparator));
   const [changeNote, setChangeNote] = useState("");
 
   // The editable form doubles as the review step for photo import. Warn when
@@ -95,48 +109,30 @@ export default function RecipeEditorForm(props: Props) {
   const [createVersion, { isLoading: isTweaking }] = useCreateVersionMutation();
   const isSubmitting = isCreating || isTweaking;
 
-  function parseMinutes(value: string): number | null {
-    const trimmed = value.trim();
-    if (trimmed === "") return null;
-    const n = Number(trimmed);
-    return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const ingredients = form.buildIngredients();
-    const steps = form.buildSteps();
-
-    if (!isTweak && !title.trim()) {
-      showError("Give your recipe a title.");
-      return;
-    }
-    if (ingredients.length === 0) {
-      showError("Add at least one ingredient.");
-      return;
-    }
-    if (steps.length === 0) {
-      showError("Add at least one step.");
-      return;
-    }
-    if (isTweak && !changeNote.trim()) {
-      showError("Add a note describing what you changed.");
+    const values = {
+      title,
+      description,
+      source,
+      servings,
+      prepMinutes: prep,
+      cookMinutes: cook,
+      ingredients: form.ingredients,
+      steps: form.steps,
+    };
+    const problem =
+      firstRecipeFormProblem(isTweak ? recipeContentProblems(values, decimalSeparator) : recipeFormProblems(values, decimalSeparator)) ??
+      (isTweak && !changeNote.trim() ? RECIPE_FORM_PROBLEMS.changeNoteRequired : undefined);
+    if (problem) {
+      showError(problem);
       return;
     }
 
     try {
       if (props.mode === "create") {
-        const created = await createRecipe({
-          title: title.trim(),
-          description: description.trim() || null,
-          source: source.trim() || null,
-          servings: servings.trim() || null,
-          prep_minutes: parseMinutes(prep),
-          cook_minutes: parseMinutes(cook),
-          ingredients,
-          steps,
-        }).unwrap();
+        const created = await createRecipe(buildRecipeCreateRequest(values, decimalSeparator)).unwrap();
         showSuccess("Recipe created.");
         navigate(`/recipes/${created.id}`, { replace: true });
       } else {
@@ -146,10 +142,10 @@ export default function RecipeEditorForm(props: Props) {
             base_version_id: props.baseVersion.id,
             change_note: changeNote.trim(),
             servings: servings.trim() || null,
-            prep_minutes: parseMinutes(prep),
-            cook_minutes: parseMinutes(cook),
-            ingredients,
-            steps,
+            prep_minutes: minutesInput(prep, decimalSeparator),
+            cook_minutes: minutesInput(cook, decimalSeparator),
+            ingredients: ingredientInputs(form.ingredients, decimalSeparator),
+            steps: stepInputs(form.steps),
           },
         }).unwrap();
         showSuccess("New version saved.");
@@ -180,7 +176,7 @@ export default function RecipeEditorForm(props: Props) {
                 onChange={(e) => setChangeNote(e.target.value)}
                 disabled={isSubmitting}
                 rows={2}
-                maxLength={2000}
+                maxLength={CHANGE_NOTE_MAX_LENGTH}
                 placeholder="e.g. Cut the sugar by half, added vanilla"
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                 {...field}
@@ -199,7 +195,7 @@ export default function RecipeEditorForm(props: Props) {
                 onChange={(e) => setTitle(e.target.value)}
                 disabled={isSubmitting}
                 required
-                maxLength={255}
+                maxLength={RECIPE_TITLE_MAX_LENGTH}
                 className={META_INPUT}
                 {...field}
               />
@@ -212,7 +208,7 @@ export default function RecipeEditorForm(props: Props) {
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={isSubmitting}
                 rows={2}
-                maxLength={5000}
+                maxLength={RECIPE_DESCRIPTION_MAX_LENGTH}
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                 {...field}
               />
@@ -225,7 +221,7 @@ export default function RecipeEditorForm(props: Props) {
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
                 disabled={isSubmitting}
-                maxLength={1000}
+                maxLength={RECIPE_SOURCE_MAX_LENGTH}
                 placeholder="e.g. grandma, a cookbook, a URL"
                 className={META_INPUT}
                 {...field}
@@ -244,7 +240,7 @@ export default function RecipeEditorForm(props: Props) {
                 value={servings}
                 onChange={(e) => setServings(e.target.value)}
                 disabled={isSubmitting}
-                maxLength={50}
+                maxLength={RECIPE_SERVINGS_MAX_LENGTH}
                 placeholder="e.g. 4"
                 className={META_INPUT}
                 {...field}
@@ -254,8 +250,7 @@ export default function RecipeEditorForm(props: Props) {
           <FormField label="Prep (min)">
             {(field) => (
               <input
-                type="number"
-                min={0}
+                inputMode="decimal"
                 value={prep}
                 onChange={(e) => setPrep(e.target.value)}
                 disabled={isSubmitting}
@@ -267,8 +262,7 @@ export default function RecipeEditorForm(props: Props) {
           <FormField label="Cook (min)">
             {(field) => (
               <input
-                type="number"
-                min={0}
+                inputMode="decimal"
                 value={cook}
                 onChange={(e) => setCook(e.target.value)}
                 disabled={isSubmitting}

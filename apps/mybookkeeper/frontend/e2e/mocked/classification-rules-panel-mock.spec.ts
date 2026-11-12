@@ -13,7 +13,7 @@
  *     403 shows the view-only toast.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "./fixtures/mockResponse";
+import { json } from "@platform/ui/testing/mockResponse";
 import { ORG_ID, plantAuth, stubSignedInShell } from "./fixtures/mockSession";
 import type { ClassificationRule } from "@mybookkeeper/api-client/types/classification-rule/classification-rule";
 

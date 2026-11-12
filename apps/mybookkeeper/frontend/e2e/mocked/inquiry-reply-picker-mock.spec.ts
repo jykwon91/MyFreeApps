@@ -12,7 +12,7 @@
  *   - The failure state fits a phone, with a full-size Try again.
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
-import { json } from "./fixtures/mockResponse";
+import { json } from "@platform/ui/testing/mockResponse";
 import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
 import { INQUIRY_DETAIL, INQUIRY_ID } from "./fixtures/mockInquiry";
 

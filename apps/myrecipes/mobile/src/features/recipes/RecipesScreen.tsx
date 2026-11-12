@@ -5,6 +5,7 @@ import { EmptyState, SearchField, Toast, useAnnouncement, useRefresh, useTheme }
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { FlatList, View } from "react-native";
+import { NEW_RECIPE_MESSAGES } from "../../constants/newRecipe";
 import { countLabel } from "../../utils/countLabel";
 import RecipeCard from "./RecipeCard";
 import RecipeListSeparator from "./RecipeListSeparator";
@@ -70,7 +71,11 @@ export default function RecipesScreen() {
       );
     }
     return (
-      <EmptyState body="Recipes shared on MyRecipes will show up here." heading="No recipes yet" />
+      <EmptyState
+        action={{ label: NEW_RECIPE_MESSAGES.newRecipe, onPress: () => router.push("/recipes/new") }}
+        body="Recipes shared on MyRecipes will show up here."
+        heading="No recipes yet"
+      />
     );
   }
 

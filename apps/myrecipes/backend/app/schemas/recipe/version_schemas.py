@@ -12,6 +12,14 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# The largest values the columns hold, so an oversized input is a 422, not a
+# database overflow (500). ``recipe_ingredient.quantity`` is Numeric(10, 3):
+# seven integer digits. Postgres rounds extra decimals to the scale on insert,
+# so only the integer part can overflow; 9999999.999 is the largest value that
+# still fits after rounding. ``prep_minutes`` / ``cook_minutes`` are Integer.
+INGREDIENT_QUANTITY_MAX = 9_999_999.999
+RECIPE_MINUTES_MAX = 2_147_483_647
+
 
 class IngredientInput(BaseModel):
     """An ingredient line submitted when creating a recipe or a tweak.
@@ -24,7 +32,7 @@ class IngredientInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(min_length=1, max_length=255)
-    quantity: float | None = Field(default=None, ge=0)
+    quantity: float | None = Field(default=None, ge=0, le=INGREDIENT_QUANTITY_MAX)
     unit: str | None = Field(default=None, max_length=50)
     note: str | None = Field(default=None, max_length=255)
     lineage_key: uuid.UUID | None = None
@@ -52,8 +60,8 @@ class VersionCreateRequest(BaseModel):
     )
     change_note: str | None = Field(default=None, max_length=2000)
     servings: str | None = Field(default=None, max_length=50)
-    prep_minutes: int | None = Field(default=None, ge=0)
-    cook_minutes: int | None = Field(default=None, ge=0)
+    prep_minutes: int | None = Field(default=None, ge=0, le=RECIPE_MINUTES_MAX)
+    cook_minutes: int | None = Field(default=None, ge=0, le=RECIPE_MINUTES_MAX)
     ingredients: list[IngredientInput] = Field(default_factory=list)
     steps: list[StepInput] = Field(default_factory=list)
 

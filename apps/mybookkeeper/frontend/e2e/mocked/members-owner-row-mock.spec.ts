@@ -12,7 +12,7 @@
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
-import { json } from "./fixtures/mockResponse";
+import { json } from "@platform/ui/testing/mockResponse";
 import { ORG_ID, plantAuth, stubSignedInShell } from "./fixtures/mockSession";
 
 const ME_ID = "00000000-0000-0000-0000-000000000001";

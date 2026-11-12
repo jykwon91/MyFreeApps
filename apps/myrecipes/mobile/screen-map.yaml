@@ -16,7 +16,7 @@ routes:
   /recipes/import:
     not_on_mobile: Not built yet.
   /recipes/new:
-    not_on_mobile: Not built yet.
+    screen: recipes/new
   /register:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /reset-password:

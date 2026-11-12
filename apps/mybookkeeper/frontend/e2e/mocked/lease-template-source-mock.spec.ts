@@ -9,7 +9,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/signed-lease-detail";
-import { json } from "./fixtures/mockResponse";
+import { json } from "@platform/ui/testing/mockResponse";
 import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
 import { APPLICANT_DETAIL, APPLICANT_ID } from "./fixtures/mockApplicant";
 import { DRAFT_LEASE, LEASE_ID } from "./fixtures/mockLease";

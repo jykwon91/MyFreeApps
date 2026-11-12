@@ -4,8 +4,8 @@
  * gets the "no documents yet" state instead.
  */
 import { test, expect } from "@playwright/test";
-import { json } from "./fixtures/mockResponse";
-import { stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/testing/mockResponse";
+import { stubSignedInShell } from "@platform/ui/testing/mockSession";
 import { mockDocument } from "./fixtures/mockData";
 
 const DOCUMENTS_ENDPOINT = /\/api\/documents(\?|$)/;

@@ -96,12 +96,13 @@ describe("RecipesScreen", () => {
     });
   });
 
-  it("explains an empty library without offering anything it can't do", async () => {
+  it("explains an empty library and offers to start one, as the website does", async () => {
     respond = () => ({ status: 200, data: [] });
     await show();
 
     expect(await screen.findByText("No recipes yet")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /new recipe/i })).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "New recipe" }));
+    expect(mockPush).toHaveBeenCalledWith("/recipes/new");
   });
 
   it("waits for typing to stop, then searches and announces the count", async () => {

@@ -4,8 +4,8 @@
  * page; a 204 navigates back to the companies list.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "./fixtures/mockResponse";
-import { stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/testing/mockResponse";
+import { stubSignedInShell } from "@platform/ui/testing/mockSession";
 import { mockCompany } from "./fixtures/mockData";
 
 const COMPANY = mockCompany();

@@ -1,5 +1,6 @@
 import { useTheme } from "@platform/mobile";
 import { Tabs } from "expo-router";
+import NewRecipeButton from "../../src/features/recipes/NewRecipeButton";
 
 export default function TabsLayout() {
   const { colors } = useTheme();
@@ -16,7 +17,7 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.background },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "Recipes" }} />
+      <Tabs.Screen name="index" options={{ title: "Recipes", headerRight: () => <NewRecipeButton /> }} />
       <Tabs.Screen name="discover" options={{ title: "Discover" }} />
       <Tabs.Screen name="settings" options={{ title: "Settings" }} />
     </Tabs>
