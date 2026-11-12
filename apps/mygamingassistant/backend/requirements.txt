@@ -122,7 +122,9 @@ packaging==26.3
 passlib==1.7.4
     # via mygamingassistant-backend
 pillow==13.0.0
-    # via qrcode
+    # via
+    #   mygamingassistant-backend
+    #   qrcode
 pluggy==1.6.0
     # via pytest
 psycopg2-binary==2.9.13

@@ -993,6 +993,30 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `src/__tests__/wowServerStatusPage.test.tsx`,
   `e2e/wow-server-status-history.spec.ts`.
 
+#### Your character (`/wow-forever/character[/:slug]`)
+
+- No Battle.net login: the player types first name + surname; Blizzard's
+  Profile API serves Forever characters at `/profile/wow/character/{first-surname}`
+  (namespace `profile-forever-us`, US only) with the app's client token.
+- Backend: `app/api/wow_characters.py` — `GET /api/wow/characters/{slug}`
+  (profile + equipment, mapped by `services/wow/character/character_mapper.py`)
+  and `/{slug}/render.png` (Blizzard's `main-raw` render, fetched only from
+  `render.worldofwarcraft.com`, refused over 3200x2400 px before decoding,
+  cropped to the figure with Pillow). Per-IP limit 30/min on each route
+  (separate budgets), in-process 5-min caches (500 profiles, 100 renders),
+  `max-age=300`; errors
+  400 bad slug, 404 `character_not_found` / `character_render_not_found`,
+  429, 502 `character_upstream_failed`. Constants `app/core/wow_character.py`.
+  Shared Blizzard HTTP (`services/wow/blizzard/`: token cache, send, error
+  class) is also what the auction client uses.
+- Frontend: `pages/WowCharacterPage.tsx`, `components/character/`,
+  `lib/character/`. Names are remembered per browser only after a successful
+  load (`mga.wowForever.character.v1`, 5 max); `/wow-forever/character`
+  opens the newest. Gear is a paper doll (`PAPER_DOLL_*` in
+  `data/character/characterConfig.ts`); "Use for MGA's pages" writes the
+  character's faction, class and level to `usePlayerSettings`. Tests:
+  `tests/test_wow_characters.py`, `src/__tests__/wowCharacterPage.test.tsx`, `e2e/wow-forever-character.spec.ts`.
+
 #### In-game icons (`GameIcon`)
 
 - `components/shared/GameIcon.tsx` (`icon`, `size` 16/24/32/48, `alt` — "" when
@@ -1809,6 +1833,7 @@ once on the router. This is the no-bandaid approach (see
 | `/api/wow/feature-requests/triage/*` | — | Superuser (`current_superuser`), BOTH modes. The one operator write surface in serve-only prod |
 | `/api/wow/map-captures` | GET, both modes (World Map locations captured in Forever) | POST import (full-auth only; prod gets captures via the committed pack) |
 | `/api/wow/prices` | GET, both modes (one US auction house's prices from Blizzard, `?server=pvp&faction=alliance\|horde\|neutral`, default PvP · Alliance; only mapped servers; refreshed by the scheduler; per-house ETag + 10-min cache) | — |
+| `/api/wow/characters/{slug}`, `/api/wow/characters/{slug}/render.png` | GET, both modes (a Forever character's profile + gear, and their cropped render, from Blizzard by name; per-IP limit, 5-min cache) | — |
 | `/api/wow/server-status`, `/api/wow/server-status/history` | GET, both modes (live status from Blizzard, 60-s cache; 7 days of recorded status per ruleset) | — |
 | `/api/wow/icons/{build}/{fdid}.webp` | GET, both modes (in-game icons streamed from object storage; year-long immutable cache, 404 + no-store when unpublished) | — |
 | `/api/wow/satellite/{build}/{uiMapId}.webp` | GET, both modes (World Map satellite pictures, same service and cache rules as icons) | — |
