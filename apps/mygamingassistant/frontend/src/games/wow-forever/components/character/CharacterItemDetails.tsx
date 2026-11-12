@@ -1,7 +1,8 @@
 import clsx from "clsx";
+import { CHARACTER_BONUS_TEXT } from "@/games/wow-forever/data/character/characterConfig";
 import type { CharacterItem } from "@/games/wow-forever/types/character/characterItem";
 
-const BONUS_LINE = "text-green-700 dark:text-green-400";
+const BONUS_LINE = CHARACTER_BONUS_TEXT;
 const GOLD_LINE = "text-amber-700 dark:text-amber-300";
 
 /** The rest of the item's in-game tooltip: type, damage, spells, set, requirements, flavour text. */

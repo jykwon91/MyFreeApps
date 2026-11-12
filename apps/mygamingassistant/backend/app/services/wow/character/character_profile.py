@@ -8,3 +8,4 @@ class CharacterProfile:
     profile: dict[str, Any]
     media: dict[str, Any] | None
     equipment: dict[str, Any] | None
+    statistics: dict[str, Any] | None

@@ -4,6 +4,8 @@
 * ``GET /profile/wow/character/{slug}/character-media`` → render image URLs.
 * ``GET /profile/wow/character/{slug}/equipment`` → equipped items with the
   stats they rolled.
+* ``GET /profile/wow/character/{slug}/statistics`` → health, base stats,
+  crit / hit, spell power, defenses, resistances.
 
 All in the ``profile-forever-us`` namespace with a client-credentials token
 (no player login). Every failure becomes a ``CharacterLookupError`` carrying
@@ -116,6 +118,9 @@ class BlizzardCharacterClient:
 
     async def equipment(self, slug: str) -> dict[str, Any] | None:
         return await self._optional_json(f"{slug}/equipment")
+
+    async def statistics(self, slug: str) -> dict[str, Any] | None:
+        return await self._optional_json(f"{slug}/statistics")
 
     async def render(self, url: str) -> bytes | None:
         """The render PNG — only from Blizzard's render host, over HTTPS (404 → None)."""

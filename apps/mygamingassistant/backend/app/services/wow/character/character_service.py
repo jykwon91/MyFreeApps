@@ -58,8 +58,10 @@ async def _profile(slug: str) -> CharacterProfile:
         return cached
     async with _new_client() as client:
         profile = await client.profile(slug)
-        media, equipment = await asyncio.gather(client.media(slug), client.equipment(slug))
-    data = CharacterProfile(profile=profile, media=media, equipment=equipment)
+        media, equipment, statistics = await asyncio.gather(
+            client.media(slug), client.equipment(slug), client.statistics(slug),
+        )
+    data = CharacterProfile(profile=profile, media=media, equipment=equipment, statistics=statistics)
     _store(_profiles, slug, data, CHARACTER_CACHE_MAX_ENTRIES)
     return data
 

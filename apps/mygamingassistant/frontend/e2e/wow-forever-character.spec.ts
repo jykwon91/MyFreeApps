@@ -7,6 +7,7 @@
  *   - an unknown name shows how to fix it and is never remembered
  *   - skeleton while Blizzard answers, then the loaded sheet in the same places
  *   - "Use for MGA's pages" sets the player's faction, class and level
+ *   - the stats panel: a warlock opens on Spell, gear bonus in green, a picked tab is remembered
  *   - 375px phone layout: picture first, no horizontal overflow
  *
  * Stubbed: `/wow/characters/<slug>` (JSON) and `/wow/characters/<slug>/render.png`.
@@ -59,6 +60,18 @@ function character() {
         set_name: null, requirements: [], durability: "Durability 100 / 100", durability_low: false, description: null,
       },
     ],
+    stats: {
+      health: 1032, power: 1295, power_type: "Mana",
+      strength: { base: 33, effective: 33 }, agility: { base: 38, effective: 41 },
+      stamina: { base: 52, effective: 80 }, intellect: { base: 74, effective: 92 },
+      spirit: { base: 77, effective: 99 },
+      melee: { attack_power: 23, main_hand: { min: 54, max: 81, speed: 3.4, dps: 19.9 }, off_hand: null, crit: 4.93, hit: 0, haste: 0, expertise: 0 },
+      ranged: { attack_power: 0, damage: null, crit: 5.1, hit: 0, haste: 0 },
+      spell: { power: 11, healing: 11, crit: 6.37, hit: 0, haste: 0, penetration: 0, mana_regen: 16, mana_regen_casting: 0 },
+      defenses: { armor: { base: 82, effective: 312 }, defense: { base: 185, effective: 185 }, dodge: 3.86, parry: 0, block: 0 },
+      resistances: { arcane: 0, fire: 0, frost: 0, nature: 0, shadow: 10 },
+      movement_speed: 100,
+    },
   };
 }
 
@@ -148,6 +161,22 @@ test("Use for MGA's pages sets the player's faction, class and level", async ({ 
   expect(JSON.parse(saved ?? "{}")).toMatchObject({ faction: "A", classId: "warlock", level: 37 });
 });
 
+test("the stats panel opens a warlock on Spell and remembers a picked tab", async ({ page }) => {
+  await stubCharacter(page);
+  await page.goto("/wow-forever/character/jason-kwon");
+  const panel = page.getByRole("region", { name: "Character stats" });
+  await expect(panel.getByRole("tab", { name: "Spell" })).toHaveAttribute("aria-selected", "true");
+  await expect(panel.getByLabel("Spell stats")).toContainText("6.37%");
+  await expect(panel.getByLabel("Attributes")).toContainText("92(+18 from gear, talents and buffs)");
+
+  await panel.getByRole("tab", { name: "Melee" }).click();
+  await expect(panel.getByLabel("Melee stats")).toContainText("Main hand damage54 – 81");
+  await expect(panel.getByLabel("Melee stats")).not.toContainText("Off hand");
+
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Character stats" }).getByRole("tab", { name: "Melee" })).toHaveAttribute("aria-selected", "true");
+});
+
 test("375px phone layout: the picture comes first and nothing overflows", async ({ page }) => {
   await stubCharacter(page);
   await page.setViewportSize({ width: 375, height: 812 });
@@ -157,6 +186,9 @@ test("375px phone layout: the picture comes first and nothing overflows", async 
   const pictureBox = await picture.boundingBox();
   const firstRow = await page.getByRole("list", { name: "Left side" }).locator("li").first().boundingBox();
   expect(pictureBox?.y ?? 0).toBeLessThan(firstRow?.y ?? 0);
+  await expect(page.getByRole("tab", { name: "Defenses" })).toBeVisible();
+  const tab = await page.getByRole("tab", { name: "Defenses" }).boundingBox();
+  expect(tab?.height ?? 0).toBeGreaterThanOrEqual(44);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });

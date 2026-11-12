@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from app.schemas.wow.character.character_item import CharacterItem
+from app.schemas.wow.character.character_stats import CharacterStats
 
 
 class CharacterResponse(BaseModel):
@@ -24,3 +25,5 @@ class CharacterResponse(BaseModel):
     last_login: datetime | None
     has_render: bool
     items: list[CharacterItem]
+    # None when Blizzard has no statistics for the character yet.
+    stats: CharacterStats | None

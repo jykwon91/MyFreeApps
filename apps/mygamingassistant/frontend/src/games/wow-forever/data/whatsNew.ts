@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-11",
+    title: "Your character: stats",
+    summary:
+      "Your character page now shows the character pane's numbers too: health, armor, the five attributes with what your gear adds, Melee, Ranged, Spell and Defenses, and resistances.",
+    to: "/wow-forever/character",
+  },
+  {
+    date: "2026-11-11",
     title: "Your character",
     summary:
       "Type your character's first name and surname to see them in their gear, with the stats each item rolled, straight from Blizzard. No login needed.",
