@@ -13,3 +13,5 @@ class CharacterProfile:
     specializations: dict[str, Any] | None
     # None when Blizzard failed on /professions; {} when the character has none yet.
     professions: dict[str, Any] | None
+    # None when Blizzard failed on /reputations; {} when the character has met no faction.
+    reputations: dict[str, Any] | None

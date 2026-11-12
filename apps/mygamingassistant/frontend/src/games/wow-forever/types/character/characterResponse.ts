@@ -1,5 +1,6 @@
 import type { CharacterItem } from "@/games/wow-forever/types/character/characterItem";
 import type { CharacterProfessions } from "@/games/wow-forever/types/character/characterProfessions";
+import type { CharacterReputation } from "@/games/wow-forever/types/character/characterReputation";
 import type { CharacterStats } from "@/games/wow-forever/types/character/characterStats";
 import type { CharacterTalents } from "@/games/wow-forever/types/character/characterTalents";
 
@@ -28,4 +29,6 @@ export interface CharacterResponse {
   talents: CharacterTalents | null;
   /** Null when Blizzard failed to send the professions; the rest of the sheet still shows. */
   professions: CharacterProfessions | null;
+  /** Null when Blizzard failed to send the reputations; the rest of the sheet still shows. */
+  reputations: CharacterReputation[] | null;
 }

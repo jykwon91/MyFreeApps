@@ -33,6 +33,7 @@ from app.services.wow.character.character_render_crop import crop_render
 from app.services.wow.character.character_slug import normalize_character_slug
 from app.services.wow.character.character_stats_mapper import to_character_stats
 from app.services.wow.character.character_professions_mapper import to_character_professions
+from app.services.wow.character.character_reputations_mapper import to_character_reputations
 from app.services.wow.character.character_talents_mapper import to_character_talents
 
 RENDER_URL = "https://render.worldofwarcraft.com/forever-us/character/101/6299749-main-raw.png"
@@ -174,6 +175,16 @@ PROFESSIONS = {
     ],
 }
 
+REPUTATIONS = {
+    "reputations": [
+        {"faction": {"name": "Stormwind", "id": 72},
+         "standing": {"raw": 16888, "value": 7888, "max": 12000, "tier": 5, "name": "Honored"}},
+        {"faction": {"name": "Booty Bay", "id": 21},
+         "standing": {"raw": 737, "value": 737, "max": 3000, "tier": 3, "name": "Neutral"}},
+        {"faction": {"name": "Broken", "id": 1}, "standing": {"name": "Neutral"}},
+    ],
+}
+
 Handler = Callable[[httpx.Request], httpx.Response]
 
 
@@ -202,6 +213,7 @@ def _blizzard(
         "/profile/wow/character/jason-kwon/statistics": _json(STATISTICS),
         "/profile/wow/character/jason-kwon/specializations": _json(SPECIALIZATIONS),
         "/profile/wow/character/jason-kwon/professions": _json(PROFESSIONS),
+        "/profile/wow/character/jason-kwon/reputations": _json(REPUTATIONS),
         **(answers or {}),
     }
 
@@ -319,7 +331,7 @@ def test_missing_credentials_fail_before_any_request() -> None:
 
 
 def test_the_sheet_keeps_the_games_own_tooltip_lines() -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS, professions=PROFESSIONS))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS, professions=PROFESSIONS, reputations=REPUTATIONS))
     assert (sheet.name, sheet.surname, sheet.level, sheet.race, sheet.class_name) == ("Jason", "Kwon", 37, "Gnome", "Warlock")
     assert (sheet.faction, sheet.guild, sheet.ruleset, sheet.has_render) == ("alliance", "Tinker Town", "PvP", True)
     assert sheet.last_login is not None and sheet.last_login.year == 2026
@@ -337,7 +349,7 @@ def test_the_sheet_keeps_the_games_own_tooltip_lines() -> None:
 
 
 def test_a_character_without_media_or_gear_has_an_empty_sheet() -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=None, equipment=None, statistics=None, specializations=None, professions=None))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=None, equipment=None, statistics=None, specializations=None, professions=None, reputations=None))
     assert sheet.has_render is False
     assert sheet.items == []
 
@@ -432,12 +444,12 @@ async def test_the_sheet_and_render_ask_blizzard_once(monkeypatch: pytest.Monkey
     await character_service.get_character_render("jason-kwon")
     assert render is not None and Image.open(BytesIO(render)).size[0] < 400
     api_calls = [r.url.path for r in seen if r.url.host == "us.api.blizzard.com"]
-    assert len(api_calls) == 6  # profile, media, equipment, statistics, specializations, professions
+    assert len(api_calls) == 7  # profile, media, equipment, statistics, specializations, professions, reputations
     assert [r.url.host for r in seen].count("render.worldofwarcraft.com") == 1
 
 
 async def test_route_returns_the_sheet(client: AsyncClient) -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS, professions=PROFESSIONS))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS, professions=PROFESSIONS, reputations=REPUTATIONS))
     with patch.object(character_service, "get_character", AsyncMock(return_value=sheet)) as get:
         resp = await client.get("/wow/characters/Jason-Kwon")
     assert resp.status_code == 200
@@ -590,6 +602,46 @@ async def test_a_professions_failure_still_shows_the_sheet_and_is_not_cached(
     assert sheet.professions is None
     assert sheet.talents is not None and len(sheet.items) > 0
     assert "Character professions unavailable" in caplog.text
+    await character_service.get_character("jason-kwon")
+    profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
+    assert len(profile_calls) == 2
+
+
+def test_the_reputations_keep_standing_and_progress_and_drop_broken_rows() -> None:
+    reputations = to_character_reputations(REPUTATIONS)
+    assert reputations is not None
+    assert [(r.id, r.name, r.standing, r.tier, r.value, r.max) for r in reputations] == [
+        (72, "Stormwind", "Honored", 5, 7888, 12000),
+        (21, "Booty Bay", "Neutral", 3, 737, 3000),
+    ]
+
+
+def test_no_reputations_is_an_empty_list_and_a_failure_is_none() -> None:
+    assert to_character_reputations({}) == []
+    assert to_character_reputations(None) is None
+
+
+async def test_a_character_with_no_reputations_has_an_empty_list_and_is_cached(monkeypatch: pytest.MonkeyPatch) -> None:
+    missing = {"/profile/wow/character/jason-kwon/reputations": _json({"code": 404}, 404)}
+    seen: list[httpx.Request] = []
+    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing, seen=seen)))
+    sheet = await character_service.get_character("jason-kwon")
+    assert sheet.reputations == []
+    await character_service.get_character("jason-kwon")
+    profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
+    assert len(profile_calls) == 1
+
+
+async def test_a_reputations_failure_still_shows_the_sheet_and_is_not_cached(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    seen: list[httpx.Request] = []
+    failing = {"/profile/wow/character/jason-kwon/reputations": _json({"code": 503}, 503)}
+    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
+    sheet = await character_service.get_character("jason-kwon")
+    assert sheet.reputations is None
+    assert sheet.professions is not None and len(sheet.items) > 0
+    assert "Character reputations unavailable" in caplog.text
     await character_service.get_character("jason-kwon")
     profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
     assert len(profile_calls) == 2

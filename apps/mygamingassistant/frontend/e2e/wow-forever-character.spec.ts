@@ -104,6 +104,13 @@ function character() {
         { id: 356, name: "Fishing", skill: 1, max_skill: 75, recipes: [{ id: 7620, name: "Fishing" }] },
       ],
     },
+    reputations: [
+      { id: 72, name: "Stormwind", standing: "Exalted", tier: 7, value: 0, max: 0 },
+      { id: 47, name: "Ironforge", standing: "Honored", tier: 5, value: 7888, max: 12000 },
+      { id: 21, name: "Booty Bay", standing: "Hostile", tier: 1, value: 1200, max: 3000 },
+      { id: 68, name: "Undercity", standing: "Hated", tier: 0, value: 0, max: 36000 },
+      { id: 2740, name: "Kirin Tor", standing: "Neutral", tier: 3, value: 250, max: 3000 },
+    ],
   };
 }
 
@@ -173,6 +180,7 @@ test("skeleton while Blizzard answers, then the sheet in the same places", async
   const skeleton = page.getByTestId("character-sheet-skeleton");
   await expect(skeleton).toBeVisible();
   await expect(skeleton.getByTestId("character-talents-skeleton")).toBeVisible();
+  await expect(skeleton.getByTestId("character-reputations-skeleton")).toBeVisible();
   const skeletonBox = await skeleton.boundingBox();
 
   release();
@@ -246,6 +254,33 @@ test("the professions section lists the recipes a profession knows and opens its
   await expect(page).toHaveURL(/\/wow-forever\/professions\?p=tailoring&skill=148/);
 });
 
+test("the reputation section groups factions as the game does, own side open first", async ({ page }) => {
+  await stubCharacter(page);
+  await page.goto("/wow-forever/character/jason-kwon");
+  const panel = page.getByRole("region", { name: "Reputation" });
+  await expect(panel.getByTestId("character-reputation-group")).toHaveCount(4);
+  const alliance = panel.getByRole("button", { name: /^Alliance/ });
+  await expect(alliance).toHaveAttribute("aria-expanded", "true");
+  const allianceList = panel.getByRole("list", { name: "Alliance factions" });
+  await expect(allianceList.getByTestId("character-reputation").first()).toContainText("Ironforge");
+  await expect(allianceList.getByTestId("character-reputation").first()).toContainText("7,888 / 12,000");
+  await expect(allianceList.getByTestId("character-reputation-progress")).toHaveCount(1);
+
+  const steamwheedle = panel.getByRole("button", { name: /Steamwheedle/ });
+  await steamwheedle.click();
+  await expect(alliance).toHaveAttribute("aria-expanded", "true");
+  await expect(panel.getByRole("list", { name: "Steamwheedle Cartel factions" })).toContainText("Its guards attack you on sight");
+  await expect(panel.getByRole("button").last()).toContainText("Other");
+});
+
+test("a reputations failure keeps the rest of the sheet", async ({ page }) => {
+  await page.route(SHEET_PATTERN, (route) => json(route, { ...character(), reputations: null }));
+  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }));
+  await page.goto("/wow-forever/character/jason-kwon");
+  await expect(page.getByRole("region", { name: "Reputation" })).toContainText("Blizzard didn't send this character's reputations");
+  await expect(page.getByRole("region", { name: "Professions" })).toBeVisible();
+});
+
 test("a talents failure keeps the rest of the sheet", async ({ page }) => {
   await page.route(SHEET_PATTERN, (route) => json(route, { ...character(), talents: null }));
   await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }));
@@ -274,6 +309,8 @@ test("375px phone layout: the picture comes first and nothing overflows", async 
   expect(link?.height ?? 0).toBeGreaterThanOrEqual(44);
   const tab = await page.getByRole("tab", { name: "Defenses" }).boundingBox();
   expect(tab?.height ?? 0).toBeGreaterThanOrEqual(44);
+  const header = await page.getByRole("button", { name: /Steamwheedle/ }).boundingBox();
+  expect(header?.height ?? 0).toBeGreaterThanOrEqual(44);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });

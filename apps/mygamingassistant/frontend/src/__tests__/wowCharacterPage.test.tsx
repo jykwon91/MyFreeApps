@@ -3,7 +3,8 @@
  * sheet with rolled stats, empty and two-hand sockets, errors, setting MGA's
  * pages to the character, and the stats panel (class default tab, gear bonus,
  * remembered tab, hands without weapons), and the talents panel (point split,
- * rank text, the calculator link, failures and unknown talents).
+ * rank text, the calculator link, failures and unknown talents), and the
+ * reputation pane (game headers, own side first, Other, caps, guard warnings).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -19,6 +20,7 @@ import {
   recipeColorAt,
   recipeSpell,
 } from "@/games/wow-forever/lib/character/characterProfessions";
+import { groupReputations, standingPercent } from "@/games/wow-forever/lib/character/characterReputation";
 import { pickedTalent } from "@/games/wow-forever/lib/character/characterTalents";
 import { characterNameFromSlug, characterSlugFromName } from "@/games/wow-forever/lib/character/characterSlug";
 import { withRecentCharacter } from "@/games/wow-forever/lib/character/recentCharacters";
@@ -181,6 +183,16 @@ const CHARACTER: CharacterResponse = {
       { id: 356, name: "Fishing", skill: 1, max_skill: 75, recipes: [{ id: 7620, name: "Fishing" }] },
     ],
   },
+  reputations: [
+    { id: 72, name: "Stormwind", standing: "Exalted", tier: 7, value: 0, max: 0 },
+    { id: 47, name: "Ironforge", standing: "Honored", tier: 5, value: 7888, max: 12000 },
+    { id: 21, name: "Booty Bay", standing: "Hostile", tier: 1, value: 1200, max: 3000 },
+    { id: 369, name: "Gadgetzan", standing: "Friendly", tier: 4, value: 500, max: 6000 },
+    { id: 470, name: "Ratchet", standing: "Unfriendly", tier: 2, value: 900, max: 3000 },
+    { id: 68, name: "Undercity", standing: "Hated", tier: 0, value: 0, max: 36000 },
+    { id: 2740, name: "Kirin Tor", standing: "Neutral", tier: 3, value: 250, max: 3000 },
+    { id: 469, name: "Alliance", standing: "Revered", tier: 6, value: 0, max: 21000 },
+  ],
 };
 
 function query(extra: Record<string, unknown>) {
@@ -641,5 +653,88 @@ describe("the professions panel", () => {
     ]);
     const groups = groupKnownRecipes([{ id: 2385, name: "Double-stitched Woolen Shoulders" }], 148, lookup);
     expect(groups).toEqual([{ color: "green", recipes: [{ id: 2385, name: "Double-stitched Woolen Shoulders" }] }]);
+  });
+});
+
+describe("WowCharacterPage reputation", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  function reputationFor(data: CharacterResponse) {
+    mockQuery.mockReturnValue(query({ data }));
+    renderAt("/wow-forever/character/jason-kwon");
+    return screen.getByRole("region", { name: "Reputation" });
+  }
+
+  it("groups factions under the game's headers: own side first, shared next, the other side, then Other", () => {
+    const panel = reputationFor(CHARACTER);
+    const headers = within(panel)
+      .getAllByRole("button")
+      .map((button) => button.textContent);
+    expect(headers).toEqual([
+      "Alliance2 factions",
+      "Steamwheedle Cartel3 factions",
+      "Horde1 faction",
+      "Other1 faction",
+    ]);
+  });
+
+  it("opens the first header only, lists it alphabetically, and opens others beside it", () => {
+    const panel = reputationFor(CHARACTER);
+    const [alliance, steamwheedle] = within(panel).getAllByRole("button");
+    expect(alliance).toHaveAttribute("aria-expanded", "true");
+    expect(steamwheedle).toHaveAttribute("aria-expanded", "false");
+    const allianceList = within(panel).getByRole("list", { name: "Alliance factions" });
+    expect(within(allianceList).getAllByTestId("character-reputation").map((li) => li.textContent?.slice(0, 9))).toEqual([
+      "Ironforge",
+      "Stormwind",
+    ]);
+    fireEvent.click(steamwheedle);
+    expect(alliance).toHaveAttribute("aria-expanded", "true");
+    expect(steamwheedle).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(alliance);
+    expect(alliance).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("shows progress and a bar below the cap, none at Exalted", () => {
+    const panel = reputationFor(CHARACTER);
+    const allianceList = within(panel).getByRole("list", { name: "Alliance factions" });
+    const [ironforge, stormwind] = within(allianceList).getAllByTestId("character-reputation");
+    expect(within(ironforge).getByTestId("character-reputation-standing")).toHaveTextContent("Honored");
+    expect(within(ironforge).getByTestId("character-reputation-progress")).toHaveTextContent("7,888 / 12,000");
+    expect(within(stormwind).getByTestId("character-reputation-standing")).toHaveTextContent("Exalted");
+    expect(within(stormwind).queryByTestId("character-reputation-progress")).not.toBeInTheDocument();
+  });
+
+  it("warns that a hostile Steamwheedle town's guards attack, but not an unfriendly or friendly one's", () => {
+    const panel = reputationFor(CHARACTER);
+    fireEvent.click(within(panel).getByRole("button", { name: /Steamwheedle/ }));
+    const list = within(panel).getByRole("list", { name: "Steamwheedle Cartel factions" });
+    const [bootyBay, gadgetzan, ratchet] = within(list).getAllByTestId("character-reputation");
+    expect(within(bootyBay).getByTestId("character-reputation-warning")).toHaveTextContent("guards attack you");
+    expect(within(gadgetzan).queryByTestId("character-reputation-warning")).not.toBeInTheDocument();
+    // Unfriendly: they won't deal with you, but don't attack.
+    expect(ratchet).toHaveTextContent("Unfriendly");
+    expect(within(ratchet).queryByTestId("character-reputation-warning")).not.toBeInTheDocument();
+  });
+
+  it("says Blizzard sent no reputations", () => {
+    const failed = reputationFor({ ...CHARACTER, reputations: null });
+    expect(within(failed).getByTestId("character-reputations-note")).toHaveTextContent("Blizzard didn't send");
+  });
+
+  it("says a character with no reputations has met no faction", () => {
+    const panel = reputationFor({ ...CHARACTER, reputations: [] });
+    expect(within(panel).getByTestId("character-reputations-note")).toHaveTextContent("hasn't met any faction");
+    expect(within(panel).queryAllByTestId("character-reputation-group")).toHaveLength(0);
+  });
+
+  it("puts a Horde character's own headers first and skips header rows", () => {
+    const groups = groupReputations(CHARACTER.reputations ?? [], "horde");
+    expect(groups.map((group) => group.name)).toEqual(["Horde", "Steamwheedle Cartel", "Alliance", "Other"]);
+    expect(groups.flatMap((group) => group.reputations).some((rep) => rep.id === 469)).toBe(false);
+    expect(standingPercent({ id: 1, name: "x", standing: "Honored", tier: 5, value: 6000, max: 12000 })).toBe(50);
+    expect(standingPercent({ id: 1, name: "x", standing: "Honored", tier: 5, value: -5, max: 12000 })).toBe(0);
   });
 });

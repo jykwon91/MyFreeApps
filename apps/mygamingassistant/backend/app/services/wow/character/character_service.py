@@ -5,10 +5,10 @@ render is cached beside it. Both expire after ``CHARACTER_CACHE_SECONDS``, so a
 player who logs out with new gear sees it within minutes, and a page that
 loads the sheet and the picture asks Blizzard once.
 
-Stats, talents and professions are the optional parts: if Blizzard fails on
-``/statistics``, ``/specializations`` or ``/professions`` the sheet still
-shows (that part null), the failure is logged, and the answer is not cached so the
-next look-up asks again.
+Stats, talents, professions and reputations are the optional parts: if
+Blizzard fails on ``/statistics``, ``/specializations``, ``/professions`` or
+``/reputations`` the sheet still shows (that part null), the failure is logged,
+and the answer is not cached so the next look-up asks again.
 """
 from __future__ import annotations
 
@@ -85,12 +85,14 @@ async def _profile(slug: str) -> CharacterProfile:
             (statistics, stats_answered),
             (specializations, talents_answered),
             (professions, professions_answered),
+            (reputations, reputations_answered),
         ) = await asyncio.gather(
             client.media(slug),
             client.equipment(slug),
             _optional_part("statistics", slug, client.statistics),
             _optional_part("talents", slug, client.specializations),
             _optional_part("professions", slug, client.professions),
+            _optional_part("reputations", slug, client.reputations),
         )
     if talents_answered and specializations is None:
         # Blizzard 404s a character that has never spent a point: no talents, not a failure.
@@ -98,6 +100,9 @@ async def _profile(slug: str) -> CharacterProfile:
     if professions_answered and professions is None:
         # Likewise a character that has learned no profession.
         professions = {}
+    if reputations_answered and reputations is None:
+        # And one that has met no faction yet.
+        reputations = {}
     data = CharacterProfile(
         profile=profile,
         media=media,
@@ -105,8 +110,9 @@ async def _profile(slug: str) -> CharacterProfile:
         statistics=statistics,
         specializations=specializations,
         professions=professions,
+        reputations=reputations,
     )
-    if stats_answered and talents_answered and professions_answered:
+    if stats_answered and talents_answered and professions_answered and reputations_answered:
         _store(_profiles, slug, data, CHARACTER_CACHE_MAX_ENTRIES)
     return data
 

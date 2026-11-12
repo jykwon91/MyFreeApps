@@ -92,6 +92,8 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         ["scripts.wow_item_pages.build", *cache],
         # The live talent trees, from Blizzard's Game Data API (BLIZZARD_CLIENT_ID / _SECRET, checked in apply).
         ["scripts.wow_talents.build", *cache],
+        # The reputation pane's headers, from the same Game Data API.
+        ["scripts.wow_reputation.build"],
         # Reads the Item and Talent output above (and the World Map's zones).
         ["scripts.wow_changes.build", *cache, "--quest-cache", str(quest_cache)],
         # The item browser's index, beside the item pages: reads the Item output and the Changes feed above.

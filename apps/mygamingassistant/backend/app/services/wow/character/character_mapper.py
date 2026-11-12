@@ -20,6 +20,7 @@ from app.services.wow.character.character_json import as_dict, as_int, as_list, 
 from app.services.wow.character.character_profile import CharacterProfile
 from app.services.wow.character.character_stats_mapper import to_character_stats
 from app.services.wow.character.character_professions_mapper import to_character_professions
+from app.services.wow.character.character_reputations_mapper import to_character_reputations
 from app.services.wow.character.character_talents_mapper import to_character_talents
 
 _DURABILITY = re.compile(r"(\d+)\s*/\s*(\d+)")
@@ -131,4 +132,5 @@ def to_character_response(slug: str, data: CharacterProfile) -> CharacterRespons
         stats=to_character_stats(data.statistics, data.equipment),
         talents=to_character_talents(data.specializations),
         professions=to_character_professions(data.professions),
+        reputations=to_character_reputations(data.reputations),
     )
