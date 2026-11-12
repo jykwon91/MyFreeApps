@@ -14,8 +14,10 @@ transactions around the model calls (the MGA item_extractor pattern):
    ``turn_count`` and settles the quota reservation.
 
 Client disconnect cancels the generator; the ``finally`` block settles the
-turn under a shielded cancel scope (status ``partial`` or ``failed``, quota
-reservation KEPT -- the tokens were already generated).
+turn under a shielded cancel scope, quota reservation KEPT (the tokens were
+already generated). Its status is ``complete`` once ``reply.done`` was sent --
+the learner has the whole reply, only its corrections are missing -- and
+``partial`` or ``failed`` before that.
 
 Never log transcript text -- ids, counts and Anthropic ``error.type`` only.
 """
@@ -37,8 +39,6 @@ from pydantic import BaseModel
 from platform_shared.extraction.anthropic_errors import (
     AnthropicFailure,
     AnthropicFailureKind,
-    map_anthropic_connection_error,
-    map_anthropic_status_error,
 )
 
 from app.core.config import settings
@@ -63,10 +63,9 @@ from app.services.tutor import quota_service
 from app.services.tutor.claude_client import get_client
 from app.services.tutor.corrections_mapper import (
     CorrectionsResult,
-    map_corrections_output,
-    parse_model_json,
     scenario_state_for,
 )
+from app.services.tutor.prepared_turn import PreparedTurn
 from app.services.tutor.prompt_builder import (
     ClaudeRequest,
     HistoryTurn,
@@ -74,7 +73,14 @@ from app.services.tutor.prompt_builder import (
     TurnPromptContext,
     build_corrections_request,
     build_reply_request,
-    build_translation_request,
+)
+from app.services.tutor.turn_calls import (
+    cancel_task,
+    classify_failure,
+    corrections_usage_if_done,
+    run_corrections,
+    run_translation,
+    turn_units,
 )
 from app.services.tutor.turn_errors import (
     SessionEndedError,
@@ -85,7 +91,6 @@ from app.services.tutor.usage_units import (
     CallUsage,
     estimate_input_tokens,
     reservation_units,
-    units_for,
 )
 
 logger = logging.getLogger(__name__)
@@ -117,18 +122,6 @@ class TurnEvent:
 
 class _EmptyPayload(BaseModel):
     pass
-
-
-@dataclass
-class PreparedTurn:
-    turn_id: uuid.UUID
-    seq: int
-    session_id: uuid.UUID
-    user_id: uuid.UUID
-    prompt: TurnPromptContext
-    reply_request: ClaudeRequest
-    corrections_request: ClaudeRequest
-    reservation: quota_service.Reservation
 
 
 class _Settlement(Enum):
@@ -301,100 +294,7 @@ async def prepare_turn(
 
 
 # ---------------------------------------------------------------------------
-# 2. Claude calls
-# ---------------------------------------------------------------------------
-
-
-def _classify(exc: Exception, log_prefix: str) -> AnthropicFailure:
-    if isinstance(exc, anthropic.APIStatusError):
-        return map_anthropic_status_error(exc, log_prefix=log_prefix, logger=logger)
-    return map_anthropic_connection_error(
-        exc,  # type: ignore[arg-type]
-        log_prefix=log_prefix,
-        logger=logger,
-    )
-
-
-def _first_text(message: Any) -> str:
-    for block in getattr(message, "content", None) or []:
-        if getattr(block, "type", None) == "text":
-            return str(getattr(block, "text", ""))
-    return ""
-
-
-async def _run_corrections(
-    client: anthropic.AsyncAnthropic, prepared: PreparedTurn,
-) -> tuple[CorrectionsResult | None, CallUsage]:
-    """The corrections call. Never raises: it is off the critical path, so a
-    failure degrades to "no correction card" (logged, with its error.type)."""
-    request = prepared.corrections_request
-    try:
-        message = await client.messages.create(
-            model=settings.ltutor_corrections_model,
-            max_tokens=settings.ltutor_corrections_max_tokens,
-            system=request.system,
-            messages=request.messages,
-            **request.extra,
-        )
-    except (anthropic.APIStatusError, anthropic.APIConnectionError) as exc:
-        _classify(exc, "tutor corrections")
-        return None, CallUsage()
-    usage = CallUsage.from_api(getattr(message, "usage", None))
-    session = prepared.prompt.session
-    result = map_corrections_output(
-        parse_model_json(_first_text(message)),
-        max_corrections=session.rules.max_corrections,
-        goal_count=len(session.scenario.goals),
-        prior_goals_met=prepared.prompt.goals_met,
-    )
-    return result, usage
-
-
-async def _run_translation(
-    client: anthropic.AsyncAnthropic, prepared: PreparedTurn, reply_text: str,
-) -> tuple[str | None, CallUsage]:
-    """English translation of the finished reply. Never raises (degrades to None)."""
-    request = build_translation_request(prepared.prompt.session.language, reply_text)
-    try:
-        message = await client.messages.create(
-            model=settings.ltutor_translation_model,
-            max_tokens=settings.ltutor_translation_max_tokens,
-            system=request.system,
-            messages=request.messages,
-        )
-    except (anthropic.APIStatusError, anthropic.APIConnectionError) as exc:
-        _classify(exc, "tutor translation")
-        return None, CallUsage()
-    text = " ".join(_first_text(message).split())
-    return (text or None), CallUsage.from_api(getattr(message, "usage", None))
-
-
-def _units(reply: CallUsage, corrections: CallUsage, translation: CallUsage) -> int:
-    return (
-        units_for(reply, weight=settings.ltutor_reply_unit_weight)
-        + units_for(corrections, weight=settings.ltutor_corrections_unit_weight)
-        + units_for(translation, weight=settings.ltutor_translation_unit_weight)
-    )
-
-
-async def _cancel(task: asyncio.Task[Any] | None) -> None:
-    if task is None or task.done():
-        return
-    task.cancel()
-    try:
-        await task
-    except (asyncio.CancelledError, Exception):  # noqa: BLE001 -- being discarded
-        pass
-
-
-def _corrections_usage_if_done(task: asyncio.Task[tuple[CorrectionsResult | None, CallUsage]]) -> CallUsage:
-    if task.done() and not task.cancelled() and task.exception() is None:
-        return task.result()[1]
-    return CallUsage()
-
-
-# ---------------------------------------------------------------------------
-# 3. Stream
+# 2. Stream
 # ---------------------------------------------------------------------------
 
 
@@ -404,12 +304,13 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncIterator[TurnEvent]:
     client = get_client()
     outcome: _Outcome | None = None
     settle_attempted = False
+    reply_delivered = False
     reply_parts: list[str] = []
     corrections_task: asyncio.Task[tuple[CorrectionsResult | None, CallUsage]] | None = None
     translation_task: asyncio.Task[tuple[str | None, CallUsage]] | None = None
     try:
         yield TurnEvent(EVENT_TURN_STARTED, TurnStartedEvent(turn_id=prepared.turn_id, seq=prepared.seq))
-        corrections_task = asyncio.create_task(_run_corrections(client, prepared))
+        corrections_task = asyncio.create_task(run_corrections(client, prepared))
 
         reply_usage = CallUsage()
         failure: AnthropicFailure | None = None
@@ -428,12 +329,12 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncIterator[TurnEvent]:
                 final = await stream.get_final_message()
                 reply_usage = CallUsage.from_api(getattr(final, "usage", None))
         except (anthropic.APIStatusError, anthropic.APIConnectionError) as exc:
-            failure = _classify(exc, "tutor reply")
+            failure = classify_failure(exc, "tutor reply")
 
         reply_text = "".join(reply_parts).strip()
         if failure is not None or not reply_text:
-            await _cancel(corrections_task)
-            corrections_usage = _corrections_usage_if_done(corrections_task)
+            await cancel_task(corrections_task)
+            corrections_usage = corrections_usage_if_done(corrections_task)
             if failure is None:
                 logger.warning("tutor reply: empty reply turn_id=%s", prepared.turn_id)
                 code, retryable = _EMPTY_REPLY_CODE, True
@@ -454,12 +355,15 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncIterator[TurnEvent]:
                     status=TurnStatus.FAILED,
                     settlement=_Settlement.RECONCILE,
                     usage=reply_usage + corrections_usage,
-                    usage_units=_units(reply_usage, corrections_usage, CallUsage()),
+                    usage_units=turn_units(reply_usage, corrections_usage, CallUsage()),
                 )
             yield TurnEvent(EVENT_ERROR, TurnErrorEvent(code=code, retryable=retryable))
         else:
             yield TurnEvent(EVENT_REPLY_DONE, _EmptyPayload())
-            translation_task = asyncio.create_task(_run_translation(client, prepared, reply_text))
+            # Resumed, so the client has the whole reply: a disconnect from here on
+            # loses only the corrections.
+            reply_delivered = True
+            translation_task = asyncio.create_task(run_translation(client, prepared, reply_text))
             corrections, corrections_usage = await corrections_task
             translation, translation_usage = await translation_task
             if corrections is None:
@@ -477,7 +381,7 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncIterator[TurnEvent]:
                 corrections=corrections,
                 translation=translation,
                 usage=reply_usage + corrections_usage + translation_usage,
-                usage_units=_units(reply_usage, corrections_usage, translation_usage),
+                usage_units=turn_units(reply_usage, corrections_usage, translation_usage),
             )
             yield TurnEvent(
                 EVENT_CORRECTIONS,
@@ -499,14 +403,18 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncIterator[TurnEvent]:
         # Shielded: on client disconnect this runs inside a cancelled anyio
         # scope, where every unshielded await would be cancelled again.
         with anyio.CancelScope(shield=True):
-            await _cancel(corrections_task)
-            await _cancel(translation_task)
+            await cancel_task(corrections_task)
+            await cancel_task(translation_task)
             if not settle_attempted:
                 # Client went away (or an unexpected error) before settlement:
                 # record what we have and KEEP the reservation.
                 reply_text = "".join(reply_parts).strip()
+                if reply_delivered:
+                    status = TurnStatus.COMPLETE
+                else:
+                    status = TurnStatus.PARTIAL if reply_text else TurnStatus.FAILED
                 abandoned = _Outcome(
-                    status=TurnStatus.PARTIAL if reply_text else TurnStatus.FAILED,
+                    status=status,
                     settlement=_Settlement.KEEP,
                     reply_text=reply_text or None,
                 )
@@ -517,7 +425,7 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncIterator[TurnEvent]:
 
 
 # ---------------------------------------------------------------------------
-# 4. Settle (post-stream transaction)
+# 3. Settle (post-stream transaction)
 # ---------------------------------------------------------------------------
 
 async def _settle(prepared: PreparedTurn, outcome: _Outcome) -> float:

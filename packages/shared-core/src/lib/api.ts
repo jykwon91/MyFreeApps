@@ -4,21 +4,15 @@ import { installStepUpInterceptor } from "../auth/stepUpInterceptor";
 import { getPlatform, onPlatformConfigured } from "../platform/configurePlatform";
 import { NO_REFRESH_URL_PARTS } from "../constants/sessionRefresh";
 import { notifyAuthChange } from "./auth-store";
-import { isRefreshCoolingDown, refreshSessionOnce } from "./session-refresh";
+import { renewAfterUnauthorized } from "./renewAfterUnauthorized";
 import { isExemptFromSignOut } from "./signOutExemptions";
 import type { SessionRetryConfig } from "./types/SessionRetryConfig";
 
 const api = axios.create();
 
 async function retryWithNewSession(config: SessionRetryConfig): Promise<AxiosResponse | null> {
-  const token = getPlatform().tokenStore.get();
-  // A request sent before the last refresh only needs the token that refresh got.
-  if (token === null || config._sentToken === token) {
-    if (isRefreshCoolingDown()) return null;
-    if ((await refreshSessionOnce()) !== "refreshed") return null;
-  }
-  const { currentAccount } = getPlatform();
-  if (currentAccount && currentAccount() !== config._sentAccount) return null;
+  const renewal = await renewAfterUnauthorized({ token: config._sentToken ?? null, account: config._sentAccount });
+  if (renewal !== "renewed") return null;
   config._sessionRetried = true;
   return api.request(config);
 }

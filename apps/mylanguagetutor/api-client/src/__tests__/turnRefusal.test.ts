@@ -23,6 +23,10 @@ describe("isRetryableRefusal", () => {
     expect(isRetryableRefusal(503, "anything")).toBe(true);
     expect(isRetryableRefusal(422, "validation")).toBe(false);
   });
+
+  it("retries a lost session, which the retry replaces", () => {
+    expect(isRetryableRefusal(404, "session_not_found")).toBe(true);
+  });
 });
 
 describe("normaliseRefusalCode", () => {

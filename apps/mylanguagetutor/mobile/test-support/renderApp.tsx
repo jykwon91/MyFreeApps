@@ -7,6 +7,7 @@ import Settings from "../app/(app)/(tabs)/settings";
 import DeleteAccountRoute from "../app/(app)/delete-account";
 import OnboardingLanguageRoute from "../app/(app)/onboarding/language";
 import OnboardingLevelRoute from "../app/(app)/onboarding/level";
+import PracticeRoute from "../app/(app)/practice";
 import SignInRoute from "../app/sign-in";
 
 /** The app's own layouts and screens, as expo-router would find them under app/. */
@@ -17,6 +18,7 @@ export const APP_ROUTES = {
   "(app)/delete-account": DeleteAccountRoute,
   "(app)/onboarding/language": OnboardingLanguageRoute,
   "(app)/onboarding/level": OnboardingLevelRoute,
+  "(app)/practice": PracticeRoute,
   "(app)/(tabs)/_layout": TabsLayout,
   "(app)/(tabs)/index": Practice,
   "(app)/(tabs)/settings": Settings,

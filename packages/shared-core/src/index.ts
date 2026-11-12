@@ -10,6 +10,9 @@ export type { TokenStore } from "./platform/types/TokenStore";
 
 export { default as api } from "./lib/api";
 export { refreshSessionOnce } from "./lib/session-refresh";
+export { renewAfterUnauthorized } from "./lib/renewAfterUnauthorized";
+export type { SentSession } from "./lib/types/SentSession";
+export type { SessionRenewal } from "./lib/types/SessionRenewal";
 export { notifyAuthChange, onAccountLeft, onIdentityChange, useIsAuthenticated } from "./lib/auth-store";
 export type { AuthChangeOptions } from "./lib/types/AuthChangeOptions";
 export { readJwtPayload } from "./utils/readJwtPayload";

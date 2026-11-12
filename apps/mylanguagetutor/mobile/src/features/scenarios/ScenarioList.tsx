@@ -1,8 +1,8 @@
 import { useScenarioPath } from "@mylanguagetutor/api-client/hooks/useScenarioPath";
 import { practicePath } from "@mylanguagetutor/api-client/utils/practicePath";
-import { EmptyState, LINK_MESSAGES, ListSeparator, useOpenWebsite, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, ListSeparator, useRefresh, useTheme } from "@platform/mobile";
+import { router } from "expo-router";
 import { FlatList } from "react-native";
-import { WEB_BASE_URL } from "../../constants/api";
 import { CATALOG_MESSAGES, SCENARIO_SKELETON_ROWS } from "../../constants/catalog";
 import type { ScenarioListProps } from "../../types/ScenarioListProps";
 import CardListSkeleton from "../catalog/CardListSkeleton";
@@ -10,15 +10,11 @@ import CatalogCard from "../catalog/CatalogCard";
 import CatalogLoadError from "../catalog/CatalogLoadError";
 import ScenarioListHeader from "./ScenarioListHeader";
 
-/**
- * The scenario learning path for the learner's language. Practice itself isn't in the app yet, so a
- * scenario opens it on the website.
- */
+/** The scenario learning path for the learner's language. A scenario opens its conversation. */
 export default function ScenarioList({ profile }: ScenarioListProps) {
   const { colors, spacing } = useTheme();
   const { languageName, scenarios, isError, error, isCapReached, refetch } = useScenarioPath(profile);
   const { refresh, isRefreshing, refreshControl } = useRefresh(refetch, error);
-  const openWebsite = useOpenWebsite();
 
   if (!scenarios) {
     if (isError) return <CatalogLoadError isRetrying={isRefreshing} onRetry={refresh} />;
@@ -38,10 +34,8 @@ export default function ScenarioList({ profile }: ScenarioListProps) {
       refreshControl={refreshControl}
       renderItem={({ item }) => (
         <CatalogCard
-          accessibilityHint={LINK_MESSAGES.opensBrowser}
-          accessibilityRole="link"
           detail={item.goal}
-          onPress={() => void openWebsite(WEB_BASE_URL, practicePath(item.slug))}
+          onPress={() => router.push(practicePath(item.slug))}
           prefix={`${item.order}.`}
           title={item.title}
         />

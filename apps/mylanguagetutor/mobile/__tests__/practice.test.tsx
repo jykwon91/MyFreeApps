@@ -14,7 +14,6 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
 import { AppState, Linking } from "react-native";
 import type { AppStateStatus } from "react-native";
-import { WEB_BASE_URL } from "../src/constants/api";
 import { CATALOG_MESSAGES } from "../src/constants/catalog";
 import { store } from "../src/lib/store";
 import { renderApp } from "../test-support/renderApp";
@@ -25,6 +24,7 @@ jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-s
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
+jest.mock("expo-keep-awake", () => ({ useKeepAwake: () => {} }));
 
 const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
 // The store tells the API layer when the app comes back to the foreground, through the listener it adds as it loads.
@@ -60,18 +60,25 @@ describe("the Practice tab", () => {
     expect(await screen.findByRole("header", { name: PRACTICE_HEADING })).toBeTruthy();
     expect(screen.getByText("Level: I know some phrases")).toBeTruthy();
     expect(screen.getByText(CATALOG_COPY.pickScenario)).toBeTruthy();
-    expect(screen.getByRole("link", { name: "1. Greetings Say hello and introduce yourself." })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "4. At the cafe Order a drink and a snack." })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "1. Greetings Say hello and introduce yourself." })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "4. At the cafe Order a drink and a snack." })).toBeTruthy();
     expect(sent.find((request) => request.route === "GET /scenarios")?.params).toEqual({ language: "es" });
     expect(screen.queryByText(SESSION_BLOCK_COPY.daily_limit)).toBeNull();
   });
 
-  it("opens a scenario's practice on the website, until the app has it", async () => {
+  it("opens a scenario's conversation in the app", async () => {
     serveCatalog();
     await renderApp();
 
-    await fireEvent.press(await screen.findByRole("link", { name: /^4\. At the cafe/ }));
-    expect(openURL).toHaveBeenLastCalledWith(`${WEB_BASE_URL}/practice?scenario=cafe`);
+    await fireEvent.press(await screen.findByRole("button", { name: /^4\. At the cafe/ }));
+    expect(await screen.findByRole("header", { name: "At the cafe" })).toBeTruthy();
+    expect(screen).toHavePathname("/practice");
+    expect(screen).toHaveSearchParams({ scenario: "cafe" });
+    expect(screen.getByText("Say hello in Spanish to start the conversation.")).toBeTruthy();
+    expect(openURL).not.toHaveBeenCalled();
+
+    await act(async () => router.back());
+    expect(await screen.findByRole("header", { name: PRACTICE_HEADING })).toBeTruthy();
   });
 
   it("says when today's practice is used up, and still lists the scenarios", async () => {
@@ -79,10 +86,10 @@ describe("the Practice tab", () => {
     await renderApp();
 
     expect(await screen.findByText(SESSION_BLOCK_COPY.daily_limit)).toBeTruthy();
-    expect(screen.getByRole("link", { name: /^1\. Greetings/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^1\. Greetings/ })).toBeTruthy();
   });
 
-  it("checks today's usage again when the learner comes back from practising on the website", async () => {
+  it("checks today's usage again when the learner comes back to the app", async () => {
     let usage = USAGE_LEFT;
     const sent = serveCatalog({ "GET /usage/today": () => ({ status: 200, data: usage }) });
     await renderApp();
@@ -168,7 +175,7 @@ describe("the Practice tab", () => {
     expect(await screen.findByRole("header", { name: CATALOG_COPY.loadFailed })).toBeTruthy();
     isDown = false;
     await fireEvent.press(screen.getByRole("button", { name: CATALOG_COPY.retry }));
-    expect(await screen.findByRole("link", { name: /^1\. Greetings/ })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /^1\. Greetings/ })).toBeTruthy();
     expect(screen.queryByText(SHOWING_LAST_LOADED_MESSAGE)).toBeNull();
 
     isDown = true;
@@ -176,7 +183,7 @@ describe("the Practice tab", () => {
       await screen.getByTestId("scenario-list").props.refreshControl.props.onRefresh();
     });
     expect(await screen.findByText(SHOWING_LAST_LOADED_MESSAGE)).toBeTruthy();
-    expect(screen.getByRole("link", { name: /^1\. Greetings/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^1\. Greetings/ })).toBeTruthy();
     expect(sent.filter((request) => request.route === "GET /scenarios")).toHaveLength(3);
   });
 });

@@ -39,6 +39,7 @@ function newEntry(key: string, text: string): TranscriptEntry {
     corrections: [],
     retryPrompt: null,
     status: "pending",
+    correctionsMissing: false,
   };
 }
 
@@ -61,6 +62,14 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
   const sessionRef = useRef<string | null>(null);
   const inFlight = useRef(false);
   const abort = useRef<AbortController | null>(null);
+  // The turn ``interrupt`` stopped, as opposed to one abandoned by unmounting.
+  const interrupted = useRef<AbortController | null>(null);
+  // The turn whose whole reply has arrived: the server has counted and charged it, so it isn't stopped.
+  const replied = useRef<AbortController | null>(null);
+  // The turn in flight when ``interrupt`` last ran: the only one ``stopWaitingForCorrections`` may end.
+  const parked = useRef<AbortController | null>(null);
+  // The turn ``stopWaitingForCorrections`` gave up on, which ends complete without them.
+  const gaveUp = useRef<AbortController | null>(null);
 
   useEffect(() => () => abort.current?.abort(), []);
 
@@ -132,7 +141,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
         }
 
         const chunker = createSentenceChunker(ttsLocale);
-        const outcome: StreamOutcome = { error: null, finished: false };
+        const outcome: StreamOutcome = { error: null, replyDone: false, finished: false };
         const onEvent = (event: TurnStreamEvent) => {
           switch (event.type) {
             case "reply.delta":
@@ -141,6 +150,8 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
               chunker.push(event.text).forEach(speak);
               break;
             case "reply.done":
+              outcome.replyDone = true;
+              replied.current = controller;
               chunker.flush().forEach(speak);
               break;
             case "corrections":
@@ -164,17 +175,29 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
           }
         };
 
+        const wasInterrupted = () => interrupted.current === controller;
         try {
           await streamTurn({ sessionId: id, text, onEvent, signal: controller.signal });
         } catch (err) {
-          if (controller.signal.aborted) return;
-          removeEntry(key);
-          handleRefusal(err, text);
+          // Unmounting abandons the turn. An interrupted one ends like a dropped connection, and
+          // one given up on after its reply ends complete without its corrections.
+          if (controller.signal.aborted && !wasInterrupted() && gaveUp.current !== controller) return;
+          if (!controller.signal.aborted && !outcome.replyDone) {
+            removeEntry(key);
+            handleRefusal(err, text);
+            return;
+          }
+        }
+
+        if (outcome.replyDone && !outcome.finished && !outcome.error) {
+          // The learner has the whole reply, and the server kept the turn: sending it again would
+          // count it twice. Only its corrections are lost.
+          patchEntry(key, (e) => ({ ...e, status: "complete", correctionsMissing: true }));
           return;
         }
 
-        // A cut-off stream may leave a sentence unspoken.
-        chunker.flush().forEach(speak);
+        // A cut-off stream may leave a sentence unspoken; an interrupted one stays unspoken.
+        if (!wasInterrupted()) chunker.flush().forEach(speak);
         const failed = outcome.error ?? (outcome.finished ? null : { code: CONNECTION_LOST, retryable: true });
         if (!failed) return;
         if (!outcome.finished) patchEntry(key, (e) => ({ ...e, status: "failed" }));
@@ -199,6 +222,21 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
     send(text);
   }, [failure, removeEntry, send]);
 
+  const interrupt = useCallback(() => {
+    parked.current = abort.current;
+    if (!abort.current || replied.current === abort.current) return;
+    interrupted.current = abort.current;
+    abort.current.abort();
+  }, []);
+
+  const stopWaitingForCorrections = useCallback(() => {
+    const turn = parked.current;
+    parked.current = null;
+    if (!turn || abort.current !== turn || replied.current !== turn) return;
+    gaveUp.current = turn;
+    abort.current.abort();
+  }, []);
+
   const dismissFailure = useCallback(() => setFailure(null), []);
 
   const dismissRetryPrompt = useCallback(
@@ -215,6 +253,8 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
     scenarioState,
     send,
     retry,
+    interrupt,
+    stopWaitingForCorrections,
     dismissFailure,
     dismissRetryPrompt,
   };

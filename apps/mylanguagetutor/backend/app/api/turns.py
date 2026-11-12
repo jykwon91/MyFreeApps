@@ -29,13 +29,13 @@ from app.core.rate_limit import check_user_rate_limit, turn_limiter
 from app.models.user.user import User
 from app.schemas.tutor.turn_schemas import TurnCreateRequest
 from app.services.tutor import quota_service, turn_service
+from app.services.tutor.prepared_turn import PreparedTurn
 from app.services.tutor.turn_errors import (
     SessionEndedError,
     SessionNotFoundError,
     SessionTurnLimitError,
     TurnInProgressError,
 )
-from app.services.tutor.turn_service import PreparedTurn
 from app.services.tutor.turn_slots import turn_slots
 
 router = APIRouter(

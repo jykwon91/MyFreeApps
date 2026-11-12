@@ -71,13 +71,22 @@ burst limiter, 503 `tutor_unavailable` (global cap, kill switch, or no key).
   (see `core/config.py`) against the per-user and global daily buckets, then
   reconciles to actual usage. `LTUTOR_GLOBAL_DAILY_UNITS=0` is the kill switch.
   One turn in flight per user (`services/tutor/turn_slots.py`).
+- **Disconnects.** A client that drops mid-turn keeps the reservation charged.
+  A turn whose `reply.done` was sent is saved `complete` (the learner has the
+  whole reply, so clients don't resend it); before that it is `partial` or
+  `failed`. Clients don't abort a turn after `reply.done`, and show a note if
+  its corrections never arrive. The phone, back from the background, waits
+  `CORRECTIONS_GRACE_MS` for them before giving up on a possibly dead socket.
 - **Frontend.** Speech recognition and TTS are the browser's Web Speech API
   (no audio reaches our servers). The SSE body is read with `fetch` +
   `eventsource-parser` because `EventSource` can't POST or send a bearer token:
   the api-client's `createStreamTurn` (request + refusal mapping) and
   `readTurnStream` (body -> `parseTurnEvent`) take the `fetch` by injection, and
   the web's `features/tutor-stream/streamTurn.ts` only wires in the browser's
-  `fetch`, the `localStorage` token and the 401 sign-out. The conversation state
+  `fetch`, the `localStorage` token and the 401 sign-out. The phone's
+  `mobile/src/lib/streamTurn.ts` wires in `expo/fetch`, the in-memory token, one
+  sign-in renewal on a 401 (`@platform/core`'s `renewAfterUnauthorized`, which
+  the axios interceptor uses too) and the same sign-out. The conversation state
   machine is the api-client's `hooks/usePracticeSession`, handed that
   `streamTurn`. Replies are spoken sentence by sentence (the api-client's
   `utils/sentenceChunker.ts`). Browsers without recognition

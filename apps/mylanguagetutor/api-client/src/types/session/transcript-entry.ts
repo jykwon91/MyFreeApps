@@ -11,4 +11,6 @@ export interface TranscriptEntry {
   retryPrompt: string | null;
   /** ``pending`` until ``done``; ``partial`` = cut off mid-reply. */
   status: "pending" | "complete" | "partial" | "failed";
+  /** The whole reply arrived but the stream ended before its corrections and translation. */
+  correctionsMissing: boolean;
 }

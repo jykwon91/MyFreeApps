@@ -10,6 +10,7 @@ test's ``db`` session (whose identity map would serve stale objects).
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 from typing import Any
@@ -308,6 +309,62 @@ class TestClientDisconnect:
         assert rows[0][0] == "partial"
         assert rows[0][1] == prepared.reservation.units
         assert await _bucket(quota_service.user_bucket(user_id)) == prepared.reservation.units
+
+    @pytest.mark.asyncio
+    async def test_disconnect_after_reply_done_records_the_reply_as_delivered(
+        self, user_factory, as_user, fake_claude,
+    ) -> None:
+        """The stream dropped while corrections ran: the learner has the whole reply,
+        so the turn is complete (no corrections), counted once, quota kept."""
+        fake_claude.create_gate = asyncio.Event()
+        user = await user_factory()
+        user_id = uuid.UUID(user["id"])
+        async with await as_user(user) as authed:
+            session_id = uuid.UUID(await _new_session(authed))
+
+        prepared = await turn_service.prepare_turn(user_id=user_id, session_id=session_id, text="hola")
+        stream = turn_service.stream_turn(prepared)
+        names = [(await stream.__anext__()).name for _ in range(4)]
+        assert names == ["turn.started", "reply.delta", "reply.delta", "reply.done"]
+        # Sent: the server goes on to wait for the corrections, and the client goes away.
+        waiting = asyncio.create_task(stream.__anext__())
+        while len(fake_claude.create_calls) < 2:
+            await asyncio.sleep(0)
+        waiting.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await waiting
+
+        rows = await _fetch(
+            "SELECT status, reply_text, corrections_json, cost_units FROM tutor_turn WHERE id = :id",
+            id=prepared.turn_id,
+        )
+        assert rows[0][0] == "complete"
+        assert rows[0][1] is not None  # the reply, encrypted
+        assert rows[0][2] is None
+        assert rows[0][3] == prepared.reservation.units
+        assert await _bucket(quota_service.user_bucket(user_id)) == prepared.reservation.units
+        sessions = await _fetch("SELECT turn_count FROM tutor_session WHERE id = :id", id=session_id)
+        assert sessions[0][0] == 1
+
+    @pytest.mark.asyncio
+    async def test_disconnect_while_reply_done_is_unsent_stays_partial(
+        self, user_factory, as_user, fake_claude,
+    ) -> None:
+        """Closed as ``reply.done`` was handed over but before it went out: the client
+        can't know the reply ended, so the turn stays partial, like the client shows it."""
+        user = await user_factory()
+        user_id = uuid.UUID(user["id"])
+        async with await as_user(user) as authed:
+            session_id = uuid.UUID(await _new_session(authed))
+
+        prepared = await turn_service.prepare_turn(user_id=user_id, session_id=session_id, text="hola")
+        stream = turn_service.stream_turn(prepared)
+        for _ in range(3):
+            await stream.__anext__()
+        await stream.aclose()
+
+        rows = await _fetch("SELECT status FROM tutor_turn WHERE id = :id", id=prepared.turn_id)
+        assert rows[0][0] == "partial"
 
 
 class TestRefusedBeforeClaude:

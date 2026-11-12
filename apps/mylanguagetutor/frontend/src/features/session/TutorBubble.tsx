@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Turtle, Volume2 } from "lucide-react";
 import { cn } from "@platform/ui";
+import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 
 interface TutorBubbleProps {
   text: string;
@@ -37,7 +38,7 @@ export default function TutorBubble({
           {partial && <span className="text-muted-foreground"> …</span>}
         </p>
         {partial && (
-          <p className="px-1 text-xs text-muted-foreground">The reply was cut off.</p>
+          <p className="px-1 text-xs text-muted-foreground">{PRACTICE_COPY.replyCutOff}</p>
         )}
         <div className="flex flex-wrap items-center">
           {canSpeak && (
@@ -64,7 +65,7 @@ export default function TutorBubble({
               ) : (
                 <ChevronDown className="h-4 w-4" aria-hidden="true" />
               )}
-              <span>{showTranslation ? "Hide translation" : "Show translation"}</span>
+              <span>{showTranslation ? PRACTICE_COPY.hideTranslation : PRACTICE_COPY.showTranslation}</span>
             </button>
           )}
         </div>

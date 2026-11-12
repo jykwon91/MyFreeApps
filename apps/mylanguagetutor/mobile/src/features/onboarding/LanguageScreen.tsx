@@ -40,7 +40,6 @@ export default function LanguageScreen() {
       refreshControl={refreshControl}
       renderItem={({ item }) => (
         <CatalogCard
-          accessibilityRole="button"
           detail={item.dialect_label}
           onPress={() => router.push(onboardingLevelPath(item.code))}
           title={item.display_name}

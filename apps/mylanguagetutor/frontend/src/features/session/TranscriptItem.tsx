@@ -2,6 +2,7 @@ import LearnerBubble from "@/features/session/LearnerBubble";
 import TutorBubble from "@/features/session/TutorBubble";
 import CorrectionList from "@/features/session/CorrectionList";
 import RetryPrompt from "@/features/session/RetryPrompt";
+import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 import type { TranscriptEntry } from "@mylanguagetutor/api-client/types/session/transcript-entry";
 
 interface TranscriptItemProps {
@@ -39,6 +40,9 @@ export default function TranscriptItem({
           onReplay={() => onReplay(entry.replyText, false)}
           onReplaySlow={() => onReplay(entry.replyText, true)}
         />
+      )}
+      {entry.correctionsMissing && (
+        <p className="px-1 text-xs text-muted-foreground">{PRACTICE_COPY.correctionsMissing}</p>
       )}
       <CorrectionList corrections={entry.corrections} languageName={languageName} />
       {showRetryPrompt && entry.retryPrompt && (

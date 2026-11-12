@@ -1,4 +1,5 @@
 import { CheckCircle2, Circle } from "lucide-react";
+import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 
 interface ScenarioGoalsProps {
   goals: string[];
@@ -11,7 +12,7 @@ export default function ScenarioGoals({ goals, met }: ScenarioGoalsProps) {
   if (goals.length === 0) return null;
   const done = new Set(met);
   return (
-    <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs" aria-label="Goals for this conversation">
+    <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs" aria-label={PRACTICE_COPY.goalsLabel}>
       {goals.map((goal, index) => {
         const isMet = done.has(index);
         return (
@@ -22,7 +23,7 @@ export default function ScenarioGoals({ goals, met }: ScenarioGoalsProps) {
               <Circle className="h-4 w-4" aria-hidden="true" />
             )}
             <span className={isMet ? "text-foreground" : undefined}>{goal}</span>
-            <span className="sr-only">{isMet ? "(done)" : "(not yet)"}</span>
+            <span className="sr-only">{isMet ? PRACTICE_COPY.goalDone : PRACTICE_COPY.goalNotYet}</span>
           </li>
         );
       })}
