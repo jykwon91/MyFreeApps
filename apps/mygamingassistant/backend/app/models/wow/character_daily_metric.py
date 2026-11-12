@@ -4,6 +4,9 @@ Upserted on every fetch of the character that day, so the last fetch of the
 day is the day's value. NULL means Blizzard didn't send that number (a failed
 call keeps the day's earlier value), never 0. A day nobody looked the
 character up has no row; readers take the newest row at or before a day.
+Profession skills hang off the row (``wow_character_profession_skill``); a day
+whose fetches all failed on professions has none, so a reader wanting skills
+takes the newest row that has them.
 Rows older than ``CHARACTER_METRIC_RETENTION`` are purged, except each
 character's newest.
 """

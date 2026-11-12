@@ -233,6 +233,23 @@ async def test_a_name_taken_by_a_new_character_marks_the_old_one_gone(bound_unit
     assert stored is not None and stored.level == 5
 
 
+async def test_a_rename_onto_a_name_another_character_held_marks_that_one_gone(
+    bound_unit_of_work: AsyncSession,
+) -> None:
+    db = bound_unit_of_work
+    ann = {**PROFILE, "id": 1, "name": "Ann", "surname": "Lee"}
+    await character_store_service.record(_fetch(), now=NOW)
+    await character_store_service.record(_fetch("ann-lee", profile=ann), now=NOW)
+    # Jason Kwon renames to Ann Lee after Blizzard freed the name.
+    await character_store_service.record(_fetch("ann-lee"), now=NOW + timedelta(days=1))
+
+    rows = {r.blizzard_character_id: r for r in await _rows(db)}
+    assert (rows[6299749].slug, rows[6299749].gone_at) == ("ann-lee", None)
+    assert rows[1].gone_at == NOW + timedelta(days=1)
+    stored = await character_store_service.get_stored("ann-lee")
+    assert stored is not None and stored.name == "Jason"
+
+
 async def test_a_404_marks_a_stored_character_gone_until_blizzard_answers_again(
     bound_unit_of_work: AsyncSession,
 ) -> None:
@@ -359,3 +376,12 @@ async def test_a_storage_failure_still_serves_the_sheet(
     sheet = await character_lookup_service.get_character("jason-kwon")
     assert sheet.slug == "jason-kwon"
     assert "storing the look-up failed" in caplog.text
+
+
+async def test_a_render_that_is_the_first_request_still_stores_the_character(
+    bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = bound_unit_of_work
+    monkeypatch.setattr(character_service, "_new_client", lambda: _blizzard())
+    assert await character_lookup_service.get_character_render("jason-kwon") is None
+    assert len(await _rows(db)) == 1

@@ -23,6 +23,7 @@ from sqlalchemy import BigInteger, CheckConstraint, DateTime, Index, SmallIntege
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, deferred, mapped_column
 
+from app.core.wow_character import CHARACTER_ERROR_MAX_LENGTH
 from app.db.base import Base
 
 
@@ -52,7 +53,7 @@ class WowCharacter(Base):
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     # Last time we asked at all, whatever the answer.
     checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    last_error: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    last_error: Mapped[Optional[str]] = mapped_column(String(CHARACTER_ERROR_MAX_LENGTH), nullable=True)
     last_error_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     gone_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

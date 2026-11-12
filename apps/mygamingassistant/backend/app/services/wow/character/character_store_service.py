@@ -52,10 +52,8 @@ async def record(fetch: CharacterFetch, *, now: datetime | None = None) -> None:
     fresh = fetch.response
     async with unit_of_work() as db:
         await character_repo.lock_character(db, blizzard_id)
+        await character_repo.mark_slug_taken(db, fresh.slug, blizzard_id, at)
         row = await character_repo.get_by_blizzard_id(db, blizzard_id)
-        holder = await character_repo.get_live_by_slug(db, fresh.slug)
-        if holder is not None and holder.blizzard_character_id != blizzard_id:
-            await character_repo.mark_gone(db, holder, at)
         stored = None if row is None else read_sheet(row.sheet, row.sheet_version)
         row = await character_repo.save_fetched(db, row, {
             "blizzard_character_id": blizzard_id,

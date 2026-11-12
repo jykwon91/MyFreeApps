@@ -67,10 +67,21 @@ async def save_fetched(db: AsyncSession, row: WowCharacter | None, values: dict[
     return row
 
 
-async def mark_gone(db: AsyncSession, row: WowCharacter, at: datetime) -> None:
-    row.gone_at = at
-    row.checked_at = at
-    await db.flush()
+async def mark_slug_taken(db: AsyncSession, slug: str, blizzard_character_id: int, at: datetime) -> None:
+    """Another live character stored under ``slug`` is gone: Blizzard gave its name away.
+
+    One conditional UPDATE, so Postgres re-checks it after any row-lock wait: a
+    holder renamed away meanwhile is left alone.
+    """
+    await db.execute(
+        update(WowCharacter)
+        .where(
+            WowCharacter.slug == slug,
+            WowCharacter.gone_at.is_(None),
+            WowCharacter.blizzard_character_id != blizzard_character_id,
+        )
+        .values(gone_at=at, checked_at=at)
+    )
 
 
 async def mark_live_slug_gone(db: AsyncSession, slug: str, at: datetime) -> bool:

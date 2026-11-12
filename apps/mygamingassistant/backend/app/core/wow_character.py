@@ -68,5 +68,5 @@ CHARACTER_SHEET_VERSION: Final = 1
 # Daily history rows older than this are purged (a character's newest row is kept).
 CHARACTER_METRIC_RETENTION: Final = timedelta(days=400)
 CHARACTER_METRIC_PURGE_INTERVAL_HOURS: Final = 24
-# ``last_error`` is cut to the column's size.
+# ``wow_character.last_error``'s size; a longer error is cut to it.
 CHARACTER_ERROR_MAX_LENGTH: Final = 500

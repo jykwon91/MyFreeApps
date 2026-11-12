@@ -38,3 +38,10 @@ async def get_character(slug: str) -> CharacterResponse:
     if fetch.fresh:
         await _store_quietly(slug, character_store_service.record(fetch))
     return fetch.response
+
+
+async def get_character_render(slug: str) -> bytes | None:
+    """The cropped render. The look-up goes through ``get_character`` first, so a
+    render that is the first request for a character still stores it."""
+    await get_character(slug)
+    return await character_service.get_character_render(slug)

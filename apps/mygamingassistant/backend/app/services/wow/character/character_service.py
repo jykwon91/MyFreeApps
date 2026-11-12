@@ -24,7 +24,6 @@ from app.core.wow_character import (
     CHARACTER_CACHE_SECONDS,
     CHARACTER_RENDER_CACHE_MAX_ENTRIES,
 )
-from app.schemas.wow.character.character_response import CharacterResponse
 from app.services.wow.blizzard.blizzard_token_cache import BlizzardTokenCache
 from app.services.wow.character.blizzard_character_client import BlizzardCharacterClient
 from app.services.wow.character.character_fetch import CharacterFetch
@@ -120,11 +119,6 @@ async def fetch_character(slug: str) -> CharacterFetch:
     """Raises ``CharacterLookupError`` (status 404 = no character by that name)."""
     profile, fresh = await _load(slug)
     return CharacterFetch(response=to_character_response(slug, profile), profile=profile, fresh=fresh)
-
-
-async def get_character(slug: str) -> CharacterResponse:
-    """Raises ``CharacterLookupError`` (status 404 = no character by that name)."""
-    return (await fetch_character(slug)).response
 
 
 async def get_character_render(slug: str) -> bytes | None:
