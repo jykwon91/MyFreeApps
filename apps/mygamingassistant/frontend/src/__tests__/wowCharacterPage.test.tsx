@@ -2,10 +2,11 @@
  * WoW Forever "Your character" — lookup by name, remembered names, the gear
  * sheet with rolled stats, empty and two-hand sockets, errors, setting MGA's
  * pages to the character, and the stats panel (class default tab, gear bonus,
- * remembered tab, hands without weapons).
+ * remembered tab, hands without weapons), and the talents panel (point split,
+ * rank text, the calculator link, failures and unknown talents).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { RECENT_CHARACTERS_STORAGE_KEY } from "@/games/wow-forever/data/character/characterConfig";
 import { CHARACTER_STATS_TAB_STORAGE_KEY } from "@/games/wow-forever/data/character/characterStatsConfig";
@@ -81,6 +82,20 @@ const STATS: CharacterStats = {
   movement_speed: 100,
 };
 
+/** A real level 37 Affliction warlock's 28 points (Blizzard's ids, as in the tree files). */
+const PICKS = [
+  { id: 135456, rank: 2 },
+  { id: 135455, rank: 5 },
+  { id: 135451, rank: 3 },
+  { id: 135450, rank: 2 },
+  { id: 135448, rank: 3 },
+  { id: 142628, rank: 5 },
+  { id: 135445, rank: 1 },
+  { id: 135443, rank: 1 },
+  { id: 135442, rank: 3 },
+  { id: 135441, rank: 3 },
+];
+
 const CHARACTER: CharacterResponse = {
   slug: "jason-kwon",
   name: "Jason",
@@ -116,6 +131,7 @@ const CHARACTER: CharacterResponse = {
     }),
   ],
   stats: STATS,
+  talents: { groups: [{ active: true, picks: PICKS }] },
 };
 
 function query(extra: Record<string, unknown>) {
@@ -316,5 +332,79 @@ describe("the stats panel", () => {
     renderAt("/wow-forever/character/jason-kwon");
     expect(screen.getByText(/doesn't have this character's stats yet/)).toBeInTheDocument();
     expect(screen.queryByRole("tablist", { name: "Stat group" })).not.toBeInTheDocument();
+  });
+});
+
+describe("the talents panel", () => {
+  async function talentsFor(data: CharacterResponse) {
+    mockQuery.mockReturnValue(query({ data }));
+    renderAt("/wow-forever/character/jason-kwon");
+    const panel = screen.getByRole("region", { name: "Talents" });
+    await waitFor(() => expect(within(panel).queryByTestId("character-talents-skeleton")).not.toBeInTheDocument());
+    return panel;
+  }
+
+  it("shows the point split, the talents taken and a calculator link at the character's level", async () => {
+    const panel = await talentsFor(CHARACTER);
+    const split = within(panel).getByTestId("character-talent-split");
+    expect(split).toHaveTextContent("Affliction 28");
+    expect(split).toHaveTextContent("Demonology 0");
+    expect(split).toHaveTextContent("Destruction 0");
+    expect(within(panel).getAllByTestId("character-talent")).toHaveLength(10);
+    expect(within(panel).getByRole("heading", { level: 3, name: /Affliction/ })).toBeInTheDocument();
+    expect(within(panel).getByText("Demonology: 0 points")).toBeInTheDocument();
+    expect(within(panel).getByRole("link", { name: "Open in the talent calculator" })).toHaveAttribute(
+      "href",
+      "/wow-forever/talents/warlock?b=2-0250032003510133--&lvl=37",
+    );
+    expect(within(panel).queryByTestId("character-talents-unspent")).not.toBeInTheDocument();
+  });
+
+  it("opens a talent to the text of the rank the character has", async () => {
+    const panel = await talentsFor(CHARACTER);
+    const row = within(panel).getAllByTestId("character-talent")[0];
+    expect(row).toHaveTextContent("Suppression");
+    expect(row).toHaveTextContent("rank 2 of 5");
+    const button = within(row).getByRole("button");
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(within(row).getByTestId("character-talent-text")).toHaveTextContent(/2%/);
+  });
+
+  it("counts points not spent yet and talents missing from our trees", async () => {
+    const picks = [...PICKS, { id: 999_999, rank: 1 }];
+    const panel = await talentsFor({ ...CHARACTER, level: 40, talents: { groups: [{ active: true, picks }] } });
+    expect(within(panel).getByTestId("character-talents-unspent")).toHaveTextContent("3 points not spent yet.");
+    expect(within(panel).getByTestId("character-talents-unknown")).toHaveTextContent("1 talent isn't in our copy");
+    expect(within(panel).getByRole("link", { name: "Open in the talent calculator" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("lvl=40"),
+    );
+  });
+
+  it("says why there's no link when the calculator wouldn't take the build", async () => {
+    const picks = [{ id: 135441, rank: 3 }]; // a tier 6 talent with nothing above it
+    const panel = await talentsFor({ ...CHARACTER, talents: { groups: [{ active: true, picks }] } });
+    expect(within(panel).queryByRole("link", { name: "Open in the talent calculator" })).not.toBeInTheDocument();
+    expect(within(panel).getByTestId("character-talents-no-link")).toBeInTheDocument();
+  });
+
+  it("heads each saved set when the character has two", async () => {
+    const other = { active: false, picks: [{ id: 135456, rank: 1 }] };
+    const panel = await talentsFor({ ...CHARACTER, talents: { groups: [{ active: true, picks: PICKS }, other] } });
+    await waitFor(() => expect(within(panel).getAllByTestId("character-talent-set")).toHaveLength(2));
+    expect(within(panel).getByRole("heading", { name: "Active talents" })).toBeInTheDocument();
+    expect(within(panel).getByRole("heading", { name: "Other saved talents" })).toBeInTheDocument();
+  });
+
+  it("tells a failed answer apart from a character with no points", async () => {
+    const failed = await talentsFor({ ...CHARACTER, talents: null });
+    expect(within(failed).getByTestId("character-talents-note")).toHaveTextContent("Blizzard didn't send");
+    expect(screen.getByRole("region", { name: "Character stats" })).toBeInTheDocument();
+  });
+
+  it("says no points are spent for a character under level 10", async () => {
+    const panel = await talentsFor({ ...CHARACTER, level: 8, talents: { groups: [] } });
+    expect(within(panel).getByTestId("character-talents-note")).toHaveTextContent("No talent points spent yet");
   });
 });

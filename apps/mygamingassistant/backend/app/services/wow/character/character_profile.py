@@ -9,3 +9,5 @@ class CharacterProfile:
     media: dict[str, Any] | None
     equipment: dict[str, Any] | None
     statistics: dict[str, Any] | None
+    # None when Blizzard failed on /specializations; {} when the character has none yet.
+    specializations: dict[str, Any] | None

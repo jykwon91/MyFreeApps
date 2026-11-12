@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-11",
+    title: "Your character: talents",
+    summary:
+      "Your character page now shows the talents you picked, with your point split and what each rank does, and opens your build in the talent calculator in one tap.",
+    to: "/wow-forever/character",
+  },
+  {
+    date: "2026-11-11",
     title: "Talents: Forever's live trees",
     summary:
       "The talent calculator now shows Forever's live talent trees and tooltips, straight from Blizzard, with talents Classic never had marked New in Forever. Old build links start empty, so plan your build again.",

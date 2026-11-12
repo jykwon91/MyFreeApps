@@ -1005,8 +1005,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Profile API serves Forever characters at `/profile/wow/character/{first-surname}`
   (namespace `profile-forever-us`, US only) with the app's client token.
 - Backend: `app/api/wow_characters.py` — `GET /api/wow/characters/{slug}`
-  (profile + equipment + statistics, mapped by `services/wow/character/character_mapper.py`;
-  `stats` by `character_stats_mapper.py`)
+  (profile + equipment + statistics + specializations, mapped by `services/wow/character/character_mapper.py`;
+  `stats` by `character_stats_mapper.py`, `talents` by `character_talents_mapper.py`)
   and `/{slug}/render.png` (Blizzard's `main-raw` render, fetched only from
   `render.worldofwarcraft.com`, refused over 3200x2400 px before decoding,
   cropped to the figure with Pillow). Per-IP limit 30/min on each route
@@ -1036,6 +1036,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   yet. Tests:
   `tests/test_wow_characters.py`, `src/__tests__/wowCharacterPage.test.tsx`,
   `src/__tests__/wowCharacterStats.test.ts`, `e2e/wow-forever-character.spec.ts`.
+- Talents (`CharacterTalentsPanel`, `lib/character/characterTalents.ts`):
+  `/specializations` keeps only each talent's id + rank per saved set (active
+  first, empty sets dropped); names, icons and rank text come from the talent
+  calculator's own tree files (same Blizzard ids), loaded with `useTalentClass`.
+  Point split in the class's tree order, lists by points. "Open in the talent
+  calculator" links `?b=2-…&lvl=<level>` only when `isLegalBuild` holds and the
+  level has the points — otherwise a note says why. `talents: null` = the call
+  failed (logged, not cached; the sheet still shows); a 404 = no points yet
+  (`groups: []`). Unknown ids are counted in a footnote, never guessed.
 
 #### In-game icons (`GameIcon`)
 

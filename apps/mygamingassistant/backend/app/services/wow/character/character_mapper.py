@@ -19,6 +19,7 @@ from app.schemas.wow.character.character_response import CharacterResponse
 from app.services.wow.character.character_json import as_dict, as_int, as_list, as_str, name_of
 from app.services.wow.character.character_profile import CharacterProfile
 from app.services.wow.character.character_stats_mapper import to_character_stats
+from app.services.wow.character.character_talents_mapper import to_character_talents
 
 _DURABILITY = re.compile(r"(\d+)\s*/\s*(\d+)")
 
@@ -127,4 +128,5 @@ def to_character_response(slug: str, data: CharacterProfile) -> CharacterRespons
         has_render=render_url(data.media) is not None,
         items=[item for item in items if item is not None],
         stats=to_character_stats(data.statistics, data.equipment),
+        talents=to_character_talents(data.specializations),
     )
