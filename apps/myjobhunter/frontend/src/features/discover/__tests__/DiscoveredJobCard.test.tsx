@@ -18,10 +18,7 @@ vi.mock("lucide-react", () => ({
   X: () => null,
 }));
 
-vi.mock("@platform/ui", async () => ({
-  ...(await vi.importActual<typeof import("@platform/ui/constants/toast-interactive-style")>(
-    "@platform/ui/constants/toast-interactive-style",
-  )),
+vi.mock("@platform/ui", () => ({
   Badge: ({ label }: { label: string }) => <span data-testid="badge">{label}</span>,
   Button: ({ children, onClick, disabled }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean }) => (
     <button onClick={onClick} disabled={disabled}>{children}</button>
@@ -40,10 +37,10 @@ vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   useDismissDiscoveredJobMutation: () => [vi.fn(), { isLoading: false }],
   useSaveDiscoveredJobMutation: () => [vi.fn(), { isLoading: false }],
   usePromoteDiscoveredJobMutation: () => [vi.fn(), { isLoading: false }],
-  // Added in PR 8 (undo-dismiss toast). No-op here — toast rendering is
-  // tested separately in UndoDismissToast.test.tsx.
-  useUndoDismissDiscoveredJobMutation: () => [vi.fn(), { isLoading: false }],
 }));
+
+// Dismiss and Undo are covered for real, store and all, in DiscoverDismissUndo.test.tsx.
+vi.mock("react-redux", () => ({ useDispatch: () => vi.fn() }));
 
 function renderInRouter(ui: React.ReactElement) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

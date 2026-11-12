@@ -119,7 +119,8 @@ export const {
   useRefreshDiscoverySourceMutation,
   useListDiscoveredJobsPagesInfiniteQuery,
   useDismissDiscoveredJobMutation,
-  useUndoDismissDiscoveredJobMutation,
   useSaveDiscoveredJobMutation,
   usePromoteDiscoveredJobMutation,
 } = discoverApi;
+
+export { discoverApi };

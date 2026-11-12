@@ -32,6 +32,11 @@ export const DISCOVER_ACTION_MESSAGES = {
   promoteFailed: "Couldn't add this to Applications",
   dismissed: "Dismissed.",
   dismissFailed: "Couldn't dismiss this posting",
+  undo: "Undo",
+  undoing: "Undoing…",
+  /** What Undo does, for screen readers. */
+  undoHint: "Brings the posting back to your list",
+  undone: "Posting brought back",
   undoFailed: "Couldn't undo dismiss",
   removed: "Saved search removed",
   removeFailed: "Couldn't remove saved search",
