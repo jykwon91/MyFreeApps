@@ -12,7 +12,11 @@ import time
 from typing import TypeVar
 
 from app.core.config import settings
-from app.core.wow_character import CHARACTER_CACHE_MAX_ENTRIES, CHARACTER_CACHE_SECONDS
+from app.core.wow_character import (
+    CHARACTER_CACHE_MAX_ENTRIES,
+    CHARACTER_CACHE_SECONDS,
+    CHARACTER_RENDER_CACHE_MAX_ENTRIES,
+)
 from app.schemas.wow.character.character_response import CharacterResponse
 from app.services.wow.blizzard.blizzard_token_cache import BlizzardTokenCache
 from app.services.wow.character.blizzard_character_client import BlizzardCharacterClient
@@ -38,12 +42,12 @@ def _fresh(cache: dict[str, tuple[T, float]], slug: str) -> T | None:
     return entry[0]
 
 
-def _store(cache: dict[str, tuple[T, float]], slug: str, value: T) -> None:
-    if len(cache) >= CHARACTER_CACHE_MAX_ENTRIES:
+def _store(cache: dict[str, tuple[T, float]], slug: str, value: T, max_entries: int) -> None:
+    if len(cache) >= max_entries:
         now = time.monotonic()
         for key in [k for k, (_, at) in cache.items() if now - at >= CHARACTER_CACHE_SECONDS]:
             del cache[key]
-        if len(cache) >= CHARACTER_CACHE_MAX_ENTRIES:
+        if len(cache) >= max_entries:
             del cache[min(cache, key=lambda k: cache[k][1])]
     cache[slug] = (value, time.monotonic())
 
@@ -56,7 +60,7 @@ async def _profile(slug: str) -> CharacterProfile:
         profile = await client.profile(slug)
         media, equipment = await asyncio.gather(client.media(slug), client.equipment(slug))
     data = CharacterProfile(profile=profile, media=media, equipment=equipment)
-    _store(_profiles, slug, data)
+    _store(_profiles, slug, data, CHARACTER_CACHE_MAX_ENTRIES)
     return data
 
 
@@ -75,8 +79,10 @@ async def get_character_render(slug: str) -> bytes | None:
         return None
     async with _new_client() as client:
         png = await client.render(url)
+    if png is None:
+        return None
     cropped = await asyncio.to_thread(crop_render, png)
-    _store(_renders, slug, cropped)
+    _store(_renders, slug, cropped, CHARACTER_RENDER_CACHE_MAX_ENTRIES)
     return cropped
 
 
@@ -85,4 +91,3 @@ def clear_caches() -> None:
     _profiles.clear()
     _renders.clear()
     _tokens.clear()
-

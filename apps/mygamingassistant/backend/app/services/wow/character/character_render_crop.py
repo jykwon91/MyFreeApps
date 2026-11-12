@@ -8,15 +8,17 @@ from io import BytesIO
 
 from PIL import Image, UnidentifiedImageError
 
-from app.core.wow_character import CHARACTER_RENDER_PADDING
+from app.core.wow_character import CHARACTER_RENDER_MAX_PIXELS, CHARACTER_RENDER_PADDING
 from app.services.wow.character.character_lookup_error import CharacterLookupError
 
 
 def crop_render(png: bytes) -> bytes:
     try:
         with Image.open(BytesIO(png)) as source:
+            if source.width * source.height > CHARACTER_RENDER_MAX_PIXELS:
+                raise CharacterLookupError(f"render is {source.width}x{source.height}, too big", status_code=200)
             image = source.convert("RGBA")
-    except (UnidentifiedImageError, OSError) as exc:
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError) as exc:
         raise CharacterLookupError("render is not an image", status_code=200) from exc
     box = image.getchannel("A").getbbox()
     if box is None:

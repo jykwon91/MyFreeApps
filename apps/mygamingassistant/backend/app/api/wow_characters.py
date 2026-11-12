@@ -31,6 +31,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/wow/characters", tags=["wow"])
 
 character_limiter = RateLimiter(max_attempts=CHARACTER_RATE_LIMIT, window_seconds=CHARACTER_RATE_WINDOW_SECONDS)
+# Its own budget: an uncached render is the sheet's Blizzard calls plus a download
+# and a crop, so unlimited it would bypass the sheet's limit.
+character_render_limiter = RateLimiter(
+    max_attempts=CHARACTER_RATE_LIMIT, window_seconds=CHARACTER_RATE_WINDOW_SECONDS,
+)
 
 CHARACTER_NOT_FOUND = "character_not_found"
 CHARACTER_RENDER_NOT_FOUND = "character_render_not_found"
@@ -65,10 +70,9 @@ async def get_character(slug: str, request: Request, response: Response) -> Char
 
 
 @router.get("/{slug}/render.png", response_class=Response)
-async def get_character_render(slug: str) -> Response:
-    # Not rate limited on its own: it rides the sheet's cached lookup, and
-    # an uncached one is the same Blizzard calls the sheet makes.
+async def get_character_render(slug: str, request: Request) -> Response:
     slug = _slug_or_400(slug)
+    check_with_retry_after(character_render_limiter, f"wow-character-render:{get_client_ip(request)}")
     try:
         png = await character_service.get_character_render(slug)
     except CharacterLookupError as exc:

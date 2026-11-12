@@ -6,12 +6,7 @@ import {
 } from "@/games/wow-forever/data/character/characterConfig";
 import type { CharacterItem } from "@/games/wow-forever/types/character/characterItem";
 import type { PaperDollSlot } from "@/games/wow-forever/types/character/paperDollSlot";
-
-/** What one paper-doll socket holds: the item, nothing, or the off hand a two-hander fills. */
-export type SlotContent =
-  | { kind: "item"; item: CharacterItem }
-  | { kind: "empty" }
-  | { kind: "two_hand" };
+import type { SlotContent } from "@/games/wow-forever/types/character/slotContent";
 
 export function itemsBySlot(items: readonly CharacterItem[]): ReadonlyMap<string, CharacterItem> {
   return new Map(items.map((item) => [item.slot, item]));

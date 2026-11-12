@@ -21,19 +21,19 @@ export default function CharacterItemDetails({ item }: { item: CharacterItem }) 
         </>
       ) : null}
       {item.armor ? <p>{item.armor}</p> : null}
-      {item.enchantments.map((line) => (
-        <p key={line} className={BONUS_LINE}>
+      {item.enchantments.map((line, i) => (
+        <p key={`${i}-${line}`} className={BONUS_LINE}>
           {line}
         </p>
       ))}
-      {item.spells.map((line) => (
-        <p key={line} className={BONUS_LINE}>
+      {item.spells.map((line, i) => (
+        <p key={`${i}-${line}`} className={BONUS_LINE}>
           {line}
         </p>
       ))}
       {item.set_name ? <p className={GOLD_LINE}>{item.set_name}</p> : null}
-      {item.requirements.map((line) => (
-        <p key={line}>{line}</p>
+      {item.requirements.map((line, i) => (
+        <p key={`${i}-${line}`}>{line}</p>
       ))}
       {item.durability ? <p className={clsx(item.durability_low && GOLD_LINE)}>{item.durability}</p> : null}
       <p className="text-muted-foreground">Item level {item.item_level}</p>

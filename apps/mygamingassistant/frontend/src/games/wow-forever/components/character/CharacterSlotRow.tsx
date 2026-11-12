@@ -4,10 +4,10 @@ import { ChevronDown } from "lucide-react";
 import CharacterItemDetails from "@/games/wow-forever/components/character/CharacterItemDetails";
 import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import { QUALITY_TEXT_CLASSES } from "@/games/wow-forever/data/itemQualityStyles";
-import type { SlotContent } from "@/games/wow-forever/lib/character/characterGear";
 import { characterItemQuality } from "@/games/wow-forever/lib/character/characterItemQuality";
 import { itemIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import type { PaperDollSlot } from "@/games/wow-forever/types/character/paperDollSlot";
+import type { SlotContent } from "@/games/wow-forever/types/character/slotContent";
 
 interface CharacterSlotRowProps {
   slot: PaperDollSlot;
@@ -53,8 +53,8 @@ export default function CharacterSlotRow({ slot, content }: CharacterSlotRowProp
           </span>
           {item.stats.length > 0 ? (
             <span className="flex flex-wrap gap-x-2 text-xs">
-              {item.stats.map((stat) => (
-                <span key={stat.text} className={clsx(stat.equip_bonus && "text-green-700 dark:text-green-400")}>
+              {item.stats.map((stat, i) => (
+                <span key={`${i}-${stat.text}`} className={clsx(stat.equip_bonus && "text-green-700 dark:text-green-400")}>
                   {stat.text}
                 </span>
               ))}

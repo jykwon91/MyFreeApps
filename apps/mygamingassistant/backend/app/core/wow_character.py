@@ -19,6 +19,8 @@ CHARACTER_MAX_RENDER_BYTES: Final = 8 * 1024 * 1024
 # while a page full of re-renders asks Blizzard once.
 CHARACTER_CACHE_SECONDS: Final = 300
 CHARACTER_CACHE_MAX_ENTRIES: Final = 500
+# Cropped renders are up to ~1 MB each, so fewer of them are kept.
+CHARACTER_RENDER_CACHE_MAX_ENTRIES: Final = 100
 
 # Each name is letters only (any alphabet), 2-24 long; the slug is both, lowercased, joined by "-".
 CHARACTER_SLUG_PATTERN: Final = re.compile(r"^[^\W\d_]{2,24}-[^\W\d_]{2,24}$")
@@ -28,8 +30,11 @@ CHARACTER_RENDER_HOST: Final = "render.worldofwarcraft.com"
 CHARACTER_RENDER_ASSET: Final = "main-raw"
 # Transparent margin kept around the cropped figure, as a share of its size.
 CHARACTER_RENDER_PADDING: Final = 0.06
+# Blizzard's render is 1600x1200; anything far bigger is refused before it is
+# decoded (a small PNG can inflate to gigabytes of pixels).
+CHARACTER_RENDER_MAX_PIXELS: Final = 3200 * 2400
 
-# Lookups per IP: each uncached one is three Blizzard calls.
+# Lookups per IP: each uncached one is up to four Blizzard calls (token, profile, media, equipment).
 CHARACTER_RATE_LIMIT: Final = 30
 CHARACTER_RATE_WINDOW_SECONDS: Final = 60
 

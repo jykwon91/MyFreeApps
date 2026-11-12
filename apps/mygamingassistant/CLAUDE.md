@@ -1001,8 +1001,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Backend: `app/api/wow_characters.py` — `GET /api/wow/characters/{slug}`
   (profile + equipment, mapped by `services/wow/character/character_mapper.py`)
   and `/{slug}/render.png` (Blizzard's `main-raw` render, fetched only from
-  `render.worldofwarcraft.com`, cropped to the figure with Pillow). Per-IP
-  limit 30/min, in-process 5-min caches (500 entries), `max-age=300`; errors
+  `render.worldofwarcraft.com`, refused over 3200x2400 px before decoding,
+  cropped to the figure with Pillow). Per-IP limit 30/min on each route
+  (separate budgets), in-process 5-min caches (500 profiles, 100 renders),
+  `max-age=300`; errors
   400 bad slug, 404 `character_not_found` / `character_render_not_found`,
   429, 502 `character_upstream_failed`. Constants `app/core/wow_character.py`.
   Shared Blizzard HTTP (`services/wow/blizzard/`: token cache, send, error

@@ -117,12 +117,18 @@ class BlizzardCharacterClient:
     async def equipment(self, slug: str) -> dict[str, Any] | None:
         return await self._optional_json(f"{slug}/equipment")
 
-    async def render(self, url: str) -> bytes:
-        """The render PNG — only from Blizzard's render host, over HTTPS."""
+    async def render(self, url: str) -> bytes | None:
+        """The render PNG — only from Blizzard's render host, over HTTPS (404 → None)."""
         parts = urlsplit(url)
         if parts.scheme != "https" or parts.hostname != CHARACTER_RENDER_HOST:
             raise CharacterLookupError(f"render URL is not on {CHARACTER_RENDER_HOST}")
-        response = await send(
-            self._client(), "GET", url, error_cls=CharacterLookupError, max_bytes=CHARACTER_MAX_RENDER_BYTES,
-        )
+        try:
+            response = await send(
+                self._client(), "GET", url, error_cls=CharacterLookupError, max_bytes=CHARACTER_MAX_RENDER_BYTES,
+            )
+        except CharacterLookupError as exc:
+            # The profile listed a render the render host doesn't have: no picture, not "no character".
+            if exc.status_code == httpx.codes.NOT_FOUND:
+                return None
+            raise
         return response.content

@@ -21,6 +21,8 @@ import pytest
 from httpx import AsyncClient
 from PIL import Image
 
+from app.api import wow_characters
+from app.core.rate_limit import RateLimiter
 from app.services.wow.blizzard.blizzard_token_cache import BlizzardTokenCache
 from app.services.wow.character import character_service
 from app.services.wow.character.blizzard_character_client import BlizzardCharacterClient
@@ -279,7 +281,24 @@ def test_an_unreadable_or_empty_render_is_an_error(png: bytes) -> None:
         crop_render(png)
 
 
+def test_a_render_far_bigger_than_blizzards_is_refused_before_decoding() -> None:
+    with pytest.raises(CharacterLookupError, match="too big"):
+        crop_render(_png(3300, 2400, None))
+
+
 # --- service + routes ---------------------------------------------------------
+
+
+async def test_a_render_the_render_host_doesnt_have_is_no_picture(monkeypatch: pytest.MonkeyPatch) -> None:
+    base = _blizzard()
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "render.worldofwarcraft.com":
+            return httpx.Response(404)
+        return base(request)
+
+    monkeypatch.setattr(character_service, "_new_client", lambda: _client(handle))
+    assert await character_service.get_character_render("jason-kwon") is None
 
 
 async def test_the_sheet_and_render_ask_blizzard_once(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -341,3 +360,12 @@ async def test_render_route_serves_the_png_or_404s(client: AsyncClient) -> None:
         resp = await client.get("/wow/characters/jason-kwon/render.png")
     assert resp.status_code == 404
     assert resp.json()["detail"] == "character_render_not_found"
+
+
+async def test_render_route_has_its_own_per_ip_limit(client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(wow_characters, "character_render_limiter", RateLimiter(max_attempts=1, window_seconds=60))
+    with patch.object(character_service, "get_character_render", AsyncMock(return_value=None)) as get:
+        first = await client.get("/wow/characters/jason-kwon/render.png")
+        second = await client.get("/wow/characters/jason-kwon/render.png")
+    assert (first.status_code, second.status_code) == (404, 429)
+    get.assert_awaited_once()
