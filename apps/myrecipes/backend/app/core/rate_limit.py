@@ -36,10 +36,12 @@ __all__ = [
     "totp_limiter",
     "register_limiter",
     "discovery_limiter",
+    "extract_limiter",
     "check_login_rate_limit",
     "check_register_rate_limit",
     "check_totp_rate_limit",
     "check_discovery_rate_limit",
+    "check_photo_import_rate_limit",
     "check_account_not_locked",
     "check_totp_account_not_locked",
     "verify_turnstile_token",
@@ -70,6 +72,12 @@ register_limiter = RateLimiter(max_attempts=5, window_seconds=3600)
 # far above normal browsing (a session is a handful of searches) and well
 # below what a script could burn unattended.
 discovery_limiter = RateLimiter(max_attempts=20, window_seconds=3600)
+
+# Per-IP photo-import throttle. Same reasoning as discovery: every
+# ``POST /recipes/extract`` is a paid Claude vision call, so this is a spend
+# ceiling. 20/hour covers importing a whole cookbook chapter in one sitting
+# and is well below what a script could burn unattended.
+extract_limiter = RateLimiter(max_attempts=20, window_seconds=3600)
 
 
 # ---------------------------------------------------------------------------
@@ -117,13 +125,23 @@ async def check_register_rate_limit(request: Request) -> None:
     register_limiter.check(get_client_ip(request))
 
 
-async def check_discovery_rate_limit(request: Request) -> None:
-    """Per-IP throttle on the paid web-discovery endpoints.
+async def _check_spend_limit(limiter: RateLimiter, request: Request) -> None:
+    """Per-IP throttle for endpoints that spend money at Anthropic.
 
     Raises HTTP 429 when the budget is exhausted. No DB write — there is no
     per-account audit dimension here, unlike the login throttle.
     """
-    discovery_limiter.check(get_client_ip(request))
+    limiter.check(get_client_ip(request))
+
+
+async def check_discovery_rate_limit(request: Request) -> None:
+    """Per-IP throttle on the paid web-discovery endpoints."""
+    await _check_spend_limit(discovery_limiter, request)
+
+
+async def check_photo_import_rate_limit(request: Request) -> None:
+    """Per-IP throttle on the paid photo-import (Claude vision) endpoint."""
+    await _check_spend_limit(extract_limiter, request)
 
 
 _check_totp_ip_limit = make_check_login_ip_limit(totp_limiter, extra_metadata={"gate": "totp"})
