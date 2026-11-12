@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { json } from "./mockResponse";
+import { json } from "@platform/ui/testing/mockResponse";
 import type { FlakyEndpoint } from "../types/flaky-endpoint";
 
 /**

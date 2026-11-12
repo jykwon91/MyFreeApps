@@ -12,7 +12,7 @@
  * with Try again showing it is busy, and the page must load once it succeeds.
  */
 import { test, expect } from "@playwright/test";
-import { json } from "./fixtures/mockResponse";
+import { json } from "@platform/ui/testing/mockResponse";
 import { ORG_ID, plantAuth, stubSignedInShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 

@@ -4,8 +4,8 @@
  * arrives. The loaded table holds five rows, matching the skeleton's five.
  */
 import { test, expect, type Locator } from "@playwright/test";
-import { json } from "./fixtures/mockResponse";
-import { stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/testing/mockResponse";
+import { stubSignedInShell } from "@platform/ui/testing/mockSession";
 import { mockApplication } from "./fixtures/mockData";
 
 const APPLICATIONS_ENDPOINT = /\/api\/applications(\?|$)/;

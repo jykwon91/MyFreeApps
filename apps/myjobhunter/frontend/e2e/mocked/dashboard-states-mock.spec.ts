@@ -4,8 +4,8 @@
  * the header counts only non-closed applications.
  */
 import { test, expect } from "@playwright/test";
-import { json } from "./fixtures/mockResponse";
-import { stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/testing/mockResponse";
+import { stubSignedInShell } from "@platform/ui/testing/mockSession";
 
 const KANBAN_ENDPOINT = /\/api\/applications\?view=kanban/;
 

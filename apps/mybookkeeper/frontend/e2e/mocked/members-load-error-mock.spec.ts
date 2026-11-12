@@ -11,7 +11,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgInvite";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
-import { json } from "./fixtures/mockResponse";
+import { json } from "@platform/ui/testing/mockResponse";
 import { ORG_ID, plantAuth, stubSignedInShell } from "./fixtures/mockSession";
 
 const MEMBER: OrgMember = {

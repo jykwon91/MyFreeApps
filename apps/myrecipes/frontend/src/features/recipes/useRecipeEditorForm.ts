@@ -1,10 +1,10 @@
 import { useState } from "react";
-import type {
-  EditableIngredientRow,
-  EditableStepRow,
-} from "@/features/recipes/editor-types";
-import type { IngredientInput } from "@myrecipes/api-client/types/recipe/ingredient";
-import type { StepInput } from "@myrecipes/api-client/types/recipe/step";
+import type { EditableIngredientRow } from "@myrecipes/api-client/types/recipe/editable-ingredient-row";
+import type { EditableStepRow } from "@myrecipes/api-client/types/recipe/editable-step-row";
+import type { DecimalSeparator } from "@myrecipes/api-client/types/recipe/decimal-separator";
+import { emptyIngredientRow, emptyStepRow } from "@myrecipes/api-client/utils/emptyRecipeRows";
+import { formatRecipeNumber } from "@myrecipes/api-client/utils/formatRecipeNumber";
+import { moveRow } from "@myrecipes/api-client/utils/moveRow";
 import type { RecipeExtractionDraft } from "@myrecipes/api-client/types/recipe/extraction";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 
@@ -13,11 +13,11 @@ function makeKey(): string {
 }
 
 function emptyIngredient(): EditableIngredientRow {
-  return { key: makeKey(), name: "", quantity: "", unit: "", note: "", lineageKey: null };
+  return emptyIngredientRow(makeKey());
 }
 
 function emptyStep(): EditableStepRow {
-  return { key: makeKey(), instruction: "" };
+  return emptyStepRow(makeKey());
 }
 
 /**
@@ -25,11 +25,11 @@ function emptyStep(): EditableStepRow {
  * so a tweak's diff tracks "same ingredient, changed". New (create) editors
  * start with one empty ingredient row and one empty step row.
  */
-function ingredientsFromVersion(version: VersionResponse): EditableIngredientRow[] {
+function ingredientsFromVersion(version: VersionResponse, decimalSeparator: DecimalSeparator): EditableIngredientRow[] {
   return version.ingredients.map((ing) => ({
     key: makeKey(),
     name: ing.name,
-    quantity: ing.quantity === null ? "" : String(ing.quantity),
+    quantity: formatRecipeNumber(ing.quantity, decimalSeparator),
     unit: ing.unit ?? "",
     note: ing.note ?? "",
     lineageKey: ing.lineage_key,
@@ -47,11 +47,12 @@ function stepsFromVersion(version: VersionResponse): EditableStepRow[] {
  */
 function ingredientsFromDraft(
   ingredients: RecipeExtractionDraft["ingredients"],
+  decimalSeparator: DecimalSeparator,
 ): EditableIngredientRow[] {
   return ingredients.map((ing) => ({
     key: makeKey(),
     name: ing.name,
-    quantity: ing.quantity === null ? "" : String(ing.quantity),
+    quantity: formatRecipeNumber(ing.quantity, decimalSeparator),
     unit: ing.unit ?? "",
     note: ing.note ?? "",
     lineageKey: null,
@@ -84,33 +85,20 @@ export interface RecipeEditorFormState {
   addStep: () => void;
   removeStep: (key: string) => void;
   moveStep: (key: string, direction: -1 | 1) => void;
-  /** Non-empty ingredient rows mapped to the API input shape. */
-  buildIngredients: () => IngredientInput[];
-  /** Non-empty step rows mapped to the API input shape. */
-  buildSteps: () => StepInput[];
-}
-
-function move<T extends { key: string }>(rows: T[], key: string, direction: -1 | 1): T[] {
-  const idx = rows.findIndex((r) => r.key === key);
-  if (idx < 0) return rows;
-  const target = idx + direction;
-  if (target < 0 || target >= rows.length) return rows;
-  const next = [...rows];
-  [next[idx], next[target]] = [next[target], next[idx]];
-  return next;
 }
 
 /**
  * Owns the editable ingredient/step row state for the recipe editor. The rows
  * are seeded from the `seed` argument: a base version (tweak, lineage keys
  * carried), an extracted draft (photo import, no lineage keys), or — when
- * absent (create) — one blank row of each.
+ * absent (create) — one blank row of each. Quantities are shown in `decimalSeparator`,
+ * the one the form reads them back in.
  */
-export function useRecipeEditorForm(seed?: EditorSeed): RecipeEditorFormState {
+export function useRecipeEditorForm(seed: EditorSeed | undefined, decimalSeparator: DecimalSeparator): RecipeEditorFormState {
   const { baseVersion, draft } = seed ?? {};
   const [ingredients, setIngredients] = useState<EditableIngredientRow[]>(() => {
-    if (baseVersion) return ingredientsFromVersion(baseVersion);
-    if (draft && draft.ingredients.length > 0) return ingredientsFromDraft(draft.ingredients);
+    if (baseVersion) return ingredientsFromVersion(baseVersion, decimalSeparator);
+    if (draft && draft.ingredients.length > 0) return ingredientsFromDraft(draft.ingredients, decimalSeparator);
     return [emptyIngredient()];
   });
   const [steps, setSteps] = useState<EditableStepRow[]>(() => {
@@ -131,28 +119,6 @@ export function useRecipeEditorForm(seed?: EditorSeed): RecipeEditorFormState {
     );
   }
 
-  function buildIngredients(): IngredientInput[] {
-    return ingredients
-      .filter((row) => row.name.trim().length > 0)
-      .map((row) => {
-        const quantity = row.quantity.trim();
-        const parsed = quantity === "" ? null : Number(quantity);
-        return {
-          name: row.name.trim(),
-          quantity: parsed !== null && Number.isFinite(parsed) ? parsed : null,
-          unit: row.unit.trim() || null,
-          note: row.note.trim() || null,
-          lineage_key: row.lineageKey,
-        };
-      });
-  }
-
-  function buildSteps(): StepInput[] {
-    return steps
-      .filter((row) => row.instruction.trim().length > 0)
-      .map((row) => ({ instruction: row.instruction.trim() }));
-  }
-
   return {
     ingredients,
     steps,
@@ -161,12 +127,10 @@ export function useRecipeEditorForm(seed?: EditorSeed): RecipeEditorFormState {
     removeIngredient: (key) =>
       setIngredients((prev) => prev.filter((row) => row.key !== key)),
     moveIngredient: (key, direction) =>
-      setIngredients((prev) => move(prev, key, direction)),
+      setIngredients((prev) => moveRow(prev, key, direction)),
     setStep,
     addStep: () => setSteps((prev) => [...prev, emptyStep()]),
     removeStep: (key) => setSteps((prev) => prev.filter((row) => row.key !== key)),
-    moveStep: (key, direction) => setSteps((prev) => move(prev, key, direction)),
-    buildIngredients,
-    buildSteps,
+    moveStep: (key, direction) => setSteps((prev) => moveRow(prev, key, direction)),
   };
 }

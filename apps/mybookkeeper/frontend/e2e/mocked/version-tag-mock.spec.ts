@@ -3,7 +3,7 @@
  * commit, so the "unknown" build can only be pinned with a mocked /version.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "./fixtures/mockResponse";
+import { json } from "@platform/ui/testing/mockResponse";
 import { VERSION_INFO, plantAuth, stubSignedInShell } from "./fixtures/mockSession";
 import type { VersionInfo } from "@/shared/types/version/version-info";
 

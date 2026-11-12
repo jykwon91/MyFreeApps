@@ -16,7 +16,7 @@
  * (empty) answer lands.
  */
 import { test, expect, type Locator, type Page } from "@playwright/test";
-import { json } from "./fixtures/mockResponse";
+import { json } from "@platform/ui/testing/mockResponse";
 import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 import { LISTING, LISTING_ID } from "./fixtures/mockListing";

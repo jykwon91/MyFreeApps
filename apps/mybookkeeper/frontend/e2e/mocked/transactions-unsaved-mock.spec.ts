@@ -16,7 +16,7 @@
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
 import { VERSION_INFO, ORG_ID, plantAuth } from "./fixtures/mockSession";
-import { json } from "./fixtures/mockResponse";
+import { json } from "@platform/ui/testing/mockResponse";
 
 const TXN_ID = "00000000-0000-0000-0000-0000000000a1";
 

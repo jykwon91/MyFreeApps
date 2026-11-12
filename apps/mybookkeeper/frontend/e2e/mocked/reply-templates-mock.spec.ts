@@ -19,7 +19,7 @@
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
 import { VERSION_INFO, ORG_ID, plantAuth } from "./fixtures/mockSession";
-import { json } from "./fixtures/mockResponse";
+import { json } from "@platform/ui/testing/mockResponse";
 
 interface FakeTemplate {
   id: string;
