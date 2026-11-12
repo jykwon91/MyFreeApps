@@ -1,3 +1,4 @@
+import recipeSpells from "@/games/wow-forever/data/character/recipeSpells.json";
 import {
   NO_PROFESSIONS_NOTE,
   NOT_A_RECIPE_SPELLS,
@@ -17,6 +18,9 @@ import { nodeColor } from "@/games/wow-forever/gathering/nodeColors";
 const GUIDE_BY_SKILL_LINE: ReadonlyMap<number, GuideProfession> = new Map(
   (Object.entries(PROFESSION_SKILL_LINES) as [GuideProfession, number][]).map(([guide, line]) => [line, guide]),
 );
+
+/** Blizzard's recipe id (the client's SkillLineAbility row) → the recipe spell our crafting files use. */
+const RECIPE_SPELLS: Readonly<Record<string, number>> = recipeSpells.spells;
 
 const CRAFTING: ReadonlySet<string> = new Set(Object.values(CRAFTING_PROFESSION));
 
@@ -42,9 +46,15 @@ function byName(a: CharacterRecipe, b: CharacterRecipe): number {
   return a.name.localeCompare(b.name);
 }
 
+/** The recipe spell behind a Blizzard recipe id, or null for one our data doesn't know. */
+export function recipeSpell(recipeId: number): number | null {
+  return RECIPE_SPELLS[String(recipeId)] ?? null;
+}
+
 /**
  * The known recipes grouped by colour at `skill` (orange first), each group
- * alphabetical. Recipes `lookup` doesn't have, and spells that aren't crafts
+ * alphabetical. `lookup` is keyed by recipe spell; each Blizzard recipe id is
+ * mapped to its spell first. Recipes `lookup` doesn't have, and spells that aren't crafts
  * (Disenchant), go in a last uncoloured group. No lookup = one uncoloured group.
  */
 export function groupKnownRecipes(
@@ -55,7 +65,8 @@ export function groupKnownRecipes(
   const byColor = new Map<SkillColor, CharacterRecipe[]>();
   const other: CharacterRecipe[] = [];
   for (const recipe of recipes) {
-    const data = NOT_A_RECIPE_SPELLS.has(recipe.id) ? undefined : lookup?.get(recipe.id);
+    const spell = recipeSpell(recipe.id);
+    const data = spell === null || NOT_A_RECIPE_SPELLS.has(spell) ? undefined : lookup?.get(spell);
     if (!data) {
       other.push(recipe);
       continue;

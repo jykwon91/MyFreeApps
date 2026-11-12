@@ -12,7 +12,13 @@ import { RECENT_CHARACTERS_STORAGE_KEY } from "@/games/wow-forever/data/characte
 import { CHARACTER_STATS_TAB_STORAGE_KEY } from "@/games/wow-forever/data/character/characterStatsConfig";
 import { CALCULATOR_ILLEGAL_REASON, CALCULATOR_UNKNOWN_REASON } from "@/games/wow-forever/data/character/characterTalentsConfig";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
-import { guideProfession, professionGuideHref, recipeColorAt } from "@/games/wow-forever/lib/character/characterProfessions";
+import {
+  groupKnownRecipes,
+  guideProfession,
+  professionGuideHref,
+  recipeColorAt,
+  recipeSpell,
+} from "@/games/wow-forever/lib/character/characterProfessions";
 import { pickedTalent } from "@/games/wow-forever/lib/character/characterTalents";
 import { characterNameFromSlug, characterSlugFromName } from "@/games/wow-forever/lib/character/characterSlug";
 import { withRecentCharacter } from "@/games/wow-forever/lib/character/recentCharacters";
@@ -143,10 +149,10 @@ const CHARACTER: CharacterResponse = {
         skill: 60,
         max_skill: 150,
         recipes: [
-          { id: 2963, name: "Bolt of Linen Cloth" },
-          { id: 3914, name: "Brown Linen Pants" },
-          { id: 2385, name: "Brown Linen Vest" },
-          { id: 3842, name: "Handstitched Linen Britches" },
+          { id: 2359, name: "Bolt of Linen Cloth" },
+          { id: 2408, name: "Brown Linen Pants" },
+          { id: 2361, name: "Brown Linen Vest" },
+          { id: 2380, name: "Handstitched Linen Britches" },
           { id: 999999, name: "Mystery Weave" },
         ],
       },
@@ -156,8 +162,8 @@ const CHARACTER: CharacterResponse = {
         skill: 30,
         max_skill: 75,
         recipes: [
-          { id: 13262, name: "Disenchant" },
-          { id: 7418, name: "Enchant Bracer - Minor Health" },
+          { id: 7316, name: "Disenchant" },
+          { id: 4289, name: "Enchant Bracer - Minor Health" },
         ],
       },
     ],
@@ -622,5 +628,18 @@ describe("the professions panel", () => {
     expect(guideProfession(197)).toBe("tailoring");
     expect(guideProfession(12345)).toBeNull();
     expect(professionGuideHref("enchanting", 128)).toBe("/wow-forever/professions?p=enchanting&skill=128");
+  });
+
+  it("reads Blizzard's recipe ids as SkillLineAbility rows, never as spells", () => {
+    // Live: Double-stitched Woolen Shoulders arrives as 2385, which is also Brown Linen Vest's spell.
+    expect(recipeSpell(2385)).toBe(3848);
+    expect(recipeSpell(2359)).toBe(2963);
+    expect(recipeSpell(999999)).toBeNull();
+    const lookup = new Map([
+      [2385, { yellow: 10, grey: 40 }],
+      [3848, { yellow: 120, grey: 160 }],
+    ]);
+    const groups = groupKnownRecipes([{ id: 2385, name: "Double-stitched Woolen Shoulders" }], 148, lookup);
+    expect(groups).toEqual([{ color: "green", recipes: [{ id: 2385, name: "Double-stitched Woolen Shoulders" }] }]);
   });
 });

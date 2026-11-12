@@ -90,13 +90,13 @@ function character() {
         {
           id: 197, name: "Tailoring", skill: 148, max_skill: 225,
           recipes: [
-            { id: 2963, name: "Bolt of Linen Cloth" }, { id: 3914, name: "Brown Linen Pants" },
-            { id: 3842, name: "Handstitched Linen Britches" },
+            { id: 2359, name: "Bolt of Linen Cloth" }, { id: 2408, name: "Brown Linen Pants" },
+            { id: 2380, name: "Handstitched Linen Britches" },
           ],
         },
         {
           id: 333, name: "Enchanting", skill: 128, max_skill: 225,
-          recipes: [{ id: 13262, name: "Disenchant" }, { id: 7418, name: "Enchant Bracer - Minor Health" }],
+          recipes: [{ id: 7316, name: "Disenchant" }, { id: 4289, name: "Enchant Bracer - Minor Health" }],
         },
       ],
       secondaries: [
