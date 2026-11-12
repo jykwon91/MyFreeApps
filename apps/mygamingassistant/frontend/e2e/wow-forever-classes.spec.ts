@@ -59,16 +59,19 @@ test("the mage class hub shows Mana resource and spellbook / downrank links", as
   await page.goto(MAGE);
   const resourceBadge = page.getByTestId("class-resource");
   await expect(resourceBadge).toHaveText(/Mana/);
+  // Scoped to the page body: the side menu has its own Spellbook and Downrank links.
+  const body = page.locator("main");
   // Spellbook link present.
-  await expect(page.getByRole("link", { name: /spellbook/i })).toBeVisible();
+  await expect(body.getByRole("link", { name: /spellbook/i })).toBeVisible();
   // Downrank link: mage has caster specs.
-  await expect(page.getByRole("link", { name: /downrank/i })).toBeVisible();
+  await expect(body.getByRole("link", { name: /downrank/i })).toBeVisible();
 });
 
 test("the warrior class hub does NOT show a downrank link", async ({ page }) => {
   await page.goto(WARRIOR);
-  // Warrior has no caster/healer specs — downrank is not useful.
-  await expect(page.getByRole("link", { name: /downrank/i })).toHaveCount(0);
+  // Warrior has no caster/healer specs — downrank is not useful. (The side menu's
+  // Downrank calculator link is outside main.)
+  await expect(page.locator("main").getByRole("link", { name: /downrank/i })).toHaveCount(0);
 });
 
 test("the class hub races section lists races with new-in-Forever combos marked", async ({ page }) => {
@@ -153,6 +156,9 @@ test("the classes index is a hub tile with an update dot until visited", async (
 
   await tile.click();
   await expect(page).toHaveURL(/\/wow-forever\/classes/);
+  // The lazy page must actually show before it counts as visited: the URL changes
+  // first, and going back before the page appears rightly leaves the dot.
+  await expect(page.getByRole("heading", { level: 1, name: "Classes" })).toBeVisible();
   // Visiting clears the dot.
   await page.goBack();
   await expect(tile.getByTestId("update-dot")).toHaveCount(0);
