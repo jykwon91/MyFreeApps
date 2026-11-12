@@ -3,19 +3,10 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { LoadingButton, showError } from "@platform/ui";
 import { useRetryPreparationMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
 import SuggestionProgressBar from "@/features/resume_refinement/SuggestionProgressBar";
-import {
-  SEVERITY_BADGE_CLASS,
-  SEVERITY_LABEL,
-} from "@/features/resume_refinement/improvement-target-labels";
-import type { ImprovementSeverity } from "@myjobhunter/api-client/types/resume-refinement/improvement-severity";
+import { SEVERITY_BADGE_CLASS } from "@/features/resume_refinement/improvement-target-labels";
+import { IMPROVEMENT_SEVERITY_LABELS } from "@myjobhunter/api-client/constants/improvementSeverityLabels";
+import { refinementPreparation } from "@myjobhunter/api-client/utils/refinementPreparation";
 import type { RefinementSession } from "@myjobhunter/api-client/types/resume-refinement/refinement-session";
-
-const SEVERITY_ORDER: ImprovementSeverity[] = [
-  "critical",
-  "high",
-  "medium",
-  "low",
-];
 
 interface SessionPreparingPanelProps {
   session: RefinementSession;
@@ -29,6 +20,7 @@ interface SessionPreparingPanelProps {
 // unknown.
 export default function SessionPreparingPanel({ session }: SessionPreparingPanelProps) {
   const [retryPreparation, retry] = useRetryPreparationMutation();
+  const preparation = refinementPreparation(session);
 
   async function handleRetry() {
     try {
@@ -38,7 +30,7 @@ export default function SessionPreparingPanel({ session }: SessionPreparingPanel
     }
   }
 
-  if (session.status === "failed") {
+  if (preparation.stage === "failed") {
     return (
       <section className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
         <header className="flex items-center gap-2" role="status" aria-live="polite">
@@ -64,11 +56,9 @@ export default function SessionPreparingPanel({ session }: SessionPreparingPanel
     );
   }
 
-  const targets = session.improvement_targets;
-
   // Critiquing: target count still unknown — prose + spinner, no
   // skeleton (there is no loaded structure to mirror yet).
-  if (targets === null) {
+  if (preparation.stage === "critiquing") {
     return (
       <section className="rounded-lg border border-border bg-card p-4 space-y-2">
         <header className="flex items-center gap-2" role="status" aria-live="polite">
@@ -85,8 +75,7 @@ export default function SessionPreparingPanel({ session }: SessionPreparingPanel
 
   // Drafting: targets known, proposals filling the cache behind the
   // existing poll. The session unlocks as soon as the first one lands.
-  const total = targets.length;
-  const ready = Math.min(session.proposals_ready_count, total);
+  const { total, ready, severities } = preparation;
   const plural = total === 1 ? "thing" : "things";
 
   return (
@@ -98,18 +87,14 @@ export default function SessionPreparingPanel({ session }: SessionPreparingPanel
         </h2>
       </header>
       <div className="flex flex-wrap gap-1.5">
-        {SEVERITY_ORDER.map((severity) => {
-          const count = targets.filter((t) => t.severity === severity).length;
-          if (count === 0) return null;
-          return (
-            <span
-              key={severity}
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${SEVERITY_BADGE_CLASS[severity]}`}
-            >
-              {count}× {SEVERITY_LABEL[severity]}
-            </span>
-          );
-        })}
+        {severities.map(({ severity, count }) => (
+          <span
+            key={severity}
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${SEVERITY_BADGE_CLASS[severity]}`}
+          >
+            {count}× {IMPROVEMENT_SEVERITY_LABELS[severity]}
+          </span>
+        ))}
       </div>
       <SuggestionProgressBar
         completed={ready}

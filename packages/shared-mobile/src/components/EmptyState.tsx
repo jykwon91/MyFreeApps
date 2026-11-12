@@ -31,7 +31,7 @@ export default function EmptyState({ heading, body, icon, action }: EmptyStatePr
         {body}
       </Text>
       {action ? (
-        <LoadingButton isLoading={action.isLoading} onPress={action.onPress}>
+        <LoadingButton isLoading={action.isLoading} loadingText={action.loadingText} onPress={action.onPress}>
           {action.label}
         </LoadingButton>
       ) : null}

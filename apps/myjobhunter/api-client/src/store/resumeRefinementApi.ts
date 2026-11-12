@@ -4,7 +4,7 @@ import type { RefinementSession } from "../types/resume-refinement/refinement-se
 
 const REFINEMENT_TAG = "RefinementSession";
 
-const resumeRefinementApi = baseApi
+export const resumeRefinementApi = baseApi
   .enhanceEndpoints({ addTagTypes: [REFINEMENT_TAG] })
   .injectEndpoints({
     endpoints: (build) => ({

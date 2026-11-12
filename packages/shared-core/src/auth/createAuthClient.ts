@@ -123,7 +123,7 @@ export function createAuthClient(store: AuthClientStore) {
      */
     signOut(): void {
       getPlatform().tokenStore.clear();
-      notifyAuthChange();
+      notifyAuthChange({ signedOut: true });
     },
 
     /**

@@ -1,5 +1,6 @@
 import { clearDownloadCopies, shareDownloadedFile, type ShareDownloadOptions } from "@platform/mobile";
 import { Directory, File, Paths } from "expo-file-system";
+import { DOCUMENT_FILES_DIRECTORY } from "../../constants/documentFiles";
 
 const PDF_MIME_TYPE = "application/pdf";
 const PDF_UTI = "com.adobe.pdf";
@@ -7,7 +8,7 @@ const CSV_MIME_TYPE = "text/csv";
 const CSV_UTI = "public.comma-separated-values-text";
 
 function documentFiles(): Directory {
-  return new Directory(Paths.cache, "documents");
+  return new Directory(Paths.cache, DOCUMENT_FILES_DIRECTORY);
 }
 
 /**

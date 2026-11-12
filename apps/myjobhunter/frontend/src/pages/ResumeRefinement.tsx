@@ -4,14 +4,11 @@ import SessionLoadErrorView from "@/features/resume_refinement/SessionLoadErrorV
 import SessionLoadingView from "@/features/resume_refinement/SessionLoadingView";
 import ActiveSessionView from "@/features/resume_refinement/ActiveSessionView";
 import { useGetRefinementSessionQuery } from "@myjobhunter/api-client/store/resumeRefinementApi";
-
-const ACTIVE_SESSION_KEY = "mjh:resumeRefinementSessionId";
-const POLL_INTERVAL_MS = 3000;
+import { REFINEMENT_POLL_INTERVAL_MS } from "@myjobhunter/api-client/constants/refinementPolling";
+import { forgetResumeSession, readStoredResumeSession, storeResumeSession } from "@/lib/resumeSessionStorage";
 
 export default function ResumeRefinement() {
-  const [sessionId, setSessionId] = useState<string | null>(() =>
-    typeof window !== "undefined" ? window.localStorage.getItem(ACTIVE_SESSION_KEY) : null,
-  );
+  const [sessionId, setSessionId] = useState<string | null>(readStoredResumeSession);
 
   // Polling is intentionally not stopped once the session is no
   // longer active — the data is stable post-completion so the cost
@@ -25,20 +22,16 @@ export default function ResumeRefinement() {
     error,
   } = useGetRefinementSessionQuery(sessionId ?? "", {
     skip: !sessionId,
-    pollingInterval: sessionId ? POLL_INTERVAL_MS : 0,
+    pollingInterval: sessionId ? REFINEMENT_POLL_INTERVAL_MS : 0,
   });
 
   function handleSessionStarted(id: string) {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(ACTIVE_SESSION_KEY, id);
-    }
+    storeResumeSession(id);
     setSessionId(id);
   }
 
   function handleStartNew() {
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(ACTIVE_SESSION_KEY);
-    }
+    forgetResumeSession();
     setSessionId(null);
   }
 

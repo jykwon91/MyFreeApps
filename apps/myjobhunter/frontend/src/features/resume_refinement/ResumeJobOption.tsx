@@ -1,3 +1,5 @@
+import { resumeJobFileName } from "@myjobhunter/api-client/utils/resumeJobFileName";
+import { resumeJobSummary } from "@myjobhunter/api-client/utils/resumeJobSummary";
 import type { ResumeUploadJob } from "@myjobhunter/api-client/types/resume-upload-job/resume-upload-job";
 
 interface ResumeJobOptionProps {
@@ -7,16 +9,6 @@ interface ResumeJobOptionProps {
 }
 
 export default function ResumeJobOption({ job, selected, onSelect }: ResumeJobOptionProps) {
-  const fields = job.result_parsed_fields;
-  const summary = fields
-    ? `${fields.work_history_count} role${fields.work_history_count === 1 ? "" : "s"}, ${fields.skills_count} skills`
-    : "Parsed resume";
-  const filename = job.file_filename ?? "resume";
-  const uploaded = new Date(job.created_at).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
   return (
     <button
       type="button"
@@ -25,9 +17,9 @@ export default function ResumeJobOption({ job, selected, onSelect }: ResumeJobOp
         selected ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
       }`}
     >
-      <div className="text-sm font-medium">{filename}</div>
+      <div className="text-sm font-medium">{resumeJobFileName(job)}</div>
       <div className="text-xs text-muted-foreground mt-0.5">
-        {summary} · uploaded {uploaded}
+        {resumeJobSummary(job)}
       </div>
     </button>
   );

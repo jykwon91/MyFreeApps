@@ -337,7 +337,6 @@
         "mobile/app/(app)/integrations/",
         "mobile/src/features/integrations/",
         "mobile/src/constants/integrations.ts",
-        "mobile/src/lib/useScreenFocused.ts",
         "mobile/src/utils/shortDateTime.ts",
         "api-client/src/hooks/useInvalidateOnExtractionComplete.ts",
         "api-client/src/constants/syncPolling.ts",

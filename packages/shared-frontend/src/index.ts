@@ -34,7 +34,7 @@ export { isRateLimitedError } from "./utils/isRateLimitedError";
 export { isUnverifiedLoginError } from "./utils/isUnverifiedLoginError";
 export { showError, showSuccess, subscribe } from "./lib/toast-store";
 export type { ToastEvent, ToastVariant } from "./lib/toast-store";
-export { notifyAuthChange, onIdentityChange, useIsAuthenticated } from "./lib/auth-store";
+export { notifyAuthChange, onAccountLeft, onIdentityChange, useIsAuthenticated } from "./lib/auth-store";
 export { readJwtPayload } from "./utils/readJwtPayload";
 export { tokenIdentity } from "./utils/tokenIdentity";
 export { baseApi } from "./store/baseApi";

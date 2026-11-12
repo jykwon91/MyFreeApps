@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import ConversationBubble from "@/features/resume_refinement/ConversationBubble";
 import SectionDivider from "@/features/resume_refinement/SectionDivider";
 import PendingEchoBubbles from "@/features/resume_refinement/PendingEchoBubbles";
-import { buildItems } from "@/features/resume_refinement/conversation-turn-render";
+import { conversationItems } from "@myjobhunter/api-client/utils/conversationItems";
 import type { RefinementTurn } from "@myjobhunter/api-client/types/resume-refinement/refinement-turn";
 
 interface ConversationHistoryProps {
@@ -38,7 +38,7 @@ export default function ConversationHistory({
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [turns.length, echoText]);
 
-  const items = buildItems(turns);
+  const items = conversationItems(turns);
   if (items.length === 0 && !pendingUserEcho) return null;
 
   return (

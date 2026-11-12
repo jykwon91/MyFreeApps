@@ -1,8 +1,6 @@
 import { timeAgo } from "@platform/ui";
-import {
-  isUserRole,
-  renderTurnBody,
-} from "@/features/resume_refinement/conversation-turn-render";
+import { isUserRefinementRole } from "@myjobhunter/api-client/utils/isUserRefinementRole";
+import { refinementTurnBody } from "@myjobhunter/api-client/utils/refinementTurnBody";
 import type { RefinementTurn } from "@myjobhunter/api-client/types/resume-refinement/refinement-turn";
 
 interface ConversationBubbleProps {
@@ -12,10 +10,10 @@ interface ConversationBubbleProps {
 // One transcript bubble: user bubbles right with a flat top-right
 // corner, AI bubbles left with a flat top-left corner.
 export default function ConversationBubble({ turn }: ConversationBubbleProps) {
-  const body = renderTurnBody(turn);
+  const body = refinementTurnBody(turn);
   if (body === null) return null;
 
-  const isUser = isUserRole(turn.role);
+  const isUser = isUserRefinementRole(turn.role);
   const wrapperClass = isUser ? "flex justify-end" : "flex justify-start";
   const bubbleClass = isUser
     ? "rounded-2xl rounded-tr-sm bg-primary/10 border border-primary/20 px-3 py-2 text-sm text-foreground whitespace-pre-wrap break-words"

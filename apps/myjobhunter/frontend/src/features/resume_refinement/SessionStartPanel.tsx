@@ -10,6 +10,7 @@ import {
 } from "@platform/ui";
 import { useListResumeJobsQuery } from "@myjobhunter/api-client/store/resumesApi";
 import { useStartRefinementSessionMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
+import { completedResumeJobs } from "@myjobhunter/api-client/utils/completedResumeJobs";
 import ResumeJobOption from "@/features/resume_refinement/ResumeJobOption";
 
 interface SessionStartPanelProps {
@@ -22,7 +23,7 @@ export default function SessionStartPanel({ onSessionStarted }: SessionStartPane
   const [startSession, { isLoading: isStarting }] = useStartRefinementSessionMutation();
   const [picked, setPicked] = useState<string | null>(null);
 
-  const completedJobs = (jobs ?? []).filter((j) => j.status === "complete");
+  const completedJobs = completedResumeJobs(jobs);
 
   if (isLoading) {
     return (

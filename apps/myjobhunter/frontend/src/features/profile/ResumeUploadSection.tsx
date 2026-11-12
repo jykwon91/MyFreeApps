@@ -9,32 +9,25 @@ import {
   useListResumeJobsQuery,
   useLazyGetResumeDownloadUrlQuery,
 } from "@myjobhunter/api-client/store/resumesApi";
+import { RESUME_JOBS_POLL_INTERVAL_MS } from "@myjobhunter/api-client/constants/resumeJobsPolling";
+import {
+  RESUME_UPLOAD_EXTENSIONS,
+  RESUME_UPLOAD_MAX_BYTES,
+  RESUME_UPLOAD_MIME_TYPES,
+} from "@myjobhunter/api-client/constants/resumeUploadLimits";
 
-// Accepted MIME types — must match the backend allowlist in resume_validator.py
-const ACCEPTED_RESUME_TYPES =
-  "application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,text/plain,.txt";
-
-// 25 MB — must match settings.max_resume_upload_bytes on the backend
-const MAX_RESUME_BYTES = 25 * 1024 * 1024;
-
-// Poll the list every 5s while the component is mounted so a row
-// transitions queued → processing → complete without the operator
-// having to refresh. RTK Query stops the timer on unmount.
-//
-// 5s is a deliberate compromise: fast enough that the first visible
-// status flip happens within a normal pause, slow enough that an
-// open Profile tab burns ~12 lightweight requests/minute (a list
-// endpoint, sub-1KB response). Conditional "only poll while in-flight"
-// was the previous shape — readability wasn't worth the saved polls.
-const POLL_INTERVAL_MS = 5000;
+// Every resume type, by content type and by extension, so the browser's picker offers them all.
+const ACCEPTED_RESUME_TYPES = [...RESUME_UPLOAD_MIME_TYPES, ...RESUME_UPLOAD_EXTENSIONS].join(",");
 
 export interface ResumeUploadSectionProps {
   profileId: string;
 }
 
 export default function ResumeUploadSection({ profileId: _profileId }: ResumeUploadSectionProps) {
+  // Re-read every few seconds while mounted, so a row moves from queued to complete without a
+  // refresh; RTK Query stops the timer on unmount.
   const { data: jobs, isLoading } = useListResumeJobsQuery(undefined, {
-    pollingInterval: POLL_INTERVAL_MS,
+    pollingInterval: RESUME_JOBS_POLL_INTERVAL_MS,
   });
 
   const [uploadResume, { isLoading: isUploading }] = useUploadResumeMutation();
@@ -84,7 +77,7 @@ export default function ResumeUploadSection({ profileId: _profileId }: ResumeUpl
       <FileUploadDropzone
         onFilesSelected={(files) => void handleFilesSelected(files)}
         accept={ACCEPTED_RESUME_TYPES}
-        maxSizeBytes={MAX_RESUME_BYTES}
+        maxSizeBytes={RESUME_UPLOAD_MAX_BYTES}
         uploading={isUploading}
         label="Drop your resume here or click to browse"
         helperText="PDF, DOCX, or plain text · max 25 MB"

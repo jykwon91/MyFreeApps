@@ -8,7 +8,13 @@ import {
 } from "@platform/ui";
 import api from "@/lib/api";
 import { useCompleteRefinementSessionMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
-import { ExportFormat } from "@/features/resume_refinement/export-format";
+import { ExportFormat } from "@myjobhunter/api-client/types/resume-refinement/export-format";
+import { RESUME_EXPORT_MIME_TYPES } from "@myjobhunter/api-client/constants/resumeExportMimeTypes";
+import { REFINEMENT_COMPLETION_COPY } from "@myjobhunter/api-client/constants/refinementCompletionCopy";
+import { REFINEMENT_TOASTS } from "@myjobhunter/api-client/constants/refinementToasts";
+import { refinementCompletion } from "@myjobhunter/api-client/utils/refinementCompletion";
+import { resumeExportFileName } from "@myjobhunter/api-client/utils/resumeExportFileName";
+import { resumeExportPath } from "@myjobhunter/api-client/utils/resumeExportPath";
 import type { RefinementSession } from "@myjobhunter/api-client/types/resume-refinement/refinement-session";
 
 interface CompletePanelProps {
@@ -16,24 +22,21 @@ interface CompletePanelProps {
 }
 
 export default function CompletePanel({ session }: CompletePanelProps) {
-  const targets = session.improvement_targets ?? [];
-  const reachedEnd = session.target_index >= targets.length;
-  const isCompleted = session.status === "completed";
-  // Critique found nothing to change — still a legitimately "done"
-  // resume, but the copy shouldn't claim the user reviewed anything.
-  const isEmpty = !isCompleted && targets.length === 0;
+  const completion = refinementCompletion(session);
+  const isCompleted = completion === "completed";
 
   const [completeSession, { isLoading: isCompleting }] = useCompleteRefinementSessionMutation();
   const [downloading, setDownloading] = useState<ExportFormat | null>(null);
 
-  if (!reachedEnd && !isCompleted) {
+  if (completion === "hidden") {
     return null;
   }
+  const { heading, body } = REFINEMENT_COMPLETION_COPY[completion];
 
   async function handleComplete() {
     try {
       await completeSession(session.id).unwrap();
-      showSuccess("Resume marked done. Download a copy below.");
+      showSuccess(REFINEMENT_TOASTS.markedDone);
     } catch (err) {
       showError(extractErrorMessage(err));
     }
@@ -42,23 +45,14 @@ export default function CompletePanel({ session }: CompletePanelProps) {
   async function handleDownload(fmt: ExportFormat) {
     setDownloading(fmt);
     try {
-      const response = await api.get(
-        `/resume-refinement/sessions/${session.id}/export`,
-        {
-          params: { format: fmt },
-          responseType: "blob",
-        }
-      );
-      const blob = new Blob([response.data], {
-        type:
-          fmt === ExportFormat.PDF
-            ? "application/pdf"
-            : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      const response = await api.get(resumeExportPath(session.id, fmt), {
+        responseType: "blob",
       });
+      const blob = new Blob([response.data], { type: RESUME_EXPORT_MIME_TYPES[fmt] });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `resume.${fmt}`;
+      link.download = resumeExportFileName(fmt);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -68,18 +62,6 @@ export default function CompletePanel({ session }: CompletePanelProps) {
     } finally {
       setDownloading(null);
     }
-  }
-
-  let heading = "All targets reviewed";
-  let body =
-    "You've gone through every suggestion. Mark the session done to lock the draft, then download.";
-  if (isCompleted) {
-    heading = "All done";
-    body = "Your refined resume is ready to download in either format.";
-  } else if (isEmpty) {
-    heading = "Nothing to flag";
-    body =
-      "We reviewed your draft and didn't find anything worth changing this pass. Mark it done as-is, or make some edits elsewhere and start a fresh session.";
   }
 
   return (
