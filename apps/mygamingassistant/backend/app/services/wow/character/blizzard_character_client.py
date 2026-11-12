@@ -145,6 +145,12 @@ class BlizzardCharacterClient:
     async def achievement_statistics(self, slug: str) -> dict[str, Any] | None:
         return await self._optional_json(f"{slug}/achievements/statistics")
 
+    async def mounts(self, slug: str) -> dict[str, Any] | None:
+        return await self._optional_json(f"{slug}/collections/mounts")
+
+    async def pets(self, slug: str) -> dict[str, Any] | None:
+        return await self._optional_json(f"{slug}/collections/pets")
+
     async def render(self, url: str) -> bytes | None:
         """The render PNG — only from Blizzard's render host, over HTTPS (404 → None)."""
         parts = urlsplit(url)

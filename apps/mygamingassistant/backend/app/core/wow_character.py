@@ -34,7 +34,7 @@ CHARACTER_RENDER_PADDING: Final = 0.06
 # decoded (a small PNG can inflate to gigabytes of pixels).
 CHARACTER_RENDER_MAX_PIXELS: Final = 3200 * 2400
 
-# Lookups per IP: each uncached one is up to ten Blizzard calls (token, profile, media, equipment and the
+# Lookups per IP: each uncached one is up to twelve Blizzard calls (token, profile, media, equipment and the
 # optional parts).
 CHARACTER_RATE_LIMIT: Final = 30
 CHARACTER_RATE_WINDOW_SECONDS: Final = 60

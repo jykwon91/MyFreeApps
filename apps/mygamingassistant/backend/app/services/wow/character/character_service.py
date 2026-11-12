@@ -46,6 +46,8 @@ _OPTIONAL_PARTS: Final[dict[str, tuple[str, _Fetch]]] = {
     "reputations": ("reputations", BlizzardCharacterClient.reputations),
     "pvp_summary": ("PvP summary", BlizzardCharacterClient.pvp_summary),
     "achievement_statistics": ("achievement statistics", BlizzardCharacterClient.achievement_statistics),
+    "mounts": ("mounts", BlizzardCharacterClient.mounts),
+    "pets": ("pets", BlizzardCharacterClient.pets),
 }
 # Parts Blizzard 404s when the character simply has none yet (no talent spent, no
 # profession learned, no faction met…): that is an empty answer, not a failure.

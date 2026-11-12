@@ -1,4 +1,5 @@
 import { PVP_FAILED_SUMMARY, PVP_RANK_SOURCE_NOTE, PVP_UNRANKED_LABEL } from "@/games/wow-forever/data/character/characterPvpConfig";
+import { formatCount } from "@/games/wow-forever/lib/character/formatCount";
 import { formatWhole } from "@/games/wow-forever/lib/character/formatWhole";
 import type { CharacterPvp } from "@/games/wow-forever/types/character/characterPvp";
 import type { CharacterStatLine } from "@/games/wow-forever/types/character/characterStatLine";
@@ -11,8 +12,7 @@ export function pvpRankLabel(rank: number): string {
 
 /** "21 honorable kills" / "1 honorable kill". */
 export function formatHonorableKills(count: number): string {
-  const noun = count === 1 ? "honorable kill" : "honorable kills";
-  return `${formatWhole(count)} ${noun}`;
+  return formatCount(count, "honorable kill", "honorable kills");
 }
 
 /** The closed section's line: "Unranked · 21 honorable kills". */

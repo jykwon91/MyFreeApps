@@ -33,6 +33,7 @@ from app.services.wow.character.character_render_crop import crop_render
 from app.services.wow.character.character_slug import normalize_character_slug
 from app.services.wow.character.character_stats_mapper import to_character_stats
 from app.services.wow.character.character_professions_mapper import to_character_professions
+from app.services.wow.character.character_collections_mapper import to_character_collections
 from app.services.wow.character.character_pvp_mapper import to_character_pvp
 from app.services.wow.character.character_reputations_mapper import to_character_reputations
 from app.services.wow.character.character_talents_mapper import to_character_talents
@@ -204,6 +205,18 @@ ACHIEVEMENT_STATISTICS = {
     ],
 }
 
+# Shaped like Blizzard's (the live answers for jason-kwon, links trimmed).
+MOUNTS = {"mounts": [
+    {"mount": {"name": "Veteran Adventurer's Loyal Companion", "id": 3130}, "is_useable": True},
+    {"mount": {"name": "Cerulean Prideclaw", "id": 3111}, "is_useable": True},
+]}
+PETS = {"pets": [
+    {"species": {"name": "Pachimari", "id": 5138}, "level": 1, "id": 1820928},
+    {"species": {"name": "Mini Diablo", "id": 5161}, "level": 1, "id": 1820927},
+    {"species": {"name": "Pachimari", "id": 5138}, "level": 1, "id": 1820930},
+    {"species": {"name": "", "id": 9}, "level": 1, "id": 1},
+]}
+
 Handler = Callable[[httpx.Request], httpx.Response]
 
 
@@ -235,6 +248,8 @@ def _blizzard(
         "/profile/wow/character/jason-kwon/reputations": _json(REPUTATIONS),
         "/profile/wow/character/jason-kwon/pvp-summary": _json(PVP_SUMMARY),
         "/profile/wow/character/jason-kwon/achievements/statistics": _json(ACHIEVEMENT_STATISTICS),
+        "/profile/wow/character/jason-kwon/collections/mounts": _json(MOUNTS),
+        "/profile/wow/character/jason-kwon/collections/pets": _json(PETS),
         **(answers or {}),
     }
 
@@ -352,7 +367,7 @@ def test_missing_credentials_fail_before_any_request() -> None:
 
 
 def test_the_sheet_keeps_the_games_own_tooltip_lines() -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS, professions=PROFESSIONS, reputations=REPUTATIONS, pvp_summary=PVP_SUMMARY, achievement_statistics=ACHIEVEMENT_STATISTICS))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS, professions=PROFESSIONS, reputations=REPUTATIONS, pvp_summary=PVP_SUMMARY, achievement_statistics=ACHIEVEMENT_STATISTICS, mounts=MOUNTS, pets=PETS))
     assert (sheet.name, sheet.surname, sheet.level, sheet.race, sheet.class_name) == ("Jason", "Kwon", 37, "Gnome", "Warlock")
     assert (sheet.faction, sheet.guild, sheet.ruleset, sheet.has_render) == ("alliance", "Tinker Town", "PvP", True)
     assert sheet.last_login is not None and sheet.last_login.year == 2026
@@ -370,7 +385,7 @@ def test_the_sheet_keeps_the_games_own_tooltip_lines() -> None:
 
 
 def test_a_character_without_media_or_gear_has_an_empty_sheet() -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=None, equipment=None, statistics=None, specializations=None, professions=None, reputations=None, pvp_summary=None, achievement_statistics=None))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=None, equipment=None, statistics=None, specializations=None, professions=None, reputations=None, pvp_summary=None, achievement_statistics=None, mounts=None, pets=None))
     assert sheet.has_render is False
     assert sheet.items == []
 
@@ -466,13 +481,13 @@ async def test_the_sheet_and_render_ask_blizzard_once(monkeypatch: pytest.Monkey
     assert render is not None and Image.open(BytesIO(render)).size[0] < 400
     api_calls = [r.url.path for r in seen if r.url.host == "us.api.blizzard.com"]
     # profile, media, equipment, statistics, specializations, professions, reputations, pvp-summary,
-    # achievements/statistics
-    assert len(api_calls) == 9
+    # achievements/statistics, collections/mounts, collections/pets
+    assert len(api_calls) == 11
     assert [r.url.host for r in seen].count("render.worldofwarcraft.com") == 1
 
 
 async def test_route_returns_the_sheet(client: AsyncClient) -> None:
-    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS, professions=PROFESSIONS, reputations=REPUTATIONS, pvp_summary=PVP_SUMMARY, achievement_statistics=ACHIEVEMENT_STATISTICS))
+    sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS, professions=PROFESSIONS, reputations=REPUTATIONS, pvp_summary=PVP_SUMMARY, achievement_statistics=ACHIEVEMENT_STATISTICS, mounts=MOUNTS, pets=PETS))
     with patch.object(character_service, "get_character", AsyncMock(return_value=sheet)) as get:
         resp = await client.get("/wow/characters/Jason-Kwon")
     assert resp.status_code == 200
@@ -729,3 +744,36 @@ async def test_a_character_blizzard_has_no_pvp_summary_for_has_zeros_and_is_cach
     await character_service.get_character("jason-kwon")
     profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
     assert len(profile_calls) == 1
+
+
+def test_collections_are_alphabetical_with_duplicate_pets_counted() -> None:
+    collections = to_character_collections(MOUNTS, PETS)
+    assert collections.mounts is not None and collections.pets is not None
+    assert [m.name for m in collections.mounts] == ["Cerulean Prideclaw", "Veteran Adventurer's Loyal Companion"]
+    assert [(p.name, p.count) for p in collections.pets] == [("Mini Diablo", 1), ("Pachimari", 2)]
+    empty = to_character_collections({}, None)
+    assert empty.mounts == [] and empty.pets is None
+
+
+async def test_a_pets_failure_keeps_the_mounts_and_is_not_cached(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    seen: list[httpx.Request] = []
+    failing = {"/profile/wow/character/jason-kwon/collections/pets": _json({"code": 503}, 503)}
+    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
+    sheet = await character_service.get_character("jason-kwon")
+    assert sheet.collections.pets is None
+    assert sheet.collections.mounts is not None and len(sheet.collections.mounts) == 2
+    assert "Character pets unavailable" in caplog.text
+    await character_service.get_character("jason-kwon")
+    assert len([r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]) == 2
+
+
+async def test_a_character_with_no_collections_has_empty_lists(monkeypatch: pytest.MonkeyPatch) -> None:
+    missing = {
+        "/profile/wow/character/jason-kwon/collections/mounts": _json({"code": 404}, 404),
+        "/profile/wow/character/jason-kwon/collections/pets": _json({"code": 404}, 404),
+    }
+    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing)))
+    sheet = await character_service.get_character("jason-kwon")
+    assert sheet.collections.mounts == [] and sheet.collections.pets == []

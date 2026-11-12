@@ -16,6 +16,7 @@ from app.schemas.wow.character.character_item import CharacterItem
 from app.schemas.wow.character.character_item_stat import CharacterItemStat
 from app.schemas.wow.character.character_item_weapon import CharacterItemWeapon
 from app.schemas.wow.character.character_response import CharacterResponse
+from app.services.wow.character.character_collections_mapper import to_character_collections
 from app.services.wow.character.character_json import as_dict, as_int, as_list, as_str, name_of
 from app.services.wow.character.character_profile import CharacterProfile
 from app.services.wow.character.character_stats_mapper import to_character_stats
@@ -135,4 +136,5 @@ def to_character_response(slug: str, data: CharacterProfile) -> CharacterRespons
         professions=to_character_professions(data.professions),
         reputations=to_character_reputations(data.reputations),
         pvp=to_character_pvp(data.pvp_summary, data.achievement_statistics),
+        collections=to_character_collections(data.mounts, data.pets),
     )

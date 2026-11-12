@@ -1005,10 +1005,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Profile API serves Forever characters at `/profile/wow/character/{first-surname}`
   (namespace `profile-forever-us`, US only) with the app's client token.
 - Backend: `app/api/wow_characters.py` — `GET /api/wow/characters/{slug}`
-  (profile + equipment + statistics + specializations + professions + reputations + pvp-summary + achievements/statistics, mapped by `services/wow/character/character_mapper.py`;
+  (profile + equipment + statistics + specializations + professions + reputations + pvp-summary + achievements/statistics + collections/mounts + collections/pets, mapped by `services/wow/character/character_mapper.py`;
   `stats` by `character_stats_mapper.py`, `talents` by `character_talents_mapper.py`,
   `professions` by `character_professions_mapper.py`, `reputations` by `character_reputations_mapper.py`,
-  `pvp` by `character_pvp_mapper.py`)
+  `pvp` by `character_pvp_mapper.py`, `collections` by `character_collections_mapper.py`)
   and `/{slug}/render.png` (Blizzard's `main-raw` render, fetched only from
   `render.worldofwarcraft.com`, refused over 3200x2400 px before decoding,
   cropped to the figure with Pillow). Per-IP limit 30/min on each route
@@ -1096,6 +1096,13 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   list), never 0. Rank shows "Rank N" with no title until a ranked Forever
   character shows its scale. `pvp: null` = the summary call failed (logged, not
   cached); 404s = zeros. Empty-section notes use `CharacterSectionNote`.
+
+- Collections (`CharacterCollectionsPanel`, `lib/character/characterCollections.ts`),
+  after PvP and closed by default ("2 mounts, 4 pets"): names only, A–Z, one
+  line per mount or pet species ("Pachimari ×2" when learned twice). Blizzard
+  may share these account-wide, so they are never compared between guild
+  members. `collections.mounts` / `.pets` null = that call failed (logged, not
+  cached, the other list still shows); a 404 = none (empty list).
 
 #### In-game icons (`GameIcon`)
 

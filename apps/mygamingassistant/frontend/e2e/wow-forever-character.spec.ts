@@ -119,6 +119,16 @@ function character() {
       top_honor_continent: "Eastern Kingdoms",
       top_honor_continent_kills: 17,
     },
+    collections: {
+      mounts: [
+        { id: 3111, name: "Cerulean Prideclaw", count: 1 },
+        { id: 3130, name: "Veteran Adventurer's Loyal Companion", count: 1 },
+      ],
+      pets: [
+        { id: 5161, name: "Mini Diablo", count: 1 },
+        { id: 5138, name: "Pachimari", count: 2 },
+      ],
+    },
   };
 }
 
@@ -190,6 +200,7 @@ test("skeleton while Blizzard answers, then the sheet in the same places", async
   await expect(skeleton.getByTestId("character-talents-skeleton")).toBeVisible();
   await expect(skeleton.getByTestId("character-reputations-skeleton")).toBeVisible();
   await expect(skeleton.getByTestId("character-pvp-skeleton")).toBeVisible();
+  await expect(skeleton.getByTestId("character-collections-skeleton")).toBeVisible();
   const skeletonBox = await skeleton.boundingBox();
 
   release();
@@ -294,6 +305,18 @@ test("the PvP section starts closed with rank and kills, and opens to deaths to 
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await expect(panel.getByTestId("character-pvp-kills")).toContainText("Most in Eastern Kingdoms (17)");
   await expect(panel).toContainText("Deaths to players");
+});
+
+test("collections start closed with counts, and open to mounts and pets by name", async ({ page }) => {
+  await stubCharacter(page);
+  await page.goto("/wow-forever/character/jason-kwon");
+  const panel = page.getByRole("region", { name: "Collections" });
+  const toggle = panel.getByRole("button", { name: /Collections/ });
+  await expect(toggle).toContainText("2 mounts, 2 pets");
+  await expect(panel.getByRole("list", { name: "Mounts" })).toBeHidden();
+  await toggle.click();
+  await expect(panel.getByRole("list", { name: "Mounts" }).locator("li")).toHaveCount(2);
+  await expect(panel.getByRole("list", { name: "Pets" })).toContainText("Pachimari ×2");
 });
 
 test("a PvP failure keeps the rest of the sheet", async ({ page }) => {

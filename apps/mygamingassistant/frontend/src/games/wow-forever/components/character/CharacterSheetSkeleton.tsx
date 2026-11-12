@@ -9,7 +9,7 @@ const WEAPON_ROWS = 3;
 const STAT_ROWS = 7;
 const STAT_TAB_ROWS = 6;
 
-/** The character sheet's shape while Blizzard answers: header, picture between two slot columns, weapons, stats, professions, reputation, talents, PvP (closed). */
+/** The character sheet's shape while Blizzard answers: header, picture between two slot columns, weapons, stats, professions, reputation, talents, PvP and collections (closed). */
 export default function CharacterSheetSkeleton() {
   return (
     <div className="space-y-4" aria-busy="true" aria-label="Loading the character" data-testid="character-sheet-skeleton">
@@ -50,6 +50,7 @@ export default function CharacterSheetSkeleton() {
         <CharacterTalentsSkeleton />
       </div>
       <CharacterCollapsedSkeleton testId="character-pvp-skeleton" />
+      <CharacterCollapsedSkeleton testId="character-collections-skeleton" />
     </div>
   );
 }

@@ -3,6 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.schemas.wow.character.character_collections import CharacterCollections
 from app.schemas.wow.character.character_item import CharacterItem
 from app.schemas.wow.character.character_professions import CharacterProfessions
 from app.schemas.wow.character.character_pvp import CharacterPvp
@@ -39,3 +40,5 @@ class CharacterResponse(BaseModel):
     reputations: list[CharacterReputation] | None
     # None when Blizzard failed to send the PvP summary (the rest of the sheet still shows).
     pvp: CharacterPvp | None
+    # Mounts and pets; each list None when Blizzard failed to send it.
+    collections: CharacterCollections

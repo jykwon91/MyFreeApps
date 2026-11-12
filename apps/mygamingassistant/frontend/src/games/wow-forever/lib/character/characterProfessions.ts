@@ -1,3 +1,4 @@
+import { formatCount } from "@/games/wow-forever/lib/character/formatCount";
 import recipeSpells from "@/games/wow-forever/data/character/recipeSpells.json";
 import {
   NO_PROFESSIONS_NOTE,
@@ -103,8 +104,7 @@ export function hasRecipeList(recipes: readonly CharacterRecipe[]): boolean {
 
 /** "38 recipes known" / "1 recipe known". */
 export function formatRecipeCount(count: number): string {
-  const noun = count === 1 ? "recipe" : "recipes";
-  return `${count} ${noun} known`;
+  return `${formatCount(count, "recipe", "recipes")} known`;
 }
 
 /** How far the skill is toward its rank's cap, 0-100, for the bar. */

@@ -20,6 +20,7 @@ import {
   recipeColorAt,
   recipeSpell,
 } from "@/games/wow-forever/lib/character/characterProfessions";
+import { collectionsSummary } from "@/games/wow-forever/lib/character/characterCollections";
 import { pvpRankLabel, pvpSummary } from "@/games/wow-forever/lib/character/characterPvp";
 import { groupReputations, standingPercent } from "@/games/wow-forever/lib/character/characterReputation";
 import { pickedTalent } from "@/games/wow-forever/lib/character/characterTalents";
@@ -201,6 +202,16 @@ const CHARACTER: CharacterResponse = {
     deaths_from_opposite_faction: 30,
     top_honor_continent: "Eastern Kingdoms",
     top_honor_continent_kills: 17,
+  },
+  collections: {
+    mounts: [
+      { id: 3111, name: "Cerulean Prideclaw", count: 1 },
+      { id: 3130, name: "Veteran Adventurer's Loyal Companion", count: 1 },
+    ],
+    pets: [
+      { id: 5161, name: "Mini Diablo", count: 1 },
+      { id: 5138, name: "Pachimari", count: 2 },
+    ],
   },
 };
 
@@ -802,5 +813,40 @@ describe("WowCharacterPage PvP", () => {
     expect(pvpRankLabel(0)).toBe("Unranked");
     expect(pvpRankLabel(3)).toBe("Rank 3");
     expect(pvpSummary({ ...CHARACTER.pvp!, rank: 2, honorable_kills: 1 })).toBe("Rank 2 · 1 honorable kill");
+  });
+});
+
+describe("WowCharacterPage collections", () => {
+  function collectionsFor(data: CharacterResponse) {
+    mockQuery.mockReturnValue(query({ data }));
+    renderAt("/wow-forever/character/jason-kwon");
+    return screen.getByRole("region", { name: "Collections" });
+  }
+
+  it("starts closed with the counts, and opens to the names", () => {
+    const panel = collectionsFor(CHARACTER);
+    const toggle = within(panel).getByRole("button", { name: /Collections/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(within(panel).getByTestId("character-collections-summary")).toHaveTextContent("2 mounts, 2 pets");
+    fireEvent.click(toggle);
+    expect(within(panel).getByRole("list", { name: "Mounts" })).toHaveTextContent("Cerulean Prideclaw");
+    expect(within(panel).getByRole("list", { name: "Pets" })).toHaveTextContent("Pachimari ×2");
+  });
+
+  it("says which list Blizzard didn't send and keeps the other", () => {
+    const panel = collectionsFor({ ...CHARACTER, collections: { ...CHARACTER.collections, pets: null } });
+    expect(within(panel).getByTestId("character-collections-summary")).toHaveTextContent("2 mounts");
+    fireEvent.click(within(panel).getByRole("button", { name: /Collections/ }));
+    expect(within(panel).getByTestId("character-pets-note")).toHaveTextContent("Blizzard didn't send");
+    expect(within(panel).getByRole("list", { name: "Mounts" })).toBeInTheDocument();
+  });
+
+  it("says when there's nothing yet, and when nothing loaded", () => {
+    const panel = collectionsFor({ ...CHARACTER, collections: { mounts: [], pets: [] } });
+    fireEvent.click(within(panel).getByRole("button", { name: /Collections/ }));
+    expect(panel).toHaveTextContent("No mounts yet.");
+    expect(panel).toHaveTextContent("No pets yet.");
+    expect(collectionsSummary({ mounts: null, pets: null })).toBe("Couldn't load");
+    expect(collectionsSummary({ mounts: [], pets: [] })).toBe("0 mounts, 0 pets");
   });
 });
