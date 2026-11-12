@@ -18,7 +18,7 @@
  * button pattern into shared-frontend at that point.
  */
 import * as Toast from "@radix-ui/react-toast";
-import { showError } from "@platform/ui";
+import { showError, TOAST_INTERACTIVE_STYLE } from "@platform/ui";
 import { DISCOVER_ACTION_MESSAGES } from "@myjobhunter/api-client/constants/discoverMessages";
 import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
 import { useUndoDismissDiscoveredJobMutation } from "@myjobhunter/api-client/store/discoverApi";
@@ -57,6 +57,7 @@ export default function UndoDismissToast({
       open={open}
       onOpenChange={onOpenChange}
       duration={UNDO_TOAST_DURATION_MS}
+      style={TOAST_INTERACTIVE_STYLE}
       className="flex items-center justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3 text-sm shadow-lg"
       data-testid="undo-dismiss-toast"
     >

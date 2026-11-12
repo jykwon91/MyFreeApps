@@ -13,8 +13,10 @@
  * - Clicking Undo fires the mutation with the correct jobId
  * - The toast is closed after a successful undo (onOpenChange called with false)
  */
+import type { ReactNode } from "react";
 import { describe, expect, it, vi, beforeAll } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import * as Toast from "@radix-ui/react-toast";
 import UndoDismissToast from "../UndoDismissToast";
 
@@ -40,14 +42,12 @@ vi.mock("@myjobhunter/api-client/store/discoverApi", () => ({
   ],
 }));
 
-vi.mock("@platform/ui", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
   showError: vi.fn(),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyChildren = { children: any };
-
-function Wrapper({ children }: AnyChildren) {
+function Wrapper({ children }: { children: ReactNode }) {
   return (
     <Toast.Provider>
       {children}
@@ -66,6 +66,23 @@ describe("UndoDismissToast", () => {
     expect(screen.getByTestId("undo-dismiss-toast")).toBeInTheDocument();
     expect(screen.getByText("Dismissed.")).toBeInTheDocument();
     expect(screen.getByTestId("undo-dismiss-button")).toBeInTheDocument();
+  });
+
+  it("keeps Undo clickable inside a viewport that passes pointer events through", async () => {
+    mockUndoFn.mockReturnValue({ unwrap: () => Promise.resolve() });
+    // The shared Toaster's viewport is `pointer-events-none` so it never blocks
+    // the page; the toast itself must opt back in.
+    render(
+      <Toast.Provider>
+        <UndoDismissToast jobId="job-1" open={true} onOpenChange={vi.fn()} />
+        <Toast.Viewport style={{ pointerEvents: "none" }} />
+      </Toast.Provider>,
+    );
+
+    // user-event refuses to click an element that has or inherits pointer-events: none.
+    await userEvent.click(screen.getByTestId("undo-dismiss-button"));
+
+    expect(mockUndoFn).toHaveBeenCalledWith("job-1");
   });
 
   it("does not render when open is false", () => {
