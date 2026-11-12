@@ -4,6 +4,7 @@ import { ScrollView, Text, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
 import { APP_NAME } from "../../constants/app";
 import { DELETE_ACCOUNT_ROUTE, SECURITY_MENU_ITEM, SECURITY_ROUTE } from "../../constants/security";
+import { SUPPORT_MENU_ITEM } from "../../constants/support";
 
 export default function SettingsScreen() {
   const { colors, spacing, fontSize } = useTheme();
@@ -34,6 +35,8 @@ export default function SettingsScreen() {
             <AccountSettings appName={APP_NAME} key={state.email} onDeleteAccount={() => router.push(DELETE_ACCOUNT_ROUTE)} />
           </>
         ) : null}
+        {/* The website's support page is public, so this shows signed in or out. */}
+        <MoreRow item={SUPPORT_MENU_ITEM} webBaseUrl={WEB_BASE_URL} />
         <AppVersion />
       </ScrollView>
     </View>

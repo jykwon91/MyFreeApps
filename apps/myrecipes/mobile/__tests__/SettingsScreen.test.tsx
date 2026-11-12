@@ -2,6 +2,8 @@ import { type MobileSession, type SessionState, SessionProvider, ToastProvider }
 import api from "@platform/core/lib/api";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
+import { Linking } from "react-native";
+import { WEB_BASE_URL } from "../src/constants/api";
 import SettingsScreen from "../src/features/settings/SettingsScreen";
 import "../src/lib/store";
 
@@ -16,6 +18,7 @@ jest.mock("expo-router", () => {
 
 jest.mock("expo-constants", () => ({ __esModule: true, default: { expoConfig: { version: "1.0.0" } } }));
 
+const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
 const originalAdapter = api.defaults.adapter;
 
 function fakeSession(state: SessionState, overrides: Partial<MobileSession> = {}): MobileSession {
@@ -39,6 +42,7 @@ async function renderWith(session: MobileSession) {
 
 beforeEach(() => {
   mockPush.mockClear();
+  openURL.mockClear();
 });
 
 afterEach(() => {
@@ -95,5 +99,19 @@ describe("SettingsScreen", () => {
     await renderWith(fakeSession({ status: "signedIn", email: "me@example.com", sessionId: "s1" }, { signOut }));
     await fireEvent.press(screen.getByRole("button", { name: "Sign out of this phone" }));
     await waitFor(() => expect(screen.getByText("You're signed out.")).toBeTruthy());
+  });
+
+  it("opens the website's support page in the browser when signed in", async () => {
+    api.defaults.adapter = async (config) => ({ status: 200, statusText: "", headers: {}, config, data: [] });
+    await renderWith(fakeSession({ status: "signedIn", email: "me@example.com", sessionId: "s1" }));
+    await fireEvent.press(screen.getByRole("link", { name: "Support MyFreeApps" }));
+    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/support-myfreeapps`);
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("offers the support page when signed out too", async () => {
+    await renderWith(fakeSession({ status: "signedOut", endedByServer: false, lastEmail: null }));
+    await fireEvent.press(screen.getByRole("link", { name: "Support MyFreeApps" }));
+    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/support-myfreeapps`);
   });
 });
