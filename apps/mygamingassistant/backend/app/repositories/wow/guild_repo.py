@@ -6,6 +6,7 @@ transaction; these only flush.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from datetime import datetime
 
 from sqlalchemy import or_, select, true, update
@@ -152,11 +153,14 @@ async def members(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildMemberRow]
     return [GuildMemberRow(**row._mapping) for row in result.all()]
 
 
-async def member_skills(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildMemberSkillRow]:
+async def member_skills(
+    db: AsyncSession, guild_id: uuid.UUID, *, slugs: Sequence[str] | None = None,
+) -> list[GuildMemberSkillRow]:
     """The live stored members' profession skills, each from the member's newest day that has any.
 
     A day whose professions call failed stores no skills, so the newest day with
     skills — not the newest day — holds the member's latest known professions.
+    ``slugs`` limits it to those members (the recipe search's crafters).
     """
     m = WowCharacterDailyMetric
     skill = WowCharacterProfessionSkill
@@ -167,7 +171,7 @@ async def member_skills(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildMemb
         .limit(1)
         .lateral()
     )
-    result = await db.execute(
+    stmt = (
         select(WowCharacter.slug, skill.profession_id, skill.skill, skill.max_skill)
         .select_from(WowCharacter)
         .join(newest_with_skills, true())
@@ -175,4 +179,7 @@ async def member_skills(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildMemb
         .where(WowCharacter.guild_id == guild_id, WowCharacter.gone_at.is_(None))
         .order_by(WowCharacter.slug, skill.profession_id)
     )
+    if slugs is not None:
+        stmt = stmt.where(WowCharacter.slug.in_(slugs))
+    result = await db.execute(stmt)
     return [GuildMemberSkillRow(*row) for row in result.all()]

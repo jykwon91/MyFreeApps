@@ -2,6 +2,7 @@
  * WoW Forever guild page (/wow-forever/guild/:slug) — E2E, network-stubbed.
  *
  *   - the guild badge on a character's sheet opens the guild page, marking that character
+ *   - recipe search: who knows a recipe, with their skill; the search lives in the URL
  *   - leaderboards: pick a board, ties share a rank, the board lives in the URL
  *   - members by rank; a name opens that member's character page
  *   - search, class filter and column sort, kept in the URL across Back
@@ -10,13 +11,14 @@
  *   - skeleton while loading, then the list in the same place
  *   - 375px phone layout: members as cards, nothing overflows
  *
- * Stubbed: `/wow/guilds/<slug>`, `/wow/characters/<slug>` and its render.
+ * Stubbed: `/wow/guilds/<slug>`, `/wow/guilds/<slug>/recipes`, `/wow/characters/<slug>` and its render.
  *
  * Run: npm run test:e2e -- wow-forever-guild
  */
 import { test, expect, type Page, type Route } from "@playwright/test";
 
 const GUILD_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+$/.test(url.pathname);
+const RECIPES_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+\/recipes$/.test(url.pathname);
 const SHEET_PATTERN = (url: URL) => /\/wow\/characters\/[^/]+$/.test(url.pathname);
 const RENDER_PATTERN = "**/wow/characters/*/render.png";
 const PIXEL = Buffer.from(
@@ -153,6 +155,7 @@ test("skeleton while loading, then the member list in the same place", async ({ 
   await page.goto("/wow-forever/guild/topdeadcenter");
   const skeleton = page.getByTestId("guild-page-skeleton");
   await expect(skeleton).toBeVisible();
+  await expect(page.getByTestId("guild-recipe-search-skeleton")).toBeVisible();
   await expect(page.getByTestId("guild-leaderboard-skeleton")).toBeVisible();
   const skeletonBox = await skeleton.boundingBox();
 
@@ -164,6 +167,7 @@ test("skeleton while loading, then the member list in the same place", async ({ 
   expect(Math.abs((summaryBox?.x ?? 0) - (skeletonBox?.x ?? 0))).toBeLessThan(2);
   await expect(memberNames(page)).toHaveCount(3);
   await expect(page.getByRole("region", { name: "Leaderboards" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Who can craft this?" })).toBeVisible();
 });
 
 test("375px phone layout: members as cards and nothing overflows", async ({ page }) => {
@@ -201,4 +205,76 @@ test("leaderboards: pick a board, ties share a rank, and the board survives Back
   await expect(page).toHaveURL(/\/wow-forever\/character\/jason-kwon$/);
   await page.goBack();
   await expect(page.getByLabel("Rank members by")).toHaveValue("prof-tailoring");
+});
+
+function recipeSearch(query: string) {
+  const known = query.toLowerCase().includes("linen");
+  return {
+    query,
+    truncated: false,
+    recipes: known
+      ? [{
+          id: 2963, name: "Bolt of Linen Cloth", profession_id: 197,
+          crafters: [
+            { slug: "jason-kwon", name: "Jason", surname: "Kwon", class_name: "Warlock", skill: 148, max_skill: 225 },
+            { slug: "tiny-john", name: "Tiny", surname: "John", class_name: "Mage", skill: null, max_skill: null },
+          ],
+        }]
+      : [],
+  };
+}
+
+test("recipe search: who knows it and their skill, kept in the URL across Back", async ({ page }) => {
+  await stubAll(page);
+  const asked: string[] = [];
+  await page.route(RECIPES_PATTERN, (route) => {
+    const q = new URL(route.request().url()).searchParams.get("q") ?? "";
+    asked.push(q);
+    return json(route, recipeSearch(q));
+  });
+  await page.goto("/wow-forever/guild/topdeadcenter");
+
+  await page.getByLabel("Recipe", { exact: true }).fill("l");
+  await page.waitForTimeout(600);
+  expect(asked).toEqual([]);
+
+  await page.getByLabel("Recipe", { exact: true }).fill("linen");
+  await expect(page).toHaveURL(/recipe=linen/);
+  const results = page.getByRole("list", { name: "Matching recipes" });
+  await expect(results).toContainText("Bolt of Linen Cloth");
+  await expect(results).toContainText("Tailoring");
+  await expect(page.getByText('1 recipe matching "linen"')).toBeVisible();
+  const who = page.getByRole("list", { name: "Who knows Bolt of Linen Cloth" }).locator("li");
+  await expect(who).toHaveCount(2);
+  await expect(who.nth(0)).toContainText("Jason Kwon");
+  await expect(who.nth(0)).toContainText("148 / 225");
+  expect(asked).toEqual(["linen"]);
+
+  await who.nth(1).getByRole("link", { name: "Tiny John" }).click();
+  await expect(page).toHaveURL(/\/wow-forever\/character\/tiny-john$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/recipe=linen/);
+  await expect(page.getByLabel("Recipe", { exact: true })).toHaveValue("linen");
+  await expect(results).toContainText("Bolt of Linen Cloth");
+
+  await page.getByLabel("Recipe", { exact: true }).fill("zzz");
+  await expect(page.getByText(/Nobody in the guild knows a recipe matching "zzz"/)).toBeVisible();
+});
+
+test("recipe search: a problem offers a retry, and the 375px phone layout doesn't overflow", async ({ page }) => {
+  await stubAll(page);
+  let fail = true;
+  await page.route(RECIPES_PATTERN, (route) => {
+    if (fail) return json(route, { detail: "boom" }, 500);
+    return json(route, recipeSearch(new URL(route.request().url()).searchParams.get("q") ?? ""));
+  });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/wow-forever/guild/topdeadcenter?recipe=linen");
+
+  await expect(page.getByText("Couldn't search the guild's recipes.")).toBeVisible();
+  fail = false;
+  await page.getByRole("button", { name: /Try again|Retry/ }).click();
+  await expect(page.getByRole("list", { name: "Matching recipes" })).toContainText("Bolt of Linen Cloth");
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
 });

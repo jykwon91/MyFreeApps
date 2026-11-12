@@ -1097,6 +1097,17 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   pins it under the top 10; the member filters keep these params and vice
   versa. Not built (ideas): first to 60, this week's gains, raid attendance,
   one chosen faction's reputation, mounts/pets.
+- Guild recipe search ("Who can craft this?", above the leaderboards,
+  `GuildRecipeSearch`): `GET /wow/guilds/{slug}/recipes?q=` — a server-side
+  ILIKE (LIKE wildcards escaped) over `wow_recipe.name`, limited to recipes a
+  LIVE member of the guild knows (`recipe_repo.guild_recipes_matching` /
+  `guild_crafters`); gathering and Fishing (`GUILD_RECIPE_EXCLUDED_PROFESSION_IDS`)
+  are never searched. 2–60 chars (a blank-after-trim query is a 422), up to
+  `GUILD_RECIPE_RESULT_LIMIT` recipes + `truncated`. Each crafter's skill comes
+  from `guild_repo.member_skills` merged by (slug, profession id); crafters sort
+  highest skill first. A gone guild finds nothing. `?recipe=` holds the search.
+  `wow_recipe.id` is the SkillLineAbility id, not a spell id. Tests:
+  `tests/test_wow_guild_recipe_search.py`.
 - Frontend: `pages/WowCharacterPage.tsx`, `components/character/`,
   `lib/character/`. Names are remembered per browser only after a successful
   load (`mga.wowForever.character.v1`, 5 max); `/wow-forever/character`

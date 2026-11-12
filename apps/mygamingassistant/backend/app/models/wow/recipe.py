@@ -17,7 +17,8 @@ class WowRecipe(Base):
     __tablename__ = "wow_recipe"
     __table_args__ = (Index("ix_wowrecipe_profession_id", "profession_id"),)
 
-    # Blizzard's recipe id (the recipe's spell id).
+    # Blizzard's recipe id: the client's SkillLineAbility row, not the spell id
+    # (the frontend's ``recipeSpells.json`` maps it to the spell).
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     # Blizzard's profession id (SkillLine id).
     profession_id: Mapped[int] = mapped_column(SmallInteger, nullable=False)
