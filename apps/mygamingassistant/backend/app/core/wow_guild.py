@@ -47,6 +47,9 @@ GUILD_MEMBER_FETCH_CONCURRENCY: Final = 4
 # many days ago (else their earliest stored day) up to their newest one.
 GUILD_GAINS_WINDOW_DAYS: Final = 7
 
+# GET /wow/guilds/{slug}/reputations?faction=: a faction id is a positive INT.
+FACTION_ID_MAX: Final = 2_147_483_647
+
 # GET /wow/guilds/{slug}: per-IP look-ups per window (a database read, no Blizzard call).
 GUILD_RATE_LIMIT: Final = 60
 GUILD_RATE_WINDOW_SECONDS: Final = 60

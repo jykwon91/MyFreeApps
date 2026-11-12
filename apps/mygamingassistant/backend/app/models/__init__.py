@@ -32,6 +32,8 @@ from app.models.wow.guild import WowGuild  # noqa: F401
 from app.models.wow.character import WowCharacter  # noqa: F401
 from app.models.wow.character_daily_metric import WowCharacterDailyMetric  # noqa: F401
 from app.models.wow.character_profession_skill import WowCharacterProfessionSkill  # noqa: F401
+from app.models.wow.faction import WowFaction  # noqa: F401
+from app.models.wow.character_reputation import WowCharacterReputation  # noqa: F401
 from app.models.wow.recipe import WowRecipe  # noqa: F401
 from app.models.wow.character_recipe import WowCharacterRecipe  # noqa: F401
 # WoW Forever feature requests — story first (submission + vote FK to it)

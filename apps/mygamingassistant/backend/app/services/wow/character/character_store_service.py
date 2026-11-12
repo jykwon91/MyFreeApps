@@ -12,7 +12,8 @@ answers. Per fetch, under a per-character advisory lock:
   time kept from the stored sheet (``merge_sheet``);
 * that UTC day's numbers are upserted, a number Blizzard didn't send keeping
   the day's earlier value, and the profession skills and known recipes are
-  replaced only when Blizzard sent the professions;
+  replaced only when Blizzard sent the professions (the faction standings
+  likewise, only when it sent the reputations);
 * the character's guild is stored (``wow_guild``) first, in its own short
   transaction so concurrent members of one guild don't queue on its row, and
   the character joins it; its rank stays only while the guild is the same (the
@@ -39,7 +40,7 @@ from app.core.wow_character import (
     RECIPE_NAME_MAX_LENGTH,
 )
 from app.db.session import unit_of_work
-from app.repositories.wow import character_metric_repo, character_repo, guild_repo, recipe_repo
+from app.repositories.wow import character_metric_repo, character_repo, faction_repo, guild_repo, recipe_repo
 from app.schemas.wow.character.character_response import CharacterResponse
 from app.services.wow.character.character_fetch import CharacterFetch
 from app.services.wow.character.character_json import as_int
@@ -49,6 +50,9 @@ from app.services.wow.character.character_sheet_merge import merge_sheet
 from app.services.wow.guild.guild_mapper import to_guild_identity
 
 logger = logging.getLogger(__name__)
+
+# CharacterMetrics fields stored in their own tables, not as daily-row numbers.
+_METRIC_SETS = frozenset({"professions", "reputations"})
 
 
 def _now() -> datetime:
@@ -88,11 +92,18 @@ async def record(fetch: CharacterFetch, *, now: datetime | None = None, viewed: 
             "guild_rank": row.guild_rank if same_guild else None,
         })
         metrics = to_character_metrics(fresh, fetch.profile.achievement_statistics)
-        values = {f.name: getattr(metrics, f.name) for f in dataclasses.fields(metrics) if f.name != "professions"}
+        values = {
+            f.name: getattr(metrics, f.name) for f in dataclasses.fields(metrics) if f.name not in _METRIC_SETS
+        }
         metric_id = await character_metric_repo.upsert_daily(db, row.id, at.date(), values)
         if metrics.professions is not None:
             await character_metric_repo.replace_profession_skills(
                 db, metric_id, [(p.profession_id, p.skill, p.max_skill) for p in metrics.professions],
+            )
+        if metrics.reputations is not None:
+            await faction_repo.upsert_factions(db, [(r.faction_id, r.faction_name) for r in metrics.reputations])
+            await character_metric_repo.replace_reputations(
+                db, metric_id, [(r.faction_id, r.tier, r.value, r.max) for r in metrics.reputations],
             )
         if fresh.professions is not None:
             known = [

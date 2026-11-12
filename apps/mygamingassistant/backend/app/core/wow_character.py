@@ -60,6 +60,10 @@ STATISTIC_TOTAL_DEATHS: Final = 60
 
 # A reputation tier of 7 is Exalted (0 = Hated).
 REPUTATION_TIER_EXALTED: Final = 7
+# The tiers the game has (0 = Hated … 7 = Exalted); a standing outside them isn't stored.
+REPUTATION_TIERS: Final = range(0, REPUTATION_TIER_EXALTED + 1)
+# ``wow_faction.name``: longer names are cut to fit.
+FACTION_NAME_MAX_LENGTH: Final = 80
 
 # Stored characters (``wow_character``): bump when a ``CharacterResponse`` change
 # means a stored sheet no longer reads as the same thing (a rename, a removal, a

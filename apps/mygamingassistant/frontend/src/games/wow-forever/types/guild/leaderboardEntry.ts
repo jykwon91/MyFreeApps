@@ -7,8 +7,8 @@ export interface LeaderboardEntry {
   /** Competition rank: tied members share it (1, 2, 2, 4). */
   rank: number;
   tied: boolean;
-  /** The number as shown ("1,204", "148 / 225", "+3"). */
+  /** The number as shown ("1,204", "148 / 225", "+3", "Honored"). */
   display: string;
-  /** A line under the name: since when a gain counts ("since Nov 12"); null on other boards. */
+  /** A line under the name: since when a gain counts ("since Nov 12"), progress in a standing ("6,550 / 12,000"); null on other boards. */
   detail: string | null;
 }

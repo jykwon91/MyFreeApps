@@ -68,24 +68,46 @@ function unranked(member: GuildMember, board: LeaderboardBoard): Omit<Leaderboar
       member, value: gained.value, display: `+${formatWhole(gained.value)}`, detail: `since ${formatShortDay(gained.since)}`,
     };
   }
+  // Standings aren't on the member: the faction board ranks them with rankStandings.
+  if (source.kind === LEADERBOARD_SOURCE_KIND.faction) return null;
   const skill = member.professions.find((p) => p.id === source.professionId);
   if (!skill) return null;
   return { member, value: skill.skill, display: `${skill.skill} / ${skill.max_skill}`, detail: null };
 }
 
+/** Whether a board ranks members' standing with one faction. */
+export function isFactionBoard(board: LeaderboardBoard): boolean {
+  return board.source.kind === LEADERBOARD_SOURCE_KIND.faction;
+}
+
 /** Every member with a number on the board, best first; ties share a rank (1, 2, 2, 4) and read by name. */
 export function rankBoard(members: readonly GuildMember[], board: LeaderboardBoard): LeaderboardEntry[] {
-  const sign = board.ascending ? 1 : -1;
   const scored = boardCandidates(members, board)
     .map((m) => unranked(m, board))
-    .filter((e) => e !== null)
-    .sort((a, b) => sign * (a.value - b.value) || memberFullName(a.member).localeCompare(memberFullName(b.member)));
+    .filter((e) => e !== null);
+  return rankEntries(scored, board.ascending);
+}
+
+/** Entries ordered by value (highest first unless ``ascending``), then name; ties share a rank (1, 2, 2, 4). */
+export function rankEntries(
+  entries: readonly Omit<LeaderboardEntry, "rank" | "tied">[],
+  ascending: boolean,
+): LeaderboardEntry[] {
+  const sign = ascending ? 1 : -1;
+  const scored = [...entries].sort(
+    (a, b) => sign * (a.value - b.value) || memberFullName(a.member).localeCompare(memberFullName(b.member)),
+  );
   let rank = 0;
   return scored.map((entry, i) => {
     if (i === 0 || scored[i - 1].value !== entry.value) rank = i + 1;
     const tied = scored[i - 1]?.value === entry.value || scored[i + 1]?.value === entry.value;
     return { ...entry, rank, tied };
   });
+}
+
+/** Whether the viewer (``?me=``) is a member of the guild but not on this board. */
+export function viewerIsUnranked(members: readonly GuildMember[], ranked: readonly LeaderboardEntry[], me: string): boolean {
+  return !ranked.some((e) => e.member.slug === me) && members.some((m) => m.slug === me);
 }
 
 /**
@@ -114,7 +136,7 @@ export function boardStatus(board: LeaderboardBoard, shown: number, ranked: numb
  * ``noBaselineCount``; no gain is ``noGainCount``).
  */
 export function missingCount(members: readonly GuildMember[], board: LeaderboardBoard, ranked: number): number {
-  if (board.source.kind === LEADERBOARD_SOURCE_KIND.profession) return 0;
+  if (board.source.kind === LEADERBOARD_SOURCE_KIND.profession || isFactionBoard(board)) return 0;
   if (isGainBoard(board)) return members.filter((m) => m.baseline !== null && gainOf(m, board) === null).length;
   return boardCandidates(members, board).length - ranked;
 }

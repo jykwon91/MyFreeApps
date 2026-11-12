@@ -13,13 +13,18 @@ from sqlalchemy import case, func, or_, select, true, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
+from sqlalchemy.sql.selectable import Lateral
 
 from app.models.wow.character import WowCharacter
 from app.models.wow.character_daily_metric import WowCharacterDailyMetric
 from app.models.wow.character_profession_skill import WowCharacterProfessionSkill
+from app.models.wow.character_reputation import WowCharacterReputation
+from app.models.wow.faction import WowFaction
 from app.models.wow.guild import WowGuild
+from app.repositories.wow.guild_faction_row import GuildFactionRow
 from app.repositories.wow.guild_member_row import GuildMemberRow
 from app.repositories.wow.guild_member_skill_row import GuildMemberSkillRow
+from app.repositories.wow.guild_standing_row import GuildStandingRow
 
 
 async def upsert(
@@ -211,3 +216,53 @@ async def member_skills(
         stmt = stmt.where(WowCharacter.slug.in_(slugs))
     result = await db.execute(stmt)
     return [GuildMemberSkillRow(*row) for row in result.all()]
+
+
+def _newest_with_reputations() -> Lateral:
+    """Per live member (LATERAL on WowCharacter): their newest daily row that has reputations.
+
+    A day whose reputations call failed stores none, so the newest day with
+    standings — not the newest day — holds the member's latest known ones.
+    """
+    m = WowCharacterDailyMetric
+    rep = WowCharacterReputation
+    return (
+        select(m.id)
+        .where(m.character_id == WowCharacter.id, select(rep.id).where(rep.daily_metric_id == m.id).exists())
+        .order_by(m.day.desc())
+        .limit(1)
+        .lateral()
+    )
+
+
+async def member_factions(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildFactionRow]:
+    """The factions live members have met, each with how many have, most first then by name."""
+    rep = WowCharacterReputation
+    newest = _newest_with_reputations()
+    members = func.count().label("members")
+    result = await db.execute(
+        select(WowFaction.id, WowFaction.name, members)
+        .select_from(WowCharacter)
+        .join(newest, true())
+        .join(rep, rep.daily_metric_id == newest.c.id)
+        .join(WowFaction, WowFaction.id == rep.faction_id)
+        .where(WowCharacter.guild_id == guild_id, WowCharacter.gone_at.is_(None))
+        .group_by(WowFaction.id, WowFaction.name)
+        .order_by(members.desc(), WowFaction.name, WowFaction.id)
+    )
+    return [GuildFactionRow(**row._mapping) for row in result.all()]
+
+
+async def faction_standings(db: AsyncSession, guild_id: uuid.UUID, faction_id: int) -> list[GuildStandingRow]:
+    """Each live member's standing with the faction, from their newest day that has reputations."""
+    rep = WowCharacterReputation
+    newest = _newest_with_reputations()
+    result = await db.execute(
+        select(WowCharacter.slug, rep.tier, rep.value, rep.max)
+        .select_from(WowCharacter)
+        .join(newest, true())
+        .join(rep, (rep.daily_metric_id == newest.c.id) & (rep.faction_id == faction_id))
+        .where(WowCharacter.guild_id == guild_id, WowCharacter.gone_at.is_(None))
+        .order_by(WowCharacter.slug)
+    )
+    return [GuildStandingRow(**row._mapping) for row in result.all()]

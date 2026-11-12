@@ -22,6 +22,14 @@ def professions_json(*recipes: tuple[int, str]) -> dict[str, Any]:
     ]}], "secondaries": []}
 
 
+def reputations_json(*standings: tuple[int, str, int, int, int]) -> dict[str, Any]:
+    """Blizzard's /reputations answer for ``(faction_id, faction_name, tier, value, max)`` standings."""
+    return {"reputations": [
+        {"faction": {"id": fid, "name": name}, "standing": {"tier": tier, "value": value, "max": cap, "name": "x"}}
+        for fid, name, tier, value, cap in standings
+    ]}
+
+
 def profile_json(slug: str, blizzard_id: int, guild: dict[str, Any] | None) -> dict[str, Any]:
     first, surname = (part.capitalize() for part in slug.split("-"))
     body: dict[str, Any] = {
@@ -36,11 +44,11 @@ def profile_json(slug: str, blizzard_id: int, guild: dict[str, Any] | None) -> d
 
 def make_fetch(
     slug: str = "jason-kwon", blizzard_id: int = 1, guild: dict[str, Any] | None = GUILD,
-    professions: dict[str, Any] | None = None,
+    professions: dict[str, Any] | None = None, reputations: dict[str, Any] | None = None,
 ) -> CharacterFetch:
     profile = CharacterProfile(
         profile=profile_json(slug, blizzard_id, guild), media=None, equipment=None, statistics=None,
-        specializations={}, professions=professions, reputations=None, pvp_summary=None,
+        specializations={}, professions=professions, reputations=reputations, pvp_summary=None,
         achievement_statistics=None, mounts={}, pets={},
     )
     return CharacterFetch(response=to_character_response(slug, profile), profile=profile, fresh=True)
