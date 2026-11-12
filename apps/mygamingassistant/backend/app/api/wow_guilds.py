@@ -4,6 +4,8 @@ GET /wow/guilds/{slug} — a stored guild and its members (level, class, item
 level, rank, leaderboard numbers).
 GET /wow/guilds/{slug}/recipes?q= — the guild's known recipes whose name
 contains ``q``, each with the members who know it.
+GET /wow/guilds/{slug}/reputations?faction= — the factions members have met,
+and each member's standing with one (default: the one most have met).
 
 Read from the database only: a guild is stored when someone looks up one of
 its members on "Your character", and the scheduled roster refresh fills in the
@@ -11,7 +13,7 @@ rest.
 
 Errors:
   - 404 — no stored guild by that slug (``guild_not_found``); a gone guild's
-    recipe search finds nothing
+    recipe search and reputation board find nothing
   - 422 — a recipe query shorter or longer than allowed, or holding control
     characters (Postgres refuses NUL)
   - 429 — too many look-ups from this IP
@@ -22,6 +24,7 @@ from platform_shared.core.request_utils import get_client_ip
 
 from app.core.rate_limit import RateLimiter, check_with_retry_after
 from app.core.wow_guild import (
+    FACTION_ID_MAX,
     GUILD_RATE_LIMIT,
     GUILD_RATE_WINDOW_SECONDS,
     GUILD_RECIPE_QUERY_FORBIDDEN,
@@ -31,8 +34,9 @@ from app.core.wow_guild import (
     GUILD_SLUG_PATTERN,
 )
 from app.schemas.wow.guild.guild_recipe_search_response import GuildRecipeSearchResponse
+from app.schemas.wow.guild.guild_reputation_response import GuildReputationResponse
 from app.schemas.wow.guild.guild_response import GuildResponse
-from app.services.wow.guild import guild_recipe_search_service, guild_view_service
+from app.services.wow.guild import guild_recipe_search_service, guild_reputation_service, guild_view_service
 
 router = APIRouter(prefix="/wow/guilds", tags=["wow"])
 
@@ -73,6 +77,18 @@ async def search_guild_recipes(
     if GUILD_RECIPE_QUERY_FORBIDDEN.search(query):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=RECIPE_QUERY_INVALID)
     result = await guild_recipe_search_service.search(checked, query)
+    if result is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=GUILD_NOT_FOUND)
+    return result
+
+
+@router.get("/{slug}/reputations", response_model=GuildReputationResponse)
+async def get_guild_reputations(
+    slug: str,
+    request: Request,
+    faction: int | None = Query(default=None, ge=1, le=FACTION_ID_MAX),
+) -> GuildReputationResponse:
+    result = await guild_reputation_service.standings(_checked_slug(slug, request), faction)
     if result is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=GUILD_NOT_FOUND)
     return result

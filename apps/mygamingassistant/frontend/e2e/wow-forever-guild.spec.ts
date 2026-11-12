@@ -5,6 +5,7 @@
  *   - recipe search: who knows a recipe, with their skill; the search lives in the URL
  *   - leaderboards: pick a board, ties share a rank, the board lives in the URL
  *   - gains boards ("This week"): who gained what since when, and who isn't ranked
+ *   - faction standing board: pick a faction (in the URL), ranked by tier, an old link falls back, retry
  *   - members by rank; a name opens that member's character page
  *   - search, class filter and column sort, kept in the URL across Back
  *   - nothing matches → Clear filters brings everyone back
@@ -12,7 +13,7 @@
  *   - skeleton while loading, then the list in the same place
  *   - 375px phone layout: members as cards, nothing overflows
  *
- * Stubbed: `/wow/guilds/<slug>`, `/wow/guilds/<slug>/recipes`, `/wow/characters/<slug>` and its render.
+ * Stubbed: `/wow/guilds/<slug>`, `/wow/guilds/<slug>/recipes`, `/wow/guilds/<slug>/reputations`, `/wow/characters/<slug>` and its render.
  *
  * Run: npm run test:e2e -- wow-forever-guild
  */
@@ -318,4 +319,69 @@ test("recipe search: a problem offers a retry, and the 375px phone layout doesn'
   await expect(page.getByRole("list", { name: "Matching recipes" })).toContainText("Bolt of Linen Cloth");
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+const REPUTATIONS_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+\/reputations$/.test(url.pathname);
+const FACTIONS = [{ id: 47, name: "Ironforge", members: 3 }, { id: 72, name: "Stormwind", members: 1 }];
+
+/** The reputations endpoint: Stormwind when asked, otherwise (default or unknown faction) Ironforge. */
+function reputationsFor(url: URL) {
+  if (url.searchParams.get("faction") === "72") {
+    return { faction_id: 72, factions: FACTIONS, standings: [{ slug: "tiny-john", tier: 4, value: 100, max: 6000 }] };
+  }
+  return {
+    faction_id: 47,
+    factions: FACTIONS,
+    standings: [
+      { slug: "jason-kwon", tier: 5, value: 6550, max: 12000 },
+      { slug: "big-sue", tier: 6, value: 20, max: 21000 },
+      { slug: "tiny-john", tier: 5, value: 6550, max: 12000 },
+    ],
+  };
+}
+
+test("faction standing board: pick a faction, standings rank by tier, an old link falls back", async ({ page }) => {
+  await stubAll(page);
+  await page.route(REPUTATIONS_PATTERN, (route) => json(route, reputationsFor(new URL(route.request().url()))));
+  await page.goto("/wow-forever/guild/topdeadcenter?board=faction&faction=999");
+
+  // Nobody has met faction 999: the board shows the faction most members have met, and the URL says so.
+  await expect(page).toHaveURL(/faction=47/);
+  await expect(page.getByLabel("Faction", { exact: true })).toHaveValue("47");
+  const rows = page.getByRole("list", { name: "Ironforge standing leaderboard" }).locator("li");
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toContainText(/^1.*Big Sue.*Revered/);
+  await expect(rows.nth(1)).toContainText(/^2.*Jason Kwon.*6,550 \/ 12,000.*Honored/);
+  await expect(rows.nth(2)).toContainText(/^2.*Tiny John/);
+
+  await page.getByLabel("Faction", { exact: true }).selectOption("72");
+  await expect(page).toHaveURL(/faction=72/);
+  const stormwind = page.getByRole("list", { name: "Stormwind standing leaderboard" }).locator("li");
+  await expect(stormwind).toHaveCount(1);
+  await expect(stormwind.first()).toContainText("Friendly");
+  await expect(page.getByText("2 members have no standing with Stormwind that we know of, so they're not ranked.")).toBeVisible();
+
+  await stormwind.first().getByRole("link", { name: "Tiny John" }).click();
+  await expect(page).toHaveURL(/\/wow-forever\/character\/tiny-john$/);
+  await page.goBack();
+  await expect(page.getByLabel("Faction", { exact: true })).toHaveValue("72");
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("faction standing board: a problem offers a retry that brings the standings in", async ({ page }) => {
+  await stubAll(page);
+  let failures = 1;
+  await page.route(REPUTATIONS_PATTERN, (route) => {
+    if (failures-- > 0) return json(route, { detail: "boom" }, 500);
+    return json(route, reputationsFor(new URL(route.request().url())));
+  });
+  await page.goto("/wow-forever/guild/topdeadcenter?board=faction");
+
+  await expect(page.getByText("Couldn't load reputation standings. Check your connection and try again.")).toBeVisible();
+  await expect(page.getByLabel("Rank members by")).toHaveValue("faction");
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("list", { name: "Ironforge standing leaderboard" }).locator("li")).toHaveCount(3);
 });

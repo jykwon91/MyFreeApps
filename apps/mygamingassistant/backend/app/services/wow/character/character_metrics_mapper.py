@@ -1,18 +1,25 @@
 """A fetched character → the numbers its daily history row stores."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from app.core.wow_character import (
+    FACTION_NAME_MAX_LENGTH,
     REPUTATION_TIER_EXALTED,
+    REPUTATION_TIERS,
     STATISTIC_KILLING_BLOWS,
     STATISTIC_TOTAL_DEATHS,
     STATISTIC_TOTAL_KILLS,
 )
+from app.schemas.wow.character.character_reputation import CharacterReputation
 from app.schemas.wow.character.character_response import CharacterResponse
 from app.services.wow.character.character_achievement_statistics import statistics_by_id
+from app.services.wow.character.character_faction_standing import CharacterFactionStanding
 from app.services.wow.character.character_metrics import CharacterMetrics
 from app.services.wow.character.character_profession_level import CharacterProfessionLevel
+
+logger = logging.getLogger(__name__)
 
 
 def _statistic(statistics: dict[int, Any] | None, statistic_id: int) -> int | None:
@@ -21,6 +28,24 @@ def _statistic(statistics: dict[int, Any] | None, statistic_id: int) -> int | No
         return None
     entry = statistics.get(statistic_id)
     return 0 if entry is None else entry.quantity
+
+
+def _standings(reputations: list[CharacterReputation]) -> tuple[CharacterFactionStanding, ...]:
+    """One standing per faction (the last one wins if Blizzard repeats a faction), named to fit the table.
+
+    A tier the game doesn't have, or negative progress, breaks the table's checks: logged and left out.
+    """
+    by_faction: dict[int, CharacterFactionStanding] = {}
+    for r in reputations:
+        if r.tier not in REPUTATION_TIERS or r.value < 0 or r.max < 0:
+            logger.warning(
+                "Reputation standing left out: faction=%s tier=%s value=%s max=%s", r.id, r.tier, r.value, r.max,
+            )
+            continue
+        by_faction[r.id] = CharacterFactionStanding(
+            faction_id=r.id, faction_name=r.name[:FACTION_NAME_MAX_LENGTH], tier=r.tier, value=r.value, max=r.max,
+        )
+    return tuple(by_faction.values())
 
 
 def to_character_metrics(response: CharacterResponse, achievement_statistics: dict[str, Any] | None) -> CharacterMetrics:
@@ -44,4 +69,5 @@ def to_character_metrics(response: CharacterResponse, achievement_statistics: di
             CharacterProfessionLevel(profession_id=p.id, skill=p.skill, max_skill=p.max_skill)
             for p in (*professions.primaries, *professions.secondaries)
         ),
+        reputations=None if reputations is None else _standings(reputations),
     )

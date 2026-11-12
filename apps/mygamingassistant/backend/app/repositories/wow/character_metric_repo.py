@@ -1,4 +1,4 @@
-"""WowCharacterDailyMetric + WowCharacterProfessionSkill repository.
+"""WowCharacterDailyMetric + WowCharacterProfessionSkill + WowCharacterReputation repository.
 
 Standalone functions like the other MGA repositories. The caller owns the
 transaction; these only flush.
@@ -17,6 +17,7 @@ from sqlalchemy.orm import aliased
 
 from app.models.wow.character_daily_metric import WowCharacterDailyMetric
 from app.models.wow.character_profession_skill import WowCharacterProfessionSkill
+from app.models.wow.character_reputation import WowCharacterReputation
 
 # The numbers a fetch writes. ``upsert_daily`` refuses any other.
 METRIC_FIELDS = frozenset({
@@ -58,6 +59,23 @@ async def replace_profession_skills(
             [
                 {"daily_metric_id": daily_metric_id, "profession_id": p, "skill": s, "max_skill": m}
                 for p, s, m in skills
+            ],
+        )
+
+
+async def replace_reputations(
+    db: AsyncSession, daily_metric_id: uuid.UUID, standings: Sequence[tuple[int, int, int, int]],
+) -> None:
+    """Replace the row's reputations with ``(faction_id, tier, value, max)``; the factions must exist."""
+    await db.execute(
+        delete(WowCharacterReputation).where(WowCharacterReputation.daily_metric_id == daily_metric_id)
+    )
+    if standings:
+        await db.execute(
+            insert(WowCharacterReputation),
+            [
+                {"daily_metric_id": daily_metric_id, "faction_id": f, "tier": t, "value": v, "max": m}
+                for f, t, v, m in standings
             ],
         )
 

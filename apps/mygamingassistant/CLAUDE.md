@@ -1106,8 +1106,21 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   began 2026-11-12, so spans differ per member until a full week builds up.
   Not built: first to 60 (Forever's achievements have no level achievement),
   raid attendance (Blizzard has no data), mounts/pets (account-wide vs
-  per-character unresolved). One faction's reputation needs per-faction
-  standing stored first.
+  per-character unresolved).
+- Guild faction standing board ("One faction's standing", Reputation group):
+  each stored daily metric row keeps the character's standing per faction in
+  `wow_character_reputation` (tier 0-7, value/max within the tier; replaced as
+  a set only when Blizzard sent the reputations, like profession skills), with
+  faction names once in `wow_faction` (upserted on store; RESTRICT FK). No
+  `value <= max` CHECK on purpose: unverified at Exalted, and a failed CHECK
+  would break character lookups. `GET /wow/guilds/{slug}/reputations?faction=`
+  (`guild_reputation_service`) reads each live member's newest day that HAS
+  standings; it lists the factions members have met (most members first) and
+  everyone's standing with one, falling back to the first for a missing or
+  unknown id (the frontend then rewrites `?faction=` from `currentData`, never
+  `data`, which is still the last faction's answer while loading). Ranked by
+  tier, then value (`standingScore`); the row shows the tier name with
+  "value / max" underneath.
 - Guild recipe search ("Who can craft this?", above the leaderboards,
   `GuildRecipeSearch`): `GET /wow/guilds/{slug}/recipes?q=` — a server-side
   ILIKE (LIKE wildcards escaped) over `wow_recipe.name`, limited to recipes a

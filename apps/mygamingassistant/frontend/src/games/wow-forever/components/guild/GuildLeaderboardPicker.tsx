@@ -12,7 +12,7 @@ interface GuildLeaderboardPickerProps {
 export default function GuildLeaderboardPicker({ board, onChange }: GuildLeaderboardPickerProps) {
   const groups = useMemo(() => boardGroups(), []);
   return (
-    <label className="block space-y-1 text-sm sm:max-w-xs">
+    <label className="block space-y-1 text-sm">
       <span className="font-medium">Rank members by</span>
       <select className={GUILD_CONTROL} value={board.id} onChange={(e) => onChange(e.target.value)}>
         {groups.map(([group, boards]) => (

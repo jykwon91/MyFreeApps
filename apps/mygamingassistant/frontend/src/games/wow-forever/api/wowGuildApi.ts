@@ -1,6 +1,8 @@
 import { baseApi } from "@platform/ui";
 import type { GuildRecipeSearch } from "@/games/wow-forever/types/guild/guildRecipeSearch";
 import type { GuildRecipeSearchArgs } from "@/games/wow-forever/types/guild/guildRecipeSearchArgs";
+import type { GuildReputations } from "@/games/wow-forever/types/guild/guildReputations";
+import type { GuildReputationsArgs } from "@/games/wow-forever/types/guild/guildReputationsArgs";
 import type { GuildResponse } from "@/games/wow-forever/types/guild/guildResponse";
 
 export const wowGuildApi = baseApi.injectEndpoints({
@@ -15,7 +17,14 @@ export const wowGuildApi = baseApi.injectEndpoints({
         params: { q: query },
       }),
     }),
+    getGuildReputations: build.query<GuildReputations, GuildReputationsArgs>({
+      query: ({ slug, faction }) => ({
+        url: `/wow/guilds/${encodeURIComponent(slug)}/reputations`,
+        method: "GET",
+        params: faction === null ? {} : { faction },
+      }),
+    }),
   }),
 });
 
-export const { useGetGuildQuery, useSearchGuildRecipesQuery } = wowGuildApi;
+export const { useGetGuildQuery, useSearchGuildRecipesQuery, useGetGuildReputationsQuery } = wowGuildApi;

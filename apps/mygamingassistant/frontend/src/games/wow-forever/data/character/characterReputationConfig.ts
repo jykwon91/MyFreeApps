@@ -10,6 +10,18 @@ export const STANDING_TIER = {
   exalted: 7,
 } as const;
 
+/** Each tier's name, indexed by tier. */
+export const STANDING_NAMES: readonly string[] = [
+  "Hated",
+  "Hostile",
+  "Unfriendly",
+  "Neutral",
+  "Friendly",
+  "Honored",
+  "Revered",
+  "Exalted",
+];
+
 /** The pane's colours: red, orange, yellow, then green from Friendly up. Indexed by tier. */
 export const STANDING_TONES: readonly string[] = [
   "bg-red-500/15 text-red-700 dark:text-red-300",

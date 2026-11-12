@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-12",
+    title: "Guild reputation leaderboard",
+    summary:
+      "Pick a faction on your guild's leaderboards to see who has the best standing with it, from Hated to Exalted.",
+    to: "/wow-forever/character",
+  },
+  {
+    date: "2026-11-12",
     title: "Guild gains this week",
     summary:
       "Your guild's leaderboards now rank who gained the most levels, dungeon clears, honorable kills and kills over the last week.",

@@ -5,7 +5,7 @@ import type { GuildStatField } from "@/games/wow-forever/types/guild/guildStatFi
 import type { LeaderboardBoard } from "@/games/wow-forever/types/guild/leaderboardBoard";
 
 /** The guild page's leaderboard URL params: which board, and whose character to highlight. */
-export const LEADERBOARD_PARAMS = { board: "board", me: "me" } as const;
+export const LEADERBOARD_PARAMS = { board: "board", me: "me", faction: "faction" } as const;
 
 /** Rows shown before "Show all". Members tied with the last one are shown too… */
 export const LEADERBOARD_TOP = 10;
@@ -14,7 +14,13 @@ export const LEADERBOARD_TIE_LIMIT = 20;
 /** Rows of the leaderboard skeleton. */
 export const LEADERBOARD_SKELETON_ROWS = 5;
 
-export const LEADERBOARD_SOURCE_KIND = { stat: "stat", gain: "gain", profession: "profession" } as const;
+export const LEADERBOARD_SOURCE_KIND = { stat: "stat", gain: "gain", profession: "profession", faction: "faction" } as const;
+
+/**
+ * A standing as one number to rank by: tier first, then progress within it.
+ * Bigger than any tier's ``max`` (Revered's is 21,000), so a higher tier always wins.
+ */
+export const STANDING_SCORE_TIER_SPAN = 1_000_000;
 
 /** The member stats a leaderboard can rank. */
 export const GUILD_STAT_FIELDS = {
@@ -46,7 +52,15 @@ export const LEADERBOARD_COPY = {
     viewerUnranked: "Your character has no gain here yet: it needs lookups on two different days, and a gain between them.",
   },
   other: {
+    empty: (boardLabel: string) =>
+      `Nobody in the guild has a number for ${boardLabel} yet. It fills in as members' characters are looked up.`,
     viewerUnranked: "Your character isn't on this board: we have no number for them here.",
+  },
+  faction: {
+    empty: "No reputation data yet. It fills in as members' characters are looked up.",
+    problem: "Couldn't load reputation standings. Check your connection and try again.",
+    loadingFactions: "Loading factions…",
+    viewerUnranked: (factionName: string) => `Your character has no standing with ${factionName} that we know of.`,
   },
 } as const;
 
@@ -76,6 +90,14 @@ const STAT_BOARDS: readonly LeaderboardBoard[] = [
   stat("deaths-to-players", "Deaths to players", GROUP_PVP, GUILD_STAT_FIELDS.deathsFromPlayers),
   stat("total-kills", "Total kills", GROUP_PVP, GUILD_STAT_FIELDS.totalKills),
   stat("exalted", "Exalted reputations", GROUP_REPUTATION, GUILD_STAT_FIELDS.exaltedReputations),
+  {
+    id: "faction",
+    label: "One faction's standing",
+    group: GROUP_REPUTATION,
+    source: { kind: LEADERBOARD_SOURCE_KIND.faction },
+    ascending: false,
+    maxLevelOnly: false,
+  },
 ];
 
 function gain(id: string, label: string, field: GuildGainField): LeaderboardBoard {
