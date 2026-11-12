@@ -16,6 +16,8 @@ export const PRACTICE_COPY = {
   replayHint: "Plays the reply again",
   replaySlow: "Slow",
   replaySlowHint: "Plays the reply again, slowly",
+  /** The hint on both replay buttons while the microphone is open: the tutor would be heard as the answer. */
+  replayUnavailableHint: "Unavailable while the microphone is listening",
   showTranslation: "Show translation",
   hideTranslation: "Hide translation",
   suggestionsLabel: "Suggestions",

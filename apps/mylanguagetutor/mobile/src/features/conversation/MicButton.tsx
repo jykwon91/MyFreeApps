@@ -1,7 +1,8 @@
 import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 import { useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
-import { MIC_BUTTON_SIZE, MIC_DISABLED_OPACITY, MIC_PRESSED_OPACITY } from "../../constants/voice";
+import { DISABLED_OPACITY } from "../../constants/conversation";
+import { MIC_BUTTON_SIZE, MIC_PRESSED_OPACITY } from "../../constants/voice";
 import type { MicButtonProps } from "../../types/MicButtonProps";
 import MicGlyph from "./MicGlyph";
 
@@ -31,7 +32,7 @@ export default function MicButton({ phase, disabled, onStart, onStop }: MicButto
           justifyContent: "center",
           borderRadius: radius.full,
           backgroundColor: listening ? colors.destructive : colors.primary,
-          opacity: disabled ? MIC_DISABLED_OPACITY : pressed ? MIC_PRESSED_OPACITY : 1,
+          opacity: disabled ? DISABLED_OPACITY : pressed ? MIC_PRESSED_OPACITY : 1,
         })}
         testID="mic-button"
       >

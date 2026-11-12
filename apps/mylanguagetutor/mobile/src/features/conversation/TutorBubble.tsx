@@ -7,7 +7,7 @@ import type { TutorBubbleProps } from "../../types/TutorBubbleProps";
 import TutorBubbleAction from "./TutorBubbleAction";
 
 /** One tutor reply, with replay (normal and slow, a genuinely lower speaking rate) and its English translation folded away. */
-export default function TutorBubble({ text, translation, partial, onReplay, onReplaySlow }: TutorBubbleProps) {
+export default function TutorBubble({ text, translation, partial, canReplay, onReplay, onReplaySlow }: TutorBubbleProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
   const [showTranslation, setShowTranslation] = useState(false);
   return (
@@ -33,8 +33,18 @@ export default function TutorBubble({ text, translation, partial, onReplay, onRe
         <Text style={{ paddingHorizontal: spacing.xs, color: colors.mutedForeground, fontSize: fontSize.xs }}>{PRACTICE_COPY.replyCutOff}</Text>
       ) : null}
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>
-        <TutorBubbleAction hint={PRACTICE_COPY.replayHint} label={PRACTICE_COPY.replay} onPress={onReplay} />
-        <TutorBubbleAction hint={PRACTICE_COPY.replaySlowHint} label={PRACTICE_COPY.replaySlow} onPress={onReplaySlow} />
+        <TutorBubbleAction
+          disabled={!canReplay}
+          hint={canReplay ? PRACTICE_COPY.replayHint : PRACTICE_COPY.replayUnavailableHint}
+          label={PRACTICE_COPY.replay}
+          onPress={onReplay}
+        />
+        <TutorBubbleAction
+          disabled={!canReplay}
+          hint={canReplay ? PRACTICE_COPY.replaySlowHint : PRACTICE_COPY.replayUnavailableHint}
+          label={PRACTICE_COPY.replaySlow}
+          onPress={onReplaySlow}
+        />
         {translation ? (
           <TutorBubbleAction
             expanded={showTranslation}

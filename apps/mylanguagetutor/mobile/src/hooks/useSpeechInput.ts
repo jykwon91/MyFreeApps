@@ -50,6 +50,12 @@ export function useSpeechInput(locale: string, onDevice: boolean | null, onFinal
     setInterim("");
   }, []);
 
+  /** The phone failed to start with an error, as iOS can with no end after it: listening is over now. */
+  const giveUp = useCallback(() => {
+    finish();
+    releaseAudioSession();
+  }, [finish]);
+
   useSpeechRecognitionEvent("start", () => {
     const current = attempt.current;
     if (current?.stage !== "starting") return;
@@ -67,11 +73,12 @@ export function useSpeechInput(locale: string, onDevice: boolean | null, onFinal
 
   useSpeechRecognitionEvent("error", ({ error }) => {
     const current = attempt.current;
-    if (current?.stage === "starting") current.stage = "failed";
-    else if (current?.stage !== "live") return;
+    if (current?.stage !== "starting" && current?.stage !== "live") return;
     const next = recognitionFailure(error);
     if (next) setFailure(next);
     else current.dropped = true;
+    // Nothing was recording: its trailing end, if any, finds no attempt and is ignored.
+    if (current.stage === "starting") giveUp();
   });
 
   useSpeechRecognitionEvent("nomatch", () => {
@@ -80,7 +87,7 @@ export function useSpeechInput(locale: string, onDevice: boolean | null, onFinal
 
   useSpeechRecognitionEvent("end", () => {
     const current = attempt.current;
-    if (current?.stage !== "live" && current?.stage !== "failed") return;
+    if (current?.stage !== "live") return;
     finish();
     releaseAudioSession();
     const text = finalTranscript(current.heard);
@@ -121,37 +128,27 @@ export function useSpeechInput(locale: string, onDevice: boolean | null, onFinal
     })();
   }, [finish, locale, onDevice, supported]);
 
-  /** iOS can fail to start with an error and no end: listening is over either way. */
-  const giveUp = useCallback(() => {
-    finish();
-    releaseAudioSession();
-  }, [finish]);
-
   const stop = useCallback(() => {
     const current = attempt.current;
     if (current?.stage === "asking") finish();
-    else if (current?.stage === "failed") giveUp();
     else if (current?.stage === "starting") current.pending ??= "stop";
     else if (current?.stage === "live") ExpoSpeechRecognitionModule.stop();
-  }, [finish, giveUp]);
+  }, [finish]);
 
   const abort = useCallback(() => {
     const current = attempt.current;
     if (!current) return;
     current.dropped = true;
     if (current.stage === "asking") finish();
-    else if (current.stage === "failed") giveUp();
     else if (current.stage === "starting") current.pending = "abort";
     else ExpoSpeechRecognitionModule.abort();
-  }, [finish, giveUp]);
+  }, [finish]);
 
   useEffect(
     () => () => {
       const current = attempt.current;
       attempt.current = null;
-      // Never sent to the phone, or failed to start there: nothing to wait for.
-      if (current?.stage === "failed") releaseAudioSession();
-      else if (current?.stage === "starting" || current?.stage === "live") abortOrphanedAttempt(current);
+      if (current?.stage === "starting" || current?.stage === "live") abortOrphanedAttempt(current);
     },
     [],
   );

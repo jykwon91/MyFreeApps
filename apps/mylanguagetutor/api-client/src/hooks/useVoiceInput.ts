@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import type { InputMode } from "../types/session/input-mode";
 import type { VoiceInput } from "../types/session/voice-input";
 import type { VoiceInputConfig } from "../types/session/voice-input-config";
+import { canReplay } from "../utils/canReplay";
 import { composerView } from "../utils/composerView";
 import { voicePhase } from "../utils/voicePhase";
 
@@ -22,6 +23,7 @@ export function useVoiceInput({
 }: VoiceInputConfig): VoiceInput {
   const [mode, setMode] = useState<InputMode>(recognition.supported ? "voice" : "text");
   const busy = requestPhase !== "idle";
+  const phase = voicePhase({ listening: recognition.listening, requestPhase, speaking });
   const { start, stop, clearFailure } = recognition;
 
   const startListening = useCallback(() => {
@@ -45,7 +47,8 @@ export function useVoiceInput({
 
   return {
     mode,
-    phase: voicePhase({ listening: recognition.listening, requestPhase, speaking }),
+    phase,
+    canReplay: canReplay(phase),
     view: composerView({ blocked: block !== null, mode, failure: recognition.failure, privacyAcked }),
     startListening,
     acceptPrivacy,

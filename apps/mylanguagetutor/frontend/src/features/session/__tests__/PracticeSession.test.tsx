@@ -5,6 +5,7 @@ import PracticeSession from "@/features/session/PracticeSession";
 import CorrectionCard from "@/features/session/CorrectionCard";
 import type { PracticeSession as PracticeSessionState } from "@mylanguagetutor/api-client/types/session/practice-session";
 import type { SpeechRecognitionControls } from "@mylanguagetutor/api-client/types/speech/speech-recognition-controls";
+import type { TranscriptEntry } from "@mylanguagetutor/api-client/types/session/transcript-entry";
 import type { UsageToday } from "@mylanguagetutor/api-client/types/tutor/usage-today";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
@@ -12,6 +13,7 @@ import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenari
 const send = vi.fn();
 const startRecognition = vi.fn();
 const cancelSpeech = vi.fn();
+const speakAll = vi.fn();
 let recognition: SpeechRecognitionControls;
 let sessionState: PracticeSessionState;
 let usage: UsageToday | undefined;
@@ -27,7 +29,7 @@ vi.mock("@/features/speech/useSpeechSynthesis", () => ({
     supported: true,
     speaking: false,
     enqueue: vi.fn(),
-    speakAll: vi.fn(),
+    speakAll,
     cancel: cancelSpeech,
   }),
 }));
@@ -50,6 +52,17 @@ const SCENARIO: Scenario = {
   order: 4,
 };
 
+const TUTOR_TURN: TranscriptEntry = {
+  key: "turn-1",
+  learnerText: "Hola",
+  replyText: "¡Hola! ¿Qué quieres?",
+  translation: null,
+  corrections: [],
+  retryPrompt: null,
+  status: "complete",
+  correctionsMissing: false,
+};
+
 function renderScreen() {
   return render(
     <MemoryRouter>
@@ -64,6 +77,7 @@ describe("PracticeSession", () => {
     send.mockReset();
     startRecognition.mockReset();
     cancelSpeech.mockReset();
+    speakAll.mockReset();
     usage = { remaining_fraction: 1, cap_reached: false, tutor_available: true };
     recognition = {
       supported: true,
@@ -105,6 +119,42 @@ describe("PracticeSession", () => {
     localStorage.setItem("ltutor.voicePrivacyAck.v1", "1");
     renderScreen();
 
+    fireEvent.click(screen.getByRole("button", { name: "Tap to speak" }));
+
+    expect(cancelSpeech).toHaveBeenCalled();
+    expect(startRecognition).toHaveBeenCalled();
+  });
+
+  it("disables Replay and Slow while the microphone is listening, and enables them again after", () => {
+    localStorage.setItem("ltutor.voicePrivacyAck.v1", "1");
+    sessionState = { ...sessionState, entries: [TUTOR_TURN] };
+    recognition = { ...recognition, listening: true };
+    const { rerender } = renderScreen();
+
+    expect(screen.getByRole("button", { name: "Replay" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Slow" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Replay" }));
+    expect(speakAll).not.toHaveBeenCalled();
+
+    recognition = { ...recognition, listening: false };
+    rerender(
+      <MemoryRouter>
+        <PracticeSession language={LANGUAGE} scenario={SCENARIO} level="beginner" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("button", { name: "Replay" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Replay" }));
+    expect(speakAll).toHaveBeenCalledWith("¡Hola! ¿Qué quieres?", expect.any(Number));
+  });
+
+  it("pressing the mic while a replay is playing stops it first", () => {
+    localStorage.setItem("ltutor.voicePrivacyAck.v1", "1");
+    sessionState = { ...sessionState, entries: [TUTOR_TURN] };
+    renderScreen();
+
+    fireEvent.click(screen.getByRole("button", { name: "Replay" }));
+    expect(speakAll).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "Tap to speak" }));
 
     expect(cancelSpeech).toHaveBeenCalled();

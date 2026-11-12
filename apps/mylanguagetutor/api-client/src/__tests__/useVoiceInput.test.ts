@@ -80,4 +80,20 @@ describe("useVoiceInput", () => {
     const settings = config({ speaking: true, recognition: recognition({ listening: true }) });
     expect(renderHook(() => useVoiceInput(settings)).result.current.phase).toBe("listening");
   });
+
+  it("allows replaying a reply until the microphone opens, and again once it closes", () => {
+    const { result, rerender } = renderHook(({ listening }) => useVoiceInput(config({ recognition: recognition({ listening }) })), {
+      initialProps: { listening: false },
+    });
+    expect(result.current.canReplay).toBe(true);
+    rerender({ listening: true });
+    expect(result.current.canReplay).toBe(false);
+    rerender({ listening: false });
+    expect(result.current.canReplay).toBe(true);
+  });
+
+  it("allows replaying while the tutor speaks, since tapping the microphone stops it first", () => {
+    const { result } = renderHook(() => useVoiceInput(config({ speaking: true })));
+    expect(result.current.canReplay).toBe(true);
+  });
 });

@@ -31,7 +31,6 @@ export const LISTENING_AUDIO_SESSION: SetCategoryOptions = {
 /** The largest microphone control: the one big control of the screen, as on the website. */
 export const MIC_BUTTON_SIZE = 72;
 export const MIC_GLYPH_SIZE = 30;
-export const MIC_DISABLED_OPACITY = 0.5;
 export const MIC_PRESSED_OPACITY = 0.85;
 
 /** Back from Settings, the microphone may have been allowed: checked as soon as the app is back. */

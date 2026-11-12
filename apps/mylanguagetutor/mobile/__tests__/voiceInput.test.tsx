@@ -137,6 +137,48 @@ describe("speaking an answer", () => {
     expect(sent.map((request) => request.text)).toEqual(["Quiero un café", "Y un pan"]);
   });
 
+  it("disables Replay and Slow while listening, and enables them again once the answer is sent", async () => {
+    installRecognizer();
+    storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+    const { streams } = await openCafeConversation();
+    await tapToSpeak();
+    await phone(() => goQuiet("Quiero un café"));
+    await tutorReplies(streams[0]);
+    await act(async () => finishSpeaking());
+    const replay = () => screen.getByRole("button", { name: PRACTICE_COPY.replay });
+    const slow = () => screen.getByRole("button", { name: PRACTICE_COPY.replaySlow });
+    expect(replay().props.accessibilityState?.disabled).toBeFalsy();
+
+    await tapToSpeak();
+    for (const button of [replay(), slow()]) {
+      expect(button.props.accessibilityState).toMatchObject({ disabled: true });
+      expect(button.props.accessibilityHint).toBe(PRACTICE_COPY.replayUnavailableHint);
+    }
+    const spokenBefore = spoken.length;
+    await fireEvent.press(replay());
+    await fireEvent.press(slow());
+    expect(spoken).toHaveLength(spokenBefore);
+
+    await phone(() => goQuiet("Y un pan"));
+    expect(replay().props.accessibilityState?.disabled).toBeFalsy();
+    expect(replay().props.accessibilityHint).toBe(PRACTICE_COPY.replayHint);
+  });
+
+  it("stops a replay that is playing when the learner taps the microphone", async () => {
+    installRecognizer();
+    storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+    const { streams } = await openCafeConversation();
+    await tapToSpeak();
+    await phone(() => goQuiet("Quiero un café"));
+    await tutorReplies(streams[0]);
+    await act(async () => finishSpeaking());
+
+    await fireEvent.press(screen.getByRole("button", { name: PRACTICE_COPY.replay }));
+    expect(spoken.at(-1)).not.toBeNull();
+    await tapToSpeak(VOICE_COPY.micLabels.speaking);
+    expect(spoken.at(-1)).toBeNull();
+  });
+
   it("keeps the microphone off while a reply is on its way", async () => {
     installRecognizer();
     storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");

@@ -7,6 +7,8 @@ interface TranscriptListProps {
   entries: TranscriptEntry[];
   languageName: string;
   canSpeak: boolean;
+  /** False while the microphone is open: the tutor's voice would be heard as the answer. */
+  canReplay: boolean;
   /** Sent, no reply text yet: show typing dots. */
   waiting: boolean;
   busy: boolean;
@@ -20,6 +22,7 @@ export default function TranscriptList({
   entries,
   languageName,
   canSpeak,
+  canReplay,
   waiting,
   busy,
   onReplay,
@@ -42,6 +45,7 @@ export default function TranscriptList({
             entry={entry}
             languageName={languageName}
             canSpeak={canSpeak}
+            canReplay={canReplay}
             showRetryPrompt={entry === last}
             busy={busy}
             onReplay={onReplay}
