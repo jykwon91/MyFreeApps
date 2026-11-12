@@ -6,7 +6,7 @@ import { parse } from "yaml";
 import { MORE_MENU } from "../src/constants/moreMenu";
 import { TABS } from "../src/constants/tabs";
 import { APP_ROUTES } from "../test-support/renderApp";
-import type { ScreenMap } from "../test-support/types/ScreenMap";
+import type { ScreenMap } from "@platform/mobile/test-support/types/ScreenMap";
 
 const SCREEN_MAP = parse(fs.readFileSync(path.join(__dirname, "..", "screen-map.yaml"), "utf8")) as ScreenMap;
 const ROUTES = Object.entries(SCREEN_MAP.routes);

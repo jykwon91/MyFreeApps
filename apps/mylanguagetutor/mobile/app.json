@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "MyLanguageTutor",
+    "slug": "mylanguagetutor",
+    "scheme": "mylanguagetutor",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "platforms": ["ios", "android"],
+    "ios": {
+      "config": { "usesNonExemptEncryption": false },
+      "bundleIdentifier": "org.myfreeapps.mylanguagetutor"
+    },
+    "android": {
+      "allowBackup": false,
+      "package": "org.myfreeapps.mylanguagetutor"
+    },
+    "plugins": ["expo-router"]
+  }
+}

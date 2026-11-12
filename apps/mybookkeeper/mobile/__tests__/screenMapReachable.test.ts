@@ -2,10 +2,8 @@
 import fs from "fs";
 import path from "path";
 import { parse } from "yaml";
+import type { ScreenMap } from "@platform/mobile/test-support/types/ScreenMap";
 import { ALL_DESTINATIONS } from "../src/constants/allDestinations";
-
-type ScreenMapRoute = { screen?: string; not_on_mobile?: string };
-type ScreenMap = { routes: Record<string, ScreenMapRoute> };
 
 const SCREEN_MAP = parse(fs.readFileSync(path.join(__dirname, "..", "screen-map.yaml"), "utf8")) as ScreenMap;
 

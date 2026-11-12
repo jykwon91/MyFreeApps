@@ -1,7 +1,7 @@
-import { AccountSettings, AppVersion, MoreRow, SearchField, useTheme } from "@platform/mobile";
+import { AccountSettings, AppVersion, MoreMenuGroups, SearchField, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
 import { ALL_DESTINATIONS } from "../../constants/allDestinations";
 import { MORE_MENU } from "../../constants/moreMenu";
@@ -13,7 +13,7 @@ import { useIsAdmin } from "../workspace/useIsAdmin";
 import MoreSearchResults from "./MoreSearchResults";
 
 export default function MoreScreen() {
-  const { colors, fontSize, spacing } = useTheme();
+  const { colors, spacing } = useTheme();
   const isAdmin = useIsAdmin();
   const canWrite = useCanWrite();
   const viewer = useMemo(() => ({ isAdmin, canWrite }), [isAdmin, canWrite]);
@@ -42,19 +42,7 @@ export default function MoreScreen() {
           />
         </View>
         {isSearching ? <MoreSearchResults onShowAccount={() => setQuery("")} query={query} results={results} /> : null}
-        {(isSearching ? [] : visibleGroups(MORE_MENU, viewer)).map((group) => (
-          <View key={group.title}>
-            <Text
-              accessibilityRole="header"
-              style={{ color: colors.mutedForeground, fontSize: fontSize.sm, fontWeight: "700", marginBottom: spacing.xs }}
-            >
-              {group.title}
-            </Text>
-            {group.items.map((item) => (
-              <MoreRow item={item} key={item.label} webBaseUrl={WEB_BASE_URL} />
-            ))}
-          </View>
-        ))}
+        {isSearching ? null : <MoreMenuGroups groups={visibleGroups(MORE_MENU, viewer)} webBaseUrl={WEB_BASE_URL} />}
         {isSearching ? null : (
           <>
             <AccountSettings appName="MyBookkeeper" onDeleteAccount={() => router.push("/delete-account")} />
