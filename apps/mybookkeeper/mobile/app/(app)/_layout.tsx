@@ -12,18 +12,21 @@ export default function AppLayout() {
   const insets = useSafeAreaInsets();
   useResumeUploads();
   return (
-    // Above the gate, so its own messages, like a link that won't open, can show.
-    <ToastProvider bottomOffset={insets.bottom + TOAST_CLEARANCE}>
-      <WorkspaceGate>
-        <WorkspaceLostToast />
-        <Stack screenOptions={{ ...stackOptions, headerShown: false }}>
-          <Stack.Screen name="(tabs)" options={{ title: "Home" }} />
-          {SINGLE_COPY_SCREENS.map((name) => (
-            <Stack.Screen dangerouslySingular key={name} name={name} options={name === "camera" ? { presentation: "fullScreenModal" } : undefined} />
-          ))}
-        </Stack>
-        <PrivacyCover />
-      </WorkspaceGate>
-    </ToastProvider>
+    <>
+      {/* Above the gate, so its own messages, like a link that won't open, can show. */}
+      <ToastProvider bottomOffset={insets.bottom + TOAST_CLEARANCE}>
+        <WorkspaceGate>
+          <WorkspaceLostToast />
+          <Stack screenOptions={{ ...stackOptions, headerShown: false }}>
+            <Stack.Screen name="(tabs)" options={{ title: "Home" }} />
+            {SINGLE_COPY_SCREENS.map((name) => (
+              <Stack.Screen dangerouslySingular key={name} name={name} options={name === "camera" ? { presentation: "fullScreenModal" } : undefined} />
+            ))}
+          </Stack>
+        </WorkspaceGate>
+      </ToastProvider>
+      {/* After the toast provider, so a toast (which can name a tenant) is covered in the app switcher too. */}
+      <PrivacyCover />
+    </>
   );
 }
