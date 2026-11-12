@@ -127,3 +127,15 @@ async def deactivate_source(
         return False
     await db.commit()
     return True
+
+
+async def list_sources(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    include_inactive: bool,
+) -> list[DiscoverySource]:
+    """List a user's saved searches (active only unless ``include_inactive``)."""
+    return await discovery_repository.list_sources(
+        db, user_id, active_only=not include_inactive,
+    )

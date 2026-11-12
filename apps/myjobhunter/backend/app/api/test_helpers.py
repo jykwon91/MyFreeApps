@@ -8,12 +8,11 @@ console-backend email log or threading verification tokens through the UI.
 """
 from fastapi import APIRouter, Body, HTTPException
 from pydantic import EmailStr
-from sqlalchemy import text
 
 from app.api import admin_invites, applications, companies, discover, resume_refinement, resumes
 from app.core import rate_limit as rl
 from app.core.rate_limit import RateLimiter
-from app.db.session import AsyncSessionLocal
+from app.services.user import user_flag_service
 
 router = APIRouter()
 
@@ -43,18 +42,8 @@ def _all_limiters() -> tuple[RateLimiter, ...]:
 @router.post("/_test/verify-email", status_code=204)
 async def force_verify_email(email: EmailStr = Body(..., embed=True)) -> None:
     """Mark a user verified — used by E2E tests to bypass the email link."""
-    async with AsyncSessionLocal() as session:
-        async with session.begin():
-            result = await session.execute(
-                text(
-                    "UPDATE users SET is_verified = TRUE "
-                    "WHERE email = :email RETURNING id"
-                ),
-                {"email": email},
-            )
-            row = result.first()
-        if row is None:
-            raise HTTPException(status_code=404, detail="user not found")
+    if not await user_flag_service.set_flag_by_email(email, "is_verified"):
+        raise HTTPException(status_code=404, detail="user not found")
 
 
 @router.post("/_test/reset-rate-limit", status_code=204)
@@ -90,15 +79,5 @@ async def promote_to_admin(email: EmailStr = Body(..., embed=True)) -> None:
     the existing JWT and read ``is_superuser`` fresh from the DB on
     every authenticated request.
     """
-    async with AsyncSessionLocal() as session:
-        async with session.begin():
-            result = await session.execute(
-                text(
-                    "UPDATE users SET is_superuser = TRUE "
-                    "WHERE email = :email RETURNING id"
-                ),
-                {"email": email},
-            )
-            row = result.first()
-        if row is None:
-            raise HTTPException(status_code=404, detail="user not found")
+    if not await user_flag_service.set_flag_by_email(email, "is_superuser"):
+        raise HTTPException(status_code=404, detail="user not found")
