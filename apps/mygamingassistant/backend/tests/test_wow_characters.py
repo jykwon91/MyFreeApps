@@ -25,7 +25,7 @@ from app.schemas.wow.character.character_dungeon import CharacterDungeon
 from app.api import wow_characters
 from app.core.rate_limit import RateLimiter
 from app.services.wow.blizzard.blizzard_token_cache import BlizzardTokenCache
-from app.services.wow.character import character_service
+from app.services.wow.character import character_lookup_service, character_service
 from app.services.wow.character.blizzard_character_client import BlizzardCharacterClient
 from app.services.wow.character.character_lookup_error import CharacterLookupError
 from app.services.wow.character.character_mapper import to_character_response
@@ -472,11 +472,11 @@ async def test_a_statistics_failure_still_shows_the_sheet_and_is_not_cached(
     seen: list[httpx.Request] = []
     failing = {"/profile/wow/character/jason-kwon/statistics": _json({"code": 503}, 503)}
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
-    sheet = await character_service.get_character("jason-kwon")
+    sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.stats is None
     assert len(sheet.items) > 0
     assert "Character statistics unavailable" in caplog.text
-    await character_service.get_character("jason-kwon")
+    (await character_service.fetch_character("jason-kwon")).response
     profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
     assert len(profile_calls) == 2
 
@@ -485,8 +485,8 @@ async def test_the_sheet_and_render_ask_blizzard_once(monkeypatch: pytest.Monkey
     seen: list[httpx.Request] = []
     tokens = BlizzardTokenCache()
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(seen=seen), tokens))
-    await character_service.get_character("jason-kwon")
-    await character_service.get_character("jason-kwon")
+    (await character_service.fetch_character("jason-kwon")).response
+    (await character_service.fetch_character("jason-kwon")).response
     render = await character_service.get_character_render("jason-kwon")
     await character_service.get_character_render("jason-kwon")
     assert render is not None and Image.open(BytesIO(render)).size[0] < 400
@@ -499,7 +499,7 @@ async def test_the_sheet_and_render_ask_blizzard_once(monkeypatch: pytest.Monkey
 
 async def test_route_returns_the_sheet(client: AsyncClient) -> None:
     sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS, professions=PROFESSIONS, reputations=REPUTATIONS, pvp_summary=PVP_SUMMARY, achievement_statistics=ACHIEVEMENT_STATISTICS, mounts=MOUNTS, pets=PETS))
-    with patch.object(character_service, "get_character", AsyncMock(return_value=sheet)) as get:
+    with patch.object(character_lookup_service, "get_character", AsyncMock(return_value=sheet)) as get:
         resp = await client.get("/wow/characters/Jason-Kwon")
     assert resp.status_code == 200
     get.assert_awaited_once_with("jason-kwon")
@@ -518,14 +518,14 @@ async def test_route_returns_the_sheet(client: AsyncClient) -> None:
 async def test_route_maps_blizzard_failures(
     client: AsyncClient, error: CharacterLookupError, status: int, detail: str,
 ) -> None:
-    with patch.object(character_service, "get_character", AsyncMock(side_effect=error)):
+    with patch.object(character_lookup_service, "get_character", AsyncMock(side_effect=error)):
         resp = await client.get("/wow/characters/jason-kwon")
     assert resp.status_code == status
     assert resp.json()["detail"] == detail
 
 
 async def test_route_refuses_a_name_that_isnt_two_names(client: AsyncClient) -> None:
-    with patch.object(character_service, "get_character", AsyncMock()) as get:
+    with patch.object(character_lookup_service, "get_character", AsyncMock()) as get:
         resp = await client.get("/wow/characters/jason")
     assert resp.status_code == 400
     get.assert_not_awaited()
@@ -533,12 +533,12 @@ async def test_route_refuses_a_name_that_isnt_two_names(client: AsyncClient) -> 
 
 async def test_render_route_serves_the_png_or_404s(client: AsyncClient) -> None:
     png = _png(10, 10, (2, 2, 8, 8))
-    with patch.object(character_service, "get_character_render", AsyncMock(return_value=png)):
+    with patch.object(character_lookup_service, "get_character_render", AsyncMock(return_value=png)):
         resp = await client.get("/wow/characters/jason-kwon/render.png")
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "image/png"
     assert resp.content == png
-    with patch.object(character_service, "get_character_render", AsyncMock(return_value=None)):
+    with patch.object(character_lookup_service, "get_character_render", AsyncMock(return_value=None)):
         resp = await client.get("/wow/characters/jason-kwon/render.png")
     assert resp.status_code == 404
     assert resp.json()["detail"] == "character_render_not_found"
@@ -546,7 +546,7 @@ async def test_render_route_serves_the_png_or_404s(client: AsyncClient) -> None:
 
 async def test_render_route_has_its_own_per_ip_limit(client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(wow_characters, "character_render_limiter", RateLimiter(max_attempts=1, window_seconds=60))
-    with patch.object(character_service, "get_character_render", AsyncMock(return_value=None)) as get:
+    with patch.object(character_lookup_service, "get_character_render", AsyncMock(return_value=None)) as get:
         first = await client.get("/wow/characters/jason-kwon/render.png")
         second = await client.get("/wow/characters/jason-kwon/render.png")
     assert (first.status_code, second.status_code) == (404, 429)
@@ -580,9 +580,9 @@ async def test_a_character_blizzard_has_no_talents_for_has_none_not_an_error(mon
     missing = {"/profile/wow/character/jason-kwon/specializations": _json({"code": 404}, 404)}
     seen: list[httpx.Request] = []
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing, seen=seen)))
-    sheet = await character_service.get_character("jason-kwon")
+    sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.talents is not None and sheet.talents.groups == []
-    await character_service.get_character("jason-kwon")
+    (await character_service.fetch_character("jason-kwon")).response
     profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
     assert len(profile_calls) == 1  # an answer, so it's cached
 
@@ -593,11 +593,11 @@ async def test_a_talents_failure_still_shows_the_sheet_and_is_not_cached(
     seen: list[httpx.Request] = []
     failing = {"/profile/wow/character/jason-kwon/specializations": _json({"code": 503}, 503)}
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
-    sheet = await character_service.get_character("jason-kwon")
+    sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.talents is None
     assert sheet.stats is not None and len(sheet.items) > 0
     assert "Character talents unavailable" in caplog.text
-    await character_service.get_character("jason-kwon")
+    (await character_service.fetch_character("jason-kwon")).response
     profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
     assert len(profile_calls) == 2
 
@@ -634,9 +634,9 @@ async def test_a_character_with_no_professions_has_none_not_an_error(monkeypatch
     missing = {"/profile/wow/character/jason-kwon/professions": _json({"code": 404}, 404)}
     seen: list[httpx.Request] = []
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing, seen=seen)))
-    sheet = await character_service.get_character("jason-kwon")
+    sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.professions is not None and sheet.professions.primaries == []
-    await character_service.get_character("jason-kwon")
+    (await character_service.fetch_character("jason-kwon")).response
     profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
     assert len(profile_calls) == 1  # an answer, so it's cached
 
@@ -647,11 +647,11 @@ async def test_a_professions_failure_still_shows_the_sheet_and_is_not_cached(
     seen: list[httpx.Request] = []
     failing = {"/profile/wow/character/jason-kwon/professions": _json({"code": 503}, 503)}
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
-    sheet = await character_service.get_character("jason-kwon")
+    sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.professions is None
     assert sheet.talents is not None and len(sheet.items) > 0
     assert "Character professions unavailable" in caplog.text
-    await character_service.get_character("jason-kwon")
+    (await character_service.fetch_character("jason-kwon")).response
     profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
     assert len(profile_calls) == 2
 
@@ -674,9 +674,9 @@ async def test_a_character_with_no_reputations_has_an_empty_list_and_is_cached(m
     missing = {"/profile/wow/character/jason-kwon/reputations": _json({"code": 404}, 404)}
     seen: list[httpx.Request] = []
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing, seen=seen)))
-    sheet = await character_service.get_character("jason-kwon")
+    sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.reputations == []
-    await character_service.get_character("jason-kwon")
+    (await character_service.fetch_character("jason-kwon")).response
     profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
     assert len(profile_calls) == 1
 
@@ -687,11 +687,11 @@ async def test_a_reputations_failure_still_shows_the_sheet_and_is_not_cached(
     seen: list[httpx.Request] = []
     failing = {"/profile/wow/character/jason-kwon/reputations": _json({"code": 503}, 503)}
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
-    sheet = await character_service.get_character("jason-kwon")
+    sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.reputations is None
     assert sheet.professions is not None and len(sheet.items) > 0
     assert "Character reputations unavailable" in caplog.text
-    await character_service.get_character("jason-kwon")
+    (await character_service.fetch_character("jason-kwon")).response
     profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
     assert len(profile_calls) == 2
 
@@ -722,11 +722,11 @@ async def test_a_pvp_failure_still_shows_the_sheet_and_is_not_cached(
     seen: list[httpx.Request] = []
     failing = {"/profile/wow/character/jason-kwon/pvp-summary": _json({"code": 503}, 503)}
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
-    sheet = await character_service.get_character("jason-kwon")
+    sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.pvp is None
     assert sheet.reputations is not None and len(sheet.items) > 0
     assert "Character PvP summary unavailable" in caplog.text
-    await character_service.get_character("jason-kwon")
+    (await character_service.fetch_character("jason-kwon")).response
     profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
     assert len(profile_calls) == 2
 
@@ -736,7 +736,7 @@ async def test_a_statistics_pane_failure_keeps_the_pvp_kills_without_deaths(
 ) -> None:
     failing = {"/profile/wow/character/jason-kwon/achievements/statistics": _json({"code": 503}, 503)}
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing)))
-    sheet = await character_service.get_character("jason-kwon")
+    sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.pvp is not None
     assert sheet.pvp.honorable_kills == 21 and sheet.pvp.deaths_from_players is None
     assert "Character achievement statistics unavailable" in caplog.text
@@ -749,10 +749,10 @@ async def test_a_character_blizzard_has_no_pvp_summary_for_has_zeros_and_is_cach
     }
     seen: list[httpx.Request] = []
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing, seen=seen)))
-    sheet = await character_service.get_character("jason-kwon")
+    sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.pvp is not None
     assert (sheet.pvp.rank, sheet.pvp.honorable_kills, sheet.pvp.deaths_from_players) == (0, 0, 0)
-    await character_service.get_character("jason-kwon")
+    (await character_service.fetch_character("jason-kwon")).response
     profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
     assert len(profile_calls) == 1
 
@@ -772,11 +772,11 @@ async def test_a_pets_failure_keeps_the_mounts_and_is_not_cached(
     seen: list[httpx.Request] = []
     failing = {"/profile/wow/character/jason-kwon/collections/pets": _json({"code": 503}, 503)}
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
-    sheet = await character_service.get_character("jason-kwon")
+    sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.collections.pets is None
     assert sheet.collections.mounts is not None and len(sheet.collections.mounts) == 2
     assert "Character pets unavailable" in caplog.text
-    await character_service.get_character("jason-kwon")
+    (await character_service.fetch_character("jason-kwon")).response
     assert len([r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]) == 2
 
 
@@ -786,7 +786,7 @@ async def test_a_character_with_no_collections_has_empty_lists(monkeypatch: pyte
         "/profile/wow/character/jason-kwon/collections/pets": _json({"code": 404}, 404),
     }
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing)))
-    sheet = await character_service.get_character("jason-kwon")
+    sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.collections.mounts == [] and sheet.collections.pets == []
 
 
@@ -823,6 +823,6 @@ def test_dungeons_are_unknown_not_all_undone_when_statistics_fail() -> None:
 async def test_a_statistics_failure_keeps_the_sheet_without_dungeons(monkeypatch: pytest.MonkeyPatch) -> None:
     failing = {"/profile/wow/character/jason-kwon/achievements/statistics": _json({"code": 503}, 503)}
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing)))
-    sheet = await character_service.get_character("jason-kwon")
+    sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.dungeons is None
     assert sheet.collections.mounts is not None

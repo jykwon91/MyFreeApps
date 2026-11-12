@@ -6,6 +6,7 @@ addresses them as ``/profile/wow/character/{first}-{surname}`` in the
 (checked 2026-11-11 against a real character).
 """
 import re
+from datetime import timedelta
 from typing import Final
 
 CHARACTER_NAMESPACE: Final = "profile-forever-us"
@@ -51,3 +52,21 @@ STATISTIC_DUNGEONS_ENTERED: Final = 932
 
 # An item under this share of its durability is flagged "repair soon".
 CHARACTER_DURABILITY_LOW_SHARE: Final = 0.5
+# More ids from the same answer, for the stored daily history (checked 2026-11-12).
+STATISTIC_TOTAL_KILLS: Final = 1197
+STATISTIC_KILLING_BLOWS: Final = 1487
+STATISTIC_TOTAL_DEATHS: Final = 60
+
+# A reputation tier of 7 is Exalted (0 = Hated).
+REPUTATION_TIER_EXALTED: Final = 7
+
+# Stored characters (``wow_character``): bump when a ``CharacterResponse`` change
+# means a stored sheet no longer reads as the same thing (a rename, a removal, a
+# new meaning). A stored sheet of another version is ignored until it is fetched
+# again. ``test_wow_character_store`` pins the schema's hash to this number.
+CHARACTER_SHEET_VERSION: Final = 1
+# Daily history rows older than this are purged (a character's newest row is kept).
+CHARACTER_METRIC_RETENTION: Final = timedelta(days=400)
+CHARACTER_METRIC_PURGE_INTERVAL_HOURS: Final = 24
+# ``wow_character.last_error``'s size; a longer error is cut to it.
+CHARACTER_ERROR_MAX_LENGTH: Final = 500

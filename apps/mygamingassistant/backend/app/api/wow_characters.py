@@ -5,7 +5,9 @@ GET /wow/characters/{slug}/render.png  — Blizzard's render, cropped to the cha
 
 ``slug`` is ``first-surname`` (Forever characters have no realm). Blizzard's
 Profile API is read with MGA's client-credentials token — no player login —
-and answers are cached in-process for a few minutes.
+and answers are cached in-process for a few minutes. Every fresh answer is
+also stored (``character_lookup_service``): the character's last sheet and a
+daily row of its numbers, for the guild pages.
 
 Errors:
   - 400 — the slug isn't two names of letters
@@ -22,7 +24,7 @@ from platform_shared.core.request_utils import get_client_ip
 from app.core.rate_limit import RateLimiter, check_with_retry_after
 from app.core.wow_character import CHARACTER_CACHE_SECONDS, CHARACTER_RATE_LIMIT, CHARACTER_RATE_WINDOW_SECONDS
 from app.schemas.wow.character.character_response import CharacterResponse
-from app.services.wow.character import character_service
+from app.services.wow.character import character_lookup_service
 from app.services.wow.character.character_lookup_error import CharacterLookupError
 from app.services.wow.character.character_slug import normalize_character_slug
 
@@ -62,7 +64,7 @@ async def get_character(slug: str, request: Request, response: Response) -> Char
     slug = _slug_or_400(slug)
     check_with_retry_after(character_limiter, f"wow-character:{get_client_ip(request)}")
     try:
-        character = await character_service.get_character(slug)
+        character = await character_lookup_service.get_character(slug)
     except CharacterLookupError as exc:
         raise _upstream_error(slug, exc) from exc
     response.headers["Cache-Control"] = _CACHE_CONTROL
@@ -74,7 +76,7 @@ async def get_character_render(slug: str, request: Request) -> Response:
     slug = _slug_or_400(slug)
     check_with_retry_after(character_render_limiter, f"wow-character-render:{get_client_ip(request)}")
     try:
-        png = await character_service.get_character_render(slug)
+        png = await character_lookup_service.get_character_render(slug)
     except CharacterLookupError as exc:
         raise _upstream_error(slug, exc) from exc
     if png is None:

@@ -24,6 +24,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.core.scheduler_constants import (
     JOB_CLEANUP_DOWNLOADS,
+    JOB_PURGE_CHARACTER_METRICS,
     JOB_PURGE_FEATURE_SUBMISSIONS,
     JOB_PURGE_SERVER_STATUS,
     JOB_RAID_NOTIFICATIONS,
@@ -48,10 +49,11 @@ _JOB_BODIES = (
     "run_refresh_wow_prices",
     "run_record_server_status",
     "run_purge_server_status_history",
+    "run_purge_character_metrics",
     "run_purge_feature_submissions",
     "run_cleanup_downloads",
 )
-_PURGES = {JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS}
+_PURGES = {JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS, JOB_PURGE_CHARACTER_METRICS}
 _ALL_JOBS = _PURGES | {
     JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS, JOB_RAID_NOTIFICATIONS,
     JOB_REFRESH_WOW_PRICES, JOB_RECORD_SERVER_STATUS,
@@ -148,6 +150,7 @@ async def test_raid_notifications_only_when_discord_is_on() -> None:
         (JOB_RECORD_SERVER_STATUS, timedelta(minutes=5), 300),
         (JOB_PURGE_FEATURE_SUBMISSIONS, timedelta(hours=24), 3600),
         (JOB_PURGE_SERVER_STATUS, timedelta(hours=24), 3600),
+        (JOB_PURGE_CHARACTER_METRICS, timedelta(hours=24), 3600),
     ],
 )
 async def test_each_job_runs_on_its_interval_once_at_a_time(

@@ -24,9 +24,9 @@ from app.core.wow_character import (
     CHARACTER_CACHE_SECONDS,
     CHARACTER_RENDER_CACHE_MAX_ENTRIES,
 )
-from app.schemas.wow.character.character_response import CharacterResponse
 from app.services.wow.blizzard.blizzard_token_cache import BlizzardTokenCache
 from app.services.wow.character.blizzard_character_client import BlizzardCharacterClient
+from app.services.wow.character.character_fetch import CharacterFetch
 from app.services.wow.character.character_lookup_error import CharacterLookupError
 from app.services.wow.character.character_mapper import render_url, to_character_response
 from app.services.wow.character.character_profile import CharacterProfile
@@ -90,10 +90,11 @@ async def _optional_part(
         return None, False
 
 
-async def _profile(slug: str) -> CharacterProfile:
+async def _load(slug: str) -> tuple[CharacterProfile, bool]:
+    """Blizzard's answers for the character, and whether Blizzard was asked for them just now."""
     cached = _fresh(_profiles, slug)
     if cached is not None:
-        return cached
+        return cached, False
     async with _new_client() as client:
         profile = await client.profile(slug)
         media, equipment, *answers = await asyncio.gather(
@@ -107,12 +108,17 @@ async def _profile(slug: str) -> CharacterProfile:
     data = CharacterProfile(profile=profile, media=media, equipment=equipment, **parts)
     if all(answered for _, answered in answers):
         _store(_profiles, slug, data, CHARACTER_CACHE_MAX_ENTRIES)
-    return data
+    return data, True
 
 
-async def get_character(slug: str) -> CharacterResponse:
+async def _profile(slug: str) -> CharacterProfile:
+    return (await _load(slug))[0]
+
+
+async def fetch_character(slug: str) -> CharacterFetch:
     """Raises ``CharacterLookupError`` (status 404 = no character by that name)."""
-    return to_character_response(slug, await _profile(slug))
+    profile, fresh = await _load(slug)
+    return CharacterFetch(response=to_character_response(slug, profile), profile=profile, fresh=fresh)
 
 
 async def get_character_render(slug: str) -> bytes | None:

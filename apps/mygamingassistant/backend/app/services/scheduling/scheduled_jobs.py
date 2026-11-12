@@ -14,6 +14,7 @@ from app.db.session import AsyncSessionLocal
 from app.repositories.game.source_repo import list_sources
 from app.services.ingestion import ingestion_orchestrator
 from app.services.wow import raid_notification_worker
+from app.services.wow.character import character_store_service
 from app.services.wow.feature_requests import feature_retention_service
 from app.services.wow.prices import price_refresh_service
 from app.services.wow.server_status import server_status_history_service
@@ -116,6 +117,15 @@ async def run_purge_server_status_history() -> None:
     except Exception:
         # Retried on the next run; logged so a persistent failure is visible.
         logger.exception("scheduler_service: purge_wow_server_status_history: run failed")
+
+
+async def run_purge_character_metrics() -> None:
+    """WoW Forever character daily-history retention."""
+    try:
+        await character_store_service.purge_old_metrics()
+    except Exception:
+        # Retried on the next run; logged so a persistent failure is visible.
+        logger.exception("scheduler_service: purge_wow_character_metrics: run failed")
 
 
 async def run_purge_feature_submissions() -> None:

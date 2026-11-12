@@ -26,6 +26,10 @@ from app.models.wow.price_feed import WowPriceFeed  # noqa: F401
 from app.models.wow.item_price import WowItemPrice  # noqa: F401
 # WoW Forever server status history — recorded on a schedule from Blizzard's status
 from app.models.wow.server_status_sample import WowServerStatusSample  # noqa: F401
+# WoW Forever characters looked up on "Your character" — last sheet + daily history
+from app.models.wow.character import WowCharacter  # noqa: F401
+from app.models.wow.character_daily_metric import WowCharacterDailyMetric  # noqa: F401
+from app.models.wow.character_profession_skill import WowCharacterProfessionSkill  # noqa: F401
 # WoW Forever feature requests — story first (submission + vote FK to it)
 from app.models.wow.feature_story import WowFeatureStory  # noqa: F401
 from app.models.wow.feature_submission import WowFeatureSubmission  # noqa: F401

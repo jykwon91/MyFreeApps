@@ -21,6 +21,8 @@ Scheduled jobs (bodies in ``scheduled_jobs``):
   record_wow_server_status — every 5 minutes. WoW Forever server status
                       changes + hourly checkpoints (``app/services/wow/server_status/``).
   purge_wow_server_status_history — every 24 hours (rows older than 90 days).
+  purge_wow_character_metrics — every 24 hours. Stored characters' daily
+                      history older than 400 days (``character_store_service``).
 
 Switches: the purges always run. SCHEDULER_ENABLED gates sync_all_sources,
 cleanup_ingestion_downloads and raid_notifications (serve-only prod turns it
@@ -54,6 +56,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from app.core.scheduler_constants import (
     CLEANUP_DOWNLOADS_INTERVAL_HOURS,
     JOB_CLEANUP_DOWNLOADS,
+    JOB_PURGE_CHARACTER_METRICS,
     JOB_PURGE_FEATURE_SUBMISSIONS,
     JOB_PURGE_SERVER_STATUS,
     JOB_RAID_NOTIFICATIONS,
@@ -62,6 +65,7 @@ from app.core.scheduler_constants import (
     JOB_SYNC_ALL_SOURCES,
     RAID_NOTIFICATIONS_INTERVAL_SECONDS,
 )
+from app.core.wow_character import CHARACTER_METRIC_PURGE_INTERVAL_HOURS
 from app.core.wow_feature_request_limits import PURGE_INTERVAL_HOURS
 from app.core.wow_server_status import PURGE_INTERVAL_HOURS as SERVER_STATUS_PURGE_INTERVAL_HOURS
 from app.core.wow_server_status import RECORD_INTERVAL as SERVER_STATUS_RECORD_INTERVAL
@@ -146,6 +150,8 @@ def start_scheduler(
         timedelta(hours=PURGE_INTERVAL_HOURS), 3600)
     add(JOB_PURGE_SERVER_STATUS, scheduled_jobs.run_purge_server_status_history,
         timedelta(hours=SERVER_STATUS_PURGE_INTERVAL_HOURS), 3600)
+    add(JOB_PURGE_CHARACTER_METRICS, scheduled_jobs.run_purge_character_metrics,
+        timedelta(hours=CHARACTER_METRIC_PURGE_INTERVAL_HOURS), 3600)
     if source_jobs:
         add(JOB_SYNC_ALL_SOURCES, scheduled_jobs.run_sync_all_sources,
             timedelta(hours=sync_interval_hours), 3600)  # syncs are not time-critical
