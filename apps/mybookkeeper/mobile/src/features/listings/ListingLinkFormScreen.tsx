@@ -6,7 +6,7 @@ import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listi
 import { externalIdChanged, externalIdProblem } from "@mybookkeeper/api-client/utils/externalIdForm";
 import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import { LISTING_LINK_MESSAGES as MESSAGES } from "../../constants/listingLinks";
 import { useSaveListingLink } from "./useSaveListingLink";
 
@@ -41,8 +41,8 @@ export default function ListingLinkFormScreen({ listing, original }: ListingLink
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <>
+      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <PickerField disabled={locked || original !== null} hint={EXTERNAL_ID_SOURCE_HINTS[source]} label={MESSAGES.source} onPress={() => setIsPicking(true)} valueLabel={LISTING_SOURCE_LABELS[source]} />
         <FormField
@@ -79,6 +79,6 @@ export default function ListingLinkFormScreen({ listing, original }: ListingLink
         title={MESSAGES.chooseSource}
         value={source}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

@@ -1,7 +1,7 @@
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
-import { Banner, FormField, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
+import { Banner, FormField, HeaderKeyboardAvoidingView, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { Alert, ScrollView, View } from "react-native";
 import {
   messageCounter,
   REPLY_TEMPLATE_BODY_COUNTER_FROM,
@@ -64,7 +64,7 @@ export default function ReplyTemplateForm({ original }: { original: ReplyTemplat
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+    <HeaderKeyboardAvoidingView>
       <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {banner ? <Banner message={banner} /> : null}
         <FormField
@@ -112,6 +112,6 @@ export default function ReplyTemplateForm({ original }: { original: ReplyTemplat
         </LoadingButton>
       </ScrollView>
       <ReplyTemplateVariableBar disabled={isBusy || isLeaving} field={insertion.activeField} onInsert={insertion.insert} />
-    </KeyboardAvoidingView>
+    </HeaderKeyboardAvoidingView>
   );
 }

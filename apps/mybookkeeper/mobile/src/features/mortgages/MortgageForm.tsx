@@ -6,7 +6,7 @@ import { EMPTY_MORTGAGE_FORM, mortgageToFormValues } from "@mybookkeeper/api-cli
 import { mortgageFormProblems } from "@mybookkeeper/api-client/utils/mortgageFormProblems";
 import { Banner, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { Alert, ScrollView } from "react-native";
 import { MORTGAGE_FORM_MESSAGES as MESSAGES, MORTGAGE_STATEMENT_MESSAGES, MORTGAGE_STATEMENT_PHOTO_NAME } from "../../constants/mortgageForm";
 import DocumentDraftNotices from "../documentReader/DocumentDraftNotices";
 import DocumentReader from "../documentReader/DocumentReader";
@@ -48,37 +48,35 @@ export default function MortgageForm({ original }: { original: Mortgage | null }
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
-        {failure ? <Banner message={failure} /> : null}
-        {original ? (
-          <TransactionFact label={MESSAGES.property} value={original.property_name ?? ""} />
-        ) : (
-          <>
-            <DocumentReader
-              isDisabled={isBusy || isLeaving}
-              messages={MORTGAGE_STATEMENT_MESSAGES}
-              photoName={MORTGAGE_STATEMENT_PHOTO_NAME}
-              readers={readers}
-              onRead={(read) => {
-                setDraft(read);
-                setValues((current) => applyMortgageDraftToForm(current, read));
-              }}
-            />
-            {draft ? <DocumentDraftNotices draft={draft} messages={MORTGAGE_STATEMENT_MESSAGES} /> : null}
-            <PropertyChoiceField messages={MESSAGES} disabled={isBusy || isLeaving} error={hasTried && needsProperty ? MESSAGES.propertyRequired : undefined} onChange={setPropertyId} value={propertyId} />
-          </>
-        )}
-        <MortgageFormFields
-          isBusy={isBusy || isLeaving}
-          onChange={(field, value) => setValues((current) => ({ ...current, [field]: value }))}
-          problems={hasTried ? problems : {}}
-          values={values}
-        />
-        <LoadingButton disabled={isBusy || isLeaving} isLoading={isBusy} loadingText={MESSAGES.saving} onPress={submit}>
-          {original ? MESSAGES.saveEdit : MESSAGES.saveNew}
-        </LoadingButton>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+      {failure ? <Banner message={failure} /> : null}
+      {original ? (
+        <TransactionFact label={MESSAGES.property} value={original.property_name ?? ""} />
+      ) : (
+        <>
+          <DocumentReader
+            isDisabled={isBusy || isLeaving}
+            messages={MORTGAGE_STATEMENT_MESSAGES}
+            photoName={MORTGAGE_STATEMENT_PHOTO_NAME}
+            readers={readers}
+            onRead={(read) => {
+              setDraft(read);
+              setValues((current) => applyMortgageDraftToForm(current, read));
+            }}
+          />
+          {draft ? <DocumentDraftNotices draft={draft} messages={MORTGAGE_STATEMENT_MESSAGES} /> : null}
+          <PropertyChoiceField messages={MESSAGES} disabled={isBusy || isLeaving} error={hasTried && needsProperty ? MESSAGES.propertyRequired : undefined} onChange={setPropertyId} value={propertyId} />
+        </>
+      )}
+      <MortgageFormFields
+        isBusy={isBusy || isLeaving}
+        onChange={(field, value) => setValues((current) => ({ ...current, [field]: value }))}
+        problems={hasTried ? problems : {}}
+        values={values}
+      />
+      <LoadingButton disabled={isBusy || isLeaving} isLoading={isBusy} loadingText={MESSAGES.saving} onPress={submit}>
+        {original ? MESSAGES.saveEdit : MESSAGES.saveNew}
+      </LoadingButton>
+    </ScrollView>
   );
 }

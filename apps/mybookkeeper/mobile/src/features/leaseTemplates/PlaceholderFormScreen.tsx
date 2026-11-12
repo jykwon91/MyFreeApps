@@ -6,7 +6,7 @@ import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/l
 import { placeholderDirtyFields, placeholderFormProblems, placeholderToFormValues } from "@mybookkeeper/api-client/utils/leasePlaceholderForm";
 import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
+import { ScrollView, Text } from "react-native";
 import { PLACEHOLDER_MESSAGES as MESSAGES } from "../../constants/leasePlaceholderEdit";
 import type { PlaceholderFormScreenProps } from "../../types/PlaceholderFormScreenProps";
 import { useSavePlaceholder } from "./useSavePlaceholder";
@@ -41,8 +41,8 @@ export default function PlaceholderFormScreen({ templateId, placeholder }: Place
   const defaultProblem = hasTried && problems.default_source ? LEASE_PLACEHOLDER_FORM_PROBLEMS[problems.default_source] : undefined;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <>
+      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {message ? <Banner message={message} /> : null}
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`${MESSAGES.key}: [${placeholder.key}]`}</Text>
         <FormField
@@ -92,6 +92,6 @@ export default function PlaceholderFormScreen({ templateId, placeholder }: Place
         title={MESSAGES.chooseType}
         value={values.input_type}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

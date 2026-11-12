@@ -6,7 +6,7 @@ import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendo
 import { EMPTY_VENDOR_FORM, vendorDirtyFields, vendorFormProblems, vendorToFormValues } from "@mybookkeeper/api-client/utils/vendorForm";
 import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import { VENDOR_FORM_MESSAGES as MESSAGES } from "../../constants/vendorForm";
 import { useSaveVendor } from "./useSaveVendor";
 
@@ -40,8 +40,8 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <>
+      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <FormField
           editable={!locked}
@@ -122,6 +122,6 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
         title={MESSAGES.chooseCategory}
         value={values.category}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

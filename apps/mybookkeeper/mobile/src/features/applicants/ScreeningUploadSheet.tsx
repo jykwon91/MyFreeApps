@@ -3,7 +3,7 @@ import { ADVERSE_OUTCOMES, SCREENING_UPLOAD_OUTCOMES } from "@mybookkeeper/api-c
 import type { ScreeningStatus } from "@mybookkeeper/api-client/types/applicant/screening-status";
 import { Banner, filePart, FormField, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, View } from "react-native";
+import { Modal, ScrollView, Text, View } from "react-native";
 import { SCREENING_MESSAGES, SCREENING_PHOTO_NAME, SCREENING_REASON_MAX_LENGTH, SCREENING_REPORT_FILE_TYPES } from "../../constants/applicantScreening";
 import { screeningOutcomeLabel } from "./applicantDisplay";
 import { confirmDiscard } from "../uploads/confirmDiscard";
@@ -66,8 +66,8 @@ export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: {
 
   return (
     <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {SCREENING_MESSAGES.sheetTitle}
           </Text>
@@ -117,7 +117,7 @@ export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: {
             {SCREENING_MESSAGES.cancel}
           </LoadingButton>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }

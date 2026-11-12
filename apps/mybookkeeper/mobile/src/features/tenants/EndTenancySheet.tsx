@@ -1,7 +1,7 @@
 import { TENANCY_END_REASON_MAX_LENGTH } from "@mybookkeeper/api-client/constants/tenancy";
 import { Banner, FormField, LoadingButton, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text } from "react-native";
+import { Modal, ScrollView, Text, View } from "react-native";
 import { endTitle, TENANT_MESSAGES } from "../../constants/tenants";
 
 export default function EndTenancySheet({
@@ -47,8 +47,8 @@ export default function EndTenancySheet({
 
   return (
     <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {endTitle(name)}
           </Text>
@@ -71,7 +71,7 @@ export default function EndTenancySheet({
             {TENANT_MESSAGES.cancel}
           </LoadingButton>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }

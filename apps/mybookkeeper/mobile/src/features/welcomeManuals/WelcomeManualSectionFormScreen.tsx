@@ -5,7 +5,7 @@ import type { WelcomeManualSectionResponse } from "@mybookkeeper/api-client/type
 import { sectionProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
 import { Banner, FormField, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import { WELCOME_MANUAL_SECTION_BODY_MIN_HEIGHT, WELCOME_MANUAL_SECTION_MESSAGES as MESSAGES } from "../../constants/welcomeManualForms";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import { roomNameFor, roomScopeOptions } from "./welcomeManualRoomOptions";
@@ -35,8 +35,8 @@ export default function WelcomeManualSectionFormScreen({ manual, original }: Wel
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <>
+      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <FormField
           editable={!locked}
@@ -75,6 +75,6 @@ export default function WelcomeManualSectionFormScreen({ manual, original }: Wel
         title={MESSAGES.chooseScope}
         value={values.room_id || SHARED_ROOM_OPTION}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

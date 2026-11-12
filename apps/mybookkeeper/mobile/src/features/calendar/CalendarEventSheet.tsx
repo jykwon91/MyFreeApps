@@ -2,7 +2,7 @@ import { isReadOnlySource } from "@mybookkeeper/api-client/constants/calendarSou
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 import { LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { useEffect, useRef } from "react";
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { CALENDAR_MESSAGES } from "../../constants/calendar";
 import { EVENT_MESSAGES } from "../../constants/calendarEventDetail";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -61,7 +61,7 @@ export default function CalendarEventSheet({ event, isOpen, onClose, onOpenLease
 
   return (
     <Modal animationType="slide" onDismiss={Platform.OS === "ios" ? onClosed : undefined} onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={{ flexDirection: "row", alignItems: "center", paddingLeft: spacing.lg, paddingTop: spacing.sm }}>
           <Text accessibilityRole="header" style={{ flex: 1, fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {eventHeadline(event)}
@@ -74,7 +74,7 @@ export default function CalendarEventSheet({ event, isOpen, onClose, onOpenLease
             <Text style={{ fontSize: fontSize.md, color: colors.primary }}>{CALENDAR_MESSAGES.close}</Text>
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+        <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
           <CalendarEventFacts event={event} />
           {isLease ? (
             <View style={{ gap: spacing.sm }}>
@@ -91,7 +91,7 @@ export default function CalendarEventSheet({ event, isOpen, onClose, onOpenLease
             </>
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }

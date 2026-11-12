@@ -5,7 +5,7 @@ import type { TransactionType } from "@mybookkeeper/api-client/types/transaction
 import { Banner, FormField, LoadingButton, OptionSheet, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
+import { Alert, ScrollView, Text } from "react-native";
 import { DEFAULT_CATEGORY, NO_PROPERTY_OPTION } from "../../constants/transactionEdit";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
 import type { TransactionEditValues } from "../../types/TransactionEditValues";
@@ -106,8 +106,9 @@ export default function TransactionEditForm({ original }: { original: Transactio
     changes.property_id && vendor && original.address ? `I'll move other ${vendor} transactions at this address too.` : undefined;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+    <>
       <ScrollView
+        automaticallyAdjustKeyboardInsets
         contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
@@ -183,6 +184,6 @@ export default function TransactionEditForm({ original }: { original: Transactio
         title="Property"
         value={values.propertyId ?? NO_PROPERTY_OPTION}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

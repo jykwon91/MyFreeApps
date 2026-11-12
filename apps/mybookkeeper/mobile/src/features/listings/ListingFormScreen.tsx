@@ -7,7 +7,7 @@ import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listi
 import { EMPTY_LISTING_FORM, listingDirtyFields, listingFormProblems, listingToFormValues } from "@mybookkeeper/api-client/utils/listingForm";
 import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import { LISTING_FORM_MESSAGES as MESSAGES, LISTING_MULTILINE_MIN_HEIGHT, LISTING_PROPERTY_CHOICE, LISTING_ROOM_OPTIONS, LISTING_STATUS_OPTIONS } from "../../constants/listingForm";
 import type { ListingFormPicking } from "../../types/ListingFormPicking";
 import PropertyChoiceField from "../properties/PropertyChoiceField";
@@ -44,8 +44,8 @@ export default function ListingFormScreen({ original }: { original: ListingRespo
   const multiline = { minHeight: LISTING_MULTILINE_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" } as const;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <>
+      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <FormField editable={!locked} error={errorFor("title")} label={MESSAGES.title} maxLength={LISTING_TITLE_MAX_LENGTH} onChangeText={(text) => edit("title", text)} required value={values.title} />
         <PropertyChoiceField disabled={locked} error={errorFor("property_id")} messages={LISTING_PROPERTY_CHOICE} onChange={(id) => edit("property_id", id)} value={values.property_id} />
@@ -100,6 +100,6 @@ export default function ListingFormScreen({ original }: { original: ListingRespo
         title={MESSAGES.chooseStatus}
         value={values.status}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

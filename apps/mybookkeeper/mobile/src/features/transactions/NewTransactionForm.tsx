@@ -4,7 +4,7 @@ import type { TransactionType } from "@mybookkeeper/api-client/types/transaction
 import { FormField, LoadingButton, MIN_TOUCH_TARGET, OptionSheet, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Switch, Text, View } from "react-native";
+import { Alert, ScrollView, Switch, Text, View } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
 import { DEFAULT_CATEGORY, NO_PROPERTY_OPTION } from "../../constants/transactionEdit";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
@@ -102,8 +102,9 @@ export default function NewTransactionForm() {
   const sheet = openSheet ? sheets[openSheet] : null;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+    <>
       <ScrollView
+        automaticallyAdjustKeyboardInsets
         contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
@@ -162,6 +163,6 @@ export default function NewTransactionForm() {
         title={openSheet ? SHEET_TITLES[openSheet] : ""}
         value={sheet?.value ?? ""}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

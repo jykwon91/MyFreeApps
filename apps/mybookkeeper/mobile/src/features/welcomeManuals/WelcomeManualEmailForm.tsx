@@ -4,7 +4,7 @@ import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welco
 import { emailProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
 import { Banner, FormField, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState, type ReactElement } from "react";
-import { KeyboardAvoidingView, Platform, RefreshControlProps, ScrollView, Text, View } from "react-native";
+import { type RefreshControlProps, ScrollView, Text, View } from "react-native";
 import { WELCOME_MANUAL_EMAIL_EMPTY_VALUES, WELCOME_MANUAL_EMAIL_MESSAGES as MESSAGES } from "../../constants/welcomeManualForms";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import WelcomeManualEmailOutcome from "./WelcomeManualEmailOutcome";
@@ -30,8 +30,8 @@ export default function WelcomeManualEmailForm({ manual, refreshControl }: Welco
   if (outcome) return <WelcomeManualEmailOutcome manualId={manual.id} onSendAnother={() => { edit("recipient_email", ""); edit("recipient_name", ""); reset(); }} onTryAgain={reset} outcome={outcome} />;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
+    <>
+      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>
         {failure ? <Banner message={failure} /> : null}
         <FormField autoCapitalize="none" editable={!isBusy} error={form.errorFor("recipient_email")} keyboardType="email-address" label={MESSAGES.emailLabel} onChangeText={(text) => edit("recipient_email", text)} required value={values.recipient_email} />
         <FormField editable={!isBusy} error={form.errorFor("recipient_name")} label={MESSAGES.nameLabel} maxLength={WELCOME_MANUAL_RECIPIENT_NAME_MAX_LENGTH} onChangeText={(text) => edit("recipient_name", text)} value={values.recipient_name} />
@@ -57,6 +57,6 @@ export default function WelcomeManualEmailForm({ manual, refreshControl }: Welco
         title={MESSAGES.chooseRoom}
         value={values.room_id}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

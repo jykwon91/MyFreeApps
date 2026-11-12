@@ -5,7 +5,7 @@ import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welco
 import { manualEditProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
 import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { ScrollView } from "react-native";
 import { WELCOME_MANUAL_FORM_MESSAGES as MESSAGES, WELCOME_MANUAL_INTRO_MIN_HEIGHT } from "../../constants/welcomeManualForms";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import { NO_PROPERTY_VALUE, propertyOptions } from "./welcomeManualPropertyOptions";
@@ -36,8 +36,8 @@ export default function WelcomeManualFormScreen({ original }: { original: Welcom
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+    <>
+      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <FormField
           editable={!locked}
@@ -77,6 +77,6 @@ export default function WelcomeManualFormScreen({ original }: { original: Welcom
         title={MESSAGES.chooseProperty}
         value={values.property_id || NO_PROPERTY_VALUE}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

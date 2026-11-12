@@ -5,10 +5,9 @@ import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/start
 import { replayRate } from "@mylanguagetutor/api-client/utils/replayRate";
 import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedAnswerPlaceholder";
 import { usageBlock } from "@mylanguagetutor/api-client/utils/usageBlock";
-import { useAnnouncement, useTheme } from "@platform/mobile";
-import { useHeaderHeight } from "expo-router/react-navigation";
+import { HeaderKeyboardAvoidingView, useAnnouncement, useTheme } from "@platform/mobile";
 import { type ComponentRef, useRef, useState } from "react";
-import { KeyboardAvoidingView, type NativeScrollEvent, type NativeSyntheticEvent, Platform, ScrollView, Text, type TextInput, View } from "react-native";
+import { type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, Text, type TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CORRECTIONS_GRACE_MS } from "../../constants/conversation";
 import { useAwakeUntilIdle } from "../../hooks/useAwakeUntilIdle";
@@ -58,7 +57,6 @@ export default function Conversation({ language, scenario, level }: Conversation
     stopSpeaking: synthesis.cancel,
   });
   const usage = useGetUsageTodayQuery();
-  const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
   const [completeDismissed, setCompleteDismissed] = useState(false);
   const input = useRef<ComponentRef<typeof TextInput>>(null);
@@ -103,11 +101,7 @@ export default function Conversation({ language, scenario, level }: Conversation
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={headerHeight}
-      style={{ flex: 1, backgroundColor: colors.background }}
-    >
+    <HeaderKeyboardAvoidingView>
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, gap: spacing.lg, padding: spacing.lg }}
         keyboardShouldPersistTaps="handled"
@@ -155,6 +149,6 @@ export default function Conversation({ language, scenario, level }: Conversation
         )}
       </View>
       {awake && !block ? <KeepAwake /> : null}
-    </KeyboardAvoidingView>
+    </HeaderKeyboardAvoidingView>
   );
 }

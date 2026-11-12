@@ -3,7 +3,7 @@ import type { LeaseImportFormValues } from "@mybookkeeper/api-client/types/lease
 import { EMPTY_LEASE_IMPORT_FORM, leaseImportProblems } from "@mybookkeeper/api-client/utils/leaseImportForm";
 import { Banner, FormField, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
+import { ScrollView, Text } from "react-native";
 import { LEASE_IMPORT_MESSAGES as MESSAGES, LEASE_IMPORT_PROBLEM_MESSAGES, notesLeft } from "../../constants/leaseImport";
 import { LEASE_FILE_TYPES } from "../../constants/leases";
 import OptionalDateField from "../shell/OptionalDateField";
@@ -45,51 +45,49 @@ export default function LeaseImportBody() {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" testID="lease-import">
-        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.intro}</Text>
-        {banner ? <Banner message={banner} /> : null}
-        <LeaseApplicantField disabled={locked} error={problemFor("applicantId")} onChange={(applicantId) => edit("applicantId", applicantId)} value={values.applicantId} />
-        <LeaseListingField disabled={locked} onChange={(listingId) => edit("listingId", listingId)} value={values.listingId} />
-        <OptionalDateField disabled={locked} label={MESSAGES.startsOn} onChange={(iso) => edit("startsOn", iso ?? "")} startsAt={new Date()} value={values.startsOn || null} />
-        <OptionalDateField disabled={locked} error={problemFor("endsOn")} label={MESSAGES.endsOn} onChange={(iso) => edit("endsOn", iso ?? "")} startsAt={new Date()} value={values.endsOn || null} />
-        <FormField
-          editable={!locked}
-          error={problemFor("notes")}
-          inputStyle={{ minHeight: NOTES_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
-          label={MESSAGES.notes}
-          maxLength={LEASE_NOTES_MAX_LENGTH}
-          multiline
-          onChangeText={(text) => edit("notes", text)}
-          placeholder={MESSAGES.notesPlaceholder}
-          value={values.notes}
-        />
-        <Text style={{ fontSize: fontSize.xs, color: values.notes.length > LEASE_NOTES_MAX_LENGTH ? colors.destructiveText : colors.mutedForeground, marginTop: -spacing.md }}>
-          {notesLeft(LEASE_NOTES_MAX_LENGTH - values.notes.length)}
+    <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" testID="lease-import">
+      <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.intro}</Text>
+      {banner ? <Banner message={banner} /> : null}
+      <LeaseApplicantField disabled={locked} error={problemFor("applicantId")} onChange={(applicantId) => edit("applicantId", applicantId)} value={values.applicantId} />
+      <LeaseListingField disabled={locked} onChange={(listingId) => edit("listingId", listingId)} value={values.listingId} />
+      <OptionalDateField disabled={locked} label={MESSAGES.startsOn} onChange={(iso) => edit("startsOn", iso ?? "")} startsAt={new Date()} value={values.startsOn || null} />
+      <OptionalDateField disabled={locked} error={problemFor("endsOn")} label={MESSAGES.endsOn} onChange={(iso) => edit("endsOn", iso ?? "")} startsAt={new Date()} value={values.endsOn || null} />
+      <FormField
+        editable={!locked}
+        error={problemFor("notes")}
+        inputStyle={{ minHeight: NOTES_MIN_HEIGHT, paddingTop: spacing.md, textAlignVertical: "top" }}
+        label={MESSAGES.notes}
+        maxLength={LEASE_NOTES_MAX_LENGTH}
+        multiline
+        onChangeText={(text) => edit("notes", text)}
+        placeholder={MESSAGES.notesPlaceholder}
+        value={values.notes}
+      />
+      <Text style={{ fontSize: fontSize.xs, color: values.notes.length > LEASE_NOTES_MAX_LENGTH ? colors.destructiveText : colors.mutedForeground, marginTop: -spacing.md }}>
+        {notesLeft(LEASE_NOTES_MAX_LENGTH - values.notes.length)}
+      </Text>
+      <Text accessibilityRole="header" style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+        {MESSAGES.files}
+      </Text>
+      <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.filesHint}</Text>
+      <HeldFilesList emptyText={MESSAGES.noFiles} files={held.files} firstFileNote={MESSAGES.signedLeaseTag} isDisabled={locked} onRemove={held.drop} />
+      {problemFor("files") ? (
+        <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>
+          {problemFor("files")}
         </Text>
-        <Text accessibilityRole="header" style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
-          {MESSAGES.files}
-        </Text>
-        <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.filesHint}</Text>
-        <HeldFilesList emptyText={MESSAGES.noFiles} files={held.files} firstFileNote={MESSAGES.signedLeaseTag} isDisabled={locked} onRemove={held.drop} />
-        {problemFor("files") ? (
-          <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>
-            {problemFor("files")}
-          </Text>
-        ) : null}
-        <HeldFileButtons
-          file={null}
-          fileTypes={LEASE_FILE_TYPES}
-          isDisabled={locked}
-          isPicking={held.isPicking}
-          onPick={(from) => void held.pick(from)}
-          photoName={MESSAGES.photoName}
-          takePhotoLabel={MESSAGES.takePhoto}
-        />
-        <LoadingButton disabled={locked || held.isPicking} isLoading={isBusy} loadingText={MESSAGES.submitting} onPress={importLease}>
-          {MESSAGES.submit}
-        </LoadingButton>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      ) : null}
+      <HeldFileButtons
+        file={null}
+        fileTypes={LEASE_FILE_TYPES}
+        isDisabled={locked}
+        isPicking={held.isPicking}
+        onPick={(from) => void held.pick(from)}
+        photoName={MESSAGES.photoName}
+        takePhotoLabel={MESSAGES.takePhoto}
+      />
+      <LoadingButton disabled={locked || held.isPicking} isLoading={isBusy} loadingText={MESSAGES.submitting} onPress={importLease}>
+        {MESSAGES.submit}
+      </LoadingButton>
+    </ScrollView>
   );
 }

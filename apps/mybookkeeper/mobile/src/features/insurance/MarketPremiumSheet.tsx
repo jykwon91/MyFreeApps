@@ -4,7 +4,7 @@ import type { InsuranceBenchmarkFormValues } from "@mybookkeeper/api-client/type
 import { benchmarkFormPayload, benchmarkToFormValues } from "@mybookkeeper/api-client/utils/insuranceBenchmarkForm";
 import { Banner, FormField, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
-import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, Text } from "react-native";
+import { Alert, Modal, ScrollView, Text, View } from "react-native";
 import { MARKET_MESSAGES } from "../../constants/insuranceMarket";
 import { dateFromIso } from "../../lib/localDate";
 import { useTodayIso } from "../../lib/useTodayIso";
@@ -56,8 +56,8 @@ export default function MarketPremiumSheet({ existing, onClose }: MarketPremiumS
 
   return (
     <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {existing ? MARKET_MESSAGES.update : MARKET_MESSAGES.record}
           </Text>
@@ -76,7 +76,7 @@ export default function MarketPremiumSheet({ existing, onClose }: MarketPremiumS
             {MARKET_MESSAGES.cancel}
           </LoadingButton>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
