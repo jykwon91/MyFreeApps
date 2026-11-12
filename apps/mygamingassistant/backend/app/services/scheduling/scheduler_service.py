@@ -23,8 +23,12 @@ Scheduled jobs (bodies in ``scheduled_jobs``):
   purge_wow_server_status_history — every 24 hours (rows older than 90 days).
   purge_wow_character_metrics — every 24 hours. Stored characters' daily
                       history older than 400 days (``character_store_service``).
+  refresh_wow_guild_rosters — every 30 minutes. Watched WoW Forever guilds
+                      whose roster is over 6 hours old: roster + every member
+                      (``app/services/wow/guild/guild_roster_service.py``).
 
-Switches: the purges always run. SCHEDULER_ENABLED gates sync_all_sources,
+Switches: the purges and refresh_wow_guild_rosters always run (it does nothing
+until someone looks up a guild member). SCHEDULER_ENABLED gates sync_all_sources,
 cleanup_ingestion_downloads and raid_notifications (serve-only prod turns it
 off). WOW_PRICE_REFRESH_ENABLED gates refresh_wow_prices.
 WOW_SERVER_STATUS_RECORDING_ENABLED gates record_wow_server_status.
@@ -61,12 +65,14 @@ from app.core.scheduler_constants import (
     JOB_PURGE_SERVER_STATUS,
     JOB_RAID_NOTIFICATIONS,
     JOB_RECORD_SERVER_STATUS,
+    JOB_REFRESH_GUILD_ROSTERS,
     JOB_REFRESH_WOW_PRICES,
     JOB_SYNC_ALL_SOURCES,
     RAID_NOTIFICATIONS_INTERVAL_SECONDS,
 )
 from app.core.wow_character import CHARACTER_METRIC_PURGE_INTERVAL_HOURS
 from app.core.wow_feature_request_limits import PURGE_INTERVAL_HOURS
+from app.core.wow_guild import GUILD_ROSTER_JOB_INTERVAL
 from app.core.wow_server_status import PURGE_INTERVAL_HOURS as SERVER_STATUS_PURGE_INTERVAL_HOURS
 from app.core.wow_server_status import RECORD_INTERVAL as SERVER_STATUS_RECORD_INTERVAL
 from app.schemas.system.run_now_outcome import RunNowOutcome
@@ -106,7 +112,7 @@ def start_scheduler(
 ) -> AsyncIOScheduler:
     """Create the module-level AsyncIOScheduler, register its jobs and start it.
 
-    The retention purges always run. The other groups each have a switch:
+    The retention purges and the guild roster refresh always run. The other groups each have a switch:
 
     * ``source_jobs`` (``SCHEDULER_ENABLED``) — YouTube source sync and
       download cleanup, plus the Discord raid reminders when
@@ -152,6 +158,9 @@ def start_scheduler(
         timedelta(hours=SERVER_STATUS_PURGE_INTERVAL_HOURS), 3600)
     add(JOB_PURGE_CHARACTER_METRICS, scheduled_jobs.run_purge_character_metrics,
         timedelta(hours=CHARACTER_METRIC_PURGE_INTERVAL_HOURS), 3600)
+    # Idle until someone looks up a guild member, so it has no switch either.
+    add(JOB_REFRESH_GUILD_ROSTERS, scheduled_jobs.run_refresh_guild_rosters,
+        GUILD_ROSTER_JOB_INTERVAL, int(GUILD_ROSTER_JOB_INTERVAL.total_seconds()))
     if source_jobs:
         add(JOB_SYNC_ALL_SOURCES, scheduled_jobs.run_sync_all_sources,
             timedelta(hours=sync_interval_hours), 3600)  # syncs are not time-critical

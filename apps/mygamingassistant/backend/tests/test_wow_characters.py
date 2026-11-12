@@ -462,7 +462,7 @@ async def test_a_render_the_render_host_doesnt_have_is_no_picture(monkeypatch: p
             return httpx.Response(404)
         return base(request)
 
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(handle))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(handle))
     assert await character_service.get_character_render("jason-kwon") is None
 
 
@@ -471,7 +471,7 @@ async def test_a_statistics_failure_still_shows_the_sheet_and_is_not_cached(
 ) -> None:
     seen: list[httpx.Request] = []
     failing = {"/profile/wow/character/jason-kwon/statistics": _json({"code": 503}, 503)}
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(failing, seen=seen)))
     sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.stats is None
     assert len(sheet.items) > 0
@@ -484,7 +484,7 @@ async def test_a_statistics_failure_still_shows_the_sheet_and_is_not_cached(
 async def test_the_sheet_and_render_ask_blizzard_once(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: list[httpx.Request] = []
     tokens = BlizzardTokenCache()
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(seen=seen), tokens))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(seen=seen), tokens))
     (await character_service.fetch_character("jason-kwon")).response
     (await character_service.fetch_character("jason-kwon")).response
     render = await character_service.get_character_render("jason-kwon")
@@ -579,7 +579,7 @@ def test_no_talents_is_an_empty_list_and_a_failure_is_none() -> None:
 async def test_a_character_blizzard_has_no_talents_for_has_none_not_an_error(monkeypatch: pytest.MonkeyPatch) -> None:
     missing = {"/profile/wow/character/jason-kwon/specializations": _json({"code": 404}, 404)}
     seen: list[httpx.Request] = []
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing, seen=seen)))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(missing, seen=seen)))
     sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.talents is not None and sheet.talents.groups == []
     (await character_service.fetch_character("jason-kwon")).response
@@ -592,7 +592,7 @@ async def test_a_talents_failure_still_shows_the_sheet_and_is_not_cached(
 ) -> None:
     seen: list[httpx.Request] = []
     failing = {"/profile/wow/character/jason-kwon/specializations": _json({"code": 503}, 503)}
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(failing, seen=seen)))
     sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.talents is None
     assert sheet.stats is not None and len(sheet.items) > 0
@@ -633,7 +633,7 @@ def test_no_professions_is_two_empty_lists_and_a_failure_is_none() -> None:
 async def test_a_character_with_no_professions_has_none_not_an_error(monkeypatch: pytest.MonkeyPatch) -> None:
     missing = {"/profile/wow/character/jason-kwon/professions": _json({"code": 404}, 404)}
     seen: list[httpx.Request] = []
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing, seen=seen)))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(missing, seen=seen)))
     sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.professions is not None and sheet.professions.primaries == []
     (await character_service.fetch_character("jason-kwon")).response
@@ -646,7 +646,7 @@ async def test_a_professions_failure_still_shows_the_sheet_and_is_not_cached(
 ) -> None:
     seen: list[httpx.Request] = []
     failing = {"/profile/wow/character/jason-kwon/professions": _json({"code": 503}, 503)}
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(failing, seen=seen)))
     sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.professions is None
     assert sheet.talents is not None and len(sheet.items) > 0
@@ -673,7 +673,7 @@ def test_no_reputations_is_an_empty_list_and_a_failure_is_none() -> None:
 async def test_a_character_with_no_reputations_has_an_empty_list_and_is_cached(monkeypatch: pytest.MonkeyPatch) -> None:
     missing = {"/profile/wow/character/jason-kwon/reputations": _json({"code": 404}, 404)}
     seen: list[httpx.Request] = []
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing, seen=seen)))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(missing, seen=seen)))
     sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.reputations == []
     (await character_service.fetch_character("jason-kwon")).response
@@ -686,7 +686,7 @@ async def test_a_reputations_failure_still_shows_the_sheet_and_is_not_cached(
 ) -> None:
     seen: list[httpx.Request] = []
     failing = {"/profile/wow/character/jason-kwon/reputations": _json({"code": 503}, 503)}
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(failing, seen=seen)))
     sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.reputations is None
     assert sheet.professions is not None and len(sheet.items) > 0
@@ -721,7 +721,7 @@ async def test_a_pvp_failure_still_shows_the_sheet_and_is_not_cached(
 ) -> None:
     seen: list[httpx.Request] = []
     failing = {"/profile/wow/character/jason-kwon/pvp-summary": _json({"code": 503}, 503)}
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(failing, seen=seen)))
     sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.pvp is None
     assert sheet.reputations is not None and len(sheet.items) > 0
@@ -735,7 +735,7 @@ async def test_a_statistics_pane_failure_keeps_the_pvp_kills_without_deaths(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
 ) -> None:
     failing = {"/profile/wow/character/jason-kwon/achievements/statistics": _json({"code": 503}, 503)}
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing)))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(failing)))
     sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.pvp is not None
     assert sheet.pvp.honorable_kills == 21 and sheet.pvp.deaths_from_players is None
@@ -748,7 +748,7 @@ async def test_a_character_blizzard_has_no_pvp_summary_for_has_zeros_and_is_cach
         "/profile/wow/character/jason-kwon/achievements/statistics": _json({"code": 404}, 404),
     }
     seen: list[httpx.Request] = []
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing, seen=seen)))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(missing, seen=seen)))
     sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.pvp is not None
     assert (sheet.pvp.rank, sheet.pvp.honorable_kills, sheet.pvp.deaths_from_players) == (0, 0, 0)
@@ -771,7 +771,7 @@ async def test_a_pets_failure_keeps_the_mounts_and_is_not_cached(
 ) -> None:
     seen: list[httpx.Request] = []
     failing = {"/profile/wow/character/jason-kwon/collections/pets": _json({"code": 503}, 503)}
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing, seen=seen)))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(failing, seen=seen)))
     sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.collections.pets is None
     assert sheet.collections.mounts is not None and len(sheet.collections.mounts) == 2
@@ -785,7 +785,7 @@ async def test_a_character_with_no_collections_has_empty_lists(monkeypatch: pyte
         "/profile/wow/character/jason-kwon/collections/mounts": _json({"code": 404}, 404),
         "/profile/wow/character/jason-kwon/collections/pets": _json({"code": 404}, 404),
     }
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing)))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(missing)))
     sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.collections.mounts == [] and sheet.collections.pets == []
 
@@ -822,7 +822,7 @@ def test_dungeons_are_unknown_not_all_undone_when_statistics_fail() -> None:
 
 async def test_a_statistics_failure_keeps_the_sheet_without_dungeons(monkeypatch: pytest.MonkeyPatch) -> None:
     failing = {"/profile/wow/character/jason-kwon/achievements/statistics": _json({"code": 503}, 503)}
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing)))
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard(failing)))
     sheet = (await character_service.fetch_character("jason-kwon")).response
     assert sheet.dungeons is None
     assert sheet.collections.mounts is not None

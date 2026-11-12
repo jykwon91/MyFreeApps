@@ -19,7 +19,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, Index, SmallInteger, String, func, text
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, SmallInteger, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, deferred, mapped_column
 
@@ -33,6 +33,7 @@ class WowCharacter(Base):
         CheckConstraint("slug = lower(slug)", name="ck_wowcharacter_slug_lower"),
         # One live character per slug; a gone row keeps its slug for its history.
         Index("uq_wowcharacter_slug_live", "slug", unique=True, postgresql_where=text("gone_at IS NULL")),
+        Index("ix_wowcharacter_guild_id", "guild_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -47,6 +48,12 @@ class WowCharacter(Base):
     name: Mapped[str] = mapped_column(String(40), nullable=False)
     surname: Mapped[str] = mapped_column(String(40), nullable=False)
     class_id: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    # The guild Blizzard last reported; None when guildless (or the guild is gone).
+    guild_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("wow_guild.id", ondelete="SET NULL"), nullable=True,
+    )
+    # Rank in that guild (0 = guild master), known once the guild's roster is refreshed.
+    guild_rank: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
     sheet: Mapped[dict[str, Any]] = deferred(mapped_column(JSONB, nullable=False))
     sheet_version: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     # Last time Blizzard sent the character.

@@ -70,3 +70,6 @@ CHARACTER_METRIC_RETENTION: Final = timedelta(days=400)
 CHARACTER_METRIC_PURGE_INTERVAL_HOURS: Final = 24
 # ``wow_character.last_error``'s size; a longer error is cut to it.
 CHARACTER_ERROR_MAX_LENGTH: Final = 500
+
+# ``wow_recipe.name``'s size; a longer recipe name is cut to it.
+RECIPE_NAME_MAX_LENGTH: Final = 120

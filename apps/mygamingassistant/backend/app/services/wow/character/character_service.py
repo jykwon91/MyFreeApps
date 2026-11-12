@@ -58,7 +58,8 @@ _profiles: dict[str, tuple[CharacterProfile, float]] = {}
 _renders: dict[str, tuple[bytes, float]] = {}
 
 
-def _new_client() -> BlizzardCharacterClient:
+def new_client() -> BlizzardCharacterClient:
+    """A Blizzard client sharing this module's token cache (``async with new_client() as client``)."""
     return BlizzardCharacterClient(settings.blizzard_client_id, settings.blizzard_client_secret, _tokens)
 
 
@@ -95,7 +96,7 @@ async def _load(slug: str) -> tuple[CharacterProfile, bool]:
     cached = _fresh(_profiles, slug)
     if cached is not None:
         return cached, False
-    async with _new_client() as client:
+    async with new_client() as client:
         profile = await client.profile(slug)
         media, equipment, *answers = await asyncio.gather(
             client.media(slug),
@@ -129,7 +130,7 @@ async def get_character_render(slug: str) -> bytes | None:
     url = render_url((await _profile(slug)).media)
     if url is None:
         return None
-    async with _new_client() as client:
+    async with new_client() as client:
         png = await client.render(url)
     if png is None:
         return None

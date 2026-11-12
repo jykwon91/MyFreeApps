@@ -28,6 +28,7 @@ from app.services.scheduling import scheduled_jobs
         ("run_record_server_status", scheduled_jobs.server_status_history_service, "record_all"),
         ("run_purge_server_status_history", scheduled_jobs.server_status_history_service, "purge_old"),
         ("run_purge_character_metrics", scheduled_jobs.character_store_service, "purge_old_metrics"),
+        ("run_refresh_guild_rosters", scheduled_jobs.guild_roster_service, "refresh_due"),
         ("run_purge_feature_submissions", scheduled_jobs.feature_retention_service, "purge_feature_request_data"),
         ("run_raid_notifications", scheduled_jobs.raid_notification_worker, "process_due_notifications"),
     ],

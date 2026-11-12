@@ -332,7 +332,7 @@ async def test_a_fresh_look_up_is_stored_and_a_cached_one_is_not(
     bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     db = bound_unit_of_work
-    monkeypatch.setattr(character_service, "_new_client", lambda: _blizzard())
+    monkeypatch.setattr(character_service, "new_client", lambda: _blizzard())
     sheet = await character_lookup_service.get_character("jason-kwon")
     assert sheet.level == 37
     assert len(await _rows(db)) == 1
@@ -348,7 +348,7 @@ async def test_a_404_look_up_marks_the_stored_character_gone(
 ) -> None:
     db = bound_unit_of_work
     await character_store_service.record(_fetch(), now=NOW)
-    monkeypatch.setattr(character_service, "_new_client", lambda: _blizzard(404))
+    monkeypatch.setattr(character_service, "new_client", lambda: _blizzard(404))
     with pytest.raises(CharacterLookupError):
         await character_lookup_service.get_character("jason-kwon")
     [row] = await _rows(db)
@@ -360,7 +360,7 @@ async def test_a_failed_look_up_records_the_error(
 ) -> None:
     db = bound_unit_of_work
     await character_store_service.record(_fetch(), now=NOW)
-    monkeypatch.setattr(character_service, "_new_client", lambda: _blizzard(503))
+    monkeypatch.setattr(character_service, "new_client", lambda: _blizzard(503))
     with pytest.raises(CharacterLookupError):
         await character_lookup_service.get_character("jason-kwon")
     [row] = await _rows(db)
@@ -371,7 +371,7 @@ async def test_a_failed_look_up_records_the_error(
 async def test_a_storage_failure_still_serves_the_sheet(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
 ) -> None:
-    monkeypatch.setattr(character_service, "_new_client", lambda: _blizzard())
+    monkeypatch.setattr(character_service, "new_client", lambda: _blizzard())
     monkeypatch.setattr(character_store_service, "record", AsyncMock(side_effect=RuntimeError("db down")))
     sheet = await character_lookup_service.get_character("jason-kwon")
     assert sheet.slug == "jason-kwon"
@@ -382,6 +382,6 @@ async def test_a_render_that_is_the_first_request_still_stores_the_character(
     bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     db = bound_unit_of_work
-    monkeypatch.setattr(character_service, "_new_client", lambda: _blizzard())
+    monkeypatch.setattr(character_service, "new_client", lambda: _blizzard())
     assert await character_lookup_service.get_character_render("jason-kwon") is None
     assert len(await _rows(db)) == 1

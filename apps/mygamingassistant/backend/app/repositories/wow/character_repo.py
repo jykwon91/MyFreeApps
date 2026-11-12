@@ -5,11 +5,13 @@ transaction; these only flush.
 """
 from __future__ import annotations
 
+import uuid
 import zlib
+from collections.abc import Collection, Mapping
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select, text, update
+from sqlalchemy import case, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import undefer
 
@@ -21,7 +23,7 @@ _LOCK_NAMESPACE = zlib.crc32(b"mga.wow_character") & 0x7FFFFFFF
 # The fields a fetch writes. ``save_fetched`` refuses any other.
 FETCHED_FIELDS = frozenset({
     "blizzard_character_id", "slug", "name", "surname", "class_id", "sheet", "sheet_version",
-    "fetched_at", "checked_at", "last_error", "last_error_at", "gone_at",
+    "fetched_at", "checked_at", "last_error", "last_error_at", "gone_at", "guild_id", "guild_rank",
 })
 
 
@@ -102,3 +104,49 @@ async def record_error(db: AsyncSession, slug: str, message: str, at: datetime) 
         .values(checked_at=at, last_error=message, last_error_at=at)
     )
     return bool(result.rowcount)
+
+
+async def apply_roster(db: AsyncSession, guild_id: uuid.UUID, ranks: Mapping[int, int]) -> None:
+    """The guild's stored members become exactly the roster's: each listed
+    character (by Blizzard id) joins with its rank; any other stored member leaves.
+
+    A listed character not stored yet (its fetch failed) is skipped; the next
+    refresh stores it. Blizzard's roster can lag a member's own profile by a
+    little; the roster wins until the member's next look-up, and the two agree
+    once Blizzard catches up.
+
+    ``ranks`` must not be empty: an empty roster would empty the guild, and
+    the caller never trusts an empty answer.
+    """
+    if not ranks:
+        raise ValueError("apply_roster needs at least one member")
+    await db.execute(
+        update(WowCharacter)
+        .where(
+            WowCharacter.guild_id == guild_id,
+            WowCharacter.blizzard_character_id.not_in(list(ranks)),
+        )
+        .values(guild_id=None, guild_rank=None)
+    )
+    await db.execute(
+        update(WowCharacter)
+        .where(WowCharacter.blizzard_character_id.in_(list(ranks)), WowCharacter.gone_at.is_(None))
+        .values(
+            guild_id=guild_id,
+            guild_rank=case(ranks, value=WowCharacter.blizzard_character_id),
+        )
+    )
+
+
+async def checked_since(db: AsyncSession, blizzard_character_ids: Collection[int], since: datetime) -> set[int]:
+    """The Blizzard ids among these of live characters refreshed at or after ``since``."""
+    if not blizzard_character_ids:
+        return set()
+    result = await db.execute(
+        select(WowCharacter.blizzard_character_id).where(
+            WowCharacter.blizzard_character_id.in_(list(blizzard_character_ids)),
+            WowCharacter.gone_at.is_(None),
+            WowCharacter.checked_at >= since,
+        )
+    )
+    return set(result.scalars())

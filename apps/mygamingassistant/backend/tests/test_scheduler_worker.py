@@ -30,6 +30,7 @@ from app.core.config import settings
 from app.core.scheduler_constants import (
     JOB_CLEANUP_DOWNLOADS,
     JOB_PURGE_CHARACTER_METRICS,
+    JOB_REFRESH_GUILD_ROSTERS,
     JOB_PURGE_FEATURE_SUBMISSIONS,
     JOB_PURGE_SERVER_STATUS,
     JOB_RECORD_SERVER_STATUS,
@@ -47,6 +48,7 @@ _JOB_BODIES = (
     "run_record_server_status",
     "run_purge_server_status_history",
     "run_purge_character_metrics",
+    "run_refresh_guild_rosters",
     "run_purge_feature_submissions",
     "run_cleanup_downloads",
 )
@@ -122,7 +124,8 @@ async def test_worker_boots_registers_jobs_reports_and_stops(
     assert scheduler is not None
     assert scheduler.running
     assert {j.id for j in scheduler.get_jobs()} == {
-        JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS, JOB_PURGE_CHARACTER_METRICS, JOB_SYNC_ALL_SOURCES,
+        JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS, JOB_PURGE_CHARACTER_METRICS, JOB_REFRESH_GUILD_ROSTERS,
+        JOB_SYNC_ALL_SOURCES,
         JOB_CLEANUP_DOWNLOADS, JOB_REFRESH_WOW_PRICES, JOB_RECORD_SERVER_STATUS,
     }
     # First boot: every job runs once now.
@@ -152,7 +155,8 @@ async def test_switches_and_discord_choose_the_jobs(
     scheduler = scheduler_service._scheduler
     assert scheduler is not None
     assert {j.id for j in scheduler.get_jobs()} == {
-        JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS, JOB_PURGE_CHARACTER_METRICS, JOB_REFRESH_WOW_PRICES,
+        JOB_PURGE_FEATURE_SUBMISSIONS, JOB_PURGE_SERVER_STATUS, JOB_PURGE_CHARACTER_METRICS, JOB_REFRESH_GUILD_ROSTERS,
+        JOB_REFRESH_WOW_PRICES,
     }
     stop.set()
     await asyncio.wait_for(task, timeout=5)

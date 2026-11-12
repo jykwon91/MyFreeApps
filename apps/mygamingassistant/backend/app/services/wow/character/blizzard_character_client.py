@@ -14,10 +14,13 @@
   statistics pane (deaths from players, boss kills…), by statistic id.
 * ``GET /profile/wow/character/{slug}/reputations`` → standing with each
   faction the character has met.
+* ``GET /data/wow/guild/{slug}`` → a guild's name, faction and member count.
+* ``GET /data/wow/guild/{slug}/roster`` → its members, with level, class and rank.
 
 All in the ``profile-forever-us`` namespace with a client-credentials token
 (no player login). Every failure becomes a ``CharacterLookupError`` carrying
-Blizzard's status and code; a 404 on the profile means no such character.
+Blizzard's status and code; a 404 on the profile means no such character (on
+a guild, no such guild).
 """
 from __future__ import annotations
 
@@ -35,6 +38,7 @@ from app.core.wow_character import (
     CHARACTER_RENDER_HOST,
     CHARACTER_TIMEOUT_SECONDS,
 )
+from app.core.wow_guild import GUILD_PATH
 from app.core.wow_prices import BLIZZARD_API_BASE, BLIZZARD_LOCALE
 from app.services.wow.blizzard.blizzard_http import USER_AGENT, fetch_client_token, json_object, send
 from app.services.wow.blizzard.blizzard_token_cache import BlizzardTokenCache
@@ -91,12 +95,15 @@ class BlizzardCharacterClient:
         )
 
     async def _profile_json(self, path: str) -> dict[str, Any]:
+        return await self._json(f"{CHARACTER_PATH}/{path}")
+
+    async def _json(self, api_path: str) -> dict[str, Any]:
         token = await self._token()
         try:
             response = await send(
                 self._client(),
                 "GET",
-                f"{BLIZZARD_API_BASE}{CHARACTER_PATH}/{path}",
+                f"{BLIZZARD_API_BASE}{api_path}",
                 error_cls=CharacterLookupError,
                 max_bytes=CHARACTER_MAX_JSON_BYTES,
                 params={"namespace": CHARACTER_NAMESPACE, "locale": BLIZZARD_LOCALE},
@@ -150,6 +157,12 @@ class BlizzardCharacterClient:
 
     async def pets(self, slug: str) -> dict[str, Any] | None:
         return await self._optional_json(f"{slug}/collections/pets")
+
+    async def guild(self, guild_slug: str) -> dict[str, Any]:
+        return await self._json(f"{GUILD_PATH}/{guild_slug}")
+
+    async def guild_roster(self, guild_slug: str) -> dict[str, Any]:
+        return await self._json(f"{GUILD_PATH}/{guild_slug}/roster")
 
     async def render(self, url: str) -> bytes | None:
         """The render PNG — only from Blizzard's render host, over HTTPS (404 → None)."""

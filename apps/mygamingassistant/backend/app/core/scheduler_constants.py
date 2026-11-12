@@ -17,6 +17,7 @@ JOB_PURGE_FEATURE_SUBMISSIONS: Final = "purge_wow_feature_submissions"
 JOB_RECORD_SERVER_STATUS: Final = "record_wow_server_status"
 JOB_PURGE_SERVER_STATUS: Final = "purge_wow_server_status_history"
 JOB_PURGE_CHARACTER_METRICS: Final = "purge_wow_character_metrics"
+JOB_REFRESH_GUILD_ROSTERS: Final = "refresh_wow_guild_rosters"
 
 # The jobs an operator may run on demand (POST /api/scheduler/trigger/{job_id}).
 TRIGGERABLE_JOB_IDS: Final = frozenset({JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS, JOB_REFRESH_WOW_PRICES})
