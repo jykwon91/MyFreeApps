@@ -370,10 +370,10 @@ async def create_version(
         version_number=next_number,
         parent_version_id=base.id if base else None,
         change_note=req.change_note,
-        # Inherit the base's servings/timing when the tweak doesn't restate them.
-        servings=req.servings if req.servings is not None else (base.servings if base else None),
-        prep_minutes=req.prep_minutes if req.prep_minutes is not None else (base.prep_minutes if base else None),
-        cook_minutes=req.cook_minutes if req.cook_minutes is not None else (base.cook_minutes if base else None),
+        # Inherit only a field the tweak leaves out; an explicit null clears it.
+        servings=req.servings if "servings" in req.model_fields_set else (base.servings if base else None),
+        prep_minutes=req.prep_minutes if "prep_minutes" in req.model_fields_set else (base.prep_minutes if base else None),
+        cook_minutes=req.cook_minutes if "cook_minutes" in req.model_fields_set else (base.cook_minutes if base else None),
     )
     await recipe_version_repository.create(db, version)
 
