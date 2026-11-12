@@ -535,6 +535,22 @@ updates:
         versions: [">=2.1"]
 
   - package-ecosystem: "npm"
+    directory: "/apps/mylanguagetutor/api-client"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "npm", "mylanguagetutor"]
+    groups:
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      # Same holds as packages/shared-core, for the same reasons.
+      - dependency-name: "react"
+      - dependency-name: "@types/react"
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "npm"
     directory: "/apps/mylanguagetutor/frontend"
     schedule:
       interval: "monthly"

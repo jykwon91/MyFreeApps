@@ -3,15 +3,15 @@ import { Provider } from "react-redux";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { store } from "@/lib/store";
-import { TurnRequestError } from "@/features/tutor-stream/TurnRequestError";
+import { TurnRequestError } from "@mylanguagetutor/api-client/errors/TurnRequestError";
 import { usePracticeSession } from "@/features/session/usePracticeSession";
 import type { StreamTurnOptions } from "@/features/tutor-stream/streamTurn";
-import type { TurnStreamEvent } from "@/types/tutor/turn-events";
+import type { TurnStreamEvent } from "@mylanguagetutor/api-client/types/tutor/turn-stream-event";
 
 const createSession = vi.fn();
 const streamTurn = vi.fn<(options: StreamTurnOptions) => Promise<void>>();
 
-vi.mock("@/store/sessionsApi", () => ({
+vi.mock("@mylanguagetutor/api-client/store/sessionsApi", () => ({
   useCreateSessionMutation: () => [createSession],
 }));
 vi.mock("@/features/tutor-stream/streamTurn", () => ({

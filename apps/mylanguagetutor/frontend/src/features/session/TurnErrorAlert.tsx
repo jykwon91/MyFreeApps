@@ -1,6 +1,6 @@
 import { AlertBox } from "@platform/ui";
-import { turnErrorCopy } from "@/features/session/errorCopy";
-import type { TurnFailure } from "@/types/session/turn-failure";
+import { turnErrorCopy } from "@mylanguagetutor/api-client/utils/turnErrorCopy";
+import type { TurnFailure } from "@mylanguagetutor/api-client/types/session/turn-failure";
 
 interface TurnErrorAlertProps {
   failure: TurnFailure;

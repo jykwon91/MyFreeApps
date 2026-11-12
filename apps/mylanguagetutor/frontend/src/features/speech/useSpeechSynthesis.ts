@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { hasSpeechSynthesis } from "@/features/speech/speechSupport";
-import { createSentenceChunker } from "@/features/speech/sentenceChunker";
-import { speakableText } from "@/features/speech/speakableText";
+import { createSentenceChunker } from "@mylanguagetutor/api-client/utils/sentenceChunker";
+import { speakableText } from "@mylanguagetutor/api-client/utils/speakableText";
 import { voiceForLocale } from "@/features/speech/voiceForLocale";
 
 /** Normal and "slow" speaking rates. Slow is a real lower rate, not a pause. */

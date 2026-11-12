@@ -5,9 +5,9 @@ import PracticeSession from "@/features/session/PracticeSession";
 import CorrectionCard from "@/features/session/CorrectionCard";
 import type { PracticeSession as PracticeSessionState } from "@/features/session/usePracticeSession";
 import type { SpeechRecognitionControls } from "@/features/speech/useSpeechRecognition";
-import type { UsageToday } from "@/types/tutor/usage-today";
-import type { Language } from "@/types/catalog/language";
-import type { Scenario } from "@/types/catalog/scenario";
+import type { UsageToday } from "@mylanguagetutor/api-client/types/tutor/usage-today";
+import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
+import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 
 const send = vi.fn();
 const startRecognition = vi.fn();
@@ -33,7 +33,7 @@ vi.mock("@/features/speech/useSpeechSynthesis", () => ({
     cancel: cancelSpeech,
   }),
 }));
-vi.mock("@/store/usageApi", () => ({
+vi.mock("@mylanguagetutor/api-client/store/usageApi", () => ({
   useGetUsageTodayQuery: () => ({ data: usage }),
 }));
 

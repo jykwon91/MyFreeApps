@@ -10,7 +10,8 @@ SSE events, in order (``event:`` name -> ``data:`` JSON):
     error          TurnErrorEvent           (instead of reply.done / corrections)
     done           TurnDoneEvent            (always last)
 
-Mirrored in ``frontend/src/types/tutor/turn-events.ts`` -- change together.
+Mirrored in ``api-client/src/types/tutor/turn-stream-event.ts`` (and the
+payload types beside it) -- change together.
 """
 from __future__ import annotations
 

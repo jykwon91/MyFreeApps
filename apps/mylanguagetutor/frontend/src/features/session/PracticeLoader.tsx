@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { SearchX } from "lucide-react";
 import { EmptyState } from "@platform/ui";
-import { useListLanguagesQuery, useListScenariosQuery } from "@/store/catalogApi";
+import { useListLanguagesQuery, useListScenariosQuery } from "@mylanguagetutor/api-client/store/catalogApi";
 import CatalogError from "@/features/catalog/CatalogError";
 import PageSkeleton from "@/features/onboarding/PageSkeleton";
 import PracticeSession from "@/features/session/PracticeSession";
-import type { Profile } from "@/types/tutor/profile";
+import type { Profile } from "@mylanguagetutor/api-client/types/tutor/profile";
 
 interface PracticeLoaderProps {
   profile: Profile;

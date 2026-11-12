@@ -2,7 +2,7 @@ import LearnerBubble from "@/features/session/LearnerBubble";
 import TutorBubble from "@/features/session/TutorBubble";
 import CorrectionList from "@/features/session/CorrectionList";
 import RetryPrompt from "@/features/session/RetryPrompt";
-import type { TranscriptEntry } from "@/types/session/transcript-entry";
+import type { TranscriptEntry } from "@mylanguagetutor/api-client/types/session/transcript-entry";
 
 interface TranscriptItemProps {
   entry: TranscriptEntry;

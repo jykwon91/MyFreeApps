@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamTurn } from "@/features/tutor-stream/streamTurn";
-import { TurnRequestError } from "@/features/tutor-stream/TurnRequestError";
-import type { TurnStreamEvent } from "@/types/tutor/turn-events";
+import { TurnRequestError } from "@mylanguagetutor/api-client/errors/TurnRequestError";
+import type { TurnStreamEvent } from "@mylanguagetutor/api-client/types/tutor/turn-stream-event";
 
 function sseBody(chunks: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();

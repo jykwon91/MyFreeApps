@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { AlertBox } from "@platform/ui";
-import type { SessionBlock } from "@/types/session/session-block";
+import type { SessionBlock } from "@mylanguagetutor/api-client/types/session/session-block";
 
 interface SessionBlockNoticeProps {
   block: SessionBlock;

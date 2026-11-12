@@ -37,10 +37,12 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY packages/shared-core/package.json ./packages/shared-core/
 COPY packages/shared-frontend/package.json ./packages/shared-frontend/
+COPY apps/mylanguagetutor/api-client/package.json ./apps/mylanguagetutor/api-client/
 COPY apps/mylanguagetutor/frontend/package.json ./apps/mylanguagetutor/frontend/
 RUN npm ci --ignore-scripts
 COPY packages/shared-core ./packages/shared-core
 COPY packages/shared-frontend ./packages/shared-frontend
+COPY apps/mylanguagetutor/api-client ./apps/mylanguagetutor/api-client
 COPY apps/mylanguagetutor/frontend ./apps/mylanguagetutor/frontend
 
 # Frontend build-time public env. Vite inlines anything prefixed with

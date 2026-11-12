@@ -1,6 +1,6 @@
 import MicButton from "@/features/session/MicButton";
 import type { RecognitionFailure } from "@/types/speech/recognition-failure";
-import type { VoicePhase } from "@/types/session/voice-phase";
+import type { VoicePhase } from "@mylanguagetutor/api-client/types/session/voice-phase";
 
 interface VoiceComposerProps {
   phase: VoicePhase;

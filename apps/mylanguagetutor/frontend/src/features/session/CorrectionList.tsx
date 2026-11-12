@@ -1,5 +1,5 @@
 import CorrectionCard from "@/features/session/CorrectionCard";
-import type { CorrectionItem } from "@/types/tutor/correction";
+import type { CorrectionItem } from "@mylanguagetutor/api-client/types/tutor/correction-item";
 
 interface CorrectionListProps {
   corrections: CorrectionItem[];
