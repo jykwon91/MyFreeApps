@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import InviteAccept from "@/app/pages/InviteAccept";
 import type { InviteInfo } from "@mybookkeeper/api-client/types/organization/InviteInfo";
@@ -18,7 +18,7 @@ vi.mock("@/shared/hooks/useCurrentUser", () => ({
 
 vi.mock("@/shared/lib/auth", () => ({
   login: vi.fn(),
-  notifyAuthChange: vi.fn(),
+  signOut: vi.fn(),
 }));
 
 vi.mock("@/shared/lib/api", () => ({
@@ -32,6 +32,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 
 import { useGetInviteInfoQuery } from "@mybookkeeper/api-client/store/membersApi";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
+import { signOut } from "@/shared/lib/auth";
 
 function makeInviteInfo(overrides: Partial<InviteInfo> = {}): InviteInfo {
   return {
@@ -127,6 +128,24 @@ describe("InviteAccept", () => {
     expect(
       screen.getByRole("button", { name: /Sign out and continue as intended@test.com/i })
     ).toBeInTheDocument();
+  });
+
+  it("signs out through the shared sign-out path, then reloads, from the wrong-user prompt", () => {
+    const originalLocation = window.location;
+    const reload = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...window.location, reload },
+    });
+    mockInviteQuery({ data: makeInviteInfo({ email: "intended@test.com" }) });
+    mockCurrentUser("other@test.com");
+
+    renderWithToken("good-token");
+    fireEvent.click(screen.getByRole("button", { name: /Sign out and continue as intended@test.com/i }));
+
+    Object.defineProperty(window, "location", { configurable: true, value: originalLocation });
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it("shows the login form when the invitee already has an account", () => {

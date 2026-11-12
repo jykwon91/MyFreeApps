@@ -7,6 +7,8 @@ vi.mock("posthog-js", () => ({
     __loaded: true,
     identify: vi.fn(),
     reset: vi.fn(),
+    get_property: vi.fn(),
+    get_distinct_id: vi.fn(),
   },
 }));
 
@@ -43,7 +45,7 @@ vi.mock("@/shared/store/baseApi", () => ({
 import posthog from "posthog-js";
 import sharedApi from "@platform/ui/lib/api";
 import api from "@/shared/lib/api";
-import { login, logout, notifyAuthChange } from "@/shared/lib/auth";
+import { login, logout, notifyAuthChange, signOut } from "@/shared/lib/auth";
 import { store } from "@/shared/store";
 import { forgetOrganizations, setActiveOrg } from "@/shared/store/organizationSlice";
 import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
@@ -51,6 +53,7 @@ import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
 const RESET_API = { type: "api/resetApiState" };
 const FORGET_ORGS = forgetOrganizations();
 const ORG_KEY = "v1_activeOrgId";
+const OWNER_KEY = "v1_activeOrgOwner";
 
 function createJwt(sub: string): string {
   const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
@@ -82,9 +85,10 @@ describe("auth — session lifecycle", () => {
   beforeEach(() => {
     localStorage.clear();
     // Start each test signed out, as far as the auth store knows.
-    notifyAuthChange();
+    notifyAuthChange({ signedOut: true });
     store.dispatch(forgetOrganizations());
     vi.clearAllMocks();
+    vi.mocked(posthog.get_property).mockReturnValue(undefined);
     (posthog as unknown as { __loaded: boolean }).__loaded = true;
     // Stub window.location.href assignment in logout()
     Object.defineProperty(window, "location", {
@@ -97,6 +101,61 @@ describe("auth — session lifecycle", () => {
     Object.defineProperty(window, "location", {
       configurable: true,
       value: originalLocation,
+    });
+  });
+
+  describe("login — PostHog identity", () => {
+    function identifiedAs(userId: string): void {
+      vi.mocked(posthog.get_property).mockReturnValue("identified");
+      vi.mocked(posthog.get_distinct_id).mockReturnValue(userId);
+    }
+
+    it("resets PostHog before identifying a different user, so they stay identified", async () => {
+      identifiedAs("user-abc-123");
+
+      await signIn("user-xyz-789");
+
+      expect(posthog.reset).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(posthog.reset).mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(posthog.identify).mock.invocationCallOrder[0],
+      );
+      expect(posthog.identify).toHaveBeenCalledWith("user-xyz-789", expect.anything());
+    });
+
+    it("does not reset PostHog when the same user signs back in", async () => {
+      identifiedAs("user-abc-123");
+
+      await signIn("user-abc-123");
+
+      expect(posthog.reset).not.toHaveBeenCalled();
+      expect(posthog.identify).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not reset an anonymous PostHog identity", async () => {
+      vi.mocked(posthog.get_property).mockReturnValue("anonymous");
+      vi.mocked(posthog.get_distinct_id).mockReturnValue("anon-1");
+
+      await signIn("user-xyz-789");
+
+      expect(posthog.reset).not.toHaveBeenCalled();
+    });
+
+    it("does not touch PostHog when another tab signs in as someone else", async () => {
+      await signIn("user-abc-123");
+      vi.clearAllMocks();
+      localStorage.setItem("token", createJwt("user-xyz-789"));
+      window.dispatchEvent(new StorageEvent("storage", { key: "token" }));
+
+      expect(posthog.reset).not.toHaveBeenCalled();
+      expect(posthog.identify).not.toHaveBeenCalled();
+    });
+
+    it("does not touch PostHog when a 401 signs out", async () => {
+      await signIn("user-abc-123");
+      vi.clearAllMocks();
+      await expect(sharedApi.get("/properties", { adapter: rejectWith401 })).rejects.toBeDefined();
+
+      expect(posthog.reset).not.toHaveBeenCalled();
     });
   });
 
@@ -221,6 +280,7 @@ describe("auth — session lifecycle", () => {
       // Tab 2 signs in as another user and picks an organization.
       localStorage.setItem("token", createJwt("user-xyz-789"));
       localStorage.setItem(ORG_KEY, "org-b");
+      localStorage.setItem(OWNER_KEY, "user-xyz-789");
       window.dispatchEvent(new StorageEvent("storage", { key: "token" }));
 
       expect(localStorage.getItem(ORG_KEY)).toBe("org-b");
@@ -239,6 +299,61 @@ describe("auth — session lifecycle", () => {
       expect(organizationState().activeOrgId).toBe("org-a");
     });
 
+    it("is removed when the user signs out on purpose", async () => {
+      await signIn("user-abc-123");
+      store.dispatch(setActiveOrg("org-a"));
+
+      signOut();
+
+      expect(localStorage.getItem(ORG_KEY)).toBeNull();
+      expect(organizationState().activeOrgId).toBeNull();
+    });
+
+    it("is removed on sign-out even when another tab switched it", async () => {
+      await signIn("user-abc-123");
+      store.dispatch(setActiveOrg("org-a"));
+      localStorage.setItem(ORG_KEY, "org-b");
+      localStorage.setItem(OWNER_KEY, "user-abc-123");
+
+      signOut();
+
+      expect(localStorage.getItem(ORG_KEY)).toBeNull();
+      expect(localStorage.getItem(OWNER_KEY)).toBeNull();
+    });
+
+    it("is removed when someone else signs in after a reload with no token", async () => {
+      localStorage.setItem(ORG_KEY, "org-a");
+      localStorage.setItem(OWNER_KEY, "user-abc-123");
+      notifyAuthChange({ signedOut: true });
+      localStorage.setItem(ORG_KEY, "org-a");
+      localStorage.setItem(OWNER_KEY, "user-abc-123");
+
+      await signIn("user-xyz-789");
+
+      expect(localStorage.getItem(ORG_KEY)).toBeNull();
+      expect(organizationState().activeOrgId).toBeNull();
+    });
+
+    it("is kept when the same user signs in after a 401 and a reload", async () => {
+      notifyAuthChange({ signedOut: true });
+      localStorage.setItem(ORG_KEY, "org-a");
+      localStorage.setItem(OWNER_KEY, "user-abc-123");
+
+      await signIn("user-abc-123");
+
+      expect(localStorage.getItem(ORG_KEY)).toBe("org-a");
+      expect(organizationState().activeOrgId).toBe("org-a");
+    });
+
+    it("is dropped when it has no recorded owner and a user signs in", async () => {
+      notifyAuthChange({ signedOut: true });
+      localStorage.setItem(ORG_KEY, "org-legacy");
+
+      await signIn("user-abc-123");
+
+      expect(localStorage.getItem(ORG_KEY)).toBeNull();
+    });
+
     it("is removed when someone else signs in after a 401", async () => {
       await signIn("user-abc-123");
       store.dispatch(setActiveOrg("org-a"));
@@ -252,9 +367,9 @@ describe("auth — session lifecycle", () => {
   });
 
   describe("logout", () => {
-    it("calls posthog.reset and clears localStorage tokens", () => {
-      localStorage.setItem("token", "some-token");
-      localStorage.setItem("v1_activeOrgId", "org-123");
+    it("calls posthog.reset and clears localStorage tokens", async () => {
+      await signIn("user-abc-123");
+      store.dispatch(setActiveOrg("org-123"));
 
       logout();
 

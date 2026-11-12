@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAcceptInviteMutation, useGetInviteInfoQuery } from "@mybookkeeper/api-client/store/membersApi";
-import { login, notifyAuthChange } from "@/shared/lib/auth";
+import { login, signOut } from "@/shared/lib/auth";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { extractErrorMessage } from "@platform/ui";
 import { LoadingButton, TurnstileWidget } from "@platform/ui";
@@ -187,8 +187,7 @@ export default function InviteAccept() {
           </p>
           <button
             onClick={() => {
-              localStorage.removeItem("token");
-              notifyAuthChange();
+              signOut();
               window.location.reload();
             }}
             className="w-full bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90"
