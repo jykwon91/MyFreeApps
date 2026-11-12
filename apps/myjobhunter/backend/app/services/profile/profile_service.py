@@ -17,12 +17,11 @@ is rejected by ``extra='forbid'`` at the schema layer.
 """
 from __future__ import annotations
 
+import logging
 import uuid
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-
-import logging
 
 from app.core.screening_questions import ALLOWED_KEYS, is_eeoc as _is_eeoc
 from app.db.violated_constraint import violated_constraint_name
@@ -31,10 +30,6 @@ from app.models.profile.profile import Profile
 from app.models.profile.screening_answer import ScreeningAnswer
 from app.models.profile.skill import Skill
 from app.models.profile.work_history import WorkHistory
-from app.services.discovery import discovery_embedding_service
-from app.services.discovery.discovery_embedding_service import (
-    EmbeddingModelLoadError,
-)
 from app.repositories.profile import (
     education_repository,
     profile_repository,
@@ -50,6 +45,10 @@ from app.schemas.profile.screening_answer_update_request import ScreeningAnswerU
 from app.schemas.profile.skill_create_request import SkillCreateRequest
 from app.schemas.profile.work_history_create_request import WorkHistoryCreateRequest
 from app.schemas.profile.work_history_update_request import WorkHistoryUpdateRequest
+from app.services.discovery import discovery_embedding_service
+from app.services.discovery.discovery_embedding_service import (
+    EmbeddingModelLoadError,
+)
 
 
 logger = logging.getLogger(__name__)
