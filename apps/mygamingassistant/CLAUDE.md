@@ -1015,7 +1015,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   opens the newest. Gear is a paper doll (`PAPER_DOLL_*` in
   `data/character/characterConfig.ts`); "Use for MGA's pages" writes the
   character's faction, class and level to `usePlayerSettings`. Tests:
-  `tests/test_wow_characters.py`, `src/__tests__/wowCharacterPage.test.tsx`.
+  `tests/test_wow_characters.py`, `src/__tests__/wowCharacterPage.test.tsx`, `e2e/wow-forever-character.spec.ts`.
 
 #### In-game icons (`GameIcon`)
 
