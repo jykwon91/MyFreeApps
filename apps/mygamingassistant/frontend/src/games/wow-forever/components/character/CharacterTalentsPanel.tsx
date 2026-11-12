@@ -25,7 +25,8 @@ export default function CharacterTalentsPanel({ character }: { character: Charac
         <>
           {groups.map((group, i) => (
             <CharacterTalentSetView
-              key={`${group.active}-${i}`}
+              // Keyed by character so another lookup starts fresh (main tree, nothing open).
+              key={`${character.slug}-${group.active}-${i}`}
               classId={classId}
               group={group}
               level={character.level}

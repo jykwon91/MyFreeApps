@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-11",
+    title: "Your character: talent trees like in game",
+    summary:
+      "Your character's talents now show as the game's talent trees, with every talent in place, your ranks on each and the arrows between them. Tap a talent to read what it does.",
+    to: "/wow-forever/character",
+  },
+  {
+    date: "2026-11-11",
     title: "Your character: talents",
     summary:
       "Your character page now shows the talents you picked, with your point split and what each rank does, and opens your build in the talent calculator in one tap.",

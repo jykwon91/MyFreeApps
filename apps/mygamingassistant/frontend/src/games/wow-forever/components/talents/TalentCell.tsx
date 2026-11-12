@@ -1,12 +1,11 @@
 import clsx from "clsx";
 import { useRef, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
-import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import TalentCellFace from "@/games/wow-forever/components/talents/TalentCellFace";
 import TalentTooltip from "@/games/wow-forever/components/talents/TalentTooltip";
-import { TALENT_CELL_RING, TALENT_RANK_TEXT } from "@/games/wow-forever/data/talents/talentCellStyles";
+import { TALENT_CELL_RING } from "@/games/wow-forever/data/talents/talentCellStyles";
 import { TALENT_CELL_PX } from "@/games/wow-forever/data/talents/talentGridLayout";
 import { useHoverTooltip } from "@/games/wow-forever/hooks/useHoverTooltip";
 import { useLongPress } from "@/games/wow-forever/hooks/useLongPress";
-import { fileIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import type { Talent } from "@/games/wow-forever/types/talents/talent";
 import type { TalentCellState } from "@/games/wow-forever/types/talents/talentCellState";
 
@@ -123,16 +122,7 @@ export default function TalentCell({
           selected && "ring-2 ring-primary ring-offset-1",
         )}
       >
-        <GameIcon icon={fileIcon(talent.icon)} size={48} alt="" className="pointer-events-none" />
-        <span
-          aria-hidden
-          className={clsx(
-            "absolute -bottom-2 -right-2 rounded border bg-card px-1 text-[11px] font-semibold leading-4 tabular-nums",
-            TALENT_RANK_TEXT[state],
-          )}
-        >
-          {rank}/{max}
-        </span>
+        <TalentCellFace talent={talent} rank={rank} state={state} />
         {compareChanged === true ? (
           <span
             aria-hidden

@@ -1040,7 +1040,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `/specializations` keeps only each talent's id + rank per saved set (active
   first, empty sets dropped); names, icons and rank text come from the talent
   calculator's own tree files (same Blizzard ids), loaded with `useTalentClass`.
-  Point split in the class's tree order, lists by points. "Open in the talent
+  Drawn as the game's talent frame, read only (`CharacterTalentTreeView` /
+  `CharacterTalentCell` on the calculator's shared `TalentTreeCard`,
+  `TalentCellFace`, `TalentTreeSkeleton`): three grids side by side, tabs
+  below `lg` opening on the main tree (`lib/talents/mainTree.ts`); a click or
+  tap opens the talent's rank text under the trees (again / Escape closes),
+  never adds or removes a point. Point split in the class's tree order. "Open in the talent
   calculator" links `?b=2-…&lvl=<level>` only when `isLegalBuild` holds and the
   level has the points — otherwise a note says why. `talents: null` = the call
   failed (logged, not cached; the sheet still shows); a 404 = no points yet
