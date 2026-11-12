@@ -1,22 +1,27 @@
 routes:
+  # The website sends / on to /scenarios, or to onboarding before a language and level are picked;
+  # the app opens on its Practice tab, which does the same.
   /:
-    not_on_mobile: Not built yet.
+    screen: (app)/(tabs)/index
   /forgot-password:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /login:
     screen: sign-in
+  # Opened over the Practice tab by its profile gate, before a learner has picked a language.
   /onboarding/language:
-    not_on_mobile: Not built yet.
+    screen: (app)/onboarding/language
+  # The language step's next step, and the scenario list's Change level.
   /onboarding/level:
-    not_on_mobile: Not built yet.
+    screen: (app)/onboarding/level
   /practice:
     not_on_mobile: Not built yet.
   /register:
     not_on_mobile: Done on the website, which the sign-in screen links to.
   /reset-password:
     not_on_mobile: Done on the website, which the sign-in screen links to.
+  # The Practice tab. A scenario opens /practice on the website until the app has it.
   /scenarios:
-    not_on_mobile: Not built yet.
+    screen: (app)/(tabs)/index
   /security:
     not_on_mobile: Not built yet.
   /settings:

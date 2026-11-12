@@ -2,7 +2,7 @@ import api from "@platform/core/lib/api";
 import { serve } from "@platform/mobile/test-support/fakeServer";
 import { ACCOUNT_EMAIL, storeSession, storedSession, tokens } from "@platform/mobile/test-support/storedSession";
 import { screen, waitFor } from "@testing-library/react-native";
-import { PRACTICE_TAB } from "../src/constants/tabs";
+import { ONBOARDED_LEARNER_ROUTES, PRACTICE_HEADING } from "../test-support/onboardedLearner";
 import { renderApp } from "../test-support/renderApp";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
@@ -13,10 +13,10 @@ jest.mock("react-native-safe-area-context", () => jest.requireActual("react-nati
 // One app launch per file: the session is read from the phone once, when the app opens.
 it("reopens signed in after a restart, and swaps the stored token for a fresh one", async () => {
   storeSession();
-  const sent = serve({ "POST /auth/mobile/refresh": () => ({ status: 200, data: tokens(5) }) });
+  const sent = serve({ "POST /auth/mobile/refresh": () => ({ status: 200, data: tokens(5) }), ...ONBOARDED_LEARNER_ROUTES });
   await renderApp();
 
-  expect(await screen.findByRole("header", { name: PRACTICE_TAB.title })).toBeTruthy();
+  expect(await screen.findByRole("header", { name: PRACTICE_HEADING })).toBeTruthy();
   expect(screen.queryByLabelText("Password")).toBeNull();
   await waitFor(() => expect(storedSession()).toEqual(expect.objectContaining({ refreshToken: "r5", email: ACCOUNT_EMAIL })));
   expect(sent[0]).toEqual(expect.objectContaining({ route: "POST /auth/mobile/refresh", body: { refresh_token: "r0" } }));

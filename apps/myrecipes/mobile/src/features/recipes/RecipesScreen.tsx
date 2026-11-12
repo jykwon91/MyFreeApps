@@ -1,14 +1,13 @@
 import { useListRecipesQuery } from "@myrecipes/api-client/store/recipesApi";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import { useDebouncedValue } from "@platform/core/hooks/useDebouncedValue";
-import { EmptyState, SearchField, Toast, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, ListSeparator, SearchField, Toast, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { FlatList, View } from "react-native";
 import { NEW_RECIPE_MESSAGES } from "../../constants/newRecipe";
 import { countLabel } from "../../utils/countLabel";
 import RecipeCard from "./RecipeCard";
-import RecipeListSeparator from "./RecipeListSeparator";
 import RecipeListSkeleton from "./RecipeListSkeleton";
 
 export default function RecipesScreen() {
@@ -106,7 +105,7 @@ export default function RecipesScreen() {
         />
       ) : null}
       <FlatList
-        ItemSeparatorComponent={RecipeListSeparator}
+        ItemSeparatorComponent={ListSeparator}
         ListEmptyComponent={renderEmpty()}
         contentContainerStyle={{ flexGrow: 1, padding: spacing.lg, paddingTop: spacing.sm }}
         data={rows ?? []}

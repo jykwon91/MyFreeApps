@@ -40,6 +40,7 @@ const TEXT_PAIRS: [Token, Token][] = [
   ["positiveText", "card"],
   ["toastSuccessForeground", "toastSuccessBackground"],
   ["toastErrorForeground", "toastErrorBackground"],
+  ["toastInfoForeground", "toastInfoBackground"],
 ];
 
 describe("contrastRatio", () => {

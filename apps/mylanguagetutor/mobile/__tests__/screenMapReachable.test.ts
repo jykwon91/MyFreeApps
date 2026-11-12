@@ -12,8 +12,6 @@ const SCREEN_MAP = parse(fs.readFileSync(path.join(__dirname, "..", "screen-map.
 const ROUTES = Object.entries(SCREEN_MAP.routes);
 /** Pages no tab or link opens, because the website reaches them only from another page. */
 const REACHED_IN_FLOW: Record<string, string> = {
-  "/onboarding/language": "Opened from / by the profile gate, before a learner has picked a language.",
-  "/onboarding/level": "Opened from / by the profile gate, after the language step.",
   "/practice": "Needs a scenario, chosen on /scenarios (the Practice tab).",
 };
 const SETTINGS_WEB_PATHS = SETTINGS_MENU.flatMap((group) => group.items.flatMap((item) => (item.webPath ? [item.webPath] : [])));

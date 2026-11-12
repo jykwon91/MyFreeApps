@@ -1,6 +1,6 @@
 import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { baseApi } from "@platform/core/store/baseApi";
-import { assertSecureApiUrl, resetCacheOnAccountChange } from "@platform/mobile";
+import { assertSecureApiUrl, refetchOnForeground, resetCacheOnAccountChange } from "@platform/mobile";
 import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
 import { session } from "./session";
@@ -25,6 +25,9 @@ export function makeStore() {
 }
 
 export const store = makeStore();
+
+// Practice happens on the website, so coming back to the app should show fresh usage.
+refetchOnForeground(store.dispatch);
 
 resetCacheOnAccountChange(session, () => store.dispatch(baseApi.util.resetApiState()));
 

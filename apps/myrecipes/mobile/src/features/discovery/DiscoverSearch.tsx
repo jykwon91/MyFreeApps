@@ -5,7 +5,7 @@ import {
   DISCOVERY_SEARCH_STAGES,
 } from "@myrecipes/api-client/constants/discovery";
 import type { DiscoveredRecipe } from "@myrecipes/api-client/types/recipe/discovery";
-import { Banner, EmptyState, LoadingButton, SearchField, useScreenFocused, useTheme, useToast } from "@platform/mobile";
+import { Banner, EmptyState, ListSeparator, LoadingButton, SearchField, useScreenFocused, useTheme, useToast } from "@platform/mobile";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { FlatList, Keyboard, ScrollView, Text, View } from "react-native";
@@ -13,7 +13,6 @@ import { useDispatch, useSelector, useStore } from "react-redux";
 import { DISCOVER_ROUTE, DISCOVERY_DETAIL_PATHNAME, DISCOVERY_MESSAGES } from "../../constants/discovery";
 import type { AppStore, RootState } from "../../lib/store";
 import { countLabel } from "../../utils/countLabel";
-import RecipeListSeparator from "../recipes/RecipeListSeparator";
 import DiscoverIdle from "./DiscoverIdle";
 import DiscoveryCard from "./DiscoveryCard";
 import DiscoveryResultsSkeleton from "./DiscoveryResultsSkeleton";
@@ -87,7 +86,7 @@ export default function DiscoverSearch() {
     }
     return (
       <FlatList
-        ItemSeparatorComponent={RecipeListSeparator}
+        ItemSeparatorComponent={ListSeparator}
         ListEmptyComponent={
           <EmptyState body="Try another dish name, or a shorter one." heading={`Nothing found for ${results.query}`} />
         }

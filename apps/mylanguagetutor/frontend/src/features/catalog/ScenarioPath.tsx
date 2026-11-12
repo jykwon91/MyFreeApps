@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { useListLanguagesQuery, useListScenariosQuery } from "@mylanguagetutor/api-client/store/catalogApi";
-import { useGetUsageTodayQuery } from "@mylanguagetutor/api-client/store/usageApi";
+import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy";
+import { useScenarioPath } from "@mylanguagetutor/api-client/hooks/useScenarioPath";
 import { levelLabel } from "@mylanguagetutor/api-client/utils/levelLabel";
+import { onboardingLevelPath } from "@mylanguagetutor/api-client/utils/onboardingLevelPath";
 import CatalogSkeleton from "@/features/catalog/CatalogSkeleton";
 import CatalogError from "@/features/catalog/CatalogError";
 import ScenarioCard from "@/features/catalog/ScenarioCard";
@@ -14,41 +15,29 @@ interface ScenarioPathProps {
 
 /** The scenario learning path for the learner's language, with their level. */
 export default function ScenarioPath({ profile }: ScenarioPathProps) {
-  const languagesQuery = useListLanguagesQuery();
-  const scenariosQuery = useListScenariosQuery(profile.language_code);
-  const usage = useGetUsageTodayQuery();
-  const language = languagesQuery.data?.find((l) => l.code === profile.language_code);
+  const { languageName, scenarios, isError, isCapReached, refetch } = useScenarioPath(profile);
 
-  if (languagesQuery.isError || scenariosQuery.isError) {
-    const retry = () => {
-      void languagesQuery.refetch();
-      void scenariosQuery.refetch();
-    };
-    return <CatalogError onRetry={retry} />;
-  }
-  if (!languagesQuery.data || !scenariosQuery.data) return <CatalogSkeleton />;
+  if (isError) return <CatalogError onRetry={() => void refetch()} />;
+  if (!scenarios) return <CatalogSkeleton />;
 
-  const languageName = language?.display_name ?? profile.language_code;
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Practice {languageName}</h1>
+        <h1 className="text-2xl font-semibold">{`${CATALOG_COPY.practicePrefix} ${languageName}`}</h1>
         <p className="text-sm text-muted-foreground">
-          Level: {levelLabel(profile.level)} ·{" "}
+          {`${CATALOG_COPY.levelPrefix} ${levelLabel(profile.level)}`} ·{" "}
           <Link
-            to={`/onboarding/level?language=${encodeURIComponent(profile.language_code)}`}
+            to={onboardingLevelPath(profile.language_code)}
             className="inline-flex min-h-[44px] items-center underline"
           >
-            Change level
+            {CATALOG_COPY.changeLevel}
           </Link>
         </p>
-        <p className="text-sm text-muted-foreground">
-          Pick a scenario. Each one is a short conversation with a few goals to cover.
-        </p>
+        <p className="text-sm text-muted-foreground">{CATALOG_COPY.pickScenario}</p>
       </div>
-      {usage.data?.cap_reached && <SessionBlockNotice block="daily_limit" />}
+      {isCapReached && <SessionBlockNotice block="daily_limit" />}
       <ul className="space-y-3">
-        {scenariosQuery.data.map((scenario) => (
+        {scenarios.map((scenario) => (
           <ScenarioCard key={scenario.slug} scenario={scenario} />
         ))}
       </ul>

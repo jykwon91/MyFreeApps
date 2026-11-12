@@ -29,6 +29,7 @@ export { default as FormField } from "./components/FormField";
 export { default as FormSheet } from "./components/FormSheet";
 export { default as GroupedBarChart } from "./components/GroupedBarChart";
 export { default as LoadingButton } from "./components/LoadingButton";
+export { default as ListSeparator } from "./components/ListSeparator";
 export { default as LoadMoreFooter } from "./components/LoadMoreFooter";
 export { default as MoreMenuGroups } from "./components/MoreMenuGroups";
 export { default as MoreRow } from "./components/MoreRow";

@@ -3,8 +3,8 @@ import { serve } from "@platform/mobile/test-support/fakeServer";
 import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
 import { ACCOUNT_EMAIL, storedSession, tokens } from "@platform/mobile/test-support/storedSession";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
-import { PRACTICE_TAB } from "../src/constants/tabs";
 import { session } from "../src/lib/session";
+import { ONBOARDED_LEARNER_ROUTES, PRACTICE_HEADING } from "../test-support/onboardedLearner";
 import { renderApp } from "../test-support/renderApp";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
@@ -49,11 +49,11 @@ describe("signing in", () => {
   });
 
   it("signs in, keeps the session on the phone, and opens the Practice tab", async () => {
-    const sent = serve({ "POST /auth/mobile/login": () => ({ status: 200, data: tokens(1) }) });
+    const sent = serve({ "POST /auth/mobile/login": () => ({ status: 200, data: tokens(1) }), ...ONBOARDED_LEARNER_ROUTES });
     await renderApp();
     await submitCredentials();
 
-    expect(await screen.findByRole("header", { name: PRACTICE_TAB.title })).toBeTruthy();
+    expect(await screen.findByRole("header", { name: PRACTICE_HEADING })).toBeTruthy();
     expect(screen).toHavePathname("/");
     expect(sent[0].body).toEqual(
       expect.objectContaining({ email: ACCOUNT_EMAIL, password: "correct horse", device_name: "Test Phone" }),
@@ -68,6 +68,7 @@ describe("signing in", () => {
 
   it("asks for the two-step code, then signs in with it", async () => {
     const sent = serve({
+      ...ONBOARDED_LEARNER_ROUTES,
       "POST /auth/mobile/login": (body) =>
         body.totp_code ? { status: 200, data: tokens(2) } : { status: 200, data: { detail: "totp_required" } },
     });
@@ -77,7 +78,7 @@ describe("signing in", () => {
     await fireEvent.changeText(await screen.findByLabelText("Authentication code"), "123456");
     await fireEvent.press(screen.getByRole("button", { name: "Verify" }));
 
-    expect(await screen.findByRole("header", { name: PRACTICE_TAB.title })).toBeTruthy();
+    expect(await screen.findByRole("header", { name: PRACTICE_HEADING })).toBeTruthy();
     expect(
       sent.filter((request) => request.route === "POST /auth/mobile/login").map((request) => request.body.totp_code ?? null),
     ).toEqual([null, "123456"]);
