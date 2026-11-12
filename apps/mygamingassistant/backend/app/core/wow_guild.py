@@ -42,3 +42,7 @@ GUILD_RANK_MAX: Final = 99
 GUILD_NOT_FOUND_ERROR: Final = "Blizzard has no guild by that name"
 # Members fetched from Blizzard at once while refreshing a roster.
 GUILD_MEMBER_FETCH_CONCURRENCY: Final = 4
+
+# GET /wow/guilds/{slug}: per-IP look-ups per window (a database read, no Blizzard call).
+GUILD_RATE_LIMIT: Final = 60
+GUILD_RATE_WINDOW_SECONDS: Final = 60

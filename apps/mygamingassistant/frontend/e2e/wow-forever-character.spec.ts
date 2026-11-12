@@ -37,6 +37,7 @@ function character() {
     gender: "Female",
     faction: "alliance",
     guild: "topdeadcenter",
+    guild_slug: "topdeadcenter",
     ruleset: "PvP",
     equipped_item_level: 28,
     last_login: new Date(Date.now() - 3 * 3_600_000).toISOString(),

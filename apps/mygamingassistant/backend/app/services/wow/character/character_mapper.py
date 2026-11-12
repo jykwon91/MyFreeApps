@@ -25,6 +25,7 @@ from app.services.wow.character.character_professions_mapper import to_character
 from app.services.wow.character.character_pvp_mapper import to_character_pvp
 from app.services.wow.character.character_reputations_mapper import to_character_reputations
 from app.services.wow.character.character_talents_mapper import to_character_talents
+from app.services.wow.guild.guild_mapper import to_guild_identity
 
 _DURABILITY = re.compile(r"(\d+)\s*/\s*(\d+)")
 
@@ -112,6 +113,11 @@ def _last_login(raw: Any) -> datetime | None:
     return datetime.fromtimestamp(millis / 1000, tz=timezone.utc) if millis else None
 
 
+def _guild_slug(raw: Any) -> str | None:
+    guild = to_guild_identity(raw)
+    return None if guild is None else guild.slug
+
+
 def to_character_response(slug: str, data: CharacterProfile) -> CharacterResponse:
     profile = data.profile
     character_class = as_dict(profile.get("character_class"))
@@ -127,6 +133,7 @@ def to_character_response(slug: str, data: CharacterProfile) -> CharacterRespons
         gender=name_of(profile.get("gender")) or "",
         faction=(as_str(as_dict(profile.get("faction")).get("type")) or "").lower(),
         guild=name_of(profile.get("guild")),
+        guild_slug=_guild_slug(profile.get("guild")),
         ruleset=name_of(profile.get("ruleset")),
         equipped_item_level=as_int(profile.get("equipped_item_level")),
         last_login=_last_login(profile.get("last_login_timestamp")),

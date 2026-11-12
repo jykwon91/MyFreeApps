@@ -25,6 +25,8 @@ class CharacterResponse(BaseModel):
     # alliance / horde
     faction: str
     guild: str | None
+    # The guild page's slug; None without a guild (or in sheets stored before it existed).
+    guild_slug: str | None = None
     # "PvP", "Normal"…
     ruleset: str | None
     equipped_item_level: int | None

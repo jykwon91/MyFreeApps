@@ -8,12 +8,14 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import or_, select, true, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.character import WowCharacter
+from app.models.wow.character_daily_metric import WowCharacterDailyMetric
 from app.models.wow.guild import WowGuild
+from app.repositories.wow.guild_member_row import GuildMemberRow
 
 
 async def upsert(
@@ -101,3 +103,45 @@ async def mark_gone(db: AsyncSession, guild_id: uuid.UUID, at: datetime) -> None
     await db.execute(
         update(WowCharacter).where(WowCharacter.guild_id == guild_id).values(guild_id=None, guild_rank=None)
     )
+
+
+async def get_by_slug(db: AsyncSession, slug: str) -> WowGuild | None:
+    """The live guild with this slug, else the one that most recently had it."""
+    result = await db.execute(
+        select(WowGuild)
+        .where(WowGuild.slug == slug)
+        .order_by(WowGuild.gone_at.desc().nulls_first())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def members(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildMemberRow]:
+    """The guild's live stored members, each with its newest day's level and item level.
+
+    The newest day is one index read per member (``(character_id, day)``,
+    backwards) — never a sort over the 400 days of history kept.
+    """
+    newest = (
+        select(WowCharacterDailyMetric.level, WowCharacterDailyMetric.item_level)
+        .where(WowCharacterDailyMetric.character_id == WowCharacter.id)
+        .order_by(WowCharacterDailyMetric.day.desc())
+        .limit(1)
+        .lateral()
+    )
+    result = await db.execute(
+        select(
+            WowCharacter.slug,
+            WowCharacter.name,
+            WowCharacter.surname,
+            WowCharacter.class_id,
+            WowCharacter.guild_rank,
+            WowCharacter.fetched_at,
+            newest.c.level,
+            newest.c.item_level,
+        )
+        .outerjoin(newest, true())
+        .where(WowCharacter.guild_id == guild_id, WowCharacter.gone_at.is_(None))
+        .order_by(WowCharacter.slug)
+    )
+    return [GuildMemberRow(*row) for row in result.all()]

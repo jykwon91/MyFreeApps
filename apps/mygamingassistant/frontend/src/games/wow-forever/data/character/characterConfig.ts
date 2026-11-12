@@ -4,6 +4,9 @@ import type { PaperDollSlot } from "@/games/wow-forever/types/character/paperDol
 export const RECENT_CHARACTERS_STORAGE_KEY = "mga.wowForever.character.v1";
 export const RECENT_CHARACTERS_MAX = 5;
 
+/** The character page: /wow-forever/character/:slug. */
+export const CHARACTER_PAGE_PATH = "/wow-forever/character";
+
 /** The character page's API, relative to the app origin (the render is a plain <img>). */
 export const CHARACTER_API_BASE = "/api/wow/characters";
 

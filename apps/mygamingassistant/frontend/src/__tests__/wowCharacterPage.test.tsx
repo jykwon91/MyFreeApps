@@ -121,6 +121,7 @@ const CHARACTER: CharacterResponse = {
   gender: "Female",
   faction: "alliance",
   guild: "topdeadcenter",
+  guild_slug: "topdeadcenter",
   ruleset: "PvP",
   equipped_item_level: 28,
   last_login: new Date(Date.now() - 2 * 3_600_000).toISOString(),
@@ -296,7 +297,10 @@ describe("WowCharacterPage", () => {
     renderAt("/wow-forever/character/jason-kwon");
     expect(screen.getByRole("heading", { name: "Jason Kwon" })).toBeInTheDocument();
     expect(screen.getByText(/Level 37 Gnome Warlock/)).toBeInTheDocument();
-    expect(screen.getByText("<topdeadcenter>")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Guild topdeadcenter: see its members/ })).toHaveAttribute(
+      "href",
+      "/wow-forever/guild/topdeadcenter",
+    );
     expect(screen.getByText(/From their last log out, 2 hours ago/)).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Jason Kwon in their current gear/ })).toHaveAttribute(
       "src",
