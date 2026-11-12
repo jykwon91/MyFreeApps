@@ -85,7 +85,7 @@ describe("before configurePlatform()", () => {
   });
 
   it("surfaces the error through the RTK Query base query", async () => {
-    const result = await axiosBaseQuery({ url: "/things" }, {} as never, {});
+    const result = await axiosBaseQuery({ url: "/things" }, { signal: new AbortController().signal } as never, {});
     expect(result.error?.data).toMatch(NOT_CONFIGURED);
   });
 });
