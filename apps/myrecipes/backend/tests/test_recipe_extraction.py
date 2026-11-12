@@ -15,6 +15,7 @@ from httpx import AsyncClient
 from PIL import Image, UnidentifiedImageError
 
 from app.core.config import settings
+from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
 from app.services.recipe import photo_extraction_service as pes
 from platform_shared.extraction import (
     ExtractionError,
@@ -189,6 +190,64 @@ class TestExtractRecipePhoto:
         async with await as_user(user) as authed:
             resp = await authed.post("/recipes/extract", files=_files())
         assert resp.status_code == 422
+
+
+class TestExtractRateLimit:
+    """The throttle is a spend ceiling on a paid vision call, not an auth control."""
+
+    @pytest.mark.asyncio
+    async def test_under_budget_passes(self, user_factory, as_user, monkeypatch) -> None:
+        _mock_extraction(monkeypatch)
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            for _ in range(20):
+                assert (await authed.post("/recipes/extract", files=_files())).status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_over_budget_returns_429_without_calling_extractor(
+        self, user_factory, as_user, monkeypatch
+    ) -> None:
+        _mock_extraction(monkeypatch)
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            for _ in range(20):
+                assert (await authed.post("/recipes/extract", files=_files())).status_code == 200
+
+            async def _boom(*args, **kwargs):
+                raise AssertionError("extractor called while rate limited")
+
+            monkeypatch.setattr(pes, "extract_recipe_from_photo", _boom)
+            resp = await authed.post("/recipes/extract", files=_files())
+
+        assert resp.status_code == 429
+        assert resp.json()["detail"] == RATE_LIMIT_GENERIC_DETAIL
+
+    @pytest.mark.asyncio
+    async def test_limit_checked_before_body_validation(
+        self, user_factory, as_user, monkeypatch
+    ) -> None:
+        """An exhausted budget rejects even an oversize upload with 429, not 413."""
+        _mock_extraction(monkeypatch)
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            for _ in range(20):
+                await authed.post("/recipes/extract", files=_files())
+            monkeypatch.setattr(settings, "max_photo_upload_bytes", 10)
+            resp = await authed.post("/recipes/extract", files=_files())
+        assert resp.status_code == 429
+
+    @pytest.mark.asyncio
+    async def test_budget_is_isolated_from_discovery(
+        self, user_factory, as_user, monkeypatch
+    ) -> None:
+        from app.core.rate_limit import discovery_limiter
+
+        _mock_extraction(monkeypatch)
+        for _ in range(20):
+            discovery_limiter.check("127.0.0.1")
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            assert (await authed.post("/recipes/extract", files=_files())).status_code == 200
 
 
 class TestPhotoFormats:

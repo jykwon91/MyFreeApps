@@ -42,6 +42,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user, current_user_optional
 from app.core.config import settings
+from app.core.rate_limit import check_photo_import_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.recipe.cook_log_schemas import CookLogCreateRequest, CookLogResponse
@@ -185,7 +186,11 @@ async def create_recipe(
     return await recipe_service.create_recipe(db, user.id, payload)
 
 
-@auth_router.post("/extract", response_model=RecipeDraftResponse)
+@auth_router.post(
+    "/extract",
+    response_model=RecipeDraftResponse,
+    dependencies=[Depends(check_photo_import_rate_limit)],
+)
 async def extract_recipe_photo(
     file: UploadFile = File(...),
     user: User = Depends(current_active_user),
@@ -195,7 +200,7 @@ async def extract_recipe_photo(
     The image is a transient input — it is never stored. The returned draft is
     for the user to review and edit; saving happens through ``POST /recipes``.
     Status codes: 413 too large, 415 unsupported type, 422 unreadable / no
-    recipe found, 503 photo import not available.
+    recipe found, 429 per-IP budget spent, 503 photo import not available.
     """
     content = await file.read()
     if not content:

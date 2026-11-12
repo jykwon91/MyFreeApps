@@ -52,12 +52,13 @@ def _reset_rate_limiters():
     """
     from app.core.rate_limit import (
         discovery_limiter,
+        extract_limiter,
         login_limiter,
         register_limiter,
         totp_limiter,
     )
 
-    limiters = (login_limiter, register_limiter, totp_limiter, discovery_limiter)
+    limiters = (login_limiter, register_limiter, totp_limiter, discovery_limiter, extract_limiter)
     for limiter in limiters:
         limiter._buckets.clear()
     yield
