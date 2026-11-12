@@ -80,6 +80,16 @@ def _read(*parts: str) -> str:
     return (_REPO_ROOT.joinpath(*parts)).read_text(encoding="utf-8")
 
 
+def _has_phone_sign_in(app: str) -> bool:
+    """A mobile app needs the routes; an app that ships the wiring file must mount it."""
+    config = yaml.safe_load(_read("apps", app, "app.yaml"))
+    wiring = _REPO_ROOT / "apps" / app / "backend" / "app" / "api" / "mobile_auth.py"
+    return _render.is_mobile_app(config) or wiring.exists()
+
+
+_PHONE_SIGN_IN_APPS = [app for app in _ALL_APPS if _has_phone_sign_in(app)]
+
+
 def _mobile_manifests() -> list[Path]:
     """Every package.json that resolves against react-native."""
     return [
@@ -1530,11 +1540,11 @@ class TestTotpRoutesAreShared:
             "An audit row would copy the secret hashes."
         )
 
-    @pytest.mark.parametrize("app", ["mybookkeeper", "myjobhunter", "myrecipes"])
+    @pytest.mark.parametrize("app", _PHONE_SIGN_IN_APPS)
     def test_apps_with_phone_sign_in_mount_the_routes(self, app: str) -> None:
         assert "app.include_router(mobile_auth.router)" in _read("apps", app, "backend", "app", "main.py")
 
-    @pytest.mark.parametrize("app", ["myjobhunter", "myrecipes"])
+    @pytest.mark.parametrize("app", [app for app in _PHONE_SIGN_IN_APPS if app != "mybookkeeper"])
     def test_phone_sign_in_wiring_matches_mybookkeeper(self, app: str) -> None:
         """The routes come from platform_shared; each app's file only wires its own
         dependencies in, so the files stay identical."""

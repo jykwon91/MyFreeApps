@@ -28,7 +28,7 @@ from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.api.users_router import build_users_router
 from platform_shared.services.seed_admin_service import build_seed_admin_hook
 
-from app.api import account, admin, catalog, health, profile, sessions, totp, turns, usage
+from app.api import account, admin, catalog, health, mobile_auth, profile, sessions, totp, turns, usage
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.permissions import current_admin, current_strict_superuser
@@ -236,6 +236,7 @@ app.include_router(build_transparency_router(settings))
 
 # TOTP routes -- /auth/totp/login gets the per-IP throttle.
 app.include_router(totp.router)
+app.include_router(mobile_auth.router)
 
 
 # Test helpers -- only mounted when APP_ENABLE_TEST_HELPERS=1.

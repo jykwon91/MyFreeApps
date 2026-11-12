@@ -47,6 +47,13 @@ user at the router level): `GET /languages`, `GET /scenarios?language=es`,
 `GET /usage/today` (caller's remaining fraction only),
 `POST /sessions/{id}/turns` (SSE).
 
+Phone sign-in (`backend/app/api/mobile_auth.py`, routes from
+`platform_shared.api.mobile_auth_router`, file identical to MyBookkeeper's):
+`POST /auth/mobile/login` (login + TOTP rate limits and lockout),
+`POST /auth/mobile/refresh` (rotates the refresh token; a reused one ends the
+session), `POST /auth/mobile/logout`, `GET /auth/mobile/sessions` and
+`DELETE /auth/mobile/sessions/{id}` (the caller's signed-in devices).
+
 ## Conversation loop
 
 `POST /sessions/{id}/turns` streams SSE events in this order:
