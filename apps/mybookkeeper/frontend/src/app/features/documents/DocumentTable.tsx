@@ -13,7 +13,7 @@ import EmptyState from "@/shared/components/ui/EmptyState";
 import { SortIndicator, ColumnFilter } from "@/shared/components/table";
 import StatusBadge from "@/app/features/documents/StatusBadge";
 import DocumentRowActions from "@/app/features/documents/DocumentRowActions";
-import { timeAgo } from "@/shared/utils/date";
+import { timeSince } from "@platform/core/utils/timeSince";
 import { cn } from "@/shared/utils/cn";
 
 interface FilterOptions {
@@ -83,7 +83,7 @@ export default function DocumentTable({
                       <span className="text-xs text-muted-foreground">{typeLabel}</span>
                     )}
                     <span className="text-xs text-muted-foreground ml-auto">
-                      {timeAgo(doc.created_at)}
+                      {timeSince(doc.created_at)}
                     </span>
                   </div>
                 </button>

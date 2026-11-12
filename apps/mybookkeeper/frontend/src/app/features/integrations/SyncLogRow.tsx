@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 import type { SyncLog } from "@mybookkeeper/api-client/types/integration/sync-log";
 import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
-import { formatDate, timeAgo } from "@/shared/utils/date";
+import { timeSince } from "@platform/core/utils/timeSince";
+import { formatDate } from "@/shared/utils/date";
 import { getStatusLabel } from "@mybookkeeper/api-client/utils/syncStatusLabel";
 import { getStatusColor } from "@/shared/utils/sync-status";
 import Spinner from "@/shared/components/icons/Spinner";
@@ -56,7 +57,7 @@ export default function SyncLogRow({
           ) : null}
         </div>
         <div className="flex items-center gap-3 text-muted-foreground">
-          <span>{timeAgo(log.started_at)}</span>
+          <span>{timeSince(log.started_at)}</span>
           <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
         </div>
       </button>

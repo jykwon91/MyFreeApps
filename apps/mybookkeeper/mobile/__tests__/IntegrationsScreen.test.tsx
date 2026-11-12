@@ -111,7 +111,7 @@ describe("IntegrationsScreen: Gmail status", () => {
   it("shows when it last synced, and says never when it hasn't", async () => {
     startIntegrationsServer({ integrations: [aGmail({ last_synced_at: hoursAgo(2) })] });
     await renderScreen(<IntegrationsScreen />);
-    await screen.findByText("Connected · Last synced 2h ago");
+    await screen.findByText("Connected · Last synced 2 hours ago");
   });
 
   it("says never when it has not synced yet", async () => {

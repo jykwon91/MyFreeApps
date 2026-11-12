@@ -9,7 +9,7 @@ import {
 import { POLLING_OPTIONS, EMPTY_QUEUE } from "@/shared/lib/constants";
 import { extractErrorMessage } from "@platform/ui";
 import { computeStatusCounts, groupBySession } from "@mybookkeeper/api-client/utils/emailQueue";
-import { timeAgo } from "@/shared/utils/date";
+import { timeSince } from "@platform/core/utils/timeSince";
 import { useToast } from "@/shared/hooks/useToast";
 import { Button, LoadingButton } from "@platform/ui";
 import ChevronDown from "@/shared/components/icons/ChevronDown";
@@ -137,7 +137,7 @@ export default function EmailQueueSection() {
               <div key={group.syncLogId} className="border rounded-md overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Sync session {group.earliestCreatedAt ? `\u00b7 ${timeAgo(group.earliestCreatedAt)}` : ""}
+                    Sync session {group.earliestCreatedAt ? `\u00b7 ${timeSince(group.earliestCreatedAt)}` : ""}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {group.items.length} item{group.items.length !== 1 ? "s" : ""}

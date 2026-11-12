@@ -3,7 +3,7 @@ import { getStatusLabel } from "@mybookkeeper/api-client/utils/syncStatusLabel";
 import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
 import { INTEGRATIONS_MESSAGES as MESSAGES } from "../../constants/integrations";
-import { timeAgo } from "../../utils/timeAgo";
+import { timeSince } from "@platform/core/utils/timeSince";
 import { syncStatusColor } from "./syncSessionDisplay";
 
 interface SyncLogRowProps {
@@ -16,7 +16,7 @@ interface SyncLogRowProps {
 export default function SyncLogRow({ log, itemCount, onPress }: SyncLogRowProps) {
   const { colors, spacing, fontSize } = useTheme();
   const label = getStatusLabel(log);
-  const when = timeAgo(log.started_at);
+  const when = timeSince(log.started_at);
   const details = [MESSAGES.sessionNumber(log.id), when, itemCount ? MESSAGES.sessionItems(itemCount) : null].filter(Boolean).join(" · ");
   return (
     <Pressable

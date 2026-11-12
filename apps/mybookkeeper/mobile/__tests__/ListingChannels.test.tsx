@@ -62,7 +62,7 @@ describe("a listing's channels", () => {
     await show(<ListingChannelsScreen id="l1" />);
     await screen.findByText(MESSAGES.notSynced);
     expect(screen.getByText(MESSAGES.noInbound)).toBeTruthy();
-    expect(screen.getByText("Synced Just now")).toBeTruthy();
+    expect(screen.getByText("Synced just now")).toBeTruthy();
     expect(screen.getByText(MESSAGES.syncFailed)).toBeTruthy();
     await fireEvent.press(button("Open Furnished listing"));
     expect(openURL).toHaveBeenCalledWith("https://furnished.example/room");

@@ -3,7 +3,7 @@ import {
   daysBetween,
   formatWindowLabel,
 } from "@/app/features/calendar/calendar-utils";
-import { relativeTime } from "@mybookkeeper/api-client/utils/calendarSync";
+import { timeSince } from "@platform/core/utils/timeSince";
 import { CALENDAR_UNASSIGNED_LISTING_LABEL, getSourceLabel, isReadOnlySource } from "@mybookkeeper/api-client/constants/calendarSources";
 import { getSourceColor } from "@/shared/lib/calendar-constants";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
@@ -20,7 +20,7 @@ export default function CalendarEventDetailBody({ event }: CalendarEventDetailBo
   const sourceColor = getSourceColor(event.source);
   const nights = Math.max(1, daysBetween(event.starts_on, event.ends_on));
   const range = formatWindowLabel(event.starts_on, event.ends_on);
-  const synced = relativeTime(event.updated_at);
+  const synced = timeSince(event.updated_at);
   // A read-only event's id belongs to another table (a lease, not a
   // blackout), so the notes and attachment endpoints don't address it.
   const readOnly = isReadOnlySource(event.source);

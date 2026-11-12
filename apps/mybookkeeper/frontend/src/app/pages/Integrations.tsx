@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { useConnectGmailMutation, useDisconnectGmailMutation, useSyncGmailMutation, useGetSyncLogsQuery, useCancelGmailSyncMutation, useGetEmailQueueQuery, useExtractAllMutation, useDismissQueueItemMutation, useRetryQueueItemMutation, useRetryAllFailedMutation, useUpdateGmailLabelMutation, useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import type { EmailQueueItem } from "@mybookkeeper/api-client/types/integration/email-queue-item";
 import { POLLING_OPTIONS, EMPTY_QUEUE } from "@/shared/lib/constants";
-import { timeAgo } from "@/shared/utils/date";
+import { timeSince } from "@platform/core/utils/timeSince";
 import { extractErrorMessage, AlertBox } from "@platform/ui";
 import { groupBySession } from "@mybookkeeper/api-client/utils/emailQueue";
 import { useToast } from "@/shared/hooks/useToast";
@@ -179,7 +179,7 @@ export default function Integrations() {
                   ) : (
                     <p className="text-sm text-muted-foreground mt-0.5">
                       Connected · Last synced{" "}
-                      {gmail.last_synced_at ? timeAgo(gmail.last_synced_at) : "never"}
+                      {gmail.last_synced_at ? timeSince(gmail.last_synced_at) : "never"}
                     </p>
                   )
                 ) : (
