@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
-import { ACTIVE_ORG_STORAGE_KEY } from "@/shared/lib/session-storage-keys";
+import { persistActiveOrgId, readActiveOrgId } from "@/shared/lib/activeOrganizationStorage";
 import { baseApi } from "./baseApi";
 
 interface OrganizationState {
@@ -8,16 +8,8 @@ interface OrganizationState {
   organizations: OrgWithRole[];
 }
 
-function loadActiveOrgId(): string | null {
-  try {
-    return localStorage.getItem(ACTIVE_ORG_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
 const initialState: OrganizationState = {
-  activeOrgId: loadActiveOrgId(),
+  activeOrgId: readActiveOrgId(),
   organizations: [],
 };
 
@@ -27,37 +19,17 @@ const organizationSlice = createSlice({
   reducers: {
     setActiveOrg(state, action: PayloadAction<string | null>) {
       state.activeOrgId = action.payload;
-      try {
-        if (action.payload) {
-          localStorage.setItem(ACTIVE_ORG_STORAGE_KEY, action.payload);
-        } else {
-          localStorage.removeItem(ACTIVE_ORG_STORAGE_KEY);
-        }
-      } catch {
-        // storage unavailable
-      }
+      persistActiveOrgId(action.payload);
     },
     setOrganizations(state, action: PayloadAction<OrgWithRole[]>) {
       state.organizations = action.payload;
       if (state.activeOrgId && !action.payload.some((o) => o.id === state.activeOrgId)) {
         state.activeOrgId = action.payload[0]?.id ?? null;
-        try {
-          if (state.activeOrgId) {
-            localStorage.setItem(ACTIVE_ORG_STORAGE_KEY, state.activeOrgId);
-          } else {
-            localStorage.removeItem(ACTIVE_ORG_STORAGE_KEY);
-          }
-        } catch {
-          // storage unavailable
-        }
+        persistActiveOrgId(state.activeOrgId);
       }
       if (!state.activeOrgId && action.payload.length > 0) {
         state.activeOrgId = action.payload[0].id;
-        try {
-          localStorage.setItem(ACTIVE_ORG_STORAGE_KEY, state.activeOrgId);
-        } catch {
-          // storage unavailable
-        }
+        persistActiveOrgId(state.activeOrgId);
       }
     },
     // The previous user's organizations go when the session changes hands. The stored
@@ -65,7 +37,7 @@ const organizationSlice = createSlice({
     // the tab that signs in or out changes it.
     forgetOrganizations(state) {
       state.organizations = [];
-      state.activeOrgId = loadActiveOrgId();
+      state.activeOrgId = readActiveOrgId();
     },
   },
 });

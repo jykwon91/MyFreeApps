@@ -80,6 +80,7 @@
     "auth": {
       "source_paths": [
         "frontend/src/shared/lib/auth.ts",
+        "frontend/src/shared/lib/session-storage-keys.ts",
         "frontend/src/shared/lib/api.ts",
         "frontend/src/app/pages/Login.tsx",
         "frontend/src/app/pages/Register.tsx",
@@ -129,6 +130,8 @@
         "DeleteAccountModal.test.tsx",
         "TwoFactorSetup.test.tsx",
         "auth.test.ts",
+        "authModuleLoad.test.ts",
+        "activeOrganizationStorage.test.ts",
         "apiInterceptor.test.ts"
       ],
       "e2e_specs": [
@@ -401,6 +404,7 @@
         "backend/app/api/organizations.py",
         "frontend/src/app/features/organizations/",
         "frontend/src/shared/store/organizationSlice.ts",
+        "frontend/src/shared/lib/activeOrganizationStorage.ts",
         "frontend/src/app/pages/Members.tsx",
         "frontend/src/shared/lib/organization-messages.ts",
         "frontend/src/shared/components/RequireOrg.tsx",
@@ -460,6 +464,7 @@
         "PendingInvites.test.tsx",
         "RequireOrgRole.test.tsx",
         "organizationSlice.test.ts",
+        "activeOrganizationStorage.test.ts",
         "Members.test.tsx",
         "RequireOrg.test.tsx"
       ],
