@@ -18,21 +18,20 @@ import {
 import {
   CHANGE_NOTE_MAX_LENGTH,
   RECIPE_DESCRIPTION_MAX_LENGTH,
-  RECIPE_FORM_PROBLEMS,
   RECIPE_SERVINGS_MAX_LENGTH,
   RECIPE_SOURCE_MAX_LENGTH,
   RECIPE_TITLE_MAX_LENGTH,
 } from "@myrecipes/api-client/constants/recipeForm";
 import { browserDecimalSeparator } from "@/lib/browserDecimalSeparator";
+import { TWEAK_MESSAGES } from "@myrecipes/api-client/constants/tweak";
 import { buildRecipeCreateRequest } from "@myrecipes/api-client/utils/buildRecipeCreateRequest";
+import { buildVersionCreateRequest } from "@myrecipes/api-client/utils/buildVersionCreateRequest";
 import { firstRecipeFormProblem } from "@myrecipes/api-client/utils/firstRecipeFormProblem";
 import { draftNeedsReview } from "@myrecipes/api-client/utils/draftNeedsReview";
 import { formatRecipeNumber } from "@myrecipes/api-client/utils/formatRecipeNumber";
-import { ingredientInputs } from "@myrecipes/api-client/utils/ingredientInputs";
-import { minutesInput } from "@myrecipes/api-client/utils/minutesInput";
-import { recipeContentProblems } from "@myrecipes/api-client/utils/recipeContentProblems";
 import { recipeFormProblems } from "@myrecipes/api-client/utils/recipeFormProblems";
-import { stepInputs } from "@myrecipes/api-client/utils/stepInputs";
+import { tweakErrorMessage } from "@myrecipes/api-client/utils/tweakErrorMessage";
+import { tweakFormProblem } from "@myrecipes/api-client/utils/tweakFormProblem";
 import type { RecipeExtractionDraft } from "@myrecipes/api-client/types/recipe/extraction";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 
@@ -119,9 +118,9 @@ export default function RecipeEditorForm(props: Props) {
       ingredients: form.ingredients,
       steps: form.steps,
     };
-    const problem =
-      firstRecipeFormProblem(isTweak ? recipeContentProblems(values, decimalSeparator) : recipeFormProblems(values, decimalSeparator)) ??
-      (isTweak && !changeNote.trim() ? RECIPE_FORM_PROBLEMS.changeNoteRequired : undefined);
+    const problem = isTweak
+      ? tweakFormProblem(values, changeNote, decimalSeparator)
+      : firstRecipeFormProblem(recipeFormProblems(values, decimalSeparator));
     if (problem) {
       showError(problem);
       return;
@@ -135,25 +134,13 @@ export default function RecipeEditorForm(props: Props) {
       } else {
         await createVersion({
           recipeId: props.recipeId,
-          body: {
-            base_version_id: props.baseVersion.id,
-            change_note: changeNote.trim(),
-            servings: servings.trim() || null,
-            prep_minutes: minutesInput(prep, decimalSeparator),
-            cook_minutes: minutesInput(cook, decimalSeparator),
-            ingredients: ingredientInputs(form.ingredients, decimalSeparator),
-            steps: stepInputs(form.steps),
-          },
+          body: buildVersionCreateRequest(values, changeNote, props.baseVersion.id, decimalSeparator),
         }).unwrap();
-        showSuccess("New version saved.");
+        showSuccess(TWEAK_MESSAGES.saved);
         navigate(`/recipes/${props.recipeId}`, { replace: true });
       }
-    } catch {
-      showError(
-        isTweak
-          ? "Couldn't save this tweak — please try again."
-          : "Couldn't create this recipe — please try again.",
-      );
+    } catch (error) {
+      showError(isTweak ? tweakErrorMessage(error) : "Couldn't create this recipe — please try again.");
     }
   }
 

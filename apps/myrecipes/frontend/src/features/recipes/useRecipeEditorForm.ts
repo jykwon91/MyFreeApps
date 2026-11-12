@@ -4,8 +4,8 @@ import type { EditableStepRow } from "@myrecipes/api-client/types/recipe/editabl
 import type { DecimalSeparator } from "@myrecipes/api-client/types/recipe/decimal-separator";
 import { draftIngredientRows, draftStepRows } from "@myrecipes/api-client/utils/draftFormRows";
 import { emptyIngredientRow, emptyStepRow } from "@myrecipes/api-client/utils/emptyRecipeRows";
-import { formatRecipeNumber } from "@myrecipes/api-client/utils/formatRecipeNumber";
 import { moveRow } from "@myrecipes/api-client/utils/moveRow";
+import { recipeFormValuesFromVersion } from "@myrecipes/api-client/utils/recipeFormValuesFromVersion";
 import type { RecipeExtractionDraft } from "@myrecipes/api-client/types/recipe/extraction";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 
@@ -19,26 +19,6 @@ function emptyIngredient(): EditableIngredientRow {
 
 function emptyStep(): EditableStepRow {
   return emptyStepRow(makeKey());
-}
-
-/**
- * Seed editor rows from a base version, CARRYING each ingredient's lineage_key
- * so a tweak's diff tracks "same ingredient, changed". New (create) editors
- * start with one empty ingredient row and one empty step row.
- */
-function ingredientsFromVersion(version: VersionResponse, decimalSeparator: DecimalSeparator): EditableIngredientRow[] {
-  return version.ingredients.map((ing) => ({
-    key: makeKey(),
-    name: ing.name,
-    quantity: formatRecipeNumber(ing.quantity, decimalSeparator),
-    unit: ing.unit ?? "",
-    note: ing.note ?? "",
-    lineageKey: ing.lineage_key,
-  }));
-}
-
-function stepsFromVersion(version: VersionResponse): EditableStepRow[] {
-  return version.steps.map((s) => ({ key: makeKey(), instruction: s.instruction }));
 }
 
 /**
@@ -74,13 +54,17 @@ export interface RecipeEditorFormState {
  */
 export function useRecipeEditorForm(seed: EditorSeed | undefined, decimalSeparator: DecimalSeparator): RecipeEditorFormState {
   const { baseVersion, draft } = seed ?? {};
+  // A tweak's rows, carrying each ingredient's lineage key so its diff tracks "same ingredient, changed".
+  const [fromVersion] = useState(() =>
+    baseVersion ? recipeFormValuesFromVersion(baseVersion, decimalSeparator, makeKey) : undefined,
+  );
   const [ingredients, setIngredients] = useState<EditableIngredientRow[]>(() => {
-    if (baseVersion) return ingredientsFromVersion(baseVersion, decimalSeparator);
+    if (fromVersion) return fromVersion.ingredients;
     if (draft && draft.ingredients.length > 0) return draftIngredientRows(draft.ingredients, decimalSeparator, makeKey);
     return [emptyIngredient()];
   });
   const [steps, setSteps] = useState<EditableStepRow[]>(() => {
-    if (baseVersion) return stepsFromVersion(baseVersion);
+    if (fromVersion) return fromVersion.steps;
     if (draft && draft.steps.length > 0) return draftStepRows(draft.steps, makeKey);
     return [emptyStep()];
   });

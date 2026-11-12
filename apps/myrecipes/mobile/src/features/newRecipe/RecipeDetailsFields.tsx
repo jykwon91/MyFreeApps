@@ -1,6 +1,5 @@
 import {
   RECIPE_DESCRIPTION_MAX_LENGTH,
-  RECIPE_SERVINGS_MAX_LENGTH,
   RECIPE_SOURCE_MAX_LENGTH,
   RECIPE_TITLE_MAX_LENGTH,
 } from "@myrecipes/api-client/constants/recipeForm";
@@ -8,8 +7,8 @@ import type { RecipeFormProblems } from "@myrecipes/api-client/types/recipe/reci
 import type { RecipeFormValues } from "@myrecipes/api-client/types/recipe/recipe-form-values";
 import { characterCounter } from "@platform/core/utils/characterCounter";
 import { FormField, useTheme } from "@platform/mobile";
-import { View } from "react-native";
 import { MULTILINE_MIN_HEIGHT, NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
+import RecipeTimingFields from "../recipeForm/RecipeTimingFields";
 
 type MetaField = Exclude<keyof RecipeFormValues, "ingredients" | "steps">;
 
@@ -59,35 +58,7 @@ export default function RecipeDetailsFields({ values, problems, disabled, focusT
         placeholder={MESSAGES.sourcePlaceholder}
         value={values.source}
       />
-      <FormField
-        editable={!disabled}
-        counter={characterCounter(values.servings.trim(), RECIPE_SERVINGS_MAX_LENGTH)}
-        error={problems.servings}
-        label={MESSAGES.servingsLabel}
-        onChangeText={(text) => onEdit("servings", text)}
-        placeholder={MESSAGES.servingsPlaceholder}
-        value={values.servings}
-      />
-      <View style={{ flexDirection: "row", gap: spacing.sm }}>
-        <FormField
-          editable={!disabled}
-          error={problems.prepMinutes}
-          keyboardType="number-pad"
-          label={MESSAGES.prepLabel}
-          onChangeText={(text) => onEdit("prepMinutes", text)}
-          style={{ flex: 1 }}
-          value={values.prepMinutes}
-        />
-        <FormField
-          editable={!disabled}
-          error={problems.cookMinutes}
-          keyboardType="number-pad"
-          label={MESSAGES.cookLabel}
-          onChangeText={(text) => onEdit("cookMinutes", text)}
-          style={{ flex: 1 }}
-          value={values.cookMinutes}
-        />
-      </View>
+      <RecipeTimingFields disabled={disabled} onEdit={onEdit} problems={problems} values={values} />
     </>
   );
 }

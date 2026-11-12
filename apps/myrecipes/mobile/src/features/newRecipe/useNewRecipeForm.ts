@@ -1,10 +1,8 @@
 import { recipesApi, useCreateRecipeMutation } from "@myrecipes/api-client/store/recipesApi";
-import type { EditableIngredientRow } from "@myrecipes/api-client/types/recipe/editable-ingredient-row";
 import type { RecipeFormValues } from "@myrecipes/api-client/types/recipe/recipe-form-values";
 import { buildRecipeCreateRequest } from "@myrecipes/api-client/utils/buildRecipeCreateRequest";
 import { emptyIngredientRow, emptyStepRow } from "@myrecipes/api-client/utils/emptyRecipeRows";
 import { firstRecipeFormProblem } from "@myrecipes/api-client/utils/firstRecipeFormProblem";
-import { moveRow } from "@myrecipes/api-client/utils/moveRow";
 import { recipeFormProblems } from "@myrecipes/api-client/utils/recipeFormProblems";
 import { recipeFormValuesFromDraft } from "@myrecipes/api-client/utils/recipeFormValuesFromDraft";
 import { useToast } from "@platform/mobile";
@@ -16,6 +14,7 @@ import type { AppStore } from "../../lib/store";
 import type { NewRecipeSeed } from "../../types/NewRecipeSeed";
 import { deviceDecimalSeparator } from "../../utils/deviceDecimalSeparator";
 import { nextRowKey } from "../../utils/nextRowKey";
+import { useRecipeRows } from "../recipeForm/useRecipeRows";
 
 type MetaField = Exclude<keyof RecipeFormValues, "ingredients" | "steps">;
 
@@ -62,8 +61,7 @@ export function useNewRecipeForm(seed?: NewRecipeSeed) {
   );
   const [values, setValues] = useState(initialValues);
   const [hasTried, setHasTried] = useState(false);
-  // The row just added, so its first field can take focus.
-  const [addedKey, setAddedKey] = useState<string | null>(null);
+  const rows = useRecipeRows(setValues);
   // Where to go once it's saved: the detail screen opens with these while it loads.
   const [created, setCreated] = useState<{ id: string; title: string; owner: string } | null>(null);
   const isMounted = useRef(true);
@@ -86,48 +84,6 @@ export function useNewRecipeForm(seed?: NewRecipeSeed) {
 
   function edit(field: MetaField, text: string): void {
     setValues((current) => ({ ...current, [field]: text }));
-  }
-
-  function editIngredient(key: string, patch: Partial<EditableIngredientRow>): void {
-    setValues((current) => ({
-      ...current,
-      ingredients: current.ingredients.map((row) => (row.key === key ? { ...row, ...patch } : row)),
-    }));
-  }
-
-  function editStep(key: string, instruction: string): void {
-    setValues((current) => ({
-      ...current,
-      steps: current.steps.map((row) => (row.key === key ? { ...row, instruction } : row)),
-    }));
-  }
-
-  function addIngredient(): void {
-    const row = emptyIngredientRow(nextRowKey());
-    setAddedKey(row.key);
-    setValues((current) => ({ ...current, ingredients: [...current.ingredients, row] }));
-  }
-
-  function addStep(): void {
-    const row = emptyStepRow(nextRowKey());
-    setAddedKey(row.key);
-    setValues((current) => ({ ...current, steps: [...current.steps, row] }));
-  }
-
-  function removeIngredient(key: string): void {
-    setValues((current) => ({ ...current, ingredients: current.ingredients.filter((row) => row.key !== key) }));
-  }
-
-  function removeStep(key: string): void {
-    setValues((current) => ({ ...current, steps: current.steps.filter((row) => row.key !== key) }));
-  }
-
-  function moveIngredient(key: string, direction: -1 | 1): void {
-    setValues((current) => ({ ...current, ingredients: moveRow(current.ingredients, key, direction) }));
-  }
-
-  function moveStep(key: string, direction: -1 | 1): void {
-    setValues((current) => ({ ...current, steps: moveRow(current.steps, key, direction) }));
   }
 
   async function save(): Promise<void> {
@@ -153,19 +109,11 @@ export function useNewRecipeForm(seed?: NewRecipeSeed) {
   return {
     values,
     problems,
-    addedKey,
+    rows,
     isSaving,
     isLeaving: created !== null,
     isDirty: seed ? values !== initialValues : hasText(values),
     edit,
-    editIngredient,
-    editStep,
-    addIngredient,
-    addStep,
-    removeIngredient,
-    removeStep,
-    moveIngredient,
-    moveStep,
     save,
   };
 }

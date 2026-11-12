@@ -1,6 +1,7 @@
 import {
   RECIPE_DESCRIPTION_MAX_LENGTH,
   RECIPE_FORM_PROBLEMS as PROBLEMS,
+  RECIPE_SERVINGS_MAX_LENGTH,
   RECIPE_SOURCE_MAX_LENGTH,
 } from "@myrecipes/api-client/constants/recipeForm";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
@@ -215,6 +216,20 @@ describe("length limits", () => {
 
     await fillMinimalRecipe();
     await press(MESSAGES.create);
+    expect(sent).toHaveLength(0);
+  });
+  it("holds servings to its limit as it's typed, and won't create past it", async () => {
+    await show();
+    await fillMinimalRecipe();
+    const tooMany = "s".repeat(RECIPE_SERVINGS_MAX_LENGTH + 1);
+    await type("Servings", tooMany);
+
+    const tooLong = tooLongProblem(tooMany, RECIPE_SERVINGS_MAX_LENGTH) as string;
+    expect(screen.getByText(tooLong)).toBeTruthy();
+
+    await press(MESSAGES.create);
+    // On the field, and toasted, once each.
+    expect(screen.getAllByText(tooLong)).toHaveLength(2);
     expect(sent).toHaveLength(0);
   });
 });

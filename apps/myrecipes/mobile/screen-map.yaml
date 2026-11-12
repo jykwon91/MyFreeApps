@@ -11,8 +11,9 @@ routes:
     screen: sign-in
   /recipes/:id:
     screen: recipes/[id]
+  # Owner only, opened from the recipe's "Tweak this recipe" button, as on the website.
   /recipes/:id/tweak:
-    not_on_mobile: Not built yet.
+    screen: recipes/[id]/tweak
   /recipes/:id/versions/:vid/diff:
     not_on_mobile: Not built yet.
   /recipes/import:
