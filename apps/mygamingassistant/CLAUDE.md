@@ -1053,7 +1053,11 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`groups: []`). Unknown ids are counted in a footnote, never guessed.
 - Professions (`CharacterProfessionsPanel`, `lib/character/characterProfessions.ts`),
   between Stats and Talents: `/professions` gives each profession's skill, its
-  rank's cap and the known recipes (`{id, name}`, id = recipe spell id). Main
+  rank's cap and the known recipes (`{id, name}`). The id is the client's
+  `SkillLineAbility` row (Bolt of Linen Cloth = 2359), NOT the spell (2963):
+  `recipeSpell` maps it through `data/character/recipeSpells.json`
+  (`scripts.wow_professions.abilities`, in the refresh). Test fixtures must use
+  ability ids, or a coincidental spell-id match colours the wrong recipe. Main
   and secondary groups; one card open at a time, a card opens only when it
   lists more than one entry (Fishing knows just "Fishing"). A crafting
   profession's recipes are coloured at the character's skill from its recipe

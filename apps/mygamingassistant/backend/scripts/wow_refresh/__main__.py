@@ -83,6 +83,8 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         ["scripts.wow_satellite.build"],
         ["scripts.wow_food.build"],
         ["scripts.wow_professions.build"],
+        # Blizzard recipe id -> recipe spell, for the character page (pinned client, like the build above).
+        ["scripts.wow_professions.abilities"],
         ["scripts.wow_gold.build"],
         ["scripts.wow_consumables.build"],
         ["scripts.wow_items.build", *cache],
