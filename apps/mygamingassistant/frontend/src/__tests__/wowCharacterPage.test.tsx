@@ -20,6 +20,7 @@ import {
   recipeColorAt,
   recipeSpell,
 } from "@/games/wow-forever/lib/character/characterProfessions";
+import { fitsNow } from "@/games/wow-forever/lib/character/characterDungeons";
 import { collectionsSummary } from "@/games/wow-forever/lib/character/characterCollections";
 import { pvpRankLabel, pvpSummary } from "@/games/wow-forever/lib/character/characterPvp";
 import { groupReputations, standingPercent } from "@/games/wow-forever/lib/character/characterReputation";
@@ -211,6 +212,17 @@ const CHARACTER: CharacterResponse = {
     pets: [
       { id: 5161, name: "Mini Diablo", count: 1 },
       { id: 5138, name: "Pachimari", count: 2 },
+    ],
+  },
+  dungeons: {
+    runs: 20,
+    dungeons: [
+      { name: "Hall of Thanes", wing: null, classic: false, boss: "Durgen Dirgehammer", kills: 1, level_min: 13, level_max: 20, required_level: null },
+      { name: "Deadmines", wing: null, classic: true, boss: "Edwin VanCleef", kills: 2, level_min: 16, level_max: 16, required_level: 10 },
+      { name: "Scarlet Monastery", wing: "Graveyard", classic: true, boss: "Bloodmage Thalnos", kills: null, level_min: 30, level_max: 30, required_level: 20 },
+      { name: "Uldaman", wing: null, classic: true, boss: "Archaedas", kills: 0, level_min: 35, level_max: 35, required_level: 30 },
+      { name: "The Drowned City", wing: null, classic: false, boss: null, kills: null, level_min: 35, level_max: 42, required_level: null },
+      { name: "Blackrock Depths", wing: null, classic: true, boss: "Emperor Dagran Thaurissan", kills: 0, level_min: 48, level_max: 48, required_level: 40 },
     ],
   },
 };
@@ -850,3 +862,60 @@ describe("WowCharacterPage collections", () => {
     expect(collectionsSummary({ mounts: [], pets: [] })).toBe("0 mounts, 0 pets");
   });
 });
+
+describe("WowCharacterPage dungeons", () => {
+  function dungeonsFor(data: CharacterResponse) {
+    mockQuery.mockReturnValue(query({ data }));
+    renderAt("/wow-forever/character/jason-kwon");
+    return screen.getByRole("region", { name: "Dungeons" });
+  }
+
+  it("starts open with done, not done and untracked rows in level order", () => {
+    const panel = dungeonsFor(CHARACTER);
+    expect(within(panel).getByRole("button", { name: /Dungeons/ })).toHaveAttribute("aria-expanded", "true");
+    expect(within(panel).getByTestId("character-dungeons-summary")).toHaveTextContent("2 of 4 tracked done");
+    expect(within(panel).getByTestId("character-dungeon-runs")).toHaveTextContent("20");
+    const rows = within(panel).getAllByTestId("character-dungeon-row");
+    expect(rows.map((r) => r.getAttribute("data-status"))).toEqual(["done", "done", "untracked", "not-done", "untracked", "not-done"]);
+    expect(rows[1]).toHaveTextContent("Done · 2 kills");
+    expect(rows[1]).toHaveTextContent("Final boss Edwin VanCleef");
+    expect(rows[2]).toHaveTextContent("Not tracked by Blizzard");
+  });
+
+  it("marks what fits now, what needs a higher level, and links Classic guides only", () => {
+    const panel = dungeonsFor(CHARACTER);
+    const rows = within(panel).getAllByTestId("character-dungeon-row");
+    expect(within(rows[3]).getByTestId("character-dungeon-fits")).toHaveTextContent("Fits you now");
+    // Untracked rows can fit too: the Drowned City (35–42) at 37.
+    expect(within(rows[4]).getByTestId("character-dungeon-fits")).toBeInTheDocument();
+    expect(within(panel).getAllByTestId("character-dungeon-fits")).toHaveLength(2);
+    expect(rows[5]).toHaveTextContent("needs level 40");
+    expect(rows[5]).toHaveClass("opacity-60");
+    expect(rows[3]).not.toHaveClass("opacity-60");
+    expect(within(rows[1]).getByRole("link", { name: "Deadmines" })).toHaveAttribute("href", "/wow-forever/dungeons/deadmines");
+    expect(within(rows[0]).queryByRole("link")).toBeNull();
+  });
+
+  it("says when the dungeon kills didn't load", () => {
+    const panel = dungeonsFor({ ...CHARACTER, dungeons: null });
+    expect(within(panel).getByTestId("character-dungeons-summary")).toHaveTextContent("Couldn't load");
+    expect(within(panel).getByTestId("character-dungeons-note")).toHaveTextContent("Blizzard didn't send");
+    expect(within(panel).queryByTestId("character-dungeon-row")).toBeNull();
+  });
+});
+
+describe("fitsNow", () => {
+  const uldaman = CHARACTER.dungeons!.dungeons[3];
+  const thanes = { ...CHARACTER.dungeons!.dungeons[0], kills: 0 };
+
+  it("allows two levels either side of a dungeon's level, not three", () => {
+    expect([32, 33, 37, 38].map((level) => fitsNow(uldaman, level))).toEqual([false, true, true, false]);
+    expect([10, 11, 22, 23].map((level) => fitsNow(thanes, level))).toEqual([false, true, true, false]);
+  });
+
+  it("never fits below the level to enter, or once done", () => {
+    expect(fitsNow({ ...uldaman, required_level: 34 }, 33)).toBe(false);
+    expect(fitsNow({ ...uldaman, kills: 1 }, 35)).toBe(false);
+  });
+});
+

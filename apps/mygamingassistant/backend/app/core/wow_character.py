@@ -46,6 +46,8 @@ STATISTIC_DEATHS_FROM_PLAYERS: Final = 1501
 STATISTIC_DEATHS_FROM_OPPOSITE_FACTION: Final = 318
 # Its quantity is the kills there; its description names the continent.
 STATISTIC_TOP_HONOR_CONTINENT: Final = 1458
+# "Total 5-player dungeons entered".
+STATISTIC_DUNGEONS_ENTERED: Final = 932
 
 # An item under this share of its durability is flagged "repair soon".
 CHARACTER_DURABILITY_LOW_SHARE: Final = 0.5

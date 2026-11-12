@@ -21,6 +21,7 @@ import pytest
 from httpx import AsyncClient
 from PIL import Image
 
+from app.schemas.wow.character.character_dungeon import CharacterDungeon
 from app.api import wow_characters
 from app.core.rate_limit import RateLimiter
 from app.services.wow.blizzard.blizzard_token_cache import BlizzardTokenCache
@@ -34,6 +35,7 @@ from app.services.wow.character.character_slug import normalize_character_slug
 from app.services.wow.character.character_stats_mapper import to_character_stats
 from app.services.wow.character.character_professions_mapper import to_character_professions
 from app.services.wow.character.character_collections_mapper import to_character_collections
+from app.services.wow.character.character_dungeons_mapper import to_character_dungeons
 from app.services.wow.character.character_pvp_mapper import to_character_pvp
 from app.services.wow.character.character_reputations_mapper import to_character_reputations
 from app.services.wow.character.character_talents_mapper import to_character_talents
@@ -202,6 +204,15 @@ ACHIEVEMENT_STATISTICS = {
              {"id": 1458, "name": "Continent with the most Honorable Kills", "quantity": 17.0,
               "description": "Eastern Kingdoms"},
          ]}]},
+        {"id": 14807, "name": "Dungeons & Raids", "statistics": [
+            {"id": 932, "name": "Total 5-player dungeons entered", "quantity": 20.0},
+        ], "sub_categories": [{"id": 14821, "name": "Boss Kills", "statistics": [
+            {"id": 63570, "name": "Edwin VanCleef Kills (Deadmines)", "quantity": 2.0},
+            {"id": 1093, "name": "Scarlet Commander Mograine kills (Scarlet Monastery)", "quantity": 3.0},
+            # Rivendare counted under two ids: the larger is the character's.
+            {"id": 15031, "name": "Baron Rivendare kills (Stratholme)", "quantity": 1.0},
+            {"id": 1097, "name": "Baron Rivendare kills (Stratholme)", "quantity": 4.0},
+        ]}]},
     ],
 }
 
@@ -777,3 +788,41 @@ async def test_a_character_with_no_collections_has_empty_lists(monkeypatch: pyte
     monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing)))
     sheet = await character_service.get_character("jason-kwon")
     assert sheet.collections.mounts == [] and sheet.collections.pets == []
+
+
+def _dungeon(dungeons: list[CharacterDungeon], name: str, wing: str | None = None) -> CharacterDungeon:
+    return next(d for d in dungeons if d.name == name and d.wing == wing)
+
+
+def test_dungeons_done_from_final_boss_kills() -> None:
+    result = to_character_dungeons(ACHIEVEMENT_STATISTICS)
+    assert result is not None
+    assert result.runs == 20
+    deadmines = _dungeon(result.dungeons, "Deadmines")
+    assert (deadmines.boss, deadmines.kills, deadmines.level_min, deadmines.required_level) == ("Edwin VanCleef", 2, 16, 10)
+    assert _dungeon(result.dungeons, "Scarlet Monastery", "Cathedral").kills == 3
+    assert _dungeon(result.dungeons, "Stratholme", "Service entrance").kills == 4
+    # Never killed: 0. Not tracked by Blizzard: None.
+    assert _dungeon(result.dungeons, "Gnomeregan").kills == 0
+    assert _dungeon(result.dungeons, "Scarlet Monastery", "Graveyard").kills is None
+    # Forever's own dungeons have a range and no level to enter.
+    thanes = _dungeon(result.dungeons, "Hall of Thanes")
+    assert (thanes.level_min, thanes.level_max, thanes.required_level, thanes.classic) == (13, 20, None, False)
+    assert deadmines.classic
+    levels = [d.level_min for d in result.dungeons]
+    assert levels == sorted(levels)
+
+
+def test_dungeons_are_unknown_not_all_undone_when_statistics_fail() -> None:
+    assert to_character_dungeons(None) is None
+    empty = to_character_dungeons({})
+    assert empty is not None and empty.runs == 0
+    assert all(d.kills in (0, None) for d in empty.dungeons)
+
+
+async def test_a_statistics_failure_keeps_the_sheet_without_dungeons(monkeypatch: pytest.MonkeyPatch) -> None:
+    failing = {"/profile/wow/character/jason-kwon/achievements/statistics": _json({"code": 503}, 503)}
+    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(failing)))
+    sheet = await character_service.get_character("jason-kwon")
+    assert sheet.dungeons is None
+    assert sheet.collections.mounts is not None
