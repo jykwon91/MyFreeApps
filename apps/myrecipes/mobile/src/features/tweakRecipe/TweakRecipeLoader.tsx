@@ -1,6 +1,6 @@
 import { useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
 import { EmptyState, useAnnouncement, useTheme } from "@platform/mobile";
-import { useRouter } from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 import { TWEAK_RECIPE_MESSAGES as MESSAGES } from "../../constants/tweakRecipe";
@@ -19,6 +19,7 @@ import TweakRecipeSkeleton from "./TweakRecipeSkeleton";
 export default function TweakRecipeLoader({ recipeId }: TweakRecipeLoaderProps) {
   const { colors, spacing } = useTheme();
   const router = useRouter();
+  const navigation = useNavigation();
   // Asked for again on opening, so the tweak starts from the latest version, not one cached earlier.
   const { currentData, error, isError, fulfilledTimeStamp, refetch } = useGetRecipeQuery(recipeId, {
     refetchOnMountOrArgChange: true,
@@ -57,7 +58,7 @@ export default function TweakRecipeLoader({ recipeId }: TweakRecipeLoaderProps) 
     }
     return (
       <EmptyState
-        action={{ label: MESSAGES.backToRecipe, onPress: () => leaveToRecipe(recipeId) }}
+        action={{ label: MESSAGES.backToRecipe, onPress: () => leaveToRecipe(navigation.getState(), recipeId) }}
         body={MESSAGES.notOwnerBody}
         heading={MESSAGES.notOwnerHeading}
       />

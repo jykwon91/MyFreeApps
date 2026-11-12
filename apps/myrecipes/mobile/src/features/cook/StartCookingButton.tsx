@@ -1,9 +1,9 @@
 import { LoadingButton } from "@platform/mobile";
-import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useRef } from "react";
+import { useRouter } from "expo-router";
 import { useSelector } from "react-redux";
 import { COOK_TARGET_HEIGHT } from "../../constants/cook";
 import { useNowOnResume } from "../../hooks/useNowOnResume";
+import { useOpenOnce } from "../../hooks/useOpenOnce";
 import type { RootState } from "../../lib/store";
 import { resumableCookSession } from "../../utils/resumableCookSession";
 
@@ -18,22 +18,11 @@ export default function StartCookingButton({
 }) {
   const router = useRouter();
   const now = useNowOnResume();
-  const isOpening = useRef(false);
   const saved = useSelector((state: RootState) => state.cookSessions[recipeId]);
   const session = resumableCookSession(saved, versionId, lastPage, now);
   const hasProgress = !!session && (session.pageIndex > 0 || session.checked.length > 0);
 
-  useFocusEffect(
-    useCallback(() => {
-      isOpening.current = false;
-    }, []),
-  );
-
-  function open(): void {
-    if (isOpening.current) return;
-    isOpening.current = true;
-    router.push({ pathname: "/recipes/[id]/cook", params: { id: recipeId } });
-  }
+  const open = useOpenOnce(() => router.push({ pathname: "/recipes/[id]/cook", params: { id: recipeId } }));
 
   return (
     <LoadingButton

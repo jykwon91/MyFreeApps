@@ -214,6 +214,26 @@ describe("RecipeDetailScreen", () => {
     expect(screen.queryByRole("button", { name: "Tweak this recipe" })).toBeNull();
   });
 
+  it("offers everyone the version history, which opens once for a double tap", async () => {
+    reply = { status: 200, data: { ...SOUP, is_owner: false, version_count: 3 } };
+    await show();
+
+    const history = await screen.findByRole("button", { name: "Version history" });
+    expect(history.props.accessibilityHint).toBe("Shows all 3 versions and what changed in each.");
+    await fireEvent.press(history);
+    await fireEvent.press(history);
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith({ pathname: "/recipes/[id]/versions", params: { id: "r1" } });
+  });
+
+  it("doesn't offer a history for a recipe with one version", async () => {
+    reply = { status: 200, data: { ...SOUP, version_count: 1 } };
+    await show();
+
+    await screen.findByRole("button", { name: "Start cooking" });
+    expect(screen.queryByRole("button", { name: "Version history" })).toBeNull();
+  });
+
   it("offers cooking when there are steps, and opens the cook screen", async () => {
     await show();
 
@@ -307,7 +327,7 @@ describe("RecipeDetailScreen", () => {
   it("stays quiet about the first version", async () => {
     await show();
     await screen.findByText("Source: Grandma");
-    expect(screen.queryByText(/^Version/)).toBeNull();
+    expect(screen.queryByText(/^Version \d/)).toBeNull();
   });
 
   it.each([404, 422])("says not found on a %i and offers a way back", async (status) => {

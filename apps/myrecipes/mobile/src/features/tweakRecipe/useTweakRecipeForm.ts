@@ -8,6 +8,7 @@ import { recipeFormValuesFromVersion } from "@myrecipes/api-client/utils/recipeF
 import { tweakErrorMessage } from "@myrecipes/api-client/utils/tweakErrorMessage";
 import { tweakFormProblem } from "@myrecipes/api-client/utils/tweakFormProblem";
 import { useToast } from "@platform/mobile";
+import { useNavigation } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { AppStore } from "../../lib/store";
@@ -29,6 +30,7 @@ import { useRecipeRows } from "../recipeForm/useRecipeRows";
  */
 export function useTweakRecipeForm(recipeId: string, version: VersionResponse) {
   const { showToast } = useToast();
+  const navigation = useNavigation();
   const dispatch = useDispatch<AppStore["dispatch"]>();
   const [createVersion, { isLoading: isSaving }] = useCreateVersionMutation();
   // Amounts and minutes are read in the device locale's decimal separator, and the version's shown in it.
@@ -51,8 +53,8 @@ export function useTweakRecipeForm(recipeId: string, version: VersionResponse) {
 
   // Waits a render after saving, or the discard question would still see the unsaved changes.
   useEffect(() => {
-    if (isSaved) leaveToRecipe(recipeId);
-  }, [isSaved, recipeId]);
+    if (isSaved) leaveToRecipe(navigation.getState(), recipeId);
+  }, [isSaved, navigation, recipeId]);
 
   // A field past its limit says so as it's typed; what's missing waits for Save.
   const scope = { lengthsOnly: !hasTried };
