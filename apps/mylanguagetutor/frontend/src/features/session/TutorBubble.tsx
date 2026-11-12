@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { ChevronDown, ChevronUp, Turtle, Volume2 } from "lucide-react";
 import { cn } from "@platform/ui";
 import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
@@ -30,6 +30,8 @@ export default function TutorBubble({
   onReplaySlow,
 }: TutorBubbleProps) {
   const [showTranslation, setShowTranslation] = useState(false);
+  const replayHintId = useId();
+  const replaySlowHintId = useId();
   return (
     <div className="flex justify-start">
       <div className="max-w-[85%] space-y-1">
@@ -43,14 +45,20 @@ export default function TutorBubble({
         <div className="flex flex-wrap items-center">
           {canSpeak && (
             <>
-              <button type="button" onClick={onReplay} className={ICON_BUTTON} aria-label="Play again">
+              <button type="button" onClick={onReplay} className={ICON_BUTTON} aria-describedby={replayHintId}>
                 <Volume2 className="h-4 w-4" aria-hidden="true" />
-                <span>Replay</span>
+                <span>{PRACTICE_COPY.replay}</span>
               </button>
-              <button type="button" onClick={onReplaySlow} className={ICON_BUTTON} aria-label="Play again slowly">
+              <span id={replayHintId} className="sr-only">
+                {PRACTICE_COPY.replayHint}
+              </span>
+              <button type="button" onClick={onReplaySlow} className={ICON_BUTTON} aria-describedby={replaySlowHintId}>
                 <Turtle className="h-4 w-4" aria-hidden="true" />
-                <span>Slow</span>
+                <span>{PRACTICE_COPY.replaySlow}</span>
               </button>
+              <span id={replaySlowHintId} className="sr-only">
+                {PRACTICE_COPY.replaySlowHint}
+              </span>
             </>
           )}
           {translation && (

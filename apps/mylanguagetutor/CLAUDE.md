@@ -89,7 +89,10 @@ burst limiter, 503 `tutor_unavailable` (global cap, kill switch, or no key).
   the axios interceptor uses too) and the same sign-out. The conversation state
   machine is the api-client's `hooks/usePracticeSession`, handed that
   `streamTurn`. Replies are spoken sentence by sentence (the api-client's
-  `utils/sentenceChunker.ts`). Browsers without recognition
+  `utils/sentenceChunker.ts`), in the voice `utils/voiceForLocale.ts` picks, at
+  `constants/speechRates.ts`. The phone speaks them with `expo-speech`
+  (`mobile/src/hooks/useTutorVoice.ts`, its voice from `mobile/src/utils/voiceIdForLocale.ts`); Hermes has no `Intl.Segmenter`, so
+  there the chunker uses its punctuation fallback. Browsers without recognition
   (Firefox) get labelled typed practice.
 - **Copy rules.** No pronunciation scoring, no "fluent", no "native speaker",
   no streak guilt. Corrections are hedged ("It looked like you said...")
@@ -207,12 +210,16 @@ npm test --workspace=@mylanguagetutor/api-client
 RTK Query endpoints, their request/response types, the SSE turn-event parser,
 the turn stream (`createStreamTurn` / `readTurnStream`, `fetch` injected), the
 turn refusal/error mapping, the `usePracticeSession` conversation hook, the
-session state types and the pure speech text helpers live in `apps/mylanguagetutor/api-client`
+session state types and the pure speech helpers (`sentenceChunker`, `spokenSentences`,
+`speakableText`, `voiceForLocale`, `primaryLanguage`, `replayRate`, `constants/speechRates`)
+live in `apps/mylanguagetutor/api-client`
 (`@mylanguagetutor/api-client`), shared with the phone app (`mobile/`). Import them
 as `@mylanguagetutor/api-client/<dir>/<file>`. The package must stay
 platform-neutral: no DOM, `window`, `localStorage`, Web Speech API or global
-`fetch` -- the platform parts (the `streamTurn` wiring, the speech hooks,
-`voiceForLocale`, `privacyAck`) stay in the web frontend, and `src/globals.d.ts`
+`fetch` -- the platform parts (the `streamTurn` wiring, the speech hooks that
+call the Web Speech API or `expo-speech`, `privacyAck`) stay in each app.
+`voiceForLocale` ranks any voice list by locale (with optional enhanced/local
+hints), and each platform maps its own voices onto it. The api-client's `src/globals.d.ts`
 declares only the globals both platforms have (`AbortController`, `TextDecoder`). One type per file in its `src/types/`.
 
 ## Architecture Rules

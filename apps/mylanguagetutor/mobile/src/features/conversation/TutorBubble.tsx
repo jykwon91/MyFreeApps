@@ -1,12 +1,13 @@
 import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { CONVERSATION_MESSAGES, PARTIAL_REPLY_MARK } from "../../constants/conversation";
 import type { TutorBubbleProps } from "../../types/TutorBubbleProps";
+import TutorBubbleAction from "./TutorBubbleAction";
 
-/** One tutor reply, with its English translation folded away. Replay buttons come with spoken replies. */
-export default function TutorBubble({ text, translation, partial }: TutorBubbleProps) {
+/** One tutor reply, with replay (normal and slow, a genuinely lower speaking rate) and its English translation folded away. */
+export default function TutorBubble({ text, translation, partial, onReplay, onReplaySlow }: TutorBubbleProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
   const [showTranslation, setShowTranslation] = useState(false);
   return (
@@ -31,18 +32,17 @@ export default function TutorBubble({ text, translation, partial }: TutorBubbleP
       {partial ? (
         <Text style={{ paddingHorizontal: spacing.xs, color: colors.mutedForeground, fontSize: fontSize.xs }}>{PRACTICE_COPY.replyCutOff}</Text>
       ) : null}
-      {translation ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ expanded: showTranslation }}
-          onPress={() => setShowTranslation((shown) => !shown)}
-          style={{ minHeight: MIN_TOUCH_TARGET, minWidth: MIN_TOUCH_TARGET, justifyContent: "center", paddingHorizontal: spacing.xs }}
-        >
-          <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs, textDecorationLine: "underline" }}>
-            {showTranslation ? PRACTICE_COPY.hideTranslation : PRACTICE_COPY.showTranslation}
-          </Text>
-        </Pressable>
-      ) : null}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>
+        <TutorBubbleAction hint={PRACTICE_COPY.replayHint} label={PRACTICE_COPY.replay} onPress={onReplay} />
+        <TutorBubbleAction hint={PRACTICE_COPY.replaySlowHint} label={PRACTICE_COPY.replaySlow} onPress={onReplaySlow} />
+        {translation ? (
+          <TutorBubbleAction
+            expanded={showTranslation}
+            label={showTranslation ? PRACTICE_COPY.hideTranslation : PRACTICE_COPY.showTranslation}
+            onPress={() => setShowTranslation((shown) => !shown)}
+          />
+        ) : null}
+      </View>
       {translation && showTranslation ? (
         <Text style={{ paddingHorizontal: spacing.xs, color: colors.mutedForeground, fontSize: fontSize.sm }}>{translation}</Text>
       ) : null}

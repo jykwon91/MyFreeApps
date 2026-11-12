@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { useSpeechSynthesis, NORMAL_RATE, SLOW_RATE } from "@/features/speech/useSpeechSynthesis";
+import { useSpeechSynthesis } from "@/features/speech/useSpeechSynthesis";
 import { useSpeechRecognition } from "@/features/speech/useSpeechRecognition";
 import { usePracticeSession } from "@mylanguagetutor/api-client/hooks/usePracticeSession";
 import { streamTurn } from "@/features/tutor-stream/streamTurn";
@@ -19,6 +19,7 @@ import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCop
 import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/startConversationPrompt";
 import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedAnswerPlaceholder";
 import { usageBlock } from "@mylanguagetutor/api-client/utils/usageBlock";
+import { replayRate } from "@mylanguagetutor/api-client/utils/replayRate";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 import type { Level } from "@mylanguagetutor/api-client/types/tutor/level";
@@ -80,7 +81,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
   };
 
   const replay = (text: string, slow: boolean) => {
-    synthesis.speakAll(text, slow ? SLOW_RATE : NORMAL_RATE);
+    synthesis.speakAll(text, replayRate(slow));
   };
 
   const tryRetryPrompt = () => {

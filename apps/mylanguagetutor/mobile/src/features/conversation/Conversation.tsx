@@ -2,6 +2,7 @@ import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCop
 import { usePracticeSession } from "@mylanguagetutor/api-client/hooks/usePracticeSession";
 import { useGetUsageTodayQuery } from "@mylanguagetutor/api-client/store/usageApi";
 import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/startConversationPrompt";
+import { replayRate } from "@mylanguagetutor/api-client/utils/replayRate";
 import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedAnswerPlaceholder";
 import { usageBlock } from "@mylanguagetutor/api-client/utils/usageBlock";
 import { useAnnouncement, useTheme } from "@platform/mobile";
@@ -13,8 +14,8 @@ import { CORRECTIONS_GRACE_MS } from "../../constants/conversation";
 import { useAwakeUntilIdle } from "../../hooks/useAwakeUntilIdle";
 import { useOnBackground } from "../../hooks/useOnBackground";
 import { useOnResume } from "../../hooks/useOnResume";
+import { useTutorVoice } from "../../hooks/useTutorVoice";
 import { useStickToBottom } from "../../hooks/useStickToBottom";
-import { NO_SPEECH } from "../../lib/noSpeech";
 import { streamTurn } from "../../lib/streamTurn";
 import type { ConversationProps } from "../../types/ConversationProps";
 import { latestReply } from "../../utils/latestReply";
@@ -27,22 +28,26 @@ import TurnErrorBanner from "./TurnErrorBanner";
 import TypedComposer from "./TypedComposer";
 
 /**
- * A typed conversation in one scenario, as the website's practice page runs it: send, read the reply
- * as it streams, see corrections, answer again. Going to the background stops a reply mid-stream as a
+ * A typed conversation in one scenario, as the website's practice page runs it: send, read and hear
+ * the reply as it streams, see corrections, answer again. Screen readers are also told each finished
+ * reply, as the website's live region tells them: TalkBack speaks on its own audio stream while the
+ * tutor's voice plays as media, so a learner who has the media volume down still hears it. Going to the background stops a reply mid-stream as a
  * dropped connection would, and the learner tries again from there, as on the website; a reply that
  * has fully arrived is left to finish, though not waited on for long after the app comes back. The
- * screen stays awake while the learner can answer, until they've been idle a while.
+ * screen stays awake while the learner can answer, until they've been idle a while. Speech stops on
+ * a new turn, on leaving the screen and in the background.
  */
 export default function Conversation({ language, scenario, level }: ConversationProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const synthesis = useTutorVoice(language.tts_locale);
   const session = usePracticeSession({
     languageCode: language.code,
     ttsLocale: language.tts_locale,
     scenarioSlug: scenario.slug,
     level,
     streamTurn,
-    speak: NO_SPEECH.speak,
-    stopSpeaking: NO_SPEECH.stopSpeaking,
+    speak: synthesis.enqueue,
+    stopSpeaking: synthesis.cancel,
   });
   const usage = useGetUsageTodayQuery();
   const headerHeight = useHeaderHeight();
@@ -51,6 +56,7 @@ export default function Conversation({ language, scenario, level }: Conversation
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   const { scroller, onScroll, onContentSizeChange, onLayout, stick } = useStickToBottom();
   useOnBackground(session.interrupt);
+  useOnBackground(synthesis.cancel);
   useOnResume(session.stopWaitingForCorrections, CORRECTIONS_GRACE_MS);
   useAnnouncement(latestReply(session.entries), "polite");
 
@@ -94,6 +100,7 @@ export default function Conversation({ language, scenario, level }: Conversation
             busy={busy}
             entries={session.entries}
             languageName={language.display_name}
+            onReplay={(text, slow) => synthesis.speakAll(text, replayRate(slow))}
             onSkipRetry={session.dismissRetryPrompt}
             onTryRetry={() => input.current?.focus()}
             waiting={session.requestPhase === "waiting"}

@@ -163,6 +163,28 @@ describe("usePracticeSession", () => {
     });
   }
 
+  it("takes no more of a stopped turn's events, so speech stopped with it doesn't start again", async () => {
+    let late: (() => void) | undefined;
+    streamTurn.mockImplementationOnce(({ onEvent, signal }: StreamTurnOptions) => {
+      onEvent({ type: "reply.delta", text: "¡Hola! Bien" });
+      // A platform stream that hands over one more delta after the abort, as a read already finished would.
+      late = () => onEvent({ type: "reply.delta", text: "venido. ¿Qué quieres?" });
+      return new Promise<void>((_resolve, reject) => {
+        signal?.addEventListener("abort", () => reject(new Error("aborted")));
+      });
+    });
+    const { result, speak } = setup();
+
+    act(() => result.current.send("hola"));
+    await waitFor(() => expect(result.current.requestPhase).toBe("replying"));
+    act(() => result.current.interrupt());
+    act(() => late?.());
+
+    await waitFor(() => expect(result.current.requestPhase).toBe("idle"));
+    expect(speak.mock.calls).toEqual([["¡Hola!"]]);
+    expect(result.current.entries[0]?.replyText).toBe("¡Hola! Bien");
+  });
+
   it("an interrupted turn keeps the words so far, unspoken, and retry sends the same text", async () => {
     streamTurn.mockImplementationOnce(holdingOpen);
     const { result, speak } = setup();

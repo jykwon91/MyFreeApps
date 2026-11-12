@@ -1,4 +1,4 @@
-import type { SegmenterConstructor } from "../types/speech/segmenter-constructor";
+import type { IntlWithSegmenter } from "../types/speech/intl-with-segmenter";
 import type { SentenceChunker } from "../types/speech/sentence-chunker";
 import type { SentenceSegmenter } from "../types/speech/sentence-segmenter";
 
@@ -15,7 +15,7 @@ import type { SentenceSegmenter } from "../types/speech/sentence-segmenter";
 const FALLBACK_BOUNDARY = /(?<=[.!?…])\s+/;
 
 function segmenterFor(locale: string): SentenceSegmenter | null {
-  const ctor = (Intl as unknown as { Segmenter?: SegmenterConstructor }).Segmenter;
+  const ctor = (Intl as unknown as IntlWithSegmenter).Segmenter;
   if (!ctor) return null;
   try {
     return new ctor(locale, { granularity: "sentence" });
