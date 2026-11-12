@@ -19,5 +19,9 @@ async def get_guild(slug: str) -> GuildResponse | None:
         if guild is None:
             return None
         # A gone guild's members are guildless already; there is nobody to read.
-        rows = [] if guild.gone_at is not None else await guild_repo.members(db, guild.id)
-    return to_guild_response(guild, rows)
+        if guild.gone_at is not None:
+            rows, skills = [], []
+        else:
+            rows = await guild_repo.members(db, guild.id)
+            skills = await guild_repo.member_skills(db, guild.id)
+    return to_guild_response(guild, rows, skills)

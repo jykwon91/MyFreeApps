@@ -3,6 +3,7 @@ import { Button } from "@platform/ui";
 import { Check } from "lucide-react";
 import { FACTION_LABELS } from "@/games/wow-forever/data/character/characterConfig";
 import { GUILD_PAGE_PATH } from "@/games/wow-forever/data/guild/guildConfig";
+import { LEADERBOARD_PARAMS } from "@/games/wow-forever/data/guild/leaderboardConfig";
 import { BADGE } from "@/games/wow-forever/data/badgeStyles";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { playerSettingsFromCharacter, settingsMatchCharacter } from "@/games/wow-forever/lib/character/characterPlayerSettings";
@@ -52,7 +53,7 @@ export default function CharacterHeader({ character }: { character: CharacterRes
         ))}
         {guildLinked ? (
           <Link
-            to={`${GUILD_PAGE_PATH}/${character.guild_slug}`}
+            to={`${GUILD_PAGE_PATH}/${character.guild_slug}?${LEADERBOARD_PARAMS.me}=${encodeURIComponent(character.slug)}`}
             className="inline-flex min-h-[44px] items-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={`Guild ${character.guild}: see its members`}
           >

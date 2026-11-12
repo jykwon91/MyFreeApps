@@ -1084,6 +1084,19 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   level band and sort live in the URL (`GUILD_PARAMS`, defaults left out,
   `replace` so Back skips keystrokes). Tests: `tests/test_wow_guild_page.py`,
   `src/__tests__/wowGuildPage.test.tsx`, `e2e/wow-forever-guild.spec.ts`.
+- Guild leaderboards (above the member list, `GuildLeaderboards`): each member
+  carries every number of its newest daily metric plus its professions from
+  `guild_repo.member_skills` — the newest day that HAS skills (a day whose
+  professions call failed stores none). Boards are `LEADERBOARDS` in
+  `data/guild/leaderboardConfig.ts`; ranking in `lib/guild/guildLeaderboards.ts`:
+  a null number is left off (never ranked as 0), ties share a competition rank
+  (1, 2, 2, 4) and read by name, the top-10 cut keeps everyone tied at it.
+  "Fewest deaths" and "Item level" rank level-60s only (total deaths counts
+  every death, so a fresh alt would win). `?board=` picks the board, `?me=`
+  (set by the character page's guild badge) marks the viewer's row "You" and
+  pins it under the top 10; the member filters keep these params and vice
+  versa. Not built (ideas): first to 60, this week's gains, raid attendance,
+  one chosen faction's reputation, mounts/pets.
 - Frontend: `pages/WowCharacterPage.tsx`, `components/character/`,
   `lib/character/`. Names are remembered per browser only after a successful
   load (`mga.wowForever.character.v1`, 5 max); `/wow-forever/character`

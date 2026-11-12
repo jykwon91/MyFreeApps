@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-12",
+    title: "Guild leaderboards",
+    summary:
+      "Your guild's page now ranks its members by level, dungeons cleared, honorable kills, exalted reputations, each profession's skill and more, with your own character marked.",
+    to: "/wow-forever/character",
+  },
+  {
+    date: "2026-11-12",
     title: "Guild pages",
     summary:
       "Select the guild on your character page to see its members — search by name, filter by class or level, sort by rank or item level, and open anyone's character.",

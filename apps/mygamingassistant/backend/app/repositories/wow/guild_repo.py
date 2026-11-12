@@ -14,8 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.wow.character import WowCharacter
 from app.models.wow.character_daily_metric import WowCharacterDailyMetric
+from app.models.wow.character_profession_skill import WowCharacterProfessionSkill
 from app.models.wow.guild import WowGuild
 from app.repositories.wow.guild_member_row import GuildMemberRow
+from app.repositories.wow.guild_member_skill_row import GuildMemberSkillRow
 
 
 async def upsert(
@@ -117,15 +119,19 @@ async def get_by_slug(db: AsyncSession, slug: str) -> WowGuild | None:
 
 
 async def members(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildMemberRow]:
-    """The guild's live stored members, each with its newest day's level and item level.
+    """The guild's live stored members, each with its newest day's numbers.
 
     The newest day is one index read per member (``(character_id, day)``,
     backwards) — never a sort over the 400 days of history kept.
     """
+    m = WowCharacterDailyMetric
     newest = (
-        select(WowCharacterDailyMetric.level, WowCharacterDailyMetric.item_level)
-        .where(WowCharacterDailyMetric.character_id == WowCharacter.id)
-        .order_by(WowCharacterDailyMetric.day.desc())
+        select(
+            m.level, m.item_level, m.honorable_kills, m.killing_blows, m.deaths_from_players,
+            m.total_kills, m.total_deaths, m.dungeons_done, m.exalted_reputations,
+        )
+        .where(m.character_id == WowCharacter.id)
+        .order_by(m.day.desc())
         .limit(1)
         .lateral()
     )
@@ -135,13 +141,38 @@ async def members(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildMemberRow]
             WowCharacter.name,
             WowCharacter.surname,
             WowCharacter.class_id,
-            WowCharacter.guild_rank,
+            WowCharacter.guild_rank.label("rank"),
             WowCharacter.fetched_at,
-            newest.c.level,
-            newest.c.item_level,
+            *newest.c,
         )
         .outerjoin(newest, true())
         .where(WowCharacter.guild_id == guild_id, WowCharacter.gone_at.is_(None))
         .order_by(WowCharacter.slug)
     )
-    return [GuildMemberRow(*row) for row in result.all()]
+    return [GuildMemberRow(**row._mapping) for row in result.all()]
+
+
+async def member_skills(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildMemberSkillRow]:
+    """The live stored members' profession skills, each from the member's newest day that has any.
+
+    A day whose professions call failed stores no skills, so the newest day with
+    skills — not the newest day — holds the member's latest known professions.
+    """
+    m = WowCharacterDailyMetric
+    skill = WowCharacterProfessionSkill
+    newest_with_skills = (
+        select(m.id)
+        .where(m.character_id == WowCharacter.id, select(skill.id).where(skill.daily_metric_id == m.id).exists())
+        .order_by(m.day.desc())
+        .limit(1)
+        .lateral()
+    )
+    result = await db.execute(
+        select(WowCharacter.slug, skill.profession_id, skill.skill, skill.max_skill)
+        .select_from(WowCharacter)
+        .join(newest_with_skills, true())
+        .join(skill, skill.daily_metric_id == newest_with_skills.c.id)
+        .where(WowCharacter.guild_id == guild_id, WowCharacter.gone_at.is_(None))
+        .order_by(WowCharacter.slug, skill.profession_id)
+    )
+    return [GuildMemberSkillRow(*row) for row in result.all()]
