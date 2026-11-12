@@ -46,3 +46,14 @@ GUILD_MEMBER_FETCH_CONCURRENCY: Final = 4
 # GET /wow/guilds/{slug}: per-IP look-ups per window (a database read, no Blizzard call).
 GUILD_RATE_LIMIT: Final = 60
 GUILD_RATE_WINDOW_SECONDS: Final = 60
+
+# GET /wow/guilds/{slug}/recipes?q=: who in the guild knows a recipe.
+GUILD_RECIPE_QUERY_MIN_LENGTH: Final = 2
+GUILD_RECIPE_QUERY_MAX_LENGTH: Final = 60
+# Control characters are never in a recipe name, and Postgres refuses NUL in text.
+GUILD_RECIPE_QUERY_FORBIDDEN: Final = re.compile(r"[\x00-\x1f\x7f]")
+# Recipes per answer; more matches = ``truncated`` (type more of the name).
+GUILD_RECIPE_RESULT_LIMIT: Final = 20
+# Professions whose "recipes" are just the skill itself (gathering, Fishing):
+# Herbalism, Mining, Skinning, Fishing. Never searched.
+GUILD_RECIPE_EXCLUDED_PROFESSION_IDS: Final = frozenset({182, 186, 393, 356})

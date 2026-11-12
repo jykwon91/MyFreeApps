@@ -11,6 +11,7 @@ import {
 } from "@/games/wow-forever/data/guild/guildConfig";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
 import type { GuildMemberFilters } from "@/games/wow-forever/types/guild/guildMemberFilters";
+import type { GuildMemberName } from "@/games/wow-forever/types/guild/guildMemberName";
 
 const SORT_KEYS: readonly string[] = Object.values(GUILD_SORT_KEYS);
 
@@ -20,7 +21,7 @@ export function rankLabel(rank: number | null): string | null {
   return rank === 0 ? "Guild master" : `Rank ${rank}`;
 }
 
-export function memberFullName(member: GuildMember): string {
+export function memberFullName(member: GuildMemberName): string {
   return `${member.name} ${member.surname}`.trim();
 }
 

@@ -1,5 +1,5 @@
 /**
- * The guild page (/wow-forever/guild/:slug): the leaderboards, the member
+ * The guild page (/wow-forever/guild/:slug): the recipe search, the leaderboards, the member
  * list's search, filters and sort (kept in the URL), and the states that stand
  * in for the list.
  */
@@ -7,7 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { GUILD_SEARCH_DEBOUNCE_MS, GUILD_SORT_KEYS } from "@/games/wow-forever/data/guild/guildConfig";
+import { RECIPE_SEARCH_DEBOUNCE_MS } from "@/games/wow-forever/data/guild/recipeSearchConfig";
 import { boardStatus, findBoard, missingCount, rankBoard, topEntries } from "@/games/wow-forever/lib/guild/guildLeaderboards";
+import { crafterSkill, professionName, recipeSearchStatus, searchableQuery } from "@/games/wow-forever/lib/guild/guildRecipes";
 import {
   classCounts,
   filterMembers,
@@ -18,12 +20,17 @@ import {
   sortMembers,
 } from "@/games/wow-forever/lib/guild/guildMembers";
 import WowGuildPage from "@/games/wow-forever/pages/WowGuildPage";
+import type { GuildCrafter } from "@/games/wow-forever/types/guild/guildCrafter";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
+import type { GuildRecipeSearch } from "@/games/wow-forever/types/guild/guildRecipeSearch";
+import type { GuildRecipeSearchArgs } from "@/games/wow-forever/types/guild/guildRecipeSearchArgs";
 import type { GuildResponse } from "@/games/wow-forever/types/guild/guildResponse";
 
 const mockQuery = vi.fn();
+const mockRecipes = vi.fn();
 vi.mock("@/games/wow-forever/api/wowGuildApi", () => ({
   useGetGuildQuery: (slug: string, opts: { skip: boolean }) => mockQuery(slug, opts),
+  useSearchGuildRecipesQuery: (args: GuildRecipeSearchArgs) => mockRecipes(args),
 }));
 
 const ROSTER_AT = new Date(Date.now() - 2 * 3_600_000).toISOString();
@@ -95,8 +102,37 @@ function tableNames(): string[] {
     .map((a) => a.textContent ?? "");
 }
 
+function crafter(overrides: Partial<GuildCrafter>): GuildCrafter {
+  return { slug: "jason-kwon", name: "Jason", surname: "Kwon", class_name: "Warlock", skill: 148, max_skill: 225, ...overrides };
+}
+
+const LINEN: GuildRecipeSearch = {
+  query: "linen",
+  truncated: false,
+  recipes: [
+    {
+      id: 2963,
+      name: "Bolt of Linen Cloth",
+      profession_id: 197,
+      crafters: [crafter({}), crafter({ slug: "tiny-john", name: "Tiny", surname: "John", class_name: "Mage", skill: null, max_skill: null })],
+    },
+  ],
+};
+
+function recipes(extra: Record<string, unknown>) {
+  return { currentData: undefined, isFetching: false, isError: false, refetch: vi.fn(), ...extra };
+}
+
+function typeRecipe(text: string) {
+  fireEvent.change(screen.getByLabelText("Recipe"), { target: { value: text } });
+  act(() => {
+    vi.advanceTimersByTime(RECIPE_SEARCH_DEBOUNCE_MS);
+  });
+}
+
 beforeEach(() => {
   mockQuery.mockReturnValue(query({}));
+  mockRecipes.mockReturnValue(recipes({}));
 });
 
 afterEach(() => {
@@ -354,5 +390,92 @@ describe("guild page", () => {
     renderAt("/wow-forever/guild/topdeadcenter?board=exalted&me=jason-kwon");
     fireEvent.change(screen.getByLabelText("Class"), { target: { value: "Mage" } });
     expect(screen.getByTestId("location")).toHaveTextContent("?board=exalted&me=jason-kwon&class=Mage");
+  });
+});
+
+describe("guild recipe search logic", () => {
+  it("names professions by their SkillLine id", () => {
+    expect(professionName(197)).toBe("Tailoring");
+    expect(professionName(185)).toBe("Cooking");
+    expect(professionName(1)).toBe("Profession");
+  });
+
+  it("shows a crafter's skill against the cap, alone without one, nothing when unknown", () => {
+    expect(crafterSkill(crafter({}))).toBe("148 / 225");
+    expect(crafterSkill(crafter({ max_skill: null }))).toBe("148");
+    expect(crafterSkill(crafter({ skill: null, max_skill: null }))).toBeNull();
+  });
+
+  it("searches only two letters or more, trimmed", () => {
+    expect(searchableQuery(" l ")).toBe("");
+    expect(searchableQuery(" li ")).toBe("li");
+    expect(searchableQuery("x".repeat(80))).toHaveLength(60);
+  });
+
+  it("says how many recipes matched, and when there were more", () => {
+    expect(recipeSearchStatus(LINEN)).toBe('1 recipe matching "linen"');
+    expect(recipeSearchStatus({ ...LINEN, truncated: true })).toBe(
+      'First 1 recipe matching "linen" — type more of the name to narrow it down',
+    );
+  });
+});
+
+describe("guild recipe search", () => {
+  it("searches after a short pause, keeps the search in the URL, and lists who knows each recipe", () => {
+    vi.useFakeTimers();
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    mockRecipes.mockReturnValue(recipes({ currentData: LINEN }));
+    renderAt("/wow-forever/guild/topdeadcenter?board=exalted");
+    typeRecipe("  linen ");
+
+    expect(screen.getByTestId("location")).toHaveTextContent("?board=exalted&recipe=linen");
+    // Our own trimmed write never reaches back into the box mid-typing.
+    expect(screen.getByLabelText("Recipe")).toHaveValue("  linen ");
+    expect(mockRecipes).toHaveBeenLastCalledWith({ slug: "topdeadcenter", query: "linen" });
+    expect(screen.getByText('1 recipe matching "linen"')).toBeInTheDocument();
+    const who = within(screen.getByRole("list", { name: "Who knows Bolt of Linen Cloth" }));
+    expect(who.getAllByRole("link").map((a) => a.textContent)).toEqual(["Jason Kwon", "Tiny John"]);
+    expect(who.getByRole("link", { name: "Jason Kwon" })).toHaveAttribute("href", "/wow-forever/character/jason-kwon");
+    expect(who.getByText("148 / 225")).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Matching recipes" })).getByText("Tailoring")).toBeInTheDocument();
+  });
+
+  it("doesn't search one letter, and clearing the box drops it from the URL", () => {
+    vi.useFakeTimers();
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    renderAt("/wow-forever/guild/topdeadcenter?recipe=linen");
+    typeRecipe("l");
+    expect(screen.getByTestId("location")).toHaveTextContent("?recipe=l");
+    expect(mockRecipes).not.toHaveBeenCalledWith({ slug: "topdeadcenter", query: "l" });
+    typeRecipe("");
+    expect(screen.getByTestId("location").textContent).toBe("/wow-forever/guild/topdeadcenter");
+  });
+
+  it("opens with the search from the URL", () => {
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    mockRecipes.mockReturnValue(recipes({ currentData: LINEN }));
+    renderAt("/wow-forever/guild/topdeadcenter?recipe=linen");
+    expect(screen.getByLabelText("Recipe")).toHaveValue("linen");
+    expect(screen.getByText("Bolt of Linen Cloth")).toBeInTheDocument();
+  });
+
+  it("shows a skeleton while searching, says when nobody knows it, and offers a retry on a problem", () => {
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    mockRecipes.mockReturnValue(recipes({ isFetching: true }));
+    const first = renderAt("/wow-forever/guild/topdeadcenter?recipe=zzz");
+    expect(screen.getByTestId("guild-recipe-skeleton")).toBeInTheDocument();
+    first.unmount();
+
+    mockRecipes.mockReturnValue(recipes({ currentData: { query: "zzz", recipes: [], truncated: false } }));
+    const second = renderAt("/wow-forever/guild/topdeadcenter?recipe=zzz");
+    expect(screen.getByText(/Nobody in the guild knows a recipe matching "zzz"/)).toBeInTheDocument();
+    second.unmount();
+
+    const refetch = vi.fn();
+    mockRecipes.mockReturnValue(recipes({ isError: true, refetch }));
+    renderAt("/wow-forever/guild/topdeadcenter?recipe=zzz");
+    expect(screen.getByText("Couldn't search the guild's recipes.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Try again|Retry/ }));
+    expect(refetch).toHaveBeenCalled();
   });
 });

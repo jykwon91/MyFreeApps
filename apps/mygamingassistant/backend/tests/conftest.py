@@ -163,6 +163,7 @@ _UOW_CONSUMERS = (
     "app.services.wow.character.character_store_service",
     "app.services.wow.guild.guild_roster_service",
     "app.services.wow.guild.guild_view_service",
+    "app.services.wow.guild.guild_recipe_search_service",
     "app.services.wow.chat.chat_quota",
     "app.services.wow.feature_requests.feature_board_service",
     "app.services.wow.feature_requests.feature_retention_service",
