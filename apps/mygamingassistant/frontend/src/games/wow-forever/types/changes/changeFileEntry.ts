@@ -17,8 +17,8 @@ export interface ChangeFileEntry {
   classes?: readonly string[];
   link?: ChangeLink;
   icon?: ChangeIconRef;
-  /** Absent = the Forever game files; "seen" = the operator's own client cache. */
-  provenance?: "seen";
+  /** Absent = the Forever game files; "seen" = the operator's own client cache; "published" = Blizzard's Game Data API (talents). */
+  provenance?: "seen" | "published";
   seenOn?: string;
   /** The client build this row's content first appeared in; null before a second refresh. */
   since: string | null;

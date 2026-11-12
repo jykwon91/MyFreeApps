@@ -23,27 +23,27 @@ test("filter by category, class and search; the URL keeps it", async ({ page }) 
   await expect(page).toHaveTitle(/Changes vs Classic/);
   // Talents by default.
   await expect(entries(page).first()).toBeVisible();
-  await expect(page.getByTestId("change-count")).toContainText("317 changes");
+  await expect(page.getByTestId("change-count")).toContainText("387 changes");
 
   await page.getByLabel("Class").selectOption("mage");
   await expect(page).toHaveURL(/[?&]class=mage(&|$)/);
-  await page.getByLabel("Search").fill("arcane focus");
-  await expect(page).toHaveURL(/[?&]q=arcane\+focus(&|$)/);
+  await page.getByLabel("Search").fill("improved channeling");
+  await expect(page).toHaveURL(/[?&]q=improved\+channeling(&|$)/);
   await expect(entries(page)).toHaveCount(1);
   const focus = entries(page).first();
-  await expect(focus.getByRole("heading")).toHaveText("Arcane Focus (Arcane)");
-  await expect(focus.getByTestId("change-rows")).toContainText("resist your Arcane spells by 2%");
-  await expect(focus.getByTestId("change-rows")).toContainText("chance to hit with Arcane spells by 2%");
-  await expect(focus.getByTestId("provenance-badge").first()).toHaveAttribute("data-provenance", "client");
+  await expect(focus.getByRole("heading")).toHaveText("Improved Channeling (Arcane)");
+  await expect(focus.getByTestId("change-rows")).toContainText("20% chance to avoid interruption caused by damage");
+  await expect(focus.getByTestId("change-rows")).toContainText("Arcane Blast and Arcane Wrath spells a 14% chance");
+  await expect(focus.getByTestId("provenance-badge").first()).toHaveAttribute("data-provenance", "published");
   await expect(focus.getByTestId("provenance-badge").nth(1)).toHaveAttribute("data-provenance", "classic");
 
   // A reload keeps the filters.
   await page.reload();
-  await expect(page.getByLabel("Search")).toHaveValue("arcane focus");
+  await expect(page.getByLabel("Search")).toHaveValue("improved channeling");
   await expect(entries(page)).toHaveCount(1);
 
   // Search with no match says so.
-  await page.getByLabel("Search").fill("arcane focus nothinglikethis");
+  await page.getByLabel("Search").fill("improved channeling nothinglikethis");
   await expect(page.getByText("No changes match these filters.")).toBeVisible();
 
   // Zones have no classes, so the class filter goes away and the URL stays readable.
@@ -57,10 +57,10 @@ test("filter by category, class and search; the URL keeps it", async ({ page }) 
 });
 
 test("a talent row opens the calculator on that talent", async ({ page }) => {
-  await page.goto(`${CHANGES}?class=mage&q=arcane+focus`);
-  await entries(page).first().getByRole("link", { name: "Arcane Focus (Arcane)" }).click();
-  await expect(page).toHaveURL(/\/wow-forever\/talents\/mage\?talent=76$/);
-  await expect(page.getByTestId("talent-details")).toContainText("Arcane Focus");
+  await page.goto(`${CHANGES}?class=mage&q=improved+channeling`);
+  await entries(page).first().getByRole("link", { name: "Improved Channeling (Arcane)" }).click();
+  await expect(page).toHaveURL(/\/wow-forever\/talents\/mage\?talent=135343$/);
+  await expect(page.getByTestId("talent-details")).toContainText("Improved Channeling");
 });
 
 test("an item row links to its item page, and Back returns to the feed", async ({ page }) => {

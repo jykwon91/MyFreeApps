@@ -100,7 +100,7 @@ export default function TalentCalculator({ data }: { data: TalentClassData }) {
       </div>
       {compareMode ? (
         <p className="text-xs text-muted-foreground" data-testid="talent-compare-note">
-          Blue outline: talent text changed from Classic Era. The Classic tree layout isn't available — the data stores text differences only, not talent positions.
+          Blue outline: talent new in Forever, or its text changed from Classic Era. The Classic tree layout isn't shown — only what each talent says.
         </p>
       ) : (
         <p className="text-xs text-muted-foreground">

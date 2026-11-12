@@ -782,34 +782,38 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   have and the next one, what blocks a change, and − / + (44 px).
 - Rules are Classic and pure (`lib/talents/talentRules.ts`): level 10–60,
   points = level − 9; a row opens at 5 points per row above it in that tree;
-  prerequisites need their ranks (same-row and diagonal ones exist); a point
+  a prerequisite needs its max rank (same-row and diagonal ones exist); a point
   can't come out while a dependent or a lower row needs it. Grid / arrow
   geometry is `data/talents/talentGridLayout.ts` + `lib/talents/talentArrows.ts`.
 - **The build is the URL** (`hooks/useTalentBuild.ts`, `useLiveSearchParams` (`@platform/ui`),
-  every change replaces history): `?b=1-<tree1>-<tree2>-<tree3>` — one digit
+  every change replaces history): `?b=2-<tree1>-<tree2>-<tree3>` — one digit
   per talent in the file's order (tier, then column), trailing zeros dropped
   (`lib/talents/talentBuildCode.ts`) — and `?lvl=` (omitted at 60). Decoding is
   strict: wrong version / tree count / characters / length or a build no
   character could have (`isLegalBuild`) → an empty build and "That build link
-  doesn't work". Bump the version (and keep decoding 1) for any format change;
-  never reorder a class's talents. "Copy link" = `shareOrigin()` + path + query.
+  doesn't work". Version 2 = the live trees; a `1-` link (the old Classic
+  trees, a different talent order) deliberately reads as no build. Bump the
+  version for any format or order change; never reorder a class's talents within
+  a version. "Copy link" = `shareOrigin()` + path + query.
 - **Data is GENERATED** — `python -m scripts.wow_talents.build --hotfix-cache
-  <DBCache.bin>` (from `backend/`, in `wow_refresh` before the icons build)
-  writes `data/talents/<class>.json` from the Forever client (Talent, TalentTab,
-  Spell*, hotfixes layered like the item build): trees, positions,
-  prerequisites, icons and each rank's text with `$s1`-style tokens filled
-  from SpellEffect (`scripts/wow_food/tooltip.py`). A sentence with a token we
-  can't fill is dropped; a rank the client lacks is `null`; a talent with no
-  rank in the client takes its Classic Era name (`classicName`, Classic data
-  badge). `data/talents/classic/<class>.json` (Classic Era wording + cmangos
-  `spell_template` numbers, GPL — keep LICENSE + README) holds `talents`, the
-  Classic text of ranks whose Forever text differs ("Changed in Forever.
-  Classic: …"), and `fallback`, Classic's text for each `null` rank — shown in
-  its place with a Classic data badge (`TalentRankBody`), plus "Forever
-  changed other ranks of this talent; this rank's Forever value isn't known
-  yet." when the talent has a changed rank. Never work a rank out from its
-  neighbours; a rank neither client has reads "This rank isn't in the game
-  files yet.". Each class is its own lazy chunk (`data/talents/talentFiles.ts`,
+  <DBCache.bin>` (from `backend/`, in `wow_refresh` before the icons build). The
+  trees are the LIVE game's, from Blizzard's Game Data API (`static-forever-us`,
+  `scripts/wow_talents/blizzard_api.py`; needs `BLIZZARD_CLIENT_ID` /
+  `BLIZZARD_CLIENT_SECRET` in `backend/.env` — missing ones stop the run, and
+  `wow_refresh apply` checks them before repinning). The client's Talent /
+  TalentTab rows are the old Classic trees and are NOT used. Each spec's nodes
+  (`display_row` 1–7, `display_col` in three bands, `TREE_COLUMN_BASES`) become
+  the trees; ids are Blizzard's talent ids; each rank's text is Blizzard's own
+  description (`Official` badge, `PROVENANCE_DETAIL.liveTalents`). A node outside
+  the 7 × 4 grid or a requirement on a lower row is printed and left out.
+  `data/talents/<class>.json` = `{source, apiBuild, classId, trees}`. Icons:
+  the client's SpellMisc for the rank-1 spell, else Blizzard's spell media.
+  `data/talents/classic/<class>.json` (Classic Era wording + cmangos
+  `spell_template` numbers, GPL — keep LICENSE + README) holds the Classic text
+  of ranks whose Forever text differs ("Changed in Forever. Classic: …"). A
+  talent matches Classic by rank-1 spell id, else by name; one with no match is
+  `newInForever` ("New in Forever" badge and dot in compare mode). Each class is
+  its own lazy chunk (`data/talents/talentFiles.ts`,
   `lib/talents/loadTalentClass.ts`). Talent and tree icon file ids go into
   `wowIcons.json` `files` (publish them with `wow_icons.publish`).
   Tests: `tests/test_wow_talents_generator.py`,
@@ -830,7 +834,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   talent calculator `?talent=`, World Map `?m=`; none for spells, map rows or
   zones not on the World Map), kind chip, the generated sentence, Classic |
   Forever rows (a table from `sm`, stacked on a phone), and badges: Game files
-  (or Seen in game + date for quests named from the operator's cache) plus
+  (Official for talents, which come from the live API trees; Seen in game + date
+  for quests named from the operator's cache) plus
   Classic data on changed rows. "Only what changed since build X" shows only
   once `index.json` has a `previousBuild` (after a second refresh); until then
   a note says so.
@@ -838,7 +843,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   <DBCache.bin> --quest-cache <questcache.wdb>` (from `backend/`, in
   `wow_refresh` after the Items and Talents builds). Every row is a diff of the
   Forever client (`wowf` + hotfixes) against Classic Era (`wow_classic_era`):
-  talents from the calculator's own output; items from `items.json` (name,
+  talents from the calculator's own output (a talent spell is never also a
+  class-spell row); items from `items.json` (name,
   quality, ilvl, required level, armor, weapon damage / speed, primary stats —
   equip-spell stats aren't compared) plus new gear, consumables and recipes;
   class trainer spells (`SkillLineAbility` × `CLASS_LINES`, tooltip text with

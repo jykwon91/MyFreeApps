@@ -4,22 +4,24 @@ Usage (from ``apps/mygamingassistant/backend``)::
 
     python -m scripts.wow_talents.build [--hotfix-cache <DBCache.bin>]
 
-Everything comes from the Forever client: ``Talent`` / ``TalentTab`` for the
-trees and the spell tables for each rank's tooltip, with the hotfix layers
-the item build uses (client file, wago.tools' hotfixes, the operator's own
-client cache — ``--hotfix-cache``, else ``WOW_FOREVER_HOTFIX_CACHE``, else the
-default install path; the run stops without it).
+The trees are the live server's, from Blizzard's Game Data API
+(``static-forever-us``, ``blizzard_api.py``; needs ``BLIZZARD_CLIENT_ID`` /
+``BLIZZARD_CLIENT_SECRET`` in ``backend/.env``): which talents, where they sit,
+what they need and every rank's tooltip. The Forever client's own ``Talent``
+rows are the old Classic trees, so they aren't used. Icons are file data ids:
+each talent's rank-1 spell's ``SpellMisc`` icon in the Forever client (with the
+item build's hotfix layers — ``--hotfix-cache``, else
+``WOW_FOREVER_HOTFIX_CACHE``, else the default install path), else Blizzard's
+spell media; each tree's is its spec's media.
 
 Writes, per class:
 
-* ``data/talents/<class>.json`` — the Forever client: three trees, each
-  talent's place, icon (``SpellMisc`` file data id), prerequisites and the
-  evaluated text of every rank the client has (``null`` for a rank the server
-  hasn't sent any client yet).
-* ``data/talents/classic/<class>.json`` — Classic's text, the Classic Era
-  client's wording filled with cmangos classic-db's 1.12 numbers (GPL-3.0,
-  LICENSE + README next to it): ``talents`` per rank whose Forever text
-  differs, ``fallback`` per rank the Forever client doesn't have yet.
+* ``data/talents/<class>.json`` — three trees in game order, each talent's
+  place, icon, rank-1 spell, prerequisites and every rank's text; a talent
+  with no Classic Era match is ``newInForever``.
+* ``data/talents/classic/<class>.json`` — Classic's text of the ranks Forever
+  changed, the Classic Era client's wording filled with cmangos classic-db's
+  1.12 numbers (GPL-3.0, LICENSE + README next to it).
 
 Game data © Blizzard Entertainment. Never hand-edit the output.
 """
@@ -31,8 +33,17 @@ import shutil
 from scripts.wow_food.build import CLASSIC_LICENSE, WOW_DATA_DIR
 from scripts.wow_gear.build import write_json
 from scripts.wow_items.forever_items import hotfix_cache_path, load_forever_tables
-from scripts.wow_talents.books import FOREVER_BOOK_TABLES, classic_book, forever_book, forever_icons
-from scripts.wow_talents.talents import Fallback, Gaps, build_trees, classic_changes, classic_fallback, tree_doc
+from scripts.wow_talents.blizzard_api import STATIC_NAMESPACE, BlizzardStatic, blizzard_credentials
+from scripts.wow_talents.books import classic_book, forever_icons
+from scripts.wow_talents.talents import (
+    CLASS_IDS,
+    Gaps,
+    build_trees,
+    classic_talents,
+    compare_with_classic,
+    tree_doc,
+    tree_spells,
+)
 from scripts.wow_world_map.sources import (
     CMANGOS_COMMIT,
     WAGO_BUILD,
@@ -45,27 +56,22 @@ from scripts.wow_world_map.sql_dump import read_dump
 
 TALENTS_DIR = WOW_DATA_DIR / "talents"
 CLASSIC_DIR = TALENTS_DIR / "classic"
-FOREVER_TABLES = ("Talent", "TalentTab", *FOREVER_BOOK_TABLES)
+TREES_PER_CLASS = 3
 
 CLASSIC_README = """# Talent calculator — Classic talent text
 
-Each file holds, for one class, Classic's talent text per rank (`null` where
-it doesn't apply):
-
-* `talents` — the talents whose WoW Forever tooltip differs from Classic's,
-  with Classic's text for each rank that changed. The calculator shows it as
-  "Changed in Forever".
-* `fallback` — Classic's text for each rank the Forever client doesn't have
-  yet. The calculator shows it in that rank's place with a "Classic data"
-  badge (and, on a talent Forever changed, a note that this rank's Forever
-  value isn't known yet).
+Each file holds, for one class, `talents`: the talents whose WoW Forever
+tooltip differs from Classic's, with Classic's text for each rank that changed
+(`null` where it didn't, or can't be compared). The calculator shows it as
+"Changed in Forever". A Forever talent is paired with the Classic Era talent
+sharing its rank-1 spell, else the one of its class with its name.
 
 Classic's text is the Classic Era client's own tooltip wording (wago.tools,
 `{era_branch}` {era_build}: `Spell`, `SpellName`, `SpellDuration`,
-`SpellRadius`, `SpellRange`) filled with the 1.12 numbers from
-[cmangos classic-db](https://github.com/cmangos/classic-db) at commit
-`{commit}` (`spell_template`: effect base points and dice, proc chance and
-charges, stacks, durations, target caps), licensed GPL-3.0 — see `LICENSE`.
+`SpellRadius`, `SpellRange`, `Talent`, `TalentTab`) filled with the 1.12
+numbers from [cmangos classic-db](https://github.com/cmangos/classic-db) at
+commit `{commit}` (`spell_template`: effect base points and dice, proc chance
+and charges, stacks, durations, target caps), licensed GPL-3.0 — see `LICENSE`.
 
 Generated by `python -m scripts.wow_talents.build`. Never hand-edit.
 """
@@ -75,21 +81,33 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build the WoW Forever talent calculator's data.")
     parser.add_argument("--hotfix-cache", help="the Forever client's _forever_/Cache/ADB/enUS/DBCache.bin")
     args = parser.parse_args()
+    credentials = blizzard_credentials()
+    forever = load_forever_tables(hotfix_cache_path(args.hotfix_cache), ("SpellMisc",))
+    client_icons = forever_icons(forever.table("SpellMisc"))
 
-    forever = load_forever_tables(hotfix_cache_path(args.hotfix_cache), FOREVER_TABLES)
-    book = forever_book({name: forever.table(name) for name in FOREVER_TABLES})
-    icons = forever_icons(forever.table("SpellMisc"))
+    with BlizzardStatic(*credentials) as api:
+        print("Reading the talent trees from Blizzard's Game Data API...", flush=True)
+        api_build, payloads = api.talent_trees()
+        icons = {s: client_icons[s] for s in tree_spells(payloads) if s in client_icons}
+        from_api = sorted(s for s in tree_spells(payloads) if s not in icons)
+        for spell in from_api:
+            icons[spell] = api.icon_file(f"/data/wow/media/spell/{spell}")
+        specs = [int(p["playable_specialization"]["id"]) for p in payloads]
+        tree_icons = {spec: api.icon_file(f"/data/wow/media/playable-specialization/{spec}") for spec in specs}
+
+    gaps = Gaps()
+    classes = build_trees(payloads, icons, tree_icons, gaps)
+    short = {c: len(classes.get(c, [])) for c in CLASS_IDS.values() if len(classes.get(c, [])) != TREES_PER_CLASS}
+    if short:
+        raise SystemExit(f"Blizzard's talent-tree index doesn't give every class {TREES_PER_CLASS} trees: {short}")
 
     era = {"branch": WAGO_ERA_BRANCH, "build": WAGO_ERA_BUILD}
     era_names = wago_table("SpellName", **era)
-    forever_files = set(icons.values())
-    fallback = Fallback(
-        names={int(r["ID"]): r["Name_lang"] for r in era_names},
-        icons={s: f for s, f in forever_icons(wago_table("SpellMisc", **era)).items() if f in forever_files},
+    candidates = classic_talents(
+        wago_table("TalentTab", **era),
+        wago_table("Talent", **era),
+        {int(r["ID"]): r["Name_lang"] for r in era_names},
     )
-    gaps = Gaps()
-    classes = build_trees(forever.table("TalentTab"), forever.table("Talent"), book, icons, gaps, fallback)
-
     classic = classic_book(
         wago_table("Spell", **era),
         era_names,
@@ -98,29 +116,28 @@ def main() -> None:
         wago_table("SpellRange", **era),
         read_dump(cmangos_dump(), {"spell_template"})["spell_template"],
     )
+    source = f"Blizzard Game Data API ({STATIC_NAMESPACE}, {api_build}); icons from the Forever client ({WAGO_BUILD})"
     classic_source = (
         f"Classic Era client ({WAGO_ERA_BRANCH} {WAGO_ERA_BUILD}) wording with cmangos classic-db "
         f"{CMANGOS_COMMIT[:12]} numbers (GPL-3.0)"
     )
 
     changed = 0
-    filled = 0
+    new = 0
     for class_id, trees in classes.items():
+        comparison = compare_with_classic(trees, candidates.get(class_id, []), classic)
+        changed += len(comparison.changes)
+        new += len(comparison.new)
         write_json(TALENTS_DIR / f"{class_id}.json", {
-            "source": forever.source(),
-            "clientBuild": WAGO_BUILD,
+            "source": source,
+            "apiBuild": api_build,
             "classId": class_id,
-            "trees": [tree_doc(t) for t in trees],
+            "trees": [tree_doc(t, comparison.new) for t in trees],
         })
-        changes = classic_changes(trees, classic, gaps)
-        changed += len(changes)
-        fallback_texts = classic_fallback(trees, classic)
-        filled += sum(1 for texts in fallback_texts.values() for t in texts if t)
         write_json(CLASSIC_DIR / f"{class_id}.json", {
             "source": classic_source,
             "classId": class_id,
-            "talents": {str(k): v for k, v in sorted(changes.items())},
-            "fallback": {str(k): v for k, v in sorted(fallback_texts.items())},
+            "talents": {str(k): v for k, v in sorted(comparison.changes.items())},
         })
     shutil.copyfile(CLASSIC_LICENSE, CLASSIC_DIR / "LICENSE")
     (CLASSIC_DIR / "README.md").write_text(
@@ -130,14 +147,18 @@ def main() -> None:
 
     talents = sum(len(t.talents) for trees in classes.values() for t in trees)
     ranks = sum(len(x.ranks) for trees in classes.values() for t in trees for x in t.talents)
-    print(f"{len(classes)} classes, {talents} talents, {ranks} ranks; {gaps.missing_ranks} ranks not in the client yet")
-    print(f"{changed} talents changed from Classic; {filled} missing ranks shown from Classic")
-    if gaps.nameless:
-        print(f"talents with no rank in the client (Classic Era name): {sorted(gaps.nameless)}")
-    if gaps.unresolved:
-        print(f"{len(gaps.unresolved)} rank texts with tokens the client data can't fill (sentence left out):")
-        for spell, tokens in sorted(gaps.unresolved.items()):
-            print(f"  {spell}: {' '.join(tokens)}")
+    print(f"{len(classes)} classes, {talents} talents, {ranks} ranks (API build {api_build})")
+    print(f"{changed} talents changed from Classic, {new} new in Forever")
+    print(f"{len(from_api)} talent icons not in the client's SpellMisc, taken from Blizzard's spell media: {from_api}")
+    for label, rows in (
+        ("nodes outside the 7 x 4 grid (left out)", gaps.off_grid),
+        ("requirements on a lower row (read backwards, dropped)", gaps.backward_prereqs),
+        ("talents with no icon", gaps.no_icon),
+    ):
+        if rows:
+            print(f"{len(rows)} {label}:")
+            for row in rows:
+                print(f"  {row}")
 
 
 if __name__ == "__main__":

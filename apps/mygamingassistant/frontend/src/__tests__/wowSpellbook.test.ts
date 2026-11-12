@@ -78,7 +78,7 @@ describe("decodeSpellbook — Forever first, Classic merged by spell id", () => 
 
   it("a talent spell links its talent, is learned by a talent point and never has a cost", () => {
     const burn = spell("Shadowburn");
-    expect(burn.talent).toBe(963);
+    expect(burn.talent).toBe(135415);
     expect(burn.ranks[0].learnedBy).toBe("talent");
     expect(burn.ranks[0].cost).toBeNull();
     // Its later ranks come from a trainer, so the spell's first level is theirs.

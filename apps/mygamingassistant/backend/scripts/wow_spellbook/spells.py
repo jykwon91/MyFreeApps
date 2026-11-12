@@ -90,8 +90,8 @@ class Learned:
     trainer: frozenset[int] = frozenset()
     quest: frozenset[int] = frozenset()
     book: frozenset[int] = frozenset()
-    # Talent rank spell -> its talent id (Forever's Talent table).
-    talent_of: Mapping[int, int] = field(default_factory=dict)
+    # Talent rank spell -> the live talent it belongs to (``talent_spells``); None when the live trees dropped it.
+    talent_of: Mapping[int, int | None] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -187,7 +187,7 @@ def class_spells(
     out = []
     for (class_id, name), group in ranks.items():
         ordered = tuple(sorted(group, key=lambda r: (rank_number(r.rank), r.level or 0, r.spell)))
-        talent = next((learned.talent_of[r.spell] for r in ordered if r.from_talent), None)
+        talent = next((t for r in ordered if r.from_talent and (t := learned.talent_of[r.spell]) is not None), None)
         icon = next((facts.icons[r.spell] for r in reversed(ordered) if r.spell in facts.icons), 0)
         allowed = frozenset(races[(class_id, name)])
         out.append(Spell(class_id, name, tabs[(class_id, name)], ordered, allowed, talent, icon))
@@ -200,6 +200,18 @@ def _first_level(spell: Spell) -> tuple[bool, int]:
     return (not levels, min(levels, default=0))
 
 
-def talent_spells(talents: Iterable[Row]) -> dict[int, int]:
-    """Talent rank spell -> its talent id, from Forever's ``Talent`` rows."""
-    return {spell: _int(row["ID"]) for row in talents for spell in rank_spells(row)}
+def talent_spells(client_talents: Iterable[Row], live: Mapping[int, int]) -> dict[int, int | None]:
+    """Talent rank spell -> the live talent it belongs to, None when the live trees dropped it.
+
+    ``client_talents`` are the Forever client's ``Talent`` rows (the old trees,
+    but every rank's spell); ``live`` is each live talent's rank-1 spell -> its
+    id (``data/talents/<class>.json``), which a client row shares when the
+    talent survived.
+    """
+    out: dict[int, int | None] = {}
+    for row in client_talents:
+        spells = rank_spells(row)
+        talent = next((live[s] for s in spells if s in live), None)
+        out.update(dict.fromkeys(spells, talent))
+    out.update(live)
+    return out

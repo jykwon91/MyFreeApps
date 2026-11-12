@@ -29,8 +29,12 @@ export const TALENT_LONG_PRESS_MS = 500;
 /** A finger that moves this far is scrolling, not pressing. */
 export const TALENT_LONG_PRESS_SLOP_PX = 8;
 
-/** The share link's build code version (`?b=1-…`). Bump it — and keep decoding 1 — for any format change. */
-export const TALENT_BUILD_CODE_VERSION = "1";
+/**
+ * The share link's build code version (`?b=2-…`). Bump it when the code's format or the trees it indexes change.
+ * 2: the live trees from Blizzard's Game Data API. A `1-` link named the client's old Classic trees, so it no
+ * longer decodes: it opens an empty build with "That build link doesn't work".
+ */
+export const TALENT_BUILD_CODE_VERSION = "2";
 export const TALENT_BUILD_PARAM = "b";
 export const TALENT_LEVEL_PARAM = "lvl";
 /** `?talent=<id>` opens the calculator on that talent (its tree and its details); the Changes feed links with it. */

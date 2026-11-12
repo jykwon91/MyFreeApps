@@ -9,9 +9,11 @@ from typing import Any
 
 KIND_CHANGED = "changed"
 KIND_NEW = "new"
-# Where the Forever side comes from (the badge): the game files, or the operator's own client cache.
+# Where the Forever side comes from (the badge): the game files, the operator's own client cache, or
+# Blizzard's Game Data API (the live talent trees).
 PROVENANCE_CLIENT = "client"
 PROVENANCE_SEEN = "seen"
+PROVENANCE_PUBLISHED = "published"
 
 # A side-by-side line: what it is, Classic's value, Forever's (None = not there).
 Row = tuple[str, str | None, str | None]

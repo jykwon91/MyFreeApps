@@ -10,7 +10,9 @@ Run from ``apps/mygamingassistant/backend``::
 ``check`` exits 0 when the data is current and 10 when a newer build exists.
 Walk graphs are never rebuilt here: they need a few GB of client files, so run
 ``python -m scripts.wow_world_map.walk`` by hand when terrain or buildings
-change. See ``apps/mygamingassistant/docs/wow-forever-refresh.md``.
+change. The talent trees come from Blizzard's Game Data API, so ``apply`` needs
+``BLIZZARD_CLIENT_ID`` / ``BLIZZARD_CLIENT_SECRET`` in ``backend/.env``. See
+``apps/mygamingassistant/docs/wow-forever-refresh.md``.
 """
 from __future__ import annotations
 
@@ -27,6 +29,7 @@ from scripts.wow_dungeons.quest_cache import QUEST_CACHE_ENV, quest_cache_path
 from scripts.wow_items.forever_items import HOTFIX_CACHE_ENV, hotfix_cache_path
 from scripts.wow_rares.creature_cache import CREATURE_CACHE_ENV, creature_cache_path
 from scripts.wow_refresh.report import DATA_REFRESH_FILE, render_report
+from scripts.wow_talents.blizzard_api import blizzard_credentials
 from scripts.wow_world_map import sources
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -85,6 +88,7 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         ["scripts.wow_items.build", *cache],
         # Reads the World Map, Professions and Item output above.
         ["scripts.wow_item_pages.build", *cache],
+        # The live talent trees, from Blizzard's Game Data API (BLIZZARD_CLIENT_ID / _SECRET, checked in apply).
         ["scripts.wow_talents.build", *cache],
         # Reads the Item and Talent output above (and the World Map's zones).
         ["scripts.wow_changes.build", *cache, "--quest-cache", str(quest_cache)],
@@ -128,7 +132,8 @@ def check() -> int:
 
 
 def apply(*, art: bool, hotfix_cache: str | None, quest_cache: str | None, creature_cache: str | None) -> int:
-    # Checked before anything is repinned, so a missing cache stops the run cleanly.
+    # Checked before anything is repinned, so a missing cache or Blizzard credential stops the run cleanly.
+    blizzard_credentials()
     cache_path = hotfix_cache_path(hotfix_cache)
     quest_path = quest_cache_path(quest_cache)
     creature_path = creature_cache_path(creature_cache)

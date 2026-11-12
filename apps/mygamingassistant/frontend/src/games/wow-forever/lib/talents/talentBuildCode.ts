@@ -13,9 +13,9 @@ const SEPARATOR = "-";
 const TREE_FIELD = /^[0-9]*$/;
 
 /**
- * A build as `?b=`: `1-<tree 1>-<tree 2>-<tree 3>`, each tree one digit per
+ * A build as `?b=`: `2-<tree 1>-<tree 2>-<tree 3>`, each tree one digit per
  * talent (its points, in the tree's tier-then-column order) with trailing
- * zeros dropped — `1--05-` is two points in tree 2's second talent. An empty
+ * zeros dropped — `2--05-` is two points in tree 2's second talent. An empty
  * build is "" (no `b` at all).
  */
 export function encodeTalentBuild(build: TalentBuild): string {

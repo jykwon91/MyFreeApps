@@ -87,7 +87,7 @@ export default function TalentTreeView({
           const block = addBlock(trees, build, treeIndex, i, level);
           const { left, top } = talentCellOffset(talent.tier, talent.column);
           const compareChanged = compareMode
-            ? isChangedInForever(talent) || talent.classicName
+            ? isChangedInForever(talent) || talent.newInForever
             : null;
           return (
             <TalentCell

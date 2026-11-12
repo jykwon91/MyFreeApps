@@ -5,6 +5,6 @@
 "classicBuild":"1.15.9.70576",
 "previousBuild":null,
 "questsSeenOn":"2026-11-08",
-"counts":{"talents":{"changed":317,"new":0},"spells":{"changed":196,"new":48},"items":{"changed":1643,"new":4096},"quests":{"changed":0,"new":77},"zones":{"changed":0,"new":17}},
+"counts":{"talents":{"changed":269,"new":118},"spells":{"changed":195,"new":31},"items":{"changed":1643,"new":4096},"quests":{"changed":0,"new":77},"zones":{"changed":0,"new":17}},
 "shards":{"talents":["classic/talents.json"],"spells":["classic/spells.json"],"items":["items.json","itemsNew.json"],"quests":["quests.json"],"zones":["zones.json"]},
 "gaps":{"spellsIncomplete":456,"spellsNotInClient":0,"itemsUnlisted":1914,"questsUnnamed":1744}}

@@ -1,45 +1,49 @@
-"""The WoW Forever talent calculator's generator: trees from Talent/TalentTab
-rows, rank texts from the spell books, the Classic comparison, and the
-committed output's shape. Fixtures are synthetic rows, never the network."""
+"""The WoW Forever talent calculator's generator: trees from Blizzard's
+talent-tree answers, the spell books the Classic side is read from, the Classic
+comparison, the API client's errors, and the committed output's shape.
+Fixtures are synthetic payloads and rows, never the network."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
+import httpx
 import pytest
 
 from scripts.wow_food.tooltip import SpellBook, evaluate
+from scripts.wow_talents import blizzard_api
+from scripts.wow_talents.blizzard_api import BlizzardStatic, blizzard_credentials, namespace_build
 from scripts.wow_talents.books import classic_book, classic_effect, forever_book, forever_icons
 from scripts.wow_talents.build import CLASSIC_DIR, TALENTS_DIR
 from scripts.wow_talents.talents import (
+    CLASS_IDS,
     CLASS_MASKS,
     COLUMNS,
     TIERS,
-    Fallback,
+    ClassicTalent,
     Gaps,
     build_trees,
-    classic_changes,
-    classic_fallback,
-    prerequisites,
+    classic_talents,
+    compare_with_classic,
+    match_classic,
     rank_spells,
     rank_text,
-    tidy,
+    tree_band,
+    tree_doc,
+    tree_spells,
 )
-from scripts.wow_world_map.sources import WAGO_BUILD
 
 
-def _talent_row(talent_id: int, tab: int, tier: int, column: int, ranks: list[int], prereq: tuple[int, int] = (0, 0)) -> dict[str, str]:
-    row = {"ID": str(talent_id), "TabID": str(tab), "TierID": str(tier), "ColumnIndex": str(column)}
+def _talent_row(talent_id: int, tab: int, ranks: list[int]) -> dict[str, str]:
+    row = {"ID": str(talent_id), "TabID": str(tab)}
     for i in range(9):
         row[f"SpellRank_{i}"] = str(ranks[i] if i < len(ranks) else 0)
-    for i in range(3):
-        row[f"PrereqTalent_{i}"] = str(prereq[0] if i == 0 else 0)
-        row[f"PrereqRank_{i}"] = str(prereq[1] if i == 0 else 0)
     return row
 
 
-def _tab(tab_id: int, name: str, mask: int, order: int, icon: int = 0) -> dict[str, str]:
-    return {"ID": str(tab_id), "Name_lang": name, "ClassMask": str(mask), "OrderIndex": str(order), "SpellIconID": str(icon)}
+def _tab(tab_id: int, mask: int) -> dict[str, str]:
+    return {"ID": str(tab_id), "ClassMask": str(mask)}
 
 
 def _effect_row(spell: int, base: float, index: int = 0, difficulty: int = 0, **extra: str) -> dict[str, str]:
@@ -77,13 +81,7 @@ def _forever_tables(**overrides: list[dict[str, str]]) -> dict[str, list[dict[st
 
 
 def test_rank_spells_skip_empty_slots() -> None:
-    assert rank_spells(_talent_row(1, 41, 0, 0, [100, 101, 102])) == (100, 101, 102)
-
-
-def test_prerequisite_ranks_are_zero_based_in_the_client() -> None:
-    # PrereqRank 2 = "rank 3"; the calculator counts ranks from 1.
-    assert prerequisites(_talent_row(2, 41, 2, 1, [100], prereq=(1, 2))) == ((1, 3),)
-    assert prerequisites(_talent_row(2, 41, 2, 1, [100])) == ()
+    assert rank_spells(_talent_row(1, 41, [100, 101, 102])) == (100, 101, 102)
 
 
 # --- the Forever book -------------------------------------------------------
@@ -200,151 +198,280 @@ def test_classic_book_reads_the_renamed_effect_fields_targets_and_range() -> Non
     assert evaluate(book, 7) == "Drains 2 mana, 3 more, 80 per point; 5 foes up to level 40 within 30 yds."
 
 
+
+
 # --- rank text --------------------------------------------------------------
 
 
-def test_rank_text_evaluates_the_tokens() -> None:
-    book = forever_book(_forever_tables())
-    assert rank_text(book, 100) == "Reduces the casting time of your Fireball by 0.1 sec."
+def test_rank_text_joins_lines_and_ends_a_bare_one() -> None:
+    assert rank_text("Requires Bear Form, Dire Bear Form\r\nCharge an enemy.\r\n\r\n") == (
+        "Requires Bear Form, Dire Bear Form. Charge an enemy."
+    )
+    assert rank_text("Increases damage by 5%.  Lasts 6 sec.\r\n") == "Increases damage by 5%. Lasts 6 sec."
+    assert rank_text("Grants 3 rage") == "Grants 3 rage"
 
 
-def test_a_rank_the_client_does_not_have_is_none() -> None:
-    assert rank_text(forever_book(_forever_tables()), 999) is None
+# --- trees from the API -----------------------------------------------------
 
 
-def test_a_sentence_with_an_unfillable_token_is_left_out_and_reported() -> None:
-    book = SpellBook(descriptions={5: "Absorbs ${431+$SPFR} damage. Lasts 1 min."})
-    gaps = Gaps()
-    assert rank_text(book, 5, gaps) == "Lasts 1 min."
-    assert gaps.unresolved == {5: ["${431+$SPFR}"]}
+def _rank(talent_id: int, name: str, spell: int, text: str) -> dict[str, Any]:
+    return {
+        "tooltip": {
+            "talent": {"id": talent_id, "name": name},
+            "spell_tooltip": {"spell": {"id": spell}, "description": text},
+        },
+    }
 
 
-def test_tidy_keeps_text_without_tokens() -> None:
-    assert tidy("Increases  damage by 5%.  Lasts 6 sec.") == "Increases damage by 5%. Lasts 6 sec."
+def _node(
+    node_id: int, talent_id: int, name: str, row: int, col: int, ranks: int = 1, locked_by: list[int] | None = None,
+) -> dict[str, Any]:
+    node: dict[str, Any] = {
+        "id": node_id,
+        "display_row": row,
+        "display_col": col,
+        "ranks": [_rank(talent_id, name, talent_id * 10, f"{name} rank {r + 1}.") for r in range(ranks)],
+    }
+    if locked_by:
+        node["locked_by"] = locked_by
+    return node
 
 
-def test_conditionals_read_as_a_player_without_the_tuning_spell() -> None:
-    book = SpellBook(descriptions={5: "Increases damage by 5%.$?s436895[ And healing.][ Only damage.]"})
-    assert rank_text(book, 5) == "Increases damage by 5%. Only damage."
+def _spec(class_id: int, spec: int, name: str, nodes: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "playable_class": {"id": class_id},
+        "playable_specialization": {"id": spec},
+        "name": name,
+        "spec_talent_nodes": nodes,
+    }
 
 
-# --- trees ------------------------------------------------------------------
-
-
-def _trees(fallback: Fallback | None = None) -> tuple[dict[str, list], Gaps]:
-    tabs = [_tab(61, "Frost", 128, 2), _tab(41, "Fire", 128, 1, icon=135810), _tab(81, "Arcane", 128, 0), _tab(999, "Pet", 0, 0)]
-    talents = [
-        _talent_row(2, 41, 1, 0, [101, 102], prereq=(1, 4)),
-        _talent_row(1, 41, 0, 1, [100, 103, 104, 105, 106]),
-        _talent_row(3, 41, 0, 0, [200]),
+def _warlock() -> list[dict[str, Any]]:
+    # The index's order isn't the game's: the column band is.
+    return [
+        _spec(9, 593, "Destruction", [_node(30, 300, "Bane", 1, 15)]),
+        _spec(9, 355, "Affliction", [
+            _node(13, 103, "Curse of Exhaustion", 4, 3, locked_by=[12]),
+            _node(11, 101, "Suppression", 1, 2, ranks=5),
+            _node(12, 102, "Amplify Curse", 3, 3),
+            _node(14, 104, "Pandemic", 3, 4, ranks=3),
+            _node(15, 105, "Stray Copy", 63, 2),
+        ]),
+        _spec(9, 354, "Demonology", [_node(20, 200, "Fel Domination", 3, 8), _node(21, 201, "Wide Copy", 7, 170)]),
+        _spec(6, 250, "Blood", [_node(40, 400, "Not Classic", 1, 1)]),
     ]
+
+
+def _built() -> tuple[dict[str, list[Any]], Gaps]:
     gaps = Gaps()
-    return build_trees(tabs, talents, forever_book(_forever_tables()), {100: 135807}, gaps, fallback), gaps
+    icons = {1010: 136230, 1020: 136132}
+    return build_trees(_warlock(), icons, {355: 136145}, gaps), gaps
 
 
-def test_trees_are_grouped_by_class_and_ordered_left_to_right() -> None:
-    classes, _ = _trees()
-    assert list(classes) == ["mage"]
-    assert [t.name for t in classes["mage"]] == ["Arcane", "Fire", "Frost"]
-    assert classes["mage"][1].icon == 135810
+def test_trees_are_in_game_order_by_their_column_band() -> None:
+    classes, _ = _built()
+    assert list(classes) == ["warlock"]
+    assert [t.name for t in classes["warlock"]] == ["Affliction", "Demonology", "Destruction"]
+    assert [t.id for t in classes["warlock"]] == [355, 354, 593]
+    assert [t.icon for t in classes["warlock"]] == [136145, 0, 0]
 
 
-def test_talents_are_in_tier_then_column_order() -> None:
-    classes, _ = _trees()
-    fire = classes["mage"][1]
-    assert [(t.id, t.tier, t.column) for t in fire.talents] == [(3, 0, 0), (1, 0, 1), (2, 1, 0)]
+def test_a_tree_band_is_where_most_of_its_talents_sit() -> None:
+    assert tree_band([_node(1, 1, "A", 1, 14), _node(2, 2, "B", 2, 16), _node(3, 3, "C", 7, 170)]) == 2
 
 
-def test_a_talent_takes_its_name_and_icon_from_any_rank_the_client_has() -> None:
-    classes, gaps = _trees()
-    fire = {t.id: t for t in classes["mage"][1].talents}
-    assert fire[1].name == "Improved Fireball" and fire[1].icon == 135807
-    assert fire[1].ranks == ("Reduces the casting time of your Fireball by 0.1 sec.", None, None, None, None)
-    # Rank 1 of talent 2 is spell 101: a name, no description, no icon.
-    assert fire[2].name == "Improved Fireball" and fire[2].icon == 0 and fire[2].ranks == (None, None)
-    assert fire[2].prereqs == ((1, 5),)
-    assert gaps.missing_ranks == 4 + 2 + 1
+def test_talents_are_in_tier_then_column_order_with_zero_based_places() -> None:
+    classes, _ = _built()
+    affliction, _, destruction = classes["warlock"]
+    assert [(t.name, t.tier, t.column) for t in affliction.talents] == [
+        ("Suppression", 0, 1), ("Amplify Curse", 2, 2), ("Pandemic", 2, 3), ("Curse of Exhaustion", 3, 2),
+    ]
+    assert [(t.tier, t.column) for t in destruction.talents] == [(0, 1)]
 
 
-def test_a_talent_with_no_rank_in_the_client_takes_the_classic_name() -> None:
-    classes, gaps = _trees(Fallback(names={200: "Burning Soul"}, icons={200: 135818}))
-    talent = next(t for t in classes["mage"][1].talents if t.id == 3)
-    assert (talent.name, talent.icon, talent.classic_name) == ("Burning Soul", 135818, True)
-    assert gaps.nameless == [3]
+def test_a_talent_carries_its_ranks_spell_icon_and_id() -> None:
+    classes, gaps = _built()
+    suppression = classes["warlock"][0].talents[0]
+    assert (suppression.id, suppression.spell, suppression.icon) == (101, 1010, 136230)
+    assert suppression.ranks == tuple(f"Suppression rank {r}." for r in range(1, 6))
+    assert "warlock Affliction: Pandemic (spell 1040)" in gaps.no_icon
 
 
-def test_tab_of_an_unknown_class_is_skipped() -> None:
-    classes, _ = _trees()
-    assert all(t.id != 999 for trees in classes.values() for t in trees)
+def test_a_prerequisite_needs_the_required_talent_at_its_max_rank() -> None:
+    classes, _ = _built()
+    exhaustion = classes["warlock"][0].talents[3]
+    assert exhaustion.prereqs == ((102, 1),)
+    payload = [_spec(9, 355, "Affliction", [_node(1, 11, "Suppression", 1, 1, ranks=5), _node(2, 12, "Next", 2, 1, locked_by=[1])])]
+    (tree,) = build_trees(payload, {}, {}, Gaps())["warlock"]
+    assert tree.talents[1].prereqs == ((11, 5),)
 
 
-def test_every_classic_class_has_a_mask() -> None:
-    assert sorted(CLASS_MASKS.values()) == ["druid", "hunter", "mage", "paladin", "priest", "rogue", "shaman", "warlock", "warrior"]
+def test_nodes_off_the_grid_are_left_out_and_reported() -> None:
+    classes, gaps = _built()
+    names = {t.name for tree in classes["warlock"] for t in tree.talents}
+    assert not names & {"Stray Copy", "Wide Copy"}
+    assert gaps.off_grid == [
+        "warlock Affliction: Stray Copy at row 63, column 2",
+        "warlock Demonology: Wide Copy at row 7, column 170",
+    ]
+
+
+def test_a_requirement_on_a_lower_row_is_dropped_and_reported() -> None:
+    payload = [_spec(3, 50, "Beast Mastery", [
+        _node(1, 11, "Bestial Swiftness", 3, 2),
+        _node(2, 12, "Intimidation", 5, 2, locked_by=[1, 3]),
+        _node(3, 13, "Bestial Wrath", 7, 2, locked_by=[2]),
+    ])]
+    gaps = Gaps()
+    (tree,) = build_trees(payload, {}, {}, gaps)["hunter"]
+    assert [t.prereqs for t in tree.talents] == [(), ((11, 1),), ((12, 1),)]
+    assert gaps.backward_prereqs == ["hunter Beast Mastery: Intimidation -> Bestial Wrath"]
+
+
+def test_a_class_the_site_does_not_list_is_skipped() -> None:
+    classes, _ = _built()
+    assert all(t.id != 250 for trees in classes.values() for t in trees)
+
+
+def test_every_classic_class_has_a_mask_and_an_api_id() -> None:
+    classes = ["druid", "hunter", "mage", "paladin", "priest", "rogue", "shaman", "warlock", "warrior"]
+    assert sorted(CLASS_MASKS.values()) == classes
+    assert sorted(CLASS_IDS.values()) == classes
+
+
+def test_tree_spells_are_every_talents_rank_one_spell() -> None:
+    assert tree_spells(_warlock()) == {1010, 1020, 1030, 1040, 1050, 2000, 2010, 3000, 4000}
+
+
+def test_tree_doc_marks_new_talents_only() -> None:
+    classes, _ = _built()
+    doc = tree_doc(classes["warlock"][0], {104})
+    assert (doc["id"], doc["name"], doc["icon"]) == (355, "Affliction", 136145)
+    talents = {t["name"]: t for t in doc["talents"]}  # type: ignore[attr-defined]
+    assert talents["Pandemic"]["newInForever"] is True
+    assert "newInForever" not in talents["Suppression"]
+    assert talents["Curse of Exhaustion"]["prereqs"] == [[102, 1]]
+    assert talents["Suppression"]["spell"] == 1010
+    assert talents["Suppression"]["ranks"] == [f"Suppression rank {r}." for r in range(1, 6)]
 
 
 # --- the Classic comparison -------------------------------------------------
 
 
-def _compare(forever_text: str, classic_text: str | None, forever_spell: int = 100) -> dict[int, list[str | None]]:
-    forever = SpellBook(descriptions={forever_spell: forever_text}, names={forever_spell: "Talent"})
-    classic = SpellBook(descriptions={} if classic_text is None else {100: classic_text})
-    tabs = [_tab(41, "Fire", 128, 0)]
-    gaps = Gaps()
-    trees = build_trees(tabs, [_talent_row(1, 41, 0, 0, [100, 101])], forever, {}, gaps)["mage"]
-    return classic_changes(trees, classic, gaps)
+def test_classic_talents_are_grouped_by_class_and_named_by_their_rank_one_spell() -> None:
+    tabs = [_tab(302, 256), _tab(999, 0)]
+    talents = [_talent_row(1, 302, [18174, 18175]), _talent_row(2, 999, [5]), _talent_row(3, 302, [])]
+    assert classic_talents(tabs, talents, {18174: "Suppression"}) == {
+        "warlock": [ClassicTalent("Suppression", (18174, 18175))],
+    }
 
 
-def test_a_changed_rank_carries_the_classic_text() -> None:
-    assert _compare("Increases damage by 5%.", "Increases damage by 2%.") == {1: ["Increases damage by 2%.", None]}
+def _one_talent_tree(name: str, spell: int, ranks: list[str]) -> Any:
+    payload = [_spec(9, 355, "Affliction", [{
+        "id": 1, "display_row": 1, "display_col": 1,
+        "ranks": [_rank(900, name, spell, text) for text in ranks],
+    }])]
+    return build_trees(payload, {}, {}, Gaps())["warlock"][0]
+
+
+def test_a_talent_matches_classic_by_spell_then_by_name() -> None:
+    by_spell = ClassicTalent("Old Name", (100, 101))
+    by_name = ClassicTalent("Improved Drains", (200,))
+    renamed = _one_talent_tree("Improved Drains", 100, ["x"]).talents[0]
+    assert match_classic(renamed, [by_name, by_spell]) == by_spell
+    same_name = _one_talent_tree("improved  drains", 300, ["x"]).talents[0]
+    assert match_classic(same_name, [by_spell, by_name]) == by_name
+    assert match_classic(_one_talent_tree("Pandemic", 400, ["x"]).talents[0], [by_spell, by_name]) is None
+
+
+def _compare(forever: list[str], classic: dict[int, str]) -> Any:
+    tree = _one_talent_tree("Suppression", 100, forever)
+    return compare_with_classic([tree], [ClassicTalent("Suppression", (100, 101))], SpellBook(descriptions=classic))
+
+
+def test_a_changed_rank_carries_classics_text_of_the_same_rank() -> None:
+    comparison = _compare(["Hit by 1%.", "Hit by 2%."], {100: "Hit by 1%.", 101: "Resist by 4%."})
+    assert comparison.changes == {900: [None, "Resist by 4%."]}
+    assert comparison.new == set()
 
 
 def test_case_and_spacing_differences_are_not_changes() -> None:
-    assert _compare("Increases  Damage by 5%.", "increases damage by 5%.") == {}
+    assert _compare(["Increases  Damage by 5%.", "x"], {100: "increases damage by 5%.", 101: "x"}).changes == {}
 
 
-def test_a_rank_without_forever_text_is_not_compared() -> None:
-    assert _compare("Increases damage by 5%.", "Increases damage by 2%.", forever_spell=999) == {}
+def test_a_rank_classic_lacks_or_cannot_fill_is_not_compared() -> None:
+    assert _compare(["A.", "B.", "C."], {100: "A.", 101: "B."}).changes == {}
+    assert _compare(["A.", "B."], {100: "Increases damage by $s1%.", 101: "B."}).changes == {}
 
 
-def test_a_rank_without_classic_text_is_not_compared() -> None:
-    assert _compare("Increases damage by 5%.", None) == {}
+def test_a_talent_without_a_classic_match_is_new() -> None:
+    tree = _one_talent_tree("Pandemic", 400, ["x"])
+    comparison = compare_with_classic([tree], [ClassicTalent("Suppression", (100,))], SpellBook())
+    assert comparison.new == {900}
+    assert comparison.changes == {}
 
 
-def test_a_forever_rank_with_an_unfillable_token_is_not_compared() -> None:
-    assert _compare("Absorbs ${$SPFR} damage. Increases damage by 5%.", "Increases damage by 5%.") == {}
+# --- the API client ---------------------------------------------------------
+
+_TREE_HREF = (
+    "https://us.api.blizzard.com/data/wow/talent-tree/1116/playable-specialization/355"
+    "?namespace=static-1.60.1_70399-forever-us"
+)
 
 
-def test_a_classic_rank_with_an_unfillable_token_is_not_compared() -> None:
-    assert _compare("Increases damage by 5%.", "Increases damage by $s1%.") == {}
+def _client(handler: Any) -> BlizzardStatic:
+    return BlizzardStatic("id", "secret", transport=httpx.MockTransport(handler))
 
 
-# --- the Classic fallback for ranks Forever doesn't have ------------------
+def _api(request: httpx.Request) -> httpx.Response:
+    if request.url.host == "oauth.battle.net":
+        return httpx.Response(200, json={"access_token": "t", "expires_in": 86399})
+    assert request.url.params["namespace"] == "static-forever-us"
+    assert request.headers["Authorization"] == "Bearer t"
+    path = request.url.path
+    if path == "/data/wow/talent-tree/index":
+        return httpx.Response(200, json={
+            "_links": {"self": {"href": "https://us.api.blizzard.com/data/wow/talent-tree/?namespace=static-1.60.1_70399-forever-us"}},
+            "spec_talent_trees": [{"key": {"href": _TREE_HREF}, "name": "Affliction"}],
+        })
+    if path == "/data/wow/talent-tree/1116/playable-specialization/355":
+        return httpx.Response(200, json=_warlock()[1])
+    if path == "/data/wow/media/spell/1040":
+        return httpx.Response(200, json={"assets": [{"key": "icon", "value": "https://x/1.jpg", "file_data_id": 136227}]})
+    return httpx.Response(404, json={"code": 404, "type": "BLZWEBAPI00000404", "detail": "Not Found"})
 
 
-def _fallback(forever: dict[int, str], classic: dict[int, str]) -> dict[int, list[str | None]]:
-    book = SpellBook(descriptions=forever, names={s: "Talent" for s in forever})
-    trees = build_trees([_tab(41, "Fire", 128, 0)], [_talent_row(1, 41, 0, 0, [100, 101, 102])], book, {}, Gaps())["mage"]
-    return classic_fallback(trees, SpellBook(descriptions=classic))
+def test_the_client_reads_the_build_trees_and_icons() -> None:
+    with _client(_api) as api:
+        build, payloads = api.talent_trees()
+        assert build == "1.60.1.70399"
+        assert [p["name"] for p in payloads] == ["Affliction"]
+        assert api.icon_file("/data/wow/media/spell/1040") == 136227
 
 
-def test_a_missing_rank_takes_the_classic_text() -> None:
-    texts = _fallback({100: "Forever rank 1."}, {100: "Classic rank 1.", 101: "Classic rank 2.", 102: "Classic rank 3."})
-    assert texts == {1: [None, "Classic rank 2.", "Classic rank 3."]}
+def test_a_failed_call_stops_with_the_status_and_blizzards_code() -> None:
+    with _client(_api) as api, pytest.raises(SystemExit, match="HTTP 404 code=BLZWEBAPI00000404 Not Found"):
+        api.get("/data/wow/media/spell/1")
 
 
-def test_a_talent_with_no_forever_rank_takes_classic_text_for_every_rank() -> None:
-    texts = _fallback({}, {100: "Classic rank 1.", 101: "Classic rank 2.", 102: "Classic rank 3."})
-    assert texts == {1: ["Classic rank 1.", "Classic rank 2.", "Classic rank 3."]}
+def test_a_refused_token_stops_with_the_oauth_error_and_no_secret() -> None:
+    def refuse(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"error": "invalid_client", "error_description": "Bad client"})
+
+    with pytest.raises(SystemExit, match="token: HTTP 401 code=invalid_client Bad client") as stopped:
+        _client(refuse).__enter__()
+    assert "secret" not in str(stopped.value)
 
 
-def test_a_missing_rank_classic_lacks_too_stays_empty() -> None:
-    assert _fallback({100: "Forever rank 1."}, {101: "Classic rank 2."}) == {1: [None, "Classic rank 2.", None]}
-    assert _fallback({100: "Forever rank 1."}, {}) == {}
+def test_missing_credentials_stop_the_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(blizzard_api.settings, "blizzard_client_id", "")
+    with pytest.raises(SystemExit, match="BLIZZARD_CLIENT_ID / BLIZZARD_CLIENT_SECRET are not set"):
+        blizzard_credentials()
 
 
-def test_a_fallback_sentence_with_an_unfillable_token_is_left_out() -> None:
-    texts = _fallback({}, {100: "Lasts $d. Increases damage by 2%.", 101: "Lasts $d."})
-    assert texts == {1: ["Increases damage by 2%.", None, None]}
+def test_namespace_build_reads_the_versioned_namespace() -> None:
+    assert namespace_build("https://x/?namespace=static-1.60.1_70399-forever-us") == "1.60.1.70399"
+    assert namespace_build("https://x/") == ""
 
 
 # --- the committed output ---------------------------------------------------
@@ -356,65 +483,74 @@ def _class_files() -> list[Path]:
     return files
 
 
+def _doc(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def test_every_class_has_three_trees_on_the_in_game_grid() -> None:
     files = _class_files()
     assert sorted(f.stem for f in files) == sorted(CLASS_MASKS.values())
     for path in files:
-        doc = json.loads(path.read_text(encoding="utf-8"))
-        assert doc["clientBuild"] == WAGO_BUILD
+        doc = _doc(path)
+        assert doc["apiBuild"]
         assert doc["classId"] == path.stem
         assert len(doc["trees"]) == 3
         for tree in doc["trees"]:
             places = [(t["tier"], t["column"]) for t in tree["talents"]]
             assert len(places) == len(set(places)), f"{path.stem} {tree['name']}: two talents share a cell"
             assert all(0 <= tier < TIERS and 0 <= col < COLUMNS for tier, col in places)
-            assert all(t["name"] for t in tree["talents"]), f"{path.stem} {tree['name']}: a talent has no name"
+            assert places == sorted(places), f"{path.stem} {tree['name']}: talents out of tier-then-column order"
+            assert tree["icon"], f"{path.stem} {tree['name']}: no tree icon"
+            for talent in tree["talents"]:
+                assert talent["name"] and talent["icon"] and talent["spell"], f"{path.stem} {talent['name']}"
+                assert talent["ranks"] and all(talent["ranks"]), f"{path.stem} {talent['name']}: a rank has no text"
 
 
-def test_prerequisites_are_talents_of_the_same_tree_no_lower_down() -> None:
+def test_prerequisites_are_talents_of_the_same_tree_no_lower_down_at_max_rank() -> None:
     for path in _class_files():
-        for tree in json.loads(path.read_text(encoding="utf-8"))["trees"]:
+        for tree in _doc(path)["trees"]:
             by_id = {t["id"]: t for t in tree["talents"]}
             for talent in tree["talents"]:
                 for required, rank in talent["prereqs"]:
                     assert required in by_id, f"{talent['name']} needs a talent outside its tree"
                     before = by_id[required]
-                    # Mostly straight down; a few point across a tier (Vampiric Embrace) or round a corner.
-                    assert (before["tier"], before["column"]) != (talent["tier"], talent["column"])
                     assert before["tier"] <= talent["tier"]
-                    assert 1 <= rank <= len(by_id[required]["ranks"])
+                    assert rank == len(before["ranks"])
 
 
-def test_classic_files_name_talents_of_their_class_rank_for_rank() -> None:
+def test_classic_files_name_matched_talents_rank_for_rank() -> None:
     assert (CLASSIC_DIR / "LICENSE").is_file() and (CLASSIC_DIR / "README.md").is_file()
     for path in _class_files():
-        talents = {t["id"]: t for tree in json.loads(path.read_text(encoding="utf-8"))["trees"] for t in tree["talents"]}
-        classic = json.loads((CLASSIC_DIR / path.name).read_text(encoding="utf-8"))["talents"]
-        for talent_id, ranks in classic.items():
+        talents = {t["id"]: t for tree in _doc(path)["trees"] for t in tree["talents"]}
+        classic = _doc(CLASSIC_DIR / path.name)
+        assert set(classic) == {"source", "classId", "talents"}
+        for talent_id, ranks in classic["talents"].items():
             talent = talents[int(talent_id)]
             assert len(ranks) == len(talent["ranks"])
             assert any(ranks)
-            for forever, was in zip(talent["ranks"], ranks):
-                assert was is None or forever is not None
+            assert not talent.get("newInForever")
 
 
-def test_classic_fallback_fills_only_ranks_forever_lacks() -> None:
-    for path in _class_files():
-        talents = {t["id"]: t for tree in json.loads(path.read_text(encoding="utf-8"))["trees"] for t in tree["talents"]}
-        fallback = json.loads((CLASSIC_DIR / path.name).read_text(encoding="utf-8"))["fallback"]
-        for talent_id, ranks in fallback.items():
-            talent = talents[int(talent_id)]
-            assert len(ranks) == len(talent["ranks"])
-            assert any(ranks)
-            for forever, was in zip(talent["ranks"], ranks):
-                assert forever is None or was is None
-        # A talent with no rank in the Forever client shows Classic's text for every rank.
-        for talent in talents.values():
-            if talent.get("classicName"):
-                assert all(fallback[str(talent["id"])]), f"{path.stem} {talent['name']}: a rank has no text"
+@pytest.mark.parametrize(
+    ("class_id", "tree", "names"),
+    [
+        ("warlock", "Affliction", {"Soul Harvest", "Improved Drains", "Pandemic", "Malevolence", "Shadow Mastery", "Wrack"}),
+        ("warrior", "Arms", {"Mortal Strike"}),
+        ("mage", "Arcane", {"Arcane Concentration", "Presence of Mind", "Arcane Power", "Missile Barrage"}),
+    ],
+)
+def test_known_live_talents_are_in_their_tree(class_id: str, tree: str, names: set[str]) -> None:
+    (found,) = [t for t in _doc(TALENTS_DIR / f"{class_id}.json")["trees"] if t["name"] == tree]
+    assert names <= {t["name"] for t in found["talents"]}
 
 
-@pytest.mark.parametrize(("class_id", "name", "tier"), [("warrior", "Mortal Strike", 6), ("mage", "Arcane Focus", 0), ("druid", "Moonkin Form", 6)])
-def test_known_talents_sit_where_they_do_in_game(class_id: str, name: str, tier: int) -> None:
-    doc = json.loads((TALENTS_DIR / f"{class_id}.json").read_text(encoding="utf-8"))
-    assert any(t["name"] == name and t["tier"] == tier for tree in doc["trees"] for t in tree["talents"])
+def test_forever_only_talents_are_marked_new() -> None:
+    (affliction,) = [t for t in _doc(TALENTS_DIR / "warlock.json")["trees"] if t["name"] == "Affliction"]
+    talents = {t["name"]: t for t in affliction["talents"]}
+    assert talents["Pandemic"].get("newInForever") is True
+    assert "newInForever" not in talents["Suppression"]
+    assert talents["Wrack"]["prereqs"] == [[talents["Siphon Life"]["id"], 1]]
+
+
+def test_trees_are_in_game_order() -> None:
+    assert [t["name"] for t in _doc(TALENTS_DIR / "warlock.json")["trees"]] == ["Affliction", "Demonology", "Destruction"]

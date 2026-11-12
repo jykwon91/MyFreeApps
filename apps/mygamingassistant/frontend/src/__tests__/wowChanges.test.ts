@@ -103,6 +103,12 @@ describe("decodeChangeEntry", () => {
     expect(quest.provenance.provenance).toBe("seen");
     expect(quest.provenance.date).toBeTruthy();
   });
+
+  it("badges talent rows as Official: the live trees come from Blizzard's Game Data API", () => {
+    const talent = decodeChangeEntry("talents", fileEntry({ provenance: "published" }));
+    expect(talent.provenance.provenance).toBe("published");
+    expect(talent.provenance.detail).toMatch(/Game Data API/);
+  });
 });
 
 describe("change data", () => {
@@ -130,11 +136,10 @@ function talent(id: number): Talent {
     tier: 0,
     column: 0,
     icon: 0,
-    ranks: [null],
+    ranks: ["Rank 1"],
     prereqs: [],
-    classicName: false,
+    newInForever: false,
     classicRanks: null,
-    classicFallback: null,
   };
 }
 

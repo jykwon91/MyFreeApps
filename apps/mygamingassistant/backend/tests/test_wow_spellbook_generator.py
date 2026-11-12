@@ -8,7 +8,7 @@ import json
 from scripts.wow_icons.build import OUT_FILE as ICON_MAP_FILE
 from scripts.wow_icons.build import spellbook_icon_files
 from scripts.wow_macros.build import CLASS_LINES
-from scripts.wow_spellbook.build import CLASSIC_DIR, SPELLBOOK_DIR
+from scripts.wow_spellbook.build import CLASSIC_DIR, SPELLBOOK_DIR, TALENTS_DIR
 from scripts.wow_spellbook.demons import DEMON_LINES, demon_docs, grimoire_items
 from scripts.wow_spellbook.docs import ChangeInfo, ClassicFill, FieldCounts, change_info, spell_doc
 from scripts.wow_spellbook.spells import (
@@ -25,6 +25,7 @@ from scripts.wow_spellbook.spells import (
     class_spells,
     races_of,
     rank_number,
+    talent_spells,
 )
 from scripts.wow_spellbook.trainers import EFFECT_LEARN_SPELL, book_spells, quest_spells, teaching_map, trainer_costs
 from scripts.wow_world_map.sources import WAGO_BUILD
@@ -138,6 +139,24 @@ def test_talent_ranks_link_the_talent_and_passive_talents_are_left_out() -> None
     (spell,) = _spells([_ability(17877), _ability(18867), _ability(18000)], facts, {17877, 18867, 18000}, learned)
     assert spell.talent == 963
     assert [(r.spell, r.from_talent) for r in spell.ranks] == [(17877, True), (18867, False)]
+
+
+def test_a_talent_the_live_trees_dropped_is_still_a_talent_but_links_nowhere() -> None:
+    facts = _facts(s17877=("Dark Pact", "Rank 1", 0, 40))
+    learned = Learned(talent_of={17877: None})
+    (spell,) = _spells([_ability(17877)], facts, {17877}, learned)
+    assert spell.talent is None
+    assert spell.ranks[0].from_talent
+
+
+def _client_talent(talent_id: int, *spells: int) -> dict[str, str]:
+    return {"ID": str(talent_id), **{f"SpellRank_{i}": str(s) for i, s in enumerate(spells)}}
+
+
+def test_talent_spells_link_every_client_rank_to_the_live_talent_sharing_a_spell() -> None:
+    client = [_client_talent(963, 17877, 18867), _client_talent(970, 18000)]
+    live = {17877: 135400, 412758: 135405}
+    assert talent_spells(client, live) == {17877: 135400, 18867: 135400, 18000: None, 412758: 135405}
 
 
 def test_race_only_ranks_union_their_races_and_level_less_spells_sort_last() -> None:
@@ -285,12 +304,21 @@ def test_committed_warlock_spells_match_the_forever_client() -> None:
     bolt = spells["Shadow Bolt"]
     assert bolt["downrank"] == "warlock-shadow-bolt" and bolt["changed"] == "changed"
     assert bolt["ranks"][0]["text"] == "Sends a shadowy bolt at the enemy, causing 11 to 15 Shadow damage."
-    assert spells["Shadowburn"]["talent"] == 963
+    assert spells["Shadowburn"]["talent"] == 135415  # the live tree's id (Blizzard's Game Data API)
+    assert spells["Wrack"]["talent"] == 135440 and "changed" not in spells["Wrack"]  # a Forever talent, not a new spell
     assert spells["Bane of Agony"]["changed"] == "new"
     assert "Curse of Agony" not in spells  # Forever renamed Curses to Banes
     classic = json.loads((CLASSIC_DIR / "warlock.json").read_text(encoding="utf-8"))
     assert classic["costs"]["172"] == 100  # Corruption Rank 1: 1 silver at a Classic trainer
     assert 25311 in classic["books"]  # Grimoire of Corruption VII
+
+
+def test_every_spellbook_talent_link_is_a_live_talent() -> None:
+    for class_id in CLASS_LINES:
+        trees = json.loads((TALENTS_DIR / f"{class_id}.json").read_text(encoding="utf-8"))["trees"]
+        live = {t["id"] for tree in trees for t in tree["talents"]}
+        linked = {s["talent"] for s in _committed(class_id)["spells"] if "talent" in s}
+        assert linked and linked <= live, class_id
 
 
 def test_every_spellbook_icon_is_in_the_icon_map() -> None:
