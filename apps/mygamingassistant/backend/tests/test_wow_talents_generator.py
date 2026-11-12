@@ -328,6 +328,23 @@ def test_a_requirement_on_a_lower_row_is_dropped_and_reported() -> None:
     assert gaps.backward_prereqs == ["hunter Beast Mastery: Intimidation -> Bestial Wrath"]
 
 
+def test_a_requirement_on_a_node_left_out_is_dropped_and_reported() -> None:
+    payload = [_spec(9, 355, "Affliction", [_node(1, 11, "Stray", 63, 1), _node(2, 12, "Next", 2, 1, locked_by=[1])])]
+    gaps = Gaps()
+    (tree,) = build_trees(payload, {}, {}, gaps)["warlock"]
+    assert tree.talents[0].prereqs == ()
+    assert gaps.lost_prereqs == ["warlock Affliction: Next needs node 1, not on the grid"]
+
+
+def test_two_trees_in_one_column_band_stop_the_build() -> None:
+    payload = [
+        _spec(9, 355, "Affliction", [_node(1, 11, "A", 1, 1)]),
+        _spec(9, 354, "Demonology", [_node(2, 12, "B", 1, 2)]),
+    ]
+    with pytest.raises(ValueError, match="warlock: two trees sit in the same column band"):
+        build_trees(payload, {}, {}, Gaps())
+
+
 def test_a_class_the_site_does_not_list_is_skipped() -> None:
     classes, _ = _built()
     assert all(t.id != 250 for trees in classes.values() for t in trees)
@@ -452,6 +469,18 @@ def test_the_client_reads_the_build_trees_and_icons() -> None:
 def test_a_failed_call_stops_with_the_status_and_blizzards_code() -> None:
     with _client(_api) as api, pytest.raises(SystemExit, match="HTTP 404 code=BLZWEBAPI00000404 Not Found"):
         api.get("/data/wow/media/spell/1")
+
+
+def test_a_link_off_the_api_host_never_gets_the_token() -> None:
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.url.host)
+        return _api(request)
+
+    with _client(handler) as api, pytest.raises(SystemExit, match="refusing a link outside"):
+        api.get("https://evil.example/data/wow/talent-tree/index")
+    assert "evil.example" not in seen
 
 
 def test_a_refused_token_stops_with_the_oauth_error_and_no_secret() -> None:

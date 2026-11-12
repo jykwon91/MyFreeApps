@@ -93,6 +93,9 @@ class BlizzardStatic:
     def get(self, url: str) -> dict[str, Any]:
         """One Game Data answer: a ``/data/wow/...`` path or a full href from another answer."""
         target = url.split("?")[0] if url.startswith("http") else f"{BLIZZARD_API_BASE}{url}"
+        # An href from an answer gets the bearer token, so it must stay on the API's host.
+        if not target.startswith(f"{BLIZZARD_API_BASE}/"):
+            raise SystemExit(f"Blizzard API: refusing a link outside {BLIZZARD_API_BASE}: {target[:_REASON_MAX]}")
         try:
             response = self._http.get(
                 target,

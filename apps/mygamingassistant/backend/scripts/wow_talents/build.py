@@ -153,6 +153,7 @@ def main() -> None:
     for label, rows in (
         ("nodes outside the 7 x 4 grid (left out)", gaps.off_grid),
         ("requirements on a lower row (read backwards, dropped)", gaps.backward_prereqs),
+        ("requirements on a node left out (dropped)", gaps.lost_prereqs),
         ("talents with no icon", gaps.no_icon),
     ):
         if rows:

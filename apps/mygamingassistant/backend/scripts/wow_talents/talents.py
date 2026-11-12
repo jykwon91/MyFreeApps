@@ -109,6 +109,7 @@ class Gaps:
 
     off_grid: list[str] = field(default_factory=list)
     backward_prereqs: list[str] = field(default_factory=list)
+    lost_prereqs: list[str] = field(default_factory=list)
     no_icon: list[str] = field(default_factory=list)
 
 
@@ -187,6 +188,7 @@ def spec_tree(payload: Payload, icons: Mapping[int, int], tree_icon: int, gaps: 
         for required in node.get("locked_by") or []:
             before = by_node.get(int(required))
             if before is None:
+                gaps.lost_prereqs.append(f"{class_id} {name}: {talent['name']} needs node {required}, not on the grid")
                 continue
             if int(before["display_row"]) > int(node["display_row"]):
                 gaps.backward_prereqs.append(f"{class_id} {name}: {talent['name']} -> {_node_talent(before)['name']}")
@@ -224,6 +226,11 @@ def build_trees(
             continue
         class_id, band, tree = parsed
         classes.setdefault(class_id, []).append((band, tree))
+    for class_id, trees in classes.items():
+        bands = [band for band, _ in trees]
+        if len(bands) != len(set(bands)):
+            names = ", ".join(f"{t.name} (band {b})" for b, t in trees)
+            raise ValueError(f"{class_id}: two trees sit in the same column band, so their order is unknown: {names}")
     return {cid: [t for _, t in sorted(trees, key=lambda p: p[0])] for cid, trees in sorted(classes.items())}
 
 
