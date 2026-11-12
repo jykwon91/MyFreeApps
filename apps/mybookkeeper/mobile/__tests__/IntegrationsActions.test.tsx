@@ -244,10 +244,12 @@ describe("a viewer", () => {
   it("sees everything but can change nothing", async () => {
     startIntegrationsServer({ role: "viewer", logs: [aSyncLog()], queue: [aQueueItem({ status: "failed" }), aQueueItem({ id: "b" })], integrations: [aGmail({ gmail_label: "Receipts" })] });
     await renderScreen(<IntegrationsScreen />);
-    await screen.findByText(MESSAGES.viewOnly);
+    // Gmail, history and queue load as separate requests. Wait for the slowest ones, or the
+    // "can change nothing" checks below pass before the queue's buttons could have appeared.
+    await screen.findByText("1 ready to extract · 1 failed");
+    await screen.findByText("3 documents added");
+    expect(screen.getByText(MESSAGES.viewOnly)).toBeTruthy();
     expect(screen.getByText(MESSAGES.labelCurrently("Receipts"))).toBeTruthy();
-    expect(screen.getByText("1 ready to extract · 1 failed")).toBeTruthy();
-    expect(screen.getByText("3 documents added")).toBeTruthy();
     for (const name of [MESSAGES.syncNow, MESSAGES.disconnect, MESSAGES.labelEdit, MESSAGES.extractAll(1), MESSAGES.retryFailed(1)]) {
       expect(screen.queryByRole("button", { name })).toBeNull();
     }
