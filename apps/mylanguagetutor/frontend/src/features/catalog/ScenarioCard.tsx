@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
+import { practicePath } from "@mylanguagetutor/api-client/utils/practicePath";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 
 interface ScenarioCardProps {
@@ -11,7 +12,7 @@ export default function ScenarioCard({ scenario }: ScenarioCardProps) {
   return (
     <li>
       <Link
-        to={`/practice?scenario=${encodeURIComponent(scenario.slug)}`}
+        to={practicePath(scenario.slug)}
         className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border bg-card p-4 hover:bg-muted"
       >
         <span>

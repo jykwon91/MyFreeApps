@@ -5,8 +5,9 @@ import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { Linking } from "react-native";
 import { WEB_BASE_URL } from "../src/constants/api";
 import { SETTINGS_MENU } from "../src/constants/settingsMenu";
-import { PRACTICE_TAB, TABS } from "../src/constants/tabs";
+import { TABS } from "../src/constants/tabs";
 import type { AppTab } from "@platform/mobile";
+import { ONBOARDED_LEARNER_ROUTES, PRACTICE_HEADING } from "../test-support/onboardedLearner";
 import { renderApp } from "../test-support/renderApp";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
@@ -48,14 +49,11 @@ it("opens the live website unless a build points it elsewhere", () => {
 
 // One app launch per file, so these run in order: the last one signs out.
 describe("the signed-in shell", () => {
-  it("has a tab for each main page, and Practice says it's on the website for now", async () => {
-    serve({ "POST /auth/mobile/refresh": () => ({ status: 200, data: tokens(1) }) });
+  it("has a tab for each main page", async () => {
+    serve({ "POST /auth/mobile/refresh": () => ({ status: 200, data: tokens(1) }), ...ONBOARDED_LEARNER_ROUTES });
     await renderApp();
-    expect(await screen.findByRole("header", { name: PRACTICE_TAB.title })).toBeTruthy();
+    expect(await screen.findByRole("header", { name: PRACTICE_HEADING })).toBeTruthy();
     expect(TABS.filter((tab) => !screen.queryByRole("button", { name: tabBarName(tab) })).map((tab) => tab.title)).toEqual([]);
-
-    await fireEvent.press(screen.getByRole("button", { name: "Open on the website" }));
-    expect(openURL).toHaveBeenLastCalledWith(`${WEB_BASE_URL}${PRACTICE_TAB.webPath}`);
   });
 
   it("links the rest of the website from Settings, with this account's devices", async () => {

@@ -4,7 +4,7 @@ import type { VersionSummary } from "@myrecipes/api-client/types/recipe/version"
 import { newestFirst } from "@myrecipes/api-client/utils/newestFirst";
 import { orderForCompare } from "@myrecipes/api-client/utils/orderForCompare";
 import { toggleCompareId } from "@myrecipes/api-client/utils/toggleCompareId";
-import { EmptyState, MIN_TOUCH_TARGET, Skeleton, Toast, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, ListSeparator, MIN_TOUCH_TARGET, Skeleton, Toast, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { FlatList, View } from "react-native";
@@ -12,7 +12,6 @@ import { VERSION_HISTORY_MESSAGES as MESSAGES, VERSION_LIST_ENTRY_POINT } from "
 import { useErrorSinceOpening } from "../../hooks/useErrorSinceOpening";
 import { useOpenOnce } from "../../hooks/useOpenOnce";
 import { isNotFoundError } from "../../utils/isNotFoundError";
-import RecipeListSeparator from "../recipes/RecipeListSeparator";
 import CompareBar from "./CompareBar";
 import VersionListSkeleton from "./VersionListSkeleton";
 import VersionRow from "./VersionRow";
@@ -117,7 +116,7 @@ export default function VersionHistoryScreen() {
         </View>
       ) : null}
       <FlatList
-        ItemSeparatorComponent={RecipeListSeparator}
+        ItemSeparatorComponent={ListSeparator}
         ListEmptyComponent={renderEmpty()}
         contentContainerStyle={{ flexGrow: 1, padding: spacing.lg, paddingTop: spacing.sm }}
         data={versions}

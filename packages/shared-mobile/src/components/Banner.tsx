@@ -4,12 +4,20 @@ import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import type { BannerProps } from "../types/BannerProps";
 
-/** For a message the user mustn't miss. It stays until the situation changes, unlike a Toast. */
+/**
+ * For a message the user mustn't miss. It stays until the situation changes, unlike a Toast.
+ * Info is for a state to know about rather than act on: it is read politely, not as an alert.
+ */
 export default function Banner({ message, tone = "error", actions = [], style }: BannerProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
-  const isError = tone === "error";
-  const foreground = isError ? colors.toastErrorForeground : colors.toastSuccessForeground;
-  useAnnouncement(message);
+  const palette = {
+    error: { background: colors.toastErrorBackground, border: colors.toastErrorBorder, foreground: colors.toastErrorForeground },
+    success: { background: colors.toastSuccessBackground, border: colors.toastSuccessBorder, foreground: colors.toastSuccessForeground },
+    info: { background: colors.toastInfoBackground, border: colors.toastInfoBorder, foreground: colors.toastInfoForeground },
+  }[tone];
+  const foreground = palette.foreground;
+  const isInfo = tone === "info";
+  useAnnouncement(message, isInfo ? "polite" : "assertive");
 
   return (
     <View
@@ -19,14 +27,14 @@ export default function Banner({ message, tone = "error", actions = [], style }:
           gap: spacing.xs,
           borderRadius: radius.md,
           borderWidth: 1,
-          backgroundColor: isError ? colors.toastErrorBackground : colors.toastSuccessBackground,
-          borderColor: isError ? colors.toastErrorBorder : colors.toastSuccessBorder,
+          backgroundColor: palette.background,
+          borderColor: palette.border,
         },
         style,
       ]}
     >
       <Text
-        accessibilityRole="alert"
+        accessibilityRole={isInfo ? "text" : "alert"}
         style={{ color: foreground, fontSize: fontSize.sm }}
       >
         {message}

@@ -4,6 +4,7 @@ import { SessionContext } from "../auth/SessionContext";
 import Banner from "../components/Banner";
 import AccountDeletedBanner from "../components/AccountDeletedBanner";
 import SessionEndedBanner from "../components/SessionEndedBanner";
+import { lightColors } from "../theme/colors";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import type { MobileSession } from "../types/MobileSession";
 import type { SessionState } from "../types/SessionState";
@@ -15,10 +16,27 @@ describe("Banner", () => {
     await render(<Banner actions={[{ label: "Act", onPress }]} message="Heads up" />);
 
     expect(announce).toHaveBeenCalledWith("Heads up");
+    expect(screen.getByRole("alert")).toHaveTextContent("Heads up");
     const action = screen.getByRole("button", { name: "Act" });
     expect(StyleSheet.flatten(action.props.style).minHeight).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     await fireEvent.press(action);
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads the info tone politely, not as an alert, in the same weights as the others", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+    const announcePolitely = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions");
+    announce.mockClear();
+    await render(<Banner message="Good to know" tone="info" />);
+
+    expect(announcePolitely).toHaveBeenCalledWith("Good to know", { queue: true });
+    expect(announce).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).toBeNull();
+    const text = screen.getByText("Good to know");
+    expect(StyleSheet.flatten(text.props.style).color).toBe(lightColors.toastInfoForeground);
+    const box = StyleSheet.flatten(text.parent?.props.style);
+    expect(box.backgroundColor).toBe(lightColors.toastInfoBackground);
+    expect(box.borderColor).toBe(lightColors.toastInfoBorder);
   });
 });
 

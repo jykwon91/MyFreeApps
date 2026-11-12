@@ -11,7 +11,7 @@ export interface BannerProps {
   /** Screen readers announce it when it appears or changes, on iOS and Android. */
   message: string;
   /** Defaults to `error`. */
-  tone?: "error" | "success";
+  tone?: "error" | "success" | "info";
   actions?: BannerAction[];
   style?: StyleProp<ViewStyle>;
 }

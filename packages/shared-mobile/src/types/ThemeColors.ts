@@ -22,4 +22,8 @@ export interface ThemeColors {
   toastErrorBackground: string;
   toastErrorBorder: string;
   toastErrorForeground: string;
+  /** For information to know about rather than act on, in the same weights as success and error. */
+  toastInfoBackground: string;
+  toastInfoBorder: string;
+  toastInfoForeground: string;
 }
