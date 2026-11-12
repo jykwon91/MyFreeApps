@@ -3,6 +3,7 @@ import * as Toast from "@radix-ui/react-toast";
 import { XCircle, CheckCircle2, X } from "lucide-react";
 import { subscribe } from "../../lib/toast-store";
 import type { ToastEvent } from "../../lib/toast-store";
+import { TOAST_INTERACTIVE_STYLE } from "../../constants/toast-interactive-style";
 
 const DURATION_MS = 6000;
 
@@ -28,6 +29,7 @@ export default function Toaster() {
           key={toast.id}
           open
           onOpenChange={(open: boolean) => handleOpenChange(open, toast.id)}
+          style={TOAST_INTERACTIVE_STYLE}
           className={`flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg text-sm ${
             toast.variant === "error"
               ? "bg-red-50 border border-red-200 text-red-800 dark:bg-red-950 dark:border-red-800 dark:text-red-200"
@@ -42,13 +44,21 @@ export default function Toaster() {
           <Toast.Description className="flex-1">
             {toast.message}
           </Toast.Description>
-          <Toast.Close className="shrink-0 text-current opacity-50 hover:opacity-100">
+          <Toast.Close
+            aria-label="Dismiss notification"
+            className="shrink-0 text-current opacity-50 hover:opacity-100"
+          >
             <X className="h-4 w-4" />
           </Toast.Close>
         </Toast.Root>
       ))}
+      {/* Toasts stack above every overlay in the apps: modal backdrops range
+          from z-40 to z-[80] (one at the old z-50 still covered toasts, its
+          portal coming later in the DOM) and the highest layer is a map context
+          menu at z-[1200]. Under a backdrop a toast is dimmed and a click on it
+          lands on the backdrop, closing the modal instead of the toast. */}
       <Toast.Viewport
-        className="fixed top-4 right-4 left-4 z-50 space-y-2 max-w-md sm:left-auto sm:w-[390px] outline-none pointer-events-none [&>*]:pointer-events-auto"
+        className="fixed top-4 right-4 left-4 z-[2000] space-y-2 max-w-md sm:left-auto sm:w-[390px] outline-none pointer-events-none [&>*]:pointer-events-auto"
         label="Notifications"
       />
     </Toast.Provider>

@@ -88,13 +88,6 @@ describe.each(["right", "center"] as const)("Panel (%s, desktop)", (position) =>
 });
 
 describe("Panel with a toast showing", () => {
-  beforeEach(() => {
-    // jsdom lacks pointer capture, which the toast's swipe handling calls.
-    Element.prototype.setPointerCapture = () => {};
-    Element.prototype.releasePointerCapture = () => {};
-    Element.prototype.hasPointerCapture = () => false;
-  });
-
   it("stays open when the toast is dismissed", async () => {
     render(
       <>

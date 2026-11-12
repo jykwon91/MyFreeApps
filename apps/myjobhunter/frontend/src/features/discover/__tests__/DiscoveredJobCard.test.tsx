@@ -18,7 +18,10 @@ vi.mock("lucide-react", () => ({
   X: () => null,
 }));
 
-vi.mock("@platform/ui", () => ({
+vi.mock("@platform/ui", async () => ({
+  ...(await vi.importActual<typeof import("@platform/ui/constants/toast-interactive-style")>(
+    "@platform/ui/constants/toast-interactive-style",
+  )),
   Badge: ({ label }: { label: string }) => <span data-testid="badge">{label}</span>,
   Button: ({ children, onClick, disabled }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean }) => (
     <button onClick={onClick} disabled={disabled}>{children}</button>
