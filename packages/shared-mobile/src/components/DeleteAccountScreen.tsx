@@ -1,5 +1,5 @@
 import { type ComponentRef, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text, type TextInput, View } from "react-native";
+import { ScrollView, Text, type TextInput, View } from "react-native";
 import { fetchDevices, requestDeleteAccount } from "../auth/mobileAuthApi";
 import { useSecondFactorCode } from "../hooks/useSecondFactorCode";
 import { useSession } from "../hooks/useSession";
@@ -110,8 +110,9 @@ export default function DeleteAccountScreen({ warning }: { warning: string }) {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
       <ScrollView
+        automaticallyAdjustKeyboardInsets
         contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
@@ -174,6 +175,6 @@ export default function DeleteAccountScreen({ warning }: { warning: string }) {
           </LoadingButton>
         )}
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }

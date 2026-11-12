@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, type ScrollViewInstance, Text } from "react-native";
+import { Modal, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
 import { useTheme } from "../theme/useTheme";
 import type { FormSheetProps } from "../types/FormSheetProps";
 import Banner from "./Banner";
@@ -16,8 +16,9 @@ export default function FormSheet({ title, isOpen, onRequestClose, failure = nul
 
   return (
     <Modal animationType="slide" onRequestClose={onRequestClose} presentationStyle="pageSheet" visible={isOpen}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
         <ScrollView
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
@@ -29,7 +30,7 @@ export default function FormSheet({ title, isOpen, onRequestClose, failure = nul
           {failure ? <Banner message={failure} /> : null}
           {children}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
