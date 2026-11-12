@@ -8,13 +8,14 @@ import RetryPrompt from "./RetryPrompt";
 import TutorBubble from "./TutorBubble";
 
 /** One exchange: what the learner wrote, the tutor's reply, then any corrections. */
-export default function TranscriptItem({ entry, languageName, showRetryPrompt, busy, onReplay, onTryRetry, onSkipRetry }: TranscriptItemProps) {
+export default function TranscriptItem({ entry, languageName, showRetryPrompt, busy, canReplay, onReplay, onTryRetry, onSkipRetry }: TranscriptItemProps) {
   const { colors, spacing, fontSize } = useTheme();
   return (
     <View style={{ gap: spacing.sm }}>
       <LearnerBubble text={entry.learnerText} />
       {entry.replyText ? (
         <TutorBubble
+          canReplay={canReplay}
           onReplay={() => onReplay(entry.replyText, false)}
           onReplaySlow={() => onReplay(entry.replyText, true)}
           partial={entry.status === "partial" || entry.status === "failed"}

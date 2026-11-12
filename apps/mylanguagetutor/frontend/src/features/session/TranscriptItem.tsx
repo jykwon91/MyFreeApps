@@ -9,6 +9,8 @@ interface TranscriptItemProps {
   entry: TranscriptEntry;
   languageName: string;
   canSpeak: boolean;
+  /** False while the microphone is open: the tutor's voice would be heard as the answer. */
+  canReplay: boolean;
   /** Only the latest turn offers "say it again". */
   showRetryPrompt: boolean;
   busy: boolean;
@@ -22,6 +24,7 @@ export default function TranscriptItem({
   entry,
   languageName,
   canSpeak,
+  canReplay,
   showRetryPrompt,
   busy,
   onReplay,
@@ -37,6 +40,7 @@ export default function TranscriptItem({
           translation={entry.translation}
           partial={entry.status === "partial" || entry.status === "failed"}
           canSpeak={canSpeak}
+          canReplay={canReplay}
           onReplay={() => onReplay(entry.replyText, false)}
           onReplaySlow={() => onReplay(entry.replyText, true)}
         />

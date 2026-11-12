@@ -1,10 +1,12 @@
+import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 import { VOICE_COPY } from "@mylanguagetutor/api-client/constants/voiceCopy";
 import { practicePath } from "@mylanguagetutor/api-client/utils/practicePath";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { router } from "expo-router";
 import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
 import { VOICE_PRIVACY_ACK_STORAGE_ITEM } from "@mylanguagetutor/api-client/constants/voicePrivacyAck";
-import { moveApp } from "../test-support/conversation";
+import { finish, moveApp, serverWrites } from "../test-support/conversation";
+import { finishSpeaking } from "../test-support/fakeSpeech";
 import {
   audioSessionReleases,
   beginRecording,
@@ -130,28 +132,40 @@ describe("the phone starting late", () => {
     expect(sent.map((request) => request.text)).toEqual(["Hola"]);
   });
 
-  it("stops listening when the learner taps stop after the phone failed to start without ending", async () => {
+  it("stops listening at once when the phone fails to start without ending, and lets the reply be replayed", async () => {
     installRecognizer({ startsLate: true });
-    const { sent } = await openCafeConversation();
+    const { sent, streams } = await openCafeConversation();
     await tapWithLateStart();
-    await phone(() => failToStart("audio-capture"));
-    expect(micButton(VOICE_COPY.micLabels.listening)).toBeTruthy();
+    await phone(() => beginRecording());
+    await phone(() => goQuiet("Quiero un café"));
+    await serverWrites(() => streams[0].emit("reply.delta", { text: "¡Claro! ¿Algo más?" }));
+    await finish(streams[0]);
+    await act(async () => finishSpeaking());
+    const releasesBefore = audioSessionReleases.length;
 
-    await fireEvent.press(micButton(VOICE_COPY.micLabels.listening));
+    await fireEvent.press(micButton(VOICE_COPY.micLabels.idle));
+    await waitFor(() => expect(started).toHaveLength(2));
+    expect(screen.getByRole("button", { name: PRACTICE_COPY.replay }).props.accessibilityState).toMatchObject({ disabled: true });
+
+    await phone(() => failToStart("audio-capture"));
     expect(micButton(VOICE_COPY.micLabels.idle)).toBeTruthy();
     expect(screen.getByText(VOICE_COPY.unavailable)).toBeTruthy();
-    expect(audioSessionReleases).toEqual([false]);
+    expect(screen.getByRole("button", { name: PRACTICE_COPY.replay }).props.accessibilityState).toMatchObject({ disabled: false });
+    expect(screen.getByRole("button", { name: PRACTICE_COPY.replaySlow }).props.accessibilityState).toMatchObject({ disabled: false });
+    expect(audioSessionReleases.slice(releasesBefore)).toEqual([false]);
 
+    // The end that may follow finds no attempt: nothing is released twice or sent.
     await phone(() => strayEnd());
-    expect(audioSessionReleases).toEqual([false]);
-    expect(sent).toHaveLength(0);
+    expect(audioSessionReleases.slice(releasesBefore)).toEqual([false]);
+    expect(sent).toHaveLength(1);
   });
 
-  it("stops listening when the app goes to the background after the phone failed to start without ending", async () => {
+  it("is idle after the phone failed to start without ending, so going to the background changes nothing", async () => {
     installRecognizer({ startsLate: true });
     await openCafeConversation();
     await tapWithLateStart();
     await phone(() => failToStart("audio-capture"));
+    expect(micButton(VOICE_COPY.micLabels.idle)).toBeTruthy();
 
     await moveApp("background");
     await moveApp("active");

@@ -96,7 +96,9 @@ burst limiter, 503 `tutor_unavailable` (global cap, kill switch, or no key).
   (Firefox) get labelled typed practice.
 - **Speaking.** Tap to talk on both platforms: one utterance (`continuous`
   off, interim results on), sent once the learner goes quiet; tapping the mic
-  while the tutor speaks stops its voice first (barge-in). The api-client's
+  while the tutor speaks stops its voice first (barge-in), and Replay / Slow are disabled
+  while listening (`utils/canReplay`, exposed as `useVoiceInput().canReplay`) so the tutor's voice
+  is never heard as the learner's answer. The api-client's
   `hooks/useVoiceInput` owns the mode, phase and which composer shows
   (`utils/composerView`), with the shared copy in `constants/voiceCopy` and the
   error mapping in `utils/recognitionFailure`; each app only wraps its

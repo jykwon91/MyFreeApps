@@ -86,6 +86,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
             entries={session.entries}
             languageName={language.display_name}
             canSpeak={synthesis.supported}
+            canReplay={voice.canReplay}
             waiting={session.requestPhase === "waiting"}
             busy={busy}
             onReplay={replay}

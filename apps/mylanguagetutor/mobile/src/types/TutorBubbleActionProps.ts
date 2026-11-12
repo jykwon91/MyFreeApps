@@ -4,5 +4,6 @@ export interface TutorBubbleActionProps {
   hint?: string;
   /** For a show/hide toggle. */
   expanded?: boolean;
+  disabled?: boolean;
   onPress: () => void;
 }

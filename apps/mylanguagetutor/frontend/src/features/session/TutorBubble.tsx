@@ -10,12 +10,14 @@ interface TutorBubbleProps {
   partial: boolean;
   /** No text-to-speech in this browser: hide the replay controls. */
   canSpeak: boolean;
+  /** False while the microphone is open: the buttons stay, disabled, and say why. */
+  canReplay: boolean;
   onReplay: () => void;
   onReplaySlow: () => void;
 }
 
 const ICON_BUTTON =
-  "inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground";
+  "inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-muted-foreground";
 
 /**
  * One tutor reply with replay (normal and slow -- a genuinely lower speaking
@@ -26,12 +28,14 @@ export default function TutorBubble({
   translation,
   partial,
   canSpeak,
+  canReplay,
   onReplay,
   onReplaySlow,
 }: TutorBubbleProps) {
   const [showTranslation, setShowTranslation] = useState(false);
   const replayHintId = useId();
   const replaySlowHintId = useId();
+  const unavailableHintId = useId();
   return (
     <div className="flex justify-start">
       <div className="max-w-[85%] space-y-1">
@@ -45,19 +49,24 @@ export default function TutorBubble({
         <div className="flex flex-wrap items-center">
           {canSpeak && (
             <>
-              <button type="button" onClick={onReplay} className={ICON_BUTTON} aria-describedby={replayHintId}>
+              <button type="button" onClick={onReplay} disabled={!canReplay} className={ICON_BUTTON} aria-describedby={canReplay ? replayHintId : unavailableHintId}>
                 <Volume2 className="h-4 w-4" aria-hidden="true" />
                 <span>{PRACTICE_COPY.replay}</span>
               </button>
-              <span id={replayHintId} className="sr-only">
+              <span id={replayHintId} hidden>
                 {PRACTICE_COPY.replayHint}
               </span>
-              <button type="button" onClick={onReplaySlow} className={ICON_BUTTON} aria-describedby={replaySlowHintId}>
+              <button type="button" onClick={onReplaySlow} disabled={!canReplay} className={ICON_BUTTON} aria-describedby={canReplay ? replaySlowHintId : unavailableHintId}>
                 <Turtle className="h-4 w-4" aria-hidden="true" />
                 <span>{PRACTICE_COPY.replaySlow}</span>
               </button>
-              <span id={replaySlowHintId} className="sr-only">
+              <span id={replaySlowHintId} hidden>
                 {PRACTICE_COPY.replaySlowHint}
+              </span>
+              {/* Fixed text, hidden: the transcript is a live region, and a hint that changed would be read aloud
+                  into the open microphone. The buttons only switch which hint describes them. */}
+              <span id={unavailableHintId} hidden>
+                {PRACTICE_COPY.replayUnavailableHint}
               </span>
             </>
           )}

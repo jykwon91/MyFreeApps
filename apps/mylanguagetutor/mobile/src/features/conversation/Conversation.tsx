@@ -126,6 +126,7 @@ export default function Conversation({ language, scenario, level }: Conversation
         ) : (
           <Transcript
             busy={busy}
+            canReplay={voice.canReplay}
             entries={session.entries}
             languageName={language.display_name}
             onReplay={(text, slow) => synthesis.speakAll(text, replayRate(slow))}

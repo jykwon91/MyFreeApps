@@ -7,7 +7,7 @@ describe("TutorBubble", () => {
     const onReplay = vi.fn();
     const onReplaySlow = vi.fn();
     render(
-      <TutorBubble text="¡Hola!" translation={null} partial={false} canSpeak onReplay={onReplay} onReplaySlow={onReplaySlow} />,
+      <TutorBubble text="¡Hola!" translation={null} partial={false} canSpeak canReplay onReplay={onReplay} onReplaySlow={onReplaySlow} />,
     );
 
     const replay = screen.getByRole("button", { name: "Replay" });
@@ -22,7 +22,27 @@ describe("TutorBubble", () => {
   });
 
   it("has no replay buttons when the browser can't speak", () => {
-    render(<TutorBubble text="¡Hola!" translation={null} partial={false} canSpeak={false} onReplay={vi.fn()} onReplaySlow={vi.fn()} />);
+    render(<TutorBubble text="¡Hola!" translation={null} partial={false} canSpeak={false} canReplay onReplay={vi.fn()} onReplaySlow={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "Replay" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the replay buttons but disables them, saying why, while the microphone is listening", () => {
+    const onReplay = vi.fn();
+    const onReplaySlow = vi.fn();
+    render(
+      <TutorBubble text="¡Hola!" translation={null} partial={false} canSpeak canReplay={false} onReplay={onReplay} onReplaySlow={onReplaySlow} />,
+    );
+
+    const replay = screen.getByRole("button", { name: "Replay" });
+    const slow = screen.getByRole("button", { name: "Slow" });
+    expect(replay).toBeDisabled();
+    expect(slow).toBeDisabled();
+    expect(replay).toHaveAccessibleDescription("Unavailable while the microphone is listening");
+    expect(slow).toHaveAccessibleDescription("Unavailable while the microphone is listening");
+
+    fireEvent.click(replay);
+    fireEvent.click(slow);
+    expect(onReplay).not.toHaveBeenCalled();
+    expect(onReplaySlow).not.toHaveBeenCalled();
   });
 });
