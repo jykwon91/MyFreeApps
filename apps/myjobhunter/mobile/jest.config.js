@@ -7,7 +7,10 @@ const ES_MODULE_PACKAGES = "(?:react-redux|@reduxjs/toolkit|immer|reselect|redux
 module.exports = {
   preset: "jest-expo",
   setupFiles: ["<rootDir>/../../../packages/shared-mobile/jest/animationFrame.js"],
-  setupFilesAfterEnv: ["<rootDir>/../../../packages/shared-mobile/test-support/flushTimersAfterEach.ts"],
+  setupFilesAfterEnv: [
+    "<rootDir>/../../../packages/shared-mobile/test-support/flushTimersAfterEach.ts",
+    "<rootDir>/../../../packages/shared-mobile/test-support/resetStoresAfterAll.ts",
+  ],
   // The preset turns this on, which would pass a project whose tests all went missing.
   passWithNoTests: false,
   // The first test in each file also pays for loading React Native, which is slow on CI.
