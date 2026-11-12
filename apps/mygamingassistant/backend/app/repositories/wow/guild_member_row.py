@@ -12,6 +12,13 @@ class GuildMemberRow(NamedTuple):
     class_id: int
     rank: int | None
     fetched_at: datetime
-    # From the member's newest daily row; None when it has none.
+    # From the member's newest daily row; None when it has none (or Blizzard sent none).
     level: int | None
     item_level: int | None
+    honorable_kills: int | None
+    killing_blows: int | None
+    deaths_from_players: int | None
+    total_kills: int | None
+    total_deaths: int | None
+    dungeons_done: int | None
+    exalted_reputations: int | None

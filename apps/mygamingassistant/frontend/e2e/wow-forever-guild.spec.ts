@@ -1,7 +1,8 @@
 /**
  * WoW Forever guild page (/wow-forever/guild/:slug) — E2E, network-stubbed.
  *
- *   - the guild badge on a character's sheet opens the guild page
+ *   - the guild badge on a character's sheet opens the guild page, marking that character
+ *   - leaderboards: pick a board, ties share a rank, the board lives in the URL
  *   - members by rank; a name opens that member's character page
  *   - search, class filter and column sort, kept in the URL across Back
  *   - nothing matches → Clear filters brings everyone back
@@ -31,6 +32,14 @@ function member(slug: string, name: string, surname: string, className: string, 
     class_name: className,
     level,
     item_level: itemLevel,
+    honorable_kills: null,
+    killing_blows: null,
+    deaths_from_players: null,
+    total_kills: null,
+    total_deaths: null,
+    dungeons_done: null,
+    exalted_reputations: null,
+    professions: [] as { id: number; skill: number; max_skill: number }[],
     rank,
     refreshed_at: new Date(Date.now() - 3_600_000).toISOString(),
   };
@@ -46,9 +55,10 @@ function guild() {
     refresh_failed: false,
     gone: false,
     members: [
-      member("jason-kwon", "Jason", "Kwon", "Warlock", 37, 28, 0),
-      member("big-sue", "Big", "Sue", "Warrior", 60, null, 1),
-      member("tiny-john", "Tiny", "John", "Mage", 12, 8, 3),
+      { ...member("jason-kwon", "Jason", "Kwon", "Warlock", 37, 28, 0), honorable_kills: 40,
+        professions: [{ id: 197, skill: 148, max_skill: 225 }] },
+      { ...member("big-sue", "Big", "Sue", "Warrior", 60, null, 1), honorable_kills: 40 },
+      { ...member("tiny-john", "Tiny", "John", "Mage", 12, 8, 3), honorable_kills: 112 },
     ],
   };
 }
@@ -82,9 +92,13 @@ test("the guild badge opens the guild page, and a member's name opens their char
   await stubAll(page);
   await page.goto("/wow-forever/character/jason-kwon");
   await page.getByRole("link", { name: /Guild TopDeadCenter: see its members/ }).click();
-  await expect(page).toHaveURL(/\/wow-forever\/guild\/topdeadcenter$/);
+  await expect(page).toHaveURL(/\/wow-forever\/guild\/topdeadcenter\?me=jason-kwon$/);
 
   await expect(page.getByRole("heading", { name: "<TopDeadCenter>" })).toBeVisible();
+  const levelBoard = page.getByRole("list", { name: "Level leaderboard" }).locator("li");
+  await expect(levelBoard).toHaveCount(3);
+  await expect(levelBoard.nth(1)).toContainText("Jason Kwon");
+  await expect(levelBoard.nth(1)).toContainText("You");
   await expect(page.getByText("3 of 4 members shown")).toBeVisible();
   await expect(page.getByText(/1 member has no profile from Blizzard/)).toBeVisible();
   await expect(memberNames(page)).toHaveText(["Jason Kwon", "Big Sue", "Tiny John"]);
@@ -139,6 +153,7 @@ test("skeleton while loading, then the member list in the same place", async ({ 
   await page.goto("/wow-forever/guild/topdeadcenter");
   const skeleton = page.getByTestId("guild-page-skeleton");
   await expect(skeleton).toBeVisible();
+  await expect(page.getByTestId("guild-leaderboard-skeleton")).toBeVisible();
   const skeletonBox = await skeleton.boundingBox();
 
   release();
@@ -148,6 +163,7 @@ test("skeleton while loading, then the member list in the same place", async ({ 
   const summaryBox = await summary.boundingBox();
   expect(Math.abs((summaryBox?.x ?? 0) - (skeletonBox?.x ?? 0))).toBeLessThan(2);
   await expect(memberNames(page)).toHaveCount(3);
+  await expect(page.getByRole("region", { name: "Leaderboards" })).toBeVisible();
 });
 
 test("375px phone layout: members as cards and nothing overflows", async ({ page }) => {
@@ -160,4 +176,29 @@ test("375px phone layout: members as cards and nothing overflows", async ({ page
   await expect(page.getByRole("table")).toBeHidden();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("leaderboards: pick a board, ties share a rank, and the board survives Back", async ({ page }) => {
+  await stubAll(page);
+  await page.goto("/wow-forever/guild/topdeadcenter");
+
+  await page.getByLabel("Rank members by").selectOption("honorable-kills");
+  await expect(page).toHaveURL(/board=honorable-kills/);
+  const rows = page.getByRole("list", { name: "Honorable kills leaderboard" }).locator("li");
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toContainText("Tiny John");
+  await expect(rows.nth(0)).toContainText("112");
+  // Big Sue and Jason Kwon tie on 40: both are 2nd, by name.
+  await expect(rows.nth(1)).toContainText(/^2.*Big Sue/);
+  await expect(rows.nth(2)).toContainText(/^2.*Jason Kwon/);
+
+  await page.getByLabel("Rank members by").selectOption("prof-tailoring");
+  const tailors = page.getByRole("list", { name: "Tailoring leaderboard" }).locator("li");
+  await expect(tailors).toHaveCount(1);
+  await expect(tailors.first()).toContainText("148 / 225");
+
+  await tailors.first().getByRole("link", { name: "Jason Kwon" }).click();
+  await expect(page).toHaveURL(/\/wow-forever\/character\/jason-kwon$/);
+  await page.goBack();
+  await expect(page.getByLabel("Rank members by")).toHaveValue("prof-tailoring");
 });

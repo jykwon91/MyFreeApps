@@ -17,7 +17,7 @@ from app.repositories.wow import guild_repo
 from app.services.wow.character import character_store_service
 from app.services.wow.character.character_mapper import to_character_response
 
-from wow_guild_fixtures import GUILD, NOW, OTHER_GUILD, make_fetch
+from wow_guild_fixtures import GUILD, NOW, OTHER_GUILD, make_fetch, professions_json
 
 
 @pytest.fixture(autouse=True)
@@ -77,6 +77,40 @@ async def test_level_and_item_level_come_from_the_newest_day_and_are_null_withou
 
     assert (members["jason-kwon"]["level"], members["jason-kwon"]["item_level"]) == (31, 33)
     assert (members["tiny-john"]["level"], members["tiny-john"]["item_level"]) == (None, None)
+
+
+async def test_each_member_carries_its_newest_days_leaderboard_numbers(client: AsyncClient, db: AsyncSession) -> None:
+    await character_store_service.record(make_fetch(), now=NOW, viewed=True)
+    jason = await _character(db, "jason-kwon")
+    db.add(WowCharacterDailyMetric(
+        character_id=jason.id, day=(NOW + timedelta(days=1)).date(), level=40, honorable_kills=12, killing_blows=7,
+        deaths_from_players=3, total_kills=900, total_deaths=0, dungeons_done=4, exalted_reputations=1,
+    ))
+    await db.flush()
+
+    member = (await client.get("/wow/guilds/topdeadcenter")).json()["members"][0]
+
+    assert {k: member[k] for k in (
+        "level", "honorable_kills", "killing_blows", "deaths_from_players", "total_kills", "total_deaths",
+        "dungeons_done", "exalted_reputations",
+    )} == {
+        "level": 40, "honorable_kills": 12, "killing_blows": 7, "deaths_from_players": 3, "total_kills": 900,
+        "total_deaths": 0, "dungeons_done": 4, "exalted_reputations": 1,
+    }
+
+
+async def test_professions_come_from_the_newest_day_that_has_them(client: AsyncClient, db: AsyncSession) -> None:
+    await character_store_service.record(make_fetch(professions=professions_json()), now=NOW, viewed=True)
+    await character_store_service.record(make_fetch("tiny-john", 2), now=NOW)
+    jason = await _character(db, "jason-kwon")
+    # A later day whose professions call failed: no skills, so yesterday's stand.
+    db.add(WowCharacterDailyMetric(character_id=jason.id, day=(NOW + timedelta(days=1)).date(), level=31))
+    await db.flush()
+
+    members = {m["slug"]: m for m in (await client.get("/wow/guilds/topdeadcenter")).json()["members"]}
+
+    assert members["jason-kwon"]["professions"] == [{"id": 197, "skill": 148, "max_skill": 225}]
+    assert members["tiny-john"]["professions"] == []
 
 
 async def test_a_gone_character_still_pointing_at_the_guild_is_left_out(client: AsyncClient, db: AsyncSession) -> None:

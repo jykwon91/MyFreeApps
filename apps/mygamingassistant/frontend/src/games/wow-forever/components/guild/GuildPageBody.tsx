@@ -1,4 +1,5 @@
 import { Button } from "@platform/ui";
+import GuildLeaderboards from "@/games/wow-forever/components/guild/GuildLeaderboards";
 import GuildMembersSection from "@/games/wow-forever/components/guild/GuildMembersSection";
 import GuildPageSkeleton from "@/games/wow-forever/components/guild/GuildPageSkeleton";
 import GuildRefreshNotice from "@/games/wow-forever/components/guild/GuildRefreshNotice";
@@ -40,7 +41,10 @@ export default function GuildPageBody({ guild, error, isFetching, onRetry }: Gui
         <GuildStateNotice state={GUILD_PAGE_STATES.collecting} onRetry={onRetry} retrying={isFetching} />
       ) : null}
       {guild.members.length > 0 ? (
-        <GuildMembersSection members={guild.members} rosterUpdatedAt={guild.roster_updated_at} />
+        <>
+          <GuildLeaderboards members={guild.members} />
+          <GuildMembersSection members={guild.members} rosterUpdatedAt={guild.roster_updated_at} />
+        </>
       ) : null}
     </>
   );

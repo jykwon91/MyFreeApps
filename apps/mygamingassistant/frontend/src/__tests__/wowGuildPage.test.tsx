@@ -1,11 +1,13 @@
 /**
- * The guild page (/wow-forever/guild/:slug): the member list's search, filters
- * and sort (kept in the URL), and the states that stand in for the list.
+ * The guild page (/wow-forever/guild/:slug): the leaderboards, the member
+ * list's search, filters and sort (kept in the URL), and the states that stand
+ * in for the list.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { GUILD_SEARCH_DEBOUNCE_MS, GUILD_SORT_KEYS } from "@/games/wow-forever/data/guild/guildConfig";
+import { boardStatus, findBoard, missingCount, rankBoard, topEntries } from "@/games/wow-forever/lib/guild/guildLeaderboards";
 import {
   classCounts,
   filterMembers,
@@ -34,6 +36,14 @@ function member(overrides: Partial<GuildMember>): GuildMember {
     class_name: "Warlock",
     level: 37,
     item_level: 30,
+    honorable_kills: null,
+    killing_blows: null,
+    deaths_from_players: null,
+    total_kills: null,
+    total_deaths: null,
+    dungeons_done: null,
+    exalted_reputations: null,
+    professions: [],
     rank: 0,
     refreshed_at: ROSTER_AT,
     ...overrides,
@@ -143,6 +153,75 @@ describe("guild member list logic", () => {
   });
 });
 
+function boardNames(name: string): string[] {
+  return within(screen.getByRole("list", { name }))
+    .getAllByRole("link")
+    .map((a) => a.textContent ?? "");
+}
+
+describe("guild leaderboard logic", () => {
+  const dungeons = findBoard("dungeons");
+
+  it("ranks best first, ties share a rank and read by name, and a missing number is left off, never 0", () => {
+    const members = [
+      member({ slug: "a-a", name: "Zed", surname: "A", dungeons_done: 4 }),
+      member({ slug: "b-b", name: "Amy", surname: "B", dungeons_done: 4 }),
+      member({ slug: "c-c", name: "Cat", surname: "C", dungeons_done: 7 }),
+      member({ slug: "d-d", name: "Dan", surname: "D", dungeons_done: 1 }),
+      member({ slug: "e-e", name: "Eve", surname: "E", dungeons_done: null }),
+    ];
+    const ranked = rankBoard(members, dungeons);
+    expect(ranked.map((e) => [e.member.name, e.rank, e.tied])).toEqual([
+      ["Cat", 1, false], ["Amy", 2, true], ["Zed", 2, true], ["Dan", 4, false],
+    ]);
+    expect(missingCount(members, dungeons, ranked.length)).toBe(1);
+  });
+
+  it("keeps everyone tied at the top-10 cut", () => {
+    const members = Array.from({ length: 12 }, (_, i) =>
+      member({ slug: `m-${i}`, name: `M${String(i).padStart(2, "0")}`, dungeons_done: i < 9 ? 20 - i : 5 }),
+    );
+    expect(topEntries(rankBoard(members, dungeons))).toHaveLength(12);
+  });
+
+  it("ranks fewest deaths lowest first among level 60s only, with 0 deaths a real first place", () => {
+    const board = findBoard("fewest-deaths");
+    const members = [
+      member({ slug: "alt-one", name: "Alt", level: 8, total_deaths: 0 }),
+      member({ slug: "max-one", name: "Max", level: 60, total_deaths: 40 }),
+      member({ slug: "zen-one", name: "Zen", level: 60, total_deaths: 0 }),
+    ];
+    expect(rankBoard(members, board).map((e) => e.member.name)).toEqual(["Zen", "Max"]);
+  });
+
+  it("ranks a profession by skill and shows it against the rank's cap; not learning it isn't missing data", () => {
+    const board = findBoard("prof-tailoring");
+    const members = [
+      member({ slug: "a-a", name: "Ann", professions: [{ id: 197, skill: 148, max_skill: 225 }] }),
+      member({ slug: "b-b", name: "Bob", professions: [{ id: 171, skill: 300, max_skill: 300 }] }),
+    ];
+    const ranked = rankBoard(members, board);
+    expect(ranked.map((e) => [e.member.name, e.display])).toEqual([["Ann", "148 / 225"]]);
+    expect(missingCount(members, board, ranked.length)).toBe(0);
+  });
+
+  it("cuts a huge tie (most of the guild at 60) to the first 10", () => {
+    const members = Array.from({ length: 30 }, (_, i) => member({ slug: `m-${i}`, name: `M${String(i).padStart(2, "0")}`, level: 60 }));
+    const top = topEntries(rankBoard(members, findBoard("level")));
+    expect(top.map((e) => e.member.name)).toEqual(Array.from({ length: 10 }, (_, i) => `M${String(i).padStart(2, "0")}`));
+  });
+
+  it("says what the board shows above it", () => {
+    expect(boardStatus(findBoard("level"), 10, 31, 12)).toBe("Level: 10 of 31 shown · 12 members at 60");
+    expect(boardStatus(findBoard("fewest-deaths"), 0, 0, 0)).toBe("Fewest deaths (level 60): nobody yet · level 60 characters only");
+  });
+
+  it("falls back to the level board for a missing or unknown board", () => {
+    expect(findBoard(null).id).toBe("level");
+    expect(findBoard("nope").id).toBe("level");
+  });
+});
+
 describe("guild page", () => {
   it("asks for the lowercased slug and lists members by rank with links to their characters", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
@@ -237,5 +316,43 @@ describe("guild page", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(/Couldn't load this guild/);
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it("shows the level board by default and switches boards from the picker, keeping the member filters", () => {
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    renderAt("/wow-forever/guild/topdeadcenter?class=Warlock");
+    expect(boardNames("Level leaderboard")).toEqual(["Big Sue", "Jason Kwon", "Tiny John"]);
+    expect(screen.getByText(/1 member has no number for this yet/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Rank members by"), { target: { value: "dungeons" } });
+    expect(screen.getByText(/Nobody in the guild has a number for Dungeons cleared yet/)).toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent("?class=Warlock&board=dungeons");
+  });
+
+  it("marks the viewer's character and pins it under the top 10 when it ranks lower", () => {
+    const many = Array.from({ length: 11 }, (_, i) =>
+      member({ slug: `m-${i}`, name: `M${String(i).padStart(2, "0")}`, surname: "X", level: 60 - i }),
+    );
+    mockQuery.mockReturnValue(query({ data: { ...GUILD, members: [...many, member({ level: 2 })] } }));
+    renderAt("/wow-forever/guild/topdeadcenter?me=Jason-Kwon");
+    expect(boardNames("Level leaderboard")).toHaveLength(10);
+    const pinned = screen.getByRole("list", { name: "Your character" });
+    expect(within(pinned).getByText("12")).toBeInTheDocument();
+    expect(within(pinned).getByText("You")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Show all 12" }));
+    expect(boardNames("Level leaderboard")).toHaveLength(12);
+    expect(screen.queryByRole("list", { name: "Your character" })).toBeNull();
+  });
+
+  it("says when the viewer's character isn't on the board", () => {
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    renderAt("/wow-forever/guild/topdeadcenter?board=fewest-deaths&me=jason-kwon");
+    expect(screen.getByText(/Your character isn't on this board/)).toBeInTheDocument();
+  });
+
+  it("changing a member filter keeps the board in the URL", () => {
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    renderAt("/wow-forever/guild/topdeadcenter?board=exalted&me=jason-kwon");
+    fireEvent.change(screen.getByLabelText("Class"), { target: { value: "Mage" } });
+    expect(screen.getByTestId("location")).toHaveTextContent("?board=exalted&me=jason-kwon&class=Mage");
   });
 });
