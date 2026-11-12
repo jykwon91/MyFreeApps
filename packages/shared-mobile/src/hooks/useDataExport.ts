@@ -15,7 +15,7 @@ import { useToast } from "./useToast";
  * request that renews it first.
  */
 export function useDataExport(
-  { apiBaseUrl, session, filePrefix }: DataExportSource,
+  { apiBaseUrl, session, filePrefix, headers }: DataExportSource,
   renewSession: () => Promise<unknown>,
 ): () => Promise<void> {
   const { showToast } = useToast();
@@ -30,7 +30,7 @@ export function useDataExport(
       directory.create({ idempotent: true, intermediates: true });
       const destination = new File(directory, dataExportFileName(filePrefix, new Date()));
       await shareDownloadedFile(`${apiBaseUrl}${DATA_EXPORT_PATH}`, destination, {
-        headers: bearerHeader(session),
+        headers: headers ? headers() : bearerHeader(session),
         share: DATA_EXPORT_SHARE,
       });
       // After the sheet closes: expo-sharing can't tell a share from a cancel, so this reports the download.

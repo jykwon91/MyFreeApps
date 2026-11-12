@@ -8,7 +8,7 @@ import SectionError from "./SectionError";
 import SettingsCard from "./SettingsCard";
 
 /** The name shown in the profile and on exported data. */
-export default function DisplayNameSection({ description, user, hasFailed, onRetry }: DisplayNameSectionProps) {
+export default function DisplayNameSection({ description, source, onRetry }: DisplayNameSectionProps) {
   const { colors, fontSize } = useTheme();
   return (
     <SettingsCard>
@@ -16,9 +16,9 @@ export default function DisplayNameSection({ description, user, hasFailed, onRet
         {MESSAGES.displayNameHeading}
       </Text>
       <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{description}</Text>
-      {user ? (
-        <DisplayNameForm initialName={user.display_name} key={user.id} />
-      ) : hasFailed ? (
+      {source.account ? (
+        <DisplayNameForm initialName={source.account.name} key={source.account.accountId} source={source} />
+      ) : source.hasFailed ? (
         <SectionError message={MESSAGES.displayNameLoadFailed} onRetry={onRetry} retryLabel={MESSAGES.tryAgain} />
       ) : (
         <DisplayNameSkeleton />

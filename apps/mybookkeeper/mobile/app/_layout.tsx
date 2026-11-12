@@ -1,4 +1,4 @@
-import { SessionProvider } from "@platform/mobile";
+import { clearDataExportFiles, SessionProvider } from "@platform/mobile";
 import { StatusBar } from "expo-status-bar";
 import { Provider } from "react-redux";
 import RootStack from "../src/features/account/RootStack";
@@ -12,6 +12,7 @@ export default function RootLayout() {
   useEffect(() => {
     clearHeldFiles();
     clearDocumentFiles();
+    clearDataExportFiles();
   }, []);
 
   return (

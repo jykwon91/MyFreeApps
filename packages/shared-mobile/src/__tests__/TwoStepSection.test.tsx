@@ -3,8 +3,10 @@ import { Alert } from "react-native";
 import { fetchTwoFactorEnabled } from "../auth/mobileAuthApi";
 import { requestTwoStepDisable } from "../auth/twoStepApi";
 import ToastProvider from "../components/ToastProvider";
-import TwoStepScreen from "../components/TwoStepScreen";
+import TwoStepSection from "../components/TwoStepSection";
 import { TWO_STEP_MESSAGES as MESSAGES } from "../constants/twoStep";
+import { useTwoStepStatus } from "../hooks/useTwoStepStatus";
+import type { ConfirmOwner } from "../types/ConfirmOwner";
 import type { TwoStepDisableResult } from "../types/TwoStepDisableResult";
 
 jest.mock("../auth/mobileAuthApi");
@@ -18,6 +20,12 @@ const status = jest.mocked(fetchTwoFactorEnabled);
 const disable = jest.mocked(requestTwoStepDisable);
 const OWNER = { confirmed: true, problem: null };
 
+/** The section with the status a Security screen holds for it. */
+function Section({ confirmOwner, onTurnOn, reloadSignal }: { confirmOwner: ConfirmOwner; onTurnOn: () => void; reloadSignal?: number }) {
+  const status = useTwoStepStatus(reloadSignal);
+  return <TwoStepSection confirmOwner={confirmOwner} onTurnOn={onTurnOn} status={status} whatItProtects="your books" />;
+}
+
 function serverFailure(httpStatus: number) {
   return Object.assign(new Error("refused"), { isAxiosError: true, response: { status: httpStatus } });
 }
@@ -25,7 +33,7 @@ function serverFailure(httpStatus: number) {
 function open(confirmOwner = jest.fn().mockResolvedValue(OWNER), onTurnOn = jest.fn()) {
   return render(
     <ToastProvider bottomOffset={0}>
-      <TwoStepScreen confirmOwner={confirmOwner} onTurnOn={onTurnOn} webBaseUrl="https://x" webPath="/security" whatItProtects="your books" />
+      <Section confirmOwner={confirmOwner} onTurnOn={onTurnOn} />
     </ToastProvider>,
   );
 }
@@ -80,13 +88,7 @@ it("ignores an older answer that arrives after a newer one", async () => {
   const { rerender } = await open();
   await rerender(
     <ToastProvider bottomOffset={0}>
-      <TwoStepScreen
-        confirmOwner={jest.fn()}
-        onTurnOn={jest.fn()}
-        reloadSignal={1}
-        webBaseUrl="https://x" webPath="/security"
-        whatItProtects="your books"
-      />
+      <Section confirmOwner={jest.fn()} onTurnOn={jest.fn()} reloadSignal={1} />
     </ToastProvider>,
   );
   expect(await screen.findByText(MESSAGES.onBody)).toBeTruthy();
@@ -98,11 +100,9 @@ it("ignores an older answer that arrives after a newer one", async () => {
 describe("off", () => {
   beforeEach(() => status.mockResolvedValue(false));
 
-  it("explains it and links to the website", async () => {
+  it("explains it", async () => {
     await open();
     expect(await screen.findByText(MESSAGES.offBody("your books"))).toBeTruthy();
-    expect(screen.getByText(MESSAGES.websiteNote)).toBeTruthy();
-    expect(screen.getByRole("link", { name: MESSAGES.openWebsite })).toBeTruthy();
   });
 
   it("asks it's the owner before going on", async () => {
@@ -199,13 +199,7 @@ describe("turning off", () => {
 
     await view.rerender(
       <ToastProvider bottomOffset={0}>
-        <TwoStepScreen
-          confirmOwner={jest.fn()}
-          onTurnOn={jest.fn()}
-          reloadSignal={1}
-          webBaseUrl="https://x" webPath="/security"
-          whatItProtects="your books"
-        />
+        <Section confirmOwner={jest.fn()} onTurnOn={jest.fn()} reloadSignal={1} />
       </ToastProvider>,
     );
     await waitFor(() => expect(screen.queryByText(MESSAGES.turnOffUnsure)).toBeNull());

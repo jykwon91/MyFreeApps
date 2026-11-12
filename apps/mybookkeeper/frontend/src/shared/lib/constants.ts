@@ -201,6 +201,6 @@ export const POLLING_OPTIONS = { pollingInterval: 3000 } as const;
 
 export const EMPTY_QUEUE: readonly EmailQueueItem[] = [];
 
-export const USER_NAME_INPUT_MAX_LENGTH = 120;
+export { USER_NAME_INPUT_MAX_LENGTH } from "@mybookkeeper/api-client/constants/userName";
 
 export { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES } from "@mybookkeeper/api-client/constants/transactionCategories";
