@@ -1,25 +1,27 @@
-import type { ReactNode } from "react";
+// @vitest-environment jsdom
+// renderHook needs a DOM; the package's own code still runs DOM-free in every other test.
+import { createElement, type ReactNode } from "react";
 import { Provider } from "react-redux";
+import { configureStore } from "@reduxjs/toolkit";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { store } from "@/lib/store";
-import { TurnRequestError } from "@mylanguagetutor/api-client/errors/TurnRequestError";
-import { usePracticeSession } from "@/features/session/usePracticeSession";
-import type { StreamTurnOptions } from "@/features/tutor-stream/streamTurn";
-import type { TurnStreamEvent } from "@mylanguagetutor/api-client/types/tutor/turn-stream-event";
+import { TurnRequestError } from "../errors/TurnRequestError";
+import { usePracticeSession } from "../hooks/usePracticeSession";
+import type { StreamTurnFn } from "../types/stream/stream-turn-fn";
+import type { StreamTurnOptions } from "../types/stream/stream-turn-options";
+import type { TurnStreamEvent } from "../types/tutor/turn-stream-event";
 
 const createSession = vi.fn();
-const streamTurn = vi.fn<(options: StreamTurnOptions) => Promise<void>>();
+const streamTurn = vi.fn<StreamTurnFn>();
 
-vi.mock("@mylanguagetutor/api-client/store/sessionsApi", () => ({
+vi.mock("../store/sessionsApi", () => ({
   useCreateSessionMutation: () => [createSession],
 }));
-vi.mock("@/features/tutor-stream/streamTurn", () => ({
-  streamTurn: (options: StreamTurnOptions) => streamTurn(options),
-}));
+
+const store = configureStore({ reducer: () => ({}) });
 
 function wrapper({ children }: { children: ReactNode }) {
-  return <Provider store={store}>{children}</Provider>;
+  return createElement(Provider, { store, children });
 }
 
 function emitting(events: TurnStreamEvent[]) {
@@ -55,6 +57,7 @@ function setup() {
         ttsLocale: "es-MX",
         scenarioSlug: "cafe",
         level: "beginner",
+        streamTurn,
         speak,
         stopSpeaking,
       }),

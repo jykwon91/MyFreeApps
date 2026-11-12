@@ -11,7 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@platform/core": "*"
+    "@platform/core": "*",
+    "eventsource-parser": "^4.1.1"
   },
   "peerDependencies": {
     "@reduxjs/toolkit": "^2",
@@ -21,11 +22,14 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@reduxjs/toolkit": "^2.11.2",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "axios": "^1.20.0",
     "eslint": "^10.3.0",
+    "jsdom": "^30.0.1",
     "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "react-redux": "^9.2.0",
     "typescript": "^7.0.2",
     "typescript-eslint": "^8.59.2",

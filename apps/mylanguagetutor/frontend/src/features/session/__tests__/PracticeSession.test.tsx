@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PracticeSession from "@/features/session/PracticeSession";
 import CorrectionCard from "@/features/session/CorrectionCard";
-import type { PracticeSession as PracticeSessionState } from "@/features/session/usePracticeSession";
+import type { PracticeSession as PracticeSessionState } from "@mylanguagetutor/api-client/types/session/practice-session";
 import type { SpeechRecognitionControls } from "@/features/speech/useSpeechRecognition";
 import type { UsageToday } from "@mylanguagetutor/api-client/types/tutor/usage-today";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
@@ -16,7 +16,7 @@ let recognition: SpeechRecognitionControls;
 let sessionState: PracticeSessionState;
 let usage: UsageToday | undefined;
 
-vi.mock("@/features/session/usePracticeSession", () => ({
+vi.mock("@mylanguagetutor/api-client/hooks/usePracticeSession", () => ({
   usePracticeSession: () => sessionState,
 }));
 vi.mock("@/features/speech/useSpeechRecognition", () => ({

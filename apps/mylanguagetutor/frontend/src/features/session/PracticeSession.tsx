@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 import { useSpeechSynthesis, NORMAL_RATE, SLOW_RATE } from "@/features/speech/useSpeechSynthesis";
 import { useSpeechRecognition } from "@/features/speech/useSpeechRecognition";
-import { usePracticeSession } from "@/features/session/usePracticeSession";
+import { usePracticeSession } from "@mylanguagetutor/api-client/hooks/usePracticeSession";
+import { streamTurn } from "@/features/tutor-stream/streamTurn";
 import { voicePhase } from "@mylanguagetutor/api-client/utils/voicePhase";
 import { ackVoicePrivacy, hasAckedVoicePrivacy } from "@/features/session/privacyAck";
 import TranscriptList from "@/features/session/TranscriptList";
@@ -47,6 +48,7 @@ export default function PracticeSession({ language, scenario, level }: PracticeS
     ttsLocale: language.tts_locale,
     scenarioSlug: scenario.slug,
     level,
+    streamTurn,
     speak: synthesis.enqueue,
     stopSpeaking: synthesis.cancel,
   });
