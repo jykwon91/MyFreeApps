@@ -1,10 +1,12 @@
-import { MIN_TOUCH_TARGET, useTheme, useToneColor } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
-import { SECURITY_MESSAGES as MESSAGES } from "../../constants/security";
-import type { SecurityIntroProps } from "../../types/SecurityIntroProps";
+import { SECURITY_MESSAGES as MESSAGES } from "../constants/security";
+import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
+import { useTheme } from "../theme/useTheme";
+import { useToneColor } from "../theme/useToneColor";
+import type { SecurityIntroProps } from "../types/SecurityIntroProps";
 
 /** The website's note recommending two-step sign-in, which stays dismissed once dismissed. */
-export default function SecurityIntro({ onDismiss }: SecurityIntroProps) {
+export default function SecurityIntro({ message, onDismiss }: SecurityIntroProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
   const tone = useToneColor("info");
   const foreground = tone?.foreground ?? colors.foreground;
@@ -13,7 +15,7 @@ export default function SecurityIntro({ onDismiss }: SecurityIntroProps) {
       style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.md, borderRadius: radius.md, backgroundColor: tone?.background ?? colors.muted }}
       testID="security-intro"
     >
-      <Text style={{ flex: 1, fontSize: fontSize.sm, color: foreground }}>{MESSAGES.intro}</Text>
+      <Text style={{ flex: 1, fontSize: fontSize.sm, color: foreground }}>{message}</Text>
       <Pressable
         accessibilityLabel={MESSAGES.dismissIntro}
         accessibilityRole="button"

@@ -1,4 +1,4 @@
-import { textLength } from "./textLength";
+import { textLength } from "@platform/core/utils/textLength";
 
 /** Most characters in the part before the @ (RFC 5321). */
 const LOCAL_PART_MAX_LENGTH = 64;

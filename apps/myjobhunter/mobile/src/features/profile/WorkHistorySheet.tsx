@@ -1,7 +1,7 @@
 import { useCreateWorkHistoryMutation, useUpdateWorkHistoryMutation } from "@myjobhunter/api-client/store/workHistoryApi";
 import { WORK_HISTORY_COMPANY_MAX_LENGTH, WORK_HISTORY_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/profileFieldLimits";
 import type { WorkHistoryFormValues } from "@myjobhunter/api-client/types/work-history/work-history-form-values";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { workHistoryFormProblems } from "@myjobhunter/api-client/utils/workHistoryFormProblems";
 import { workHistoryFormValues } from "@myjobhunter/api-client/utils/workHistoryFormValues";
 import { workHistoryRequest } from "@myjobhunter/api-client/utils/workHistoryRequest";

@@ -1,4 +1,4 @@
-import { LoadMoreFooter, OptionSheet, PickerField, useTheme } from "@platform/mobile";
+import { LoadMoreFooter, OptionSheet, PickerField, SectionError, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
@@ -6,7 +6,6 @@ import { APPLICATION_SORTS } from "../../constants/applicationSorts";
 import { PAGED_LIST_MESSAGES } from "../../constants/pagedListMessages";
 import { COMPANY_APPLICATION_SORT_OPTIONS, COMPANY_APPLICATIONS_MESSAGES as MESSAGES } from "../../constants/companyApplications";
 import type { CompanyApplicationsSectionProps } from "../../types/CompanyApplicationsSectionProps";
-import SectionError from "../applicationDetail/SectionError";
 import SectionHeading from "../applicationDetail/SectionHeading";
 import CompanyApplicationRow from "./CompanyApplicationRow";
 import CompanyApplicationSkeletonRows from "./CompanyApplicationSkeletonRows";

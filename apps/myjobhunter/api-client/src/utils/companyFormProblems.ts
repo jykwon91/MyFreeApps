@@ -7,7 +7,7 @@ import {
 import { COMPANY_FORM_PROBLEMS as PROBLEMS } from "../constants/companyFormProblems";
 import type { CompanyFormProblems } from "../types/company/company-form-problems";
 import type { CompanyFormValues } from "../types/company/company-form-values";
-import { textLength } from "./textLength";
+import { textLength } from "@platform/core/utils/textLength";
 
 /**
  * What stops the add-company form saving, checked against what is sent (trimmed) and counted in

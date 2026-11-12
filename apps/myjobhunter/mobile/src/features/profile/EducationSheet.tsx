@@ -5,7 +5,7 @@ import {
 } from "@myjobhunter/api-client/constants/profileFieldLimits";
 import { useCreateEducationMutation, useUpdateEducationMutation } from "@myjobhunter/api-client/store/educationApi";
 import type { EducationFormValues } from "@myjobhunter/api-client/types/education/education-form-values";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { educationFormProblems } from "@myjobhunter/api-client/utils/educationFormProblems";
 import { educationFormValues } from "@myjobhunter/api-client/utils/educationFormValues";
 import { educationRequest } from "@myjobhunter/api-client/utils/educationRequest";

@@ -1,9 +1,8 @@
 import { useGetProfileQuery } from "@myjobhunter/api-client/store/profileApi";
 import { useListSkillsQuery } from "@myjobhunter/api-client/store/skillsApi";
-import { useOpenWebsite } from "@platform/mobile";
+import { useDismissal, useOpenWebsite } from "@platform/mobile";
 import { WEB_BASE_URL } from "../../constants/api";
 import { PROFILE_BANNER_DISMISSED_KEY, PROFILE_WEB_PATH } from "../../constants/profileBanner";
-import { useDismissal } from "../../hooks/useDismissal";
 import ProfileCompletenessBanner from "./ProfileCompletenessBanner";
 
 /**

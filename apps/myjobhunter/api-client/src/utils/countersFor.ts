@@ -1,6 +1,6 @@
 import type { CharacterCounters } from "../types/character-counters";
 import type { FieldLimits } from "../types/field-limits";
-import { characterCounter } from "./characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 
 /** The counters of the fields over or near their limit, counted on what is sent (trimmed). */
 export function countersFor<Values extends object>(

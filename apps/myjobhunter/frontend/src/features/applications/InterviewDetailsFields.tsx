@@ -15,9 +15,9 @@ import { INTERVIEW_TYPE_LABELS } from "@myjobhunter/api-client/constants/intervi
 import type { InterviewType } from "@myjobhunter/api-client/types/interview-type";
 import type { LogEventFormValues } from "@myjobhunter/api-client/types/log-event-form-values";
 import { isInterviewDurationValid } from "@myjobhunter/api-client/utils/isInterviewDurationValid";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { interviewerNamesProblem } from "@myjobhunter/api-client/utils/interviewerNamesProblem";
-import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 
 import { FieldFeedback, fieldFeedbackAria } from "@platform/ui";
 

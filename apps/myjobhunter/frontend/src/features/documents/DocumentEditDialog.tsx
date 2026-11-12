@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/documentFieldLimits";
-import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import DocumentTitleField from "./DocumentTitleField";
 import type { Document } from "@myjobhunter/api-client/types/document/document";
 import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";

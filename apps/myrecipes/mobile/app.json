@@ -16,6 +16,11 @@
       "package": "org.myfreeapps.myrecipes",
       "permissions": ["android.permission.SCHEDULE_EXACT_ALARM"]
     },
-    "plugins": ["expo-router", ["expo-notifications", { "enableRemoteNotifications": false }]]
+    "plugins": [
+      "expo-router",
+      "expo-sharing",
+      ["expo-notifications", { "enableRemoteNotifications": false }],
+      ["expo-local-authentication", { "faceIDPermission": "I use Face ID to confirm it's you before changing your sign-in security." }]
+    ]
   }
 }

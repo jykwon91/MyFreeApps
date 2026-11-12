@@ -1,10 +1,9 @@
 import jobAnalysisReducer from "@myjobhunter/api-client/store/jobAnalysisSlice";
 import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { baseApi } from "@platform/core/store/baseApi";
-import { assertSecureApiUrl, onAccountLeft, refetchOnForeground, resetCacheOnAccountChange } from "@platform/mobile";
+import { assertSecureApiUrl, clearDataExportFiles, onAccountLeft, refetchOnForeground, resetCacheOnAccountChange } from "@platform/mobile";
 import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
-import { clearDataExportFiles } from "./dataExportFiles";
 import { clearResumeExportFiles } from "./resumeExportFiles";
 import { writeResumeSessionId } from "./resumeSessionStore";
 import { session } from "./session";

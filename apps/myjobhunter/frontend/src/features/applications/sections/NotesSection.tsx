@@ -12,8 +12,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useUpdateApplicationMutation } from "@myjobhunter/api-client/store/applicationsApi";
 import { APPLICATION_NOTES_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
-import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import { characterCounter } from "@platform/core/utils/characterCounter";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { extractErrorMessage, FieldFeedback, fieldFeedbackAria } from "@platform/ui";
 import NotesSaveStatus from "./NotesSaveStatus";
 import type { NotesSaveState } from "./NotesSaveState";

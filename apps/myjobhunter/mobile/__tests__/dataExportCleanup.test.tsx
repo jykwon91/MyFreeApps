@@ -1,13 +1,13 @@
+import { clearDataExportFiles } from "@platform/mobile";
 import { fakeFiles, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { act, screen, waitFor } from "@testing-library/react-native";
-import { clearDataExportFiles } from "../src/lib/dataExportFiles";
 import { session } from "../src/lib/session";
-import { serve } from "../test-support/fakeServer";
+import { serve } from "@platform/mobile/test-support/fakeServer";
 import { renderApp } from "../test-support/renderApp";
-import { storeSession, tokens } from "../test-support/storedSession";
+import { storeSession, tokens } from "@platform/mobile/test-support/storedSession";
 
-jest.mock("expo-secure-store", () => jest.requireActual("../test-support/memorySecureStore"));
-jest.mock("expo-application", () => jest.requireActual("../test-support/fakeApplication"));
+jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
+jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));

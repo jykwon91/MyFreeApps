@@ -12,31 +12,12 @@ import { addApplicationFormProblems } from "../utils/addApplicationFormProblems"
 import { combineNotes } from "../utils/combineNotes";
 import { contactFormErrors } from "../utils/contactFormErrors";
 import { eventTextProblems } from "../utils/eventTextProblems";
-import { textLength } from "../utils/textLength";
-import { tooLongProblem } from "../utils/tooLongProblem";
+import { textLength } from "@platform/core/utils/textLength";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 
 // One emoji is two UTF-16 units but one code point, which is how the backend counts.
 const EMOJI = "😀";
 const EMPTY_ADD_APPLICATION_FORM: AddApplicationFormValues = { role_title: "", location: "", remote_type: "unknown", notes: "" };
-
-describe("tooLongProblem", () => {
-  it("is silent at the limit and says the limit, never the count", () => {
-    expect(tooLongProblem("a".repeat(200), 200)).toBeUndefined();
-    expect(tooLongProblem("a".repeat(236), 200)).toBe("Keep this to 200 characters or fewer.");
-  });
-
-  it("gives the same message whatever the over-limit length, so a screen reader isn't re-told it", () => {
-    expect(tooLongProblem("a".repeat(5100), 5000)).toBe("Keep this to 5,000 characters or fewer.");
-    expect(tooLongProblem("a".repeat(5101), 5000)).toBe(tooLongProblem("a".repeat(5100), 5000));
-  });
-
-  it("counts an emoji once, as the backend does", () => {
-    expect(textLength(EMOJI)).toBe(1);
-    expect(EMOJI.length).toBe(2);
-    expect(tooLongProblem(EMOJI.repeat(200), 200)).toBeUndefined();
-    expect(tooLongProblem(EMOJI.repeat(201), 200)).toBe("Keep this to 200 characters or fewer.");
-  });
-});
 
 describe("eventTextProblems", () => {
   const values = emptyFormValues();

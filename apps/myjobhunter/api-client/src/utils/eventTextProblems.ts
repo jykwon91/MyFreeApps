@@ -3,7 +3,7 @@ import { EVENT_NOTE_MAX_LENGTH } from "../constants/textFieldLimits";
 import type { EventTextProblems } from "../types/event-text-problems";
 import type { LogEventFormValues } from "../types/log-event-form-values";
 import { interviewerNamesProblem } from "./interviewerNamesProblem";
-import { tooLongProblem } from "./tooLongProblem";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 
 /**
  * The event note, the interview location and the interviewer names, checked as `logEventRequest` sends

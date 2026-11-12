@@ -1,6 +1,6 @@
 import { useListCompaniesQuery } from "@myjobhunter/api-client/store/companiesApi";
 import { COMPANY_NAME_MAX_LENGTH } from "@myjobhunter/api-client/constants/companyFieldLimits";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { companyNameProblem } from "@myjobhunter/api-client/utils/companyNameProblem";
 import { filterCompanies } from "@myjobhunter/api-client/utils/filterCompanies";
 import { findCompanyByName } from "@myjobhunter/api-client/utils/findCompanyByName";

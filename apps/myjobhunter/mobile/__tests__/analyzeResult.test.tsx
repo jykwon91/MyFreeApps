@@ -8,17 +8,17 @@ import { store } from "../src/lib/store";
 import { analysisRecord } from "../test-support/analysisRecord";
 import { analyzeRoutes } from "../test-support/analyzeRoutes";
 import { applicationRecord } from "../test-support/applicationRecord";
-import { serve } from "../test-support/fakeServer";
-import { storedItems } from "../test-support/memorySecureStore";
+import { serve } from "@platform/mobile/test-support/fakeServer";
+import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
 import { rememberAnalysis } from "../test-support/rememberAnalysis";
 import { renderApp } from "../test-support/renderApp";
-import { storeSession } from "../test-support/storedSession";
+import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { JobAnalysisVerdict } from "@myjobhunter/api-client/types/job-analysis/job-analysis-verdict";
-import type { FakeReply } from "../test-support/types/FakeReply";
-import type { FakeRoute } from "../test-support/types/FakeRoute";
+import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
+import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 
-jest.mock("expo-secure-store", () => jest.requireActual("../test-support/memorySecureStore"));
-jest.mock("expo-application", () => jest.requireActual("../test-support/fakeApplication"));
+jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
+jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 

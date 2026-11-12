@@ -9,7 +9,7 @@ import { useUpdateProfileMutation } from "@myjobhunter/api-client/store/profileA
 import type { JSearchFormValues } from "@myjobhunter/api-client/types/discovery/jsearch-form-values";
 import type { SavedSearchFormValues } from "@myjobhunter/api-client/types/discovery/saved-search-form-values";
 import { buildSavedSearchSummary } from "@myjobhunter/api-client/utils/buildSavedSearchSummary";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
 import { discoveryDefaultsFrom } from "@myjobhunter/api-client/utils/discoveryDefaultsFrom";
 import { discoverySourceLabel } from "@myjobhunter/api-client/utils/discoverySourceLabel";

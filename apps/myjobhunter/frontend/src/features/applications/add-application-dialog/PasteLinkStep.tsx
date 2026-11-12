@@ -10,7 +10,7 @@
  */
 import { useEffect, useRef } from "react";
 import { JOB_URL_MAX_LENGTH } from "@myjobhunter/api-client/constants/addApplicationForm";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { FieldFeedback, fieldFeedbackAria, LoadingButton } from "@platform/ui";
 import type { DialogInputMode } from "../useAddApplicationDialogState";
 

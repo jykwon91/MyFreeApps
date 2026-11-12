@@ -6,19 +6,19 @@ import { PROFILE_MESSAGES as PROFILE } from "../src/constants/profile";
 import { EDUCATION_MESSAGES as EDUCATION } from "../src/constants/profileEducation";
 import { WORK_HISTORY_MESSAGES as WORK } from "../src/constants/profileWorkHistory";
 import { store } from "../src/lib/store";
-import { alertButton } from "../test-support/alertButton";
+import { alertButton } from "@platform/mobile/test-support/alertButton";
 import { educationRecord } from "../test-support/educationRecord";
-import { serve } from "../test-support/fakeServer";
+import { serve } from "@platform/mobile/test-support/fakeServer";
 import { heldReplies } from "../test-support/heldReplies";
-import { storedItems } from "../test-support/memorySecureStore";
+import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
 import { NEW_IDS, profileRoutes } from "../test-support/profileRoutes";
 import { renderProfile } from "../test-support/renderProfile";
-import { storeSession } from "../test-support/storedSession";
-import type { SentRequest } from "../test-support/types/SentRequest";
+import { storeSession } from "@platform/mobile/test-support/storedSession";
+import type { SentRequest } from "@platform/mobile/test-support/types/SentRequest";
 import { workHistoryRecord } from "../test-support/workHistoryRecord";
 
-jest.mock("expo-secure-store", () => jest.requireActual("../test-support/memorySecureStore"));
-jest.mock("expo-application", () => jest.requireActual("../test-support/fakeApplication"));
+jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
+jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 jest.mock("@react-native-community/datetimepicker", () => {

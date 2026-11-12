@@ -1,6 +1,7 @@
-import { LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
-import type { SectionErrorProps } from "../../types/SectionErrorProps";
+import { useTheme } from "../theme/useTheme";
+import type { SectionErrorProps } from "../types/SectionErrorProps";
+import LoadingButton from "./LoadingButton";
 
 /** A section that couldn't load says so where its list would be, with a way to try again. */
 export default function SectionError({ message, retryLabel, onRetry }: SectionErrorProps) {

@@ -1,5 +1,5 @@
 import type { ApplicationEvent } from "@myjobhunter/api-client/types/application-event";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { LoadingButton, SectionError, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { APPLICATION_EVENT_MESSAGES as MESSAGES } from "../../constants/applicationEvents";
@@ -7,7 +7,6 @@ import type { EventsSectionProps } from "../../types/EventsSectionProps";
 import EditInterviewSheet from "./EditInterviewSheet";
 import EventCard from "./EventCard";
 import LogEventSheet from "./LogEventSheet";
-import SectionError from "./SectionError";
 import SectionHeading from "./SectionHeading";
 import SectionSkeletonCards from "./SectionSkeletonCards";
 

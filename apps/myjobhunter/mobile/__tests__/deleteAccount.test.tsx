@@ -1,11 +1,11 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { DELETE_ACCOUNT_WARNING } from "../src/constants/deleteAccount";
-import { serve } from "../test-support/fakeServer";
+import { serve } from "@platform/mobile/test-support/fakeServer";
 import { renderApp } from "../test-support/renderApp";
-import { ACCOUNT_EMAIL, storeSession, storedSession, tokens } from "../test-support/storedSession";
+import { ACCOUNT_EMAIL, storeSession, storedSession, tokens } from "@platform/mobile/test-support/storedSession";
 
-jest.mock("expo-secure-store", () => jest.requireActual("../test-support/memorySecureStore"));
-jest.mock("expo-application", () => jest.requireActual("../test-support/fakeApplication"));
+jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
+jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
 jest.mock("expo-device", () => ({ deviceName: "Test Phone", modelName: "iPhone" }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 

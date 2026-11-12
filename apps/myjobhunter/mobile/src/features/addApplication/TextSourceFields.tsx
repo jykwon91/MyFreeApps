@@ -1,5 +1,5 @@
 import { JD_TEXT_MAX_LENGTH } from "@myjobhunter/api-client/constants/addApplicationForm";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { FormField, LoadingButton, useTheme } from "@platform/mobile";
 import { ADD_APPLICATION_MESSAGES as MESSAGES, MULTILINE_MIN_HEIGHT } from "../../constants/addApplication";
 import type { TextSourceFieldsProps } from "../../types/TextSourceFieldsProps";

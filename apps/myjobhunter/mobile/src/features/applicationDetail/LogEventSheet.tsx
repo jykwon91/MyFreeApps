@@ -1,6 +1,6 @@
 import { EVENT_NOTE_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import { useLogApplicationEventMutation } from "@myjobhunter/api-client/store/applicationsApi";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { emptyFormValues } from "@myjobhunter/api-client/utils/interviewEventForm";
 import { logEventRequest } from "@myjobhunter/api-client/utils/logEventRequest";
 import { FormField, FormSheet, useToast } from "@platform/mobile";

@@ -1,6 +1,6 @@
 import { SCREENING_ANSWER_MAX_LENGTH } from "@myjobhunter/api-client/constants/profileFieldLimits";
 import { useCreateScreeningAnswerMutation, useUpdateScreeningAnswerMutation } from "@myjobhunter/api-client/store/screeningAnswersApi";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { isConflict } from "@myjobhunter/api-client/utils/isConflict";
 import { screeningAnswerProblem } from "@myjobhunter/api-client/utils/screeningAnswerProblem";
 import { screeningQuestionLabel } from "@myjobhunter/api-client/utils/screeningQuestionLabel";

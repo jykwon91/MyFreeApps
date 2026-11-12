@@ -1,8 +1,8 @@
-import { useTheme } from "@platform/mobile";
 import { View } from "react-native";
-import type { SettingsCardProps } from "../../types/SettingsCardProps";
+import { useTheme } from "../theme/useTheme";
+import type { SettingsCardProps } from "../types/SettingsCardProps";
 
-/** One of the Security screen's sections, boxed as the website boxes them. */
+/** One of a settings screen's sections, boxed as the website boxes them. */
 export default function SettingsCard({ children, testID }: SettingsCardProps) {
   const { colors, spacing, radius } = useTheme();
   return (

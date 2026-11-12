@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { readDismissed, writeDismissed } from "../lib/dismissalPrefs";
+import { readDismissed, writeDismissed } from "../utils/dismissalPrefs";
 import type { Dismissal } from "../types/Dismissal";
 
 /** Whether the banner kept under `key` was dismissed, kept on the phone as the website keeps it in the browser. */

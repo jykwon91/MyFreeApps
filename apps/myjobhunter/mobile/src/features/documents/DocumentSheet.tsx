@@ -2,9 +2,9 @@ import { DOCUMENT_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/doc
 import { DOCUMENT_KIND_OPTIONS } from "@myjobhunter/api-client/constants/documentKindOptions";
 import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@myjobhunter/api-client/store/documentsApi";
 import type { DocumentKind } from "@myjobhunter/api-client/types/document/document-kind";
-import { characterCounter } from "@myjobhunter/api-client/utils/characterCounter";
+import { characterCounter } from "@platform/core/utils/characterCounter";
 import { documentChangesRequest } from "@myjobhunter/api-client/utils/documentChangesRequest";
-import { tooLongProblem } from "@myjobhunter/api-client/utils/tooLongProblem";
+import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { FormField, FormSheet, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";

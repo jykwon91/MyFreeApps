@@ -6,7 +6,7 @@ import {
 import { APPLICATION_NOTES_MAX_LENGTH } from "../constants/textFieldLimits";
 import type { AddApplicationFormProblems } from "../types/application/add-application-form-problems";
 import type { AddApplicationFormValues } from "../types/application/add-application-form-values";
-import { textLength } from "./textLength";
+import { textLength } from "@platform/core/utils/textLength";
 
 /** What stops the form saving, checked against what is sent (trimmed). Empty when it can be saved. */
 export function addApplicationFormProblems(values: AddApplicationFormValues): AddApplicationFormProblems {

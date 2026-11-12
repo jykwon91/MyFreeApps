@@ -11,7 +11,7 @@ import type { CompanyFormValues } from "../types/company/company-form-values";
 import { companyCreateRequest } from "../utils/companyCreateRequest";
 import { companyFormProblems } from "../utils/companyFormProblems";
 import { isDuplicateCompanyDomainError } from "../utils/isDuplicateCompanyDomainError";
-import { textLength } from "../utils/textLength";
+import { textLength } from "@platform/core/utils/textLength";
 
 // Two UTF-16 units but one code point, which is how Pydantic and Postgres count it.
 const EMOJI = "🚀";

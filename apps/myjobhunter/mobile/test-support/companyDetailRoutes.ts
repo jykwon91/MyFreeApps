@@ -1,8 +1,8 @@
 import type { Application } from "@myjobhunter/api-client/types/application";
 import type { Company } from "@myjobhunter/api-client/types/company";
 import type { CompanyResearch } from "@myjobhunter/api-client/types/company-research";
-import type { FakeReply } from "./types/FakeReply";
-import type { FakeRoute } from "./types/FakeRoute";
+import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
+import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 
 /**
  * What the server answers for one company's screen: the company, its research (a 404 when none

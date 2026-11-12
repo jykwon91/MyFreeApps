@@ -1,6 +1,8 @@
-import { MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
-import { SECURITY_MESSAGES as MESSAGES } from "../../constants/security";
+import { SECURITY_MESSAGES as MESSAGES } from "../constants/security";
+import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
+import { useTheme } from "../theme/useTheme";
+import Skeleton from "./Skeleton";
 
 /** The name field and its Save button while the account loads. */
 export default function DisplayNameSkeleton() {

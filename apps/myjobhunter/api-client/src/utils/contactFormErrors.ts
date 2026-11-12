@@ -10,7 +10,7 @@ import { contactProfileUrl } from "./contactLinkUrls";
 import { extractEmailAddress } from "./extractEmailAddress";
 import { isPlainEmailAddress } from "./isPlainEmailAddress";
 import { normalizeProfileUrl } from "./normalizeProfileUrl";
-import { textLength } from "./textLength";
+import { textLength } from "@platform/core/utils/textLength";
 
 /**
  * What stops the add-contact form from being sent, by field: the backend's rules
