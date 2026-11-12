@@ -1008,7 +1008,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (profile + equipment + statistics + specializations + professions + reputations + pvp-summary + achievements/statistics + collections/mounts + collections/pets, mapped by `services/wow/character/character_mapper.py`;
   `stats` by `character_stats_mapper.py`, `talents` by `character_talents_mapper.py`,
   `professions` by `character_professions_mapper.py`, `reputations` by `character_reputations_mapper.py`,
-  `pvp` by `character_pvp_mapper.py`, `collections` by `character_collections_mapper.py`)
+  `pvp` by `character_pvp_mapper.py`, `collections` by `character_collections_mapper.py`,
+  `dungeons` by `character_dungeons_mapper.py`)
   and `/{slug}/render.png` (Blizzard's `main-raw` render, fetched only from
   `render.worldofwarcraft.com`, refused over 3200x2400 px before decoding,
   cropped to the figure with Pillow). Per-IP limit 30/min on each route
@@ -1103,6 +1104,24 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   may share these account-wide, so they are never compared between guild
   members. `collections.mounts` / `.pets` null = that call failed (logged, not
   cached, the other list still shows); a 404 = none (empty list).
+
+- Dungeons (`CharacterDungeonsPanel`, `lib/character/characterDungeons.ts`),
+  before PvP and OPEN by default ("8 of 25 tracked done"): every dungeon/wing,
+  Classic and Forever's own, in level order. Done = the final boss's Blizzard
+  "Boss Kills" statistic (category 14821) is above zero; kills = the larger of a
+  boss's ids (Rivendare is counted under two; the build fails if one row's ids name
+  different bosses), never the sum. Cathedral = Mograine (1093): Whitemane's id is
+  retail's map 1001. Wings
+  whose last boss has no statistic (SM Graveyard/Library/Armory, DM East/West,
+  Strat main gate, four Forever dungeons) show "Not tracked by Blizzard" — never
+  "Not done". The list is `backend/data/wow/character_dungeons.json`, built by
+  `python -m scripts.wow_character_dungeons.build` (curated in
+  `scripts/wow_character_dungeons/dungeons.py`; fails if an id stops being a
+  Boss Kills statistic in the client; Classic levels from `classicDungeons.json`,
+  Forever ranges hand-entered; in `wow_refresh`). "Fits you now" = not done (or not
+  tracked), enterable and within 2 levels of the range; below the level to enter = dimmed
+  "needs level N". Classic rows link their guide page. `runs` = statistic 932.
+  `dungeons: null` = the statistics call failed — never every dungeon "not done".
 
 #### In-game icons (`GameIcon`)
 

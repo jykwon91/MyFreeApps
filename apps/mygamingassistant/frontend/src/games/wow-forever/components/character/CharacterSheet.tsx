@@ -1,5 +1,6 @@
 import CharacterGear from "@/games/wow-forever/components/character/CharacterGear";
 import CharacterHeader from "@/games/wow-forever/components/character/CharacterHeader";
+import CharacterDungeonsPanel from "@/games/wow-forever/components/character/CharacterDungeonsPanel";
 import CharacterCollectionsPanel from "@/games/wow-forever/components/character/CharacterCollectionsPanel";
 import CharacterProfessionsPanel from "@/games/wow-forever/components/character/CharacterProfessionsPanel";
 import CharacterPvpPanel from "@/games/wow-forever/components/character/CharacterPvpPanel";
@@ -34,6 +35,8 @@ export default function CharacterSheet({ slug, rawSlug, shown, error, isFetching
         {/* Keyed likewise, so another lookup opens its own first group. */}
         <CharacterReputationPanel key={`reputation-${shown.slug}`} character={shown} />
         <CharacterTalentsPanel character={shown} />
+        {/* Keyed so another lookup starts open again. */}
+        <CharacterDungeonsPanel key={`dungeons-${shown.slug}`} character={shown} />
         {/* Keyed so another lookup starts closed. */}
         <CharacterPvpPanel key={`pvp-${shown.slug}`} character={shown} />
         <CharacterCollectionsPanel key={`collections-${shown.slug}`} character={shown} />

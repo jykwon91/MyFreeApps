@@ -13,6 +13,12 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-12",
+    title: "Your character: dungeons done",
+    summary: "Your character page now lists every dungeon, done or not, by its final boss kills, and which ones fit your level now.",
+    to: "/wow-forever/character",
+  },
+  {
+    date: "2026-11-12",
     title: "Your character: mounts and pets",
     summary: "Your character page now lists every mount and pet you've collected.",
     to: "/wow-forever/character",

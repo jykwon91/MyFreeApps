@@ -129,6 +129,17 @@ function character() {
         { id: 5138, name: "Pachimari", count: 2 },
       ],
     },
+    dungeons: {
+      runs: 20,
+      dungeons: [
+        { name: "Hall of Thanes", wing: null, classic: false, boss: "Durgen Dirgehammer", kills: 1, level_min: 13, level_max: 20, required_level: null },
+        { name: "Deadmines", wing: null, classic: true, boss: "Edwin VanCleef", kills: 2, level_min: 16, level_max: 16, required_level: 10 },
+        { name: "Scarlet Monastery", wing: "Graveyard", classic: true, boss: "Bloodmage Thalnos", kills: null, level_min: 30, level_max: 30, required_level: 20 },
+        { name: "Uldaman", wing: null, classic: true, boss: "Archaedas", kills: 0, level_min: 35, level_max: 35, required_level: 30 },
+        { name: "The Drowned City", wing: null, classic: false, boss: null, kills: null, level_min: 35, level_max: 42, required_level: null },
+        { name: "Blackrock Depths", wing: null, classic: true, boss: "Emperor Dagran Thaurissan", kills: 0, level_min: 48, level_max: 48, required_level: 40 },
+      ],
+    },
   };
 }
 
@@ -199,6 +210,7 @@ test("skeleton while Blizzard answers, then the sheet in the same places", async
   await expect(skeleton).toBeVisible();
   await expect(skeleton.getByTestId("character-talents-skeleton")).toBeVisible();
   await expect(skeleton.getByTestId("character-reputations-skeleton")).toBeVisible();
+  await expect(skeleton.getByTestId("character-dungeons-skeleton")).toBeVisible();
   await expect(skeleton.getByTestId("character-pvp-skeleton")).toBeVisible();
   await expect(skeleton.getByTestId("character-collections-skeleton")).toBeVisible();
   const skeletonBox = await skeleton.boundingBox();
@@ -317,6 +329,30 @@ test("collections start closed with counts, and open to mounts and pets by name"
   await toggle.click();
   await expect(panel.getByRole("list", { name: "Mounts" }).locator("li")).toHaveCount(2);
   await expect(panel.getByRole("list", { name: "Pets" })).toContainText("Pachimari ×2");
+});
+
+test("dungeons show done and not done in level order, with what fits now", async ({ page }) => {
+  await stubCharacter(page);
+  await page.goto("/wow-forever/character/jason-kwon");
+  const panel = page.getByRole("region", { name: "Dungeons" });
+  await expect(panel.getByRole("button", { name: /Dungeons/ })).toContainText("2 of 4 tracked done");
+  const rows = panel.getByTestId("character-dungeon-row");
+  await expect(rows).toHaveCount(6);
+  await expect(rows.nth(1)).toContainText("Done · 2 kills");
+  await expect(rows.nth(3)).toContainText("Fits you now");
+  await expect(rows.nth(4)).toContainText("Fits you now");
+  await expect(rows.nth(5)).toContainText("needs level 40");
+  await rows.nth(1).getByRole("link", { name: "Deadmines" }).click();
+  await expect(page).toHaveURL(/\/wow-forever\/dungeons\/deadmines$/);
+});
+
+test("a dungeon-kills failure keeps the rest of the sheet", async ({ page }) => {
+  await page.route(SHEET_PATTERN, (route) => json(route, { ...character(), dungeons: null }));
+  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }));
+  await page.goto("/wow-forever/character/jason-kwon");
+  const panel = page.getByRole("region", { name: "Dungeons" });
+  await expect(panel.getByRole("button", { name: /Dungeons/ })).toContainText("Couldn't load");
+  await expect(page.getByRole("region", { name: "PvP" })).toBeVisible();
 });
 
 test("a PvP failure keeps the rest of the sheet", async ({ page }) => {
