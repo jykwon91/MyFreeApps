@@ -3,7 +3,7 @@ import { speakableText } from "@mylanguagetutor/api-client/utils/speakableText";
 import { spokenSentences } from "@mylanguagetutor/api-client/utils/spokenSentences";
 import * as Speech from "expo-speech";
 import type { SpeechOptions } from "expo-speech";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { NO_VOICES, USE_APPLICATION_AUDIO_SESSION } from "../constants/speech";
 import type { TutorVoiceControls } from "../types/TutorVoiceControls";
 import { speechLanguage } from "../utils/speechLanguage";
@@ -21,12 +21,16 @@ function couldNotSpeak(): void {
  * voice list that arrives mid-reply applies to the rest of it. When the phone reports it can't speak
  * in the chosen voice, that sentence is tried once without it and the voice is dropped, so the rest
  * is spoken in the phone's pick instead of failing sentence by sentence. Speech stops when the screen
- * goes away.
+ * goes away. `speaking` is true from the first sentence queued until the last has been said or speech
+ * stopped, as the website's.
  */
 export function useTutorVoice(locale: string): TutorVoiceControls {
   const voice = useRef<string | undefined>(undefined);
   // Bumped by every stop, so a failed sentence's retry can't speak after it.
   const generation = useRef(0);
+  const [speaking, setSpeaking] = useState(false);
+  // Sentences queued and not yet said, since the last stop.
+  const pending = useRef(0);
 
   useEffect(() => {
     let current = true;
@@ -45,6 +49,8 @@ export function useTutorVoice(locale: string): TutorVoiceControls {
 
   const cancel = useCallback(() => {
     generation.current += 1;
+    pending.current = 0;
+    setSpeaking(false);
     void Speech.stop();
   }, []);
 
@@ -59,17 +65,34 @@ export function useTutorVoice(locale: string): TutorVoiceControls {
         couldNotSpeak();
         return;
       }
-      const options: SpeechOptions = { language: speechLanguage(locale), rate, useApplicationAudioSession: USE_APPLICATION_AUDIO_SESSION };
+      const queuedIn = generation.current;
+      const said = () => {
+        if (queuedIn !== generation.current) return;
+        pending.current = Math.max(0, pending.current - 1);
+        if (pending.current === 0) setSpeaking(false);
+      };
+      const failed = () => {
+        couldNotSpeak();
+        said();
+      };
+      const options: SpeechOptions = {
+        language: speechLanguage(locale),
+        rate,
+        useApplicationAudioSession: USE_APPLICATION_AUDIO_SESSION,
+        onDone: said,
+        onStopped: said,
+      };
+      pending.current += 1;
+      setSpeaking(true);
       const chosen = voice.current;
       if (!chosen) {
-        Speech.speak(text, { ...options, onError: couldNotSpeak });
+        Speech.speak(text, { ...options, onError: failed });
         return;
       }
-      const queuedIn = generation.current;
       // The engine reports the failure later, once it reaches the sentence: by then speech may have stopped.
       const withoutVoice = () => {
         if (voice.current === chosen) voice.current = undefined;
-        if (queuedIn === generation.current) Speech.speak(text, { ...options, onError: couldNotSpeak });
+        if (queuedIn === generation.current) Speech.speak(text, { ...options, onError: failed });
       };
       Speech.speak(text, { ...options, voice: chosen, onError: withoutVoice });
     },
@@ -84,5 +107,5 @@ export function useTutorVoice(locale: string): TutorVoiceControls {
     [cancel, enqueue, locale],
   );
 
-  return { enqueue, speakAll, cancel };
+  return { speaking, enqueue, speakAll, cancel };
 }

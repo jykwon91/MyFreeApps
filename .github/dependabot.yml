@@ -591,6 +591,9 @@ updates:
       # an alert and needs that upgrade.
       - dependency-name: "expo"
       - dependency-name: "expo-*"
+      # expo-* also covers expo-speech-recognition: not part of the SDK, but
+      # its major tracks it (58.x is for SDK 58), so it moves by hand in the
+      # same upgrade, pinned exactly.
       - dependency-name: "jest-expo"
       - dependency-name: "react"
       - dependency-name: "react-native"

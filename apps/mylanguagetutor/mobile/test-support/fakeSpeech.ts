@@ -14,6 +14,7 @@ export const spoken: (SpokenUtterance | null)[] = [];
 let voices: Voice[] | Error | Promise<Voice[]> = [];
 const failingVoices = new Set<string>();
 let unreported: (() => void)[] = [];
+let unfinished: (() => void)[] = [];
 
 /** The voices the phone lists, the error listing them fails with, or a list that arrives later. */
 export function installVoices(next: Voice[] | Error | Promise<Voice[]>): void {
@@ -41,6 +42,14 @@ export function resetSpeech(): void {
   voices = [];
   failingVoices.clear();
   unreported = [];
+  unfinished = [];
+}
+
+/** The phone finishes saying everything queued, telling the screen of each sentence as it ends. */
+export function finishSpeaking(): void {
+  const finishing = unfinished;
+  unfinished = [];
+  finishing.forEach((finish) => finish());
 }
 
 /** What was said since speech last stopped, as the learner would hear it. */
@@ -49,16 +58,18 @@ export function saidSinceStop(): string[] {
   return spoken.slice(lastStop + 1).flatMap((utterance) => (utterance ? [utterance.text] : []));
 }
 
-export function speak(text: string, { onError, ...options }: SpeechOptions = {}): void {
+export function speak(text: string, { onError, onDone, onStopped: _onStopped, onStart: _onStart, ...options }: SpeechOptions = {}): void {
   if (options.voice !== undefined && failingVoices.has(options.voice)) {
     unreported.push(() => onError?.(new Error("Speech synthesis failed")));
     return;
   }
   spoken.push({ text, options });
+  unfinished.push(() => onDone?.());
 }
 
 export async function stop(): Promise<void> {
   spoken.push(null);
+  unfinished = [];
 }
 
 export async function getAvailableVoicesAsync(): Promise<Voice[]> {

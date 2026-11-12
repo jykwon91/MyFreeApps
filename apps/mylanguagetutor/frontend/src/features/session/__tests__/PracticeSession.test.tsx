@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import PracticeSession from "@/features/session/PracticeSession";
 import CorrectionCard from "@/features/session/CorrectionCard";
 import type { PracticeSession as PracticeSessionState } from "@mylanguagetutor/api-client/types/session/practice-session";
-import type { SpeechRecognitionControls } from "@/features/speech/useSpeechRecognition";
+import type { SpeechRecognitionControls } from "@mylanguagetutor/api-client/types/speech/speech-recognition-controls";
 import type { UsageToday } from "@mylanguagetutor/api-client/types/tutor/usage-today";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";

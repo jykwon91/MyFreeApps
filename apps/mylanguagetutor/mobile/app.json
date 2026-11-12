@@ -15,6 +15,15 @@
       "allowBackup": false,
       "package": "org.myfreeapps.mylanguagetutor"
     },
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "MyLanguageTutor uses the microphone while you tap to speak, so you can answer the tutor out loud. It listens only until you stop talking.",
+          "speechRecognitionPermission": "Your iPhone turns what you say into text so the tutor can read it. It does this on the iPhone when it can for the language you're practicing; otherwise Apple does it. MyLanguageTutor never receives your audio."
+        }
+      ]
+    ]
   }
 }

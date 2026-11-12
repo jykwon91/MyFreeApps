@@ -94,6 +94,26 @@ burst limiter, 503 `tutor_unavailable` (global cap, kill switch, or no key).
   (`mobile/src/hooks/useTutorVoice.ts`, its voice from `mobile/src/utils/voiceIdForLocale.ts`); Hermes has no `Intl.Segmenter`, so
   there the chunker uses its punctuation fallback. Browsers without recognition
   (Firefox) get labelled typed practice.
+- **Speaking.** Tap to talk on both platforms: one utterance (`continuous`
+  off, interim results on), sent once the learner goes quiet; tapping the mic
+  while the tutor speaks stops its voice first (barge-in). The api-client's
+  `hooks/useVoiceInput` owns the mode, phase and which composer shows
+  (`utils/composerView`), with the shared copy in `constants/voiceCopy` and the
+  error mapping in `utils/recognitionFailure`; each app only wraps its
+  recognizer. The phone uses `expo-speech-recognition` (exact pin; its major
+  tracks the Expo SDK, so it moves by hand in an SDK upgrade) via
+  `mobile/src/hooks/useSpeechInput.ts`. It requires on-device recognition where
+  the phone has it for the language (Android: `installedLocales`; iOS can't say
+  per language, so it's always requested and applied natively where available),
+  and its privacy notice says which; the read notice is kept per privacy level
+  in SecureStore. Listening is aborted (nothing sent) in the background, on
+  leaving the screen and on an iOS audio interruption; iOS listens in
+  `playAndRecord` + `defaultToSpeaker` (`LISTENING_AUDIO_SESSION`) and lets the
+  session go once listening ends (also after the screen closes mid-utterance). iOS runs
+  start/stop/abort in no fixed order, so each tap is an attempt whose events count
+  only once its own `start` arrives; a stop or abort asked for earlier is sent then. An attempt left behind by a closed screen
+  is aborted, and a new attempt isn't sent to the phone until it has ended. Jest maps the module to
+  `mobile/test-support/fakeSpeechRecognition.ts`. Adding it needs a new native build.
 - **Copy rules.** No pronunciation scoring, no "fluent", no "native speaker",
   no streak guilt. Corrections are hedged ("It looked like you said...")
   because the transcript may be a mishearing.
@@ -211,13 +231,14 @@ RTK Query endpoints, their request/response types, the SSE turn-event parser,
 the turn stream (`createStreamTurn` / `readTurnStream`, `fetch` injected), the
 turn refusal/error mapping, the `usePracticeSession` conversation hook, the
 session state types and the pure speech helpers (`sentenceChunker`, `spokenSentences`,
-`speakableText`, `voiceForLocale`, `primaryLanguage`, `replayRate`, `constants/speechRates`)
+`speakableText`, `voiceForLocale`, `primaryLanguage`, `replayRate`, `constants/speechRates`,
+the transcript and recognition-failure helpers) and the voice-input hook `useVoiceInput`
 live in `apps/mylanguagetutor/api-client`
 (`@mylanguagetutor/api-client`), shared with the phone app (`mobile/`). Import them
 as `@mylanguagetutor/api-client/<dir>/<file>`. The package must stay
 platform-neutral: no DOM, `window`, `localStorage`, Web Speech API or global
 `fetch` -- the platform parts (the `streamTurn` wiring, the speech hooks that
-call the Web Speech API or `expo-speech`, `privacyAck`) stay in each app.
+call the Web Speech API, `expo-speech` or `expo-speech-recognition`, the privacy ack's storage) stay in each app.
 `voiceForLocale` ranks any voice list by locale (with optional enhanced/local
 hints), and each platform maps its own voices onto it. The api-client's `src/globals.d.ts`
 declares only the globals both platforms have (`AbortController`, `TextDecoder`). One type per file in its `src/types/`.

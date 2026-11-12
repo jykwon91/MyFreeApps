@@ -1,4 +1,6 @@
 export interface TutorVoiceControls {
+  /** True while any queued sentence is still being spoken. */
+  speaking: boolean;
   /** Queue one sentence (glosses, markdown and emoji left out) behind anything already queued. */
   enqueue: (sentence: string, rate?: number) => void;
   /** Stop everything, then read `text` from the start, sentence by sentence. */
