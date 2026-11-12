@@ -27,11 +27,14 @@ def _picks(group: dict[str, Any]) -> list[CharacterTalentPick]:
 
 
 def to_character_talents(specializations: dict[str, Any] | None) -> CharacterTalents | None:
-    """None only when Blizzard failed to answer; a character with no points has no groups."""
+    """None only when Blizzard failed to answer; a character with no points in any set has no groups."""
     if specializations is None:
         return None
     groups = [as_dict(raw) for raw in as_list(specializations.get("specialization_groups"))]
     talents = [CharacterTalentGroup(active=group.get("is_active") is True, picks=_picks(group)) for group in groups]
-    kept = [group for group in talents if group.picks]
+    if not any(group.picks for group in talents):
+        return CharacterTalents(groups=[])
+    # The active set stays even when empty (just respecced): showing the other set would lie.
+    kept = [group for group in talents if group.picks or group.active]
     kept.sort(key=lambda group: not group.active)
     return CharacterTalents(groups=kept)

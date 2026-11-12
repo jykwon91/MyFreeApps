@@ -4,9 +4,11 @@ import {
   TALENT_BUILD_PARAM,
   TALENT_LEVEL_PARAM,
 } from "@/games/wow-forever/data/talents/talentConfig";
+import { CALCULATOR_ILLEGAL_REASON, CALCULATOR_UNKNOWN_REASON } from "@/games/wow-forever/data/character/characterTalentsConfig";
 import { encodeTalentBuild } from "@/games/wow-forever/lib/talents/talentBuildCode";
 import { isLegalBuild, pointsForLevel, totalPoints, treePoints } from "@/games/wow-forever/lib/talents/talentRules";
 import type { WowClassId } from "@/games/wow-forever/data/classes";
+import type { CharacterCalculatorLink } from "@/games/wow-forever/types/character/characterCalculatorLink";
 import type { CharacterTalents } from "@/games/wow-forever/types/character/characterTalents";
 import type { CharacterTalentPick } from "@/games/wow-forever/types/character/characterTalentPick";
 import type { CharacterTalentSet } from "@/games/wow-forever/types/character/characterTalentSet";
@@ -19,11 +21,13 @@ export function characterTalentSet(trees: readonly TalentTree[], picks: readonly
   let unknown = 0;
   for (const pick of picks) {
     const tree = trees.findIndex((t) => t.talents.some((talent) => talent.id === pick.id));
-    if (tree < 0) {
+    const index = tree < 0 ? -1 : trees[tree].talents.findIndex((talent) => talent.id === pick.id);
+    // A rank past the tree file's max means Blizzard and our copy disagree: count it, never clamp it.
+    if (index < 0 || pick.rank > trees[tree].talents[index].ranks.length) {
       unknown += 1;
       continue;
     }
-    build[tree][trees[tree].talents.findIndex((talent) => talent.id === pick.id)] = pick.rank;
+    build[tree][index] = pick.rank;
   }
   return {
     build,
@@ -44,16 +48,23 @@ export function unspentPoints(build: TalentBuild, level: number): number {
 
 /**
  * The talent calculator opened on this build at the character's level, or
- * null when the calculator wouldn't take it (a rank past the max, a row not
- * open yet, more points than the level gives) — a link that opens an empty
- * build would show something the character doesn't have.
+ * why not: a talent missing from our trees (the link would open a build the
+ * character doesn't have), or points the calculator wouldn't take (a rank
+ * past the max, a row not open yet, more points than the level gives).
  */
-export function calculatorHref(classId: WowClassId, trees: readonly TalentTree[], build: TalentBuild, level: number): string | null {
-  if (totalPoints(build) === 0 || !isLegalBuild(trees, build)) return null;
-  if (totalPoints(build) > pointsForLevel(level)) return null;
-  const params = new URLSearchParams({ [TALENT_BUILD_PARAM]: encodeTalentBuild(build) });
+export function calculatorLink(classId: WowClassId, trees: readonly TalentTree[], set: CharacterTalentSet, level: number): CharacterCalculatorLink {
+  const points = totalPoints(set.build);
+  if (set.unknown > 0) return { kind: "none", reason: CALCULATOR_UNKNOWN_REASON };
+  if (points === 0) return { kind: "none", reason: null };
+  if (!isLegalBuild(trees, set.build) || points > pointsForLevel(level)) return { kind: "none", reason: CALCULATOR_ILLEGAL_REASON };
+  const params = new URLSearchParams({ [TALENT_BUILD_PARAM]: encodeTalentBuild(set.build) });
   if (level < MAX_TALENT_LEVEL) params.set(TALENT_LEVEL_PARAM, String(level));
-  return `/wow-forever/talents/${classId}?${params.toString()}`;
+  return { kind: "link", href: `/wow-forever/talents/${classId}?${params.toString()}` };
+}
+
+/** "1 talent isn't" / "3 talents aren't" — the footnote's subject. */
+export function formatUnknownTalents(n: number): string {
+  return n === 1 ? "1 talent isn't" : `${n} talents aren't`;
 }
 
 /** The trees with the most points first (the spec the character plays), ties in the class's order. */

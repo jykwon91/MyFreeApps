@@ -25,7 +25,7 @@ export default function CharacterTalentsPanel({ character }: { character: Charac
         <>
           {groups.map((group, i) => (
             <CharacterTalentSetView
-              key={i}
+              key={`${group.active}-${i}`}
               classId={classId}
               group={group}
               level={character.level}

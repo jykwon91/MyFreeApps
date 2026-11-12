@@ -8,10 +8,10 @@ export default function CharacterTalentSplit({ trees }: { trees: readonly Charac
       {trees.map((tree) => (
         <li
           key={tree.name}
-          className={clsx(
-            "rounded-full border px-3 py-1 text-sm",
-            tree.points > 0 ? "bg-card font-medium" : "text-muted-foreground",
-          )}
+          className={clsx("rounded-full border px-3 py-1 text-sm", {
+            "bg-card font-medium": tree.points > 0,
+            "text-muted-foreground": tree.points === 0,
+          })}
         >
           {tree.name} <span className="tabular-nums">{tree.points}</span>
         </li>

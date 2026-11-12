@@ -6,19 +6,21 @@ import CharacterTalentsSkeleton from "@/games/wow-forever/components/character/C
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 import { useTalentClass } from "@/games/wow-forever/hooks/useTalentClass";
 import {
-  calculatorHref,
+  calculatorLink,
   characterTalentSet,
+  formatUnknownTalents,
   treesByPoints,
   unspentPoints,
 } from "@/games/wow-forever/lib/character/characterTalents";
 import { formatPoints } from "@/games/wow-forever/lib/talents/formatPoints";
+import { totalPoints } from "@/games/wow-forever/lib/talents/talentRules";
 import type { CharacterTalentGroup } from "@/games/wow-forever/types/character/characterTalentGroup";
 
 interface CharacterTalentSetViewProps {
   classId: WowClassId;
   group: CharacterTalentGroup;
   level: number;
-  /** "Active" / "Other saved set" when the character has more than one; null otherwise. */
+  /** "Active talents" / "Other saved talents" when the character has more than one; null otherwise. */
   label: string | null;
 }
 
@@ -31,40 +33,42 @@ export default function CharacterTalentSetView({ classId, group, level, label }:
   }
   const { trees } = state.data;
   const set = characterTalentSet(trees, group.picks);
-  const href = calculatorHref(classId, trees, set.build, level);
+  const link = calculatorLink(classId, trees, set, level);
   const unspent = group.active ? unspentPoints(set.build, level) : 0;
+  const empty = totalPoints(set.build) === 0 && set.unknown === 0;
   return (
     <div className="space-y-3" data-testid="character-talent-set">
-      {label ? <h3 className="text-base font-semibold">{label}</h3> : null}
+      {label && <h3 className="text-base font-semibold">{label}</h3>}
       <div className="flex flex-wrap items-center gap-2">
         <CharacterTalentSplit trees={set.trees} />
-        {href ? (
+        {link.kind === "link" && (
           <Link
-            to={href}
+            to={link.href}
             className="inline-flex min-h-[44px] items-center rounded-md border px-3 text-sm font-medium hover:bg-muted sm:ml-auto"
             data-testid="character-talents-calculator-link"
           >
             Open in the talent calculator
           </Link>
-        ) : (
+        )}
+        {link.kind === "none" && link.reason && (
           <p className="text-xs text-muted-foreground sm:ml-auto" data-testid="character-talents-no-link">
-            The talent calculator can&apos;t open this build: it has points the calculator doesn&apos;t allow.
+            {link.reason}
           </p>
         )}
       </div>
-      {unspent > 0 ? (
+      {empty && <p className="text-sm text-muted-foreground">No points spent in this set yet.</p>}
+      {unspent > 0 && (
         <p className="text-sm" data-testid="character-talents-unspent">
           {formatPoints(unspent)} not spent yet.
         </p>
-      ) : null}
-      {treesByPoints(set.trees).map((tree) => (
-        <CharacterTalentTree key={tree.name} tree={tree} />
-      ))}
-      {set.unknown > 0 ? (
+      )}
+      {!empty &&
+        treesByPoints(set.trees).map((tree) => <CharacterTalentTree key={tree.name} tree={tree} nested={label !== null} />)}
+      {set.unknown > 0 && (
         <p className="text-xs text-muted-foreground" data-testid="character-talents-unknown">
-          {set.unknown === 1 ? "1 talent isn't" : `${set.unknown} talents aren't`} in our copy of the trees yet.
+          {formatUnknownTalents(set.unknown)} in our copy of the trees yet.
         </p>
-      ) : null}
+      )}
     </div>
   );
 }

@@ -476,6 +476,16 @@ def test_the_talents_are_ids_and_ranks_with_the_active_set_first() -> None:
     assert [(p.id, p.rank) for p in talents.groups[1].picks] == [(135500, 1)]
 
 
+def test_an_empty_active_set_is_kept_so_the_other_set_isnt_shown_as_current() -> None:
+    respecced = {"specialization_groups": [
+        {"is_active": True, "specializations": []},
+        SPECIALIZATIONS["specialization_groups"][1] | {"is_active": False},
+    ]}
+    talents = to_character_talents(respecced)
+    assert talents is not None
+    assert [(group.active, len(group.picks)) for group in talents.groups] == [(True, 0), (False, 2)]
+
+
 def test_no_talents_is_an_empty_list_and_a_failure_is_none() -> None:
     assert to_character_talents({}) is not None and to_character_talents({}).groups == []
     assert to_character_talents(None) is None
@@ -483,9 +493,13 @@ def test_no_talents_is_an_empty_list_and_a_failure_is_none() -> None:
 
 async def test_a_character_blizzard_has_no_talents_for_has_none_not_an_error(monkeypatch: pytest.MonkeyPatch) -> None:
     missing = {"/profile/wow/character/jason-kwon/specializations": _json({"code": 404}, 404)}
-    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing)))
+    seen: list[httpx.Request] = []
+    monkeypatch.setattr(character_service, "_new_client", lambda: _client(_blizzard(missing, seen=seen)))
     sheet = await character_service.get_character("jason-kwon")
     assert sheet.talents is not None and sheet.talents.groups == []
+    await character_service.get_character("jason-kwon")
+    profile_calls = [r for r in seen if r.url.path == "/profile/wow/character/jason-kwon"]
+    assert len(profile_calls) == 1  # an answer, so it's cached
 
 
 async def test_a_talents_failure_still_shows_the_sheet_and_is_not_cached(

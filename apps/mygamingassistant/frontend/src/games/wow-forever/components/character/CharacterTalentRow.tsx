@@ -30,11 +30,11 @@ export default function CharacterTalentRow({ line }: { line: CharacterTalentLine
         </span>
         <ChevronDown className={clsx("h-4 w-4 shrink-0 transition-transform", open && "rotate-180")} aria-hidden />
       </button>
-      {open ? (
+      {open && (
         <p className="mt-2 text-sm" data-testid="character-talent-text">
           {talent.ranks[rank - 1]}
         </p>
-      ) : null}
+      )}
     </li>
   );
 }

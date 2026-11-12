@@ -10,6 +10,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { RECENT_CHARACTERS_STORAGE_KEY } from "@/games/wow-forever/data/character/characterConfig";
 import { CHARACTER_STATS_TAB_STORAGE_KEY } from "@/games/wow-forever/data/character/characterStatsConfig";
+import { CALCULATOR_ILLEGAL_REASON, CALCULATOR_UNKNOWN_REASON } from "@/games/wow-forever/data/character/characterTalentsConfig";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { characterNameFromSlug, characterSlugFromName } from "@/games/wow-forever/lib/character/characterSlug";
 import { withRecentCharacter } from "@/games/wow-forever/lib/character/recentCharacters";
@@ -371,22 +372,41 @@ describe("the talents panel", () => {
     expect(within(row).getByTestId("character-talent-text")).toHaveTextContent(/2%/);
   });
 
-  it("counts points not spent yet and talents missing from our trees", async () => {
-    const picks = [...PICKS, { id: 999_999, rank: 1 }];
-    const panel = await talentsFor({ ...CHARACTER, level: 40, talents: { groups: [{ active: true, picks }] } });
+  it("counts points not spent yet and links at the character's level", async () => {
+    const panel = await talentsFor({ ...CHARACTER, level: 40 });
     expect(within(panel).getByTestId("character-talents-unspent")).toHaveTextContent("3 points not spent yet.");
-    expect(within(panel).getByTestId("character-talents-unknown")).toHaveTextContent("1 talent isn't in our copy");
     expect(within(panel).getByRole("link", { name: "Open in the talent calculator" })).toHaveAttribute(
       "href",
       expect.stringContaining("lvl=40"),
     );
   });
 
+  it("counts talents missing from our trees and doesn't link a build it can't show whole", async () => {
+    const picks = [...PICKS, { id: 999_999, rank: 1 }];
+    const panel = await talentsFor({ ...CHARACTER, talents: { groups: [{ active: true, picks }] } });
+    expect(within(panel).getByTestId("character-talents-unknown")).toHaveTextContent("1 talent isn't in our copy");
+    expect(within(panel).queryByRole("link", { name: "Open in the talent calculator" })).not.toBeInTheDocument();
+    expect(within(panel).getByTestId("character-talents-no-link")).toHaveTextContent(CALCULATOR_UNKNOWN_REASON);
+  });
+
+  it("counts a rank above the talent's top rank as unknown", async () => {
+    const picks = [...PICKS.filter((pick) => pick.id !== 135456), { id: 135456, rank: 9 }];
+    const panel = await talentsFor({ ...CHARACTER, talents: { groups: [{ active: true, picks }] } });
+    expect(within(panel).getByTestId("character-talents-unknown")).toHaveTextContent("1 talent isn't in our copy");
+    expect(within(panel).getByTestId("character-talents-no-link")).toBeInTheDocument();
+  });
+
+  it("explains a class it has no talent trees for", async () => {
+    const panel = await talentsFor({ ...CHARACTER, class_name: "Monk" });
+    expect(within(panel).getByTestId("character-talents-note")).toBeInTheDocument();
+    expect(within(panel).queryByTestId("character-talent-set")).not.toBeInTheDocument();
+  });
+
   it("says why there's no link when the calculator wouldn't take the build", async () => {
     const picks = [{ id: 135441, rank: 3 }]; // a tier 6 talent with nothing above it
     const panel = await talentsFor({ ...CHARACTER, talents: { groups: [{ active: true, picks }] } });
     expect(within(panel).queryByRole("link", { name: "Open in the talent calculator" })).not.toBeInTheDocument();
-    expect(within(panel).getByTestId("character-talents-no-link")).toBeInTheDocument();
+    expect(within(panel).getByTestId("character-talents-no-link")).toHaveTextContent(CALCULATOR_ILLEGAL_REASON);
   });
 
   it("heads each saved set when the character has two", async () => {
@@ -397,7 +417,7 @@ describe("the talents panel", () => {
     expect(within(panel).getByRole("heading", { name: "Other saved talents" })).toBeInTheDocument();
   });
 
-  it("tells a failed answer apart from a character with no points", async () => {
+  it("says Blizzard sent no talents and keeps the rest of the sheet", async () => {
     const failed = await talentsFor({ ...CHARACTER, talents: null });
     expect(within(failed).getByTestId("character-talents-note")).toHaveTextContent("Blizzard didn't send");
     expect(screen.getByRole("region", { name: "Character stats" })).toBeInTheDocument();
