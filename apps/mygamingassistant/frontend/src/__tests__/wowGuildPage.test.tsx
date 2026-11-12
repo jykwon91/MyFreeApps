@@ -8,7 +8,16 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { GUILD_SEARCH_DEBOUNCE_MS, GUILD_SORT_KEYS } from "@/games/wow-forever/data/guild/guildConfig";
 import { RECIPE_SEARCH_DEBOUNCE_MS } from "@/games/wow-forever/data/guild/recipeSearchConfig";
-import { boardStatus, findBoard, missingCount, rankBoard, topEntries } from "@/games/wow-forever/lib/guild/guildLeaderboards";
+import {
+  boardStatus,
+  findBoard,
+  gainsNote,
+  missingCount,
+  noBaselineCount,
+  noGainCount,
+  rankBoard,
+  topEntries,
+} from "@/games/wow-forever/lib/guild/guildLeaderboards";
 import { crafterSkill, professionName, recipeSearchStatus, searchableQuery } from "@/games/wow-forever/lib/guild/guildRecipes";
 import {
   classCounts,
@@ -22,6 +31,7 @@ import {
 import WowGuildPage from "@/games/wow-forever/pages/WowGuildPage";
 import type { GuildCrafter } from "@/games/wow-forever/types/guild/guildCrafter";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
+import type { GuildMemberBaseline } from "@/games/wow-forever/types/guild/guildMemberBaseline";
 import type { GuildRecipeSearch } from "@/games/wow-forever/types/guild/guildRecipeSearch";
 import type { GuildRecipeSearchArgs } from "@/games/wow-forever/types/guild/guildRecipeSearchArgs";
 import type { GuildResponse } from "@/games/wow-forever/types/guild/guildResponse";
@@ -50,9 +60,17 @@ function member(overrides: Partial<GuildMember>): GuildMember {
     total_deaths: null,
     dungeons_done: null,
     exalted_reputations: null,
+    baseline: null,
     professions: [],
     rank: 0,
     refreshed_at: ROSTER_AT,
+    ...overrides,
+  };
+}
+
+function baseline(overrides: Partial<GuildMemberBaseline>): GuildMemberBaseline {
+  return {
+    day: "2026-11-12", level: null, honorable_kills: null, killing_blows: null, total_kills: null, dungeons_done: null,
     ...overrides,
   };
 }
@@ -72,6 +90,7 @@ const GUILD: GuildResponse = {
   roster_updated_at: ROSTER_AT,
   refresh_failed: false,
   gone: false,
+  gains_window_days: 7,
   members: MEMBERS,
 };
 
@@ -252,6 +271,30 @@ describe("guild leaderboard logic", () => {
     expect(boardStatus(findBoard("fewest-deaths"), 0, 0, 0)).toBe("Fewest deaths (level 60): nobody yet · level 60 characters only");
   });
 
+  it("ranks gains since each member's baseline, leaves out no gain and no older day, and says since when", () => {
+    const board = findBoard("honorable-kills-gained");
+    const members = [
+      member({ slug: "a-a", name: "Ann", honorable_kills: 40, baseline: baseline({ honorable_kills: 10, day: "2026-11-12" }) }),
+      member({ slug: "b-b", name: "Bob", honorable_kills: 9, baseline: baseline({ honorable_kills: 4, day: "2026-11-14" }) }),
+      member({ slug: "c-c", name: "Cat", honorable_kills: 5, baseline: baseline({ honorable_kills: 5 }) }),
+      // A smaller number than before (Blizzard reset it) is no gain, never negative.
+      member({ slug: "d-d", name: "Dan", honorable_kills: 2, baseline: baseline({ honorable_kills: 8 }) }),
+      member({ slug: "e-e", name: "Eve", honorable_kills: 30, baseline: null }),
+      member({ slug: "f-f", name: "Fay", honorable_kills: 30, baseline: baseline({ honorable_kills: null }) }),
+    ];
+    const ranked = rankBoard(members, board);
+    expect(ranked.map((e) => [e.member.name, e.display, e.detail])).toEqual([
+      ["Ann", "+30", "since Nov 12"], ["Bob", "+5", "since Nov 14"],
+    ]);
+    expect(noGainCount(members, board)).toBe(2);
+    // Eve has no older day; Fay has one but no number for it.
+    expect(noBaselineCount(members, board)).toBe(1);
+    expect(missingCount(members, board, ranked.length)).toBe(1);
+    expect(noBaselineCount(members, dungeons)).toBe(0);
+    expect(gainsNote(7)).toMatch(/at least 7 days ago/);
+    expect(rankBoard(members, dungeons)[0]?.detail ?? null).toBeNull();
+  });
+
   it("falls back to the level board for a missing or unknown board", () => {
     expect(findBoard(null).id).toBe("level");
     expect(findBoard("nope").id).toBe("level");
@@ -383,6 +426,29 @@ describe("guild page", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
     renderAt("/wow-forever/guild/topdeadcenter?board=fewest-deaths&me=jason-kwon");
     expect(screen.getByText(/Your character isn't on this board/)).toBeInTheDocument();
+  });
+
+  it("shows a gains board with since-when under each name, and says who isn't ranked and why", () => {
+    const members = [
+      member({ level: 40, baseline: baseline({ level: 37, day: "2026-11-12" }) }),
+      member({ slug: "tiny-john", name: "Tiny", surname: "John", class_name: "Mage", level: 12, baseline: baseline({ level: 12 }) }),
+      member({ slug: "new-guy", name: "New", surname: "Guy", level: 5 }),
+    ];
+    mockQuery.mockReturnValue(query({ data: { ...GUILD, members } }));
+    renderAt("/wow-forever/guild/topdeadcenter?board=levels-gained&me=new-guy");
+    const board = screen.getByRole("list", { name: "Levels gained leaderboard" });
+    expect(within(board).getByText("+3")).toBeInTheDocument();
+    expect(within(board).getByText("Warlock · since Nov 12")).toBeInTheDocument();
+    expect(screen.getByText(/at least 7 days ago/)).toBeInTheDocument();
+    expect(screen.getByText("1 member had no gain, so they're not ranked.")).toBeInTheDocument();
+    expect(screen.getByText("1 member needs a second lookup on another day to show a gain.")).toBeInTheDocument();
+    expect(screen.getByText(/Your character has no gain here yet/)).toBeInTheDocument();
+  });
+
+  it("says plainly when nobody has a gain yet", () => {
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    renderAt("/wow-forever/guild/topdeadcenter?board=dungeons-gained");
+    expect(screen.getByText(/No gains to show yet/)).toBeInTheDocument();
   });
 
   it("changing a member filter keeps the board in the URL", () => {

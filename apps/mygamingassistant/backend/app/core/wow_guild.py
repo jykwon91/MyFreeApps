@@ -43,6 +43,10 @@ GUILD_NOT_FOUND_ERROR: Final = "Blizzard has no guild by that name"
 # Members fetched from Blizzard at once while refreshing a roster.
 GUILD_MEMBER_FETCH_CONCURRENCY: Final = 4
 
+# The gains boards count from each member's newest stored day at or before this
+# many days ago (else their earliest stored day) up to their newest one.
+GUILD_GAINS_WINDOW_DAYS: Final = 7
+
 # GET /wow/guilds/{slug}: per-IP look-ups per window (a database read, no Blizzard call).
 GUILD_RATE_LIMIT: Final = 60
 GUILD_RATE_WINDOW_SECONDS: Final = 60

@@ -18,4 +18,7 @@ class GuildResponse(BaseModel):
     refresh_failed: bool
     # Blizzard no longer has this guild.
     gone: bool
+    # The gains boards' window: each member's baseline is their newest stored
+    # day at least this many days old (else their earliest).
+    gains_window_days: int
     members: list[GuildMemberResponse]

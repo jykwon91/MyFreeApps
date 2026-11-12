@@ -6,14 +6,21 @@ rest. Nothing here calls Blizzard.
 """
 from __future__ import annotations
 
+from datetime import date, datetime, timedelta, timezone
+
+from app.core.wow_guild import GUILD_GAINS_WINDOW_DAYS
 from app.db.session import unit_of_work
 from app.repositories.wow import guild_repo
 from app.schemas.wow.guild.guild_response import GuildResponse
 from app.services.wow.guild.guild_response_mapper import to_guild_response
 
 
-async def get_guild(slug: str) -> GuildResponse | None:
-    """The guild with this slug (live, else the latest gone one), or None if never stored."""
+async def get_guild(slug: str, *, today: date | None = None) -> GuildResponse | None:
+    """The guild with this slug (live, else the latest gone one), or None if never stored.
+
+    ``today`` (UTC, default now) sets the gains window.
+    """
+    day = today or datetime.now(timezone.utc).date()
     async with unit_of_work() as db:
         guild = await guild_repo.get_by_slug(db, slug)
         if guild is None:
@@ -22,6 +29,6 @@ async def get_guild(slug: str) -> GuildResponse | None:
         if guild.gone_at is not None:
             rows, skills = [], []
         else:
-            rows = await guild_repo.members(db, guild.id)
+            rows = await guild_repo.members(db, guild.id, gains_since=day - timedelta(days=GUILD_GAINS_WINDOW_DAYS))
             skills = await guild_repo.member_skills(db, guild.id)
     return to_guild_response(guild, rows, skills)
