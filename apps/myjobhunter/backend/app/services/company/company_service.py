@@ -30,6 +30,8 @@ from app.schemas.company.company_update_request import CompanyUpdateRequest
 
 APPLICATIONS_COMPANY_FK_NAME = "applications_company_id_fkey"
 COMPANY_USER_DOMAIN_UNIQUE_NAME = "uq_company_user_domain"
+UNKNOWN_COMPANY_NAME = "Unknown company"
+MAX_COMPANY_NAME_LEN = 200
 
 
 class DuplicatePrimaryDomainError(ValueError):
@@ -65,6 +67,26 @@ async def list_companies(
     Empty or whitespace-only search strings are treated as no filter.
     """
     return await company_repository.list_by_user(db, user_id, name_search=name_search)
+
+
+async def find_or_create_by_name(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    name: str | None,
+) -> Company:
+    """Return the user's company matching ``name``, creating it if missing.
+
+    The single matcher for paths that only know a company name (job-analysis
+    promote, discovery promote): case-insensitive, whitespace-trimmed exact
+    match, scoped to ``user_id``. A blank name falls back to
+    ``"Unknown company"``. Flushes but does not commit — the caller owns the
+    transaction.
+    """
+    cleaned = ((name or "").strip() or UNKNOWN_COMPANY_NAME)[:MAX_COMPANY_NAME_LEN]
+    existing = await company_repository.get_by_name(db, user_id, cleaned)
+    if existing is not None:
+        return existing
+    return await company_repository.create(db, Company(user_id=user_id, name=cleaned))
 
 
 async def get_company(

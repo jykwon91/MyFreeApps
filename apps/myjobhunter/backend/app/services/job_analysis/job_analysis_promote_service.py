@@ -10,8 +10,9 @@ Design notes
 
 - Idempotent: if ``analysis.applied_application_id`` is already set and the
   referenced application still exists, return it without creating a duplicate.
-- Company lookup mirrors the AddApplicationDialog's behaviour: case-insensitive
-  name match first, create if missing.
+- Company lookup goes through ``company_service.find_or_create_by_name`` (shared
+  with the discovery promote path): case-insensitive, trimmed name match,
+  create if missing.
 - Salary / remote-type normalisation helpers are imported from the sibling
   ``job_analysis_service`` module (the shared canonical source) to avoid
   duplicating those small utilities.
@@ -24,15 +25,14 @@ also filters by ``user_id`` (defense in depth).
 from __future__ import annotations
 
 import uuid
-from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.application.application import Application
 from app.models.application.application_event import ApplicationEvent
 from app.repositories.application import application_event_repository, application_repository
-from app.repositories.company import company_repository
 from app.repositories.job_analysis import job_analysis_repository
+from app.services.company import company_service
 from app.services.job_analysis._job_analysis_utils import (
     _map_salary_period,
     _safe_float,
@@ -47,10 +47,8 @@ async def apply_to_application(
 ) -> Application | None:
     """Create an Application from a stored analysis.
 
-    Looks up or creates the Company by name (using the same
-    ``primary_domain``-or-``name`` heuristic the AddApplicationDialog
-    uses), creates the Application with the extracted role title +
-    salary + location + remote_type fields, logs an initial
+    Looks up or creates the Company by name, creates the Application
+    with the extracted role title + salary + location + remote_type fields, logs an initial
     ``applied`` event, sets ``analysis.applied_application_id``, and
     commits.
 
@@ -77,12 +75,7 @@ async def apply_to_application(
     company_name = (extracted.get("company") or "Unknown company").strip() or "Unknown company"
     role_title = (extracted.get("title") or "Untitled role").strip() or "Untitled role"
 
-    # Find-or-create the company. Match by case-insensitive name first
-    # (cheap, mirrors the dialog's behavior), fall back to creating a
-    # fresh row.
-    company = await _find_or_create_company(
-        db, user_id=user_id, name=company_name,
-    )
+    company = await company_service.find_or_create_by_name(db, user_id, company_name)
 
     application = Application(
         user_id=user_id,
@@ -121,22 +114,3 @@ async def apply_to_application(
     await db.commit()
     return application
 
-
-async def _find_or_create_company(
-    db: AsyncSession,
-    *,
-    user_id: uuid.UUID,
-    name: str,
-) -> Any:
-    """Find a company by case-insensitive name, or create one."""
-    from app.models.company.company import Company
-
-    matches = await company_repository.list_by_user(
-        db, user_id, name_search=name,
-    )
-    needle = name.strip().lower()
-    for c in matches:
-        if c.name.strip().lower() == needle:
-            return c
-    fresh = Company(user_id=user_id, name=name[:200])
-    return await company_repository.create(db, fresh)
