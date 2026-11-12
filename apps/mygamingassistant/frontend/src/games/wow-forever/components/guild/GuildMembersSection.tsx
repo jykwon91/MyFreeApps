@@ -5,14 +5,17 @@ import { GUILD_SORT_DESCENDING_FIRST, type GuildSortKey } from "@/games/wow-fore
 import { useGuildMemberFilters } from "@/games/wow-forever/hooks/useGuildMemberFilters";
 import { classCounts, filterMembers, filtersFromParams, sortMembers } from "@/games/wow-forever/lib/guild/guildMembers";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
+import type { GuildTitle } from "@/games/wow-forever/types/guild/guildTitle";
 
 interface GuildMembersSectionProps {
   members: readonly GuildMember[];
   rosterUpdatedAt: string | null;
+  /** Each member's guild titles, by slug. */
+  titles: ReadonlyMap<string, readonly GuildTitle[]>;
 }
 
 /** The toolbar and the member list it filters and sorts. */
-export default function GuildMembersSection({ members, rosterUpdatedAt }: GuildMembersSectionProps) {
+export default function GuildMembersSection({ members, rosterUpdatedAt, titles }: GuildMembersSectionProps) {
   const [urlFilters, setFilters] = useGuildMemberFilters();
   const classes = useMemo(() => classCounts(members), [members]);
   // A shared link can name a class nobody in the guild plays now: show everyone, as the select does.
@@ -41,6 +44,7 @@ export default function GuildMembersSection({ members, rosterUpdatedAt }: GuildM
         members={shown}
         total={members.length}
         rosterUpdatedAt={rosterUpdatedAt}
+        titles={titles}
         sort={filters.sort}
         descending={filters.descending}
         onSort={onSort}

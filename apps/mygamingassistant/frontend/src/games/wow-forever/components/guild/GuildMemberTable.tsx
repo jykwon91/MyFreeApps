@@ -1,21 +1,25 @@
 import { GUILD_MISSING_VALUE, GUILD_SORT_KEYS, type GuildSortKey } from "@/games/wow-forever/data/guild/guildConfig";
 import { GUILD_NUMBER_CELL } from "@/games/wow-forever/data/guild/guildStyles";
 import GuildMemberLink from "@/games/wow-forever/components/guild/GuildMemberLink";
+import GuildMemberTitles from "@/games/wow-forever/components/guild/GuildMemberTitles";
 import GuildMemberStaleNote from "@/games/wow-forever/components/guild/GuildMemberStaleNote";
 import GuildSortHeader from "@/games/wow-forever/components/guild/GuildSortHeader";
 import { rankLabel } from "@/games/wow-forever/lib/guild/guildMembers";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
+import type { GuildTitle } from "@/games/wow-forever/types/guild/guildTitle";
 
 interface GuildMemberTableProps {
   members: readonly GuildMember[];
   rosterUpdatedAt: string | null;
+  /** Each member's guild titles, by slug. */
+  titles: ReadonlyMap<string, readonly GuildTitle[]>;
   sort: GuildSortKey;
   descending: boolean;
   onSort: (column: GuildSortKey) => void;
 }
 
 /** The member list as a sortable table (wider screens). */
-export default function GuildMemberTable({ members, rosterUpdatedAt, sort, descending, onSort }: GuildMemberTableProps) {
+export default function GuildMemberTable({ members, rosterUpdatedAt, titles, sort, descending, onSort }: GuildMemberTableProps) {
   const header = { sort, descending, onSort };
   return (
     <div className="hidden md:block overflow-x-auto rounded-xl border bg-card">
@@ -35,6 +39,7 @@ export default function GuildMemberTable({ members, rosterUpdatedAt, sort, desce
             <tr key={m.slug} className="border-b last:border-b-0">
               <td className="px-3 py-1">
                 <GuildMemberLink member={m} />
+                <GuildMemberTitles titles={titles.get(m.slug)} />
                 <GuildMemberStaleNote member={m} rosterUpdatedAt={rosterUpdatedAt} />
               </td>
               <td className={GUILD_NUMBER_CELL}>{m.level ?? GUILD_MISSING_VALUE}</td>

@@ -3,12 +3,15 @@ import type { GuildSortKey } from "@/games/wow-forever/data/guild/guildConfig";
 import GuildMemberCards from "@/games/wow-forever/components/guild/GuildMemberCards";
 import GuildMemberTable from "@/games/wow-forever/components/guild/GuildMemberTable";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
+import type { GuildTitle } from "@/games/wow-forever/types/guild/guildTitle";
 
 interface GuildMemberListProps {
   /** Already filtered and sorted. */
   members: readonly GuildMember[];
   total: number;
   rosterUpdatedAt: string | null;
+  /** Each member's guild titles, by slug. */
+  titles: ReadonlyMap<string, readonly GuildTitle[]>;
   sort: GuildSortKey;
   descending: boolean;
   onSort: (column: GuildSortKey) => void;
@@ -20,6 +23,7 @@ export default function GuildMemberList({
   members,
   total,
   rosterUpdatedAt,
+  titles,
   sort,
   descending,
   onSort,
@@ -39,8 +43,8 @@ export default function GuildMemberList({
         </div>
       ) : (
         <>
-          <GuildMemberTable members={members} rosterUpdatedAt={rosterUpdatedAt} sort={sort} descending={descending} onSort={onSort} />
-          <GuildMemberCards members={members} rosterUpdatedAt={rosterUpdatedAt} />
+          <GuildMemberTable members={members} rosterUpdatedAt={rosterUpdatedAt} titles={titles} sort={sort} descending={descending} onSort={onSort} />
+          <GuildMemberCards members={members} rosterUpdatedAt={rosterUpdatedAt} titles={titles} />
           <p className="text-xs text-muted-foreground">Blizzard shares rank numbers, not names. Lower is higher.</p>
         </>
       )}

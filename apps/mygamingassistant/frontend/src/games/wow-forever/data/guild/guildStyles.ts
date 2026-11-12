@@ -25,3 +25,8 @@ export const LEADERBOARD_CHIP =
 export const LEADERBOARD_CHIP_ON = "border-[hsl(var(--primary))] bg-primary text-primary-foreground";
 /** A member's name in their class colour (``memberClassStyle`` sets the variables); plain text for an unknown class. */
 export const CLASS_NAME_TEXT = "text-[var(--c-light,currentColor)] dark:text-[var(--c-dark,currentColor)]";
+
+/** A guild title badge; all-time ones are solid gold-edged, this week's dashed and plain (they also say "This week"). */
+export const GUILD_TITLE_BADGE = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold";
+export const GUILD_TITLE_BADGE_ALL_TIME = "bg-[#F2C94C]/20 text-card-foreground";
+export const GUILD_TITLE_BADGE_WEEKLY = "border-dashed bg-card text-muted-foreground";
