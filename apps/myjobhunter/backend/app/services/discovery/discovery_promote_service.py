@@ -17,13 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import PUBLISHER_TO_SOURCE
 from app.models.application.application import Application
 from app.models.application.application_event import ApplicationEvent
-from app.models.company.company import Company
 from app.repositories.application import (
     application_event_repository,
     application_repository,
 )
-from app.repositories.company import company_repository
 from app.repositories.discovery import discovery_repository
+from app.services.company import company_service
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +61,8 @@ async def promote_discovered_job(
         # The previous link points at a deleted/missing app. Fall
         # through and create a fresh one.
 
-    company = await _find_or_create_company(
-        db, user_id=user_id, name=job.company_name,
+    company = await company_service.find_or_create_by_name(
+        db, user_id, job.company_name,
     )
 
     publisher_norm = (job.source_publisher or "").lower()
@@ -142,18 +141,3 @@ async def promote_discovered_job(
     )
     return application
 
-
-async def _find_or_create_company(
-    db: AsyncSession, *, user_id: uuid.UUID, name: str,
-) -> Company:
-    """Find a company by case-insensitive name, or create one."""
-    cleaned = (name or "Unknown company").strip() or "Unknown company"
-    matches = await company_repository.list_by_user(
-        db, user_id, name_search=cleaned,
-    )
-    needle = cleaned.lower()
-    for c in matches:
-        if c.name.strip().lower() == needle:
-            return c
-    fresh = Company(user_id=user_id, name=cleaned[:200])
-    return await company_repository.create(db, fresh)

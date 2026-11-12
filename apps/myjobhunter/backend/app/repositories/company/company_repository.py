@@ -13,7 +13,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company.company import Company
@@ -82,6 +82,24 @@ async def list_by_user(
     stmt = stmt.order_by(Company.name.asc())
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def get_by_name(
+    db: AsyncSession, user_id: uuid.UUID, name: str,
+) -> Company | None:
+    """Return the user's company whose name equals ``name`` (case-insensitive, trimmed).
+
+    Names are not unique per user, so when several rows match the oldest wins
+    (deterministic across calls). Scoped to ``user_id``.
+    """
+    needle = name.strip().lower()
+    result = await db.execute(
+        select(Company)
+        .where(Company.user_id == user_id, func.lower(func.trim(Company.name)) == needle)
+        .order_by(Company.created_at.asc(), Company.id.asc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 async def create(db: AsyncSession, company: Company) -> Company:
