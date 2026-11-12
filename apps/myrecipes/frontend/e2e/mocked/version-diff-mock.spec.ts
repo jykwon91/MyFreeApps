@@ -5,77 +5,81 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { json } from "@platform/ui/testing/mockResponse";
-import { stubSignedInShell, TEST_USER } from "@platform/ui/testing/mockSession";
+import { stubSignedInShell } from "@platform/ui/testing/mockSession";
+import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
+import { diffVersions } from "./fixtures/diffVersions";
+import {
+  SALT_LINEAGE_KEY,
+  recipeIdAt,
+  detailOf,
+  stepIdOf,
+  versionIdOf,
+  versionOf,
+  versionSummaryOf,
+} from "./fixtures/recipeFixtures";
 
-const RECIPE_ID = "44444444-4444-4444-4444-444444444444";
-const NOW = "2026-11-11T00:00:00Z";
+const RECIPE_ID = recipeIdAt(4);
+const VERSION_COUNT = 3;
+// Worded as VERSION_COPY in @myrecipes/api-client; Playwright can't import that CommonJS-typed package at runtime.
+const VERSION_COPY = {
+  nothing: "nothing",
+  loadFailedHeading: "Couldn't load this comparison",
+  notInRecipe:
+    "One of these versions isn't part of this recipe, or no longer exists. Go back and pick two versions to compare.",
+  recipeOrVersionGone: "This recipe or one of its versions no longer exists.",
+} as const;
+const NOT_FOUND = { detail: "Not Found" };
+const BAD_AGAINST = { detail: "against version is not a version of this recipe" };
 
-function version(n: number) {
-  return {
-    id: `v${n}`,
-    recipe_id: RECIPE_ID,
-    version_number: n,
-    parent_version_id: n === 1 ? null : `v${n - 1}`,
-    change_note: n === 1 ? null : `Change ${n}`,
-    servings: "4",
-    prep_minutes: null,
-    cook_minutes: null,
-    created_at: NOW,
-    ingredients: [],
-    steps: [],
-  };
-}
-
-const RECIPE = {
-  id: RECIPE_ID,
-  title: "Tomato soup",
-  description: null,
-  source: null,
-  created_at: NOW,
-  updated_at: NOW,
-  version_count: 3,
-  latest_version_number: 3,
+// v1 and v2 share the default body; v3 doubles the salt and adds a step, so v1 -> v3 has two changes.
+const V3_BASE = versionOf(RECIPE_ID, VERSION_COUNT, { change_note: "Change 3" });
+const VERSIONS: VersionResponse[] = [
+  versionOf(RECIPE_ID, 1),
+  versionOf(RECIPE_ID, 2, { change_note: "Change 2" }),
+  {
+    ...V3_BASE,
+    ingredients: V3_BASE.ingredients.map((ingredient) =>
+      ingredient.lineage_key === SALT_LINEAGE_KEY ? { ...ingredient, quantity: 2 } : ingredient,
+    ),
+    steps: [...V3_BASE.steps, { id: stepIdOf(VERSION_COUNT, 1), position: 1, instruction: "Stir." }],
+  },
+];
+const RECIPE = detailOf(RECIPE_ID, {
   is_owner: false,
-  owner_display_name: TEST_USER.display_name,
-  best_rating: null,
-  last_cooked_at: null,
-  latest_version: version(3),
-};
+  version_count: VERSION_COUNT,
+  latest_version_number: VERSION_COUNT,
+  latest_version: VERSIONS[VERSION_COUNT - 1]!,
+});
 
-const SUMMARIES = [1, 2, 3].map((n) => ({
-  id: `v${n}`,
-  version_number: n,
-  change_note: version(n).change_note,
-  created_at: NOW,
-  cook_count: null,
-  best_rating: null,
-}));
+const versionById = (id: string | undefined): VersionResponse | undefined =>
+  VERSIONS.find((version) => version.id === id);
 
-const SALT = { name: "salt", quantity: 1, unit: "tsp", note: null };
-const DIFF = {
-  from_version_id: "v1",
-  from_version_number: 1,
-  to_version_id: "v3",
-  to_version_number: 3,
-  ingredient_changes: [{ lineage_key: "lk-salt", change: "changed", before: SALT, after: { ...SALT, quantity: 2 } }],
-  step_changes: [{ position: 1, change: "added", before: null, after: "Stir." }],
-};
-
-/** Answers the recipe's reads; the diff answers `diffStatus`. Returns each diff URL asked for. */
-async function stubRecipe(page: Page, diffStatus = 200) {
+/**
+ * Answers the recipe's public reads like the backend (recipes.py diff_version):
+ * a version that is not the recipe's is 404; an `against` that is not the
+ * recipe's is 400; without `against` the diff is against the parent, and the
+ * first version, which has none, gets everything as added. The diff itself is
+ * derived from the versions' bodies. Returns each diff URL asked for.
+ */
+async function stubRecipe(page: Page): Promise<URL[]> {
   const diffs: URL[] = [];
   await page.route(/\/api\/recipes(\?|$)/, (route) => route.fulfill(json([])));
   await page.route(new RegExp(`/api/recipes/${RECIPE_ID}(/.*)?(\\?.*)?$`), (route) => {
     const url = new URL(route.request().url());
-    if (url.pathname.endsWith("/diff")) {
-      diffs.push(url);
-      return route.fulfill(diffStatus === 200 ? json(DIFF) : json({ detail: "no" }, diffStatus));
-    }
+    const [, versionId, diff] = /\/versions\/([^/]+)(\/diff)?$/.exec(url.pathname) ?? [];
+    const version = versionById(versionId);
     if (url.pathname.endsWith(`/recipes/${RECIPE_ID}`)) return route.fulfill(json(RECIPE));
-    if (url.pathname.endsWith("/versions")) return route.fulfill(json(SUMMARIES));
-    const match = url.pathname.match(/\/versions\/v(\d)$/);
-    if (match) return route.fulfill(json(version(Number(match[1]))));
-    return route.fulfill(json([]));
+    if (url.pathname.endsWith("/versions")) return route.fulfill(json(VERSIONS.map((v) => versionSummaryOf(v))));
+    if (!version) return route.fulfill(json(NOT_FOUND, 404));
+    if (!diff) return route.fulfill(json(version));
+
+    diffs.push(url);
+    const against = url.searchParams.get("against");
+    if (against !== null) {
+      const from = versionById(against);
+      return route.fulfill(from ? json(diffVersions(from, version)) : json(BAD_AGAINST, 400));
+    }
+    return route.fulfill(json(diffVersions(versionById(version.parent_version_id ?? undefined) ?? null, version)));
   });
   return diffs;
 }
@@ -92,24 +96,42 @@ test("compares two picked versions, newer against older, and shows what changed"
   await expect(page.getByLabel("Select v2 to compare")).toBeDisabled();
   await compare.click();
 
-  await expect(page).toHaveURL(new RegExp(`/recipes/${RECIPE_ID}/versions/v3/diff\\?against=v1$`));
+  await expect(page).toHaveURL(new RegExp(`/recipes/${RECIPE_ID}/versions/${versionIdOf(3)}/diff\\?against=${versionIdOf(1)}$`));
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("v1 to v3");
   await expect(page.getByText("2 changes — 1 ingredient, 1 step.")).toBeVisible();
   await expect(page.getByText("1 tsp salt")).toBeVisible();
   await expect(page.getByText("2 tsp salt")).toBeVisible();
   await expect(page.getByText("Stir.")).toBeVisible();
-  expect(diffs[0]?.searchParams.get("against")).toBe("v1");
+  expect(diffs[0]?.searchParams.get("against")).toBe(versionIdOf(1));
 });
 
-test("says a version is gone when the comparison 404s", async ({ page }) => {
+test("says a version is not part of the recipe when the comparison base is not one of its versions", async ({ page }) => {
   await stubSignedInShell(page);
-  await stubRecipe(page, 404);
+  await stubRecipe(page);
 
-  await page.goto(`/recipes/${RECIPE_ID}/versions/v3/diff?against=v9`);
-  await expect(page.getByRole("heading", { name: "Couldn't load this comparison" })).toBeVisible();
-  await expect(
-    page.getByText("This recipe or one of its versions no longer exists."),
-  ).toBeVisible();
+  await page.goto(`/recipes/${RECIPE_ID}/versions/${versionIdOf(3)}/diff?against=${versionIdOf(9)}`);
+  await expect(page.getByRole("heading", { name: VERSION_COPY.loadFailedHeading })).toBeVisible();
+  await expect(page.getByText(VERSION_COPY.notInRecipe)).toBeVisible();
   await page.getByRole("button", { name: "Back to recipe" }).click();
   await expect(page).toHaveURL(new RegExp(`/recipes/${RECIPE_ID}$`));
+});
+
+test("says the recipe or version no longer exists when the version being viewed is unknown", async ({ page }) => {
+  await stubSignedInShell(page);
+  await stubRecipe(page);
+
+  await page.goto(`/recipes/${RECIPE_ID}/versions/${versionIdOf(9)}/diff?against=${versionIdOf(1)}`);
+  await expect(page.getByRole("heading", { name: VERSION_COPY.loadFailedHeading })).toBeVisible();
+  await expect(page.getByText(VERSION_COPY.recipeOrVersionGone)).toBeVisible();
+});
+
+test("shows the first version as all added when it is opened without a base", async ({ page }) => {
+  await stubSignedInShell(page);
+  const diffs = await stubRecipe(page);
+
+  await page.goto(`/recipes/${RECIPE_ID}/versions/${versionIdOf(1)}/diff`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${VERSION_COPY.nothing} to v1`);
+  await expect(page.getByText("3 changes — 2 ingredient, 1 step.")).toBeVisible();
+  await expect(page.getByText("Simmer.")).toBeVisible();
+  expect(diffs[0]?.searchParams.has("against")).toBe(false);
 });
