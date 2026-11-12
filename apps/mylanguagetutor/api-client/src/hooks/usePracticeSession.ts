@@ -1,55 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import { createSentenceChunker } from "@mylanguagetutor/api-client/utils/sentenceChunker";
-import { streamTurn } from "@/features/tutor-stream/streamTurn";
-import { TurnRequestError } from "@mylanguagetutor/api-client/errors/TurnRequestError";
-import { blockForCode, isRetryableRefusal, normaliseRefusalCode } from "@mylanguagetutor/api-client/utils/turnRefusal";
-import { MAX_TURN_CHARS } from "@mylanguagetutor/api-client/constants/turnLimits";
+import { createSentenceChunker } from "../utils/sentenceChunker";
+import { TurnRequestError } from "../errors/TurnRequestError";
+import { blockForCode, isRetryableRefusal, normaliseRefusalCode } from "../utils/turnRefusal";
+import { MAX_TURN_CHARS } from "../constants/turnLimits";
 import {
   CONNECTION_LOST,
   NETWORK_ERROR,
   SESSION_CREATE_FAILED,
   SESSION_NOT_FOUND,
-} from "@mylanguagetutor/api-client/constants/turnFailureCodes";
-import { useCreateSessionMutation } from "@mylanguagetutor/api-client/store/sessionsApi";
-import { usageApiUtil } from "@mylanguagetutor/api-client/store/usageApi";
-import type { AppDispatch } from "@/lib/store";
-import type { Level } from "@mylanguagetutor/api-client/types/tutor/level";
-import type { ScenarioState } from "@mylanguagetutor/api-client/types/tutor/scenario-state";
-import type { TurnStreamEvent } from "@mylanguagetutor/api-client/types/tutor/turn-stream-event";
-import type { TranscriptEntry } from "@mylanguagetutor/api-client/types/session/transcript-entry";
-import type { TurnFailure } from "@mylanguagetutor/api-client/types/session/turn-failure";
-import type { SessionBlock } from "@mylanguagetutor/api-client/types/session/session-block";
-import type { RequestPhase } from "@mylanguagetutor/api-client/types/session/request-phase";
-
-export interface PracticeSessionConfig {
-  languageCode: string;
-  ttsLocale: string;
-  scenarioSlug: string;
-  level: Level;
-  /** Queue a finished sentence for speech. */
-  speak: (sentence: string) => void;
-  /** Stop any speech in progress (a new turn barges in). */
-  stopSpeaking: () => void;
-}
-
-export interface PracticeSession {
-  sessionId: string | null;
-  entries: TranscriptEntry[];
-  requestPhase: RequestPhase;
-  failure: TurnFailure | null;
-  block: SessionBlock | null;
-  scenarioState: ScenarioState;
-  send: (text: string) => void;
-  retry: () => void;
-  dismissFailure: () => void;
-  dismissRetryPrompt: (key: string) => void;
-}
-
-interface StreamOutcome {
-  error: { code: string; retryable: boolean } | null;
-  finished: boolean;
-}
+} from "../constants/turnFailureCodes";
+import { useCreateSessionMutation } from "../store/sessionsApi";
+import { usageApiUtil } from "../store/usageApi";
+import type { ScenarioState } from "../types/tutor/scenario-state";
+import type { TurnStreamEvent } from "../types/tutor/turn-stream-event";
+import type { TranscriptEntry } from "../types/session/transcript-entry";
+import type { TurnFailure } from "../types/session/turn-failure";
+import type { SessionBlock } from "../types/session/session-block";
+import type { RequestPhase } from "../types/session/request-phase";
+import type { PracticeSession } from "../types/session/practice-session";
+import type { PracticeSessionConfig } from "../types/session/practice-session-config";
+import type { StreamOutcome } from "../types/session/stream-outcome";
 
 const EMPTY_STATE: ScenarioState = { goals_met: [], complete: false };
 
@@ -75,10 +46,11 @@ function newEntry(key: string, text: string): TranscriptEntry {
  * The conversation loop's state machine (no rendering): creates the session
  * on the first turn, streams each turn, feeds finished sentences to speech,
  * attaches corrections, and turns refusals into retry / blocked states.
+ * Shared by web and the phone: each passes its own ``streamTurn``.
  */
 export function usePracticeSession(config: PracticeSessionConfig): PracticeSession {
-  const { languageCode, ttsLocale, scenarioSlug, level, speak, stopSpeaking } = config;
-  const dispatch = useDispatch<AppDispatch>();
+  const { languageCode, ttsLocale, scenarioSlug, level, streamTurn, speak, stopSpeaking } = config;
+  const dispatch = useDispatch();
   const [createSession] = useCreateSessionMutation();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [entries, setEntries] = useState<TranscriptEntry[]>([]);
@@ -216,7 +188,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
         dispatch(usageApiUtil.invalidateTags(["Usage"]));
       });
     },
-    [block, dispatch, ensureSession, handleRefusal, patchEntry, removeEntry, speak, stopSpeaking, ttsLocale],
+    [block, dispatch, ensureSession, handleRefusal, patchEntry, removeEntry, speak, stopSpeaking, streamTurn, ttsLocale],
   );
 
   const retry = useCallback(() => {

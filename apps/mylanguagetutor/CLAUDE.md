@@ -73,9 +73,13 @@ burst limiter, 503 `tutor_unavailable` (global cap, kill switch, or no key).
   One turn in flight per user (`services/tutor/turn_slots.py`).
 - **Frontend.** Speech recognition and TTS are the browser's Web Speech API
   (no audio reaches our servers). The SSE body is read with `fetch` +
-  `eventsource-parser` (`features/tutor-stream/`) because `EventSource` can't
-  POST or send a bearer token; the events are parsed by `parseTurnEvent` in the
-  api-client. Replies are spoken sentence by sentence (the api-client's
+  `eventsource-parser` because `EventSource` can't POST or send a bearer token:
+  the api-client's `createStreamTurn` (request + refusal mapping) and
+  `readTurnStream` (body -> `parseTurnEvent`) take the `fetch` by injection, and
+  the web's `features/tutor-stream/streamTurn.ts` only wires in the browser's
+  `fetch`, the `localStorage` token and the 401 sign-out. The conversation state
+  machine is the api-client's `hooks/usePracticeSession`, handed that
+  `streamTurn`. Replies are spoken sentence by sentence (the api-client's
   `utils/sentenceChunker.ts`). Browsers without recognition
   (Firefox) get labelled typed practice.
 - **Copy rules.** No pronunciation scoring, no "fluent", no "native speaker",
@@ -192,13 +196,15 @@ npm test --workspace=@mylanguagetutor/api-client
 ```
 
 RTK Query endpoints, their request/response types, the SSE turn-event parser,
-the turn refusal/error mapping, the session state types and the pure speech
-text helpers live in `apps/mylanguagetutor/api-client`
+the turn stream (`createStreamTurn` / `readTurnStream`, `fetch` injected), the
+turn refusal/error mapping, the `usePracticeSession` conversation hook, the
+session state types and the pure speech text helpers live in `apps/mylanguagetutor/api-client`
 (`@mylanguagetutor/api-client`), shared with the phone app (`mobile/`). Import them
 as `@mylanguagetutor/api-client/<dir>/<file>`. The package must stay
-platform-neutral: no DOM, `window`, `localStorage`, Web Speech API or
-`fetch` streaming -- those (`streamTurn`, the speech hooks, `voiceForLocale`,
-`privacyAck`) stay in the web frontend. One type per file in its `src/types/`.
+platform-neutral: no DOM, `window`, `localStorage`, Web Speech API or global
+`fetch` -- the platform parts (the `streamTurn` wiring, the speech hooks,
+`voiceForLocale`, `privacyAck`) stay in the web frontend, and `src/globals.d.ts`
+declares only the globals both platforms have (`AbortController`, `TextDecoder`). One type per file in its `src/types/`.
 
 ## Architecture Rules
 

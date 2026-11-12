@@ -1,7 +1,15 @@
+// The stream reading and refusal mapping are tested in the api-client
+// (createStreamTurn / readTurnStream); this covers only the web's wiring.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamTurn } from "@/features/tutor-stream/streamTurn";
 import { TurnRequestError } from "@mylanguagetutor/api-client/errors/TurnRequestError";
-import type { TurnStreamEvent } from "@mylanguagetutor/api-client/types/tutor/turn-stream-event";
+
+const notifyAuthChange = vi.hoisted(() => vi.fn());
+
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
+  notifyAuthChange,
+}));
 
 function sseBody(chunks: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -13,7 +21,7 @@ function sseBody(chunks: string[]): ReadableStream<Uint8Array> {
   });
 }
 
-describe("streamTurn", () => {
+describe("streamTurn (web)", () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
@@ -24,42 +32,25 @@ describe("streamTurn", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     fetchMock.mockReset();
+    notifyAuthChange.mockReset();
     localStorage.clear();
   });
 
-  it("POSTs with the bearer token and delivers events across chunk boundaries", async () => {
+  it("POSTs to /api with the stored bearer token through the browser's fetch", async () => {
     fetchMock.mockResolvedValue(
-      new Response(
-        sseBody([
-          'event: turn.started\ndata: {"turn_id":"t1","seq":1}\n\n',
-          'event: reply.delta\ndata: {"text":"Ho',
-          'la"}\n\nevent: done\ndata: {"status":"complete","usage":{"remaining_fraction":0.9}}\n\n',
-        ]),
-        { status: 200, headers: { "Content-Type": "text/event-stream" } },
-      ),
+      new Response(sseBody(['event: reply.delta\ndata: {"text":"Hola"}\n\n']), {
+        status: 200,
+        headers: { "Content-Type": "text/event-stream" },
+      }),
     );
-    const events: TurnStreamEvent[] = [];
+    const onEvent = vi.fn();
 
-    await streamTurn({ sessionId: "s1", text: "hola", onEvent: (e) => events.push(e) });
+    await streamTurn({ sessionId: "s1", text: "hola", onEvent });
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/sessions/s1/turns");
-    expect(init.method).toBe("POST");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer test-token");
-    expect(JSON.parse(init.body as string)).toEqual({ text: "hola" });
-    expect(events.map((e) => e.type)).toEqual(["turn.started", "reply.delta", "done"]);
-    expect(events[1]).toEqual({ type: "reply.delta", text: "Hola" });
-  });
-
-  it("throws TurnRequestError with the refusal code", async () => {
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ detail: "daily_limit_reached" }), { status: 429 }),
-    );
-
-    const error = await streamTurn({ sessionId: "s1", text: "hola", onEvent: () => {} }).catch((e) => e);
-
-    expect(error).toBeInstanceOf(TurnRequestError);
-    expect(error).toMatchObject({ status: 429, detail: "daily_limit_reached" });
+    expect(onEvent).toHaveBeenCalledWith({ type: "reply.delta", text: "Hola" });
   });
 
   it("signs the user out on 401", async () => {
@@ -69,6 +60,7 @@ describe("streamTurn", () => {
       TurnRequestError,
     );
     expect(localStorage.getItem("token")).toBeNull();
+    expect(notifyAuthChange).toHaveBeenCalledTimes(1);
   });
 
   it("leaves the next user signed in when the 401 answers the previous user's token", async () => {
@@ -82,14 +74,6 @@ describe("streamTurn", () => {
       TurnRequestError,
     );
     expect(localStorage.getItem("token")).toBe("next-user-token");
-  });
-
-  it("maps a failed fetch to network_error", async () => {
-    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
-
-    await expect(streamTurn({ sessionId: "s1", text: "hola", onEvent: () => {} })).rejects.toMatchObject({
-      status: 0,
-      detail: "network_error",
-    });
+    expect(notifyAuthChange).not.toHaveBeenCalled();
   });
 });
