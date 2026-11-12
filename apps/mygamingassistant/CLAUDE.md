@@ -1019,6 +1019,30 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   429, 502 `character_upstream_failed`. Constants `app/core/wow_character.py`.
   Shared Blizzard HTTP (`services/wow/blizzard/`: token cache, send, error
   class) is also what the auction client uses.
+- Stored characters (migration 0054, `services/wow/character/character_store_service.py`,
+  for the guild pages): the route goes through `character_lookup_service`,
+  which still serves Blizzard's answer (the page never shows stored data) and
+  after every FRESH fetch (not an in-process cache hit) writes, in one short
+  `unit_of_work` after the Blizzard calls, under a per-character advisory lock:
+  - `wow_character` — keyed by Blizzard's character id (a rename moves the
+    slug and keeps history; a different live character under the slug is
+    marked gone first). `sheet` = the `CharacterResponse` JSON, a render cache
+    only (never filtered); a section Blizzard failed to send keeps its stored
+    value (`character_sheet_merge.py`). Bump `CHARACTER_SHEET_VERSION` when a
+    `CharacterResponse` change makes old sheets mean something else, then the
+    `SHEET_SCHEMA_HASH` pin in `tests/test_wow_character_store.py` (it fails
+    on any schema change). A sheet of another version or that no longer
+    validates reads as None.
+  - `wow_character_daily_metric` (one row per character per UTC day, upserted;
+    `None` keeps the day's earlier value, never 0) + `wow_character_profession_skill`
+    (replaced only when Blizzard sent the professions). Numbers:
+    `character_metrics_mapper.py` (statistics 1197 total kills, 1487 killing
+    blows, 60 deaths; absent = 0, failed call = None).
+  - A 404 marks a stored character `gone_at` (cleared when it answers again);
+    nothing is stored for a name Blizzard never answered. Other failures set
+    `last_error`. A storage error is logged and never breaks the page.
+  - `purge_wow_character_metrics` (daily, always on): rows older than 400 days,
+    each character's newest kept. Tests: `tests/test_wow_character_store.py`.
 - Frontend: `pages/WowCharacterPage.tsx`, `components/character/`,
   `lib/character/`. Names are remembered per browser only after a successful
   load (`mga.wowForever.character.v1`, 5 max); `/wow-forever/character`

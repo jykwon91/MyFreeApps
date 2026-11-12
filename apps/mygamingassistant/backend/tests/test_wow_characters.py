@@ -25,7 +25,7 @@ from app.schemas.wow.character.character_dungeon import CharacterDungeon
 from app.api import wow_characters
 from app.core.rate_limit import RateLimiter
 from app.services.wow.blizzard.blizzard_token_cache import BlizzardTokenCache
-from app.services.wow.character import character_service
+from app.services.wow.character import character_lookup_service, character_service
 from app.services.wow.character.blizzard_character_client import BlizzardCharacterClient
 from app.services.wow.character.character_lookup_error import CharacterLookupError
 from app.services.wow.character.character_mapper import to_character_response
@@ -499,7 +499,7 @@ async def test_the_sheet_and_render_ask_blizzard_once(monkeypatch: pytest.Monkey
 
 async def test_route_returns_the_sheet(client: AsyncClient) -> None:
     sheet = to_character_response("jason-kwon", CharacterProfile(profile=PROFILE, media=MEDIA, equipment=EQUIPMENT, statistics=STATISTICS, specializations=SPECIALIZATIONS, professions=PROFESSIONS, reputations=REPUTATIONS, pvp_summary=PVP_SUMMARY, achievement_statistics=ACHIEVEMENT_STATISTICS, mounts=MOUNTS, pets=PETS))
-    with patch.object(character_service, "get_character", AsyncMock(return_value=sheet)) as get:
+    with patch.object(character_lookup_service, "get_character", AsyncMock(return_value=sheet)) as get:
         resp = await client.get("/wow/characters/Jason-Kwon")
     assert resp.status_code == 200
     get.assert_awaited_once_with("jason-kwon")
@@ -518,14 +518,14 @@ async def test_route_returns_the_sheet(client: AsyncClient) -> None:
 async def test_route_maps_blizzard_failures(
     client: AsyncClient, error: CharacterLookupError, status: int, detail: str,
 ) -> None:
-    with patch.object(character_service, "get_character", AsyncMock(side_effect=error)):
+    with patch.object(character_lookup_service, "get_character", AsyncMock(side_effect=error)):
         resp = await client.get("/wow/characters/jason-kwon")
     assert resp.status_code == status
     assert resp.json()["detail"] == detail
 
 
 async def test_route_refuses_a_name_that_isnt_two_names(client: AsyncClient) -> None:
-    with patch.object(character_service, "get_character", AsyncMock()) as get:
+    with patch.object(character_lookup_service, "get_character", AsyncMock()) as get:
         resp = await client.get("/wow/characters/jason")
     assert resp.status_code == 400
     get.assert_not_awaited()
