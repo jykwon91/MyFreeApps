@@ -62,7 +62,8 @@ describe("the signed-in shell", () => {
 
     expect(await screen.findByText(`Signed in as ${ACCOUNT_EMAIL}`)).toBeTruthy();
     expect(await screen.findByText("Old iPad")).toBeTruthy();
-    for (const item of SETTINGS_MENU.flatMap((group) => group.items)) {
+    // Security has a screen of its own (security.test.tsx); the rest open on the website.
+    for (const item of SETTINGS_MENU.flatMap((group) => group.items).filter((item) => !item.screen)) {
       await fireEvent.press(screen.getByRole("link", { name: item.label }));
       expect(openURL).toHaveBeenLastCalledWith(`${WEB_BASE_URL}${item.webPath}`);
     }

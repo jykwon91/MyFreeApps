@@ -1,6 +1,6 @@
 import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { baseApi } from "@platform/core/store/baseApi";
-import { assertSecureApiUrl, refetchOnForeground, resetCacheOnAccountChange } from "@platform/mobile";
+import { assertSecureApiUrl, clearDataExportFiles, onAccountLeft, refetchOnForeground, resetCacheOnAccountChange } from "@platform/mobile";
 import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
 import { session } from "./session";
@@ -28,6 +28,9 @@ export const store = makeStore();
 
 // Practice on the website uses time too, so coming back to the app should show fresh usage.
 refetchOnForeground(store.dispatch);
+
+// A data export on the way to the share sheet is the whole account, which the next one shouldn't open.
+onAccountLeft(session, clearDataExportFiles);
 
 resetCacheOnAccountChange(session, () => store.dispatch(baseApi.util.resetApiState()));
 

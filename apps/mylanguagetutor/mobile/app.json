@@ -23,7 +23,9 @@
           "microphonePermission": "MyLanguageTutor uses the microphone while you tap to speak, so you can answer the tutor out loud. It listens only until you stop talking.",
           "speechRecognitionPermission": "Your iPhone turns what you say into text so the tutor can read it. It does this on the iPhone when it can for the language you're practicing; otherwise Apple does it. MyLanguageTutor never receives your audio."
         }
-      ]
+      ],
+      "expo-sharing",
+      ["expo-local-authentication", { "faceIDPermission": "I use Face ID to confirm it's you before changing your sign-in security." }]
     ]
   }
 }

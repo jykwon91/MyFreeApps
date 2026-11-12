@@ -23,8 +23,10 @@ routes:
   # The Practice tab. A scenario opens /practice.
   /scenarios:
     screen: (app)/(tabs)/index
+  # In Settings. Its Turn on dialog is a screen of its own, (app)/security/turn-on; the Turn off dialog is a
+  # sheet; the export downloads to the share sheet; Delete account opens (app)/delete-account.
   /security:
-    not_on_mobile: Not built yet.
+    screen: (app)/security/index
   /settings:
     screen: (app)/(tabs)/settings
   /support-myfreeapps:

@@ -2,4 +2,4 @@
  * Screens that open from a tap. A fast double tap pushes twice, and Back then
  * appears to do nothing, so each of these keeps one copy per id in the stack.
  */
-export const SINGLE_COPY_SCREENS = ["delete-account", "onboarding/language", "onboarding/level", "practice"] as const;
+export const SINGLE_COPY_SCREENS = ["delete-account", "onboarding/language", "onboarding/level", "practice", "security/index", "security/turn-on"] as const;
