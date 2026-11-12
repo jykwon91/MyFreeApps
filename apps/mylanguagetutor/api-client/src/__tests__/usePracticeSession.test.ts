@@ -91,7 +91,7 @@ describe("usePracticeSession", () => {
       retryPrompt: "Try: Quiero un café.",
       status: "complete",
     });
-    expect(speak.mock.calls.map((call) => call[0])).toEqual(["¡Hola!", "¿Qué quieres?"]);
+    expect(speak.mock.calls).toEqual([["¡Hola!"], ["¿Qué quieres?"]]);
     expect(result.current.scenarioState.goals_met).toEqual([0]);
     expect(result.current.failure).toBeNull();
     expect(result.current.sessionId).toBe("s1");
@@ -176,7 +176,7 @@ describe("usePracticeSession", () => {
     expect(result.current.failure).toMatchObject({ code: "connection_lost", text: "hola", retryable: true });
     expect(result.current.entries[0]).toMatchObject({ replyText: "¡Hola! Bienvenido", status: "failed" });
     // "¡Hola!" was a finished sentence; the rest was cut off, so it isn't read out.
-    expect(speak.mock.calls.map((call) => call[0])).toEqual(["¡Hola!"]);
+    expect(speak.mock.calls).toEqual([["¡Hola!"]]);
 
     streamTurn.mockImplementation(emitting(COMPLETE_TURN));
     act(() => result.current.retry());

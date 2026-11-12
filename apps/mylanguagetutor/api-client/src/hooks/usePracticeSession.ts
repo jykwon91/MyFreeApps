@@ -147,12 +147,12 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
             case "reply.delta":
               setRequestPhase("replying");
               patchEntry(key, (e) => ({ ...e, replyText: e.replyText + event.text }));
-              chunker.push(event.text).forEach(speak);
+              chunker.push(event.text).forEach((sentence) => speak(sentence));
               break;
             case "reply.done":
               outcome.replyDone = true;
               replied.current = controller;
-              chunker.flush().forEach(speak);
+              chunker.flush().forEach((sentence) => speak(sentence));
               break;
             case "corrections":
               patchEntry(key, (e) => ({
@@ -197,7 +197,7 @@ export function usePracticeSession(config: PracticeSessionConfig): PracticeSessi
         }
 
         // A cut-off stream may leave a sentence unspoken; an interrupted one stays unspoken.
-        if (!wasInterrupted()) chunker.flush().forEach(speak);
+        if (!wasInterrupted()) chunker.flush().forEach((sentence) => speak(sentence));
         const failed = outcome.error ?? (outcome.finished ? null : { code: CONNECTION_LOST, retryable: true });
         if (!failed) return;
         if (!outcome.finished) patchEntry(key, (e) => ({ ...e, status: "failed" }));
