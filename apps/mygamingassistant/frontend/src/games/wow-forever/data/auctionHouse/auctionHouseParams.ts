@@ -44,6 +44,10 @@ export const AUCTION_LEVEL_PARAM = "lvl";
 /** `?usable=1` — gear the player's class can equip. */
 export const AUCTION_USABLE_PARAM = "usable";
 
+/** `?bis=any|1|2|3` — the top picks for the player's class and level; `?bisLvl=24` picks for another level. */
+export const AUCTION_BIS_PARAM = "bis";
+export const AUCTION_BIS_LEVEL_PARAM = "bisLvl";
+
 /** Every param that is a filter (not the search, sort, house or profession): "Clear all" removes these. */
 export const AUCTION_FILTER_PARAMS: readonly string[] = [
   AUCTION_CATEGORY_PARAM,
@@ -57,4 +61,6 @@ export const AUCTION_FILTER_PARAMS: readonly string[] = [
   AUCTION_TYPE_PARAM,
   AUCTION_LEVEL_PARAM,
   AUCTION_USABLE_PARAM,
+  AUCTION_BIS_PARAM,
+  AUCTION_BIS_LEVEL_PARAM,
 ];

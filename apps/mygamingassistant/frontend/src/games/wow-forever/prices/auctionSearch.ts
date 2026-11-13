@@ -9,6 +9,7 @@ import { ITEM_QUALITIES } from "@/games/wow-forever/data/itemSlots";
 import type { ItemQuality } from "@/games/wow-forever/data/itemSlots";
 import type { AuctionFilterContext } from "@/games/wow-forever/types/auctionHouse/auctionFilterContext";
 import type { AuctionFilters } from "@/games/wow-forever/types/auctionHouse/auctionFilters";
+import type { BisPick } from "@/games/wow-forever/types/auctionHouse/bisPick";
 import type { AuctionPriceCompare } from "@/games/wow-forever/types/auctionHouse/auctionPriceCompare";
 import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
 import type { AuctionSearchResult } from "@/games/wow-forever/types/auctionSearchResult";
@@ -77,15 +78,22 @@ function matchesGear(item: AuctionPrice, filters: AuctionFilters, context: Aucti
   return !filters.usable || usableByClass(found, context.classId);
 }
 
+/** The top-picks filter: the item is one of the picks, at the asked rank (any of the three for "any"). */
+function matchesBis(item: AuctionPrice, filters: AuctionFilters, picks: ReadonlyMap<number, BisPick>): boolean {
+  const pick = picks.get(item.itemId);
+  return pick !== undefined && (filters.bis === "any" || pick.rank === filters.bis);
+}
+
 /**
  * The items that match the search and every filter that is on (a filter left off
  * lets everything through), in the order given. A reversed price or level range is read low to high. Gear filters wait for
- * `context.gear`, and the category filter for `context.categories`: until those have loaded they don't apply.
+ * `context.gear`, the top-picks filter for `context.bisPicks` and the category filter for `context.categories`: until those have loaded they don't apply.
  */
 export function filterAuctionItems(items: Iterable<AuctionPrice>, asked: AuctionFilters, context: AuctionFilterContext): AuctionPrice[] {
   const filters = normalizeFilterRanges(asked);
   const needle = filters.query.trim().toLowerCase();
   const gear = gearFilterActive(filters) ? context.gear : null;
+  const bisPicks = filters.bis === null ? null : context.bisPicks;
   const categories = categoryFilterActive(filters) ? context.categories : null;
   return [...items].filter((item) => {
     if (!matchesQuery(item, needle) || !inGoldRange(item, filters)) return false;
@@ -93,6 +101,7 @@ export function filterAuctionItems(items: Iterable<AuctionPrice>, asked: Auction
     if (filters.minListings !== null && item.listings < filters.minListings) return false;
     if (filters.qualities.length > 0 && !filters.qualities.includes(context.qualityOf(item.itemId) ?? "unknown")) return false;
     if (categories !== null && !inCategory(item.itemId, filters, categories)) return false;
+    if (bisPicks !== null && !matchesBis(item, filters, bisPicks)) return false;
     return gear === null || matchesGear(item, filters, context, gear);
   });
 }

@@ -67,7 +67,7 @@ describe("lookupAuctionItems for a profession's materials", () => {
     [6217, price(6217, "Copper Rod", 120, 5)],
     [2589, price(2589, "Linen Cloth", 50, 9000)],
   ]);
-  const context = { qualityOf: () => null, gear: null, categories: null, classId: "mage" as const };
+  const context = { qualityOf: () => null, gear: null, categories: null, bisPicks: null, classId: "mage" as const };
   const look = (query: string, sort = NO_AUCTION_FILTERS.sort) => lookupAuctionItems(byId, materials, { ...NO_AUCTION_FILTERS, query, sort }, context);
 
   it("keeps only the profession's materials on sale, and counts the ones that aren't", () => {

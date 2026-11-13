@@ -1,5 +1,6 @@
 import type { ItemSlot } from "@/games/wow-forever/data/itemSlots";
 import type { AuctionCategory } from "@/games/wow-forever/types/auctionHouse/auctionCategory";
+import type { BisChoice } from "@/games/wow-forever/types/auctionHouse/bisChoice";
 import type { AuctionQualityFilter } from "@/games/wow-forever/types/auctionHouse/auctionQualityFilter";
 import type { AuctionSort } from "@/games/wow-forever/types/auctionSort";
 
@@ -28,4 +29,8 @@ export interface AuctionFilters {
   maxLevel: number | null;
   /** Only gear the player's class can equip. */
   usable: boolean;
+  /** `?bis=` — only the top picks for the player's class at their level; needs the gear data. */
+  bis: BisChoice | null;
+  /** `?bisLvl=` — the level to pick for, instead of the player's own; only meaningful with `bis`. */
+  bisLevel: number | null;
 }

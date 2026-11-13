@@ -4,6 +4,9 @@ import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import AuctionFilterChips from "@/games/wow-forever/components/auctionHouse/AuctionFilterChips";
 import AuctionRangeFields from "@/games/wow-forever/components/auctionHouse/AuctionRangeFields";
 import FilterChipsSkeleton from "@/games/wow-forever/components/auctionHouse/FilterChipsSkeleton";
+import { bisLegend } from "@/games/wow-forever/data/auctionHouse/auctionBisCopy";
+import { BIS_CHIPS, BIS_OFF_CHIP_ID } from "@/games/wow-forever/data/auctionHouse/auctionBisOptions";
+import { bisPatch } from "@/games/wow-forever/lib/auctionHouse/bisPatch";
 import { AUCTION_LOAD_COPY, FILTER_PANEL_COPY, usableChipLabel } from "@/games/wow-forever/data/auctionHouse/auctionFilterLabels";
 import { GEAR_SKELETON_CHIPS, LEVEL_FILTER_DECIMALS, MAX_FILTER_LEVEL, MIN_FILTER_LEVEL, SLOT_CHIPS, TYPE_CHIPS, USABLE_CHIP_ID } from "@/games/wow-forever/data/auctionHouse/auctionFilterOptions";
 import type { ClientItemsState } from "@/games/wow-forever/hooks/useClientItems";
@@ -18,10 +21,12 @@ interface AuctionGearFiltersProps {
   onToggleOpen: () => void;
   /** The player's class, e.g. "Warlock". */
   classLabel: string;
+  /** The level the top picks are for (the player's, or the link's). */
+  bisLevel: number;
 }
 
 /** Slot, armor/weapon type, required level and "usable by my class": a group that loads the item list when opened. */
-export default function AuctionGearFilters({ filters, onFilters, gear, open, onToggleOpen, classLabel }: AuctionGearFiltersProps) {
+export default function AuctionGearFilters({ filters, onFilters, gear, open, onToggleOpen, classLabel, bisLevel }: AuctionGearFiltersProps) {
   return (
     <div className="space-y-3" data-testid="auction-gear-group">
       <button
@@ -71,6 +76,13 @@ export default function AuctionGearFilters({ filters, onFilters, gear, open, onT
             value={filters.usable ? [USABLE_CHIP_ID] : []}
             onToggle={() => onFilters({ usable: !filters.usable })}
             testId="auction-filter-usable"
+          />
+          <AuctionFilterChips
+            legend={bisLegend(bisLevel)}
+            options={BIS_CHIPS}
+            value={[filters.bis === null ? BIS_OFF_CHIP_ID : `${filters.bis}`]}
+            onToggle={(id) => onFilters(bisPatch(id, filters.bis))}
+            testId="auction-filter-bis"
           />
         </div>
       )}

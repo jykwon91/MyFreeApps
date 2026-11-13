@@ -9,10 +9,14 @@ import AuctionSearchControls from "@/games/wow-forever/components/auctionHouse/A
 import { AUCTION_WIDE_QUERY } from "@/games/wow-forever/data/auctionHouse/auctionFilterOptions";
 import { findClass } from "@/games/wow-forever/data/classes";
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
+import { useAuctionBisPicks } from "@/games/wow-forever/hooks/useAuctionBisPicks";
 import { useClientItems } from "@/games/wow-forever/hooks/useClientItems";
 import { useItemCategories } from "@/games/wow-forever/hooks/useItemCategories";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { categoryFilterActive, describeActiveFilters, gearFilterActive, removalPatch } from "@/games/wow-forever/lib/auctionHouse/auctionActiveFilters";
+import { bisLevelFor } from "@/games/wow-forever/lib/auctionHouse/bisLevel";
+import { bisTarget } from "@/games/wow-forever/lib/auctionHouse/bisTarget";
+import { savedGearSpec } from "@/games/wow-forever/lib/auctionHouse/savedGearSpec";
 import { auctionResultsKey } from "@/games/wow-forever/lib/auctionHouse/auctionResultsKey";
 import { lookupAuctionItems } from "@/games/wow-forever/lib/auctionHouse/auctionLookup";
 import { itemQuality } from "@/games/wow-forever/lib/icons/wowIcons";
@@ -40,20 +44,26 @@ export default function AuctionLookup({ house, filters, onFilters, onClear, mate
   // The item categories are fetched only once a category is picked (or a link already has one).
   const categories = useItemCategories(categoryFilterActive(filters));
   const priceState = useAuctionPrices(house);
+  // The top picks are worked out from the item list and gear data, and only once the filter is on.
+  const bisLevel = bisLevelFor(filters, player.level);
+  const specId = useMemo(() => savedGearSpec(player.classId), [player.classId]);
+  const bis = useAuctionBisPicks(filters.bis !== null, player.classId, specId, player.faction, bisLevel);
 
   const classLabel = findClass(player.classId)?.name ?? player.classId;
   const categoriesIndex = categories.status === LOAD_STATUS.ready ? categories.index : null;
-  const active = describeActiveFilters(filters, classLabel, categoriesIndex);
+  const active = describeActiveFilters(filters, classLabel, categoriesIndex, bisTarget(bisLevel, player.classId, specId));
   const gearById = gear.status === LOAD_STATUS.ready ? gear.list.byId : null;
+  const bisPicks = bis.status === LOAD_STATUS.ready ? bis.picks : null;
   const context = useMemo(
-    () => ({ qualityOf: itemQuality, gear: gearById, categories: categoriesIndex, classId: player.classId }),
-    [gearById, categoriesIndex, player.classId],
+    () => ({ qualityOf: itemQuality, gear: gearById, categories: categoriesIndex, bisPicks, classId: player.classId }),
+    [gearById, categoriesIndex, bisPicks, player.classId],
   );
   const { prices } = priceState;
   const lookup = useMemo(() => (prices ? lookupAuctionItems(prices.byId, materials, filters, context) : null), [prices, materials, filters, context]);
   const gearPending = gearFilterActive(filters) && gear.status !== LOAD_STATUS.ready;
   const categoryPending = categoryFilterActive(filters) && categories.status !== LOAD_STATUS.ready;
-  const resultCount = lookup && !gearPending && !categoryPending ? lookup.items.length : null;
+  const bisPending = filters.bis !== null && bis.status !== LOAD_STATUS.ready;
+  const resultCount = lookup && !gearPending && !categoryPending && !bisPending ? lookup.items.length : null;
 
   const panel = (
     <AuctionFilterPanel
@@ -64,6 +74,7 @@ export default function AuctionLookup({ house, filters, onFilters, onClear, mate
       gearOpen={gearOpen}
       onToggleGear={() => setGearOpen((open) => !open)}
       classLabel={classLabel}
+      bisLevel={bisLevel}
     />
   );
 
@@ -85,7 +96,7 @@ export default function AuctionLookup({ house, filters, onFilters, onClear, mate
         </AuctionFilterSheet>
       )}
       <AuctionActiveFilters active={active} onRemove={(group) => onFilters(removalPatch(group))} onClear={onClear} />
-      <AuctionLookupList priceState={priceState} gear={gear} categories={categories} filters={filters} active={active} lookup={lookup} resultsKey={auctionResultsKey(house, professionLabel, filters)} professionLabel={professionLabel} onClear={onClear} />
+      <AuctionLookupList priceState={priceState} gear={gear} categories={categories} bis={bis} filters={filters} active={active} lookup={lookup} resultsKey={auctionResultsKey(house, professionLabel, filters)} professionLabel={professionLabel} onClear={onClear} />
     </div>
   );
 }

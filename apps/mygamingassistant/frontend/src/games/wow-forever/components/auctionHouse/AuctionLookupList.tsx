@@ -12,6 +12,7 @@ import { categoryFilterActive, gearFilterActive } from "@/games/wow-forever/lib/
 import { auctionEmptyMessage } from "@/games/wow-forever/lib/auctionHouse/auctionEmptyMessage";
 import { priceHouseLabel } from "@/games/wow-forever/prices/priceHouseLabel";
 import type { AuctionPricesState } from "@/games/wow-forever/hooks/useAuctionPrices";
+import type { AuctionBisState } from "@/games/wow-forever/types/auctionHouse/auctionBisState";
 import type { ClientItemsState } from "@/games/wow-forever/hooks/useClientItems";
 import type { ItemCategoriesState } from "@/games/wow-forever/hooks/useItemCategories";
 import type { ActiveAuctionFilter } from "@/games/wow-forever/types/auctionHouse/activeAuctionFilter";
@@ -22,6 +23,8 @@ interface AuctionLookupListProps {
   priceState: AuctionPricesState;
   gear: ClientItemsState;
   categories: ItemCategoriesState;
+  /** The top picks; only asked for while the top-picks filter is on. */
+  bis: AuctionBisState;
   filters: AuctionFilters;
   active: readonly ActiveAuctionFilter[];
   /** Null until the prices are in. */
@@ -36,7 +39,7 @@ interface AuctionLookupListProps {
  * What sits under the filters: the prices' error or skeleton, the list (50 at a
  * time) or why it is empty. Changing a filter only swaps the rows; it never shows a spinner.
  */
-export default function AuctionLookupList({ priceState, gear, categories, filters, active, lookup, resultsKey, professionLabel, onClear }: AuctionLookupListProps) {
+export default function AuctionLookupList({ priceState, gear, categories, bis, filters, active, lookup, resultsKey, professionLabel, onClear }: AuctionLookupListProps) {
   const { status, prices, retry, retrying } = priceState;
   if (status === LOAD_STATUS.error) return <LoadErrorRetry message={AUCTION_LOAD_COPY.pricesError} onRetry={retry} retrying={retrying} />;
   if (!prices) return <AuctionResultsSkeleton />;
@@ -44,13 +47,16 @@ export default function AuctionLookupList({ priceState, gear, categories, filter
 
   const needsGear = gearFilterActive(filters);
   const needsCategories = categoryFilterActive(filters);
+  const needsBis = filters.bis !== null;
   const narrowed = filters.query.trim() !== "" || active.length > 0;
   let body: ReactNode;
   if (needsGear && gear.status === LOAD_STATUS.error) {
     body = <LoadErrorRetry message={AUCTION_LOAD_COPY.gearError} onRetry={gear.retry} retrying={gear.retrying} />;
+  } else if (needsBis && bis.status === LOAD_STATUS.error) {
+    body = <LoadErrorRetry message={AUCTION_LOAD_COPY.gearError} onRetry={bis.retry} retrying={bis.retrying} />;
   } else if (needsCategories && categories.status === LOAD_STATUS.error) {
     body = <LoadErrorRetry message={AUCTION_LOAD_COPY.categoryError} onRetry={categories.retry} retrying={categories.retrying} />;
-  } else if (!lookup || (needsGear && gear.status !== LOAD_STATUS.ready) || (needsCategories && categories.status !== LOAD_STATUS.ready)) {
+  } else if (!lookup || (needsGear && gear.status !== LOAD_STATUS.ready) || (needsBis && bis.status !== LOAD_STATUS.ready) || (needsCategories && categories.status !== LOAD_STATUS.ready)) {
     body = <AuctionResultsSkeleton />;
   } else if (lookup.items.length === 0) {
     const message = auctionEmptyMessage({ query: filters.query, active, professionLabel });
@@ -60,6 +66,7 @@ export default function AuctionLookupList({ priceState, gear, categories, filter
       <AuctionResults
         items={lookup.items}
         resultsKey={resultsKey}
+        bisPicks={needsBis && bis.status === LOAD_STATUS.ready ? bis.picks : null}
         note={(shown) => (
           <AuctionResultsNote total={lookup.items.length} shown={shown} narrowed={narrowed} professionLabel={professionLabel} notOnSale={lookup.notOnSale} />
         )}

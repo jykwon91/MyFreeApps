@@ -24,6 +24,9 @@
  *     them in a bottom sheet that doesn't scroll sideways
  *   - the Auction house page filters by item category (Trade Goods, then Metal & Stone), loading
  *     the item categories only once a category is picked, and keeps both in its link
+ *   - the Auction house top-picks filter (Gear group) keeps only the top three items per slot for the
+ *     player's class, tags each with its rank and slot, narrows to one rank from a chip, and loads the
+ *     item list and gear data only once it is on
  *   - "Download the addon" zips MGA Prices with every house's prices in Data.lua, plus crafting demand per material
  *   - nothing scrolls sideways at 375px
  *
@@ -403,6 +406,55 @@ test("the Auction house page filters by category and subclass, and loads the cat
   await page.getByRole("button", { name: "Remove filter: Category: Metal & Stone" }).click();
   await expect(page).not.toHaveURL(/cat=|sub=/);
   await expect(page.getByTestId("auction-row")).toHaveCount(3);
+});
+
+const ITEMS_FILE = "**/items*.json*";
+const ITEM_COLUMNS = ["id", "name", "quality", "slot", "itemType", "itemLevel", "requiredLevel", "armor", "weapon", "stats", "classes", "damageUnknown", "otherEffects"];
+
+function neckRow(id: number, name: string, spellDamage: number): unknown[] {
+  return [id, name, "rare", "neck", null, 60, 0, null, null, { spell_damage: spellDamage }, null, 0, 0];
+}
+
+/** Necks for a Warlock at level 60: Rare Test Item (50, #1), a filler (48, #2), Gold Bar (45, #3) and another filler (40, out). */
+const ITEMS_STUB = {
+  source: "test",
+  clientBuild: "1.60.1.70888",
+  attribution: "test",
+  columns: ITEM_COLUMNS,
+  items: [neckRow(720, "Rare Test Item", 50), neckRow(9000001, "Filler Neck", 48), neckRow(3577, "Gold Bar", 45), neckRow(9000002, "Other Neck", 40)],
+};
+
+test("the Auction house top-picks filter keeps the top three per slot, tags them, and narrows to one rank", async ({ page }) => {
+  await stubFilterPrices(page);
+  let itemRequests = 0;
+  await page.route(ITEMS_FILE, (route) => {
+    // Only the page's fetch of the file; the dev server's own module imports of it pass through.
+    if (route.request().resourceType() !== "fetch") return route.fallback();
+    itemRequests += 1;
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(ITEMS_STUB) });
+  });
+  await page.goto("/wow-forever/auction-house");
+  await expect(page.getByTestId("auction-row")).toHaveCount(3);
+  expect(itemRequests).toBe(0);
+  await page.getByTestId("auction-filters-button").click();
+  await page.getByRole("button", { name: /Gear filters/ }).click();
+  const bis = page.getByTestId("auction-filter-bis");
+  await expect(bis.getByRole("button")).toHaveText(["Off", "Any top 3", "#1", "#2", "#3"]);
+
+  await bis.getByRole("button", { name: "Any top 3" }).click();
+  await expect(page).toHaveURL(/bis=any/);
+  expect(await rowNames(page, 2)).toEqual(["Gold Bar", "Rare Test Item"]);
+  await expect(page.getByTestId("auction-bis-badge")).toHaveText(["#3 Neck", "#1 Neck"]);
+  await expect(page.getByRole("button", { name: "Remove filter: Top 3 BiS for level 60 Affliction Warlock" })).toBeVisible();
+
+  await bis.getByRole("button", { name: "#3" }).click();
+  await expect(page).toHaveURL(/bis=3/);
+  expect(await rowNames(page, 1)).toEqual(["Gold Bar"]);
+
+  await page.getByRole("button", { name: /^Remove filter: #3 BiS/ }).click();
+  await expect(page).not.toHaveURL(/bis=/);
+  await expect(page.getByTestId("auction-row")).toHaveCount(3);
+  await expect(page.getByTestId("auction-bis-badge")).toHaveCount(0);
 });
 
 test("a link to a filtered Auction house view opens it filtered, with the filters shown", async ({ page }) => {
