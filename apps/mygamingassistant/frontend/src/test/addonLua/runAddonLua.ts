@@ -9,11 +9,14 @@ function call(L: LuaState, name: string, code: string, results: number): void {
   }
 }
 
-/** Runs Lua chunks in order (name, code) on top of the WoW stubs; returns every line the stub tooltips and chat received. */
-export function runAddonLua(chunks: readonly [string, string][]): string[] {
+/**
+ * Runs Lua chunks in order (name, code) on top of WoW stubs (the tooltip stubs
+ * unless given others); returns every line the stubs recorded into `out`.
+ */
+export function runAddonLua(chunks: readonly [string, string][], stubs: string = WOW_TOOLTIP_STUBS): string[] {
   const L = lauxlib.luaL_newstate();
   lualib.luaL_openlibs(L);
-  call(L, "stubs", WOW_TOOLTIP_STUBS, 0);
+  call(L, "stubs", stubs, 0);
   for (const [name, code] of chunks) call(L, name, code, 0);
   call(L, "lines", "return table.concat(out, string.char(10))", 1);
   const text = lua.lua_tojsstring(L, -1);

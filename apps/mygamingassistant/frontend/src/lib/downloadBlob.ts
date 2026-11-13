@@ -7,3 +7,8 @@ export function downloadBlob(blob: Blob, filename: string): void {
   link.click();
   URL.revokeObjectURL(url);
 }
+
+/** Hands the browser zip bytes to save, named `filename`. */
+export function downloadZip(bytes: Uint8Array, filename: string): void {
+  downloadBlob(new Blob([bytes as BlobPart], { type: "application/zip" }), filename);
+}

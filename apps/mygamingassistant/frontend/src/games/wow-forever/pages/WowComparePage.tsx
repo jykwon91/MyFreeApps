@@ -6,6 +6,7 @@ import CompareDisclaimer from "@/games/wow-forever/components/compare/CompareDis
 import CompareResultPanel from "@/games/wow-forever/components/compare/CompareResultPanel";
 import CompareSettingsBar from "@/games/wow-forever/components/compare/CompareSettingsBar";
 import ItemCard from "@/games/wow-forever/components/compare/ItemCard";
+import LootAddonCard from "@/games/wow-forever/components/compare/LootAddonCard";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { useCompareItems, MAX_COMPARE_ITEMS } from "@/games/wow-forever/hooks/useCompareItems";
 import { useCompareSettings } from "@/games/wow-forever/hooks/useCompareSettings";
@@ -52,6 +53,7 @@ export default function WowComparePage() {
         </Button>
       ) : null}
       <CompareResultPanel result={result} weightsLabel={describeWeights(settings, result.weightSource)} />
+      <LootAddonCard />
       <ClientDataFooter />
     </div>
   );

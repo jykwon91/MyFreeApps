@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "MGA Loot: is this roll an upgrade?",
+    "summary": "A new addon, MGA Loot, writes above each loot roll whether the item is an upgrade over what you wear and by how much, scored with Item compare's weights for your class and spec. It also says when your class can't use it. Download it from Item compare.",
+    "to": "/wow-forever/compare"
+  },
+  {
+    "date": "2026-11-13",
     "title": "Summon macro names the surname",
     "summary": "The Warlock \"Summon, then tell the party\" macro now tells your party the full name, surname included, of who you're summoning. It's marked unconfirmed until it's checked in game.",
     "to": "/wow-forever/macros?class=warlock"

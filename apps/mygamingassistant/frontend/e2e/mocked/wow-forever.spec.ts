@@ -7,6 +7,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever
  */
+import { readFileSync } from "node:fs";
+import { strFromU8, unzipSync } from "fflate";
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
@@ -97,4 +99,18 @@ test("pasted tooltips from a website are compared and a winner explained", async
 
   await expect(page.getByRole("heading", { name: "Strong Helm is the better pick" })).toBeVisible();
   await expect(page.getByText(/ahead mostly on Strength/)).toBeVisible();
+});
+
+test("the Item compare page downloads the MGA Loot addon with its weights inside", async ({ page }) => {
+  await page.goto("/wow-forever/compare");
+  const card = page.getByTestId("loot-addon");
+  await card.getByText("Know in game if a loot roll is an upgrade").click();
+  await expect(card).toContainText(String.raw`World of Warcraft\_forever_\Interface\AddOns`);
+  const [download] = await Promise.all([page.waitForEvent("download"), card.getByTestId("loot-addon-download").click()]);
+  expect(download.suggestedFilename()).toBe("MGALoot.zip");
+  const files = unzipSync(readFileSync(await download.path()));
+  expect(Object.keys(files).sort()).toEqual(["MGALoot/", "MGALoot/Data.lua", "MGALoot/MGALoot.lua", "MGALoot/MGALoot.toc"]);
+  expect(strFromU8(files["MGALoot/Data.lua"])).toContain('{id = "arms", name = "Arms", tab = 1, weights = {');
+  expect(strFromU8(files["MGALoot/MGALoot.toc"])).toContain("## SavedVariables: MGALootSettings");
+  await expect(page.getByText("MGA Loot is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
 });
