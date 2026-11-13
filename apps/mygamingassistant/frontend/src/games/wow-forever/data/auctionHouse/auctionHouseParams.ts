@@ -30,6 +30,10 @@ export const AUCTION_QUANTITY_PARAM = "qty";
 /** `?listings=5` — at least this many auctions. */
 export const AUCTION_LISTINGS_PARAM = "listings";
 
+/** `?cat=consumable` — one item category; `?sub=1` — one of its subclasses (the game's subclass id, e.g. Potions). */
+export const AUCTION_CATEGORY_PARAM = "cat";
+export const AUCTION_SUBCATEGORY_PARAM = "sub";
+
 /** `?slot=head` and `?type=Plate` — gear only. */
 export const AUCTION_SLOT_PARAM = "slot";
 export const AUCTION_TYPE_PARAM = "type";
@@ -42,6 +46,8 @@ export const AUCTION_USABLE_PARAM = "usable";
 
 /** Every param that is a filter (not the search, sort, house or profession): "Clear all" removes these. */
 export const AUCTION_FILTER_PARAMS: readonly string[] = [
+  AUCTION_CATEGORY_PARAM,
+  AUCTION_SUBCATEGORY_PARAM,
   AUCTION_QUALITY_PARAM,
   AUCTION_MIN_GOLD_PARAM,
   AUCTION_MAX_GOLD_PARAM,

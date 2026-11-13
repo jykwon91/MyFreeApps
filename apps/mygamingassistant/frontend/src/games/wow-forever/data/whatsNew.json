@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-11-13",
+    "title": "Auction house categories",
+    "summary": "Browse the auction house by category: potions, herbs, cloth and more. Pick Consumable, Trade Goods, Recipe or Gear, then narrow it down to one kind.",
+    "to": "/wow-forever/auction-house"
+  },
+  {
     "date": "2026-11-12",
     "title": "A sturdier auction house",
     "summary": "Item icons are bigger and show their quality, and you can now filter prices by quality, price, how many are for sale and, for gear, slot, type, level and what your class can use. Sort by most listings, biggest gap or highest quality. Your filters stay in the link, so you can share a view.",

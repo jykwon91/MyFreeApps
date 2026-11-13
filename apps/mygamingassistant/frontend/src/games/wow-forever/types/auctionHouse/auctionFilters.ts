@@ -1,4 +1,5 @@
 import type { ItemSlot } from "@/games/wow-forever/data/itemSlots";
+import type { AuctionCategory } from "@/games/wow-forever/types/auctionHouse/auctionCategory";
 import type { AuctionQualityFilter } from "@/games/wow-forever/types/auctionHouse/auctionQualityFilter";
 import type { AuctionSort } from "@/games/wow-forever/types/auctionSort";
 
@@ -16,6 +17,10 @@ export interface AuctionFilters {
   minQuantity: number | null;
   /** At least this many auctions. */
   minListings: number | null;
+  /** `?cat=` — one item category; this needs the item categories file. */
+  category: AuctionCategory | null;
+  /** `?sub=` — the game's subclass id within `category`; only meaningful with a category. */
+  subcategory: number | null;
   /** Gear filters: these need the game's item list. */
   slot: ItemSlot | null;
   itemType: string | null;

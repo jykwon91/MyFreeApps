@@ -19,6 +19,7 @@ export const FILTER_SHEET_COPY = {
 export const AUCTION_LOAD_COPY = {
   pricesError: "Couldn't load auction prices.",
   gearError: "Couldn't load the gear list.",
+  categoryError: "Couldn't load the item categories.",
 } as const;
 
 export const FILTER_PANEL_COPY = {
@@ -28,6 +29,10 @@ export const FILTER_PANEL_COPY = {
   toGold: "To gold",
   quantity: "Units on sale",
   listings: "Auctions listing it",
+  category: "Category",
+  categoryLoading: "Loading item categories",
+  categoryError: "Couldn't load the item categories.",
+  gearCategoryHint: "Narrow gear down by slot, armor or weapon type and level with the Gear filters below.",
   gearToggle: "Gear filters",
   slot: "Slot",
   type: "Armor or weapon type",
@@ -39,6 +44,15 @@ export const FILTER_PANEL_COPY = {
   gearError: "Couldn't load the gear list.",
 } as const;
 
+/** The legend over a category's subclass chips. */
+export function subcategoryLegend(categoryLabel: string): string {
+  return `Kind of ${categoryLabel.toLowerCase()}`;
+}
+
+/** The chip that clears the subclass choice. */
+export function allSubcategoriesLabel(categoryLabel: string): string {
+  return `All ${categoryLabel.toLowerCase()}`;
+}
 
 /** The label of the "usable by my class" chip. */
 export function usableChipLabel(classLabel: string): string {

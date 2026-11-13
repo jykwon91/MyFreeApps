@@ -3,9 +3,9 @@ import { ChevronDown } from "lucide-react";
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import AuctionFilterChips from "@/games/wow-forever/components/auctionHouse/AuctionFilterChips";
 import AuctionRangeFields from "@/games/wow-forever/components/auctionHouse/AuctionRangeFields";
-import GearChipsSkeleton from "@/games/wow-forever/components/auctionHouse/GearChipsSkeleton";
+import FilterChipsSkeleton from "@/games/wow-forever/components/auctionHouse/FilterChipsSkeleton";
 import { FILTER_PANEL_COPY, usableChipLabel } from "@/games/wow-forever/data/auctionHouse/auctionFilterLabels";
-import { LEVEL_FILTER_DECIMALS, MAX_FILTER_LEVEL, MIN_FILTER_LEVEL, SLOT_CHIPS, TYPE_CHIPS, USABLE_CHIP_ID } from "@/games/wow-forever/data/auctionHouse/auctionFilterOptions";
+import { GEAR_SKELETON_CHIPS, LEVEL_FILTER_DECIMALS, MAX_FILTER_LEVEL, MIN_FILTER_LEVEL, SLOT_CHIPS, TYPE_CHIPS, USABLE_CHIP_ID } from "@/games/wow-forever/data/auctionHouse/auctionFilterOptions";
 import type { ClientItemsState } from "@/games/wow-forever/hooks/useClientItems";
 import type { AuctionFilters } from "@/games/wow-forever/types/auctionHouse/auctionFilters";
 
@@ -33,7 +33,7 @@ export default function AuctionGearFilters({ filters, onFilters, gear, open, onT
         <span>{FILTER_PANEL_COPY.gearToggle}</span>
         <ChevronDown className={open ? "size-4 rotate-180" : "size-4"} aria-hidden />
       </button>
-      {open && gear.status === LOAD_STATUS.loading && <GearChipsSkeleton />}
+      {open && gear.status === LOAD_STATUS.loading && <FilterChipsSkeleton label={FILTER_PANEL_COPY.gearLoading} count={GEAR_SKELETON_CHIPS} testId="auction-gear-skeleton" />}
       {open && gear.status === LOAD_STATUS.error && (
         <LoadErrorRetry message={FILTER_PANEL_COPY.gearError} onRetry={gear.retry} retrying={gear.retrying} />
       )}

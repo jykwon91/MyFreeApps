@@ -1,3 +1,4 @@
+import AuctionCategoryFilters from "@/games/wow-forever/components/auctionHouse/AuctionCategoryFilters";
 import AuctionFilterChips from "@/games/wow-forever/components/auctionHouse/AuctionFilterChips";
 import AuctionGearFilters from "@/games/wow-forever/components/auctionHouse/AuctionGearFilters";
 import AuctionMinChoice from "@/games/wow-forever/components/auctionHouse/AuctionMinChoice";
@@ -5,12 +6,14 @@ import AuctionRangeFields from "@/games/wow-forever/components/auctionHouse/Auct
 import { FILTER_PANEL_COPY } from "@/games/wow-forever/data/auctionHouse/auctionFilterLabels";
 import { GOLD_FILTER_DECIMALS, GOLD_FILTER_STEP, LISTINGS_CHIPS, MAX_FILTER_GOLD, MIN_FILTER_GOLD, QUALITY_CHIPS, QUANTITY_CHIPS } from "@/games/wow-forever/data/auctionHouse/auctionFilterOptions";
 import type { ClientItemsState } from "@/games/wow-forever/hooks/useClientItems";
+import type { ItemCategoriesState } from "@/games/wow-forever/hooks/useItemCategories";
 import { toggleQuality } from "@/games/wow-forever/lib/auctionHouse/toggleQuality";
 import type { AuctionFilters } from "@/games/wow-forever/types/auctionHouse/auctionFilters";
 
 interface AuctionFilterPanelProps {
   filters: AuctionFilters;
   onFilters: (patch: Partial<AuctionFilters>) => void;
+  categories: ItemCategoriesState;
   gear: ClientItemsState;
   gearOpen: boolean;
   onToggleGear: () => void;
@@ -19,9 +22,10 @@ interface AuctionFilterPanelProps {
 }
 
 /** Every filter group; the same panel sits in the phone's bottom sheet and inline from sm. */
-export default function AuctionFilterPanel({ filters, onFilters, gear, gearOpen, onToggleGear, classLabel }: AuctionFilterPanelProps) {
+export default function AuctionFilterPanel({ filters, onFilters, categories, gear, gearOpen, onToggleGear, classLabel }: AuctionFilterPanelProps) {
   return (
     <div className="space-y-5" data-testid="auction-filter-panel">
+      <AuctionCategoryFilters filters={filters} onFilters={onFilters} categories={categories} />
       <AuctionFilterChips
         legend={FILTER_PANEL_COPY.quality}
         options={QUALITY_CHIPS}
