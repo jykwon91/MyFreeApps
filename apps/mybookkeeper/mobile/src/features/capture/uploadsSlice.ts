@@ -1,6 +1,8 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { PendingUpload } from "../../types/PendingUpload";
+import type { UploadFilePercent } from "../../types/UploadFilePercent";
 import type { UploadFileStatus } from "../../types/UploadFileStatus";
+import type { UploadFileStatusChange } from "../../types/UploadFileStatusChange";
 import type { UploadPhase } from "../../types/UploadPhase";
 import type { UploadsState } from "../../types/UploadsState";
 
@@ -28,11 +30,11 @@ const uploadsSlice = createSlice({
         else if (listed.status === "failed") Object.assign(listed, { status: "queued", percent: null });
       }
     },
-    uploadFileChanged(state, { payload }: PayloadAction<{ uri: string; status: UploadFileStatus }>) {
+    uploadFileChanged(state, { payload }: PayloadAction<UploadFileStatusChange>) {
       const listed = state.files.find((file) => file.uri === payload.uri);
       if (listed) Object.assign(listed, { status: payload.status, percent: null });
     },
-    uploadFileProgressed(state, { payload }: PayloadAction<{ uri: string; percent: number }>) {
+    uploadFileProgressed(state, { payload }: PayloadAction<UploadFilePercent>) {
       const listed = state.files.find((file) => file.uri === payload.uri);
       if (listed?.status === "uploading") listed.percent = payload.percent;
     },
@@ -57,6 +59,10 @@ const uploadsSlice = createSlice({
         state.phase = "idle";
       }
     },
+    /** Signed out or moved to another workspace: nothing listed here is the next person's or workspace's to see. */
+    uploadsReset() {
+      return initialState;
+    },
   },
 });
 
@@ -69,5 +75,6 @@ export const {
   uploadRejected,
   uploadSentSettled,
   uploadStatusDismissed,
+  uploadsReset,
 } = uploadsSlice.actions;
 export default uploadsSlice.reducer;

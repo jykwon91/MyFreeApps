@@ -5,6 +5,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-
 import type { AxiosAdapter } from "axios";
 import { Linking } from "react-native";
 import { Provider } from "react-redux";
+import { UPLOAD_PROCESSING_LABEL } from "../src/constants/capture";
 import CaptureScreen from "../src/features/capture/CaptureScreen";
 import { uploadStatusDismissed } from "../src/features/capture/uploadsSlice";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -284,6 +285,25 @@ describe("CaptureScreen", () => {
     expect(await screen.findByLabelText(`${second}, Sent`)).toBeTruthy();
     expect(sent).toEqual([first, second]);
     expect(await screen.findByText("Got it. I'm reading it now.")).toBeTruthy();
+  });
+
+  it("says a file is being processed once every byte is out, rather than sending at 100%", async () => {
+    pickerReturns({ uri: "cache:/lease.docx", name: "lease.docx", size: 100 });
+    const releases: (() => void)[] = [];
+    const adapter: AxiosAdapter = (config) => {
+      config.onUploadProgress?.({ loaded: 100, total: 100, bytes: 100, lengthComputable: true });
+      return new Promise((resolve) => {
+        releases.push(() => resolve({ data: { document_id: "d" }, status: 202, statusText: "", headers: {}, config }));
+      });
+    };
+    api.defaults.adapter = adapter;
+    await renderScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "Files" }));
+    expect(await screen.findByLabelText(`lease.docx, ${UPLOAD_PROCESSING_LABEL}`)).toBeTruthy();
+    expect(screen.queryByText("Sending… 100%")).toBeNull();
+
+    await act(async () => releases[0]());
+    expect(await screen.findByLabelText("lease.docx, Sent")).toBeTruthy();
   });
 
   it("shows a file the server refused as failed, with its reason", async () => {

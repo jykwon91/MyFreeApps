@@ -159,7 +159,7 @@ describe("InsurancePolicyDocumentReader — the document library", () => {
 
 describe("InsurancePolicyDocumentReader — when a read fails", () => {
   it.each([
-    [413, "10MB"],
+    [413, "29 MB"],
     [415, "PDF or a photo"],
     [429, "today"],
     [422, "fill it in by hand"],

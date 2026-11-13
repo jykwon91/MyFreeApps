@@ -131,6 +131,14 @@ describe("upload queue", () => {
     expect(uploads().phase).toBe("sent");
   });
 
+  it("names the size limit when the proxy refuses a file as too big, since its 413 says nothing", async () => {
+    addFile("w1", "scans.zip");
+    serverAnswering(413);
+    await drain();
+    expect(waiting()).toEqual([]);
+    expect(uploads().rejections).toEqual(["scans.zip is over 29 MB, which is more than I can take. Try a smaller file, or split it up."]);
+  });
+
   it("doesn't say it's reading anything when every file was refused", async () => {
     addFile("w1", "a.jpg");
     serverAnswering(415);

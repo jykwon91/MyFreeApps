@@ -96,6 +96,10 @@ describe("reading a policy from a document", () => {
     expect(screen.getByRole("button", { name: "Try reading it again" })).toBeTruthy();
   });
 
+  it("names the size the read upload actually takes, the documents limit rather than a stale 10MB", () => {
+    expect(MESSAGES.tooBig).toBe("That file's too big for me. I can take up to 29 MB, so try a smaller scan or a lower resolution photo.");
+  });
+
   it("says so when the server can't be reached, and reads again on request", async () => {
     const server = startInsuranceServer({ failures: { "POST /insurance-policies/extract-upload": "offline" } });
     await renderInsurance(<NewPolicyScreen />);

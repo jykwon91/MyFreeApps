@@ -13,8 +13,6 @@ import {
   isSupportedDocumentUpload,
 } from "../utils/documentUploadFile";
 
-const MEGABYTE = 1024 * 1024;
-
 describe("the document upload allowlist", () => {
   it("offers a file input exactly the types the server reads", () => {
     expect(DOCUMENT_UPLOAD_ACCEPT).toBe(".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.csv,.zip");
@@ -54,7 +52,7 @@ describe("the document upload allowlist", () => {
 
 describe("the document upload size limit", () => {
   it("is the proxy's 30 MB request ceiling less room for the form, not the server's own 100 MB", () => {
-    expect(DOCUMENT_UPLOAD_MAX_BYTES).toBe(29 * MEGABYTE);
+    expect(DOCUMENT_UPLOAD_MAX_BYTES).toBe(29_000_000);
     expect(DOCUMENT_UPLOAD_MAX_LABEL).toBe("29 MB");
   });
 

@@ -1,4 +1,5 @@
-import { MEGABYTE, REQUEST_BODY_MAX_BYTES, REQUEST_OVERHEAD_BYTES } from "./requestBodyLimit";
+import { MIB } from "./byteUnits";
+import { REQUEST_BODY_MAX_BYTES, REQUEST_OVERHEAD_BYTES } from "./requestBodyLimit";
 
 /** Mirrors ``ALLOWED_TEMPLATE_MIME_TYPES`` in ``lease_template_service``: the server refuses anything else. */
 export const LEASE_TEMPLATE_MIME_TYPES = [
@@ -15,7 +16,7 @@ export const LEASE_TEMPLATE_EXTENSIONS = [".md", ".txt", ".docx"] as const;
 export const LEASE_TEMPLATE_EXTENSIONS_LABEL = LEASE_TEMPLATE_EXTENSIONS.join(", ");
 
 /** ``settings.max_blackout_attachment_size_bytes`` (``core/config.py``), which ``lease_template_service`` applies to each file. */
-export const LEASE_TEMPLATE_FILE_MAX_BYTES = 25 * MEGABYTE;
+export const LEASE_TEMPLATE_FILE_MAX_BYTES = 25 * MIB;
 
 /** What the files together may come to for the whole request to get through, with room for the name and description. */
 export const LEASE_TEMPLATE_FILES_TOTAL_MAX_BYTES = REQUEST_BODY_MAX_BYTES - REQUEST_OVERHEAD_BYTES;

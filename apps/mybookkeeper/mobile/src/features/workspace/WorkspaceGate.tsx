@@ -7,6 +7,7 @@ import { AppState, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { WEB_BASE_URL } from "../../constants/api";
 import type { AppDispatch, RootState } from "../../lib/store";
+import { uploadsReset } from "../capture/uploadsSlice";
 import { readSavedWorkspace, saveWorkspace } from "./savedWorkspace";
 import WorkspaceMessage from "./WorkspaceMessage";
 import { workspaceChosen, workspaceLost } from "./workspaceSlice";
@@ -40,6 +41,8 @@ export default function WorkspaceGate({ children }: { children: ReactNode }) {
     const next = savedStillThere ?? data[0] ?? null;
     const lost = lastActive.current?.id === activeId ? lastActive.current : null;
     lastActive.current = null;
+    // The upload list is about the workspace being left.
+    if (activeId !== null) dispatch(uploadsReset());
     dispatch(workspaceChosen(next?.id ?? null));
     // At launch, the one they had open last time may have gone while the app was closed.
     const goneSinceLastTime = activeId === null && saved !== null && !savedStillThere ? saved : null;

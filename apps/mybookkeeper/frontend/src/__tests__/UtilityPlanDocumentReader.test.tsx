@@ -146,6 +146,12 @@ describe("UtilityPlanDocumentReader — reading a file off the device", () => {
       screen.queryByTestId("utility-plan-read-document-button"),
     ).not.toBeInTheDocument();
   });
+
+  it("names the size the upload actually takes, the proxy's 29 MB rather than a stale 10MB", () => {
+    renderReader();
+
+    expect(screen.getByTestId("utility-plan-file-dropzone")).toHaveTextContent("up to 29 MB");
+  });
 });
 
 describe("UtilityPlanDocumentReader — the document library", () => {
@@ -190,7 +196,7 @@ describe("UtilityPlanDocumentReader — the document library", () => {
 
 describe("UtilityPlanDocumentReader — when a read fails", () => {
   it.each([
-    [413, "10MB"],
+    [413, "29 MB"],
     [415, "PDF or a photo"],
     [429, "today"],
     [422, "fill it in by hand"],

@@ -1,3 +1,4 @@
+import { DOCUMENT_UPLOAD_MAX_LABEL } from "@mybookkeeper/api-client/constants/documentUpload";
 import type { DocumentReaderMessages } from "../types/DocumentReaderMessages";
 import type { DocumentReaderWording } from "../types/DocumentReaderWording";
 
@@ -20,7 +21,7 @@ export function documentReaderMessages({ title, hint, takePhoto, target }: Docum
     tryAgain: "Try reading it again",
     neverMind: "Never mind",
     readDone: (name: string) => `I read ${name}. Check each figure before you save.`,
-    tooBig: "That file's too big for me. I can take up to 10MB, so try a smaller scan or a lower resolution photo.",
+    tooBig: `That file's too big for me. I can take up to ${DOCUMENT_UPLOAD_MAX_LABEL}, so try a smaller scan or a lower resolution photo.`,
     wrongType: "I can't read that kind of file. A PDF or a photo (JPG, PNG or WEBP) works best.",
     tooMany: `That's as many documents as I can read today. Try again tomorrow, or fill in the ${target} by hand.`,
     unreadable: `I couldn't read that one. Try another file, or fill in the ${target} by hand.`,

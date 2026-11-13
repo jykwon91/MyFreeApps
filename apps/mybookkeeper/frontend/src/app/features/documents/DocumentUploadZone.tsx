@@ -232,8 +232,10 @@ export default function DocumentUploadZone() {
     dispatch(startMultiUpload({ total: supported.length }));
 
     for (const file of supported) {
-      // Too big to get through, so it's counted as failed without spending the time to send it.
-      if (documentUploadProblem(file.name, file.size)) {
+      // Too big to get through, so it's counted as failed without spending the time to send it, and named.
+      const problem = documentUploadProblem(file.name, file.size);
+      if (problem) {
+        showError(documentUploadProblemMessage(file.name, problem));
         dispatch(multiUploadFileFailed());
         continue;
       }

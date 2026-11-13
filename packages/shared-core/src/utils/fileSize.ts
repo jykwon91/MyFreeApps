@@ -4,7 +4,7 @@
  * - Returns "" for null/undefined (unknown size).
  * - Returns "0 B" for exactly 0 bytes.
  * - Uses 1-decimal precision for KB and MB.
- * - Does not go beyond MB (files in this app are capped at 10 MB).
+ * - Does not go beyond MB (no upload is anywhere near a gigabyte).
  *
  * @example
  * formatFileSize(null)       // ""

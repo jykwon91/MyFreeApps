@@ -387,6 +387,9 @@ describe("DocumentUploadZone", () => {
       await user.upload(input, [new File(["a"], "a.pdf", { type: "application/pdf" }), sizedFile("big.zip", DOCUMENT_UPLOAD_MAX_BYTES + 1)]);
       expect(await screen.findByText("2 files — 1 of 2 uploaded (1 failed)")).toBeInTheDocument();
       expect(mockUploadDocument).toHaveBeenCalledTimes(1);
+      expect(showError).toHaveBeenCalledWith(
+        "big.zip is over 29 MB, which is more than I can take. Try a smaller file, or split it up.",
+      );
     });
 
     it("says it couldn't upload any, not that it finished, when every upload failed", async () => {

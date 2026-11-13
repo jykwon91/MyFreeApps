@@ -1,3 +1,4 @@
+import { BLACKOUT_ATTACHMENT_MAX_LABEL } from "@mybookkeeper/api-client/constants/blackoutAttachments";
 import type { InsuranceAttachmentKind } from "@mybookkeeper/api-client/types/insurance/insurance-attachment-kind";
 import type { PropertyChoiceMessages } from "../types/PropertyChoiceMessages";
 import { documentReaderMessages } from "./documentReader";
@@ -79,7 +80,7 @@ export const POLICY_ATTACHMENT_MESSAGES = {
   removeTitle: "Remove this document?",
   removeBody: "It's deleted from this policy for good.",
   notAllowed: "You have view-only access, so I can't change documents.",
-  tooBig: "That file's too big. I can take up to 10MB.",
+  tooBig: `That file's too big. I can take up to ${BLACKOUT_ATTACHMENT_MAX_LABEL}.`,
   badType: "I can't take that kind of file. A PDF, Word document or photo works.",
   gone: "That policy isn't there any more.",
   removeGone: "That document is already gone.",

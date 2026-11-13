@@ -224,7 +224,21 @@
         "api-client/src/utils/failedDocumentsMessage.ts",
         "mobile/src/types/DocumentFilter.ts",
         "mobile/src/types/DocumentFilterSegment.ts",
-        "api-client/src/store/documentsApi.ts"
+        "api-client/src/store/documentsApi.ts",
+        "api-client/src/constants/documentUpload.ts",
+        "api-client/src/constants/requestBodyLimit.ts",
+        "api-client/src/constants/byteUnits.ts",
+        "api-client/src/utils/documentUploadFile.ts",
+        "api-client/src/utils/documentReadErrors.ts",
+        "../../packages/shared-core/src/utils/mimeTypeFor.ts",
+        "mobile/src/features/capture/",
+        "mobile/src/constants/capture.ts",
+        "mobile/src/types/PickedDocument.ts",
+        "mobile/src/types/UploadFileProgress.ts",
+        "mobile/src/types/UploadFileStatus.ts",
+        "mobile/src/types/UploadFileStatusChange.ts",
+        "mobile/src/types/UploadFilePercent.ts",
+        "mobile/src/types/UploadsState.ts"
       ],
       "backend_tests": [
         "test_document_checklist_service.py",
