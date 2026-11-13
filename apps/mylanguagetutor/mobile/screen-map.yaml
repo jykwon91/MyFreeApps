@@ -13,7 +13,7 @@ routes:
   # The language step's next step, and the scenario list's Change level.
   /onboarding/level:
     screen: (app)/onboarding/level
-  # A typed conversation, opened from a scenario on the Practice tab.
+  # The conversation (spoken or typed), opened from a scenario on the Practice tab.
   /practice:
     screen: (app)/practice
   /register:
