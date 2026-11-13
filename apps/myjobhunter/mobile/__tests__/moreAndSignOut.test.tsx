@@ -8,7 +8,7 @@ import { DASHBOARD_MESSAGES } from "../src/constants/dashboard";
 import { PROFILE_MESSAGES } from "../src/constants/profile";
 import { RESUME_EXPORT_DIRECTORY, RESUME_SESSION_ID_KEY } from "../src/constants/resumeStorage";
 import { PROFILE_TAB, TABS } from "../src/constants/tabs";
-import type { AppTab } from "@platform/mobile";
+import { THEME_MESSAGES, THEME_OPTIONS, type AppTab } from "@platform/mobile";
 import { EMPTY_BOARD } from "../test-support/emptyBoard";
 import { serve } from "@platform/mobile/test-support/fakeServer";
 import { profileRoutes } from "../test-support/profileRoutes";
@@ -86,6 +86,19 @@ describe("the signed-in shell", () => {
       await fireEvent.press(screen.getByRole("link", { name: item.label }));
       expect(openURL).toHaveBeenLastCalledWith(`${WEB_BASE_URL}${item.webPath}`);
     }
+  });
+
+  it("offers the website's Light / Dark / System theme choice on More", async () => {
+    serve({ "GET /auth/mobile/sessions": () => ({ status: 200, data: DEVICES }) });
+    await renderApp("/more");
+
+    expect(await screen.findByRole("header", { name: THEME_MESSAGES.heading })).toBeTruthy();
+    expect(screen.getAllByRole("radio")).toHaveLength(THEME_OPTIONS.length);
+    expect(screen.getByRole("radio", { name: "System", checked: true })).toBeTruthy();
+    await fireEvent.press(screen.getByRole("radio", { name: "Dark" }));
+    expect(screen.getByRole("radio", { name: "Dark", checked: true })).toBeTruthy();
+    await fireEvent.press(screen.getByRole("radio", { name: "System" }));
+    expect(screen.getByRole("radio", { name: "System", checked: true })).toBeTruthy();
   });
 
   it("opens the pages the phone has from More on the phone, not the website", async () => {

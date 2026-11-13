@@ -1,13 +1,23 @@
 import { render, screen } from "@testing-library/react-native";
-import { Text } from "react-native";
+import { Appearance, Text } from "react-native";
 import RootProviders from "../components/RootProviders";
+import { THEME_PREFERENCE_KEY } from "../constants/themePreference";
+import { useTheme } from "../theme/useTheme";
+import { storedItems } from "../../test-support/memorySecureStore";
 import { useSession } from "../hooks/useSession";
 import { nodesOfType } from "../../test-support/renderedNodes";
 import type { RenderedNode } from "../../test-support/types/RenderedNode";
 import type { MobileSession } from "../types/MobileSession";
 import type { SessionState } from "../types/SessionState";
 
+jest.mock("expo-secure-store", () => jest.requireActual("../../test-support/memorySecureStore"));
+jest.spyOn(Appearance, "setColorScheme").mockImplementation(() => undefined);
+
 const SIGNED_IN: SessionState = { status: "signedIn", email: "me@example.com", sessionId: "mine" };
+
+function Scheme() {
+  return <Text>{useTheme().isDark ? "dark" : "light"}</Text>;
+}
 
 function Status() {
   return <Text>{useSession().state.status}</Text>;
@@ -28,5 +38,16 @@ describe("RootProviders", () => {
     expect(outermost).toBeDefined();
     expect(nodesOfType(outermost, "Text").map((node) => node.children)).toEqual([["signedIn"]]);
     expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  it("puts back the theme chosen on this phone before", async () => {
+    storedItems.set(THEME_PREFERENCE_KEY, "dark");
+    const session = { getState: () => SIGNED_IN, subscribe: () => () => {}, start: jest.fn() } as unknown as MobileSession;
+    await render(
+      <RootProviders session={session}>
+        <Scheme />
+      </RootProviders>,
+    );
+    expect(await screen.findByText("dark")).toBeTruthy();
   });
 });

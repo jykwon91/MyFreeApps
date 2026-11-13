@@ -1,4 +1,4 @@
-import { AccountSettings, AppVersion, LoadingButton, MoreRow, Skeleton, UnreadableSession, useSession, useTheme } from "@platform/mobile";
+import { AccountSettings, AppVersion, LoadingButton, MoreRow, Skeleton, ThemeSettings, UnreadableSession, useSession, useTheme } from "@platform/mobile";
 import { useRouter } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
@@ -35,6 +35,8 @@ export default function SettingsScreen() {
             <AccountSettings appName={APP_NAME} key={state.email} onDeleteAccount={() => router.push(DELETE_ACCOUNT_ROUTE)} />
           </>
         ) : null}
+        {/* The theme is this phone's, so it can be chosen signed in or out. */}
+        <ThemeSettings />
         {/* The website's support page is public, so this shows signed in or out. */}
         <MoreRow item={SUPPORT_MENU_ITEM} webBaseUrl={WEB_BASE_URL} />
         <AppVersion />

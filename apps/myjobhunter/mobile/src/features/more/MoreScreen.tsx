@@ -1,4 +1,4 @@
-import { AccountSettings, AppVersion, MoreMenuGroups, useTheme } from "@platform/mobile";
+import { AccountSettings, AppVersion, MoreMenuGroups, ThemeSettings, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { ScrollView } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
@@ -10,6 +10,7 @@ export default function MoreScreen() {
   return (
     <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }} style={{ backgroundColor: colors.background }}>
       <MoreMenuGroups groups={MORE_MENU} webBaseUrl={WEB_BASE_URL} />
+      <ThemeSettings />
       <AccountSettings appName={APP_NAME} onDeleteAccount={() => router.push("/delete-account")} />
       <AppVersion />
     </ScrollView>

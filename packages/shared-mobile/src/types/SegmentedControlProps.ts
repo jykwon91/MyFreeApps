@@ -1,3 +1,5 @@
+import type { SegmentRole } from "./SegmentRole";
+
 export interface SegmentedControlProps<Value extends string> {
   segments: readonly { value: Value; label: string }[];
   value: Value;
@@ -6,4 +8,6 @@ export interface SegmentedControlProps<Value extends string> {
   accessibilityLabel: string;
   /** Dims the group and ignores presses, for while the choice is being saved. */
   disabled?: boolean;
+  /** Tabs (the default) switch what's shown; radios pick a setting. */
+  role?: SegmentRole;
 }

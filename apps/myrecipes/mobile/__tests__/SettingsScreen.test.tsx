@@ -1,4 +1,4 @@
-import { type MobileSession, type SessionState, SessionProvider, ToastProvider } from "@platform/mobile";
+import { type MobileSession, type SessionState, SessionProvider, THEME_MESSAGES, THEME_OPTIONS, ToastProvider } from "@platform/mobile";
 import api from "@platform/core/lib/api";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
@@ -107,6 +107,20 @@ describe("SettingsScreen", () => {
     await fireEvent.press(screen.getByRole("link", { name: "Support MyFreeApps" }));
     expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}/support-myfreeapps`);
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["signed in", { status: "signedIn", email: "me@example.com", sessionId: "s1" }],
+    ["signed out", { status: "signedOut", endedByServer: false, lastEmail: null }],
+  ] as const)("offers the website's Light / Dark / System theme choice when %s", async (_name, state) => {
+    api.defaults.adapter = async (config) => ({ status: 200, statusText: "", headers: {}, config, data: [] });
+    await renderWith(fakeSession(state));
+    expect(screen.getByRole("header", { name: THEME_MESSAGES.heading })).toBeTruthy();
+    expect(screen.getAllByRole("radio")).toHaveLength(THEME_OPTIONS.length);
+    for (const option of THEME_OPTIONS) {
+      expect(screen.getByRole("radio", { name: option.label })).toBeTruthy();
+    }
+    expect(screen.getByRole("radio", { name: "System", checked: true })).toBeTruthy();
   });
 
   it("offers the support page when signed out too", async () => {

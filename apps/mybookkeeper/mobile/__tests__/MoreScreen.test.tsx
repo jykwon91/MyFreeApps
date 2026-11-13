@@ -1,4 +1,4 @@
-import { KEYBOARD_FIELD_CLEARANCE, ToastProvider } from "@platform/mobile";
+import { KEYBOARD_FIELD_CLEARANCE, THEME_MESSAGES, THEME_OPTIONS, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { AccessibilityInfo, Text as MockText } from "react-native";
 import { MORE_MENU } from "../src/constants/moreMenu";
@@ -51,6 +51,17 @@ describe("MoreScreen search", () => {
     expect(screen.queryByText(/results?$/)).toBeNull();
   });
 
+  it("offers the website's Light / Dark / System theme choice, and switches when one is pressed", async () => {
+    await show();
+    expect(screen.getByRole("header", { name: THEME_MESSAGES.heading })).toBeTruthy();
+    expect(screen.getAllByRole("radio")).toHaveLength(THEME_OPTIONS.length);
+    expect(screen.getByRole("radio", { name: "System", checked: true })).toBeTruthy();
+    await fireEvent.press(screen.getByRole("radio", { name: "Light" }));
+    expect(screen.getByRole("radio", { name: "Light", checked: true })).toBeTruthy();
+    await fireEvent.press(screen.getByRole("radio", { name: "System" }));
+    expect(screen.getByRole("radio", { name: "System", checked: true })).toBeTruthy();
+  });
+
   it("filters as you type, with the group as secondary text and a polite count", async () => {
     await show();
     await fireEvent.changeText(field(), "rent");
@@ -66,6 +77,7 @@ describe("MoreScreen search", () => {
     await fireEvent.changeText(field(), "rent");
     expect(screen.queryByText("Account section")).toBeNull();
     expect(screen.queryByText("Workspace section")).toBeNull();
+    expect(screen.queryByRole("radio")).toBeNull();
     expect(screen.queryByText("Version 1.0.0")).toBeNull();
     await fireEvent.press(screen.getByLabelText("Clear search"));
     expect(screen.getByText("Account section")).toBeTruthy();

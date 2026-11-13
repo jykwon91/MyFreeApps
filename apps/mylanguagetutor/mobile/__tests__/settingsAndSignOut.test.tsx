@@ -6,7 +6,7 @@ import { Linking } from "react-native";
 import { WEB_BASE_URL } from "../src/constants/api";
 import { SETTINGS_MENU } from "../src/constants/settingsMenu";
 import { TABS } from "../src/constants/tabs";
-import type { AppTab } from "@platform/mobile";
+import { THEME_MESSAGES, THEME_OPTIONS, type AppTab } from "@platform/mobile";
 import { ONBOARDED_LEARNER_ROUTES, PRACTICE_HEADING } from "../test-support/onboardedLearner";
 import { renderApp } from "../test-support/renderApp";
 
@@ -67,6 +67,19 @@ describe("the signed-in shell", () => {
       await fireEvent.press(screen.getByRole("link", { name: item.label }));
       expect(openURL).toHaveBeenLastCalledWith(`${WEB_BASE_URL}${item.webPath}`);
     }
+  });
+
+  it("offers the website's Light / Dark / System theme choice on Settings", async () => {
+    serve({ "GET /auth/mobile/sessions": () => ({ status: 200, data: DEVICES }) });
+    await renderApp("/settings");
+
+    expect(await screen.findByRole("header", { name: THEME_MESSAGES.heading })).toBeTruthy();
+    expect(screen.getAllByRole("radio")).toHaveLength(THEME_OPTIONS.length);
+    expect(screen.getByRole("radio", { name: "System", checked: true })).toBeTruthy();
+    await fireEvent.press(screen.getByRole("radio", { name: "Dark" }));
+    expect(screen.getByRole("radio", { name: "Dark", checked: true })).toBeTruthy();
+    await fireEvent.press(screen.getByRole("radio", { name: "System" }));
+    expect(screen.getByRole("radio", { name: "System", checked: true })).toBeTruthy();
   });
 
   it("signs out of this phone, tells the server, and goes back to sign-in", async () => {

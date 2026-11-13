@@ -1,4 +1,4 @@
-import { AccountSettings, AppVersion, KeyboardAwareScroll, MoreMenuGroups, SearchField, useTheme } from "@platform/mobile";
+import { AccountSettings, AppVersion, KeyboardAwareScroll, MoreMenuGroups, SearchField, ThemeSettings, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { View } from "react-native";
@@ -46,6 +46,7 @@ export default function MoreScreen() {
         {isSearching ? null : <MoreMenuGroups groups={visibleGroups(MORE_MENU, viewer)} webBaseUrl={WEB_BASE_URL} />}
         {isSearching ? null : (
           <>
+            <ThemeSettings />
             <AccountSettings appName="MyBookkeeper" onDeleteAccount={() => router.push("/delete-account")} />
             <AppVersion />
           </>

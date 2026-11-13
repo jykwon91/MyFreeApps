@@ -4,7 +4,7 @@ import type { TabScreenOptions } from "../types/TabScreenOptions";
 import type { TabScreenOptionsSettings } from "../types/TabScreenOptionsSettings";
 
 // Header, tab bar and scene colours for a Tabs navigator, from the same tokens as
-// useStackScreenOptions, so the tab bar follows the system light/dark scheme.
+// useStackScreenOptions, so the tab bar follows the chosen light/dark theme.
 export function useTabScreenOptions({ showIcons = false }: TabScreenOptionsSettings = {}): TabScreenOptions {
   const { colors } = useTheme();
   return useMemo(
