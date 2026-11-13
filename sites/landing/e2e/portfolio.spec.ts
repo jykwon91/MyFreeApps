@@ -39,7 +39,7 @@ test("renders under the production CSP with every screenshot loaded", async ({ p
 
 test("styles from both stylesheets apply in light and dark", async ({ page }) => {
   await page.goto(PAGE);
-  await expect(page.locator(".role")).toHaveCSS("color", "rgb(37, 99, 235)");
+  await expect(page.locator(".role")).toHaveCSS("color", "rgb(26, 91, 234)");
   await expect(page.locator(".project").first()).toHaveCSS("border-radius", "8px");
 
   await page.emulateMedia({ colorScheme: "dark" });

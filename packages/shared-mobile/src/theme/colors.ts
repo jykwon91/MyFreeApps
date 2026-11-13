@@ -8,7 +8,7 @@ export const lightColors: ThemeColors = {
   background: "hsl(0, 0%, 100%)",
   foreground: "hsl(222.2, 84%, 4.9%)",
   card: "hsl(0, 0%, 100%)",
-  primary: "hsl(221.2, 83.2%, 53.3%)",
+  primary: "hsl(221.2, 83.2%, 51%)",
   primaryForeground: "hsl(210, 40%, 98%)",
   secondary: "hsl(210, 40%, 96.1%)",
   secondaryForeground: "hsl(222.2, 47.4%, 11.2%)",
