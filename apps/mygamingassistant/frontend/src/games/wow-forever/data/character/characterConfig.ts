@@ -1,3 +1,4 @@
+import type { BackLinkState } from "@/games/wow-forever/types/shared/backLinkState";
 import type { PaperDollSlot } from "@/games/wow-forever/types/character/paperDollSlot";
 
 /** Names this browser looked up, most recent first. Names only — never the answers. */
@@ -6,6 +7,9 @@ export const RECENT_CHARACTERS_MAX = 5;
 
 /** The character page: /wow-forever/character/:slug. */
 export const CHARACTER_PAGE_PATH = "/wow-forever/character";
+
+/** Where the character page's back arrow goes unless the visitor arrived from somewhere that said otherwise. */
+export const CHARACTER_DEFAULT_BACK: BackLinkState = { backTo: "/wow-forever", backLabel: "Back to WoW Forever" };
 
 /** The character page's API, relative to the app origin (the render is a plain <img>). */
 export const CHARACTER_API_BASE = "/api/wow/characters";

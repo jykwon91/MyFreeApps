@@ -10,7 +10,7 @@
  *   - faction standing board: pick a faction (in the URL), ranked by tier, an old link falls back, retry
  *   - Hall of Titles: rarity medallions, flavour, challengers; Home holds the Arena, heroes, quests and hot races in that order
  *   - 375px phone: the heroes row snaps sideways inside itself, nothing overflows
- *   - members by rank; a name opens that member's character page
+ *   - members by rank; a name opens that member's character page, whose back arrow returns to the same guild URL
  *   - search, class filter and column sort, kept in the URL across Back
  *   - nothing matches → Clear filters brings everyone back
  *   - before we have the guild, the page says how to get it collected
@@ -118,9 +118,14 @@ test("the guild badge opens the guild page, and a member's name opens their char
   await expect(page.getByText(/1 member has no profile from Blizzard/)).toBeVisible();
   await expect(memberNames(page)).toHaveText(["Jason Kwon", "Big Sue", "Tiny John"]);
 
+  const guildUrl = new URL(page.url());
   await memberNames(page).filter({ hasText: "Tiny John" }).click();
   await expect(page).toHaveURL(/\/wow-forever\/character\/tiny-john$/);
   await expect(page.getByRole("heading", { name: "Tiny John" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to topdeadcenter" })).toHaveAttribute("href", `${guildUrl.pathname}${guildUrl.search}`);
+  await page.getByRole("link", { name: "Back to topdeadcenter" }).click();
+  await expect(page).toHaveURL(guildUrl.href);
+  await expect(page.getByRole("tab", { name: "Roster", exact: true })).toHaveAttribute("aria-selected", "true");
 });
 
 test("search, class filter and sort live in the URL and survive Back", async ({ page }) => {

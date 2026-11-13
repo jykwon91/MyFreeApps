@@ -3,6 +3,9 @@ export const GUILD_PAGE_PATH = "/wow-forever/guild";
 /** That guild's Blizzard slug (the backend's ``GUILD_SLUG``; every other slug is a 404). */
 export const GUILD_SLUG = "topdeadcenter";
 
+/** A member page's back arrow, when they were opened from the guild page. */
+export const GUILD_BACK_LABEL = `Back to ${GUILD_SLUG}`;
+
 /** The member list's sort columns. */
 export const GUILD_SORT_KEYS = {
   rank: "rank",

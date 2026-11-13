@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "Back to the guild from a member's page",
+    "summary": "Open a guild member's character page and the back arrow now takes you straight back to the guild page, right where you left it.",
+    "to": "/wow-forever/guild"
+  },
+  {
+    "date": "2026-11-13",
     "title": "Shorter crafter lists",
     "summary": "On the guild's Who can craft? tab, each recipe now shows just the member with the highest skill. Tap \"Show more\" to see everyone else who knows it, and \"Show fewer\" to fold the list back up.",
     "to": "/wow-forever/guild?tab=crafting"

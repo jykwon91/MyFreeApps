@@ -1200,6 +1200,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `tests/conftest.py`), `__tests__/wowPriceRefreshButton.test.tsx`,
   `e2e/mocked/wow-forever-auction-house-refresh.spec.ts`. Page tests that mock `wowPricesApi`
   spread `refreshApiStub` from `test/auctionPricesStub.ts` (no button renders).
+- Guild member names (every one, via `GuildMemberLink`) pass router state `{backTo, backLabel}` (`types/shared/backLinkState.ts`); the character page reads it through `parseBackLink` (`lib/shared/backLinkState.ts`, only `/wow-forever...` paths) so its back arrow returns to the exact guild URL, kept through a lookup and the recent-character redirect. A new link to a member must use `GuildMemberLink`. Tests: `wowBackLinkState`, `wowCharacterBackLink`, `wowGuildMemberBackState`.
 - Guild "Refresh now" (next to "Roster updated …", `components/guild/GuildRefreshButton.tsx`,
   `hooks/useGuildRefresh.ts`): ONLY for the operator's guild — `GUILD_SLUG`
   (`topdeadcenter`) in `core/wow_guild.py`; the guild response carries `can_refresh`
