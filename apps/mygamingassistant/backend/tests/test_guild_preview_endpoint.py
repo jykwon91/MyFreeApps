@@ -106,3 +106,23 @@ async def test_any_other_slug_is_a_404_even_when_stored(http: AsyncClient, monke
     response = await http.get("/wow/guilds/other-guild/preview.png")
     assert response.status_code == 404
     assert calls == []
+
+
+async def test_a_head_request_gets_the_png_headers(http: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Some unfurlers check the image with HEAD before fetching it."""
+    stored(monkeypatch, make_guild([make_member("Ana", honorable_kills=5)]))
+    response = await http.head(URL)
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.headers["cache-control"] == CACHE_CONTROL
+    assert int(response.headers["content-length"]) > 0
+    assert response.content == b""
+
+
+async def test_a_head_request_for_a_guild_never_stored_redirects_to_the_generic_card(
+    http: AsyncClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stored(monkeypatch, None)
+    response = await http.head(URL)
+    assert response.status_code == 302
+    assert response.headers["location"] == FALLBACK_IMAGE_PATH

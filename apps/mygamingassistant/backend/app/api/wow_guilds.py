@@ -6,7 +6,7 @@ GET /wow/guilds/{slug}/recipes?q= — the guild's known recipes whose name
 contains ``q``, each with the members who know it.
 GET /wow/guilds/{slug}/reputations?faction= — the factions members have met,
 and each member's standing with one (default: the one most have met).
-GET /wow/guilds/{slug}/preview.png — the guild's link-preview picture (Open Graph
+GET (and HEAD) /wow/guilds/{slug}/preview.png — the guild's link-preview picture (Open Graph
 image), drawn from the stored guild; the generic WoW Forever card (302) when the
 guild isn't stored or can't be drawn, so an unfurl never gets an error.
 POST /wow/guilds/{slug}/refresh — "Refresh now": re-pull the roster and members
@@ -93,6 +93,8 @@ async def get_guild(slug: str, request: Request) -> GuildResponse:
 
 
 @router.get("/{slug}/preview.png", response_class=Response, responses={200: {"content": {"image/png": {}}}})
+# Some unfurlers check the image with HEAD first.
+@router.head("/{slug}/preview.png", response_class=Response, include_in_schema=False)
 async def get_guild_preview(slug: str, request: Request) -> Response:
     png = await guild_preview_service.get_preview_png(_checked_slug(slug, request))
     if png is None:
