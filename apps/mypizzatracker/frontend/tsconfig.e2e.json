@@ -1,0 +1,5 @@
+{
+  "extends": ["./tsconfig.json", "../../../packages/shared-frontend/tsconfig.e2e.base.json"],
+  "include": ["e2e", "playwright.layout.config.ts"],
+  "exclude": ["e2e/test-results*", "e2e/playwright-report"]
+}

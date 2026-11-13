@@ -1,7 +1,5 @@
 import { expect, type Locator } from "@playwright/test";
-
-/** How far a loaded card may differ in height from its skeleton before the swap visibly jumps. */
-export const LAYOUT_SHIFT_TOLERANCE_PX = 2;
+import { LAYOUT_SHIFT_TOLERANCE_PX } from "@platform/ui/test-support/constants/layoutShiftTolerance";
 
 /** The first skeleton card's height, measured while the skeleton is still on screen. */
 export async function skeletonCardHeight(skeletonCards: Locator): Promise<number> {
