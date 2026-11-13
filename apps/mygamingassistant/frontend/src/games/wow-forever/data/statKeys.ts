@@ -130,9 +130,14 @@ export function isStatKey(value: string): value is StatKey {
   return (STAT_KEYS as readonly string[]).includes(value);
 }
 
+/** "12" / "1.5%": an amount without a sign. */
+export function formatStatMagnitude(key: StatKey, value: number): string {
+  const unit = key.endsWith(PERCENT_SUFFIX) ? "%" : "";
+  return `${Number(value.toFixed(2))}${unit}`;
+}
+
 /** "+1% Hit" style display of one stat amount. */
 export function formatStatAmount(key: StatKey, value: number): string {
   const sign = value > 0 ? "+" : "";
-  const unit = key.endsWith(PERCENT_SUFFIX) ? "%" : "";
-  return `${sign}${Number(value.toFixed(2))}${unit}`;
+  return `${sign}${formatStatMagnitude(key, value)}`;
 }

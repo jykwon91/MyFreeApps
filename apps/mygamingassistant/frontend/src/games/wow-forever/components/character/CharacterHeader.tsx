@@ -66,7 +66,7 @@ export default function CharacterHeader({ character }: { character: CharacterRes
       </div>
       {wanted ? (
         <p className="text-xs text-muted-foreground">
-          &ldquo;Use for MGA&apos;s pages&rdquo; sets your faction, class and level on the map, gear, food and trainer pages.
+          &ldquo;Use for MGA&apos;s pages&rdquo; sets your faction, class and level on the map, gear, food and trainer pages, and lets the Auction house compare items with this character&apos;s gear.
         </p>
       ) : null}
     </section>

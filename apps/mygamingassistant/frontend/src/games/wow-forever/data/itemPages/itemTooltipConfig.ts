@@ -4,6 +4,9 @@ import type { ItemPageFacts } from "@/games/wow-forever/types/itemPages/itemPage
 /** Hover this long before an item-name tooltip shows (keyboard focus shows it at once). */
 export const ITEM_TOOLTIP_SHOW_DELAY_MS = 150;
 
+/** An interactive tooltip stays open this long after the pointer leaves its trigger, so the pointer can reach it. */
+export const ITEM_TOOLTIP_HIDE_GRACE_MS = 150;
+
 /** Gap between the item name and its tooltip. */
 export const ITEM_TOOLTIP_OFFSET_PX = 8;
 

@@ -249,7 +249,7 @@ describe("player prefill", () => {
   });
 
   it("prefills class, faction and level band from the saved player", () => {
-    const prefill = prefillFromPlayer({ faction: "H", classId: "warlock", zoneId: null, level: 24, position: null });
+    const prefill = prefillFromPlayer({ faction: "H", classId: "warlock", zoneId: null, level: 24, position: null, characterSlug: null });
     expect(prefill.context).toEqual({ class_id: "warlock", faction: "horde", level_band: "21-30" });
     expect(prefill.summary).toMatch(/^Using your saved Warlock, /);
   });

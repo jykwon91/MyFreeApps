@@ -303,7 +303,9 @@ describe("directions", () => {
 describe("player settings", () => {
   it("keeps valid stored settings and drops broken ones", () => {
     const stored = { faction: "H", classId: "warlock", zoneId: DUROTAR, level: 12, position: { x: 52, y: 42 } };
-    expect(parsePlayerSettings(stored)).toEqual(stored);
+    // Saved before characters were remembered: no characterSlug reads as none.
+    expect(parsePlayerSettings(stored)).toEqual({ ...stored, characterSlug: null });
+    expect(parsePlayerSettings({ ...stored, characterSlug: "Thrall-Doomhammer" })?.characterSlug).toBe("thrall-doomhammer");
     expect(parsePlayerSettings({ ...stored, faction: "X" })).toBeNull();
     expect(parsePlayerSettings({ ...stored, level: 99 })?.level).toBeNull();
     expect(parsePlayerSettings({ ...stored, position: { x: 500, y: 1 } })?.position).toBeNull();
