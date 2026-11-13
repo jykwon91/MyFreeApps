@@ -23,6 +23,9 @@ export const LISTING_MESSAGES = {
   allStatuses: "All",
   shareLink: "Share inquiry form link",
   shareLinkNote: "Anyone with this link can send you an inquiry.",
+  showQr: "Show QR code",
+  hideQr: "Hide QR code",
+  qrNote: "Show this to a prospective tenant, or print it, so they can open the inquiry form.",
   shareFailed: "I couldn't open sharing on this phone.",
   petsLabel: "Pets on premises",
   petsDefault: "You've said pets live here. Tell anyone who asks about this room.",
@@ -69,4 +72,14 @@ export function deleteListingTitle(title: string): string {
 
 export function countText(count: number, one: string, many: string): string {
   return count === 1 ? `1 ${one}` : `${count} ${many}`;
+}
+
+export const APPLY_QR_SIZE = 200;
+export const APPLY_QR_PADDING = 12;
+/** A QR code needs dark-on-light to scan, whatever the app theme. */
+export const APPLY_QR_BACKGROUND = "#ffffff";
+export const APPLY_QR_FOREGROUND = "#000000";
+
+export function applyQrLabel(title: string): string {
+  return `QR code for the apply link to ${title}`;
 }
