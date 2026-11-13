@@ -16,6 +16,7 @@ import {
   useListRecipeCooksQuery,
   useDeleteRecipeMutation,
 } from "@myrecipes/api-client/store/recipesApi";
+import { RECIPE_MANAGE_MESSAGES } from "@myrecipes/api-client/constants/recipeManage";
 import { COMPARE_VERSION_COUNT } from "@myrecipes/api-client/constants/versions";
 import { orderForCompare } from "@myrecipes/api-client/utils/orderForCompare";
 import { toggleCompareId } from "@myrecipes/api-client/utils/toggleCompareId";
@@ -80,10 +81,10 @@ export default function RecipeDetail() {
   async function handleDelete() {
     try {
       await deleteRecipe(recipeId).unwrap();
-      showSuccess("Recipe deleted.");
+      showSuccess(RECIPE_MANAGE_MESSAGES.deleted);
       navigate("/", { replace: true });
     } catch {
-      showError("Couldn't delete this recipe — please try again.");
+      showError(RECIPE_MANAGE_MESSAGES.couldntDelete);
     }
   }
 
@@ -244,9 +245,9 @@ export default function RecipeDetail() {
       {isOwner && (
         <ConfirmDialog
           open={deleteOpen}
-          title="Delete this recipe?"
-          description="This removes the recipe and its whole version history from your list. This can't be undone here."
-          confirmLabel="Delete recipe"
+          title={RECIPE_MANAGE_MESSAGES.deleteTitle}
+          description={RECIPE_MANAGE_MESSAGES.deleteBody}
+          confirmLabel={RECIPE_MANAGE_MESSAGES.deleteConfirm}
           variant="destructive"
           isLoading={isDeleting}
           onConfirm={handleDelete}

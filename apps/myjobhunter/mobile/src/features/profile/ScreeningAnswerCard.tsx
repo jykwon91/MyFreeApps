@@ -1,12 +1,11 @@
 import { useDeleteScreeningAnswerMutation } from "@myjobhunter/api-client/store/screeningAnswersApi";
 import { screeningQuestionLabel } from "@myjobhunter/api-client/utils/screeningQuestionLabel";
-import { useTheme } from "@platform/mobile";
+import { useConfirmedRemoval, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { SCREENING_MESSAGES as MESSAGES } from "../../constants/profileScreening";
 import type { ScreeningAnswerCardProps } from "../../types/ScreeningAnswerCardProps";
 import CardActions from "./CardActions";
-import { useConfirmedRemoval } from "../../hooks/useConfirmedRemoval";
 
 /** A question and its saved answer, then Edit and Remove. */
 export default function ScreeningAnswerCard({ answer, onEdit }: ScreeningAnswerCardProps) {

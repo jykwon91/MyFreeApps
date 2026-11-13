@@ -1,11 +1,10 @@
 import { useDeleteSkillMutation } from "@myjobhunter/api-client/store/skillsApi";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { MIN_TOUCH_TARGET, useConfirmedRemoval, useTheme } from "@platform/mobile";
 import { ActivityIndicator, Pressable, Text } from "react-native";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { SKILL_MESSAGES as MESSAGES } from "../../constants/profileSkills";
 import { formatSkillYears } from "../../lib/formatSkillYears";
 import type { SkillChipProps } from "../../types/SkillChipProps";
-import { useConfirmedRemoval } from "../../hooks/useConfirmedRemoval";
 
 /** A skill and its years. Tapping it asks to remove it; it shows the removal in flight. */
 export default function SkillChip({ skill }: SkillChipProps) {

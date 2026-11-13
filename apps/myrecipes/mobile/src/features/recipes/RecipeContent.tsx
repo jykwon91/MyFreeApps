@@ -9,6 +9,7 @@ import RecipeFacts from "./RecipeFacts";
 import RecipeIngredients from "./RecipeIngredients";
 import RecipeSteps from "./RecipeSteps";
 import VersionHistoryButton from "../versions/VersionHistoryButton";
+import RecipeOwnerActions from "./RecipeOwnerActions";
 import TweakRecipeButton from "./TweakRecipeButton";
 
 export default function RecipeContent({ recipe }: { recipe: RecipeDetailResponse }) {
@@ -49,6 +50,7 @@ export default function RecipeContent({ recipe }: { recipe: RecipeDetailResponse
       ) : (
         <Text style={muted}>This recipe has no ingredients or steps yet.</Text>
       )}
+      {recipe.is_owner ? <RecipeOwnerActions recipe={recipe} /> : null}
     </View>
   );
 }

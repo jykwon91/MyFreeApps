@@ -2,6 +2,7 @@ import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
+import { ToastProvider } from "@platform/mobile";
 import { AccessibilityInfo, AppState } from "react-native";
 import { Provider } from "react-redux";
 import RecipeDetailScreen from "../src/features/recipes/RecipeDetailScreen";
@@ -82,7 +83,9 @@ function show() {
   store = makeStore();
   return render(
     <Provider store={store}>
-      <RecipeDetailScreen />
+      <ToastProvider bottomOffset={0}>
+        <RecipeDetailScreen />
+      </ToastProvider>
     </Provider>,
   );
 }
@@ -90,7 +93,9 @@ function show() {
 function reopen() {
   return render(
     <Provider store={store}>
-      <RecipeDetailScreen />
+      <ToastProvider bottomOffset={0}>
+        <RecipeDetailScreen />
+      </ToastProvider>
     </Provider>,
   );
 }

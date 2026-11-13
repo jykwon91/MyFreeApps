@@ -61,6 +61,7 @@ export { default as WebLink } from "./components/WebLink";
 
 export { useAnnouncement } from "./hooks/useAnnouncement";
 export { useConfirmLeave } from "./hooks/useConfirmLeave";
+export { useConfirmedRemoval } from "./hooks/useConfirmedRemoval";
 export { useDiscardPrompt } from "./hooks/useDiscardPrompt";
 export { useDismissal } from "./hooks/useDismissal";
 export { useLeaveWhenSaved } from "./hooks/useLeaveWhenSaved";
@@ -123,6 +124,8 @@ export type { OptionRowProps } from "./types/OptionRowProps";
 export type { OptionSheetProps } from "./types/OptionSheetProps";
 export type { PickerFieldProps } from "./types/PickerFieldProps";
 export type { PinnedBarProps } from "./types/PinnedBarProps";
+export type { RemovalMessages } from "./types/RemovalMessages";
+export type { RemovalOptions } from "./types/RemovalOptions";
 export type { SearchFieldProps } from "./types/SearchFieldProps";
 export type { SectionErrorProps } from "./types/SectionErrorProps";
 export type { SecurityScreenContent } from "./types/SecurityScreenContent";

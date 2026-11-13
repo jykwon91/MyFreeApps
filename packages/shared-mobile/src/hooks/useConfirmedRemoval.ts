@@ -1,9 +1,9 @@
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Alert } from "react-native";
 import type { RemovalMessages } from "../types/RemovalMessages";
 import type { RemovalOptions } from "../types/RemovalOptions";
+import { useToast } from "./useToast";
 
 /**
  * Asks first, then removes, says how it went, and reports the removal in flight. A 404 means it's

@@ -1,13 +1,12 @@
 import { useDeleteEducationMutation } from "@myjobhunter/api-client/store/educationApi";
 import { educationDegreeLine } from "@myjobhunter/api-client/utils/educationDegreeLine";
 import { educationYearsLine } from "@myjobhunter/api-client/utils/educationYearsLine";
-import { useTheme } from "@platform/mobile";
+import { useConfirmedRemoval, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { EDUCATION_MESSAGES as MESSAGES } from "../../constants/profileEducation";
 import type { EducationCardProps } from "../../types/EducationCardProps";
 import CardActions from "./CardActions";
-import { useConfirmedRemoval } from "../../hooks/useConfirmedRemoval";
 
 /** A school: its degree and field, years and GPA when set, then Edit and Remove. */
 export default function EducationCard({ entry, onEdit }: EducationCardProps) {
