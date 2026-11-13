@@ -107,6 +107,9 @@ describe("RequireOrg", () => {
 
     expect(screen.getByTestId("create-org-prompt")).toBeInTheDocument();
     expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+    // Shown in place of Layout, so it is the page's one main landmark.
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+    expect(screen.getByRole("main")).toContainElement(screen.getByTestId("create-org-prompt"));
   });
 
   it("renders children when organizations exist", () => {
@@ -169,6 +172,9 @@ describe("RequireOrg", () => {
     expect(screen.getByText("Something went wrong loading your organizations.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
     expect(screen.queryByTestId("create-org-prompt")).not.toBeInTheDocument();
+    // Shown in place of Layout, so it is the page's one main landmark.
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+    expect(screen.getByRole("main")).toContainElement(screen.getByRole("button", { name: "Try again" }));
   });
 
   it("calls refetch when Try again button is clicked", async () => {

@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom";
+import { StandaloneMain } from "@platform/ui";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import type { Role } from "@/shared/types/user/role";
 
@@ -10,12 +11,15 @@ interface RequireRoleProps {
 export default function RequireRole({ roles, children }: RequireRoleProps) {
   const { user, isLoading, isError, error } = useCurrentUser();
 
+  // Guards /admin, outside every shell, so its skeleton brings the main landmark.
   if (isLoading) {
     return (
-      <div className="p-6 space-y-4 animate-pulse">
-        <div className="h-6 w-48 bg-muted rounded" />
-        <div className="h-64 bg-muted rounded" />
-      </div>
+      <StandaloneMain>
+        <div className="p-6 space-y-4 animate-pulse">
+          <div className="h-6 w-48 bg-muted rounded" />
+          <div className="h-64 bg-muted rounded" />
+        </div>
+      </StandaloneMain>
     );
   }
 

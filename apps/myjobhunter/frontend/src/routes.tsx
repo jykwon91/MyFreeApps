@@ -1,5 +1,5 @@
 import { Navigate, type RouteObject } from "react-router-dom";
-import { Support } from "@platform/ui";
+import { StandaloneLayout, Support } from "@platform/ui";
 import Dashboard from "@/pages/Dashboard";
 import Analyze from "@/pages/Analyze";
 import Discover from "@/pages/Discover";
@@ -68,12 +68,18 @@ export const routes: RouteObject[] = [
       },
     ],
   },
-  // Public support / donation page — standalone (no shell, no auth).
-  { path: "/support-myfreeapps", element: <Support appName="MyJobHunter" /> },
-  { path: "/login", element: <Login /> },
-  { path: "/register", element: <Register /> },
-  { path: "/forgot-password", element: <ForgotPassword /> },
-  { path: "/reset-password", element: <ResetPassword /> },
-  { path: "/verify-email", element: <VerifyEmail /> },
-  { path: "*", element: <NotFound /> },
+  // Pages outside the shell. StandaloneLayout gives each its one main landmark.
+  {
+    element: <StandaloneLayout />,
+    children: [
+      // Public support / donation page — standalone (no shell, no auth).
+      { path: "/support-myfreeapps", element: <Support appName="MyJobHunter" /> },
+      { path: "/login", element: <Login /> },
+      { path: "/register", element: <Register /> },
+      { path: "/forgot-password", element: <ForgotPassword /> },
+      { path: "/reset-password", element: <ResetPassword /> },
+      { path: "/verify-email", element: <VerifyEmail /> },
+      { path: "*", element: <NotFound /> },
+    ],
+  },
 ];
