@@ -24,6 +24,7 @@
     "postcss.config.js",
     "src/constants/linkPreview.ts",
     "src/games/registry.ts",
+    "src/games/wow-forever/data/guild/guildConfig.ts",
     "src/types/game.ts",
     "../../../packages/shared-frontend/src/vite/linkPreview/**/*.ts"
   ]
