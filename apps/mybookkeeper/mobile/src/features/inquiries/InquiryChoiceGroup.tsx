@@ -10,12 +10,11 @@ export default function InquiryChoiceGroup<Value extends string>({ label, choice
       <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>{label}</Text>
       {choices.map((choice) => (
         <OptionRow
+          disabled={disabled}
           isSelected={choice.value === value}
           key={choice.value}
           label={choice.label}
-          onPress={() => {
-            if (!disabled) onSelect(choice.value);
-          }}
+          onPress={() => onSelect(choice.value)}
         />
       ))}
     </View>

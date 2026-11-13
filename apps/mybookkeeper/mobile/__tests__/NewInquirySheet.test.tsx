@@ -205,16 +205,53 @@ describe("adding an inquiry by hand", () => {
       expect(await screen.findByText("You have view-only access, so I can't add inquiries.")).toBeTruthy();
     });
 
-    it("says it can't reach the server when offline", async () => {
+    it("warns it may have been added when no answer came back, since a direct inquiry has no duplicate check", async () => {
       await failWith(null, true);
-      expect(await screen.findByText("I can't reach the server, so I couldn't add that. Your details are still here.")).toBeTruthy();
+      expect(await screen.findByText(/I'm not sure that was added/)).toBeTruthy();
+      expect(screen.getByText(/Check your inquiries before trying again/)).toBeTruthy();
     });
 
     it("warns it may have been added on a server error", async () => {
       await failWith({ status: 500 });
-      expect(await screen.findByText(/I'm not sure it was added/)).toBeTruthy();
+      expect(await screen.findByText(/I'm not sure that was added/)).toBeTruthy();
       expect(screen.getByRole("button", SAVE)).toBeTruthy();
     });
+
+    it("refetches the list behind the sheet after an unsure failure", async () => {
+      const server = startInquiryServer([]);
+      await openSheet();
+      await typeName();
+      const listReads = () => server.requests.filter((request) => request.url === "/inquiries" && request.method === "get").length;
+      await screen.findByText("No inquiries yet");
+      const before = listReads();
+
+      server.createOutcome = { status: 500 };
+      await fireEvent.press(screen.getByRole("button", SAVE));
+      await screen.findByText(/I'm not sure that was added/);
+      await waitFor(() => expect(listReads()).toBeGreaterThan(before));
+    });
+  });
+
+  it("stops each field at the length the server accepts", async () => {
+    startInquiryServer([]);
+    await openSheet();
+    await fireEvent.press(screen.getByRole("radio", { name: "Furnished Finder" }));
+    expect(screen.getByLabelText("Furnished Finder inquiry ID, required").props.maxLength).toBe(100);
+    expect(screen.getByLabelText("Inquirer name, required").props.maxLength).toBe(255);
+    expect(screen.getByLabelText("Email").props.maxLength).toBe(255);
+    expect(screen.getByLabelText("Phone").props.maxLength).toBe(50);
+    expect(screen.getByLabelText("Employer / hospital").props.maxLength).toBe(255);
+    expect(screen.getByLabelText("Notes").props.maxLength).toBe(5000);
+  });
+
+  it("announces the source choices as disabled while saving", async () => {
+    startInquiryServer([]);
+    api.defaults.adapter = ((answer) => (config) => (config.method === "post" ? new Promise(() => undefined) : answer(config)))(api.defaults.adapter as AxiosAdapter);
+    await openSheet();
+    await typeName();
+    await fireEvent.press(screen.getByRole("button", SAVE));
+    await screen.findByRole("button", { name: "Saving…" });
+    expect(screen.getByRole("radio", { name: "Direct" }).props.accessibilityState).toMatchObject({ disabled: true });
   });
 
   it("asks before throwing away what was typed", async () => {

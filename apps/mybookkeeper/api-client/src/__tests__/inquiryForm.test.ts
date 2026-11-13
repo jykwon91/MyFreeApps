@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INQUIRY_FORM_PROBLEMS } from "../constants/inquiryForm";
+import { INQUIRY_FIELD_MAX_LENGTH, INQUIRY_FORM_PROBLEMS } from "../constants/inquiryForm";
 import type { InquiryFormValues } from "../types/inquiry/inquiry-form-values";
 import {
   blankInquiryForm,
@@ -103,5 +103,11 @@ describe("inquiryFormToCreateRequest", () => {
 
   it("refuses a received-at it can't read", () => {
     expect(() => inquiryFormToCreateRequest(aForm({ received_at: "" }))).toThrow();
+  });
+});
+
+describe("INQUIRY_FIELD_MAX_LENGTH", () => {
+  it("matches the backend's InquiryCreateRequest caps", () => {
+    expect(INQUIRY_FIELD_MAX_LENGTH).toEqual({ externalId: 100, name: 255, email: 255, phone: 50, employer: 255, notes: 5000 });
   });
 });

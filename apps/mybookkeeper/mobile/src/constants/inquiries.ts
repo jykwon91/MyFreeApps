@@ -24,9 +24,6 @@ export const ALL_STAGES_OPTION = "all";
 export const CLAMPED_MESSAGE_LINES = 12;
 export const LONG_MESSAGE_CHARACTERS = 500;
 
-/** Same as the server's limit on notes. */
-export const INQUIRY_NOTES_MAX_LENGTH = 5000;
-
 export const INQUIRY_EMPTY_WORDS: Record<InquiryView, { heading: string; body: string }> = {
   inbox: { heading: "No inquiries yet", body: "When someone asks about a room, it'll show up here." },
   flagged: { heading: "Nothing flagged", body: "I haven't spotted anything that looks like spam." },

@@ -7,15 +7,21 @@ const FORBIDDEN = 403;
 const CLIENT_ERROR = 400;
 const SERVER_ERROR = 500;
 
+/** Whether the server may have saved the inquiry even though the call failed: no answer at all, or a server error. */
+export function isInquiryCreateUnsure(error: unknown): boolean {
+  const status = httpStatus(error);
+  return status === undefined || status >= SERVER_ERROR;
+}
+
 /**
  * What to say on the form when adding an inquiry fails. A 400, 409 or 422 is the server explaining
- * what it refused (an ID it needs, dates the wrong way round), so its own reason is shown.
+ * what it refused (an ID it needs, dates the wrong way round), so its own reason is shown. A lost answer or a
+ * broken server may still have saved the inquiry, and a direct one has no duplicate check, so those say so.
  */
 export function inquiryCreateFailure(error: unknown): string {
   const status = httpStatus(error);
-  if (status === undefined) return MESSAGES.offline;
   if (status === FORBIDDEN) return isDemoRefusal(error) ? MESSAGES.demo : MESSAGES.viewOnly;
-  if (status >= SERVER_ERROR) return MESSAGES.serverError;
+  if (status === undefined || status >= SERVER_ERROR) return MESSAGES.unsure;
   if (status >= CLIENT_ERROR) return getApiValidationDetail(error, MESSAGES.rejectedFallback);
   return MESSAGES.other;
 }

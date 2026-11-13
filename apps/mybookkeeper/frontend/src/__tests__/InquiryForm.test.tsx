@@ -127,4 +127,33 @@ describe("InquiryForm", () => {
     expect(options).toContain("");  // "Not yet linked"
     expect(options).toContain("listing-1");
   });
+
+  it("sends no platform id when it was typed under another source and the form went back to direct", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.selectOptions(screen.getByTestId("inquiry-form-source"), "FF");
+    await user.type(screen.getByTestId("inquiry-form-external-id"), "I-12345");
+    await user.selectOptions(screen.getByTestId("inquiry-form-source"), "direct");
+    await user.type(screen.getByTestId("inquiry-form-name"), "Test User");
+    await user.click(screen.getByTestId("inquiry-form-submit"));
+    await waitFor(() => expect(createInquiryMock).toHaveBeenCalledTimes(1));
+    expect(createInquiryMock.mock.calls[0][0]).toMatchObject({ source: "direct", external_inquiry_id: null });
+  });
+
+  it("stops each field at the length the server accepts", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.selectOptions(screen.getByTestId("inquiry-form-source"), "FF");
+    const caps: Record<string, number> = {
+      "inquiry-form-external-id": 100,
+      "inquiry-form-name": 255,
+      "inquiry-form-email": 255,
+      "inquiry-form-phone": 50,
+      "inquiry-form-employer": 255,
+      "inquiry-form-notes": 5000,
+    };
+    for (const [testId, cap] of Object.entries(caps)) {
+      expect(screen.getByTestId(testId)).toHaveAttribute("maxLength", String(cap));
+    }
+  });
 });

@@ -13,10 +13,9 @@ export const INQUIRY_CREATE_MESSAGES = {
   listingsFailed: "I couldn't load your listings. You can still add the inquiry and link one later.",
   added: (name: string) => `Got it. I added ${name}'s inquiry.`,
   fixFields: "A couple of things need a look before I can add this.",
-  offline: "I can't reach the server, so I couldn't add that. Your details are still here.",
   viewOnly: "You have view-only access, so I can't add inquiries.",
   demo: "Demo workspaces can't add inquiries.",
   rejectedFallback: "Something in there isn't right. Check the fields and try again.",
-  serverError: "Something went wrong on my side, so I'm not sure it was added. Check your inquiries before trying again, so you don't end up with two.",
+  unsure: "I'm not sure that was added: I may not have heard back, or something went wrong on my side. Check your inquiries before trying again, so you don't end up with two.",
   other: "I couldn't add that. Want to try again?",
 } as const;

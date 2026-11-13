@@ -1,8 +1,8 @@
+import { INQUIRY_FIELD_MAX_LENGTH } from "@mybookkeeper/api-client/constants/inquiryForm";
 import { useUpdateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { FormField, LoadingButton, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Alert, Text, View } from "react-native";
-import { INQUIRY_NOTES_MAX_LENGTH } from "../../constants/inquiries";
 import { inquiryWriteFailure } from "./inquiryFailures";
 import CollapsibleSection from "./CollapsibleSection";
 
@@ -46,7 +46,7 @@ export default function InquiryNotes({ id, notes, canWrite }: { id: string; note
     <CollapsibleSection preview={saved || "No notes yet."} title="Notes">
       {canWrite ? (
         <View style={{ gap: spacing.sm }}>
-          <FormField label="Your notes" maxLength={INQUIRY_NOTES_MAX_LENGTH} multiline onChangeText={setEdit} value={draft} />
+          <FormField label="Your notes" maxLength={INQUIRY_FIELD_MAX_LENGTH.notes} multiline onChangeText={setEdit} value={draft} />
           <LoadingButton disabled={!isDirty} isLoading={isSaving} loadingText="Saving…" onPress={() => void save()} variant="secondary">
             Save notes
           </LoadingButton>

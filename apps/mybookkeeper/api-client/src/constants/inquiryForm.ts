@@ -6,6 +6,16 @@ export const INQUIRY_DIRECT_SOURCE: InquirySource = "direct";
 /** The form's local date-time shape, the same as an HTML datetime-local input. */
 export const INQUIRY_RECEIVED_AT_FORMAT = "yyyy-MM-dd'T'HH:mm";
 
+/** The backend's ``InquiryCreateRequest`` length caps, so a field stops taking text where the server would refuse it. */
+export const INQUIRY_FIELD_MAX_LENGTH = {
+  externalId: 100,
+  name: 255,
+  email: 255,
+  phone: 50,
+  employer: 255,
+  notes: 5000,
+} as const;
+
 export const INQUIRY_FORM_LABELS = {
   title: "New inquiry",
   intro: "Log an inquiry that came in outside Furnished Finder or Travel Nurse Housing — or a backdated one you want to track.",

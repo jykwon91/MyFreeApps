@@ -1,6 +1,6 @@
-import { INQUIRY_FORM_LABELS as LABELS, INQUIRY_FORM_PLACEHOLDERS as PLACEHOLDERS } from "@mybookkeeper/api-client/constants/inquiryForm";
+import { INQUIRY_FIELD_MAX_LENGTH as MAX_LENGTH, INQUIRY_FORM_LABELS as LABELS, INQUIRY_FORM_PLACEHOLDERS as PLACEHOLDERS } from "@mybookkeeper/api-client/constants/inquiryForm";
 import { INQUIRY_SOURCE_LABELS, INQUIRY_SOURCES } from "@mybookkeeper/api-client/constants/inquiryLabels";
-import { useCreateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
+import { inquiriesApi, useCreateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
 import type { InquiryFormValues } from "@mybookkeeper/api-client/types/inquiry/inquiry-form-values";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import type { InquirySource } from "@mybookkeeper/api-client/types/inquiry/inquiry-source";
@@ -14,15 +14,16 @@ import {
 import { FormField, FormSheet, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { INQUIRY_NOTES_MAX_LENGTH } from "../../constants/inquiries";
+import { useDispatch } from "react-redux";
 import { INQUIRY_CREATE_MESSAGES as MESSAGES } from "../../constants/inquiryCreate";
 import { confirmDiscard } from "../../lib/confirmDiscard";
 import { dateFromIso } from "../../lib/localDate";
+import type { AppDispatch } from "../../lib/store";
 import type { NewInquirySheetProps } from "../../types/NewInquirySheetProps";
 import OptionalDateField from "../shell/OptionalDateField";
 import { useFormSubmit } from "../shell/useFormSubmit";
 import InquiryChoiceGroup from "./InquiryChoiceGroup";
-import { inquiryCreateFailure } from "./inquiryCreateFailure";
+import { inquiryCreateFailure, isInquiryCreateUnsure } from "./inquiryCreateFailure";
 import InquiryListingField from "./InquiryListingField";
 import InquiryReceivedAtField from "./InquiryReceivedAtField";
 
@@ -32,6 +33,7 @@ const SOURCE_CHOICES = INQUIRY_SOURCES.map((source) => ({ value: source, label: 
 export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
+  const dispatch = useDispatch<AppDispatch>();
   const [createInquiry] = useCreateInquiryMutation();
   const { isBusy, failure, submit } = useFormSubmit();
   const [initial] = useState(() => blankInquiryForm(new Date()));
@@ -52,6 +54,12 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
     else onClose();
   }
 
+  /** An unsure failure may have saved it anyway, so the list behind the sheet is refetched to show it. */
+  function describeFailure(error: unknown): string {
+    if (isInquiryCreateUnsure(error)) dispatch(inquiriesApi.util.invalidateTags([{ type: "Inquiry", id: "LIST" }]));
+    return inquiryCreateFailure(error);
+  }
+
   async function save(): Promise<void> {
     if (isBusy) return;
     if (Object.keys(inquiryFormProblems(values)).length > 0) {
@@ -61,7 +69,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
     const result: { inquiry?: InquiryResponse } = {};
     const landed = await submit(async () => {
       result.inquiry = await createInquiry(inquiryFormToCreateRequest(values)).unwrap();
-    }, inquiryCreateFailure);
+    }, describeFailure);
     if (!landed || !result.inquiry) return;
     onClose();
     showToast(MESSAGES.added(values.inquirer_name.trim()));
@@ -80,6 +88,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
             editable={!isBusy}
             error={problems.external_inquiry_id}
             label={externalInquiryIdLabel(values.source)}
+            maxLength={MAX_LENGTH.externalId}
             onChangeText={(external_inquiry_id) => update({ external_inquiry_id })}
             placeholder={PLACEHOLDERS.externalId}
             required
@@ -91,6 +100,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
           editable={!isBusy}
           error={problems.inquirer_name}
           label={LABELS.name}
+          maxLength={MAX_LENGTH.name}
           onChangeText={(inquirer_name) => update({ inquirer_name })}
           required
           value={values.inquirer_name}
@@ -102,6 +112,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
           editable={!isBusy}
           keyboardType="email-address"
           label={LABELS.email}
+          maxLength={MAX_LENGTH.email}
           onChangeText={(inquirer_email) => update({ inquirer_email })}
           value={values.inquirer_email}
         />
@@ -110,12 +121,14 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
           editable={!isBusy}
           keyboardType="phone-pad"
           label={LABELS.phone}
+          maxLength={MAX_LENGTH.phone}
           onChangeText={(inquirer_phone) => update({ inquirer_phone })}
           value={values.inquirer_phone}
         />
         <FormField
           editable={!isBusy}
           label={LABELS.employer}
+          maxLength={MAX_LENGTH.employer}
           onChangeText={(inquirer_employer) => update({ inquirer_employer })}
           placeholder={PLACEHOLDERS.employer}
           value={values.inquirer_employer}
@@ -140,7 +153,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
         <FormField
           editable={!isBusy}
           label={LABELS.notes}
-          maxLength={INQUIRY_NOTES_MAX_LENGTH}
+          maxLength={MAX_LENGTH.notes}
           multiline
           onChangeText={(notes) => update({ notes })}
           value={values.notes}

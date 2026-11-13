@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
 import { INQUIRY_SOURCES, INQUIRY_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import { useCreateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { INQUIRY_FORM_LABELS as LABELS, INQUIRY_FORM_PLACEHOLDERS as PLACEHOLDERS } from "@mybookkeeper/api-client/constants/inquiryForm";
+import { INQUIRY_FIELD_MAX_LENGTH as MAX_LENGTH, INQUIRY_FORM_LABELS as LABELS, INQUIRY_FORM_PLACEHOLDERS as PLACEHOLDERS } from "@mybookkeeper/api-client/constants/inquiryForm";
 import type { InquiryFormProblems } from "@mybookkeeper/api-client/types/inquiry/inquiry-form-problems";
 import type { InquiryFormValues } from "@mybookkeeper/api-client/types/inquiry/inquiry-form-values";
 import {
@@ -108,6 +108,7 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
                   <input
                     {...register("external_inquiry_id", { validate: problemFor("external_inquiry_id") })}
                     data-testid="inquiry-form-external-id"
+                    maxLength={MAX_LENGTH.externalId}
                     placeholder={PLACEHOLDERS.externalId}
                     className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                     {...field}
@@ -128,6 +129,7 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
                 <input
                   {...register("inquirer_name", { validate: problemFor("inquirer_name") })}
                   data-testid="inquiry-form-name"
+                  maxLength={MAX_LENGTH.name}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
                 />
@@ -145,6 +147,7 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
                   type="email"
                   {...register("inquirer_email")}
                   data-testid="inquiry-form-email"
+                  maxLength={MAX_LENGTH.email}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
                 />
@@ -156,6 +159,7 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
                   type="tel"
                   {...register("inquirer_phone")}
                   data-testid="inquiry-form-phone"
+                  maxLength={MAX_LENGTH.phone}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
                 />
@@ -169,6 +173,7 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
                 {...register("inquirer_employer")}
                 placeholder={PLACEHOLDERS.employer}
                 data-testid="inquiry-form-employer"
+                maxLength={MAX_LENGTH.employer}
                 className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                 {...field}
               />
@@ -248,6 +253,7 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
                 {...register("notes")}
                 rows={3}
                 data-testid="inquiry-form-notes"
+                maxLength={MAX_LENGTH.notes}
                 className="w-full border rounded-md px-3 py-2 text-sm"
                 {...field}
               />
