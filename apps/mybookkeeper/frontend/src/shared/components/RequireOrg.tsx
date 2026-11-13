@@ -1,7 +1,7 @@
 import { useLayoutEffect } from "react";
 import { useDispatch } from "react-redux";
 import { Navigate } from "react-router-dom";
-import { LoadingButton } from "@platform/ui";
+import { LoadingButton, StandaloneMain } from "@platform/ui";
 import { useListOrganizationsQuery } from "@/shared/store/organizationsApi";
 import { useGetTaxProfileQuery } from "@/shared/store/taxProfileApi";
 import { setActiveOrg, setOrganizations } from "@/shared/store/organizationSlice";
@@ -45,7 +45,8 @@ export default function RequireOrg({ children }: RequireOrgProps) {
     return <RequireOrgSkeleton />;
   }
 
-  // API error — distinguish auth failures from other errors.
+  // API error — distinguish auth failures from other errors. The error state
+  // is shown in place of Layout, so it brings the page's main landmark.
   // On 401, RequireAuth's reactive subscription will redirect to /login.
   // For other errors, show a recoverable error state instead of CreateOrgPrompt.
   // Reads `error`, not `isError`: RTK clears `isError` while a retry is in
@@ -58,26 +59,33 @@ export default function RequireOrg({ children }: RequireOrgProps) {
       return <Navigate to="/login" replace />;
     }
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <p className="text-destructive text-lg">
-            Something went wrong loading your organizations.
-          </p>
-          <LoadingButton
-            type="button"
-            isLoading={isFetching}
-            loadingText="Retrying..."
-            onClick={() => refetch()}
-          >
-            Try again
-          </LoadingButton>
+      <StandaloneMain>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <p className="text-destructive text-lg">
+              Something went wrong loading your organizations.
+            </p>
+            <LoadingButton
+              type="button"
+              isLoading={isFetching}
+              loadingText="Retrying..."
+              onClick={() => refetch()}
+            >
+              Try again
+            </LoadingButton>
+          </div>
         </div>
-      </div>
+      </StandaloneMain>
     );
   }
 
+  // Shown in place of Layout, so it brings the page's main landmark.
   if (!orgs || orgs.length === 0) {
-    return <CreateOrgPrompt />;
+    return (
+      <StandaloneMain>
+        <CreateOrgPrompt />
+      </StandaloneMain>
+    );
   }
 
   // Wait until the active workspace is in the store, so pages always know

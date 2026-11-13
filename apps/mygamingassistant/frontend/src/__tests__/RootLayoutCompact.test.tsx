@@ -2,7 +2,7 @@
  * Unit tests for RootLayout rendering branches.
  *
  * RootLayout has three branches:
- *   - ?compact=1                 → no shell (Outlet in a bare <main>)
+ *   - ?compact=1                 → no shell (Outlet in StandaloneMain)
  *   - authenticated              → AppShell (full sidebar + user dropdown)
  *   - unauthenticated (default)  → GuestShell (public nav + Sign in CTA)
  *
@@ -35,7 +35,8 @@ const mockIsAuthenticated = vi.fn(() => false);
 // lives in @platform/ui (extracted from the local copy), so it's stubbed here
 // alongside AppShell — we just want to assert which shell renders, not exercise
 // its internals (those have their own tests in shared-frontend).
-vi.mock("@platform/ui", () => ({
+vi.mock("@platform/ui", async (importOriginal) => ({
+  StandaloneMain: (await importOriginal<typeof import("@platform/ui")>()).StandaloneMain,
   AppShell: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="app-shell">{children}</div>
   ),
@@ -101,7 +102,7 @@ describe("RootLayout branches", () => {
     render(<RootLayout />);
     expect(screen.queryByTestId("app-shell")).toBeNull();
     expect(screen.queryByTestId("guest-shell")).toBeNull();
-    // The page renders in a bare frame that is its one main landmark.
+    // The page renders in StandaloneMain, its one main landmark.
     expect(screen.getAllByRole("main")).toHaveLength(1);
     expect(screen.getByRole("main")).toContainElement(screen.getByTestId("outlet"));
   });

@@ -89,6 +89,9 @@ export type { AppShellProps, NavItem, NavSection, BottomNavItem } from "./compon
 export { default as GuestShell } from "./components/layout/GuestShell";
 export type { GuestShellProps } from "./components/layout/GuestShell";
 export { default as AuthPageFooter } from "./components/layout/AuthPageFooter";
+export { default as StandaloneLayout } from "./components/layout/StandaloneLayout";
+export { default as StandaloneMain } from "./components/layout/StandaloneMain";
+export type { StandaloneMainProps } from "./types/standalone-main-props";
 
 // Auth components
 export { default as RequireAuth } from "./components/auth/RequireAuth";
@@ -143,5 +146,6 @@ export { useForgetMutationArgs } from "./hooks/useForgetMutationArgs";
 export { useMediaQuery } from "./hooks/useMediaQuery";
 export { useLiveSearchParams } from "./hooks/useLiveSearchParams";
 export { useScrollTopOnNavigate } from "./hooks/useScrollTopOnNavigate";
+export type { ScrollTopOnNavigateOptions } from "./types/scroll-top-on-navigate-options";
 export { useTheme } from "./hooks/useTheme";
 export { useToast } from "./hooks/useToast";

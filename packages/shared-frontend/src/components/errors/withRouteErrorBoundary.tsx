@@ -1,4 +1,5 @@
 import type { RouteObject } from "react-router-dom";
+import StandaloneMain from "../layout/StandaloneMain";
 import RouteErrorFallback from "./RouteErrorFallback";
 
 /**
@@ -7,9 +8,20 @@ import RouteErrorFallback from "./RouteErrorFallback";
  * `element` renders its matched child unchanged, so routing is identical —
  * the wrapper only catches render / loader / lazy-chunk errors that would
  * otherwise fall through to React Router's default developer error screen.
+ * The fallback replaces the whole tree, shell included, so it brings its own
+ * main landmark (StandaloneMain).
  *
  *   const router = createBrowserRouter(withRouteErrorBoundary(routes));
  */
 export function withRouteErrorBoundary(routes: RouteObject[]): RouteObject[] {
-  return [{ errorElement: <RouteErrorFallback />, children: routes }];
+  return [
+    {
+      errorElement: (
+        <StandaloneMain>
+          <RouteErrorFallback />
+        </StandaloneMain>
+      ),
+      children: routes,
+    },
+  ];
 }

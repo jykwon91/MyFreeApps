@@ -1,5 +1,5 @@
 import { type RouteObject } from "react-router-dom";
-import { Support } from "@platform/ui";
+import { StandaloneLayout, Support } from "@platform/ui";
 import Home from "@/pages/Home";
 import OnboardingLanguage from "@/pages/OnboardingLanguage";
 import OnboardingLevel from "@/pages/OnboardingLevel";
@@ -31,12 +31,18 @@ export const routes: RouteObject[] = [
       { path: "/security", element: <Security /> },
     ],
   },
-  // Public support / donation page — standalone (no shell, no auth).
-  { path: "/support-myfreeapps", element: <Support appName="MyLanguageTutor" /> },
-  { path: "/login", element: <Login /> },
-  { path: "/register", element: <Register /> },
-  { path: "/forgot-password", element: <ForgotPassword /> },
-  { path: "/reset-password", element: <ResetPassword /> },
-  { path: "/verify-email", element: <VerifyEmail /> },
-  { path: "*", element: <NotFound /> },
+  // Pages outside the shell. StandaloneLayout gives each its one main landmark.
+  {
+    element: <StandaloneLayout />,
+    children: [
+      // Public support / donation page — standalone (no shell, no auth).
+      { path: "/support-myfreeapps", element: <Support appName="MyLanguageTutor" /> },
+      { path: "/login", element: <Login /> },
+      { path: "/register", element: <Register /> },
+      { path: "/forgot-password", element: <ForgotPassword /> },
+      { path: "/reset-password", element: <ResetPassword /> },
+      { path: "/verify-email", element: <VerifyEmail /> },
+      { path: "*", element: <NotFound /> },
+    ],
+  },
 ];

@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
-import { StepUpModal, Support, useIsAuthenticated } from "@platform/ui";
+import { StandaloneLayout, StepUpModal, Support, useIsAuthenticated } from "@platform/ui";
 import Layout from "@/app/components/Layout";
 import RequireRole from "@/shared/components/RequireRole";
 import RequireOrg from "@/shared/components/RequireOrg";
@@ -82,30 +82,33 @@ export default function App() {
         <StepUpModal />
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            <Route path="/terms" element={<TermsOfService />} />
-            <Route path="/support-myfreeapps" element={<Support appName="MyBookkeeper" />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/invite/:token" element={<InviteAccept />} />
-            <Route path="/oauth-callback" element={<OAuthCallback />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            {/* Public inquiry form (T0) — unauthenticated, no Layout. */}
-            <Route path="/apply/:slug" element={<PublicInquiryForm />} />
-            {/* Public PIN-protected welcome manual guide — unauthenticated, no Layout. */}
-            <Route path="/guide/:token" element={<PublicWelcomeManual />} />
-            <Route
-              path="/onboarding"
-              element={
-                <RequireAuth>
-                  <Suspense fallback={<div className="flex-1 flex items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>
-                    <Onboarding />
-                  </Suspense>
-                </RequireAuth>
-              }
-            />
+            {/* Pages outside Layout and AdminLayout. StandaloneLayout gives each its one main landmark. */}
+            <Route element={<StandaloneLayout />}>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/support-myfreeapps" element={<Support appName="MyBookkeeper" />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/invite/:token" element={<InviteAccept />} />
+              <Route path="/oauth-callback" element={<OAuthCallback />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              {/* Public inquiry form (T0) — unauthenticated, no Layout. */}
+              <Route path="/apply/:slug" element={<PublicInquiryForm />} />
+              {/* Public PIN-protected welcome manual guide — unauthenticated, no Layout. */}
+              <Route path="/guide/:token" element={<PublicWelcomeManual />} />
+              <Route
+                path="/onboarding"
+                element={
+                  <RequireAuth>
+                    <Suspense fallback={<div className="flex-1 flex items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>
+                      <Onboarding />
+                    </Suspense>
+                  </RequireAuth>
+                }
+              />
+            </Route>
             <Route
               path="/"
               element={

@@ -124,6 +124,14 @@ describe("withRouteErrorBoundary", () => {
     expect(mockReloadOnce).not.toHaveBeenCalled();
   });
 
+  it("puts the fallback in one main landmark, since it replaces the shell", async () => {
+    renderAt("/boom", [{ path: "/boom", element: <Boom /> }]);
+
+    expect(await screen.findByText("Something went wrong")).toBeInTheDocument();
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+    expect(screen.getByRole("main")).toContainElement(screen.getByRole("alert"));
+  });
+
   it("announces the caught error on window, so the mocked e2e suites fail on it", async () => {
     const announced: CaughtErrorDetail[] = [];
     const listener = (event: Event) => {

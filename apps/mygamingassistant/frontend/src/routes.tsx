@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
-import { AuthRequired, Support } from "@platform/ui";
+import { AuthRequired, StandaloneLayout, Support } from "@platform/ui";
 import GameGrid from "@/pages/GameGrid";
 import LineupDetail from "@/pages/LineupDetail";
 import LineupPackages from "@/pages/LineupPackages";
@@ -145,16 +145,22 @@ export const routes: RouteObject[] = [
       },
     ],
   },
-  // Public support / donation page — standalone (no shell, no auth). Available
-  // in serve_only too (no auth API calls; showTransparency=false).
-  // showTransparency=false: MGA serves from Cloudflare R2, not the shared MinIO,
-  // so it can't read the shared cost-transparency object. Donation CTA + story +
-  // video still render; the cost widget is omitted. See platform_shared/services/
-  // transparency + memory/project_mga_prod_storage_r2.md.
-  { path: "/support-myfreeapps", element: <Support appName="MyGamingAssistant" showTransparency={false} /> },
-  { path: "/login", element: signInPageElement(<Login />) },
-  { path: "/forgot-password", element: authPageElement(<ForgotPassword />) },
-  { path: "/reset-password", element: authPageElement(<ResetPassword />) },
-  { path: "/verify-email", element: authPageElement(<VerifyEmail />) },
-  { path: "*", element: <NotFound /> },
+  // Pages outside every shell. StandaloneLayout gives each its one main landmark.
+  {
+    element: <StandaloneLayout />,
+    children: [
+      // Public support / donation page — standalone (no shell, no auth). Available
+      // in serve_only too (no auth API calls; showTransparency=false).
+      // showTransparency=false: MGA serves from Cloudflare R2, not the shared MinIO,
+      // so it can't read the shared cost-transparency object. Donation CTA + story +
+      // video still render; the cost widget is omitted. See platform_shared/services/
+      // transparency + memory/project_mga_prod_storage_r2.md.
+      { path: "/support-myfreeapps", element: <Support appName="MyGamingAssistant" showTransparency={false} /> },
+      { path: "/login", element: signInPageElement(<Login />) },
+      { path: "/forgot-password", element: authPageElement(<ForgotPassword />) },
+      { path: "/reset-password", element: authPageElement(<ResetPassword />) },
+      { path: "/verify-email", element: authPageElement(<VerifyEmail />) },
+      { path: "*", element: <NotFound /> },
+    ],
+  },
 ];

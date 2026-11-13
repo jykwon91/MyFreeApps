@@ -9,7 +9,14 @@ landmarks. Pages use a ``<div>`` root (same classes) instead.
 
 The only files that may render ``<main>`` are those in ``ALLOWED_MAIN_OWNERS``,
 each a shell or a page that renders outside every shell. A new entry needs a
-one-line reason saying why nothing wraps it in another ``<main>``.
+one-line reason saying why nothing wraps it in another ``<main>``. A page with
+no shell gets its one ``<main>`` from ``StandaloneLayout`` (a layout route) or
+``StandaloneMain`` from ``@platform/ui`` rather than a new entry here.
+
+This test only stops a second ``<main>``; it can't see a page with none. The
+mocked Playwright suites check that at runtime: the crash guard
+(``@platform/ui/test-support/crashGuard``) fails a passing test whose page
+doesn't end with exactly one main landmark.
 """
 from __future__ import annotations
 
@@ -28,6 +35,8 @@ ALLOWED_MAIN_OWNERS: dict[str, str] = {
         "The shared signed-in shell; its <main> is the page's one main landmark.",
     "packages/shared-frontend/src/components/layout/GuestShell.tsx":
         "The shared signed-out shell; its <main> is the page's one main landmark.",
+    "packages/shared-frontend/src/components/layout/StandaloneMain.tsx":
+        "The frame of every page and screen shown with no shell (StandaloneLayout routes, crash fallbacks).",
     "apps/mybookkeeper/frontend/src/app/components/Layout.tsx":
         "MBK's own signed-in shell (MBK does not use AppShell).",
     "apps/mybookkeeper/frontend/src/admin/components/AdminLayout.tsx":
@@ -36,8 +45,6 @@ ALLOWED_MAIN_OWNERS: dict[str, str] = {
         "Full-page /admin skeleton: the Suspense fallback shown in place of AdminLayout.",
     "apps/mybookkeeper/frontend/src/shared/components/RequireOrgSkeleton.tsx":
         "Full-page skeleton RequireOrg shows in place of Layout, before the shell mounts.",
-    "apps/mygamingassistant/frontend/src/RootLayout.tsx":
-        "Compact mode (?compact=1) renders pages with no shell; RootLayout supplies the one <main>.",
     "apps/mygamingassistant/frontend/src/components/discord/DiscordActivityShell.tsx":
         "The Discord Activity frame, used in place of AppShell / GuestShell.",
     "apps/mypizzatracker/frontend/src/features/public-order/PageShell.tsx":

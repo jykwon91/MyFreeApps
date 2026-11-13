@@ -79,6 +79,8 @@ describe("RequireRole", () => {
     );
 
     expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
+    // RequireRole guards /admin, outside every shell: the skeleton is the page's one main landmark.
+    expect(screen.getAllByRole("main")).toHaveLength(1);
   });
 
   // ── Regression: 401 error must redirect to /login, not /forbidden ──

@@ -158,84 +158,93 @@ async function loadedSdk(bodies: Promise<string>[]): Promise<boolean> {
   return (await Promise.all(bodies)).some((text) => text.includes(SDK_MARKER));
 }
 
-test("inside Discord: connects, shows the game picker, and opens the real site through Discord", async ({ page }) => {
-  const scripts = collectScripts(page);
-  await mockApi(page);
-  await openInDiscord(page, "manual");
-  const activity = page.frameLocator("#activity");
+test.describe("inside Discord", () => {
+  // The top page is the test's stand-in for Discord's client, not an app page. The app runs in
+  // its #activity frame, and each test checks that frame has exactly one main landmark itself.
+  test.use({ mainLandmarkOptOut: "The top page is a stand-in for Discord's client; each test checks the app frame's one main." });
 
-  // While Discord hasn't answered: a visible "connecting" state, nothing else.
-  await expect(activity.getByRole("status")).toHaveText("Connecting to Discord…");
-  await connect(page);
+  test("inside Discord: connects, shows the game picker, and opens the real site through Discord", async ({ page }) => {
+    const scripts = collectScripts(page);
+    await mockApi(page);
+    await openInDiscord(page, "manual");
+    const activity = page.frameLocator("#activity");
 
-  // The game picker in the slim Activity bar, with no account UI.
-  await expect(activity.getByRole("heading", { name: "Games" })).toBeVisible();
-  await expect(activity.getByRole("link", { name: /Counter-Strike 2/ })).toBeVisible();
-  const bar = activity.getByRole("navigation", { name: "Main navigation" });
-  await expect(bar.getByRole("link", { name: "Games" })).toBeVisible();
-  await expect(activity.getByRole("link", { name: /sign in/i })).toHaveCount(0);
-  expect(await loadedSdk(scripts)).toBe(true);
+    // While Discord hasn't answered: a visible "connecting" state, nothing else.
+    await expect(activity.getByRole("status")).toHaveText("Connecting to Discord…");
+    await connect(page);
 
-  // WoW Forever, scrolled to the bottom → Item Compare opens at its top, with
-  // searching by name first (the item list is a same-origin file, so it works
-  // inside Discord with no API).
-  await activity.getByRole("link", { name: /WoW: Forever/ }).click();
-  await expect(activity.getByRole("link", { name: /Item Compare/ })).toBeVisible();
-  const content = activity.getByTestId("activity-content");
-  await content.evaluate((el) => {
-    el.scrollTop = el.scrollHeight;
+    // The game picker in the slim Activity bar, with no account UI.
+    await expect(activity.getByRole("heading", { name: "Games" })).toBeVisible();
+    await expect(activity.getByRole("link", { name: /Counter-Strike 2/ })).toBeVisible();
+    const bar = activity.getByRole("navigation", { name: "Main navigation" });
+    await expect(bar.getByRole("link", { name: "Games" })).toBeVisible();
+    await expect(activity.getByRole("link", { name: /sign in/i })).toHaveCount(0);
+    expect(await loadedSdk(scripts)).toBe(true);
+
+    // WoW Forever, scrolled to the bottom → Item Compare opens at its top, with
+    // searching by name first (the item list is a same-origin file, so it works
+    // inside Discord with no API).
+    await activity.getByRole("link", { name: /WoW: Forever/ }).click();
+    await expect(activity.getByRole("link", { name: /Item Compare/ })).toBeVisible();
+    const content = activity.getByTestId("activity-content");
+    await content.evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
+    expect(await content.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await activity.getByRole("link", { name: /Item Compare/ }).click();
+    await expect(activity.getByRole("heading", { name: "Item Compare" })).toBeVisible();
+    expect(await content.evaluate((el) => el.scrollTop)).toBe(0);
+    await expect(activity.getByRole("radio", { name: "Search by name" }).first()).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await activity.getByRole("combobox", { name: "Item name" }).first().fill("lionheart helm");
+    await expect(activity.getByRole("option", { name: /Lionheart Helm/ }).first()).toBeVisible();
+
+    // "Open in browser" asks Discord to open this page on the real site; no tab
+    // opens from inside the frame.
+    await activity.getByRole("button", { name: "Open in browser" }).click();
+    await expect.poll(async () => (await rpcLog(page)).commands.filter((c) => c.cmd === "OPEN_EXTERNAL_LINK")).toEqual([
+      expect.objectContaining({ args: { url: `${SITE_URL}/wow-forever/compare` } }),
+    ]);
+    expect(page.context().pages()).toHaveLength(1);
+
+    // "Games" in the bar leads back to the picker.
+    await bar.getByRole("link", { name: "Games" }).click();
+    await expect(activity.getByRole("heading", { name: "Games" })).toBeVisible();
+    await expect(activity.getByRole("main", { includeHidden: true })).toHaveCount(1);
   });
-  expect(await content.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-  await activity.getByRole("link", { name: /Item Compare/ }).click();
-  await expect(activity.getByRole("heading", { name: "Item Compare" })).toBeVisible();
-  expect(await content.evaluate((el) => el.scrollTop)).toBe(0);
-  await expect(activity.getByRole("radio", { name: "Search by name" }).first()).toHaveAttribute(
-    "aria-checked",
-    "true",
-  );
-  await activity.getByRole("combobox", { name: "Item name" }).first().fill("lionheart helm");
-  await expect(activity.getByRole("option", { name: /Lionheart Helm/ }).first()).toBeVisible();
 
-  // "Open in browser" asks Discord to open this page on the real site; no tab
-  // opens from inside the frame.
-  await activity.getByRole("button", { name: "Open in browser" }).click();
-  await expect.poll(async () => (await rpcLog(page)).commands.filter((c) => c.cmd === "OPEN_EXTERNAL_LINK")).toEqual([
-    expect.objectContaining({ args: { url: `${SITE_URL}/wow-forever/compare` } }),
-  ]);
-  expect(page.context().pages()).toHaveLength(1);
+  test("inside Discord: media from the API loads through Discord's proxy", async ({ page }) => {
+    await mockApi(page);
+    const fetched = await serveMinimap(page);
+    await openInDiscord(page, "manual");
+    await connect(page);
+    const activity = page.frameLocator("#activity");
 
-  // "Games" in the bar leads back to the picker.
-  await bar.getByRole("link", { name: "Games" }).click();
-  await expect(activity.getByRole("heading", { name: "Games" })).toBeVisible();
-});
+    await activity.getByRole("link", { name: /Counter-Strike 2/ }).click();
+    // R2 is unreachable inside Discord, so the URL is rewritten onto the
+    // Activity's own origin under the /r2/{subdomain} mapping.
+    const proxied = `https://${new URL(page.url()).host}/r2/0a1b2c3d${R2_PATH}`;
+    const minimap = activity.getByRole("img", { name: "Mirage" });
+    await expect(minimap).toHaveAttribute("src", proxied);
+    await expect.poll(() => minimap.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1);
+    expect(fetched).toEqual([proxied]);
+    await expect(activity.getByRole("main", { includeHidden: true })).toHaveCount(1);
+  });
 
-test("inside Discord: media from the API loads through Discord's proxy", async ({ page }) => {
-  await mockApi(page);
-  const fetched = await serveMinimap(page);
-  await openInDiscord(page, "manual");
-  await connect(page);
-  const activity = page.frameLocator("#activity");
+  test("inside Discord: a refused connection explains itself and still lets you browse", async ({ page }) => {
+    await mockApi(page);
+    await openInDiscord(page, "close");
+    const activity = page.frameLocator("#activity");
 
-  await activity.getByRole("link", { name: /Counter-Strike 2/ }).click();
-  // R2 is unreachable inside Discord, so the URL is rewritten onto the
-  // Activity's own origin under the /r2/{subdomain} mapping.
-  const proxied = `https://${new URL(page.url()).host}/r2/0a1b2c3d${R2_PATH}`;
-  const minimap = activity.getByRole("img", { name: "Mirage" });
-  await expect(minimap).toHaveAttribute("src", proxied);
-  await expect.poll(() => minimap.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1);
-  expect(fetched).toEqual([proxied]);
-});
-
-test("inside Discord: a refused connection explains itself and still lets you browse", async ({ page }) => {
-  await mockApi(page);
-  await openInDiscord(page, "close");
-  const activity = page.frameLocator("#activity");
-
-  await expect(activity.getByRole("heading", { name: "Couldn't connect to Discord" })).toBeVisible();
-  await expect(activity.getByText("Discord closed the connection. Try again in a moment.")).toBeVisible();
-  await activity.getByRole("button", { name: "Continue anyway" }).click();
-  await expect(activity.getByRole("heading", { name: "Games" })).toBeVisible();
-  await expect(activity.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
+    await expect(activity.getByRole("heading", { name: "Couldn't connect to Discord" })).toBeVisible();
+    await expect(activity.getByText("Discord closed the connection. Try again in a moment.")).toBeVisible();
+    await activity.getByRole("button", { name: "Continue anyway" }).click();
+    await expect(activity.getByRole("heading", { name: "Games" })).toBeVisible();
+    await expect(activity.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
+    await expect(activity.getByRole("main", { includeHidden: true })).toHaveCount(1);
+  });
 });
 
 test("on the website: nothing changes and the Discord SDK is never downloaded", async ({ page }) => {

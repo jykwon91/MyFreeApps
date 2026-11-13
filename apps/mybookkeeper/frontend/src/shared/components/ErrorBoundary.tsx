@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { NewVersionPrompt, announceUnlessReloading, isChunkLoadError } from "@platform/ui";
+import { NewVersionPrompt, StandaloneMain, announceUnlessReloading, isChunkLoadError } from "@platform/ui";
 
 export interface ErrorBoundaryProps {
   children: ReactNode;
@@ -22,25 +22,28 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, State> 
   }
 
   render(): ReactNode {
-    // A lazy route chunk that 404s after a deploy is not a bug in the page —
-    // the tab is running a replaced build. Offer the reload instead.
-    if (this.state.error && isChunkLoadError(this.state.error)) {
-      return <NewVersionPrompt />;
-    }
-    if (this.state.error) {
-      return (
-        <div className="p-8 text-center space-y-2">
-          <p className="text-lg font-medium text-destructive">Something went wrong</p>
-          <p className="text-sm text-muted-foreground">{this.state.error.message}</p>
-          <button
-            onClick={() => this.setState({ error: null })}
-            className="text-sm underline text-muted-foreground"
-          >
-            Try again
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
+    if (!this.state.error) return this.props.children;
+    // The fallback replaces the whole app, shell included, so it brings the
+    // page's main landmark.
+    return (
+      <StandaloneMain>
+        {/* A lazy route chunk that 404s after a deploy is not a bug in the page —
+            the tab is running a replaced build. Offer the reload instead. */}
+        {isChunkLoadError(this.state.error) ? (
+          <NewVersionPrompt />
+        ) : (
+          <div className="p-8 text-center space-y-2">
+            <p className="text-lg font-medium text-destructive">Something went wrong</p>
+            <p className="text-sm text-muted-foreground">{this.state.error.message}</p>
+            <button
+              onClick={() => this.setState({ error: null })}
+              className="text-sm underline text-muted-foreground"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+      </StandaloneMain>
+    );
   }
 }
