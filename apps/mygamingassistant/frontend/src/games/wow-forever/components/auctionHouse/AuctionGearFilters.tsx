@@ -4,7 +4,7 @@ import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import AuctionFilterChips from "@/games/wow-forever/components/auctionHouse/AuctionFilterChips";
 import AuctionRangeFields from "@/games/wow-forever/components/auctionHouse/AuctionRangeFields";
 import FilterChipsSkeleton from "@/games/wow-forever/components/auctionHouse/FilterChipsSkeleton";
-import { FILTER_PANEL_COPY, usableChipLabel } from "@/games/wow-forever/data/auctionHouse/auctionFilterLabels";
+import { AUCTION_LOAD_COPY, FILTER_PANEL_COPY, usableChipLabel } from "@/games/wow-forever/data/auctionHouse/auctionFilterLabels";
 import { GEAR_SKELETON_CHIPS, LEVEL_FILTER_DECIMALS, MAX_FILTER_LEVEL, MIN_FILTER_LEVEL, SLOT_CHIPS, TYPE_CHIPS, USABLE_CHIP_ID } from "@/games/wow-forever/data/auctionHouse/auctionFilterOptions";
 import type { ClientItemsState } from "@/games/wow-forever/hooks/useClientItems";
 import type { AuctionFilters } from "@/games/wow-forever/types/auctionHouse/auctionFilters";
@@ -35,7 +35,7 @@ export default function AuctionGearFilters({ filters, onFilters, gear, open, onT
       </button>
       {open && gear.status === LOAD_STATUS.loading && <FilterChipsSkeleton label={FILTER_PANEL_COPY.gearLoading} count={GEAR_SKELETON_CHIPS} testId="auction-gear-skeleton" />}
       {open && gear.status === LOAD_STATUS.error && (
-        <LoadErrorRetry message={FILTER_PANEL_COPY.gearError} onRetry={gear.retry} retrying={gear.retrying} />
+        <LoadErrorRetry message={AUCTION_LOAD_COPY.gearError} onRetry={gear.retry} retrying={gear.retrying} />
       )}
       {open && gear.status === LOAD_STATUS.ready && (
         <div className="space-y-4">

@@ -3,7 +3,7 @@ import { NO_AUCTION_FILTERS } from "@/games/wow-forever/data/auctionHouse/noAuct
 import { categoryFilterActive, describeActiveFilters, removalPatch } from "@/games/wow-forever/lib/auctionHouse/auctionActiveFilters";
 import { filtersFromParams, writeFiltersToParams } from "@/games/wow-forever/lib/auctionHouse/auctionFilterParams";
 import { decodeItemCategories } from "@/games/wow-forever/lib/auctionHouse/decodeItemCategories";
-import { inCategory, subcategoryLabel } from "@/games/wow-forever/lib/auctionHouse/itemCategoryLookup";
+import { inCategory, knownSubcategory, subcategoryLabel } from "@/games/wow-forever/lib/auctionHouse/itemCategoryLookup";
 import { filterAuctionItems } from "@/games/wow-forever/prices/auctionSearch";
 import type { AuctionFilterContext } from "@/games/wow-forever/types/auctionHouse/auctionFilterContext";
 import type { AuctionFilters } from "@/games/wow-forever/types/auctionHouse/auctionFilters";
@@ -100,6 +100,14 @@ describe("inCategory / subcategoryLabel", () => {
     expect(inCategory(UNLISTED, filters({ category: "consumable" }), index)).toBe(false);
   });
 
+  it("treats a subclass the category does not have as all of the category", () => {
+    expect(knownSubcategory(index, "consumable", 1)).toBe(1);
+    expect(knownSubcategory(index, "consumable", 99)).toBeNull();
+    expect(knownSubcategory(index, "consumable", null)).toBeNull();
+    expect(inCategory(POTION, filters({ category: "consumable", subcategory: 99 }), index)).toBe(true);
+    expect(inCategory(UNLISTED, filters({ category: "misc", subcategory: 99 }), index)).toBe(true);
+  });
+
   it("names a subclass, or null when the category has none like it", () => {
     expect(subcategoryLabel(index, "consumable", 1)).toBe("Potions");
     expect(subcategoryLabel(index, "consumable", 9)).toBeNull();
@@ -117,6 +125,10 @@ describe("filterAuctionItems with a category", () => {
   it("narrows to one subclass", () => {
     expect(ids({ category: "consumable", subcategory: 1 })).toEqual([POTION]);
     expect(ids({ category: "trade-goods", subcategory: 9 })).toEqual([PEACEBLOOM]);
+  });
+
+  it("lists the whole category for a subclass it does not have, never an empty list", () => {
+    expect(ids({ category: "consumable", subcategory: 99 })).toEqual([POTION, ELIXIR]);
   });
 
   it("puts items the file does not list under Miscellaneous", () => {

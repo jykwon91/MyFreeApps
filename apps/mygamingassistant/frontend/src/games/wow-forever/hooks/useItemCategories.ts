@@ -16,6 +16,12 @@ export function useItemCategories(enabled: boolean): ItemCategoriesState {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<{ attempt: number; index: ItemCategoryIndex | null } | null>(null);
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  // A failure is forgotten when the filter is turned off, so turning it back on shows loading, not the old error.
+  const [wasEnabled, setWasEnabled] = useState(enabled);
+  if (wasEnabled !== enabled) {
+    setWasEnabled(enabled);
+    if (!enabled && result?.index === null) setResult(null);
+  }
 
   useEffect(() => {
     if (!enabled) return;

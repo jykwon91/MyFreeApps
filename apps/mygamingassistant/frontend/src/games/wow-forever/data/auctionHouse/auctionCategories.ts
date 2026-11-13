@@ -44,9 +44,8 @@ export const AUCTION_CATEGORY_BY_CLASS: Readonly<Record<number, AuctionCategory>
   15: "misc",
 };
 
-/** Gear is filed under this key in `itemCategories.json`; it has no subclasses (the Gear group splits it). */
-export const GEAR_CATEGORY: AuctionCategory = "gear";
-export const GEAR_CATEGORY_KEY = "gear";
+/** Gear has no subclasses (the Gear group splits it), and `itemCategories.json` files it under this same key. */
+export const GEAR_CATEGORY = "gear" satisfies AuctionCategory;
 
 /** An item the file doesn't list (a quest item, a key, an obsolete subclass) counts as Miscellaneous. */
 export const UNLISTED_ITEM_PLACE: ItemCategoryPlace = { category: "misc", subclass: null };

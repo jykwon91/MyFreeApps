@@ -2,7 +2,6 @@
 import {
   AUCTION_CATEGORY_BY_CLASS,
   GEAR_CATEGORY,
-  GEAR_CATEGORY_KEY,
   SUBCLASS_KEY_PATTERN,
 } from "@/games/wow-forever/data/auctionHouse/auctionCategories";
 import type { AuctionCategory } from "@/games/wow-forever/types/auctionHouse/auctionCategory";
@@ -13,7 +12,7 @@ import type { ItemCategorySubclass } from "@/games/wow-forever/types/auctionHous
 
 /** Where a file key files its items; null for a class the page has no category for. */
 function placeForKey(key: string): ItemCategoryPlace | null {
-  if (key === GEAR_CATEGORY_KEY) return { category: GEAR_CATEGORY, subclass: null };
+  if (key === GEAR_CATEGORY) return { category: GEAR_CATEGORY, subclass: null };
   const match = SUBCLASS_KEY_PATTERN.exec(key);
   if (!match) return null;
   const category = AUCTION_CATEGORY_BY_CLASS[Number(match[1])];

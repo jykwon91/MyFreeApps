@@ -14,14 +14,14 @@ export const FILTER_SHEET_COPY = {
   apply: "Apply",
 } as const;
 
-/** Legends, field labels and copy of the filter panel and its gear group. */
-/** The list's load-failure messages. */
+/** The load-failure messages, shared by the list and the filter panel. */
 export const AUCTION_LOAD_COPY = {
   pricesError: "Couldn't load auction prices.",
   gearError: "Couldn't load the gear list.",
   categoryError: "Couldn't load the item categories.",
 } as const;
 
+/** Legends, field labels and copy of the filter panel and its gear group. */
 export const FILTER_PANEL_COPY = {
   quality: "Quality",
   price: "Price (market value, in gold)",
@@ -31,7 +31,6 @@ export const FILTER_PANEL_COPY = {
   listings: "Auctions listing it",
   category: "Category",
   categoryLoading: "Loading item categories",
-  categoryError: "Couldn't load the item categories.",
   gearCategoryHint: "Narrow gear down by slot, armor or weapon type and level with the Gear filters below.",
   gearToggle: "Gear filters",
   slot: "Slot",
@@ -41,7 +40,6 @@ export const FILTER_PANEL_COPY = {
   toLevel: "To level",
   classGroup: "Class",
   gearLoading: "Loading gear filters",
-  gearError: "Couldn't load the gear list.",
 } as const;
 
 /** The legend over a category's subclass chips. */

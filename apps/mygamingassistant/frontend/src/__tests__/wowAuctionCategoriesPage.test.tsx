@@ -172,6 +172,33 @@ describe("Auction house category filter", () => {
     expect(names()).toEqual(["Major Healing Potion"]);
   });
 
+  it("shows the whole category, with All pressed, for a link naming a subclass the category lacks", async () => {
+    loadItemCategories.mockResolvedValue(fixtureCategories());
+    renderPage("/wow-forever/auction-house?cat=consumable&sub=99");
+    await waitFor(() => expect(names()).toEqual(["Major Healing Potion", "Elixir of Giants"]));
+    expect(within(screen.getByTestId("auction-active-filters")).getByRole("button", { name: "Remove filter: Category: Consumable" })).toBeInTheDocument();
+    const sheet = await openFilters();
+    const kinds = within(await within(sheet).findByTestId("auction-filter-subcategory"));
+    expect(kinds.getByRole("button", { name: "All consumable" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("forgets a failed load when the category is cleared, so picking one again shows loading, not the old error", async () => {
+    let finish: (index: ItemCategoryIndex) => void = () => undefined;
+    loadItemCategories
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockReturnValueOnce(new Promise<ItemCategoryIndex>((resolve) => (finish = resolve)));
+    renderPage("/wow-forever/auction-house?cat=consumable");
+    expect(await screen.findAllByText("Couldn't load the item categories.")).not.toHaveLength(0);
+    const sheet = await openFilters();
+    await userEvent.click(within(sheet).getByRole("button", { name: "Consumable" }));
+    expect(url()).toBe("");
+    await userEvent.click(within(sheet).getByRole("button", { name: "Consumable" }));
+    expect(screen.queryByText("Couldn't load the item categories.")).toBeNull();
+    expect(within(sheet).getByTestId("auction-category-skeleton")).toBeInTheDocument();
+    await act(async () => finish(fixtureCategories()));
+    await waitFor(() => expect(names()).toEqual(["Major Healing Potion", "Elixir of Giants"]));
+  });
+
   it("shows a retry when the item categories fail to load", async () => {
     loadItemCategories.mockRejectedValueOnce(new Error("offline")).mockResolvedValue(fixtureCategories());
     renderPage("/wow-forever/auction-house?cat=consumable");
