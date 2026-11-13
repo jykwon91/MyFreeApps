@@ -30,6 +30,7 @@ from app.repositories.application import (
     application_repository,
 )
 from app.repositories.company import company_repository
+from app.repositories.discovery import discovery_promotion_repository
 from app.repositories.documents import document_repo
 from app.schemas.application.application_contact_create_request import ApplicationContactCreateRequest
 from app.schemas.application.application_contact_response import ApplicationContactResponse
@@ -236,7 +237,9 @@ async def soft_delete_application(
     belongs to another user. ``include_deleted=True`` so a second DELETE on
     an already-deleted row still returns 204.
 
-    Commits at the end so the write survives the request lifecycle.
+    Clears the link from any discovered posting promoted to it, so that
+    posting returns to Discover. Commits at the end so the write survives the
+    request lifecycle.
     """
     application = await application_repository.get_by_id(
         db, application_id, user_id, include_deleted=True,
@@ -244,6 +247,8 @@ async def soft_delete_application(
     if application is None:
         return False
     await application_repository.soft_delete(db, application)
+    # A posting promoted to it becomes a posting again, back in Discover.
+    await discovery_promotion_repository.clear_promotion_links(db, user_id, application.id)
     await db.commit()
     return True
 

@@ -10,6 +10,7 @@ import type { DismissalReason } from "@myjobhunter/api-client/types/discovery/di
 import { discoveredJobFacts } from "@myjobhunter/api-client/utils/discoveredJobFacts";
 import { discoveredJobUrl } from "@myjobhunter/api-client/utils/discoveredJobUrl";
 import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
+import { triageFailureMessage } from "@myjobhunter/api-client/utils/triageFailureMessage";
 import { undoDismissFailureMessage } from "@myjobhunter/api-client/utils/undoDismissFailureMessage";
 import { Chip, LoadingButton, OptionSheet, useOpenLink, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
@@ -22,13 +23,14 @@ import DismissedJobActions from "./DismissedJobActions";
 
 /**
  * A discovered posting as the website's card shows it, with Open, Apply, Save and Dismiss (with a
- * reason, and Undo); in the Dismissed view, the dismissal and Open and Restore instead.
+ * reason, and Undo); in the Dismissed view, the dismissal and Open and Restore instead. An applied
+ * posting is an application, not something to triage: no Dismiss, and Save stays off.
  */
 export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isScoringInFlight }: DiscoveredJobCardProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
   const { showToast } = useToast();
   const openLink = useOpenLink();
-  const [promote, { isLoading: isPromoting }] = usePromoteDiscoveredJobMutation();
+  const [promote, { isLoading: isPromoting, isSuccess: hasPromoted }] = usePromoteDiscoveredJobMutation();
   const [save, { isLoading: isSaving }] = useSaveDiscoveredJobMutation();
   const [dismiss, { isLoading: isDismissing }] = useDismissDiscoveredJobMutation();
   const dispatch = useDispatch<DiscoverCacheDispatch>();
@@ -36,6 +38,11 @@ export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isSc
   const facts = discoveredJobFacts(job, profileUpdatedAt, sources);
   const postingUrl = discoveredJobUrl(job);
   const applicationId = job.promoted_application_id;
+  // An applied posting is an application, not something to triage: no Save or Dismiss.
+  // Applying here counts from success on, until the refetched list drops the card.
+  const isApplied = facts.isPromoted || hasPromoted;
+  // One triage action at a time: each would move the posting somewhere else.
+  const isTriaging = isPromoting || isSaving || isDismissing;
   const meta = [facts.remoteLabel, facts.salaryLabel, facts.postedLabel ? MESSAGES.posted(facts.postedLabel) : null].filter(Boolean).join(" · ");
   const labelFor = (action: string) => MESSAGES.actionFor(action, job.title, job.company_name);
 
@@ -53,7 +60,7 @@ export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isSc
       await save(job.id).unwrap();
       showToast(ACTIONS.saved);
     } catch (error) {
-      showToast(discoverFailureMessage(error, ACTIONS.saveFailed), "error");
+      showToast(triageFailureMessage(error, ACTIONS.saveFailed), "error");
     }
   }
 
@@ -71,7 +78,7 @@ export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isSc
       await dismiss({ jobId: job.id, reason }).unwrap();
       showToast(ACTIONS.dismissed, "success", { label: ACTIONS.undo, accessibilityHint: ACTIONS.undoHint, onPress: () => void undo() });
     } catch (error) {
-      showToast(discoverFailureMessage(error, ACTIONS.dismissFailed), "error");
+      showToast(triageFailureMessage(error, ACTIONS.dismissFailed), "error");
     }
   }
 
@@ -114,39 +121,46 @@ export default function DiscoveredJobCard({ job, sources, profileUpdatedAt, isSc
                 {MESSAGES.viewApplication}
               </LoadingButton>
             ) : (
-              <LoadingButton accessibilityLabel={labelFor(MESSAGES.apply)} disabled={isDismissing} isLoading={isPromoting} loadingText={MESSAGES.applying} onPress={apply} style={{ flex: 1 }}>
+              <LoadingButton accessibilityLabel={labelFor(MESSAGES.apply)} disabled={hasPromoted || isSaving || isDismissing} isLoading={isPromoting} loadingText={MESSAGES.applying} onPress={apply} style={{ flex: 1 }}>
                 {MESSAGES.apply}
               </LoadingButton>
             )}
-            <LoadingButton
-              accessibilityLabel={labelFor(facts.isSaved ? MESSAGES.saved : MESSAGES.save)}
-              disabled={facts.isSaved || facts.isPromoted || isDismissing}
-              isLoading={isSaving}
-              loadingText={MESSAGES.saving}
-              onPress={keep}
-              style={{ flex: 1 }}
-              variant="secondary"
-            >
-              {facts.isSaved ? MESSAGES.saved : MESSAGES.save}
-            </LoadingButton>
-          </View>
-          <View style={{ flexDirection: "row", gap: spacing.sm }}>
-            {postingUrl ? (
-              <LoadingButton accessibilityLabel={labelFor(MESSAGES.open)} loadingText={MESSAGES.opening} onPress={() => openLink(postingUrl)} style={{ flex: 1 }} variant="secondary">
-                {MESSAGES.open}
+            {isApplied ? null : (
+              <LoadingButton
+                accessibilityLabel={labelFor(facts.isSaved ? MESSAGES.saved : MESSAGES.save)}
+                disabled={facts.isSaved || isTriaging}
+                isLoading={isSaving}
+                loadingText={MESSAGES.saving}
+                onPress={keep}
+                style={{ flex: 1 }}
+                variant="secondary"
+              >
+                {facts.isSaved ? MESSAGES.saved : MESSAGES.save}
               </LoadingButton>
-            ) : null}
-            <LoadingButton
-              accessibilityLabel={labelFor(MESSAGES.dismiss)}
-              isLoading={isDismissing}
-              loadingText={MESSAGES.dismissing}
-              onPress={() => setIsChoosingReason(true)}
-              style={{ flex: 1 }}
-              variant="ghost"
-            >
-              {MESSAGES.dismiss}
-            </LoadingButton>
+            )}
           </View>
+          {postingUrl || !isApplied ? (
+            <View style={{ flexDirection: "row", gap: spacing.sm }}>
+              {postingUrl ? (
+                <LoadingButton accessibilityLabel={labelFor(MESSAGES.open)} loadingText={MESSAGES.opening} onPress={() => openLink(postingUrl)} style={{ flex: 1 }} variant="secondary">
+                  {MESSAGES.open}
+                </LoadingButton>
+              ) : null}
+              {isApplied ? null : (
+                <LoadingButton
+                  accessibilityLabel={labelFor(MESSAGES.dismiss)}
+                  disabled={isTriaging}
+                  isLoading={isDismissing}
+                  loadingText={MESSAGES.dismissing}
+                  onPress={() => setIsChoosingReason(true)}
+                  style={{ flex: 1 }}
+                  variant="ghost"
+                >
+                  {MESSAGES.dismiss}
+                </LoadingButton>
+              )}
+            </View>
+          ) : null}
           <OptionSheet
             isOpen={isChoosingReason}
             onClose={() => setIsChoosingReason(false)}

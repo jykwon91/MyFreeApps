@@ -366,9 +366,9 @@ async def test_inbox_coverage_counts_scored_vs_total(
         assert before["total_count"] == 2
 
         # Score one row directly, then re-read coverage.
-        rows = await discovery_repository.list_discovered(
+        rows = [job for job, _source_id in await discovery_repository.list_discovered(
             db, uuid.UUID(user["id"]), state="inbox",
-        )
+        )]
         rows[0].score = 90
         await db.commit()
 
@@ -485,18 +485,12 @@ async def test_save_clears_dismissed_reason(
     db.add(job)
     await db.flush()
 
-    dismissed = await discovery_repository.dismiss_discovered(
-        db, job.id, uuid.UUID(user["id"]), reason="wrong_stack",
-    )
-    assert dismissed is True
+    await discovery_repository.dismiss_discovered(db, job, reason="wrong_stack")
     await db.refresh(job)
     assert job.dismissed_at is not None
     assert job.dismissed_reason == "wrong_stack"
 
-    saved = await discovery_repository.save_discovered(
-        db, job.id, uuid.UUID(user["id"]),
-    )
-    assert saved is True
+    await discovery_repository.save_discovered(db, job)
     await db.refresh(job)
     assert job.saved_at is not None
     assert job.dismissed_at is None

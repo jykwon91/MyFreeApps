@@ -20,8 +20,8 @@ vi.mock("lucide-react", () => ({
 
 vi.mock("@platform/ui", () => ({
   Badge: ({ label }: { label: string }) => <span data-testid="badge">{label}</span>,
-  Button: ({ children, onClick, disabled }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean }) => (
-    <button onClick={onClick} disabled={disabled}>{children}</button>
+  Button: ({ children, onClick, disabled, "aria-label": ariaLabel }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean; "aria-label"?: string }) => (
+    <button onClick={onClick} disabled={disabled} aria-label={ariaLabel}>{children}</button>
   ),
   LoadingButton: ({ children, onClick, disabled, isLoading }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean; isLoading?: boolean }) => (
     <button onClick={onClick} disabled={disabled || isLoading}>{children}</button>
@@ -293,6 +293,20 @@ describe("DiscoveredJobCard — post-promote view application link (PR 7)", () =
     const link = screen.getByTestId("view-application-link");
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute("href", "/applications/app-abc-123");
+  });
+
+  it("offers no Save or Dismiss on an applied posting", () => {
+    renderInRouter(
+      <DiscoveredJobCard job={makeJob({ promoted_application_id: "app-abc-123" })} />,
+    );
+    expect(screen.queryByRole("button", { name: "Dismiss this posting" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Saved?$/ })).toBeNull();
+  });
+
+  it("offers Save and Dismiss on a posting not yet applied", () => {
+    renderInRouter(<DiscoveredJobCard job={makeJob()} />);
+    expect(screen.getByRole("button", { name: "Dismiss this posting" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
   });
 
   it("does not show 'View application' link when not promoted", () => {

@@ -45,12 +45,19 @@ def discovered_state_predicate(state: DiscoveredJobState) -> tuple:
     all filter with it, so the populations never drift apart.
 
     - ``inbox``: not dismissed, not saved, not promoted, and active.
-    - ``saved``: saved (so not dismissed — chk_discovered_state) and active.
+    - ``saved``: saved (so not dismissed — chk_discovered_state), not promoted,
+      and active.
     - ``dismissed``: dismissed, not promoted, and active. These are exactly the
-      rows Restore (``undo_dismiss_discovered``) brings back into the inbox:
+      rows Restore (``get_restorable``) brings back into the inbox:
       restoring an expired/closed posting or one already turned into an
       application would make it vanish from every view, so neither is listed.
     - ``all``: every row, expired and closed ones included.
+
+    A promoted posting is an application, so none of the triage views lists it:
+    Promote clears Saved (and Dismiss, unless it went to a twin), Dismiss / Save
+    refuse it (409) and Restore doesn't find it (404). Deleting the application
+    clears the link (``discovery_promotion_repository``), so the posting comes
+    back.
     """
     if state == "inbox":
         return (
@@ -63,6 +70,7 @@ def discovered_state_predicate(state: DiscoveredJobState) -> tuple:
         return (
             DiscoveredJob.saved_at.isnot(None),
             DiscoveredJob.dismissed_at.is_(None),
+            DiscoveredJob.promoted_application_id.is_(None),
             *active_only_predicate(),
         )
     if state == "dismissed":

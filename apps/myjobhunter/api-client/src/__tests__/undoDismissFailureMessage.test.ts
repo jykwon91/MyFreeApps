@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DISCOVER_CONFLICT_CODES } from "../constants/discoverConflictCodes";
 import { DISCOVER_ACTION_MESSAGES } from "../constants/discoverMessages";
 import { undoDismissFailureMessage } from "../utils/undoDismissFailureMessage";
 
@@ -9,6 +10,12 @@ describe("undoDismissFailureMessage", () => {
     expect(undoDismissFailureMessage({ status: 404, data: { detail: "Discovery resource not found" } }, FALLBACK)).toBe(
       DISCOVER_ACTION_MESSAGES.undoDismissGone,
     );
+  });
+
+  it("explains Restore's coded 409s: the posting's twin is in Discover, or already applied", () => {
+    const coded = (code: string) => ({ status: 409, data: { detail: { code, message: "The server's wording" } } });
+    expect(undoDismissFailureMessage(coded(DISCOVER_CONFLICT_CODES.duplicate), FALLBACK)).toBe(DISCOVER_ACTION_MESSAGES.duplicate);
+    expect(undoDismissFailureMessage(coded(DISCOVER_CONFLICT_CODES.alreadyApplied), FALLBACK)).toBe(DISCOVER_ACTION_MESSAGES.alreadyApplied);
   });
 
   it("passes on the server's reason for any other failure", () => {

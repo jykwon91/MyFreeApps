@@ -103,7 +103,7 @@ async def test_dismissed_view_lists_only_dismissed_active_rows_newest_first(
     await _make_job(db, uid, external_id="expired", dismissed_at=now, expired_at=now)
     await _make_job(db, uid, external_id="closed", dismissed_at=now, source_expires_at=now - timedelta(hours=1))
 
-    rows = await discovery_repository.list_discovered(db, uid, state="dismissed")
+    rows = [job for job, _source_id in await discovery_repository.list_discovered(db, uid, state="dismissed")]
 
     assert [r.id for r in rows] == [newer.id, older.id]
     assert rows[0].dismissed_reason == "wrong_stack"
@@ -119,7 +119,7 @@ async def test_dismissed_view_never_shows_another_users_rows(
     mine = await _make_job(db, owner, external_id="mine", dismissed_at=_now())
     await _make_job(db, other, external_id="theirs", dismissed_at=_now())
 
-    rows = await discovery_repository.list_discovered(db, owner, state="dismissed")
+    rows = [job for job, _source_id in await discovery_repository.list_discovered(db, owner, state="dismissed")]
 
     assert [r.id for r in rows] == [mine.id]
     assert await discovery_inbox_repository.count_discovered(db, owner, state="dismissed") == 1
@@ -139,7 +139,7 @@ async def test_dismissed_paging_is_stable_when_dismissed_at_ties(
 
     seen: list[uuid.UUID] = []
     for offset in range(0, 7, 3):
-        page = await discovery_repository.list_discovered(db, uid, state="dismissed", limit=3, offset=offset)
+        page = [job for job, _source_id in await discovery_repository.list_discovered(db, uid, state="dismissed", limit=3, offset=offset)]
         seen.extend(r.id for r in page)
 
     assert len(seen) == 7
@@ -234,13 +234,18 @@ async def test_dismissed_view_api_is_tenant_isolated(
 async def test_dismissed_view_hides_postings_already_turned_into_applications(
     db: AsyncSession, client: AsyncClient, user_factory, as_user,
 ):
-    """Restore couldn't bring a promoted posting back to the inbox, so it isn't listed."""
+    """Restore couldn't bring a promoted posting back to the inbox, so it isn't listed.
+
+    Dismiss now refuses a promoted posting; the row is the one the earlier
+    Dismiss-after-Apply left behind.
+    """
     user = await user_factory()
     job = await _make_job(db, _uid(user), external_id="applied")
 
     async with await as_user(user) as a:
         assert (await a.post(f"/discover/{job.id}/promote")).status_code == 201
-        assert (await a.post(f"/discover/{job.id}/dismiss")).status_code == 204
+        job.dismissed_at = _now()
+        await db.commit()
         body = (await a.get("/discover", params={"state": "dismissed"})).json()
 
     assert body["total"] == 0
@@ -314,7 +319,9 @@ async def test_restore_refuses_a_posting_already_turned_into_an_application(
 
     async with await as_user(user) as a:
         assert (await a.post(f"/discover/{job.id}/promote")).status_code == 201
-        assert (await a.post(f"/discover/{job.id}/dismiss")).status_code == 204
+        # Left by the earlier Dismiss-after-Apply, which Dismiss now refuses.
+        job.dismissed_at = _now()
+        await db.commit()
         resp = await a.post(f"/discover/{job.id}/undo-dismiss")
 
     assert resp.status_code == 404

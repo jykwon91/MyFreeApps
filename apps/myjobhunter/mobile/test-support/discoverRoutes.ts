@@ -26,12 +26,15 @@ export function discoverPage(jobs: readonly DiscoveredJob[], params: FakeParams)
 }
 
 /**
- * The postings in a view, filtered by saved search: the inbox is neither saved nor dismissed; saved is
- * saved and not dismissed; dismissed is dismissed, newest-dismissed first.
+ * The postings in a view, filtered by saved search, as the backend lists them: a posting added to
+ * Applications is in no view; the inbox is neither saved nor dismissed; saved is saved and not
+ * dismissed; dismissed is dismissed, newest-dismissed first.
  */
 export function jobsFor(jobs: readonly DiscoveredJob[], params: FakeParams): DiscoveredJob[] {
   const state = params.state ?? "inbox";
-  const bySource = jobs.filter((job) => !params.source_id || job.discovery_source_id === params.source_id);
+  const bySource = jobs.filter(
+    (job) => job.promoted_application_id === null && (!params.source_id || job.discovery_source_id === params.source_id),
+  );
   if (state === "dismissed") {
     return bySource.filter((job) => job.dismissed_at !== null).sort((a, b) => (b.dismissed_at ?? "").localeCompare(a.dismissed_at ?? ""));
   }

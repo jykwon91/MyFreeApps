@@ -28,19 +28,32 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
 from app.core.config import settings
+from app.core.discovered_job_conflicts import (
+    ALREADY_APPLIED_CODE,
+    ALREADY_APPLIED_MESSAGE,
+    DUPLICATE_CODE,
+    DUPLICATE_MESSAGE,
+    NO_LONGER_LISTED_CODE,
+    NO_LONGER_LISTED_MESSAGE,
+)
 from app.core.discovered_job_state import DiscoveredJobState
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
+from app.mappers.discovered_job_mapper import to_discovered_job_response
 from app.models.user.user import User
 from app.schemas.application.application_response import ApplicationResponse
 from app.schemas.discovery.discovery_schemas import (
     DiscoveredJobDismissRequest,
     DiscoveredJobListResponse,
-    DiscoveredJobResponse,
     DiscoveryFetchResultResponse,
     DiscoverySourceCreate,
     DiscoverySourcePatch,
     DiscoverySourceResponse,
+)
+from app.services.discovery.discovery_inbox_service import (
+    DiscoveredJobAlreadyAppliedError,
+    DiscoveredJobDuplicateError,
+    DiscoveredJobNoLongerListedError,
 )
 from app.services.discovery.discovery_promote_service import (
     DiscoveryPromoteError,
@@ -291,13 +304,31 @@ async def list_discovered(
     )
 
     return DiscoveredJobListResponse(
-        items=[DiscoveredJobResponse.model_validate(r) for r in page.rows],
+        items=[to_discovered_job_response(job, source_id) for job, source_id in page.rows],
         total=page.total,
         has_more=offset + len(page.rows) < page.total,
         state=state,
         scored_count=page.scored_count,
         total_count=page.total_count,
     )
+
+
+_TRIAGE_CONFLICTS = (
+    DiscoveredJobAlreadyAppliedError, DiscoveredJobDuplicateError, DiscoveredJobNoLongerListedError,
+)
+
+
+def _triage_conflict(
+    exc: DiscoveredJobAlreadyAppliedError | DiscoveredJobDuplicateError | DiscoveredJobNoLongerListedError,
+) -> HTTPException:
+    """The coded 409 for a refused Dismiss / Save / Restore (see discovered_job_conflicts)."""
+    if isinstance(exc, DiscoveredJobDuplicateError):
+        code, message = DUPLICATE_CODE, DUPLICATE_MESSAGE
+    elif isinstance(exc, DiscoveredJobNoLongerListedError):
+        code, message = NO_LONGER_LISTED_CODE, NO_LONGER_LISTED_MESSAGE
+    else:
+        code, message = ALREADY_APPLIED_CODE, ALREADY_APPLIED_MESSAGE
+    return HTTPException(status_code=409, detail={"code": code, "message": message})
 
 
 @router.post(
@@ -311,11 +342,20 @@ async def dismiss_job(
     user: User = Depends(current_active_user),
 ) -> None:
     """Dismiss a discovered job. Optional ``reason`` is captured as a
-    teaching signal for future scoring."""
+    teaching signal for future scoring.
+
+    Status codes:
+    - 204 — dismissed
+    - 404 — job not found / belongs to a different user
+    - 409 ``DISCOVERED_JOB_ALREADY_APPLIED`` — job is already an application
+    """
     reason = payload.reason if payload else None
-    ok = await discovery_inbox_service.dismiss_discovered(
-        db, job_id, user.id, reason=reason,
-    )
+    try:
+        ok = await discovery_inbox_service.dismiss_discovered(
+            db, job_id, user.id, reason=reason,
+        )
+    except DiscoveredJobAlreadyAppliedError as exc:
+        raise _triage_conflict(exc) from exc
     if not ok:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
 
@@ -333,9 +373,16 @@ async def undo_dismiss_job(
 
     Status codes:
     - 204 — dismiss reversed successfully
-    - 404 — job not found, belongs to a different user, or was not dismissed
+    - 404 — the Dismissed view doesn't list the job (not found, another user's,
+      not dismissed, expired/closed, or an application)
+    - 409 ``DISCOVERED_JOB_DUPLICATE`` — its twin from another source is in Discover
+    - 409 ``DISCOVERED_JOB_NO_LONGER_LISTED`` — that twin has expired or closed
+    - 409 ``DISCOVERED_JOB_ALREADY_APPLIED`` — its twin is already an application
     """
-    ok = await discovery_inbox_service.undo_dismiss_for_user(db, job_id, user.id)
+    try:
+        ok = await discovery_inbox_service.undo_dismiss_for_user(db, job_id, user.id)
+    except _TRIAGE_CONFLICTS as exc:
+        raise _triage_conflict(exc) from exc
     if not ok:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
 
@@ -349,7 +396,20 @@ async def save_job(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> None:
-    ok = await discovery_inbox_service.save_discovered(db, job_id, user.id)
+    """Keep a discovered job for later.
+
+    Status codes:
+    - 204 — saved
+    - 404 — job not found / belongs to a different user
+    - 409 ``DISCOVERED_JOB_ALREADY_APPLIED`` — job (or its twin) is already an application
+    - 409 ``DISCOVERED_JOB_DUPLICATE`` — a dismissed job whose twin from another
+      source is in Discover
+    - 409 ``DISCOVERED_JOB_NO_LONGER_LISTED`` — that twin has expired or closed
+    """
+    try:
+        ok = await discovery_inbox_service.save_discovered(db, job_id, user.id)
+    except _TRIAGE_CONFLICTS as exc:
+        raise _triage_conflict(exc) from exc
     if not ok:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
 
@@ -367,7 +427,9 @@ async def promote_job(
     """Convert a discovered job into a tracked Application.
 
     Idempotent — a second call for the same discovered_job returns the
-    existing application instead of creating a duplicate.
+    existing application instead of creating a duplicate. A dismissed job
+    whose twin from another source holds its slot promotes the twin and links
+    both to the application.
 
     Status codes:
     - 201 — Application created (or returned existing one)

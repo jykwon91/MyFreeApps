@@ -262,7 +262,7 @@ async def test_inbox_excludes_expired_and_past_expiry(
         source_expires_at=_now() + timedelta(days=7),
     )
 
-    rows = await discovery_repository.list_discovered(db, uid, state="inbox")
+    rows = [job for job, _source_id in await discovery_repository.list_discovered(db, uid, state="inbox")]
     ids = {r.source_external_id for r in rows}
 
     assert "active" in ids
@@ -296,7 +296,7 @@ async def test_saved_view_excludes_expired(db: AsyncSession, user_factory):
         source_expires_at=now - timedelta(minutes=5),
     )
 
-    rows = await discovery_repository.list_discovered(db, uid, state="saved")
+    rows = [job for job, _source_id in await discovery_repository.list_discovered(db, uid, state="saved")]
     ids = {r.source_external_id for r in rows}
 
     assert "s-active" in ids
@@ -319,7 +319,7 @@ async def test_all_state_includes_expired(db: AsyncSession, user_factory):
         source_expires_at=_now() - timedelta(hours=1),
     )
 
-    rows = await discovery_repository.list_discovered(db, uid, state="all")
+    rows = [job for job, _source_id in await discovery_repository.list_discovered(db, uid, state="all")]
     ids = {r.source_external_id for r in rows}
 
     assert {"active", "expired", "closed"} <= ids
