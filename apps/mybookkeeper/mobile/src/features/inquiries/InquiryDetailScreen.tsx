@@ -1,5 +1,4 @@
 import { useGetInquiryByIdQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { INQUIRY_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
 import { Banner, Chip, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
@@ -16,6 +15,7 @@ import { moreOptions, stageOptions } from "./inquiryActionOptions";
 import InquiryContact from "./InquiryContact";
 import { inquirerName, receivedAgo, stageLabel, stayDates } from "./inquiryDisplay";
 import InquiryExtras from "./InquiryExtras";
+import InquiryListingRow from "./InquiryListingRow";
 import InquiryMessages from "./InquiryMessages";
 import InquiryNotes from "./InquiryNotes";
 import InquirySection from "./InquirySection";
@@ -27,7 +27,6 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
   const insets = useSafeAreaInsets();
   const canWrite = useCanWrite();
   const { currentData: inquiry, error, isFetching, refetch } = useGetInquiryByIdQuery(id);
-  const { data: listing } = useGetListingByIdQuery(inquiry?.listing_id ?? "", { skip: !inquiry?.listing_id });
   const actions = useInquiryActions(id);
   const [openSheet, setOpenSheet] = useState<"stage" | "more" | null>(null);
   const { refresh, refreshControl } = useRefresh(refetch, error);
@@ -112,7 +111,7 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
         <InquirySection title="Stay">
           <TransactionFact label="Dates" value={stayDates(inquiry.desired_start_date, inquiry.desired_end_date)} />
           {inquiry.inquirer_employer?.trim() ? <TransactionFact label="Employer" value={inquiry.inquirer_employer.trim()} /> : null}
-          {listing ? <TransactionFact label="Listing" value={listing.title} /> : null}
+          <InquiryListingRow listingId={inquiry.listing_id} />
         </InquirySection>
 
         <InquirySection title="Contact">

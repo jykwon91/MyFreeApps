@@ -96,6 +96,45 @@ describe("InquiryDetailScreen", () => {
     expect(await screen.findByText("Garden room")).toBeTruthy();
   });
 
+  it("opens the listing an inquiry came in for", async () => {
+    const server = startInquiryServer([anInquiry({ listing_id: "l1" })]);
+    server.listingTitle = "Garden room";
+    await renderScreen();
+    await fireEvent.press(await screen.findByRole("link", { name: "View listing: Garden room" }));
+    expect(mockPush).toHaveBeenCalledWith("/listings/l1");
+  });
+
+  it("shows a loading placeholder while the listing loads", async () => {
+    const server = startInquiryServer([anInquiry({ listing_id: "l1" })]);
+    server.listingTitle = "Garden room";
+    let release: () => void = () => undefined;
+    server.holdListing = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await renderScreen();
+    expect(await screen.findByLabelText("Loading the listing")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /View listing/ })).toBeNull();
+    await act(async () => {
+      release();
+    });
+    expect(await screen.findByRole("link", { name: "View listing: Garden room" })).toBeTruthy();
+    expect(screen.queryByLabelText("Loading the listing")).toBeNull();
+  });
+
+  it("says so, with no link, when the inquiry has no listing", async () => {
+    startInquiryServer([anInquiry({ listing_id: null })]);
+    await renderScreen();
+    expect(await screen.findByText("Not yet linked")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /View listing/ })).toBeNull();
+  });
+
+  it("explains, with no link, when the listing is gone", async () => {
+    startInquiryServer([anInquiry({ listing_id: "l1" })]);
+    await renderScreen();
+    expect(await screen.findByText("This listing is no longer available.")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /View listing/ })).toBeNull();
+  });
+
   it("leads with their latest message and tucks the rest away", async () => {
     const now = Date.now();
     startInquiryServer([

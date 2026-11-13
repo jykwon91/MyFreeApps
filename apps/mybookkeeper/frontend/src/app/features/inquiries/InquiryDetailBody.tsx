@@ -15,6 +15,7 @@ import {
 } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import type { DetailLoadMode } from "@/shared/types/detail-load-mode";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
+import { INQUIRY_LISTING_LABELS } from "@mybookkeeper/api-client/constants/inquiryListingLabels";
 import InquiryStageBadge from "./InquiryStageBadge";
 import InquiryStageDropdown from "./InquiryStageDropdown";
 import InquiryDetailSkeleton from "./InquiryDetailSkeleton";
@@ -255,17 +256,17 @@ export default function InquiryDetailBody({
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Listing</dt>
+                <dt className="text-xs text-muted-foreground">{INQUIRY_LISTING_LABELS.heading}</dt>
                 <dd>
                   {inquiry.listing_id ? (
                     <Link
                       to={`/listings/${inquiry.listing_id}`}
                       className="text-primary hover:underline"
                     >
-                      View listing
+                      {INQUIRY_LISTING_LABELS.viewListing}
                     </Link>
                   ) : (
-                    "Not yet linked"
+                    INQUIRY_LISTING_LABELS.notLinked
                   )}
                 </dd>
               </div>

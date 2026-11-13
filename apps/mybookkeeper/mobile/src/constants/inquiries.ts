@@ -37,3 +37,9 @@ export const INQUIRY_EMPTY_WORDS: Record<InquiryView, { heading: string; body: s
 export const MAX_NEW_INQUIRY_BADGE = 99;
 
 export const INQUIRY_REPLY_VIEW_ONLY_BODY = "Ask the workspace owner if you need to reply.";
+
+/** Phone-only wording for the listing row, beside the shared labels. */
+export const INQUIRY_LISTING_MESSAGES = {
+  loading: "Loading the listing",
+  unavailable: "This listing is no longer available.",
+} as const;
