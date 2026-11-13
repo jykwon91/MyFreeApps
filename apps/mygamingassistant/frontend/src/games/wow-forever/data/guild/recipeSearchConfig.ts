@@ -10,3 +10,6 @@ export const RECIPE_SEARCH_DEBOUNCE_MS = 300;
 /** Placeholder rows while a search runs. */
 export const RECIPE_SKELETON_ROWS = 3;
 export const RECIPE_SEARCH_PROBLEM = "Couldn't search the guild's recipes.";
+/** How many crafters a recipe card lists before the rest are folded away (the list is sorted best first). */
+export const RECIPE_CRAFTERS_VISIBLE = 1;
+export const RECIPE_CRAFTERS_COLLAPSE_LABEL = "Show fewer";

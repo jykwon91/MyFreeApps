@@ -1147,6 +1147,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`lib/guild/guildTabParams.ts`). Call `useGuildTab` once per page
   (`GuildPageBody`). The tab row is the shared `components/shared/TabList`
   (also the character sheet's stat tabs): reuse it for any new tabs.
+  "Who can craft?" cards (`GuildRecipeCard`) show only the best crafter (list is sorted skill-first);
+  a per-card "Show N more" / "Show fewer" toggle reveals the rest (`RECIPE_CRAFTERS_VISIBLE`).
 - ONE guild only: the site shows and refreshes just the operator's guild,
   `GUILD_SLUG` = "topdeadcenter" (`core/wow_guild.py`; frontend `GUILD_SLUG` in
   `data/guild/guildConfig.ts`). Every `/api/wow/guilds/{slug}` route 404s any
