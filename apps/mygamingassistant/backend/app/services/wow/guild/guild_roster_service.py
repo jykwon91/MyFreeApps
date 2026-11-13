@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -33,6 +33,8 @@ from app.core.wow_character import CHARACTER_ERROR_MAX_LENGTH
 from app.core.wow_guild import (
     GUILD_MEMBER_FETCH_CONCURRENCY,
     GUILD_NOT_FOUND_ERROR,
+    GUILD_REFRESH_COOLDOWN,
+    GUILD_REFRESH_NOW_MAX_MEMBER_FETCHES,
     GUILD_ROSTER_MAX_GUILDS_PER_RUN,
     GUILD_ROSTER_MAX_MEMBER_FETCHES_PER_RUN,
     GUILD_ROSTER_STALE_AFTER,
@@ -88,8 +90,26 @@ async def refresh_due(*, now: datetime | None = None) -> int:
     return attempted
 
 
-async def refresh_guild(guild: WowGuild, *, budget: int, now: datetime | None = None) -> GuildRefreshOutcome:
-    """Refresh one guild, fetching at most ``budget`` members."""
+async def refresh_now(guild: WowGuild, *, now: datetime) -> None:
+    """An on-demand refresh of one guild, within its own member budget.
+
+    Members refreshed within ``GUILD_REFRESH_COOLDOWN`` are not fetched again. A failure is
+    recorded on the guild (so the page can say so) and never raised: this runs after the
+    response, with nobody to hand it to.
+    """
+    try:
+        await refresh_guild(
+            guild, budget=GUILD_REFRESH_NOW_MAX_MEMBER_FETCHES, now=now, member_fresh_for=GUILD_REFRESH_COOLDOWN,
+        )
+    except Exception:
+        logger.exception("Guild %s on-demand roster refresh failed", guild.slug)
+        await _record_error(guild, "The roster refresh failed unexpectedly")
+
+
+async def refresh_guild(
+    guild: WowGuild, *, budget: int, now: datetime | None = None, member_fresh_for: timedelta = GUILD_ROSTER_STALE_AFTER,
+) -> GuildRefreshOutcome:
+    """Refresh one guild, fetching at most ``budget`` members not refreshed within ``member_fresh_for``."""
     at = now or _now()
     try:
         async with character_service.new_client() as client:
@@ -116,7 +136,7 @@ async def refresh_guild(guild: WowGuild, *, budget: int, now: datetime | None = 
         logger.info("Guild %s is gone: Blizzard gave its name to another guild", guild.slug)
         return _NOTHING_FETCHED
 
-    slugs = await _members_to_fetch(roster.members, budget, at)
+    slugs = await _members_to_fetch(roster.members, budget, at - member_fresh_for)
     rate_limited = asyncio.Event()
     limit = asyncio.Semaphore(GUILD_MEMBER_FETCH_CONCURRENCY)
     await asyncio.gather(*(_fetch_member(slug, limit, rate_limited) for slug in slugs))
@@ -124,12 +144,10 @@ async def refresh_guild(guild: WowGuild, *, budget: int, now: datetime | None = 
     return GuildRefreshOutcome(fetched=len(slugs), rate_limited=rate_limited.is_set())
 
 
-async def _members_to_fetch(members: list[GuildRosterMember], budget: int, at: datetime) -> list[str]:
-    """Slugs of the members not refreshed within ``GUILD_ROSTER_STALE_AFTER``, at most ``budget``."""
+async def _members_to_fetch(members: list[GuildRosterMember], budget: int, fresh_since: datetime) -> list[str]:
+    """Slugs of the members not refreshed since ``fresh_since``, at most ``budget``."""
     async with unit_of_work() as db:
-        recent = await character_repo.checked_since(
-            db, [m.blizzard_character_id for m in members], at - GUILD_ROSTER_STALE_AFTER,
-        )
+        recent = await character_repo.checked_since(db, [m.blizzard_character_id for m in members], fresh_since)
     stale = [m.slug for m in members if m.slug is not None and m.blizzard_character_id not in recent]
     return stale[:budget]
 

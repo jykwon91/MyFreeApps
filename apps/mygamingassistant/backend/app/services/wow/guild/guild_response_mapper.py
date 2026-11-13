@@ -5,7 +5,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 
 from app.core.wow_character import CLASS_NAMES_BY_ID
-from app.core.wow_guild import GUILD_GAINS_WINDOW_DAYS
+from app.core.wow_guild import GUILD_GAINS_WINDOW_DAYS, GUILD_REFRESH_COOLDOWN, GUILD_REFRESHABLE_SLUG
 from app.models.wow.guild import WowGuild
 from app.repositories.wow.guild_member_row import GuildMemberRow
 from app.repositories.wow.guild_member_skill_row import GuildMemberSkillRow
@@ -32,6 +32,7 @@ def to_guild_response(
     guild: WowGuild, rows: Sequence[GuildMemberRow], skills: Sequence[GuildMemberSkillRow],
 ) -> GuildResponse:
     gone = guild.gone_at is not None
+    refresh_failed = guild.last_error is not None and not gone
     skills_by_slug: defaultdict[str, list[GuildMemberSkillResponse]] = defaultdict(list)
     for skill in skills:
         skills_by_slug[skill.slug].append(
@@ -43,7 +44,10 @@ def to_guild_response(
         faction=guild.faction.lower(),
         roster_size=guild.member_count,
         roster_updated_at=guild.roster_fetched_at,
-        refresh_failed=guild.last_error is not None and not gone,
+        refresh_failed=refresh_failed,
+        refresh_failed_at=guild.last_error_at if refresh_failed else None,
+        can_refresh=guild.slug == GUILD_REFRESHABLE_SLUG and not gone,
+        refresh_available_at=None if guild.roster_checked_at is None else guild.roster_checked_at + GUILD_REFRESH_COOLDOWN,
         gone=gone,
         gains_window_days=GUILD_GAINS_WINDOW_DAYS,
         members=[

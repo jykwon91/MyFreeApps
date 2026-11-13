@@ -61,6 +61,9 @@ function guild() {
     roster_size: 4,
     roster_updated_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
     refresh_failed: false,
+    refresh_failed_at: null,
+    can_refresh: false,
+    refresh_available_at: null,
     gone: false,
     gains_window_days: 7,
     members: [

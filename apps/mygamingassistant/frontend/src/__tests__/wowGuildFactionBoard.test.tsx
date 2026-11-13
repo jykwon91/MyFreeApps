@@ -35,7 +35,7 @@ function member(slug: string, name: string): GuildMember {
 const MEMBERS = [member("ann-x", "Ann"), member("bob-x", "Bob"), member("cat-x", "Cat"), member("dan-x", "Dan")];
 const GUILD: GuildResponse = {
   slug: "topdeadcenter", name: "TopDeadCenter", faction: "alliance", roster_size: 4, roster_updated_at: ROSTER_AT,
-  refresh_failed: false, gone: false, gains_window_days: 7, members: MEMBERS,
+  refresh_failed: false, refresh_failed_at: null, can_refresh: false, refresh_available_at: null, gone: false, gains_window_days: 7, members: MEMBERS,
 };
 
 function standing(slug: string, tier: number, value: number, max: number): GuildStanding {

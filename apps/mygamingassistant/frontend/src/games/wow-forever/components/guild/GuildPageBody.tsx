@@ -34,7 +34,7 @@ export default function GuildPageBody({ guild, error, isFetching, onRetry }: Gui
   if (guild.gone) return <GuildStateNotice state={GUILD_PAGE_STATES.gone} onRetry={onRetry} retrying={isFetching} />;
   return (
     <>
-      <GuildSummary guild={guild} />
+      <GuildSummary guild={guild} refetch={onRetry} />
       {guild.refresh_failed ? <GuildRefreshNotice rosterUpdatedAt={guild.roster_updated_at} /> : null}
       {guild.roster_updated_at === null ? (
         <GuildStateNotice state={GUILD_PAGE_STATES.collecting} onRetry={onRetry} retrying={isFetching} />
