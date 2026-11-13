@@ -90,8 +90,7 @@ function liftedCopy(page: Page, name: string): Locator {
 
 /**
  * Press `name`'s handle, move past dnd-kit's 4 px until the drag starts, then on to `target` in steps it can follow,
- * let go, and wait for the drop to finish. dnd-kit swallows every click for 50 ms after a drop, so a click sent
- * before the lifted copy has settled into its seat would be lost.
+ * let go, and wait until dnd-kit lets clicks through again.
  */
 async function dragWithMouse(page: Page, name: string, from: Locator, target: Locator): Promise<void> {
   const start = await centerOf(from);
@@ -103,7 +102,24 @@ async function dragWithMouse(page: Page, name: string, from: Locator, target: Lo
   await expect(liftedCopy(page, name)).toBeVisible();
   await page.mouse.move(end.x, end.y, { steps: 20 });
   await page.mouse.up();
-  await expect(liftedCopy(page, name)).toHaveCount(0);
+  await expect.poll(() => clicksReachThePage(page)).toBe(true);
+}
+
+/**
+ * Whether a click on the page's body gets to it. For a moment after a drop, dnd-kit stops every click on the document
+ * before it reaches anything (its guard against the drop's own click), so a click sent then — Save, say — is lost.
+ */
+function clicksReachThePage(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    let reached = false;
+    const onClick = () => {
+      reached = true;
+    };
+    document.body.addEventListener("click", onClick);
+    document.body.click();
+    document.body.removeEventListener("click", onClick);
+    return reached;
+  });
 }
 
 /** Every plan request sent the link's token, and only it. */
