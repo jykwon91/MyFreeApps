@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "MGA Loot now judges every item, not just rolls",
+    "summary": "Update the MGA Loot addon and hover any item in your bags, bank, a vendor or a chat link: its tooltip says Upgrade, Downgrade or About the same next to what you wear. Type /mgaloot bags to list every upgrade sitting in your bags, biggest first.",
+    "to": "/wow-forever/compare"
+  },
+  {
+    "date": "2026-11-13",
     "title": "Upgrade or downgrade, at a glance",
     "summary": "Hover an item on the Auction house and each piece of gear you wear in that slot now says Upgrade, Downgrade or About the same, with how much better or worse, scored for your class the same way Best gear scores it. Items your class can't wear say so instead.",
     "to": "/wow-forever/auction-house"

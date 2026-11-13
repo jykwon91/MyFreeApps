@@ -306,3 +306,102 @@ describe("MGA Loot slash command", () => {
     expect(run("talents = { 31, 0, 0 }", slash(""))[0]).toBe("chat: MGA Loot: level 60 warrior, as Arms. Spec: auto from talents.");
   });
 });
+
+describe("MGA Loot on item tooltips", () => {
+  const WORN_CHEST = `items[5] = { ${CHEST}, ${strength(10)} }; equipped[5] = 5`;
+  const setup = (extra = ""): string => `items[100] = { ${CHEST}, bind = 2, minLevel = 61, ${strength(20)} }; talents = { 31, 0, 0 }; ${WORN_CHEST}; ${extra}`;
+
+  it("adds the verdict to a hovered item, without the binding and level the tooltip already shows", () => {
+    const lines = run(setup(), "hover(100)");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toMatch(/^GameTooltip: MGA Loot: Upgrade \+100% over .*\[Item 5\]/);
+    expect(lines[1]).toBe("GameTooltip: as Arms");
+  });
+
+  it("adds it once per tooltip show however many hooks fire, and again for the next show", () => {
+    const lines = run(setup(`items[101] = { ${CHEST}, ${strength(5)} }`), "hover(100); refire(100); hover(101)");
+    expect(lines.filter((l) => l.includes("MGA Loot:"))).toHaveLength(2);
+    expect(lines[lines.length - 2]).toContain("Downgrade -50% vs");
+  });
+
+  it("says nothing on the item you're wearing", () => {
+    expect(run(setup(), "hover(5)")).toEqual([]);
+  });
+
+  it("says nothing on items that aren't gear, or that the game hasn't loaded", () => {
+    expect(run(setup(`items[200] = { loc = "" }; items[201] = { ${CHEST}, loading = true }`), "hover(200); hover(201)")).toEqual([]);
+  });
+
+  it("uses the tooltip's full link, so a random-suffix item is scored as itself", () => {
+    const lines = run(setup(`items[300] = { ${CHEST}, ${strength(5)} }`), 'hover(100, link(300))');
+    expect(lines[0]).toContain("Downgrade -50% vs");
+  });
+
+  it("adds it once to a chat link clicked open, though the hooks see a full link and a raw item string", () => {
+    const lines = run(setup(), "clickLink(100)");
+    expect(lines.filter((l) => l.includes("MGA Loot:"))).toEqual([expect.stringMatching(/^ItemRefTooltip: MGA Loot: Upgrade \+100%/)]);
+  });
+
+  it("adds it once on clients that also fire OnTooltipSetItem", () => {
+    expect(run(`setItemScript = true; ${setup()}`, "hover(100)").filter((l) => l.includes("MGA Loot:"))).toHaveLength(1);
+  });
+
+  it("knows an item you wear from a chat link's raw item string", () => {
+    expect(run(setup(), "clickLink(5)")).toEqual([]);
+  });
+
+  it("tries again in the same show when the item loads after the first hook", () => {
+    const lines = run(setup(`items[201] = { ${CHEST}, ${strength(20)}, loading = true }`), "hover(201); items[201].loading = nil; refire(201)");
+    expect(lines[0]).toMatch(/^GameTooltip: MGA Loot: Upgrade \+100%/);
+  });
+
+  it("says Can't use on a tooltip too", () => {
+    expect(run(setup(`items[400] = { loc = "INVTYPE_CHEST", ${ARMOR}, subclassID = 4, ${strength(5)} }; me.class = "MAGE"`), "hover(400)")[0]).toBe(
+      "GameTooltip: MGA Loot: Can't use: your class can't wear Plate",
+    );
+  });
+
+  it("can be turned off and on, and remembers it", () => {
+    const lines = run(setup(), 'SlashCmdList.MGALOOT("tooltip off"); hover(100); SlashCmdList.MGALOOT("tooltip on"); hover(100)');
+    expect(lines[0]).toBe("chat: MGA Loot: tooltip verdicts off.");
+    expect(lines[1]).toBe("chat: MGA Loot: tooltip verdicts on.");
+    expect(lines[2]).toMatch(/^GameTooltip: MGA Loot: Upgrade/);
+    expect(run(setup(), 'MGALootSettings = { tooltip = false }; hover(100)')).toEqual([]);
+  });
+});
+
+describe("/mgaloot bags", () => {
+  const bagsSetup = (bags: string, extra = ""): string =>
+    `talents = { 31, 0, 0 }; items[5] = { ${CHEST}, ${strength(10)} }; equipped[5] = 5; ` +
+    `items[11] = { ${RING}, ${strength(10)} }; equipped[11] = 11; ` +
+    `items[100] = { ${CHEST}, ${strength(12)} }; items[101] = { ${CHEST}, ${strength(30)}, minLevel = 61 }; ` +
+    `items[102] = { ${CHEST}, ${strength(5)} }; items[103] = { ${RING}, ${strength(3)} }; items[104] = { loc = "" }; ${extra}; bagItems = ${bags}`;
+  const bags = 'SlashCmdList.MGALOOT("bags")';
+
+  it("lists the upgrades across every bag, biggest first, once each, with the level they need", () => {
+    const lines = run(bagsSetup("{ [0] = { 100, 102, 104 }, [2] = { 101, 103, 100 } }"), bags);
+    expect(lines[0]).toBe("chat: MGA Loot: upgrades in your bags (as Arms):");
+    expect(lines).toHaveLength(4);
+    expect(lines[1]).toMatch(/\[Item 103\].* Upgrade: your slot is empty$/);
+    expect(lines[2]).toMatch(/\[Item 101\].* Upgrade \+200% over .*\[Item 5\].* \(needs level 61\)$/);
+    expect(lines[3]).toMatch(/\[Item 100\].* Upgrade \+20% over .*\[Item 5\].*$/);
+  });
+
+  it("says when nothing is an upgrade", () => {
+    expect(run(bagsSetup("{ [0] = { 102, 104 } }"), bags)).toEqual(["chat: MGA Loot: nothing in your bags is an upgrade (as Arms)."]);
+  });
+
+  it("counts items the game hasn't loaded yet", () => {
+    const lines = run(bagsSetup("{ [0] = { 100, 105 } }", `items[105] = { ${CHEST}, loading = true }`), bags);
+    expect(lines[lines.length - 1]).toBe("chat: MGA Loot: 1 more still loading: run /mgaloot bags again in a moment.");
+  });
+
+  it("reads bags with the older global API too, and says so when there is none", () => {
+    const old =
+      "GetContainerNumSlots = C_Container.GetContainerNumSlots; GetContainerItemLink = C_Container.GetContainerItemLink; C_Container = nil";
+    expect(run(bagsSetup("{ [0] = { 100 } }", old), bags)[1]).toMatch(/\[Item 100\].* Upgrade \+20%/);
+    expect(run(bagsSetup("{ [0] = { 100 } }", "C_Container = nil"), bags)).toEqual([
+      "chat: MGA Loot: this client doesn't let addons read your bags.",
+    ]);
+  });
+});

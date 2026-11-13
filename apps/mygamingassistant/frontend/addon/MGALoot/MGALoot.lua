@@ -1,4 +1,5 @@
--- MGA Loot — on each loot roll, whether the item is an upgrade over what you wear.
+-- MGA Loot — whether an item is an upgrade over what you wear: on each loot
+-- roll, and on the tooltip of any item (bags, bank, vendors, chat links).
 --
 -- Scores items with MyGamingAssistant's Item compare weights (Data.lua):
 -- under level 60 your class's leveling weights (an estimate); at 60 your
@@ -8,9 +9,13 @@
 --   Beside the roll window: "Upgrade +14% over [your item]", "Downgrade",
 --   "About the same", "Your slot is empty" or "Can't use", then tags: binds on
 --   pickup or equip, the level it needs, effects and stats it can't score.
+--   On an item's tooltip: the same verdict (the tooltip already shows binding and
+--   level), except on the items you're wearing.
 --   /mgaloot              which weights it's using
 --   /mgaloot spec <name>  set your spec (holy, feral-tank, ...); "auto" reads talents
 --   /mgaloot check <link> the verdict for any item, without a roll
+--   /mgaloot bags         the upgrades in your bags, biggest first
+--   /mgaloot tooltip off  stop adding the verdict to tooltips ("on" brings it back)
 --
 -- The Forever client's APIs aren't documented, so every call is checked first;
 -- when the roll window can't be found the verdict goes to chat instead.
@@ -23,6 +28,10 @@ local SIDEGRADE_PCT = 5
 -- Past this the old item scores next to nothing, so a percentage means little.
 local MAX_SHOWN_PCT = 300
 local TEXT_WIDTH = 240
+-- Bag 0 is the backpack; 1-4 the bags beside it.
+local LAST_BAG = NUM_BAG_SLOTS or 4
+-- Sorts an empty slot (no percentage) above every upgrade by a percentage.
+local EMPTY_SLOT_PCT = math.huge
 
 local GREEN, RED, YELLOW, GREY = "|cff40ff40", "|cffff6060", "|cffffd040", "|cff9d9d9d"
 
@@ -313,8 +322,11 @@ local function percentText(new, old)
   return pct, (pct > 0 and "+" or "") .. pct .. "%"
 end
 
--- The verdict for an item, as {text, pending}; nil when it isn't gear.
-local function judge(link)
+-- The verdict for an item, as {text, kind, pct, needs, pending}; nil when it isn't gear.
+-- kind is "upgrade", "downgrade", "same" or nil (can't use / can't compare / trinket);
+-- `needs` is the level it needs when above yours. `brief` leaves out the binding and
+-- level tags, for a tooltip that already shows them.
+local function judge(link, brief)
   local info = itemInfo(link)
   if not info then return { text = GREY .. "Checking the item...|r", pending = true } end
   if not SLOTS[info.equipLoc] then return nil end
@@ -322,8 +334,11 @@ local function judge(link)
   if not me.class then return nil end
 
   local tags = {}
-  if BIND_TEXT[info.bindType] then table.insert(tags, BIND_TEXT[info.bindType]) end
-  if info.minLevel > me.level then table.insert(tags, "needs level " .. info.minLevel) end
+  local needs = info.minLevel > me.level and info.minLevel or nil
+  if not brief then
+    if BIND_TEXT[info.bindType] then table.insert(tags, BIND_TEXT[info.bindType]) end
+    if needs then table.insert(tags, "needs level " .. needs) end
+  end
   local why = cantUse(info, me)
   if why then
     return { text = RED .. "Can't use:|r " .. why .. (#tags > 0 and (GREY .. " · " .. table.concat(tags, " · ") .. "|r") or "") }
@@ -332,7 +347,7 @@ local function judge(link)
 
   local w, label = weightsFor(me)
   for _, tag in ipairs(effectTags(link)) do table.insert(tags, tag) end
-  local text
+  local text, kind, pct
   if info.equipLoc == "INVTYPE_TRINKET" then
     text = YELLOW .. "Trinket: judge it by its effect|r"
   else
@@ -343,22 +358,47 @@ local function judge(link)
     if old.blocked then
       text = GREY .. "Can't compare: " .. old.blocked .. "|r"
     elseif not old.link then
-      text = GREEN .. "Upgrade: your slot is empty|r"
+      text, kind, pct = GREEN .. "Upgrade: your slot is empty|r", "upgrade", EMPTY_SLOT_PCT
     elseif old.score <= 0 then
-      text = new > 0 and (GREEN .. "Upgrade over|r " .. old.link) or (GREY .. "Nothing it scores on either item|r")
-    else
-      local pct, shown = percentText(new, old.score)
-      if pct >= SIDEGRADE_PCT then
-        text = GREEN .. "Upgrade " .. shown .. " over|r " .. old.link
-      elseif pct <= -SIDEGRADE_PCT then
-        text = RED .. "Downgrade " .. shown .. " vs|r " .. old.link
+      if new > 0 then
+        text, kind, pct = GREEN .. "Upgrade over|r " .. old.link, "upgrade", EMPTY_SLOT_PCT
       else
-        text = YELLOW .. "About the same as|r " .. old.link
+        text = GREY .. "Nothing it scores on either item|r"
+      end
+    else
+      local shown
+      pct, shown = percentText(new, old.score)
+      if pct >= SIDEGRADE_PCT then
+        text, kind = GREEN .. "Upgrade " .. shown .. " over|r " .. old.link, "upgrade"
+      elseif pct <= -SIDEGRADE_PCT then
+        text, kind = RED .. "Downgrade " .. shown .. " vs|r " .. old.link, "downgrade"
+      else
+        text, kind = YELLOW .. "About the same as|r " .. old.link, "same"
       end
     end
   end
   if #tags > 0 then text = text .. "\n" .. GREY .. table.concat(tags, " · ") .. "|r" end
-  return { text = text }
+  return { text = text, kind = kind, pct = pct, needs = needs }
+end
+
+-- The "item:..." part of a link: the same for a full chat link and the raw string
+-- the client passes to SetHyperlink.
+local function itemString(link)
+  return link and link:match("item:[%-%d:]+")
+end
+
+-- Whether you're wearing this very item (same item string) in a slot it goes in.
+local function wearing(link)
+  local info = itemInfo(link)
+  local this = itemString(link)
+  for _, slot in ipairs(info and SLOTS[info.equipLoc] or {}) do
+    if itemString(GetInventoryItemLink("player", slot)) == this then return true end
+  end
+  return false
+end
+
+local function firstLine(text)
+  return text:match("^[^\n]*")
 end
 
 -- The roll window showing this roll, in either the Classic or the newer loot UI.
@@ -429,6 +469,118 @@ events:SetScript("OnEvent", function(_, event, rollID)
   end
 end)
 
+-- Tooltips. MGALootSettings.tooltip == false turns the verdict line off.
+local TOOLTIPS = { GameTooltip = true, ItemRefTooltip = true }
+
+local function tooltipsOn()
+  return MGALootSettings.tooltip ~= false
+end
+
+-- Adds the verdict once per tooltip show: several hooks fire for one show, with the
+-- item as a full link or a raw item string, so the guard is the item id. An item the
+-- game hasn't loaded leaves the guard unset, so a later hook in the same show can try again.
+local function addVerdict(tooltip, link)
+  local id = itemId(link)
+  if not id or tooltip.mgaLootItem == id or not tooltipsOn() then return end
+  local verdict = not wearing(link) and judge(link, true)
+  if verdict and verdict.pending then return end
+  tooltip.mgaLootItem = id
+  if not verdict then return end
+  local prefix = PREFIX
+  for line in verdict.text:gmatch("[^\n]+") do
+    tooltip:AddLine(prefix .. line, 1, 1, 1, true)
+    prefix = ""
+  end
+end
+
+-- The full link (random suffix included) when the tooltip gives it; else one built from the id.
+local function tooltipLink(tooltip, data)
+  local _, link
+  if tooltip.GetItem then _, link = tooltip:GetItem() end
+  if link then return link end
+  return data and data.id and ("item:" .. data.id) or nil
+end
+
+-- Like MGA Prices: hook every way the client builds an item tooltip, since which
+-- ones fire differs by client build; addVerdict's per-link guard adds it once.
+if TooltipDataProcessor and Enum and Enum.TooltipDataType then
+  TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, data)
+    if TOOLTIPS[tooltip:GetName() or ""] then addVerdict(tooltip, tooltipLink(tooltip, data)) end
+  end)
+end
+for name in pairs(TOOLTIPS) do
+  local tooltip = _G[name]
+  if tooltip then
+    tooltip:HookScript("OnTooltipCleared", function(self) self.mgaLootItem = nil end)
+    if not tooltip.HasScript or tooltip:HasScript("OnTooltipSetItem") then
+      tooltip:HookScript("OnTooltipSetItem", function(self) addVerdict(self, tooltipLink(self)) end)
+    end
+    -- A clicked chat link opens ItemRefTooltip with SetHyperlink: add it there too, then
+    -- Show() so the tooltip grows to fit.
+    if hooksecurefunc then
+      hooksecurefunc(tooltip, "SetHyperlink", function(self, link)
+        local id = type(link) == "string" and itemId(link)
+        if id and self.mgaLootItem ~= id then
+          addVerdict(self, link)
+          self:Show()
+        end
+      end)
+    end
+  end
+end
+
+-- Every item link in your bags once each, or nil when the client gives addons no bag API.
+local function bagLinks()
+  local container = C_Container
+  local numSlots = (container and container.GetContainerNumSlots) or GetContainerNumSlots
+  local slotLink = (container and container.GetContainerItemLink) or GetContainerItemLink
+  if not (numSlots and slotLink) then return nil end
+  local links, seen = {}, {}
+  for bag = 0, LAST_BAG do
+    for slot = 1, numSlots(bag) or 0 do
+      local link = slotLink(bag, slot)
+      if link and not seen[link] then
+        seen[link] = true
+        table.insert(links, link)
+      end
+    end
+  end
+  return links
+end
+
+local function biggestFirst(a, b)
+  if a.verdict.pct ~= b.verdict.pct then return a.verdict.pct > b.verdict.pct end
+  return a.link < b.link
+end
+
+local function bags()
+  local me = player()
+  if not me.class then return say("doesn't know your class.") end
+  local links = bagLinks()
+  if not links then return say("this client doesn't let addons read your bags.") end
+  local upgrades, loading = {}, 0
+  for _, link in ipairs(links) do
+    local verdict = judge(link, true)
+    if verdict and verdict.pending then
+      loading = loading + 1
+    elseif verdict and verdict.kind == "upgrade" then
+      table.insert(upgrades, { link = link, verdict = verdict })
+    end
+  end
+  table.sort(upgrades, biggestFirst)
+  local _, label = weightsFor(me)
+  if #upgrades == 0 then
+    say("nothing in your bags is an upgrade (" .. label .. ").")
+  else
+    say("upgrades in your bags (" .. label .. "):")
+    for _, found in ipairs(upgrades) do
+      local needs = found.verdict.needs and (GREY .. " (needs level " .. found.verdict.needs .. ")|r") or ""
+      say(found.link .. " " .. firstLine(found.verdict.text) .. needs)
+    end
+  end
+  if loading > 0 then say(loading .. " more still loading: run /mgaloot bags again in a moment.") end
+end
+
 local function status()
   local me = player()
   if not me.class then return say("doesn't know your class.") end
@@ -454,6 +606,15 @@ SlashCmdList.MGALOOT = function(msg)
     local names = {}
     for _, spec in ipairs(me.class and me.class.specs or {}) do table.insert(names, spec.id) end
     return say("pick one of: " .. table.concat(names, ", ") .. ", or auto.")
+  end
+  if command == "bags" then return bags() end
+  if command == "tooltip" then
+    local turn = rest:lower()
+    if turn ~= "on" and turn ~= "off" then
+      return say("tooltip verdicts are " .. (tooltipsOn() and "on" or "off") .. ": /mgaloot tooltip on or off.")
+    end
+    MGALootSettings.tooltip = turn == "on"
+    return say("tooltip verdicts " .. turn .. ".")
   end
   if command == "check" then
     local link = rest:match("(|c%x+|Hitem:.-|h.-|h|r)") or rest:match("(item:[%d:%-]+)")
