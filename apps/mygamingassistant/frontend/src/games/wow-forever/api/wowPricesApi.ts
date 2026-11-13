@@ -1,6 +1,5 @@
 import { baseApi } from "@platform/ui";
-import { PRICE_REFRESH_POLL_MS, PRICE_REFRESH_WATCH_TIMEOUT_MS } from "@/games/wow-forever/data/priceRefreshConfig";
-import { refreshOutcome } from "@/games/wow-forever/prices/priceRefresh";
+import { followPriceRefresh } from "@/games/wow-forever/prices/followPriceRefresh";
 import type { PriceHouse } from "@/games/wow-forever/types/priceHouse";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
 import type { PriceRefreshBaseline } from "@/games/wow-forever/types/priceRefreshBaseline";
@@ -48,17 +47,13 @@ export const wowPricesApi = baseApi.injectEndpoints({
      */
     finishPriceRefresh: build.mutation<null, { house: PriceHouse; baseline: PriceRefreshBaseline }>({
       async queryFn({ house, baseline }, { dispatch }) {
-        const giveUpAt = Date.now() + PRICE_REFRESH_WATCH_TIMEOUT_MS;
-        while (Date.now() < giveUpAt) {
-          await new Promise((resolve) => setTimeout(resolve, PRICE_REFRESH_POLL_MS));
-          const state = await dispatch(
-            wowPricesApi.endpoints.getWowPriceRefreshState.initiate(house, { forceRefetch: true, subscribe: false }),
-          ).unwrap();
-          const outcome = refreshOutcome(baseline, state);
-          if (outcome === "pending") continue;
-          if (outcome === "updated") await dispatch(wowPricesApi.endpoints.loadFreshWowPrices.initiate(house)).unwrap();
-          break;
-        }
+        await followPriceRefresh(baseline, {
+          readState: () =>
+            dispatch(
+              wowPricesApi.endpoints.getWowPriceRefreshState.initiate(house, { forceRefetch: true, subscribe: false }),
+            ).unwrap(),
+          loadFresh: () => dispatch(wowPricesApi.endpoints.loadFreshWowPrices.initiate(house)).unwrap(),
+        });
         return { data: null };
       },
     }),

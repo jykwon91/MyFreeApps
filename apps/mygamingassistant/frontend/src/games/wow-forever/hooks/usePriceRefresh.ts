@@ -73,21 +73,20 @@ export function usePriceRefresh(house: PriceHouse): PriceRefresh {
       : null;
   const notice = runningNotice ?? unchangedNotice;
 
+  // A refresh the server was asked for, until the page has seen it end. Walking away from it (another
+  // house, another page) follows it to its end anyway.
+  const inFlight = useRef<WatchedRefresh | null>(null);
   useRefreshWatch(watching !== null && outcome === "pending", refetch, {
     pollMs: PRICE_REFRESH_POLL_MS,
     timeoutMs: PRICE_REFRESH_WATCH_TIMEOUT_MS,
     onPoll: syncClock,
     onGiveUp: () => {
       setWatching(null);
+      inFlight.current = null;
       showError(PRICE_REFRESH_COPY.slow);
     },
   });
 
-  // Walking away mid-refresh (another house, another page): follow it to its end anyway.
-  const inFlight = useRef<WatchedRefresh | null>(null);
-  useEffect(() => {
-    inFlight.current = watching !== null && outcome === "pending" ? { house, baseline: watching } : null;
-  });
   useEffect(
     () => () => {
       if (inFlight.current) void finishInBackground(inFlight.current);
@@ -98,7 +97,9 @@ export function usePriceRefresh(house: PriceHouse): PriceRefresh {
   // Say how a finished refresh went, once. "Nothing newer" is a plain note, not a fault: no toast.
   const reported = useRef<PriceRefreshBaseline | null>(null);
   useEffect(() => {
-    if (watching === null || outcome === "pending" || outcome === "unchanged" || reported.current === watching) return;
+    if (watching === null || outcome === "pending") return;
+    inFlight.current = null;
+    if (outcome === "unchanged" || reported.current === watching) return;
     reported.current = watching;
     if (outcome === "failed") {
       showError(PRICE_REFRESH_COPY.failed);
@@ -120,20 +121,25 @@ export function usePriceRefresh(house: PriceHouse): PriceRefresh {
     try {
       // The page's copy of the state may predate a scheduled run: measure "finished" from the server's word now.
       const current = await refetch().unwrap();
-      setWatching(refreshBaselineOf(current));
+      const baseline = refreshBaselineOf(current);
+      setWatching(baseline);
+      inFlight.current = { house, baseline };
       const answer = await start(house).unwrap();
       // The server stamped its cooldown before answering: count from now, not from the click.
       syncClock();
       if (answer.status === "cooldown") {
         setWatching(null);
+        inFlight.current = null;
         startCooldown(answer.retry_after_seconds);
       } else if (answer.status === "refreshing") {
         // A scheduled run holds the lock; it may not even be for this house. Don't wait on it.
         setWatching(null);
+        inFlight.current = null;
         setRunningNotice(PRICE_REFRESH_COPY.alreadyRunning);
       }
     } catch (error) {
       setWatching(null);
+      inFlight.current = null;
       const code = statusOf(error);
       if (code === TOO_MANY_REQUESTS) showError(PRICE_REFRESH_COPY.tooMany);
       else if (code === SERVICE_UNAVAILABLE) showError(PRICE_REFRESH_COPY.unavailable);

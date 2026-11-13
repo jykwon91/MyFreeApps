@@ -135,12 +135,16 @@ async def release_claim(
     *,
     claimed_at: datetime,
     restore_to: datetime | None,
-    error: str,
-    error_at: datetime,
+    error: str | None = None,
+    error_at: datetime | None = None,
 ) -> bool:
     """Hand back a claim whose refresh never stored a result: put ``checked_at`` back to ``restore_to``
-    and record ``error`` so the house's state reports it. Only while ``checked_at`` is still the
-    claim's own stamp, so a refresh that did store a result (or a later claim) is never undone."""
+    and, when ``error`` is given, record it so the house's state reports a failure. Only while
+    ``checked_at`` is still the claim's own stamp, so a refresh that did store a result (or a later
+    claim) is never undone."""
+    values: dict[str, object] = {"checked_at": restore_to}
+    if error is not None:
+        values.update(last_error=error, last_error_at=error_at)
     result = await db.execute(
         sql_update(WowPriceFeed)
         .where(
@@ -149,7 +153,7 @@ async def release_claim(
             WowPriceFeed.house_id == house_id,
             WowPriceFeed.checked_at == claimed_at,
         )
-        .values(checked_at=restore_to, last_error=error, last_error_at=error_at)
+        .values(**values)
         .returning(WowPriceFeed.id)
     )
     return result.scalar_one_or_none() is not None

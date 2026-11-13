@@ -369,6 +369,80 @@ describe("PriceRefreshButton", () => {
     expect(mockFinish).toHaveBeenCalledWith({ house: HOUSE, baseline: refreshBaselineOf(refreshState()) });
   });
 
+  it("follows the refresh even when the page is left while the server is still being asked", async () => {
+    let answer: (value: PriceRefreshResponse) => void = () => undefined;
+    mockStart.mockReturnValue(
+      new Promise<PriceRefreshResponse>((resolve) => {
+        answer = resolve;
+      }),
+    );
+    const { unmount } = render(<PriceRefreshButton house={HOUSE} />);
+    await click();
+
+    unmount();
+
+    expect(mockFinish).toHaveBeenCalledWith({ house: HOUSE, baseline: refreshBaselineOf(refreshState()) });
+    answer(started());
+  });
+
+  it.each([
+    ["cooldown", { status: "cooldown", retry_after_seconds: 240 }],
+    ["refreshing", { status: "refreshing", retry_after_seconds: 0 }],
+  ])("starts no follow-up when the server answered %s, since nothing was started", async (_name, answer) => {
+    mockStart.mockResolvedValue(answer);
+    const { unmount } = render(<PriceRefreshButton house={HOUSE} />);
+    await click();
+
+    unmount();
+
+    expect(mockFinish).not.toHaveBeenCalled();
+  });
+
+  it("starts no follow-up when the server refused the click", async () => {
+    mockStart.mockRejectedValue({ status: 429 });
+    const { unmount } = render(<PriceRefreshButton house={HOUSE} />);
+    await click();
+
+    unmount();
+
+    expect(mockFinish).not.toHaveBeenCalled();
+  });
+
+  it("starts no follow-up once the refresh has finished", async () => {
+    mockStart.mockResolvedValue(started());
+    const { rerender, unmount } = render(<PriceRefreshButton house={HOUSE} />);
+    await click();
+    show(refreshState({ fetched_at: at(0), refresh_available_at: at(10 * MINUTE_MS) }));
+    await act(async () => {
+      rerender(<PriceRefreshButton house={HOUSE} />);
+    });
+
+    unmount();
+
+    expect(mockFinish).not.toHaveBeenCalled();
+  });
+
+  it("counts the server's wait from this device even when another tab moved the server's time after the click", async () => {
+    let answer: (value: PriceRefreshResponse) => void = () => undefined;
+    mockStart.mockReturnValue(
+      new Promise<PriceRefreshResponse>((resolve) => {
+        answer = resolve;
+      }),
+    );
+    const { rerender } = render(<PriceRefreshButton house={HOUSE} />);
+    await click();
+
+    // Another tab claimed in the meantime: the page's state now has a different `available at` (in the past by this clock).
+    show(refreshState({ refresh_available_at: at(-2 * MINUTE_MS) }));
+    await act(async () => {
+      rerender(<PriceRefreshButton house={HOUSE} />);
+    });
+    await act(async () => answer({ status: "cooldown", retry_after_seconds: 240 }));
+
+    expect(screen.getByRole("button", { name: PRICE_REFRESH_COPY.button })).toBeDisabled();
+    expect(screen.getByRole("status").textContent).toBe(refreshCooldownCopy(4));
+  });
+
   it("leaves nothing to follow when no refresh is running", () => {
     const { unmount } = render(<PriceRefreshButton house={HOUSE} />);
 

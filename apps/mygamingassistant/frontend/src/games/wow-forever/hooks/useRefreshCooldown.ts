@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cooldownLeftMs } from "@/games/wow-forever/lib/refreshCooldown";
 
 /** The "you can refresh again in N minutes" text counts down by the minute. */
@@ -34,14 +34,16 @@ export function useRefreshCooldown(availableAt: string | null): RefreshCooldown 
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [local, setLocal] = useState<LocalCooldown | null>(null);
   const syncClock = useCallback(() => setNowMs(Date.now()), []);
-  const startCooldown = useCallback(
-    (seconds: number) => {
-      const now = Date.now();
-      setNowMs(now);
-      setLocal({ availableAt, endMs: now + seconds * MS_PER_SECOND });
-    },
-    [availableAt],
-  );
+  // The server's time as of now, not as of the click: another tab may have claimed in between.
+  const latestAvailableAt = useRef(availableAt);
+  useEffect(() => {
+    latestAvailableAt.current = availableAt;
+  });
+  const startCooldown = useCallback((seconds: number) => {
+    const now = Date.now();
+    setNowMs(now);
+    setLocal({ availableAt: latestAvailableAt.current, endMs: now + seconds * MS_PER_SECOND });
+  }, []);
 
   const localEndMs = local !== null && local.availableAt === availableAt ? local.endMs : null;
   const cooldownLeft = localEndMs !== null ? Math.max(localEndMs - nowMs, 0) : cooldownLeftMs(availableAt, nowMs);

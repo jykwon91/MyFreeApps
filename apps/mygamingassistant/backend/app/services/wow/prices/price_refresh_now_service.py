@@ -35,7 +35,6 @@ logger = logging.getLogger(__name__)
 
 _COOLDOWN_SECONDS = int(PRICE_REFRESH_COOLDOWN.total_seconds())
 _UNSTORED_OUTCOMES = frozenset({OUTCOME_LOCKED, OUTCOME_FAILED})
-_LOCKED_REASON = "Another price refresh was already running"
 _CRASHED_REASON = "The refresh stopped before it saved anything"
 
 
@@ -73,22 +72,27 @@ async def run(claim: PriceRefreshClaim) -> None:
     """Run the refresh a started claim won. Failures are recorded on the feed and logged with
     Blizzard's status and code by ``price_refresh_service``; nothing is raised.
 
-    A refresh that stored nothing (it lost the lock to a scheduled run, or crashed before writing)
-    hands the cooldown back and records why, so the page ends with an answer and the click isn't spent.
+    A refresh that stored nothing hands the cooldown back so the click isn't spent. One that crashed
+    before writing also records why, so the page ends with an answer; one that lost the lock to a
+    scheduled run records nothing (that run is still fetching, and its result is the answer). If
+    handing the cooldown back fails too, that is logged here, never raised into the background task.
     """
     outcome = await price_refresh_service.refresh_house(claim.house)
     logger.info("wow prices: on-demand refresh of %s: %s (%d items)", outcome.label, outcome.outcome, outcome.item_count)
     if outcome.outcome not in _UNSTORED_OUTCOMES or claim.claimed_at is None:
         return
-    reason = _LOCKED_REASON if outcome.outcome == OUTCOME_LOCKED else _CRASHED_REASON
-    async with unit_of_work() as db:
-        game = await get_game_by_slug(db, WOW_FOREVER_GAME_SLUG)
-        if game is not None:
-            await price_feed_repo.release_claim(
-                db, game.id, PRICE_REGION, claim.house.house_id,
-                claimed_at=claim.claimed_at, restore_to=claim.previous_checked_at,
-                error=reason, error_at=datetime.now(timezone.utc),
-            )
+    reason = None if outcome.outcome == OUTCOME_LOCKED else _CRASHED_REASON
+    try:
+        async with unit_of_work() as db:
+            game = await get_game_by_slug(db, WOW_FOREVER_GAME_SLUG)
+            if game is not None:
+                await price_feed_repo.release_claim(
+                    db, game.id, PRICE_REGION, claim.house.house_id,
+                    claimed_at=claim.claimed_at, restore_to=claim.previous_checked_at,
+                    error=reason, error_at=datetime.now(timezone.utc) if reason else None,
+                )
+    except Exception:
+        logger.exception("wow prices: couldn't hand back the cooldown of %s", claim.house.label)
 
 
 async def state(db: AsyncSession, server: PriceServer, faction: PriceFaction) -> WowPriceRefreshState:
