@@ -71,7 +71,7 @@ export default function GuildLeaderboardList({ ranked, label, empty, me, viewerN
           </ol>
         </div>
       ) : null}
-      {viewerNote ? <p className="rounded-md border bg-[hsl(var(--muted)/0.4)] p-3 text-sm text-muted-foreground">{viewerNote}</p> : null}
+      {viewerNote ? <p className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">{viewerNote}</p> : null}
       {ranked.length > top.length ? (
         <Button
           variant="secondary"

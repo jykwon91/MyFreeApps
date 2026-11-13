@@ -105,11 +105,13 @@ export default function LineupListRow({
   return (
     <div
       ref={rowRef}
+      data-editing={isEditing || undefined}
       className={[
         "border-b last:border-b-0 scroll-mt-16",
         // Strong, unmistakable highlight when this row is the one bound to the
-        // open pin editor — left accent bar + tinted background.
-        isEditing && "border-l-4 border-l-primary bg-primary/10",
+        // open pin editor: a left accent bar (with the EDITING pill). No primary
+        // tint: it drops the row's muted text below 4.5:1 in light mode.
+        isEditing && "border-l-4 border-l-primary",
       ].filter(Boolean).join(" ")}
       onMouseEnter={() => onHover?.(lineup.id)}
       onMouseLeave={() => onHover?.(null)}
@@ -128,10 +130,7 @@ export default function LineupListRow({
         }}
         aria-expanded={expanded}
         aria-label={`${target}${stand ? ` from ${stand}` : ""} — ${util.chipLabel} — ${sideCfg.label} side.${isEditing ? " Currently open in the pin editor." : ""} Click to ${expanded ? "collapse" : "expand"} storyboard.`}
-        className={[
-          "w-full flex items-center gap-2 px-3 py-2 text-left transition-colors min-h-[44px]",
-          isEditing ? "hover:bg-primary/15" : "hover:bg-muted/30",
-        ].join(" ")}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left transition-colors min-h-[44px] hover:bg-muted/30"
       >
         {/* "EDITING" pill — only on the row bound to the open pin editor, so
             the editor panel ("Editing pin — <title>") and this list row are
@@ -194,14 +193,14 @@ export default function LineupListRow({
 
         {/* Technique (when present) */}
         {technique && (
-          <span className="shrink-0 text-xs text-muted-foreground/80 truncate max-w-[200px]">
+          <span className="shrink-0 text-xs text-muted-foreground truncate max-w-[200px]">
             · {technique}
           </span>
         )}
 
         {/* Title (only when it adds context beyond zone names) */}
         {titleAddsContext && (
-          <span className="shrink-0 text-xs text-muted-foreground/60 italic truncate max-w-[160px]">
+          <span className="shrink-0 text-xs text-muted-foreground italic truncate max-w-[160px]">
             · {lineup.title}
           </span>
         )}

@@ -55,7 +55,7 @@ export default function TriageHeader({ tab, onTab, inboxCount, onSignOut, signin
                 inboxCount === 0 ? (
                   <Check size={16} aria-label={TRIAGE_COPY.inboxEmpty} />
                 ) : (
-                  <span className="rounded-full bg-background/20 px-1.5 text-xs" aria-label={`${inboxCount} waiting`}>
+                  <span className="rounded-full bg-foreground px-1.5 text-xs text-background" aria-label={`${inboxCount} waiting`}>
                     {badgeCount(inboxCount)}
                   </span>
                 )

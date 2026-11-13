@@ -17,6 +17,7 @@ import { useSearchParams } from "react-router-dom";
 import type { Lineup, Game } from "@/types/game";
 import { zoneAnchorId } from "./glanceBoardUtils";
 import LineupListRow from "./LineupListRow";
+import LineupListSkeleton from "./LineupListSkeleton";
 import { DEFAULT_KNOBS } from "@/hooks/useDesignKnobs";
 import type { DesignKnobs } from "@/hooks/useDesignKnobs";
 import { utilDisplay } from "@/constants/utilityDisplay";
@@ -110,23 +111,6 @@ function buildEmptyMessage(mapName: string, side: string, filteredUtils: string[
   return `No ${parts.join(" ")} lineups on this map.`;
 }
 
-function LineupListSkeleton() {
-  return (
-    <div className="space-y-6">
-      {[1, 2].map((s) => (
-        <div key={s} className="space-y-2">
-          <div className="h-5 w-48 bg-muted/40 rounded animate-pulse" />
-          <div className="rounded-lg border divide-y">
-            {[1, 2, 3, 4].map((r) => (
-              <div key={r} className="h-9 bg-muted/30 animate-pulse" />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export default function LineupListBoard({
   lineups,
   isFetching,
@@ -172,7 +156,7 @@ export default function LineupListBoard({
           {buildEmptyMessage(mapName, side, filteredUtils)}
         </p>
         {isFiltered && (
-          <span className="text-xs text-muted-foreground/60">
+          <span className="text-xs text-muted-foreground">
             Try clearing filters in the top bar.
           </span>
         )}
@@ -188,7 +172,7 @@ export default function LineupListBoard({
             <span className="flex-1 border-t border-border" />
             <span>
               {group.zoneName}
-              <span className="ml-1.5 font-normal text-muted-foreground/60">
+              <span className="ml-1.5 font-normal text-muted-foreground">
                 ({group.lineups.length})
               </span>
             </span>

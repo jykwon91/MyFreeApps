@@ -426,7 +426,7 @@ export default function MapPage() {
                 <button
                   type="button"
                   onClick={() => updateParam("zone", null)}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/15 text-primary hover:bg-primary/25 transition-colors"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary hover:underline"
                   aria-label={`Clear zone filter (currently ${activeZone.name})`}
                 >
                   <span>{activeZone.name}</span>

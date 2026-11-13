@@ -111,7 +111,8 @@ describe("leaderboard list", () => {
     const { container } = renderList([entry("a", 1, 100), entry("b", 2, 50)], { me: "b", showBar: false });
     const mine = screen.getAllByRole("listitem")[1];
     expect(within(mine).getByText("You")).toBeInTheDocument();
-    expect(mine.className).toContain("ring-[hsl(var(--primary))]");
+    expect(mine.className).toContain("ring-primary");
+    expect(mine.className).toContain("bg-primary/10");
     expect(container.querySelectorAll("span[style*='width']")).toHaveLength(0);
   });
 

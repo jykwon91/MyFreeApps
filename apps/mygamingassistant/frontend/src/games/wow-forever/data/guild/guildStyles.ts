@@ -7,7 +7,7 @@ export const GUILD_NUMBER_CELL = "px-3 py-1 text-right tabular-nums";
 export const LEADERBOARD_ROW =
   "flex min-h-[44px] items-center gap-3 rounded-lg border bg-card px-3 py-1.5 sm:col-span-3";
 /** The viewer's own row or card: a ring and tint, never colour alone (it also says "You"). */
-export const LEADERBOARD_MINE = "ring-2 ring-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.1)]";
+export const LEADERBOARD_MINE = "ring-2 ring-primary bg-primary/10";
 /**
  * The board picker's grid. ``grid-cols-1`` (``minmax(0, 1fr)``) on a phone: an implicit column would grow to the
  * chips row's full width and push the card off the screen.
@@ -16,7 +16,7 @@ export const LEADERBOARD_PICKER_GRID = "grid grid-cols-1 gap-3 sm:grid-cols-2";
 /** A podium card: a row on a phone (its bar wraps to a line of its own); 1st is taller, with a gold border and glow. */
 export const PODIUM_CARD = "flex flex-wrap items-center gap-3 rounded-xl border bg-card p-3 sm:flex-col sm:justify-end sm:gap-2 sm:p-4 sm:text-center";
 export const PODIUM_CARD_FIRST =
-  "border-2 bg-gradient-to-b from-[#F2C94C]/25 to-[hsl(var(--card))] shadow-[0_0_24px_4px_rgba(242,201,76,0.35)] sm:min-h-[208px]";
+  "border-2 bg-gradient-to-b from-[#F2C94C]/25 to-card shadow-[0_0_24px_4px_rgba(242,201,76,0.35)] sm:min-h-[208px]";
 /** A podium card's top border wears the member's class colour (``memberClassStyle`` sets the variables). */
 export const PODIUM_CLASS_TOP = "relative border-t-4 border-t-[color:var(--c-light,transparent)] dark:border-t-[color:var(--c-dark,transparent)]";
 /** The "Champion" ribbon on a 1st-place card. */
@@ -27,8 +27,8 @@ export const PODIUM_CARD_OTHER = "sm:min-h-[172px]";
 export const PODIUM_SLOTS = ["sm:col-start-2", "sm:col-start-1", "sm:col-start-3"] as const;
 /** A board category chip, and the one picked. */
 export const LEADERBOARD_CHIP =
-  "min-h-[44px] shrink-0 snap-start rounded-full border bg-card px-4 text-sm font-medium text-card-foreground transition-colors hover:bg-[hsl(var(--muted)/0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
-export const LEADERBOARD_CHIP_ON = "border-[hsl(var(--primary))] bg-primary text-primary-foreground";
+  "min-h-[44px] shrink-0 snap-start rounded-full border bg-card px-4 text-sm font-medium text-card-foreground transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+export const LEADERBOARD_CHIP_ON = "border-primary bg-primary text-primary-foreground";
 /** A member's name in their class colour (``memberClassStyle`` sets the variables); plain text for an unknown class. */
 export const CLASS_NAME_TEXT = "text-[var(--c-light,currentColor)] dark:text-[var(--c-dark,currentColor)]";
 
@@ -58,6 +58,6 @@ export const TITLE_CARD = "flex flex-col gap-1.5 rounded-xl border-2 p-3";
 export const HERO_STRIP =
   "-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3";
 export const HERO_CARD =
-  "relative flex w-[78%] min-w-[240px] shrink-0 snap-start flex-col gap-1 rounded-xl border-2 border-[#ff8000]/50 bg-gradient-to-b from-[#ff8000]/10 to-[hsl(var(--card))] p-3 sm:w-auto sm:min-w-0";
+  "relative flex w-[78%] min-w-[240px] shrink-0 snap-start flex-col gap-1 rounded-xl border-2 border-[#ff8000]/50 bg-gradient-to-b from-[#ff8000]/10 to-card p-3 sm:w-auto sm:min-w-0";
 /** The banner's text on its dark field, in a member's in-game class colour (the light-theme darkening would be too dim here). */
 export const CLASS_NAME_TEXT_ON_DARK = "text-[var(--c-dark,currentColor)]";
