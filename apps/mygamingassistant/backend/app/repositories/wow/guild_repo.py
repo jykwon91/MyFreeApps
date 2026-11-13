@@ -125,6 +125,18 @@ async def get_by_slug(db: AsyncSession, slug: str) -> WowGuild | None:
     return result.scalar_one_or_none()
 
 
+async def search_live(db: AsyncSession, text: str, *, limit: int) -> list[WowGuild]:
+    """Live guilds whose name contains ``text`` (any case): biggest first, then by name."""
+    result = await db.execute(
+        select(WowGuild)
+        # autoescape: LIKE's own wildcards in ``text`` are taken literally.
+        .where(WowGuild.gone_at.is_(None), WowGuild.name.icontains(text, autoescape=True))
+        .order_by(WowGuild.member_count.desc().nulls_last(), func.lower(WowGuild.name), WowGuild.slug)
+        .limit(limit)
+    )
+    return list(result.scalars())
+
+
 async def members(db: AsyncSession, guild_id: uuid.UUID, *, gains_since: date) -> list[GuildMemberRow]:
     """The guild's live stored members, each with its newest day's numbers and a gains baseline.
 

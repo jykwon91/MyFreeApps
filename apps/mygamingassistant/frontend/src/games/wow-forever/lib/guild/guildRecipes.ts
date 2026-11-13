@@ -2,6 +2,7 @@ import { PROFESSION_GROUPS } from "@/games/wow-forever/data/professions/professi
 import { PROFESSION_SKILL_LINES } from "@/games/wow-forever/data/professions/professionSkillLines";
 import { RECIPE_QUERY_MAX_LENGTH, RECIPE_QUERY_MIN_LENGTH } from "@/games/wow-forever/data/guild/recipeSearchConfig";
 import { formatCount } from "@/games/wow-forever/lib/character/formatCount";
+import { searchableText } from "@/games/wow-forever/lib/searchableText";
 import type { GuildCrafter } from "@/games/wow-forever/types/guild/guildCrafter";
 import type { GuildRecipeSearch } from "@/games/wow-forever/types/guild/guildRecipeSearch";
 
@@ -23,8 +24,7 @@ export function crafterSkill(crafter: GuildCrafter): string | null {
 
 /** The search as sent: trimmed and cut to the server's limit, or "" when too short to search. */
 export function searchableQuery(text: string): string {
-  const query = text.trim().slice(0, RECIPE_QUERY_MAX_LENGTH).trim();
-  return query.length >= RECIPE_QUERY_MIN_LENGTH ? query : "";
+  return searchableText(text, RECIPE_QUERY_MIN_LENGTH, RECIPE_QUERY_MAX_LENGTH);
 }
 
 /** The line above the results. */

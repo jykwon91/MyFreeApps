@@ -18,6 +18,7 @@ const WowAuctionHousePage = lazy(() => import("@/games/wow-forever/pages/WowAuct
 const WowMacrosPage = lazy(() => import("@/games/wow-forever/pages/WowMacrosPage"));
 const WowGearPage = lazy(() => import("@/games/wow-forever/pages/WowGearPage"));
 const WowGuildPage = lazy(() => import("@/games/wow-forever/pages/WowGuildPage"));
+const WowGuildFinderPage = lazy(() => import("@/games/wow-forever/pages/WowGuildFinderPage"));
 const WowDungeonsPage = lazy(() => import("@/games/wow-forever/pages/WowDungeonsPage"));
 const WowDungeonPage = lazy(() => import("@/games/wow-forever/pages/WowDungeonPage"));
 const WowHunterPetsPage = lazy(() => import("@/games/wow-forever/pages/WowHunterPetsPage"));
@@ -107,6 +108,7 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/server-status", element: withSuggestFooter(<WowServerStatusPage />, "site_app") },
   { path: "/wow-forever/character", element: withSuggestFooter(<WowCharacterPage />, "gear_upgrades") },
   { path: "/wow-forever/character/:slug", element: withSuggestFooter(<WowCharacterPage />, "gear_upgrades") },
+  { path: "/wow-forever/guild", element: withSuggestFooter(<WowGuildFinderPage />, "site_app") },
   { path: "/wow-forever/guild/:slug", element: withSuggestFooter(<WowGuildPage />, "site_app") },
   { path: "/wow-forever/ask", element: withSuggestFooter(<WowAskPage />, "site_app") },
   // The old Warlock-only page: same macros, now the Warlock filter of the Macros page.

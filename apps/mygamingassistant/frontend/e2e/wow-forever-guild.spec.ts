@@ -12,8 +12,10 @@
  *   - a guild we don't have yet says how to get it collected
  *   - skeleton while loading, then the list in the same place
  *   - 375px phone layout: members as cards, nothing overflows
+ *   - the Guild menu item: search by name → open a guild; once a character is looked up it opens
+ *     their guild, and "Find another guild" gets back to the search (on a phone too)
  *
- * Stubbed: `/wow/guilds/<slug>`, `/wow/guilds/<slug>/recipes`, `/wow/guilds/<slug>/reputations`, `/wow/characters/<slug>` and its render.
+ * Stubbed: `/wow/guilds?q=`, `/wow/guilds/<slug>`, `/wow/guilds/<slug>/recipes`, `/wow/guilds/<slug>/reputations`, `/wow/characters/<slug>` and its render.
  *
  * Run: npm run test:e2e -- wow-forever-guild
  */
@@ -22,6 +24,7 @@ import { test, expect, type Locator, type Page, type Route } from "@playwright/t
 const GUILD_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+$/.test(url.pathname);
 const RECIPES_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+\/recipes$/.test(url.pathname);
 const SHEET_PATTERN = (url: URL) => /\/wow\/characters\/[^/]+$/.test(url.pathname);
+const SEARCH_PATTERN = (url: URL) => /\/wow\/guilds$/.test(url.pathname);
 const RENDER_PATTERN = "**/wow/characters/*/render.png";
 const PIXEL = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
@@ -490,4 +493,77 @@ test("faction standing board: a problem offers a retry that brings the standings
   await expect(page.getByLabel("Rank members by")).toHaveValue("faction");
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByRole("list", { name: "Ironforge standing leaderboard" }).locator("li")).toHaveCount(3);
+});
+
+// --- the Guild menu item (/wow-forever/guild) ---------------------------------------
+
+function guildSearch(query: string) {
+  return {
+    query,
+    guilds: [
+      { slug: "topdeadcenter", name: "TopDeadCenter", faction: "alliance", member_count: 4 },
+      { slug: "dead-men-walking", name: "Dead Men Walking", faction: "horde", member_count: null },
+    ],
+    truncated: false,
+  };
+}
+
+async function stubSearch(page: Page): Promise<string[]> {
+  const queries: string[] = [];
+  await page.route(SEARCH_PATTERN, (route) => {
+    const q = new URL(route.request().url()).searchParams.get("q") ?? "";
+    queries.push(q);
+    return json(route, guildSearch(q));
+  });
+  return queries;
+}
+
+test("Guild menu item: search a guild by name and open it", async ({ page }) => {
+  await stubAll(page);
+  const queries = await stubSearch(page);
+  await page.goto("/wow-forever");
+  await page.getByRole("link", { name: "Guild", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/wow-forever\/guild$/);
+  await expect(page.getByRole("heading", { name: "Find a guild" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Look up your character" })).toBeVisible();
+
+  await page.getByRole("searchbox", { name: "Guild name" }).fill("dead");
+  await expect(page).toHaveURL(/\/wow-forever\/guild\?q=dead$/);
+  const results = page.getByRole("list", { name: "Matching guilds" }).getByRole("link");
+  await expect(results).toHaveCount(2);
+  await expect(results.first()).toContainText("TopDeadCenter");
+  await expect(results.first()).toContainText("4 members");
+  await expect(page.getByRole("status")).toHaveText('2 guilds matching "dead"');
+  expect(queries).toEqual(["dead"]);
+
+  await results.first().click();
+  await expect(page).toHaveURL(/\/wow-forever\/guild\/topdeadcenter$/);
+  await expect(page.getByRole("heading", { name: "<TopDeadCenter>" })).toBeVisible();
+});
+
+test("Guild menu item: opens your character's guild, and Find another guild gets back to the search, on a phone too", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await stubAll(page);
+  await stubSearch(page);
+  await page.goto("/wow-forever/character/jason-kwon");
+  await expect(page.getByRole("heading", { name: "Jason Kwon" })).toBeVisible();
+
+  await page.goto("/wow-forever/guild");
+  await expect(page).toHaveURL(/\/wow-forever\/guild\/topdeadcenter$/);
+  await expect(page.getByRole("heading", { name: "<TopDeadCenter>" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Find another guild" }).click();
+  await expect(page).toHaveURL(/\/wow-forever\/guild\?find=1$/);
+  const yours = page.getByRole("region", { name: "Your guild" });
+  await expect(yours.getByRole("link", { name: /TopDeadCenter/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Find another guild" })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Guild name" }).fill("dead");
+  await expect(page.getByRole("list", { name: "Matching guilds" }).getByRole("link")).toHaveCount(2);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+  const box = await yours.getByRole("link").boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/wow-forever\/guild\/topdeadcenter$/);
 });

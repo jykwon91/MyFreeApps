@@ -1086,6 +1086,20 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   level band and sort live in the URL (`GUILD_PARAMS`, defaults left out,
   `replace` so Back skips keystrokes). Tests: `tests/test_wow_guild_page.py`,
   `src/__tests__/wowGuildPage.test.tsx`, `e2e/wow-forever-guild.spec.ts`.
+- Guild menu item + finder (`/wow-forever/guild`, `pages/WowGuildFinderPage.tsx`,
+  `components/guild/finder/`): the sidebar's "Guild" opens the guild of the last
+  character looked up (`useRememberedGuild`, localStorage
+  `mga.wowForever.guild.v1`, written by `WowCharacterPage` only for a character
+  WITH a guild; the guild page forgets it on a 404 for that slug). With none, or
+  `?find=1` / `?q=`, it's a search: `GET /api/wow/guilds?q=` (same per-IP
+  limiter; `guild_repo.search_live` = live guilds whose name contains the text,
+  `icontains(autoescape=True)` so `%`/`_` are literal; biggest first, then name;
+  20 + `truncated`; 2-60 chars once trimmed, no control characters → 422
+  `guild_query_too_short` / `guild_query_invalid`). Only guilds someone looked
+  up a member of exist, so an empty search says how to add yours. The search box
+  and the recipe search share `useDebouncedSearchParam` (URL-kept, debounced,
+  `replace`). Tests: `tests/test_wow_guild_search.py`,
+  `src/__tests__/wowGuildFinder.test.tsx`, `e2e/wow-forever-guild.spec.ts`.
 - Guild leaderboards (above the member list, `GuildLeaderboards`): each member
   carries every number of its newest daily metric plus its professions from
   `guild_repo.member_skills` — the newest day that HAS skills (a day whose
