@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import uuid
 import zlib
+from datetime import datetime
 
-from sqlalchemy import select, text
+from sqlalchemy import or_, select, text, update as sql_update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,6 +45,10 @@ async def get_or_create(
     return feed
 
 
+def _lock_key(game_id: uuid.UUID) -> int:
+    return zlib.crc32(game_id.bytes) & 0x7FFFFFFF
+
+
 async def try_refresh_lock(db: AsyncSession, game_id: uuid.UUID) -> bool:
     """Take the game's price-refresh lock for the rest of the transaction.
 
@@ -51,11 +56,54 @@ async def try_refresh_lock(db: AsyncSession, game_id: uuid.UUID) -> bool:
     when another worker holds it — that worker is already refreshing, so
     this one can skip. Released automatically on commit / rollback.
     """
-    key = zlib.crc32(game_id.bytes) & 0x7FFFFFFF
     result = await db.execute(
-        text("SELECT pg_try_advisory_xact_lock(:ns, :key)"), {"ns": _LOCK_NAMESPACE, "key": key},
+        text("SELECT pg_try_advisory_xact_lock(:ns, :key)"), {"ns": _LOCK_NAMESPACE, "key": _lock_key(game_id)},
     )
     return bool(result.scalar_one())
+
+
+async def refresh_in_progress(db: AsyncSession, game_id: uuid.UUID) -> bool:
+    """True while some worker holds the game's price-refresh lock.
+
+    Reads ``pg_locks`` instead of taking the lock to test it, so looking never makes a
+    scheduled refresh that starts at the same moment skip.
+    """
+    result = await db.execute(
+        text(
+            "SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND granted "
+            "AND classid = CAST(:ns AS oid) AND objid = CAST(:key AS oid) AND objsubid = 2)"
+        ),
+        {"ns": _LOCK_NAMESPACE, "key": _lock_key(game_id)},
+    )
+    return bool(result.scalar_one())
+
+
+async def claim_refresh(
+    db: AsyncSession,
+    game_id: uuid.UUID,
+    region: str,
+    house_id: int,
+    faction: str,
+    *,
+    at: datetime,
+    claimable_before: datetime,
+) -> bool:
+    """Take the right to refresh a house now: stamp ``checked_at`` with ``at`` unless the house
+    was asked for since ``claimable_before``. One atomic UPDATE, so two clicks (or two workers)
+    can't both win."""
+    await get_or_create(db, game_id, region, house_id, faction)
+    result = await db.execute(
+        sql_update(WowPriceFeed)
+        .where(
+            WowPriceFeed.game_id == game_id,
+            WowPriceFeed.region == region,
+            WowPriceFeed.house_id == house_id,
+            or_(WowPriceFeed.checked_at.is_(None), WowPriceFeed.checked_at <= claimable_before),
+        )
+        .values(checked_at=at)
+        .returning(WowPriceFeed.id)
+    )
+    return result.scalar_one_or_none() is not None
 
 
 def update(feed: WowPriceFeed, values: dict[str, object]) -> None:

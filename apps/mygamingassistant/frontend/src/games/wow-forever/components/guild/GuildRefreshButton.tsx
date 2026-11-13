@@ -1,7 +1,8 @@
 import { LoadingButton } from "@platform/ui";
-import { GUILD_REFRESH_COPY, guildRefreshCooldownCopy } from "@/games/wow-forever/data/guild/guildRefreshConfig";
+import { GUILD_REFRESH_COPY } from "@/games/wow-forever/data/guild/guildRefreshConfig";
+import { refreshCooldownCopy } from "@/games/wow-forever/data/refreshCooldownCopy";
 import { useGuildRefresh } from "@/games/wow-forever/hooks/useGuildRefresh";
-import { cooldownMinutes } from "@/games/wow-forever/lib/guild/refreshCooldown";
+import { cooldownMinutes } from "@/games/wow-forever/lib/refreshCooldown";
 import type { GuildResponse } from "@/games/wow-forever/types/guild/guildResponse";
 
 interface GuildRefreshButtonProps {
@@ -28,7 +29,7 @@ export default function GuildRefreshButton({ guild, refetch }: GuildRefreshButto
       </LoadingButton>
       {coolingDown ? (
         <span role="status" className="text-xs text-muted-foreground">
-          {guildRefreshCooldownCopy(cooldownMinutes(cooldownLeft))}
+          {refreshCooldownCopy(cooldownMinutes(cooldownLeft))}
         </span>
       ) : null}
     </div>

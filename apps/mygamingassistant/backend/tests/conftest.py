@@ -174,6 +174,7 @@ _UOW_CONSUMERS = (
     "app.services.wow.feature_requests.feature_vote_service",
     "app.services.wow.item_extractor",
     "app.services.wow.map_capture_service",
+    "app.services.wow.prices.price_refresh_now_service",
     "app.services.wow.prices.price_refresh_service",
     "app.services.wow.server_status.server_status_history_service",
 )

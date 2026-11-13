@@ -5,10 +5,13 @@ import {
   GUILD_REFRESH_COPY,
   GUILD_REFRESH_POLL_MS,
   GUILD_REFRESH_WATCH_TIMEOUT_MS,
-  guildRefreshCooldownCopy,
 } from "@/games/wow-forever/data/guild/guildRefreshConfig";
-import { baselineOf, cooldownLeftMs, cooldownMinutes, refreshFinished } from "@/games/wow-forever/lib/guild/refreshCooldown";
+import { refreshCooldownCopy } from "@/games/wow-forever/data/refreshCooldownCopy";
+import { useRefreshCooldown } from "@/games/wow-forever/hooks/useRefreshCooldown";
+import { useRefreshWatch } from "@/games/wow-forever/hooks/useRefreshWatch";
+import { baselineOf, refreshFinished } from "@/games/wow-forever/lib/guild/refreshCooldown";
 import { statusOf } from "@/games/wow-forever/lib/raidPageError";
+import { cooldownMinutes } from "@/games/wow-forever/lib/refreshCooldown";
 import type { GuildRefreshBaseline } from "@/games/wow-forever/types/guild/guildRefreshBaseline";
 import type { GuildResponse } from "@/games/wow-forever/types/guild/guildResponse";
 
@@ -30,38 +33,22 @@ interface GuildRefresh {
 export function useGuildRefresh(guild: GuildResponse, refetch: () => unknown): GuildRefresh {
   const [start] = useRefreshGuildMutation();
   const [watching, setWatching] = useState<GuildRefreshBaseline | null>(null);
-  const [nowMs, setNowMs] = useState(() => Date.now());
-  const cooldownLeft = cooldownLeftMs(guild.refresh_available_at, nowMs);
-
-  // Re-render when the cooldown runs out, so the button comes back on its own.
-  useEffect(() => {
-    if (guild.refresh_available_at === null) return undefined;
-    const wait = cooldownLeftMs(guild.refresh_available_at, Date.now());
-    if (wait <= 0) return undefined;
-    const timer = window.setTimeout(() => setNowMs(Date.now()), wait);
-    return () => window.clearTimeout(timer);
-  }, [guild.refresh_available_at]);
+  const { cooldownLeft, syncClock } = useRefreshCooldown(guild.refresh_available_at);
 
   // The roster or failure time moved: the refresh is done.
   const finished = watching !== null && refreshFinished(watching, guild);
   const isRefreshing = watching !== null && !finished;
 
   // While waiting: read the guild again every few seconds, and give up after a while.
-  useEffect(() => {
-    if (!isRefreshing) return undefined;
-    const poll = window.setInterval(() => {
-      setNowMs(Date.now());
-      void refetch();
-    }, GUILD_REFRESH_POLL_MS);
-    const giveUp = window.setTimeout(() => {
+  useRefreshWatch(isRefreshing, refetch, {
+    pollMs: GUILD_REFRESH_POLL_MS,
+    timeoutMs: GUILD_REFRESH_WATCH_TIMEOUT_MS,
+    onPoll: syncClock,
+    onGiveUp: () => {
       setWatching(null);
       showError(GUILD_REFRESH_COPY.slow);
-    }, GUILD_REFRESH_WATCH_TIMEOUT_MS);
-    return () => {
-      window.clearInterval(poll);
-      window.clearTimeout(giveUp);
-    };
-  }, [isRefreshing, refetch]);
+    },
+  });
 
   // Say how a finished refresh went, once.
   const reported = useRef<GuildRefreshBaseline | null>(null);
@@ -74,14 +61,14 @@ export function useGuildRefresh(guild: GuildResponse, refetch: () => unknown): G
 
   const refresh = useCallback(async () => {
     setWatching(baselineOf(guild));
-    setNowMs(Date.now());
+    syncClock();
     try {
       const answer = await start(guild.slug).unwrap();
       // The server stamped its cooldown before answering: count from now, not from the click.
-      setNowMs(Date.now());
+      syncClock();
       if (answer.status === "cooldown") {
         setWatching(null);
-        showError(guildRefreshCooldownCopy(cooldownMinutes(answer.retry_after_seconds * 1000)));
+        showError(refreshCooldownCopy(cooldownMinutes(answer.retry_after_seconds * 1000)));
       }
     } catch (error) {
       setWatching(null);
@@ -89,7 +76,7 @@ export function useGuildRefresh(guild: GuildResponse, refetch: () => unknown): G
     }
     // Either way the guild has a new cooldown to show.
     void refetch();
-  }, [guild, start, refetch]);
+  }, [guild, start, refetch, syncClock]);
 
   return { isRefreshing, cooldownLeft, refresh };
 }

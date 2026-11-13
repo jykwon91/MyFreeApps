@@ -12,7 +12,10 @@ import type { PriceListResponse } from "@/games/wow-forever/types/priceListRespo
 import { PRICE_COLUMNS, pricesReady } from "@/test/auctionPricesStub";
 
 const usePricesQuery = vi.hoisted(() => vi.fn());
-vi.mock("@/games/wow-forever/api/wowPricesApi", () => ({ useGetWowPricesQuery: usePricesQuery }));
+vi.mock("@/games/wow-forever/api/wowPricesApi", async () => ({
+  useGetWowPricesQuery: usePricesQuery,
+  ...(await import("@/test/auctionPricesStub")).refreshApiStub,
+}));
 
 const loadClientItems = vi.hoisted(() => vi.fn());
 vi.mock("@/games/wow-forever/lib/clientItemsLoader", () => ({ loadClientItems }));

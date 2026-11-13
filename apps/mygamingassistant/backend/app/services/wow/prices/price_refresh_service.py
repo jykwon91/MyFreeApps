@@ -15,13 +15,14 @@ house — each house is its own server market, never pooled:
   house answering empty is far likelier a Blizzard hiccup than an empty market).
 
 A per-game advisory lock, taken before anything is fetched, makes an
-overlapping run (the scheduler and the CLI at once) skip.
+overlapping run (the scheduler, the CLI and an on-demand ``refresh_house``) skip.
 """
 from __future__ import annotations
 
 import logging
 import uuid
 from datetime import datetime, timezone
+from functools import partial
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -106,13 +107,10 @@ async def store_house(
     return _outcome(house, OUTCOME_UPDATED, len(result.prices))
 
 
-async def refresh_all(fetch: PriceFetch | None = None, *, now: datetime | None = None) -> list[FeedRefresh]:
-    """Read every mapped house and store each one's set. Returns what happened to each house.
-
-    The whole refresh is one transaction holding the game's lock, so a
-    reader sees every house's old set or every house's new one.
-    """
-    houses = mapped_houses()
+async def _refresh_houses(
+    houses: list[MappedHouse], fetch: PriceFetch, now: datetime | None,
+) -> list[FeedRefresh]:
+    """Read these houses and store each one's set, in one transaction holding the game's lock."""
     async with unit_of_work() as db:
         game = await get_game_by_slug(db, WOW_FOREVER_GAME_SLUG)
         game_id = game.id if game else None
@@ -128,10 +126,30 @@ async def refresh_all(fetch: PriceFetch | None = None, *, now: datetime | None =
             if not await price_feed_repo.try_refresh_lock(db, game_id):
                 logger.info("wow prices: another worker is refreshing — skipped")
                 return [_outcome(house, OUTCOME_LOCKED, 0) for house in houses]
-            results = await (fetch or fetch_house_prices)()
+            results = await fetch()
             at = now or _now()
             return [await store_house(db, game_id, house, results[house.house_id], at) for house in houses]
     except Exception:
         # A DB error mid-write rolls every house back: the old prices stay.
         logger.exception("wow prices: refresh crashed — stored prices kept")
         return [_outcome(house, OUTCOME_FAILED, 0) for house in houses]
+
+
+async def refresh_all(fetch: PriceFetch | None = None, *, now: datetime | None = None) -> list[FeedRefresh]:
+    """Read every mapped house and store each one's set. Returns what happened to each house.
+
+    The whole refresh is one transaction holding the game's lock, so a
+    reader sees every house's old set or every house's new one.
+    """
+    return await _refresh_houses(mapped_houses(), fetch or fetch_house_prices, now)
+
+
+async def refresh_house(
+    house: MappedHouse, fetch: PriceFetch | None = None, *, now: datetime | None = None,
+) -> FeedRefresh:
+    """Read ONE house and store its set (the on-demand "Refresh now"); the other houses are untouched.
+
+    Takes the same game lock as ``refresh_all``, so it never overlaps a scheduled run.
+    """
+    outcomes = await _refresh_houses([house], fetch or partial(fetch_house_prices, [house]), now)
+    return outcomes[0] if outcomes else _outcome(house, OUTCOME_FAILED, 0)

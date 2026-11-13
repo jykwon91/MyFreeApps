@@ -75,10 +75,10 @@ async def fetch_with_client(client: BlizzardAuctionClient, houses: list[MappedHo
     return results
 
 
-async def fetch_house_prices() -> HouseResults:
-    """Take a token and read every mapped house. Any failure before the houses
-    (no credentials, a refused token, the index) is every house's error."""
-    houses = mapped_houses()
+async def fetch_house_prices(houses: list[MappedHouse] | None = None) -> HouseResults:
+    """Take a token and read the given houses (default: every mapped house). Any failure before
+    the houses (no credentials, a refused token, the index) is every house's error."""
+    houses = mapped_houses() if houses is None else houses
     try:
         async with BlizzardAuctionClient(settings.blizzard_client_id, settings.blizzard_client_secret) as client:
             return await fetch_with_client(client, houses)

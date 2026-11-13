@@ -38,7 +38,8 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
-const PRICES = "**/wow/prices**";
+/** The price list only, not "Refresh now" (/wow/prices/refresh). */
+const PRICES = /\/wow\/prices(\?|$)/;
 const COLUMNS = ["item_id", "market_value", "min_buyout", "quantity", "listings", "name"];
 const UPDATED_AT = "2026-11-06T09:00:00Z";
 const NOW = new Date("2026-11-06T12:00:00Z");

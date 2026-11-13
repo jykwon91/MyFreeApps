@@ -1172,6 +1172,31 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   lives in `data/guild/guildHallCopy.ts` and title flavour in `guildTitles.ts`.
   Never invent gold, achievements, guild ranks or past winners — we have no
   data for them. Tests: `wowGuildHallLogic.test.ts`, `wowGuildHall.test.tsx`.
+- Auction House "Refresh now" (next to "Prices from Blizzard … · updated X",
+  `components/auctionHouse/AuctionPriceFreshness.tsx` + `components/prices/PriceRefreshButton.tsx`,
+  `hooks/usePriceRefresh.ts`): `POST /api/wow/prices/refresh?server&faction` (same params as
+  GET prices) refreshes ONE house. The claim
+  (`price_refresh_now_service.claim` -> `price_feed_repo.claim_refresh`) is one atomic UPDATE
+  of `WowPriceFeed.checked_at`, refused inside `PRICE_REFRESH_COOLDOWN` (10 min, counted from
+  ANY ask for that house: the scheduler, a failed try, another click; per house; safe across
+  the 2 uvicorn workers; no migration). Answers: 202 `started` (the refresh runs after the
+  response via `refresh_house`, which takes the same advisory lock as `refresh_all`), 200
+  `cooldown` (+ `retry_after_seconds`), 200 `refreshing` (the lock is held, e.g. a scheduled
+  run; peeked through `pg_locks` so it never makes that run skip, no cooldown spent), 503
+  `price_refresh_disabled` when `WOW_PRICE_REFRESH_ENABLED` is false, 404 when the game isn't
+  seeded, 429 past 5 per 10 min per IP. `GET /api/wow/prices/refresh` is the polled state
+  (`Cache-Control: no-store`; `fetched_at`, `source_updated_at`, `refresh_available_at`,
+  `refresh_failed_at`), because GET prices is cached for 10 min. Outcome (`prices/priceRefresh.ts`):
+  `fetched_at` moved + `source_updated_at` moved = new prices (`loadFreshWowPrices` re-reads
+  with `Cache-Control: no-cache` into the `getWowPrices` cache); only `fetched_at` moved =
+  "Blizzard hasn't published newer prices yet — try again in ~N minutes" (inline note + error
+  toast, `@platform/ui` has no info toast); only `refresh_failed_at` moved = failed. Shares
+  `lib/refreshCooldown.ts`, `data/refreshCooldownCopy.ts`, `hooks/useRefreshCooldown.ts` and
+  `hooks/useRefreshWatch.ts` with the guild button. The page keys the button by house. Tests:
+  `tests/test_wow_prices_refresh_now.py` (the service is in `_UOW_CONSUMERS` in
+  `tests/conftest.py`), `__tests__/wowPriceRefreshButton.test.tsx`,
+  `e2e/mocked/wow-forever-auction-house-refresh.spec.ts`. Page tests that mock `wowPricesApi`
+  spread `refreshApiStub` from `test/auctionPricesStub.ts` (no button renders).
 - Guild "Refresh now" (next to "Roster updated …", `components/guild/GuildRefreshButton.tsx`,
   `hooks/useGuildRefresh.ts`): ONLY for the operator's guild — `GUILD_SLUG`
   (`topdeadcenter`) in `core/wow_guild.py`; the guild response carries `can_refresh`
@@ -1616,7 +1641,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Typed prices are optional overrides (`mga.wowForever.professions.priceOverrides.v2`,
   priced professions only); the pre-auction key `...prices.v1` is removed on read.
 - Tests stub the hook with `src/test/auctionPricesStub.ts`; E2E stubs
-  `**/wow/prices**` per house (`e2e/mocked/wow-forever-auction-prices.spec.ts`;
+  `/wow/prices` (not `/wow/prices/refresh`) per house (`e2e/mocked/wow-forever-auction-prices.spec.ts`;
   specs that only need "no prices yet" use `e2e/mocked/fixtures/emptyPrices.ts`).
   `e2e/wow-forever-prices-api.spec.ts` checks the live endpoint.
 
@@ -2297,6 +2322,7 @@ once on the router. This is the no-bandaid approach (see
 | `/api/wow/feature-requests/triage/*` | — | Superuser (`current_superuser`), BOTH modes. The one operator write surface in serve-only prod |
 | `/api/wow/map-captures` | GET, both modes (World Map locations captured in Forever) | POST import (full-auth only; prod gets captures via the committed pack) |
 | `/api/wow/prices` | GET, both modes (one US auction house's prices from Blizzard, `?server=pvp&faction=alliance\|horde\|neutral`, default PvP · Alliance; only mapped servers; refreshed by the scheduler; per-house ETag + 10-min cache) | — |
+| `/api/wow/prices/refresh` | GET (refresh state, no-store) and POST ("Refresh now" for one house; 10-min cooldown, 5/10 min per IP; 202 / 200 cooldown or refreshing / 503 / 429), both modes | — |
 | `/api/wow/characters/{slug}`, `/api/wow/characters/{slug}/render.png` | GET, both modes (a Forever character's profile + gear, and their cropped render, from Blizzard by name; per-IP limit, 5-min cache) | — |
 | `/api/wow/server-status`, `/api/wow/server-status/history` | GET, both modes (live status from Blizzard, 60-s cache; 7 days of recorded status per ruleset) | — |
 | `/api/wow/icons/{build}/{fdid}.webp` | GET, both modes (in-game icons streamed from object storage; year-long immutable cache, 404 + no-store when unpublished) | — |

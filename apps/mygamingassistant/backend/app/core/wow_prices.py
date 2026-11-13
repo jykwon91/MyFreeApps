@@ -6,6 +6,7 @@ its own market — one server's Alliance, Horde or neutral Blackwater house —
 so prices are stored and served PER HOUSE, never pooled. Regions and
 factions each need a CHECK value here AND in the migration that adds them.
 """
+from datetime import timedelta
 from typing import Final, Literal, get_args
 
 WOW_FOREVER_GAME_SLUG: Final = "wow-forever"
@@ -71,3 +72,17 @@ HOUSE_NAME_FACTIONS: Final[dict[str, PriceFaction]] = {
 # units sits. A low quantile is what a buyer actually pays, and a single
 # troll listing (one unit far below or above the rest) can't move it.
 MARKET_VALUE_QUANTILE: Final = 0.10
+
+# POST /wow/prices/refresh ("Refresh now" on the Auction house page): one house can be
+# pulled from Blizzard on demand once per cooldown, counted from the last time that
+# house was asked for (`WowPriceFeed.checked_at`: the scheduler's runs, failed tries
+# and other clicks all count), however many people click. Blizzard publishes a new
+# snapshot about hourly, so a shorter cooldown would mostly download the same prices.
+PRICE_REFRESH_COOLDOWN: Final = timedelta(minutes=10)
+# Per-IP on-demand refreshes per window. Each downloads ~20 MB from Blizzard.
+PRICE_REFRESH_RATE_LIMIT: Final = 5
+PRICE_REFRESH_RATE_WINDOW_SECONDS: Final = 600
+# GET /wow/prices/refresh: per-IP reads of the refresh state per window (a database read; the
+# page polls it every few seconds while a refresh runs).
+PRICE_REFRESH_STATE_RATE_LIMIT: Final = 60
+PRICE_REFRESH_STATE_RATE_WINDOW_SECONDS: Final = 60
