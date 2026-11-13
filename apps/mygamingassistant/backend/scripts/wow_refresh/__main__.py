@@ -124,7 +124,8 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         ["scripts.wow_legacy.build", *cache],
         # Reads the Professions, Item, Talent, Downrank, Spellbook, Rares, Races, Classes, Hunter pets, Library and Legacy output above. Its images are published last, below.
         ["scripts.wow_icons.build", *cache],
-        ["scripts.wow_item_names.build"],
+        # The AH's names: the client's ItemSparse plus the hotfix cache, like the Item build.
+        ["scripts.wow_item_names.build", *cache],
         ["scripts.wow_macros.build"],
         # Reads the World Map, Professions and Item output above, so it runs last.
         ["scripts.wow_gear.build", *cache],

@@ -34,3 +34,11 @@ def test_committed_file_names_forever_only_items() -> None:
     assert names.client_build
     assert names.names[247789] == "Novice's Practice Wand"
     assert names.names[249391] == "Pyrite"
+
+
+def test_committed_file_names_items_only_the_hotfix_cache_has() -> None:
+    # These come from the client's hotfix cache, not its ItemSparse file; the AH sells them.
+    names = client_item_names().names
+    assert names[16702] == "Dreadmist Belt"
+    assert names[1980] == "Underworld Band"
+    assert names[1713] == "Ankh of Life"
