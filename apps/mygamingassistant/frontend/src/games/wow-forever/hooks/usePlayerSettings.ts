@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { findClass, type WowClassId } from "@/games/wow-forever/data/classes";
 import { MAX_LEVEL, playerLevel } from "@/games/wow-forever/data/levelCap";
+import { characterSlugFromName } from "@/games/wow-forever/lib/character/characterSlug";
 import { readStored, writeStored } from "@/games/wow-forever/lib/safeLocalStorage";
 import { FACTION, type PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
@@ -14,6 +15,8 @@ export interface PlayerSettings {
   level: number | null;
   /** Map percent on `zoneId`; null = the middle of the zone until they say otherwise. */
   position: { x: number; y: number } | null;
+  /** The character the player set MGA's pages to (its Blizzard slug); the Auction house compares items with its gear. */
+  characterSlug: string | null;
 }
 
 export const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
@@ -22,6 +25,7 @@ export const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
   zoneId: null,
   level: null,
   position: null,
+  characterSlug: null,
 };
 
 function isPercent(v: unknown): v is number {
@@ -42,7 +46,9 @@ export function parsePlayerSettings(raw: unknown): PlayerSettings | null {
   let position: PlayerSettings["position"] = null;
   const p = r.position as Record<string, unknown> | null | undefined;
   if (zoneId !== null && p && isPercent(p.x) && isPercent(p.y)) position = { x: p.x, y: p.y };
-  return { faction, classId: cls.id, zoneId, level, position };
+  // Absent in values saved before characters could be remembered: that reads as "none".
+  const characterSlug = typeof r.characterSlug === "string" ? characterSlugFromName(r.characterSlug) : null;
+  return { faction, classId: cls.id, zoneId, level, position, characterSlug };
 }
 
 function readRaw(): string | null {

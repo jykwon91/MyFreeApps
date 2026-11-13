@@ -1256,7 +1256,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   load (`mga.wowForever.character.v1`, 5 max); `/wow-forever/character`
   opens the newest. Gear is a paper doll (`PAPER_DOLL_*` in
   `data/character/characterConfig.ts`); "Use for MGA's pages" writes the
-  character's faction, class and level to `usePlayerSettings`.
+  character's faction, class, level **and slug** (`characterSlug`, nullable,
+  absent in older saved values) to `usePlayerSettings`; the Auction house reads
+  the slug to compare items with that character's gear.
 - Stats panel (`CharacterStatsPanel`, lines from `lib/character/characterStats.ts`):
   Blizzard's own totals from `/statistics` — never recomputed. Retail
   leftovers (mastery, versatility, lifesteal, avoidance, ratings) are dropped
@@ -1426,6 +1428,27 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   cheapest, on sale ("23,980 in 910 auctions", `onSaleText`). Filter/sort is
   the pure `prices/auctionSearch.ts` (default "Most on sale"; 50 browse /
   200 search cap).
+- Auction house item tooltip + gear compare: an item's name in `AuctionRow` is
+  `AuctionItemName` (a button — hover/focus, or a tap that toggles; a tap
+  elsewhere closes) opening `components/itemCompare/ItemCompareTooltip` — the
+  in-game `ItemTooltipContent` beside "Currently equipped" blocks (side by side
+  when wide, stacked on a phone; capped to the viewport and scrollable via
+  `useHoverTooltip({ fitToViewport, interactive })`, so a pointer can reach the
+  lookup link). The character is `usePlayerSettings().characterSlug`
+  (set by CharacterHeader's "Use for MGA's pages"), fetched with
+  `useGetCharacterQuery` ONLY while a tooltip is open (RTK cache reused); the
+  worn items' stats come from `ClientItemList.byId`, never parsed from
+  Blizzard's tooltip text. Pure logic in `lib/itemCompare/`: `comparisonSlots`
+  (Blizzard slot per `ItemSlot`: rings/trinkets both, one-hander = main hand +
+  off hand only if it holds a weapon, two-hander = both hands, shield/held =
+  off hand, ranged/thrown/relic = RANGED), `compareItems` (stat/armor/DPS
+  delta, equal omitted), `deltaLines` (green gain / red "−" loss),
+  `equippedComparisons`. A worn item missing from the game files, or either
+  item with a random "of the …" suffix, shows "stats not known" / "can't be
+  compared" — never a guess. No saved character = one hint line + link to
+  `/wow-forever/character`. Tests: `wowItemCompare.test.ts`,
+  `wowAuctionItemTooltip.test.tsx`,
+  `e2e/mocked/wow-forever-auction-item-tooltip.spec.ts`.
 - Auction house filters (operator: "more robust … icons are too small … more
   filters"): every filter and the sort live in the URL via
   `hooks/useAuctionFilters.ts` (allowlisted params, replace-history, defaults

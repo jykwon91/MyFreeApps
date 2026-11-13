@@ -374,8 +374,26 @@ describe("WowCharacterPage", () => {
     renderAt("/wow-forever/character/jason-kwon");
     fireEvent.click(screen.getByRole("button", { name: "Use for MGA's pages" }));
     const saved = JSON.parse(window.localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY) ?? "{}");
-    expect(saved).toMatchObject({ faction: "A", classId: "warlock", level: 37 });
+    expect(saved).toMatchObject({ faction: "A", classId: "warlock", level: 37, characterSlug: "jason-kwon" });
     expect(screen.getByRole("button", { name: /MGA's pages use this character/ })).toBeDisabled();
+  });
+
+  it("offers the button again when settings saved before characters were remembered match but have no character", () => {
+    window.localStorage.setItem(
+      PLAYER_SETTINGS_STORAGE_KEY,
+      JSON.stringify({ faction: "A", classId: "warlock", zoneId: null, level: 37, position: null }),
+    );
+    mockQuery.mockReturnValue(query({ data: CHARACTER }));
+    renderAt("/wow-forever/character/jason-kwon");
+    expect(screen.getByRole("button", { name: "Use for MGA's pages" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Use for MGA's pages" }));
+    expect(JSON.parse(window.localStorage.getItem(PLAYER_SETTINGS_STORAGE_KEY) ?? "{}").characterSlug).toBe("jason-kwon");
+  });
+
+  it("says the Auction house compares with the character's gear", () => {
+    mockQuery.mockReturnValue(query({ data: CHARACTER }));
+    renderAt("/wow-forever/character/jason-kwon");
+    expect(screen.getByText(/Auction house compare items with this character's gear/)).toBeInTheDocument();
   });
 });
 

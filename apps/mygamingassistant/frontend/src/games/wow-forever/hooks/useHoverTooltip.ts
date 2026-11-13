@@ -1,7 +1,8 @@
-import { autoUpdate, flip, offset, shift, useFloating } from "@floating-ui/react-dom";
+import { autoUpdate, flip, offset, shift, size, useFloating } from "@floating-ui/react-dom";
 import { useCallback, useEffect, useId, useRef, useState, type FocusEvent, type PointerEvent } from "react";
 import {
   ITEM_TOOLTIP_FALLBACK_PLACEMENTS,
+  ITEM_TOOLTIP_HIDE_GRACE_MS,
   ITEM_TOOLTIP_OFFSET_PX,
   ITEM_TOOLTIP_PLACEMENT,
   ITEM_TOOLTIP_SHOW_DELAY_MS,
@@ -15,6 +16,16 @@ interface HoverTooltipOptions {
    * Off for links, where a tap must only navigate.
    */
   toggleOnTap?: boolean;
+  /**
+   * Caps the tooltip's height to the room the viewport leaves it, so a tall one
+   * (an item beside the gear it is compared with) scrolls instead of running off screen.
+   */
+  fitToViewport?: boolean;
+  /**
+   * The pointer may travel from the trigger onto the tooltip without closing it (spread
+   * `floatingProps` on the tooltip), so a link inside it can be clicked with a mouse.
+   */
+  interactive?: boolean;
 }
 
 /**
@@ -24,7 +35,7 @@ interface HoverTooltipOptions {
  * (`toggleOnTap` changes that). Placed by Floating UI: above the trigger,
  * flipped below at the viewport edge, shifted to stay inside it.
  */
-export function useHoverTooltip({ toggleOnTap = false }: HoverTooltipOptions = {}) {
+export function useHoverTooltip({ toggleOnTap = false, fitToViewport = false, interactive = false }: HoverTooltipOptions = {}) {
   const [open, setOpen] = useState(false);
   const timer = useRef<number | null>(null);
   const lastPointerType = useRef("");
@@ -40,6 +51,16 @@ export function useHoverTooltip({ toggleOnTap = false }: HoverTooltipOptions = {
     middleware: [
       offset(ITEM_TOOLTIP_OFFSET_PX),
       flip({ fallbackPlacements: ITEM_TOOLTIP_FALLBACK_PLACEMENTS, padding: ITEM_TOOLTIP_VIEWPORT_PADDING_PX }),
+      ...(fitToViewport
+        ? [
+            size({
+              padding: ITEM_TOOLTIP_VIEWPORT_PADDING_PX,
+              apply({ availableHeight, elements }) {
+                elements.floating.style.maxHeight = `${Math.max(0, availableHeight)}px`;
+              },
+            }),
+          ]
+        : []),
       shift({ padding: ITEM_TOOLTIP_VIEWPORT_PADDING_PX }),
     ],
     whileElementsMounted: autoUpdate,
@@ -71,12 +92,14 @@ export function useHoverTooltip({ toggleOnTap = false }: HoverTooltipOptions = {
   useEffect(() => {
     if (!open || !toggleOnTap) return;
     function onOutsidePointerDown(event: globalThis.PointerEvent) {
-      if (reference && event.target instanceof Node && reference.contains(event.target)) return;
+      const target = event.target;
+      // A touch inside the tooltip (to scroll it) is not "elsewhere".
+      if (target instanceof Node && (reference?.contains(target) || floating?.contains(target))) return;
       hide();
     }
     document.addEventListener("pointerdown", onOutsidePointerDown);
     return () => document.removeEventListener("pointerdown", onOutsidePointerDown);
-  }, [open, toggleOnTap, reference, hide]);
+  }, [open, toggleOnTap, reference, floating, hide]);
 
   const onPointerEnter = useCallback(
     (event: PointerEvent) => {
@@ -92,10 +115,28 @@ export function useHoverTooltip({ toggleOnTap = false }: HoverTooltipOptions = {
 
   const onPointerLeave = useCallback(
     (event: PointerEvent) => {
-      if (event.pointerType === "mouse") hide();
+      if (event.pointerType !== "mouse") return;
+      if (!interactive) {
+        hide();
+        return;
+      }
+      // Give the pointer time to cross the gap onto the tooltip.
+      cancelTimer();
+      timer.current = window.setTimeout(hide, ITEM_TOOLTIP_HIDE_GRACE_MS);
     },
-    [hide],
+    [hide, cancelTimer, interactive],
   );
+
+  const floatingProps = interactive
+    ? {
+        onPointerEnter: (event: PointerEvent) => {
+          if (event.pointerType === "mouse") cancelTimer();
+        },
+        onPointerLeave: (event: PointerEvent) => {
+          if (event.pointerType === "mouse") hide();
+        },
+      }
+    : {};
 
   const onFocus = useCallback(
     (event: FocusEvent) => {
@@ -122,5 +163,5 @@ export function useHoverTooltip({ toggleOnTap = false }: HoverTooltipOptions = {
   const hoverProps = { onPointerEnter, onPointerLeave, onFocus, onBlur: hide, "aria-describedby": open ? tooltipId : undefined };
   const triggerProps = toggleOnTap ? { ...hoverProps, onPointerDown, onClick } : hoverProps;
 
-  return { open, tooltipId, triggerProps, setReference, setFloating, floatingStyles, isPositioned, placement };
+  return { open, tooltipId, triggerProps, floatingProps, setReference, setFloating, floatingStyles, isPositioned, placement };
 }

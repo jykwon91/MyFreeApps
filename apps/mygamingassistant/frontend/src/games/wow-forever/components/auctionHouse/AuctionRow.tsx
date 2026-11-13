@@ -1,5 +1,6 @@
 import AuctionBisBadge from "@/games/wow-forever/components/auctionHouse/AuctionBisBadge";
 import AuctionFigure from "@/games/wow-forever/components/auctionHouse/AuctionFigure";
+import AuctionItemName from "@/games/wow-forever/components/auctionHouse/AuctionItemName";
 import { AUCTION_ROW_GRID, AUCTION_ROW_LOOK } from "@/games/wow-forever/components/auctionHouse/auctionGrid";
 import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import { QUALITY_LABELS } from "@/games/wow-forever/data/itemQualityStyles";
@@ -22,9 +23,7 @@ export default function AuctionRow({ item, pick }: AuctionRowProps) {
       <div className="col-span-2 flex min-h-[44px] min-w-0 items-center gap-3 sm:col-span-1">
         <GameIcon icon={icon} size={48} smSize={40} thickBorder alt="" />
         <div className="flex min-w-0 flex-col items-start gap-1">
-          <span className="line-clamp-2 min-w-0 break-words font-medium" data-testid="auction-item-name">
-            {itemLabel(item.name, item.itemId)}
-          </span>
+          <AuctionItemName itemId={item.itemId} label={itemLabel(item.name, item.itemId)} />
           {pick && <AuctionBisBadge pick={pick} />}
         </div>
         {icon?.quality && <span className="sr-only">{QUALITY_LABELS[icon.quality]} quality</span>}
