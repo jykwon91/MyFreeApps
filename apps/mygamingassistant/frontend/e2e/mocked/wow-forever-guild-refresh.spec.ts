@@ -89,7 +89,7 @@ async function stub(page: Page, state: GuildState, outcome: "ok" | "blizzard_dow
 
 test("Refresh now shows loading at the click, then the roster reads just now and the button waits out the cooldown", async ({ page }) => {
   const calls = await stub(page, newState());
-  await page.goto("/wow-forever/guild");
+  await page.goto("/wow-forever/guild?tab=roster");
   await expect(page.getByText(/Roster updated/)).toContainText("2 hours ago");
 
   await page.getByRole("button", { name: "Refresh now" }).click();
@@ -115,7 +115,7 @@ test("a guild refreshed a moment ago starts with the button disabled and says fo
 
 test("a refresh Blizzard did not answer says so and keeps the list", async ({ page }) => {
   await stub(page, newState(), "blizzard_down");
-  await page.goto("/wow-forever/guild");
+  await page.goto("/wow-forever/guild?tab=roster");
 
   await page.getByRole("button", { name: "Refresh now" }).click();
 

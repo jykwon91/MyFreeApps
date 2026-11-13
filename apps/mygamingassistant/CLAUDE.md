@@ -1137,6 +1137,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Every member name goes through `GuildMemberLink`: bold, class-coloured,
   `size` sm|md|lg|xl (`GUILD_MEMBER_NAME_SIZES`), `onDark` on the banner. Never
   style a name at the call site. The menu item is titled "topdeadcenter".
+  The page is tabs (`GuildPageSections`, `data/guild/guildTabs.ts`): This
+  week (heroes, quests, hot races) / Titles / Arena / Who can craft? / Roster;
+  only the open tab renders, and the skeleton sketches only that tab.
+  `?tab=` holds it (first tab left out); without it an older link's `recipe` /
+  `board`/`faction` / member-filter params open crafting / arena / roster, and
+  `useGuildTab` writes the implied tab in so clearing that param stays put
+  (`lib/guild/guildTabParams.ts`). Call `useGuildTab` once per page
+  (`GuildPageBody`). The tab row is the shared `components/shared/TabList`
+  (also the character sheet's stat tabs): reuse it for any new tabs.
 - ONE guild only: the site shows and refreshes just the operator's guild,
   `GUILD_SLUG` = "topdeadcenter" (`core/wow_guild.py`; frontend `GUILD_SLUG` in
   `data/guild/guildConfig.ts`). Every `/api/wow/guilds/{slug}` route 404s any

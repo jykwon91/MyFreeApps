@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "The guild page in tabs",
+    "summary": "topdeadcenter's page is split into tabs: This week, Titles, Arena, Who can craft? and Roster, so each opens on its own instead of one long scroll. The tab is kept in the link, so you can share it, and older links still open the right one.",
+    "to": "/wow-forever/guild"
+  },
+  {
+    "date": "2026-11-13",
     "title": "Auction house: compare with your gear",
     "summary": "Hover an item's name on the Auction house (tap on a phone) to see its in-game tooltip beside what you wear in that slot, with what you'd gain in green and lose in red. Rings and trinkets compare with both of yours. Press \"Use for MGA's pages\" on your character's page once to set it up.",
     "to": "/wow-forever/auction-house"
