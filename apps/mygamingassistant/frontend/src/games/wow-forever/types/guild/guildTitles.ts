@@ -3,7 +3,7 @@ import type { SkippedGuildTitle } from "@/games/wow-forever/types/guild/skippedG
 
 /** Every title the guild's members hold, and the ones skipped for a big tie. */
 export interface GuildTitles {
-  /** All-time titles first, then professions, then this week's. */
+  /** Rarest first; within a tier, all-time titles, then professions, then this week's. */
   awarded: GuildTitle[];
   skipped: SkippedGuildTitle[];
   /** A member's titles in that same order. */

@@ -6,7 +6,9 @@ import {
   GUILD_TITLE_TIE_SHARE,
   GUILD_TITLES,
 } from "@/games/wow-forever/data/guild/guildTitles";
+import { GUILD_TITLE_TIER_STYLES } from "@/games/wow-forever/data/guild/titleTiers";
 import { LEADERBOARD_SOURCE_KIND, LEADERBOARDS } from "@/games/wow-forever/data/guild/leaderboardConfig";
+import { titleChallenger } from "@/games/wow-forever/lib/guild/guildChase";
 import { isGainBoard, rankBoard } from "@/games/wow-forever/lib/guild/guildLeaderboards";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
 import type { GuildTitle } from "@/games/wow-forever/types/guild/guildTitle";
@@ -20,12 +22,12 @@ export function titleTieLimit(rankedCount: number): number {
 }
 
 /** Whether the leaders' number earns a title at all: more than 0 (fewest deaths: any), a real skill on a profession. */
-function leadersQualify(board: LeaderboardBoard, best: number): boolean {
+export function leadersQualify(board: LeaderboardBoard, best: number): boolean {
   if (board.source.kind === LEADERBOARD_SOURCE_KIND.profession) return best >= GUILD_TITLE_PROFESSION_FLOOR;
   return board.ascending || best > 0;
 }
 
-/** Each board's title for its leaders (ties share it), and the titles skipped because too many (or all) tied. */
+/** Each board's title for its leaders (ties share it), rarest first, and the titles skipped because too many (or all) tied. */
 export function awardGuildTitles(members: readonly GuildMember[]): GuildTitles {
   const awarded: { title: GuildTitle; order: number }[] = [];
   const skipped: SkippedGuildTitle[] = [];
@@ -43,13 +45,20 @@ export function awardGuildTitles(members: readonly GuildMember[]): GuildTitles {
     }
     awarded.push({
       title: {
-        ...def, boardId: board.id, weekly: isGainBoard(board), holders: leaders.map((e) => e.member), display: leaders[0].display,
+        ...def,
+        boardId: board.id,
+        weekly: isGainBoard(board),
+        holders: leaders.map((e) => e.member),
+        display: leaders[0].display,
+        challenger: titleChallenger(ranked),
       },
       order: GUILD_TITLE_SOURCE_ORDER[board.source.kind],
     });
   }
-  // A stable sort keeps the board order within each kind.
-  const ordered = awarded.sort((a, b) => a.order - b.order).map((a) => a.title);
+  // Rarest first; a stable sort keeps the board order within each kind.
+  const ordered = awarded
+    .sort((a, b) => GUILD_TITLE_TIER_STYLES[b.title.tier].rank - GUILD_TITLE_TIER_STYLES[a.title.tier].rank || a.order - b.order)
+    .map((a) => a.title);
   const bySlug = new Map<string, GuildTitle[]>();
   for (const title of ordered) {
     for (const holder of title.holders) bySlug.set(holder.slug, [...(bySlug.get(holder.slug) ?? []), title]);

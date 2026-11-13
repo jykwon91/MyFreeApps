@@ -92,3 +92,9 @@
   .border-border { border-color: hsl(var(--border)); }
   .ring-ring { --tw-ring-color: hsl(var(--ring)); }
 }
+
+/* The shine that sweeps over an epic or legendary guild title medallion (GuildTitleMedallion). */
+@keyframes guild-shine {
+  from { translate: 0 0; }
+  to { translate: 450% 0; }
+}

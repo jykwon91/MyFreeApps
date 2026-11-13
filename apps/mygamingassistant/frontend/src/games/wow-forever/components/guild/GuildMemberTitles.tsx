@@ -4,11 +4,11 @@ import { GUILD_TITLE_COPY, GUILD_TITLE_SHOWN } from "@/games/wow-forever/data/gu
 import type { GuildTitle } from "@/games/wow-forever/types/guild/guildTitle";
 
 interface GuildMemberTitlesProps {
-  /** The member's titles, most notable first; undefined or empty for none. */
+  /** The member's titles, rarest first; undefined or empty for none. */
   titles: readonly GuildTitle[] | undefined;
 }
 
-/** A member's guild titles by their name: the first, and "+N" to show the rest. */
+/** A member's guild titles by their name: the rarest few, and "+N" to show the rest. */
 export default function GuildMemberTitles({ titles }: GuildMemberTitlesProps) {
   const [open, setOpen] = useState(false);
   const moreId = useId();
@@ -17,11 +17,11 @@ export default function GuildMemberTitles({ titles }: GuildMemberTitlesProps) {
   return (
     <span className="flex flex-wrap items-center gap-1">
       {titles.slice(0, GUILD_TITLE_SHOWN).map((title) => (
-        <GuildTitleBadge key={title.boardId} title={title} />
+        <GuildTitleBadge key={title.boardId} title={title} size="inline" />
       ))}
       <span id={moreId} hidden={!open} className={open ? "contents" : undefined}>
         {more.map((title) => (
-          <GuildTitleBadge key={title.boardId} title={title} />
+          <GuildTitleBadge key={title.boardId} title={title} size="inline" />
         ))}
       </span>
       {more.length > 0 ? (
