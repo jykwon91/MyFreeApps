@@ -1,7 +1,7 @@
 import GuildSkeletonCard from "@/games/wow-forever/components/guild/GuildSkeletonCard";
 import { GUILD_HEROES_SKELETON_CARDS, HOT_RACES_SHOWN } from "@/games/wow-forever/data/guild/guildHallCopy";
 
-/** The This week tab while it loads: the heroes strip, then the hot races. */
+/** The rest of the Home tab (under the Arena) while it loads: the heroes strip, then the hot races. */
 export default function GuildWeekSkeleton() {
   return (
     <>

@@ -2,7 +2,7 @@ import GuildPodiumSkeleton from "@/games/wow-forever/components/guild/GuildPodiu
 import GuildSkeletonCard from "@/games/wow-forever/components/guild/GuildSkeletonCard";
 import { LEADERBOARD_SKELETON_CHIPS } from "@/games/wow-forever/data/guild/leaderboardConfig";
 
-/** The Arena tab while it loads: category chips, board picker, podium and rows. */
+/** The Arena (top of the Home tab) while it loads: category chips, board picker, podium and rows. */
 export default function GuildArenaSkeleton() {
   return (
     <GuildSkeletonCard testId="guild-leaderboard-skeleton">

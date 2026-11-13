@@ -1,26 +1,30 @@
 import { GUILD_PARAMS } from "@/games/wow-forever/data/guild/guildConfig";
-import { LEADERBOARD_PARAMS } from "@/games/wow-forever/data/guild/leaderboardConfig";
 import { RECIPE_SEARCH_PARAM } from "@/games/wow-forever/data/guild/recipeSearchConfig";
-import { GUILD_DEFAULT_TAB, GUILD_TAB_PARAM, GUILD_TABS } from "@/games/wow-forever/data/guild/guildTabs";
+import { GUILD_DEFAULT_TAB, GUILD_LEGACY_TABS, GUILD_TAB_PARAM, GUILD_TABS } from "@/games/wow-forever/data/guild/guildTabs";
 import type { GuildTab } from "@/games/wow-forever/types/guild/guildTab";
 
-const ARENA_PARAMS = [LEADERBOARD_PARAMS.board, LEADERBOARD_PARAMS.faction];
 const ROSTER_PARAMS = Object.values(GUILD_PARAMS);
 
 function isGuildTab(value: string | null): value is GuildTab {
   return GUILD_TABS.some((t) => t === value);
 }
 
+function legacyGuildTab(value: string | null): GuildTab | undefined {
+  return value !== null && Object.prototype.hasOwnProperty.call(GUILD_LEGACY_TABS, value) ? GUILD_LEGACY_TABS[value] : undefined;
+}
+
 /**
  * The tab a guild link opens on. `?tab=` wins; without it, a link made before
- * the tabs (a board, a recipe search, a member filter) opens the tab that
- * holds it, so old links still land on what they pointed at. Pure.
+ * the tabs (a recipe search, a member filter) opens the tab that holds it, and a
+ * retired tab (`?tab=week`, `?tab=arena`) opens Home, which now holds both; a board
+ * or faction link is on Home already. Pure.
  */
 export function guildTabFromParams(params: URLSearchParams): GuildTab {
   const tab = params.get(GUILD_TAB_PARAM);
   if (isGuildTab(tab)) return tab;
+  const legacy = legacyGuildTab(tab);
+  if (legacy) return legacy;
   if (params.has(RECIPE_SEARCH_PARAM)) return "crafting";
-  if (ARENA_PARAMS.some((p) => params.has(p))) return "arena";
   if (ROSTER_PARAMS.some((p) => params.has(p))) return "roster";
   return GUILD_DEFAULT_TAB;
 }
