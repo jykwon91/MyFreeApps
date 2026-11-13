@@ -1,19 +1,64 @@
-import type { WelcomeManualSectionImageResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-image-response";
-import { FormSheet, LoadingButton, useTheme } from "@platform/mobile";
-import { Text } from "react-native";
-import { WELCOME_MANUAL_PHOTO_MESSAGES as MESSAGES } from "../../constants/welcomeManualForms";
-import WelcomeManualPhoto from "./WelcomeManualPhoto";
+import { useRef, useState } from "react";
+import { FlatList, Modal, Text, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  pageAtOffset,
+  photoViewerCounter,
+  WELCOME_MANUAL_PHOTO_VIEWER_GLYPHS as GLYPHS,
+  WELCOME_MANUAL_PHOTO_VIEWER_MESSAGES as MESSAGES,
+  WELCOME_MANUAL_PHOTO_VIEWER_STYLE as STYLE,
+} from "../../constants/welcomeManualPhotoViewer";
+import type { WelcomeManualPhotoViewerProps } from "../../types/WelcomeManualPhotoViewerProps";
+import WelcomeManualPhotoViewerPage from "./WelcomeManualPhotoViewerPage";
+import WelcomeManualViewerButton from "./WelcomeManualViewerButton";
 
-/** What someone with view-only access sees of a photo: the picture and its caption. */
-export default function WelcomeManualPhotoViewer({ image, onClose }: { image: WelcomeManualSectionImageResponse; onClose: () => void }) {
-  const { colors, fontSize } = useTheme();
+/** Every photo of a section, full screen: swipe or use the buttons to page, with a count and each caption. */
+export default function WelcomeManualPhotoViewer({ images, startIndex, onClose }: WelcomeManualPhotoViewerProps) {
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const list = useRef<FlatList>(null);
+  const [index, setIndex] = useState(startIndex);
+  const total = images.length;
+
+  function goTo(next: number): void {
+    if (next < 0 || next >= total) return;
+    setIndex(next);
+    list.current?.scrollToIndex({ index: next, animated: true });
+  }
+
+  function onSettled(event: NativeSyntheticEvent<NativeScrollEvent>): void {
+    setIndex(pageAtOffset(event.nativeEvent.contentOffset.x, width, total));
+  }
+
   return (
-    <FormSheet isOpen onRequestClose={onClose} title={MESSAGES.view}>
-      <WelcomeManualPhoto image={image} size="full" />
-      <Text style={{ fontSize: fontSize.md, color: image.caption ? colors.foreground : colors.mutedForeground }}>{image.caption ?? MESSAGES.noCaption}</Text>
-      <LoadingButton onPress={onClose} variant="secondary">
-        {MESSAGES.close}
-      </LoadingButton>
-    </FormSheet>
+    <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent testID="welcome-manual-photo-viewer" visible>
+      <View style={{ flex: 1, backgroundColor: STYLE.backdrop }}>
+        <FlatList
+          ref={list}
+          data={images}
+          getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
+          horizontal
+          initialScrollIndex={startIndex}
+          keyExtractor={(image) => image.id}
+          onMomentumScrollEnd={onSettled}
+          pagingEnabled
+          renderItem={({ item, index: i }) => <WelcomeManualPhotoViewerPage image={item} index={i} total={total} width={width} />}
+          showsHorizontalScrollIndicator={false}
+          testID="welcome-manual-photo-pager"
+        />
+        <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + 12, left: 12, right: 12, flexDirection: "row", justifyContent: "flex-end" }}>
+          <WelcomeManualViewerButton glyph={GLYPHS.close} label={MESSAGES.close} onPress={onClose} />
+        </View>
+        <View pointerEvents="box-none" style={{ position: "absolute", top: 0, bottom: 0, left: 12, right: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          {index > 0 ? <WelcomeManualViewerButton glyph={GLYPHS.previous} label={MESSAGES.previous} onPress={() => goTo(index - 1)} /> : <View />}
+          {index < total - 1 ? <WelcomeManualViewerButton glyph={GLYPHS.next} label={MESSAGES.next} onPress={() => goTo(index + 1)} /> : <View />}
+        </View>
+        <View pointerEvents="none" style={{ position: "absolute", bottom: insets.bottom + 12, left: 0, right: 0, alignItems: "center" }}>
+          <Text accessibilityLiveRegion="polite" style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 16, overflow: "hidden", backgroundColor: STYLE.overlay, color: STYLE.onBackdrop }}>
+            {photoViewerCounter(index, total)}
+          </Text>
+        </View>
+      </View>
+    </Modal>
   );
 }

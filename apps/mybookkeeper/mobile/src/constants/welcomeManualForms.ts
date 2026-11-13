@@ -114,7 +114,6 @@ export const WELCOME_MANUAL_PHOTO_MESSAGES = {
   unavailable: "This photo is missing from storage.",
   noCaption: "No caption",
   loading: "Loading photos",
-  close: "Close",
 } as const;
 
 export const DELETE_PHOTO_TITLE = "Delete this photo?";

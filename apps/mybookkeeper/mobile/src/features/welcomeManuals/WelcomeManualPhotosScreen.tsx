@@ -22,6 +22,7 @@ export default function WelcomeManualPhotosScreen({ manualId, sectionId }: Welco
     <WelcomeManualSectionGate manualId={manualId} sectionId={sectionId}>
       {({ refreshControl }, section) => {
         const open: WelcomeManualSectionImageResponse | undefined = section.images.find((image) => image.id === openId);
+        const openIndex = section.images.findIndex((image) => image.id === openId);
         return (
           <>
             <WelcomeManualItemList
@@ -48,7 +49,7 @@ export default function WelcomeManualPhotosScreen({ manualId, sectionId }: Welco
               testID="welcome-manual-photos-list"
             />
             {open && canWrite ? <WelcomeManualPhotoSheet image={open} manualId={manualId} onClose={() => setOpenId(null)} sectionId={sectionId} /> : null}
-            {open && !canWrite ? <WelcomeManualPhotoViewer image={open} onClose={() => setOpenId(null)} /> : null}
+            {open && !canWrite ? <WelcomeManualPhotoViewer images={section.images} startIndex={openIndex} onClose={() => setOpenId(null)} /> : null}
             {isUploading ? <WelcomeManualPhotoUploadSheet existingCount={section.images.length} manualId={manualId} onClose={() => setIsUploading(false)} sectionId={sectionId} /> : null}
             {isReordering ? <WelcomeManualPhotosReorder manualId={manualId} onClose={() => setIsReordering(false)} section={section} /> : null}
           </>

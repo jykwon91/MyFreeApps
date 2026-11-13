@@ -123,6 +123,15 @@ describe("the photos of a section", () => {
     expect(screen.queryByRole("button", { name: PHOTO.add })).toBeNull();
     expect(screen.queryByRole("button", { name: PHOTO.reorder })).toBeNull();
   });
+
+  it("opens a viewer at the tapped photo for someone who can only look", async () => {
+    startWelcomeManualsServer({ manuals: [withPhotos()], role: "viewer" });
+    await open();
+    await fireEvent.press(await screen.findByRole("button", { name: `Photo, ${PHOTO.noCaption}` }));
+    expect(screen.getByText("2 of 2")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Close photo viewer" }));
+    expect(screen.queryByText("2 of 2")).toBeNull();
+  });
 });
 
 describe("adding photos", () => {
