@@ -63,7 +63,7 @@ const GEAR = new Map<number, ClientItem>([
 ]);
 
 function context(over: Partial<AuctionFilterContext> = {}): AuctionFilterContext {
-  return { qualityOf: (id) => QUALITIES[id] ?? null, gear: GEAR, categories: null, classId: "mage", ...over };
+  return { qualityOf: (id) => QUALITIES[id] ?? null, gear: GEAR, categories: null, bisPicks: null, classId: "mage", ...over };
 }
 
 function filters(over: Partial<AuctionFilters>): AuctionFilters {
@@ -220,6 +220,8 @@ describe("filtersFromParams / writeFiltersToParams", () => {
       minLevel: 20,
       maxLevel: 40,
       usable: true,
+      bis: null,
+      bisLevel: null,
     });
   });
 
@@ -266,6 +268,7 @@ describe("describeActiveFilters", () => {
       filters({ qualities: ["rare", "epic"], minGold: 10, maxGold: 50, minQuantity: 10, minListings: 5, slot: "head", itemType: "Plate", minLevel: 20, usable: true }),
       "Warrior",
       null,
+      60,
     );
     expect(active.map((f) => f.label)).toEqual([
       "Quality: Rare, Epic",
@@ -280,13 +283,13 @@ describe("describeActiveFilters", () => {
   });
 
   it("names a backwards range low to high", () => {
-    const active = describeActiveFilters(filters({ minGold: 50, maxGold: 10, minLevel: 40, maxLevel: 15 }), "Warlock", null);
+    const active = describeActiveFilters(filters({ minGold: 50, maxGold: 10, minLevel: 40, maxLevel: 15 }), "Warlock", null, 60);
     expect(active.map((f) => f.label)).toEqual(["Price: 10g to 50g", "Level: 15 to 40"]);
   });
 
 
   it("is empty with nothing on, and the search and order are not filters", () => {
-    expect(describeActiveFilters(filters({ query: "x", sort: "gap" }), "Warlock", null)).toEqual([]);
+    expect(describeActiveFilters(filters({ query: "x", sort: "gap" }), "Warlock", null, 60)).toEqual([]);
   });
 
   it("knows which filters need the gear list", () => {
@@ -303,7 +306,7 @@ describe("describeActiveFilters", () => {
 });
 
 describe("auctionEmptyMessage", () => {
-  const active = describeActiveFilters(filters({ qualities: ["epic"], minGold: 10 }), "Warlock", null);
+  const active = describeActiveFilters(filters({ qualities: ["epic"], minGold: 10 }), "Warlock", null, 60);
 
   it("names the search, the filters, or both", () => {
     expect(auctionEmptyMessage({ query: "zzz", active: [], professionLabel: null })).toBe('No items match "zzz".');

@@ -259,7 +259,7 @@ describe("Auction house list: empty and paging", () => {
       Array.from({ length: 120 }, (_, i) => ({ itemId: 1000 + i, name: `Thing ${i}`, marketValue: 100 + i + bump, minBuyout: 100, quantity: 10, listings: 2 }));
     const list = (items: AuctionPrice[], key: string) => (
       <MemoryRouter>
-        <AuctionResults items={items} resultsKey={key} note={() => null} />
+        <AuctionResults items={items} resultsKey={key} bisPicks={null} note={() => null} />
       </MemoryRouter>
     );
     const view = render(list(things(0), "a"));

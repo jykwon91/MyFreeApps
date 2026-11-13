@@ -1431,6 +1431,20 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   category is picked or a link has `?cat=`; until it loads the list shows the
   skeleton, never an unfiltered list. An item the file doesn't list counts as
   Miscellaneous.
+- Auction house top picks (Gear group, `?bis=any|1|2|3`, optional
+  `?bisLvl=<1-60>`; invalid values ignored, `bisLvl` only with `bis`): keeps
+  only AH rows that are one of the top 3 for their slot for the player's class
+  at their saved level (else 60; the link's `bisLvl` wins), tagged "#1 Head".
+  `lib/auctionHouse/bisPicks.ts` (`computeBisPicks`) reuses `gear/rankGear.ts`
+  (`candidates`, `scorer`) and `gearFilters.ts` (`canEquip`) but ranks by score
+  alone (no unknown-source penalty); bind-on-pickup and random-suffix items are
+  skipped; rings and trinkets are one pool each; two-hand and main/off hand stay
+  separate cards (an item on two cards keeps its better rank). Spec = the one
+  last saved on the Best gear page for that class, else the first. "BiS" wording
+  only at level 60 (`data/auctionHouse/auctionBisCopy.ts`); below it "Top 3 for
+  level N <Class>". `useAuctionBisPicks` loads `useGearData` (item list + gear
+  facts) only while the filter is on and memoizes on class/spec/faction/level;
+  until it loads the list shows the skeleton, on failure `LoadErrorRetry`.
 - Auction house profession filter (`?prof=<crafting profession>`, replace;
   `?recipe=<spell id>`, push to set / replace to clear; changing `prof` drops
   `recipe`; `hooks/useAuctionMaterialFilter.ts`): `AuctionProfessionSelect`

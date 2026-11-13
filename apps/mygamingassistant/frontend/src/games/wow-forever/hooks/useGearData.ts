@@ -8,14 +8,16 @@ type Ready = Extract<GearDataState, { status: "ready" }>;
 /**
  * The item list and the gear sources/facts, loaded together; Retry reloads
  * whichever failed. The returned object only changes when the data or the
- * retry state does, so callers can memoise on it.
+ * retry state does, so callers can memoise on it. With `enabled` false nothing
+ * is requested and the state stays "loading" until it is true.
  */
-export function useGearData(): GearDataState {
+export function useGearData(enabled = true): GearDataState {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<{ attempt: number; data: Ready | null } | null>(null);
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
   useEffect(() => {
+    if (!enabled) return;
     let live = true;
     Promise.all([loadClientItems(), loadGearData()]).then(
       ([list, gear]) => live && setResult({ attempt, data: { status: "ready", list, gear } }),
@@ -24,7 +26,7 @@ export function useGearData(): GearDataState {
     return () => {
       live = false;
     };
-  }, [attempt]);
+  }, [attempt, enabled]);
 
   return useMemo<GearDataState>(() => {
     if (result?.data) return result.data;

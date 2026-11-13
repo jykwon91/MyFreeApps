@@ -25,7 +25,7 @@ const RAID_LIKE_QUALITIES: ReadonlySet<ItemQuality> = new Set(["epic", "legendar
 const UNKNOWN_SOURCE_DISCOUNT = 1 + CLOSE_SCORE_PCT / PERCENT;
 
 /** Scored, obtainable items for one class — before they're put in slot cards. */
-interface Candidate extends Omit<RankedGearItem, "pctOfBest" | "availableFrom"> {
+export interface Candidate extends Omit<RankedGearItem, "pctOfBest" | "availableFrom"> {
   availableFrom: number | null;
 }
 
@@ -48,7 +48,7 @@ export function compareRanked(a: Candidate, b: Candidate): number {
   );
 }
 
-function scorer(settings: GearSettings, leveling: boolean): (item: ClientItem, build: string) => number {
+export function scorer(settings: GearSettings, leveling: boolean): (item: ClientItem, build: string) => number {
   const specId = leveling ? LEVELING_SPEC_ID : settings.specId;
   const { weights } = resolveWeights({
     classId: settings.classId,
@@ -61,7 +61,7 @@ function scorer(settings: GearSettings, leveling: boolean): (item: ClientItem, b
 }
 
 /** Items a player of this class and faction could get, scored — before slot and level checks. */
-function candidates(
+export function candidates(
   items: readonly ClientItem[],
   data: GearData,
   settings: GearSettings,
