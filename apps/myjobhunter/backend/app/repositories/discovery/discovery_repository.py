@@ -20,11 +20,12 @@ from sqlalchemy import desc, func, nulls_last, outerjoin, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.discovered_job_state import DiscoveredJobState
 from app.models.discovery.discovered_job import DiscoveredJob
 from app.models.discovery.discovery_fetch import DiscoveryFetch
 from app.models.discovery.discovery_source import DiscoverySource
 from app.repositories.discovery.discovery_inbox_repository import (
-    active_only_predicate,
+    discovered_state_predicate,
 )
 
 
@@ -383,25 +384,17 @@ async def list_discovered(
     db: AsyncSession,
     user_id: uuid.UUID,
     *,
-    state: str = "inbox",
+    state: DiscoveredJobState = "inbox",
     limit: int = 50,
     offset: int = 0,
     source_id: uuid.UUID | None = None,
 ) -> list[DiscoveredJob]:
     """List discovered jobs scoped to user.
 
-    state:
-      - "inbox": not dismissed, not saved, not promoted, AND active
-        (the triage view) — active means not expired upstream and not
-        past its feed-declared close date.
-      - "saved": saved_at IS NOT NULL AND dismissed_at IS NULL AND active
-      - "all": every row (no active filter — the operator explicitly
-        asked for everything, including expired/closed listings).
-
-    "Active" excludes a row when ``expired_at IS NOT NULL`` (we observed it
-    vanish upstream) OR ``source_expires_at < now()`` (the feed told us it
-    closed). The operator wants active-ONLY in the inbox, so these are
-    excluded rather than greyed out.
+    Which rows each ``state`` holds is ``discovered_state_predicate``'s call
+    (shared with the pagination and coverage counts). The dismissed view is
+    newest-dismissed first; the others are highest score first. ``id`` breaks
+    ties in both, so offset pages never skip or repeat a row.
 
     source_id:
       When provided, restricts results to rows whose fetch_id points to a
@@ -421,37 +414,20 @@ async def list_discovered(
                 DiscoveredJob.fetch_id == DiscoveryFetch.id,
             )
         )
-        .where(DiscoveredJob.user_id == user_id)
+        .where(DiscoveredJob.user_id == user_id, *discovered_state_predicate(state))
     )
-    # Active-only predicate, shared by the inbox and saved views (and the
-    # coverage-count query) via ``active_only_predicate`` — one source of
-    # truth so the populations never drift.
-    active_only = active_only_predicate()
-
-    if state == "inbox":
-        stmt = stmt.where(
-            DiscoveredJob.dismissed_at.is_(None),
-            DiscoveredJob.saved_at.is_(None),
-            DiscoveredJob.promoted_application_id.is_(None),
-            *active_only,
-        )
-    elif state == "saved":
-        stmt = stmt.where(
-            DiscoveredJob.saved_at.isnot(None),
-            DiscoveredJob.dismissed_at.is_(None),
-            *active_only,
-        )
-    # else "all": no extra filter — include expired/closed rows on request
-
     if source_id is not None:
         stmt = stmt.where(DiscoveryFetch.discovery_source_id == source_id)
 
-    stmt = stmt.order_by(
-        # Highest score first, unscored last; id breaks ties so offset pages never skip or repeat a row.
-        nulls_last(desc(DiscoveredJob.score)),
-        desc(DiscoveredJob.discovered_at),
-        desc(DiscoveredJob.id),
-    ).limit(limit).offset(offset)
+    if state == "dismissed":
+        order = (desc(DiscoveredJob.dismissed_at), desc(DiscoveredJob.id))
+    else:
+        order = (
+            nulls_last(desc(DiscoveredJob.score)),
+            desc(DiscoveredJob.discovered_at),
+            desc(DiscoveredJob.id),
+        )
+    stmt = stmt.order_by(*order).limit(limit).offset(offset)
 
     result = await db.execute(stmt)
     rows = []
@@ -525,19 +501,18 @@ async def undo_dismiss_discovered(
 ) -> DiscoveredJob | None:
     """Clear dismissed_at / dismissed_reason so the job returns to the inbox.
 
-    Returns the updated row on success, or None when:
-    - The job doesn't exist or belongs to a different user (tenant isolation).
-    - The job is NOT currently dismissed (already active / saved / promoted).
-
-    Idempotency decision: a job that was never dismissed returns None (404) so
-    the frontend can distinguish "undo worked" from "nothing to undo". The
-    caller (service layer) translates None → 404.
+    Restores only rows the Dismissed view lists (same predicate), so Restore
+    never moves a posting into no view. None (→ 404 in the service) when the
+    job isn't the caller's, isn't dismissed, has expired/closed, or was
+    already turned into an application.
     """
-    job = await get_discovered(db, job_id, user_id)
+    stmt = select(DiscoveredJob).where(
+        DiscoveredJob.id == job_id,
+        DiscoveredJob.user_id == user_id,
+        *discovered_state_predicate("dismissed"),
+    )
+    job = (await db.execute(stmt)).scalar_one_or_none()
     if job is None:
-        return None
-    if job.dismissed_at is None:
-        # Not currently dismissed — nothing to undo.
         return None
     job.dismissed_at = None
     job.dismissed_reason = None

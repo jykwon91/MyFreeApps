@@ -53,6 +53,8 @@ const POSTING: DiscoveredJob = {
 const actions: string[] = [];
 let dismissed = false;
 let failUndo = false;
+/** Undo finds the posting already brought back (or expired) since: the backend answers 404. */
+let undoGone = false;
 
 function respond(config: InternalAxiosRequestConfig): { status: number; data: unknown } {
   if (config.url === "/discover/sources") return { status: 200, data: [] };
@@ -63,6 +65,7 @@ function respond(config: InternalAxiosRequestConfig): { status: number; data: un
   const action = config.url?.split("/").pop() ?? "";
   actions.push(action);
   if (action === "undo-dismiss" && failUndo) return { status: 500, data: { detail: "boom" } };
+  if (action === "undo-dismiss" && undoGone) return { status: 404, data: { detail: "Discovery resource not found" } };
   dismissed = action === "dismiss";
   return { status: 204, data: undefined };
 }
@@ -88,6 +91,7 @@ beforeEach(() => {
   actions.length = 0;
   dismissed = false;
   failUndo = false;
+  undoGone = false;
 });
 
 function makeStore() {
@@ -164,5 +168,16 @@ describe("Undo after dismissing a posting", () => {
     expect(screen.queryByText(TITLE)).toBeNull();
     expect(screen.queryByText("Posting brought back")).toBeNull();
     expect(undoMutationRecords(store)).toEqual([]);
+  });
+
+  it("says in plain words when the posting can no longer be brought back, instead of the server's not-found", async () => {
+    undoGone = true;
+    renderInbox();
+    await dismissThePosting();
+
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(await screen.findByText("This posting can no longer be brought back. It may already be in your inbox.")).toBeInTheDocument();
+    expect(screen.queryByText("Discovery resource not found")).toBeNull();
+    expect(screen.queryByText("Posting brought back")).toBeNull();
   });
 });

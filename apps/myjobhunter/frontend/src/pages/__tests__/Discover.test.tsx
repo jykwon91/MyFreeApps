@@ -1,5 +1,5 @@
 /**
- * Tests for Discover page — Saved tab, error branches, and tab navigation.
+ * Tests for Discover page — Saved and Dismissed tabs, error branches, and tab navigation.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -33,8 +33,8 @@ vi.mock("@/features/discover/DiscoverInboxView", () => ({
   ),
 }));
 
-vi.mock("@/features/discover/DiscoverSavedView", () => ({
-  default: () => <div data-testid="saved-view" />,
+vi.mock("@/features/discover/DiscoverListView", () => ({
+  default: ({ view }: { view: string }) => <div data-testid={`${view}-view`} />,
 }));
 
 vi.mock("@platform/ui", async (importOriginal) => {
@@ -125,6 +125,43 @@ describe("Discover page", () => {
         "aria-selected",
         "true",
       );
+    });
+  });
+
+  describe("Dismissed tab", () => {
+    it("renders a Dismissed tab after Saved", () => {
+      stubQueries();
+      renderDiscover();
+
+      expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Inbox", "Saved", "Dismissed"]);
+    });
+
+    it("opens the Dismissed list from ?view=dismissed", () => {
+      stubQueries({ hasSources: true });
+      renderDiscover("/discover?view=dismissed");
+
+      expect(screen.getByRole("tab", { name: "Dismissed" })).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByTestId("dismissed-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("inbox-view")).toBeNull();
+    });
+
+    it("switches to the Dismissed list when its tab is clicked", async () => {
+      const user = userEvent.setup();
+      stubQueries({ hasSources: true });
+      renderDiscover("/discover?view=saved");
+
+      await user.click(screen.getByRole("tab", { name: "Dismissed" }));
+
+      expect(screen.getByTestId("dismissed-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("saved-view")).toBeNull();
+    });
+
+    it("falls back to the inbox for an unknown ?view", () => {
+      stubQueries();
+      renderDiscover("/discover?view=archived");
+
+      expect(screen.getByRole("tab", { name: "Inbox" })).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByTestId("inbox-view")).toBeInTheDocument();
     });
   });
 

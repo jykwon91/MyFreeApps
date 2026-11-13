@@ -1,4 +1,6 @@
+import { DISCOVER_VIEW_LABELS, DISCOVER_VIEWS } from "@myjobhunter/api-client/constants/discoverViewLabels";
 import type { DiscoverView } from "@myjobhunter/api-client/types/discovery/discover-view";
+import type { DiscoverViewCopy } from "../types/DiscoverViewCopy";
 
 /** Copy for the Discovery screen, worded as the website's for a phone that's tapped, not clicked. */
 export const DISCOVER_SCREEN_MESSAGES = {
@@ -13,6 +15,7 @@ export const DISCOVER_SCREEN_MESSAGES = {
   loadingJobs: "Loading postings",
   couldntLoadInbox: "I couldn't load your inbox.",
   couldntLoadSaved: "I couldn't load your saved jobs.",
+  couldntLoadDismissed: "I couldn't load your dismissed jobs.",
   tryAgainOffer: "Want me to try again?",
   tryAgain: "Try again",
   noSavedSearchesHeading: "No saved searches yet",
@@ -22,16 +25,29 @@ export const DISCOVER_SCREEN_MESSAGES = {
   inboxEmptyBody: "Tap Refresh on a saved search above to fetch the latest postings.",
   savedEmptyHeading: "No saved jobs",
   savedEmptyBody: "When you save a posting from the inbox it shows up here — hold it until you're ready to apply.",
+  dismissedEmptyHeading: "No dismissed jobs",
+  dismissedEmptyBody: "Postings you dismiss show up here while they're still open, newest first, so you can restore one if you change your mind.",
   showAllSources: "Show every saved search",
   scoring: "Scoring your new postings",
-  listSummary: (view: DiscoverView, count: number) => `${view === "saved" ? "Saved" : "Inbox"}: ${count} posting${count === 1 ? "" : "s"}`,
+  listSummary: (view: DiscoverView, count: number) => `${DISCOVER_VIEW_LABELS[view]}: ${count} posting${count === 1 ? "" : "s"}`,
 } as const;
 
-/** The Inbox and Saved tabs, in the website's order. */
-export const DISCOVER_VIEW_SEGMENTS: readonly { value: DiscoverView; label: string }[] = [
-  { value: "inbox", label: "Inbox" },
-  { value: "saved", label: "Saved" },
-];
+/** The Inbox, Saved and Dismissed tabs, in the website's order. */
+export const DISCOVER_VIEW_SEGMENTS: readonly { value: DiscoverView; label: string }[] = DISCOVER_VIEWS.map((view) => ({
+  value: view,
+  label: DISCOVER_VIEW_LABELS[view],
+}));
+
+/** What each view says when it couldn't load, or has nothing to show. */
+export const DISCOVER_VIEW_COPY: Readonly<Record<DiscoverView, DiscoverViewCopy>> = {
+  inbox: { couldntLoad: DISCOVER_SCREEN_MESSAGES.couldntLoadInbox, emptyHeading: DISCOVER_SCREEN_MESSAGES.inboxEmptyHeading, emptyBody: DISCOVER_SCREEN_MESSAGES.inboxEmptyBody },
+  saved: { couldntLoad: DISCOVER_SCREEN_MESSAGES.couldntLoadSaved, emptyHeading: DISCOVER_SCREEN_MESSAGES.savedEmptyHeading, emptyBody: DISCOVER_SCREEN_MESSAGES.savedEmptyBody },
+  dismissed: {
+    couldntLoad: DISCOVER_SCREEN_MESSAGES.couldntLoadDismissed,
+    emptyHeading: DISCOVER_SCREEN_MESSAGES.dismissedEmptyHeading,
+    emptyBody: DISCOVER_SCREEN_MESSAGES.dismissedEmptyBody,
+  },
+};
 
 /** The source filter's choice for every saved search. No saved search's id is empty. */
 export const ALL_SOURCES = "";

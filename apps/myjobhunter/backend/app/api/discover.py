@@ -6,8 +6,9 @@ Endpoints:
 - ``GET  /discover/sources``                  — list saved searches
 - ``DELETE /discover/sources/{id}``           — deactivate (soft-delete)
 - ``POST /discover/sources/{id}/refresh``     — trigger a fetch cycle
-- ``GET  /discover``                          — list discovered jobs (inbox view)
+- ``GET  /discover``                          — list discovered jobs (inbox / saved / dismissed / all)
 - ``POST /discover/{id}/dismiss``             — hide a discovered job
+- ``POST /discover/{id}/undo-dismiss``        — restore a dismissed job to the inbox
 - ``POST /discover/{id}/save``                — keep a discovered job for later
 
 Auth: every endpoint requires an authenticated user via
@@ -27,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
 from app.core.config import settings
+from app.core.discovered_job_state import DiscoveredJobState
 from app.core.rate_limit import RateLimiter, check_user_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
@@ -277,7 +279,7 @@ async def refresh_source(
     response_model=DiscoveredJobListResponse,
 )
 async def list_discovered(
-    state: str = Query(default="inbox", pattern="^(inbox|saved|all)$"),
+    state: DiscoveredJobState = Query(default="inbox"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     source_id: uuid.UUID | None = Query(default=None),

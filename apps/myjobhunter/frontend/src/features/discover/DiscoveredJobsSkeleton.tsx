@@ -1,20 +1,27 @@
 import { Card, Skeleton } from "@platform/ui";
+import type { DiscoverView } from "@myjobhunter/api-client/types/discovery/discover-view";
+
+interface DiscoveredJobsSkeletonProps {
+  count?: number;
+  /** The Dismissed view's cards end in a dismissal line and Open + Restore instead of the triage buttons. */
+  view?: DiscoverView;
+}
 
 /**
- * Loading skeleton for the /discover inbox card list.
+ * Loading skeleton for a /discover card list.
  *
  * Cell widths mirror DiscoveredJobCard's loaded layout:
  *   - Title (~60% width)
  *   - Company + location (~40%)
  *   - Three meta chips
  *   - Description body (3 short lines)
- *   - Action button row (4 fixed-width buttons)
+ *   - Footer: the triage buttons, or (Dismissed) the dismissal line and Open + Restore
  *
  * No layout shift on first data arrival.
  */
-export default function DiscoveredJobsSkeleton({ count = 3 }: { count?: number }) {
+export default function DiscoveredJobsSkeleton({ count = 3, view = "inbox" }: DiscoveredJobsSkeletonProps) {
   return (
-    <div className="space-y-3" aria-busy="true">
+    <div className="space-y-3" aria-busy="true" data-testid="discovered-jobs-skeleton">
       {Array.from({ length: count }).map((_, i) => (
         <Card key={i} className="p-4 sm:p-5 space-y-3">
           <div className="flex items-start justify-between gap-3">
@@ -34,11 +41,21 @@ export default function DiscoveredJobsSkeleton({ count = 3 }: { count?: number }
             <Skeleton className="h-3 w-full" />
             <Skeleton className="h-3 w-5/6" />
           </div>
-          <div className="flex gap-2 pt-1">
-            <Skeleton className="h-9 w-16" />
-            <Skeleton className="h-9 w-20" />
-            <Skeleton className="h-9 w-16" />
-          </div>
+          {view === "dismissed" ? (
+            <div className="space-y-2 pt-1">
+              <Skeleton className="h-3 w-1/3" />
+              <div className="flex gap-2" data-testid="skeleton-actions">
+                <Skeleton className="h-9 w-16" />
+                <Skeleton className="h-9 w-24" />
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2 pt-1" data-testid="skeleton-actions">
+              <Skeleton className="h-9 w-16" />
+              <Skeleton className="h-9 w-20" />
+              <Skeleton className="h-9 w-16" />
+            </div>
+          )}
         </Card>
       ))}
     </div>

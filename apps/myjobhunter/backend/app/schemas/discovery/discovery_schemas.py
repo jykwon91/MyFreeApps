@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validat
 
 from platform_shared.schemas.pagination import ListResponse
 
+from app.core.discovered_job_state import DiscoveredJobState
 from app.schemas.discovery.greenhouse_source_config import GreenhouseSourceConfig
 from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
 from app.schemas.discovery.lever_source_config import LeverSourceConfig
@@ -306,13 +307,12 @@ class DiscoveredJobListResponse(ListResponse[DiscoveredJobResponse]):
     returned page length, so ``has_more`` drives the frontend's load-more.
     """
 
-    state: Literal["inbox", "saved", "all"]
+    state: DiscoveredJobState
     # Inbox scoring coverage, spanning the WHOLE active inbox (not just the
     # returned page). ``scored_count`` of ``total_count`` rows carry an AI
     # score; the rest are awaiting scoring or fell outside the day's scoring
     # budget. The frontend renders this as "Scored N of M" so a large
     # unscored tail reads as "daily limit reached", not "broken". Both are
-    # None for the ``saved`` / ``all`` views, where the coverage framing
-    # doesn't apply.
+    # None for the other views, where the coverage framing doesn't apply.
     scored_count: int | None = None
     total_count: int | None = None

@@ -17,7 +17,9 @@ import { DISCOVER_ACTION_MESSAGES } from "@myjobhunter/api-client/constants/disc
 import { discoveredJobFacts } from "@myjobhunter/api-client/utils/discoveredJobFacts";
 import { discoveredJobUrl } from "@myjobhunter/api-client/utils/discoveredJobUrl";
 import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
+import { undoDismissFailureMessage } from "@myjobhunter/api-client/utils/undoDismissFailureMessage";
 import { STATUS_TONE_BADGE_COLORS } from "@/constants/statusToneBadgeColors";
+import DismissedJobFooter from "./DismissedJobFooter";
 import DismissReasonPopover from "./DismissReasonPopover";
 
 interface DiscoveredJobCardProps {
@@ -74,7 +76,7 @@ export default function DiscoveredJobCard({
       await dispatch(undoDismissDiscoveredJob(job.id));
       showSuccess(DISCOVER_ACTION_MESSAGES.undone);
     } catch (err) {
-      showError(discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.undoFailed));
+      showError(undoDismissFailureMessage(err, DISCOVER_ACTION_MESSAGES.undoFailed));
     }
   }
 
@@ -214,7 +216,10 @@ export default function DiscoveredJobCard({
         </p>
       )}
 
-      {showReasons ? (
+      {job.dismissed_at ? (
+        // Only the Dismissed view lists dismissed postings: Restore replaces the triage actions.
+        <DismissedJobFooter job={job} />
+      ) : showReasons ? (
         <DismissReasonPopover
           onDismiss={doDismiss}
           onCancel={() => setShowReasons(false)}
