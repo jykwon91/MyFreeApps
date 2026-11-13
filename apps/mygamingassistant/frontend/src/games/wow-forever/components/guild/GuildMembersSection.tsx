@@ -3,6 +3,7 @@ import GuildMemberList from "@/games/wow-forever/components/guild/GuildMemberLis
 import GuildMemberToolbar from "@/games/wow-forever/components/guild/GuildMemberToolbar";
 import { GUILD_SORT_DESCENDING_FIRST, type GuildSortKey } from "@/games/wow-forever/data/guild/guildConfig";
 import { useGuildMemberFilters } from "@/games/wow-forever/hooks/useGuildMemberFilters";
+import { professionCounts } from "@/games/wow-forever/lib/guild/guildMemberProfessions";
 import { classCounts, filterMembers, filtersFromParams, sortMembers } from "@/games/wow-forever/lib/guild/guildMembers";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
 import type { GuildTitle } from "@/games/wow-forever/types/guild/guildTitle";
@@ -18,11 +19,13 @@ interface GuildMembersSectionProps {
 export default function GuildMembersSection({ members, rosterUpdatedAt, titles }: GuildMembersSectionProps) {
   const [urlFilters, setFilters] = useGuildMemberFilters();
   const classes = useMemo(() => classCounts(members), [members]);
-  // A shared link can name a class nobody in the guild plays now: show everyone, as the select does.
+  const professions = useMemo(() => professionCounts(members), [members]);
+  // A shared link can name a class or profession nobody in the guild has now: show everyone, as the selects do.
   const filters = useMemo(() => {
-    if (classes.some(([name]) => name === urlFilters.className)) return urlFilters;
-    return { ...urlFilters, className: "" };
-  }, [classes, urlFilters]);
+    const className = classes.some(([name]) => name === urlFilters.className) ? urlFilters.className : "";
+    const profession = professions.some((p) => p.id === urlFilters.profession) ? urlFilters.profession : "";
+    return { ...urlFilters, className, profession };
+  }, [classes, professions, urlFilters]);
   const shown = useMemo(
     () => sortMembers(filterMembers(members, filters), filters.sort, filters.descending),
     [members, filters],
@@ -39,12 +42,13 @@ export default function GuildMembersSection({ members, rosterUpdatedAt, titles }
 
   return (
     <>
-      <GuildMemberToolbar filters={filters} classes={classes} onChange={setFilters} />
+      <GuildMemberToolbar filters={filters} classes={classes} professions={professions} onChange={setFilters} />
       <GuildMemberList
         members={shown}
         total={members.length}
         rosterUpdatedAt={rosterUpdatedAt}
         titles={titles}
+        profession={filters.profession}
         sort={filters.sort}
         descending={filters.descending}
         onSort={onSort}

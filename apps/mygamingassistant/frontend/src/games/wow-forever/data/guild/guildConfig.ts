@@ -30,7 +30,7 @@ export const GUILD_SORT_LABELS: Readonly<Record<GuildSortKey, string>> = {
 export const GUILD_SORT_DESCENDING_FIRST: ReadonlySet<GuildSortKey> = new Set([GUILD_SORT_KEYS.level, GUILD_SORT_KEYS.itemLevel]);
 
 /** URL search params of the member list. */
-export const GUILD_PARAMS = { query: "q", className: "class", minLevel: "level", sort: "sort", direction: "dir" } as const;
+export const GUILD_PARAMS = { query: "q", className: "class", minLevel: "level", profession: "prof", sort: "sort", direction: "dir" } as const;
 export const GUILD_DIRECTION_DESC = "desc";
 export const GUILD_DIRECTION_ASC = "asc";
 
@@ -72,5 +72,5 @@ export const GUILD_NOT_FOUND_STATUS = 404;
 export const GUILD_MISSING_VALUE = "—";
 /** The loading skeleton's member rows and toolbar controls. */
 export const GUILD_SKELETON_ROWS = 8;
-export const GUILD_SKELETON_CONTROLS = 4;
+export const GUILD_SKELETON_CONTROLS = 5;
 export const MS_PER_HOUR = 3_600_000;

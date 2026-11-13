@@ -6,7 +6,7 @@ import { GUILD_SKELETON_CONTROLS, GUILD_SKELETON_ROWS } from "@/games/wow-foreve
 export default function GuildRosterSkeleton() {
   return (
     <GuildSkeletonCard testId="guild-roster-skeleton">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {Array.from({ length: GUILD_SKELETON_CONTROLS }, (_, i) => (
           <div key={i} className="h-[68px] rounded-md bg-muted animate-pulse" />
         ))}

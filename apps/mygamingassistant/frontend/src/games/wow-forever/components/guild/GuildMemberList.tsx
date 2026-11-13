@@ -1,4 +1,5 @@
 import { Button } from "@platform/ui";
+import type { GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
 import type { GuildSortKey } from "@/games/wow-forever/data/guild/guildConfig";
 import GuildMemberCards from "@/games/wow-forever/components/guild/GuildMemberCards";
 import GuildMemberTable from "@/games/wow-forever/components/guild/GuildMemberTable";
@@ -12,6 +13,8 @@ interface GuildMemberListProps {
   rosterUpdatedAt: string | null;
   /** Each member's guild titles, by slug. */
   titles: ReadonlyMap<string, readonly GuildTitle[]>;
+  /** The Profession filter: shows each member's skill in it. "" for none. */
+  profession: GuideProfession | "";
   sort: GuildSortKey;
   descending: boolean;
   onSort: (column: GuildSortKey) => void;
@@ -24,6 +27,7 @@ export default function GuildMemberList({
   total,
   rosterUpdatedAt,
   titles,
+  profession,
   sort,
   descending,
   onSort,
@@ -43,8 +47,8 @@ export default function GuildMemberList({
         </div>
       ) : (
         <>
-          <GuildMemberTable members={members} rosterUpdatedAt={rosterUpdatedAt} titles={titles} sort={sort} descending={descending} onSort={onSort} />
-          <GuildMemberCards members={members} rosterUpdatedAt={rosterUpdatedAt} titles={titles} />
+          <GuildMemberTable members={members} rosterUpdatedAt={rosterUpdatedAt} titles={titles} profession={profession} sort={sort} descending={descending} onSort={onSort} />
+          <GuildMemberCards members={members} rosterUpdatedAt={rosterUpdatedAt} titles={titles} profession={profession} />
           <p className="text-xs text-muted-foreground">Blizzard shares rank numbers, not names. Lower is higher.</p>
         </>
       )}

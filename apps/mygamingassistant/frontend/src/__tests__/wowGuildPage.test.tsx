@@ -32,6 +32,8 @@ import WowGuildPage from "@/games/wow-forever/pages/WowGuildPage";
 import WowLegacyGuildRedirect from "@/games/wow-forever/pages/WowLegacyGuildRedirect";
 import type { GuildCrafter } from "@/games/wow-forever/types/guild/guildCrafter";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
+import { memberSkill, memberSkillText, professionCounts } from "@/games/wow-forever/lib/guild/guildMemberProfessions";
+import type { GuildMemberFilters } from "@/games/wow-forever/types/guild/guildMemberFilters";
 import type { GuildMemberBaseline } from "@/games/wow-forever/types/guild/guildMemberBaseline";
 import type { GuildRecipeSearch } from "@/games/wow-forever/types/guild/guildRecipeSearch";
 import type { GuildRecipeSearchArgs } from "@/games/wow-forever/types/guild/guildRecipeSearchArgs";
@@ -195,10 +197,35 @@ describe("guild member list logic", () => {
   it("round-trips its state through the URL, leaving defaults out", () => {
     const base = filtersFromParams(new URLSearchParams());
     expect(paramsFromFilters(base).toString()).toBe("");
-    const custom = { query: "jo", className: "Mage", minLevel: 10, sort: GUILD_SORT_KEYS.level, descending: false };
+    const custom: GuildMemberFilters = {
+      query: "jo", className: "Mage", minLevel: 10, profession: "tailoring", sort: GUILD_SORT_KEYS.level, descending: false,
+    };
+    expect(paramsFromFilters(custom).get("prof")).toBe("tailoring");
     expect(filtersFromParams(paramsFromFilters(custom))).toEqual(custom);
+    expect(filtersFromParams(new URLSearchParams("prof=basketweaving")).profession).toBe("");
     expect(filtersFromParams(new URLSearchParams("sort=bogus&level=7")).sort).toBe(GUILD_SORT_KEYS.rank);
     expect(filtersFromParams(new URLSearchParams("level=7")).minLevel).toBe(0);
+  });
+
+  it("filters by profession and counts each profession someone has, in the picker's order", () => {
+    const crafters = [
+      member({ slug: "a-a", professions: [{ id: 197, skill: 148, max_skill: 225 }, { id: 185, skill: 75, max_skill: 75 }] }),
+      member({ slug: "b-b", professions: [{ id: 171, skill: 300, max_skill: 300 }] }),
+      member({ slug: "c-c", professions: [{ id: 197, skill: 300, max_skill: 300 }] }),
+      member({ slug: "d-d", professions: [] }),
+    ];
+    const base = filtersFromParams(new URLSearchParams());
+    expect(filterMembers(crafters, { ...base, profession: "tailoring" }).map((m) => m.slug)).toEqual(["a-a", "c-c"]);
+    expect(filterMembers(crafters, { ...base, profession: "mining" })).toEqual([]);
+    expect(memberSkill(crafters[0], "tailoring")).toBe("148 / 225");
+    expect(memberSkill(crafters[3], "tailoring")).toBeNull();
+    expect(memberSkillText(crafters[0], "cooking")).toBe("Cooking 75 / 75");
+    expect(memberSkillText(crafters[1], "cooking")).toBeNull();
+    expect(professionCounts(crafters).map((p) => [p.label, p.count])).toEqual([
+      ["Alchemy", 1],
+      ["Tailoring", 2],
+      ["Cooking", 1],
+    ]);
   });
 
   it("counts classes and spots a member whose profile stopped refreshing", () => {
@@ -325,6 +352,39 @@ describe("guild page", () => {
       "href",
       "/wow-forever/character/tiny-john",
     );
+  });
+
+  it("filters the roster by profession and shows each member's skill in it", () => {
+    const members = [
+      member({ professions: [{ id: 197, skill: 148, max_skill: 225 }] }),
+      member({ slug: "big-sue", name: "Big", surname: "Sue", rank: 1, professions: [{ id: 171, skill: 300, max_skill: 300 }] }),
+    ];
+    mockQuery.mockReturnValue(query({ data: { ...GUILD, members } }));
+    renderAt("/wow-forever/topdeadcenter?tab=roster");
+    const select = screen.getByLabelText("Profession");
+    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Any profession",
+      "Alchemy (1)",
+      "Tailoring (1)",
+    ]);
+    expect(screen.queryByRole("columnheader", { name: "Tailoring" })).toBeNull();
+    fireEvent.change(select, { target: { value: "tailoring" } });
+    expect(screen.getByTestId("location")).toHaveTextContent(/prof=tailoring/);
+    expect(tableNames()).toEqual(["Jason Kwon"]);
+    expect(screen.getByRole("columnheader", { name: "Tailoring" })).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("148 / 225")).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Guild members" })).getByText(/Tailoring 148 \/ 225/)).toBeInTheDocument();
+  });
+
+  it("shows everyone when a shared link names a profession nobody in the guild has, and drops it on the next change", () => {
+    const members = MEMBERS.map((m) => ({ ...m, professions: [] }));
+    mockQuery.mockReturnValue(query({ data: { ...GUILD, members } }));
+    renderAt("/wow-forever/topdeadcenter?tab=roster&prof=tailoring");
+    expect(screen.getByText("Showing 4 of 4 members")).toBeInTheDocument();
+    expect(screen.getByLabelText("Profession")).toHaveValue("");
+    fireEvent.change(screen.getByLabelText("Class"), { target: { value: "Mage" } });
+    expect(screen.getByTestId("location")).toHaveTextContent(/class=Mage/);
+    expect(screen.getByTestId("location")).not.toHaveTextContent(/prof=/);
   });
 
   it("sends an old guild link, for any guild, to topdeadcenter's page with its query kept", () => {

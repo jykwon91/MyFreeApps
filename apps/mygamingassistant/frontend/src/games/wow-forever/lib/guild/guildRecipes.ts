@@ -16,7 +16,7 @@ export function professionName(professionId: number): string {
 }
 
 /** "148 / 225", "148" without a cap, or null when no skill is stored. */
-export function crafterSkill(crafter: GuildCrafter): string | null {
+export function crafterSkill(crafter: Pick<GuildCrafter, "skill" | "max_skill">): string | null {
   if (crafter.skill === null) return null;
   if (crafter.max_skill === null) return String(crafter.skill);
   return `${crafter.skill} / ${crafter.max_skill}`;

@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "Find guild members by profession",
+    "summary": "The Roster tab has a Profession filter. Pick one to see only members who have learned it, with each member's skill.",
+    "to": "/wow-forever/topdeadcenter?tab=roster"
+  },
+  {
+    "date": "2026-11-13",
     "title": "topdeadcenter has its own address",
     "summary": "The guild page now lives at /wow-forever/topdeadcenter. Old links and bookmarks to /wow-forever/guild still work and take you there, on the same tab.",
     "to": "/wow-forever/topdeadcenter"

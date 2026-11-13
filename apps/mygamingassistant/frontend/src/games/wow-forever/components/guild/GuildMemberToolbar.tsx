@@ -7,21 +7,25 @@ import {
   GUILD_SORT_LABELS,
   type GuildSortKey,
 } from "@/games/wow-forever/data/guild/guildConfig";
+import { isGuideProfession } from "@/games/wow-forever/lib/guideProfession";
 import { GUILD_CONTROL } from "@/games/wow-forever/data/guild/guildStyles";
 import { isSortKey } from "@/games/wow-forever/lib/guild/guildMembers";
+import type { GuildProfessionCount } from "@/games/wow-forever/types/guild/guildProfessionCount";
 import type { GuildMemberFilters } from "@/games/wow-forever/types/guild/guildMemberFilters";
 
 interface GuildMemberToolbarProps {
   filters: GuildMemberFilters;
   classes: readonly [string, number][];
+  /** The professions someone in the guild has. */
+  professions: readonly GuildProfessionCount[];
   onChange: (next: GuildMemberFilters) => void;
 }
 
 const SORT_KEYS = Object.keys(GUILD_SORT_LABELS) as GuildSortKey[];
 
-/** Name search, class and level filters, and the sort — all kept in the URL. */
-export default function GuildMemberToolbar({ filters, classes, onChange }: GuildMemberToolbarProps) {
-  const ids = { search: useId(), className: useId(), level: useId(), sort: useId() };
+/** Name search, class, level and profession filters, and the sort — all kept in the URL. */
+export default function GuildMemberToolbar({ filters, classes, professions, onChange }: GuildMemberToolbarProps) {
+  const ids = { search: useId(), className: useId(), level: useId(), profession: useId(), sort: useId() };
   const [query, setQuery] = useState(filters.query);
   const [urlQuery, setUrlQuery] = useState(filters.query);
 
@@ -39,7 +43,7 @@ export default function GuildMemberToolbar({ filters, classes, onChange }: Guild
 
   const direction = filters.descending ? "highest first" : "lowest first";
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" role="search" aria-label="Find a member">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" role="search" aria-label="Find a member">
       <div className="space-y-1">
         <label htmlFor={ids.search} className="text-sm font-medium">
           Name
@@ -85,6 +89,27 @@ export default function GuildMemberToolbar({ filters, classes, onChange }: Guild
           {GUILD_LEVEL_BANDS.map((band) => (
             <option key={band} value={band}>
               {band === 0 ? "Any level" : `${band}+`}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="space-y-1">
+        <label htmlFor={ids.profession} className="text-sm font-medium">
+          Profession
+        </label>
+        <select
+          id={ids.profession}
+          value={filters.profession}
+          onChange={(e) => {
+            const profession = e.target.value;
+            onChange({ ...filters, profession: isGuideProfession(profession) ? profession : "" });
+          }}
+          className={GUILD_CONTROL}
+        >
+          <option value="">Any profession</option>
+          {professions.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label} ({p.count})
             </option>
           ))}
         </select>
