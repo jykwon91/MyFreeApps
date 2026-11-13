@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { listingRowBars } from "./fixtures/calendar-rows";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 import { deleteBlackout } from "./fixtures/blackouts";
 
 /**
@@ -155,7 +155,7 @@ test.describe("Calendar review queue — Phase 2b resolve creates blackout", () 
       await queueItem.getByTestId("review-queue-confirm-btn").click();
 
       // Assert the success toast appears with a date range.
-      const toast = toasts(page).getByText(/Booking added/i);
+      const toast = toastRegion(page).getByText(/Booking added/i);
       await expect(toast).toBeVisible({ timeout: 8000 });
 
       // The toast should mention both dates.

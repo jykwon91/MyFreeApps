@@ -11,8 +11,10 @@
 import { test, expect, type Page } from "@playwright/test";
 import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgInvite";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
-import { json } from "@platform/ui/testing/mockResponse";
-import { ORG_ID, plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
+import { ORG_ID, plantAuth, stubWorkspaceShell, workspaceOf } from "./fixtures/mockSession";
 
 const OTHER_ORG_ID = "00000000-0000-0000-0000-000000000020";
 
@@ -51,14 +53,14 @@ async function stubTwoOrgs(page: Page): Promise<{ release: () => void; dropFirst
   const otherOrgReady = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route("**/api/**", (route) => route.fulfill(json(route.request().method() === "GET" ? [] : {})));
-  await stubSignedInShell(page, "admin");
+  await stubUnmatchedApi(page, { answer: "empty" });
+  await stubWorkspaceShell(page, "admin");
   await page.route("**/api/organizations", (route) =>
     route.fulfill(
       json([
-        ...(firstListed ? [{ id: ORG_ID, name: "First Workspace", role: "admin", org_role: "admin" }] : []),
-        { id: OTHER_ORG_ID, name: "Second Workspace", role: "admin", org_role: "admin" },
-      ]),
+        ...(firstListed ? [workspaceOf(ORG_ID, "First Workspace", "admin")] : []),
+        workspaceOf(OTHER_ORG_ID, "Second Workspace", "admin"),
+      ] satisfies OrgWithRole[]),
     ),
   );
   await page.route(`**/api/organizations/${ORG_ID}/members`, (route) =>

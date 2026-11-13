@@ -4,8 +4,8 @@
  * with the copy shared with the phone, and a version that's gone says so.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { stubSignedInShell } from "@platform/ui/testing/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 import { diffVersions } from "./fixtures/diffVersions";
 import {

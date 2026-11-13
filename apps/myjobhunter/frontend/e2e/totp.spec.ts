@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { totpCode } from "../../../../packages/shared-frontend/src/testing/totpCode";
+import { totpCode } from "@platform/ui/test-support/totpCode";
 import { createTestUser, deleteTestUser, loginViaUI, resetRateLimit } from "./fixtures/auth";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8002";

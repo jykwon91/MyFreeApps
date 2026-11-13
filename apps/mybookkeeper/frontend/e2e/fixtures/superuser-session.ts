@@ -3,7 +3,7 @@ import {
   currentTotpStep,
   msUntilNextTotpStep,
   totpCodeAtStep,
-} from "../../../../../packages/shared-frontend/src/testing/totpCode";
+} from "@platform/ui/test-support/totpCode";
 import { resetAuthRateLimits } from "./auth-rate-limits";
 import { BACKEND_URL } from "./config";
 import { E2E_ONBOARDING } from "./onboarding";

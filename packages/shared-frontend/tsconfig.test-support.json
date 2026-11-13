@@ -1,0 +1,7 @@
+// test-support/ is Playwright code, so it gets the same check as each app's
+// e2e code (tsconfig.e2e.base.json: strict, unused locals/parameters, node
+// types) rather than the package's src/ options.
+{
+  "extends": ["./tsconfig.json", "./tsconfig.e2e.base.json"],
+  "include": ["test-support"]
+}

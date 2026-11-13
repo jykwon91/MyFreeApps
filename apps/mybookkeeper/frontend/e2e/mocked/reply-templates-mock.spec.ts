@@ -18,8 +18,17 @@
  *     no horizontal overflow at mobile / tablet / desktop widths.
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
-import { VERSION_INFO, ORG_ID, plantAuth } from "./fixtures/mockSession";
-import { json } from "@platform/ui/testing/mockResponse";
+import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
+import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+
+// Registered first, so every stub below wins over it. Any call this spec does
+// not stub (the sidebar's integrations and review-queue reads, say) gets an
+// empty answer instead of reaching the absent backend.
+test.beforeEach(async ({ page }) => {
+  await stubUnmatchedApi(page, { answer: "empty" });
+});
 
 interface FakeTemplate {
   id: string;
@@ -44,27 +53,8 @@ function asResponse(row: FakeTemplate) {
   };
 }
 
-async function stubShell(page: Page, orgRole = "owner"): Promise<void> {
-  await page.route("**/api/users/me", (route) =>
-    route.fulfill(
-      json({
-        id: "00000000-0000-0000-0000-000000000001",
-        email: "test@example.com",
-        name: "Test User",
-        is_active: true,
-        is_superuser: false,
-        is_verified: true,
-        role: "owner",
-      }),
-    ),
-  );
-  await page.route("**/api/organizations", (route) =>
-    route.fulfill(json([{ id: ORG_ID, name: "Test Workspace", role: orgRole, org_role: orgRole }])),
-  );
-  await page.route("**/api/version", (route) => route.fulfill(json(VERSION_INFO)));
-  await page.route("**/api/tax-profile", (route) =>
-    route.fulfill(json({ onboarding_completed: true, tax_situations: [], filing_status: null, dependents_count: 0 })),
-  );
+async function stubShell(page: Page, orgRole: OrgRole = "owner"): Promise<void> {
+  await stubWorkspaceShell(page, orgRole);
   await page.route("**/api/properties", (route) => route.fulfill(json([])));
 }
 

@@ -13,8 +13,8 @@
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
 import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgInvite";
-import { json } from "@platform/ui/testing/mockResponse";
-import { ORG_ID, plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -42,7 +42,7 @@ async function stubApi(page: Page): Promise<{ invitesLoads: () => number }> {
   await page.route("**/api/**", (route, request: Request) =>
     route.fulfill(json(request.method() === "GET" ? [] : {})),
   );
-  await stubSignedInShell(page, "admin");
+  await stubWorkspaceShell(page, "admin");
   await page.route(`**/api/organizations/${ORG_ID}/invites`, (route, request) => {
     if (request.method() === "GET") {
       loads += 1;

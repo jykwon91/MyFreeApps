@@ -2,7 +2,7 @@ import type { APIRequestContext, Page } from "@playwright/test";
 import { test, expect } from "./fixtures/auth";
 import { cleanUp } from "./fixtures/cleanup";
 import { createProperty, deleteProperty, deleteTransaction } from "./fixtures/seed-data";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 
 /**
  * Bank statement import from the Transactions page: pick a small Chase CSV,
@@ -56,7 +56,7 @@ async function importCsv(page: Page, runId: number, propertyName?: string): Prom
   if (propertyName) await dialog.getByRole("combobox").selectOption({ label: propertyName });
   await submit.click();
 
-  await expect(toasts(page).getByText("Imported 2 transaction(s)")).toBeVisible({ timeout: 15000 });
+  await expect(toastRegion(page).getByText("Imported 2 transaction(s)")).toBeVisible({ timeout: 15000 });
   await expect(dialog).toBeHidden();
 }
 

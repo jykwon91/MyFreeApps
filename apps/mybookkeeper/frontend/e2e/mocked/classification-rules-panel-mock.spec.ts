@@ -13,8 +13,9 @@
  *     403 shows the view-only toast.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { ORG_ID, plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import type { ClassificationRule } from "@mybookkeeper/api-client/types/classification-rule/classification-rule";
 
 const rule = (id: string, match_pattern: string, category: string, times_applied: number): ClassificationRule => ({
@@ -36,8 +37,8 @@ const rule = (id: string, match_pattern: string, category: string, times_applied
 async function openPanel(page: Page, rules: ClassificationRule[]) {
   await plantAuth(page);
   // Registered first so the specific routes below win; the page's other reads get an empty answer.
-  await page.route("**/api/**", (route, request) => route.fulfill(json(request.method() === "GET" ? [] : {})));
-  await stubSignedInShell(page, "owner");
+  await stubUnmatchedApi(page, { answer: "empty" });
+  await stubWorkspaceShell(page, "owner");
   await page.route("**/api/classification-rules", (route) => route.fulfill(json(rules)));
 
   await page.goto("/transactions");

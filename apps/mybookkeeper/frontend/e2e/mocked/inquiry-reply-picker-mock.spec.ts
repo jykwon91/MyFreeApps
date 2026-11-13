@@ -11,9 +11,10 @@
  *   - No templates links to the Reply Templates page, and following it closes the panel.
  *   - The failure state fits a phone, with a full-size Try again.
  */
-import { test, expect, type Page, type Request } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { test, expect, type Page } from "@playwright/test";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { INQUIRY_DETAIL, INQUIRY_ID } from "./fixtures/mockInquiry";
 
 const TEMPLATE = {
@@ -42,8 +43,8 @@ const fail = json({ detail: "boom" }, 500);
 
 async function openReplyPanel(page: Page, plan: Plan): Promise<void> {
   await plantAuth(page);
-  await page.route("**/api/**", (route, request: Request) => route.fulfill(json(request.method() === "GET" ? [] : {})));
-  await stubSignedInShell(page, "owner");
+  await stubUnmatchedApi(page, { answer: "empty" });
+  await stubWorkspaceShell(page, "owner");
   await page.route(`**/api/inquiries/${INQUIRY_ID}`, (route) => route.fulfill(json(INQUIRY_DETAIL)));
   await page.route("**/api/integrations", (route) =>
     route.fulfill(json([{ provider: "gmail", connected: true, last_synced_at: null, metadata: null, has_send_scope: true }])),

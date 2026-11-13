@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { holdRequests } from "./fixtures/hold-requests";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 import { deleteApplicant } from "./fixtures/applicants";
 
 /**
@@ -101,7 +101,7 @@ test.describe("Attribution review — Airbnb payout UX (PR D)", () => {
       await assignBtn.click();
 
       // Conversational success toast from handleConfirmProperty.
-      await expect(toasts(page).getByText(/book this payout/i)).toBeVisible({
+      await expect(toastRegion(page).getByText(/book this payout/i)).toBeVisible({
         timeout: 8000,
       });
 

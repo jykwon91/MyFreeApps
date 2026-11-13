@@ -9,16 +9,17 @@
  * retry is in flight, and shows the provider cards once they load.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 import { APPLICANT_DETAIL, APPLICANT_ID, SCREENING_ELIGIBLE, SCREENING_PROVIDERS } from "./fixtures/mockApplicant";
 
 async function signIn(page: Page): Promise<void> {
   await plantAuth(page);
   // Registered first so the specific routes win; the page's other reads get an empty answer.
-  await page.route("**/api/**", (route) => route.fulfill(json(route.request().method() === "GET" ? [] : {})));
-  await stubSignedInShell(page, "admin");
+  await stubUnmatchedApi(page, { answer: "empty" });
+  await stubWorkspaceShell(page, "admin");
   await page.route(new RegExp(`/api/applicants/${APPLICANT_ID}$`), (route) => route.fulfill(json(APPLICANT_DETAIL)));
   await page.route(new RegExp(`/api/applicants/${APPLICANT_ID}/screening/eligibility$`), (route) =>
     route.fulfill(json(SCREENING_ELIGIBLE)),

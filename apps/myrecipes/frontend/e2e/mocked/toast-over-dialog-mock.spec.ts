@@ -5,8 +5,9 @@
  * not the dialog, so what was typed stays put.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { stubSignedInShell, TEST_USER } from "@platform/ui/testing/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubSignedInShell, TEST_USER } from "@platform/ui/test-support/mockSession";
+import { toast, toastAboveModal } from "@platform/ui/test-support/toast";
 
 const RECIPE_ID = "44444444-4444-4444-4444-444444444444";
 const NOW = "2026-11-12T00:00:00Z";
@@ -59,9 +60,6 @@ async function stubRecipe(page: Page, patchStatus: 200 | 500) {
   });
 }
 
-// Toasts are located page-wide, not inside the "Notifications" region: while a
-// modal is open the region is aria-hidden, so it has no role to scope by.
-
 test("a refused save inside the edit dialog shows a toast that can be dismissed without closing the dialog", async ({ page }) => {
   await stubSignedInShell(page);
   await stubRecipe(page, 500);
@@ -72,13 +70,13 @@ test("a refused save inside the edit dialog shows a toast that can be dismissed 
   await dialog.getByRole("textbox", { name: /Title/ }).fill("Roasted tomato soup");
   await dialog.getByRole("button", { name: "Save changes" }).click();
 
-  await expect(page.getByText(REFUSED, { exact: true })).toBeVisible();
+  await expect(toastAboveModal(page, REFUSED)).toBeVisible();
 
   // The toast draws above the backdrop: a click on its close button reaches it
   // (Playwright refuses a click another element would intercept).
   await page.getByLabel("Dismiss notification").click();
 
-  await expect(page.getByText(REFUSED, { exact: true })).toHaveCount(0);
+  await expect(toastAboveModal(page, REFUSED)).toHaveCount(0);
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("textbox", { name: /Title/ })).toHaveValue("Roasted tomato soup");
 });
@@ -92,13 +90,13 @@ test("a toast already showing when the dialog opens can be dismissed without clo
   const dialog = page.getByRole("dialog", { name: "Edit recipe details" });
   await dialog.getByRole("button", { name: "Save changes" }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByText(UPDATED, { exact: true })).toBeVisible();
+  await expect(toast(page, UPDATED)).toBeVisible();
 
   // Reopening the dialog leaves the toast an older layer than the dialog.
   await page.getByRole("button", { name: "Edit" }).click();
   await expect(dialog).toBeVisible();
   await page.getByLabel("Dismiss notification").click();
 
-  await expect(page.getByText(UPDATED, { exact: true })).toHaveCount(0);
+  await expect(toastAboveModal(page, UPDATED)).toHaveCount(0);
   await expect(dialog).toBeVisible();
 });

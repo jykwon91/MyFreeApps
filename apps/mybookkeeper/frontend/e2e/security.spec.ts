@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures/auth";
 import { resetAuthRateLimits } from "./fixtures/auth-rate-limits";
 import { BACKEND_URL } from "./fixtures/config";
-import { totpCode } from "../../../../packages/shared-frontend/src/testing/totpCode";
+import { totpCode } from "@platform/ui/test-support/totpCode";
 
 test.describe("Security page — layout", () => {
   test.beforeEach(async ({ authedPage: page }) => {

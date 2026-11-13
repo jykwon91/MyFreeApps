@@ -3,7 +3,7 @@ import type { RecipeDetailResponse, RecipeSummary } from "@myrecipes/api-client/
 import type { RecipeCreateRequest } from "@myrecipes/api-client/types/recipe/recipe-requests";
 import type { VersionResponse, VersionSummary } from "@myrecipes/api-client/types/recipe/version";
 import type { CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-log";
-import { TEST_USER } from "@platform/ui/testing/mockSession";
+import { TEST_USER } from "@platform/ui/test-support/mockSession";
 
 export const NOW = "2026-11-11T00:00:00Z";
 

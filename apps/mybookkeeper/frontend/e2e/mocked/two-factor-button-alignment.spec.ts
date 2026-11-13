@@ -11,7 +11,9 @@
  * parent-flex-container level, not on the button itself.
  */
 import { test, expect, type Locator } from "@playwright/test";
-import { VERSION_INFO } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 async function expectHorizontallyCenteredWithin(
   child: Locator,
@@ -51,6 +53,11 @@ test.describe("2FA — Verify-email success page button alignment", () => {
 });
 
 test.describe("2FA — Login challenge step Verify button alignment", () => {
+  // Signed out: anything left unstubbed gets a 404 instead of reaching the absent backend.
+  test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page, { answer: "notFound" });
+  });
+
   test("Verify button is horizontally centered inside the login card on the TOTP challenge step", async ({ page }) => {
     // Mock the login endpoint to return totp_required so the UI advances to the challenge step.
     await page.route("**/api/auth/totp/login", (route) => {
@@ -82,6 +89,13 @@ test.describe("2FA — Login challenge step Verify button alignment", () => {
 });
 
 test.describe("2FA — Security setup Verify & Enable button alignment", () => {
+  // Signed in, so the sidebar's reads (integrations, the review queues) fire.
+  // Registered first, so every stub in the test wins over it; anything left
+  // unstubbed gets an empty answer instead of reaching the absent backend.
+  test.beforeEach(async ({ page }) => {
+    await stubUnmatchedApi(page, { answer: "empty" });
+  });
+
   test("'Verify & Enable' button is horizontally centered within its action row container", async ({ page }) => {
     // We need to land on the /security page with TOTP setup state.
     // Without a real backend the page would redirect to login on token-validation
@@ -89,70 +103,20 @@ test.describe("2FA — Security setup Verify & Enable button alignment", () => {
     // a future exp claim so the client-side `useIsAuthenticated` check passes,
     // and (b) mock the bare minimum API surface the page needs to render
     // the verify step.
-    await page.addInitScript(() => {
-      const futureExp = Math.floor(Date.now() / 1000) + 3600;
-      const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-      const payload = btoa(JSON.stringify({ sub: "test-user", exp: futureExp }));
-      const fakeJwt = `${header}.${payload}.fake-signature`;
-      window.localStorage.setItem("token", fakeJwt);
-      window.localStorage.setItem("v1_activeOrgId", "00000000-0000-0000-0000-000000000010");
-    });
-
-    await page.route("**/api/users/me", (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          id: "00000000-0000-0000-0000-000000000001",
-          email: "test@example.com",
-          name: "Test User",
-          is_active: true,
-          is_superuser: false,
-          is_verified: true,
-          role: "owner",
-        }),
-      });
-    });
-
-    await page.route("**/api/organizations", (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          { id: "00000000-0000-0000-0000-000000000010", name: "Test Workspace", role: "owner" },
-        ]),
-      });
-    });
-
-    await page.route("**/api/auth/totp/status", (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ enabled: false }),
-      });
-    });
-
-    await page.route("**/api/auth/totp/setup", (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
+    await plantAuth(page);
+    await stubWorkspaceShell(page, "owner");
+    await page.route("**/api/auth/totp/status", (route) => route.fulfill(json({ enabled: false })));
+    await page.route("**/api/auth/totp/setup", (route) =>
+      route.fulfill(
+        json({
           provisioning_uri: "otpauth://totp/MBK:test@example.com?secret=JBSWY3DPEHPK3PXP&issuer=MBK",
           secret: "JBSWY3DPEHPK3PXP",
           algorithm: "sha256",
           digits: 6,
           period: 30,
         }),
-      });
-    });
-
-    // Other routes the auth-gated app probes on first render.
-    await page.route("**/api/version", (route) => {
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(VERSION_INFO) });
-    });
-    await page.route("**/api/tax-profile", (route) => {
-      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ onboarding_completed: true, tax_situations: [], filing_status: null, dependents_count: 0 }) });
-    });
+      ),
+    );
 
     await page.goto("/security");
 

@@ -6,8 +6,8 @@
  * skeleton has the same grid as the loaded list.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { stubSignedInShell } from "@platform/ui/testing/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import type { ListAnswer } from "./types/ListAnswer";
 import type { ListCall } from "./types/ListCall";

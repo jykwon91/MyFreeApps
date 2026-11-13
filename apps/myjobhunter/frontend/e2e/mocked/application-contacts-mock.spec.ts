@@ -10,8 +10,8 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import type { ApplicationContact } from "@myjobhunter/api-client/types/contact/application-contact";
-import { json } from "@platform/ui/testing/mockResponse";
-import { stubSignedInShell } from "@platform/ui/testing/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { mockApplication, mockCompany } from "./fixtures/mockData";
 
 const APPLICATION = mockApplication();

@@ -16,68 +16,19 @@
  *       worker re-runs, then the document reappears in its reprocessed state.
  */
 import { test, expect } from "@playwright/test";
-import { VERSION_INFO } from "./fixtures/mockSession";
+import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+
+// Registered first, so every stub below wins over it. Any call this spec does
+// not stub (the sidebar's integrations and review-queue reads, say) gets an
+// empty answer instead of reaching the absent backend.
+test.beforeEach(async ({ page }) => {
+  await stubUnmatchedApi(page, { answer: "empty" });
+});
 
 const USER_ID = "00000000-0000-0000-0000-000000000001";
-const ORG_ID = "00000000-0000-0000-0000-000000000010";
 const DOC_ID = "00000000-0000-0000-0000-000000000bbb";
 const FAILED_FILE = "unreadable-invoice.pdf";
-
-async function plantValidJwtAndOrgInLocalStorage(page: import("@playwright/test").Page): Promise<void> {
-  await page.addInitScript(
-    ([orgId]) => {
-      const futureExp = Math.floor(Date.now() / 1000) + 3600;
-      const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-      const payload = btoa(JSON.stringify({ sub: "test-user", exp: futureExp }));
-      window.localStorage.setItem("token", `${header}.${payload}.fake-signature`);
-      window.localStorage.setItem("v1_activeOrgId", orgId);
-    },
-    [ORG_ID],
-  );
-}
-
-async function stubAuthAndOrg(page: import("@playwright/test").Page): Promise<void> {
-  await page.route("**/api/users/me", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        id: USER_ID,
-        email: "test@example.com",
-        name: "Test User",
-        is_active: true,
-        is_superuser: false,
-        is_verified: true,
-        role: "owner",
-      }),
-    });
-  });
-  await page.route("**/api/organizations", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify([
-        {
-          id: ORG_ID,
-          name: "Test Workspace",
-          org_role: "owner",
-          is_demo: false,
-          created_at: "2026-01-01T00:00:00Z",
-        },
-      ]),
-    });
-  });
-  await page.route("**/api/version", (route) => {
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(VERSION_INFO) });
-  });
-  await page.route("**/api/tax-profile", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ onboarding_completed: true, tax_situations: [], filing_status: null, dependents_count: 0 }),
-    });
-  });
-}
 
 function documentRow(status: string, errorMessage: string | null): Record<string, unknown> {
   return {
@@ -98,8 +49,8 @@ function documentRow(status: string, errorMessage: string | null): Record<string
 
 test.describe("Documents — re-extract a failed document", () => {
   test("clicking Re-extract on a failed row fires the request and the document reprocesses", async ({ page }) => {
-    await plantValidJwtAndOrgInLocalStorage(page);
-    await stubAuthAndOrg(page);
+    await plantAuth(page);
+    await stubWorkspaceShell(page, "owner");
 
     let reExtractMethod: string | null = null;
     let getCallsAfterReExtract = 0;
@@ -178,8 +129,8 @@ test.describe("Documents — re-extract a failed document", () => {
     // desktop table (includeHidden defaults to false), so it resolves only the
     // visible mobile-card action.
     await page.setViewportSize({ width: 390, height: 844 });
-    await plantValidJwtAndOrgInLocalStorage(page);
-    await stubAuthAndOrg(page);
+    await plantAuth(page);
+    await stubWorkspaceShell(page, "owner");
 
     let reExtractMethod: string | null = null;
 

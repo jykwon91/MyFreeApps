@@ -1,5 +1,5 @@
 import { test, expect, getOrgId } from "./fixtures/auth";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 import { ViewerMember } from "./fixtures/viewer-member";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
 import type { UserProfile } from "../src/shared/types/user/user";
@@ -56,7 +56,7 @@ test.describe("Members page", () => {
       await roleSelect.selectOption("viewer");
       await page.getByRole("button", { name: /send invite/i }).click();
 
-      await expect(toasts(page).getByText(`Invite sent to ${testEmail}`, { exact: true })).toBeVisible({
+      await expect(toastRegion(page).getByText(`Invite sent to ${testEmail}`, { exact: true })).toBeVisible({
         timeout: 10000,
       });
       await expect(emailInput).toHaveValue("");
@@ -131,7 +131,7 @@ test.describe("Members page", () => {
       const row = page.getByRole("row").filter({ hasText: testEmail });
       await row.getByRole("button", { name: `Cancel invite for ${testEmail}` }).click();
 
-      await expect(toasts(page).getByText(`Invite for ${testEmail} cancelled`, { exact: true })).toBeVisible({
+      await expect(toastRegion(page).getByText(`Invite for ${testEmail} cancelled`, { exact: true })).toBeVisible({
         timeout: 10000,
       });
       await expect(row).toHaveCount(0);
@@ -166,12 +166,12 @@ test.describe("Members page", () => {
       await expect(confirm).toContainText(`Make ${joined.name} an admin?`);
       expect(await roleOf()).toBe("viewer");
       await confirm.getByRole("button", { name: "Make admin" }).click();
-      await expect(toasts(page).getByText(new RegExp(`^Updated .* to admin$`))).toBeVisible({ timeout: 5000 });
+      await expect(toastRegion(page).getByText(new RegExp(`^Updated .* to admin$`))).toBeVisible({ timeout: 5000 });
       await expect.poll(roleOf).toBe("admin");
 
       // Restore — the first toast may still be showing.
       await roleSelect.selectOption("viewer");
-      await expect(toasts(page).getByText(new RegExp(`^Updated .* to viewer$`))).toBeVisible({ timeout: 5000 });
+      await expect(toastRegion(page).getByText(new RegExp(`^Updated .* to viewer$`))).toBeVisible({ timeout: 5000 });
       await expect.poll(roleOf).toBe("viewer");
     });
   });

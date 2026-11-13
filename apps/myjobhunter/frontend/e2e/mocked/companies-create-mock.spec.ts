@@ -4,8 +4,8 @@
  * the new row; a 500 on POST shows an error toast and keeps the dialog open.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { stubSignedInShell } from "@platform/ui/testing/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { mockCompany } from "./fixtures/mockData";
 import type { Company } from "@myjobhunter/api-client/types/company";
 

@@ -16,8 +16,9 @@
  * (empty) answer lands.
  */
 import { test, expect, type Locator, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 import { LISTING, LISTING_ID } from "./fixtures/mockListing";
 import { TAX_RETURN_ID, stubTaxReturnDetail } from "./fixtures/mockTaxReturn";
@@ -114,8 +115,8 @@ function retryButtonNextTo(page: Page, message: string, name: "Retry" | "Retryin
 
 async function signIn(page: Page): Promise<void> {
   await plantAuth(page);
-  await page.route("**/api/**", (route) => route.fulfill(json(route.request().method() === "GET" ? [] : {})));
-  await stubSignedInShell(page, "admin");
+  await stubUnmatchedApi(page, { answer: "empty" });
+  await stubWorkspaceShell(page, "admin");
 }
 
 for (const section of SECTIONS) {

@@ -13,43 +13,20 @@
  *   - No horizontal scroll on either page across mobile / tablet / desktop.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { VERSION_INFO, ORG_ID, plantAuth } from "./fixtures/mockSession";
+import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+
+// Registered first, so every stub below wins over it. Any call this spec does
+// not stub (the sidebar's integrations and review-queue reads, say) gets an
+// empty answer instead of reaching the absent backend.
+test.beforeEach(async ({ page }) => {
+  await stubUnmatchedApi(page, { answer: "empty" });
+});
 
 const MANUAL_ID = "00000000-0000-0000-0000-0000000000a1";
 
 async function stubShell(page: Page): Promise<void> {
-  await page.route("**/api/users/me", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        id: "00000000-0000-0000-0000-000000000001",
-        email: "test@example.com",
-        name: "Test User",
-        is_active: true,
-        is_superuser: false,
-        is_verified: true,
-        role: "owner",
-      }),
-    }),
-  );
-  await page.route("**/api/organizations", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify([{ id: ORG_ID, name: "Test Workspace", role: "owner" }]),
-    }),
-  );
-  await page.route("**/api/version", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(VERSION_INFO) }),
-  );
-  await page.route("**/api/tax-profile", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ onboarding_completed: true, tax_situations: [], filing_status: null, dependents_count: 0 }),
-    }),
-  );
+  await stubWorkspaceShell(page, "owner");
   await page.route("**/api/properties", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([]) }),
   );
@@ -69,7 +46,7 @@ function summary(id: string, title: string, sectionCount: number) {
 async function stubList(page: Page, delayMs = 0): Promise<void> {
   await page.route("**/api/welcome-manuals?*", async (route, request) => {
     if (request.method() !== "GET") {
-      await route.continue();
+      await route.fallback();
       return;
     }
     if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
@@ -132,7 +109,7 @@ async function stubDetail(
 ): Promise<void> {
   await page.route(`**/api/welcome-manuals/${MANUAL_ID}`, async (route, request) => {
     if (request.method() !== "GET") {
-      await route.continue();
+      await route.fallback();
       return;
     }
     if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));

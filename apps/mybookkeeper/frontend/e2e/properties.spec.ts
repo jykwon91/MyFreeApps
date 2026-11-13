@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures/auth";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 
 // Unique suffix per run to avoid collisions
 const RUN_ID = Date.now();
@@ -34,7 +34,7 @@ async function createPropertyViaUI(
     await selectByLabel(section, "Rental type").selectOption(opts.type);
   }
   await page.getByRole("button", { name: /add property/i }).click();
-  await expect(toasts(page).getByText("Property created", { exact: true })).toBeVisible({ timeout: 10000 });
+  await expect(toastRegion(page).getByText("Property created", { exact: true })).toBeVisible({ timeout: 10000 });
 }
 
 test.describe("Properties CRUD", () => {

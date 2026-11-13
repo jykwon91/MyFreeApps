@@ -15,8 +15,8 @@
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
 import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
-import { json } from "@platform/ui/testing/mockResponse";
-import { plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { LISTING, LISTING_ID, LISTING_SUMMARY } from "./fixtures/mockListing";
 import { LISTING_MESSAGES } from "../../src/shared/lib/listing-messages";
 
@@ -47,7 +47,7 @@ async function stubApi(page: Page, orgRole: OrgRole): Promise<string[]> {
     if (request.method() !== "GET") writes.push(`${request.method()} ${new URL(request.url()).pathname}`);
     return route.fulfill(json(request.method() === "GET" ? [] : {}));
   });
-  await stubSignedInShell(page, orgRole);
+  await stubWorkspaceShell(page, orgRole);
   await page.route(/\/api\/listings(\?.*)?$/, (route, request: Request) =>
     request.method() === "GET"
       ? route.fulfill(json({ items: [LISTING_SUMMARY], total: 1, has_more: false }))

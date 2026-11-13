@@ -15,8 +15,8 @@
  *   - Fields are named by their visible labels, and clicking a label focuses its field.
  */
 import { test, expect, type Page, type Request } from "@playwright/test";
-import { VERSION_INFO, ORG_ID, plantAuth } from "./fixtures/mockSession";
-import { json } from "@platform/ui/testing/mockResponse";
+import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
 
 const TXN_ID = "00000000-0000-0000-0000-0000000000a1";
 
@@ -58,26 +58,7 @@ async function stubApi(page: Page): Promise<FakeServer> {
   await page.route("**/api/**", (route, request: Request) =>
     route.fulfill(json(request.method() === "GET" ? [] : {})),
   );
-  await page.route("**/api/users/me", (route) =>
-    route.fulfill(
-      json({
-        id: "00000000-0000-0000-0000-000000000001",
-        email: "test@example.com",
-        name: "Test User",
-        is_active: true,
-        is_superuser: false,
-        is_verified: true,
-        role: "owner",
-      }),
-    ),
-  );
-  await page.route("**/api/organizations", (route) =>
-    route.fulfill(json([{ id: ORG_ID, name: "Test Workspace", role: "owner", org_role: "owner" }])),
-  );
-  await page.route("**/api/version", (route) => route.fulfill(json(VERSION_INFO)));
-  await page.route("**/api/tax-profile", (route) =>
-    route.fulfill(json({ onboarding_completed: true, tax_situations: [], filing_status: null, dependents_count: 0 })),
-  );
+  await stubWorkspaceShell(page, "owner");
   const emptyPage = json({ items: [], total: 0, has_more: false });
   await page.route("**/api/vendors?**", (route) => route.fulfill(emptyPage));
   await page.route("**/api/transactions/attribution-review-queue?**", (route) => route.fulfill(emptyPage));

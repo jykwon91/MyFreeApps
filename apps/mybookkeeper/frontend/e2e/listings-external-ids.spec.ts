@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 
 /**
  * PR 1.3 — External-ID linkage UI behavioural E2E.
@@ -246,7 +246,7 @@ test.describe("Listings external-ID linkage (PR 1.3)", () => {
 
       // Toast surfaces with the conflict message; the form does NOT close.
       await expect(
-        toasts(page).getByText(/already linked to another listing/i),
+        toastRegion(page).getByText(/already linked to another listing/i),
       ).toBeVisible({ timeout: 10000 });
       await expect(page.getByTestId("external-id-form")).toBeVisible();
 

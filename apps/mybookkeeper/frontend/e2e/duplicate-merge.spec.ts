@@ -4,7 +4,7 @@ import { BACKEND_URL } from "./fixtures/config";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUN_ID = Date.now();
@@ -195,7 +195,7 @@ test.describe("Duplicate merge — full user flow", () => {
     await page.getByRole("button", { name: /confirm merge/i }).click();
 
     // Should show success toast or the pair disappears
-    await expect(toasts(page).getByText(/merged/i)).toBeVisible({ timeout: 10000 });
+    await expect(toastRegion(page).getByText(/merged/i)).toBeVisible({ timeout: 10000 });
 
     // Wait for UI to update — the pair should disappear or reduce
     // The RTK cache invalidation will refresh the list

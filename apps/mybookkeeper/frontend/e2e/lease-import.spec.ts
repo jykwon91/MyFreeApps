@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { deleteApplicant } from "./fixtures/applicants";
 import { deleteSignedLease } from "./fixtures/signed-leases";
-import { toasts } from "./fixtures/toasts";
+import { toastRegion } from "@platform/ui/test-support/toast";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -262,7 +262,7 @@ test.describe("Import Signed Lease", () => {
 
         expect((await importResponse).status()).toBe(415);
         await expect(
-          toasts(page).getByText("Couldn't import the lease. Please check the files and try again."),
+          toastRegion(page).getByText("Couldn't import the lease. Please check the files and try again."),
         ).toBeVisible({ timeout: 10000 });
         await expect(dialog).toBeVisible();
         await expect(page).toHaveURL(/\/leases$/);

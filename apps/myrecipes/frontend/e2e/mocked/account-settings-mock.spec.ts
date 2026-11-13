@@ -7,9 +7,9 @@
  */
 import { readFile } from "node:fs/promises";
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { stubSignedInShell, TEST_USER } from "@platform/ui/testing/mockSession";
-import { toast, toastAboveModal } from "./fixtures/toast";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubSignedInShell, TEST_USER } from "@platform/ui/test-support/mockSession";
+import { toast, toastAboveModal } from "@platform/ui/test-support/toast";
 import type { SentRequest } from "./types/SentRequest";
 
 const ME_PATH = "/users/me";
@@ -188,7 +188,7 @@ test.describe("delete account", () => {
   });
 
   test("with 2FA on, it also asks for the code and sends it", async ({ page }) => {
-    await stubSignedInShell(page, { ...TEST_USER, totp_enabled: true });
+    await stubSignedInShell(page, { user: { ...TEST_USER, totp_enabled: true } });
     const sent = await stubAccount(page, { totp: true });
 
     const dialog = await openDialog(page);

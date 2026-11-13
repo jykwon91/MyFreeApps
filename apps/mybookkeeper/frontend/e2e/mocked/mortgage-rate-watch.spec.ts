@@ -26,7 +26,17 @@
  *   - A feed outage renders the reason and offers no verdict at all.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { VERSION_INFO, ORG_ID, plantAuth } from "./fixtures/mockSession";
+import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import type { AttributionReviewQueueResponse } from "@mybookkeeper/api-client/types/attribution/attribution-review-queue-response";
+
+// Registered first, so every stub below wins over it. Any call this spec does
+// not stub (the sidebar's integrations and review-queue reads, say) gets an
+// empty answer instead of reaching the absent backend.
+test.beforeEach(async ({ page }) => {
+  await stubUnmatchedApi(page, { answer: "empty" });
+});
 
 const PROPERTY_ID = "00000000-0000-0000-0000-0000000000e1";
 const BLOCKED_PROPERTY_ID = "00000000-0000-0000-0000-0000000000e2";
@@ -42,10 +52,6 @@ const FEED_DOWN_REASON =
 
 const UNCLASSIFIED_REASON =
   "This property isn't marked as a rental or a home you live in, and the two are priced differently.";
-
-function json(body: unknown) {
-  return { status: 200, contentType: "application/json", body: JSON.stringify(body) };
-}
 
 const PROPERTIES = [
   {
@@ -71,39 +77,11 @@ const PROPERTIES = [
 ];
 
 async function stubShell(page: Page): Promise<void> {
-  await page.route("**/api/users/me", (route) =>
-    route.fulfill(
-      json({
-        id: "00000000-0000-0000-0000-000000000001",
-        email: "test@example.com",
-        name: "Test User",
-        is_active: true,
-        is_superuser: false,
-        is_verified: true,
-        role: "owner",
-      }),
-    ),
-  );
-  await page.route("**/api/organizations", (route) =>
-    route.fulfill(json([{ id: ORG_ID, name: "Test Workspace", role: "owner" }])),
-  );
-  await page.route("**/api/version", (route) => route.fulfill(json(VERSION_INFO)));
-  await page.route("**/api/tax-profile", (route) =>
-    route.fulfill(
-      json({
-        onboarding_completed: true,
-        tax_situations: [],
-        filing_status: null,
-        dependents_count: 0,
-      }),
-    ),
-  );
-  // Shell-level polls. Unstubbed they 401 against the dev proxy, and the axios
-  // interceptor logs the session out mid-test — which shows up as the section
-  // detaching from the DOM rather than as an auth failure.
-  await page.route("**/api/integrations", (route) => route.fulfill(json([])));
+  await stubWorkspaceShell(page, "owner");
+  // The attribution-review badge reads an object, not the list the catch-all
+  // answers with, so it gets its real (empty) shape here.
   await page.route("**/api/transactions/attribution-review-queue*", (route) =>
-    route.fulfill(json({ items: [], total: 0, has_more: false })),
+    route.fulfill(json({ items: [], total: 0, pending_count: 0 } satisfies AttributionReviewQueueResponse)),
   );
 }
 

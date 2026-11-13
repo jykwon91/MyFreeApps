@@ -8,7 +8,7 @@
  * (extra keys, empty title and out-of-range rating are 422).
  */
 import type { Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
+import { json } from "@platform/ui/test-support/mockResponse";
 import type { CookLogCreateRequest, CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-log";
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
 import type { RecipeUpdateRequest } from "@myrecipes/api-client/types/recipe/recipe-requests";

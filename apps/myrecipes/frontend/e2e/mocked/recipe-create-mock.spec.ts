@@ -5,11 +5,11 @@
  * error keeps everything typed.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { stubSignedInShell } from "@platform/ui/testing/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import type { RecipeCreateRequest } from "@myrecipes/api-client/types/recipe/recipe-requests";
 import { VERSION_1_ID, VERSION_2_ID, detailFromCreateRequest, lineageKeyAt, recipeIdAt } from "./fixtures/recipeFixtures";
-import { toast } from "./fixtures/toast";
+import { toast } from "@platform/ui/test-support/toast";
 
 const CREATED_ID = recipeIdAt(1);
 

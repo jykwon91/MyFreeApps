@@ -4,8 +4,8 @@
  * read says why (the copy shared with the phone) and goes back to picking.
  */
 import { test, expect, type Page } from "@playwright/test";
-import { json } from "@platform/ui/testing/mockResponse";
-import { stubSignedInShell, TEST_USER } from "@platform/ui/testing/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubSignedInShell, TEST_USER } from "@platform/ui/test-support/mockSession";
 import { recipeIdAt } from "./fixtures/recipeFixtures";
 
 const CREATED_ID = recipeIdAt(2);

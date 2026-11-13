@@ -11,8 +11,9 @@
 import { test, expect, type Page } from "@playwright/test";
 import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgInvite";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
-import { json } from "@platform/ui/testing/mockResponse";
-import { ORG_ID, plantAuth, stubSignedInShell } from "./fixtures/mockSession";
+import { json } from "@platform/ui/test-support/mockResponse";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 
 const MEMBER: OrgMember = {
   id: "member-1",
@@ -49,8 +50,8 @@ async function stubLoadFails(page: Page, failing: ListName): Promise<{ recover: 
   const retryAllowed = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route("**/api/**", (route) => route.fulfill(json(route.request().method() === "GET" ? [] : {})));
-  await stubSignedInShell(page, "admin");
+  await stubUnmatchedApi(page, { answer: "empty" });
+  await stubWorkspaceShell(page, "admin");
   const bodies: Record<ListName, unknown[]> = { members: [MEMBER], invites: [INVITE] };
   for (const name of ["members", "invites"] as const) {
     await page.route(`**/api/organizations/${ORG_ID}/${name}`, async (route) => {
