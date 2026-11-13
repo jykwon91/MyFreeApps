@@ -1,3 +1,4 @@
+import { mimeTypeFor } from "@platform/core/utils/mimeTypeFor";
 import { discardFile } from "@platform/mobile";
 import { nanoid } from "@reduxjs/toolkit";
 import { Directory, File, Paths } from "expo-file-system";
@@ -23,7 +24,7 @@ function safeFileName(name: string): string {
 
 function toPendingUpload(file: File): PendingUpload {
   const name = file.name.split("~").slice(2).join("~");
-  return { uri: file.uri, name, mimeType: name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg" };
+  return { uri: file.uri, name, mimeType: mimeTypeFor(name) };
 }
 
 /** Moves the file in, which is all or nothing, so a killed app can't leave half a photo to send. */

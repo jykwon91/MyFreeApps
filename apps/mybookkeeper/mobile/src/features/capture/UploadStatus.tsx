@@ -8,18 +8,19 @@ import type { AppDispatch, RootState } from "../../lib/store";
 import { waitingFilesMessage } from "../aiPermission/waitingFilesMessage";
 import { drainUploadQueue } from "./drainUploadQueue";
 import { pendingUploads } from "./uploadQueueFiles";
-import { uploadPhaseChanged, uploadStatusDismissed } from "./uploadsSlice";
+import UploadFileRow from "./UploadFileRow";
+import { uploadSentSettled, uploadStatusDismissed } from "./uploadsSlice";
 
-/** Where the photos are. Nothing here needs an answer unless a send failed. */
+/** Where each file is. Nothing here needs an answer unless a send failed. */
 export default function UploadStatus() {
   const { colors, spacing, fontSize } = useTheme();
   const dispatch = useDispatch<AppDispatch>();
-  const { phase, rejections } = useSelector((state: RootState) => state.uploads);
+  const { phase, rejections, files } = useSelector((state: RootState) => state.uploads);
   const workspaceId = useSelector((state: RootState) => state.workspace.activeId);
 
   useEffect(() => {
     if (phase !== "sent") return;
-    const timer = setTimeout(() => dispatch(uploadPhaseChanged("idle")), SENT_MESSAGE_MS);
+    const timer = setTimeout(() => dispatch(uploadSentSettled()), SENT_MESSAGE_MS);
     return () => clearTimeout(timer);
   }, [dispatch, phase]);
 
@@ -27,6 +28,9 @@ export default function UploadStatus() {
 
   return (
     <View style={{ gap: spacing.sm }}>
+      {files.map((file) => (
+        <UploadFileRow file={file} key={file.uri} />
+      ))}
       {rejections.length > 0 ? <Banner actions={[dismiss]} message={rejections.join("\n")} /> : null}
       {phase === "unreachable" ? (
         <Banner

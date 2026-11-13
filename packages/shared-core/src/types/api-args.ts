@@ -11,4 +11,6 @@ export type Args = {
   headers?: Record<string, string>;
   /** Milliseconds. Unset means none, and a phone's connection can then hang forever. */
   timeout?: number;
+  /** Called as the request body goes out, for showing how much of an upload has been sent. */
+  onUploadProgress?: AxiosRequestConfig["onUploadProgress"];
 };

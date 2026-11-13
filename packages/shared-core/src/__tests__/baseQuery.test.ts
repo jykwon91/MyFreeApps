@@ -55,4 +55,17 @@ describe("axiosBaseQuery", () => {
     expect(seen).toHaveLength(0);
     expect(result.error).toEqual({ status: undefined, data: "canceled" });
   });
+
+  it("hands the upload progress callback to the request", async () => {
+    const seen: InternalAxiosRequestConfig[] = [];
+    configure(async (config) => {
+      seen.push(config);
+      return { data: {}, status: 200, statusText: "OK", headers: {}, config };
+    });
+    const onUploadProgress = (): void => {};
+
+    await axiosBaseQuery({ url: "/upload", method: "POST", onUploadProgress }, { signal: new AbortController().signal } as never, {});
+
+    expect(seen[0].onUploadProgress).toBe(onUploadProgress);
+  });
 });

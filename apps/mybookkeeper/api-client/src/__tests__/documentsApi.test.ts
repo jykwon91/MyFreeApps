@@ -83,4 +83,14 @@ describe("documentsApi", () => {
     expect(`${sent[0].method} ${sent[0].url}`).toBe("patch /documents/d1/escrow-paid");
     expect(JSON.parse(String(sent[0].data))).toEqual({ is_escrow_paid: true });
   });
+
+  it("uploads the form and reports how much has gone out", async () => {
+    const form = new FormData();
+    form.append("file", new Blob(["x"]), "lease.docx");
+    const onUploadProgress = (): void => {};
+    await makeStore().dispatch(endpoints.uploadDocument.initiate({ form, onUploadProgress }));
+    expect(`${sent[0].method} ${sent[0].url}`).toBe("post /documents/upload");
+    expect(sent[0].data).toBe(form);
+    expect(sent[0].onUploadProgress).toBe(onUploadProgress);
+  });
 });

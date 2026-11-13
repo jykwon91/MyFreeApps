@@ -1,19 +1,21 @@
+import { documentUploadProblem, documentUploadProblemMessage } from "@mybookkeeper/api-client/utils/documentUploadFile";
 import { discardFile, LoadingButton, Toast, useTheme } from "@platform/mobile";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import { MAX_FILES_AT_ONCE, SHUTTER_SIZE } from "../../constants/capture";
+import { CAPTURE_HINT, SHUTTER_SIZE } from "../../constants/capture";
 import type { AppDispatch, RootState } from "../../lib/store";
 import type { PickedPhoto } from "../../types/PickedPhoto";
 import CameraPermissionPrompt from "./CameraPermissionPrompt";
 import { drainUploadQueue } from "./drainUploadQueue";
 import PhotoReview from "./PhotoReview";
-import { pickPdfs, pickPhotos } from "./pickFiles";
+import { pickDocuments, pickPhotos } from "./pickFiles";
 import { preparePhoto } from "./preparePhoto";
-import { pdfFileName, photoName } from "./uploadFileNames";
+import { documentFileName, photoName } from "./uploadFileNames";
 import { addToQueue } from "./uploadQueueFiles";
+import { uploadRejected } from "./uploadsSlice";
 import UploadStatus from "./UploadStatus";
 
 export default function CaptureScreen() {
@@ -83,8 +85,16 @@ export default function CaptureScreen() {
   async function chooseFiles(): Promise<void> {
     try {
       const workspace = requireWorkspace();
-      for (const pdf of await pickPdfs()) {
-        addToQueue(workspace, pdf.uri, pdfFileName(pdf.name));
+      for (const picked of await pickDocuments()) {
+        const name = documentFileName(picked);
+        const problem = documentUploadProblem(name, picked.size);
+        if (problem) {
+          // Never queued, so it can't sit there failing. Said where the server's refusals are.
+          dispatch(uploadRejected(documentUploadProblemMessage(name, problem)));
+          discardFile(picked.uri);
+          continue;
+        }
+        addToQueue(workspace, picked.uri, name);
         setAddedCount((count) => count + 1);
       }
       void dispatch(drainUploadQueue());
@@ -113,43 +123,47 @@ export default function CaptureScreen() {
     </View>
   );
 
+  // Until the system has answered, there's nothing to show in the camera's place.
+  let cameraArea = <View style={{ flex: 1 }} />;
+  if (permission?.granted) {
+    cameraArea = (
+      <CameraView facing="back" ref={camera} style={{ flex: 1 }}>
+        <View style={{ flex: 1, justifyContent: "flex-end", alignItems: "center", padding: spacing.lg }}>
+          <Pressable
+            accessibilityLabel="Take photo"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isTaking, busy: isTaking }}
+            disabled={isTaking}
+            onPress={takePhoto}
+            style={{
+              width: SHUTTER_SIZE,
+              height: SHUTTER_SIZE,
+              borderRadius: SHUTTER_SIZE / 2,
+              borderWidth: 4,
+              borderColor: colors.card,
+              opacity: isTaking ? 0.5 : 1,
+              backgroundColor: colors.primary,
+            }}
+          />
+        </View>
+      </CameraView>
+    );
+  } else if (permission) {
+    cameraArea = <CameraPermissionPrompt canAsk={permission.canAskAgain} onAsk={requestPermission} />;
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {photo ? (
         <PhotoReview onRetake={retake} onUse={acceptPhoto} uri={photo.uri} />
       ) : (
         <View style={{ flex: 1 }}>
-          {permission?.granted ? (
-            <CameraView facing="back" ref={camera} style={{ flex: 1 }}>
-              <View style={{ flex: 1, justifyContent: "flex-end", alignItems: "center", padding: spacing.lg }}>
-                <Pressable
-                  accessibilityLabel="Take photo"
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: isTaking, busy: isTaking }}
-                  disabled={isTaking}
-                  onPress={takePhoto}
-                  style={{
-                    width: SHUTTER_SIZE,
-                    height: SHUTTER_SIZE,
-                    borderRadius: SHUTTER_SIZE / 2,
-                    borderWidth: 4,
-                    borderColor: colors.card,
-                    opacity: isTaking ? 0.5 : 1,
-                    backgroundColor: colors.primary,
-                  }}
-                />
-              </View>
-            </CameraView>
-          ) : permission ? (
-            <CameraPermissionPrompt canAsk={permission.canAskAgain} onAsk={requestPermission} />
-          ) : (
-            <View style={{ flex: 1 }} />
-          )}
+          {cameraArea}
           <View style={{ gap: spacing.md, padding: spacing.lg, paddingBottom: spacing.xl }}>
             <UploadStatus />
             {footerButtons}
             <Text style={{ textAlign: "center", fontSize: fontSize.sm, color: colors.mutedForeground }}>
-              {`Photos, or a PDF from Files. Up to ${MAX_FILES_AT_ONCE} at a time.`}
+              {CAPTURE_HINT}
             </Text>
           </View>
         </View>

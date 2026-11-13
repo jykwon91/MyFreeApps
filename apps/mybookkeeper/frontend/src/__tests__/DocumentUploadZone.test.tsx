@@ -13,6 +13,14 @@ import { showError } from "@platform/ui";
 import { DOCUMENT_UPLOAD_MESSAGES } from "@/shared/lib/document-upload-messages";
 import type { DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
 import type { UploadDocumentArgs } from "@mybookkeeper/api-client/types/document/UploadDocumentArgs";
+import { DOCUMENT_UPLOAD_MAX_BYTES } from "@mybookkeeper/api-client/constants/documentUpload";
+
+/** Reports a size without allocating it. */
+function sizedFile(name: string, bytes: number): File {
+  const file = new File(["x"], name);
+  Object.defineProperty(file, "size", { value: bytes });
+  return file;
+}
 
 const mockUploadDocument = vi.fn(() => ({
   unwrap: () => Promise.resolve({ document_id: "doc-1", batch_id: null, batch_total: 1 }),
@@ -94,6 +102,29 @@ describe("DocumentUploadZone", () => {
 
     const { form } = (mockUploadDocument.mock.calls as unknown as [UploadDocumentArgs][])[0][0];
     expect(form.get("file")).toBe(file);
+  });
+
+  it.each(["lease.docx", "ledger.xlsx", "bank.csv", "receipts.zip"])("uploads %s", async (name) => {
+    const user = userEvent.setup();
+    renderWithStore(<DocumentUploadZone />);
+    const input = document.querySelector("input[type='file']") as HTMLInputElement;
+    const file = new File(["data"], name);
+
+    await user.upload(input, file);
+
+    const { form } = (mockUploadDocument.mock.calls as unknown as [UploadDocumentArgs][])[0][0];
+    expect(form.get("file")).toBe(file);
+  });
+
+  it("turns away a file too big to get through, says why, and sends nothing", async () => {
+    const user = userEvent.setup();
+    renderWithStore(<DocumentUploadZone />);
+    const input = document.querySelector("input[type='file']") as HTMLInputElement;
+
+    await user.upload(input, sizedFile("scans.zip", DOCUMENT_UPLOAD_MAX_BYTES + 1));
+
+    expect(mockUploadDocument).not.toHaveBeenCalled();
+    expect(await screen.findByText(/scans\.zip is over 29 MB/)).toBeInTheDocument();
   });
 
   it("rejects empty file (size 0)", async () => {
@@ -347,6 +378,15 @@ describe("DocumentUploadZone", () => {
       await uploadTwo();
       expect(await screen.findByText("2 files — 1 of 2 uploaded (1 failed)")).toBeInTheDocument();
       expect(screen.getByLabelText("Some files failed")).toBeInTheDocument();
+    });
+
+    it("counts a file too big to get through as failed without sending it", async () => {
+      const user = userEvent.setup();
+      renderWithStore(<DocumentUploadZone />);
+      const input = document.querySelector("input[type='file']") as HTMLInputElement;
+      await user.upload(input, [new File(["a"], "a.pdf", { type: "application/pdf" }), sizedFile("big.zip", DOCUMENT_UPLOAD_MAX_BYTES + 1)]);
+      expect(await screen.findByText("2 files — 1 of 2 uploaded (1 failed)")).toBeInTheDocument();
+      expect(mockUploadDocument).toHaveBeenCalledTimes(1);
     });
 
     it("says it couldn't upload any, not that it finished, when every upload failed", async () => {

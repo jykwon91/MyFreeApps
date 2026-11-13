@@ -4,7 +4,8 @@ import { Upload, Camera } from "lucide-react";
 import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
 import { useUploadDocumentMutation, useGetBatchStatusQuery, useGetSingleUploadStatusQuery, useGetDocumentsQuery, useCancelBatchMutation } from "@mybookkeeper/api-client/store/documentsApi";
 import { baseApi } from "@/shared/store/baseApi";
-import { isSupportedFile } from "@/shared/utils/file-upload";
+import { DOCUMENT_UPLOAD_ACCEPT } from "@mybookkeeper/api-client/constants/documentUpload";
+import { documentUploadProblem, documentUploadProblemMessage, isSupportedDocumentUpload } from "@mybookkeeper/api-client/utils/documentUploadFile";
 import { uploadOutcome } from "@/shared/utils/upload-outcome";
 import { cn, showError } from "@platform/ui";
 import UploadStatusCard from "./UploadStatusCard";
@@ -199,9 +200,10 @@ export default function DocumentUploadZone() {
   }, [documents, upload, dispatch]);
 
   function handleFile(file: File) {
-    if (!isSupportedFile(file.name)) return;
-    if (file.size === 0) {
-      dispatch(startUpload("Empty files cannot be processed."));
+    const problem = documentUploadProblem(file.name, file.size);
+    if (problem === "unsupported") return;
+    if (problem) {
+      dispatch(startUpload(documentUploadProblemMessage(file.name, problem)));
       dispatch(uploadFailed());
       return;
     }
@@ -220,7 +222,7 @@ export default function DocumentUploadZone() {
   }
 
   async function handleFiles(files: File[]) {
-    const supported = files.filter((f) => isSupportedFile(f.name) && f.size > 0);
+    const supported = files.filter((f) => isSupportedDocumentUpload(f.name) && f.size > 0);
     if (supported.length === 0) return;
     if (supported.length === 1) {
       handleFile(supported[0]);
@@ -230,6 +232,11 @@ export default function DocumentUploadZone() {
     dispatch(startMultiUpload({ total: supported.length }));
 
     for (const file of supported) {
+      // Too big to get through, so it's counted as failed without spending the time to send it.
+      if (documentUploadProblem(file.name, file.size)) {
+        dispatch(multiUploadFileFailed());
+        continue;
+      }
       try {
         await uploadDocument({ form: documentUploadForm(file) }).unwrap();
         dispatch(multiUploadFileCompleted());
@@ -329,7 +336,7 @@ export default function DocumentUploadZone() {
             type="file"
             className="hidden"
             multiple
-            accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.csv,.zip"
+            accept={DOCUMENT_UPLOAD_ACCEPT}
             onChange={(e) => {
               const files = Array.from(e.target.files ?? []);
               if (files.length > 0) handleFiles(files);

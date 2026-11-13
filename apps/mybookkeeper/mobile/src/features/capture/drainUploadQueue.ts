@@ -1,4 +1,6 @@
 import { documentsApi } from "@mybookkeeper/api-client/store/documentsApi";
+import { progressPercent } from "@mybookkeeper/api-client/utils/progressPercent";
+import type { DocumentUploadRequest } from "@mybookkeeper/api-client/types/document/DocumentUploadRequest";
 import type { ApiError } from "@platform/core/types/api-error";
 import {
   FILE_REJECTED_STATUSES,
@@ -13,14 +15,34 @@ import { hasAiPermission } from "../aiPermission/aiPermission";
 import { rejectionMessage } from "./rejectionMessage";
 import { uploadForm } from "./uploadForm";
 import { pendingUploads, removeFromQueue } from "./uploadQueueFiles";
-import { uploadPhaseChanged, uploadRejected } from "./uploadsSlice";
+import {
+  uploadDrainEnded,
+  uploadFileChanged,
+  uploadFileProgressed,
+  uploadFilesQueued,
+  uploadPhaseChanged,
+  uploadRejected,
+} from "./uploadsSlice";
 
 let isDraining = false;
+
+function reportProgress(upload: PendingUpload, dispatch: AppDispatch): NonNullable<DocumentUploadRequest["onUploadProgress"]> {
+  return ({ loaded, total }) => {
+    // Without a total there's nothing to say how far along it is.
+    if (total) dispatch(uploadFileProgressed({ uri: upload.uri, percent: Math.round(progressPercent(loaded, total)) }));
+  };
+}
 
 /** Gives up on a dead connection, or nothing else could send until the app restarts. */
 async function send(upload: PendingUpload, workspaceId: string, dispatch: AppDispatch) {
   // Named here, so a send retried after a switch still goes to the file's own workspace.
-  const request = dispatch(documentsApi.endpoints.uploadDocument.initiate({ form: uploadForm(upload), workspaceId }));
+  const request = dispatch(
+    documentsApi.endpoints.uploadDocument.initiate({
+      form: uploadForm(upload),
+      workspaceId,
+      onUploadProgress: reportProgress(upload, dispatch),
+    }),
+  );
   const timer = setTimeout(() => request.abort(), UPLOAD_TIMEOUT_MS);
   try {
     return await request;
@@ -33,20 +55,30 @@ async function sendAll(workspaceId: string, dispatch: AppDispatch, getState: () 
   const failed = new Set<string>();
   let sentAny = false;
   while (getState().workspace.activeId === workspaceId) {
-    const next = pendingUploads(workspaceId).find((upload) => !failed.has(upload.uri));
+    // Read each time round: files added while one is sending join the end of the line.
+    const waiting = pendingUploads(workspaceId).filter((upload) => !failed.has(upload.uri));
+    dispatch(uploadFilesQueued(waiting));
+    const [next] = waiting;
     if (!next) return failed.size > 0 ? "unreachable" : sentAny ? "sent" : "idle";
     // Asked before every file, so stopping takes effect at the next one.
     if (!hasAiPermission()) return "waitingForPermission";
 
+    dispatch(uploadFileChanged({ uri: next.uri, status: "uploading" }));
     const result = await send(next, workspaceId, dispatch);
     if (!("error" in result)) {
       removeFromQueue(next);
+      dispatch(uploadFileChanged({ uri: next.uri, status: "done" }));
       sentAny = true;
       continue;
     }
     const error = result.error as ApiError;
     const status = error.status;
-    if (status === LIMIT_REACHED_STATUS) return "limitReached";
+    if (status === LIMIT_REACHED_STATUS) {
+      // Not this file's fault: it waits with the rest for tomorrow.
+      dispatch(uploadFileChanged({ uri: next.uri, status: "queued" }));
+      return "limitReached";
+    }
+    dispatch(uploadFileChanged({ uri: next.uri, status: "failed" }));
     if (status !== undefined && FILE_REJECTED_STATUSES.includes(status)) {
       dispatch(uploadRejected(rejectionMessage(next.name, error)));
       removeFromQueue(next);
@@ -85,7 +117,9 @@ export function drainUploadQueue() {
     } finally {
       isDraining = false;
     }
+    const isSameWorkspace = getState().workspace.activeId === workspaceId;
+    dispatch(uploadDrainEnded(isSameWorkspace));
     dispatch(uploadPhaseChanged(phase));
-    if (getState().workspace.activeId !== workspaceId) void dispatch(drainUploadQueue());
+    if (!isSameWorkspace) void dispatch(drainUploadQueue());
   };
 }
