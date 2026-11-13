@@ -1,3 +1,4 @@
+import type { WowClassId } from "@/games/wow-forever/data/classes";
 import type { ItemSlot } from "@/games/wow-forever/data/itemSlots";
 import type { AuctionCategory } from "@/games/wow-forever/types/auctionHouse/auctionCategory";
 import type { BisChoice } from "@/games/wow-forever/types/auctionHouse/bisChoice";
@@ -27,9 +28,11 @@ export interface AuctionFilters {
   itemType: string | null;
   minLevel: number | null;
   maxLevel: number | null;
-  /** Only gear the player's class can equip. */
+  /** `?usable=1` (older links) — only gear the player's own class can equip. */
   usable: boolean;
-  /** `?bis=` — only the top picks for the player's class at their level; needs the gear data. */
+  /** `?class=` — only gear this class can equip, and the top picks are for it; null = the player's class (and no class filter unless `usable`). */
+  classId: WowClassId | null;
+  /** `?bis=` — only the top picks for the chosen (else the player's) class at their level; needs the gear data. */
   bis: BisChoice | null;
   /** `?bisLvl=` — the level to pick for, instead of the player's own; only meaningful with `bis`. */
   bisLevel: number | null;

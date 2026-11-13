@@ -320,15 +320,30 @@ describe("Auction house gear filters", () => {
     expect(within(sheet).getByLabelText("To level")).toHaveValue(60);
   });
 
-  it("offers 'usable by my class' with the saved class's name", async () => {
+  it("picks whose gear to show on the page, marking the saved class, and Any class clears it", async () => {
     loadClientItems.mockResolvedValue(GEAR_LIST);
     renderPage();
-    const sheet = await openFilters();
-    await userEvent.click(within(sheet).getByRole("button", { name: /Gear filters/ }));
-    // The default class is a Warlock, who cannot wear plate.
-    await userEvent.click(await within(sheet).findByRole("button", { name: "Usable by my class (Warlock)" }));
-    expect(url()).toBe("?usable=1");
-    expect(names()).toEqual([]);
+    const select = await screen.findByLabelText("Gear for");
+    expect(select).toHaveValue("");
+    expect(within(select).getByRole("option", { name: "Warlock (you)" })).toBeInTheDocument();
+    // A Warlock cannot wear plate.
+    await userEvent.selectOptions(select, "warlock");
+    expect(url()).toBe("?class=warlock");
+    await waitFor(() => expect(names()).toEqual([]));
+    expect(screen.getByRole("button", { name: "Remove filter: Usable by Warlock" })).toBeInTheDocument();
+    await userEvent.selectOptions(select, "warrior");
+    expect(url()).toBe("?class=warrior");
+    expect(screen.getByRole("button", { name: "Remove filter: Usable by Warrior" })).toBeInTheDocument();
+    await userEvent.selectOptions(select, "");
+    expect(url()).toBe("");
+  });
+
+  it("shows an older ?usable=1 link as the saved class in the picker", async () => {
+    loadClientItems.mockResolvedValue(GEAR_LIST);
+    renderPage("/wow-forever/auction-house?usable=1");
+    expect(await screen.findByLabelText("Gear for")).toHaveValue("warlock");
+    await userEvent.selectOptions(screen.getByLabelText("Gear for"), "");
+    expect(url()).toBe("");
   });
 
   it("load straight away for a link that filters by gear, with the list skeleton until it is in", async () => {

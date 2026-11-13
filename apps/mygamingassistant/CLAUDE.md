@@ -1459,7 +1459,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   category is picked or a link has `?cat=`; until it loads the list shows the
   skeleton, never an unfiltered list. An item the file doesn't list counts as
   Miscellaneous.
-- Auction house top picks (Gear group, `?bis=any|1|2|3`, optional
+- Auction house "Gear for" card (`components/auctionHouse/AuctionGearFor.tsx`), ON THE PAGE
+  under the search, never inside Filters: a class picker (`?class=<class id>`, "Any class" =
+  no class filter; the saved class is marked "(you)"; an old `?usable=1` link reads as the
+  saved class), a Level box (`?bisLvl=`, empty = saved level; typing a level turns the
+  picks on as "any", `lib/auctionHouse/bisLevelPatch.ts`) and the #1/#2/#3 chips. The
+  picked class (`gearClassFor`, else the saved one) drives "usable", the top picks and
+  their spec (`usableFilterOn` = `usable` or a class).
+- Auction house top picks (`?bis=any|1|2|3`, optional
   `?bisLvl=<1-60>`; invalid values ignored, `bisLvl` only with `bis`): keeps
   only AH rows that are one of the top 3 for their slot for the player's class
   at their saved level (else 60; the link's `bisLvl` wins), tagged "#1 Head".

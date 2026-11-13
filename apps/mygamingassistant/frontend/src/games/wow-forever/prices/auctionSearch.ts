@@ -5,6 +5,7 @@ import { categoryFilterActive, gearFilterActive } from "@/games/wow-forever/lib/
 import { inCategory } from "@/games/wow-forever/lib/auctionHouse/itemCategoryLookup";
 import { normalizeFilterRanges } from "@/games/wow-forever/lib/auctionHouse/normalizeFilterRanges";
 import { usableByClass } from "@/games/wow-forever/lib/auctionHouse/usableByClass";
+import { usableFilterOn } from "@/games/wow-forever/lib/auctionHouse/gearClass";
 import { ITEM_QUALITIES } from "@/games/wow-forever/data/itemSlots";
 import type { ItemQuality } from "@/games/wow-forever/data/itemSlots";
 import type { AuctionFilterContext } from "@/games/wow-forever/types/auctionHouse/auctionFilterContext";
@@ -75,7 +76,7 @@ function matchesGear(item: AuctionPrice, filters: AuctionFilters, context: Aucti
   if (filters.slot !== null && found.slot !== filters.slot) return false;
   if (filters.itemType !== null && found.itemType !== filters.itemType) return false;
   if (!inLevelRange(found, filters)) return false;
-  return !filters.usable || usableByClass(found, context.classId);
+  return !usableFilterOn(filters) || usableByClass(found, context.classId);
 }
 
 /** The top-picks filter: the item is one of the picks, at the asked rank (any of the three for "any"). */

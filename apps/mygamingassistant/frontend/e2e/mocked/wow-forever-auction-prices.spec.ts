@@ -436,8 +436,7 @@ test("the Auction house top-picks filter keeps the top three per slot, tags them
   await page.goto("/wow-forever/auction-house");
   await expect(page.getByTestId("auction-row")).toHaveCount(3);
   expect(itemRequests).toBe(0);
-  await page.getByTestId("auction-filters-button").click();
-  await page.getByRole("button", { name: /Gear filters/ }).click();
+  // The top picks sit on the page itself, not inside the Filters panel.
   const bis = page.getByTestId("auction-filter-bis");
   await expect(bis.getByRole("button")).toHaveText(["Off", "Any top 3", "#1", "#2", "#3"]);
 
@@ -455,6 +454,35 @@ test("the Auction house top-picks filter keeps the top three per slot, tags them
   await expect(page).not.toHaveURL(/bis=/);
   await expect(page.getByTestId("auction-row")).toHaveCount(3);
   await expect(page.getByTestId("auction-bis-badge")).toHaveCount(0);
+});
+
+test("the Auction house's Gear for card picks a class and a level on the page, and fits a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await stubFilterPrices(page);
+  await page.route(ITEMS_FILE, (route) =>
+    route.request().resourceType() === "fetch"
+      ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(ITEMS_STUB) })
+      : route.fallback(),
+  );
+  await page.goto("/wow-forever/auction-house");
+  const card = page.getByTestId("auction-gear-for");
+  await expect(card).toBeVisible();
+  const gearFor = card.getByLabel("Gear for");
+  await expect(gearFor).toHaveValue("");
+
+  await gearFor.selectOption("warrior");
+  await expect(page).toHaveURL(/class=warrior/);
+  await expect(page.getByRole("button", { name: "Remove filter: Usable by Warrior" })).toBeVisible();
+
+  await card.getByLabel("Level").fill("39");
+  await card.getByLabel("Level").press("Enter");
+  await expect(page).toHaveURL(/bis=any/);
+  await expect(page).toHaveURL(/bisLvl=39/);
+  await expect(page.getByRole("button", { name: "Remove filter: Top 3 for level 39 Warrior" })).toBeVisible();
+
+  const box = await card.boundingBox();
+  expect(box && box.x + box.width).toBeLessThanOrEqual(375);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
 });
 
 test("a link to a filtered Auction house view opens it filtered, with the filters shown", async ({ page }) => {

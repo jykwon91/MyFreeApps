@@ -1,6 +1,7 @@
 import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 import { useMemo, useState } from "react";
 import { useMediaQuery } from "@platform/ui";
+import AuctionGearFor from "@/games/wow-forever/components/auctionHouse/AuctionGearFor";
 import AuctionActiveFilters from "@/games/wow-forever/components/auctionHouse/AuctionActiveFilters";
 import AuctionFilterPanel from "@/games/wow-forever/components/auctionHouse/AuctionFilterPanel";
 import AuctionFilterSheet from "@/games/wow-forever/components/auctionHouse/AuctionFilterSheet";
@@ -15,6 +16,7 @@ import { useItemCategories } from "@/games/wow-forever/hooks/useItemCategories";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { categoryFilterActive, describeActiveFilters, gearFilterActive, removalPatch } from "@/games/wow-forever/lib/auctionHouse/auctionActiveFilters";
 import { bisLevelFor } from "@/games/wow-forever/lib/auctionHouse/bisLevel";
+import { gearClassFor } from "@/games/wow-forever/lib/auctionHouse/gearClass";
 import { bisTarget } from "@/games/wow-forever/lib/auctionHouse/bisTarget";
 import { savedGearSpec } from "@/games/wow-forever/lib/auctionHouse/savedGearSpec";
 import { auctionResultsKey } from "@/games/wow-forever/lib/auctionHouse/auctionResultsKey";
@@ -46,17 +48,19 @@ export default function AuctionLookup({ house, filters, onFilters, onClear, mate
   const priceState = useAuctionPrices(house);
   // The top picks are worked out from the item list and gear data, and only once the filter is on.
   const bisLevel = bisLevelFor(filters, player.level);
-  const specId = useMemo(() => savedGearSpec(player.classId), [player.classId]);
-  const bis = useAuctionBisPicks(filters.bis !== null, player.classId, specId, player.faction, bisLevel);
+  // The class picked on the page, else the player's own: what "usable" and the top picks mean.
+  const gearClass = gearClassFor(filters, player.classId);
+  const specId = useMemo(() => savedGearSpec(gearClass), [gearClass]);
+  const bis = useAuctionBisPicks(filters.bis !== null, gearClass, specId, player.faction, bisLevel);
 
-  const classLabel = findClass(player.classId)?.name ?? player.classId;
+  const classLabel = findClass(gearClass)?.name ?? gearClass;
   const categoriesIndex = categories.status === LOAD_STATUS.ready ? categories.index : null;
-  const active = describeActiveFilters(filters, classLabel, categoriesIndex, bisTarget(bisLevel, player.classId, specId));
+  const active = describeActiveFilters(filters, classLabel, categoriesIndex, bisTarget(bisLevel, gearClass, specId));
   const gearById = gear.status === LOAD_STATUS.ready ? gear.list.byId : null;
   const bisPicks = bis.status === LOAD_STATUS.ready ? bis.picks : null;
   const context = useMemo(
-    () => ({ qualityOf: itemQuality, gear: gearById, categories: categoriesIndex, bisPicks, classId: player.classId }),
-    [gearById, categoriesIndex, bisPicks, player.classId],
+    () => ({ qualityOf: itemQuality, gear: gearById, categories: categoriesIndex, bisPicks, classId: gearClass }),
+    [gearById, categoriesIndex, bisPicks, gearClass],
   );
   const { prices } = priceState;
   const lookup = useMemo(() => (prices ? lookupAuctionItems(prices.byId, materials, filters, context) : null), [prices, materials, filters, context]);
@@ -73,8 +77,6 @@ export default function AuctionLookup({ house, filters, onFilters, onClear, mate
       gear={gear}
       gearOpen={gearOpen}
       onToggleGear={() => setGearOpen((open) => !open)}
-      classLabel={classLabel}
-      bisLevel={bisLevel}
     />
   );
 
@@ -89,6 +91,7 @@ export default function AuctionLookup({ house, filters, onFilters, onClear, mate
         filtersOpen={panelOpen}
         onToggleFilters={() => setPanelOpen((open) => !open)}
       />
+      <AuctionGearFor filters={filters} onFilters={onFilters} playerClass={player.classId} classLabel={classLabel} bisLevel={bisLevel} playerLevel={bisLevelFor({ bisLevel: null }, player.level)} />
       {wide && panelOpen && <div className="rounded-xl border bg-card p-4">{panel}</div>}
       {!wide && panelOpen && (
         <AuctionFilterSheet onClose={() => setPanelOpen(false)} resultCount={resultCount} canClear={active.length > 0} onClear={onClear}>

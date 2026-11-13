@@ -113,6 +113,3 @@ function minChoiceChips(options: readonly number[]): readonly AuctionChipOption<
 
 export const QUANTITY_CHIPS = minChoiceChips(QUANTITY_FILTER_OPTIONS);
 export const LISTINGS_CHIPS = minChoiceChips(LISTINGS_FILTER_OPTIONS);
-
-/** The one chip of the "Class" group. */
-export const USABLE_CHIP_ID = "usable";

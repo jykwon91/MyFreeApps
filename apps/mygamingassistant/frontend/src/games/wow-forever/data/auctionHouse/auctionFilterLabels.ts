@@ -38,7 +38,6 @@ export const FILTER_PANEL_COPY = {
   level: "Required level",
   fromLevel: "From level",
   toLevel: "To level",
-  classGroup: "Class",
   gearLoading: "Loading gear filters",
 } as const;
 
@@ -50,11 +49,6 @@ export function subcategoryLegend(categoryLabel: string): string {
 /** The chip that clears the subclass choice. */
 export function allSubcategoriesLabel(categoryLabel: string): string {
   return `All ${categoryLabel.toLowerCase()}`;
-}
-
-/** The label of the "usable by my class" chip. */
-export function usableChipLabel(classLabel: string): string {
-  return `Usable by my class (${classLabel})`;
 }
 
 /** The search row, the active-filter chips, the list and its states. */
