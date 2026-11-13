@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import WowWorldMapPage from "@/games/wow-forever/pages/WowWorldMapPage";
@@ -385,6 +385,8 @@ describe("WoW Forever World Map page", () => {
     it("a zoomed-in view before the selection comes back zoomed in", async () => {
       renderInElwynn();
       await screen.findByRole("region", { name: "Find" });
+      // The wheel listener only exists once Leaflet has loaded and built the map; a wheel before that is lost.
+      await waitFor(() => expect(screen.getByRole("button", { name: "Zoom the map in" })).toBeEnabled());
       fireEvent.wheel(screen.getByTestId("zone-map"), { deltaY: -400, clientX: 10, clientY: 10 });
       // A burst of wheel events becomes one zoom once the wheel stops ticking (a few tens of ms).
       expect(await screen.findByRole("button", { name: "Reset zoom" })).toBeInTheDocument();
