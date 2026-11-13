@@ -98,6 +98,25 @@ async def record_roster(db: AsyncSession, guild_id: uuid.UUID, member_count: int
     )
 
 
+async def claim_refresh(
+    db: AsyncSession, guild_id: uuid.UUID, *, at: datetime, claimable_before: datetime,
+) -> bool:
+    """Take the right to refresh a live guild now: stamp ``roster_checked_at`` with ``at`` unless it
+    was asked for since ``claimable_before``. One atomic UPDATE, so two clicks (or two workers)
+    can't both win."""
+    result = await db.execute(
+        update(WowGuild)
+        .where(
+            WowGuild.id == guild_id,
+            WowGuild.gone_at.is_(None),
+            or_(WowGuild.roster_checked_at.is_(None), WowGuild.roster_checked_at <= claimable_before),
+        )
+        .values(roster_checked_at=at)
+        .returning(WowGuild.id)
+    )
+    return result.scalar_one_or_none() is not None
+
+
 async def record_error(db: AsyncSession, guild_id: uuid.UUID, message: str, at: datetime) -> None:
     await db.execute(
         update(WowGuild)

@@ -58,6 +58,21 @@ GUILD_GAINS_WINDOW_DAYS: Final = 7
 # GET /wow/guilds/{slug}/reputations?faction=: a faction id is a positive INT.
 FACTION_ID_MAX: Final = 2_147_483_647
 
+# The operator's own guild (Blizzard's slug): the only one "Refresh now" works for.
+GUILD_REFRESHABLE_SLUG: Final = "topdeadcenter"
+# POST /wow/guilds/{slug}/refresh ("Refresh now"): the guild can be refreshed on demand
+# once per cooldown, counted from the last time its roster was asked for (the
+# scheduler's runs and failed tries count too), however many people click.
+GUILD_REFRESH_COOLDOWN: Final = timedelta(minutes=5)
+# At most this many members fetched from Blizzard by one on-demand refresh (the
+# scheduler's per-run budget is for the whole queue); members refreshed within
+# the cooldown are not fetched again. A bigger guild is finished by its hourly refreshes.
+GUILD_REFRESH_NOW_MAX_MEMBER_FETCHES: Final = 100
+# Per-IP on-demand refreshes per window. Each can cost up to a hundred member
+# fetches (about eleven Blizzard calls each), so it is far stricter than the read limit.
+GUILD_REFRESH_RATE_LIMIT: Final = 5
+GUILD_REFRESH_RATE_WINDOW_SECONDS: Final = 600
+
 # GET /wow/guilds/{slug}: per-IP look-ups per window (a database read, no Blizzard call).
 GUILD_RATE_LIMIT: Final = 60
 GUILD_RATE_WINDOW_SECONDS: Final = 60

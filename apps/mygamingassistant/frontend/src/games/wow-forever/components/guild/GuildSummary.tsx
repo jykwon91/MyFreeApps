@@ -1,3 +1,4 @@
+import GuildRefreshButton from "@/games/wow-forever/components/guild/GuildRefreshButton";
 import { FACTION_LABELS } from "@/games/wow-forever/data/character/characterConfig";
 import { GUILD_ROSTER_FRESH_HOURS } from "@/games/wow-forever/data/guild/guildConfig";
 import { BADGE } from "@/games/wow-forever/data/badgeStyles";
@@ -6,7 +7,7 @@ import { relativeTime } from "@/games/wow-forever/lib/serverStatusTime";
 import type { GuildResponse } from "@/games/wow-forever/types/guild/guildResponse";
 
 /** Faction, how many members show out of the roster, and how fresh the roster is. */
-export default function GuildSummary({ guild }: { guild: GuildResponse }) {
+export default function GuildSummary({ guild, refetch }: { guild: GuildResponse; refetch: () => unknown }) {
   const shown = guild.members.length;
   const missing = guild.roster_size === null ? 0 : Math.max(guild.roster_size - shown, 0);
   const updatedAt = guild.roster_updated_at;
@@ -28,6 +29,7 @@ export default function GuildSummary({ guild }: { guild: GuildResponse }) {
             </time>
           </span>
         ) : null}
+        {guild.can_refresh ? <GuildRefreshButton guild={guild} refetch={refetch} /> : null}
       </div>
       {missing > 0 ? (
         <p className="text-xs text-muted-foreground">

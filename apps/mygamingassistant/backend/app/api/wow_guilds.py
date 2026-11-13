@@ -7,6 +7,8 @@ GET /wow/guilds/{slug}/recipes?q= — the guild's known recipes whose name
 contains ``q``, each with the members who know it.
 GET /wow/guilds/{slug}/reputations?faction= — the factions members have met,
 and each member's standing with one (default: the one most have met).
+POST /wow/guilds/{slug}/refresh — "Refresh now": re-pull the roster and members
+from Blizzard in the background (202), at most once per cooldown per guild.
 
 Read from the database only: a guild is stored when someone looks up one of
 its members on "Your character", and the scheduled roster refresh fills in the
@@ -17,9 +19,9 @@ Errors:
     recipe search and reputation board find nothing
   - 422 — a guild or recipe query shorter or longer than allowed, or holding control
     characters (Postgres refuses NUL)
-  - 429 — too many look-ups from this IP
+  - 429 — too many look-ups (or refreshes) from this IP
 """
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request, Response, status
 
 from platform_shared.core.request_utils import get_client_ip
 
@@ -29,6 +31,8 @@ from app.core.wow_guild import (
     GUILD_QUERY_FORBIDDEN,
     GUILD_RATE_LIMIT,
     GUILD_RATE_WINDOW_SECONDS,
+    GUILD_REFRESH_RATE_LIMIT,
+    GUILD_REFRESH_RATE_WINDOW_SECONDS,
     GUILD_RECIPE_QUERY_MAX_LENGTH,
     GUILD_RECIPE_QUERY_MIN_LENGTH,
     GUILD_SEARCH_QUERY_MAX_LENGTH,
@@ -37,11 +41,13 @@ from app.core.wow_guild import (
     GUILD_SLUG_PATTERN,
 )
 from app.schemas.wow.guild.guild_recipe_search_response import GuildRecipeSearchResponse
+from app.schemas.wow.guild.guild_refresh_response import GuildRefreshResponse
 from app.schemas.wow.guild.guild_reputation_response import GuildReputationResponse
 from app.schemas.wow.guild.guild_response import GuildResponse
 from app.schemas.wow.guild.guild_search_response import GuildSearchResponse
 from app.services.wow.guild import (
     guild_recipe_search_service,
+    guild_refresh_service,
     guild_reputation_service,
     guild_search_service,
     guild_view_service,
@@ -50,6 +56,7 @@ from app.services.wow.guild import (
 router = APIRouter(prefix="/wow/guilds", tags=["wow"])
 
 guild_limiter = RateLimiter(max_attempts=GUILD_RATE_LIMIT, window_seconds=GUILD_RATE_WINDOW_SECONDS)
+guild_refresh_limiter = RateLimiter(max_attempts=GUILD_REFRESH_RATE_LIMIT, window_seconds=GUILD_REFRESH_RATE_WINDOW_SECONDS)
 
 GUILD_NOT_FOUND = "guild_not_found"
 RECIPE_QUERY_TOO_SHORT = "recipe_query_too_short"
@@ -123,3 +130,19 @@ async def get_guild_reputations(
     if result is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=GUILD_NOT_FOUND)
     return result
+
+
+@router.post("/{slug}/refresh", response_model=GuildRefreshResponse, status_code=status.HTTP_202_ACCEPTED)
+async def refresh_guild(
+    slug: str, request: Request, response: Response, background: BackgroundTasks,
+) -> GuildRefreshResponse:
+    checked = _checked_slug(slug, request)
+    check_with_retry_after(guild_refresh_limiter, f"wow-guild-refresh:{get_client_ip(request)}")
+    claim = await guild_refresh_service.claim(checked)
+    if claim is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=GUILD_NOT_FOUND)
+    if not claim.started:
+        response.status_code = status.HTTP_200_OK
+        return GuildRefreshResponse(status="cooldown", retry_after_seconds=claim.retry_after_seconds)
+    background.add_task(guild_refresh_service.run, claim)
+    return GuildRefreshResponse(status="started", retry_after_seconds=claim.retry_after_seconds)

@@ -1113,6 +1113,24 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   and the recipe search share `useDebouncedSearchParam` (URL-kept, debounced,
   `replace`). Tests: `tests/test_wow_guild_search.py`,
   `src/__tests__/wowGuildFinder.test.tsx`, `e2e/wow-forever-guild.spec.ts`.
+- Guild "Refresh now" (next to "Roster updated …", `components/guild/GuildRefreshButton.tsx`,
+  `hooks/useGuildRefresh.ts`): ONLY for the operator's guild — `GUILD_REFRESHABLE_SLUG`
+  (`topdeadcenter`) in `core/wow_guild.py`; the guild response carries `can_refresh`
+  so the frontend never hardcodes the slug, and any other slug's
+  `POST /api/wow/guilds/{slug}/refresh` is a 404 `guild_not_found`. The claim
+  (`guild_refresh_service.claim` → `guild_repo.claim_refresh`) is one atomic UPDATE
+  of `roster_checked_at`, refused inside `GUILD_REFRESH_COOLDOWN` (5 min, counted
+  from ANY ask for the roster: the hourly run, a failed try, another click — safe
+  across the 2 uvicorn workers; no migration). Started = 202 and the refresh runs
+  after the response (`guild_roster_service.refresh_now` = `refresh_guild` with
+  `GUILD_REFRESH_NOW_MAX_MEMBER_FETCHES` and members fresher than the cooldown
+  skipped; a crash is recorded as `last_error`, never raised); cooling down = 200
+  `{status: "cooldown", retry_after_seconds}`. Per-IP `guild_refresh_limiter`
+  (5 per 10 min → 429). The page reads `refresh_available_at` (disables the button
+  and says how long), then polls the guild until `roster_updated_at` or
+  `refresh_failed_at` changes and toasts the result. Tests:
+  `tests/test_wow_guild_refresh.py`, `src/__tests__/wowGuildRefreshButton.test.tsx`,
+  `e2e/wow-forever-guild-refresh.spec.ts`.
 - Guild leaderboards (above the member list, `GuildLeaderboards`): each member
   carries every number of its newest daily metric plus its professions from
   `guild_repo.member_skills` — the newest day that HAS skills (a day whose

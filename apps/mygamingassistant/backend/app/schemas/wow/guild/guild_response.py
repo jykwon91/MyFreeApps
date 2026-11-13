@@ -16,6 +16,12 @@ class GuildResponse(BaseModel):
     roster_updated_at: datetime | None
     # The last roster refresh failed; the members shown are from roster_updated_at.
     refresh_failed: bool
+    # When the last failed refresh happened (set while refresh_failed); it changes with each failed try.
+    refresh_failed_at: datetime | None
+    # This guild has a "Refresh now" button (only the operator's own guild does).
+    can_refresh: bool
+    # "Refresh now" works from this moment on; None when no one has asked for the roster yet.
+    refresh_available_at: datetime | None
     # Blizzard no longer has this guild.
     gone: bool
     # The gains boards' window: each member's baseline is their newest stored

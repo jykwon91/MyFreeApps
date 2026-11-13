@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.wow_guild import (
     GUILD_NOT_FOUND_ERROR,
+    GUILD_REFRESH_COOLDOWN,
     GUILD_ROSTER_JOB_INTERVAL,
     GUILD_ROSTER_REFRESH_EVERY,
     GUILD_ROSTER_STALE_AFTER,
@@ -439,3 +440,52 @@ async def test_an_empty_roster_is_refused_by_the_repository(bound_unit_of_work: 
     guild = await _watched_guild_with_jason(bound_unit_of_work)
     with pytest.raises(ValueError):
         await character_repo.apply_roster(bound_unit_of_work, guild.id, {})
+
+
+# --- refresh now ---------------------------------------------------------------------
+
+
+async def test_refresh_now_refetches_members_older_than_the_cooldown_but_not_newer_ones(
+    bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = bound_unit_of_work
+    guild = await _watched_guild_with_jason(db)
+    await character_store_service.record(make_fetch("tiny-john", 2), now=NOW)
+    fetched: list[str] = []
+    real = character_lookup_service.get_character
+
+    async def spy(slug: str, **kwargs: Any) -> Any:
+        fetched.append(slug)
+        return await real(slug, **kwargs)
+
+    monkeypatch.setattr(character_lookup_service, "get_character", spy)
+    monkeypatch.setattr(character_service, "new_client", lambda: _blizzard([("jason-kwon", 1, 0), ("tiny-john", 2, 4)]))
+    jason = await _character(db, "jason-kwon")
+    jason.checked_at = NOW - timedelta(minutes=1)  # inside the cooldown: not fetched again
+    tiny = await _character(db, "tiny-john")
+    # Older than the cooldown, yet still fresh to the hourly scheduler.
+    tiny.checked_at = NOW - GUILD_REFRESH_COOLDOWN - timedelta(minutes=1)
+    await db.flush()
+
+    await guild_roster_service.refresh_now(guild, now=NOW)
+
+    assert fetched == ["tiny-john"]
+    await db.refresh(guild)
+    assert guild.roster_fetched_at == NOW and guild.member_count == 2 and guild.last_error is None
+
+
+async def test_refresh_now_records_a_crash_instead_of_raising(
+    bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = bound_unit_of_work
+    guild = await _watched_guild_with_jason(db)
+
+    def boom() -> BlizzardCharacterClient:
+        raise RuntimeError("bug")
+
+    monkeypatch.setattr(character_service, "new_client", boom)
+
+    await guild_roster_service.refresh_now(guild, now=NOW)
+
+    await db.refresh(guild)
+    assert guild.last_error is not None and guild.gone_at is None
