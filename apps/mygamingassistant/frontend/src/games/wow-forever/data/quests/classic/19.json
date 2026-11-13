@@ -38,7 +38,7 @@
 "5203":[5203,"Rescue From Jaedenar",55,49,"N","",[["npc",11016,"Captured Arko'narin",1448,"Jaedenar",36.2,55.5,null]],[5202],[],[],[],["npc:11019"],false,[5204,5385]],
 "5651":[5651,"In Favor of Darkness",4,5,"H","priest",[["npc",2123,"Dark Cleric Duesten",1420,"Deathknell",31.1,66.0,null]],[],[],[],[],["npc:2129"],true,[5650]],
 "5843":[5843,"Welcome!",1,1,"H","",[["item",14649,"Valley of Trials Gift Voucher",null,"",null,null,null]],[],[["item",14649,1]],[],[],["npc:11943"],false,[]],
-"6163":[6163,"Ramstein",60,56,"H","",[["npc",11878,"Nathanos Blightcaller",1423,"The Undercroft",22.2,63.5,null]],[6133,6135],[["item",15880,1]],[],[],["npc:11878"],true,[]],
+"6163":[6163,"Ramstein",60,56,"H","",[["npc",11878,"Nathanos Blightcaller",1423,"The Undercroft",22.2,63.5,null]],[6133,6135],[["item",15880,1]],[],[[18022,1],[17001,1]],["npc:11878"],true,[]],
 "6611":[6611,"To Gadgetzan You Go!",45,35,"H","",[["npc",3399,"Zamja",1454,"",57.4,54.0,null]],[],[],[],[],["npc:8125"],true,[6610]],
 "7123":[7123,"Speak with our Quartermaster",60,51,"H","",[],[],[],[],[],["npc:12097"],true,[]],
 "7507":[7507,"Foror's Compendium",60,60,"N","",[["item",18401,"Foror's Compendium of Dragon Slaying",null,"",null,null,null]],[],[["item",18401,1]],[],[],["npc:14368"],false,[7508,7509]],

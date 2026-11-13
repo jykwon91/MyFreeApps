@@ -40,7 +40,7 @@
 "5142":[5142,"Little Pamela",55,50,"N","",[["npc",10927,"Marlene Redpath",1422,"Sorrow Hill",49.2,78.6,null]],[],[],[],[],["npc:10926"],true,[5149,5152,5153,5154,5210,5181,5206,5941,5721,5942]],
 "5206":[5206,"Marauders of Darrowshire",60,50,"N","",[["npc",11063,"Carlin Redpath",1423,"Light's Hope Chapel",71.7,50.0,null]],[5142,5149,5152,5153,5154,5210,5168],[["item",13155,5],["item",13156,1]],[],[],["npc:11063"],false,[5941,5721,5942]],
 "5462":[5462,"The Dying, Ras Frostwhisper",60,57,"N","",[["npc",11286,"Magistrate Marduke",1422,"Caer Darrow",70.6,74.1,null]],[5382,5515,5384,5461],[["item",13585,1]],[],[],["npc:11036"],false,[5463,5464,5465,5466]],
-"5526":[5526,"Shards of the Felvine",60,56,"N","",[["npc",11801,"Rabine Saturna",1450,"Moonglade",51.7,45.1,null]],[5527],[["item",18540,1]],[],[],["npc:11801"],false,[]],
+"5526":[5526,"Shards of the Felvine",60,56,"N","",[["npc",11801,"Rabine Saturna",1450,"Moonglade",51.7,45.1,null]],[5527],[["item",18540,1]],[],[[18535,1],[18536,1]],["npc:11801"],false,[]],
 "5654":[5654,"Hex of Weakness",10,10,"H","priest",[["npc",11407,"Var'jun",1412,"Bloodhoof Village",46.2,62.3,null]],[],[],[],[],["npc:6018"],true,[]],
 "5846":[5846,"Of Love and Family",58,52,"N","",[["npc",1855,"Tirion Fordring",1422,"Thondroril River",67.3,24.2,null]],[5542,5742,5781,5845],[],[],[],["npc:11936"],true,[5848,5861,5862,5944]],
 "6102":[6102,"Taming the Beast",10,10,"A","hunter",[["npc",3601,"Dazalar",1438,"Dolanaar",56.7,59.5,null]],[6071,6063,6101],[["item",15923,1]],[],[],["npc:3601"],false,[6103]],

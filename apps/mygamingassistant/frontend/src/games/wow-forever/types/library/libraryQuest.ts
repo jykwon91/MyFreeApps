@@ -10,4 +10,6 @@ export interface LibraryQuest {
   rewards: LibraryRewardItem[];
   /** Items you choose one of. */
   choices: LibraryRewardItem[];
+  /** The day our client was sent it (the "Seen in game" date). */
+  seenOn: string;
 }

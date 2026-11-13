@@ -9,11 +9,10 @@ interface AbilityCardProps {
   ability: PetAbility;
   families: readonly HunterFamily[];
   teachersBySpell: ReadonlyMap<number, readonly TamableBeast[]>;
-  seenOn: string;
 }
 
 /** One ability with the families that learn it and every rank (open by default for a deep link, closed otherwise). */
-export default function AbilityCard({ ability, families, teachersBySpell, seenOn }: AbilityCardProps) {
+export default function AbilityCard({ ability, families, teachersBySpell }: AbilityCardProps) {
   const learners = families.filter((f) => ability.familyIds.includes(f.id)).map((f) => f.name);
   return (
     <details className="rounded-xl border bg-card p-3 sm:p-4" data-testid="ability-card" data-ability={ability.slug}>
@@ -32,7 +31,6 @@ export default function AbilityCard({ ability, families, teachersBySpell, seenOn
               rank={rank}
               abilityIsNew={ability.isNew}
               teachers={teachersBySpell.get(rank.spell) ?? []}
-              seenOn={seenOn}
             />
           ))}
         </ol>

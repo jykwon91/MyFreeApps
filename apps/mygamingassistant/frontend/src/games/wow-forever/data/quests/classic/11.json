@@ -37,7 +37,7 @@
 "6027":[6027,"Book of the Ancients",38,30,"N","",[["npc",11863,"Azore Aldamort",1443,"Ethel Rethor",38.9,27.2,null]],[5741],[["item",15803,1],["item",15766,1]],[],[[16791,1],[16793,1]],["npc:11863"],false,[]],
 "6283":[6283,"Bloodfury Bloodline",26,18,"H","",[["npc",11860,"Maggran Earthbinder",1442,"Sun Rock Retreat",47.2,61.2,null]],[6282],[["item",16190,1]],[],[[16990,1],[16987,1]],["npc:11860"],true,[]],
 "6603":[6603,"Trouble in Winterspring!",56,52,"N","",[["npc",11754,"Meggi Peppinrocker",1452,"Everlook",60.7,38.2,null]],[],[],[],[],["npc:9298"],true,[5082]],
-"7499":[7499,"Codex of Defense",60,54,"N","warrior",[["item",18357,"Codex of Defense",null,"",null,null,null]],[],[["item",18357,1]],[],[],["npc:14383"],false,[]],
+"7499":[7499,"Codex of Defense",60,54,"N","warrior",[["item",18357,"Codex of Defense",null,"",null,null,null]],[],[["item",18357,1]],[[18466,1]],[],["npc:14383"],false,[]],
 "7563":[7563,"Rage of Blood",58,60,"N","warlock",[["npc",14436,"Mor'zul Bloodbringer",1428,"Altar of Storms",12.7,31.6,null]],[7562],[["item",18590,30]],[],[],["npc:14436"],true,[7564,7629,7631]],
 "7627":[7627,"Wheel of the Black March",60,60,"N","warlock",[["npc",14436,"Mor'zul Bloodbringer",1428,"Altar of Storms",12.7,31.6,null]],[7562,7563,7564],[["item",14344,6],["item",11370,25]],[],[],["npc:14437"],false,[7630,7631]],
 "8075":[8075,"Paragons of Power: The Augur's Hauberk",60,60,"N","shaman",[["npc",14904,"Maywiki of Zuldazar",1434,"",15.3,16.0,null]],[],[["item",19722,1]],[[19828,1]],[],["npc:14904"],true,[]],

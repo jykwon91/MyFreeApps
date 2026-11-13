@@ -35,7 +35,7 @@
 "6032":[6032,"Sacred Cloth",55,50,"N","",[],[],[["item",14342,2]],[],[],["npc:11557"],true,[]],
 "6544":[6544,"Torek's Assault",24,20,"H","",[["npc",12858,"Torek",1440,"Fallen Sky Lake",68.3,75.3,null]],[],[],[],[[16889,1],[16890,1]],["npc:12877"],false,[]],
 "6608":[6608,"You Too Good.",45,35,"H","",[["npc",3332,"Lumak",1454,"",69.8,29.2,null]],[],[],[],[],["npc:12919"],true,[]],
-"7504":[7504,"Holy Bologna: What the Light Won't Tell You",60,54,"N","priest",[["item",18362,"Holy Bologna: What the Light Won't Tell You",null,"",null,null,null]],[],[["item",18362,1]],[],[],["npc:14381"],false,[]],
+"7504":[7504,"Holy Bologna: What the Light Won't Tell You",60,54,"N","priest",[["item",18362,"Holy Bologna: What the Light Won't Tell You",null,"",null,null,null]],[],[["item",18362,1]],[[18469,1]],[],["npc:14381"],false,[]],
 "7632":[7632,"The Ancient Leaf",60,60,"N","hunter",[["item",18703,"Ancient Petrified Leaf",null,"",null,null,null]],[],[["item",18703,1]],[],[],["npc:14524"],false,[7634]],
 "7824":[7824,"A Donation of Runecloth",60,50,"H","",[["npc",14726,"Rashona Straglash",1454,"",63.6,51.2,null]],[7826],[["item",14047,60]],[],[],["npc:14726"],false,[]],
 "8080":[8080,"Arathi Basin Resources!",55,50,"A","",[],[],[["item",20559,1]],[],[],[],false,[]],

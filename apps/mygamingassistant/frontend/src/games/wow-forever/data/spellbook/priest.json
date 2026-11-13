@@ -1,5 +1,5 @@
-{"source":"wago.tools DB2 wowf 1.60.1.70790 with hotfixes, plus the Forever client hotfix cache (build 70888, 12,416 records)",
-"clientBuild":"1.60.1.70790",
+{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 70888, 12,482 records)",
+"clientBuild":"1.60.1.70888",
 "classId":"priest",
 "tabs":[{"id":613,"name":"Discipline"},{"id":56,"name":"Holy"},{"id":78,"name":"Shadow Magic"}],
 "spells":[

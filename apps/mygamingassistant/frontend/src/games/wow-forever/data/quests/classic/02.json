@@ -56,7 +56,7 @@
 "7810":[7810,"Arena Master",55,1,"N","",[["item",18706,"Arena Master",null,"",null,null,null]],[],[],[],[],["npc:14508"],false,[]],
 "7874":[7874,"Quell the Silverwing Usurpers",35,30,"H","",[],[],[["item",20558,1]],[],[],[],false,[]],
 "8066":[8066,"Paragons of Power: The Predator's Belt",60,60,"N","hunter",[["npc",14905,"Falthir the Sightless",1434,"",14.1,13.7,null]],[],[["item",19721,1]],[[19832,1]],[],["npc:14905"],true,[]],
-"8258":[8258,"The Darkreaver Menace",60,60,"H","shaman",[["npc",13417,"Sagorne Creststrider",1454,"",38.7,35.9,null]],[7667],[["item",18880,1]],[],[],["npc:13417"],false,[]],
+"8258":[8258,"The Darkreaver Menace",60,60,"H","shaman",[["npc",13417,"Sagorne Creststrider",1454,"",38.7,35.9,null]],[7667],[["item",18880,1]],[[20134,1]],[],["npc:13417"],false,[]],
 "8322":[8322,"Rotten Eggs",60,30,"H","",[],[],[["item",20605,1]],[],[],["object:180570"],false,[8409]],
 "8578":[8578,"Scrying Goggles? No Problem!",60,60,"N","",[["object",180642,"Inconspicuous Crate",1421,"The Greymane Wall",46.2,86.7,null]],[8575,8576,8577],[["item",20951,1]],[],[],["npc:11811"],false,[]],
 "8642":[8642,"Silvervein the Elder",60,1,"N","",[],[],[],[],[],["npc:15558"],true,[]],

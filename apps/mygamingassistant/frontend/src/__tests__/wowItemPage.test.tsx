@@ -57,10 +57,10 @@ describe("item page", () => {
   });
 
   it("says a Classic item hasn't appeared in Forever yet, without saying it doesn't exist", async () => {
-    renderAt("/wow-forever/items/809");
-    expect(await screen.findByRole("heading", { level: 1, name: "Bloodrazor" })).toBeInTheDocument();
+    renderAt("/wow-forever/items/913");
+    expect(await screen.findByRole("heading", { level: 1, name: "Huge Ogre Sword" })).toBeInTheDocument();
     expect(screen.getByText(/hasn't appeared in WoW Forever's game files yet/)).toBeInTheDocument();
-    expect(screen.getByRole("searchbox", { name: "Find an item" })).toHaveValue("Bloodrazor");
+    expect(screen.getByRole("searchbox", { name: "Find an item" })).toHaveValue("Huge Ogre Sword");
   });
 
   it("says a link to no item is not found and offers a search", async () => {

@@ -1,8 +1,7 @@
 /** The two generated files as they sit on disk (`data/rares/`), before decoding. */
 export interface RareDataFiles {
   forever: {
-    clientBuild: number;
-    seenOn: string;
+    /** id, name, classification, seenOn (the day our client met it). */
     columns: readonly string[];
     rares: readonly (readonly (string | number)[])[];
     itemColumns: readonly string[];

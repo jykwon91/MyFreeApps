@@ -43,13 +43,14 @@ export function decodeLibrary(file: LibraryDataFile): LibraryData {
     city: String(row[cCity]),
     quality: quality(row[cQuality]),
   }));
-  const quests = file.quests.map(([id, title, level, minLevel, rewards, choices]) => ({
+  const quests = file.quests.map(([id, title, level, minLevel, rewards, choices, seenOn]) => ({
     id,
     title,
     level,
     minLevel,
     rewards: rewardItems(rewards, file.items),
     choices: rewardItems(choices, file.items),
+    seenOn,
   }));
-  return { books, cards, quests, seenOn: file.seenOn, clientBuild: file.clientBuild };
+  return { books, cards, quests };
 }

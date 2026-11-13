@@ -37,7 +37,7 @@
 "6028":[6028,"The Everlook Report",52,50,"A","",[["npc",10431,"Gregor Greystone",1452,"Everlook",61.3,39.0,null]],[],[["item",15788,1]],[],[],["npc:10840"],false,[]],
 "6284":[6284,"Arachnophobia",21,15,"H","",[["object",177904,"Wanted Poster: Besseleth",1442,"Webwinder Path",59.1,75.7,null]],[],[["item",16192,1]],[],[[16891,1],[16894,1]],["npc:11860"],true,[]],
 "6604":[6604,"Enraged Wildkin",59,53,"A","",[["npc",11755,"Harlo Wigglesworth",1452,"Everlook",61.1,38.4,null]],[],[],[],[],["npc:10301"],true,[4861,4863,4864]],
-"7500":[7500,"The Arcanist's Cookbook",60,54,"N","mage",[["item",18358,"The Arcanist's Cookbook",null,"",null,null,null]],[],[["item",18358,1]],[],[],["npc:14383"],false,[]],
+"7500":[7500,"The Arcanist's Cookbook",60,54,"N","mage",[["item",18358,"The Arcanist's Cookbook",null,"",null,null,null]],[],[["item",18358,1]],[[18468,1]],[],["npc:14383"],false,[]],
 "7564":[7564,"Wildeyes",58,60,"N","warlock",[["npc",14436,"Mor'zul Bloodbringer",1428,"Altar of Storms",12.7,31.6,null]],[7562,7563],[["item",18591,1]],[],[],["npc:14437"],false,[7629,7631]],
 "7628":[7628,"Doomsday Candle",60,60,"N","warlock",[["npc",14436,"Mor'zul Bloodbringer",1428,"Altar of Storms",12.7,31.6,null]],[7562,7563,7564],[["item",15416,35]],[],[],["npc:14437"],false,[7630,7631]],
 "7820":[7820,"A Donation of Wool",60,12,"H","",[["npc",14728,"Rumstag Proudstrider",1456,"",43.0,42.7,null]],[],[["item",2592,60]],[],[],["npc:14728"],false,[7823]],

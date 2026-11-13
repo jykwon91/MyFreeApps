@@ -7,7 +7,4 @@ export interface RaresData {
   rares: readonly Rare[];
   /** Every zone a rare spawns in, by name. */
   zones: readonly RareZone[];
-  /** The day the operator's Forever client cache was last written. */
-  seenOn: string;
-  clientBuild: number;
 }

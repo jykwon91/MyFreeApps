@@ -369,7 +369,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Under the header: "Game data: patch 1.60.1 (build 70790) · updated <date>" from
   `data/dataRefresh.json`, **written by `wow_refresh apply`** (never by hand; a
   backend test checks its build matches `sources.WAGO_BUILD`).
-- **What's new on this site** (`data/whatsNew.ts`, hand-written, newest first,
+- **What's new on this site** (`data/whatsNew.json`, typed by `whatsNew.ts`; hand-written, newest first,
   date = the day it merged): the latest `WHATS_NEW_HUB_COUNT` (5) + "Show all".
   Add an entry in the same PR as any player-visible change. An entry's `to` path
   (query dropped) must be the hub or a hub tile — that page gets the dot.
@@ -630,6 +630,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `earlier_seen`), each with its own `seenOn`; never delete
   `dungeonQuestsSeen.json` / `questSeen.json` before a rebuild, or every
   quest seen before the patch loses its Forever data.
+- **The same carry-over holds for every "Seen in game" list.** Rares
+  (`rares.json`, `seen_rares` / `earlier_rares`), hunter-pet beasts
+  (`hunterPets.json` `seen`, `seen_rows` / `earlier_seen_beasts`), the
+  Library's reward quests and the Changes feed's new quests (both read
+  `questSeen.json`, so `wow_quests` runs before them) keep a `seenOn` per row.
+  A row is dropped only when the new cache met that creature or quest as
+  something else; a file from before the per-row column falls back to its
+  file-level `seenOn`.
 
 #### Rares (`/wow-forever/rares`)
 

@@ -20,7 +20,7 @@ export default function WowRaresPage() {
         backTo="/wow-forever"
         backLabel="Back to WoW Forever"
       />
-      <RaresNote confirmedCount={data ? data.rares.filter((r) => r.seenOn !== null).length : null} seenOn={data?.seenOn ?? null} />
+      <RaresNote confirmedCount={data ? data.rares.filter((r) => r.seenOn !== null).length : null} />
       {state.status === RARES_STATUS.error ? (
         <LoadErrorRetry message="Couldn't load the rares." onRetry={state.retry} retrying={false} />
       ) : null}

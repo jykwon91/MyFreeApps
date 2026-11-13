@@ -52,7 +52,7 @@
 "7848":[7848,"Attunement to the Core",60,55,"N","",[["npc",14387,"Lothos Riftwaker",1428,"Blackrock Mountain",26.4,24.5,null]],[],[["item",18412,1]],[],[],["npc:14387"],false,[]],
 "8104":[8104,"The Jewel of Kajaro",60,60,"N","mage",[["npc",14903,"Al'tabim the All-Seeing",1434,"",15.3,16.1,null]],[8101,8102,8103],[["item",19600,1]],[[19601,1]],[],["npc:14903"],false,[]],
 "8168":[8168,"The Battle for Arathi Basin!",25,20,"A","",[["npc",14983,"Field Marshal Oslight",1417,"Refuge Pointe",45.8,45.5,null]],[],[["npc",15005,1],["npc",15004,1],["npc",15002,1],["npc",15003,1]],[],[],["npc:14983"],true,[]],
-"8232":[8232,"The Green Drake",52,50,"N","hunter",[["npc",8405,"Ogtinc",1447,"Timbermaw Hold",42.4,42.6,null]],[8151,8153,8231],[["item",20019,1]],[],[],["npc:8405"],false,[]],
+"8232":[8232,"The Green Drake",52,50,"N","hunter",[["npc",8405,"Ogtinc",1447,"Timbermaw Hold",42.4,42.6,null]],[8151,8153,8231],[["item",20019,1]],[],[[20083,1],[19991,1],[19992,1]],["npc:8405"],false,[]],
 "8424":[8424,"War on the Shadowsworn",52,50,"N","warrior",[["npc",7572,"Fallen Hero of the Horde",1435,"Stonard",34.3,66.1,null]],[8417,8423],[["npc",6006,20],["npc",6004,10],["npc",6005,20]],[],[],["npc:7572"],false,[8425]],
 "8552":[8552,"The Monogrammed Sash",50,40,"N","",[["item",3985,"Monogrammed Sash",null,"",null,null,null]],[],[["item",3985,1]],[],[],["npc:2500"],false,[615,8554]],
 "8680":[8680,"Windtotem the Elder",60,1,"N","",[],[],[],[],[],["npc:15582"],true,[]],

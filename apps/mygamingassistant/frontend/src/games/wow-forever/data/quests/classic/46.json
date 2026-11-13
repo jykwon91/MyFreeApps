@@ -45,7 +45,7 @@
 "4782":[4782,"Components for the Enchanted Gold Bloodrobe",34,31,"N","warlock",[["npc",2670,"Xizk Goodstitch",1434,"Booty Bay",28.7,76.9,null]],[1796,4781],[],[],[],["npc:6266"],true,[4783,4784,4786]],
 "4974":[4974,"For The Horde!",60,55,"H","",[["npc",4949,"Thrall",1454,"",31.7,37.8,null]],[4903,4941],[["item",12630,1]],[],[[13966,1]],["npc:4949"],true,[6566,6567,6568,6569,6570,6582,6585,6601,6602]],
 "5102":[5102,"General Drakkisath's Demise",60,55,"A","",[["npc",9560,"Marshal Maxwell",1428,"Morgan's Vigil",84.7,69.0,null]],[5089],[["npc",10363,1]],[],[[13966,1]],["npc:9560"],true,[]],
-"5166":[5166,"Breastplate of the Chromatic Flight",60,57,"N","",[["object",176192,"Catalogue of the Wayward",1422,"Ruins of Andorhal",39.3,66.6,null]],[5160,5161,5162,5164],[["item",12871,1],["item",12607,10],["item",12938,10],["item",12735,10]],[],[],["npc:10976"],true,[]],
+"5166":[5166,"Breastplate of the Chromatic Flight",60,57,"N","",[["object",176192,"Catalogue of the Wayward",1422,"Ruins of Andorhal",39.3,66.6,null]],[5160,5161,5162,5164],[["item",12871,1],["item",12607,10],["item",12938,10],["item",12735,10]],[[12895,1]],[],["npc:10976"],true,[]],
 "5230":[5230,"Return to the Bulwark",53,50,"H","",[["object",176361,"Scourge Cauldron",1422,"Felstone Field",37.2,56.8,null]],[5093,5096,5228,5229],[["item",13190,1]],[],[],["npc:11055"],false,[5231,5232,5233,5234,5235,5236,5238]],
 "5742":[5742,"Redemption",56,52,"N","",[["npc",1855,"Tirion Fordring",1422,"Thondroril River",67.3,24.2,null]],[5542],[],[],[],["npc:1855"],true,[5781,5845,5846,5848,5861,5862,5944]],
 "6062":[6062,"Taming the Beast",10,10,"H","hunter",[["npc",3171,"Thotar",1411,"Razor Hill",51.8,43.5,null]],[6068],[["item",15917,1]],[],[],["npc:3171"],false,[6083,6082,6081]],

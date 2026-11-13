@@ -31,7 +31,7 @@ from scripts.wow_changes.spells import (
 from scripts.wow_changes.stamp import previous_build, stamp
 from scripts.wow_changes.talents import live_talent_spells, talent_changes
 from scripts.wow_changes.world import quest_changes, zone_changes
-from scripts.wow_dungeons.quest_cache import CachedQuest
+from scripts.wow_dungeons.quests import SeenRow
 from scripts.wow_food.tooltip import SpellBook
 from scripts.wow_world_map.sources import WAGO_BUILD, WAGO_ERA_BUILD
 
@@ -227,11 +227,16 @@ def test_new_other_items_lists_consumables_and_recipes_and_counts_the_rest() -> 
 
 
 def test_new_quests_are_named_from_the_cache_and_unnamed_ones_counted() -> None:
-    cached = {5: CachedQuest(5, "Old", 10, 5, False, (), (), ()), 7: CachedQuest(7, "A Dynamite Plan", 16, 9, False, (), (), ())}
-    changes, unnamed = quest_changes([5, 7, 8], classic_ids={5}, cached=cached, seen_on="2026-11-08")
-    assert [c.key for c in changes] == ["quest:7"]
+    seen = {
+        5: SeenRow("Old", 10, 5, [], [], [], None, "2026-11-12"),
+        7: SeenRow("A Dynamite Plan", 16, 9, [], [], [], None, "2026-11-08"),  # kept from before a patch
+        9: SeenRow("Fresh", 20, 15, [], [], [], None, "2026-11-12"),
+    }
+    changes, unnamed = quest_changes([5, 7, 8, 9], classic_ids={5}, seen=seen)
+    assert [c.key for c in changes] == ["quest:7", "quest:9"]
     assert changes[0].summary == "New quest, level 16 (from level 9)."
     assert (changes[0].provenance, changes[0].seen_on) == (PROVENANCE_SEEN, "2026-11-08")
+    assert changes[1].seen_on == "2026-11-12"
     assert unnamed == 1
 
 

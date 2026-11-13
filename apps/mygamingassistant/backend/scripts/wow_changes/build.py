@@ -2,7 +2,7 @@
 
 Usage (from ``apps/mygamingassistant/backend``, after the Items and Talents builds)::
 
-    python -m scripts.wow_changes.build [--hotfix-cache <DBCache.bin>] [--quest-cache <questcache.wdb>]
+    python -m scripts.wow_changes.build [--hotfix-cache <DBCache.bin>]
 
 Every row is a diff of two clients' tables, never hand-written: the Forever
 client (wago.tools ``wowf`` with the hotfix layers the item build uses — the
@@ -10,7 +10,8 @@ operator's ``DBCache.bin`` is required) against the Classic Era client
 (``wow_classic_era``). Talents come from the talent calculator's own output;
 items from the compare page's item list; class spells, quests, zones and
 maps from the client tables here. Quest names come only from the operator's
-own ``questcache.wdb`` (required too).
+own ``questcache.wdb``, through the quest pages' ``questSeen.json`` (run the
+Quest pages build first): it keeps quests a patch emptied from the cache.
 
 Writes ``data/changes/``:
 
@@ -38,7 +39,7 @@ from scripts.wow_changes.spells import SpellGaps, class_spells, spell_changes
 from scripts.wow_changes.stamp import previous_build, stamp
 from scripts.wow_changes.talents import live_talent_spells, talent_changes
 from scripts.wow_changes.world import quest_changes, zone_changes
-from scripts.wow_dungeons.quest_cache import quest_cache_path, read_quest_cache
+from scripts.wow_dungeons.quests import earlier_seen
 from scripts.wow_food.build import CLASSIC_LICENSE, WOW_DATA_DIR
 from scripts.wow_gear.build import write_json
 from scripts.wow_items.build import write_rows
@@ -48,6 +49,7 @@ from scripts.wow_items.forever_items import (
     load_forever_tables,
 )
 from scripts.wow_macros.build import CLASS_LINES
+from scripts.wow_quests.build import read_quest_seen
 from scripts.wow_talents.books import FOREVER_BOOK_TABLES, classic_book, forever_book
 from scripts.wow_talents.talents import rank_spells
 from scripts.wow_world_map.sources import (
@@ -138,10 +140,8 @@ def _ids(rows: list[dict[str, str]]) -> set[int]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build the WoW Forever Changes vs Classic feed.")
     parser.add_argument("--hotfix-cache", help="the Forever client's _forever_/Cache/ADB/enUS/DBCache.bin")
-    parser.add_argument("--quest-cache", help="the Forever client's _forever_/Cache/WDB/enUS/questcache.wdb")
     args = parser.parse_args()
     hotfix_cache = hotfix_cache_path(args.hotfix_cache)
-    quest_cache = quest_cache_path(args.quest_cache)
 
     era = {"branch": WAGO_ERA_BRANCH, "build": WAGO_ERA_BUILD}
     forever = load_forever_tables(hotfix_cache, (*ITEM_TABLES, *FOREVER_TABLES))
@@ -194,12 +194,11 @@ def main() -> None:
     )
 
     print("Diffing quests, zones and maps...", flush=True)
-    cache, seen_on = read_quest_cache(quest_cache)
+    seen_doc = read_quest_seen()
     quests, unnamed_quests = quest_changes(
         _ids(wago_table("QuestV2", hotfixes=True)),
         _ids(wago_table("QuestV2", **era, hotfixes=True)),
-        cache.quests,
-        seen_on,
+        earlier_seen(seen_doc),
     )
     world_map_ids = {z["id"] for z in _read(ZONES_PATH)["zones"]}
     zones = zone_changes(
@@ -218,7 +217,7 @@ def main() -> None:
         "build": WAGO_BUILD,
         "classicBuild": WAGO_ERA_BUILD,
         "previousBuild": previous_build(old_index, WAGO_BUILD),
-        "questsSeenOn": seen_on,
+        "questsSeenOn": seen_doc["seenOn"],
         "counts": {category: _counts(changes) for category, changes in by_category.items()},
         "shards": {category: [path for c, _, path in SHARDS if c == category] for category in by_category},
         "gaps": {

@@ -7,6 +7,4 @@ export interface HunterPetsData {
   families: readonly HunterFamily[];
   abilities: readonly PetAbility[];
   beasts: readonly TamableBeast[];
-  /** The day the creature cache was read, as written by the generator. */
-  seenOn: string;
 }

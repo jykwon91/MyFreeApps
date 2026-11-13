@@ -46,7 +46,6 @@ export default function BeastsSection({ data, filters, onChange }: BeastsSection
               key={beast.id}
               beast={beast}
               familyName={familyName.get(beast.familyId) ?? ""}
-              seenOn={data.seenOn}
             />
           ))}
         </ul>

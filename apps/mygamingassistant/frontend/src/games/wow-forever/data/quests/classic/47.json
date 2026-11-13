@@ -42,7 +42,7 @@
 "4783":[4783,"Components for the Enchanted Gold Bloodrobe",37,31,"N","warlock",[["npc",6266,"Menara Voidrender",1413,"Ratchet",62.5,35.4,null]],[1796,4781,4782],[["item",6989,10],["item",6990,1]],[],[],["npc:6266"],true,[4784,4786]],
 "4975":[4975,"The Completed Orb of Noh'Orahil",40,35,"N","warlock",[["npc",6266,"Menara Voidrender",1413,"Ratchet",62.5,35.4,null]],[1799,4961,4976],[],[],[[15107,1],[15105,1]],["npc:6266"],false,[]],
 "5103":[5103,"Hot Fiery Death",60,60,"N","",[["object",176090,"Human Remains",null,"",null,null,229]],[],[],[],[],["npc:10637"],true,[5124]],
-"5167":[5167,"Legplates of the Chromatic Defier",60,57,"N","",[["object",176192,"Catalogue of the Wayward",1422,"Ruins of Andorhal",39.3,66.6,null]],[5160,5161,5162,5164],[["item",12871,1],["item",12607,10],["item",12938,10],["item",12753,5]],[],[],["npc:10976"],true,[]],
+"5167":[5167,"Legplates of the Chromatic Defier",60,57,"N","",[["object",176192,"Catalogue of the Wayward",1422,"Ruins of Andorhal",39.3,66.6,null]],[5160,5161,5162,5164],[["item",12871,1],["item",12607,10],["item",12938,10],["item",12753,5]],[],[[12903,1],[12945,1]],["npc:10976"],true,[]],
 "5231":[5231,"Target: Dalson's Tears",55,50,"H","",[["npc",11055,"Shadow Priestess Vandis",1422,"The Bulwark",26.4,59.1,null]],[5093,5096,5228,5229,5230],[["item",13195,1],["item",13187,1]],[],[],["object:177289"],false,[5232,5233,5234,5235,5236,5238]],
 "5679":[5679,"Devouring Plague",20,20,"H","priest",[["npc",4607,"Father Lankester",1458,"",49.1,14.6,null]],[],[],[],[],["npc:4606"],true,[]],
 "6063":[6063,"Taming the Beast",10,10,"A","hunter",[["npc",3601,"Dazalar",1438,"Dolanaar",56.7,59.5,null]],[6071],[["item",15921,1]],[],[],["npc:3601"],false,[6101,6102,6103]],

@@ -1,15 +1,42 @@
 {
-  "source": "WoW Forever client build 1.60.1.70790 (wowf) via wago.tools. Game data © Blizzard Entertainment.",
-  "clientBuild": "1.60.1.70790",
+  "source": "WoW Forever client build 1.60.1.70888 (wowf) via wago.tools. Game data \u00a9 Blizzard Entertainment.",
+  "clientBuild": "1.60.1.70888",
   "classes": {
-    "warrior": { "icon": 626008, "resource": "rage" },
-    "paladin": { "icon": 626003, "resource": "mana" },
-    "hunter": { "icon": 626000, "resource": "mana" },
-    "rogue": { "icon": 626005, "resource": "energy" },
-    "priest": { "icon": 626004, "resource": "mana" },
-    "shaman": { "icon": 626006, "resource": "mana" },
-    "mage": { "icon": 626001, "resource": "mana" },
-    "warlock": { "icon": 626007, "resource": "mana" },
-    "druid": { "icon": 625999, "resource": "mana" }
+    "warrior": {
+      "icon": 626008,
+      "resource": "rage"
+    },
+    "paladin": {
+      "icon": 626003,
+      "resource": "mana"
+    },
+    "hunter": {
+      "icon": 626000,
+      "resource": "mana"
+    },
+    "rogue": {
+      "icon": 626005,
+      "resource": "energy"
+    },
+    "priest": {
+      "icon": 626004,
+      "resource": "mana"
+    },
+    "shaman": {
+      "icon": 626006,
+      "resource": "mana"
+    },
+    "mage": {
+      "icon": 626001,
+      "resource": "mana"
+    },
+    "warlock": {
+      "icon": 626007,
+      "resource": "mana"
+    },
+    "druid": {
+      "icon": 625999,
+      "resource": "mana"
+    }
   }
 }

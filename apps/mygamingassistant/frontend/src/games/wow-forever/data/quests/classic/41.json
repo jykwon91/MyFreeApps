@@ -66,7 +66,7 @@
 "8233":[8233,"A Simple Request",52,50,"N","rogue",[["npc",13283,"Lord Tony Romano",1453,"",80.3,68.6,null],["npc",3328,"Ormok",1454,"",43.9,54.6,null],["npc",5166,"Ormyr Flinteye",1455,"",52.9,15.0,null]],[],[],[],[],["npc:6768"],false,[8234,8235,8236]],
 "8297":[8297,"Arathi Basin Resources!",60,60,"A","",[],[],[["item",20559,1]],[],[],[],false,[]],
 "8361":[8361,"Abyssal Contacts",60,60,"N","",[["npc",15306,"Bor Wildmane",1451,"Twilight Base Camp",48.6,37.8,null]],[],[["item",20513,1]],[],[],["npc:15306"],true,[]],
-"8425":[8425,"Voodoo Feathers",52,50,"N","warrior",[["npc",7572,"Fallen Hero of the Horde",1435,"Stonard",34.3,66.1,null]],[8417,8423,8424],[["item",20606,2],["item",20607,2],["item",20608,2]],[],[],["npc:7572"],false,[]],
+"8425":[8425,"Voodoo Feathers",52,50,"N","warrior",[["npc",7572,"Fallen Hero of the Horde",1435,"Stonard",34.3,66.1,null]],[8417,8423,8424],[["item",20606,2],["item",20607,2],["item",20608,2]],[],[[20521,1],[20517,1]],["npc:7572"],false,[]],
 "8553":[8553,"The Captain's Cutlass",50,40,"N","",[["npc",2500,"Captain Hecklebury Smotts",1434,"Booty Bay",26.7,73.6,null]],[8552],[],[],[],["npc:2594"],true,[8554]],
 "8681":[8681,"Thunderhorn the Elder",60,1,"N","",[],[],[],[],[],["npc:15583"],true,[]],
 "8745":[8745,"Treasure of the Timeless One",60,60,"N","",[["npc",15693,"Jonathan the Revelator",1451,"The Scarab Wall",25.9,91.0,null]],[8575,8576,8597,8598,8606,8620,8728,8729,8742],[],[],[[21523,1],[21522,1],[21521,1],[21520,1]],["npc:15693"],false,[]],

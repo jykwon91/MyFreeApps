@@ -59,15 +59,16 @@ export function compareRares(a: Rare, b: Rare): number {
 interface RareIdentity {
   name: string;
   classificationCode: number;
+  seenOn: string;
 }
 
-/** Creature id -> Forever's name and classification, for every rare the client has met. */
+/** Creature id -> Forever's name, classification and the day it was seen, for every rare the client has met. */
 function confirmedRares(files: RareDataFiles): Map<number, RareIdentity> {
-  const col = columnIndexes("rares.json", files.forever.columns, ["id", "name", "classification"] as const);
+  const col = columnIndexes("rares.json", files.forever.columns, ["id", "name", "classification", "seenOn"] as const);
   return new Map(
     files.forever.rares.map((row) => [
       Number(row[col.id]),
-      { name: String(row[col.name]), classificationCode: Number(row[col.classification]) },
+      { name: String(row[col.name]), classificationCode: Number(row[col.classification]), seenOn: String(row[col.seenOn]) },
     ]),
   );
 }
@@ -87,7 +88,7 @@ export function decodeRares(files: RareDataFiles): RaresData {
         name: identity.name,
         classification,
         classic: classic !== undefined,
-        seenOn: forever ? files.forever.seenOn : null,
+        seenOn: forever ? forever.seenOn : null,
         minLevel: classic?.minLevel ?? null,
         maxLevel: classic?.maxLevel ?? null,
         spawns: classic ? spawns(files, classic.spawns) : [],
@@ -98,5 +99,5 @@ export function decodeRares(files: RareDataFiles): RaresData {
   const zones = Object.entries(files.forever.zones)
     .map(([id, name]) => ({ id: Number(id), name }))
     .sort((a, b) => a.name.localeCompare(b.name));
-  return { rares: rares.sort(compareRares), zones, seenOn: files.forever.seenOn, clientBuild: files.forever.clientBuild };
+  return { rares: rares.sort(compareRares), zones };
 }

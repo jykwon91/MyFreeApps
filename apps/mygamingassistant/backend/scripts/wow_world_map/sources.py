@@ -30,7 +30,7 @@ CMANGOS_DUMP_URL = (
 )
 
 WAGO_BRANCH = "wowf"  # WoW Forever's own client product (1.60.x). `python -m scripts.wow_refresh` moves the build.
-WAGO_BUILD = "1.60.1.70790"
+WAGO_BUILD = "1.60.1.70888"
 
 # The Forever client ships only some instance-entrance area triggers. The rest
 # come from the Classic Era client: see `area_triggers`.

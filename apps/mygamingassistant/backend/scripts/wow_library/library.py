@@ -9,8 +9,10 @@ Everything here is read from the Forever client:
   of the other items in the same id range, so they are there on purpose.
 * **Library cards**: ``ItemSparse`` rows named "<city> Library Card" (new in
   Forever: the Classic Era client has none).
-* **Reward quests**: quests in the operator's quest cache whose title names
-  the Library ("Friend of the Library"), with the rewards the server sent.
+* **Reward quests**: quests the operator's client has been sent whose title
+  names the Library ("Friend of the Library"), with the rewards the server
+  sent and the day they were seen. They come from the quest pages' seen file,
+  which keeps what an earlier cache saw after a patch empties it.
 
 What the client does NOT say — where each book is found, who takes them and
 how many books a reward needs — is server-side and stays unknown here.
@@ -21,7 +23,7 @@ import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
-from scripts.wow_dungeons.quest_cache import QuestCache
+from scripts.wow_dungeons.quests import SeenRow
 from scripts.wow_items.client_ids import QUALITY_BY_ID
 
 BOOK_DESCRIPTION = re.compile(r"addition to any library's collection\.\s*$", re.IGNORECASE)
@@ -30,7 +32,7 @@ REWARD_QUEST_TITLE = re.compile(r"\bLibrary\b")
 
 BOOK_COLUMNS = ["id", "name", "description", "itemLevel", "quality"]
 CARD_COLUMNS = ["id", "name", "city", "quality"]
-QUEST_COLUMNS = ["id", "title", "level", "minLevel", "rewards", "choices"]
+QUEST_COLUMNS = ["id", "title", "level", "minLevel", "rewards", "choices", "seenOn"]
 
 Row = Mapping[str, str]
 
@@ -67,11 +69,13 @@ class RewardQuest:
     # (item id, count) the quest always gives, then the ones you choose one of.
     rewards: tuple[tuple[int, int], ...]
     choices: tuple[tuple[int, int], ...]
+    # The day the client was sent it (YYYY-MM-DD).
+    seen_on: str
 
     def as_row(self) -> list[object]:
         return [
             self.quest_id, self.title, self.level, self.min_level,
-            [list(r) for r in self.rewards], [list(c) for c in self.choices],
+            [list(r) for r in self.rewards], [list(c) for c in self.choices], self.seen_on,
         ]
 
     def item_ids(self) -> set[int]:
@@ -107,10 +111,10 @@ def library_cards(sparse: Iterable[Row]) -> list[LibraryCard]:
     return sorted(cards, key=lambda c: c.item_id)
 
 
-def reward_quests(cache: QuestCache) -> list[RewardQuest]:
+def reward_quests(seen: Mapping[int, SeenRow]) -> list[RewardQuest]:
     """Quests the client has seen whose title names the Library, lowest id first."""
     return [
-        RewardQuest(q.quest_id, q.title, q.level, q.min_level, q.rewards, q.choices)
-        for _, q in sorted(cache.quests.items())
+        RewardQuest(qid, q.title, q.level, q.min_level, tuple(q.rewards), tuple(q.choices), q.seen_on)
+        for qid, q in sorted(seen.items())
         if REWARD_QUEST_TITLE.search(q.title)
     ]

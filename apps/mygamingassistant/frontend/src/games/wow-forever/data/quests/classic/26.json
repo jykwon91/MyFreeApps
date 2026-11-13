@@ -46,7 +46,7 @@
 "5082":[5082,"Threat of the Winterfall",56,52,"N","",[["npc",9298,"Donova Snowden",1452,"Timbermaw Post",31.3,45.2,null]],[6603],[["npc",7442,8],["npc",7440,8],["npc",7441,8]],[],[],["npc:9298"],true,[]],
 "5146":[5146,"Elemental Leatherworking",55,40,"H","",[["npc",7869,"Brumn Winterhoof",1417,"Boulder'gor",28.3,45.1,null]],[],[["item",7077,2],["item",7079,2],["item",7075,2],["item",7081,2]],[],[],["npc:7869"],true,[]],
 "5210":[5210,"Brother Carlin",56,50,"N","",[["npc",10667,"Chromie",1422,"Ruins of Andorhal",39.5,66.8,null]],[5142,5149,5152,5153,5154],[["item",13202,1]],[],[],["npc:11063"],false,[5181,5206,5941,5721,5942]],
-"5466":[5466,"The Lich, Ras Frostwhisper",60,57,"N","",[["npc",11286,"Magistrate Marduke",1422,"Caer Darrow",70.6,74.1,null]],[5382,5515,5384,5461,5462,5463,5464,5465],[["item",13626,1]],[],[],["npc:11286"],false,[]],
+"5466":[5466,"The Lich, Ras Frostwhisper",60,57,"N","",[["npc",11286,"Magistrate Marduke",1422,"Caer Darrow",70.6,74.1,null]],[5382,5515,5384,5461,5462,5463,5464,5465],[["item",13626,1]],[[14002,1]],[[13986,1]],["npc:11286"],false,[]],
 "5658":[5658,"Touch of Weakness",10,10,"H","priest",[["npc",4607,"Father Lankester",1458,"",49.1,14.6,null]],[],[],[],[],["npc:4606"],true,[]],
 "5722":[5722,"Searching for the Lost Satchel",16,9,"H","",[["npc",11833,"Rahauro",1456,"",70.1,29.5,null]],[],[],[],[],["npc:11834"],true,[5724]],
 "6042":[6042,"Un-Life's Little Annoyances",58,54,"H","",[["npc",11878,"Nathanos Blightcaller",1423,"The Undercroft",22.2,63.5,null]],[],[["npc",8601,20],["npc",8602,10]],[],[],["npc:11878"],true,[]],

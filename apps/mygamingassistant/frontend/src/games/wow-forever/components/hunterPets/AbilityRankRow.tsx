@@ -11,11 +11,10 @@ interface AbilityRankRowProps {
   /** The ability is new in Forever, so Classic can't say who teaches it. */
   abilityIsNew: boolean;
   teachers: readonly TamableBeast[];
-  seenOn: string;
 }
 
 /** One rank: learn level, tooltip, new-in-Forever mark and the beasts that teach it. */
-export default function AbilityRankRow({ rank, abilityIsNew, teachers, seenOn }: AbilityRankRowProps) {
+export default function AbilityRankRow({ rank, abilityIsNew, teachers }: AbilityRankRowProps) {
   const [showAll, setShowAll] = useState(false);
   const shown = showAll ? teachers : teachers.slice(0, TEACHERS_PREVIEW);
   const unknown = teachers.length === 0 && (abilityIsNew || rank.isNew);
@@ -32,7 +31,7 @@ export default function AbilityRankRow({ rank, abilityIsNew, teachers, seenOn }:
           <ul className="space-y-1 text-sm" aria-label={`Beasts that teach rank ${rank.rank}`}>
             {shown.map((beast) => (
               <li key={beast.id}>
-                <BeastName beast={beast} seenOn={seenOn} withPlace />
+                <BeastName beast={beast} withPlace />
               </li>
             ))}
           </ul>

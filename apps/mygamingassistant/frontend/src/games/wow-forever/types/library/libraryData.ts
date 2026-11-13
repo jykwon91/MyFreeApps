@@ -7,7 +7,4 @@ export interface LibraryData {
   books: LibraryBook[];
   cards: LibraryCard[];
   quests: LibraryQuest[];
-  /** The day the quest cache was read (the "Seen in game" date). */
-  seenOn: string;
-  clientBuild: number;
 }

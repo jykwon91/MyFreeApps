@@ -4,7 +4,9 @@ The list is every Classic rare / rare elite (cmangos classic-db, GPL-3.0:
 ``creature_template.Rank``) with an open-world spawn, plus every creature the
 WoW Forever client calls a rare or rare elite (``creature_cache.py``). A
 creature the client has met is "confirmed": its name and classification are
-Forever's, and if Forever no longer calls it a rare it is left out. Level,
+Forever's, and if Forever no longer calls it a rare it is left out. A patch
+empties the client's cache, so rares an earlier cache confirmed are kept (with
+the day they were seen) until the client meets them again (``seen_rares``). Level,
 spawn points and loot are always Classic, because the client has none of them.
 
 Pure: the build (``build.py``) passes in the dump's rows and a placer; tests
@@ -33,7 +35,7 @@ Placer = Callable[[int, float, float], list[Any] | None]
 
 # creature_template.Rank uses the client's classification codes.
 RARE_CLASSIFICATIONS = frozenset({CLASSIFICATION_RARE, CLASSIFICATION_RARE_ELITE})
-RARE_COLUMNS = ["id", "name", "classification"]
+RARE_COLUMNS = ["id", "name", "classification", "seenOn"]
 SPAWN_COLUMNS = ["zone", "subzone", "x", "y"]
 DROP_COLUMNS = ["item", "chance"]
 # A rare's own items roll at 10%+; a shared table of random greens a few
@@ -62,10 +64,46 @@ class ClassicRare:
         }
 
 
+@dataclass(frozen=True)
+class SeenRare:
+    creature_id: int
+    name: str
+    classification: int
+    # The day the client cache that met it was written (YYYY-MM-DD).
+    seen_on: str
+
+    def as_row(self) -> list[object]:
+        """``RARE_COLUMNS`` order."""
+        return [self.creature_id, self.name, self.classification, self.seen_on]
+
+
 def forever_rares(cache: CreatureCache) -> list[CachedCreature]:
     """Every creature the Forever client calls a rare, by name then id."""
     rares = [c for c in cache.creatures.values() if c.classification in RARE_CLASSIFICATIONS]
     return sorted(rares, key=lambda c: (c.name, c.creature_id))
+
+
+def seen_rares(cache: CreatureCache, seen_on: str, earlier: Mapping[int, SeenRare]) -> list[SeenRare]:
+    """This cache's rares, plus the ones an earlier cache confirmed that this one hasn't met;
+    a creature this cache shows as something else is no longer a rare. By name then id."""
+    fresh = [SeenRare(c.creature_id, c.name, c.classification, seen_on) for c in forever_rares(cache)]
+    carried = [r for cid, r in earlier.items() if cid not in cache.creatures]
+    return sorted([*fresh, *carried], key=lambda r: (r.name, r.creature_id))
+
+
+def earlier_rares(doc: Mapping[str, Any]) -> dict[int, SeenRare]:
+    """The last ``rares.json``'s rows by creature. A file older than the per-rare day uses its own ``seenOn``."""
+    columns = doc.get("columns")
+    rows = doc.get("rares")
+    if not isinstance(columns, list) or not isinstance(rows, list):
+        return {}
+    out: dict[int, SeenRare] = {}
+    for values in rows:
+        row = dict(zip(columns, values, strict=True))
+        out[int(row["id"])] = SeenRare(
+            int(row["id"]), str(row["name"]), int(row["classification"]), str(row.get("seenOn") or doc["seenOn"]),
+        )
+    return out
 
 
 def classic_rare_ids(templates: Mapping[int, Row]) -> set[int]:
@@ -73,9 +111,11 @@ def classic_rare_ids(templates: Mapping[int, Row]) -> set[int]:
     return {cid for cid, t in templates.items() if as_int(t["Rank"]) in RARE_CLASSIFICATIONS}
 
 
-def listed_rare_ids(cache: CreatureCache, classic_ids: set[int], spawns: Mapping[int, list[list[Any]]]) -> set[int]:
-    """Forever's rares, plus Classic rares with a map spot that the client hasn't shown as something else."""
-    forever = {c.creature_id for c in forever_rares(cache)}
+def listed_rare_ids(
+    cache: CreatureCache, forever: set[int], classic_ids: set[int], spawns: Mapping[int, list[list[Any]]],
+) -> set[int]:
+    """Forever's rares (``seen_rares``), plus Classic rares with a map spot that the client hasn't shown as
+    something else."""
     demoted = set(cache.creatures) - forever
     return forever | {cid for cid in classic_ids if spawns.get(cid) and cid not in demoted}
 

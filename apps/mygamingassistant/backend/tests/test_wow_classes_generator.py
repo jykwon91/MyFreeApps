@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 
-from scripts.wow_classes.build import OUT_FILE, _CLASS_ID_TO_SLUG, _DISPLAY_POWER_TO_RESOURCE, build_class_details
+from scripts.wow_classes.build import OUT_FILE, _CLASS_ID_TO_SLUG, _DISPLAY_POWER_TO_RESOURCE, class_details
 from scripts.wow_icons.build import OUT_FILE as ICON_MAP_FILE
 from scripts.wow_icons.build import class_icon_files
 from scripts.wow_world_map.sources import WAGO_BUILD
@@ -57,6 +57,21 @@ def test_mana_classes_use_mana() -> None:
 def test_display_power_mapping_covers_all_resources() -> None:
     """Every resource type we emit must come from a known DisplayPower value."""
     assert set(_DISPLAY_POWER_TO_RESOURCE.values()) == KNOWN_RESOURCES
+
+
+def test_class_details_reads_rows_keyed_by_column() -> None:
+    """wago_table returns one dict per row; other classes (Death Knight, Monk) are left out."""
+    rows = [
+        {"ID": "1", "IconFileDataID": "626008", "DisplayPower": "1", "Name_lang": "Warrior"},
+        {"ID": "4", "IconFileDataID": "626005", "DisplayPower": "3", "Name_lang": "Rogue"},
+        {"ID": "8", "IconFileDataID": "626001", "DisplayPower": "0", "Name_lang": "Mage"},
+        {"ID": "6", "IconFileDataID": "135771", "DisplayPower": "6", "Name_lang": "Death Knight"},
+    ]
+    assert class_details(rows) == {
+        "warrior": {"icon": 626008, "resource": "rage"},
+        "rogue": {"icon": 626005, "resource": "energy"},
+        "mage": {"icon": 626001, "resource": "mana"},
+    }
 
 
 def test_build_class_details_offline_shape() -> None:

@@ -9,11 +9,10 @@ import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 interface LibraryRewardsProps {
   quests: readonly LibraryQuest[];
-  seenOn: string;
 }
 
 /** "Turning books in": who takes them and how many (not known yet), then each reward quest and its rewards. */
-export default function LibraryRewards({ quests, seenOn }: LibraryRewardsProps) {
+export default function LibraryRewards({ quests }: LibraryRewardsProps) {
   return (
     <section className="space-y-3 rounded-xl border bg-card p-3 sm:p-4" aria-labelledby="library-rewards" data-testid="library-rewards">
       <h2 id="library-rewards" className="text-base font-semibold">Turning books in</h2>
@@ -33,7 +32,7 @@ export default function LibraryRewards({ quests, seenOn }: LibraryRewardsProps) 
               {quest.title}
             </Link>
             <span className="text-sm text-muted-foreground">Level {quest.level}</span>
-            <ProvenanceBadge provenance={PROVENANCE.seen} date={seenOn} />
+            <ProvenanceBadge provenance={PROVENANCE.seen} date={quest.seenOn} />
           </div>
           {quest.choices.length > 0 ? (
             <div>

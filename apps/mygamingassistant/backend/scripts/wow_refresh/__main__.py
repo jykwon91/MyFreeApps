@@ -96,12 +96,13 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         ["scripts.wow_reputation.build"],
         # The character page's dungeons: Boss Kills statistic ids checked against the client; reads the World Map.
         ["scripts.wow_character_dungeons.build"],
-        # Reads the Item and Talent output above (and the World Map's zones).
-        ["scripts.wow_changes.build", *cache, "--quest-cache", str(quest_cache)],
+        # Reads the World Map, Item and quest-cache output above; reward items are in the icon build's wanted ids.
+        # Its questSeen.json keeps quests a patch emptied from the cache; the Changes feed and Library read it.
+        ["scripts.wow_quests.build", "--quest-cache", str(quest_cache)],
+        # Reads the Item, Talent and Quest output above (and the World Map's zones).
+        ["scripts.wow_changes.build", *cache],
         # The item browser's index, beside the item pages: reads the Item output and the Changes feed above.
         ["scripts.wow_item_pages.index"],
-        # Reads the World Map, Item and quest-cache output above; reward items are in the icon build's wanted ids.
-        ["scripts.wow_quests.build", "--quest-cache", str(quest_cache)],
         # Reads the Changes output above (a family Forever changed links to it).
         ["scripts.wow_downrank.build", *cache],
         # Reads the Changes and Downrank output above (changed marks, downrank links).
@@ -115,7 +116,8 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         # Reads the World Map output above (spawn placement); its family and ability icons are in the icon build's wanted ids.
         ["scripts.wow_hunter_pets.build", *cache, "--creature-cache", str(creature_cache)],
         # Reads the Item output above; its books, cards and rewards are in the icon build's wanted ids.
-        ["scripts.wow_library.build", *cache, "--quest-cache", str(quest_cache)],
+        # Also reads the Quest pages' questSeen.json above (its reward quests).
+        ["scripts.wow_library.build", *cache],
         # Its talent, challenge and reward icons are in the icon build's wanted ids.
         ["scripts.wow_legacy.build", *cache],
         # Reads the Professions, Item, Talent, Downrank, Spellbook, Rares, Races, Classes, Hunter pets, Library and Legacy output above. Its images are published last, below.

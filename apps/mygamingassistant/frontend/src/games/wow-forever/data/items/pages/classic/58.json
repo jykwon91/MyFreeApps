@@ -34,6 +34,7 @@
 "1445":"Dustwallow Marsh",
 "1446":"Tanaris",
 "1447":"Azshara",
+"1449":"Un'Goro Crater",
 "1451":"Silithus",
 "1454":"Orgrimmar",
 "1455":"Ironforge"
@@ -65,6 +66,7 @@
 "1445":"contested",
 "1446":"contested",
 "1447":"contested",
+"1449":"contested",
 "1451":"contested",
 "1454":"horde",
 "1455":"alliance"
@@ -92,17 +94,20 @@
 "8931":[8931,"Just Compensation",60,"A",[["npc",16013,"Deliana",1455,"",43.5,52.6,"A"]],58,"hunter"],
 "8938":[8938,"Just Compensation",60,"H",[["npc",16012,"Mokvar",1454,"",34.9,38.3,"H"]],58,"hunter"],
 "9005":[9005,"Saving the Best for Last",60,"A",[["npc",16013,"Deliana",1455,"",43.5,52.6,"A"]],58,"warlock"],
-"9012":[9012,"Saving the Best for Last",60,"H",[["npc",16012,"Mokvar",1454,"",34.9,38.3,"H"]],58,"warlock"]
+"9012":[9012,"Saving the Best for Last",60,"H",[["npc",16012,"Mokvar",1454,"",34.9,38.3,"H"]],58,"warlock"],
+"9053":[9053,"A Better Ingredient",52,"N",[["npc",9619,"Torwa Pathfinder",1449,"The Marshlands",71.6,76.0,"N"]],50,"druid"]
 },
 "instances":{
 "36":["Deadmines","dungeon",16,16,10,1436,38.0,77.5],
 "48":["Blackfathom Deeps","dungeon",22,22,10,1440,16.4,10.9],
 "90":["Gnomeregan","dungeon",25,25,15,1426,17.5,39.1],
+"229":["Blackrock Spire","dungeon",53,53,45,1428,33.2,24.9],
 "249":["Onyxia's Lair","raid",60,60,50,1445,52.9,78.2],
 "289":["Scholomance","dungeon",57,57,45,1422,69.0,72.7],
 "309":["Zul'Gurub","raid",60,60,50,1434,54.2,17.6],
 "349":["Maraudon","dungeon",42,42,35,1443,35.9,64.6],
 "409":["Molten Core","raid",60,60,50,1428,26.3,24.6],
+"429":["Dire Maul","dungeon",54,54,45,1444,67.2,34.9],
 "469":["Blackwing Lair","raid",60,60,50,1428,33.2,24.9],
 "531":["Ahn'Qiraj Temple","raid",60,60,50,1451,15.3,97.8],
 "2832":["Nightmare Grove","raid",0,0,0,null,null,null]
@@ -156,11 +161,15 @@
 "10746":{"quests":[3378]},
 "11194":{"quests":[717,793]},
 "12026":{"drop":{"world":true,"levels":[54,61],"mobs":[],"more":0,"zones":[]},"instance":{"mobs":[["Darkmaster Gandling",61,61,0.0,289,"boss"]],"more":0}},
+"12602":{"instance":{"mobs":[["General Drakkisath",62,62,24.8,229,"boss"]],"more":0}},
 "13114":{"drop":{"world":true,"levels":[26,34],"mobs":[],"more":0,"zones":[]}},
+"13178":{"instance":{"mobs":[["Urok Doomhowl",60,60,23.8,229,"boss"]],"more":0}},
+"13498":{"instance":{"mobs":[["Goraluk Anvilcrack",61,61,14.3,229,""]],"more":0}},
 "14202":{"drop":{"world":true,"levels":[32,45],"mobs":[["Ironeye the Invincible",37,37,0.2,1441,"The Shimmering Flats",87.2,78.4,"rare"]],"more":0,"zones":[1441]}},
 "14266":{"drop":{"world":true,"levels":[40,50],"mobs":[],"more":0,"zones":[]}},
 "14330":{"drop":{"world":true,"levels":[56,63],"mobs":[["Azuregos",63,63,2.5,1447,"Lake Mennar",53.3,80.4,"elite"],["Lord Kazzak",63,63,2.5,1419,"The Tainted Scar",35.5,75.0,"elite"]],"more":0,"zones":[1419,1447]},"instance":{"mobs":[["Emeriss",63,63,1.6,2832,"boss"],["Lethon",63,63,1.6,2832,"boss"],["Nefarian",63,63,1.6,469,"boss"],["Taerar",63,63,1.6,2832,"boss"],["Ysondre",63,63,1.6,2832,"boss"],["Gahz'ranka",63,63,0.8,309,"boss"]],"more":1}},
 "14458":{"drop":{"world":true,"levels":[54,62],"mobs":[],"more":0,"zones":[]}},
+"14522":{"instance":{"mobs":[["Ras Frostwhisper",62,62,16.7,289,""]],"more":0}},
 "14778":{"drop":{"world":true,"levels":[40,50],"mobs":[],"more":0,"zones":[]}},
 "14842":{"drop":{"world":true,"levels":[43,51],"mobs":[["The Reak",49,49,0.4,1425,"Skulk Rock",58.9,43.1,"rare"]],"more":0,"zones":[1425]}},
 "14906":{"drop":{"world":true,"levels":[39,50],"mobs":[],"more":0,"zones":[]}},
@@ -175,6 +184,9 @@
 "15930":{"drop":{"world":true,"levels":[51,58],"mobs":[],"more":0,"zones":[]},"instance":{"mobs":[["Darkmaster Gandling",61,61,0.0,289,"boss"]],"more":0}},
 "16698":{"instance":{"mobs":[["Darkmaster Gandling",61,61,11.1,289,"boss"]],"more":0}},
 "16890":{"quests":[6544]},
+"18298":{"instance":{"mobs":[["Wildspawn Satyr",55,56,0.6,429,""]],"more":0}},
+"18490":{"instance":{"mobs":[["Cho'Rush the Observer",60,60,25.0,429,"boss"]],"more":0}},
+"18682":{"instance":{"mobs":[["Lord Alexei Barov",60,60,3.7,289,"boss"],["Doctor Theolen Krastinov",60,60,1.1,289,"boss"],["Instructor Malicia",60,60,1.1,289,"boss"],["Lady Illucia Barov",60,60,1.1,289,"boss"],["Lorekeeper Polkelt",60,60,1.1,289,"boss"],["The Ravenian",60,60,1.1,289,"boss"]],"more":0}},
 "19514":{"vendors":[[14753,"Illiyana Moonblaze","Silverwing Supply Officer",1440,"Fallen Sky Lake",61.5,83.9,"A",0,0]]},
 "19578":{"vendors":[[14753,"Illiyana Moonblaze","Silverwing Supply Officer",1440,"Fallen Sky Lake",61.5,83.9,"A",0,0],[14754,"Kelm Hargunth","Warsong Supply Officer",1413,"The Mor'shan Rampart",46.7,8.4,"H",0,0]]},
 "19834":{"quests":[8073]},
@@ -184,5 +196,7 @@
 "21178":{"quests":[8548]},
 "21690":{"instance":{"mobs":[["Vem",63,63,22.5,531,"boss"]],"more":0}},
 "22010":{"quests":[8931,8938]},
-"22074":{"quests":[9005,9012]}
+"22074":{"quests":[9005,9012]},
+"22330":{"containers":["Arena Spoils"]},
+"22458":{"quests":[9053]}
 }}

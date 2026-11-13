@@ -9,7 +9,9 @@ list is every Classic rare / rare elite with an open-world spawn, plus every
 rare the operator's own Forever client has met: ``--creature-cache``, else
 ``WOW_FOREVER_CREATURE_CACHE``, else the default install path
 (``creature_cache.py``). The run stops without it. The cache is read, never
-committed — so more rares become "confirmed" as the client meets them.
+committed — so more rares become "confirmed" as the client meets them, and
+the rares the last ``rares.json`` confirmed stay confirmed after a patch empties
+the cache (each row keeps the day it was seen).
 
 Writes two files; the Forever one and the Classic one are kept apart because
 their licences differ:
@@ -43,10 +45,11 @@ from scripts.wow_rares.rares import (
     classic_rare_ids,
     classic_rares,
     drop_item_ids,
+    earlier_rares,
     event_only_guids,
-    forever_rares,
     listed_rare_ids,
     rare_spawns,
+    seen_rares,
     zone_names,
 )
 from scripts.wow_world_map.map_art import WorldMapArt
@@ -93,7 +96,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build the WoW Forever rares finder's data.")
     parser.add_argument("--creature-cache", help="the Forever client's Cache/WDB/enUS/creaturecache.wdb")
     cache, seen_on = read_creature_cache(creature_cache_path(parser.parse_args().creature_cache))
-    confirmed = forever_rares(cache)
+    earlier = earlier_rares(json.loads(RARES_PATH.read_text(encoding="utf-8"))) if RARES_PATH.is_file() else {}
+    confirmed = seen_rares(cache, seen_on, earlier)
+    confirmed_ids = {r.creature_id for r in confirmed}
     items_doc = json.loads(ITEMS_PATH.read_text(encoding="utf-8"))
     items = {int(row[0]): row for row in items_doc["items"]}
     print("Reading cmangos classic-db...")
@@ -111,22 +116,23 @@ def main() -> None:
 
     classic_ids = classic_rare_ids(templates)
     spawns = rare_spawns(
-        tables["creature"], classic_ids | {r.creature_id for r in confirmed},
+        tables["creature"], classic_ids | confirmed_ids,
         event_only_guids(tables["game_event_creature"]), placer,
     )
-    listed = listed_rare_ids(cache, classic_ids, spawns)
+    listed = listed_rare_ids(cache, confirmed_ids, classic_ids, spawns)
     creature_loot = loot_index(tables["creature_loot_template"])
     classic = classic_rares(
         listed, templates, spawns,
         creature_loot, loot_index(tables["reference_loot_template"]), world_pools(creature_loot), set(items),
     )
     write_json(RARES_PATH, {
-        "source": "The WoW Forever client's creature cache (Cache/WDB/enUS/creaturecache.wdb) on the operator's machine",
-        "clientBuild": cache.build,
-        "seenOn": seen_on,
+        "source": (
+            "The WoW Forever client's creature cache (Cache/WDB/enUS/creaturecache.wdb) on the operator's machine, "
+            "kept across patches"
+        ),
         "attribution": "Game data from the WoW Forever client. © Blizzard Entertainment.",
         "columns": RARE_COLUMNS,
-        "rares": [[r.creature_id, r.name, r.classification] for r in confirmed],
+        "rares": [r.as_row() for r in confirmed],
         "itemColumns": ITEM_COLUMNS,
         "items": loot_item_rows({}, items, items_doc["columns"], drop_item_ids(classic)),
         "zones": zone_names(classic, {b.ui_map_id: b.name for b in bounds}),
@@ -141,8 +147,10 @@ def main() -> None:
     (CLASSIC_DIR / "README.md").write_text(CLASSIC_README.format(commit=CMANGOS_COMMIT), encoding="utf-8")
     placed = sum(1 for rare in classic.values() if rare.spawns)
     demoted = len({cid for cid in classic_ids if spawns.get(cid)} - listed)
+    fresh = sum(1 for r in confirmed if r.seen_on == seen_on)
     print(
-        f"{len(listed)} rares listed ({len(confirmed)} confirmed by the client cache, build {cache.build}, {seen_on}; "
+        f"{len(listed)} rares listed ({len(confirmed)} confirmed, {fresh} by this client cache, build {cache.build}, "
+        f"{seen_on}; "
         f"{demoted} Classic rares the client shows as something else left out); "
         f"{len(classic)} in cmangos, {placed} with map spots, {len(drop_item_ids(classic))} drop items -> {RARES_DIR}"
     )

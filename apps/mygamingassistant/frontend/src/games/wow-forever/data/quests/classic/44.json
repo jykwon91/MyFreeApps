@@ -47,7 +47,7 @@
 "7788":[7788,"Vanquish the Invaders!",25,20,"A","",[],[],[["item",20558,1]],[],[],[],false,[]],
 "8044":[8044,"The Rage of Mount Mugamba",60,60,"N","warrior",[["npc",14902,"Jin'rokh the Breaker",1434,"",15.3,14.4,null]],[8041,8042,8043],[["item",19576,1]],[[19577,1]],[],["npc:14902"],false,[]],
 "8108":[8108,"Kezan's Taint",60,60,"N","warlock",[["npc",14903,"Al'tabim the All-Seeing",1434,"",15.3,16.1,null]],[8106,8107],[["item",19603,1]],[[19604,1]],[],["npc:14903"],false,[8109]],
-"8236":[8236,"The Azure Key",52,50,"N","rogue",[["npc",8379,"Archmage Xylem",1447,"",29.2,40.2,null]],[8233,8234,8235],[["item",20022,1]],[],[],["npc:6768"],false,[]],
+"8236":[8236,"The Azure Key",52,50,"N","rogue",[["npc",8379,"Archmage Xylem",1447,"",29.2,40.2,null]],[8233,8234,8235],[["item",20022,1]],[],[[19984,1],[20255,1],[19982,1]],["npc:6768"],false,[]],
 "8428":[8428,"Battle of Warsong Gulch",49,40,"H","",[["npc",15350,"Horde Warbringer",1413,"The Mor'shan Rampart",46.7,8.7,null]],[],[["item",20558,3]],[],[],["npc:15350"],true,[]],
 "8492":[8492,"The Alliance Needs Copper Bars!",60,50,"N","",[],[],[["item",2840,20]],[],[],["npc:15383"],true,[]],
 "8556":[8556,"Signet of Unyielding Strength",60,60,"N","warrior",[["npc",15498,"Windcaller Yessendra",1451,"Twilight Base Camp",52.0,38.2,null]],[],[["item",20884,1],["item",20868,2],["item",20861,5],["item",20865,5]],[[21393,1]],[],["npc:15498"],true,[]],

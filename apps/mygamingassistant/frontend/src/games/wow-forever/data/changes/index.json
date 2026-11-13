@@ -1,10 +1,10 @@
-{"source":"wago.tools DB2 wowf 1.60.1.70790 with hotfixes, plus the Forever client hotfix cache (build 70862, 14,698 records)",
+{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 70888, 19,073 records)",
 "classicSource":"wago.tools DB2 wow_classic_era 1.15.9.70576",
 "attribution":"Diffed from the WoW Forever and Classic Era clients via wago.tools. Game data © Blizzard Entertainment.",
-"build":"1.60.1.70790",
+"build":"1.60.1.70888",
 "classicBuild":"1.15.9.70576",
-"previousBuild":null,
-"questsSeenOn":"2026-11-08",
-"counts":{"talents":{"changed":269,"new":118},"spells":{"changed":195,"new":31},"items":{"changed":1643,"new":4096},"quests":{"changed":0,"new":77},"zones":{"changed":0,"new":17}},
+"previousBuild":"1.60.1.70790",
+"questsSeenOn":"2026-11-12",
+"counts":{"talents":{"changed":269,"new":118},"spells":{"changed":195,"new":31},"items":{"changed":1997,"new":4302},"quests":{"changed":0,"new":142},"zones":{"changed":0,"new":22}},
 "shards":{"talents":["classic/talents.json"],"spells":["classic/spells.json"],"items":["items.json","itemsNew.json"],"quests":["quests.json"],"zones":["zones.json"]},
-"gaps":{"spellsIncomplete":456,"spellsNotInClient":0,"itemsUnlisted":1914,"questsUnnamed":1744}}
+"gaps":{"spellsIncomplete":444,"spellsNotInClient":0,"itemsUnlisted":1889,"questsUnnamed":1679}}

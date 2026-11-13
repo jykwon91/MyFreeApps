@@ -38,7 +38,7 @@
 "6031":[6031,"Runecloth",55,50,"N","",[],[],[["item",14047,30]],[],[[15822,1],[15823,1]],["npc:11557"],true,[]],
 "6543":[6543,"The Warsong Reports",19,17,"H","",[["npc",8582,"Kadrak",1440,"Fallen Sky Lake",68.6,89.1,null]],[6541],[["item",16764,1],["item",16763,1],["item",16765,1]],[],[],["npc:8582"],false,[]],
 "6607":[6607,"Nat Pagle, Angler Extreme",45,35,"N","",[["npc",12919,"Nat Pagle",1445,"The Quagmire",58.6,60.1,null]],[],[["item",16967,1],["item",16970,1],["item",16968,1],["item",16969,1]],[],[],["npc:12919"],true,[]],
-"7503":[7503,"The Greatest Race of Hunters",60,54,"N","hunter",[["item",18361,"The Greatest Race of Hunters",null,"",null,null,null]],[],[["item",18361,1]],[],[],["npc:14382"],false,[]],
+"7503":[7503,"The Greatest Race of Hunters",60,54,"N","hunter",[["item",18361,"The Greatest Race of Hunters",null,"",null,null,null]],[],[["item",18361,1]],[[18473,1]],[],["npc:14382"],false,[]],
 "7631":[7631,"Dreadsteed of Xoroth",60,60,"N","warlock",[["npc",14436,"Mor'zul Bloodbringer",1428,"Altar of Storms",12.7,31.6,null]],[7562,7563,7564,7629],[["npc",14502,1]],[],[],["npc:14504"],false,[]],
 "7823":[7823,"A Donation of Runecloth",60,50,"H","",[["npc",14728,"Rumstag Proudstrider",1456,"",43.0,42.7,null]],[7820],[["item",14047,60]],[],[],["npc:14728"],false,[]],
 "8079":[8079,"Paragons of Power: The Vindicator's Breastplate",60,60,"N","warrior",[["npc",14902,"Jin'rokh the Breaker",1434,"",15.3,14.4,null]],[],[["item",19723,1]],[[19822,1]],[],["npc:14902"],true,[]],

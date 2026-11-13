@@ -15,6 +15,6 @@ export interface TamableBeast {
   teaches: readonly BeastTeaching[];
   /** In cmangos classic-db (Classic data). */
   inClassic: boolean;
-  /** The Forever client's creature cache has met it. */
-  seenInGame: boolean;
+  /** The day (YYYY-MM-DD) our Forever client met it; null when it hasn't. */
+  seenOn: string | null;
 }
