@@ -10,11 +10,12 @@ import { toast } from "@platform/ui/test-support/toast";
 import { apiPath } from "@platform/ui/test-support/apiPath";
 import { FIXTURE_NOW, ON_DROP_DATE } from "./constants/fixtureTimes";
 import { ACTIVE_DROP_ID, PLANNING_DROP_ID } from "./fixtures/dropFixtures";
-import { failReads } from "@platform/ui/test-support/routeControls";
+import { failReads, logReads } from "@platform/ui/test-support/routeControls";
 import { stubDropsApi } from "./fixtures/stubDropsApi";
 import { stubFinancialsApi } from "./fixtures/stubFinancialsApi";
 import { stubSignedInShellAt } from "./fixtures/stubSignedInShellAt";
 
+const DROPS_LIST = apiPath(/^\/drops$/);
 const FINANCIALS_READ = apiPath(/^\/financials\/drops\/[^/]+$/);
 
 function summary(page: Page, dropName = "Friday Night Drop") {
@@ -94,4 +95,22 @@ test("a failed load of the totals says so and Retry loads them", async ({ page }
 
   await expect(summary(page)).toBeVisible();
   await expect(page.getByText("Failed to load financials.")).toHaveCount(0);
+});
+
+test("a failed load of the drops says so, never claims there are none, and Retry loads the totals", async ({ page }) => {
+  await stubFinancialsApi(page);
+  await failReads(page, DROPS_LIST);
+  const dropReads = await logReads(page, DROPS_LIST);
+
+  await page.goto("/financials");
+  await expect(page.getByRole("heading", { name: "Could not load drops" })).toBeVisible();
+  await expect(page.getByText("No drops yet")).toHaveCount(0);
+  expect(dropReads).toHaveLength(1);
+
+  await page.getByRole("button", { name: "Retry" }).click();
+
+  await expect(summary(page).locator("dl")).toContainText("Pizza count9Revenue$120.00");
+  expect(dropReads).toHaveLength(2);
+  await expect(page.getByRole("heading", { name: "Could not load drops" })).toHaveCount(0);
+  await expect(page.getByText("No drops yet")).toHaveCount(0);
 });
