@@ -2,10 +2,9 @@ import { useRemoveApplicationContactMutation } from "@myjobhunter/api-client/sto
 import { contactEmailUrl, contactProfileUrl } from "@myjobhunter/api-client/utils/contactLinkUrls";
 import { contactDisplayName } from "@myjobhunter/api-client/utils/contactDisplayName";
 import { formatContactRole } from "@myjobhunter/api-client/utils/formatContactRole";
-import { Chip, LoadingButton, useTheme } from "@platform/mobile";
+import { Chip, LoadingButton, useConfirmedRemoval, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { APPLICATION_CONTACT_MESSAGES as MESSAGES } from "../../constants/applicationContacts";
-import { useConfirmedRemoval } from "../../hooks/useConfirmedRemoval";
 import type { ContactCardProps } from "../../types/ContactCardProps";
 import ContactLink from "./ContactLink";
 

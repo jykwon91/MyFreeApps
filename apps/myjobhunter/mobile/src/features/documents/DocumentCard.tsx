@@ -1,10 +1,9 @@
 import { useDeleteDocumentMutation, useLazyGetDocumentDownloadUrlQuery } from "@myjobhunter/api-client/store/documentsApi";
 import { documentDownloadUrl } from "@myjobhunter/api-client/utils/documentDownloadUrl";
 import { documentKindLabel, documentKindTone } from "@myjobhunter/api-client/utils/documentKind";
-import { Chip, LoadingButton, useOpenLink, useTheme, useToast } from "@platform/mobile";
+import { Chip, LoadingButton, useConfirmedRemoval, useOpenLink, useTheme, useToast } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
-import { useConfirmedRemoval } from "../../hooks/useConfirmedRemoval";
 import { documentMeta } from "../../lib/documentMeta";
 import { writeFailure } from "../../lib/writeFailure";
 import type { DocumentCardProps } from "../../types/DocumentCardProps";

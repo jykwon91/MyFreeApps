@@ -1,12 +1,11 @@
 import { useDeleteWorkHistoryMutation } from "@myjobhunter/api-client/store/workHistoryApi";
 import { formatWorkDateRange } from "@myjobhunter/api-client/utils/formatWorkDateRange";
-import { useTheme } from "@platform/mobile";
+import { useConfirmedRemoval, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { PROFILE_MESSAGES } from "../../constants/profile";
 import { WORK_HISTORY_MESSAGES as MESSAGES } from "../../constants/profileWorkHistory";
 import type { WorkHistoryCardProps } from "../../types/WorkHistoryCardProps";
 import CardActions from "./CardActions";
-import { useConfirmedRemoval } from "../../hooks/useConfirmedRemoval";
 
 /** A role: title, company, dates and bullets, then Edit and Remove. */
 export default function WorkHistoryCard({ entry, onEdit }: WorkHistoryCardProps) {

@@ -1,9 +1,8 @@
 import { useDeleteCompanyMutation } from "@myjobhunter/api-client/store/companiesApi";
 import { isCompanyHasApplicationsError } from "@myjobhunter/api-client/utils/isCompanyHasApplicationsError";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { LoadingButton, useConfirmedRemoval, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { COMPANY_DETAIL_MESSAGES as MESSAGES } from "../../constants/companyDetail";
-import { useConfirmedRemoval } from "../../hooks/useConfirmedRemoval";
 import type { CompanyDeleteActionProps } from "../../types/CompanyDeleteActionProps";
 
 /**
