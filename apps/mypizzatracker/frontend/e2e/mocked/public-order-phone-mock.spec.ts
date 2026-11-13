@@ -1,14 +1,21 @@
 /**
  * No-backend E2E for /order on a phone: nothing scrolls sideways, the pickup
  * slots sit two to a row, and a customer can build and place an order with
- * the controls in reach.
+ * the controls in reach, and the loading skeleton has the loaded cards.
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { apiPath } from "@platform/ui/test-support/apiPath";
+import { measureBoxes } from "@platform/ui/test-support/layoutShift";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { holdReads } from "@platform/ui/test-support/routeControls";
+import { CARD } from "./constants/layoutSelectors";
 import { PHONE_VIEWPORT } from "./constants/phoneViewport";
 import { ORDER_PLACED_HEADING } from "./constants/publicCopy";
 import { fillDetails } from "./fixtures/publicOrderForm";
+import { expectSameColumns, skeletonCards } from "./fixtures/skeletonLayout";
 import { stubPublicApi } from "./fixtures/stubPublicApi";
+
+const CURRENT_DROP = apiPath(/^\/public\/drops\/current$/);
 
 test.use({ viewport: PHONE_VIEWPORT, hasTouch: true, isMobile: true });
 
@@ -37,4 +44,23 @@ test("the order page fits a phone and an order can be placed from it", async ({ 
   await placeOrder.tap();
   await expect(page.getByRole("heading", { name: ORDER_PLACED_HEADING })).toBeVisible();
   expect(api.writes).toHaveLength(1);
+});
+
+test("on a phone the order page's skeleton has one card per loaded card, in their column", async ({ page }) => {
+  await stubUnmatchedApi(page);
+  await stubPublicApi(page);
+  const gate = await holdReads(page, CURRENT_DROP);
+
+  try {
+    await page.goto("/order");
+    const skeleton = skeletonCards(page);
+    await expect(skeleton).toHaveCount(5);
+    const boxes = await measureBoxes(skeleton);
+
+    gate.release();
+    await expect(skeleton).toHaveCount(0);
+    await expectSameColumns(boxes, page.getByRole("main").locator(CARD));
+  } finally {
+    gate.release();
+  }
 });

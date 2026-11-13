@@ -5,7 +5,7 @@
  * returning customer reorders their usual; no running drop, a failed drop
  * load, a failed menu load, a failed order read and an unknown order each get
  * their own state, and each Retry re-reads what failed; and the order-status
- * skeleton has the loaded layout.
+ * skeletons have the loaded layout.
  */
 import type { PublicOrderConfirmation } from "@/types/public/public";
 import { apiPath } from "@platform/ui/test-support/apiPath";
@@ -27,7 +27,7 @@ import { ACTIVE_DROP_ID } from "./fixtures/dropFixtures";
 import { orderIdAt, pizzaIdAt, slotIdAt, toppingIdAt } from "./fixtures/fixtureIds";
 import { confirmationFromOrder } from "./fixtures/publicFixtures";
 import { fillDetails, pizzaLine } from "./fixtures/publicOrderForm";
-import { expectSameColumns, looseSkeletonBars } from "./fixtures/skeletonLayout";
+import { expectSameColumns, looseSkeletonBars, skeletonCards } from "./fixtures/skeletonLayout";
 import { stubPublicApi } from "./fixtures/stubPublicApi";
 
 const CURRENT_DROP = apiPath(/^\/public\/drops\/current$/);
@@ -224,6 +224,24 @@ test("the order status skeleton has one placeholder per loaded card, in their co
     await expect(bars).toHaveCount(0);
     await expectSameColumns(boxes, page.getByRole("main").locator(CARD));
     await expect(page.getByRole("heading", { name: ORDER_STATUS_HEADING })).toBeVisible();
+  } finally {
+    gate.release();
+  }
+});
+
+test("the order page's skeleton has one card per loaded card, in their column", async ({ page }) => {
+  await stubPublicApi(page);
+  const gate = await holdReads(page, CURRENT_DROP);
+
+  try {
+    await page.goto("/order");
+    const skeleton = skeletonCards(page);
+    await expect(skeleton).toHaveCount(5);
+    const boxes = await measureBoxes(skeleton);
+
+    gate.release();
+    await expect(skeleton).toHaveCount(0);
+    await expectSameColumns(boxes, page.getByRole("main").locator(CARD));
   } finally {
     gate.release();
   }

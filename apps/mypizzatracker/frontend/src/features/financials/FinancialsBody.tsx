@@ -1,5 +1,7 @@
-import { Button, Skeleton } from "@platform/ui";
+import { Button } from "@platform/ui";
 import { useGetFinancialsQuery } from "@/store/financialsApi";
+import FinancialsBodySkeleton from "@/features/financials/FinancialsBodySkeleton";
+import FinancialsStack from "@/features/financials/FinancialsStack";
 import SummaryCard from "@/features/financials/SummaryCard";
 import ExpensesSection from "@/features/financials/ExpensesSection";
 import type { FinancialsBodyProps } from "@/types/financials/FinancialsBodyProps";
@@ -7,7 +9,7 @@ import type { FinancialsBodyProps } from "@/types/financials/FinancialsBodyProps
 export default function FinancialsBody({ dropId }: FinancialsBodyProps) {
   const { data, isLoading, isError, refetch } = useGetFinancialsQuery(dropId);
 
-  if (isLoading) return <Skeleton className="h-96 w-full" />;
+  if (isLoading) return <FinancialsBodySkeleton />;
   if (isError || !data) {
     return (
       <div className="space-y-2">
@@ -22,9 +24,9 @@ export default function FinancialsBody({ dropId }: FinancialsBodyProps) {
   const readOnly = data.drop.status === "closed";
 
   return (
-    <div className="space-y-4">
+    <FinancialsStack>
       <SummaryCard data={data} readOnly={readOnly} />
       <ExpensesSection data={data} readOnly={readOnly} />
-    </div>
+    </FinancialsStack>
   );
 }

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Card,
   EmptyState,
   Select,
   Skeleton,
@@ -9,6 +8,11 @@ import {
 } from "@platform/ui";
 import { useGetDashboardQuery } from "@/store/serviceApi";
 import { useListDropsQuery } from "@/store/dropsApi";
+import ServiceFrame from "@/features/service/ServiceFrame";
+import ServiceHeader from "@/features/service/ServiceHeader";
+import ServiceLoadingSkeleton from "@/features/service/ServiceLoadingSkeleton";
+import SlotGrid from "@/features/service/SlotGrid";
+import SlotGridSkeleton from "@/features/service/SlotGridSkeleton";
 import { SlotColumn } from "./SlotColumn";
 
 const POLL_INTERVAL_MS = 5_000;
@@ -59,7 +63,7 @@ export function ServiceDashboard({
     pollingInterval: tabHidden ? 0 : POLL_INTERVAL_MS,
   });
 
-  if (isLoadingDrops) return <DashboardSkeleton />;
+  if (isLoadingDrops) return <ServiceLoadingSkeleton />;
 
   if (isDropsError) {
     return (
@@ -84,13 +88,13 @@ export function ServiceDashboard({
     );
   }
 
-  if (!effectiveDropId) return <DashboardSkeleton />;
+  if (!effectiveDropId) return <ServiceLoadingSkeleton />;
 
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-[1600px]">
-      <header className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
+    <ServiceFrame>
+      <ServiceHeader
+        title={
+          <>
             <h1 className="text-2xl font-semibold">
               {dashboard?.drop.name ?? "Service"}
             </h1>
@@ -100,31 +104,37 @@ export function ServiceDashboard({
                 label={dashboard.drop.status}
               />
             ) : null}
-          </div>
-          {dashboard ? (
+          </>
+        }
+        subtitle={
+          dashboard ? (
             <p className="text-sm text-muted-foreground">
               {dashboard.drop.in_progress_count} in progress -- updated{" "}
               {isFetching ? "..." : formatRelative(dashboard.server_time)}
             </p>
-          ) : null}
-        </div>
-        {activeDrops.length > 1 ? (
-          <Select
-            value={effectiveDropId}
-            onChange={(e) => onDropChange(e.target.value)}
-            className="w-56"
-            aria-label="Choose drop"
-          >
-            {activeDrops.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name} -- {d.date}
-              </option>
-            ))}
-          </Select>
-        ) : null}
-      </header>
+          ) : isLoadingDashboard ? (
+            <Skeleton className="h-5 w-40" />
+          ) : null
+        }
+        actions={
+          activeDrops.length > 1 ? (
+            <Select
+              value={effectiveDropId}
+              onChange={(e) => onDropChange(e.target.value)}
+              className="w-56"
+              aria-label="Choose drop"
+            >
+              {activeDrops.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} -- {d.date}
+                </option>
+              ))}
+            </Select>
+          ) : null
+        }
+      />
 
-      {isLoadingDashboard ? <DashboardSkeleton /> : null}
+      {isLoadingDashboard ? <SlotGridSkeleton /> : null}
 
       {isDashboardError ? (
         <EmptyState
@@ -141,7 +151,7 @@ export function ServiceDashboard({
             body="Add at least one pickup slot on the Drops page before serving."
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <SlotGrid>
             {dashboard.slots.map((slot) => (
               <SlotColumn
                 key={slot.id}
@@ -152,30 +162,16 @@ export function ServiceDashboard({
                 readOnly={dashboard.drop.status !== "active"}
               />
             ))}
-          </div>
+          </SlotGrid>
         )
       ) : null}
-    </main>
+    </ServiceFrame>
   );
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function DashboardSkeleton() {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-      {[0, 1, 2, 3].map((i) => (
-        <Card key={i}>
-          <Skeleton className="h-5 w-24 mb-3" />
-          <Skeleton className="h-20 w-full mb-2" />
-          <Skeleton className="h-20 w-full" />
-        </Card>
-      ))}
-    </div>
-  );
-}
 
 function useTabHidden(): boolean {
   const [hidden, setHidden] = useState(
