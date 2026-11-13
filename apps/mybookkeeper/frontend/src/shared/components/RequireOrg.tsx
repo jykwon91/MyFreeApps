@@ -2,7 +2,7 @@ import { useLayoutEffect } from "react";
 import { useDispatch } from "react-redux";
 import { Navigate } from "react-router-dom";
 import { LoadingButton, StandaloneMain } from "@platform/ui";
-import { useListOrganizationsQuery } from "@/shared/store/organizationsApi";
+import { useListOrganizationsQuery } from "@mybookkeeper/api-client/store/organizationsApi";
 import { useGetTaxProfileQuery } from "@/shared/store/taxProfileApi";
 import { setActiveOrg, setOrganizations } from "@/shared/store/organizationSlice";
 import { useActiveOrgId, useCurrentOrg } from "@/shared/hooks/useCurrentOrg";

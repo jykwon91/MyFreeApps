@@ -10,6 +10,7 @@ import { useDebouncedAnnouncement } from "../../lib/useDebouncedAnnouncement";
 import { filterDestinations, flattenDestinations, visibleGroups } from "../../utils/destinationSearch";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { useIsAdmin } from "../workspace/useIsAdmin";
+import WorkspaceSection from "../workspace/WorkspaceSection";
 import MoreSearchResults from "./MoreSearchResults";
 
 export default function MoreScreen() {
@@ -41,6 +42,7 @@ export default function MoreScreen() {
           />
         </View>
         {isSearching ? <MoreSearchResults onShowAccount={() => setQuery("")} query={query} results={results} /> : null}
+        {isSearching ? null : <WorkspaceSection />}
         {isSearching ? null : <MoreMenuGroups groups={visibleGroups(MORE_MENU, viewer)} webBaseUrl={WEB_BASE_URL} />}
         {isSearching ? null : (
           <>

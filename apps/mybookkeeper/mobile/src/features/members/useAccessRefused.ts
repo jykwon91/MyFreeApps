@@ -2,7 +2,7 @@ import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { useToast } from "@platform/mobile";
 import { useCallback } from "react";
 import { MEMBERS_MESSAGES as MESSAGES } from "../../constants/members";
-import { useListWorkspacesQuery } from "../workspace/workspaceApi";
+import { useListOrganizationsQuery } from "@mybookkeeper/api-client/store/organizationsApi";
 import { isNotMemberRefusal } from "./membersDisplay";
 
 /**
@@ -11,7 +11,7 @@ import { isNotMemberRefusal } from "./membersDisplay";
  */
 export function useAccessRefused(): (error: unknown) => void {
   const { showToast } = useToast();
-  const { refetch } = useListWorkspacesQuery();
+  const { refetch } = useListOrganizationsQuery();
 
   return useCallback(
     (error: unknown) => {

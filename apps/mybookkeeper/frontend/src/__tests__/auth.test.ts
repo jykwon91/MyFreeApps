@@ -48,7 +48,7 @@ import api from "@/shared/lib/api";
 import { login, logout, notifyAuthChange, signOut } from "@/shared/lib/auth";
 import { store } from "@/shared/store";
 import { forgetOrganizations, setActiveOrg } from "@/shared/store/organizationSlice";
-import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
+import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 
 const RESET_API = { type: "api/resetApiState" };
 const FORGET_ORGS = forgetOrganizations();

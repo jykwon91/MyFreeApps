@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import OrgSwitcher from "@/app/features/organizations/OrgSwitcher";
-import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
+import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 
 const mockDispatch = vi.fn();
 
@@ -11,7 +11,7 @@ vi.mock("react-redux", () => ({
   useDispatch: () => mockDispatch,
 }));
 
-vi.mock("@/shared/store/organizationsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/organizationsApi", () => ({
   useCreateOrganizationMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 

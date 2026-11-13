@@ -9,6 +9,7 @@ import uploads, { uploadStatusDismissed } from "../features/capture/uploadsSlice
 import { clearDocumentFiles } from "../features/documents/openDocumentFile";
 import { clearReplyDrafts } from "../features/inquiries/replyDrafts";
 import { clearReplyRequestIds } from "../features/inquiries/replyRequestIds";
+import { clearSavedWorkspace } from "../features/workspace/savedWorkspace";
 import workspace, { workspaceChosen, workspaceLost } from "../features/workspace/workspaceSlice";
 import { clearHeldFiles } from "../features/uploads/heldFile";
 import { session } from "./session";
@@ -42,7 +43,7 @@ onAccountLeft(session, () => {
   store.dispatch(uploadStatusDismissed());
   // Each has to run whatever the others do: these are someone's records. Nothing may
   // escape either, or the session's next listener, which clears the cache, never runs.
-  for (const clear of [clearDocumentFiles, clearDataExportFiles, clearUploadQueue, clearReplyDrafts, clearReplyRequestIds, clearHeldFiles, stopAi]) {
+  for (const clear of [clearDocumentFiles, clearDataExportFiles, clearUploadQueue, clearReplyDrafts, clearReplyRequestIds, clearHeldFiles, clearSavedWorkspace, stopAi]) {
     try {
       clear();
     } catch (error) {

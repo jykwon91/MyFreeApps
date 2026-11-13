@@ -19,6 +19,7 @@ jest.mock("@platform/mobile", () => {
     AccountSettings: () => <MockText>Account section</MockText>,
   };
 });
+jest.mock("../src/features/workspace/WorkspaceSection", () => ({ __esModule: true, default: () => <MockText>Workspace section</MockText> }));
 jest.mock("../src/features/workspace/useIsAdmin", () => ({ useIsAdmin: jest.fn() }));
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: jest.fn() }));
 
@@ -64,9 +65,11 @@ describe("MoreScreen search", () => {
     await show();
     await fireEvent.changeText(field(), "rent");
     expect(screen.queryByText("Account section")).toBeNull();
+    expect(screen.queryByText("Workspace section")).toBeNull();
     expect(screen.queryByText("Version 1.0.0")).toBeNull();
     await fireEvent.press(screen.getByLabelText("Clear search"));
     expect(screen.getByText("Account section")).toBeTruthy();
+    expect(screen.getByText("Workspace section")).toBeTruthy();
     expect(screen.getByText("Version 1.0.0")).toBeTruthy();
   });
 

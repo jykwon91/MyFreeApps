@@ -10,7 +10,7 @@ import RequireOrg from "@/shared/components/RequireOrg";
 import { useOrgRole } from "@/shared/hooks/useOrgRole";
 import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
 
-vi.mock("@/shared/store/organizationsApi", () => ({
+vi.mock("@mybookkeeper/api-client/store/organizationsApi", () => ({
   useListOrganizationsQuery: vi.fn(),
 }));
 
@@ -28,7 +28,7 @@ vi.mock("@/shared/components/ui/Skeleton", () => ({
   ),
 }));
 
-import { useListOrganizationsQuery } from "@/shared/store/organizationsApi";
+import { useListOrganizationsQuery } from "@mybookkeeper/api-client/store/organizationsApi";
 
 const seenRoles: (OrgRole | null)[] = [];
 

@@ -1,14 +1,19 @@
 import { useState } from "react";
-import { useCreateOrganizationMutation } from "@/shared/store/organizationsApi";
+import { useCreateOrganizationMutation } from "@mybookkeeper/api-client/store/organizationsApi";
 import { LoadingButton } from "@platform/ui";
+import { ORGANIZATION_NAME_MAX_LENGTH, ORGANIZATION_NAME_PROBLEM_MESSAGES } from "@mybookkeeper/api-client/constants/organizationName";
+import { organizationNameProblem } from "@mybookkeeper/api-client/utils/organizationNameProblem";
 
 export default function CreateOrgPrompt() {
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
   const [createOrg, { isLoading, error }] = useCreateOrganizationMutation();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
+    const problem = organizationNameProblem(name);
+    setNameError(problem ? ORGANIZATION_NAME_PROBLEM_MESSAGES[problem] : null);
+    if (problem) return;
     await createOrg({ name: name.trim() });
   }
 
@@ -31,9 +36,11 @@ export default function CreateOrgPrompt() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. My Properties LLC"
+              maxLength={ORGANIZATION_NAME_MAX_LENGTH}
               className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               required
             />
+            {nameError ? <p className="text-destructive text-sm mt-1">{nameError}</p> : null}
           </div>
           {errorMessage ? <p className="text-destructive text-sm">{errorMessage}</p> : null}
           <LoadingButton type="submit" isLoading={isLoading} loadingText="Creating..." className="w-full">

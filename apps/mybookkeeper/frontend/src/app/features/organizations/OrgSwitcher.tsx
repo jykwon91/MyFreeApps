@@ -5,9 +5,11 @@ import type { RootState, AppDispatch } from "@/shared/store";
 import { switchOrg } from "@/shared/store/organizationSlice";
 import { useCurrentOrg } from "@/shared/hooks/useCurrentOrg";
 import { useState } from "react";
-import { useCreateOrganizationMutation } from "@/shared/store/organizationsApi";
+import { useCreateOrganizationMutation } from "@mybookkeeper/api-client/store/organizationsApi";
 
 import { ROLE_LABELS } from "@mybookkeeper/api-client/constants/orgRoles";
+import { ORGANIZATION_NAME_MAX_LENGTH } from "@mybookkeeper/api-client/constants/organizationName";
+import { organizationNameProblem } from "@mybookkeeper/api-client/utils/organizationNameProblem";
 
 export default function OrgSwitcher() {
   const dispatch = useDispatch<AppDispatch>();
@@ -23,7 +25,7 @@ export default function OrgSwitcher() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!newName.trim()) return;
+    if (organizationNameProblem(newName)) return;
     await createOrg({ name: newName.trim() });
     setNewName("");
     setShowCreate(false);
@@ -79,13 +81,14 @@ export default function OrgSwitcher() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Organization name"
+            maxLength={ORGANIZATION_NAME_MAX_LENGTH}
             className="w-full border rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
             autoFocus
           />
           <div className="flex gap-1">
             <button
               type="submit"
-              disabled={creating || !newName.trim()}
+              disabled={creating || organizationNameProblem(newName) !== null}
               className="flex-1 text-xs bg-primary text-primary-foreground rounded px-2 py-1 disabled:opacity-50 flex items-center justify-center gap-1"
             >
               {creating ? (
