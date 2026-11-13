@@ -93,7 +93,7 @@ export default function CreatePackageDialog({
               Select lineups to include ({selectedLineupIds.length} selected)
             </p>
             {lineupsLoading ? (
-              <div className="h-32 bg-muted/40 rounded-lg animate-pulse" />
+              <div className="h-32 bg-muted rounded-lg animate-pulse" />
             ) : acceptedLineups.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No accepted lineups for this game/map/side filter.

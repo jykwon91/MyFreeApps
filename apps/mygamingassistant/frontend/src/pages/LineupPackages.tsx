@@ -138,7 +138,7 @@ export default function LineupPackages() {
         {isLoading && (
           <div className="space-y-3">
             {[1, 2].map((i) => (
-              <div key={i} className="h-20 rounded-lg bg-muted/40 animate-pulse" aria-hidden />
+              <div key={i} className="h-20 rounded-lg bg-muted animate-pulse" aria-hidden />
             ))}
           </div>
         )}

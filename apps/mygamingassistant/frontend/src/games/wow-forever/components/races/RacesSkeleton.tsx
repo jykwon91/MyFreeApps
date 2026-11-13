@@ -1,6 +1,6 @@
 import { RACES_SKELETON_CARDS, RACES_SKELETON_RACIALS } from "@/games/wow-forever/data/races/racesConfig";
 
-const BAR = "rounded bg-muted/40 animate-pulse";
+const BAR = "rounded bg-muted animate-pulse";
 
 /** Same shape as the loaded page: the filters card, a count, then race cards (title, zone, classes, racial rows). */
 export default function RacesSkeleton({ filters }: { filters: boolean }) {

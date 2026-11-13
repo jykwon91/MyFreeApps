@@ -26,7 +26,7 @@ export default function PriceStatus({ withoutPrices, hideError = false, faction 
   }
   return (
     <div aria-busy="true" aria-label="Loading auction prices" data-testid="price-credit-skeleton">
-      <div className="h-4 w-64 max-w-full rounded bg-muted/40 animate-pulse" aria-hidden />
+      <div className="h-4 w-64 max-w-full rounded bg-muted animate-pulse" aria-hidden />
     </div>
   );
 }

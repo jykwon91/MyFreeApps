@@ -16,4 +16,4 @@ export const TRIAGE_INPUT =
   "w-full rounded-md border bg-card px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary";
 
 /** A skeleton bar. */
-export const TRIAGE_SKELETON_BAR = "rounded-md bg-muted/40 motion-safe:animate-pulse";
+export const TRIAGE_SKELETON_BAR = "rounded-md bg-muted motion-safe:animate-pulse";

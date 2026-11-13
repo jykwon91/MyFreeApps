@@ -1,6 +1,6 @@
 import { SPELLBOOK_SKELETON_ROWS, SPELLBOOK_SKELETON_TABS } from "@/games/wow-forever/data/spellbook/spellbookConfig";
 
-const BAR = "rounded bg-muted/40 animate-pulse";
+const BAR = "rounded bg-muted animate-pulse";
 
 /** Same shape as the loaded spellbook: the filters card (search, level, chips), a tab heading, then spell cards. */
 export default function SpellbookSkeleton() {

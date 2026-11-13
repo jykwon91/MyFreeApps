@@ -1,6 +1,6 @@
 import { DOWNRANK_SKELETON_ROWS } from "@/games/wow-forever/data/downrank/downrankConfig";
 
-const BAR = "rounded bg-muted/40 animate-pulse";
+const BAR = "rounded bg-muted animate-pulse";
 const FIELDS = 4;
 
 /** Same shape as the loaded calculator: the inputs card, the suggestions, the formula note, then the ranks. */

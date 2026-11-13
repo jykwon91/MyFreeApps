@@ -281,8 +281,8 @@ export default function ZoneEditPage() {
   if (mapLoading || !draft.ready) {
     return (
       <div className="p-4 sm:p-6 space-y-4">
-        <div className="h-10 w-1/3 bg-muted/40 rounded animate-pulse" />
-        <div className="h-96 bg-muted/40 rounded-xl animate-pulse" />
+        <div className="h-10 w-1/3 bg-muted rounded animate-pulse" />
+        <div className="h-96 bg-muted rounded-xl animate-pulse" />
       </div>
     );
   }

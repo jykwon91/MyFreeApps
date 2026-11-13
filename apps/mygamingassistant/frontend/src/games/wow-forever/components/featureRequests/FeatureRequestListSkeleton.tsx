@@ -1,6 +1,6 @@
 import { BOARD_SKELETON_CARDS } from "@/games/wow-forever/data/featureRequests/featureRequestBoard";
 
-const BAR = "rounded-md bg-muted/40 motion-safe:animate-pulse";
+const BAR = "rounded-md bg-muted motion-safe:animate-pulse";
 
 /**
  * The board while it first loads: the filter row and four cards with the same rows as a loaded card

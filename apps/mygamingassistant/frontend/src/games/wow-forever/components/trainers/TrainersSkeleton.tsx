@@ -1,4 +1,4 @@
-const BAR = "rounded bg-muted/40 animate-pulse";
+const BAR = "rounded bg-muted animate-pulse";
 const LEVEL_ROWS = 6;
 const TRAINER_ROWS = 3;
 

@@ -44,8 +44,8 @@ export default function LineupDetailPanel({ lineupId, onClose, pins }: Props) {
       <div className="p-3">
         {isLoading && (
           <div className="space-y-3">
-            <div className="h-32 rounded-lg bg-muted/40 animate-pulse" />
-            <div className="h-32 rounded-lg bg-muted/40 animate-pulse" />
+            <div className="h-32 rounded-lg bg-muted animate-pulse" />
+            <div className="h-32 rounded-lg bg-muted animate-pulse" />
           </div>
         )}
         {isError && (

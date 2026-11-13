@@ -3,7 +3,7 @@ import {
   HUNTER_PETS_SKELETON_ROWS,
 } from "@/games/wow-forever/data/hunterPets/hunterPetsConfig";
 
-const BAR = "rounded bg-muted/40 animate-pulse";
+const BAR = "rounded bg-muted animate-pulse";
 
 /** Same shape as the loaded page: the family cards, the abilities, then the filters and beast rows. */
 export default function HunterPetsSkeleton() {

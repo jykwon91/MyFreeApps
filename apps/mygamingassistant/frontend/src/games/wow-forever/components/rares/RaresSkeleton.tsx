@@ -1,6 +1,6 @@
 import { RARES_SKELETON_ROWS } from "@/games/wow-forever/data/rares/raresConfig";
 
-const BAR = "rounded bg-muted/40 animate-pulse";
+const BAR = "rounded bg-muted animate-pulse";
 
 /** Same shape as the loaded page: the filters card, the macro bar, a count, then rare cards (title, place, /target line, drops). */
 export default function RaresSkeleton() {

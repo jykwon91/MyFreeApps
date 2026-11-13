@@ -13,10 +13,10 @@ export default function GlanceBoardSkeleton() {
     <div className="space-y-8">
       {[1, 2].map((s) => (
         <div key={s} className="space-y-3">
-          <div className="h-5 w-48 bg-muted/40 rounded animate-pulse" />
+          <div className="h-5 w-48 bg-muted rounded animate-pulse" />
           <div className="grid grid-cols-2 gap-4">
             {[1, 2].map((t) => (
-              <div key={t} className="rounded-lg bg-muted/40 animate-pulse" style={{ aspectRatio: "4.5 / 1" }} />
+              <div key={t} className="rounded-lg bg-muted animate-pulse" style={{ aspectRatio: "4.5 / 1" }} />
             ))}
           </div>
         </div>

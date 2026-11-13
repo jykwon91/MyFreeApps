@@ -1,4 +1,4 @@
-const BAR = "rounded bg-muted/40 animate-pulse";
+const BAR = "rounded bg-muted animate-pulse";
 
 /** Mirrors the loaded quest detail layout: header, facts, rewards. */
 export default function QuestDetailSkeleton() {

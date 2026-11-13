@@ -25,7 +25,7 @@ export default function LineupResultsPanel({
     return (
       <div className="space-y-3">
         {[1, 2].map((i) => (
-          <div key={i} className="h-48 rounded-lg bg-muted/40 animate-pulse" />
+          <div key={i} className="h-48 rounded-lg bg-muted animate-pulse" />
         ))}
       </div>
     );

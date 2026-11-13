@@ -1,6 +1,6 @@
 import { LEGACY_SKELETON_NODES } from "@/games/wow-forever/data/legacy/legacyConfig";
 
-const BAR = "rounded bg-muted/40 animate-pulse";
+const BAR = "rounded bg-muted animate-pulse";
 const TREES = 3;
 
 /** Same shape as the loaded page: the summary strip, the planner (tabs + three trees), the challenges and the rewards. */
