@@ -13,8 +13,10 @@ vi.mock("../lib/stale-chunk", async (importOriginal) => {
   return { ...mod, reloadOnceForStaleChunk: vi.fn() };
 });
 
-import { reloadOnceForStaleChunk } from "../lib/stale-chunk";
+import { __resetStaleChunkStateForTests, reloadOnceForStaleChunk } from "../lib/stale-chunk";
 import { withRouteErrorBoundary } from "../components/errors/withRouteErrorBoundary";
+import { CAUGHT_ERROR_EVENT } from "../constants/caught-error-event";
+import type { CaughtErrorDetail } from "../types/caught-error-detail";
 
 const mockReloadOnce = vi.mocked(reloadOnceForStaleChunk);
 
@@ -26,13 +28,45 @@ function Boom(): never {
   throw new Error("Cannot read properties of undefined (reading 'map')");
 }
 
+const CHUNK_ERROR = "Failed to fetch dynamically imported module: /assets/a-1234abcd.js";
+
+function memoryStorage(): Pick<Storage, "getItem" | "setItem"> {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key) => store.get(key) ?? null,
+    setItem: (key, value) => {
+      store.set(key, value);
+    },
+  };
+}
+
 function renderAt(path: string, routes: RouteObject[]) {
   const router = createMemoryRouter(withRouteErrorBoundary(routes), { initialEntries: [path] });
   return render(<RouterProvider router={router} />);
 }
 
+/** Renders `/x` with a lazy page and returns what was announced once `ready` (a button name) shows. */
+async function announcedWhileRendering(
+  Page: ComponentType,
+  ready: RegExp = /^Reload$/,
+): Promise<CaughtErrorDetail[]> {
+  const announced: CaughtErrorDetail[] = [];
+  const listener = (event: Event) => {
+    if (event instanceof CustomEvent) announced.push(event.detail as CaughtErrorDetail);
+  };
+  window.addEventListener(CAUGHT_ERROR_EVENT, listener);
+  try {
+    renderAt("/x", [{ path: "/x", element: <Suspense fallback={<p>loading</p>}><Page /></Suspense> }]);
+    expect(await screen.findByRole("button", { name: ready })).toBeInTheDocument();
+  } finally {
+    window.removeEventListener(CAUGHT_ERROR_EVENT, listener);
+  }
+  return announced;
+}
+
 beforeEach(() => {
   mockReloadOnce.mockReset();
+  __resetStaleChunkStateForTests();
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 afterEach(() => vi.restoreAllMocks());
@@ -88,5 +122,63 @@ describe("withRouteErrorBoundary", () => {
     expect(await screen.findByText("Something went wrong")).toBeInTheDocument();
     expect(screen.getByText(/reading 'map'/)).toBeInTheDocument();
     expect(mockReloadOnce).not.toHaveBeenCalled();
+  });
+
+  it("announces the caught error on window, so the mocked e2e suites fail on it", async () => {
+    const announced: CaughtErrorDetail[] = [];
+    const listener = (event: Event) => {
+      if (event instanceof CustomEvent) announced.push(event.detail as CaughtErrorDetail);
+    };
+    window.addEventListener(CAUGHT_ERROR_EVENT, listener);
+    try {
+      renderAt("/boom", [{ path: "/boom", element: <Boom /> }]);
+      expect(await screen.findByText("Something went wrong")).toBeInTheDocument();
+    } finally {
+      window.removeEventListener(CAUGHT_ERROR_EVENT, listener);
+    }
+
+    expect(announced.length).toBeGreaterThan(0);
+    expect(announced[0]).toMatchObject({
+      source: "RouteErrorFallback",
+      name: "Error",
+      message: "Cannot read properties of undefined (reading 'map')",
+    });
+  });
+
+  it("announces a route Response (no route matched) by its status", async () => {
+    const announced: CaughtErrorDetail[] = [];
+    const listener = (event: Event) => {
+      if (event instanceof CustomEvent) announced.push(event.detail as CaughtErrorDetail);
+    };
+    window.addEventListener(CAUGHT_ERROR_EVENT, listener);
+    try {
+      renderAt("/nowhere", [{ path: "/ok", element: <p>page content</p> }]);
+      expect(await screen.findByText("404 Not Found")).toBeInTheDocument();
+    } finally {
+      window.removeEventListener(CAUGHT_ERROR_EVENT, listener);
+    }
+
+    expect(announced[0]).toMatchObject({ source: "RouteErrorFallback", name: "RouteErrorResponse", message: "404 Not Found" });
+  });
+
+  it("announces a stale chunk when the reload guard declines, since the page is stuck on the prompt", async () => {
+    mockReloadOnce.mockReturnValue(false);
+    const announced = await announcedWhileRendering(failingLazy(CHUNK_ERROR));
+
+    expect(announced).toEqual([
+      expect.objectContaining({ source: "RouteErrorFallback", name: "TypeError", message: CHUNK_ERROR }),
+    ]);
+  });
+
+  it("does not announce a stale chunk the page is reloading away from", async () => {
+    const actual = await vi.importActual<typeof import("../lib/stale-chunk")>("../lib/stale-chunk");
+    // The real guard, so it records the reload as scheduled; the reload itself does nothing.
+    mockReloadOnce.mockImplementation(() =>
+      actual.reloadOnceForStaleChunk({ storage: memoryStorage(), pathname: "/x", now: Date.now(), reload: () => {} }),
+    );
+    const announced = await announcedWhileRendering(failingLazy(CHUNK_ERROR), /Reloading/);
+
+    expect(mockReloadOnce).toHaveBeenCalledTimes(1);
+    expect(announced).toEqual([]);
   });
 });

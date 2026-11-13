@@ -17,7 +17,8 @@
  *   - The skeleton matches the loaded list's rows; Restore is at least 44px tall;
  *     no horizontal overflow at mobile / tablet / desktop widths.
  */
-import { test, expect, type Page, type Request } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";

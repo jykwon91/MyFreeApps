@@ -6,7 +6,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-world-map
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { hideMapLayers } from "./fixtures/mapLayers";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 

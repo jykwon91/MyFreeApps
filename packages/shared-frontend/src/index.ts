@@ -105,7 +105,8 @@ export { installStepUpInterceptor } from "./auth/stepUpInterceptor";
 export { StepUpCancelledError } from "./auth/errors/StepUpCancelledError";
 export { StepUpReauthRequiredError } from "./auth/errors/StepUpReauthRequiredError";
 
-// Stale-chunk recovery after a deploy (vite:preloadError reload-once + router errorElement)
+// Stale-chunk recovery after a deploy (vite:preloadError reload-once + router errorElement),
+// and the event every error boundary announces a caught crash on
 export {
   installStaleChunkRecovery,
   isChunkLoadError,
@@ -114,6 +115,9 @@ export {
 export { default as NewVersionPrompt } from "./components/errors/NewVersionPrompt";
 export { default as RouteErrorFallback } from "./components/errors/RouteErrorFallback";
 export { withRouteErrorBoundary } from "./components/errors/withRouteErrorBoundary";
+export { announceCaughtError, announceUnlessReloading } from "./lib/caught-error";
+export { CAUGHT_ERROR_EVENT } from "./constants/caught-error-event";
+export type { CaughtErrorDetail } from "./types/caught-error-detail";
 
 // Data components
 export { default as DataTable } from "./components/data/DataTable";

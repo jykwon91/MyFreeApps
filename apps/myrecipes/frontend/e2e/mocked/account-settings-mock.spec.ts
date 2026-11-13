@@ -6,7 +6,8 @@
  * server refuses it says so and keeps what was typed.
  */
 import { readFile } from "node:fs/promises";
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell, TEST_USER } from "@platform/ui/test-support/mockSession";
 import { toast, toastAboveModal } from "@platform/ui/test-support/toast";

@@ -3,7 +3,8 @@
  * same column headers in the same order, so the table does not shift when data
  * arrives. The loaded table holds five rows, matching the skeleton's five.
  */
-import { test, expect, type Locator } from "@playwright/test";
+import type { Locator } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { mockApplication } from "./fixtures/mockData";

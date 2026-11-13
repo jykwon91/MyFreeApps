@@ -15,11 +15,13 @@
  * the error stays with Retry busy and nothing claims to be empty until the real
  * (empty) answer lands.
  */
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
+import { stubNoListings } from "./fixtures/emptyLists";
 import { LISTING, LISTING_ID } from "./fixtures/mockListing";
 import { TAX_RETURN_ID, stubTaxReturnDetail } from "./fixtures/mockTaxReturn";
 
@@ -54,6 +56,7 @@ const SECTIONS: Section[] = [
     emptyAnswer: [],
     // With no listings either, the calendar's empty state is the "add a listing" prompt.
     empty: (p) => p.getByTestId("calendar-no-listings"),
+    stubPage: stubNoListings,
   },
   {
     name: "pending receipts",

@@ -8,7 +8,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-triage
  */
-import { expect, test, type Page, type Request } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
+import { expect, test } from "@platform/ui/test-support/crashGuard";
 
 const PAGE = "/wow-forever/triage";
 const OPERATOR_EMAIL = "operator@fixture.example";

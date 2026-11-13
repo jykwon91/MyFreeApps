@@ -7,7 +7,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-icons
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubEmptyPrices } from "./fixtures/emptyPrices";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 

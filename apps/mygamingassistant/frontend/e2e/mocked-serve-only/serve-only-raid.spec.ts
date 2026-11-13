@@ -5,7 +5,7 @@
  *
  * Run: npx playwright test --config=playwright.layout.serve-only.config.ts serve-only-raid
  */
-import { expect, test } from "@playwright/test";
+import { expect, test } from "@platform/ui/test-support/crashGuard";
 import { RAID_PATH, RAID_TITLE, fulfillJson, raidFixture, routeRaid, leaveAndUnroute } from "../fixtures/raidPage";
 
 test.afterEach(async ({ page }) => {

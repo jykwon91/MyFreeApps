@@ -3,7 +3,7 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-food
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 // Most checks pick levels past the beta cap of 30, so they run after launch.

@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode, useState } from "react";
 import { Coffee, ChevronDown, ChevronUp, Copy, Home, RotateCcw } from "lucide-react";
-import { Button, NewVersionPrompt, isChunkLoadError } from "@platform/ui";
+import { Button, NewVersionPrompt, announceUnlessReloading, isChunkLoadError } from "@platform/ui";
 import api from "@/shared/lib/api";
 
 export interface PageErrorBoundaryProps {
@@ -99,6 +99,7 @@ export default class PageErrorBoundary extends Component<PageErrorBoundaryProps,
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error("[PageErrorBoundary]", error.message, info.componentStack);
+    announceUnlessReloading("PageErrorBoundary", error);
     api
       .post("/frontend-errors", {
         message: error.message,

@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { NewVersionPrompt, isChunkLoadError } from "@platform/ui";
+import { NewVersionPrompt, announceUnlessReloading, isChunkLoadError } from "@platform/ui";
 
 export interface ErrorBoundaryProps {
   children: ReactNode;
@@ -18,6 +18,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, State> 
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error("[ErrorBoundary]", error.message, info.componentStack);
+    announceUnlessReloading("ErrorBoundary", error);
   }
 
   render(): ReactNode {

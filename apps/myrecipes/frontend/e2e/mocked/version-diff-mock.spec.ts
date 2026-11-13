@@ -3,7 +3,8 @@
  * picking two versions opens the newer one against the older, the diff reads
  * with the copy shared with the phone, and a version that's gone says so.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";

@@ -8,7 +8,8 @@
  * old organization's members or invites, and that a half-typed invite doesn't carry
  * over to the new organization.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgInvite";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
 import { json } from "@platform/ui/test-support/mockResponse";

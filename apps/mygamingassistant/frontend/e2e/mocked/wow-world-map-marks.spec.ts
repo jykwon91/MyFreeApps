@@ -11,7 +11,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-world-map-marks
  */
-import { test, expect, type Browser, type Page } from "@playwright/test";
+import type { Browser, BrowserContext, Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { hideMapLayers } from "./fixtures/mapLayers";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
@@ -130,15 +131,19 @@ test("a three-mark route draws its line and straight-line yards", async ({ page 
   await expect(route.getByRole("listitem")).toHaveText([/Alpha/, /Charlie/, /Bravo/]);
 });
 
-async function freshPage(browser: Browser): Promise<Page> {
+async function freshPage(
+  browser: Browser,
+  guardContext: (context: BrowserContext) => Promise<void>,
+): Promise<Page> {
   const context = await browser.newContext({ permissions: ["clipboard-read", "clipboard-write"] });
+  await guardContext(context);
   const page = await context.newPage();
   await stubUnmatchedApi(page);
   await prepare(page);
   return page;
 }
 
-test("a shared view opens read-only elsewhere, and saving makes the marks yours", async ({ page, browser }) => {
+test("a shared view opens read-only elsewhere, and saving makes the marks yours", async ({ page, browser, guardContext }) => {
   await prepare(page);
   await openElwynn(page);
   await addMark(page, 30, 40, "Alpha");
@@ -151,7 +156,7 @@ test("a shared view opens read-only elsewhere, and saving makes the marks yours"
   const url = await page.evaluate(() => navigator.clipboard.readText());
   expect(url).toMatch(/\/wow-forever\/map\?m=1429#view=1~1429~/);
 
-  const friend = await freshPage(browser);
+  const friend = await freshPage(browser, guardContext);
   await friend.goto(url);
   await expect(friend.getByRole("img", { name: "Elwynn Forest map" })).toBeVisible();
   const banner = friend.getByRole("region", { name: "Shared with you" });
@@ -180,7 +185,6 @@ test("a shared view opens read-only elsewhere, and saving makes the marks yours"
   await friend.goto(url);
   await friend.getByRole("region", { name: "Shared with you" }).getByRole("button", { name: "Save to my marks" }).click();
   expect(await storedLabels(friend)).toEqual(["Alpha", "Bravo <b>bold</b>", "Charlie"]);
-  await friend.context().close();
 });
 
 test("a garbage share link shows a friendly notice, not a crash", async ({ page }) => {

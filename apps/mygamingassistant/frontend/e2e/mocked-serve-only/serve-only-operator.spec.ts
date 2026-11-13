@@ -7,7 +7,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.serve-only.config.ts serve-only-operator
  */
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "@platform/ui/test-support/crashGuard";
 
 const TRIAGE = "/wow-forever/triage";
 const OPERATOR_EMAIL = "operator@fixture.example";

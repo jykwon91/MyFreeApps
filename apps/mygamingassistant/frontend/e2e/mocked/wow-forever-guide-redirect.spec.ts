@@ -6,7 +6,7 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-guide-redirect
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 // Any API call this spec does not stub (icons, prices, server status, ...) answers 404,

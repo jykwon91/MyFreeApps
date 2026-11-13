@@ -2,7 +2,8 @@
  * No-backend E2E for the sidebar version tag. The real stack always reports a
  * commit, so the "unknown" build can only be pinned with a mocked /version.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { VERSION_INFO, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";

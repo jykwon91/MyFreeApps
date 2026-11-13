@@ -21,7 +21,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-guild
  */
-import { test, expect, type Locator, type Page, type Route } from "@playwright/test";
+import type { Locator, Page, Route } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 
 const GUILD_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+$/.test(url.pathname);
 const RECIPES_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+\/recipes$/.test(url.pathname);

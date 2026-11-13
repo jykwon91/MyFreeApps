@@ -12,7 +12,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-server-status
  */
-import { test, expect, type Route } from "@playwright/test";
+import type { Route } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 
 const API_PATTERN = "**/wow/server-status**";
 

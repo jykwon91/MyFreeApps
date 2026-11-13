@@ -13,7 +13,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-ask
  */
-import { expect, test, type Page, type Route } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
+import { expect, test } from "@platform/ui/test-support/crashGuard";
 
 const TURN_PATH = "/api/wow/chat/turn";
 const QUESTION = "where's the closest warlock trainer if i'm in desolace";

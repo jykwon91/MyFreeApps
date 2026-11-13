@@ -7,7 +7,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-dungeon-quests
  */
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 const DEADMINES = "/wow-forever/dungeons/deadmines";

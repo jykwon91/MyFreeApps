@@ -6,7 +6,8 @@
  * get their own path; the shell shows the learner and its navigation, and
  * signing out ends the session.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { TEST_USER, stubCurrentUser } from "@platform/ui/test-support/mockSession";
 import { ISSUED_TOKEN, TEST_PASSWORD, TOTP_CODE, WRONG_PASSWORD } from "./constants/accountCredentials";

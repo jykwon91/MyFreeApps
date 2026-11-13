@@ -3,7 +3,8 @@
  * into the editor for review, and creating it lands on the new recipe; a failed
  * read says why (the copy shared with the phone) and goes back to picking.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell, TEST_USER } from "@platform/ui/test-support/mockSession";
 import { recipeIdAt } from "./fixtures/recipeFixtures";

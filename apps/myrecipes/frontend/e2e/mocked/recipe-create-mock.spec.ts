@@ -4,7 +4,8 @@
  * no ingredient named, stops the save instead of being dropped; and a server
  * error keeps everything typed.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import type { RecipeCreateRequest } from "@myrecipes/api-client/types/recipe/recipe-requests";

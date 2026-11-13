@@ -5,7 +5,8 @@
  * save says why (the copy shared with the phone) and keeps what was typed; and
  * someone else's recipe can't be tweaked.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { SALT_LINEAGE_KEY, TOMATOES_LINEAGE_KEY, VERSION_1_ID, detailOf, recipeIdAt, versionOf } from "./fixtures/recipeFixtures";

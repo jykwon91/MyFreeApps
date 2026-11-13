@@ -6,7 +6,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts raid-web
  */
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "@platform/ui/test-support/crashGuard";
 import {
   DISCORD_URL,
   RAID_PATH,

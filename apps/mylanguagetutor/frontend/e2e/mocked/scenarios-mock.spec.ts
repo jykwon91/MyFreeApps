@@ -4,7 +4,7 @@
  * cap is told before they start; a failed load (catalog or profile) says so and
  * Try again recovers; the loading skeleton lines up with the loaded list.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { DAILY_LIMIT_COPY } from "./constants/blockCopy";
 import { LESSONS_LOAD_FAILED } from "./constants/onboardingCopy";
 import { GET_PROFILE, LIST_SCENARIOS } from "./constants/stubbedEndpoints";

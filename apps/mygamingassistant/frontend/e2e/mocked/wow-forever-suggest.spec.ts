@@ -5,7 +5,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-suggest
  */
-import { expect, test, type Page, type Route } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
+import { expect, test } from "@platform/ui/test-support/crashGuard";
 
 const LIST_PATH = "/api/wow/feature-requests";
 const IDEA = "Show me the cheapest way to level Alchemy from 1 to 300.";

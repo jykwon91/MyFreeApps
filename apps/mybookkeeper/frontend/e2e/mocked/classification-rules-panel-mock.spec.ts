@@ -12,7 +12,8 @@
  *   - Delete: the confirm dialog shows loading until the request finishes, and a
  *     403 shows the view-only toast.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";

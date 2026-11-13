@@ -13,7 +13,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { MAP_STYLE_STORAGE_KEY } from "../../src/games/wow-forever/data/worldMap/mapStyle";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 

@@ -25,7 +25,8 @@
  *   - No horizontal scroll across mobile / tablet / desktop; 44px touch target.
  *   - A feed outage renders the reason and offers no verdict at all.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";

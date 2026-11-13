@@ -3,7 +3,7 @@
  * and lanes, a failed load shows an error with Retry (not the empty state), and
  * the header counts only non-closed applications.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 

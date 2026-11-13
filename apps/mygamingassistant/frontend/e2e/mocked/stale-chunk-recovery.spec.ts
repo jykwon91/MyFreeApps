@@ -11,9 +11,13 @@
  * and if the chunk is still missing it shows the "new version" prompt whose
  * Reload button recovers once the chunk is available again.
  *
+ * The first failure reloads, so it's recovery, not a crash. The second, which
+ * the reload guard declines, leaves the page on the prompt: the error screen
+ * announces that one, so this spec allows it and checks it was announced.
+ *
  * Run: npx playwright test --config=playwright.layout.config.ts stale-chunk-recovery
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 // Matches the lazy page module in both dev (`/src/.../WowProfessionsPage.tsx`)
@@ -22,11 +26,13 @@ const PROFESSIONS_CHUNK = /WowProfessionsPage[^/]*\.(tsx|js)(\?.*)?$/;
 
 // Any API call this spec does not stub (icons, prices, server status, ...) answers 404,
 // so nothing reaches a backend through the dev server.
+test.use({ allowCrashes: true });
+
 test.beforeEach(async ({ page }) => {
   await stubUnmatchedApi(page);
 });
 
-test("a chunk removed by a deploy reloads once, then offers a manual reload", async ({ page }) => {
+test("a chunk removed by a deploy reloads once, then offers a manual reload", async ({ page, pageCrashes }) => {
   let documentLoads = 0;
   page.on("load", () => {
     documentLoads += 1;
@@ -51,6 +57,12 @@ test("a chunk removed by a deploy reloads once, then offers a manual reload", as
   await expect(page).toHaveURL(/\/wow-forever\/professions$/);
   expect(documentLoads).toBe(2);
   expect(chunkRequests).toBe(2);
+
+  // Only the failure the guard declined to reload for was announced, as a crash of the professions chunk.
+  await expect.poll(() => pageCrashes.length).toBeGreaterThan(0);
+  for (const crash of pageCrashes) {
+    expect(crash).toMatch(/^caught by RouteErrorFallback: TypeError: Failed to fetch dynamically imported module: \S*WowProfessionsPage/);
+  }
 
   // No reload loop: nothing else happens while the prompt is showing.
   await page.waitForTimeout(1_500);

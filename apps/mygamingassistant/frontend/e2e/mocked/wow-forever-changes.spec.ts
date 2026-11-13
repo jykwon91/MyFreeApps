@@ -5,7 +5,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-changes
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { CHANGES_PREVIOUS_BUILD, TALENT_CHANGES, ZONE_CHANGES, ZONES_SINCE_LAST_BUILD } from "./fixtures/wowForeverDataCounts";
 

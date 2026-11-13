@@ -12,10 +12,12 @@
  *   - An owner still gets those controls, so the viewer check can't pass by accident.
  *   - The viewer's page has no horizontal overflow on a phone.
  */
-import { test, expect, type Page, type Request } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { stubNoListings } from "./fixtures/emptyLists";
 import { INQUIRY_DETAIL, INQUIRY_ID, INQUIRY_NOTES, INQUIRY_SUMMARY } from "./fixtures/mockInquiry";
 
 /** Answers the pages' reads and records every write, which a viewer must never send. */
@@ -27,7 +29,7 @@ async function stubApi(page: Page, orgRole: OrgRole): Promise<string[]> {
     return route.fulfill(json(request.method() === "GET" ? [] : {}));
   });
   await stubWorkspaceShell(page, orgRole);
-  await page.route(/\/api\/listings(\?.*)?$/, (route) => route.fulfill(json({ items: [], total: 0, has_more: false })));
+  await stubNoListings(page);
   await page.route(/\/api\/inquiries(\?.*)?$/, (route, request: Request) =>
     request.method() === "GET"
       ? route.fulfill(json({ items: [INQUIRY_SUMMARY], total: 1, has_more: false }))

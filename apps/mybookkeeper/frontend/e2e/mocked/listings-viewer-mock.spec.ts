@@ -13,7 +13,8 @@
  *   - An owner still gets those controls, so the viewer check can't pass by accident.
  *   - The viewer's page, with the photo toolbar open, has no sideways scroll on a phone.
  */
-import { test, expect, type Page, type Request } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
