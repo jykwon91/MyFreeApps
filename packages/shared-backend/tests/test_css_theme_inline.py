@@ -13,6 +13,8 @@ The checks:
   filtered to the tokens that file defines in `:root` — every defined token mapped, nothing mapped
   that isn't defined, the same order and shape in every app;
 - `.dark` defines no token `:root` lacks;
+- every file defines the same token set, so no app lacks a utility another app's code (or
+  @platform/ui) can use — `border-input` once compiled to nothing in MyBookkeeper alone;
 - no hand-written semantic-token utility (`.bg-card`, `.hover\\:bg-muted:hover`, `@utility bg-card`).
 
 The error message is the fix: edit that file's `@theme inline` block (and infra/templates/scaffold
@@ -104,6 +106,20 @@ def test_theme_inline_maps_every_defined_token(name: str) -> None:
     assert actual == expected, (
         f"{css_path}: the @theme inline block must map exactly the tokens :root defines, in the "
         f"canonical order. Replace its body with:\n  " + "\n  ".join(expected)
+    )
+
+
+@pytest.mark.parametrize("name", sorted(CSS_FILES))
+def test_every_file_defines_the_same_tokens(name: str) -> None:
+    defined = {
+        other: set(parse_block_tokens(_read(path), ":root")) for other, path in CSS_FILES.items()
+    }
+    all_tokens = set().union(*defined.values())
+    missing = sorted(all_tokens - defined[name])
+    assert not missing, (
+        f"{CSS_FILES[name]}: :root lacks {missing}, which other apps define — @platform/ui "
+        f"utilities built on them compile to nothing here. Define them in :root and .dark "
+        f"(and map them in @theme inline)"
     )
 
 

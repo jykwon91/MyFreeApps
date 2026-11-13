@@ -159,6 +159,18 @@ describe("DiscoveredJobCard — unscored visual signal (PR 4b)", () => {
     ).toBeNull();
   });
 
+  it.each([
+    [false, "discovered-job-awaiting-score"],
+    [true, "discovered-job-scoring-spinner"],
+  ])("outlines the unscored pill (scoring %s) in the border colour, not the near-white muted fill", (inFlight, testId) => {
+    renderInRouter(
+      <DiscoveredJobCard job={makeJob({ verdict: null, score: null })} isScoringInFlight={inFlight} />,
+    );
+    const pill = screen.getByTestId(testId);
+    expect(pill).toHaveClass("border-border");
+    expect(pill).not.toHaveClass("border-muted");
+  });
+
   it("defaults isScoringInFlight to false when omitted (static pill, no spinner)", () => {
     renderInRouter(<DiscoveredJobCard job={makeJob({ verdict: null, score: null })} />);
     // Default falsy → static pill, not the spinner.

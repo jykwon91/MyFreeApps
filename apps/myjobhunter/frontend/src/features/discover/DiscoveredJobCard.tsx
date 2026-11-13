@@ -167,7 +167,7 @@ export default function DiscoveredJobCard({
           )}
           {!verdictLabel && isUnscored && isScoringInFlight && (
             <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-muted-foreground border border-muted rounded"
+              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-muted-foreground border border-border rounded"
               role="status"
               aria-live="polite"
               aria-label="Scoring in progress"
@@ -179,7 +179,7 @@ export default function DiscoveredJobCard({
           )}
           {!verdictLabel && isUnscored && !isScoringInFlight && (
             <span
-              className="px-2 py-0.5 text-xs text-muted-foreground border border-muted rounded"
+              className="px-2 py-0.5 text-xs text-muted-foreground border border-border rounded"
               data-testid="discovered-job-awaiting-score"
               title="Not scored yet. The AI rates the most promising postings each day; the rest stay unscored until the next pass."
             >
@@ -214,7 +214,7 @@ export default function DiscoveredJobCard({
       </div>
 
       {job.score_reason && (
-        <p className="text-xs text-muted-foreground italic border-l-2 border-muted pl-2">
+        <p className="text-xs text-muted-foreground italic border-l-2 border-border pl-2">
           {job.score_reason}
         </p>
       )}
