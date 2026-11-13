@@ -8,12 +8,12 @@ vi.mock("@/shared/lib/auth", () => ({
   login: vi.fn(),
 }));
 
-vi.mock("@/shared/lib/api", () => ({
-  default: { post: vi.fn() },
+vi.mock("@platform/core/auth/requestVerifyToken", () => ({
+  requestVerifyToken: vi.fn(),
 }));
 
 import { login } from "@/shared/lib/auth";
-import api from "@/shared/lib/api";
+import { requestVerifyToken } from "@platform/core/auth/requestVerifyToken";
 
 const mockNavigate = vi.fn();
 
@@ -507,9 +507,9 @@ describe("Login — unverified user", () => {
     expect(screen.queryByText("Incorrect email or password. Please try again.")).not.toBeInTheDocument();
   });
 
-  it("calls /auth/request-verify-token when resend button is clicked", async () => {
+  it("requests a verification email for the entered address when resend is clicked", async () => {
     vi.mocked(login).mockRejectedValue(unverifiedError);
-    vi.mocked(api.post).mockResolvedValue({});
+    vi.mocked(requestVerifyToken).mockResolvedValue(undefined);
     const user = userEvent.setup();
     const { container } = renderLogin();
 
@@ -521,13 +521,13 @@ describe("Login — unverified user", () => {
     await user.click(screen.getByRole("button", { name: /resend verification email/i }));
 
     await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith("/auth/request-verify-token", { email: "user@example.com" });
+      expect(requestVerifyToken).toHaveBeenCalledWith("user@example.com");
     });
   });
 
   it("shows confirmation message after resend succeeds", async () => {
     vi.mocked(login).mockRejectedValue(unverifiedError);
-    vi.mocked(api.post).mockResolvedValue({});
+    vi.mocked(requestVerifyToken).mockResolvedValue(undefined);
     const user = userEvent.setup();
     const { container } = renderLogin();
 
@@ -543,7 +543,7 @@ describe("Login — unverified user", () => {
 
   it("shows error message when resend fails", async () => {
     vi.mocked(login).mockRejectedValue(unverifiedError);
-    vi.mocked(api.post).mockRejectedValue(new Error("SMTP down"));
+    vi.mocked(requestVerifyToken).mockRejectedValue(new Error("SMTP down"));
     const user = userEvent.setup();
     const { container } = renderLogin();
 
