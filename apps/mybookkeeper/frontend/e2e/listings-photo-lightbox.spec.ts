@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
+import { BLUE_PIXEL_PNG, RED_PIXEL_PNG } from "./constants/listingPhotoPixels";
 
 /**
  * E2E tests for the photo lightbox on the Listing detail page.
@@ -10,12 +11,6 @@ import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-d
  * to be populated with real objects while still exercising the full lightbox
  * UI flow in the browser.
  */
-
-// 1×1 red pixel PNG as a data URL — stable across runs.
-const RED_PIXEL_PNG =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==";
-const BLUE_PIXEL_PNG =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
 interface SeedListingPayload {
   property_id: string;

@@ -24,15 +24,12 @@
 import type { Locator, Page, Route } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
+import { PIXEL_PNG } from "@platform/ui/test-support/constants/pixelPng";
 
 const GUILD_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+$/.test(url.pathname);
 const RECIPES_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+\/recipes$/.test(url.pathname);
 const SHEET_PATTERN = (url: URL) => /\/wow\/characters\/[^/]+$/.test(url.pathname);
 const RENDER_PATTERN = "**/wow/characters/*/render.png";
-const PIXEL = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
-  "base64",
-);
 
 function member(slug: string, name: string, surname: string, className: string, level: number, itemLevel: number | null, rank: number) {
   return {
@@ -96,7 +93,7 @@ function json(route: Route, body: unknown, status = 200) {
 async function stubAll(page: Page) {
   await page.route(GUILD_PATTERN, (route) => json(route, guild()));
   await page.route(SHEET_PATTERN, (route) => json(route, character(new URL(route.request().url()).pathname.split("/").pop() ?? "")));
-  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }));
+  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL_PNG }));
 }
 
 function memberNames(page: Page) {

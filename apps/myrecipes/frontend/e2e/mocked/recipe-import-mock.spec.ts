@@ -10,6 +10,7 @@ import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { recipeIdAt } from "./fixtures/recipeFixtures";
 import { stubRecipeCreate } from "./fixtures/stubRecipeCreate";
+import { PIXEL_PNG } from "@platform/ui/test-support/constants/pixelPng";
 
 const CREATED_ID = recipeIdAt(2);
 const DRAFT = {
@@ -26,7 +27,7 @@ const DRAFT = {
 const PHOTO = {
   name: "card.png",
   mimeType: "image/png",
-  buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64"),
+  buffer: PIXEL_PNG,
 };
 
 /** POST /recipes/extract answers each status in turn; POST /recipes creates from what was posted. */

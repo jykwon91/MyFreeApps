@@ -18,18 +18,14 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { MAP_STYLE_STORAGE_KEY } from "../../src/games/wow-forever/data/worldMap/mapStyle";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
+import { PIXEL_PNG } from "@platform/ui/test-support/constants/pixelPng";
 
 const PHONE = { width: 375, height: 812 };
 const ELWYNN = "/wow-forever/map?m=1429";
 const IRONFORGE = "/wow-forever/map?m=1455";
-// A 1x1 PNG: the browser decodes by content, so it stands in for the WebP.
-const PIXEL = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-  "base64",
-);
 
 async function serveSatellite(page: Page) {
-  await page.route("**/api/wow/satellite/**", (route) => route.fulfill({ status: 200, contentType: "image/webp", body: PIXEL }));
+  await page.route("**/api/wow/satellite/**", (route) => route.fulfill({ status: 200, contentType: "image/webp", body: PIXEL_PNG }));
 }
 
 async function openMap(page: Page, url = ELWYNN) {
@@ -104,7 +100,7 @@ test("a satellite picture that won't load falls back to the drawn map, with Try 
   let published = false;
   await page.route("**/api/wow/satellite/**", (route) =>
     published
-      ? route.fulfill({ status: 200, contentType: "image/webp", body: PIXEL })
+      ? route.fulfill({ status: 200, contentType: "image/webp", body: PIXEL_PNG })
       : route.fulfill({ status: 404, contentType: "application/json", body: '{"detail":"Not Found"}' }),
   );
   await openMap(page);
