@@ -429,11 +429,13 @@ test("recipe search: who knows it and their skill, kept in the URL across Back",
   await expect(results).toContainText("Tailoring");
   await expect(page.getByText('1 recipe matching "linen"')).toBeVisible();
   const who = page.getByRole("list", { name: "Who knows Bolt of Linen Cloth" }).locator("li");
-  await expect(who).toHaveCount(2);
+  await expect(who).toHaveCount(1);
   await expect(who.nth(0)).toContainText("Jason Kwon");
   await expect(who.nth(0)).toContainText("148 / 225");
   expect(asked).toEqual(["linen"]);
 
+  await page.getByRole("button", { name: "Show 1 more" }).click();
+  await expect(who).toHaveCount(2);
   await who.nth(1).getByRole("link", { name: "Tiny John" }).click();
   await expect(page).toHaveURL(/\/wow-forever\/character\/tiny-john$/);
   await page.goBack();
@@ -443,6 +445,26 @@ test("recipe search: who knows it and their skill, kept in the URL across Back",
 
   await page.getByLabel("Recipe", { exact: true }).fill("zzz");
   await expect(page.getByText(/Nobody in the guild knows a recipe matching "zzz"/)).toBeVisible();
+});
+
+test("recipe search: only the top crafter shows until you ask for the rest", async ({ page }) => {
+  await stubAll(page);
+  await page.route(RECIPES_PATTERN, (route) => json(route, recipeSearch("linen")));
+  await page.goto("/wow-forever/guild?tab=crafting&recipe=linen");
+
+  const who = page.getByRole("list", { name: "Who knows Bolt of Linen Cloth" }).locator("li");
+  const toggle = page.getByRole("button", { name: "Show 1 more" });
+  await expect(who).toHaveCount(1);
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect((await toggle.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+  await toggle.click();
+  await expect(who).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Show fewer" })).toHaveAttribute("aria-expanded", "true");
+
+  await page.getByRole("button", { name: "Show fewer" }).click();
+  await expect(who).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Show 1 more" })).toBeVisible();
 });
 
 test("recipe search: a problem offers a retry, and the 375px phone layout doesn't overflow", async ({ page }) => {

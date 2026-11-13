@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "Shorter crafter lists",
+    "summary": "On the guild's Who can craft? tab, each recipe now shows just the member with the highest skill. Tap \"Show more\" to see everyone else who knows it, and \"Show fewer\" to fold the list back up.",
+    "to": "/wow-forever/guild?tab=crafting"
+  },
+  {
+    "date": "2026-11-13",
     "title": "Guild home: the Arena and this week together",
     "summary": "topdeadcenter's page now opens on a Home tab with the Arena on top, then this week's heroes, your quests and the hot races. The tabs are Home, Titles, Who can craft? and Roster, and older links to This week or Arena open Home.",
     "to": "/wow-forever/guild"

@@ -518,10 +518,55 @@ describe("guild recipe search", () => {
     expect(mockRecipes).toHaveBeenLastCalledWith({ slug: "topdeadcenter", query: "linen" });
     expect(screen.getByText('1 recipe matching "linen"')).toBeInTheDocument();
     const who = within(screen.getByRole("list", { name: "Who knows Bolt of Linen Cloth" }));
-    expect(who.getAllByRole("link").map((a) => a.textContent)).toEqual(["Jason Kwon", "Tiny John"]);
+    expect(who.getAllByRole("link").map((a) => a.textContent)).toEqual(["Jason Kwon"]);
     expect(who.getByRole("link", { name: "Jason Kwon" })).toHaveAttribute("href", "/wow-forever/character/jason-kwon");
     expect(who.getByText("148 / 225")).toBeInTheDocument();
     expect(within(screen.getByRole("list", { name: "Matching recipes" })).getByText("Tailoring")).toBeInTheDocument();
+  });
+
+  it("shows only the top crafter, and a button reveals and hides the rest in order", () => {
+    vi.useFakeTimers();
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    mockRecipes.mockReturnValue(recipes({ currentData: LINEN }));
+    renderAt("/wow-forever/guild?tab=crafting&recipe=linen");
+    const names = () =>
+      within(screen.getByRole("list", { name: "Who knows Bolt of Linen Cloth" }))
+        .getAllByRole("link")
+        .map((a) => a.textContent);
+
+    expect(names()).toEqual(["Jason Kwon"]);
+    const toggle = screen.getByRole("button", { name: "Show 1 more" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveAttribute("aria-controls", screen.getByRole("list", { name: "Who knows Bolt of Linen Cloth" }).id);
+
+    fireEvent.click(toggle);
+    expect(names()).toEqual(["Jason Kwon", "Tiny John"]);
+    expect(screen.getByRole("button", { name: "Show fewer" })).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show fewer" }));
+    expect(names()).toEqual(["Jason Kwon"]);
+    expect(screen.getByRole("button", { name: "Show 1 more" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("counts the hidden crafters, and offers no button for a lone crafter", () => {
+    vi.useFakeTimers();
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    const third = crafter({ slug: "ann-lee", name: "Ann", surname: "Lee", skill: 100 });
+    const [linen] = LINEN.recipes;
+    mockRecipes.mockReturnValue(
+      recipes({
+        currentData: {
+          ...LINEN,
+          recipes: [
+            { ...linen, crafters: [...linen.crafters, third] },
+            { ...linen, id: 1, name: "Solo Recipe", crafters: [crafter({})] },
+          ],
+        },
+      }),
+    );
+    renderAt("/wow-forever/guild?tab=crafting&recipe=linen");
+    expect(screen.getAllByRole("button", { name: /^Show/ })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Show 2 more" })).toBeInTheDocument();
   });
 
   it("doesn't search one letter, and clearing the box drops it from the URL", () => {
