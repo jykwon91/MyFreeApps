@@ -105,15 +105,18 @@ test("more than one page: Load more appends each next page and the count shows t
 test("a failed next page keeps the loaded rows and offers Try again", async ({ page }) => {
   await stubSignedInShell(page);
   let failNextPage = true;
+  let firstPage = 0;
   await page.route(APPLICATIONS_ENDPOINT, async (route) => {
     const { offset, limit } = pageParams(route.request().url());
+    if (offset === 0) firstPage = limit;
     if (offset > 0 && failNextPage) return route.fulfill(json({ detail: "boom" }, 500));
     await route.fulfill(json({ items: MANY.slice(offset, offset + limit), total: MANY.length }));
   });
 
   await page.goto("/applications");
-  await expect(page.locator("tbody tr").first()).toBeVisible();
-  const firstPage = await page.locator("tbody tr").count();
+  // The loading skeleton is also a table with 5 `tbody tr`, so wait for the real first page by its size, not for "a row".
+  await expect.poll(() => firstPage).toBeGreaterThan(0);
+  await expect(page.locator("tbody tr")).toHaveCount(firstPage);
   await page.getByRole("button", { name: "Load more" }).click();
 
   await expect(page.getByRole("alert").filter({ hasText: "Couldn't load more applications." })).toBeVisible();
