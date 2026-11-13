@@ -1,6 +1,7 @@
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
-import type { ChipButtonProps } from "../../types/ChipButtonProps";
+import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
+import { useTheme } from "../theme/useTheme";
+import type { ChipButtonProps } from "../types/ChipButtonProps";
 
 /** A chip that does something when tapped: removes itself, adds a suggestion, or switches on and off. A full touch target tall. */
 export default function ChipButton({ label, accessibilityLabel, onPress, isChecked, disabled = false }: ChipButtonProps) {

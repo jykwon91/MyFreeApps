@@ -1,5 +1,6 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
+import { SessionProvider, type MobileSession, type SessionState } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { AccessibilityInfo } from "react-native";
@@ -15,8 +16,37 @@ const SOUP = {
   title: "Tomato soup",
   description: "Weeknight soup",
   version_count: 3,
+  latest_version_number: 3,
+  is_owner: false,
+  best_rating: null,
+  last_cooked_at: null,
   owner_display_name: "Sam",
 };
+
+const MINE = { ...SOUP, id: "r2", title: "Pancakes", is_owner: true };
+
+const SIGNED_IN: SessionState = { status: "signedIn", email: "sam@example.com", sessionId: "s1" };
+const SIGNED_OUT: SessionState = { status: "signedOut", endedByServer: false, lastEmail: null };
+
+/** A session whose account the test can change, as signing out and in again does. */
+function fakeSession(initial: SessionState) {
+  let state = initial;
+  const listeners = new Set<() => void>();
+  const session = {
+    start: async () => {},
+    getState: () => state,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  } as unknown as MobileSession;
+  const become = async (next: SessionState) =>
+    act(async () => {
+      state = next;
+      listeners.forEach((listener) => listener());
+    });
+  return { session, become };
+}
 
 type Respond = (config: InternalAxiosRequestConfig) => { status: number; data: unknown };
 let respond: Respond;
@@ -34,13 +64,17 @@ const adapter: AxiosAdapter = async (config) => {
   return { status, data, statusText: "", headers: {}, config };
 };
 
-function show() {
+async function show(state: SessionState = SIGNED_OUT) {
+  const { session, become } = fakeSession(state);
   store = makeStore();
-  return render(
+  await render(
     <Provider store={store}>
-      <RecipesScreen />
+      <SessionProvider session={session}>
+        <RecipesScreen />
+      </SessionProvider>
     </Provider>,
   );
+  return become;
 }
 
 async function pullToRefresh() {
@@ -87,7 +121,7 @@ describe("RecipesScreen", () => {
 
   it("reads a card as one element and opens the recipe", async () => {
     await show();
-    const card = await screen.findByRole("button", { name: "Tomato soup, 3 versions, by Sam" });
+    const card = await screen.findByRole("button", { name: "Tomato soup, v3, 3 versions, by Sam" });
 
     await fireEvent.press(card);
     expect(mockPush).toHaveBeenCalledWith({
@@ -132,6 +166,91 @@ describe("RecipesScreen", () => {
     await fireEvent.press(screen.getAllByRole("button", { name: "Clear search" })[1]!);
     expect(await screen.findByText("Tomato soup")).toBeTruthy();
     expect(screen.getByLabelText("Search recipes by title").props.value).toBe("");
+  });
+
+  it("offers My recipes only when signed in", async () => {
+    await show();
+    await screen.findByText("Tomato soup");
+    expect(screen.queryByRole("checkbox", { name: "My recipes" })).toBeNull();
+  });
+
+  it("sends owner=me when My recipes is on, and drops it when off", async () => {
+    respond = (config) => ({ status: 200, data: config.params?.owner ? [MINE] : [SOUP] });
+    await show(SIGNED_IN);
+    await screen.findByText("Tomato soup");
+    const toggle = screen.getByRole("checkbox", { name: "My recipes" });
+    expect(toggle.props.accessibilityState).toMatchObject({ checked: false });
+    requests.length = 0;
+
+    await fireEvent.press(toggle);
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0]?.params).toEqual({ owner: "me" });
+    expect(await screen.findByText("Pancakes")).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "My recipes" }).props.accessibilityState).toMatchObject({
+      checked: true,
+    });
+
+    await fireEvent.press(screen.getByRole("checkbox", { name: "My recipes" }));
+    // Back to the list that was asked for without owner, so its own rows return.
+    expect(await screen.findByText("Tomato soup")).toBeTruthy();
+    expect(screen.queryByText("Pancakes")).toBeNull();
+  });
+
+  it("keeps the filter on while the search changes", async () => {
+    respond = (config) => ({
+      status: 200,
+      data: config.params?.search ? [] : config.params?.owner ? [MINE] : [SOUP],
+    });
+    await show(SIGNED_IN);
+    await screen.findByText("Tomato soup");
+    await fireEvent.press(screen.getByRole("checkbox", { name: "My recipes" }));
+    await waitFor(() => expect(requests.at(-1)?.params).toEqual({ owner: "me" }));
+
+    await typeSearch("soup");
+    await waitFor(() => expect(requests.at(-1)?.params).toEqual({ search: "soup", owner: "me" }));
+
+    await typeSearch("");
+    expect(await screen.findByText("Pancakes")).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "My recipes" }).props.accessibilityState).toMatchObject({
+      checked: true,
+    });
+  });
+
+  it("starts unfiltered for the next account after signing out", async () => {
+    respond = (config) => ({ status: 200, data: config.params?.owner ? [MINE] : [SOUP] });
+    const become = await show(SIGNED_IN);
+    await screen.findByText("Tomato soup");
+    await fireEvent.press(screen.getByRole("checkbox", { name: "My recipes" }));
+    await screen.findByText("Pancakes");
+
+    await become(SIGNED_OUT);
+    expect(screen.queryByRole("checkbox", { name: "My recipes" })).toBeNull();
+    expect(await screen.findByText("Tomato soup")).toBeTruthy();
+
+    requests.length = 0;
+    await become(SIGNED_IN);
+    expect(screen.getByRole("checkbox", { name: "My recipes" }).props.accessibilityState).toMatchObject({
+      checked: false,
+    });
+    expect(await screen.findByText("Tomato soup")).toBeTruthy();
+    expect(screen.queryByText("Pancakes")).toBeNull();
+    expect(requests.some((request) => request.params?.owner === "me")).toBe(false);
+  });
+
+  it("says so when the filter leaves nothing, and offers all recipes", async () => {
+    respond = (config) => ({ status: 200, data: config.params?.owner ? [] : [SOUP] });
+    await show(SIGNED_IN);
+    await screen.findByText("Tomato soup");
+
+    await fireEvent.press(screen.getByRole("checkbox", { name: "My recipes" }));
+    expect(await screen.findByText("None of your recipes yet")).toBeTruthy();
+    expect(screen.queryByText("No recipes yet")).toBeNull();
+
+    await fireEvent.press(screen.getByRole("button", { name: "Show all recipes" }));
+    expect(await screen.findByText("Tomato soup")).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "My recipes" }).props.accessibilityState).toMatchObject({
+      checked: false,
+    });
   });
 
   it("recovers from a failed first load with Try again, and hides the status code", async () => {

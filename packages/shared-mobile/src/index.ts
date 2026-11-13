@@ -23,6 +23,7 @@ export { default as DeleteAccountScreen } from "./components/DeleteAccountScreen
 export { default as Banner } from "./components/Banner";
 export { default as CharacterCounter } from "./components/CharacterCounter";
 export { default as Chip } from "./components/Chip";
+export { default as ChipButton } from "./components/ChipButton";
 export { default as ComingToAppScreen } from "./components/ComingToAppScreen";
 export { default as EmptyState } from "./components/EmptyState";
 export { default as FormField } from "./components/FormField";
@@ -92,6 +93,7 @@ export type { AccountMessage } from "./types/AccountMessage";
 export type { AccountSettingsProps } from "./types/AccountSettingsProps";
 export type { AppTab } from "./types/AppTab";
 export type { ButtonVariant } from "./types/ButtonVariant";
+export type { ChipButtonProps } from "./types/ChipButtonProps";
 export type { ChipProps } from "./types/ChipProps";
 export type { ChipTone } from "./types/ChipTone";
 export type { ComingToAppScreenProps } from "./types/ComingToAppScreenProps";
