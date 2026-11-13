@@ -4,6 +4,7 @@ import WowSuggestFooterLink from "@/games/wow-forever/components/featureRequests
 import ProvenanceGuide from "@/games/wow-forever/components/shared/ProvenanceGuide";
 import WowLegalNotice from "@/games/wow-forever/components/shared/WowLegalNotice";
 import WowPageSkeleton from "@/games/wow-forever/components/shared/WowPageSkeleton";
+import { GUILD_LEGACY_PATH, GUILD_PAGE_PATH } from "@/games/wow-forever/data/guild/guildConfig";
 import type { FeatureArea } from "@/games/wow-forever/types/featureRequests/featureArea";
 
 // Lazy so the lineup library's bundle doesn't carry the WoW pages.
@@ -108,8 +109,9 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/server-status", element: withSuggestFooter(<WowServerStatusPage />, "site_app") },
   { path: "/wow-forever/character", element: withSuggestFooter(<WowCharacterPage />, "gear_upgrades") },
   { path: "/wow-forever/character/:slug", element: withSuggestFooter(<WowCharacterPage />, "gear_upgrades") },
-  { path: "/wow-forever/guild", element: withSuggestFooter(<WowGuildPage />, "site_app") },
-  { path: "/wow-forever/guild/:slug", element: <WowLegacyGuildRedirect /> },
+  { path: GUILD_PAGE_PATH, element: withSuggestFooter(<WowGuildPage />, "site_app") },
+  { path: GUILD_LEGACY_PATH, element: <WowLegacyGuildRedirect /> },
+  { path: `${GUILD_LEGACY_PATH}/:slug`, element: <WowLegacyGuildRedirect /> },
   { path: "/wow-forever/ask", element: withSuggestFooter(<WowAskPage />, "site_app") },
   // The old Warlock-only page: same macros, now the Warlock filter of the Macros page.
   { path: "/wow-forever/warlock-macros", element: <Navigate to="/wow-forever/macros?class=warlock" replace /> },

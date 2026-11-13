@@ -57,7 +57,7 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Look up your character by name: how they look in their gear, and the stats each item rolled, from your last log out.",
       },
       {
-        path: "/wow-forever/guild",
+        path: "/wow-forever/topdeadcenter",
         title: "topdeadcenter",
         iconName: "Users",
         description: "<topdeadcenter>'s members, leaderboards and titles.",

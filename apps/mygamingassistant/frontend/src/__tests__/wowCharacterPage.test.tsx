@@ -299,7 +299,7 @@ describe("WowCharacterPage", () => {
     expect(screen.getByText(/Level 37 Gnome Warlock/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Guild topdeadcenter: see its members/ })).toHaveAttribute(
       "href",
-      "/wow-forever/guild?me=jason-kwon",
+      "/wow-forever/topdeadcenter?me=jason-kwon",
     );
     expect(screen.getByText(/From their last log out, 2 hours ago/)).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Jason Kwon in their current gear/ })).toHaveAttribute(

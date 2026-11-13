@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "topdeadcenter has its own address",
+    "summary": "The guild page now lives at /wow-forever/topdeadcenter. Old links and bookmarks to /wow-forever/guild still work and take you there, on the same tab.",
+    "to": "/wow-forever/topdeadcenter"
+  },
+  {
+    "date": "2026-11-13",
     "title": "MGA Loot now judges every item, not just rolls",
     "summary": "Update the MGA Loot addon and hover any item in your bags, bank, a vendor or a chat link: its tooltip says Upgrade, Downgrade or About the same next to what you wear. Type /mgaloot bags to list every upgrade sitting in your bags, biggest first.",
     "to": "/wow-forever/compare"
@@ -15,19 +21,19 @@
     "date": "2026-11-13",
     "title": "Back to the guild from a member's page",
     "summary": "Open a guild member's character page and the back arrow now takes you straight back to the guild page, right where you left it.",
-    "to": "/wow-forever/guild"
+    "to": "/wow-forever/topdeadcenter"
   },
   {
     "date": "2026-11-13",
     "title": "Shorter crafter lists",
     "summary": "On the guild's Who can craft? tab, each recipe now shows just the member with the highest skill. Tap \"Show more\" to see everyone else who knows it, and \"Show fewer\" to fold the list back up.",
-    "to": "/wow-forever/guild?tab=crafting"
+    "to": "/wow-forever/topdeadcenter?tab=crafting"
   },
   {
     "date": "2026-11-13",
     "title": "Guild home: the Arena and this week together",
     "summary": "topdeadcenter's page now opens on a Home tab with the Arena on top, then this week's heroes, your quests and the hot races. The tabs are Home, Titles, Who can craft? and Roster, and older links to This week or Arena open Home.",
-    "to": "/wow-forever/guild"
+    "to": "/wow-forever/topdeadcenter"
   },
   {
     "date": "2026-11-13",
@@ -39,7 +45,7 @@
     "date": "2026-11-13",
     "title": "The guild page in tabs",
     "summary": "topdeadcenter's page is split into tabs: This week, Titles, Arena, Who can craft? and Roster, so each opens on its own instead of one long scroll. The tab is kept in the link, so you can share it, and older links still open the right one.",
-    "to": "/wow-forever/guild"
+    "to": "/wow-forever/topdeadcenter"
   },
   {
     "date": "2026-11-13",
@@ -57,7 +63,7 @@
     "date": "2026-11-13",
     "title": "topdeadcenter in the menu, names stand out",
     "summary": "The Guild link in the menu is now called topdeadcenter. On its page every member's name is bold in their class colour, and bigger where it matters: title holders, this week's heroes and the guild master.",
-    "to": "/wow-forever/guild"
+    "to": "/wow-forever/topdeadcenter"
   },
   {
     "date": "2026-11-13",
@@ -111,13 +117,13 @@
     "date": "2026-11-12",
     "title": "The Guild page is a guild hall",
     "summary": "TopDeadCenter's page now opens with a guild banner, this week's heroes, the closest races for first place, and shiny rarity badges for every title. Look yourself up and it lists the titles you could steal next.",
-    "to": "/wow-forever/guild"
+    "to": "/wow-forever/topdeadcenter"
   },
   {
     "date": "2026-11-12",
     "title": "The Guild page is TopDeadCenter's",
     "summary": "Guild in the menu now opens TopDeadCenter's page straight away. The search for other guilds is gone, and only TopDeadCenter's badge on a character links to a guild page.",
-    "to": "/wow-forever/guild"
+    "to": "/wow-forever/topdeadcenter"
   },
   {
     "date": "2026-11-12",
@@ -129,7 +135,7 @@
     "date": "2026-11-12",
     "title": "Refresh the guild on demand",
     "summary": "TopDeadCenter's guild page has a Refresh now button next to when the roster was updated: one tap pulls the roster and every member's stats from Blizzard again, instead of waiting for the hourly refresh.",
-    "to": "/wow-forever/guild"
+    "to": "/wow-forever/topdeadcenter"
   },
   {
     "date": "2026-11-12",
@@ -141,7 +147,7 @@
     "date": "2026-11-12",
     "title": "Guild in the menu",
     "summary": "A new Guild menu item opens your guild's page in one tap, and you can find any other guild the site knows by typing part of its name.",
-    "to": "/wow-forever/guild"
+    "to": "/wow-forever/topdeadcenter"
   },
   {
     "date": "2026-11-12",

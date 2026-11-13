@@ -1156,9 +1156,11 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   other guilds' identity rows so a character keeps its guild name), there is no
   guild search, and `guild_repo.due_for_roster(slug=...)` only ever picks
   topdeadcenter so Blizzard quota isn't spent on other guilds. The sidebar's
-  "Guild" (`/wow-forever/guild`) IS topdeadcenter's page; the old
-  `/wow-forever/guild/:slug` redirects there keeping its query
-  (`WowLegacyGuildRedirect`). On a character sheet only a topdeadcenter badge
+  "topdeadcenter" item IS topdeadcenter's page, at `/wow-forever/topdeadcenter`
+  (`GUILD_PAGE_PATH`, built from `GUILD_SLUG`; the operator wanted the address
+  to name the guild, not say "guild"). The old `/wow-forever/guild` and
+  `/wow-forever/guild/:slug` (`GUILD_LEGACY_PATH`) redirect there keeping their
+  query (`WowLegacyGuildRedirect`). On a character sheet only a topdeadcenter badge
   links to the guild page; any other guild is plain text. Never re-add a guild
   finder or a per-slug guild page — the operator asked for topdeadcenter only.
 - The guild page is a guild HALL, not a dashboard (operator: "fun and something

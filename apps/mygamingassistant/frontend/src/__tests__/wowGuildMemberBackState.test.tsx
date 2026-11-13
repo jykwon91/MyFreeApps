@@ -51,10 +51,10 @@ const GUILD: GuildResponse = {
 };
 
 const SURFACES: ReadonlyArray<readonly [string, string]> = [
-  ["Home (Arena podium and rows, heroes, quests, hot races)", "/wow-forever/guild?me=tiny"],
-  ["Titles", "/wow-forever/guild?tab=titles&me=tiny"],
-  ["Who can craft?", "/wow-forever/guild?tab=crafting&recipe=linen"],
-  ["Roster", "/wow-forever/guild?tab=roster"],
+  ["Home (Arena podium and rows, heroes, quests, hot races)", "/wow-forever/topdeadcenter?me=tiny"],
+  ["Titles", "/wow-forever/topdeadcenter?tab=titles&me=tiny"],
+  ["Who can craft?", "/wow-forever/topdeadcenter?tab=crafting&recipe=linen"],
+  ["Roster", "/wow-forever/topdeadcenter?tab=roster"],
 ];
 
 function CharacterProbe() {
@@ -67,7 +67,7 @@ function renderSurface(url: string, banner: boolean) {
     <MemoryRouter initialEntries={[url]}>
       <Routes>
         <Route
-          path="/wow-forever/guild"
+          path="/wow-forever/topdeadcenter"
           element={banner ? <GuildSummary guild={GUILD} refetch={vi.fn()} /> : <GuildSectionsHarness guild={GUILD} />}
         />
         <Route path="/wow-forever/character/:slug" element={<CharacterProbe />} />
@@ -104,6 +104,6 @@ describe("member names on the guild page", () => {
   });
 
   it("the banner's guild master returns to this exact guild URL", () => {
-    expectEveryNameCarriesBackState("/wow-forever/guild?tab=roster", true);
+    expectEveryNameCarriesBackState("/wow-forever/topdeadcenter?tab=roster", true);
   });
 });

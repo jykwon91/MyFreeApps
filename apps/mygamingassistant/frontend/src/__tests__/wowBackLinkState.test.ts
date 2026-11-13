@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { parseBackLink } from "@/games/wow-forever/lib/shared/backLinkState";
 
 describe("parseBackLink", () => {
-  it.each(["/wow-forever", "/wow-forever/guild", "/wow-forever/guild?tab=roster&q=ab", "/wow-forever/guild?me=x#top", "/wow-forever/guild?next=../x", "/wow-forever/a.b/..c"])(
+  it.each(["/wow-forever", "/wow-forever/topdeadcenter", "/wow-forever/topdeadcenter?tab=roster&q=ab", "/wow-forever/topdeadcenter?me=x#top", "/wow-forever/topdeadcenter?next=../x", "/wow-forever/a.b/..c"])(
     "accepts %s",
     (backTo) => {
       expect(parseBackLink({ backTo, backLabel: "Back to topdeadcenter" })).toEqual({ backTo, backLabel: "Back to topdeadcenter" });
@@ -18,12 +18,12 @@ describe("parseBackLink", () => {
     ["/wow-forever\\evil"],
     ["/wow-forevermore"],
     ["/other/page"],
-    ["wow-forever/guild"],
+    ["wow-forever/topdeadcenter"],
     ["javascript:alert(1)"],
     ["/wow-forever/../evil"],
     ["/wow-forever/%2e%2e//evil.example"],
     ["/wow-forever/%2E./x"],
-    ["/wow-forever/guild\n"],
+    ["/wow-forever/topdeadcenter\n"],
     [""],
   ])("rejects %s", (backTo) => {
     expect(parseBackLink({ backTo, backLabel: "Back" })).toBeNull();
@@ -32,12 +32,12 @@ describe("parseBackLink", () => {
   it("rejects a missing, non-object, mistyped or label-less state", () => {
     expect(parseBackLink(undefined)).toBeNull();
     expect(parseBackLink(null)).toBeNull();
-    expect(parseBackLink("/wow-forever/guild")).toBeNull();
+    expect(parseBackLink("/wow-forever/topdeadcenter")).toBeNull();
     expect(parseBackLink({})).toBeNull();
-    expect(parseBackLink({ backTo: "/wow-forever/guild" })).toBeNull();
+    expect(parseBackLink({ backTo: "/wow-forever/topdeadcenter" })).toBeNull();
     expect(parseBackLink({ backTo: 3, backLabel: "Back" })).toBeNull();
-    expect(parseBackLink({ backTo: "/wow-forever/guild", backLabel: 3 })).toBeNull();
-    expect(parseBackLink({ backTo: "/wow-forever/guild", backLabel: "" })).toBeNull();
-    expect(parseBackLink({ backTo: "/wow-forever/guild", backLabel: "x".repeat(200) })).toBeNull();
+    expect(parseBackLink({ backTo: "/wow-forever/topdeadcenter", backLabel: 3 })).toBeNull();
+    expect(parseBackLink({ backTo: "/wow-forever/topdeadcenter", backLabel: "" })).toBeNull();
+    expect(parseBackLink({ backTo: "/wow-forever/topdeadcenter", backLabel: "x".repeat(200) })).toBeNull();
   });
 });

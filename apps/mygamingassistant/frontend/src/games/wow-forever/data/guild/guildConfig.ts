@@ -1,7 +1,9 @@
-/** The guild page: /wow-forever/guild. The site has one guild, the operator's own. */
-export const GUILD_PAGE_PATH = "/wow-forever/guild";
-/** That guild's Blizzard slug (the backend's ``GUILD_SLUG``; every other slug is a 404). */
+/** The site's one guild, the operator's own: its Blizzard slug (the backend's ``GUILD_SLUG``; every other slug is a 404). */
 export const GUILD_SLUG = "topdeadcenter";
+/** The guild page, named for the guild: /wow-forever/topdeadcenter. */
+export const GUILD_PAGE_PATH = `/wow-forever/${GUILD_SLUG}`;
+/** Where the guild page used to be; /wow-forever/guild and /wow-forever/guild/:slug redirect to GUILD_PAGE_PATH. */
+export const GUILD_LEGACY_PATH = "/wow-forever/guild";
 
 /** A member page's back arrow, when they were opened from the guild page. */
 export const GUILD_BACK_LABEL = `Back to ${GUILD_SLUG}`;
