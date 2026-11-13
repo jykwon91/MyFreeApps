@@ -227,7 +227,7 @@ def test_new_other_items_lists_consumables_and_recipes_and_counts_the_rest() -> 
 
 
 def test_new_quests_are_named_from_the_cache_and_unnamed_ones_counted() -> None:
-    cached = {5: CachedQuest(5, "Old", 10, 5, (), (), ()), 7: CachedQuest(7, "A Dynamite Plan", 16, 9, (), (), ())}
+    cached = {5: CachedQuest(5, "Old", 10, 5, False, (), (), ()), 7: CachedQuest(7, "A Dynamite Plan", 16, 9, False, (), (), ())}
     changes, unnamed = quest_changes([5, 7, 8], classic_ids={5}, cached=cached, seen_on="2026-11-08")
     assert [c.key for c in changes] == ["quest:7"]
     assert changes[0].summary == "New quest, level 16 (from level 9)."

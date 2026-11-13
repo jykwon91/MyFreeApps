@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-12",
+    title: "Shareable quests and quest lines",
+    summary:
+      "Dungeon quests now say whether you can share them with your group and which step of their quest line they are, and an opened quest lists the quests that come after it too.",
+    to: "/wow-forever/dungeons",
+  },
+  {
+    date: "2026-11-12",
     title: "Guild in the menu",
     summary:
       "A new Guild menu item opens your guild's page in one tap, and you can find any other guild the site knows by typing part of its name.",

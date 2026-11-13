@@ -6,20 +6,22 @@ import QuestFact from "@/games/wow-forever/components/dungeons/quests/QuestFact"
 import QuestGiverLine from "@/games/wow-forever/components/dungeons/quests/QuestGiverLine";
 import QuestObjectiveText from "@/games/wow-forever/components/dungeons/quests/QuestObjectiveText";
 import QuestRewards from "@/games/wow-forever/components/dungeons/quests/QuestRewards";
+import QuestSharingFact from "@/games/wow-forever/components/dungeons/quests/QuestSharingFact";
 import { DETAIL_LINK } from "@/games/wow-forever/components/food/detail/detailStyles";
+import { QUEST_CHAIN_AFTER_SHOWN } from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
+import { CLASSIC_QUEST_TAG } from "@/games/wow-forever/data/provenance/provenanceTags";
+import { questStepText } from "@/games/wow-forever/lib/dungeons/describeQuest";
 import { questProvenance } from "@/games/wow-forever/lib/provenance/questProvenance";
 import { questPageHref } from "@/games/wow-forever/lib/quests/questPageHref";
 import type { DungeonQuest } from "@/games/wow-forever/types/dungeons/dungeonQuest";
-import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
-const CLASSIC = { provenance: PROVENANCE.classic } as const;
-
-/** An opened quest: who gives it, the quests before it, what to do, what you get and who takes it back. */
+/** An opened quest: who gives it, whether it can be shared, its quest line, what to do, what you get and who takes it back. */
 export default function DungeonQuestDetails({ quest, id }: { quest: DungeonQuest; id: string }) {
   const tag = questProvenance(quest.seenOn);
+  const step = questStepText(quest);
   return (
     <div id={id} className="space-y-3 pb-3 pl-1" data-testid="dungeon-quest-details">
-      <QuestFact label="Given by" tag={CLASSIC}>
+      <QuestFact label="Given by" tag={CLASSIC_QUEST_TAG}>
         {quest.givers.length > 0 ? (
           <ul className="space-y-1">
             {quest.givers.map((g) => (
@@ -30,9 +32,10 @@ export default function DungeonQuestDetails({ quest, id }: { quest: DungeonQuest
           <p className="text-sm text-muted-foreground">Who gives this quest isn't in our data.</p>
         )}
       </QuestFact>
-      {quest.chain.length > 0 ? (
-        <QuestFact label="Quests before this one" tag={CLASSIC}>
-          <QuestChain quest={quest} />
+      <QuestSharingFact quest={quest} seenTag={tag} />
+      {step ? (
+        <QuestFact label="Quest chain" tag={CLASSIC_QUEST_TAG}>
+          <QuestChain quest={quest} linked={false} afterShown={QUEST_CHAIN_AFTER_SHOWN} />
         </QuestFact>
       ) : null}
       {quest.objectives.length > 0 ? (
@@ -58,7 +61,7 @@ export default function DungeonQuestDetails({ quest, id }: { quest: DungeonQuest
         </QuestFact>
       ) : null}
       {quest.enders.length > 0 ? (
-        <QuestFact label="Hand in to" tag={CLASSIC}>
+        <QuestFact label="Hand in to" tag={CLASSIC_QUEST_TAG}>
           <p className="text-sm">{quest.enders.join(", ")}</p>
         </QuestFact>
       ) : null}

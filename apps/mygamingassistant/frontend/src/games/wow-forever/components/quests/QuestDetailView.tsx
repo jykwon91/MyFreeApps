@@ -1,14 +1,17 @@
 import { Link } from "react-router-dom";
 import { ExternalLink } from "lucide-react";
 import InsideDungeonChip from "@/games/wow-forever/components/dungeons/quests/InsideDungeonChip";
+import QuestChain from "@/games/wow-forever/components/dungeons/quests/QuestChain";
 import QuestFact from "@/games/wow-forever/components/dungeons/quests/QuestFact";
 import QuestGiverLine from "@/games/wow-forever/components/dungeons/quests/QuestGiverLine";
 import QuestObjectiveText from "@/games/wow-forever/components/dungeons/quests/QuestObjectiveText";
+import QuestFlagBadges from "@/games/wow-forever/components/dungeons/quests/QuestFlagBadges";
 import QuestRewards from "@/games/wow-forever/components/dungeons/quests/QuestRewards";
-import QuestChainLinks from "@/games/wow-forever/components/quests/QuestChainLinks";
+import QuestSharingFact from "@/games/wow-forever/components/dungeons/quests/QuestSharingFact";
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import { DETAIL_LINK, FACTION_NAME } from "@/games/wow-forever/components/food/detail/detailStyles";
-import { questClassesText, questLevelText } from "@/games/wow-forever/lib/dungeons/describeQuest";
+import { CLASSIC_QUEST_TAG } from "@/games/wow-forever/data/provenance/provenanceTags";
+import { questClassesText, questLevelText, questStepText } from "@/games/wow-forever/lib/dungeons/describeQuest";
 import { dungeonPageHref } from "@/games/wow-forever/lib/dungeons/dungeonHref";
 import { questProvenance } from "@/games/wow-forever/lib/provenance/questProvenance";
 import type { QuestPageResult } from "@/games/wow-forever/types/quests/questPageResult";
@@ -20,15 +23,15 @@ interface QuestDetailViewProps {
   dungeonSlug: string | null;
 }
 
-const CLASSIC_TAG = { provenance: PROVENANCE.classic } as const;
 const FOREVER_TAG = { provenance: PROVENANCE.client } as const;
 
-/** The full detail view for a single quest: who gives it, prereq chain, objectives, rewards, and a dungeon page link. */
+/** The full detail view for a single quest: who gives it, whether it can be shared, its quest line, objectives, rewards, and a dungeon page link. */
 export default function QuestDetailView({ quest, dungeonSlug }: QuestDetailViewProps) {
   const factionLabel = quest.side === FACTION.neutral ? "Both factions" : FACTION_NAME[quest.side];
   const classesText = questClassesText(quest);
   const levelText = questLevelText(quest);
   const provenanceTag = questProvenance(quest.seenOn);
+  const step = questStepText(quest);
 
   return (
     <div className="space-y-6" data-testid="quest-detail-view">
@@ -43,6 +46,7 @@ export default function QuestDetailView({ quest, dungeonSlug }: QuestDetailViewP
           {levelText} · {factionLabel}
           {classesText ? ` · ${classesText} only` : ""}
         </p>
+        <QuestFlagBadges quest={quest} />
         <p className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
           Quest #{quest.id}
           <ProvenanceBadge {...FOREVER_TAG} />
@@ -51,7 +55,7 @@ export default function QuestDetailView({ quest, dungeonSlug }: QuestDetailViewP
       </div>
 
       <div className="space-y-4">
-        <QuestFact label="Given by" tag={CLASSIC_TAG}>
+        <QuestFact label="Given by" tag={CLASSIC_QUEST_TAG}>
           {quest.givers.length > 0 ? (
             <ul className="space-y-1">
               {quest.givers.map((g) => (
@@ -63,9 +67,11 @@ export default function QuestDetailView({ quest, dungeonSlug }: QuestDetailViewP
           )}
         </QuestFact>
 
-        {quest.chain.length > 0 ? (
-          <QuestFact label="Quests before this one" tag={CLASSIC_TAG}>
-            <QuestChainLinks quest={quest} />
+        <QuestSharingFact quest={quest} seenTag={provenanceTag} />
+
+        {step ? (
+          <QuestFact label="Quest chain" tag={CLASSIC_QUEST_TAG}>
+            <QuestChain quest={quest} linked />
           </QuestFact>
         ) : null}
 
@@ -93,7 +99,7 @@ export default function QuestDetailView({ quest, dungeonSlug }: QuestDetailViewP
         ) : null}
 
         {quest.enders.length > 0 ? (
-          <QuestFact label="Hand in to" tag={CLASSIC_TAG}>
+          <QuestFact label="Hand in to" tag={CLASSIC_QUEST_TAG}>
             <p className="text-sm">{quest.enders.join(", ")}</p>
           </QuestFact>
         ) : null}

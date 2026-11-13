@@ -6,50 +6,28 @@
  * The `insideDungeon` field on givers and objectives will be `false` for
  * world-only quests; for dungeon quests the detail page can note it.
  */
-import { findClass, type WowClassId } from "@/games/wow-forever/data/classes";
 import { columnIndexes } from "@/games/wow-forever/lib/dungeons/columnIndexes";
+import { questSharing } from "@/games/wow-forever/lib/dungeons/questSharing";
+import { chainSteps, seenStep } from "@/games/wow-forever/lib/quests/chainSteps";
+import { classIds, numberOrNull, rows, side, stringOrNull, targetKind } from "@/games/wow-forever/lib/quests/questRowDecode";
 import type { QuestPageResult } from "@/games/wow-forever/types/quests/questPageResult";
 import type { QuestChainStep } from "@/games/wow-forever/types/dungeons/questChainStep";
 import type { QuestGiver } from "@/games/wow-forever/types/dungeons/questGiver";
 import type { QuestObjective } from "@/games/wow-forever/types/dungeons/questObjective";
 import type { QuestReward } from "@/games/wow-forever/types/dungeons/questReward";
-import { QUEST_TARGET_KIND, type QuestTargetKind } from "@/games/wow-forever/types/dungeons/questTargetKind";
+import type { QuestDataRow } from "@/games/wow-forever/types/quests/questDataRow";
 import type { QuestDetailFile } from "@/games/wow-forever/types/quests/questDetailFile";
 import type { QuestSeenFile } from "@/games/wow-forever/types/quests/questSeenFile";
-import { FACTION, type Faction, type WorldZone } from "@/games/wow-forever/types/worldMap";
+import { FACTION, type WorldZone } from "@/games/wow-forever/types/worldMap";
 
-const QUEST_COLS = ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders"] as const;
-const SEEN_COLS = ["title", "level", "minLevel", "objectives", "rewards", "choices"] as const;
+const QUEST_COLS = [
+  "id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders", "shareable", "after",
+] as const;
+const SEEN_COLS = ["title", "level", "minLevel", "objectives", "rewards", "choices", "shareable", "seenOn"] as const;
+const STEP_COLS = ["title", "level", "giver"] as const;
 const GIVER_COLS = ["kind", "id", "name", "zone", "subzone", "x", "y", "instance"] as const;
 const OBJ_COLS = ["kind", "id", "count"] as const;
 const TARGET_COLS = ["name", "instance"] as const;
-
-const TARGET_KINDS: readonly string[] = Object.values(QUEST_TARGET_KIND);
-const FACTIONS: readonly string[] = [FACTION.alliance, FACTION.horde, FACTION.neutral];
-
-type Row = readonly unknown[];
-
-function rows(value: unknown): Row[] {
-  return Array.isArray(value) ? value.filter((r): r is Row => Array.isArray(r)) : [];
-}
-
-function targetKind(value: unknown): QuestTargetKind | null {
-  return typeof value === "string" && TARGET_KINDS.includes(value) ? (value as QuestTargetKind) : null;
-}
-
-function side(value: unknown): Faction {
-  return typeof value === "string" && FACTIONS.includes(value) ? (value as Faction) : FACTION.neutral;
-}
-
-function classIds(value: unknown): WowClassId[] {
-  return String(value ?? "")
-    .split(",")
-    .flatMap((id) => findClass(id)?.id ?? []);
-}
-
-function numberOrNull(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
 
 /**
  * Decodes a single quest from the shard and seen overlay.
@@ -69,6 +47,7 @@ export function decodeQuestDetail(
   const giverCol = columnIndexes("questShard", doc.giverColumns, GIVER_COLS);
   const objCol = columnIndexes("questShard", doc.objectiveColumns, OBJ_COLS);
   const targetCol = columnIndexes("questShard", doc.targetColumns, TARGET_COLS);
+  const stepCol = columnIndexes("questShard", doc.stepColumns, STEP_COLS);
 
   const row = doc.quests[String(questId)] ?? null;
   const seenRow = seen.quests[String(questId)] ?? null;
@@ -111,23 +90,16 @@ export function decodeQuestDetail(
       return [{ kind, id: Number(g[giverCol.id]), name: String(g[giverCol.name]), place, insideDungeon }];
     });
 
-  const chainStep = (id: number): QuestChainStep[] => {
-    const r = doc.quests[String(id)];
-    if (!r) return [];
-    const s = seen.quests[String(id)] ?? null;
-    const [giver] = rows(r[col.givers]);
-    return [
-      {
-        id,
-        title: String(s ? s[seenCol.title] : r[col.title]),
-        level: Number(s ? s[seenCol.level] : r[col.level]),
-        giver: giver ? String(giver[giverCol.name]) : null,
-      },
-    ];
+  // A line spans shards, so its steps are named from this shard's `steps` table.
+  const chainStep = (id: number): QuestChainStep | null => {
+    const r = doc.steps[String(id)];
+    if (!r) return null;
+    const classic = { id, title: String(r[stepCol.title]), level: Number(r[stepCol.level]), giver: stringOrNull(r[stepCol.giver]) };
+    return seenStep(classic, seen.quests[String(id)] ?? null, seenCol);
   };
 
   if (!row) {
-    const s = seenRow as Row;
+    const s = seenRow as QuestDataRow;
     return {
       id: questId,
       title: String(s[seenCol.title]),
@@ -137,11 +109,13 @@ export function decodeQuestDetail(
       classes: [],
       givers: [],
       chain: [],
+      after: [],
+      ...questSharing(s[seenCol.shareable], null),
       objectives: decodeObjectives(s[seenCol.objectives]),
       rewards: decodeRewards(s[seenCol.rewards]),
       choices: decodeRewards(s[seenCol.choices]),
       enders: [],
-      seenOn: seen.seenOn,
+      seenOn: String(s[seenCol.seenOn]),
       dungeonInstanceId: null,
     };
   }
@@ -155,14 +129,16 @@ export function decodeQuestDetail(
     side: side(row[col.side]),
     classes: classIds(row[col.classes]),
     givers,
-    chain: (Array.isArray(row[col.chain]) ? (row[col.chain] as unknown[]) : []).flatMap((c) => chainStep(Number(c))),
+    chain: chainSteps(row[col.chain], chainStep),
+    after: chainSteps(row[col.after], chainStep),
+    ...questSharing(seenRow ? seenRow[seenCol.shareable] : null, row[col.shareable]),
     objectives: decodeObjectives(seenRow ? seenRow[seenCol.objectives] : row[col.objectives]),
     rewards: decodeRewards(seenRow ? seenRow[seenCol.rewards] : row[col.rewards]),
     choices: decodeRewards(seenRow ? seenRow[seenCol.choices] : row[col.choices]),
     enders: (Array.isArray(row[col.enders]) ? (row[col.enders] as unknown[]) : []).flatMap(
       (k) => target(String(k))?.name ?? [],
     ),
-    seenOn: seenRow ? seen.seenOn : null,
+    seenOn: seenRow ? String(seenRow[seenCol.seenOn]) : null,
     dungeonInstanceId,
   };
 }

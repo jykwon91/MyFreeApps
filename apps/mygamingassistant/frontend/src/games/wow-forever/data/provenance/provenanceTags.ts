@@ -2,6 +2,9 @@ import { PROVENANCE_DETAIL } from "@/games/wow-forever/data/provenance/provenanc
 import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 import type { ProvenanceTag } from "@/games/wow-forever/types/provenance/provenanceTag";
 
+/** A Classic quest fact: who gives it, its quest line, who takes it back. */
+export const CLASSIC_QUEST_TAG: ProvenanceTag = { provenance: PROVENANCE.classic };
+
 /** A Classic route, spot or location: zones to go to, trainer and spawn spots. */
 export const CLASSIC_ROUTE_TAG: ProvenanceTag = { provenance: PROVENANCE.classic, detail: PROVENANCE_DETAIL.classicRoute };
 

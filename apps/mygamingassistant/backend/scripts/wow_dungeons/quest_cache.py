@@ -13,8 +13,9 @@ Format (worked out against the cmangos values of the same quests)::
 
     record body, little-endian:
       i32 [0] id, [2] level (-1 = your level), [4] required level,
-          [24] item that starts it, [29 + 4k] reward item k (k < 4) with its
-          count at [30 + 4k], [45 + 3k] choice item k (k < 6) with its count
+          [24] item that starts it, [25] quest flags (8 = can be shared),
+          [29 + 4k] reward item k (k < 4) with its count at [30 + 4k],
+          [45 + 3k] choice item k (k < 6) with its count
           at [46 + 3k], [109] objective count
       byte 488: each objective — i32 id, i32 type, u8 index, i32 object id,
           i32 amount, …, i32 visual-effect count at +33, the effects (4 bytes
@@ -44,7 +45,9 @@ HEADER_SIZE = 24
 RECORD_HEAD = struct.Struct("<II")
 FIXED_INTS = 122
 OBJECTIVES_AT = FIXED_INTS * 4
-AT_LEVEL, AT_MIN_LEVEL, AT_OBJECTIVE_COUNT = 2, 4, 109
+AT_LEVEL, AT_MIN_LEVEL, AT_FLAGS, AT_OBJECTIVE_COUNT = 2, 4, 25, 109
+# QUEST_FLAGS_SHARABLE: the quest log's Share button works for it.
+QUEST_FLAG_SHAREABLE = 8
 REWARD_ITEMS = [(29 + 4 * k, 30 + 4 * k) for k in range(4)]
 CHOICE_ITEMS = [(45 + 3 * k, 46 + 3 * k) for k in range(6)]
 OBJECTIVE_HEAD = struct.Struct("<iiBii")
@@ -68,6 +71,7 @@ class CachedQuest:
     title: str
     level: int
     min_level: int
+    shareable: bool
     # (type, object id, amount), in the client's order.
     objectives: tuple[tuple[int, int, int], ...]
     rewards: tuple[tuple[int, int], ...]
@@ -122,6 +126,7 @@ def parse_quest(body: bytes) -> CachedQuest:
         title=body[at:at + lengths[0]].decode("utf-8"),
         level=ints[AT_LEVEL],
         min_level=ints[AT_MIN_LEVEL],
+        shareable=bool(ints[AT_FLAGS] & QUEST_FLAG_SHAREABLE),
         objectives=tuple(objectives),
         rewards=_items(ints, REWARD_ITEMS),
         choices=_items(ints, CHOICE_ITEMS),

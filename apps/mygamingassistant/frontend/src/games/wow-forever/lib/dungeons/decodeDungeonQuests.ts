@@ -2,11 +2,13 @@
  * Each dungeon's quests, from the dungeon generator's `dungeons/classic/dungeonQuests.json`
  * (cmangos Classic data, only quests the Forever client has) and
  * `dungeons/dungeonQuestsSeen.json` (what the operator's own Forever client
- * says about the quests it has seen — preferred for title, levels, objectives
- * and rewards).
+ * says about the quests it has seen, each with the day — preferred for title,
+ * levels, objectives, rewards and sharing).
  */
-import { findClass, type WowClassId } from "@/games/wow-forever/data/classes";
 import { columnIndexes } from "@/games/wow-forever/lib/dungeons/columnIndexes";
+import { questSharing } from "@/games/wow-forever/lib/dungeons/questSharing";
+import { chainSteps, seenStep } from "@/games/wow-forever/lib/quests/chainSteps";
+import { classIds, numberOrNull, rows, side, targetKind } from "@/games/wow-forever/lib/quests/questRowDecode";
 import type { DungeonDataFiles } from "@/games/wow-forever/types/dungeons/dungeonDataFiles";
 import type { DungeonQuest } from "@/games/wow-forever/types/dungeons/dungeonQuest";
 import type { LootItemInfo } from "@/games/wow-forever/types/dungeons/lootItemInfo";
@@ -14,43 +16,18 @@ import type { QuestChainStep } from "@/games/wow-forever/types/dungeons/questCha
 import type { QuestGiver } from "@/games/wow-forever/types/dungeons/questGiver";
 import type { QuestObjective } from "@/games/wow-forever/types/dungeons/questObjective";
 import type { QuestReward } from "@/games/wow-forever/types/dungeons/questReward";
-import { QUEST_TARGET_KIND, type QuestTargetKind } from "@/games/wow-forever/types/dungeons/questTargetKind";
-import { FACTION, type Faction, type WorldZone } from "@/games/wow-forever/types/worldMap";
+import type { QuestDataRow } from "@/games/wow-forever/types/quests/questDataRow";
+import type { WorldZone } from "@/games/wow-forever/types/worldMap";
 
 const QUESTS_FILE = "dungeonQuests.json";
 const SEEN_FILE = "dungeonQuestsSeen.json";
-const QUEST_COLUMNS = ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders"] as const;
-const SEEN_COLUMNS = ["title", "level", "minLevel", "objectives", "rewards", "choices"] as const;
+const QUEST_COLUMNS = [
+  "id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders", "shareable", "after",
+] as const;
+const SEEN_COLUMNS = ["title", "level", "minLevel", "objectives", "rewards", "choices", "shareable", "seenOn"] as const;
 const GIVER_COLUMNS = ["kind", "id", "name", "zone", "subzone", "x", "y", "instance"] as const;
 const OBJECTIVE_COLUMNS = ["kind", "id", "count"] as const;
 const TARGET_COLUMNS = ["name", "instance"] as const;
-
-const TARGET_KINDS: readonly string[] = Object.values(QUEST_TARGET_KIND);
-const SIDES: readonly string[] = [FACTION.alliance, FACTION.horde, FACTION.neutral];
-
-type Row = readonly unknown[];
-
-function rows(value: unknown): Row[] {
-  return Array.isArray(value) ? value.filter((r): r is Row => Array.isArray(r)) : [];
-}
-
-function targetKind(value: unknown): QuestTargetKind | null {
-  return typeof value === "string" && TARGET_KINDS.includes(value) ? (value as QuestTargetKind) : null;
-}
-
-function side(value: unknown): Faction {
-  return typeof value === "string" && SIDES.includes(value) ? (value as Faction) : FACTION.neutral;
-}
-
-function classIds(value: unknown): WowClassId[] {
-  return String(value ?? "")
-    .split(",")
-    .flatMap((id) => findClass(id)?.id ?? []);
-}
-
-function numberOrNull(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
 
 /** Turns the files into quests per instance; each quest is decoded once and shared between the pages that list it. */
 export function decodeDungeonQuests(
@@ -99,21 +76,15 @@ export function decodeDungeonQuests(
       return [{ kind, id: Number(g[giverCol.id]), name: String(g[giverCol.name]), place, insideDungeon: numberOrNull(g[giverCol.instance]) === instanceId }];
     });
 
-  const seen = (id: number): Row | null => files.seenQuests.quests[String(id)] ?? null;
+  const seen = (id: number): QuestDataRow | null => files.seenQuests.quests[String(id)] ?? null;
 
-  const chainStep = (id: number): QuestChainStep[] => {
+  // A step's own row is in this file too (the generator adds every quest in a listed quest's line).
+  const chainStep = (id: number): QuestChainStep | null => {
     const row = doc.quests[String(id)];
-    if (!row) return [];
-    const s = seen(id);
+    if (!row) return null;
     const [giver] = rows(row[col.givers]);
-    return [
-      {
-        id,
-        title: String(s ? s[seenCol.title] : row[col.title]),
-        level: Number(s ? s[seenCol.level] : row[col.level]),
-        giver: giver ? String(giver[giverCol.name]) : null,
-      },
-    ];
+    const classic = { id, title: String(row[col.title]), level: Number(row[col.level]), giver: giver ? String(giver[giverCol.name]) : null };
+    return seenStep(classic, seen(id), seenCol);
   };
 
   const quest = (id: number, instanceId: number): DungeonQuest[] => {
@@ -129,12 +100,14 @@ export function decodeDungeonQuests(
         side: side(row[col.side]),
         classes: classIds(row[col.classes]),
         givers: givers(row[col.givers], instanceId),
-        chain: (Array.isArray(row[col.chain]) ? (row[col.chain] as unknown[]) : []).flatMap((c) => chainStep(Number(c))),
+        chain: chainSteps(row[col.chain], chainStep),
+        after: chainSteps(row[col.after], chainStep),
+        ...questSharing(s ? s[seenCol.shareable] : null, row[col.shareable]),
         objectives: objectives(s ? s[seenCol.objectives] : row[col.objectives], instanceId),
         rewards: rewards(s ? s[seenCol.rewards] : row[col.rewards]),
         choices: rewards(s ? s[seenCol.choices] : row[col.choices]),
         enders: (Array.isArray(row[col.enders]) ? (row[col.enders] as unknown[]) : []).flatMap((k) => target(String(k))?.name ?? []),
-        seenOn: s ? files.seenQuests.seenOn : null,
+        seenOn: s ? String(s[seenCol.seenOn]) : null,
       },
     ];
   };

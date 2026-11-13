@@ -178,6 +178,20 @@ test.describe("at 375px", () => {
 // Quest detail page
 // ---------------------------------------------------------------------------
 
+test("a quest page says whether it can be shared and links every quest in its line", async ({ page }) => {
+  await page.goto("/wow-forever/quests/373");
+  await expect(page.getByTestId("quest-title")).toHaveText("The Unsent Letter");
+  await expect(page.getByTestId("quest-sharing")).toHaveText("Can't share");
+  await expect(page.getByTestId("quest-step")).toHaveText("Step 1 of 12");
+  await expect(page.getByTestId("quest-sharing-detail")).toContainText("get it themselves");
+  const line = page.getByTestId("quest-chain");
+  await expect(line.getByRole("listitem")).toHaveCount(12);
+  await expect(line.getByRole("listitem").first()).toContainText("this quest");
+  await line.getByRole("listitem").nth(1).getByRole("link").click();
+  await expect(page).toHaveURL("/wow-forever/quests/389");
+  await expect(page.getByTestId("quest-step")).toHaveText("Step 2 of 12");
+});
+
 test("a quest not in our data shows 'Quest not found'", async ({ page }) => {
   // ID 999999 — not in any shard and never seen in game
   await page.goto("/wow-forever/quests/999999");
@@ -268,9 +282,9 @@ test("clicking 'View full quest details' navigates to the quest detail page", as
 
 test("the WoW Forever hub has a Quests tile linking to the quest list", async ({ page }) => {
   await page.goto(HUB);
-  const questsLink = page.getByRole("link", { name: /Quests/ }).filter({ hasText: /Browse/ });
-  await expect(questsLink.first()).toBeVisible();
-  await questsLink.first().click();
+  const questsLink = page.getByRole("main").locator(`a[href="${QUESTS}"]`).first();
+  await expect(questsLink).toBeVisible();
+  await questsLink.click();
   await expect(page).toHaveURL(QUESTS);
 });
 
@@ -279,7 +293,9 @@ test("the What's New section lists the Quests entry", async ({ page }) => {
   // The What's New list is an <ol id="wow-whats-new-list">
   const whatsNew = page.locator("#wow-whats-new-list");
   await expect(whatsNew).toBeVisible();
-  await expect(whatsNew.getByRole("link", { name: /Quests/ })).toBeVisible();
+  // Newer entries push it past the first few: open the whole list.
+  await page.getByRole("button", { name: /Show all/ }).click();
+  await expect(whatsNew.getByRole("link", { name: /Quests/ }).first()).toBeVisible();
 });
 
 // ---------------------------------------------------------------------------

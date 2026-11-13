@@ -337,20 +337,25 @@ describe("listableQuests", () => {
 describe("decodeQuestDetail", () => {
   const shard: QuestDetailFile = {
     source: {},
-    questColumns: ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders"],
+    questColumns: ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders", "shareable", "after"],
     giverColumns: ["kind", "id", "name", "zone", "subzone", "x", "y", "instance"],
     objectiveColumns: ["kind", "id", "count"],
     targetColumns: ["name", "instance"],
+    stepColumns: ["title", "level", "giver"],
     quests: {},
     targets: {},
+    steps: {},
   };
   const seen: QuestSeenFile = {
     source: "questcache.wdb",
     clientBuild: 70862,
     seenOn: "2026-11-08",
     attribution: "",
-    columns: ["title", "level", "minLevel", "objectives", "rewards", "choices"],
-    quests: { "65602": ["A New Forever Quest", 12, 8, [], [[2589, 3]], []] },
+    columns: ["title", "level", "minLevel", "objectives", "rewards", "choices", "shareable", "seenOn"],
+    quests: {
+      "65602": ["A New Forever Quest", 12, 8, [], [[2589, 3]], [], true, "2026-11-08"],
+      "10": ["Into the Keep!", 23, 18, [], [], [], null, "2026-11-01"],
+    },
   };
   const items = new Map([[2589, { name: "Linen Cloth", slot: "" }]]);
 
@@ -363,6 +368,35 @@ describe("decodeQuestDetail", () => {
     expect(quest?.givers).toEqual([]);
     expect(quest?.rewards).toEqual([{ id: 2589, name: "Linen Cloth", count: 3 }]);
     expect(quest?.seenOn).toBe("2026-11-08");
+    expect([quest?.shareable, quest?.shareableSeen, quest?.after]).toEqual([true, true, []]);
+  });
+
+  it("names the quests before and after from the shard's steps, even ones kept in other shards", () => {
+    // Only quest 10 is in this shard; 9 and 11 live in others, and are named from `steps`.
+    const linked: QuestDetailFile = {
+      ...shard,
+      quests: { "10": [10, "Into the Keep", 22, 18, "A", "", [], [9], [], [], [], [], true, [11]] },
+      steps: { "9": ["Lead In", 18, "Old Scout"], "11": ["Report Back", 24, null] },
+    };
+    const quest = decodeQuestDetail(10, linked, seen, new Map(), items);
+    expect(quest?.chain).toEqual([{ id: 9, title: "Lead In", level: 18, giver: "Old Scout" }]);
+    expect(quest?.after).toEqual([{ id: 11, title: "Report Back", level: 24, giver: null }]);
+    expect([quest?.shareable, quest?.shareableSeen, quest?.seenOn]).toEqual([true, false, "2026-11-01"]);
+  });
+
+  it("leaves sharing unknown for a quest new in Forever whose seen row didn't read it", () => {
+    const unread: QuestSeenFile = { ...seen, quests: { "65602": ["A New Forever Quest", 12, 8, [], [], [], null, "2026-11-01"] } };
+    const quest = decodeQuestDetail(65602, shard, unread, new Map(), items);
+    expect([quest?.shareable, quest?.shareableSeen]).toEqual([null, false]);
+  });
+
+  it("drops a step the shard can't name, and reads a missing giver as none", () => {
+    const linked: QuestDetailFile = {
+      ...shard,
+      quests: { "10": [10, "Into the Keep", 22, 18, "A", "", [], [8, 9], [], [], [], [], true, []] },
+      steps: { "9": ["Lead In", 18] },
+    };
+    expect(decodeQuestDetail(10, linked, seen, new Map(), items)?.chain).toEqual([{ id: 9, title: "Lead In", level: 18, giver: null }]);
   });
 
   it("returns null when neither the shard nor the seen file has the quest", () => {

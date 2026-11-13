@@ -3,16 +3,23 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import DungeonQuests from "@/games/wow-forever/components/dungeons/quests/DungeonQuests";
-import { QUEST_GIVER_MAP_SCALE } from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
+import {
+  QUEST_CHAIN_AFTER_SHOWN,
+  QUEST_GIVER_MAP_SCALE,
+  QUEST_SHARING_COPY,
+} from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
 import { WORLD_MAP_PAGE_PATH } from "@/games/wow-forever/data/worldMap/mapMarks";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { findDungeon } from "@/games/wow-forever/lib/dungeons/decodeDungeons";
 import { decodeDungeonQuests } from "@/games/wow-forever/lib/dungeons/decodeDungeonQuests";
+import { questSharing } from "@/games/wow-forever/lib/dungeons/questSharing";
 import {
+  moreQuestsText,
   objectiveText,
   questClassesText,
   questLevelText,
   questsForFaction,
+  questStepText,
   rewardCountText,
 } from "@/games/wow-forever/lib/dungeons/describeQuest";
 import { loadDungeons } from "@/games/wow-forever/lib/dungeons/loadDungeons";
@@ -27,7 +34,7 @@ import QuestObjectiveText from "@/games/wow-forever/components/dungeons/quests/Q
 import { iconSources, itemIconFile } from "./wowIconFiles";
 
 const KEEP = 10;
-const QUEST_COLUMNS = ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders"];
+const QUEST_COLUMNS = ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders", "shareable", "after"];
 
 function files(): Pick<DungeonDataFiles, "quests" | "seenQuests"> {
   return {
@@ -38,11 +45,12 @@ function files(): Pick<DungeonDataFiles, "quests" | "seenQuests"> {
       targetColumns: ["name", "instance"],
       instances: { [KEEP]: [3, 5, 404] },
       quests: {
-        "1": [1, "Lead In", 18, 15, "A", "", [["npc", 8, "Old Scout", 100, "", 10, 10, null]], [], [], [], [], []],
-        "2": [2, "Second Step", 19, 15, "A", "", [], [1], [], [], [], []],
+        "1": [1, "Lead In", 18, 15, "A", "", [["npc", 8, "Old Scout", 100, "", 10, 10, null]], [], [], [], [], [], true, [2, 3, 6]],
+        "2": [2, "Second Step", 19, 15, "A", "", [], [1], [], [], [], [], true, [3, 6]],
         "3": [3, "Into the Keep", 22, 18, "A", "warrior,nobody", [["npc", 7, "Captain Hale", 100, "Old Hill", 56.3, 47.5, null]], [1, 2],
-          [["npc", 50, 2], ["item", 60, 10], ["item", 61, 1]], [[9001, 1]], [[9002, 1], [9999, 1]], ["npc:7"]],
-        "5": [5, "Lost Letter", 20, 16, "N", "", [["item", 61, "Torn Letter", null, "", null, null, KEEP]], [], [], [], [], []],
+          [["npc", 50, 2], ["item", 60, 10], ["item", 61, 1]], [[9001, 1]], [[9002, 1], [9999, 1]], ["npc:7"], true, [6]],
+        "5": [5, "Lost Letter", 20, 16, "N", "", [["item", 61, "Torn Letter", null, "", null, null, KEEP]], [], [], [], [], [], false, []],
+        "6": [6, "Report to the King", 24, 18, "A", "", [["npc", 9, "King", 100, "", 50, 50, null]], [1, 2, 3], [], [], [], [], true, []],
       },
       targets: {
         "npc:7": ["Captain Hale", null],
@@ -53,10 +61,11 @@ function files(): Pick<DungeonDataFiles, "quests" | "seenQuests"> {
     },
     seenQuests: {
       seenOn: "2026-11-07",
-      columns: ["title", "level", "minLevel", "objectives", "rewards", "choices"],
+      columns: ["title", "level", "minLevel", "objectives", "rewards", "choices", "shareable", "seenOn"],
       quests: {
-        "2": ["Second Step (Forever)", 20, 15, [], [], []],
-        "3": ["Into the Keep!", 23, 18, [["npc", 50, 1]], [[9002, 3]], []],
+        // An older row: the client's sharing flag wasn't read then (null), and its own day.
+        "2": ["Second Step (Forever)", 20, 15, [], [], [], null, "2026-11-01"],
+        "3": ["Into the Keep!", 23, 18, [["npc", 50, 1]], [[9002, 3]], [], false, "2026-11-07"],
       },
     },
   };
@@ -120,6 +129,25 @@ describe("decodeDungeonQuests", () => {
     expect(letter.side).toBe("N");
   });
 
+  it("reads sharing from the client when it said, else from Classic, and each seen quest's own day", () => {
+    const [quest, letter] = decoded();
+    expect([quest.shareable, quest.shareableSeen]).toEqual([false, true]);
+    expect([letter.shareable, letter.shareableSeen]).toEqual([false, false]);
+    const unseen = files();
+    unseen.seenQuests.quests = {};
+    const [classic] = decodeDungeonQuests(unseen, ITEMS, ZONES)(KEEP);
+    expect([classic.shareable, classic.shareableSeen]).toEqual([true, false]);
+    expect(questSharing(null, true)).toEqual({ shareable: true, shareableSeen: false });
+    expect(questSharing(true, false)).toEqual({ shareable: true, shareableSeen: true });
+    expect(questSharing(null, null)).toEqual({ shareable: null, shareableSeen: false });
+  });
+
+  it("names the quests after it, next first", () => {
+    const [quest, letter] = decoded();
+    expect(quest.after).toEqual([{ id: 6, title: "Report to the King", level: 24, giver: "King" }]);
+    expect(letter.after).toEqual([]);
+  });
+
   it("throws on a missing column", () => {
     const broken = files();
     broken.quests.questColumns = QUEST_COLUMNS.filter((c) => c !== "givers");
@@ -132,6 +160,16 @@ describe("quest text, links and badges", () => {
     const quests = decoded();
     expect(questsForFaction(quests, "A").map((q) => q.id)).toEqual([3, 5]);
     expect(questsForFaction(quests, "H").map((q) => q.id)).toEqual([5]);
+  });
+
+  it("says where a quest is in its line, and how many more follow", () => {
+    const step = { id: 1, title: "S", level: 1, giver: null };
+    expect(questStepText({ chain: [step, step], after: [step] })).toBe("Step 3 of 4");
+    expect(questStepText({ chain: [], after: [step] })).toBe("Step 1 of 2");
+    expect(questStepText({ chain: [], after: [] })).toBeNull();
+    expect(moreQuestsText(0)).toBeNull();
+    expect(moreQuestsText(1)).toBe("then 1 more quest");
+    expect(moreQuestsText(4)).toBe("then 4 more quests");
   });
 
   it("formats levels, classes, objectives and counts", () => {
@@ -185,7 +223,15 @@ describe("the Quests section", () => {
     expect(within(details).getByTestId("quest-giver-map-link").getAttribute("href")).toMatch(/^\/wow-forever\/map\?m=100#view=1~/);
     expect(within(details).getByRole("link", { name: /Directions/ }).getAttribute("href")).toContain("dir=1");
     const chain = within(details).getAllByRole("listitem").filter((li) => li.closest("[data-testid=quest-chain]"));
-    expect(chain.map((li) => li.textContent)).toEqual(["Lead In · level 18 · from Old Scout","Second Step (Forever) · level 20", "Into the Keep! · this quest"]);
+    expect(chain.map((li) => li.textContent)).toEqual([
+      "Lead In · level 18 · from Old Scout",
+      "Second Step (Forever) · level 20",
+      "Into the Keep! · this quest",
+      "Report to the King · level 24 · from King",
+    ]);
+    expect(within(details).getByRole("heading", { name: /^Quest chain/ })).toBeInTheDocument();
+    expect(within(within(details).getByTestId("quest-chain")).queryAllByRole("link")).toHaveLength(0);
+    expect(within(details).getByTestId("quest-sharing-detail")).toHaveTextContent(QUEST_SHARING_COPY.notShareable.detail);
     const objective = within(details).getByTestId("quest-objective");
     expect(objective).toHaveAttribute("data-inside", "true");
     expect(within(objective).getByTestId("quest-inside-dungeon")).toBeInTheDocument();
@@ -193,6 +239,43 @@ describe("the Quests section", () => {
     const badges = within(rows[0]).getAllByTestId("provenance-badge").map((b) => b.getAttribute("data-provenance"));
     expect(badges).toContain("seen");
     expect(badges).toContain("classic");
+  });
+
+  it("badges each row with whether it can be shared and its step in the line", () => {
+    renderSection(decoded());
+    const [keep, letter] = screen.getAllByTestId("dungeon-quest-row");
+    expect(within(keep).getByTestId("quest-sharing")).toHaveTextContent("Can't share");
+    expect(within(keep).getByTestId("quest-step")).toHaveTextContent("Step 3 of 4");
+    expect(within(letter).getByTestId("quest-sharing")).toHaveTextContent("Can't share");
+    expect(within(letter).queryByTestId("quest-step")).toBeNull();
+  });
+
+  it("marks a shareable quest, tags the sharing fact Classic when the client didn't say, and caps the quests after", async () => {
+    const lead = { id: 1, title: "Lead In", level: 18, giver: null };
+    const after = [2, 3, 4, 5, 6].map((id) => ({ id, title: `Next ${id}`, level: 20, giver: null }));
+    const [keep] = decoded();
+    renderSection([{ ...keep, chain: [lead], after, shareable: true, shareableSeen: false }]);
+    const row = screen.getByTestId("dungeon-quest-row");
+    expect(within(row).getByTestId("quest-sharing")).toHaveTextContent("Shareable");
+    expect(within(row).getByTestId("quest-sharing")).toHaveAttribute("data-shareable", "true");
+    await userEvent.click(within(row).getByTestId("dungeon-quest-toggle"));
+    const details = within(row).getByTestId("dungeon-quest-details");
+    const sharing = within(details).getByTestId("quest-sharing-detail").closest("[data-testid=quest-fact]") as HTMLElement;
+    expect(within(sharing).getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "classic");
+    const chain = within(within(details).getByTestId("quest-chain")).getAllByRole("listitem");
+    expect(chain).toHaveLength(2 + QUEST_CHAIN_AFTER_SHOWN);
+    expect(within(details).getByTestId("quest-chain-more")).toHaveTextContent(`then ${after.length - QUEST_CHAIN_AFTER_SHOWN} more quests`);
+  });
+
+  it("shows no sharing badge or fact when no source says whether it can be shared", async () => {
+    const [keep] = decoded();
+    renderSection([{ ...keep, chain: [], after: [], shareable: null, shareableSeen: false }]);
+    const row = screen.getByTestId("dungeon-quest-row");
+    expect(within(row).queryByTestId("quest-sharing")).toBeNull();
+    expect(within(row).queryByTestId("quest-step")).toBeNull();
+    await userEvent.click(within(row).getByTestId("dungeon-quest-toggle"));
+    expect(within(row).queryByTestId("quest-sharing-detail")).toBeNull();
+    expect(within(row).queryByTestId("quest-chain")).toBeNull();
   });
 
   it("follows the saved faction, and the toggle changes it", async () => {

@@ -27,6 +27,19 @@ export function questClassesText(quest: Pick<DungeonQuest, "classes">): string {
   return quest.classes.map((id) => findClass(id)?.name ?? id).join(", ");
 }
 
+/** "Step 3 of 5" in the quest's line; null when it stands alone. */
+export function questStepText(quest: Pick<DungeonQuest, "chain" | "after">): string | null {
+  const step = quest.chain.length + 1;
+  const of = step + quest.after.length;
+  return of > 1 ? `Step ${step} of ${of}` : null;
+}
+
+/** "then 2 more quests" after the listed ones; null when they're all listed. */
+export function moreQuestsText(more: number): string | null {
+  if (more <= 0) return null;
+  return more === 1 ? "then 1 more quest" : `then ${more} more quests`;
+}
+
 /** "Kill", "Use", "Collect". */
 export function objectiveVerb(kind: QuestTargetKind): string {
   return OBJECTIVE_VERB[kind];

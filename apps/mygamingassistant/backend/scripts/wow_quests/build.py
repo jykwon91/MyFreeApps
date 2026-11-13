@@ -14,9 +14,12 @@ Writes:
 * ``data/quests/questIndex.json`` — columnar index of every quest in
   ``QuestV2``: name (or null), level, side, zone and new-in-Forever flag.
 * ``data/quests/questSeen.json`` — the Forever client's quest cache: title,
-  levels, objectives and rewards for the quests the operator has seen.
+  levels, sharing, objectives and rewards for the quests the operator has seen,
+  each with the day. The client empties its cache when Forever patches, so rows
+  the new cache lacks are kept from the last file (``merge_seen``).
 * ``data/quests/classic/NNN.json`` — 64 cmangos GPL shards (``id % 64``):
-  full quest data (givers, chain, objectives, rewards) for every Classic quest
+  full quest data (givers, the quests before and after, sharing, objectives,
+  rewards) for every Classic quest
   the Forever client has.
 * ``data/quests/classic/LICENSE`` + ``README.md`` — GPL-3.0 attribution.
 * ``data/quests/questRewardItems.json`` — name + slot of every quest reward item
@@ -35,7 +38,7 @@ from pathlib import Path
 from typing import Any
 
 from scripts.wow_dungeons.build import forever_quest_sides, givers_by_quest, quest_sources
-from scripts.wow_dungeons.quest_cache import QuestCache, quest_cache_path, read_quest_cache
+from scripts.wow_dungeons.quest_cache import quest_cache_path, read_quest_cache
 from scripts.wow_dungeons.quests import (
     GIVER_COLUMNS,
     OBJECTIVE_COLUMNS,
@@ -43,10 +46,11 @@ from scripts.wow_dungeons.quests import (
     SEEN_COLUMNS,
     TARGET_COLUMNS,
     QuestRow,
-    chain_before,
-    predecessors,
-    quest_row,
-    seen_row,
+    SeenRow,
+    earlier_seen,
+    linked_row,
+    merge_seen,
+    quest_links,
     shown_level,
 )
 from scripts.wow_food.build import CLASSIC_LICENSE, WOW_DATA_DIR
@@ -75,6 +79,8 @@ ITEMS_PATH = WOW_DATA_DIR / "items" / "items.json"
 ZONES_FILE = WOW_DATA_DIR / "worldMap" / "zones.json"
 
 SHARD_COUNT = 64
+# One quest in another quest's line, as its shard row shows it: title, level, first giver's name.
+STEP_COLUMNS = ["title", "level", "giver"]
 # Must match QUEST_SHARD_COUNT in frontend/src/games/wow-forever/data/quests/questsConfig.ts.
 INDEX_COLUMNS = ["id", "name", "level", "minLevel", "side", "zoneId", "isNew"]
 DUNGEON_KIND = "dungeon"
@@ -86,7 +92,9 @@ the quests whose id mod {count} equals that number.
 
 Columns match the dungeon quests format: ``questColumns``, ``giverColumns``,
 ``objectiveColumns``, ``targetColumns``. ``quests`` maps quest id → row
-(same order as ``questColumns``); ``targets`` maps target key → [name, instance].
+(same order as ``questColumns``); ``targets`` maps target key → [name, instance];
+``steps`` maps every quest in those quests' lines (before or after) → row in
+``stepColumns`` order, so a line reads whole from one shard.
 
 Only quests the WoW Forever client has (``QuestV2``) are kept. Reward items
 are only items in ``items/items.json``.
@@ -126,12 +134,11 @@ def build_quest_index(
     new_ids: set[int],
     src_quests: dict[int, Any],
     keep: dict[int, str],
-    cache: QuestCache,
+    seen: dict[int, SeenRow],
     quest_zone: dict[int, int],
     zone_names: dict[int, str],
-    seen_ids: set[int],
 ) -> dict[str, Any]:
-    """The quest index: columnar, one row per quest."""
+    """The quest index: columnar, one row per quest. A quest new in Forever is named from what the client saw."""
     rows = []
     for qid in sorted(forever_ids):
         if qid in src_quests:
@@ -140,11 +147,10 @@ def build_quest_index(
             level = shown_level(as_int(q["QuestLevel"]), as_int(q["MinLevel"]))
             min_level = as_int(q["MinLevel"])
             side = keep.get(qid, "N")
-        elif qid in cache.quests:
-            cached = cache.quests[qid]
-            name = cached.title.strip() or None
-            level = shown_level(cached.level, cached.min_level)
-            min_level = cached.min_level
+        elif qid in seen:
+            name = seen[qid].title.strip() or None
+            level = seen[qid].level
+            min_level = seen[qid].min_level
             side = "N"
         else:
             name = None
@@ -184,7 +190,7 @@ def build_quest_index(
             "total": total,
             "named": named,
             "withClassic": with_classic,
-            "seenInGame": len(seen_ids),
+            "seenInGame": len(seen),
             "unnamed": unnamed,
         },
         "quests": rows,
@@ -197,10 +203,10 @@ def build_shards(
     keep: dict[int, str],
 ) -> dict[int, dict[str, Any]]:
     """64 shards of Classic quest data, keyed by id % SHARD_COUNT."""
-    before = predecessors(src.quests)
+    links = quest_links(src.quests)
     rows: dict[int, QuestRow] = {}
     for qid in sorted(forever_ids & set(src.quests) & set(keep)):
-        rows[qid] = quest_row(qid, keep[qid], chain_before(qid, before, keep), src)
+        rows[qid] = linked_row(qid, src, keep, links)
 
     shard_quests: dict[int, dict[int, QuestRow]] = defaultdict(dict)
     for qid, row in rows.items():
@@ -212,6 +218,7 @@ def build_shards(
         shard_rows = shard_quests.get(n, {})
         shard_keys = {f"{k}:{e}" for r in shard_rows.values() for k, e, _ in r.objectives}
         shard_keys |= {k for r in shard_rows.values() for k in r.enders}
+        step_ids = {q for r in shard_rows.values() for q in (*r.chain, *r.after)}
         result[n] = {
             "quests": {str(r.quest_id): r.as_json() for r in sorted(shard_rows.values(), key=lambda r: r.quest_id)},
             "targets": {
@@ -219,8 +226,15 @@ def build_shards(
                 for k in sorted(shard_keys)
                 if k in src.names
             },
+            "steps": {str(q): step_row(rows[q]) for q in sorted(step_ids) if q in rows},
         }
     return result
+
+
+def step_row(row: QuestRow) -> list[object]:
+    """``STEP_COLUMNS`` order."""
+    giver = row.givers[0][GIVER_COLUMNS.index("name")] if row.givers else None
+    return [row.title, row.level, giver]
 
 
 def main() -> None:
@@ -258,10 +272,11 @@ def main() -> None:
 
     keep = forever_quest_sides(dict(src.quests), forever_ids)
     quest_zone = quest_zone_map(world_quests)
-    seen_ids = {qid for qid in sorted(forever_ids) if qid in cache.quests and qid not in cache.unreadable}
+    earlier = earlier_seen(json.loads(SEEN_PATH.read_text(encoding="utf-8"))) if SEEN_PATH.is_file() else {}
+    seen = merge_seen(cache, seen_on, earlier, forever_ids, src)
 
     print(f"Building quest index for {len(forever_ids)} quests...")
-    index = build_quest_index(forever_ids, new_ids, dict(src.quests), keep, cache, quest_zone, zone_names, seen_ids)
+    index = build_quest_index(forever_ids, new_ids, dict(src.quests), keep, seen, quest_zone, zone_names)
     write_json(INDEX_PATH, index)
 
     print(f"Building {SHARD_COUNT} classic shards...")
@@ -277,6 +292,7 @@ def main() -> None:
                 "giverColumns": GIVER_COLUMNS,
                 "objectiveColumns": OBJECTIVE_COLUMNS,
                 "targetColumns": TARGET_COLUMNS,
+                "stepColumns": STEP_COLUMNS,
                 **shard,
             },
         )
@@ -285,17 +301,13 @@ def main() -> None:
         CLASSIC_README.format(commit=CMANGOS_COMMIT), encoding="utf-8"
     )
 
-    seen = {}
-    for qid in sorted(seen_ids):
-        s = seen_row(cache.quests[qid], src)
-        seen[str(qid)] = s.as_json()
     write_json(SEEN_PATH, {
         "source": "The WoW Forever client's quest cache (Cache/WDB/enUS/questcache.wdb) on the operator's machine",
         "clientBuild": cache.build,
         "seenOn": seen_on,
         "attribution": "Game data from the WoW Forever client. © Blizzard Entertainment.",
         "columns": SEEN_COLUMNS,
-        "quests": seen,
+        "quests": {str(q): s.as_json() for q, s in seen.items()},
     })
 
     # Reward items: name + slot for every item any quest rewards
@@ -306,8 +318,7 @@ def main() -> None:
             at_rew = q_col.index("rewards")
             at_cho = q_col.index("choices")
             reward_item_ids |= {int(item) for item, _ in row[at_rew] + row[at_cho]}
-    for qid in sorted(seen_ids):
-        s = seen_row(cache.quests[qid], src)
+    for s in seen.values():
         reward_item_ids |= {item for item, _ in (*s.rewards, *s.choices)}
 
     items_by_id = {int(row[0]): row for row in items_doc["items"]}
@@ -334,7 +345,8 @@ def main() -> None:
         f"{counts['seenInGame']} seen in game, {counts['unnamed']} unnamed) -> {QUESTS_DIR}"
     )
     print(f"wrote {len(shards)} classic shards to {CLASSIC_DIR}")
-    print(f"wrote {SEEN_PATH.name}: {len(seen)} seen quests (build {cache.build}, {seen_on})")
+    fresh = sum(1 for q in seen if q in cache.quests)
+    print(f"wrote {SEEN_PATH.name}: {len(seen)} seen quests ({fresh} in this cache, build {cache.build}, {seen_on})")
     print(f"wrote {REWARD_ITEMS_PATH.name}: {len(reward_items)} reward items")
 
 

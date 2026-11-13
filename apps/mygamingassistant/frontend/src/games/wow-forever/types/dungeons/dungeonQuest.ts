@@ -8,8 +8,9 @@ import type { Faction } from "@/games/wow-forever/types/worldMap";
 /**
  * One quest on a dungeon page. Every quest is in the Forever client (`QuestV2`).
  * When the operator's client has seen it (`seenOn`), its title, levels,
- * objectives and rewards are the client's; otherwise they, like everything
- * else here, are Classic data.
+ * objectives and rewards are the client's, and so is whether it can be shared
+ * when that client said (`shareableSeen`); otherwise they, like everything else
+ * here, are Classic data.
  */
 export interface DungeonQuest {
   id: number;
@@ -24,6 +25,12 @@ export interface DungeonQuest {
   givers: readonly QuestGiver[];
   /** The quests before it, earliest first; empty when it starts on its own. */
   chain: readonly QuestChainStep[];
+  /** The quests it leads on to, next first; empty when the line ends here. */
+  after: readonly QuestChainStep[];
+  /** Whether the quest log's Share button works for it; null when neither the client nor Classic says. */
+  shareable: boolean | null;
+  /** True when `shareable` is what the operator's client says, not Classic data. */
+  shareableSeen: boolean;
   objectives: readonly QuestObjective[];
   /** You get all of these. */
   rewards: readonly QuestReward[];
