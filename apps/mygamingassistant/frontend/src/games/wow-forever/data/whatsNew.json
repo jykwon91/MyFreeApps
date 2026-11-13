@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "topdeadcenter has its own address",
+    "summary": "The guild page now lives at /wow-forever/topdeadcenter. Old links and bookmarks to /wow-forever/guild still work and take you there, on the same tab.",
+    "to": "/wow-forever/topdeadcenter"
+  },
+  {
+    "date": "2026-11-13",
     "title": "MGA Loot now judges every item, not just rolls",
     "summary": "Update the MGA Loot addon and hover any item in your bags, bank, a vendor or a chat link: its tooltip says Upgrade, Downgrade or About the same next to what you wear. Type /mgaloot bags to list every upgrade sitting in your bags, biggest first.",
     "to": "/wow-forever/compare"

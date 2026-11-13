@@ -48,7 +48,7 @@ const GUILD: GuildResponse = {
 
 function renderSections(search = "") {
   return render(
-    <MemoryRouter initialEntries={[`/wow-forever/guild/topdeadcenter${search}`]}>
+    <MemoryRouter initialEntries={[`/wow-forever/topdeadcenter${search}`]}>
       <GuildSectionsHarness guild={GUILD} />
     </MemoryRouter>,
   );

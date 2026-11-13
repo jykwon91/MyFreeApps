@@ -5,7 +5,7 @@ import { GUILD_SLUG } from "@/games/wow-forever/data/guild/guildConfig";
 import { WOW_HUB_PATH } from "@/games/wow-forever/data/wowPagePaths";
 import { useDocumentTitle } from "@/games/wow-forever/hooks/useDocumentTitle";
 
-/** /wow-forever/guild — topdeadcenter's stored members: find one and open their character. */
+/** /wow-forever/topdeadcenter — topdeadcenter's stored members: find one and open their character. */
 export default function WowGuildPage() {
   const { data: guild, error, isFetching, refetch } = useGetGuildQuery(GUILD_SLUG);
   useDocumentTitle(`${guild ? `<${guild.name}>` : "Guild"} · WoW Forever`);

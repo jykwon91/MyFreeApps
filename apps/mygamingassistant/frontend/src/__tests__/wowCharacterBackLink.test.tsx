@@ -12,13 +12,13 @@ vi.mock("@/games/wow-forever/api/wowCharacterApi", () => ({
 }));
 
 const MEMBER = { slug: "tiny-john", name: "Tiny", surname: "John", class_name: "Mage" };
-const GUILD_URL = "/wow-forever/guild?tab=roster&q=ti";
+const GUILD_URL = "/wow-forever/topdeadcenter?tab=roster&q=ti";
 
 function renderAt(entry: string | { pathname: string; state?: unknown }) {
   return render(
     <MemoryRouter initialEntries={[entry]}>
       <Routes>
-        <Route path="/wow-forever/guild" element={<GuildMemberLink member={MEMBER} />} />
+        <Route path="/wow-forever/topdeadcenter" element={<GuildMemberLink member={MEMBER} />} />
         <Route path="/wow-forever/character" element={<WowCharacterPage />} />
         <Route path="/wow-forever/character/:slug" element={<WowCharacterPage />} />
       </Routes>
