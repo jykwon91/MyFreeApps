@@ -9,7 +9,7 @@ import { itemsBySlot } from "@/games/wow-forever/lib/character/characterGear";
 import { playerSettingsFromCharacter, settingsMatchCharacter } from "@/games/wow-forever/lib/character/characterPlayerSettings";
 import { compareItems } from "@/games/wow-forever/lib/itemCompare/compareItems";
 import { comparisonSlots, isEquippableSlot } from "@/games/wow-forever/lib/itemCompare/comparisonSlots";
-import { deltaLines } from "@/games/wow-forever/lib/itemCompare/deltaLines";
+import { deltaLines, deltaNotes, formatSignedNumber, formatSignedStat } from "@/games/wow-forever/lib/itemCompare/deltaLines";
 import { equippedComparisons } from "@/games/wow-forever/lib/itemCompare/equippedComparisons";
 import type { CharacterItem } from "@/games/wow-forever/types/character/characterItem";
 import type { CharacterResponse } from "@/games/wow-forever/types/character/characterResponse";
@@ -63,7 +63,7 @@ function worn(slot: string, id: number, overrides: Partial<CharacterItem> = {}):
 const WEAPON_TEXT = { damage: "10 - 20 Damage", speed: "Speed 2.00", dps: "(7.5 damage per second)" };
 
 function slotsFor(slot: ItemSlot, ...equipped: CharacterItem[]): string[] {
-  return comparisonSlots(slot, itemsBySlot(equipped));
+  return comparisonSlots(slot, itemsBySlot(equipped)).map((c) => c.slot);
 }
 
 describe("which worn slots an item is compared with", () => {
@@ -145,7 +145,7 @@ describe("what changes between two items", () => {
   it("reports identical items as no change", () => {
     const item = clientItem({ armor: 30, stats: { stamina: 5 } });
     const delta = compareItems(item, { ...item, id: 2 });
-    expect(delta).toEqual({ stats: [], armor: 0, dps: null });
+    expect(delta).toEqual({ stats: [], armor: 0, dps: null, otherEffects: false, damageNotCompared: false });
     expect(deltaLines(delta)).toEqual([]);
   });
 });
@@ -161,6 +161,8 @@ describe("the delta's lines", () => {
       ],
       armor: -4,
       dps: 2.5,
+      otherEffects: false,
+      damageNotCompared: false,
     });
     expect(lines.map((l) => l.text)).toEqual([
       "−4 Armor",
@@ -213,6 +215,72 @@ describe("the equipped items an item is compared with", () => {
     const items = [worn("MAIN_HAND", 100), worn("OFF_HAND", 101)];
     expect(equippedComparisons(shield, items, byId).map((r) => r.equipped.slot)).toEqual(["OFF_HAND"]);
     expect(equippedComparisons(staff, items, byId).map((r) => r.equipped.slot)).toEqual(["MAIN_HAND", "OFF_HAND"]);
+  });
+});
+
+describe("slots with two-handers and shields", () => {
+  const SHIELD = worn("OFF_HAND", 2, { inventory_type: "SHIELD" });
+
+  it("compares an off-hand item with the two-hander that fills both hands, marked as replaced", () => {
+    const twoHander = worn("MAIN_HAND", 1, { inventory_type: "TWOHWEAPON", weapon: WEAPON_TEXT });
+    const bySlot = itemsBySlot([twoHander]);
+    for (const slot of ["off_hand", "held_in_off_hand"] as const) {
+      expect(comparisonSlots(slot, bySlot)).toEqual([{ slot: "MAIN_HAND", replacesTwoHander: true }]);
+    }
+    const shield = clientItem({ slot: "off_hand", armor: 100, stats: { stamina: 5 } });
+    const byId = new Map([[1, clientItem({ id: 1, slot: "two_hand", stats: { stamina: 9 } })]]);
+    const result = equippedComparisons(shield, [twoHander], byId);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ kind: "known", replacesTwoHander: true, delta: { armor: 100, stats: [{ key: "stamina", amount: -4 }] } });
+  });
+
+  it("still compares an off-hand item with the off hand when one-handers are worn, and an empty off hand with nothing", () => {
+    expect(comparisonSlots("off_hand", itemsBySlot([worn("MAIN_HAND", 1), SHIELD]))).toEqual([{ slot: "OFF_HAND", replacesTwoHander: false }]);
+    expect(equippedComparisons(clientItem({ slot: "off_hand" }), [worn("MAIN_HAND", 1)], new Map())).toEqual([]);
+  });
+
+  it("compares a one-hander with the main hand only while a shield is in the off hand", () => {
+    expect(slotsFor("one_hand", worn("MAIN_HAND", 1), SHIELD)).toEqual(["MAIN_HAND"]);
+  });
+});
+
+describe("what a comparison cannot cover", () => {
+  it("flags effects the game files only count, from either side, instead of claiming no change", () => {
+    const plainItem = clientItem({ stats: { stamina: 5 } });
+    const proc = clientItem({ stats: { stamina: 5 }, otherEffects: 1 });
+    expect(compareItems(plainItem, proc)).toMatchObject({ stats: [], otherEffects: true });
+    expect(compareItems(proc, plainItem).otherEffects).toBe(true);
+    expect(compareItems(plainItem, plainItem).otherEffects).toBe(false);
+    expect(deltaNotes(compareItems(plainItem, proc))).toEqual(["Other effects (procs, on-use, Equip:) aren't compared"]);
+  });
+
+  it("carries the flag through to the equipped comparison", () => {
+    const ring = clientItem({ slot: "finger", otherEffects: 2 });
+    const byId = new Map([[100, clientItem({ id: 100, slot: "finger" })]]);
+    expect(equippedComparisons(ring, [worn("FINGER_1", 100)], byId)[0]).toMatchObject({ kind: "known", delta: { otherEffects: true } });
+  });
+
+  it("says damage is not compared when either weapon has unknown damage", () => {
+    const known = clientItem({ slot: "main_hand", weapon: { minDamage: 10, maxDamage: 20, speed: 2 } });
+    const caster = clientItem({ slot: "main_hand", weapon: { minDamage: 0, maxDamage: 0, speed: 2 }, damageUnknown: true });
+    for (const delta of [compareItems(known, caster), compareItems(caster, known)]) {
+      expect(delta).toMatchObject({ dps: null, damageNotCompared: true });
+      expect(deltaNotes(delta)).toEqual(["Damage not compared"]);
+    }
+    expect(compareItems(known, known).damageNotCompared).toBe(false);
+  });
+});
+
+describe("signed amounts", () => {
+  it("formats from the absolute value with a real minus, a plus, or nothing for zero", () => {
+    expect(formatSignedStat("stamina", 12)).toBe("+12");
+    expect(formatSignedStat("stamina", -3)).toBe("−3");
+    expect(formatSignedStat("stamina", 0)).toBe("0");
+    expect(formatSignedStat("hit_pct", -2)).toBe("−2%");
+    expect(formatSignedStat("crit_pct", 1.5)).toBe("+1.5%");
+    expect(formatSignedNumber(18)).toBe("+18");
+    expect(formatSignedNumber(-0.25)).toBe("−0.3");
+    expect(formatSignedNumber(0)).toBe("0");
   });
 });
 

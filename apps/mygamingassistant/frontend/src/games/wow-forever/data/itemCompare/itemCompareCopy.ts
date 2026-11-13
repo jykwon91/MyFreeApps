@@ -2,6 +2,11 @@ import { CHARACTER_PAGE_PATH } from "@/games/wow-forever/data/character/characte
 
 export const ITEM_COMPARE_COPY = {
   heading: "Currently equipped",
+  dialogLabel: "Item and the gear you wear in its slot",
+  replacesTwoHander: "Replaces your two-hander",
+  damageNotCompared: "Damage not compared",
+  otherEffectsNotCompared: "Other effects (procs, on-use, Equip:) aren't compared",
+  enchantsNotCounted: "Enchants on your gear aren't counted",
   noCharacter: "Compare with your gear: look up your character and press Use for MGA's pages.",
   noCharacterLink: "Look up your character",
   characterLookupPath: CHARACTER_PAGE_PATH,

@@ -8,6 +8,7 @@ import {
   ITEM_TOOLTIP_SHOW_DELAY_MS,
   ITEM_TOOLTIP_VIEWPORT_PADDING_PX,
 } from "@/games/wow-forever/data/itemPages/itemTooltipConfig";
+import type { HoverTooltipFloatingProps } from "@/games/wow-forever/types/itemPages/hoverTooltipFloatingProps";
 
 interface HoverTooltipOptions {
   /**
@@ -22,8 +23,11 @@ interface HoverTooltipOptions {
    */
   fitToViewport?: boolean;
   /**
-   * The pointer may travel from the trigger onto the tooltip without closing it (spread
-   * `floatingProps` on the tooltip), so a link inside it can be clicked with a mouse.
+   * Makes it a non-modal popover (the content holds links): hover still opens it and the
+   * pointer may cross onto it (spread `floatingProps`, give it `role="dialog"` and an
+   * `aria-label`); Enter / Space on the trigger toggles it and moves focus into it; Escape
+   * closes it and returns focus to the trigger; focus leaving it closes it. Keyboard focus
+   * alone no longer opens it, and the trigger gets `aria-controls`, not `aria-describedby`.
    */
   interactive?: boolean;
 }
@@ -39,6 +43,7 @@ export function useHoverTooltip({ toggleOnTap = false, fitToViewport = false, in
   const [open, setOpen] = useState(false);
   const timer = useRef<number | null>(null);
   const lastPointerType = useRef("");
+  const focusOnOpen = useRef(false);
   const tooltipId = useId();
   const [reference, setReference] = useState<HTMLElement | null>(null);
   const [floating, setFloating] = useState<HTMLElement | null>(null);
@@ -83,11 +88,23 @@ export function useHoverTooltip({ toggleOnTap = false, fitToViewport = false, in
   useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") hide();
+      if (event.key !== "Escape") return;
+      // Focus that was inside the popover goes back to where it came from.
+      if (interactive && floating?.contains(document.activeElement)) reference?.focus();
+      hide();
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, hide]);
+  }, [open, hide, interactive, floating, reference]);
+
+  // A keyboard open moves focus into the popover, once Floating UI has placed it (a hidden element can't take focus).
+  useEffect(() => {
+    if (!open || !focusOnOpen.current || !floating || !isPositioned) return;
+    focusOnOpen.current = false;
+    floating.focus();
+  }, [open, floating, isPositioned]);
+
+  const focusInside = useCallback(() => floating?.contains(document.activeElement) ?? false, [floating]);
 
   useEffect(() => {
     if (!open || !toggleOnTap) return;
@@ -113,6 +130,14 @@ export function useHoverTooltip({ toggleOnTap = false, fitToViewport = false, in
     [cancelTimer],
   );
 
+  // Give the pointer time to cross the gap between trigger and tooltip (same timer both ways: no flicker).
+  const leaveWithGrace = useCallback(() => {
+    // Someone using the keyboard inside the popover keeps it, wherever the mouse wanders.
+    if (focusInside()) return;
+    cancelTimer();
+    timer.current = window.setTimeout(hide, ITEM_TOOLTIP_HIDE_GRACE_MS);
+  }, [focusInside, cancelTimer, hide]);
+
   const onPointerLeave = useCallback(
     (event: PointerEvent) => {
       if (event.pointerType !== "mouse") return;
@@ -120,20 +145,25 @@ export function useHoverTooltip({ toggleOnTap = false, fitToViewport = false, in
         hide();
         return;
       }
-      // Give the pointer time to cross the gap onto the tooltip.
-      cancelTimer();
-      timer.current = window.setTimeout(hide, ITEM_TOOLTIP_HIDE_GRACE_MS);
+      leaveWithGrace();
     },
-    [hide, cancelTimer, interactive],
+    [hide, interactive, leaveWithGrace],
   );
 
-  const floatingProps = interactive
+  const floatingProps: HoverTooltipFloatingProps = interactive
     ? {
-        onPointerEnter: (event: PointerEvent) => {
+        tabIndex: -1,
+        onPointerEnter: (event) => {
           if (event.pointerType === "mouse") cancelTimer();
         },
-        onPointerLeave: (event: PointerEvent) => {
-          if (event.pointerType === "mouse") hide();
+        onPointerLeave: (event) => {
+          if (event.pointerType === "mouse") leaveWithGrace();
+        },
+        // Focus moving out of the popover (to anything but its trigger) closes it.
+        onBlur: (event) => {
+          const next = event.relatedTarget;
+          if (next instanceof Node && (floating?.contains(next) || reference?.contains(next))) return;
+          hide();
         },
       }
     : {};
@@ -141,11 +171,20 @@ export function useHoverTooltip({ toggleOnTap = false, fitToViewport = false, in
   const onFocus = useCallback(
     (event: FocusEvent) => {
       // The browser's own "focused from the keyboard" test: a click or a tap doesn't match it.
-      if (!event.currentTarget.matches(":focus-visible")) return;
+      if (interactive || !event.currentTarget.matches(":focus-visible")) return;
       cancelTimer();
       setOpen(true);
     },
-    [cancelTimer],
+    [cancelTimer, interactive],
+  );
+
+  // Pressing the mouse on a link in the popover blurs the trigger first; that must not close it.
+  const onBlur = useCallback(
+    (event: FocusEvent) => {
+      if (interactive && event.relatedTarget instanceof Node && floating?.contains(event.relatedTarget)) return;
+      hide();
+    },
+    [interactive, floating, hide],
   );
 
   const onPointerDown = useCallback((event: PointerEvent) => {
@@ -157,10 +196,19 @@ export function useHoverTooltip({ toggleOnTap = false, fitToViewport = false, in
     // A mouse click on a hovered trigger keeps it open; a tap or a key press toggles it.
     if (lastPointerType.current === "mouse") setOpen(true);
     else setOpen((wasOpen) => !wasOpen);
+    // A key press (no pointer went down first) opens the popover with focus inside it.
+    if (interactive && lastPointerType.current === "" && !open) focusOnOpen.current = true;
     lastPointerType.current = "";
-  }, [cancelTimer]);
+  }, [cancelTimer, interactive, open]);
 
-  const hoverProps = { onPointerEnter, onPointerLeave, onFocus, onBlur: hide, "aria-describedby": open ? tooltipId : undefined };
+  const hoverProps = {
+    onPointerEnter,
+    onPointerLeave,
+    onFocus,
+    onBlur,
+    "aria-describedby": open && !interactive ? tooltipId : undefined,
+    "aria-controls": open && interactive ? tooltipId : undefined,
+  };
   const triggerProps = toggleOnTap ? { ...hoverProps, onPointerDown, onClick } : hoverProps;
 
   return { open, tooltipId, triggerProps, floatingProps, setReference, setFloating, floatingStyles, isPositioned, placement };

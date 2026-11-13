@@ -4,7 +4,8 @@
  * to compare; a failed character load is a short note; a tap outside closes it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import AuctionItemName from "@/games/wow-forever/components/auctionHouse/AuctionItemName";
 import { ITEM_TOOLTIP_HIDE_GRACE_MS, ITEM_TOOLTIP_SHOW_DELAY_MS } from "@/games/wow-forever/data/itemPages/itemTooltipConfig";
@@ -194,6 +195,121 @@ describe("Auction house item tooltip", () => {
     expect(characterQuery).not.toHaveBeenCalled();
   });
 
+  it("is a labelled non-modal dialog the name controls, not a tooltip", () => {
+    saveCharacter();
+    renderName();
+    hover();
+    const dialog = screen.getByRole("dialog", { hidden: true });
+    expect(dialog).toHaveAttribute("aria-label");
+    const name = screen.getByRole("button", { name: "Ring of the Eagle" });
+    expect(name).toHaveAttribute("aria-controls", dialog.id);
+    expect(name).toHaveAttribute("aria-haspopup", "dialog");
+    expect(name).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("never says no changes when an item has effects the game files only count", () => {
+    saveCharacter();
+    clientItems.mockReturnValue({
+      status: LOAD_STATUS.ready,
+      list: { byId: new Map([[WORN_RING_ID, { ...SAME_RING, id: WORN_RING_ID, otherEffects: 1 }]]) },
+    });
+    characterQuery.mockReturnValue({ data: { ...CHARACTER, items: [CHARACTER.items[0]] }, isError: false });
+    renderName();
+    hover();
+    const block = screen.getByTestId("item-compare-block");
+    expect(block).not.toHaveTextContent("No stat changes");
+    expect(block).toHaveTextContent("Other effects (procs, on-use, Equip:) aren't compared");
+  });
+
+  it("says damage is not compared for a weapon whose damage is unknown", () => {
+    saveCharacter();
+    const staff = clientItem({ slot: "main_hand", stats: {}, damageUnknown: true });
+    tooltipData.mockReturnValue({ status: ITEM_TOOLTIP_STATUS.READY, data: { item: staff, facts: { bind: null, buyPrice: null, crafted: [] } } });
+    clientItems.mockReturnValue({
+      status: LOAD_STATUS.ready,
+      list: { byId: new Map([[WORN_RING_ID, clientItem({ id: WORN_RING_ID, slot: "main_hand", stats: {} })]]) },
+    });
+    characterQuery.mockReturnValue({ data: { ...CHARACTER, items: [worn("MAIN_HAND", WORN_RING_ID, "Old Staff")] }, isError: false });
+    renderName();
+    hover();
+    const block = screen.getByTestId("item-compare-block");
+    expect(block).toHaveTextContent("Damage not compared");
+    expect(block).not.toHaveTextContent("No stat changes");
+  });
+
+  it("notes that enchants are not counted only when a compared worn item has some", () => {
+    saveCharacter();
+    renderName();
+    hover();
+    expect(screen.queryByText("Enchants on your gear aren't counted")).not.toBeInTheDocument();
+    cleanup();
+
+    const enchanted = { ...CHARACTER.items[0], enchantments: ["Enchant Ring - Test"] };
+    characterQuery.mockReturnValue({ data: { ...CHARACTER, items: [enchanted] }, isError: false });
+    renderName();
+    hover();
+    expect(screen.getByText("Enchants on your gear aren't counted")).toBeInTheDocument();
+  });
+
+  it("labels the two-hander an off-hand item would replace", () => {
+    saveCharacter();
+    const shield = clientItem({ slot: "off_hand", armor: 90, stats: { stamina: 4 } });
+    tooltipData.mockReturnValue({ status: ITEM_TOOLTIP_STATUS.READY, data: { item: shield, facts: { bind: null, buyPrice: null, crafted: [] } } });
+    clientItems.mockReturnValue({
+      status: LOAD_STATUS.ready,
+      list: { byId: new Map([[WORN_RING_ID, clientItem({ id: WORN_RING_ID, slot: "two_hand", stats: { stamina: 9 } })]]) },
+    });
+    const staff = { ...worn("MAIN_HAND", WORN_RING_ID, "Big Staff"), inventory_type: "TWOHWEAPON" };
+    characterQuery.mockReturnValue({ data: { ...CHARACTER, items: [staff] }, isError: false });
+    renderName();
+    hover();
+    const block = screen.getByTestId("item-compare-block");
+    expect(block).toHaveTextContent("Replaces your two-hander");
+    expect(block).toHaveTextContent("Big Staff");
+    expect(screen.getByTestId("item-compare-tooltip")).not.toHaveTextContent("Nothing equipped");
+  });
+
+  it("shows one note, not a crash, when the character and the item list both fail to load", () => {
+    saveCharacter();
+    characterQuery.mockReturnValue({ data: undefined, isError: true });
+    clientItems.mockReturnValue({ status: LOAD_STATUS.error, retry: vi.fn(), retrying: false });
+    renderName();
+    hover();
+    const tooltip = screen.getByTestId("item-compare-tooltip");
+    expect(within(tooltip).getByTestId("item-stats")).toBeInTheDocument();
+    expect(tooltip).toHaveTextContent("Couldn't load your character's gear");
+    expect(tooltip).not.toHaveTextContent("Couldn't load the item list");
+  });
+
+  it("opens from the keyboard with Enter, focuses the dialog, and Escape returns focus to the name", async () => {
+    vi.useRealTimers();
+    saveCharacter();
+    renderName();
+    const user = userEvent.setup();
+    await user.tab();
+    const name = screen.getByRole("button", { name: "Ring of the Eagle" });
+    expect(name).toHaveFocus();
+    expect(screen.queryByTestId("item-compare-tooltip")).not.toBeInTheDocument();
+    await user.keyboard("{Enter}");
+    const dialog = await screen.findByTestId("item-compare-tooltip");
+    await vi.waitFor(() => expect(dialog).toHaveFocus());
+    await user.keyboard("{Escape}");
+    expect(screen.queryByTestId("item-compare-tooltip")).not.toBeInTheDocument();
+    expect(name).toHaveFocus();
+  });
+
+  it("lets Tab reach the lookup link when there is no saved character", async () => {
+    vi.useRealTimers();
+    renderName();
+    const user = userEvent.setup();
+    await user.tab();
+    await user.keyboard("{Enter}");
+    const dialog = await screen.findByTestId("item-compare-tooltip");
+    await vi.waitFor(() => expect(dialog).toHaveFocus());
+    await user.tab();
+    expect(within(dialog).getByText("Look up your character").closest("a")).toHaveFocus();
+  });
+
   it("opens on a tap and closes on a tap elsewhere, but not on a touch inside the tooltip", () => {
     saveCharacter();
     renderName();
@@ -247,6 +363,10 @@ describe("Auction house item tooltip with a mouse", () => {
     expect(screen.getByTestId("item-compare-tooltip")).toBeInTheDocument();
 
     fireEvent.pointerLeave(screen.getByTestId("item-compare-tooltip"), { pointerType: "mouse" });
+    expect(screen.getByTestId("item-compare-tooltip")).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(ITEM_TOOLTIP_HIDE_GRACE_MS);
+    });
     expect(screen.queryByTestId("item-compare-tooltip")).not.toBeInTheDocument();
   });
 

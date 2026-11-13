@@ -1,29 +1,36 @@
 import { ITEM_COMPARE_COPY as COPY } from "@/games/wow-forever/data/itemCompare/itemCompareCopy";
+import { ITEM_COMPARE_LOSS_TEXT, ITEM_COMPARE_MUTED_LINE } from "@/games/wow-forever/data/itemCompare/itemCompareStyles";
 import { EQUIP_TEXT } from "@/games/wow-forever/data/itemPages/itemTooltipStyles";
-import type { DeltaLine } from "@/games/wow-forever/types/itemCompare/deltaLine";
+import { deltaLines, deltaNotes } from "@/games/wow-forever/lib/itemCompare/deltaLines";
 import type { EquippedComparison } from "@/games/wow-forever/types/itemCompare/equippedComparison";
 
-const LOSS_TEXT = "text-red-700 dark:text-red-400";
-
-interface EquippedItemDeltaProps {
-  comparison: EquippedComparison;
-  /** The delta's lines; empty when nothing changes. Unused for an unknown comparison. */
-  lines: readonly DeltaLine[];
-}
-
-/** What changes against one worn item: green gains, red losses, or why it can't be said. */
-export default function EquippedItemDelta({ comparison, lines }: EquippedItemDeltaProps) {
+/**
+ * What changes against one worn item: green gains, red losses, then what couldn't be compared.
+ * "No stat changes" only when nothing was left out, so it is never a confident claim.
+ */
+export default function EquippedItemDelta({ comparison }: { comparison: EquippedComparison }) {
   if (comparison.kind === "unknown") {
-    return <p className="text-muted-foreground">{comparison.reason === "candidate" ? COPY.candidateUnknown : COPY.equippedUnknown}</p>;
+    return <p className={ITEM_COMPARE_MUTED_LINE}>{comparison.reason === "candidate" ? COPY.candidateUnknown : COPY.equippedUnknown}</p>;
   }
-  if (lines.length === 0) return <p className="text-muted-foreground">{COPY.noChanges}</p>;
+  const lines = deltaLines(comparison.delta);
+  const notes = deltaNotes(comparison.delta);
   return (
-    <ul className="pt-1">
-      {lines.map((line) => (
-        <li key={line.key} className={line.gain ? EQUIP_TEXT : LOSS_TEXT} data-gain={line.gain}>
-          {line.text}
-        </li>
+    <>
+      {lines.length > 0 ? (
+        <ul className="pt-1">
+          {lines.map((line) => (
+            <li key={line.key} className={line.gain ? EQUIP_TEXT : ITEM_COMPARE_LOSS_TEXT} data-gain={line.gain}>
+              {line.text}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {lines.length === 0 && notes.length === 0 ? <p className={ITEM_COMPARE_MUTED_LINE}>{COPY.noChanges}</p> : null}
+      {notes.map((note) => (
+        <p key={note} className={`${ITEM_COMPARE_MUTED_LINE} pt-1 text-xs`}>
+          {note}
+        </p>
       ))}
-    </ul>
+    </>
   );
 }

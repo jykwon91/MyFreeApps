@@ -1429,8 +1429,11 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   the pure `prices/auctionSearch.ts` (default "Most on sale"; 50 browse /
   200 search cap).
 - Auction house item tooltip + gear compare: an item's name in `AuctionRow` is
-  `AuctionItemName` (a button — hover/focus, or a tap that toggles; a tap
-  elsewhere closes) opening `components/itemCompare/ItemCompareTooltip` — the
+  `AuctionItemName` (a 44px button — hover, or a tap / Enter that toggles; a
+  tap elsewhere or Escape closes; it is a non-modal `role="dialog"` popover,
+  not a tooltip: Enter moves focus into it, Tab reaches its link, Escape returns
+  focus to the name, focus leaving closes it, and keyboard focus alone does not
+  open it) opening `components/itemCompare/ItemCompareTooltip` — the
   in-game `ItemTooltipContent` beside "Currently equipped" blocks (side by side
   when wide, stacked on a phone; capped to the viewport and scrollable via
   `useHoverTooltip({ fitToViewport, interactive })`, so a pointer can reach the
@@ -1445,9 +1448,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   delta, equal omitted), `deltaLines` (green gain / red "−" loss),
   `equippedComparisons`. A worn item missing from the game files, or either
   item with a random "of the …" suffix, shows "stats not known" / "can't be
-  compared" — never a guess. No saved character = one hint line + link to
+  compared" — never a guess; effects the game files only count (procs,
+  on-use) or an unknown weapon damage add a note, so "No stat changes" is
+  never said over something left out, and a note says enchants aren't counted.
+  A shield / off-hand item against a worn two-hander compares with it, labelled
+  "Replaces your two-hander". No saved character = one hint line + link to
   `/wow-forever/character`. Tests: `wowItemCompare.test.ts`,
-  `wowAuctionItemTooltip.test.tsx`,
+  `wowAuctionItemTooltip.test.tsx`, `wowHoverTooltipHook.test.tsx`,
+  `wowPlayerSettingsSlug.test.tsx`,
   `e2e/mocked/wow-forever-auction-item-tooltip.spec.ts`.
 - Auction house filters (operator: "more robust … icons are too small … more
   filters"): every filter and the sort live in the URL via

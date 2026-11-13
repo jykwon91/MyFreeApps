@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "Auction house: compare with your gear",
+    "summary": "Hover an item's name on the Auction house (tap on a phone) to see its in-game tooltip beside what you wear in that slot, with what you'd gain in green and lose in red. Rings and trinkets compare with both of yours. Press \"Use for MGA's pages\" on your character's page once to set it up.",
+    "to": "/wow-forever/auction-house"
+  },
+  {
+    "date": "2026-11-13",
     "title": "Auction house: BiS for any class and level",
     "summary": "The auction house now has a Gear for card right under the search: pick a class (say Warlock), type a level (say 39), and tap #1, #2 or #3 to see the best pieces for that class and level that are for sale right now. It used to be hidden inside Filters.",
     "to": "/wow-forever/auction-house"

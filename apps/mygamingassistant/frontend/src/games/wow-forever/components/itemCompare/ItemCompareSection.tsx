@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import EquippedComparisonPanel from "@/games/wow-forever/components/itemCompare/EquippedComparisonPanel";
 import { ITEM_COMPARE_COPY as COPY } from "@/games/wow-forever/data/itemCompare/itemCompareCopy";
+import { ITEM_COMPARE_COLUMN_WIDTH } from "@/games/wow-forever/data/itemCompare/itemCompareStyles";
 import { ITEM_TOOLTIP_NOTE } from "@/games/wow-forever/data/itemPages/itemTooltipStyles";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import { isEquippableSlot } from "@/games/wow-forever/lib/itemCompare/comparisonSlots";
@@ -16,7 +17,7 @@ export default function ItemCompareSection({ candidate }: { candidate: ClientIte
   if (!isEquippableSlot(candidate.slot)) return null;
   if (characterSlug === null) {
     return (
-      <p className={`${ITEM_TOOLTIP_NOTE} w-72 max-w-full sm:w-80`} data-testid="item-compare-no-character">
+      <p className={`${ITEM_TOOLTIP_NOTE} ${ITEM_COMPARE_COLUMN_WIDTH}`} data-testid="item-compare-no-character">
         {COPY.noCharacter}{" "}
         <Link to={COPY.characterLookupPath} className="underline underline-offset-2">
           {COPY.noCharacterLink}

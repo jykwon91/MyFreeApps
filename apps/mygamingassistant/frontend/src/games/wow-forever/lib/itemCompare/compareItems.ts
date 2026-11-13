@@ -10,7 +10,10 @@ function itemDps(item: ClientItem): number | null {
   return item.weapon && !item.damageUnknown ? weaponDps(item.weapon) : null;
 }
 
-/** What you gain (positive) or lose (negative) by wearing `candidate` instead of `equipped`; equal values are left out. */
+/**
+ * What you gain (positive) or lose (negative) by wearing `candidate` instead of `equipped`; equal values are left out.
+ * Effects the game files only count (`otherEffects`) and unknown weapon damage are flagged, not compared.
+ */
 export function compareItems(candidate: ClientItem, equipped: ClientItem): ItemDelta {
   const stats: StatDelta[] = [];
   for (const key of STAT_KEYS) {
@@ -21,5 +24,11 @@ export function compareItems(candidate: ClientItem, equipped: ClientItem): ItemD
   const equippedDps = itemDps(equipped);
   const dps =
     candidateDps !== null && equippedDps !== null ? Math.round((candidateDps - equippedDps) * DPS_DECIMALS) / DPS_DECIMALS : null;
-  return { stats, armor: (candidate.armor ?? 0) - (equipped.armor ?? 0), dps };
+  return {
+    stats,
+    armor: (candidate.armor ?? 0) - (equipped.armor ?? 0),
+    dps,
+    otherEffects: candidate.otherEffects > 0 || equipped.otherEffects > 0,
+    damageNotCompared: candidate.damageUnknown || equipped.damageUnknown,
+  };
 }

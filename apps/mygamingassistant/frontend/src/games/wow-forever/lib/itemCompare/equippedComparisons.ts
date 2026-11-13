@@ -17,13 +17,12 @@ export function equippedComparisons(
   itemsById: ReadonlyMap<number, ClientItem>,
 ): EquippedComparison[] {
   const bySlot = itemsBySlot(equipped);
-  return comparisonSlots(candidate.slot, bySlot)
-    .map((slot) => bySlot.get(slot))
-    .filter((worn): worn is CharacterItem => worn !== undefined)
-    .map((worn): EquippedComparison => {
-      if (candidate.randomSuffix) return { kind: "unknown", equipped: worn, reason: "candidate" };
-      const known = itemsById.get(worn.item_id);
-      if (!known || known.randomSuffix) return { kind: "unknown", equipped: worn, reason: "equipped" };
-      return { kind: "known", equipped: worn, delta: compareItems(candidate, known) };
-    });
+  return comparisonSlots(candidate.slot, bySlot).flatMap(({ slot, replacesTwoHander }): EquippedComparison[] => {
+    const worn = bySlot.get(slot);
+    if (!worn) return [];
+    if (candidate.randomSuffix) return [{ kind: "unknown", equipped: worn, replacesTwoHander, reason: "candidate" }];
+    const known = itemsById.get(worn.item_id);
+    if (!known || known.randomSuffix) return [{ kind: "unknown", equipped: worn, replacesTwoHander, reason: "equipped" }];
+    return [{ kind: "known", equipped: worn, replacesTwoHander, delta: compareItems(candidate, known) }];
+  });
 }

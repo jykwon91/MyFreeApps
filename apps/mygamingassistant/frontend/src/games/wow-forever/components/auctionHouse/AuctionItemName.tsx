@@ -7,9 +7,9 @@ interface AuctionItemNameProps {
 }
 
 /**
- * An auction row's item name. Hover or keyboard focus shows the item's in-game tooltip beside
- * what you wear in its slot; a tap opens it and a tap anywhere else closes it. The tap area
- * reaches past the text so it is a phone-sized target without moving the row.
+ * An auction row's item name (at least 44x44 to touch). Hover, or Enter / Space (which moves focus into it),
+ * opens the item's in-game stats beside what you wear in its slot; a tap opens it too. Escape, a tap
+ * elsewhere, or tabbing out closes it.
  */
 export default function AuctionItemName({ itemId, label }: AuctionItemNameProps) {
   const { open, tooltipId, triggerProps, floatingProps, setReference, setFloating, floatingStyles, isPositioned, placement } = useHoverTooltip({
@@ -23,7 +23,8 @@ export default function AuctionItemName({ itemId, label }: AuctionItemNameProps)
         type="button"
         ref={setReference}
         aria-expanded={open}
-        className="group relative block min-w-0 rounded text-left before:absolute before:-inset-y-3 before:inset-x-0 before:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-haspopup="dialog"
+        className="group flex min-h-[44px] min-w-[44px] max-w-full items-center rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         {...triggerProps}
       >
         <span className="line-clamp-2 min-w-0 break-words font-medium underline-offset-2 group-hover:underline" data-testid="auction-item-name">

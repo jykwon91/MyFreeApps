@@ -174,6 +174,32 @@ test("with no saved character it shows the stats and how to compare, and the lin
   await expect(page).toHaveURL(/\/wow-forever\/character$/);
 });
 
+test("the name is a 44px target, and the keyboard opens the dialog, reaches its link, and Escape returns", async ({ page }) => {
+  await stubCharacter(page);
+  const name = await rowName(page, "Ring of Precision");
+  const box = await name.boundingBox();
+  expect(box && box.width >= 44 && box.height >= 44).toBe(true);
+
+  await name.focus();
+  const tooltip = page.getByTestId("item-compare-tooltip");
+  await expect(tooltip).toHaveCount(0);
+  await page.keyboard.press("Enter");
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toBeFocused();
+  await expect(name).toHaveAttribute("aria-controls", /.+/);
+
+  // The item's data loads after the dialog opens; its link is there once it has.
+  const link = tooltip.getByRole("link", { name: "Look up your character" });
+  await expect(link).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(link).toBeFocused();
+  await expect(tooltip).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(tooltip).toHaveCount(0);
+  await expect(name).toBeFocused();
+});
+
 test("a character that fails to load is a short note, and the item's stats still show", async ({ page }) => {
   await saveCharacter(page);
   await stubCharacter(page, 502);
