@@ -62,9 +62,9 @@ function LocationProbe() {
 
 function renderAt(search: string) {
   return render(
-    <MemoryRouter initialEntries={[`/wow-forever/guild/topdeadcenter${search}`]}>
+    <MemoryRouter initialEntries={[`/wow-forever/guild${search}`]}>
       <Routes>
-        <Route path="/wow-forever/guild/:slug" element={<WowGuildPage />} />
+        <Route path="/wow-forever/guild" element={<WowGuildPage />} />
       </Routes>
       <LocationProbe />
     </MemoryRouter>,

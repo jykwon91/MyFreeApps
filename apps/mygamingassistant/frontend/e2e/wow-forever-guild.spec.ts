@@ -1,5 +1,5 @@
 /**
- * WoW Forever guild page (/wow-forever/guild/:slug) — E2E, network-stubbed.
+ * WoW Forever guild page (/wow-forever/guild, topdeadcenter only) — E2E, network-stubbed.
  *
  *   - the guild badge on a character's sheet opens the guild page, marking that character
  *   - recipe search: who knows a recipe, with their skill; the search lives in the URL
@@ -9,13 +9,13 @@
  *   - members by rank; a name opens that member's character page
  *   - search, class filter and column sort, kept in the URL across Back
  *   - nothing matches → Clear filters brings everyone back
- *   - a guild we don't have yet says how to get it collected
+ *   - before we have the guild, the page says how to get it collected
  *   - skeleton while loading, then the list in the same place
  *   - 375px phone layout: members as cards, nothing overflows
  *   - the Guild menu item: search by name → open a guild; once a character is looked up it opens
  *     their guild, and "Find another guild" gets back to the search (on a phone too)
  *
- * Stubbed: `/wow/guilds?q=`, `/wow/guilds/<slug>`, `/wow/guilds/<slug>/recipes`, `/wow/guilds/<slug>/reputations`, `/wow/characters/<slug>` and its render.
+ * Stubbed: `/wow/guilds/<slug>`, `/wow/guilds/<slug>/recipes`, `/wow/guilds/<slug>/reputations`, `/wow/characters/<slug>` and its render.
  *
  * Run: npm run test:e2e -- wow-forever-guild
  */
@@ -24,7 +24,6 @@ import { test, expect, type Locator, type Page, type Route } from "@playwright/t
 const GUILD_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+$/.test(url.pathname);
 const RECIPES_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+\/recipes$/.test(url.pathname);
 const SHEET_PATTERN = (url: URL) => /\/wow\/characters\/[^/]+$/.test(url.pathname);
-const SEARCH_PATTERN = (url: URL) => /\/wow\/guilds$/.test(url.pathname);
 const RENDER_PATTERN = "**/wow/characters/*/render.png";
 const PIXEL = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
@@ -104,7 +103,7 @@ test("the guild badge opens the guild page, and a member's name opens their char
   await stubAll(page);
   await page.goto("/wow-forever/character/jason-kwon");
   await page.getByRole("link", { name: /Guild TopDeadCenter: see its members/ }).click();
-  await expect(page).toHaveURL(/\/wow-forever\/guild\/topdeadcenter\?me=jason-kwon$/);
+  await expect(page).toHaveURL(/\/wow-forever\/guild\?me=jason-kwon$/);
 
   await expect(page.getByRole("heading", { name: "<TopDeadCenter>" })).toBeVisible();
   const levelBoard = page.getByRole("list", { name: "Level leaderboard" }).locator("li");
@@ -122,7 +121,7 @@ test("the guild badge opens the guild page, and a member's name opens their char
 
 test("search, class filter and sort live in the URL and survive Back", async ({ page }) => {
   await stubAll(page);
-  await page.goto("/wow-forever/guild/topdeadcenter");
+  await page.goto("/wow-forever/guild");
 
   await page.getByRole("table").getByRole("button", { name: "Level", exact: true }).click();
   await expect(memberNames(page)).toHaveText(["Big Sue", "Jason Kwon", "Tiny John"]);
@@ -142,13 +141,13 @@ test("search, class filter and sort live in the URL and survive Back", async ({ 
   await expect(page.getByText("No members match.")).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(memberNames(page)).toHaveText(["Jason Kwon", "Big Sue", "Tiny John"]);
-  await expect(page).toHaveURL(/\/wow-forever\/guild\/topdeadcenter$/);
+  await expect(page).toHaveURL(/\/wow-forever\/guild$/);
 });
 
-test("a guild we don't have yet says how to get it collected", async ({ page }) => {
+test("before we have the guild, the page says how to get it collected", async ({ page }) => {
   await page.route(GUILD_PATTERN, (route) => json(route, { detail: "guild_not_found" }, 404));
-  await page.goto("/wow-forever/guild/nobody-here");
-  await expect(page.getByText(/We don't have this guild yet/)).toBeVisible();
+  await page.goto("/wow-forever/guild");
+  await expect(page.getByText(/We don't have <TopDeadCenter> yet/)).toBeVisible();
   await page.getByRole("link", { name: "Look up a character" }).click();
   await expect(page).toHaveURL(/\/wow-forever\/character$/);
 });
@@ -162,7 +161,7 @@ test("skeleton while loading, then the member list in the same place", async ({ 
     await held;
     await json(route, guild());
   });
-  await page.goto("/wow-forever/guild/topdeadcenter");
+  await page.goto("/wow-forever/guild");
   const skeleton = page.getByTestId("guild-page-skeleton");
   await expect(skeleton).toBeVisible();
   await expect(page.getByTestId("guild-recipe-search-skeleton")).toBeVisible();
@@ -191,7 +190,7 @@ test("skeleton while loading, then the member list in the same place", async ({ 
 test("375px phone layout: members as cards and nothing overflows", async ({ page }) => {
   await stubAll(page);
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/wow-forever/guild/topdeadcenter");
+  await page.goto("/wow-forever/guild");
   const cards = page.getByRole("list", { name: "Guild members" }).locator("li");
   await expect(cards).toHaveCount(3);
   await expect(cards.first()).toContainText("Level 37 · Warlock · item level 28 · Guild master");
@@ -202,7 +201,7 @@ test("375px phone layout: members as cards and nothing overflows", async ({ page
 
 test("leaderboards: pick a board, ties share a rank, and the board survives Back", async ({ page }) => {
   await stubAll(page);
-  await page.goto("/wow-forever/guild/topdeadcenter");
+  await page.goto("/wow-forever/guild");
 
   await page.getByRole("button", { name: "PvP" }).click();
   await expect(page.getByRole("button", { name: "PvP" })).toHaveAttribute("aria-pressed", "true");
@@ -230,7 +229,7 @@ test("leaderboards: pick a board, ties share a rank, and the board survives Back
 
 test("leaderboards look like a game's: a podium with 1st in the middle, medals, class colours; stacked on a phone", async ({ page }) => {
   await stubAll(page);
-  await page.goto("/wow-forever/guild/topdeadcenter?board=honorable-kills");
+  await page.goto("/wow-forever/guild?board=honorable-kills");
 
   const board = page.getByRole("list", { name: "Honorable kills leaderboard" });
   const cards = board.locator("li");
@@ -292,7 +291,7 @@ test("guild titles: a leader's badge by their name, every title and holder in th
     json(route, { ...g, members: g.members.map((m, i) => ({ ...m, killing_blows: kb[i] })) }),
   );
   await page.route(SHEET_PATTERN, (route) => json(route, character(new URL(route.request().url()).pathname.split("/").pop() ?? "")));
-  await page.goto("/wow-forever/guild/topdeadcenter");
+  await page.goto("/wow-forever/guild");
 
   // The strip: Tiny John leads honorable kills (112) and killing blows; Big Sue is the only 60.
   const strip = page.getByRole("region", { name: "Guild titles" });
@@ -341,7 +340,7 @@ test("gains board: who gained what since when, who isn't ranked and why, on a ph
   await stubAll(page);
   await page.route(GUILD_PATTERN, (route) => json(route, gainsGuild()));
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/wow-forever/guild/topdeadcenter?me=big-sue");
+  await page.goto("/wow-forever/guild?me=big-sue");
 
   await page.getByRole("button", { name: "This week" }).click();
   await page.getByLabel("Rank members by").selectOption("honorable-kills-gained");
@@ -386,7 +385,7 @@ test("recipe search: who knows it and their skill, kept in the URL across Back",
     asked.push(q);
     return json(route, recipeSearch(q));
   });
-  await page.goto("/wow-forever/guild/topdeadcenter");
+  await page.goto("/wow-forever/guild");
 
   await page.getByLabel("Recipe", { exact: true }).fill("l");
   await page.waitForTimeout(600);
@@ -423,7 +422,7 @@ test("recipe search: a problem offers a retry, and the 375px phone layout doesn'
     return json(route, recipeSearch(new URL(route.request().url()).searchParams.get("q") ?? ""));
   });
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/wow-forever/guild/topdeadcenter?recipe=linen");
+  await page.goto("/wow-forever/guild?recipe=linen");
 
   await expect(page.getByText("Couldn't search the guild's recipes.")).toBeVisible();
   fail = false;
@@ -455,7 +454,7 @@ function reputationsFor(url: URL) {
 test("faction standing board: pick a faction, standings rank by tier, an old link falls back", async ({ page }) => {
   await stubAll(page);
   await page.route(REPUTATIONS_PATTERN, (route) => json(route, reputationsFor(new URL(route.request().url()))));
-  await page.goto("/wow-forever/guild/topdeadcenter?board=faction&faction=999");
+  await page.goto("/wow-forever/guild?board=faction&faction=999");
 
   // Nobody has met faction 999: the board shows the faction most members have met, and the URL says so.
   await expect(page).toHaveURL(/faction=47/);
@@ -490,7 +489,7 @@ test("faction standing board: a problem offers a retry that brings the standings
     if (failures-- > 0) return json(route, { detail: "boom" }, 500);
     return json(route, reputationsFor(new URL(route.request().url())));
   });
-  await page.goto("/wow-forever/guild/topdeadcenter?board=faction");
+  await page.goto("/wow-forever/guild?board=faction");
 
   await expect(page.getByText("Couldn't load reputation standings. Check your connection and try again.")).toBeVisible();
   await expect(page.getByLabel("Rank members by")).toHaveValue("faction");
@@ -498,75 +497,26 @@ test("faction standing board: a problem offers a retry that brings the standings
   await expect(page.getByRole("list", { name: "Ironforge standing leaderboard" }).locator("li")).toHaveCount(3);
 });
 
-// --- the Guild menu item (/wow-forever/guild) ---------------------------------------
+// --- the Guild menu item (/wow-forever/guild): topdeadcenter only ------------------
 
-function guildSearch(query: string) {
-  return {
-    query,
-    guilds: [
-      { slug: "topdeadcenter", name: "TopDeadCenter", faction: "alliance", member_count: 4 },
-      { slug: "dead-men-walking", name: "Dead Men Walking", faction: "horde", member_count: null },
-    ],
-    truncated: false,
-  };
-}
-
-async function stubSearch(page: Page): Promise<string[]> {
-  const queries: string[] = [];
-  await page.route(SEARCH_PATTERN, (route) => {
-    const q = new URL(route.request().url()).searchParams.get("q") ?? "";
-    queries.push(q);
-    return json(route, guildSearch(q));
+test("Guild menu item opens topdeadcenter, and an old link to any guild lands there too, on a phone", async ({ page }) => {
+  const asked: string[] = [];
+  page.on("request", (r) => {
+    const path = new URL(r.url()).pathname;
+    if (/\/wow\/guilds\/[^/]+$/.test(path)) asked.push(path.split("/").pop() ?? "");
   });
-  return queries;
-}
-
-test("Guild menu item: search a guild by name and open it", async ({ page }) => {
   await stubAll(page);
-  const queries = await stubSearch(page);
   await page.goto("/wow-forever");
   await page.getByRole("link", { name: "Guild", exact: true }).first().click();
   await expect(page).toHaveURL(/\/wow-forever\/guild$/);
-  await expect(page.getByRole("heading", { name: "Find a guild" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Look up your character" })).toBeVisible();
-
-  await page.getByRole("searchbox", { name: "Guild name" }).fill("dead");
-  await expect(page).toHaveURL(/\/wow-forever\/guild\?q=dead$/);
-  const results = page.getByRole("list", { name: "Matching guilds" }).getByRole("link");
-  await expect(results).toHaveCount(2);
-  await expect(results.first()).toContainText("TopDeadCenter");
-  await expect(results.first()).toContainText("4 members");
-  await expect(page.getByRole("status")).toHaveText('2 guilds matching "dead"');
-  expect(queries).toEqual(["dead"]);
-
-  await results.first().click();
-  await expect(page).toHaveURL(/\/wow-forever\/guild\/topdeadcenter$/);
   await expect(page.getByRole("heading", { name: "<TopDeadCenter>" })).toBeVisible();
-});
+  await expect(page.getByRole("link", { name: /Find another guild/ })).toHaveCount(0);
 
-test("Guild menu item: opens your character's guild, and Find another guild gets back to the search, on a phone too", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
-  await stubAll(page);
-  await stubSearch(page);
-  await page.goto("/wow-forever/character/jason-kwon");
-  await expect(page.getByRole("heading", { name: "Jason Kwon" })).toBeVisible();
-
-  await page.goto("/wow-forever/guild");
-  await expect(page).toHaveURL(/\/wow-forever\/guild\/topdeadcenter$/);
+  await page.goto("/wow-forever/guild/dead-men-walking?me=big-sue");
+  await expect(page).toHaveURL(/\/wow-forever\/guild\?me=big-sue$/);
   await expect(page.getByRole("heading", { name: "<TopDeadCenter>" })).toBeVisible();
-
-  await page.getByRole("link", { name: "Find another guild" }).click();
-  await expect(page).toHaveURL(/\/wow-forever\/guild\?find=1$/);
-  const yours = page.getByRole("region", { name: "Your guild" });
-  await expect(yours.getByRole("link", { name: /TopDeadCenter/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Find another guild" })).toBeVisible();
-  await page.getByRole("searchbox", { name: "Guild name" }).fill("dead");
-  await expect(page.getByRole("list", { name: "Matching guilds" }).getByRole("link")).toHaveCount(2);
+  expect(new Set(asked)).toEqual(new Set(["topdeadcenter"]));
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
-  const box = await yours.getByRole("link").boundingBox();
-  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
-
-  await page.goBack();
-  await expect(page).toHaveURL(/\/wow-forever\/guild\/topdeadcenter$/);
 });

@@ -1074,8 +1074,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   while a person looked up a member within 14 days (`last_viewed_at`, set only
   by `get_character(viewed=True)` — the job's own look-ups pass `viewed=False`,
   so a member moving to another guild never starts watching it; a page
-  look-up served from the cache still stamps it via `record_view`). Up to 5
-  due guilds per run (roster refreshed HOURLY: due 45 min after its last run, half a
+  look-up served from the cache still stamps it via `record_view`). Only
+  `GUILD_SLUG` is ever due (roster refreshed HOURLY: due 45 min after its last run, half a
   job interval short of the hour so on-the-hour runs never count last hour as fresh
   — `GUILD_ROSTER_STALE_AFTER`; members use the same cut-off; never-asked first): Blizzard
   `/data/wow/guild/{slug}` + `/roster` (namespace `profile-forever-us`, no
@@ -1095,7 +1095,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Tests: `tests/test_wow_guild_roster.py`.
 - Guild page (`GET /api/wow/guilds/{slug}`, `api/wow_guilds.py`, own per-IP
   limit `GUILD_RATE_LIMIT`/min): stored data only, never calls Blizzard. 404
-  `guild_not_found` for a slug never stored or impossible. `guild_repo.members`
+  `guild_not_found` for any slug but `GUILD_SLUG`, or one never stored. `guild_repo.members`
   joins each member's newest daily metric (level, item level) with a LATERAL
   one-row index read, and names the class from `class_id`
   (`CLASS_NAMES_BY_ID`) — never from the stored sheet; the live guild
@@ -1107,22 +1107,20 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   level band and sort live in the URL (`GUILD_PARAMS`, defaults left out,
   `replace` so Back skips keystrokes). Tests: `tests/test_wow_guild_page.py`,
   `src/__tests__/wowGuildPage.test.tsx`, `e2e/wow-forever-guild.spec.ts`.
-- Guild menu item + finder (`/wow-forever/guild`, `pages/WowGuildFinderPage.tsx`,
-  `components/guild/finder/`): the sidebar's "Guild" opens the guild of the last
-  character looked up (`useRememberedGuild`, localStorage
-  `mga.wowForever.guild.v1`, written by `WowCharacterPage` only for a character
-  WITH a guild; the guild page forgets it on a 404 for that slug). With none, or
-  `?find=1` / `?q=`, it's a search: `GET /api/wow/guilds?q=` (same per-IP
-  limiter; `guild_repo.search_live` = live guilds whose name contains the text,
-  `icontains(autoescape=True)` so `%`/`_` are literal; biggest first, then name;
-  20 + `truncated`; 2-60 chars once trimmed, no control characters → 422
-  `guild_query_too_short` / `guild_query_invalid`). Only guilds someone looked
-  up a member of exist, so an empty search says how to add yours. The search box
-  and the recipe search share `useDebouncedSearchParam` (URL-kept, debounced,
-  `replace`). Tests: `tests/test_wow_guild_search.py`,
-  `src/__tests__/wowGuildFinder.test.tsx`, `e2e/wow-forever-guild.spec.ts`.
+- ONE guild only: the site shows and refreshes just the operator's guild,
+  `GUILD_SLUG` = "topdeadcenter" (`core/wow_guild.py`; frontend `GUILD_SLUG` in
+  `data/guild/guildConfig.ts`). Every `/api/wow/guilds/{slug}` route 404s any
+  other slug even when that guild is stored (character look-ups still store
+  other guilds' identity rows so a character keeps its guild name), there is no
+  guild search, and `guild_repo.due_for_roster(slug=...)` only ever picks
+  topdeadcenter so Blizzard quota isn't spent on other guilds. The sidebar's
+  "Guild" (`/wow-forever/guild`) IS topdeadcenter's page; the old
+  `/wow-forever/guild/:slug` redirects there keeping its query
+  (`WowLegacyGuildRedirect`). On a character sheet only a topdeadcenter badge
+  links to the guild page; any other guild is plain text. Never re-add a guild
+  finder or a per-slug guild page — the operator asked for topdeadcenter only.
 - Guild "Refresh now" (next to "Roster updated …", `components/guild/GuildRefreshButton.tsx`,
-  `hooks/useGuildRefresh.ts`): ONLY for the operator's guild — `GUILD_REFRESHABLE_SLUG`
+  `hooks/useGuildRefresh.ts`): ONLY for the operator's guild — `GUILD_SLUG`
   (`topdeadcenter`) in `core/wow_guild.py`; the guild response carries `can_refresh`
   so the frontend never hardcodes the slug, and any other slug's
   `POST /api/wow/guilds/{slug}/refresh` is a 404 `guild_not_found`. The claim

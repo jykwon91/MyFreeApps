@@ -140,6 +140,16 @@ async def test_the_live_guild_wins_over_a_gone_one_with_the_same_slug(client: As
     assert (body["gone"], body["faction"], [m["slug"] for m in body["members"]]) == (False, "alliance", ["jason-kwon"])
 
 
+async def test_any_guild_but_the_operators_is_a_404_even_when_stored(client: AsyncClient) -> None:
+    await character_store_service.record(make_fetch("away-guy", 3, guild=OTHER_GUILD), now=NOW, viewed=True)
+    for slug in ("other-guild", "Other-Guild"):
+        response = await client.get(f"/wow/guilds/{slug}")
+        assert (response.status_code, response.json()["detail"]) == (404, "guild_not_found")
+    assert (await client.get("/wow/guilds/other-guild/recipes", params={"q": "bolt"})).status_code == 404
+    assert (await client.get("/wow/guilds/other-guild/reputations")).status_code == 404
+    assert (await client.get("/wow/guilds", params={"q": "other"})).status_code == 404  # no guild search
+
+
 async def test_a_guild_never_stored_or_an_impossible_slug_is_a_404(client: AsyncClient) -> None:
     for slug in ("nobody-guild", "a_b", "x" * 61):
         response = await client.get(f"/wow/guilds/{slug}")

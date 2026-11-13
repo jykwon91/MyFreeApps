@@ -60,7 +60,7 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         path: "/wow-forever/guild",
         title: "Guild",
         iconName: "Users",
-        description: "Your guild's members, leaderboards and titles — or find another guild the site knows by name.",
+        description: "<topdeadcenter>'s members, leaderboards and titles.",
       },
       {
         path: "/wow-forever/quests",

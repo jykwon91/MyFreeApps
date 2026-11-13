@@ -24,6 +24,7 @@ from app.core.wow_guild import (
     GUILD_ROSTER_JOB_INTERVAL,
     GUILD_ROSTER_REFRESH_EVERY,
     GUILD_ROSTER_STALE_AFTER,
+    GUILD_SLUG,
     GUILD_TRACKED_FOR,
 )
 from app.models.wow.character import WowCharacter
@@ -146,7 +147,7 @@ async def test_a_guild_is_due_while_watched_and_stale(bound_unit_of_work: AsyncS
 
     async def due(at: datetime) -> list[str]:
         rows = await guild_repo.due_for_roster(
-            db, viewed_since=at - GUILD_TRACKED_FOR, checked_before=at - GUILD_ROSTER_STALE_AFTER, limit=5,
+            db, slug=GUILD_SLUG, viewed_since=at - GUILD_TRACKED_FOR, checked_before=at - GUILD_ROSTER_STALE_AFTER,
         )
         return [guild.slug for guild in rows]
 
@@ -160,6 +161,15 @@ async def test_a_guild_is_due_while_watched_and_stale(bound_unit_of_work: AsyncS
     assert await due(NOW + GUILD_ROSTER_JOB_INTERVAL) == []
     assert await due(NOW + GUILD_ROSTER_REFRESH_EVERY) == ["topdeadcenter"]
     assert await due(NOW + GUILD_TRACKED_FOR + timedelta(minutes=1)) == []
+
+
+async def test_only_the_operators_guild_is_due_even_when_another_is_watched(bound_unit_of_work: AsyncSession) -> None:
+    db = bound_unit_of_work
+    await character_store_service.record(make_fetch(guild=OTHER_GUILD), now=NOW, viewed=True)
+    kwargs = dict(viewed_since=NOW - GUILD_TRACKED_FOR, checked_before=NOW)
+    assert await guild_repo.due_for_roster(db, slug=GUILD_SLUG, **kwargs) == []
+    assert [g.slug for g in await guild_repo.due_for_roster(db, slug="other-guild", **kwargs)] == ["other-guild"]
+    assert await guild_roster_service.refresh_due(now=NOW) == 0
 
 
 async def test_a_roster_stamped_during_a_run_is_due_on_the_run_an_hour_later(
@@ -378,34 +388,27 @@ async def test_members_fetched_during_last_hours_run_are_fetched_again_on_this_o
     assert fetched == ["jason-kwon"]
 
 
-async def test_one_guild_failing_unexpectedly_is_recorded_and_the_next_still_refreshes(
+async def test_a_guild_failing_unexpectedly_is_recorded_so_it_waits_its_turn(
     bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     db = bound_unit_of_work
     await character_store_service.record(make_fetch(), now=NOW, viewed=True)
-    await character_store_service.record(make_fetch("tiny-john", 2, guild=OTHER_GUILD), now=NOW, viewed=True)
-    calls: list[str] = []
 
-    async def first_one_breaks(guild: WowGuild, *, budget: int, now: datetime | None = None) -> GuildRefreshOutcome:
-        calls.append(guild.slug)
-        if len(calls) == 1:
-            raise KeyError("a bug")
-        return GuildRefreshOutcome(fetched=0, rate_limited=False)
+    async def breaks(guild: WowGuild, *, budget: int, now: datetime | None = None) -> GuildRefreshOutcome:
+        raise KeyError("a bug")
 
-    monkeypatch.setattr(guild_roster_service, "refresh_guild", first_one_breaks)
-    assert await guild_roster_service.refresh_due(now=NOW) == 2
-    assert len(calls) == 2
-    broken = (await db.execute(select(WowGuild).where(WowGuild.slug == calls[0]))).scalar_one()
+    monkeypatch.setattr(guild_roster_service, "refresh_guild", breaks)
+    assert await guild_roster_service.refresh_due(now=NOW) == 1
+    broken = await _guild(db)
     await db.refresh(broken)
     assert broken.last_error is not None and broken.roster_checked_at is not None
 
 
-async def test_a_429_from_blizzard_ends_the_run(
+async def test_a_429_from_blizzard_still_stamps_the_attempt(
     bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     db = bound_unit_of_work
     await character_store_service.record(make_fetch(), now=NOW, viewed=True)
-    await character_store_service.record(make_fetch("tiny-john", 2, guild=OTHER_GUILD), now=NOW, viewed=True)
     monkeypatch.setattr(character_service, "new_client", lambda: _blizzard([], guild_status=429))
     assert await guild_roster_service.refresh_due(now=NOW) == 1
     checked = (await db.execute(select(WowGuild).where(WowGuild.roster_checked_at.is_not(None)))).scalars().all()

@@ -27,7 +27,6 @@ import { groupReputations, standingPercent } from "@/games/wow-forever/lib/chara
 import { pickedTalent } from "@/games/wow-forever/lib/character/characterTalents";
 import { characterNameFromSlug, characterSlugFromName } from "@/games/wow-forever/lib/character/characterSlug";
 import { withRecentCharacter } from "@/games/wow-forever/lib/character/recentCharacters";
-import { REMEMBERED_GUILD_STORAGE_KEY } from "@/games/wow-forever/data/guild/guildFinderConfig";
 import WowCharacterPage from "@/games/wow-forever/pages/WowCharacterPage";
 import type { CharacterItem } from "@/games/wow-forever/types/character/characterItem";
 import type { CharacterResponse } from "@/games/wow-forever/types/character/characterResponse";
@@ -300,7 +299,7 @@ describe("WowCharacterPage", () => {
     expect(screen.getByText(/Level 37 Gnome Warlock/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Guild topdeadcenter: see its members/ })).toHaveAttribute(
       "href",
-      "/wow-forever/guild/topdeadcenter?me=jason-kwon",
+      "/wow-forever/guild?me=jason-kwon",
     );
     expect(screen.getByText(/From their last log out, 2 hours ago/)).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Jason Kwon in their current gear/ })).toHaveAttribute(
@@ -343,20 +342,11 @@ describe("WowCharacterPage", () => {
     expect(screen.getByRole("button", { name: "Jason Kwon" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("remembers the character's guild for the Guild menu item", () => {
-    mockQuery.mockReturnValue(query({ data: CHARACTER }));
+  it("links only topdeadcenter: another guild's badge is plain text", () => {
+    mockQuery.mockReturnValue(query({ data: { ...CHARACTER, guild: "Other Guild", guild_slug: "other-guild" } }));
     renderAt("/wow-forever/character/jason-kwon");
-    expect(JSON.parse(window.localStorage.getItem(REMEMBERED_GUILD_STORAGE_KEY) ?? "null")).toEqual({
-      slug: "topdeadcenter",
-      name: "topdeadcenter",
-      faction: CHARACTER.faction,
-    });
-  });
-
-  it("remembers no guild for a guildless character", () => {
-    mockQuery.mockReturnValue(query({ data: { ...CHARACTER, guild: null, guild_slug: null } }));
-    renderAt("/wow-forever/character/jason-kwon");
-    expect(window.localStorage.getItem(REMEMBERED_GUILD_STORAGE_KEY)).toBeNull();
+    expect(screen.getByText("<Other Guild>")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Guild Other Guild/ })).not.toBeInTheDocument();
   });
 
   it("never remembers a name Blizzard doesn't know, and says how to fix it", () => {

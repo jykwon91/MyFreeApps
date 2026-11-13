@@ -1,5 +1,7 @@
-/** The guild page: /wow-forever/guild/:slug. */
+/** The guild page: /wow-forever/guild. The site has one guild, the operator's own. */
 export const GUILD_PAGE_PATH = "/wow-forever/guild";
+/** That guild's Blizzard slug (the backend's ``GUILD_SLUG``; every other slug is a 404). */
+export const GUILD_SLUG = "topdeadcenter";
 
 /** The member list's sort columns. */
 export const GUILD_SORT_KEYS = {
@@ -54,7 +56,7 @@ export const GUILD_LOAD_PROBLEM = "Couldn't load this guild. Check your connecti
 /** What each whole-page state says. */
 export const GUILD_STATE_MESSAGES: Readonly<Record<GuildPageState, string>> = {
   [GUILD_PAGE_STATES.notStored]:
-    "We don't have this guild yet. Look up one of its members on Your character and we'll start collecting its roster.",
+    "We don't have <TopDeadCenter> yet. Look up one of its members on Your character and we'll start collecting its roster.",
   [GUILD_PAGE_STATES.collecting]: "We're collecting this guild's roster from Blizzard. It usually takes under half an hour.",
   [GUILD_PAGE_STATES.gone]: "Blizzard no longer lists this guild. It may have disbanded or been renamed.",
 };
