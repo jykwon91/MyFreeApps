@@ -12,10 +12,9 @@ import { strFromU8, unzipSync } from "fflate";
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { PIXEL_PNG } from "@platform/ui/test-support/constants/pixelPng";
 
 const SETTINGS_KEY = "mga.wowForever.compare.settings.v1";
-// A real 1x1 PNG, so the preview renders.
-const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
 
 async function useArmsWarrior(page: Page) {
   await page.addInitScript(
@@ -69,7 +68,7 @@ test("the screenshot reader fills the item", async ({ page }) => {
     const data = new DataTransfer();
     data.items.add(new File([new Uint8Array(bytes)], "tooltip.png", { type: "image/png" }));
     el.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
-  }, Array.from(PNG));
+  }, Array.from(PIXEL_PNG));
   const preview = card.getByRole("img", { name: "Screenshot to read: tooltip.png" });
   await expect(preview).toBeVisible();
   await expect.poll(() => preview.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);

@@ -5,6 +5,7 @@ import {
   type APIRequestContext,
   type Page,
 } from "@playwright/test";
+import { PIXEL_PNG } from "@platform/ui/test-support/constants/pixelPng";
 
 /**
  * E2E coverage for web recipe discovery (/discover).
@@ -35,14 +36,6 @@ const BASE_URL = process.env.BASE_URL ?? "http://localhost:5180";
 // Long enough that the loading affordance is unambiguously observable, short
 // enough to keep the suite quick. Live, these waits are tens of seconds.
 const STUB_LATENCY_MS = 1200;
-
-// A 1x1 PNG — enough for the browser to decode, so `naturalWidth > 0` proves
-// the tile really loaded through /api/discovery/image rather than falling back
-// to the placeholder.
-const PIXEL_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
-  "base64",
-);
 
 const SEARCH_RESULTS = {
   query: "mexican flan",

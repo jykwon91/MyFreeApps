@@ -15,6 +15,7 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 import { getOperatorCredentials, loginViaUI } from "./fixtures/auth";
+import { PIXEL_PNG } from "@platform/ui/test-support/constants/pixelPng";
 
 interface CalibrationStubOptions {
   bundledPackage?: Record<string, unknown> | null;
@@ -88,7 +89,7 @@ async function injectFakeTauriCalibration(
       cv_get_primary_monitor_resolution:
         payload.detectedResolution ?? { width: 1920, height: 1080 },
       cv_capture_frame: {
-        png_base64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        png_base64: PIXEL_PNG.toString("base64"),
         width: 1920,
         height: 1080,
       },

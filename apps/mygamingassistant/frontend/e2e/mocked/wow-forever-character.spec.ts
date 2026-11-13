@@ -18,15 +18,11 @@ import type { Page, Route } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
+import { PIXEL_PNG } from "@platform/ui/test-support/constants/pixelPng";
 
 const SHEET_PATTERN = (url: URL) => /\/wow\/characters\/[^/]+$/.test(url.pathname);
 const RENDER_PATTERN = "**/wow/characters/*/render.png";
 
-// A 1x1 transparent PNG.
-const PIXEL = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
-  "base64",
-);
 
 function character() {
   return {
@@ -153,7 +149,7 @@ function json(route: Route, body: unknown, status = 200) {
 
 async function stubCharacter(page: Page) {
   await page.route(SHEET_PATTERN, (route) => json(route, character()));
-  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }));
+  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL_PNG }));
 }
 
 // Any API call this spec does not stub (icons, prices, server status, ...) answers 404,
@@ -213,7 +209,7 @@ test("skeleton while Blizzard answers, then the sheet in the same places", async
     await held;
     await json(route, character());
   });
-  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }));
+  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL_PNG }));
   await page.goto("/wow-forever/character/jason-kwon");
 
   const skeleton = page.getByTestId("character-sheet-skeleton");
@@ -358,7 +354,7 @@ test("dungeons show done and not done in level order, with what fits now", async
 
 test("a dungeon-kills failure keeps the rest of the sheet", async ({ page }) => {
   await page.route(SHEET_PATTERN, (route) => json(route, { ...character(), dungeons: null }));
-  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }));
+  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL_PNG }));
   await page.goto("/wow-forever/character/jason-kwon");
   const panel = page.getByRole("region", { name: "Dungeons" });
   await expect(panel.getByRole("button", { name: /Dungeons/ })).toContainText("Couldn't load");
@@ -367,7 +363,7 @@ test("a dungeon-kills failure keeps the rest of the sheet", async ({ page }) => 
 
 test("a PvP failure keeps the rest of the sheet", async ({ page }) => {
   await page.route(SHEET_PATTERN, (route) => json(route, { ...character(), pvp: null }));
-  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }));
+  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL_PNG }));
   await page.goto("/wow-forever/character/jason-kwon");
   const panel = page.getByRole("region", { name: "PvP" });
   await expect(panel.getByRole("button", { name: /PvP/ })).toContainText("Couldn't load");
@@ -376,7 +372,7 @@ test("a PvP failure keeps the rest of the sheet", async ({ page }) => {
 
 test("a reputations failure keeps the rest of the sheet", async ({ page }) => {
   await page.route(SHEET_PATTERN, (route) => json(route, { ...character(), reputations: null }));
-  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }));
+  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL_PNG }));
   await page.goto("/wow-forever/character/jason-kwon");
   await expect(page.getByRole("region", { name: "Reputation" })).toContainText("Blizzard didn't send this character's reputations");
   await expect(page.getByRole("region", { name: "Professions" })).toBeVisible();
@@ -384,7 +380,7 @@ test("a reputations failure keeps the rest of the sheet", async ({ page }) => {
 
 test("a talents failure keeps the rest of the sheet", async ({ page }) => {
   await page.route(SHEET_PATTERN, (route) => json(route, { ...character(), talents: null }));
-  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }));
+  await page.route(RENDER_PATTERN, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL_PNG }));
   await page.goto("/wow-forever/character/jason-kwon");
   await expect(page.getByRole("region", { name: "Talents" })).toContainText("Blizzard didn't send this character's talents");
   await expect(page.getByRole("region", { name: "Character stats" })).toBeVisible();
