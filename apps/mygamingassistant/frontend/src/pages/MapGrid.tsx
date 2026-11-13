@@ -39,7 +39,7 @@ export default function MapGrid() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="h-24 rounded-xl bg-muted/40 animate-pulse"
+              className="h-24 rounded-xl bg-muted animate-pulse"
               aria-hidden
             />
           ))}

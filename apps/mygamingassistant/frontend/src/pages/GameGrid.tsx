@@ -21,7 +21,7 @@ export default function GameGrid() {
           {[1, 2].map((i) => (
             <div
               key={i}
-              className="h-32 rounded-xl bg-muted/40 animate-pulse"
+              className="h-32 rounded-xl bg-muted animate-pulse"
               aria-hidden
             />
           ))}

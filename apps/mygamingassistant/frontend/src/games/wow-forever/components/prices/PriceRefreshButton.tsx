@@ -13,7 +13,7 @@ export default function PriceRefreshButton({ house }: { house: PriceHouse }) {
   const { isReady, loadFailed, isRefreshing, cooldownLeft, notice, refresh } = usePriceRefresh(house);
   if (loadFailed) return null;
   if (!isReady) {
-    return <div className="h-11 w-32 rounded bg-muted/40 animate-pulse" aria-hidden data-testid="price-refresh-skeleton" />;
+    return <div className="h-11 w-32 rounded bg-muted animate-pulse" aria-hidden data-testid="price-refresh-skeleton" />;
   }
   const coolingDown = cooldownLeft > 0 && !isRefreshing;
   const note = notice ?? (coolingDown ? refreshCooldownCopy(cooldownMinutes(cooldownLeft)) : null);

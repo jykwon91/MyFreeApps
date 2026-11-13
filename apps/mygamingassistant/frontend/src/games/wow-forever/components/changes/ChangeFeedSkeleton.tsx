@@ -1,6 +1,6 @@
 import { CHANGE_SKELETON_ROWS } from "@/games/wow-forever/data/changes/changeFeedConfig";
 
-const BAR = "rounded bg-muted/40 animate-pulse";
+const BAR = "rounded bg-muted animate-pulse";
 
 /** Same shape as the loaded feed: a result count, then cards with an icon, name, chips, a summary and two lines of old / new. */
 export default function ChangeFeedSkeleton() {

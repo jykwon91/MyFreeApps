@@ -10,7 +10,7 @@ export default function FilterChipsSkeleton({ label, count, testId }: FilterChip
   return (
     <div className="flex flex-wrap gap-2" aria-busy="true" aria-label={label} data-testid={testId}>
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="h-11 w-20 animate-pulse rounded-full bg-muted/40" aria-hidden />
+        <div key={i} className="h-11 w-20 animate-pulse rounded-full bg-muted" aria-hidden />
       ))}
     </div>
   );

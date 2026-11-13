@@ -1,7 +1,7 @@
 import { QUEST_PAGE_SIZE } from "@/games/wow-forever/data/quests/questsConfig";
 
 const SKELETON_ROWS = Math.min(QUEST_PAGE_SIZE, 12);
-const BAR = "rounded bg-muted/40 animate-pulse";
+const BAR = "rounded bg-muted animate-pulse";
 
 const ROW_WIDTHS = ["w-2/3", "w-1/2", "w-3/4"] as const;
 

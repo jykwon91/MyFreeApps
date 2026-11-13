@@ -11,7 +11,7 @@ export default function CharacterRowSkeletons({ count, height = "h-[52px]" }: Ch
   return (
     <div className="space-y-2">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className={clsx(height, "rounded-lg bg-muted/40 animate-pulse")} />
+        <div key={i} className={clsx(height, "rounded-lg bg-muted animate-pulse")} />
       ))}
     </div>
   );

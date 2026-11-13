@@ -1,6 +1,6 @@
 import { ITEM_BROWSER_SKELETON_ROWS } from "@/games/wow-forever/data/itemBrowser/itemBrowserConfig";
 
-const BAR = "rounded bg-muted/40 animate-pulse";
+const BAR = "rounded bg-muted animate-pulse";
 
 /** Same shape as the loaded page: search box, filters card (a button on phones), count + toolbar, then item rows. */
 export default function ItemBrowserSkeleton() {

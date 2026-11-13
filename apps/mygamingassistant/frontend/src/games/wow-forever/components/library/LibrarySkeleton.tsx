@@ -1,6 +1,6 @@
 import { LIBRARY_SKELETON_ROWS } from "@/games/wow-forever/data/library/libraryConfig";
 
-const BAR = "rounded bg-muted/40 animate-pulse";
+const BAR = "rounded bg-muted animate-pulse";
 
 /** Same shape as the loaded page: the rewards card, the cards card, the filters, a count, then book cards. */
 export default function LibrarySkeleton() {

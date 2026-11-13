@@ -68,7 +68,7 @@ export default function LiveOverridePanel({
       <label className="flex items-center gap-2 text-xs">
         <span className="text-muted-foreground">Map:</span>
         {isLoading ? (
-          <span className="inline-block h-7 w-28 rounded bg-muted/40 animate-pulse" />
+          <span className="inline-block h-7 w-28 rounded bg-muted animate-pulse" />
         ) : (
           <select
             value={override.mapSlug}
