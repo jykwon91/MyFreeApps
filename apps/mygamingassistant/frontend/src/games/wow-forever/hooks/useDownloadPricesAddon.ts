@@ -6,7 +6,7 @@ import { DEFAULT_PRICE_SERVER } from "@/games/wow-forever/data/priceServers";
 import { PRICE_FACTIONS } from "@/games/wow-forever/data/priceFactions";
 import { fetchAskPrices } from "@/games/wow-forever/lib/ask/askLiveData";
 import { pricesAddonZip } from "@/games/wow-forever/lib/auctionHouse/pricesAddonZip";
-import { downloadBlob } from "@/lib/downloadBlob";
+import { downloadZip } from "@/lib/downloadBlob";
 
 /** Fetches every house's prices (and loads the recipe data for the crafting-demand lines) and downloads the MGA Prices addon with them inside. */
 export function useDownloadPricesAddon(): { download: () => Promise<void>; downloading: boolean } {
@@ -20,7 +20,7 @@ export function useDownloadPricesAddon(): { download: () => Promise<void>; downl
         loadAllCraftingData(),
       ]);
       const zip = pricesAddonZip(houses, crafting);
-      downloadBlob(new Blob([zip as BlobPart], { type: "application/zip" }), PRICES_ADDON_ZIP_NAME);
+      downloadZip(zip, PRICES_ADDON_ZIP_NAME);
       showSuccess("MGA Prices is downloading. Unzip it into your AddOns folder.");
     } catch {
       showError("Couldn't get the prices for the addon. Try again.");
