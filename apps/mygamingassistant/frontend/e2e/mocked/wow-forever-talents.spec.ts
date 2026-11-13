@@ -9,6 +9,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const MAGE = "/wow-forever/talents/mage";
 // Mage Arcane talent ids (Blizzard's Game Data API), in the live tree.
@@ -201,10 +202,10 @@ test("on a 375 px phone one tree shows at a time, behind tabs, with 44 px target
   expect(await noSideways(page)).toBeLessThanOrEqual(0);
 
   const box = await visibleTrees.getByTestId("talent-cell").first().boundingBox();
-  expect(box?.width).toBeGreaterThanOrEqual(44);
-  expect(box?.height).toBeGreaterThanOrEqual(44);
+  expect(box?.width).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+  expect(box?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   const plusBox = await page.getByRole("button", { name: "Level up" }).boundingBox();
-  expect(plusBox?.height).toBeGreaterThanOrEqual(44);
+  expect(plusBox?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
 });
 
 test("the skeleton shows while a class's trees load, in the trees' places", async ({ page }) => {

@@ -16,10 +16,11 @@
  * button's center.
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { LOGIN_ENDPOINT } from "@platform/ui/test-support/constants/loginEndpoint";
 
 test.describe("Login TOTP challenge — Verify button text centered within button", () => {
   test("the 'Verify' text is horizontally centered inside the Verify button", async ({ page }) => {
-    await page.route("**/api/auth/totp/login", (route) => {
+    await page.route(LOGIN_ENDPOINT, (route) => {
       route.fulfill({
         status: 200,
         contentType: "application/json",

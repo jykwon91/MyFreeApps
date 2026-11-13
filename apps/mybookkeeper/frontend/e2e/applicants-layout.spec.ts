@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { holdRequests } from "./fixtures/hold-requests";
 import { expectCardsMatchSkeleton, skeletonCardBox } from "./fixtures/skeleton-card-fit";
 import { deleteApplicant } from "./fixtures/applicants";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 /**
  * Layout E2E for the Applicants list + detail (PR 3.1b).
@@ -129,7 +130,7 @@ test.describe("Applicants layout (PR 3.1b)", () => {
     const allChip = page.getByTestId("applicant-filter-all");
     await expect(allChip).toBeVisible();
     const box = await allChip.boundingBox();
-    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   });
 
   test("detail skeleton section headers match the loaded page", async ({

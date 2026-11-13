@@ -18,6 +18,7 @@ import type { Page, Request } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const TXN_ID = "00000000-0000-0000-0000-0000000000a1";
 
@@ -180,7 +181,7 @@ test.describe("Transaction editor: unsaved changes", () => {
     for (const name of ["Discard", "Keep editing", "Save & close"]) {
       const box = await prompt(page).getByRole("button", { name }).boundingBox();
       expect(box, name).not.toBeNull();
-      expect(box!.height, name).toBeGreaterThanOrEqual(44);
+      expect(box!.height, name).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
       expect(box!.x, name).toBeGreaterThanOrEqual(0);
       expect(box!.x + box!.width, name).toBeLessThanOrEqual(375);
     }

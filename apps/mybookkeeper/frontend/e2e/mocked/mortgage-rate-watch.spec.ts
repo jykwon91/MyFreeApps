@@ -31,6 +31,7 @@ import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import type { AttributionReviewQueueResponse } from "@mybookkeeper/api-client/types/attribution/attribution-review-queue-response";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 // Registered first, so every stub below wins over it. Any call this spec does
 // not stub (the sidebar's integrations and review-queue reads, say) gets an
@@ -348,7 +349,7 @@ test.describe("Check for better rates", () => {
     await expect(button).toBeVisible({ timeout: 15000 });
     const box = await button.boundingBox();
     expect(box, "check button has no box").not.toBeNull();
-    expect(box!.height, "check button height").toBeGreaterThanOrEqual(44);
+    expect(box!.height, "check button height").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   });
 
   test("a feed outage reads as an outage, not as good news", async ({ page }) => {

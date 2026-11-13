@@ -10,6 +10,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { ALL_RACES, ALL_RACIALS, raceListing, racialsWithStatus } from "./fixtures/wowRacesDataCounts";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const RACES = "/wow-forever/races";
 const UNCHANGED = racialsWithStatus("unchanged");
@@ -168,12 +169,12 @@ test.describe("at 375px", () => {
     expect(await noSideways(page)).toBeLessThanOrEqual(0);
     for (const id of ["race-faction-alliance", "race-status-changed", "race-changed-only"]) {
       const box = await page.getByTestId(id).boundingBox();
-      expect(box?.height, id).toBeGreaterThanOrEqual(44);
+      expect(box?.height, id).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     }
     const select = await page.getByLabel("Can be a").boundingBox();
-    expect(select?.height).toBeGreaterThanOrEqual(44);
+    expect(select?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     const jump = await page.locator("#human").getByRole("navigation").getByRole("link").first().boundingBox();
-    expect(jump?.height).toBeGreaterThanOrEqual(44);
+    expect(jump?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
 
     await page.goto(`${RACES}/human`);
     await expect(page.getByTestId("race-card")).toHaveCount(1);

@@ -9,6 +9,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { CHANGES_PREVIOUS_BUILD, TALENT_CHANGES, ZONE_CHANGES, ZONES_SINCE_LAST_BUILD } from "./fixtures/wowForeverDataCounts";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const CHANGES = "/wow-forever/changes";
 
@@ -113,7 +114,7 @@ test("on a 375 px phone the rows stack, nothing scrolls sideways and targets are
   expect(await noSideways(page)).toBeLessThanOrEqual(0);
   for (const target of [page.getByLabel("Search"), page.getByLabel("Class"), page.getByRole("radio", { name: /Items/ })]) {
     const box = await target.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   }
   await expect(page.getByRole("button", { name: /Show 50 more/ })).toBeVisible();
   await page.getByRole("button", { name: /Show 50 more/ }).click();

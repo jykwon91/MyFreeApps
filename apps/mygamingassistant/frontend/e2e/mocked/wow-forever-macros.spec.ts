@@ -6,6 +6,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const HOVER_CAST_HEADING = "Hover-cast macros (mouseover)";
 
@@ -117,15 +118,15 @@ test("the phone layout never scrolls sideways and keeps touch targets large", as
   await page.goto("/wow-forever/macros");
   await page.getByLabel("Your spell name").fill("X".repeat(60));
   const input = await page.getByLabel("Your spell name").boundingBox();
-  expect(input?.height).toBeGreaterThanOrEqual(44);
+  expect(input?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   for (const target of [
     page.getByRole("button", { name: "Copy macro: Hover cast on a friend" }),
     page.getByRole("radio", { name: "All classes" }),
     page.getByRole("radio", { name: "Warlock" }),
   ]) {
     const box = await target.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
-    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+    expect(box?.width).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   }
   // The longest macro stays inside its card.
   await expect(page.getByRole("article", { name: "Healthstone and potion together" })).toBeAttached();

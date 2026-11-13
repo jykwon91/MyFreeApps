@@ -12,6 +12,7 @@ import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { hideMapLayers } from "./fixtures/mapLayers";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const PHONE = { width: 375, height: 812 };
 
@@ -258,8 +259,8 @@ test.describe("on a phone", () => {
 
     for (const name of ["Zoom the map in", "Zoom the map out"]) {
       const button = await boxOf(page.getByRole("button", { name }));
-      expect(button.width).toBeGreaterThanOrEqual(44);
-      expect(button.height).toBeGreaterThanOrEqual(44);
+      expect(button.width).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+      expect(button.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     }
 
     // Unzoomed, one finger still scrolls the page up and down.

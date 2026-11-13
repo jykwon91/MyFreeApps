@@ -43,6 +43,7 @@ from pathlib import Path
 import yaml
 
 from platform_shared.infra import render as _render
+from platform_shared.infra import used_ports as _used_ports
 
 # Tokens substituted in template content. ORDER MATTERS -- longer keys first
 # so __APP_DISPLAY_NAME__ does not get partially matched by __APP_.
@@ -51,8 +52,14 @@ _TOKEN_ORDER: tuple[str, ...] = (
     "__APP_SLUG__",
     "__API_PORT__",
     "__FRONTEND_DEV_PORT__",
+    "__FRONTEND_MOCKED_PORT__",
     "__CADDY_HOST_PORT__",
 )
+
+# The no-backend Playwright suite's dev server runs this far above the app's dev
+# port, so the two can run side by side. Nothing about the offset keeps it clear
+# of other apps' ports: _validate_ports_free checks every port against them.
+_MOCKED_PORT_OFFSET = 1
 
 # Slug regex -- lowercase letters, numbers, hyphens; must start with a letter;
 # no trailing hyphen; reasonable length.
@@ -81,13 +88,40 @@ def _validate_slug(slug: str) -> None:
 
 
 def _validate_ports(api: int, caddy: int, frontend: int) -> None:
-    for label, port in (("--api-port", api), ("--caddy-port", caddy), ("--frontend-port", frontend)):
+    mocked = frontend + _MOCKED_PORT_OFFSET
+    for label, port in (
+        ("--api-port", api),
+        ("--caddy-port", caddy),
+        ("--frontend-port", frontend),
+        (f"--frontend-port + {_MOCKED_PORT_OFFSET} (mocked e2e)", mocked),
+    ):
         if not (1024 <= port <= 65535):
             raise ScaffoldError(f"{label}={port} must be 1024-65535.")
-    if len({api, caddy, frontend}) != 3:
+    if len({api, caddy, frontend, mocked}) != 4:
         raise ScaffoldError(
-            f"Ports must be distinct: api={api} caddy={caddy} frontend={frontend}"
+            f"Ports must be distinct: api={api} caddy={caddy} frontend={frontend} "
+            f"mocked-e2e={mocked}"
         )
+
+
+def _validate_ports_free(repo_root: Path, api: int, caddy: int, frontend: int) -> None:
+    """Refuse any port of the new app, the mocked e2e one included, an existing app already uses."""
+    try:
+        used = _used_ports.ports_in_use(repo_root)
+    except _used_ports.UsedPortsError as exc:
+        raise ScaffoldError(f"Can't read the ports existing apps use: {exc}") from exc
+    clashes = [
+        f"{label}={port} is already used by {', '.join(used[port])}"
+        for label, port in (
+            ("--api-port", api),
+            ("--caddy-port", caddy),
+            ("--frontend-port", frontend),
+            (f"--frontend-port + {_MOCKED_PORT_OFFSET} (mocked e2e)", frontend + _MOCKED_PORT_OFFSET),
+        )
+        if port in used
+    ]
+    if clashes:
+        raise ScaffoldError("Ports clash with existing apps: " + "; ".join(clashes) + ".")
 
 
 def _repo_root() -> Path:
@@ -292,6 +326,7 @@ def scaffold_app(
     _validate_ports(api_port, caddy_host_port, frontend_port)
 
     root = repo_root or _repo_root()
+    _validate_ports_free(root, api_port, caddy_host_port, frontend_port)
     app_dir = root / "apps" / slug
     if app_dir.exists():
         raise ScaffoldError(f"Target {app_dir} already exists. Refusing to overwrite.")
@@ -305,6 +340,7 @@ def scaffold_app(
         "__APP_DISPLAY_NAME__": display_name,
         "__API_PORT__": str(api_port),
         "__FRONTEND_DEV_PORT__": str(frontend_port),
+        "__FRONTEND_MOCKED_PORT__": str(frontend_port + _MOCKED_PORT_OFFSET),
         "__CADDY_HOST_PORT__": str(caddy_host_port),
     }
 

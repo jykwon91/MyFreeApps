@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
 import { localToday } from "./fixtures/local-today";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 /**
  * Layout E2E for the Utility Plans list.
@@ -160,8 +161,8 @@ test.describe("Utility Plans layout", () => {
         await expect(control).toBeVisible();
         const box = await control.boundingBox();
         expect(box, `${testId} has no box`).not.toBeNull();
-        expect(box!.width, `${testId} width`).toBeGreaterThanOrEqual(44);
-        expect(box!.height, `${testId} height`).toBeGreaterThanOrEqual(44);
+        expect(box!.width, `${testId} width`).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+        expect(box!.height, `${testId} height`).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
       }
     } finally {
       if (planId) await api.delete(`/utility-plans/${planId}`).catch(() => {});

@@ -4,11 +4,11 @@
  * display name.
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { TOTP_STATUS_ENDPOINT } from "@platform/ui/test-support/constants/totpStatusEndpoint";
 import { ME_PATH, stubAccountApi } from "@platform/ui/test-support/accountApi";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { TEST_USER, stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { toast } from "@platform/ui/test-support/toast";
-import { TOTP_STATUS_ENDPOINT } from "./constants/authEndpoints";
 
 test.beforeEach(async ({ page }) => {
   await stubSignedInShell(page);

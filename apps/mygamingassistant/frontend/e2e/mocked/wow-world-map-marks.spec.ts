@@ -15,6 +15,7 @@ import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { hideMapLayers } from "./fixtures/mapLayers";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const MARKS_KEY = "mga.wowForever.worldMap.marks.v1";
 const ELWYNN = 1429;
@@ -218,7 +219,7 @@ test.describe("on a phone", () => {
     await expect(menu).toBeVisible();
     // A bottom sheet with big touch targets.
     const item = menu.getByRole("menuitem", { name: "Add a mark here" });
-    expect((await item.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect((await item.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     await item.tap();
     await expect(page.getByRole("img", { name: "Your mark Mark" })).toBeAttached();
     await expect(page.getByRole("button", { name: /^My marks \(1\)/ })).toBeVisible();

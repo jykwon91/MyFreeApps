@@ -12,6 +12,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { LIBRARY_BOOKS as ALL_BOOKS, LIBRARY_CARDS, libraryQuestRewardCount } from "./fixtures/wowForeverDataCounts";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const LIBRARY = "/wow-forever/library";
 const CHECKLIST_KEY = "mga.wowForever.library.checklist.v1";
@@ -159,14 +160,14 @@ test.describe("at 375px", () => {
       foundToggle,
     ]) {
       const box = await control.boundingBox();
-      expect(box?.height).toBeGreaterThanOrEqual(44);
+      expect(box?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     }
 
     await foundToggle.click();
     await expect(page.getByLabel(`Found: ${ANTONIDAS}`)).toBeChecked();
     await expect(page.getByTestId("library-count")).toContainText(`1 of ${ALL_BOOKS} found`);
     const clear = page.getByRole("button", { name: "Clear found" });
-    expect((await clear.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    expect((await clear.boundingBox())?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     const sideways = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );

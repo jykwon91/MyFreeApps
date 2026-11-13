@@ -15,6 +15,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const QUESTS = "/wow-forever/quests";
 const HUB = "/wow-forever";
@@ -177,8 +178,8 @@ test.describe("at 375px", () => {
     await page.goto(QUESTS);
     const toggle = page.getByTestId("quest-filters-toggle");
     const box = await toggle.boundingBox();
-    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
-    expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+    expect(box?.width ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   });
 });
 

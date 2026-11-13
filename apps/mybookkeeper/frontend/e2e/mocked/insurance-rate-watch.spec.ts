@@ -34,6 +34,7 @@ import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import type { AttributionReviewQueueResponse } from "@mybookkeeper/api-client/types/attribution/attribution-review-queue-response";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 // Registered first, so every stub below wins over it. Any call this spec does
 // not stub (the sidebar's integrations and review-queue reads, say) gets an
@@ -329,7 +330,7 @@ test.describe("Check for rate increases", () => {
     await expect(button).toBeVisible({ timeout: 15000 });
     const box = await button.boundingBox();
     expect(box, "check button has no box").not.toBeNull();
-    expect(box!.height, "check button height").toBeGreaterThanOrEqual(44);
+    expect(box!.height, "check button height").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
 
     // The disclosure hiding a card's non-binding filings is tapped, not just
     // read, so it is held to the same floor as the button above it.
@@ -338,7 +339,7 @@ test.describe("Check for rate increases", () => {
     await expect(fold).toBeVisible({ timeout: 15000 });
     const foldBox = await fold.boundingBox();
     expect(foldBox, "fold summary has no box").not.toBeNull();
-    expect(foldBox!.height, "fold summary height").toBeGreaterThanOrEqual(44);
+    expect(foldBox!.height, "fold summary height").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   });
 
   test("a feed outage reads as an outage, not as good news", async ({ page }) => {

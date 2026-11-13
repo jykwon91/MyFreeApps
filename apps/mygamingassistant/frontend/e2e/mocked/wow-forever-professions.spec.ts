@@ -7,6 +7,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubEmptyPrices } from "./fixtures/emptyPrices";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 /** The page's text without the recipe vendors' Classic list prices (the vendor list and route "Buy … from …" lines) — what's left must carry no auction price. */
 function textWithoutVendorPrices(page: Page): Promise<string> {
@@ -173,7 +174,7 @@ test("every crafting radio fits inside the viewport and its group at 375px", asy
   for (const box of boxes) {
     expect(box).not.toBeNull();
     // Touch target: at least 44px tall.
-    expect(box!.height).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     // Every radio must start inside the viewport.
     expect(box!.x).toBeGreaterThanOrEqual(0);
     // Every radio must end inside the viewport (no overflow off the right edge).

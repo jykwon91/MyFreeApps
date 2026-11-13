@@ -14,6 +14,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const COLLAPSE_KEY = "platform.sidebar.collapsed.v1";
 
@@ -144,7 +145,7 @@ test.describe("WoW Forever mobile nav (375px)", () => {
       const box = await link.boundingBox();
       expect(box, `link has no bounding box`).not.toBeNull();
       if (box) {
-        expect(box.height, `touch target too short: ${box.height}px`).toBeGreaterThanOrEqual(44);
+        expect(box.height, `touch target too short: ${box.height}px`).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
       }
     }
   });

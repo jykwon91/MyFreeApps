@@ -11,6 +11,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { LEGACY_CHALLENGES as TOTAL_CHALLENGES } from "./fixtures/wowForeverDataCounts";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const LEGACY = "/wow-forever/legacy";
 const CHECKLIST_KEY = "mga.wowForever.legacy.checklist.v1";
@@ -143,8 +144,8 @@ test("on a phone the trees are tabs with 44px talents", async ({ page }) => {
   await page.getByRole("radio", { name: /Adventure/ }).click();
   await expect(page.getByTestId("legacy-tree-Adventure")).toBeVisible();
   const size = await node(page, WELL_RESTED).boundingBox();
-  expect(size?.width ?? 0).toBeGreaterThanOrEqual(44);
-  expect(size?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect(size?.width ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+  expect(size?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(scrollWidth).toBeLessThanOrEqual(375);
 });

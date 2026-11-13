@@ -1744,6 +1744,8 @@ class TestScaffolderProducesBootableApp:
             "frontend/src/App.tsx",
             "frontend/src/routes.tsx",
             "frontend/src/pages/Login.tsx",
+            "frontend/playwright.layout.config.ts",
+            "frontend/tsconfig.e2e.json",
             "CLAUDE.md",
             "app.yaml",
             "docker/backend.Dockerfile",
@@ -1755,6 +1757,7 @@ class TestScaffolderProducesBootableApp:
             "__APP_DISPLAY_NAME__",
             "__API_PORT__",
             "__FRONTEND_DEV_PORT__",
+            "__FRONTEND_MOCKED_PORT__",
             "__CADDY_HOST_PORT__",
         )
         for f in app_dir.rglob("*"):

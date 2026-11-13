@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 /**
  * Layout E2E for the insurance policy detail page.
@@ -160,7 +161,7 @@ test.describe("Insurance policy detail layout", () => {
         await expect(control).toBeVisible();
         const box = await control.boundingBox();
         expect(box, `${testId} has no box`).not.toBeNull();
-        expect(box!.height, `${testId} height`).toBeGreaterThanOrEqual(44);
+        expect(box!.height, `${testId} height`).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
       }
     } finally {
       if (policyId) await api.delete(`/insurance-policies/${policyId}`).catch(() => {});

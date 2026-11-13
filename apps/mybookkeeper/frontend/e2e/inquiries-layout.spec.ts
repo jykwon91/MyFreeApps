@@ -2,6 +2,7 @@ import { test, expect } from "./fixtures/auth";
 import { holdRequests } from "./fixtures/hold-requests";
 import { expectCardsMatchSkeleton, skeletonCardBox } from "./fixtures/skeleton-card-fit";
 import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 /**
  * Layout E2E for the Inquiries inbox.
@@ -102,6 +103,6 @@ test.describe("Inquiries layout (PR 2.1b)", () => {
     const allChip = page.getByTestId("inquiry-filter-all");
     await expect(allChip).toBeVisible();
     const box = await allChip.boundingBox();
-    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   });
 });

@@ -23,8 +23,13 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _GUARD = "@platform/ui/test-support/crashGuard"
-# e2e/mocked/ plus any sibling suite such as e2e/mocked-serve-only/.
-_MOCKED_SPECS = sorted(_REPO_ROOT.glob("apps/*/frontend/e2e/mocked*/**/*.spec.ts"))
+# e2e/mocked/ plus any sibling suite such as e2e/mocked-serve-only/, in every app and in the web
+# scaffold new_app copies, so a new app starts out guarded.
+_MOCKED_SPEC_GLOBS = (
+    "apps/*/frontend/e2e/mocked*/**/*.spec.ts",
+    "infra/templates/scaffold/frontend/e2e/mocked*/**/*.spec.ts",
+)
+_MOCKED_SPECS = sorted(spec for pattern in _MOCKED_SPEC_GLOBS for spec in _REPO_ROOT.glob(pattern))
 # A value import (not `import type`) from @playwright/test, with its braces' contents.
 _PLAYWRIGHT_VALUE_IMPORT = re.compile(r'import\s+(?!type\b)\{([^}]*)\}\s*from\s*"@playwright/test"')
 # A value namespace (`* as pw`) or default (`pw`, `pw, { ... }`) import from @playwright/test. Either
@@ -174,6 +179,13 @@ def test_extra_context_problems_are_recognised(source: str, problems: list[str])
 
 def test_there_are_mocked_specs_to_check() -> None:
     assert _MOCKED_SPECS, "No apps/*/frontend/e2e/mocked*/*.spec.ts found, so the check below would pass on nothing."
+
+
+def test_scaffold_mocked_specs_are_checked() -> None:
+    assert any(spec.is_relative_to(_REPO_ROOT / "infra" / "templates" / "scaffold") for spec in _MOCKED_SPECS), (
+        "No infra/templates/scaffold/frontend/e2e/mocked*/ spec is in the checked set, so the specs every "
+        "new app starts with go unchecked."
+    )
 
 
 def test_serve_only_mocked_specs_are_checked() -> None:

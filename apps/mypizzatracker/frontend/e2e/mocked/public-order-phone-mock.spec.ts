@@ -5,11 +5,11 @@
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { apiPath } from "@platform/ui/test-support/apiPath";
+import { PHONE_VIEWPORT } from "@platform/ui/test-support/constants/phoneViewport";
 import { measureBoxes } from "@platform/ui/test-support/layoutShift";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { holdReads } from "@platform/ui/test-support/routeControls";
 import { CARD } from "./constants/layoutSelectors";
-import { PHONE_VIEWPORT } from "./constants/phoneViewport";
 import { ORDER_PLACED_HEADING } from "./constants/publicCopy";
 import { fillDetails } from "./fixtures/publicOrderForm";
 import { expectSameColumns, skeletonCards } from "./fixtures/skeletonLayout";

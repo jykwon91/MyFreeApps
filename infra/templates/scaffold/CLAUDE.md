@@ -55,6 +55,7 @@ apps/__APP_SLUG__/
 | Caddy (docker) | __CADDY_HOST_PORT__ (host) -> :80 (container) |
 | Backend (uvicorn) | __API_PORT__ |
 | Frontend (dev) | __FRONTEND_DEV_PORT__ |
+| Frontend (mocked Playwright) | __FRONTEND_MOCKED_PORT__ |
 | PostgreSQL (dev) | see docker-compose.yml |
 
 Domain: `__APP_SLUG__.myfreeapps.org`
@@ -86,7 +87,17 @@ npm run build     # TypeScript check + Vite build
 npm run typecheck
 npm run lint
 npm test
+npm run typecheck:e2e
+CI=1 npx playwright test -c playwright.layout.config.ts   # mocked suite, no backend
 ```
+
+**Mocked E2E (no backend)**: specs in `frontend/e2e/mocked/*-mock.spec.ts` answer every API call
+with `page.route()`. They run against a Vite server on :__FRONTEND_MOCKED_PORT__ (the dev port + 1);
+`PW_PORT=<port>` overrides it. Every spec imports `test`/`expect` from
+`@platform/ui/test-support/crashGuard` (CI enforces it). Shared stubs and constants (`stubSignedInShell`,
+`stubLogin`, `routeControls`, `constants/*`) live in `@platform/ui/test-support/`. `new_app` refuses
+ports another app already uses, including this mocked port. The `web-scaffold` job in
+`ci-shared-frontend.yml` runs this suite against a freshly generated app.
 
 ## Architecture Rules
 

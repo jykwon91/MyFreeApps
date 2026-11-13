@@ -9,6 +9,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { ALL_BEASTS, PET_FAMILIES, familyBeastCount } from "./fixtures/wowForeverDataCounts";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const PAGE = "/wow-forever/hunter-pets";
 /** Beasts shown before "Show more". */
@@ -113,9 +114,9 @@ test.describe("at 375px", () => {
     await expect(page.getByTestId("family-card").first()).toBeVisible();
     expect(await noSideways(page)).toBeLessThanOrEqual(0);
     for (const card of (await page.getByTestId("family-card").all()).slice(0, 3)) {
-      expect((await card.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect((await card.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     }
-    expect((await page.getByLabel("Search").boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
-    expect((await page.getByTestId("beasts-show-more").boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect((await page.getByLabel("Search").boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+    expect((await page.getByTestId("beasts-show-more").boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   });
 });

@@ -9,6 +9,8 @@
  */
 import type { Page } from "@playwright/test";
 import { expect, test } from "@platform/ui/test-support/crashGuard";
+import { LOGIN_ENDPOINT } from "@platform/ui/test-support/constants/loginEndpoint";
+import { TOTP_STATUS_ENDPOINT } from "@platform/ui/test-support/constants/totpStatusEndpoint";
 
 const TRIAGE = "/wow-forever/triage";
 const OPERATOR_EMAIL = "operator@fixture.example";
@@ -25,7 +27,7 @@ async function mockOperatorApi(page: Page): Promise<void> {
     (url) => url.pathname.startsWith("/api/"),
     (route) => route.fulfill({ status: 404, json: { detail: "Not Found" } }),
   );
-  await page.route("**/api/auth/totp/login", (route) =>
+  await page.route(LOGIN_ENDPOINT, (route) =>
     route.fulfill({ json: { access_token: FIXTURE_TOKEN, token_type: "bearer" } }),
   );
   await page.route("**/api/users/me", (route) =>
@@ -33,7 +35,7 @@ async function mockOperatorApi(page: Page): Promise<void> {
       json: { id: "fixture-operator", email: OPERATOR_EMAIL, is_active: true, is_superuser: true, is_verified: true },
     }),
   );
-  await page.route("**/api/auth/totp/status", (route) => route.fulfill({ json: { enabled: false } }));
+  await page.route(TOTP_STATUS_ENDPOINT, (route) => route.fulfill({ json: { enabled: false } }));
   await page.route("**/wow/feature-requests/triage/**", (route) => {
     if (route.request().headers()["authorization"] !== `Bearer ${FIXTURE_TOKEN}`) {
       return route.fulfill({ status: 401, json: { detail: "Unauthorized" } });

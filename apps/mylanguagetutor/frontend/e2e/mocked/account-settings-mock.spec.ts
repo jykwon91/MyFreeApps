@@ -8,12 +8,14 @@
 import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { TEST_PASSWORD } from "@platform/ui/test-support/constants/testPassword";
+import { WRONG_PASSWORD } from "@platform/ui/test-support/constants/wrongPassword";
 import { ME_PATH, stubAccountApi } from "@platform/ui/test-support/accountApi";
 import { createGate } from "@platform/ui/test-support/gate";
 import { json, plainText } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell, TEST_USER } from "@platform/ui/test-support/mockSession";
 import { toast, toastAboveModal } from "@platform/ui/test-support/toast";
-import { TEST_PASSWORD, TOTP_CODE, WRONG_PASSWORD } from "./constants/accountCredentials";
+import { TOTP_CODE } from "./constants/accountCredentials";
 import { EXPORT_ROUTE } from "./constants/accountEndpoints";
 import { INCORRECT_PASSWORD, INTERNAL_ERROR } from "./constants/refusalDetails";
 import {

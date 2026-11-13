@@ -12,6 +12,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { RARE_FIT_LEVELS_ABOVE, RARE_FIT_LEVELS_BELOW } from "../../src/games/wow-forever/data/rares/raresConfig";
 import { ALL_RARES, CONFIRMED_RARES, FIT_LEVELS_ABOVE, FIT_LEVELS_BELOW, rareCount } from "./fixtures/wowRaresDataCounts";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const RARES = "/wow-forever/rares";
 const PLAYER_KEY = "mga.wowForever.worldMap.player.v1";
@@ -233,9 +234,9 @@ test.describe("at 375px", () => {
     await expect(page.getByTestId("rare-row")).toHaveCount(ALL_RARES);
     expect(await noSideways(page)).toBeLessThanOrEqual(0);
     const box = await page.getByTestId("rare-row").first().getByRole("link", { name: "Show on map" }).boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     const zone = await page.getByLabel("Zone").boundingBox();
-    expect(zone?.height).toBeGreaterThanOrEqual(44);
+    expect(zone?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   });
 });
 

@@ -30,6 +30,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 // Registered first, so every stub below wins over it. Any call this spec does
 // not stub (the sidebar's integrations and review-queue reads, say) gets an
@@ -286,7 +287,7 @@ test.describe("Find a better plan", () => {
         expect(
           enrollBox!.height,
           `${testId} height at ${size.width}px`,
-        ).toBeGreaterThanOrEqual(44);
+        ).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
       }
     }
 
@@ -296,7 +297,7 @@ test.describe("Find a better plan", () => {
     await expect(button).toBeVisible({ timeout: 15000 });
     const box = await button.boundingBox();
     expect(box, "search button has no box").not.toBeNull();
-    expect(box!.height, "search button height").toBeGreaterThanOrEqual(44);
+    expect(box!.height, "search button height").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   });
 
   test("a feed outage reads as a feed outage, not as a bad rate", async ({ page }) => {

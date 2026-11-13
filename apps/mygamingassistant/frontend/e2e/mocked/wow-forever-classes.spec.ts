@@ -8,6 +8,7 @@
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 const CLASSES = "/wow-forever/classes";
@@ -15,7 +16,6 @@ const WARRIOR = `${CLASSES}/warrior`;
 const MAGE = `${CLASSES}/mage`;
 const DRUID = `${CLASSES}/druid`;
 const CLASS_COUNT = 9;
-const MIN_TARGET_PX = 44;
 
 async function noSideways(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -184,7 +184,7 @@ test.describe("at 375px", () => {
     // Cards are touch-friendly.
     const firstCard = page.getByTestId(/^class-card-/).first();
     const box = await firstCard.boundingBox();
-    expect(box?.height, "card height").toBeGreaterThanOrEqual(MIN_TARGET_PX);
+    expect(box?.height, "card height").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   });
 
   test("the class hub fits a phone with no sideways scroll", async ({ page }) => {

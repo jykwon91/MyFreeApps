@@ -13,6 +13,5 @@ export const RATE_LIMIT_GENERIC_DETAIL = "Too many attempts";
 export const UNAUTHORIZED = "Unauthorized";
 /** require_current_password's refusal of a wrong password (platform_shared/auth/require_current_password.py), a 403. */
 export const INCORRECT_PASSWORD = "Incorrect password";
-/** fastapi-users' login refusals (ErrorCode.LOGIN_BAD_CREDENTIALS, LOGIN_USER_NOT_VERIFIED), each a 400. */
-export const LOGIN_BAD_CREDENTIALS = "LOGIN_BAD_CREDENTIALS";
+/** fastapi-users' refusal of an unverified email at login (ErrorCode.LOGIN_USER_NOT_VERIFIED), a 400. */
 export const LOGIN_USER_NOT_VERIFIED = "LOGIN_USER_NOT_VERIFIED";

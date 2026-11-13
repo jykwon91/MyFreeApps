@@ -17,6 +17,7 @@
 import type { Page, Route } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const SHEET_PATTERN = (url: URL) => /\/wow\/characters\/[^/]+$/.test(url.pathname);
 const RENDER_PATTERN = "**/wow/characters/*/render.png";
@@ -406,11 +407,11 @@ test("375px phone layout: the picture comes first and nothing overflows", async 
   await talents.getByRole("radio", { name: /Demonology/ }).click();
   await expect(talents.getByRole("region", { name: "Demonology talents" })).toBeVisible();
   const link = await page.getByRole("link", { name: "Open in the talent calculator" }).boundingBox();
-  expect(link?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect(link?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   const tab = await page.getByRole("tab", { name: "Defenses" }).boundingBox();
-  expect(tab?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect(tab?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   const header = await page.getByRole("button", { name: /Steamwheedle/ }).boundingBox();
-  expect(header?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect(header?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });

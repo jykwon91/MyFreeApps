@@ -10,6 +10,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const DEADMINES = "/wow-forever/dungeons/deadmines";
 const RAGEFIRE = "/wow-forever/dungeons/ragefire-chasm";
@@ -127,12 +128,12 @@ test.describe("at 375px", () => {
     await page.goto(DEADMINES);
     const row = questRow(page, DEFIAS_BROTHERHOOD);
     const toggle = row.getByTestId("dungeon-quest-toggle");
-    expect((await toggle.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
-    expect((await quests(page).getByRole("radio", { name: "Horde" }).boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect((await toggle.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+    expect((await quests(page).getByRole("radio", { name: "Horde" }).boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     await toggle.click();
     const mapLink = row.getByTestId("quest-giver-map-link");
-    expect((await mapLink.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
-    expect((await row.getByTestId("quest-reward-row").first().boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect((await mapLink.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+    expect((await row.getByTestId("quest-reward-row").first().boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     expect(await noSideways(page)).toBeLessThanOrEqual(0);
   });
 });

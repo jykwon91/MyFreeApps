@@ -21,6 +21,7 @@ import {
   smallPlanFixture,
   type PlanRoutes,
 } from "../fixtures/raidPlan";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const SITE_TITLE = "MyGamingAssistant";
 const LINK_PROBLEM = "Planner link missing or expired";
@@ -336,8 +337,8 @@ test("on a phone it never scrolls sideways, every control is a 44 px tap, and Mo
   for (const control of controls) {
     await control.scrollIntoViewIfNeeded();
     const box = await control.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
-    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+    expect(box?.width).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   }
 
   // The phone's own picker: here, the select's value.
