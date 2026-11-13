@@ -5,6 +5,7 @@ import GuildRefreshNotice from "@/games/wow-forever/components/guild/GuildRefres
 import GuildStateNotice from "@/games/wow-forever/components/guild/GuildStateNotice";
 import GuildSummary from "@/games/wow-forever/components/guild/GuildSummary";
 import { GUILD_LOAD_PROBLEM, GUILD_NOT_FOUND_STATUS, GUILD_PAGE_STATES } from "@/games/wow-forever/data/guild/guildConfig";
+import { useGuildTab } from "@/games/wow-forever/hooks/useGuildTab";
 import { statusOf } from "@/games/wow-forever/lib/raidPageError";
 import type { GuildResponse } from "@/games/wow-forever/types/guild/guildResponse";
 
@@ -17,8 +18,9 @@ interface GuildPageBodyProps {
 
 /** The guild page below its header: the members, or the state that stands in for them. */
 export default function GuildPageBody({ guild, error, isFetching, onRetry }: GuildPageBodyProps) {
+  const [tab, setTab] = useGuildTab();
   if (!guild) {
-    if (isFetching) return <GuildPageSkeleton />;
+    if (isFetching) return <GuildPageSkeleton tab={tab} />;
     if (error && statusOf(error) !== GUILD_NOT_FOUND_STATUS) {
       return (
         <div role="alert" className="rounded-xl border border-destructive/40 bg-card p-4 space-y-3 text-sm">
@@ -40,7 +42,7 @@ export default function GuildPageBody({ guild, error, isFetching, onRetry }: Gui
         <GuildStateNotice state={GUILD_PAGE_STATES.collecting} onRetry={onRetry} retrying={isFetching} />
       ) : null}
       {guild.members.length > 0 ? (
-        <GuildPageSections guild={guild} />
+        <GuildPageSections guild={guild} tab={tab} onTab={setTab} />
       ) : null}
     </>
   );

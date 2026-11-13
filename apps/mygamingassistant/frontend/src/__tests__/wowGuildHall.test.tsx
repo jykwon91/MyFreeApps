@@ -1,17 +1,17 @@
 /**
  * The guild page's fun sections, rendered: the banner, this week's heroes, your quests (and the nudge without
- * `?me=`), hot races, the Hall of Titles' medallions, the Arena's champion ribbon, and the folding roll call.
+ * `?me=`), hot races, the Hall of Titles' medallions, the Arena's champion ribbon, and the roll call, each in its tab.
  */
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import GuildPageSections from "@/games/wow-forever/components/guild/GuildPageSections";
 import GuildSummary from "@/games/wow-forever/components/guild/GuildSummary";
 import GuildTitleMedallion from "@/games/wow-forever/components/guild/GuildTitleMedallion";
 import { CLASS_COLORS } from "@/games/wow-forever/data/guild/classColors";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
 import type { GuildMemberBaseline } from "@/games/wow-forever/types/guild/guildMemberBaseline";
 import type { GuildResponse } from "@/games/wow-forever/types/guild/guildResponse";
+import GuildSectionsHarness from "@/test/GuildSectionsHarness";
 import { Swords } from "lucide-react";
 
 vi.mock("@/games/wow-forever/api/wowGuildApi", () => ({
@@ -49,7 +49,7 @@ const GUILD: GuildResponse = {
 function renderSections(search = "") {
   return render(
     <MemoryRouter initialEntries={[`/wow-forever/guild/topdeadcenter${search}`]}>
-      <GuildPageSections guild={GUILD} />
+      <GuildSectionsHarness guild={GUILD} />
     </MemoryRouter>,
   );
 }
@@ -75,13 +75,29 @@ describe("the banner", () => {
 });
 
 describe("the fun sections", () => {
-  it("come first, in order, and the member list comes last", () => {
+  it("sit in tabs: this week (heroes, your quests, hot races) open first, then titles, the Arena, crafting and the roster", () => {
     renderSections("?me=tiny");
-    const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
-    expect(headings.slice(0, 5)).toEqual(["This week's heroes", "Your quests", "Hot races", "Hall of Titles", "The Arena"]);
-    expect(screen.getByText("Roll call (3)")).toBeInTheDocument();
-    expect(screen.queryByText("Leaderboards")).toBeNull();
-    expect(screen.queryByText("Guild titles")).toBeNull();
+    const tabs = within(screen.getByRole("tablist", { name: "Guild sections" })).getAllByRole("tab");
+    expect(tabs.map((t) => t.textContent)).toEqual(["This week", "Titles", "Arena", "Who can craft?", "Roster"]);
+    expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+    const panel = screen.getByRole("tabpanel", { name: "This week" });
+    expect(within(panel).getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["This week's heroes", "Your quests", "Hot races"]);
+    // Only the open tab renders.
+    expect(screen.queryByRole("region", { name: "Hall of Titles" })).toBeNull();
+    expect(screen.queryByText("Roll call (3)")).toBeNull();
+  });
+
+  it("switches tabs by click and by arrow keys, only the open tab in the Tab order", () => {
+    renderSections();
+    fireEvent.click(screen.getByRole("tab", { name: "Roster" }));
+    expect(screen.getByRole("tabpanel", { name: "Roster" })).toHaveTextContent("Roll call (3)");
+    expect(screen.getByRole("tab", { name: "Roster" })).toHaveAttribute("tabIndex", "0");
+    expect(screen.getByRole("tab", { name: "This week" })).toHaveAttribute("tabIndex", "-1");
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Roster" }), { key: "ArrowRight" });
+    expect(screen.getByRole("tab", { name: "This week" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "This week" })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("tab", { name: "This week" }), { key: "End" });
+    expect(screen.getByRole("region", { name: /Roll call/ })).toBeInTheDocument();
   });
 
   it("heroes: one card per gains board with the leader, '+N', a chase hint, and a rolling window (never 'resets')", () => {
@@ -109,7 +125,7 @@ describe("the fun sections", () => {
   it("hot races: a board whose title wasn't given out (too few ranked) names no title", () => {
     render(
       <MemoryRouter>
-        <GuildPageSections guild={{ ...GUILD, members: MEMBERS.slice(0, 2) }} />
+        <GuildSectionsHarness guild={{ ...GUILD, members: MEMBERS.slice(0, 2) }} />
       </MemoryRouter>,
     );
     const duels = within(screen.getByRole("list", { name: "Hot races" })).getAllByRole("listitem");
@@ -138,7 +154,7 @@ describe("the fun sections", () => {
   });
 
   it("the Hall of Titles: flavour, rarity and the challenger on each card", () => {
-    renderSections();
+    renderSections("?tab=titles");
     const hall = within(screen.getByRole("region", { name: "Hall of Titles" }));
     const bloodletter = hall.getAllByRole("listitem").find((li) => li.textContent?.includes("Bloodletter"));
     expect(bloodletter).toHaveTextContent("Legendary");
@@ -156,12 +172,10 @@ describe("the fun sections", () => {
     expect(podium[0]).toHaveStyle({ "--c-light": CLASS_COLORS.warrior.light });
   });
 
-  it("the roll call folds the member list away and starts open", () => {
-    const { container } = renderSections();
-    const details = container.querySelector("details");
-    expect(details).toHaveAttribute("open");
-    expect(within(details as HTMLElement).getByText("Roll call (3)")).toBeInTheDocument();
-    expect(within(details as HTMLElement).getByText("Showing 3 of 3 members")).toBeInTheDocument();
+  it("the roll call is the Roster tab: a heading with the count, then the member list", () => {
+    renderSections("?tab=roster");
+    const rollCall = screen.getByRole("region", { name: "Roll call (3)" });
+    expect(within(rollCall).getByText("Showing 3 of 3 members")).toBeInTheDocument();
   });
 });
 

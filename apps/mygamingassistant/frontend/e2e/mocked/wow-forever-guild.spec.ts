@@ -1,18 +1,20 @@
 /**
  * WoW Forever guild page (/wow-forever/guild, topdeadcenter only) — E2E, network-stubbed.
  *
+ *   - tabs (This week / Titles / Arena / Who can craft? / Roster) kept in `?tab=`; older links open
+ *     the tab holding what they point at; the tab row scrolls sideways on a 375px phone
  *   - the guild badge on a character's sheet opens the guild page, marking that character
  *   - recipe search: who knows a recipe, with their skill; the search lives in the URL
  *   - leaderboards: pick a board, ties share a rank, the board lives in the URL
  *   - gains boards ("This week"): who gained what since when, and who isn't ranked
  *   - faction standing board: pick a faction (in the URL), ranked by tier, an old link falls back, retry
- *   - Hall of Titles: rarity medallions, flavour, challengers; the fun sections (heroes, quests, hot races) come first
+ *   - Hall of Titles: rarity medallions, flavour, challengers; This week holds heroes, quests and hot races in that order
  *   - 375px phone: the heroes row snaps sideways inside itself, nothing overflows
  *   - members by rank; a name opens that member's character page
  *   - search, class filter and column sort, kept in the URL across Back
  *   - nothing matches → Clear filters brings everyone back
  *   - before we have the guild, the page says how to get it collected
- *   - skeleton while loading, then the list in the same place
+ *   - skeleton while loading (banner, tab row, the open tab's body), then the page in the same place
  *   - 375px phone layout: members as cards, nothing overflows
  *   - the Guild menu item: search by name → open a guild; once a character is looked up it opens
  *     their guild, and "Find another guild" gets back to the search (on a phone too)
@@ -107,10 +109,12 @@ test("the guild badge opens the guild page, and a member's name opens their char
   await expect(page).toHaveURL(/\/wow-forever\/guild\?me=jason-kwon$/);
 
   await expect(page.getByRole("heading", { name: "<TopDeadCenter>" })).toBeVisible();
+  await page.getByRole("tab", { name: "Arena", exact: true }).click();
   const levelBoard = page.getByRole("list", { name: "Level leaderboard" }).locator("li");
   await expect(levelBoard).toHaveCount(3);
   await expect(levelBoard.nth(1)).toContainText("Jason Kwon");
   await expect(levelBoard.nth(1)).toContainText("You");
+  await page.getByRole("tab", { name: "Roster", exact: true }).click();
   await expect(page.getByText("3 of 4 members shown")).toBeVisible();
   await expect(page.getByText(/1 member has no profile from Blizzard/)).toBeVisible();
   await expect(memberNames(page)).toHaveText(["Jason Kwon", "Big Sue", "Tiny John"]);
@@ -122,7 +126,7 @@ test("the guild badge opens the guild page, and a member's name opens their char
 
 test("search, class filter and sort live in the URL and survive Back", async ({ page }) => {
   await stubAll(page);
-  await page.goto("/wow-forever/guild");
+  await page.goto("/wow-forever/guild?tab=roster");
 
   await page.getByRole("table").getByRole("button", { name: "Level", exact: true }).click();
   await expect(memberNames(page)).toHaveText(["Big Sue", "Jason Kwon", "Tiny John"]);
@@ -142,7 +146,7 @@ test("search, class filter and sort live in the URL and survive Back", async ({ 
   await expect(page.getByText("No members match.")).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(memberNames(page)).toHaveText(["Jason Kwon", "Big Sue", "Tiny John"]);
-  await expect(page).toHaveURL(/\/wow-forever\/guild$/);
+  await expect(page).toHaveURL(/\/wow-forever\/guild\?tab=roster$/);
 });
 
 test("before we have the guild, the page says how to get it collected", async ({ page }) => {
@@ -162,13 +166,15 @@ test("skeleton while loading, then the member list in the same place", async ({ 
     await held;
     await json(route, guild());
   });
-  await page.goto("/wow-forever/guild");
+  await page.goto("/wow-forever/guild?tab=arena");
   const skeleton = page.getByTestId("guild-page-skeleton");
   await expect(skeleton).toBeVisible();
-  await expect(page.getByTestId("guild-recipe-search-skeleton")).toBeVisible();
+  await expect(page.getByTestId("guild-banner-skeleton")).toBeVisible();
+  await expect(page.getByTestId("guild-tabs-skeleton")).toBeVisible();
   await expect(page.getByTestId("guild-leaderboard-skeleton")).toBeVisible();
   await expect(page.getByTestId("guild-podium-skeleton")).toBeVisible();
-  await expect(page.getByTestId("guild-titles-skeleton")).toBeVisible();
+  await expect(page.getByTestId("guild-heroes-skeleton")).toHaveCount(0);
+  await expect(page.getByTestId("guild-roster-skeleton")).toHaveCount(0);
   const skeletonBox = await skeleton.boundingBox();
   const podiumHeights = async (cards: Locator) =>
     cards.evaluateAll((els) => els.slice(0, 2).map((e) => e.getBoundingClientRect().height));
@@ -180,18 +186,17 @@ test("skeleton while loading, then the member list in the same place", async ({ 
   await expect(summary).toBeVisible();
   const summaryBox = await summary.boundingBox();
   expect(Math.abs((summaryBox?.x ?? 0) - (skeletonBox?.x ?? 0))).toBeLessThan(2);
-  await expect(memberNames(page)).toHaveCount(3);
+  await expect(page.getByRole("tab", { name: "Arena", exact: true })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("region", { name: "The Arena" })).toBeVisible();
   // The podium skeleton is the loaded podium's size, so the board doesn't jump when it arrives.
   const loadedCards = await podiumHeights(page.getByRole("list", { name: "Level leaderboard" }).locator("li"));
   loadedCards.forEach((height, i) => expect(Math.abs(height - skeletonCards[i])).toBeLessThan(4));
-  await expect(page.getByRole("region", { name: "Who can craft this?" })).toBeVisible();
 });
 
 test("375px phone layout: members as cards and nothing overflows", async ({ page }) => {
   await stubAll(page);
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/wow-forever/guild");
+  await page.goto("/wow-forever/guild?tab=roster");
   const cards = page.getByRole("list", { name: "Guild members" }).locator("li");
   await expect(cards).toHaveCount(3);
   await expect(cards.first()).toContainText("Level 37 · Warlock · item level 28 · Guild master");
@@ -202,7 +207,7 @@ test("375px phone layout: members as cards and nothing overflows", async ({ page
 
 test("leaderboards: pick a board, ties share a rank, and the board survives Back", async ({ page }) => {
   await stubAll(page);
-  await page.goto("/wow-forever/guild");
+  await page.goto("/wow-forever/guild?tab=arena");
 
   await page.getByRole("button", { name: "PvP" }).click();
   await expect(page.getByRole("button", { name: "PvP" })).toHaveAttribute("aria-pressed", "true");
@@ -292,7 +297,7 @@ test("Hall of Titles: medallion badges by a leader's name (rarest first), every 
     json(route, { ...g, members: g.members.map((m, i) => ({ ...m, killing_blows: kb[i] })) }),
   );
   await page.route(SHEET_PATTERN, (route) => json(route, character(new URL(route.request().url()).pathname.split("/").pop() ?? "")));
-  await page.goto("/wow-forever/guild");
+  await page.goto("/wow-forever/guild?tab=titles");
 
   // The hall: Tiny John leads honorable kills (112) and killing blows; Big Sue is the only 60.
   const strip = page.getByRole("region", { name: "Hall of Titles" });
@@ -309,7 +314,8 @@ test("Hall of Titles: medallion badges by a leader's name (rarest first), every 
   // Rarest first: the legendary title leads the hall.
   await expect(cards.first()).toContainText("Bloodletter");
 
-  // By the name in the member table: up to three titles, rarest first, so both show and there's no "+N".
+  // By the name in the member table (Roster tab): up to three titles, rarest first, so both show and there's no "+N".
+  await page.getByRole("tab", { name: "Roster", exact: true }).click();
   const row = page.getByRole("table").getByRole("row").filter({ hasText: "Tiny John" });
   await expect(row).toContainText("Guild title: Bloodletter (most honorable kills)");
   await expect(row.getByText("Deathblow", { exact: true })).toBeVisible();
@@ -366,7 +372,7 @@ test("gains board: who gained what since when, who isn't ranked and why, on a ph
   await stubAll(page);
   await page.route(GUILD_PATTERN, (route) => json(route, gainsGuild()));
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto("/wow-forever/guild?me=big-sue");
+  await page.goto("/wow-forever/guild?me=big-sue&tab=arena");
 
   await page.getByRole("button", { name: "This week" }).click();
   await page.getByLabel("Rank members by").selectOption("honorable-kills-gained");
@@ -411,7 +417,7 @@ test("recipe search: who knows it and their skill, kept in the URL across Back",
     asked.push(q);
     return json(route, recipeSearch(q));
   });
-  await page.goto("/wow-forever/guild");
+  await page.goto("/wow-forever/guild?tab=crafting");
 
   await page.getByLabel("Recipe", { exact: true }).fill("l");
   await page.waitForTimeout(600);
@@ -598,18 +604,19 @@ test("375px phone: heroes snap sideways inside their own row, hot races and your
     expect(box.x + box.width).toBeLessThanOrEqual(375);
   }
 
-  // The fun sections come first, the roll call last.
-  const names = ["This week's heroes", "Your quests", "Hot races", "Hall of Titles", "The Arena"];
+  // This week's sections run heroes, quests, hot races; the tabs run This week to Roster.
+  const names = ["This week's heroes", "Your quests", "Hot races"];
   const tops = await Promise.all(names.map(async (name) => (await page.getByRole("region", { name }).boundingBox())!.y));
   expect([...tops].sort((a, b) => a - b)).toEqual(tops);
-  const rollCall = await page.getByText("Roll call (3)").boundingBox();
-  expect(rollCall!.y).toBeGreaterThan(tops[4]);
+  await expect(page.getByRole("tablist", { name: "Guild sections" }).getByRole("tab")).toHaveText([
+    "This week", "Titles", "Arena", "Who can craft?", "Roster",
+  ]);
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
-test("without ?me= your quests become a one-line nudge, and the roll call folds the members away", async ({ page }) => {
+test("without ?me= your quests become a one-line nudge, and the Roster tab lists the members", async ({ page }) => {
   await stubAll(page);
   await page.route(GUILD_PATTERN, (route) => json(route, funGuild()));
   await page.goto("/wow-forever/guild/topdeadcenter");
@@ -617,9 +624,62 @@ test("without ?me= your quests become a one-line nudge, and the roll call folds 
   await expect(page.getByText(/Want your own quests\?/)).toBeVisible();
   await expect(page.getByRole("link", { name: "Look up your character" })).toHaveAttribute("href", "/wow-forever/character");
 
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await page.getByRole("tab", { name: "Roster", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Roll call (3)" })).toBeVisible();
   await expect(memberNames(page)).toHaveCount(3);
-  await page.getByText("Roll call (3)").click();
-  await expect(page.getByRole("table")).toBeHidden();
-  await page.getByText("Roll call (3)").click();
+});
+
+test("375px phone: the tab row scrolls sideways, tabs are 44px tall, and a link to the last tab shows it", async ({ page }) => {
+  await stubAll(page);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/wow-forever/guild?tab=roster");
+  const roster = page.getByRole("tab", { name: "Roster", exact: true });
+  await expect(roster).toHaveAttribute("aria-selected", "true");
+  await expect(roster).toBeInViewport();
+  const rosterBox = (await roster.boundingBox())!;
+  expect(rosterBox.x + rosterBox.width).toBeLessThanOrEqual(375);
+  const tabs = page.getByRole("tablist", { name: "Guild sections" }).getByRole("tab");
+  await expect(tabs).toHaveCount(5);
+  for (const i of [0, 1, 2, 3, 4]) {
+    const box = (await tabs.nth(i).boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+  }
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("an old ?board= link opens the Arena tab and names it in the URL", async ({ page }) => {
+  await stubAll(page);
+  await page.goto("/wow-forever/guild?board=honorable-kills");
+  await expect(page.getByRole("tab", { name: "Arena", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("region", { name: "The Arena" })).toBeVisible();
+  await expect(page).toHaveURL(/tab=arena/);
+});
+
+test("picking a tab keeps it in the URL and the skeleton sketches the open tab", async ({ page }) => {
+  await stubAll(page);
+  await page.goto("/wow-forever/guild");
+  await page.getByRole("tab", { name: "Titles", exact: true }).click();
+  await expect(page).toHaveURL(/tab=titles/);
+  await expect(page.getByRole("region", { name: "Hall of Titles" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("tab", { name: "Titles", exact: true })).toHaveAttribute("aria-selected", "true");
+
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.unroute(GUILD_PATTERN);
+  await page.route(GUILD_PATTERN, async (route) => {
+    await held;
+    await json(route, guild());
+  });
+  await page.goto("/wow-forever/guild?tab=roster");
+  await expect(page.getByTestId("guild-tabs-skeleton")).toBeVisible();
+  await expect(page.getByTestId("guild-roster-skeleton")).toBeVisible();
+  await expect(page.getByTestId("guild-heroes-skeleton")).toHaveCount(0);
+  release();
+  await expect(page.getByTestId("guild-page-skeleton")).toHaveCount(0);
   await expect(memberNames(page)).toHaveCount(3);
 });

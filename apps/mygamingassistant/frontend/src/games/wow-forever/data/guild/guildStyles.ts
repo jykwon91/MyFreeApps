@@ -50,7 +50,6 @@ export const TITLE_PIP = "rounded-full border border-current px-1.5 text-[10px] 
 
 /** A section of the fun part of the guild page. */
 export const HALL_SECTION = "space-y-3 rounded-xl border bg-card p-3 sm:p-4";
-export const ROLL_CALL_SECTION = `group ${HALL_SECTION}`;
 export const HALL_HEADING = "flex items-center gap-2 text-lg font-bold";
 /** A title card in the Hall of Titles; the tier's tint goes with it. */
 export const TITLE_CARD = "flex flex-col gap-1.5 rounded-xl border-2 p-3";
