@@ -51,25 +51,21 @@ _DISPLAY_POWER_TO_RESOURCE: dict[int, str] = {
 }
 
 
-def build_class_details() -> dict[str, dict[str, int | str]]:
-    """Read ChrClasses from wago.tools and return {slug: {icon, resource}}."""
-    rows = wago_table("ChrClasses", hotfixes=True)
-    columns = rows[0]
-    id_col = columns.index("ID")
-    icon_col = columns.index("IconFileDataID")
-    power_col = columns.index("DisplayPower")
-
+def class_details(rows: list[dict[str, str]]) -> dict[str, dict[str, int | str]]:
+    """ChrClasses rows (one dict per row, keyed by column) → {slug: {icon, resource}}."""
     result: dict[str, dict[str, int | str]] = {}
-    for row in rows[1:]:
-        class_id = int(row[id_col])
-        slug = _CLASS_ID_TO_SLUG.get(class_id)
+    for row in rows:
+        slug = _CLASS_ID_TO_SLUG.get(int(row["ID"]))
         if slug is None:
             continue
-        icon = int(row[icon_col])
-        display_power = int(row[power_col])
-        resource = _DISPLAY_POWER_TO_RESOURCE.get(display_power, "mana")
-        result[slug] = {"icon": icon, "resource": resource}
+        resource = _DISPLAY_POWER_TO_RESOURCE.get(int(row["DisplayPower"]), "mana")
+        result[slug] = {"icon": int(row["IconFileDataID"]), "resource": resource}
     return result
+
+
+def build_class_details() -> dict[str, dict[str, int | str]]:
+    """Read ChrClasses from wago.tools and return {slug: {icon, resource}}."""
+    return class_details(wago_table("ChrClasses", hotfixes=True))
 
 
 def main() -> None:

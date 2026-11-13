@@ -172,7 +172,7 @@ describe("loadItemPage", () => {
   });
 
   it("says a Classic item Forever hasn't shown yet is unseen, with its Classic name", async () => {
-    expect(await loadItemPage(809)).toEqual({ kind: ITEM_PAGE_RESULT.unseen, id: 809, name: "Bloodrazor" });
+    expect(await loadItemPage(913)).toEqual({ kind: ITEM_PAGE_RESULT.unseen, id: 913, name: "Huge Ogre Sword" });
   });
 
   it("says an id that's no item is unknown", async () => {

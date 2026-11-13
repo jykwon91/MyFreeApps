@@ -47,7 +47,7 @@
 "6282":[6282,"Harpies Threaten",26,18,"H","",[["npc",11860,"Maggran Earthbinder",1442,"Sun Rock Retreat",47.2,61.2,null]],[],[["npc",4022,7],["npc",4025,7],["npc",4024,7],["npc",4023,7]],[],[],["npc:11860"],true,[6283]],
 "6602":[6602,"Blood of the Black Dragon Champion",60,55,"H","",[["npc",10182,"Rexxar",1444,"The Twin Colossals",46.4,18.2,null]],[4903,4941,4974,6566,6567,6568,6569,6570,6582,6585,6601],[["item",16663,1]],[[16309,1]],[],["npc:10182"],true,[]],
 "6922":[6922,"Baron Aquanis",30,21,"H","",[["item",16782,"Strange Water Globe",null,"",null,null,null]],[],[["item",16782,1]],[],[[16886,1],[16887,1]],["npc:12736"],false,[]],
-"7498":[7498,"Garona: A Study on Stealth and Treachery",60,54,"N","rogue",[["item",18356,"Garona: A Study on Stealth and Treachery",null,"",null,null,null]],[],[["item",18356,1]],[],[],["npc:14383"],false,[]],
+"7498":[7498,"Garona: A Study on Stealth and Treachery",60,54,"N","rogue",[["item",18356,"Garona: A Study on Stealth and Treachery",null,"",null,null,null]],[],[["item",18356,1]],[[18465,1]],[],["npc:14383"],false,[]],
 "7562":[7562,"Mor'zul Bloodbringer",58,60,"N","warlock",[["npc",12807,"Greshka",1435,"Stonard",48.6,55.3,null],["npc",5520,"Spackle Thornberry",1453,"",39.5,84.5,null],["npc",5815,"Kurgul",1454,"",47.5,46.7,null]],[],[],[],[],["npc:14436"],false,[7563,7564,7629,7631]],
 "7626":[7626,"Bell of Dethmoora",60,60,"N","warlock",[["npc",14436,"Mor'zul Bloodbringer",1428,"Altar of Storms",12.7,31.6,null]],[7562,7563,7564],[["item",9264,10]],[],[],["npc:14437"],false,[7630,7631]],
 "7818":[7818,"A Donation of Runecloth",60,50,"H","",[["npc",14729,"Ralston Farnsley",1458,"",71.7,29.2,null]],[7813],[["item",14047,60]],[],[],["npc:14729"],false,[]],

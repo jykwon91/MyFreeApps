@@ -45,7 +45,7 @@
 "6482":[6482,"Freedom to Ruul",24,19,"H","",[["npc",12818,"Ruul Snowhoof",1440,"Thistlefur Village",41.5,34.5,null]],[],[],[],[],["npc:12837"],false,[]],
 "6610":[6610,"Clamlette Surprise",45,35,"N","",[["npc",8125,"Dirge Quikcleave",1446,"Gadgetzan",52.6,28.1,null]],[],[["item",12207,12],["item",7974,10],["item",8932,20]],[],[],["npc:8125"],true,[]],
 "7122":[7122,"Capture a Mine",60,51,"A","",[["npc",13777,"Sergeant Durgen Stormpike",1416,"Growless Cave",36.8,77.2,null]],[],[["npc",13796,1]],[],[],["npc:13777"],true,[]],
-"7506":[7506,"The Emerald Dream...",60,54,"N","druid",[["item",18364,"The Emerald Dream",null,"",null,null,null]],[],[["item",18364,1]],[],[],["npc:14381"],false,[]],
+"7506":[7506,"The Emerald Dream...",60,54,"N","druid",[["item",18364,"The Emerald Dream",null,"",null,null,null]],[],[["item",18364,1]],[[18470,1]],[],["npc:14381"],false,[]],
 "7634":[7634,"Ancient Sinew Wrapped Lamina",60,60,"N","hunter",[],[7632],[["item",18704,1]],[],[],["npc:14526"],false,[]],
 "7826":[7826,"A Donation of Wool",60,12,"H","",[["npc",14726,"Rashona Straglash",1454,"",63.6,51.2,null]],[],[["item",2592,60]],[],[],["npc:14726"],false,[7824]],
 "8146":[8146,"The Maelstrom's Tendril",60,60,"N","hunter",[["npc",14905,"Falthir the Sightless",1434,"",14.1,13.7,null]],[8145],[["item",19618,1]],[[19619,1]],[],["npc:14905"],false,[8147,8148]],

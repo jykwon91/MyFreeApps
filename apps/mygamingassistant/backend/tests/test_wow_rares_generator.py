@@ -21,13 +21,16 @@ from scripts.wow_rares.creature_cache import (
 )
 from scripts.wow_rares.rares import (
     NOTABLE_DROP_CHANCE,
+    SeenRare,
     classic_rare_ids,
     classic_rares,
+    earlier_rares,
     event_only_guids,
     forever_rares,
     listed_rare_ids,
     notable_drops,
     rare_spawns,
+    seen_rares,
     zone_names,
 )
 from scripts.wow_world_map.services import SAME_SPOT_YARDS
@@ -118,7 +121,31 @@ def test_listed_rares_are_forever_rares_plus_placed_classic_rares_forever_has_no
     })
     spots = {99: [[1429, "a", 1.0, 1.0]], 61: [[1429, "b", 2.0, 2.0]], 500: [[1429, "c", 3.0, 3.0]]}
     # 61 is an unconfirmed Classic rare with a spot; 77 is a Classic rare with no open-world spot.
-    assert listed_rare_ids(cache, {99, 61, 77, 500}, spots) == {99, 61, 210107}
+    forever = {r.creature_id for r in seen_rares(cache, "2026-11-12", {})}
+    assert listed_rare_ids(cache, forever, {99, 61, 77, 500}, spots) == {99, 61, 210107}
+
+
+def test_rares_an_earlier_cache_confirmed_stay_until_the_client_meets_them_again() -> None:
+    cache = CreatureCache(2, {
+        99: _creature(99, "Morgaine the Sly", CLASSIFICATION_RARE),  # met again
+        500: _creature(500, "Demoted", CLASSIFICATION_NORMAL),  # no longer a rare
+    })
+    earlier = {
+        99: SeenRare(99, "Morgaine the Sly", CLASSIFICATION_RARE, "2026-11-08"),
+        210107: SeenRare(210107, "Kackle", CLASSIFICATION_RARE, "2026-11-08"),  # not met since the patch
+        500: SeenRare(500, "Demoted", CLASSIFICATION_RARE, "2026-11-08"),
+    }
+    rows = [r.as_row() for r in seen_rares(cache, "2026-11-12", earlier)]
+    assert rows == [
+        [210107, "Kackle", CLASSIFICATION_RARE, "2026-11-08"],
+        [99, "Morgaine the Sly", CLASSIFICATION_RARE, "2026-11-12"],
+    ]
+
+
+def test_earlier_rares_read_a_file_from_before_the_per_rare_day() -> None:
+    old = {"seenOn": "2026-11-08", "columns": ["id", "name", "classification"], "rares": [[7, "Old", CLASSIFICATION_RARE]]}
+    assert earlier_rares(old) == {7: SeenRare(7, "Old", CLASSIFICATION_RARE, "2026-11-08")}
+    assert earlier_rares({}) == {}
 
 
 def _spawn(guid: int, creature: int, x: float, y: float, map_id: int = 0) -> dict[str, Any]:
@@ -182,10 +209,11 @@ def _load(path: Path) -> dict[str, Any]:
 def test_committed_output_is_consistent() -> None:
     forever = _load(RARES_PATH)
     classic = _load(SPAWNS_PATH)
-    assert forever["columns"] == ["id", "name", "classification"]
+    assert forever["columns"] == ["id", "name", "classification", "seenOn"]
     rares = {int(r[0]): r for r in forever["rares"]}
     assert rares, "no rares — was the build run against an empty creature cache?"
     assert all(r[2] in (CLASSIFICATION_RARE, CLASSIFICATION_RARE_ELITE) for r in rares.values())
+    assert all(len(r[3]) == len("2026-11-12") for r in rares.values())
     # Every Classic rare / rare elite with a map spot is listed, not only the confirmed ones.
     assert len(classic["rares"]) > 10 * len(rares)
     for cid, rare in classic["rares"].items():
@@ -207,7 +235,7 @@ def test_committed_output_pins_a_known_rare() -> None:
     """Morgaine the Sly: a confirmed rare, level 10, in Elwynn Forest, dropping Lithe Boots;
     Master Digger: an unconfirmed Classic rare in Westfall."""
     forever = _load(RARES_PATH)
-    assert [99, "Morgaine the Sly", CLASSIFICATION_RARE] in forever["rares"]
+    assert [99, "Morgaine the Sly", CLASSIFICATION_RARE, "2026-11-08"] in forever["rares"]
     morgaine = _load(SPAWNS_PATH)["rares"]["99"]
     assert morgaine["minLevel"] == 10
     assert forever["zones"][str(morgaine["spawns"][0][0])] == "Elwynn Forest"

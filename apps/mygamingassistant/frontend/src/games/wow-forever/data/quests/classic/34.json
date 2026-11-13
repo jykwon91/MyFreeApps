@@ -53,7 +53,7 @@
 "7842":[7842,"Another Message to the Wildhammer",48,44,"H","",[["npc",14738,"Otho Moji'ko",1425,"The Overlook Cliffs",79.4,79.1,null]],[7841],[["item",4589,10]],[],[],["npc:14738"],false,[7843]],
 "8162":[8162,"Cut Arathor Supply Lines",25,20,"H","",[],[],[["item",20559,1]],[],[],[],false,[]],
 "8290":[8290,"Vanquish the Invaders",15,10,"A","",[],[],[["item",20558,1]],[],[],[],false,[]],
-"8418":[8418,"Forging the Mightstone",52,50,"A","paladin",[["npc",10838,"Commander Ashlam Valorfist",1416,"Strahnbrad",78.7,29.1,null]],[8415,8414,8416],[["item",20606,2],["item",20607,2],["item",20608,2]],[],[],["npc:10838"],true,[]],
+"8418":[8418,"Forging the Mightstone",52,50,"A","paladin",[["npc",10838,"Commander Ashlam Valorfist",1416,"Strahnbrad",78.7,29.1,null]],[8415,8414,8416],[["item",20606,2],["item",20607,2],["item",20608,2]],[],[[20504,1],[20512,1],[20505,1]],["npc:10838"],true,[]],
 "8674":[8674,"Winterhoof the Elder",60,1,"N","",[],[],[],[],[],["npc:15576"],true,[]],
 "8802":[8802,"The Savior of Kalimdor",60,60,"N","",[],[8801],[["item",21221,1]],[],[[21712,1],[21710,1],[21709,1]],["npc:15192"],false,[]],
 "8866":[8866,"Bronzebeard the Elder",60,1,"N","",[],[],[],[],[],["npc:15871"],true,[]],

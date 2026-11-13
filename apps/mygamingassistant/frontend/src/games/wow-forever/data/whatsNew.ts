@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-12",
+    title: "Game data for the Nov 11 hotfixes",
+    summary:
+      "Items, quests, rares and hunter pets now match the Nov 11 WoW Forever hotfixes, and rares, tamable beasts and Library rewards our game client met before it keep their \"Seen in game\" mark with the day it was seen.",
+    to: "/wow-forever",
+  },
+  {
+    date: "2026-11-12",
     title: "Refresh the guild on demand",
     summary:
       "TopDeadCenter's guild page has a Refresh now button next to when the roster was updated: one tap pulls the roster and every member's stats from Blizzard again, instead of waiting for the hourly refresh.",

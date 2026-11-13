@@ -25,7 +25,6 @@ export default function HunterPetsContent({ data }: { data: HunterPetsData }) {
         families={data.families}
         familyName={family?.name ?? null}
         teachersBySpell={teachers}
-        seenOn={data.seenOn}
       />
       <BeastsSection data={data} filters={filters} onChange={update} />
     </div>

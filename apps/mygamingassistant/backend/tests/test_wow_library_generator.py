@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from scripts.wow_dungeons.quest_cache import CachedQuest, QuestCache
+from scripts.wow_dungeons.quests import SeenRow
 from scripts.wow_library.build import LIBRARY_PATH, reward_item_rows
 from scripts.wow_library.library import (
     BOOK_COLUMNS,
@@ -25,8 +25,8 @@ def _sparse(item_id: int, name: str, description: str = "", ilvl: int = 10, qual
     }
 
 
-def _quest(quest_id: int, title: str, choices: tuple[tuple[int, int], ...] = ()) -> CachedQuest:
-    return CachedQuest(quest_id, title, 20, 1, False, (), (), choices)
+def _seen(title: str, choices: list[tuple[int, int]] | None = None, seen_on: str = "2026-11-08") -> SeenRow:
+    return SeenRow(title, 20, 1, [], [], choices or [], None, seen_on)
 
 
 class TestBooks:
@@ -67,14 +67,15 @@ class TestCards:
 
 class TestRewardQuests:
     def test_quests_naming_the_library_are_kept_with_their_rewards(self) -> None:
-        cache = QuestCache(1, {
-            5: _quest(5, "Friend of the Library", ((100, 1), (101, 1))),
-            4: _quest(4, "The Library Card"),
-            6: _quest(6, "Librarian's Errand"),
-        }, frozenset())
-        quests = reward_quests(cache)
+        seen = {
+            5: _seen("Friend of the Library", [(100, 1), (101, 1)]),
+            4: _seen("The Library Card", seen_on="2026-11-12"),
+            6: _seen("Librarian's Errand"),
+        }
+        quests = reward_quests(seen)
         assert [q.quest_id for q in quests] == [4, 5]
-        assert quests[1].as_row() == [5, "Friend of the Library", 20, 1, [], [[100, 1], [101, 1]]]
+        assert quests[0].seen_on == "2026-11-12"
+        assert quests[1].as_row() == [5, "Friend of the Library", 20, 1, [], [[100, 1], [101, 1]], "2026-11-08"]
         assert quests[1].item_ids() == {100, 101}
 
     def test_a_reward_missing_from_items_json_stops_the_run(self) -> None:
@@ -106,6 +107,7 @@ class TestCommittedOutput:
         friend = next(q for q in doc["quests"] if q[0] == 78150)
         assert friend[1] == "Friend of the Library"
         assert {item for item, _ in friend[5]} == {277203, 277204}
+        assert friend[6] == "2026-11-08"
         assert doc["items"]["277203"][0] == "Scholarly Pendant"
 
     def test_every_reward_item_is_named(self, doc: dict) -> None:

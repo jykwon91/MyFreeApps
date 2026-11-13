@@ -57,7 +57,7 @@ describe("decodeRares (committed data)", () => {
     expect(morgaine.name).toBe("Morgaine the Sly");
     expect(morgaine.classification).toBe(RARE_CLASSIFICATION.rare);
     expect(morgaine.classic).toBe(true);
-    expect(morgaine.seenOn).toBe(raresJson.seenOn);
+    expect(morgaine.seenOn).toBe(raresJson.rares.find((r) => r[0] === 99)?.[3]);
     expect(morgaine.minLevel).toBe(10);
     expect(morgaine.spawns.every((s) => s.zoneId === ELWYNN && s.zoneName === "Elwynn Forest")).toBe(true);
     expect(morgaine.drops[0]).toMatchObject({ id: 6201, name: "Lithe Boots" });
@@ -75,7 +75,7 @@ describe("decodeRares (committed data)", () => {
   it("keeps rares new in Forever with no level, spawns or drops", () => {
     const kackle = byId(210107);
     expect(kackle.classic).toBe(false);
-    expect(kackle.seenOn).toBe(raresJson.seenOn);
+    expect(kackle.seenOn).toBe(raresJson.rares.find((r) => r[0] === 210107)?.[3]);
     expect(kackle.minLevel).toBeNull();
     expect(kackle.spawns).toEqual([]);
     expect(kackle.drops).toEqual([]);

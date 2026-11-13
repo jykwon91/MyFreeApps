@@ -48,7 +48,7 @@
 "7063":[7063,"The Feast of Winter Veil",60,10,"A","",[["npc",2916,"Historian Karnik",1455,"",77.5,11.8,null]],[7062],[["item",17735,1]],[],[],["npc:2784"],false,[]],
 "7383":[7383,"Crown of the Earth",11,1,"A","",[["npc",3515,"Corithras Moonrage",1438,"Dolanaar",56.1,61.7,null]],[916,917,920,921,928,929,933],[["item",18151,1]],[],[],["npc:3515"],false,[935]],
 "7639":[7639,"To Show Due Judgment",60,60,"A","paladin",[["npc",11406,"High Priest Rohan",1455,"",24.7,8.2,null]],[7638,7637],[["item",18819,1]],[],[],["npc:928"],false,[7640,7641,7642,7643,7644,7646,7647]],
-"7703":[7703,"Unfinished Gordok Business",60,56,"N","",[["npc",14325,"Captain Kromcrush",null,"",null,null,429]],[],[["item",18336,1]],[],[],["npc:14325"],false,[]],
+"7703":[7703,"Unfinished Gordok Business",60,56,"N","",[["npc",14325,"Captain Kromcrush",null,"",null,null,429]],[],[["item",18336,1]],[],[[18366,1],[18367,1],[18368,1],[18369,1]],["npc:14325"],false,[]],
 "7831":[7831,"A Donation of Mageweave",60,40,"H","",[["npc",14726,"Rashona Straglash",1454,"",63.6,51.2,null]],[],[["item",4338,60]],[],[],["npc:14726"],false,[7824]],
 "8151":[8151,"The Hunter's Charm",52,50,"N","hunter",[["npc",5516,"Ulfir Ironbeard",1453,"",67.6,35.8,null],["npc",3406,"Xor'juul",1454,"",67.2,20.2,null],["npc",5116,"Olmin Burningbeard",1455,"",70.9,83.6,null]],[],[],[],[],["npc:8405"],false,[8153,8231,8232]],
 "8279":[8279,"The Twilight Lexicon",60,54,"N","",[["npc",15194,"Hermit Ortell",1451,"Hive'Regal",67.2,69.8,null]],[8284,8285],[["item",20394,1],["item",20395,1],["item",20396,1]],[],[],["npc:15194"],true,[8287]],

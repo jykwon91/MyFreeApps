@@ -1,3 +1,4 @@
+import { columnIndexes } from "@/games/wow-forever/lib/dungeons/columnIndexes";
 import type { BeastTeaching } from "@/games/wow-forever/types/hunterPets/beastTeaching";
 import type { HunterPetsData } from "@/games/wow-forever/types/hunterPets/hunterPetsData";
 import type { HunterPetsDataFiles } from "@/games/wow-forever/types/hunterPets/hunterPetsDataFiles";
@@ -39,7 +40,14 @@ export function decodeHunterPets(files: HunterPetsDataFiles): HunterPetsData {
       });
     }
   }
-  const seenIds = new Set(files.forever.seen.map(([id]) => id));
+  const col = columnIndexes("hunterPets.json", files.forever.seenColumns, ["id", "name", "family", "seenOn"] as const);
+  const seen = files.forever.seen.map((row) => ({
+    id: Number(row[col.id]),
+    name: String(row[col.name]),
+    familyId: Number(row[col.family]),
+    seenOn: String(row[col.seenOn]),
+  }));
+  const seenOnById = new Map(seen.map((s) => [s.id, s.seenOn]));
   const beasts: TamableBeast[] = files.classic.beasts.map(
     ([id, name, familyId, minLevel, maxLevel, attackMs, zoneKeys, spells]) => ({
       id,
@@ -51,11 +59,11 @@ export function decodeHunterPets(files: HunterPetsDataFiles): HunterPetsData {
       zones: zoneKeys.map((key) => files.classic.zones[key] ?? key),
       teaches: spells.flatMap((spell) => teachingBySpell.get(spell) ?? []),
       inClassic: true,
-      seenInGame: seenIds.has(id),
+      seenOn: seenOnById.get(id) ?? null,
     }),
   );
   const classicIds = new Set(beasts.map((b) => b.id));
-  for (const [id, name, familyId] of files.forever.seen) {
+  for (const { id, name, familyId, seenOn } of seen) {
     if (classicIds.has(id)) continue;
     beasts.push({
       id,
@@ -67,7 +75,7 @@ export function decodeHunterPets(files: HunterPetsDataFiles): HunterPetsData {
       zones: [],
       teaches: [],
       inClassic: false,
-      seenInGame: true,
+      seenOn,
     });
   }
   return {
@@ -84,6 +92,5 @@ export function decodeHunterPets(files: HunterPetsDataFiles): HunterPetsData {
     })),
     abilities,
     beasts,
-    seenOn: files.forever.seenOn,
   };
 }

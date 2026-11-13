@@ -51,7 +51,7 @@
 "5921":[5921,"Moonglade",10,10,"A","druid",[["npc",4217,"Mathrengyl Bearwalker",1457,"",35.4,8.4,null]],[5923],[],[],[],["npc:11802"],false,[5929,5931,6001]],
 "6561":[6561,"Blackfathom Villainy",27,18,"H","",[["npc",4787,"Argent Guard Thaelrid",null,"",null,null,48]],[],[["item",5881,1]],[],[[7001,1],[7002,1]],["npc:9087"],true,[]],
 "6625":[6625,"Alliance Trauma",45,35,"A","",[["npc",5150,"Nissa Firestone",1455,"",55.1,58.3,null]],[],[],[],[],["npc:12939"],true,[6624]],
-"7201":[7201,"The Last Element",54,48,"H","",[["npc",9078,"Shadowmage Vivian Lagrave",1427,"Dustfire Valley",81.9,39.1,null]],[],[["item",11129,10]],[],[],["npc:9078"],true,[]],
+"7201":[7201,"The Last Element",54,48,"H","",[["npc",9078,"Shadowmage Vivian Lagrave",1427,"Dustfire Valley",81.9,39.1,null]],[],[["item",11129,10]],[[12038,1]],[],["npc:9078"],true,[]],
 "7649":[7649,"Enchanted Thorium Platemail: Volume I",60,60,"N","",[["item",18769,"Enchanted Thorium Platemail",null,"",null,null,null]],[],[["item",18769,1]],[],[],["npc:14368"],false,[]],
 "7841":[7841,"Message to the Wildhammer",48,44,"H","",[["npc",14738,"Otho Moji'ko",1425,"The Overlook Cliffs",79.4,79.1,null]],[],[["npc",2692,15],["npc",2691,15],["npc",2694,15],["npc",2693,15]],[],[],["npc:14738"],true,[7842,7843]],
 "7905":[7905,"The Darkmoon Faire",60,6,"A","",[],[],[["item",19338,1]],[],[],["npc:14828"],false,[]],

@@ -32,7 +32,7 @@
 "3527":[3527,"The Prophecy of Mosh'aru",47,40,"N","",[["npc",8579,"Yeh'kinya",1446,"Steamwheedle Port",67.0,22.4,null]],[3520],[["item",10660,1],["item",10661,1]],[],[],["npc:8579"],true,[4787,3528,5065,4788,8181,8182]],
 "3783":[3783,"Are We There, Yeti?",56,52,"N","",[["npc",10305,"Umi Rumplesnicker",1452,"Everlook",60.9,37.6,null]],[],[["item",12366,10]],[],[],["npc:10305"],true,[977,5163,8798]],
 "4487":[4487,"Summon Felsteed",40,40,"A","warlock",[["npc",5172,"Briarthorn",1455,"",50.3,5.7,null]],[],[],[],[],["npc:6251"],true,[4490]],
-"4743":[4743,"Seal of Ascension",60,57,"N","",[],[4742],[["item",12324,1]],[],[],["npc:10296"],false,[]],
+"4743":[4743,"Seal of Ascension",60,57,"N","",[],[4742],[["item",12324,1]],[[12344,1]],[],["npc:10296"],false,[]],
 "5127":[5127,"The Demon Forge",60,55,"N","",[["npc",10918,"Lorax",1452,"Frostwhisper Gorge",63.8,73.8,null]],[5126],[["item",12847,1],["item",12806,1]],[],[],["npc:10918"],false,[]],
 "5511":[5511,"The Key to Scholomance",60,55,"H","",[["npc",10837,"High Executor Derrington",1422,"The Bulwark",26.5,56.0,null]],[5093,5096,5098,838,964,5514,5802,5804],[],[],[],["npc:10837"],true,[]],
 "5639":[5639,"Desperate Prayer",10,10,"A","priest",[["npc",11406,"High Priest Rohan",1455,"",24.7,8.2,null]],[],[],[],[],["npc:376"],true,[]],

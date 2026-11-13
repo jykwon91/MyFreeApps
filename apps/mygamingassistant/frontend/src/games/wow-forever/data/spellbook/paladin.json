@@ -1,5 +1,5 @@
-{"source":"wago.tools DB2 wowf 1.60.1.70790 with hotfixes, plus the Forever client hotfix cache (build 70888, 12,416 records)",
-"clientBuild":"1.60.1.70790",
+{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 70888, 12,482 records)",
+"clientBuild":"1.60.1.70888",
 "classId":"paladin",
 "tabs":[{"id":594,"name":"Holy"},{"id":267,"name":"Protection"},{"id":184,"name":"Retribution"}],
 "spells":[

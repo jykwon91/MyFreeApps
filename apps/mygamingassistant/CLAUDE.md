@@ -630,6 +630,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `earlier_seen`), each with its own `seenOn`; never delete
   `dungeonQuestsSeen.json` / `questSeen.json` before a rebuild, or every
   quest seen before the patch loses its Forever data.
+- **The same carry-over holds for every "Seen in game" list.** Rares
+  (`rares.json`, `seen_rares` / `earlier_rares`), hunter-pet beasts
+  (`hunterPets.json` `seen`, `seen_rows` / `earlier_seen_beasts`), the
+  Library's reward quests and the Changes feed's new quests (both read
+  `questSeen.json`, so `wow_quests` runs before them) keep a `seenOn` per row.
+  A row is dropped only when the new cache met that creature or quest as
+  something else; a file from before the per-row column falls back to its
+  file-level `seenOn`.
 
 #### Rares (`/wow-forever/rares`)
 

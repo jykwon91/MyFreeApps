@@ -1,5 +1,5 @@
-{"source":"wago.tools DB2 wowf 1.60.1.70790 with hotfixes, plus the Forever client hotfix cache (build 70862, 5,182 records)",
-"clientBuild":"1.60.1.70790",
+{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 70888, 5,609 records)",
+"clientBuild":"1.60.1.70888",
 "families":[
 {"id":"druid-healing-touch","classId":"druid","name":"Healing Touch","kind":"heal","targets":"single","icon":136041,"changedInForever":true,"ranks":[
 {"spell":5185,"rank":1,"level":1,"maxLevel":5,"maxLevelFrom":"client","fullBonusUntil":10,"lowLevelFactor":0.2875,"mana":25,"castMs":1500,"direct":{"base":44,"perLevel":0.8,"variance":0.3182,"coefficient":0.429},"periodic":null,"from":"client","coefficientFrom":"client"},
@@ -142,7 +142,7 @@
 {"spell":10929,"rank":9,"level":56,"maxLevel":61,"maxLevelFrom":"client","fullBonusUntil":66,"lowLevelFactor":1,"mana":365,"castMs":0,"direct":null,"periodic":{"tick":134,"perLevel":0,"ticks":5,"periodMs":3000,"coefficient":0.2},"from":"client","coefficientFrom":"client"},
 {"spell":25315,"rank":10,"level":60,"maxLevel":65,"maxLevelFrom":"client","fullBonusUntil":70,"lowLevelFactor":1,"mana":410,"castMs":0,"direct":null,"periodic":{"tick":166,"perLevel":0,"ticks":5,"periodMs":3000,"coefficient":0.2},"from":"client","coefficientFrom":"client"}
 ]},
-{"id":"priest-prayer-of-healing","classId":"priest","name":"Prayer of Healing","kind":"heal","targets":"group","icon":135943,"changedInForever":false,"ranks":[
+{"id":"priest-prayer-of-healing","classId":"priest","name":"Prayer of Healing","kind":"heal","targets":"group","icon":135943,"changedInForever":true,"ranks":[
 {"spell":596,"rank":1,"level":30,"maxLevel":39,"maxLevelFrom":"client","fullBonusUntil":44,"lowLevelFactor":1,"mana":410,"castMs":3000,"direct":{"base":178,"perLevel":0.8,"variance":0.0643,"coefficient":0.286},"periodic":null,"from":"client","coefficientFrom":"client"},
 {"spell":996,"rank":2,"level":40,"maxLevel":49,"maxLevelFrom":"client","fullBonusUntil":54,"lowLevelFactor":1,"mana":560,"castMs":3000,"direct":{"base":265,"perLevel":1,"variance":0.0611,"coefficient":0.286},"periodic":null,"from":"client","coefficientFrom":"client"},
 {"spell":10960,"rank":3,"level":50,"maxLevel":59,"maxLevelFrom":"client","fullBonusUntil":64,"lowLevelFactor":1,"mana":770,"castMs":3000,"direct":{"base":401,"perLevel":1.3,"variance":0.0562,"coefficient":0.286},"periodic":null,"from":"client","coefficientFrom":"client"},

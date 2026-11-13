@@ -9,7 +9,10 @@ from scripts.wow_hunter_pets.abilities import build_abilities
 from scripts.wow_hunter_pets.beasts import (
     classic_beasts,
     pet_spell_lists,
+    SeenBeast,
+    earlier_seen_beasts,
     seen_beasts,
+    seen_rows,
     spawn_zones,
     tamable_templates,
 )
@@ -178,6 +181,29 @@ def test_seen_beasts_are_the_tameable_beasts_the_client_has_met() -> None:
     assert [c.name for c in seen_beasts(cache, {1, 319, 4})] == ["Gray Fox"]
 
 
+def test_beasts_an_earlier_cache_met_stay_until_the_client_meets_them_again() -> None:
+    cache = CreatureCache(build=2, creatures={
+        1: CachedCreature(1, "Gray Fox", 0, creature_type=1, family=319, tameable=True),  # met again
+        5: CachedCreature(5, "Bear", 0, creature_type=1, family=4, tameable=False),  # no longer tamable
+    })
+    earlier = {
+        1: SeenBeast(1, "Gray Fox", 319, "2026-11-08"),
+        6: SeenBeast(6, "Kackle", 6, "2026-11-08"),  # not met since the patch
+        5: SeenBeast(5, "Bear", 4, "2026-11-08"),
+        7: SeenBeast(7, "Gone", 99, "2026-11-08"),  # family no longer on the page
+    }
+    assert [b.as_row() for b in seen_rows(cache, {319, 6, 4}, "2026-11-12", earlier)] == [
+        [1, "Gray Fox", 319, "2026-11-12"],
+        [6, "Kackle", 6, "2026-11-08"],
+    ]
+
+
+def test_earlier_seen_beasts_read_a_file_from_before_the_per_beast_day() -> None:
+    old = {"seenOn": "2026-11-08", "seenColumns": ["id", "name", "family"], "seen": [[6, "Kackle", 6]]}
+    assert earlier_seen_beasts(old) == {6: SeenBeast(6, "Kackle", 6, "2026-11-08")}
+    assert earlier_seen_beasts({}) == {}
+
+
 def _pack_bits(fields: list[tuple[int, int]], size: int) -> bytes:
     value = 0
     used = 0
@@ -258,5 +284,7 @@ def test_seen_beasts_include_forever_only_ones() -> None:
     classic_ids = {b[0] for b in classic["beasts"]}
     seen = {s[0]: s for s in forever["seen"]}
     assert 165189 not in seen
+    assert forever["seenColumns"] == ["id", "name", "family", "seenOn"]
     assert any(s[1] == "Gray Fox" and s[2] == 319 for s in seen.values())
+    assert len({s[3] for s in seen.values()}) > 1, "carried-over beasts keep their own seen day"
     assert any(i not in classic_ids for i in seen) and any(i in classic_ids for i in seen)

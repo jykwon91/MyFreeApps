@@ -34,7 +34,7 @@
 "2847":[2847,"Wild Leather Armor",45,30,"A","",[["npc",7852,"Pratt McGrubben",1444,"Sardor Isle",30.6,42.7,null]],[],[["item",4304,10]],[],[],["npc:7852"],true,[2848,2853]],
 "2975":[2975,"The Ogres of Feralas",43,38,"H","",[["npc",7777,"Rok Orhan",1444,"Camp Mojache",75.8,43.6,null]],[2981],[["npc",5229,10],["npc",5237,10],["npc",5232,5]],[],[],["npc:7777"],true,[2980]],
 "3103":[3103,"Hallowed Letter",1,1,"A","priest",[["npc",197,"Marshal McBride",1429,"Northshire Valley",48.9,41.6,null]],[783,7],[["item",9548,1]],[],[],["npc:375"],false,[]],
-"4063":[4063,"The Rise of the Machines",58,52,"H","",[["npc",2921,"Lotwil Veriatus",1418,"The Dustbowl",25.9,44.9,null]],[4061,4062],[["item",11268,1],["item",11269,10]],[],[],["npc:2921"],true,[]],
+"4063":[4063,"The Rise of the Machines",58,52,"H","",[["npc",2921,"Lotwil Veriatus",1418,"The Dustbowl",25.9,44.9,null]],[4061,4062],[["item",11268,1],["item",11269,10]],[],[[12109,1],[12110,1],[12108,1],[12111,1]],["npc:2921"],true,[]],
 "4127":[4127,"Boat Wreckage",44,40,"A","",[["object",164909,"Wrecked Row Boat",1444,"The Forgotten Coast",45.4,65.0,null]],[4124,4125],[["item",11462,1]],[],[],["npc:7880"],false,[4129,4130,4131,4135,4265,4266,4267]],
 "4511":[4511,"Calm Before the Storm",54,50,"H","",[["npc",7010,"Zilzibin Drumlore",1454,"",56.3,46.7,null]],[4494,4496,4507,4509],[["item",11843,1]],[],[[11870,1],[11871,1],[11872,1]],["npc:3309"],false,[]],
 "4767":[4767,"Wind Rider",29,25,"H","",[["npc",10377,"Elu",1441,"Freewind Post",44.9,48.9,null]],[],[["item",12356,10]],[],[],["npc:10377"],true,[]],

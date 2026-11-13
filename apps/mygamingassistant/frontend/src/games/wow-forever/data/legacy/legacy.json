@@ -1,5 +1,5 @@
-{"source":"wago.tools DB2 wowf 1.60.1.70790 with hotfixes, plus the Forever client hotfix cache (build 70862, 5,707 records)",
-"build":70862,
+{"source":"wago.tools DB2 wowf 1.60.1.70888 with hotfixes, plus the Forever client hotfix cache (build 70888, 6,120 records)",
+"build":70888,
 "attribution":"Game data from the WoW Forever client. © Blizzard Entertainment.",
 "currency":{"id":4225,"cap":16,"icon":135884},
 "pointCost":1,

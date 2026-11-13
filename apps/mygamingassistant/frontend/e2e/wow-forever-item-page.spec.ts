@@ -57,9 +57,9 @@ test("a quest reward lists the quest and its giver", async ({ page }) => {
 });
 
 test("a Classic item Forever hasn't shown yet says so and offers a search", async ({ page }) => {
-  await page.goto("/wow-forever/items/809");
+  await page.goto("/wow-forever/items/913");
   await expect(page.getByTestId("item-not-found")).toBeVisible();
-  await expect(page.getByRole("heading", { level: 1, name: "Bloodrazor" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Huge Ogre Sword" })).toBeVisible();
   await expect(page.getByText(/hasn't appeared in WoW Forever's game files yet/)).toBeVisible();
 
   const search = page.getByRole("searchbox", { name: "Find an item" });
@@ -76,7 +76,7 @@ test("an unknown item id is not found", async ({ page }) => {
 
 test("fits a 375px phone with no sideways scrolling", async ({ page }) => {
   await page.setViewportSize(PHONE);
-  for (const id of [11815, 13047, 14152, 809]) {
+  for (const id of [11815, 13047, 14152, 913]) {
     await page.goto(`/wow-forever/items/${id}`);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByTestId("item-page-skeleton")).toHaveCount(0);

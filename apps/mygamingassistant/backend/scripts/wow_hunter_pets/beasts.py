@@ -8,7 +8,9 @@ zones are the three places it spawns most (continents through the World Map
 placement, instance maps by name).
 
 Forever side (the operator's creature cache): the beasts the client has met,
-including ones cmangos doesn't know.
+including ones cmangos doesn't know, each with the day it was seen. A patch
+empties the cache, so beasts an earlier cache met are kept until the client
+meets them again (``seen_rows``).
 """
 from __future__ import annotations
 
@@ -115,6 +117,45 @@ def classic_beasts(
             teaches=[s for s in pet_spells.get(int(t["PetSpellDataId"]), []) if s in ability_spells],
         ))
     return kept, dropped
+
+
+@dataclass(frozen=True)
+class SeenBeast:
+    creature_id: int
+    name: str
+    family: int
+    # The day the client cache that met it was written (YYYY-MM-DD).
+    seen_on: str
+
+    def as_row(self) -> list[object]:
+        """``SEEN_COLUMNS`` order (``build.py``)."""
+        return [self.creature_id, self.name, self.family, self.seen_on]
+
+
+def seen_rows(
+    cache: CreatureCache, family_ids: set[int], seen_on: str, earlier: Mapping[int, SeenBeast],
+) -> list[SeenBeast]:
+    """This cache's tamable beasts, plus the ones an earlier file listed that this cache hasn't met
+    (a creature it has met as something else is dropped), by name then id."""
+    fresh = [SeenBeast(c.creature_id, c.name, c.family, seen_on) for c in seen_beasts(cache, family_ids)]
+    carried = [b for cid, b in earlier.items() if cid not in cache.creatures and b.family in family_ids]
+    return sorted([*fresh, *carried], key=lambda b: (b.name, b.creature_id))
+
+
+def earlier_seen_beasts(doc: Mapping[str, Any]) -> dict[int, SeenBeast]:
+    """The last ``hunterPets.json``'s seen rows by creature. A file older than the per-beast day
+    uses its own ``seenOn``."""
+    columns = doc.get("seenColumns")
+    rows = doc.get("seen")
+    if not isinstance(columns, list) or not isinstance(rows, list):
+        return {}
+    out: dict[int, SeenBeast] = {}
+    for values in rows:
+        row = dict(zip(columns, values, strict=True))
+        out[int(row["id"])] = SeenBeast(
+            int(row["id"]), str(row["name"]), int(row["family"]), str(row.get("seenOn") or doc["seenOn"]),
+        )
+    return out
 
 
 def seen_beasts(cache: CreatureCache, family_ids: set[int]) -> list[CachedCreature]:

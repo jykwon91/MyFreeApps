@@ -13,11 +13,10 @@ interface AbilitiesSectionProps {
   families: readonly HunterFamily[];
   familyName: string | null;
   teachersBySpell: ReadonlyMap<number, readonly TamableBeast[]>;
-  seenOn: string;
 }
 
 /** The abilities (of the picked family, if any) with their ranks and teachers. */
-export default function AbilitiesSection({ abilities, families, familyName, teachersBySpell, seenOn }: AbilitiesSectionProps) {
+export default function AbilitiesSection({ abilities, families, familyName, teachersBySpell }: AbilitiesSectionProps) {
   return (
     <GuideSection
       id="abilities"
@@ -37,7 +36,6 @@ export default function AbilitiesSection({ abilities, families, familyName, teac
               ability={ability}
               families={families}
               teachersBySpell={teachersBySpell}
-              seenOn={seenOn}
             />
           ))}
         </div>

@@ -2,18 +2,19 @@
 
 Usage (from ``apps/mygamingassistant/backend``)::
 
-    python -m scripts.wow_library.build [--hotfix-cache <DBCache.bin>] [--quest-cache <questcache.wdb>]
+    python -m scripts.wow_library.build [--hotfix-cache <DBCache.bin>]
 
-Run after the Items generator (it reads ``items.json`` for reward names). Both
-caches are the operator's own Forever client files, read and never committed:
-``--hotfix-cache`` / ``WOW_FOREVER_HOTFIX_CACHE`` (the item layers, as the
-Items build) and ``--quest-cache`` / ``WOW_FOREVER_QUEST_CACHE`` (the reward
-quests the server has sent). The run stops when either is missing.
+Run after the Items generator (it reads ``items.json`` for reward names) and the
+Quest pages generator (it reads ``questSeen.json``, the quests the server has
+sent, kept across patches that empty the client's quest cache). The hotfix cache
+is the operator's own Forever client file, read and never committed:
+``--hotfix-cache`` / ``WOW_FOREVER_HOTFIX_CACHE`` (the item layers, as the Items
+build). The run stops when it is missing.
 
 Writes ``data/library/library.json``: the books and library cards from the
 Forever client's ItemSparse, and the quests whose title names the Library with
-their rewards from the quest cache. Where the books are found, who takes them
-and how many a reward needs are server-side and not in either file.
+their rewards and the day they were seen. Where the books are found, who takes
+them and how many a reward needs are server-side and not in either file.
 
 Game data © Blizzard Entertainment. Never hand-edit the output.
 """
@@ -23,7 +24,7 @@ import argparse
 import json
 from typing import Any
 
-from scripts.wow_dungeons.quest_cache import quest_cache_path, read_quest_cache
+from scripts.wow_dungeons.quests import earlier_seen
 from scripts.wow_food.build import WOW_DATA_DIR
 from scripts.wow_gear.build import write_json
 from scripts.wow_items.forever_items import hotfix_cache_path, load_forever_item_tables
@@ -35,6 +36,7 @@ from scripts.wow_library.library import (
     library_cards,
     reward_quests,
 )
+from scripts.wow_quests.build import read_quest_seen
 
 ITEMS_PATH = WOW_DATA_DIR / "items" / "items.json"
 LIBRARY_PATH = WOW_DATA_DIR / "library" / "library.json"
@@ -55,13 +57,11 @@ def reward_item_rows(items_doc: dict[str, Any], wanted: set[int]) -> dict[str, l
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build the WoW Forever library books page's data.")
     parser.add_argument("--hotfix-cache", help="the Forever client's Cache/ADB/enUS/DBCache.bin")
-    parser.add_argument("--quest-cache", help="the Forever client's Cache/WDB/enUS/questcache.wdb")
     args = parser.parse_args()
-    quest_cache, seen_on = read_quest_cache(quest_cache_path(args.quest_cache))
     tables = load_forever_item_tables(hotfix_cache_path(args.hotfix_cache))
     books = library_books(tables.sparse)
     cards = library_cards(tables.sparse)
-    quests = reward_quests(quest_cache)
+    quests = reward_quests(earlier_seen(read_quest_seen()))
     if not books:
         raise SystemExit("No library books in the Forever client's ItemSparse — the description pattern changed?")
     items_doc = json.loads(ITEMS_PATH.read_text(encoding="utf-8"))
@@ -69,10 +69,8 @@ def main() -> None:
     write_json(LIBRARY_PATH, {
         "source": (
             f"{tables.source}; reward quests from the WoW Forever client's quest cache "
-            "(Cache/WDB/enUS/questcache.wdb) on the operator's machine"
+            "(Cache/WDB/enUS/questcache.wdb) on the operator's machine, kept across patches"
         ),
-        "clientBuild": quest_cache.build,
-        "seenOn": seen_on,
         "attribution": "Game data from the WoW Forever client. © Blizzard Entertainment.",
         "bookColumns": BOOK_COLUMNS,
         "books": [b.as_row() for b in books],
@@ -84,8 +82,7 @@ def main() -> None:
         "items": reward_item_rows(items_doc, reward_ids),
     })
     print(
-        f"{len(books)} library books, {len(cards)} library cards, {len(quests)} reward quests "
-        f"(quest cache build {quest_cache.build}, {seen_on}) -> {LIBRARY_PATH}"
+        f"{len(books)} library books, {len(cards)} library cards, {len(quests)} reward quests -> {LIBRARY_PATH}"
     )
 
 

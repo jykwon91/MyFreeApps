@@ -11,7 +11,9 @@ Writes two files; the licences differ, so they're kept apart:
   (diet, damage / armor / health modifiers from each family's own passive spell,
   icon), every pet ability with its ranks (learn level, tooltip text, icon, the
   families that can learn it, ``new`` when no Classic Era skill line lists it) and
-  the tamable beasts the operator's own client has met (``creaturecache.wdb``).
+  the tamable beasts the operator's own client has met (``creaturecache.wdb``),
+  each with the day it was seen; the last file's beasts are kept after a patch
+  empties the cache.
 * ``data/hunterPets/classic/tamableBeasts.json`` — cmangos classic-db (GPL-3.0,
   LICENSE + README next to it): every tamable Classic beast with its level range,
   attack speed, top spawn zones and the ability ranks it teaches (its
@@ -22,6 +24,7 @@ Game data © Blizzard Entertainment. Never hand-edit the output.
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 from pathlib import Path
 from typing import Any
@@ -32,9 +35,10 @@ from scripts.wow_hunter_pets.abilities import Ability, build_abilities
 from scripts.wow_hunter_pets.beasts import (
     Beast,
     classic_beasts,
+    earlier_seen_beasts,
     instance_zone_key,
     pet_spell_lists,
-    seen_beasts,
+    seen_rows,
     spawn_zones,
     tamable_templates,
 )
@@ -63,7 +67,7 @@ CLASSIC_DIR = HUNTER_PETS_DIR / "classic"
 BEASTS_PATH = CLASSIC_DIR / "tamableBeasts.json"
 FOREVER_TABLES = (*FOREVER_BOOK_TABLES, "SpellLevels", "SkillLineAbility")
 BEAST_COLUMNS = ["id", "name", "family", "minLevel", "maxLevel", "attackMs", "zones", "teaches"]
-SEEN_COLUMNS = ["id", "name", "family"]
+SEEN_COLUMNS = ["id", "name", "family", "seenOn"]
 RANK_COLUMNS = ["spell", "level", "text", "new", "families"]
 
 CLASSIC_README = """# Hunter pets — Classic tamable beasts
@@ -174,12 +178,12 @@ def main() -> None:
     }})
     used = {k for b in beasts for k in b.zones}
 
-    seen = seen_beasts(cache, family_ids)
+    earlier = earlier_seen_beasts(json.loads(FOREVER_PATH.read_text(encoding="utf-8"))) if FOREVER_PATH.is_file() else {}
+    seen = seen_rows(cache, family_ids, seen_on, earlier)
     write_lines(FOREVER_PATH, {
         "source": f"{forever.source()}; the creature cache on the operator's machine (Cache/WDB/enUS/creaturecache.wdb)",
         "clientBuild": cache.build,
         "wagoBuild": WAGO_BUILD,
-        "seenOn": seen_on,
         "attribution": "Game data from the WoW Forever client. © Blizzard Entertainment.",
         "families": [
             {
@@ -191,7 +195,7 @@ def main() -> None:
         "rankColumns": RANK_COLUMNS,
         "abilities": [ability_doc(a, families, texts, icons) for a in abilities],
         "seenColumns": SEEN_COLUMNS,
-        "seen": [[c.creature_id, c.name, c.family] for c in seen],
+        "seen": [b.as_row() for b in seen],
     }, "abilities")
     write_lines(BEASTS_PATH, {
         "source": {"repo": "cmangos/classic-db", "commit": CMANGOS_COMMIT, "license": "GPL-3.0-or-later"},

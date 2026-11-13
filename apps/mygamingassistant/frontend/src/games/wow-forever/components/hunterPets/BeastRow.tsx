@@ -8,17 +8,16 @@ import type { TamableBeast } from "@/games/wow-forever/types/hunterPets/tamableB
 interface BeastRowProps {
   beast: TamableBeast;
   familyName: string;
-  seenOn: string;
 }
 
 /** One tamable beast: name and tags, family, level, zones, attack speed and what it teaches. */
-export default function BeastRow({ beast, familyName, seenOn }: BeastRowProps) {
+export default function BeastRow({ beast, familyName }: BeastRowProps) {
   const level = formatLevelRange(beast);
   const speed = formatAttackSpeed(beast.attackSeconds);
   const unknownDetails = !level && !speed && beast.zones.length === 0;
   return (
     <li className="space-y-1 rounded-xl border bg-card p-3 text-sm sm:p-4" data-testid="beast-row">
-      <BeastName beast={beast} seenOn={seenOn} />
+      <BeastName beast={beast} />
       <p className="text-muted-foreground">
         {[familyName, level ? `level ${level}` : "", speed ? `attacks every ${speed}` : ""].filter(Boolean).join(" · ")}
       </p>

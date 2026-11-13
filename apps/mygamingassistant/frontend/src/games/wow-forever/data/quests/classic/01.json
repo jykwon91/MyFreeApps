@@ -57,7 +57,7 @@
 "7873":[7873,"Vanquish the Invaders!",55,50,"A","",[],[],[["item",20558,1]],[],[],[],false,[]],
 "8065":[8065,"Paragons of Power: The Haruspex's Tunic",60,60,"N","druid",[["npc",14904,"Maywiki of Zuldazar",1434,"",15.3,16.0,null]],[],[["item",19722,1]],[[19838,1]],[],["npc:14904"],true,[]],
 "8193":[8193,"Master Angler",60,60,"N","",[],[],[["item",19807,40]],[],[[19970,1]],["npc:15077"],false,[]],
-"8257":[8257,"Blood of Morphaz",52,50,"N","priest",[["npc",8405,"Ogtinc",1447,"Timbermaw Hold",42.4,42.6,null]],[8254,8255,8256],[["item",20025,1]],[],[],["npc:10922"],false,[]],
+"8257":[8257,"Blood of Morphaz",52,50,"N","priest",[["npc",8405,"Ogtinc",1447,"Timbermaw Hold",42.4,42.6,null]],[8254,8255,8256],[["item",20025,1]],[],[[19990,1],[20082,1],[20006,1]],["npc:10922"],false,[]],
 "8321":[8321,"Vyral the Vile",60,60,"N","",[["npc",15270,"Huum Wildmane",1451,"Twilight Base Camp",48.6,37.9,null]],[8320],[["item",20466,1]],[],[[20650,1],[20649,1]],["npc:15270"],true,[]],
 "8513":[8513,"The Alliance Needs Medium Leather!",60,52,"N","",[],[],[["item",2319,10]],[],[],["npc:15448"],true,[]],
 "8577":[8577,"Stewvul, Ex-B.F.F.",60,60,"N","",[["npc",11811,"Narain Soothfancy",1446,"Steamwheedle Port",65.2,18.6,null]],[8575,8576],[],[],[],["object:180642"],false,[8578]],

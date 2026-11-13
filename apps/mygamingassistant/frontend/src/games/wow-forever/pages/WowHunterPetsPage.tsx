@@ -20,7 +20,7 @@ export default function WowHunterPetsPage() {
         backTo="/wow-forever"
         backLabel="Back to WoW Forever"
       />
-      <HunterPetsNote seenCount={data ? data.beasts.filter((b) => b.seenInGame).length : null} seenOn={data?.seenOn ?? null} />
+      <HunterPetsNote seenCount={data ? data.beasts.filter((b) => b.seenOn !== null).length : null} />
       {state.status === HUNTER_PETS_STATUS.error ? (
         <LoadErrorRetry message="Couldn't load the hunter pets." onRetry={state.retry} retrying={false} />
       ) : null}

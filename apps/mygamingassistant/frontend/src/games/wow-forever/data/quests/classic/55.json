@@ -41,7 +41,7 @@
 "3639":[3639,"Show Your Work",47,30,"N","",[["npc",8126,"Nixx Sprocketspring",1446,"Gadgetzan",52.5,27.3,null]],[3633,3638],[["item",4394,20],["item",10507,20],["item",4384,5]],[],[],["npc:8126"],true,[]],
 "4023":[4023,"A Taste of Flame",54,52,"N","",[["npc",9459,"Cyrus Therepentous",1428,"Terror Wing Path",95.1,31.6,null]],[],[["item",10575,1]],[],[],["npc:9459"],true,[4024]],
 "4727":[4727,"Beached Sea Turtle",15,12,"A","",[["object",176196,"Beached Sea Turtle",1439,"Ruins of Mathystra",53.1,18.1,null]],[3524,4681],[["item",12289,1]],[],[],["npc:10219"],false,[]],
-"4983":[4983,"Bijou's Reconnaissance Report",59,55,"H","",[["npc",10257,"Bijou",null,"",null,null,229]],[4981,4982],[["item",12652,1]],[],[],["npc:9080"],false,[]],
+"4983":[4983,"Bijou's Reconnaissance Report",59,55,"H","",[["npc",10257,"Bijou",null,"",null,null,229]],[4981,4982],[["item",12652,1]],[],[[15858,1],[15859,1]],["npc:9080"],false,[]],
 "5047":[5047,"Finkle Einhorn, At Your Service!",60,55,"N","",[],[],[["item",12710,1]],[],[],["npc:10637"],false,[]],
 "5623":[5623,"In Favor of the Light",4,5,"A","priest",[["npc",375,"Priestess Anetta",1429,"Northshire Valley",49.8,39.5,null]],[],[],[],[],["npc:377"],true,[5624]],
 "5943":[5943,"Gizelton Caravan",38,32,"N","",[["npc",11626,"Rigger Gizelton",1443,"Kormek's Hut",60.3,38.2,null]],[],[],[],[[15691,1],[15692,1],[15695,1]],["npc:11596"],false,[]],

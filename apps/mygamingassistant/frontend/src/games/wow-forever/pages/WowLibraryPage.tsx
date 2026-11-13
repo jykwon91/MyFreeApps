@@ -22,13 +22,13 @@ export default function WowLibraryPage() {
         backTo="/wow-forever"
         backLabel="Back to WoW Forever"
       />
-      <LibraryNote seenOn={data?.seenOn ?? null} />
+      <LibraryNote />
       {state.status === LIBRARY_STATUS.error ? (
         <LoadErrorRetry message="Couldn't load the library books." onRetry={state.retry} retrying={false} />
       ) : null}
       {data ? (
         <>
-          <LibraryRewards quests={data.quests} seenOn={data.seenOn} />
+          <LibraryRewards quests={data.quests} />
           <LibraryCards cards={data.cards} />
           <LibraryBookList books={data.books} />
         </>

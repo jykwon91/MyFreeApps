@@ -34,7 +34,7 @@
 "4003":[4003,"The Royal Rescue",59,48,"H","",[["npc",4949,"Thrall",1454,"",31.7,37.8,null]],[3906,3981,3982,4001,4002],[["npc",9019,1]],[],[],["npc:8929"],true,[4004]],
 "4131":[4131,"The Woodpaw Gnolls",44,40,"A","",[["npc",7880,"Ginro Hearthkindle",1444,"Sardor Isle",31.9,45.1,null]],[4124,4125,4127,4129,4130],[],[],[],["object:164953"],true,[4135,4265,4266,4267]],
 "4451":[4451,"The Key to Freedom",47,43,"N","",[["item",11818,"Grimesilt Outhouse Key",null,"",null,null,null]],[],[["item",11818,1]],[],[],["object:173265"],false,[]],
-"4771":[4771,"Dawn's Gambit",60,57,"N","",[["npc",11035,"Betina Bigglezink",1423,"Light's Hope Chapel",71.7,49.9,null]],[4726,4808,4809,4810,4907,4734,4735,5522,5531],[["npc",10432,1]],[],[],["npc:11035"],false,[]],
+"4771":[4771,"Dawn's Gambit",60,57,"N","",[["npc",11035,"Betina Bigglezink",1423,"Light's Hope Chapel",71.7,49.9,null]],[4726,4808,4809,4810,4907,4734,4735,5522,5531],[["npc",10432,1]],[],[[15854,1]],["npc:11035"],false,[]],
 "4963":[4963,"Shard of an Infernal",40,35,"N","warlock",[["npc",6252,"Acolyte Magaz",1413,"Ratchet",62.6,35.2,null]],[],[["item",12646,1],["item",12649,1]],[],[],["npc:6266"],false,[]],
 "5091":[5091,"A Call to Arms: The Plaguelands!",50,50,"A","",[["npc",10878,"Herald Moonstalker",1457,"",47.8,82.0,null]],[],[],[],[],["npc:10838"],true,[5092,5097,211]],
 "5155":[5155,"Forces of Jaedenar",51,48,"N","",[["npc",10922,"Greta Mosshoof",1448,"Emerald Sanctuary",51.2,82.1,null]],[],[["npc",7125,4],["npc",7113,4],["npc",7115,6],["npc",7112,6]],[],[],["npc:10922"],true,[5157,5158,5159,5165,5242]],

@@ -33,7 +33,7 @@
 "3104":[3104,"Glyphic Letter",1,1,"A","mage",[["npc",197,"Marshal McBride",1429,"Northshire Valley",48.9,41.6,null]],[783,7],[["item",9571,1]],[],[],["npc:198"],false,[]],
 "4128":[4128,"Ragnar Thunderbrew",55,50,"A","",[["npc",9540,"Enohar Thunderbrew",1419,"Nethergarde Keep",63.6,20.6,null]],[],[],[],[],["npc:1267"],true,[4126]],
 "4512":[4512,"A Little Slime Goes a Long Way",52,48,"A","",[["npc",9616,"Laris Geardawdle",1455,"",75.8,23.4,null]],[],[["item",11947,6],["item",11949,6]],[],[],["npc:9616"],false,[4513]],
-"4768":[4768,"The Darkstone Tablet",60,57,"H","",[["npc",9078,"Shadowmage Vivian Lagrave",1427,"Dustfire Valley",81.9,39.1,null]],[4769],[["item",12358,1]],[],[],["npc:9078"],true,[]],
+"4768":[4768,"The Darkstone Tablet",60,57,"H","",[["npc",9078,"Shadowmage Vivian Lagrave",1427,"Dustfire Valley",81.9,39.1,null]],[4769],[["item",12358,1]],[],[[15861,1],[15860,1]],["npc:9078"],true,[]],
 "5088":[5088,"Arikara",28,24,"H","",[["npc",4046,"Magatha Grimtotem",1456,"",69.9,30.9,null]],[4821,4865,5062],[["item",12785,1],["item",12925,1]],[],[[15464,1],[15465,1],[15466,1]],["npc:10428"],false,[]],
 "5152":[5152,"Auntie Marlene",56,50,"N","",[["npc",10926,"Pamela Redpath",1423,"Darrowshire",31.2,78.0,null]],[5142,5149],[],[],[],["npc:10927"],true,[5153,5154,5210,5181,5206,5941,5721,5942]],
 "5216":[5216,"Target: Felstone Field",53,50,"A","",[["npc",11053,"High Priestess MacDonnell",1416,"Strahnbrad",79.1,29.8,null]],[5066,5092,5215],[["item",13194,1],["item",13186,1]],[],[],["object:176361"],false,[5217,5219,5220,5222,5223,5225,5226,5237]],

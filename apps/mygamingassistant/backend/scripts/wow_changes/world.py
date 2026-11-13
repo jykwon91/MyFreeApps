@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 
 from scripts.wow_changes.entry import KIND_NEW, PROVENANCE_SEEN, Change
-from scripts.wow_dungeons.quest_cache import CachedQuest
+from scripts.wow_dungeons.quests import SeenRow
 
 Row = Mapping[str, str]
 
@@ -34,14 +34,14 @@ def _int(value: str | None) -> int:
 def quest_changes(
     forever_ids: Iterable[int],
     classic_ids: set[int],
-    cached: Mapping[int, CachedQuest],
-    seen_on: str,
+    seen: Mapping[int, SeenRow],
 ) -> tuple[list[Change], int]:
-    """The new quests the client cache names, and how many new quests it doesn't."""
+    """The new quests the client has named (the quest pages' seen file, kept across patches),
+    each with the day it was seen, and how many new quests it hasn't."""
     out = []
     unnamed = 0
     for quest_id in sorted(set(forever_ids) - classic_ids):
-        quest = cached.get(quest_id)
+        quest = seen.get(quest_id)
         if quest is None or not quest.title.strip():
             unnamed += 1
             continue
@@ -54,7 +54,7 @@ def quest_changes(
             summary=f"New quest{level}{start}.",
             link=("quest", quest_id),
             provenance=PROVENANCE_SEEN,
-            seen_on=seen_on,
+            seen_on=quest.seen_on,
         ))
     return sorted(out, key=lambda c: c.name), unnamed
 
