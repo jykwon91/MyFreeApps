@@ -9,6 +9,7 @@
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { expectFrameScrollsTo } from "./fixtures/compactFrame";
 
 // Any API call this spec does not stub answers 404, so nothing reaches a backend.
 test.beforeEach(async ({ page }) => {
@@ -23,16 +24,8 @@ test("a tall page scrolls inside the compact frame, its one main landmark, with 
   await expect(page.getByRole("navigation", { name: "Main navigation" })).toHaveCount(0);
   await expect(page.locator("main")).toHaveCount(1);
 
-  const main = page.getByRole("main");
-  const frame = await main.evaluate((el) => ({ scrollHeight: el.scrollHeight, clientHeight: el.clientHeight }));
-  expect(frame.scrollHeight).toBeGreaterThan(frame.clientHeight);
-
   // The foot of the page is reachable: the frame scrolls, not the window.
-  const notice = page.getByTestId("wow-legal-notice");
-  await notice.scrollIntoViewIfNeeded();
-  await expect(notice).toBeInViewport();
-  expect(await main.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  await expectFrameScrollsTo(page, page.getByTestId("wow-legal-notice"));
 });
 
 test("the web build's live-mode placeholder renders in the compact frame", async ({ page }) => {
