@@ -33,6 +33,8 @@ const TEXT_PAIRS: [Token, Token][] = [
   ["mutedForeground", "background"],
   ["mutedForeground", "card"],
   ["primaryForeground", "primary"],
+  ["primary", "background"],
+  ["primary", "card"],
   ["destructiveForeground", "destructive"],
   ["destructiveText", "background"],
   ["destructiveText", "card"],

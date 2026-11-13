@@ -34,7 +34,7 @@ test("stylesheet and design tokens apply in light and dark", async ({ page }) =>
   await page.goto(`${ORIGIN}/`);
   const card = page.locator("a.app").first();
   await expect(card).toHaveCSS("border-radius", "8px");
-  await expect(card.locator(".app-cta")).toHaveCSS("color", "rgb(37, 99, 235)");
+  await expect(card.locator(".app-cta")).toHaveCSS("color", "rgb(26, 91, 234)");
 
   await page.emulateMedia({ colorScheme: "dark" });
   await expect(page.locator("body")).toHaveCSS("background-color", "rgb(2, 8, 23)");
