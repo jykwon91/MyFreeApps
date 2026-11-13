@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, EmailStr
 
+from app.schemas.organization.organization_name import OrganizationName
+
 
 class InviteInfoResponse(BaseModel):
     org_name: str
@@ -17,11 +19,11 @@ class InviteInfoResponse(BaseModel):
 
 
 class OrganizationCreate(BaseModel):
-    name: str
+    name: OrganizationName
 
 
 class OrganizationUpdate(BaseModel):
-    name: str
+    name: OrganizationName
 
 
 class OrganizationRead(BaseModel):

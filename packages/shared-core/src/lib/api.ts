@@ -2,6 +2,7 @@ import axios from "axios";
 import type { AxiosResponse } from "axios";
 import { installStepUpInterceptor } from "../auth/stepUpInterceptor";
 import { getPlatform, onPlatformConfigured } from "../platform/configurePlatform";
+import { ORGANIZATION_HEADER } from "../constants/organizationHeader";
 import { NO_REFRESH_URL_PARTS } from "../constants/sessionRefresh";
 import { notifyAuthChange } from "./auth-store";
 import { renewAfterUnauthorized } from "./renewAfterUnauthorized";
@@ -40,9 +41,11 @@ api.interceptors.request.use((config: SessionRetryConfig) => {
     }
   }
 
-  const orgId = orgStore.get();
-  if (orgId) {
-    config.headers["X-Organization-Id"] = orgId;
+  // Set once, when first sent: a retry after a session renewal goes to the workspace
+  // the request started in, even if the user has switched since.
+  if (!config.headers.has(ORGANIZATION_HEADER)) {
+    const orgId = orgStore.get();
+    if (orgId) config.headers.set(ORGANIZATION_HEADER, orgId);
   }
 
   return config;

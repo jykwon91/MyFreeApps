@@ -18,8 +18,9 @@ import { uploadPhaseChanged, uploadRejected } from "./uploadsSlice";
 let isDraining = false;
 
 /** Gives up on a dead connection, or nothing else could send until the app restarts. */
-async function send(upload: PendingUpload, dispatch: AppDispatch) {
-  const request = dispatch(documentsApi.endpoints.uploadDocument.initiate(uploadForm(upload)));
+async function send(upload: PendingUpload, workspaceId: string, dispatch: AppDispatch) {
+  // Named here, so a send retried after a switch still goes to the file's own workspace.
+  const request = dispatch(documentsApi.endpoints.uploadDocument.initiate({ form: uploadForm(upload), workspaceId }));
   const timer = setTimeout(() => request.abort(), UPLOAD_TIMEOUT_MS);
   try {
     return await request;
@@ -37,7 +38,7 @@ async function sendAll(workspaceId: string, dispatch: AppDispatch, getState: () 
     // Asked before every file, so stopping takes effect at the next one.
     if (!hasAiPermission()) return "waitingForPermission";
 
-    const result = await send(next, dispatch);
+    const result = await send(next, workspaceId, dispatch);
     if (!("error" in result)) {
       removeFromQueue(next);
       sentAny = true;

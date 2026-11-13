@@ -3,6 +3,8 @@ import { useCreateOrganizationMutation } from "@mybookkeeper/api-client/store/or
 import { LoadingButton } from "@platform/ui";
 import { ORGANIZATION_NAME_MAX_LENGTH, ORGANIZATION_NAME_PROBLEM_MESSAGES } from "@mybookkeeper/api-client/constants/organizationName";
 import { organizationNameProblem } from "@mybookkeeper/api-client/utils/organizationNameProblem";
+import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
+import { CREATE_ORGANIZATION_MESSAGES } from "@/shared/lib/organization-messages";
 
 export default function CreateOrgPrompt() {
   const [name, setName] = useState("");
@@ -17,9 +19,7 @@ export default function CreateOrgPrompt() {
     await createOrg({ name: name.trim() });
   }
 
-  const errorMessage = error && "data" in error
-    ? String((error.data as Record<string, unknown>)?.detail ?? "Something went wrong")
-    : null;
+  const errorMessage = error ? getApiErrorDetail(error, CREATE_ORGANIZATION_MESSAGES.couldntCreate) : null;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted">

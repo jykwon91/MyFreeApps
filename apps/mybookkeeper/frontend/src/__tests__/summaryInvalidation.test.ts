@@ -80,7 +80,7 @@ describe("Summary cache invalidation on mutations", () => {
   describe("documentsApi mutations invalidate Summary", () => {
     it("uploadDocument triggers summary refetch", async () => {
       const file = new File(["x"], "x.pdf", { type: "application/pdf" });
-      await assertInvalidatesSummary("uploadDocument", documentUploadForm(file));
+      await assertInvalidatesSummary("uploadDocument", { form: documentUploadForm(file) });
     });
 
     it("deleteDocument triggers summary refetch", async () => {

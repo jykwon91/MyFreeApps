@@ -6,7 +6,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { Provider } from "react-redux";
 import { WORKSPACE_HOME_ROUTE, WORKSPACE_MESSAGES as MESSAGES } from "../src/constants/workspace";
-import { readSavedWorkspaceId } from "../src/features/workspace/savedWorkspace";
+import { readSavedWorkspace } from "../src/features/workspace/savedWorkspace";
 import WorkspaceGate from "../src/features/workspace/WorkspaceGate";
 import WorkspaceSection from "../src/features/workspace/WorkspaceSection";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -128,7 +128,7 @@ describe("switching workspace", () => {
     expect(cached("listOrganizations")).toEqual([[MINE, OTHER]]);
     expect(mockNavigate).toHaveBeenCalledWith(WORKSPACE_HOME_ROUTE);
     expect(await screen.findByText(MESSAGES.switched("Other"))).toBeTruthy();
-    await waitFor(() => expect(readSavedWorkspaceId()).toBe("w2"));
+    await waitFor(() => expect(readSavedWorkspace()).toEqual({ id: "w2", name: "Other" }));
 
     await api.get("/transactions");
     expect(server.sentFor["/transactions"]).toBe("w2");

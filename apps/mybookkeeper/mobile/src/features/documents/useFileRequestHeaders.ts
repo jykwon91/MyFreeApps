@@ -1,3 +1,4 @@
+import { ORGANIZATION_HEADER } from "@platform/core/constants/organizationHeader";
 import { bearerHeader } from "@platform/mobile";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../lib/store";
@@ -8,6 +9,6 @@ export function useFileRequestHeaders(): () => Record<string, string> {
   const workspaceId = useSelector((state: RootState) => state.workspace.activeId);
   return () => ({
     ...bearerHeader(session),
-    ...(workspaceId ? { "X-Organization-Id": workspaceId } : {}),
+    ...(workspaceId ? { [ORGANIZATION_HEADER]: workspaceId } : {}),
   });
 }

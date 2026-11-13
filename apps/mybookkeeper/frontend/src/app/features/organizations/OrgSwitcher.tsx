@@ -6,6 +6,9 @@ import { switchOrg } from "@/shared/store/organizationSlice";
 import { useCurrentOrg } from "@/shared/hooks/useCurrentOrg";
 import { useState } from "react";
 import { useCreateOrganizationMutation } from "@mybookkeeper/api-client/store/organizationsApi";
+import { showError } from "@platform/ui";
+import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
+import { CREATE_ORGANIZATION_MESSAGES } from "@/shared/lib/organization-messages";
 
 import { ROLE_LABELS } from "@mybookkeeper/api-client/constants/orgRoles";
 import { ORGANIZATION_NAME_MAX_LENGTH } from "@mybookkeeper/api-client/constants/organizationName";
@@ -26,7 +29,13 @@ export default function OrgSwitcher() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (organizationNameProblem(newName)) return;
-    await createOrg({ name: newName.trim() });
+    try {
+      await createOrg({ name: newName.trim() }).unwrap();
+    } catch (err) {
+      // The form stays open with the name, so it can be sent again.
+      showError(getApiErrorDetail(err, CREATE_ORGANIZATION_MESSAGES.couldntCreate));
+      return;
+    }
     setNewName("");
     setShowCreate(false);
   }

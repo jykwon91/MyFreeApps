@@ -1,6 +1,6 @@
 import type { OrganizationNameProblem } from "../types/organization/OrganizationNameProblem";
 
-/** `organizations.name` is a String(255), and the API takes any string, so the forms hold the line. */
+/** `organizations.name` is a String(255). The API refuses a longer name, and a blank one, after trimming. */
 export const ORGANIZATION_NAME_MAX_LENGTH = 255;
 
 export const ORGANIZATION_NAME_PROBLEM_MESSAGES: Record<OrganizationNameProblem, string> = {

@@ -209,7 +209,7 @@ export default function DocumentUploadZone() {
 
     dispatch(startUpload(file.name));
 
-    uploadDocument(documentUploadForm(file))
+    uploadDocument({ form: documentUploadForm(file) })
       .unwrap()
       .then(({ document_id, batch_id, batch_total }) => {
         dispatch(uploadSucceeded({ documentId: document_id, batchId: batch_id, batchTotal: batch_total }));
@@ -231,7 +231,7 @@ export default function DocumentUploadZone() {
 
     for (const file of supported) {
       try {
-        await uploadDocument(documentUploadForm(file)).unwrap();
+        await uploadDocument({ form: documentUploadForm(file) }).unwrap();
         dispatch(multiUploadFileCompleted());
       } catch {
         dispatch(multiUploadFileFailed());

@@ -1,4 +1,5 @@
 import "@platform/mobile/test-support/reactNativeFormData";
+import { ORGANIZATION_HEADER } from "@platform/core/constants/organizationHeader";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { waitFor } from "@testing-library/react-native";
@@ -184,6 +185,24 @@ describe("upload queue", () => {
     await waitFor(() => expect(pendingUploads("w2")).toEqual([]));
     expect(sentTo).toEqual(["w1", "w2"]);
     expect(pendingUploads("w1").map((upload) => upload.name)).toEqual(["b.jpg"]);
+  });
+
+  it("files a photo in its own workspace when the send is retried after a switch", async () => {
+    addFile("w1", "a.jpg");
+    const sentTo: unknown[] = [];
+    const adapter: AxiosAdapter = (config) => {
+      sentTo.push(config.headers[ORGANIZATION_HEADER]);
+      if (sentTo.length > 1) return Promise.resolve({ data: { document_id: "d" }, status: 202, statusText: "", headers: {}, config });
+      // The session renews and the user switches before the retry goes out.
+      session.tokenStore.set("renewed");
+      store.dispatch(workspaceChosen("w2"));
+      const response = { data: {}, status: 401, statusText: "", headers: {}, config };
+      return Promise.reject(Object.assign(new Error("401"), { config, response, isAxiosError: true }));
+    };
+    api.defaults.adapter = adapter;
+    await drain();
+    expect(sentTo).toEqual(["w1", "w1"]);
+    expect(pendingUploads("w1")).toEqual([]);
   });
 
   it("keeps sending after someone dismisses a message mid-send", async () => {

@@ -1,8 +1,10 @@
+import { ORGANIZATION_HEADER } from "@platform/core/constants/organizationHeader";
 import { baseApi } from "@platform/core/store/baseApi";
 import type { BatchStatusResponse } from "../types/document/BatchStatusResponse";
 import type { BulkDeleteDocumentsResponse } from "../types/document/BulkDeleteDocumentsResponse";
 import type { Document } from "../types/document/document";
 import type { SingleStatusResponse } from "../types/document/SingleStatusResponse";
+import type { UploadDocumentArgs } from "../types/document/UploadDocumentArgs";
 import type { UploadResponse } from "../types/document/UploadResponse";
 
 export const documentsApi = baseApi.enhanceEndpoints({
@@ -19,9 +21,13 @@ export const documentsApi = baseApi.enhanceEndpoints({
           ? [...result.map((d) => ({ type: "Document" as const, id: d.id })), { type: "Document", id: "LIST" }]
           : [{ type: "Document", id: "LIST" }],
     }),
-    // The caller builds the form: a browser appends a File, a phone a { uri, name, type }.
-    uploadDocument: builder.mutation<UploadResponse, FormData>({
-      query: (form) => ({ url: "/documents/upload", method: "POST", data: form }),
+    uploadDocument: builder.mutation<UploadResponse, UploadDocumentArgs>({
+      query: ({ form, workspaceId }) => ({
+        url: "/documents/upload",
+        method: "POST",
+        data: form,
+        headers: workspaceId ? { [ORGANIZATION_HEADER]: workspaceId } : undefined,
+      }),
       invalidatesTags: ["Document", "Summary", "Transaction"],
     }),
     getBatchStatus: builder.query<BatchStatusResponse, string>({
