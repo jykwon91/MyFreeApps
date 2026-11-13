@@ -10,7 +10,7 @@ import { serve } from "@platform/mobile/test-support/fakeServer";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { SentRequest } from "@platform/mobile/test-support/types/SentRequest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
-import { Alert } from "react-native";
+import { AccessibilityInfo, Alert } from "react-native";
 import { Provider } from "react-redux";
 import { MANAGE_RECIPE_MESSAGES as MESSAGES } from "../src/constants/manageRecipe";
 import { RECIPES_LIST_PATH } from "../src/constants/routes";
@@ -287,6 +287,31 @@ describe("deleting a recipe", () => {
 
     expect(await screen.findByRole("alert", { name: MESSAGES.gone })).toBeTruthy();
     expect(mockDismissTo).toHaveBeenCalledWith(RECIPES_LIST_PATH);
+  });
+
+  it.each([
+    ["deleted", () => reply(204, null)],
+    ["already deleted", () => reply(404, { detail: "Not Found" })],
+  ])("never says the recipe is not found while it leaves after it was %s", async (_name, answer) => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+    let deleted = false;
+    await show(SOUP, {
+      "GET /recipes/r1": () => (deleted ? reply(404, { detail: "Not Found" }) : reply(200, SOUP)),
+      "DELETE /recipes/r1": () => {
+        deleted = true;
+        return answer();
+      },
+    });
+    await pressDelete();
+    await act(async () => alertButton(SHARED.deleteConfirm).onPress?.());
+
+    await waitFor(() => expect(mockDismissTo).toHaveBeenCalledWith(RECIPES_LIST_PATH));
+    await waitFor(() => expect(sent.filter(({ route }) => route === "GET /recipes/r1").length).toBeGreaterThan(1));
+    await act(async () => undefined);
+    expect(screen.queryByText("Recipe not found")).toBeNull();
+    expect(screen.getByText("Simmer.")).toBeTruthy();
+    expect(announce).not.toHaveBeenCalledWith("Recipe not found");
+    announce.mockRestore();
   });
 
   it("stays and says so when the delete fails, and can try again", async () => {

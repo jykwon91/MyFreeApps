@@ -1,8 +1,9 @@
-import { useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
+import { useDeleteRecipeMutation, useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
 import { EmptyState, Toast, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { useErrorSinceOpening } from "../../hooks/useErrorSinceOpening";
+import { deleteRecipeCacheKey } from "../../utils/deleteRecipeCacheKey";
 import { isNotFoundError } from "../../utils/isNotFoundError";
 import { recipeBackTitle } from "../../utils/recipeBackTitle";
 import RecipeContent from "./RecipeContent";
@@ -20,7 +21,13 @@ export default function RecipeDetailScreen() {
   });
   const { dismissError, isErrorDismissed, refreshControl } = useRefresh(refetch, error);
 
-  const hasFailed = useErrorSinceOpening(error, isError);
+  // Once this screen's delete has gone through (or found the recipe already gone), the screen is on
+  // its way out; the refetch the delete triggers then 404s, and that must not show or announce.
+  const [, deletion] = useDeleteRecipeMutation({ fixedCacheKey: deleteRecipeCacheKey(params.id) });
+  const isLeaving = deletion.isSuccess || (deletion.isError && isNotFoundError(deletion.error));
+
+  const hasFailedSinceOpening = useErrorSinceOpening(error, isError);
+  const hasFailed = hasFailedSinceOpening && !isLeaving;
   const isGone = hasFailed && isNotFoundError(error);
   const isLoadFailed = hasFailed && !isGone && !recipe;
   useAnnouncement(isGone ? "Recipe not found" : isLoadFailed ? "Can't load this recipe" : undefined);

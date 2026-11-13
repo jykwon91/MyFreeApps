@@ -4,6 +4,7 @@ import { LoadingButton, useConfirmedRemoval } from "@platform/mobile";
 import { router } from "expo-router";
 import { MANAGE_RECIPE_MESSAGES as MESSAGES } from "../../constants/manageRecipe";
 import { RECIPES_LIST_PATH } from "../../constants/routes";
+import { deleteRecipeCacheKey } from "../../utils/deleteRecipeCacheKey";
 import type { DeleteRecipeButtonProps } from "../../types/DeleteRecipeButtonProps";
 
 /**
@@ -11,7 +12,7 @@ import type { DeleteRecipeButtonProps } from "../../types/DeleteRecipeButtonProp
  * recipes list, whose cached copy the delete has marked stale, so it's asked for again.
  */
 export default function DeleteRecipeButton({ recipeId }: DeleteRecipeButtonProps) {
-  const [deleteRecipe] = useDeleteRecipeMutation();
+  const [deleteRecipe] = useDeleteRecipeMutation({ fixedCacheKey: deleteRecipeCacheKey(recipeId) });
   const { isRemoving, confirmRemove } = useConfirmedRemoval(
     () => deleteRecipe(recipeId).unwrap(),
     {
