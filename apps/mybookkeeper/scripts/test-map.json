@@ -733,6 +733,8 @@
         "frontend/src/shared/lib/inquiry-badge-colors.ts",
         "api-client/src/utils/inquiryQuality.ts",
         "api-client/src/utils/inquiryDateFormat.ts",
+        "api-client/src/constants/inquiryForm.ts",
+        "api-client/src/utils/inquiryForm.ts",
         "frontend/src/shared/lib/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode.ts",
         "frontend/src/shared/types/list-load-mode-args.ts",

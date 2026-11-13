@@ -1,8 +1,10 @@
 import api from "@platform/core/lib/api";
+import type { InquiryCreateRequest } from "@mybookkeeper/api-client/types/inquiry/inquiry-create-request";
 import type { InquiryMessage } from "@mybookkeeper/api-client/types/inquiry/inquiry-message";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import type { ReplyTemplate } from "@mybookkeeper/api-client/types/inquiry/reply-template";
 import type { Integration } from "@mybookkeeper/api-client/types/integration/integration";
+import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 import type { InquirySpamAssessment } from "@mybookkeeper/api-client/types/inquiry/inquiry-spam-assessment";
 import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
@@ -60,6 +62,8 @@ export interface FakeInquiryServer {
   listingTitle: string | null;
   /** While set, the listing's answer waits for it. */
   holdListing: Promise<void> | null;
+  /** What GET /listings answers with. Null fails it. */
+  listings: Partial<ListingSummary>[] | null;
   role: string;
   offline: boolean;
   /** The status every inquiry write fails with, while set. */
@@ -74,6 +78,8 @@ export interface FakeInquiryServer {
   /** How the next template write ends. "lost" ones commit (or not) but never answer. */
   /** Saved, then: the answer lost; the answer lost and the network gone; or the proxy's own 502. */
   templateWriteOutcome: "lostAfterSaving" | "lostBeforeSaving" | "lostAndOffline" | "gatewayAfterSaving" | null;
+  /** How the next add ends, while set: a failure with that status and body detail. */
+  createOutcome: { status: number; detail?: unknown } | null;
   /** How the next send ends. A number is a failure with that status. */
   sendOutcome: { status: number; detail?: string | Record<string, string> } | "lostAfterSending" | "lostBeforeSending" | null;
   /** Replies sent, by request id: the same id again gets the same reply back, as the real server does. */
@@ -88,6 +94,7 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
     assessments: [],
     listingTitle: null,
     holdListing: null,
+    listings: [],
     role: "owner",
     offline: false,
     failWritesWith: null,
@@ -97,6 +104,7 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
     failTemplateRender: false,
     archivedTemplates: [],
     templateWriteOutcome: null,
+    createOutcome: null,
     sendOutcome: null,
     sentByRequestId: new Map(),
     requests: [],
@@ -120,6 +128,17 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
       return respond(rows);
     }
     if (config.url?.startsWith("/reply-templates")) return answerTemplateWrite(config, server, respond);
+    if (config.url === "/inquiries" && config.method === "post") {
+      if (server.createOutcome) return respond({ detail: server.createOutcome.detail ?? "nope" }, server.createOutcome.status);
+      const body = JSON.parse(String(config.data)) as InquiryCreateRequest;
+      const created = anInquiry({ ...body, id: `new${server.inquiries.length}`, messages: [], spam_status: "unscored" });
+      server.inquiries = [created, ...server.inquiries];
+      return respond(created, 201);
+    }
+    if (config.url === "/listings") {
+      if (!server.listings) return respond({ detail: "nope" }, 500);
+      return respond({ items: server.listings, total: server.listings.length, has_more: false });
+    }
     if (config.url === "/inquiries") {
       const params = (config.params ?? {}) as Record<string, string | number | boolean | undefined>;
       const offset = Number(params.offset ?? 0);

@@ -1,11 +1,19 @@
 import { useMemo } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { X } from "lucide-react";
 import { FormField, LoadingButton, Panel, PanelTitle, showError, showSuccess } from "@platform/ui";
 import { INQUIRY_SOURCES, INQUIRY_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import { useCreateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
-import type { InquiryCreateRequest } from "@mybookkeeper/api-client/types/inquiry/inquiry-create-request";
-import type { InquiryFormValues } from "@/shared/types/inquiry/inquiry-form-values";
+import { INQUIRY_FORM_LABELS as LABELS, INQUIRY_FORM_PLACEHOLDERS as PLACEHOLDERS } from "@mybookkeeper/api-client/constants/inquiryForm";
+import type { InquiryFormProblems } from "@mybookkeeper/api-client/types/inquiry/inquiry-form-problems";
+import type { InquiryFormValues } from "@mybookkeeper/api-client/types/inquiry/inquiry-form-values";
+import {
+  blankInquiryForm,
+  externalInquiryIdLabel,
+  inquiryFormProblems,
+  inquiryFormToCreateRequest,
+  needsExternalInquiryId,
+} from "@mybookkeeper/api-client/utils/inquiryForm";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import type { InquirySource } from "@mybookkeeper/api-client/types/inquiry/inquiry-source";
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
@@ -17,74 +25,31 @@ export interface InquiryFormProps {
 }
 
 /**
- * Right-side slide-in panel for manually creating an inquiry.
- *
- * PR 2.1b is create-only — edit flows go through the detail page (stage
- * dropdown + notes auto-save). PR 2.2's email parser will populate the same
- * underlying record, so the form intentionally accepts every field a parsed
- * inquiry can carry.
- *
- * Validation mirrors the backend Pydantic schema so the host gets early
- * feedback (received_at required, dates ordering, external_inquiry_id
- * required for non-direct sources).
+ * Right-side slide-in panel for manually creating an inquiry. Edits go through the detail page.
+ * The fields, validation and request body are shared with the phone app via
+ * ``@mybookkeeper/api-client/utils/inquiryForm``.
  */
-function buildEmptyDefaults(): InquiryFormValues {
-  // datetime-local input wants "YYYY-MM-DDTHH:mm" with no seconds / TZ.
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const localNow = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-
-  return {
-    source: "direct",
-    external_inquiry_id: "",
-    listing_id: "",
-    inquirer_name: "",
-    inquirer_email: "",
-    inquirer_phone: "",
-    inquirer_employer: "",
-    desired_start_date: "",
-    desired_end_date: "",
-    notes: "",
-    received_at: localNow,
-  };
-}
-
-function formValuesToCreateRequest(values: InquiryFormValues): InquiryCreateRequest {
-  return {
-    source: values.source,
-    external_inquiry_id: values.external_inquiry_id.trim() || null,
-    listing_id: values.listing_id || null,
-    inquirer_name: values.inquirer_name.trim() || null,
-    inquirer_email: values.inquirer_email.trim() || null,
-    inquirer_phone: values.inquirer_phone.trim() || null,
-    inquirer_employer: values.inquirer_employer.trim() || null,
-    desired_start_date: values.desired_start_date || null,
-    desired_end_date: values.desired_end_date || null,
-    notes: values.notes.trim() || null,
-    // datetime-local string is naive ISO; backend requires aware datetime.
-    // Convert via the native Date parser then stringify as ISO with TZ.
-    received_at: new Date(values.received_at).toISOString(),
-  };
-}
-
 export default function InquiryForm({ listings, onClose, onCreated }: InquiryFormProps) {
   const [createInquiry, { isLoading }] = useCreateInquiryMutation();
-  const defaults = useMemo<InquiryFormValues>(() => buildEmptyDefaults(), []);
+  const defaults = useMemo<InquiryFormValues>(() => blankInquiryForm(new Date()), []);
 
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors },
   } = useForm<InquiryFormValues>({ defaultValues: defaults });
 
-  const source = watch("source");
-  const externalIdRequired = source !== "direct";
-  const startDate = watch("desired_start_date");
+  const source = useWatch({ control, name: "source" });
+  const externalIdRequired = needsExternalInquiryId(source);
+
+  function problemFor(field: keyof InquiryFormProblems): (value: string, all: InquiryFormValues) => string | true {
+    return (_value: string, all: InquiryFormValues) => inquiryFormProblems(all)[field] ?? true;
+  }
 
   async function onSubmit(values: InquiryFormValues) {
     try {
-      const created = await createInquiry(formValuesToCreateRequest(values)).unwrap();
+      const created = await createInquiry(inquiryFormToCreateRequest(values)).unwrap();
       showSuccess("Inquiry created.");
       onCreated?.(created);
       onClose();
@@ -99,12 +64,9 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
         <div className="px-5 py-4 border-b flex items-start justify-between">
           <div>
             <PanelTitle asChild>
-              <h3 className="font-medium text-base">New inquiry</h3>
+              <h3 className="font-medium text-base">{LABELS.title}</h3>
             </PanelTitle>
-            <p className="text-xs text-muted-foreground">
-              Log an inquiry that came in outside Furnished Finder or Travel Nurse
-              Housing — or a backdated one you want to track.
-            </p>
+            <p className="text-xs text-muted-foreground">{LABELS.intro}</p>
           </div>
           <button
             onClick={onClose}
@@ -122,7 +84,7 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
           className="flex-1 overflow-y-auto px-5 py-4 space-y-4"
           data-testid="inquiry-form"
         >
-          <FormField label="Source" required>
+          <FormField label={LABELS.source} required>
             {(field) => (
               <select
                 {...register("source", { required: true })}
@@ -140,15 +102,13 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
           </FormField>
 
           {externalIdRequired ? (
-            <FormField label={`${INQUIRY_SOURCE_LABELS[source]} inquiry ID`} required>
+            <FormField label={externalInquiryIdLabel(source)} required>
               {(field) => (
                 <>
                   <input
-                    {...register("external_inquiry_id", {
-                      required: "Required for non-direct inquiries",
-                    })}
+                    {...register("external_inquiry_id", { validate: problemFor("external_inquiry_id") })}
                     data-testid="inquiry-form-external-id"
-                    placeholder="e.g. I-12345"
+                    placeholder={PLACEHOLDERS.externalId}
                     className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                     {...field}
                   />
@@ -162,11 +122,11 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
             </FormField>
           ) : null}
 
-          <FormField label="Inquirer name" required>
+          <FormField label={LABELS.name} required>
             {(field) => (
               <>
                 <input
-                  {...register("inquirer_name", { required: "Name is required" })}
+                  {...register("inquirer_name", { validate: problemFor("inquirer_name") })}
                   data-testid="inquiry-form-name"
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
@@ -179,7 +139,7 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
           </FormField>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FormField label="Email">
+            <FormField label={LABELS.email}>
               {(field) => (
                 <input
                   type="email"
@@ -190,7 +150,7 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
                 />
               )}
             </FormField>
-            <FormField label="Phone">
+            <FormField label={LABELS.phone}>
               {(field) => (
                 <input
                   type="tel"
@@ -203,11 +163,11 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
             </FormField>
           </div>
 
-          <FormField label="Employer / hospital">
+          <FormField label={LABELS.employer}>
             {(field) => (
               <input
                 {...register("inquirer_employer")}
-                placeholder="e.g. Texas Children's Hospital"
+                placeholder={PLACEHOLDERS.employer}
                 data-testid="inquiry-form-employer"
                 className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                 {...field}
@@ -216,7 +176,7 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
           </FormField>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FormField label="Desired start date">
+            <FormField label={LABELS.startDate}>
               {(field) => (
                 <input
                   type="date"
@@ -227,16 +187,12 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
                 />
               )}
             </FormField>
-            <FormField label="Desired end date">
+            <FormField label={LABELS.endDate}>
               {(field) => (
                 <>
                   <input
                     type="date"
-                    {...register("desired_end_date", {
-                      validate: (v) =>
-                        !v || !startDate || v >= startDate
-                          || "End date must be on or after start date",
-                    })}
+                    {...register("desired_end_date", { validate: problemFor("desired_end_date") })}
                     data-testid="inquiry-form-end-date"
                     className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                     {...field}
@@ -251,7 +207,7 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
             </FormField>
           </div>
 
-          <FormField label="Listing">
+          <FormField label={LABELS.listing}>
             {(field) => (
               <select
                 {...register("listing_id")}
@@ -259,7 +215,7 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
                 className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                 {...field}
               >
-                <option value="">Not yet linked</option>
+                <option value="">{LABELS.noListing}</option>
                 {listings.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.title}
@@ -269,12 +225,12 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
             )}
           </FormField>
 
-          <FormField label="Received at" required>
+          <FormField label={LABELS.receivedAt} required>
             {(field) => (
               <>
                 <input
                   type="datetime-local"
-                  {...register("received_at", { required: "Received-at is required" })}
+                  {...register("received_at", { validate: problemFor("received_at") })}
                   data-testid="inquiry-form-received-at"
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   {...field}
@@ -286,7 +242,7 @@ export default function InquiryForm({ listings, onClose, onCreated }: InquiryFor
             )}
           </FormField>
 
-          <FormField label="Notes">
+          <FormField label={LABELS.notes}>
             {(field) => (
               <textarea
                 {...register("notes")}
