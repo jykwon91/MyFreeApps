@@ -1,7 +1,7 @@
 /**
  * Stubs the customer-facing API (app/api/public.py) the way it answers
  * without a token: the menu, the current drop (404 when none is taking
- * orders), placing an order (201 with its confirmation), reading an order back
+ * orders), placing an order (201 with its confirmation, or the refusal it is told to give), reading an order back
  * by id (404 for one it never placed) and the phone lookup (404 for a phone it
  * doesn't know).
  */
@@ -27,7 +27,7 @@ const FIRST_NEW = 100;
 
 export async function stubPublicApi(
   page: Page,
-  { noActiveDrop = false, orders = [], knownCustomers = {} }: PublicApiStubOptions = {},
+  { noActiveDrop = false, orders = [], knownCustomers = {}, refuseOrders }: PublicApiStubOptions = {},
 ): Promise<PublicApiStub> {
   const stub: PublicApiStub = { writes: [], lookups: [] };
   const placed: PublicOrderConfirmation[] = [...orders];
@@ -40,6 +40,7 @@ export async function stubPublicApi(
 
   await page.route(apiPath(ORDERS), (route) => {
     const body = recordWrite(stub.writes, route.request()) as PublicOrderCreateBody;
+    if (refuseOrders) return route.fulfill(json({ detail: refuseOrders.detail }, refuseOrders.status));
     const confirmation = confirmationFromOrder(orderIdAt(created++), body);
     placed.push(confirmation);
     return route.fulfill(json(confirmation, 201));
