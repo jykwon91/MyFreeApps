@@ -1,6 +1,6 @@
 import { Outlet, ScrollRestoration } from "react-router-dom";
 import { ChefHat, Compass, Settings, Shield } from "lucide-react";
-import { AppShell, GuestShell, StepUpModal, Toaster, useIsAuthenticated } from "@platform/ui";
+import { AppShell, GuestShell, StepUpModal, useIsAuthenticated } from "@platform/ui";
 import { buildNav, PUBLIC_NAV_PATHS } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
@@ -71,7 +71,6 @@ export default function RootLayout() {
     return (
       <>
         <ScrollRestoration />
-        <Toaster />
         <StepUpModal />
         <GuestShell logo={LOGO} nav={nav}>
           <Outlet />
@@ -83,7 +82,6 @@ export default function RootLayout() {
   return (
     <>
       <ScrollRestoration />
-      <Toaster />
       <StepUpModal />
       <AppShell
         logo={LOGO}

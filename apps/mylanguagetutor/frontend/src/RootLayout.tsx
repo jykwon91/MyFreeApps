@@ -1,6 +1,6 @@
 import { Outlet, ScrollRestoration } from "react-router-dom";
 import { MessageCircle, Settings, Shield } from "lucide-react";
-import { AppShell, RequireAuth, StepUpModal, ThemeToggle, Toaster, useIsAuthenticated } from "@platform/ui";
+import { AppShell, RequireAuth, StepUpModal, ThemeToggle, useIsAuthenticated } from "@platform/ui";
 import { buildNav } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
@@ -47,7 +47,6 @@ export default function RootLayout() {
   return (
     <RequireAuth>
       <ScrollRestoration />
-      <Toaster />
       <StepUpModal />
       <AppShell
         logo={logo}

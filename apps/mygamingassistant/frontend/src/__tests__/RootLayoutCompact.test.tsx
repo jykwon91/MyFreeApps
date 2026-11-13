@@ -44,7 +44,6 @@ vi.mock("@platform/ui", () => ({
   ),
   StepUpModal: () => <div data-testid="step-up-modal" />,
   ThemeToggle: () => <div data-testid="theme-toggle" />,
-  Toaster: () => <div data-testid="toaster" />,
   useIsAuthenticated: () => mockIsAuthenticated(),
 }));
 
