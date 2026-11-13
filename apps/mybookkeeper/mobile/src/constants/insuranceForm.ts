@@ -6,6 +6,14 @@ import { documentReaderMessages } from "./documentReader";
 export const POLICY_NAME_MAX_LENGTH = 255;
 export const POLICY_NOTES_MAX_LENGTH = 5000;
 export const POLICY_PHOTO_NAME = "policy.jpg";
+
+/** Photos taken or picked together get their own number, so a failure can name the one that failed. */
+export function policyPhotoName(number: number): string {
+  return `policy-${number}.jpg`;
+}
+
+/** The library doesn't cap how many documents a policy holds, matching the web. */
+export const POLICY_PHOTO_NO_SELECTION_LIMIT = 0;
 export const DEFAULT_ATTACHMENT_KIND: InsuranceAttachmentKind = "policy_document";
 
 export const POLICY_FORM_MESSAGES = {
@@ -74,6 +82,10 @@ export const POLICY_ATTACHMENT_MESSAGES = {
   uploading: "Uploading…",
   cancel: "Cancel",
   uploaded: "Document added.",
+  uploadedMany: (count: number): string => `${count} documents added.`,
+  noFilesYet: "No documents chosen yet.",
+  failedNamed: (name: string, reason: string): string => `${name}: ${reason}`,
+  uploadingProgress: (done: number, total: number): string => `Uploading ${done + 1} of ${total}…`,
   remove: "Remove",
   removing: "Removing…",
   removed: "Document removed.",
