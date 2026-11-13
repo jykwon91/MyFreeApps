@@ -2,6 +2,7 @@ import type { DungeonBoss } from "@/games/wow-forever/types/dungeons/dungeonBoss
 import type { DungeonEntranceZone } from "@/games/wow-forever/types/dungeons/dungeonEntranceZone";
 import type { DungeonEntryRequirement } from "@/games/wow-forever/types/dungeons/dungeonEntryRequirement";
 import type { DungeonQuest } from "@/games/wow-forever/types/dungeons/dungeonQuest";
+import type { ForeverDungeonQuest } from "@/games/wow-forever/types/dungeons/foreverDungeonQuest";
 import type { Interior } from "@/games/wow-forever/worldMap/interiors";
 
 /**
@@ -15,7 +16,7 @@ export interface Dungeon {
   name: string;
   /**
    * A dungeon Forever added (`foreverDungeons.json`): the client gives its level
-   * and bosses, but no door, loot, quests or entry rules.
+   * and bosses, Blizzard's Game Data API its quests (`foreverQuests`); no door, loot or entry rules.
    */
   newInForever: boolean;
   /** What players call it ("VC", "SFK"). */
@@ -38,4 +39,6 @@ export interface Dungeon {
   interior: Interior | null;
   /** The dungeon's quests in Forever, lowest level first (both factions; the page filters). */
   quests: readonly DungeonQuest[];
+  /** A new Forever dungeon's quests (Game Data API), seen level first then title; empty for a Classic dungeon. */
+  foreverQuests: readonly ForeverDungeonQuest[];
 }

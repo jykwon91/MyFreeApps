@@ -436,8 +436,12 @@ _TREE_HREF = (
 )
 
 
-def _client(handler: Any) -> BlizzardStatic:
-    return BlizzardStatic("id", "secret", transport=httpx.MockTransport(handler))
+def _client(handler: Any, waits: list[float] | None = None) -> BlizzardStatic:
+    def sleep(seconds: float) -> None:
+        if waits is not None:
+            waits.append(seconds)
+
+    return BlizzardStatic("id", "secret", transport=httpx.MockTransport(handler), sleep=sleep)
 
 
 def _api(request: httpx.Request) -> httpx.Response:
@@ -469,6 +473,31 @@ def test_the_client_reads_the_build_trees_and_icons() -> None:
 def test_a_failed_call_stops_with_the_status_and_blizzards_code() -> None:
     with _client(_api) as api, pytest.raises(SystemExit, match="HTTP 404 code=BLZWEBAPI00000404 Not Found"):
         api.get("/data/wow/media/spell/1")
+
+
+def _dropping(drops: int) -> Any:
+    """The API, but the first ``drops`` Game Data calls lose their connection."""
+    left = [drops]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host != "oauth.battle.net" and left[0] > 0:
+            left[0] -= 1
+            raise httpx.ConnectError("dropped", request=request)
+        return _api(request)
+
+    return handler
+
+
+def test_a_dropped_connection_is_retried_after_a_growing_wait() -> None:
+    waits: list[float] = []
+    with _client(_dropping(2), waits) as api:
+        assert api.icon_file("/data/wow/media/spell/1040") == 136227
+    assert waits == [2.0, 4.0]
+
+
+def test_a_connection_dropped_every_time_stops_the_run() -> None:
+    with _client(_dropping(3)) as api, pytest.raises(SystemExit, match="request failed: ConnectError"):
+        api.get("/data/wow/media/spell/1040")
 
 
 def test_a_link_off_the_api_host_never_gets_the_token() -> None:

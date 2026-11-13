@@ -10,7 +10,8 @@ Run from ``apps/mygamingassistant/backend``::
 ``check`` exits 0 when the data is current and 10 when a newer build exists.
 Walk graphs are never rebuilt here: they need a few GB of client files, so run
 ``python -m scripts.wow_world_map.walk`` by hand when terrain or buildings
-change. The talent trees come from Blizzard's Game Data API, so ``apply`` needs
+change. The talent trees, reputations and Forever dungeon quests come from
+Blizzard's Game Data API, so ``apply`` needs
 ``BLIZZARD_CLIENT_ID`` / ``BLIZZARD_CLIENT_SECRET`` in ``backend/.env``. See
 ``apps/mygamingassistant/docs/wow-forever-refresh.md``.
 """
@@ -101,6 +102,8 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         # Reads the World Map, Item and quest-cache output above; reward items are in the icon build's wanted ids.
         # Its questSeen.json keeps quests a patch emptied from the cache; the Changes feed and Library read it.
         ["scripts.wow_quests.build", "--quest-cache", str(quest_cache)],
+        # WoW Forever's own dungeons' quests, from the Game Data API; reads the World Map's foreverDungeons.json.
+        ["scripts.wow_forever_quests.build"],
         # Reads the Item, Talent and Quest output above (and the World Map's zones).
         ["scripts.wow_changes.build", *cache],
         # The item browser's index, beside the item pages: reads the Item output and the Changes feed above.

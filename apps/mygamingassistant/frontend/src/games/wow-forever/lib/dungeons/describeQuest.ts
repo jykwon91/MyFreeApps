@@ -11,7 +11,7 @@ const OBJECTIVE_VERB: Readonly<Record<QuestTargetKind, string>> = {
 };
 
 /** The quests a player of this faction can take: theirs and the ones for both sides, in the page's order. */
-export function questsForFaction(quests: readonly DungeonQuest[], faction: PlayerFaction): DungeonQuest[] {
+export function questsForFaction<Q extends Pick<DungeonQuest, "side">>(quests: readonly Q[], faction: PlayerFaction): Q[] {
   return quests.filter((q) => q.side === faction || q.side === FACTION.neutral);
 }
 

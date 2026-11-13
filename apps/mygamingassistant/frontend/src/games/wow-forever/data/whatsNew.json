@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "Quests for Forever's new dungeons",
+    "summary": "Each of WoW Forever's nine new dungeons now lists its quests from Blizzard's own game data, about 80 in all (four a faction in City of Dalaran), with what each one gives (XP, gold, items, reputation) and any reputation it needs.",
+    "to": "/wow-forever/dungeons"
+  },
+  {
+    "date": "2026-11-13",
     "title": "Forever's new dungeons are listed",
     "summary": "City of Dalaran, Ruins of Lordaeron, Hall of Thanes and the other six dungeons WoW Forever added now show on the Dungeons page, tagged New in Forever, with their level, their bosses and the area the game puts them in.",
     "to": "/wow-forever/dungeons"

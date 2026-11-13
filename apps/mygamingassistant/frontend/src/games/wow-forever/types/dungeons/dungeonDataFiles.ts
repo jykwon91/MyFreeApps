@@ -26,4 +26,8 @@ export interface DungeonDataFiles {
   };
   /** `seenOn` is the day of the newest cache read; each row has its own. */
   seenQuests: { seenOn: string; columns: string[]; quests: Record<string, unknown[]> };
+  /** Forever's own dungeons' quests from Blizzard's Game Data API, rows by instance id (`foreverDungeonQuests.json`). */
+  foreverQuests: { build: string; columns: string[]; quests: Record<string, unknown[][]> };
+  /** Every quest the operator's client has seen (`quests/questSeen.json`): the levels the API doesn't give. */
+  questSeen: { columns: string[]; quests: Record<string, readonly unknown[]> };
 }

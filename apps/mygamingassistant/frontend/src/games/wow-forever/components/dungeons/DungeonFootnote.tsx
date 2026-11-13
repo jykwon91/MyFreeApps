@@ -9,8 +9,9 @@ export default function DungeonFootnote({ clientBuild }: { clientBuild: string }
         are listed. Flight-path distances are straight lines, not the walk.
       </p>
       <p>
-        Forever&apos;s new dungeons come from the Forever client alone: its level, its bosses in the game&apos;s list
-        order and the area the game puts it in. Their doors, keys, loot and quests aren&apos;t known yet.
+        Forever&apos;s new dungeons come from the Forever client (its level, its bosses in the game&apos;s list order
+        and the area the game puts it in) and their quests from Blizzard&apos;s Game Data API. Their doors, keys and
+        loot aren&apos;t known yet.
       </p>
       <p>Raids aren&apos;t listed yet; recipes, reagents and quest items aren&apos;t in the drop lists.</p>
     </aside>

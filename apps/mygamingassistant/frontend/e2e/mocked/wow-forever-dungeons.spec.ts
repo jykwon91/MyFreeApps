@@ -80,9 +80,8 @@ test("a dungeon Forever added is listed, tagged, and its page says what isn't kn
   await expect(bosses).toContainText("What the bosses drop isn't known yet");
   await expect(page.getByText("Drops", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Bosses" })).toHaveCount(0);
-  const quests = page.getByTestId("dungeon-quests");
-  await expect(quests).toContainText("No quests for this dungeon in our data yet.");
-  await expect(quests.getByRole("radiogroup")).toHaveCount(0);
+  // Its quests come from Blizzard's Game Data API (wow-forever-dungeon-quests.spec covers the section).
+  await expect(page.getByTestId("dungeon-quests").getByTestId("forever-quest-row").first()).toBeVisible();
 
   await where.getByRole("link", { name: "Show Alterac Mountains on the World Map" }).click();
   await expect(page).toHaveURL(/\/wow-forever\/map\?m=1416/);
