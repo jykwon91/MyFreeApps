@@ -3,6 +3,7 @@ import { FlatList, Modal, Text, useWindowDimensions, View, type NativeScrollEven
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   pageAtOffset,
+  photoViewerEditLabel,
   photoViewerCounter,
   WELCOME_MANUAL_PHOTO_VIEWER_GLYPHS as GLYPHS,
   WELCOME_MANUAL_PHOTO_VIEWER_MESSAGES as MESSAGES,
@@ -13,7 +14,7 @@ import WelcomeManualPhotoViewerPage from "./WelcomeManualPhotoViewerPage";
 import WelcomeManualViewerButton from "./WelcomeManualViewerButton";
 
 /** Every photo of a section, full screen: swipe or use the buttons to page, with a count and each caption. */
-export default function WelcomeManualPhotoViewer({ images, startIndex, onClose }: WelcomeManualPhotoViewerProps) {
+export default function WelcomeManualPhotoViewer({ images, startIndex, onClose, onEdit }: WelcomeManualPhotoViewerProps) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const list = useRef<FlatList>(null);
@@ -46,7 +47,8 @@ export default function WelcomeManualPhotoViewer({ images, startIndex, onClose }
           showsHorizontalScrollIndicator={false}
           testID="welcome-manual-photo-pager"
         />
-        <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + 12, left: 12, right: 12, flexDirection: "row", justifyContent: "flex-end" }}>
+        <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + 12, left: 12, right: 12, flexDirection: "row", justifyContent: "space-between" }}>
+          {onEdit ? <WelcomeManualViewerButton glyph={GLYPHS.edit} label={photoViewerEditLabel(index, total)} onPress={() => onEdit(images[index])} /> : <View />}
           <WelcomeManualViewerButton glyph={GLYPHS.close} label={MESSAGES.close} onPress={onClose} />
         </View>
         <View pointerEvents="box-none" style={{ position: "absolute", top: 0, bottom: 0, left: 12, right: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>

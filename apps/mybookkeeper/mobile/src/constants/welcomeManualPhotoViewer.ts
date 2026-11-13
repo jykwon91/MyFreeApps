@@ -8,6 +8,7 @@ export const WELCOME_MANUAL_PHOTO_VIEWER_MESSAGES = {
 
 export const WELCOME_MANUAL_PHOTO_VIEWER_GLYPHS = {
   close: "✕",
+  edit: "Edit",
   previous: "‹",
   next: "›",
 } as const;
@@ -23,6 +24,10 @@ export const WELCOME_MANUAL_PHOTO_VIEWER_STYLE = {
 
 export function photoViewerCounter(index: number, total: number): string {
   return `${index + 1} of ${total}`;
+}
+
+export function photoViewerEditLabel(index: number, total: number): string {
+  return `Edit photo ${index + 1} of ${total}`;
 }
 
 export function photoViewerPageLabel(index: number, total: number, caption: string | null): string {

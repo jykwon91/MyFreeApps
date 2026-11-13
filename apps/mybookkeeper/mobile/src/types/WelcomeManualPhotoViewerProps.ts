@@ -5,4 +5,6 @@ export interface WelcomeManualPhotoViewerProps {
   /** The photo the viewer opens on. */
   startIndex: number;
   onClose: () => void;
+  /** Given only to people who can change photos: hands over the photo on screen to edit. */
+  onEdit?: (image: WelcomeManualSectionImageResponse) => void;
 }

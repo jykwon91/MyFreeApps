@@ -9,7 +9,7 @@ export default function WelcomeManualViewerButton({ glyph, label, onPress }: Wel
       accessibilityLabel={label}
       accessibilityRole="button"
       onPress={onPress}
-      style={{ width: STYLE.touchTarget, height: STYLE.touchTarget, borderRadius: STYLE.touchTarget / 2, alignItems: "center", justifyContent: "center", backgroundColor: STYLE.overlay }}
+      style={{ minWidth: STYLE.touchTarget, height: STYLE.touchTarget, paddingHorizontal: 12, borderRadius: STYLE.touchTarget / 2, alignItems: "center", justifyContent: "center", backgroundColor: STYLE.overlay }}
     >
       <Text importantForAccessibility="no" style={{ fontSize: STYLE.glyphSize, color: STYLE.onBackdrop }}>
         {glyph}

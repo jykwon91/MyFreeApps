@@ -60,6 +60,18 @@ describe("the photo viewer", () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
+  it("offers Edit for the photo on screen only when given a way to edit", async () => {
+    const onEdit = jest.fn();
+    await render(<WelcomeManualPhotoViewer images={images} onClose={jest.fn()} onEdit={onEdit} startIndex={2} />);
+    await fireEvent.press(button("Edit photo 3 of 3"));
+    expect(onEdit).toHaveBeenCalledWith(images[2]);
+  });
+
+  it("has no Edit button without one", async () => {
+    await open(0);
+    expect(screen.queryByRole("button", { name: /^Edit photo/ })).toBeNull();
+  });
+
   it("keeps a scroll offset inside the photos there are", () => {
     expect(pageAtOffset(-50, 400, 3)).toBe(0);
     expect(pageAtOffset(9999, 400, 3)).toBe(2);
