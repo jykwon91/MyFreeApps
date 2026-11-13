@@ -104,7 +104,7 @@ describe("Auction house top picks filter", () => {
     renderPage("/wow-forever/auction-house?bis=any");
     await waitFor(() => expect(names()).toEqual(["Neck 20", "Neck 30", "Neck 40"]));
     expect(badges()).toEqual(["#3 Neck", "#2 Neck", "#1 Neck"]);
-    expect(within(screen.getByTestId("auction-active-filters")).getByRole("button", { name: "Remove filter: Top 3 BiS for level 60 Warlock" })).toBeInTheDocument();
+    expect(within(screen.getByTestId("auction-active-filters")).getByRole("button", { name: "Remove filter: Top 3 BiS for level 60 Affliction Warlock" })).toBeInTheDocument();
   });
 
   it("shows the list skeleton, never the unfiltered list, until the gear data is in", async () => {

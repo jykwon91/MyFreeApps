@@ -2,7 +2,7 @@
   {
     "date": "2026-11-13",
     "title": "Top picks at the auction house",
-    "summary": "In the auction house's Gear filters, pick \"Top picks for my level\" to see only the best three items per slot for your class and level, tagged #1, #2 or #3. At level 60 they are your best in slot.",
+    "summary": "In the auction house's Gear filters, pick \"Top picks for my level\" to see only the best three items per slot for your class and level, tagged #1, #2 or #3. At level 60 they are the best in slot you can buy (bind-on-pickup drops are left out).",
     "to": "/wow-forever/auction-house"
   },
   {

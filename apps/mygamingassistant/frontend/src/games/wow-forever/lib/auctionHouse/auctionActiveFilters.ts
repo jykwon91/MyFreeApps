@@ -5,6 +5,7 @@ import { QUALITY_FILTER_LABELS } from "@/games/wow-forever/data/auctionHouse/auc
 import { SLOT_LABELS } from "@/games/wow-forever/data/itemSlots";
 import { subcategoryLabel } from "@/games/wow-forever/lib/auctionHouse/itemCategoryLookup";
 import { normalizeFilterRanges } from "@/games/wow-forever/lib/auctionHouse/normalizeFilterRanges";
+import type { BisTarget } from "@/games/wow-forever/types/auctionHouse/bisTarget";
 import type { ActiveAuctionFilter } from "@/games/wow-forever/types/auctionHouse/activeAuctionFilter";
 import type { AuctionFilterGroup } from "@/games/wow-forever/types/auctionHouse/auctionFilterGroup";
 import type { AuctionFilters } from "@/games/wow-forever/types/auctionHouse/auctionFilters";
@@ -43,8 +44,8 @@ function range(min: number | null, max: number | null, unit: string): string {
   return `up to ${max}${unit}`;
 }
 
-/** The filters that are on, in the order the panel shows them. `classLabel` names the class "usable" means; `categories` names a chosen subclass once loaded; `bisLevel` is the level the top picks are for. */
-export function describeActiveFilters(asked: AuctionFilters, classLabel: string, categories: ItemCategoryIndex | null, bisLevel: number): ActiveAuctionFilter[] {
+/** The filters that are on, in the order the panel shows them. `classLabel` names the class "usable" means; `categories` names a chosen subclass once loaded; `bis` is who the top picks are for. */
+export function describeActiveFilters(asked: AuctionFilters, classLabel: string, categories: ItemCategoryIndex | null, bis: BisTarget): ActiveAuctionFilter[] {
   const filters = normalizeFilterRanges(asked);
   const active: ActiveAuctionFilter[] = [];
   if (filters.qualities.length > 0) {
@@ -62,7 +63,7 @@ export function describeActiveFilters(asked: AuctionFilters, classLabel: string,
     active.push({ group: "level", label: `Level: ${range(filters.minLevel, filters.maxLevel, "")}` });
   }
   if (filters.usable) active.push({ group: "usable", label: `Usable by ${classLabel}` });
-  if (filters.bis !== null) active.push({ group: "bis", label: bisActiveLabel(filters.bis, bisLevel, classLabel) });
+  if (filters.bis !== null) active.push({ group: "bis", label: bisActiveLabel(filters.bis, bis) });
   return active;
 }
 

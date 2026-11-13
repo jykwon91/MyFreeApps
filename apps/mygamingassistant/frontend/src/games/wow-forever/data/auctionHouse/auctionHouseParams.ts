@@ -44,7 +44,7 @@ export const AUCTION_LEVEL_PARAM = "lvl";
 /** `?usable=1` — gear the player's class can equip. */
 export const AUCTION_USABLE_PARAM = "usable";
 
-/** `?bis=any|1|2|3` � the top picks for the player's class and level; `?bisLvl=24` picks for another level. */
+/** `?bis=any|1|2|3` — the top picks for the player's class and level; `?bisLvl=24` picks for another level. */
 export const AUCTION_BIS_PARAM = "bis";
 export const AUCTION_BIS_LEVEL_PARAM = "bisLvl";
 

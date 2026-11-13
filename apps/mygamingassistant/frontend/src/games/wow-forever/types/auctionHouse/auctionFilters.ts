@@ -29,8 +29,8 @@ export interface AuctionFilters {
   maxLevel: number | null;
   /** Only gear the player's class can equip. */
   usable: boolean;
-  /** `?bis=` — only the top picks for the player's class at their level; needs the gear data. */
+  /** `?bis=` â€” only the top picks for the player's class at their level; needs the gear data. */
   bis: BisChoice | null;
-  /** `?bisLvl=` — the level to pick for, instead of the player's own; only meaningful with `bis`. */
+  /** `?bisLvl=` â€” the level to pick for, instead of the player's own; only meaningful with `bis`. */
   bisLevel: number | null;
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { NO_AUCTION_FILTERS } from "@/games/wow-forever/data/auctionHouse/noAuctionFilters";
 import { decodeGearData } from "@/games/wow-forever/gear/decodeGearData";
 import { DEFAULT_GEAR_SETTINGS } from "@/games/wow-forever/hooks/useGearSettings";
@@ -7,6 +7,9 @@ import { describeActiveFilters, removalPatch } from "@/games/wow-forever/lib/auc
 import { filtersFromParams, writeFiltersToParams } from "@/games/wow-forever/lib/auctionHouse/auctionFilterParams";
 import { bisLevelFor } from "@/games/wow-forever/lib/auctionHouse/bisLevel";
 import { bisPatch } from "@/games/wow-forever/lib/auctionHouse/bisPatch";
+import { bisTarget } from "@/games/wow-forever/lib/auctionHouse/bisTarget";
+import { savedGearSpec } from "@/games/wow-forever/lib/auctionHouse/savedGearSpec";
+import { GEAR_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/useGearSettings";
 import { computeBisPicks } from "@/games/wow-forever/lib/auctionHouse/bisPicks";
 import { filterAuctionItems } from "@/games/wow-forever/prices/auctionSearch";
 import type { AuctionFilterContext } from "@/games/wow-forever/types/auctionHouse/auctionFilterContext";
@@ -191,18 +194,24 @@ describe("top picks in the link and the chips", () => {
   });
 
   it("says BiS only at level 60", () => {
-    expect(bisActiveLabel("any", 24, "Warlock")).toBe("Top 3 for level 24 Warlock");
-    expect(bisActiveLabel(2, 24, "Warlock")).toBe("#2 pick for level 24 Warlock");
-    expect(bisActiveLabel("any", 60, "Warlock")).toBe("Top 3 BiS for level 60 Warlock");
-    expect(bisActiveLabel(1, 60, "Warlock")).toBe("#1 BiS for level 60 Warlock");
+    expect(bisActiveLabel("any", { level: 24, label: "Warlock" })).toBe("Top 3 for level 24 Warlock");
+    expect(bisActiveLabel(2, { level: 24, label: "Warlock" })).toBe("#2 pick for level 24 Warlock");
+    expect(bisActiveLabel("any", { level: 60, label: "Warlock" })).toBe("Top 3 BiS for level 60 Warlock");
+    expect(bisActiveLabel(1, { level: 60, label: "Warlock" })).toBe("#1 BiS for level 60 Warlock");
     expect(bisLegend(24)).toBe("Top picks for my level");
     expect(bisLegend(60)).toContain("BiS");
     expect(bisBadgeText({ rank: 1, slot: "Head" })).toBe("#1 Head");
   });
 
+  it("names the spec only at level 60, where its weights are used", () => {
+    expect(bisTarget(60, "warlock", "affliction")).toEqual({ level: 60, label: "Affliction Warlock" });
+    expect(bisTarget(24, "warlock", "affliction")).toEqual({ level: 24, label: "Warlock" });
+    expect(bisTarget(60, "warlock", "not-a-spec")).toEqual({ level: 60, label: "Warlock" });
+  });
+
   it("is an active filter that can be removed", () => {
     const on: AuctionFilters = { ...NO_AUCTION_FILTERS, bis: "any" };
-    expect(describeActiveFilters(on, "Warlock", null, 24)).toEqual([{ group: "bis", label: "Top 3 for level 24 Warlock" }]);
+    expect(describeActiveFilters(on, "Warlock", null, { level: 24, label: "Warlock" })).toEqual([{ group: "bis", label: "Top 3 for level 24 Warlock" }]);
     expect(removalPatch("bis")).toEqual({ bis: null, bisLevel: null });
   });
 
@@ -211,5 +220,21 @@ describe("top picks in the link and the chips", () => {
     expect(bisPatch("any", 1)).toEqual({ bis: "any" });
     expect(bisPatch("2", 2)).toEqual({ bis: null, bisLevel: null });
     expect(bisPatch("off", "any")).toEqual({ bis: null, bisLevel: null });
+  });
+});
+
+describe("savedGearSpec", () => {
+  afterEach(() => window.localStorage.clear());
+
+  it("uses the Best gear page's spec when it is for the same class", () => {
+    window.localStorage.setItem(GEAR_SETTINGS_STORAGE_KEY, JSON.stringify({ ...DEFAULT_GEAR_SETTINGS, classId: "warlock", specId: "destruction" }));
+    expect(savedGearSpec("warlock")).toBe("destruction");
+  });
+
+  it("falls back to the class's first spec for another class, or nothing saved", () => {
+    window.localStorage.setItem(GEAR_SETTINGS_STORAGE_KEY, JSON.stringify({ ...DEFAULT_GEAR_SETTINGS, classId: "mage", specId: "frost" }));
+    expect(savedGearSpec("warlock")).toBe("affliction");
+    window.localStorage.clear();
+    expect(savedGearSpec("warlock")).toBe("affliction");
   });
 });

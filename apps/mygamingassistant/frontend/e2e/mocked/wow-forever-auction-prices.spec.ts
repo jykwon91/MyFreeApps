@@ -445,7 +445,7 @@ test("the Auction house top-picks filter keeps the top three per slot, tags them
   await expect(page).toHaveURL(/bis=any/);
   expect(await rowNames(page, 2)).toEqual(["Gold Bar", "Rare Test Item"]);
   await expect(page.getByTestId("auction-bis-badge")).toHaveText(["#3 Neck", "#1 Neck"]);
-  await expect(page.getByRole("button", { name: "Remove filter: Top 3 BiS for level 60 Warlock" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Remove filter: Top 3 BiS for level 60 Affliction Warlock" })).toBeVisible();
 
   await bis.getByRole("button", { name: "#3" }).click();
   await expect(page).toHaveURL(/bis=3/);

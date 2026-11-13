@@ -188,15 +188,15 @@ describe("category URL params", () => {
 describe("category active filter", () => {
   it("names the category, then the subclass once the categories are loaded", () => {
     const on = filters({ category: "consumable", subcategory: 1 });
-    expect(describeActiveFilters(on, "Mage", null, 60).map((f) => f.label)).toEqual(["Category: Consumable"]);
-    expect(describeActiveFilters(on, "Mage", fixtureCategories(), 60).map((f) => f.label)).toEqual(["Category: Potions"]);
-    expect(describeActiveFilters(filters({ category: "trade-goods" }), "Mage", fixtureCategories(), 60).map((f) => f.label)).toEqual([
+    expect(describeActiveFilters(on, "Mage", null, { level: 60, label: "Mage" }).map((f) => f.label)).toEqual(["Category: Consumable"]);
+    expect(describeActiveFilters(on, "Mage", fixtureCategories(), { level: 60, label: "Mage" }).map((f) => f.label)).toEqual(["Category: Potions"]);
+    expect(describeActiveFilters(filters({ category: "trade-goods" }), "Mage", fixtureCategories(), { level: 60, label: "Mage" }).map((f) => f.label)).toEqual([
       "Category: Trade Goods",
     ]);
   });
 
   it("falls back to the category name for a subclass the category does not have", () => {
-    const labels = describeActiveFilters(filters({ category: "consumable", subcategory: 77 }), "Mage", fixtureCategories(), 60).map((f) => f.label);
+    const labels = describeActiveFilters(filters({ category: "consumable", subcategory: 77 }), "Mage", fixtureCategories(), { level: 60, label: "Mage" }).map((f) => f.label);
     expect(labels).toEqual(["Category: Consumable"]);
   });
 
