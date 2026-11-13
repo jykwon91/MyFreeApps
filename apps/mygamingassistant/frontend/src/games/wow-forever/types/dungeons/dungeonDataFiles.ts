@@ -22,5 +22,6 @@ export interface DungeonDataFiles {
     quests: Record<string, unknown[]>;
     targets: Record<string, unknown[]>;
   };
+  /** `seenOn` is the day of the newest cache read; each row has its own. */
   seenQuests: { seenOn: string; columns: string[]; quests: Record<string, unknown[]> };
 }

@@ -22,8 +22,9 @@ because their licences differ:
 * ``data/dungeons/dungeonFacts.json`` — from the Forever client (wago.tools
   ``Map``): each dungeon's group size (``MaxPlayers``).
 * ``data/dungeons/dungeonQuestsSeen.json`` — the Forever client's quest cache:
-  title, levels, objectives and rewards of the dungeon quests the operator's
-  client has seen.
+  title, levels, sharing, objectives and rewards of the dungeon quests the
+  operator's client has seen, each with the day. The client empties its cache
+  when Forever patches, so rows the new cache lacks are kept from the last file.
 * ``data/dungeons/classic/bossLoot.json`` — cmangos classic-db (GPL-3.0,
   LICENSE + README next to it): per dungeon, per Forever encounter, the items it
   drops with the chance the server rolls.
@@ -61,6 +62,7 @@ from scripts.wow_dungeons.quests import (
     DungeonQuests,
     QuestSources,
     build_dungeon_quests,
+    earlier_seen,
     target_key,
 )
 from scripts.wow_food.build import CLASSIC_LICENSE, WOW_DATA_DIR
@@ -261,7 +263,8 @@ def main() -> None:
     src = quest_sources(tables, _load_json(WORLD_MAP_CLASSIC / "classicQuests.json"), dungeons, set(items))
     keep = forever_quest_sides(dict(src.quests), {int(r["ID"]) for r in wago_table("QuestV2", hotfixes=True)})
     areas = dungeon_areas(dungeon_names(dungeon_doc, dungeons), wago_table("AreaTable"), wago_table("Map"))
-    quests = build_dungeon_quests(src, areas, keep, cache)
+    earlier = earlier_seen(_load_json(SEEN_QUESTS_PATH)) if SEEN_QUESTS_PATH.is_file() else {}
+    quests = build_dungeon_quests(src, areas, keep, cache, seen_on, earlier)
     write_json(LOOT_ITEMS_PATH, {
         "source": items_doc["source"],
         "clientBuild": items_doc["clientBuild"],
@@ -290,8 +293,9 @@ def main() -> None:
     print(f"{len(loot)} dungeons, {bosses} bosses matched, {with_loot} with Forever loot -> {DUNGEONS_DIR}")
     shown = sum(len(ids) for ids in quests.instances.values())
     print(
-        f"{shown} dungeon quests ({len(quests.quests)} with the quests before them), "
-        f"{len(quests.seen)} seen in the client cache (build {cache.build}, {seen_on}), "
+        f"{shown} dungeon quests ({len(quests.quests)} with the quests before and after them), "
+        f"{len(quests.seen)} seen in the client ({sum(1 for q in quests.seen if int(q) in cache.quests)} in this cache, "
+        f"build {cache.build}, {seen_on}), "
         f"{len(quests.item_ids)} reward items"
     )
 

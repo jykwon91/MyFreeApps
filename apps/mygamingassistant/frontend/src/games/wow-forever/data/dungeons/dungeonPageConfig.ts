@@ -26,6 +26,15 @@ export const DUNGEON_QUESTS_EMPTY = {
   noneForFaction: "No quests for this dungeon for your faction in our data yet.",
 } as const;
 
+/** An opened quest's "Quest chain" lists this many of the quests after it, then says how many more. */
+export const QUEST_CHAIN_AFTER_SHOWN = 3;
+
+/** Whether a quest can be shared: the row's badge, and the sentence an opened quest gives. */
+export const QUEST_SHARING_COPY = {
+  shareable: { badge: "Shareable", detail: "Share it from your quest log with party members who meet its level and have done the quests before it." },
+  notShareable: { badge: "Can't share", detail: "Everyone in your group has to get it themselves, from its quest giver or the item that starts it." },
+} as const;
+
 /** How far the World Map zooms in on a quest giver its link marks (1 = the whole zone). */
 export const QUEST_GIVER_MAP_SCALE = 2;
 /** The id of the one mark a quest giver's World Map link carries. */

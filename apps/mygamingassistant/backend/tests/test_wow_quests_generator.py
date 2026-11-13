@@ -16,9 +16,7 @@ from scripts.wow_dungeons.quests import (
     QUEST_COLUMNS,
     QuestRow,
     QuestSources,
-    chain_before,
-    predecessors,
-    quest_row,
+    SeenRow,
 )
 from scripts.wow_quests.build import (
     CLASSIC_DIR,
@@ -28,6 +26,7 @@ from scripts.wow_quests.build import (
     REWARD_ITEMS_PATH,
     SEEN_PATH,
     SHARD_COUNT,
+    STEP_COLUMNS,
     _dungeon_ids,
     build_quest_index,
     build_shards,
@@ -43,7 +42,7 @@ def _quest(entry: int, title: str = "Q", **fields: Any) -> dict[str, Any]:
     row: dict[str, Any] = {
         "entry": entry, "Title": title, "QuestLevel": 20, "MinLevel": 17,
         "ZoneOrSort": 0, "RequiredRaces": 0, "RequiredClasses": 0,
-        "PrevQuestId": 0, "NextQuestId": 0, "NextQuestInChain": 0,
+        "PrevQuestId": 0, "NextQuestId": 0, "NextQuestInChain": 0, "QuestFlags": 0,
     }
     for i in range(1, 5):
         row |= {
@@ -152,19 +151,21 @@ def _make_index(
     keep: dict[int, str] | None = None,
     quest_zone: dict[int, int] | None = None,
     zone_names: dict[int, str] | None = None,
-    seen_ids: set[int] | None = None,
+    seen: dict[int, SeenRow] | None = None,
 ) -> dict[str, Any]:
-    from scripts.wow_dungeons.quest_cache import QuestCache
     return build_quest_index(
         forever_ids=forever_ids,
         new_ids=new_ids or set(),
         src_quests=src_quests or {},
         keep=keep or {},
-        cache=QuestCache(0, {}, frozenset()),
+        seen=seen or {},
         quest_zone=quest_zone or {},
         zone_names=zone_names or {},
-        seen_ids=seen_ids or set(),
     )
+
+
+def _seen(title: str, level: int = 12, min_level: int = 8) -> SeenRow:
+    return SeenRow(title, level, min_level, [], [], [], True, "2026-11-12")
 
 
 def test_build_quest_index_has_correct_columns() -> None:
@@ -224,7 +225,7 @@ def test_build_quest_index_zones_list_sorted_by_name() -> None:
 def test_build_quest_index_counts_match_data() -> None:
     forever_ids = {1, 2, 3, 99}  # 99 is unnamed
     src_quests = {1: _quest(1, "Q1"), 2: _quest(2, "Q2"), 3: _quest(3, "Q3")}
-    result = _make_index(forever_ids, src_quests=src_quests, keep={1: "N", 2: "N", 3: "N"}, seen_ids={1})
+    result = _make_index(forever_ids, src_quests=src_quests, keep={1: "N", 2: "N", 3: "N"}, seen={1: _seen("One")})
     c = result["counts"]
     assert c["total"] == 4
     assert c["named"] == 3
@@ -278,6 +279,20 @@ def test_build_shards_keeps_only_forever_items_in_rewards() -> None:
     at_choices = QUEST_COLUMNS.index("choices")
     choices = shard_row[at_choices]
     assert all(item == 2000 for item, _ in choices)
+
+
+def test_build_shards_name_every_quest_in_a_line_even_from_other_shards() -> None:
+    # 1 → 2 → 65: 1 and 65 share shard 1, 2 sits in shard 2.
+    quests = {
+        1: _quest(1, "Lead In"),
+        2: _quest(2, "Middle", PrevQuestId=1),
+        65: _quest(65, "Last", PrevQuestId=2),
+    }
+    shards = build_shards({1, 2, 65}, _sources(quests), {1: "N", 2: "N", 65: "N"})
+    steps = shards[1]["steps"]
+    assert set(steps) == {"1", "2", "65"}
+    assert dict(zip(STEP_COLUMNS, steps["2"], strict=True)) == {"title": "Middle", "level": quests[2]["QuestLevel"], "giver": None}
+    assert set(shards[2]["steps"]) == {"1", "65"}
 
 
 def test_build_shards_quest_row_format_matches_quest_columns() -> None:
@@ -349,6 +364,18 @@ def test_committed_shards_cover_all_numbers_and_match_quest_columns() -> None:
             assert len(row) == len(QUEST_COLUMNS), f"Wrong column count for {qid}"
     # All 64 placeholder shards must exist for the frontend glob to include them.
     assert present == set(range(SHARD_COUNT)), f"Missing shards: {set(range(SHARD_COUNT)) - present}"
+
+
+@REAL_DATA
+def test_committed_shards_name_every_quest_in_their_lines() -> None:
+    for path in sorted(CLASSIC_DIR.glob("[0-9]*.json")):
+        doc = _load(path)
+        assert doc["stepColumns"] == STEP_COLUMNS, path.name
+        for qid, row in doc["quests"].items():
+            by = dict(zip(QUEST_COLUMNS, row, strict=True))
+            for step in by["chain"] + by["after"]:
+                assert str(step) in doc["steps"], f"{path.name}: quest {qid} line step {step} unnamed"
+            assert isinstance(by["shareable"], bool)
 
 
 @REAL_DATA

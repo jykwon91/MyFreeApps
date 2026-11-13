@@ -1,4 +1,4 @@
-/** A quest you do before the dungeon quest, in order. */
+/** A quest in the dungeon quest's line, before or after it, in order. */
 export interface QuestChainStep {
   id: number;
   title: string;

@@ -617,6 +617,19 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `tests/test_wow_dungeon_quests_generator.py`,
   `src/__tests__/wowDungeonQuests.test.tsx`,
   `e2e/wow-forever-dungeon-quests.spec.ts`.
+- **Sharing and quest lines.** `shareable` is the client cache's quest flags
+  bit 8 (int[25]) on the seen row, else cmangos `QuestFlags & 8` — they agree
+  on every dungeon quest checked. A seen row written before that column holds
+  `null` there, and the page then tags the fact "Classic". `chain` is the
+  quests before (`PrevQuestId`), `after` the quests after (`NextQuestInChain`,
+  then `NextQuestId`, then quests whose `PrevQuestId` is this one; same side,
+  no loops, `MAX_CHAIN`). Quest-database shards carry a `steps` table naming
+  every quest in their quests' lines, because a line spans shards.
+- **The client empties its quest cache when Forever patches.** Seen rows the
+  new cache lacks are kept from the last committed file (`merge_seen`,
+  `earlier_seen`), each with its own `seenOn`; never delete
+  `dungeonQuestsSeen.json` / `questSeen.json` before a rebuild, or every
+  quest seen before the patch loses its Forever data.
 
 #### Rares (`/wow-forever/rares`)
 

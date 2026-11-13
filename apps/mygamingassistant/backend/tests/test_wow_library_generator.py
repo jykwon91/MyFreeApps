@@ -26,7 +26,7 @@ def _sparse(item_id: int, name: str, description: str = "", ilvl: int = 10, qual
 
 
 def _quest(quest_id: int, title: str, choices: tuple[tuple[int, int], ...] = ()) -> CachedQuest:
-    return CachedQuest(quest_id, title, 20, 1, (), (), choices)
+    return CachedQuest(quest_id, title, 20, 1, False, (), (), choices)
 
 
 class TestBooks:

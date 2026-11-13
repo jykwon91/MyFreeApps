@@ -5,7 +5,9 @@ the quests whose id mod 64 equals that number.
 
 Columns match the dungeon quests format: ``questColumns``, ``giverColumns``,
 ``objectiveColumns``, ``targetColumns``. ``quests`` maps quest id → row
-(same order as ``questColumns``); ``targets`` maps target key → [name, instance].
+(same order as ``questColumns``); ``targets`` maps target key → [name, instance];
+``steps`` maps every quest in those quests' lines (before or after) → row in
+``stepColumns`` order, so a line reads whole from one shard.
 
 Only quests the WoW Forever client has (``QuestV2``) are kept. Reward items
 are only items in ``items/items.json``.

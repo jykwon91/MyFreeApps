@@ -27,19 +27,24 @@ from scripts.wow_dungeons.quest_cache import (
 from scripts.wow_dungeons.quest_places import dungeon_areas, item_dungeons, only_on
 from scripts.wow_dungeons.quests import (
     QUEST_COLUMNS,
+    SEEN_COLUMNS,
     QuestSources,
     build_dungeon_quests,
+    chain_after,
     chain_before,
     chain_ends,
     classic_objectives,
     distinct_quests,
+    earlier_seen,
     predecessors,
     quest_row,
     select_quests,
     shown_level,
+    successors,
 )
 
 DEADMINES = 36
+TODAY = "2026-11-12"
 
 
 # --- the quest cache --------------------------------------------------------------------------
@@ -47,10 +52,10 @@ DEADMINES = 36
 
 def _record(quest_id: int, title: str, *, level: int = 20, min_level: int = 17,
             objectives: list[tuple[int, int, int]] = (), rewards: list[tuple[int, int]] = (),
-            choices: list[tuple[int, int]] = (), effects: int = 1) -> bytes:
+            choices: list[tuple[int, int]] = (), effects: int = 1, flags: int = 0) -> bytes:
     """One quest record body in the client's layout."""
     ints = [0] * FIXED_INTS
-    ints[0], ints[2], ints[4], ints[109] = quest_id, level, min_level, len(objectives)
+    ints[0], ints[2], ints[4], ints[25], ints[109] = quest_id, level, min_level, flags, len(objectives)
     for k, (item, count) in enumerate(rewards):
         ints[29 + 4 * k], ints[30 + 4 * k] = item, count
     for k, (item, count) in enumerate(choices):
@@ -85,6 +90,11 @@ def test_parse_quest_reads_title_levels_objectives_and_rewards() -> None:
     assert quest.objectives == ((1, 915, 10), (0, 589, 15))
     assert quest.rewards == ((2074, 1),)
     assert quest.choices == ((6087, 1), (2059, 1))
+
+
+def test_parse_quest_reads_whether_the_quest_can_be_shared() -> None:
+    assert parse_quest(_record(1, "Shared", flags=8 | 2)).shareable
+    assert not parse_quest(_record(2, "Solo", flags=2)).shareable
 
 
 def test_parse_quest_refuses_a_record_whose_strings_dont_fit() -> None:
@@ -151,7 +161,7 @@ def test_item_dungeons_follow_creature_and_chest_drops() -> None:
 def _quest(entry: int, title: str = "Q", **fields: Any) -> dict[str, Any]:
     row: dict[str, Any] = {
         "entry": entry, "Title": title, "QuestLevel": 20, "MinLevel": 17, "ZoneOrSort": 0, "RequiredRaces": 0,
-        "RequiredClasses": 0, "PrevQuestId": 0, "NextQuestId": 0, "NextQuestInChain": 0,
+        "RequiredClasses": 0, "PrevQuestId": 0, "NextQuestId": 0, "NextQuestInChain": 0, "QuestFlags": 0,
     }
     for i in range(1, 5):
         row |= {f"ReqCreatureOrGOId{i}": 0, f"ReqCreatureOrGOCount{i}": 0, f"ReqItemId{i}": 0, f"ReqItemCount{i}": 0,
@@ -184,6 +194,38 @@ def test_chain_before_walks_back_through_forever_quests_of_the_same_side() -> No
     keep = {1: "A", 2: "N", 3: "A", 4: "H", 9: "A"}
     assert chain_before(3, before, keep) == [1, 2]
     assert chain_before(9, before, keep) == []
+
+
+def test_chain_after_walks_on_through_forever_quests_of_the_same_side() -> None:
+    quests = {
+        1: _quest(1, NextQuestInChain=2),
+        2: _quest(2),
+        3: _quest(3, PrevQuestId=2),
+        4: _quest(4, PrevQuestId=3),  # Horde: not on an Alliance chain
+        5: _quest(5, PrevQuestId=2),  # a second way on: the first link wins
+    }
+    after = successors(quests)
+    keep = {1: "A", 2: "N", 3: "A", 4: "H", 5: "A"}
+    assert chain_after(1, after, keep, []) == [2, 3]
+    assert chain_after(4, after, keep, []) == []
+
+
+def test_a_line_for_both_factions_never_turns_into_one_factions() -> None:
+    quests = {
+        1: _quest(1, NextQuestInChain=2),
+        2: _quest(2, PrevQuestId=1),  # Alliance only
+        3: _quest(3, PrevQuestId=1),  # Horde only
+        4: _quest(4, PrevQuestId=1),  # both
+    }
+    keep = {1: "N", 2: "A", 3: "H", 4: "N"}
+    assert chain_after(1, successors(quests), keep, []) == [4]
+    assert chain_before(2, predecessors(quests), keep) == [1]
+    assert chain_after(1, successors(quests), {1: "N", 2: "A", 3: "H"}, []) == []
+
+
+def test_chain_after_never_leads_back_to_a_quest_before_it() -> None:
+    quests = {1: _quest(1, NextQuestId=2), 2: _quest(2, NextQuestId=1)}
+    assert chain_after(2, successors(quests), {1: "A", 2: "A"}, [1]) == []
 
 
 def test_chain_before_stops_on_a_loop() -> None:
@@ -221,7 +263,7 @@ def test_quest_row_places_givers_and_keeps_forever_rewards_only() -> None:
                           RewChoiceItemId1=2000, RewChoiceItemCount1=1, RewChoiceItemId2=3000, RewChoiceItemCount2=1)}
     world = {166: [[0, "npc", 1, "Gryan Stoutmantle", 40, "Sentinel Hill", 56.3, 47.5, 166]]}
     src = _sources(quests, world_givers=world, ended_by={166: [("npc", 1)]})
-    row = quest_row(166, "A", [], src).as_json()
+    row = quest_row(166, "A", [], [], src).as_json()
     by = dict(zip(QUEST_COLUMNS, row, strict=True))
     assert by["givers"] == [["npc", 1, "Gryan Stoutmantle", 40, "Sentinel Hill", 56.3, 47.5, None]]
     assert by["objectives"] == [["item", 100, 1]]
@@ -234,13 +276,13 @@ def test_distinct_quests_drop_a_repeat_offered_by_another_object_of_the_same_nam
     names = {"object:1": "The Sparklematic 5200", "object:2": "The Sparklematic 5200", "item:100": "Grime-Encrusted Ring"}
     inside = {"object:1": 90, "object:2": 90, "item:100": 90}
     src = _sources(quests, names=names, inside=inside, offered_by={2951: [("object", 1)], 4601: [("object", 2)]})
-    rows = {q: quest_row(q, "N", [], src) for q in quests}
+    rows = {q: quest_row(q, "N", [], [], src) for q in quests}
     assert distinct_quests([2951, 4601], rows) == [2951]
 
 
 def test_chain_ends_hides_a_step_another_listed_quest_leads_on_from() -> None:
     src = _sources({1: _quest(1), 2: _quest(2)})
-    rows = {1: quest_row(1, "N", [], src), 2: quest_row(2, "N", [1], src)}
+    rows = {1: quest_row(1, "N", [], [], src), 2: quest_row(2, "N", [1], [], src)}
     assert chain_ends([1, 2], rows) == [2]
 
 
@@ -251,13 +293,70 @@ def test_build_dungeon_quests_lists_chain_steps_and_stops_on_an_unreadable_cache
                    PrevQuestId=10, RewItemId1=2000, RewItemCount1=1),
     }
     src = _sources(quests)
-    result = build_dungeon_quests(src, {}, {10: "A", 11: "A"}, QuestCache(1, {}, frozenset()))
+    result = build_dungeon_quests(src, {}, {10: "A", 11: "A"}, QuestCache(1, {}, frozenset()), TODAY, {})
     assert result.instances == {str(DEADMINES): [11]}
     assert set(result.quests) == {"10", "11"}
     assert result.targets == {"npc:7": ["Edwin VanCleef", DEADMINES]}
     assert result.item_ids == frozenset({2000})
+    lead_in = dict(zip(QUEST_COLUMNS, result.quests["10"], strict=True))
+    assert lead_in["after"] == [11]
+    assert dict(zip(QUEST_COLUMNS, result.quests["11"], strict=True))["chain"] == [10]
     with pytest.raises(SystemExit):
-        build_dungeon_quests(src, {}, {10: "A", 11: "A"}, QuestCache(1, {}, frozenset({10})))
+        build_dungeon_quests(src, {}, {10: "A", 11: "A"}, QuestCache(1, {}, frozenset({10})), TODAY, {})
+
+
+def test_build_dungeon_quests_lists_the_quests_after_and_whether_each_can_be_shared() -> None:
+    quests = {
+        11: _quest(11, "Kill VanCleef", ZoneOrSort=40, ReqCreatureOrGOId1=7, ReqCreatureOrGOCount1=1, QuestFlags=8),
+        12: _quest(12, "Report back", PrevQuestId=11, QuestFlags=2),
+    }
+    cached = parse_quest(_record(12, "Report back", flags=8))
+    result = build_dungeon_quests(_sources(quests), {}, {11: "A", 12: "A"}, QuestCache(1, {12: cached}, frozenset()), TODAY, {})
+    assert result.instances == {str(DEADMINES): [11]}
+    kill = dict(zip(QUEST_COLUMNS, result.quests["11"], strict=True))
+    report = dict(zip(QUEST_COLUMNS, result.quests["12"], strict=True))
+    assert (kill["after"], kill["shareable"], report["shareable"]) == ([12], True, False)
+    # The client says the follow-up can be shared; the page prefers that.
+    seen = dict(zip(SEEN_COLUMNS, result.seen["12"], strict=True))
+    assert (seen["shareable"], seen["seenOn"]) == (True, TODAY)
+
+
+def _earlier_file(**over: Any) -> dict[str, Any]:
+    """A seen file as the last run wrote it, before the per-quest day and sharing columns."""
+    return {
+        "seenOn": "2026-11-07",
+        "columns": ["title", "level", "minLevel", "objectives", "rewards", "choices"],
+        "quests": {
+            "11": ["Kill VanCleef!", 21, 17, [["npc", 7, 1], ["npc", 404, 1]], [[2000, 2], [8888, 1]], []],
+            "99": ["Not a dungeon quest", 10, 5, [], [], []],
+        },
+    } | over
+
+
+def test_earlier_seen_reads_an_old_file_with_its_own_day_and_unknown_sharing() -> None:
+    earlier = earlier_seen(_earlier_file())
+    assert set(earlier) == {11, 99}
+    assert (earlier[11].seen_on, earlier[11].shareable, earlier[11].objectives[0]) == ("2026-11-07", None, ("npc", 7, 1))
+    assert earlier_seen({"seenOn": "2026-11-07"}) == {}
+
+
+def test_build_dungeon_quests_keeps_what_an_earlier_cache_saw_after_a_patch_emptied_it() -> None:
+    quests = {11: _quest(11, "Kill VanCleef", ZoneOrSort=40, ReqCreatureOrGOId1=7, ReqCreatureOrGOCount1=1, QuestFlags=8)}
+    result = build_dungeon_quests(_sources(quests), {}, {11: "A"}, QuestCache(2, {}, frozenset()), TODAY,
+                                  earlier_seen(_earlier_file()))
+    # Only the dungeon's own quests carry over, trimmed to the names and Forever items this run has.
+    assert set(result.seen) == {"11"}
+    seen = dict(zip(SEEN_COLUMNS, result.seen["11"], strict=True))
+    assert (seen["title"], seen["seenOn"], seen["shareable"]) == ("Kill VanCleef!", "2026-11-07", None)
+    assert (seen["objectives"], seen["rewards"]) == ([["npc", 7, 1]], [[2000, 2]])
+
+
+def test_build_dungeon_quests_prefers_the_new_cache_over_an_earlier_one() -> None:
+    quests = {11: _quest(11, "Kill VanCleef", ZoneOrSort=40, ReqCreatureOrGOId1=7, ReqCreatureOrGOCount1=1)}
+    cache = QuestCache(2, {11: parse_quest(_record(11, "Kill VanCleef (new)", flags=8))}, frozenset())
+    result = build_dungeon_quests(_sources(quests), {}, {11: "A"}, cache, TODAY, earlier_seen(_earlier_file()))
+    seen = dict(zip(SEEN_COLUMNS, result.seen["11"], strict=True))
+    assert (seen["title"], seen["seenOn"], seen["shareable"]) == ("Kill VanCleef (new)", TODAY, True)
 
 
 def test_forever_quest_sides_keep_only_forever_quests_with_a_side() -> None:
@@ -281,8 +380,9 @@ def test_committed_quests_are_complete_and_point_at_known_things() -> None:
         assert ids, instance
         for qid in ids:
             row = dict(zip(cols, doc["quests"][str(qid)], strict=True))
-            for step in row["chain"]:
+            for step in row["chain"] + row["after"]:
                 assert str(step) in doc["quests"]
+            assert isinstance(row["shareable"], bool)
             for kind, entry, _ in row["objectives"]:
                 assert f"{kind}:{entry}" in doc["targets"]
             for item, _ in row["rewards"] + row["choices"]:
@@ -299,4 +399,9 @@ def test_committed_seen_quests_are_dungeon_quests() -> None:
     seen = _load(SEEN_QUESTS_PATH)
     quests = _load(QUESTS_PATH)["quests"]
     assert seen["clientBuild"] > 0
+    assert seen["columns"] == SEEN_COLUMNS
     assert set(seen["quests"]) <= set(quests)
+    for row in seen["quests"].values():
+        by = dict(zip(SEEN_COLUMNS, row, strict=True))
+        assert by["shareable"] in (True, False, None)
+        assert by["seenOn"] <= seen["seenOn"]

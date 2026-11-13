@@ -2,6 +2,7 @@ import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import clsx from "clsx";
 import DungeonQuestDetails from "@/games/wow-forever/components/dungeons/quests/DungeonQuestDetails";
+import QuestFlagBadges from "@/games/wow-forever/components/dungeons/quests/QuestFlagBadges";
 import { FACTION_NAME } from "@/games/wow-forever/components/food/detail/detailStyles";
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import { questClassesText, questLevelText } from "@/games/wow-forever/lib/dungeons/describeQuest";
@@ -9,7 +10,7 @@ import { questProvenance } from "@/games/wow-forever/lib/provenance/questProvena
 import type { DungeonQuest } from "@/games/wow-forever/types/dungeons/dungeonQuest";
 import { FACTION } from "@/games/wow-forever/types/worldMap";
 
-/** One quest: title, level and who may take it; opens to its details. */
+/** One quest: title, level, who may take it, whether it can be shared and its step in a line; opens to its details. */
 export default function DungeonQuestRow({ quest }: { quest: DungeonQuest }) {
   const [open, setOpen] = useState(false);
   const detailsId = `dungeon-quest-${quest.id}`;
@@ -32,6 +33,7 @@ export default function DungeonQuestRow({ quest }: { quest: DungeonQuest }) {
             <span className="block text-xs text-muted-foreground">
               {questLevelText(quest)} · {who}
             </span>
+            <QuestFlagBadges quest={quest} />
           </span>
         </button>
         <span className="shrink-0 py-2.5">

@@ -1,8 +1,9 @@
 /**
  * WoW Forever dungeon pages — the Quests section: a quest opens to its giver
  * (World Map link with the giver marked, directions), the quests leading up to
- * it, the objectives inside the dungeon and its rewards (item pages); the
- * faction toggle; badges; the phone layout and the loading skeleton.
+ * it, the objectives inside the dungeon and its rewards (item pages); whether
+ * it can be shared and where it sits in its quest line; the faction toggle;
+ * badges; the phone layout and the loading skeleton.
  *
  * Run: npx playwright test --config e2e/playwright.config.ts wow-forever-dungeon-quests
  */
@@ -11,6 +12,7 @@ import { test, expect, type Locator, type Page } from "@playwright/test";
 const DEADMINES = "/wow-forever/dungeons/deadmines";
 const RAGEFIRE = "/wow-forever/dungeons/ragefire-chasm";
 const DEFIAS_BROTHERHOOD = 166;
+const UNSENT_LETTER = 373;
 
 function quests(page: Page): Locator {
   return page.getByRole("region", { name: "Quests" });
@@ -84,10 +86,30 @@ test("quest facts carry their badges", async ({ page }) => {
   // Seen in the operator's client: the row's title and level.
   await expect(row.locator('[data-provenance="seen"]')).toHaveCount(1);
   await row.getByTestId("dungeon-quest-toggle").click();
-  // Given by, chain, hand in to: Classic. Objectives and rewards: seen.
-  await expect(row.getByTestId("dungeon-quest-details").locator('[data-provenance="classic"]')).toHaveCount(3);
+  // Given by, sharing (the client's flag wasn't read when it was seen), chain, hand in to: Classic.
+  // Objectives and rewards: seen.
+  await expect(row.getByTestId("dungeon-quest-details").locator('[data-provenance="classic"]')).toHaveCount(4);
   await expect(row.getByTestId("dungeon-quest-details").locator('[data-provenance="seen"]')).toHaveCount(2);
   await expect(page.locator('a[href*="wowhead"]')).toHaveCount(0);
+});
+
+test("each quest says whether it can be shared and where it sits in its line", async ({ page }) => {
+  await page.goto(DEADMINES);
+  const last = questRow(page, DEFIAS_BROTHERHOOD);
+  await expect(last.getByTestId("quest-sharing")).toHaveText("Shareable");
+  await expect(last.getByTestId("quest-step")).toHaveText("Step 7 of 7");
+  await last.getByTestId("dungeon-quest-toggle").click();
+  await expect(last.getByTestId("quest-sharing-detail")).toContainText("Share it from your quest log");
+  await expect(last.getByRole("heading", { name: /^Quest chain/ })).toBeVisible();
+
+  const first = questRow(page, UNSENT_LETTER);
+  await expect(first.getByTestId("quest-sharing")).toHaveText("Can't share");
+  await expect(first.getByTestId("quest-step")).toHaveText("Step 1 of 12");
+  await first.getByTestId("dungeon-quest-toggle").click();
+  const chain = first.getByTestId("quest-chain");
+  await expect(chain.getByRole("listitem").first()).toContainText("this quest");
+  await expect(chain.getByRole("listitem")).toHaveCount(4);
+  await expect(first.getByTestId("quest-chain-more")).toHaveText("then 8 more quests");
 });
 
 test.describe("at 375px", () => {
