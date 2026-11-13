@@ -1490,7 +1490,23 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   on-use) or an unknown weapon damage add a note, so "No stat changes" is
   never said over something left out, and a note says enchants aren't counted.
   A shield / off-hand item against a worn two-hander compares with it, labelled
-  "Replaces your two-hander". No saved character = one hint line + link to
+  "Replaces your two-hander". Each known block also gets an upgrade verdict
+  (`UpgradeVerdictLine`: "▲ Upgrade +12%" / "▼ Downgrade −8%" / "About the
+  same" within `SAME_SCORE_PCT` 2%; arrow `aria-hidden`; "by stats" note when
+  procs or damage weren't counted; % shown capped at ±100, `formatVerdictPct`)
+  from `lib/itemCompare/upgradeVerdict`, scored by `verdictScoring` (via the
+  `useVerdictScoring` hook) exactly like Best gear and the AH best-gear badges
+  (`rankGear.scorer`: class leveling weights below 60, at 60 the spec saved on
+  Best gear via `savedGearSpec`), with a "Scored for …" caption. A two-hander
+  against main hand + off hand gets ONE verdict, on the first block, against
+  both hands' summed score ("Against your main hand and off hand together"),
+  and none if either hand is unknown; an off-hand item against a worn
+  two-hander gets no verdict (losing the two-hander isn't scored). An item the
+  character's class can't wear (`gearFilters.canWear`; only a known "no" — an
+  unknown item type, or a slot no Best-gear card covers (relic, shirt, tabard),
+  passes unless the item names other classes) shows one amber "Your level N
+  Class can't use this (Type)." line instead of the blocks. Unknown class =
+  deltas without verdicts. Thresholds in `data/itemCompare/upgradeVerdictConfig`. No saved character = one hint line + link to
   `/wow-forever/character`. Tests: `wowItemCompare.test.ts`,
   `wowAuctionItemTooltip.test.tsx`, `wowHoverTooltipHook.test.tsx`,
   `wowPlayerSettingsSlug.test.tsx`,

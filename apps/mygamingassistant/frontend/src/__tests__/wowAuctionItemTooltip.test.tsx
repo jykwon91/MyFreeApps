@@ -81,6 +81,8 @@ const CHARACTER = {
   slug: "jason-kwon",
   name: "Jason",
   surname: "Kwon",
+  level: 37,
+  class_name: "Warlock",
   items: [worn("FINGER_1", WORN_RING_ID, "Plain Band"), worn("FINGER_2", BAND_ID, "Twin Ring")],
 } as CharacterResponse;
 
@@ -117,7 +119,7 @@ describe("Auction house item tooltip", () => {
     });
     clientItems.mockReturnValue({
       status: LOAD_STATUS.ready,
-      list: { byId: new Map([WORN_RING, SAME_RING].map((i) => [i.id, i])) },
+      list: { byId: new Map([WORN_RING, SAME_RING].map((i) => [i.id, i])), clientBuild: "1.60.1" },
     });
     characterQuery.mockReturnValue({ data: CHARACTER, isError: false });
   });
@@ -142,6 +144,59 @@ describe("Auction house item tooltip", () => {
     expect(within(plain).getByText("−3 Intellect")).toHaveAttribute("data-gain", "false");
     expect(within(twin).getByText("No stat changes")).toBeInTheDocument();
     expect(characterQuery).toHaveBeenCalledWith("jason-kwon");
+  });
+
+  it("says whether it is better or worse than each worn item, scored with the class's leveling weights below 60", () => {
+    saveCharacter();
+    renderName();
+    hover();
+    const tooltip = screen.getByTestId("item-compare-tooltip");
+    expect(within(tooltip).getByTestId("item-compare-scored-for")).toHaveTextContent("Scored for Warlock leveling (the spec counts at 60)");
+    const [plain, twin] = within(tooltip).getAllByTestId("item-compare-block");
+    // Warlock leveling: stamina 1, intellect 0.7 -> 15.5 against the Plain Band's 14.6.
+    expect(within(plain).getByTestId("item-compare-verdict")).toHaveAttribute("data-verdict", "upgrade");
+    expect(within(plain).getByTestId("item-compare-verdict")).toHaveTextContent("Upgrade +6%");
+    expect(within(twin).getByTestId("item-compare-verdict")).toHaveTextContent("About the same");
+  });
+
+  it("says a downgrade in words, with the arrow hidden from screen readers", () => {
+    saveCharacter();
+    tooltipData.mockReturnValue({
+      status: ITEM_TOOLTIP_STATUS.READY,
+      data: { item: clientItem({ stats: { stamina: 4 } }), facts: { bind: null, buyPrice: null, crafted: [] } },
+    });
+    renderName();
+    hover();
+    const [plain] = screen.getAllByTestId("item-compare-verdict");
+    expect(plain).toHaveAttribute("data-verdict", "downgrade");
+    expect(plain).toHaveTextContent("Downgrade −73%");
+    expect(plain.querySelector("[aria-hidden='true']")).toHaveTextContent("▼");
+  });
+
+  it("says the character can't use an item their class can't wear, without gains or verdicts", () => {
+    saveCharacter();
+    tooltipData.mockReturnValue({
+      status: ITEM_TOOLTIP_STATUS.READY,
+      data: { item: clientItem({ slot: "chest", itemType: "Plate", armor: 500, stats: { stamina: 30 } }), facts: { bind: null, buyPrice: null, crafted: [] } },
+    });
+    characterQuery.mockReturnValue({ data: { ...CHARACTER, items: [{ ...worn("CHEST", WORN_RING_ID, "Robe"), inventory_type: "CHEST" }] }, isError: false });
+    renderName();
+    hover();
+    const tooltip = screen.getByTestId("item-compare-tooltip");
+    expect(within(tooltip).getByTestId("item-compare-cant-use")).toHaveTextContent("Your level 37 Warlock can't use this (Plate).");
+    expect(within(tooltip).queryByTestId("item-compare-verdict")).not.toBeInTheDocument();
+    expect(within(tooltip).queryByTestId("item-compare-block")).not.toBeInTheDocument();
+  });
+
+  it("gives no verdict for a class MGA doesn't know, but still shows the deltas", () => {
+    saveCharacter();
+    characterQuery.mockReturnValue({ data: { ...CHARACTER, class_name: "Unknown" }, isError: false });
+    renderName();
+    hover();
+    const tooltip = screen.getByTestId("item-compare-tooltip");
+    expect(within(tooltip).queryByTestId("item-compare-verdict")).not.toBeInTheDocument();
+    expect(within(tooltip).queryByTestId("item-compare-scored-for")).not.toBeInTheDocument();
+    expect(within(tooltip).getByText("+3 Stamina")).toBeInTheDocument();
   });
 
   it("with no saved character still shows the stats and one line on how to compare, linking to the lookup", () => {

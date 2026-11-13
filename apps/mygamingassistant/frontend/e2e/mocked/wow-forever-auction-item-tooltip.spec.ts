@@ -2,7 +2,7 @@
  * WoW Forever Auction house item tooltip — E2E, network-stubbed.
  *
  *   - hovering a ring's name shows its in-game stats beside BOTH worn rings, with the stat deltas
- *     (green gain, red loss), inside the viewport; leaving hides it
+ *     (green gain, red loss) and an upgrade/downgrade verdict, inside the viewport; leaving hides it
  *   - with no saved character it shows the stats and how to compare, and the pointer can reach the link
  *   - a character that fails to load is a short note, never a crash
  *   - at 375px a tap opens it (stacked, inside the viewport, no sideways scroll) and a tap elsewhere closes it
@@ -43,6 +43,8 @@ const CHARACTER = {
   slug: "jason-kwon",
   name: "Jason",
   surname: "Kwon",
+  level: 37,
+  class_name: "Warlock",
   items: [worn("FINGER_1", DEFIAS_RING, "Defias Renegade Ring"), worn("FINGER_2", FREEZING_BAND, "Freezing Band")],
 };
 
@@ -134,6 +136,10 @@ test("hovering a ring compares it with both worn rings: green gains, red losses;
   await expect(defias.getByText("+2 Agility")).toHaveAttribute("data-gain", "true");
   await expect(defias.getByText("+3 Spirit")).toHaveAttribute("data-gain", "true");
   await expect(defias.getByText("−6 Stamina")).toHaveAttribute("data-gain", "false");
+  // A level 37 Warlock values stamina far above agility: swapping out the Defias ring is a downgrade.
+  await expect(tooltip.getByTestId("item-compare-scored-for")).toHaveText("Scored for Warlock leveling (the spec counts at 60)");
+  await expect(defias.getByTestId("item-compare-verdict")).toHaveAttribute("data-verdict", "downgrade");
+  await expect(defias.getByTestId("item-compare-verdict")).toContainText("Downgrade −");
   const band = blocks.filter({ hasText: "Freezing Band" });
   await expect(band.getByText("+6 Agility")).toBeVisible();
   await expect(band.getByText("−13 Frost spell damage")).toHaveAttribute("data-gain", "false");
@@ -156,6 +162,7 @@ test("hovering a ring you already wear says there are no stat changes", async ({
   await name.hover();
   const tooltip = page.getByTestId("item-compare-tooltip");
   await expect(tooltip.getByTestId("item-compare-block").filter({ hasText: "Freezing Band" }).getByText("No stat changes")).toBeVisible();
+  await expect(tooltip.getByTestId("item-compare-block").filter({ hasText: "Freezing Band" }).getByTestId("item-compare-verdict")).toHaveText("About the same");
 });
 
 test("with no saved character it shows the stats and how to compare, and the link can be clicked", async ({ page }) => {

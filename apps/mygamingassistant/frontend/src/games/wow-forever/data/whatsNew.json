@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "Upgrade or downgrade, at a glance",
+    "summary": "Hover an item on the Auction house and each piece of gear you wear in that slot now says Upgrade, Downgrade or About the same, with how much better or worse, scored for your class the same way Best gear scores it. Items your class can't wear say so instead.",
+    "to": "/wow-forever/auction-house"
+  },
+  {
+    "date": "2026-11-13",
     "title": "Back to the guild from a member's page",
     "summary": "Open a guild member's character page and the back arrow now takes you straight back to the guild page, right where you left it.",
     "to": "/wow-forever/guild"
