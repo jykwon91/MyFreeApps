@@ -3,9 +3,10 @@ import { NONE_CHOICE } from "../../constants/transactionCreateOptions";
 import { SAVED_VENDOR_MESSAGES } from "../../constants/transactionFieldLabels";
 import type { TransactionChoice } from "../../types/TransactionChoice";
 
-/** None first, so the link can be taken off, then every saved vendor. */
-export function savedVendorChoices(vendors: readonly VendorSummary[]): TransactionChoice[] {
-  return [NONE_CHOICE, ...vendors.map((vendor) => ({ value: vendor.id, label: vendor.name }))];
+/** None first, so the link can be taken off, then every saved vendor. Without the list, None would drop a link the row still has. */
+export function savedVendorChoices(vendors: readonly VendorSummary[], canClear: boolean): TransactionChoice[] {
+  const choices = vendors.map((vendor) => ({ value: vendor.id, label: vendor.name }));
+  return canClear ? [NONE_CHOICE, ...choices] : choices;
 }
 
 /** A linked row must never read as having none, even before the list loads or once the vendor is gone. */

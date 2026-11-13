@@ -9,8 +9,8 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Text } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
-import { DEFAULT_CATEGORY, NO_PROPERTY_OPTION, TRANSACTION_EDIT_SHEET, TRANSACTION_SAVE_ACTION } from "../../constants/transactionEdit";
-import { SAVED_VENDOR_MESSAGES, TRANSACTION_FIELD_LABELS as LABELS } from "../../constants/transactionFieldLabels";
+import { DEFAULT_CATEGORY, NONE_OPTION_VALUE, TRANSACTION_EDIT_SHEET, TRANSACTION_SAVE_ACTION } from "../../constants/transactionEdit";
+import { SAVED_VENDOR_MESSAGES, TRANSACTION_FIELD_LABELS as LABELS, TRANSACTION_SHEET_TITLES } from "../../constants/transactionFieldLabels";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
 import type { TransactionEditSheet } from "../../types/TransactionEditSheet";
 import type { TransactionEditValues } from "../../types/TransactionEditValues";
@@ -26,19 +26,11 @@ import { categoryLabel, isReviewable, propertyLabel } from "./transactionDisplay
 import { amountError, categoryChoices, categoryFitsType, changedFields, selectableProperties, taxYearError, toEditValues } from "./transactionEditValues";
 import { othersUpdatedSentence, saveFailureMessage } from "./transactionMessages";
 
-const SHEET_TITLES: Record<TransactionEditSheet, string> = {
-  category: "Category",
-  property: "Property",
-  savedVendor: LABELS.savedVendor,
-  channel: LABELS.channel,
-  paymentMethod: LABELS.paymentMethod,
-};
-
 export default function TransactionEditForm({ original }: { original: Transaction }) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
   const { data: properties = [] } = useGetPropertiesQuery();
-  const { data: vendorList, isError: vendorsFailed, isLoading: vendorsLoading } = useGetVendorsQuery(ASSIGN_VENDOR_LIST_ARGS);
+  const { data: vendorList, isError: vendorsFailed, isLoading: vendorsLoading, refetch: refetchVendors } = useGetVendorsQuery(ASSIGN_VENDOR_LIST_ARGS);
   const vendors = vendorList?.items ?? [];
   const [updateTransaction, { isLoading: isSaving }] = useUpdateTransactionMutation();
   const [values, setValues] = useState<TransactionEditValues>(() => toEditValues(original));
@@ -71,6 +63,12 @@ export default function TransactionEditForm({ original }: { original: Transactio
 
   function update(change: Partial<TransactionEditValues>): void {
     setValues((current) => ({ ...current, ...change }));
+  }
+
+  function openSavedVendorSheet(): void {
+    // The sheet tells them to try again, so reopening it has to actually try again.
+    if (vendorsFailed) refetchVendors();
+    setOpenSheet(TRANSACTION_EDIT_SHEET.savedVendor);
   }
 
   function changeType(type: TransactionType): void {
@@ -121,26 +119,26 @@ export default function TransactionEditForm({ original }: { original: Transactio
     },
     property: {
       options: [
-        { value: NO_PROPERTY_OPTION, label: "No property" },
+        { value: NONE_OPTION_VALUE, label: "No property" },
         ...selectableProperties(properties, original.property_id).map((property) => ({ value: property.id, label: property.name })),
       ],
-      value: values.propertyId ?? NO_PROPERTY_OPTION,
+      value: values.propertyId ?? NONE_OPTION_VALUE,
       apply: (propertyId) => update({ propertyId: fromChoice(propertyId) || null }),
     },
     savedVendor: {
-      options: savedVendorChoices(vendors),
-      value: values.vendorId ?? NO_PROPERTY_OPTION,
+      options: savedVendorChoices(vendors, !(vendorsFailed && values.vendorId !== null)),
+      value: values.vendorId ?? NONE_OPTION_VALUE,
       apply: (vendorId) => update({ vendorId: fromChoice(vendorId) || null }),
       description: vendorsFailed ? SAVED_VENDOR_MESSAGES.loadFailed : SAVED_VENDOR_MESSAGES.sheetDescription,
     },
     channel: {
       options: CHANNEL_OPTIONS,
-      value: values.channel || NO_PROPERTY_OPTION,
+      value: values.channel || NONE_OPTION_VALUE,
       apply: (channel) => update({ channel: fromChoice(channel) }),
     },
     paymentMethod: {
       options: PAYMENT_METHOD_CHOICES,
-      value: values.paymentMethod || NO_PROPERTY_OPTION,
+      value: values.paymentMethod || NONE_OPTION_VALUE,
       apply: (paymentMethod) => update({ paymentMethod: fromChoice(paymentMethod) }),
     },
   };
@@ -174,7 +172,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
         <PickerField
           disabled={vendorsLoading}
           label={LABELS.savedVendor}
-          onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.savedVendor)}
+          onPress={openSavedVendorSheet}
           value={vendorsLoading ? SAVED_VENDOR_MESSAGES.loading : savedVendorLabel(values.vendorId, vendors)}
         />
         <FormField
@@ -238,7 +236,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
           setOpenSheet(null);
         }}
         options={sheet?.options ?? []}
-        title={openSheet ? SHEET_TITLES[openSheet] : ""}
+        title={openSheet ? TRANSACTION_SHEET_TITLES[openSheet] : ""}
         value={sheet?.value ?? null}
       />
     </>

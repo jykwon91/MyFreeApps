@@ -1,5 +1,6 @@
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
-import { DEFAULT_CATEGORY, NO_PROPERTY_OPTION } from "../../constants/transactionEdit";
+import { NONE_CHOICE } from "../../constants/transactionCreateOptions";
+import { DEFAULT_CATEGORY, NONE_OPTION_VALUE } from "../../constants/transactionEdit";
 import { isoFromDate } from "../../lib/localDate";
 import type { TransactionChoice } from "../../types/TransactionChoice";
 import type { TransactionCreateValues } from "../../types/TransactionCreateValues";
@@ -45,10 +46,10 @@ export function createPayload(values: TransactionCreateValues): Partial<Transact
 }
 
 export function choiceLabel(choices: readonly TransactionChoice[], value: string): string {
-  return choices.find((choice) => choice.value === (value || NO_PROPERTY_OPTION))?.label ?? "None";
+  return choices.find((choice) => choice.value === (value || NONE_OPTION_VALUE))?.label ?? NONE_CHOICE.label;
 }
 
 /** A pick from a sheet as a form keeps it: the "none" choice is empty. */
 export function fromChoice(value: string): string {
-  return value === NO_PROPERTY_OPTION ? "" : value;
+  return value === NONE_OPTION_VALUE ? "" : value;
 }

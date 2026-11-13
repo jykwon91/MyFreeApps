@@ -6,8 +6,8 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, View } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
-import { DEFAULT_CATEGORY, NO_PROPERTY_OPTION } from "../../constants/transactionEdit";
-import { TRANSACTION_FIELD_LABELS as LABELS } from "../../constants/transactionFieldLabels";
+import { DEFAULT_CATEGORY, NONE_OPTION_VALUE } from "../../constants/transactionEdit";
+import { TRANSACTION_FIELD_LABELS as LABELS, TRANSACTION_SHEET_TITLES } from "../../constants/transactionFieldLabels";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
 import type { TransactionChoice } from "../../types/TransactionChoice";
 import type { TransactionSheetConfig } from "../../types/TransactionSheetConfig";
@@ -20,13 +20,6 @@ import { categoryChoices, selectableProperties } from "./transactionEditValues";
 import { createFailureMessage } from "./transactionMessages";
 
 type SheetName = "category" | "property" | "channel" | "paymentMethod";
-
-const SHEET_TITLES: Record<SheetName, string> = {
-  category: "Category",
-  property: "Property",
-  channel: LABELS.channel,
-  paymentMethod: LABELS.paymentMethod,
-};
 
 /** Adds a transaction by hand, with the same fields and the same request as the website's form. */
 export default function NewTransactionForm() {
@@ -76,7 +69,7 @@ export default function NewTransactionForm() {
   }
 
   const propertyChoices: TransactionChoice[] = [
-    { value: NO_PROPERTY_OPTION, label: "No property" },
+    { value: NONE_OPTION_VALUE, label: "No property" },
     ...selectableProperties(properties, null).map((property) => ({ value: property.id, label: property.name })),
   ];
   const sheets: Record<SheetName, TransactionSheetConfig> = {
@@ -87,17 +80,17 @@ export default function NewTransactionForm() {
     },
     property: {
       options: propertyChoices,
-      value: values.propertyId ?? NO_PROPERTY_OPTION,
+      value: values.propertyId ?? NONE_OPTION_VALUE,
       apply: (propertyId) => update({ propertyId: fromChoice(propertyId) || null }),
     },
     channel: {
       options: CHANNEL_OPTIONS,
-      value: values.channel || NO_PROPERTY_OPTION,
+      value: values.channel || NONE_OPTION_VALUE,
       apply: (channel) => update({ channel: fromChoice(channel) }),
     },
     paymentMethod: {
       options: PAYMENT_METHOD_CHOICES,
-      value: values.paymentMethod || NO_PROPERTY_OPTION,
+      value: values.paymentMethod || NONE_OPTION_VALUE,
       apply: (paymentMethod) => update({ paymentMethod: fromChoice(paymentMethod) }),
     },
   };
@@ -154,7 +147,7 @@ export default function NewTransactionForm() {
           setOpenSheet(null);
         }}
         options={sheet?.options ?? []}
-        title={openSheet ? SHEET_TITLES[openSheet] : ""}
+        title={openSheet ? TRANSACTION_SHEET_TITLES[openSheet] : ""}
         value={sheet?.value ?? ""}
       />
     </>

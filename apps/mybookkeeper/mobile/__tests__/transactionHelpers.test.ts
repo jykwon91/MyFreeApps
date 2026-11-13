@@ -187,16 +187,17 @@ describe("the edit form", () => {
     expect(taxYearError({ ...values, taxYear }, original)).toBe(expected);
   });
 
-  it("doesn't hold back a row already filed under a year outside the range", () => {
-    const old = aTransaction({ tax_year: 2018 });
+  it("has nothing to say about a year that wasn't changed", () => {
+    const old = aTransaction({ tax_year: 2020 });
     expect(taxYearError(toEditValues(old), old)).toBeUndefined();
   });
 
   it("offers None first, then the saved vendors, and never names a link as none", () => {
-    expect(savedVendorChoices([aSavedVendor()])).toEqual([
+    expect(savedVendorChoices([aSavedVendor()], true)).toEqual([
       { value: "none", label: "None" },
       { value: "v1", label: "Ace Plumbing" },
     ]);
+    expect(savedVendorChoices([aSavedVendor()], false)).toEqual([{ value: "v1", label: "Ace Plumbing" }]);
     expect(savedVendorLabel(null, [])).toBe("None");
     expect(savedVendorLabel("v1", [aSavedVendor()])).toBe("Ace Plumbing");
     expect(savedVendorLabel("gone", [])).toBe("A saved vendor");

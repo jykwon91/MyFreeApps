@@ -3,7 +3,7 @@ import { LoadingButton, OptionSheet, Skeleton, useTheme } from "@platform/mobile
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";
 import { BANK_IMPORT_MESSAGES as MESSAGES } from "../../constants/bankImport";
-import { NO_PROPERTY_OPTION } from "../../constants/transactionEdit";
+import { NONE_OPTION_VALUE } from "../../constants/transactionEdit";
 import PickerField from "../transactions/PickerField";
 import { selectableProperties } from "../transactions/transactionEditValues";
 
@@ -52,11 +52,11 @@ export default function BankImportPropertyField({ value, onChange, disabled }: B
         onClose={() => setIsPicking(false)}
         onSelect={(next) => {
           setIsPicking(false);
-          onChange(next === NO_PROPERTY_OPTION ? null : next);
+          onChange(next === NONE_OPTION_VALUE ? null : next);
         }}
-        options={[{ value: NO_PROPERTY_OPTION, label: MESSAGES.noProperty }, ...properties.map((property) => ({ value: property.id, label: property.name }))]}
+        options={[{ value: NONE_OPTION_VALUE, label: MESSAGES.noProperty }, ...properties.map((property) => ({ value: property.id, label: property.name }))]}
         title={MESSAGES.propertySheetTitle}
-        value={value ?? NO_PROPERTY_OPTION}
+        value={value ?? NONE_OPTION_VALUE}
       />
     </>
   );

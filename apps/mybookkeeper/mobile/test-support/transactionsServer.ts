@@ -68,6 +68,8 @@ export interface FakeTransactionServer {
   pendingPayments: number;
   /** Fails summary requests while set. */
   failSummary: boolean;
+  /** The status every saved-vendor read fails with, while set. */
+  failVendorsWith: number | null;
   renewalAlerts: UtilityPlanRenewalAlert;
   rateComparison: UtilityPlanRateComparison;
   premiumComparison: InsurancePremiumComparison;
@@ -134,6 +136,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     pendingReceipts: 0,
     pendingPayments: 0,
     failSummary: false,
+    failVendorsWith: null,
     renewalAlerts: noRenewalAlerts(),
     rateComparison: noRateComparison(),
     premiumComparison: noPremiumComparison(),
@@ -160,6 +163,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     server.requests.push(config);
     if (server.offline) return Promise.reject(Object.assign(new Error("Network Error"), { config }));
     if (config.url === "/properties") return respond(server.properties);
+    if (server.failVendorsWith !== null && config.url?.startsWith("/vendors")) return respond({ detail: "nope" }, server.failVendorsWith);
     if (config.url === "/vendors") return respond({ items: server.vendors, total: server.vendors.length, has_more: false });
     if (config.url?.startsWith("/vendors/")) {
       const vendor = server.vendors.find((row) => row.id === config.url?.split("/")[2]);

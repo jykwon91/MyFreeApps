@@ -6,7 +6,7 @@ export const DEFAULT_CATEGORY: Record<TransactionType, string> = {
   expense: "maintenance",
 };
 
-export const NO_PROPERTY_OPTION = "none";
+export const NONE_OPTION_VALUE = "none";
 
 export const TRANSACTION_EDIT_SHEET = {
   category: "category",

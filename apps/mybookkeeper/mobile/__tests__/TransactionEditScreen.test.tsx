@@ -246,6 +246,28 @@ describe("TransactionEditScreen", () => {
       expect(lastPatch(server)).toEqual({ vendor_id: null });
     });
 
+    it("tries the vendor list again when the sheet is reopened after it failed", async () => {
+      const server = startTransactionServer([aTransaction()]);
+      server.vendors = [aSavedVendor()];
+      server.failVendorsWith = 500;
+      await renderScreen();
+      await fireEvent.press(await screen.findByLabelText("Saved vendor, None"));
+      expect(await screen.findByText(/couldn't load your saved vendors/)).toBeTruthy();
+      await fireEvent.press(screen.getByRole("button", { name: "Close" }));
+      server.failVendorsWith = null;
+      await fireEvent.press(screen.getByLabelText("Saved vendor, None"));
+      expect(await screen.findByRole("radio", { name: "Ace Plumbing" })).toBeTruthy();
+    });
+
+    it("doesn't offer None for a linked vendor while the vendor list has failed", async () => {
+      const server = startTransactionServer([aTransaction({ vendor_id: "v1" })]);
+      server.failVendorsWith = 500;
+      await renderScreen();
+      await fireEvent.press(await screen.findByLabelText("Saved vendor, A saved vendor"));
+      expect(await screen.findByText(/couldn't load your saved vendors/)).toBeTruthy();
+      expect(screen.queryByRole("radio", { name: "None" })).toBeNull();
+    });
+
     it("sends a new channel and payment method", async () => {
       const server = startTransactionServer([aTransaction()]);
       await renderScreen();

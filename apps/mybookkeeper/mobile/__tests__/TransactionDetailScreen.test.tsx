@@ -101,6 +101,18 @@ describe("TransactionDetailScreen", () => {
     expect(await screen.findByText("A saved vendor")).toBeTruthy();
   });
 
+  it("says it couldn't load a saved vendor, and tries again on tap", async () => {
+    const server = startTransactionServer([aTransaction({ vendor_id: "v1" })]);
+    server.vendors = [aSavedVendor()];
+    server.failVendorsWith = 500;
+    await renderScreen();
+    const retry = await screen.findByRole("button", { name: "Retry loading the saved vendor" });
+    expect(screen.queryByText("A saved vendor")).toBeNull();
+    server.failVendorsWith = null;
+    await fireEvent.press(retry);
+    expect(await screen.findByText("Ace Plumbing")).toBeTruthy();
+  });
+
   it("offers to link income to a tenant", async () => {
     startTransactionServer([aTransaction({ id: "t1", transaction_type: "income" })]);
     await renderScreen("t1");

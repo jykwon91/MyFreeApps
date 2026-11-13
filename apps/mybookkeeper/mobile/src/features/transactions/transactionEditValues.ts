@@ -47,7 +47,7 @@ export function amountError(values: TransactionEditValues, original: Transaction
   return moneyInputError(amount);
 }
 
-/** Only a changed year is checked, so a row already filed under an older year still saves. */
+/** Only a changed year is checked. A stored year is always valid, because the database enforces its range (chk_txn_tax_year), so only a year typed in here can be out of range. */
 export function taxYearError(values: TransactionEditValues, original: Transaction): string | undefined {
   const year = values.taxYear.trim();
   if (year === String(original.tax_year)) return undefined;
