@@ -51,9 +51,8 @@ const GUILD: GuildResponse = {
 };
 
 const SURFACES: ReadonlyArray<readonly [string, string]> = [
-  ["This week (heroes, quests, hot races)", "/wow-forever/guild?me=tiny"],
+  ["Home (Arena podium and rows, heroes, quests, hot races)", "/wow-forever/guild?me=tiny"],
   ["Titles", "/wow-forever/guild?tab=titles&me=tiny"],
-  ["Arena (podium and rows)", "/wow-forever/guild?tab=arena"],
   ["Who can craft?", "/wow-forever/guild?tab=crafting&recipe=linen"],
   ["Roster", "/wow-forever/guild?tab=roster"],
 ];
