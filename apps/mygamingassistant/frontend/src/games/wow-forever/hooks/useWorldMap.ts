@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 import { useGetMapCapturesQuery } from "@/games/wow-forever/api/wowMapCapturesApi";
 import type { WorldMapData } from "@/games/wow-forever/types/worldMap";
-import { LOAD_STATUS, useWorldMapData, type LoadStatus } from "@/games/wow-forever/hooks/useWorldMapData";
+import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
+import { useWorldMapData } from "@/games/wow-forever/hooks/useWorldMapData";
+import type { LoadStatus } from "@/games/wow-forever/types/loadStatus";
 import { applyCaptures } from "@/games/wow-forever/worldMap/capture/applyCaptures";
 
 export interface WorldMapState {

@@ -1,3 +1,5 @@
+import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
+import type { LoadStatus } from "@/games/wow-forever/types/loadStatus";
 import { useGetWowPricesQuery } from "@/games/wow-forever/api/wowPricesApi";
 import { DEFAULT_PRICE_SERVER } from "@/games/wow-forever/data/priceServers";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
@@ -8,10 +10,8 @@ import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
 import type { PriceServer } from "@/games/wow-forever/types/priceServer";
 
-export type AuctionPricesStatus = "loading" | "error" | "ready";
-
 export interface AuctionPricesState {
-  status: AuctionPricesStatus;
+  status: LoadStatus;
   /** Whose auction house these are (or will be, while loading): a server's house for one faction. */
   server: PriceServer;
   faction: PriceFaction;
@@ -45,7 +45,7 @@ export function useAuctionPrices(faction?: PriceFaction, server: PriceServer = D
   const { currentData: data, isError, isFetching, refetch } = useGetWowPricesQuery({ server, faction: wanted });
   const retry = () => void refetch();
   const house = { server, faction: wanted };
-  if (data) return { status: "ready", ...house, prices: mapOnce(data), retry, retrying: false };
-  if (isError) return { status: "error", ...house, prices: null, retry, retrying: isFetching };
-  return { status: "loading", ...house, prices: null, retry, retrying: false };
+  if (data) return { status: LOAD_STATUS.ready, ...house, prices: mapOnce(data), retry, retrying: false };
+  if (isError) return { status: LOAD_STATUS.error, ...house, prices: null, retry, retrying: isFetching };
+  return { status: LOAD_STATUS.loading, ...house, prices: null, retry, retrying: false };
 }

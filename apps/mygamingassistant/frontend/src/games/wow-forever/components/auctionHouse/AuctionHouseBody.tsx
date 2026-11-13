@@ -1,3 +1,5 @@
+import { AUCTION_LOAD_COPY } from "@/games/wow-forever/data/auctionHouse/auctionFilterLabels";
+import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 import type { ReactNode } from "react";
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import AuctionResultsSkeleton from "@/games/wow-forever/components/auctionHouse/AuctionResultsSkeleton";
@@ -16,8 +18,8 @@ interface AuctionHouseBodyProps {
 /** Skeleton while loading, a retry if it failed, a note when the house has no prices yet, else `children`. */
 export default function AuctionHouseBody({ faction, children }: AuctionHouseBodyProps) {
   const { status, prices, retry, retrying } = useAuctionPrices(faction);
-  if (status === "error") return <LoadErrorRetry message="Couldn't load auction prices." onRetry={retry} retrying={retrying} />;
-  if (status !== "ready" || !prices) return <AuctionResultsSkeleton />;
+  if (status === LOAD_STATUS.error) return <LoadErrorRetry message={AUCTION_LOAD_COPY.pricesError} onRetry={retry} retrying={retrying} />;
+  if (status !== LOAD_STATUS.ready || !prices) return <AuctionResultsSkeleton />;
   if (prices.byId.size === 0) return <EmptyStateNote message={`No ${priceHouseLabel(prices)} auction prices yet.`} />;
   return <>{children(prices)}</>;
 }

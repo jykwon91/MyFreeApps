@@ -1,4 +1,4 @@
-import type { AuctionSort } from "@/games/wow-forever/types/auctionSort";
+import type { AuctionFilters } from "@/games/wow-forever/types/auctionHouse/auctionFilters";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import type { PriceFaction } from "@/games/wow-forever/types/priceFaction";
 
@@ -9,8 +9,7 @@ export interface ProfessionAuctionProps {
   house: PriceFaction;
   recipe: number | null;
   onRecipe: (next: number | null) => void;
-  query: string;
-  onQuery: (next: string) => void;
-  sort: AuctionSort;
-  onSort: (next: AuctionSort) => void;
+  filters: AuctionFilters;
+  onFilters: (patch: Partial<AuctionFilters>) => void;
+  onClearFilters: () => void;
 }

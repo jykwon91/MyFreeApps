@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { BROWSE_LIMIT, SEARCH_LIMIT, searchAuctionItems } from "@/games/wow-forever/prices/auctionSearch";
+import { BROWSE_LIMIT, SEARCH_LIMIT } from "@/games/wow-forever/data/auctionHouse/auctionFilterOptions";
+import { searchAuctionItems } from "@/games/wow-forever/prices/auctionSearch";
 import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
 
 function item(itemId: number, name: string, marketValue: number, quantity = 1): AuctionPrice {

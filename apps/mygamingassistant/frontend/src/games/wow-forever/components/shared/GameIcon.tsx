@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import clsx from "clsx";
 import { QUALITY_BORDER_CLASSES } from "@/games/wow-forever/data/itemQualityStyles";
 import { iconUrl } from "@/games/wow-forever/lib/icons/wowIcons";
@@ -12,6 +12,10 @@ interface GameIconProps {
   /** The name, or "" when the name is printed next to it (the icon is then decorative). */
   alt: string;
   className?: string;
+  /** Draw it at this size from the sm breakpoint up (`size` on phones). */
+  smSize?: GameIconSize;
+  /** A 2px frame instead of 1px, for icons big enough to carry it. */
+  thickBorder?: boolean;
 }
 
 /**
@@ -19,15 +23,22 @@ interface GameIconProps {
  * A missing icon, or one that fails to load, keeps the same box as a neutral
  * placeholder, so rows never shift.
  */
-export default function GameIcon({ icon, size, alt, className }: GameIconProps) {
+export default function GameIcon({ icon, size, alt, className, smSize, thickBorder = false }: GameIconProps) {
   const src = icon ? iconUrl(icon.fileDataId) : null;
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  // A size that changes at sm can't be inline style (it would beat the breakpoint), so it rides CSS variables.
+  const responsive = smSize !== undefined;
+  const box = responsive
+    ? ({ "--icon-size": `${size}px`, "--icon-sm-size": `${smSize}px` } as CSSProperties)
+    : { width: size, height: size };
+  const boxClass = responsive ? "h-[var(--icon-size)] w-[var(--icon-size)] sm:h-[var(--icon-sm-size)] sm:w-[var(--icon-sm-size)]" : undefined;
   const frame = clsx(
-    "inline-block shrink-0 overflow-hidden rounded border bg-muted align-middle",
+    "inline-block shrink-0 overflow-hidden rounded bg-muted align-middle",
+    thickBorder ? "border-2" : "border",
     icon?.quality ? QUALITY_BORDER_CLASSES[icon.quality] : "border-border",
+    boxClass,
     className,
   );
-  const box = { width: size, height: size };
   if (!src || failedSrc === src) {
     return (
       <span

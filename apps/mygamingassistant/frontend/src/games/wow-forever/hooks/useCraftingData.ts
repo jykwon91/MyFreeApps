@@ -1,12 +1,13 @@
+import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 import { useCallback, useEffect, useState } from "react";
 import { loadCraftingData } from "@/games/wow-forever/crafting/loadCraftingData";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import type { CraftingData } from "@/games/wow-forever/types/craftingData";
 
 export type CraftingDataState =
-  | { status: "loading" }
-  | { status: "error"; retry: () => void }
-  | { status: "ready"; data: CraftingData };
+  | { status: typeof LOAD_STATUS.loading }
+  | { status: typeof LOAD_STATUS.error; retry: () => void }
+  | { status: typeof LOAD_STATUS.ready; data: CraftingData };
 
 /** The generated recipe, trainer and source data for one crafting profession. */
 export function useCraftingData(profession: CraftingProfession): CraftingDataState {
@@ -25,7 +26,7 @@ export function useCraftingData(profession: CraftingProfession): CraftingDataSta
     };
   }, [profession]);
 
-  if (!result || result.profession !== profession) return { status: "loading" };
-  if (!result.data) return { status: "error", retry };
-  return { status: "ready", data: result.data };
+  if (!result || result.profession !== profession) return { status: LOAD_STATUS.loading };
+  if (!result.data) return { status: LOAD_STATUS.error, retry };
+  return { status: LOAD_STATUS.ready, data: result.data };
 }

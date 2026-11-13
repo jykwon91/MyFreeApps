@@ -6,4 +6,4 @@
 export const WOW_ICON_BASE = "/api/wow/icons";
 
 /** The sizes icons are drawn at (CSS px); the published art is 64px, sharp up to 32px at 2x. */
-export const GAME_ICON_SIZES = [16, 24, 32, 48] as const;
+export const GAME_ICON_SIZES = [16, 24, 32, 40, 48] as const;

@@ -55,6 +55,10 @@ function rows() {
   return screen.getAllByTestId("auction-row");
 }
 
+function itemName(row: HTMLElement): string | null {
+  return within(row).getByTestId("auction-item-name").textContent;
+}
+
 function saveFaction(faction: "A" | "H") {
   window.localStorage.setItem(
     PLAYER_SETTINGS_STORAGE_KEY,
@@ -71,7 +75,7 @@ describe("Auction house page", () => {
   it("lists items most on sale first with market value, cheapest listing and supply, and the Blizzard credit", () => {
     answerPerFaction();
     renderPage();
-    expect(rows().map((r) => r.firstElementChild?.textContent)).toEqual(["Linen Cloth", "Wool Cloth", "Silk Cloth"]);
+    expect(rows().map((r) => itemName(r))).toEqual(["Linen Cloth", "Wool Cloth", "Silk Cloth"]);
     const silk = rows()[2];
     expect(within(silk).getByTestId("auction-market")).toHaveTextContent("50s");
     expect(within(silk).getByTestId("auction-cheapest")).toHaveTextContent("45s");
@@ -140,7 +144,7 @@ describe("Auction house page", () => {
     answerPerFaction();
     renderPage();
     await userEvent.selectOptions(screen.getByLabelText("Sort by"), "high");
-    expect(rows()[0].firstElementChild).toHaveTextContent("Silk Cloth");
+    expect(itemName(rows()[0])).toBe("Silk Cloth");
   });
 
   it("is US only and ignores the saved server status region", () => {
@@ -164,6 +168,13 @@ describe("Auction house page", () => {
     usePricesQuery.mockReturnValue(pricesReady({ ...response(ITEMS), source_updated_at: "2020-01-01T00:00:00Z" }));
     renderPage();
     expect(screen.getByTestId("price-credit")).toHaveTextContent("these may be out of date");
+    expect(screen.getByTestId("auction-stale-banner")).toHaveTextContent("These prices are old.");
+  });
+
+  it("shows no warning banner for fresh prices", () => {
+    answerPerFaction();
+    renderPage();
+    expect(screen.queryByTestId("auction-stale-banner")).toBeNull();
   });
 
   it("shows a skeleton while loading", () => {
@@ -203,7 +214,7 @@ describe("Auction house page: profession and recipe filters", () => {
     await userEvent.selectOptions(screen.getByTestId("auction-profession"), "enchanting");
     expect(screen.getByTestId("search")).toHaveTextContent("prof=enchanting");
     expect(await screen.findByTestId("auction-results-note")).toHaveTextContent(/Enchanting materials on sale · \d+ more have no auctions right now/);
-    const names = rows().map((r) => r.firstElementChild?.textContent);
+    const names = rows().map((r) => itemName(r));
     expect(names).toContain("Mote of Magic");
     expect(names).not.toContain("Linen Cloth");
   });
@@ -266,6 +277,27 @@ describe("Auction house item icons", () => {
     renderPage();
     const linen = rows()[0];
     expect(within(linen).getByTestId("game-icon").getAttribute("src")).toContain(`/${itemIconFile(2589)}.webp`);
+  });
+
+  it("draws it 48px on a phone and 40px from sm, in a 2px frame, with the quality said to screen readers", () => {
+    answerPerFaction();
+    renderPage();
+    const linen = rows()[0];
+    const frame = within(linen).getByTestId("game-icon").parentElement as HTMLElement;
+    expect(frame.getAttribute("style")).toContain("--icon-size: 48px");
+    expect(frame.getAttribute("style")).toContain("--icon-sm-size: 40px");
+    expect(frame.className).toContain("border-2");
+    expect(frame.className).toContain("sm:h-[var(--icon-sm-size)]");
+    expect(within(linen).getByText("Common quality")).toHaveClass("sr-only");
+    expect(within(linen).getByTestId("auction-item-name")).toHaveClass("line-clamp-2");
+  });
+
+  it("keeps the same-size placeholder for an item with no icon", () => {
+    answerPerFaction([[99999999, 700, 650, 5, 5, "No Icon Item"]]);
+    renderPage();
+    const placeholder = within(rows()[0]).getByTestId("game-icon-placeholder");
+    expect(placeholder.getAttribute("style")).toContain("--icon-size: 48px");
+    expect(within(rows()[0]).queryByText(/quality$/)).toBeNull();
   });
 
   it("shows icons on the recipe picker, the recipe title and each material", async () => {

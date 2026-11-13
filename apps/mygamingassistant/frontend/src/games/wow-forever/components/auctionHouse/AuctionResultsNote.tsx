@@ -1,22 +1,26 @@
-import { BROWSE_LIMIT, SEARCH_LIMIT } from "@/games/wow-forever/prices/auctionSearch";
-import type { AuctionSearchResult } from "@/games/wow-forever/types/auctionSearchResult";
+import { auctionResultsCountText } from "@/games/wow-forever/lib/auctionHouse/auctionResultsCountText";
+import { formatWhole } from "@/games/wow-forever/lib/character/formatWhole";
 
 interface AuctionResultsNoteProps {
-  result: AuctionSearchResult;
-  searching: boolean;
+  /** Items that match, before paging. */
+  total: number;
+  /** Items listed right now. */
+  shown: number;
+  /** True when a search or filter is narrowing the list. */
+  narrowed: boolean;
+  /** Set when the list is one profession's materials. */
+  professionLabel: string | null;
+  /** Profession materials with no auctions right now. */
+  notOnSale: number;
 }
 
-function noteText({ result, searching }: AuctionResultsNoteProps): string {
-  if (!result.capped) return `${result.total} ${result.total === 1 ? "item" : "items"}`;
-  if (searching) return `Showing the first ${SEARCH_LIMIT} of ${result.total} matches — type more to narrow it down`;
-  return `Showing ${BROWSE_LIMIT} of ${result.total} — search to find any item`;
-}
-
-/** How many items are listed, and whether the list was cut short. */
-export default function AuctionResultsNote(props: AuctionResultsNoteProps) {
+/** "1,204 items match", plus how many of them are listed so far. */
+export default function AuctionResultsNote({ total, shown, narrowed, professionLabel, notOnSale }: AuctionResultsNoteProps) {
   return (
-    <p className="text-sm text-muted-foreground" data-testid="auction-results-note">
-      {noteText(props)}
+    <p className="text-sm" aria-live="polite" data-testid="auction-results-note">
+      {auctionResultsCountText(total, narrowed, professionLabel)}
+      {shown < total && <span className="text-muted-foreground"> · showing the first {formatWhole(shown)}</span>}
+      {notOnSale > 0 && <span className="text-muted-foreground"> · {notOnSale} more have no auctions right now</span>}
     </p>
   );
 }

@@ -8,8 +8,9 @@ import {
   RECIPE_MATCH_LIMIT,
   recipeOptions,
   recipePriceBreakdown,
-  searchProfessionMaterials,
 } from "@/games/wow-forever/lib/auctionHouse/professionMaterials";
+import { lookupAuctionItems } from "@/games/wow-forever/lib/auctionHouse/auctionLookup";
+import { NO_AUCTION_FILTERS } from "@/games/wow-forever/data/auctionHouse/noAuctionFilters";
 import { parseRecipeParam } from "@/games/wow-forever/lib/auctionHouse/parseRecipeParam";
 import { signedPrice } from "@/games/wow-forever/lib/auctionHouse/signedPrice";
 import { CRAFTING_PROFESSION, type CraftRecipe } from "@/games/wow-forever/types/crafting";
@@ -59,27 +60,33 @@ describe("professionMaterials", () => {
   });
 });
 
-describe("searchProfessionMaterials", () => {
+describe("lookupAuctionItems for a profession's materials", () => {
   const materials = professionMaterials([ROD, ENCHANT, OIL]);
   const byId = new Map([
     [10940, price(10940, "Strange Dust", 300, 500)],
     [6217, price(6217, "Copper Rod", 120, 5)],
     [2589, price(2589, "Linen Cloth", 50, 9000)],
   ]);
+  const context = { qualityOf: () => null, gear: null, classId: "mage" as const };
+  const look = (query: string, sort = NO_AUCTION_FILTERS.sort) => lookupAuctionItems(byId, materials, { ...NO_AUCTION_FILTERS, query, sort }, context);
 
   it("keeps only the profession's materials on sale, and counts the ones that aren't", () => {
-    const result = searchProfessionMaterials(materials, byId, "", "supply");
+    const result = look("");
     expect(result.items.map((i) => i.name)).toEqual(["Strange Dust", "Copper Rod"]);
-    expect(result.total).toBe(2);
     expect(result.notOnSale).toBe(1);
-    expect(result.capped).toBe(false);
   });
 
   it("applies the search to both counts", () => {
-    const result = searchProfessionMaterials(materials, byId, "seed", "supply");
+    const result = look("seed");
     expect(result.items).toEqual([]);
     expect(result.notOnSale).toBe(1);
-    expect(searchProfessionMaterials(materials, byId, "dust", "name").notOnSale).toBe(0);
+    expect(look("dust", "name").notOnSale).toBe(0);
+  });
+
+  it("is every item on the house when there are no materials", () => {
+    const all = lookupAuctionItems(byId, null, NO_AUCTION_FILTERS, context);
+    expect(all.items.map((i) => i.name)).toEqual(["Linen Cloth", "Strange Dust", "Copper Rod"]);
+    expect(all.notOnSale).toBe(0);
   });
 });
 

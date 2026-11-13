@@ -1,28 +1,37 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import AuctionHeaderRow from "@/games/wow-forever/components/auctionHouse/AuctionHeaderRow";
 import AuctionRow from "@/games/wow-forever/components/auctionHouse/AuctionRow";
-import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
-import type { AuctionSearchResult } from "@/games/wow-forever/types/auctionSearchResult";
+import AuctionShowMore from "@/games/wow-forever/components/auctionHouse/AuctionShowMore";
+import { AUCTION_PAGE_SIZE } from "@/games/wow-forever/data/auctionHouse/auctionFilterOptions";
+import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
 
 interface AuctionResultsProps {
-  result: AuctionSearchResult;
-  /** Shown instead of the list when nothing is in it. */
-  emptyMessage: string;
-  /** The count line above the list. */
-  note: ReactNode;
+  /** Every match, in order; this shows the first page and a button for more. */
+  items: readonly AuctionPrice[];
+  /** What the list is showing (house, profession, filters). The paging starts over when it changes, not when prices refetch. */
+  resultsKey: string;
+  /** The count line above the list, given how many rows are listed. */
+  note: (shown: number) => ReactNode;
 }
 
-export default function AuctionResults({ result, emptyMessage, note }: AuctionResultsProps) {
-  if (result.items.length === 0) return <EmptyStateNote message={emptyMessage} />;
+/** The list, 50 at a time. A new search, filter, house or profession starts again from the first page. */
+export default function AuctionResults({ items, resultsKey, note }: AuctionResultsProps) {
+  const [paging, setPaging] = useState({ key: resultsKey, count: AUCTION_PAGE_SIZE });
+  if (paging.key !== resultsKey) setPaging({ key: resultsKey, count: AUCTION_PAGE_SIZE });
+  const shown = Math.min(paging.count, items.length);
+
   return (
     <section className="space-y-3">
-      {note}
+      {note(shown)}
       <AuctionHeaderRow />
       <ul className="space-y-3 sm:space-y-0" data-testid="auction-results">
-        {result.items.map((item) => (
+        {items.slice(0, shown).map((item) => (
           <AuctionRow key={item.itemId} item={item} />
         ))}
       </ul>
+      {shown < items.length && (
+        <AuctionShowMore remaining={items.length - shown} onShowMore={() => setPaging({ key: resultsKey, count: shown + AUCTION_PAGE_SIZE })} />
+      )}
     </section>
   );
 }

@@ -1,9 +1,8 @@
+import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
+import type { LoadStatus } from "@/games/wow-forever/types/loadStatus";
 import { useCallback, useEffect, useState } from "react";
 import type { WorldMapData } from "@/games/wow-forever/types/worldMap";
 import { loadWorldMap } from "@/games/wow-forever/worldMap/loadWorldMap";
-
-export const LOAD_STATUS = { loading: "loading", ready: "ready", error: "error" } as const;
-export type LoadStatus = (typeof LOAD_STATUS)[keyof typeof LOAD_STATUS];
 
 export interface WorldMapDataState {
   status: LoadStatus;
