@@ -1,47 +1,38 @@
-import GuildRefreshButton from "@/games/wow-forever/components/guild/GuildRefreshButton";
+import clsx from "clsx";
+import GuildBannerChips from "@/games/wow-forever/components/guild/GuildBannerChips";
+import GuildBannerFooter from "@/games/wow-forever/components/guild/GuildBannerFooter";
+import GuildBannerMaster from "@/games/wow-forever/components/guild/GuildBannerMaster";
 import { FACTION_LABELS } from "@/games/wow-forever/data/character/characterConfig";
-import { GUILD_ROSTER_FRESH_HOURS } from "@/games/wow-forever/data/guild/guildConfig";
-import { BADGE } from "@/games/wow-forever/data/badgeStyles";
-import { hoursSince } from "@/games/wow-forever/lib/guild/guildMembers";
-import { relativeTime } from "@/games/wow-forever/lib/serverStatusTime";
+import { GUILD_BANNER_COPY, GUILD_BANNER_FALLBACK, GUILD_BANNER_STYLES } from "@/games/wow-forever/data/guild/guildBannerConfig";
+import { guildTotals } from "@/games/wow-forever/lib/guild/guildTotals";
 import type { GuildResponse } from "@/games/wow-forever/types/guild/guildResponse";
 
-/** Faction, how many members show out of the roster, and how fresh the roster is. */
+/** The guild's heraldic banner: faction colours and emblem, its name big, the guild master, and the guild's totals; the roster's freshness and "Refresh now" underneath. */
 export default function GuildSummary({ guild, refetch }: { guild: GuildResponse; refetch: () => unknown }) {
-  const shown = guild.members.length;
-  const missing = guild.roster_size === null ? 0 : Math.max(guild.roster_size - shown, 0);
-  const updatedAt = guild.roster_updated_at;
-  const stale = updatedAt !== null && hoursSince(updatedAt) > GUILD_ROSTER_FRESH_HOURS;
+  const style = GUILD_BANNER_STYLES[guild.faction] ?? GUILD_BANNER_FALLBACK;
+  const Emblem = style.emblem;
+  const master = guild.members.find((m) => m.rank === 0);
   return (
-    <section className="space-y-2" aria-label="Guild">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className={BADGE}>{FACTION_LABELS[guild.faction] ?? guild.faction}</span>
-        {guild.roster_size === null ? null : (
-          <span>
-            {shown} of {guild.roster_size} members shown
-          </span>
-        )}
-        {updatedAt ? (
-          <span className="text-muted-foreground">
-            · Roster {stale ? "last " : ""}updated{" "}
-            <time dateTime={updatedAt} title={new Date(updatedAt).toLocaleString()}>
-              {relativeTime(updatedAt)}
-            </time>
-          </span>
-        ) : null}
-        {guild.can_refresh ? <GuildRefreshButton guild={guild} refetch={refetch} /> : null}
+    <section aria-label={GUILD_BANNER_COPY.sectionLabel} className="overflow-hidden rounded-2xl border shadow-md">
+      <div className={clsx("relative bg-gradient-to-br p-4 text-white sm:p-6", style.gradient)}>
+        <Emblem aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-32 w-32 rotate-12 text-white/10 sm:h-44 sm:w-44" />
+        <div className="relative space-y-3">
+          <p className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-semibold ring-1 ring-white/25">
+              {FACTION_LABELS[guild.faction] ?? guild.faction}
+            </span>
+            {guild.roster_size === null ? null : (
+              <span>
+                {guild.members.length} of {guild.roster_size} members shown
+              </span>
+            )}
+          </p>
+          <p aria-hidden className="break-words text-3xl font-extrabold tracking-tight drop-shadow sm:text-5xl">{`<${guild.name}>`}</p>
+          {master ? <GuildBannerMaster master={master} /> : null}
+          <GuildBannerChips totals={guildTotals(guild.members)} />
+        </div>
       </div>
-      {missing > 0 ? (
-        <p className="text-xs text-muted-foreground">
-          {missing} {missing === 1 ? "member has" : "members have"} no profile from Blizzard, so they&apos;re not listed.
-        </p>
-      ) : null}
-      {stale ? (
-        <p className="text-xs text-muted-foreground">
-          The roster refreshes every hour while someone keeps looking up its members. Look one up on Your
-          character to start it again.
-        </p>
-      ) : null}
+      <GuildBannerFooter guild={guild} refetch={refetch} />
     </section>
   );
 }

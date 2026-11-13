@@ -1,14 +1,23 @@
 import CharacterRowSkeletons from "@/games/wow-forever/components/character/CharacterRowSkeletons";
 import { GUILD_SKELETON_CONTROLS, GUILD_SKELETON_ROWS } from "@/games/wow-forever/data/guild/guildConfig";
 import GuildPodiumSkeleton from "@/games/wow-forever/components/guild/GuildPodiumSkeleton";
+import { GUILD_HEROES_SKELETON_CARDS } from "@/games/wow-forever/data/guild/guildHallCopy";
 import { GUILD_TITLE_SKELETON_ROWS } from "@/games/wow-forever/data/guild/guildTitles";
 import { LEADERBOARD_SKELETON_CHIPS } from "@/games/wow-forever/data/guild/leaderboardConfig";
 
-/** The guild page while it loads: summary line, recipe search, titles, leaderboard (chips, picker, podium, rows), toolbar, member rows. */
+/** The guild page while it loads: banner, this week's heroes, recipe search, titles, leaderboard (chips, picker, podium, rows), toolbar, member rows. */
 export default function GuildPageSkeleton() {
   return (
     <div className="space-y-4" aria-hidden data-testid="guild-page-skeleton">
-      <div className="h-5 w-64 rounded bg-muted animate-pulse" />
+      <div className="h-[196px] rounded-2xl bg-muted animate-pulse sm:h-[220px]" data-testid="guild-banner-skeleton" />
+      <div className="space-y-3 rounded-xl border p-3 sm:p-4" data-testid="guild-heroes-skeleton">
+        <div className="h-6 w-44 rounded bg-muted animate-pulse" />
+        <div className="flex gap-3 overflow-hidden">
+          {Array.from({ length: GUILD_HEROES_SKELETON_CARDS }, (_, i) => (
+            <div key={i} className="h-[132px] w-[78%] shrink-0 rounded-xl bg-muted animate-pulse sm:w-auto sm:flex-1" />
+          ))}
+        </div>
+      </div>
       <div className="space-y-3 rounded-xl border p-3 sm:p-4" data-testid="guild-recipe-search-skeleton">
         <div className="h-6 w-44 rounded bg-muted animate-pulse" />
         <div className="h-[86px] rounded-md bg-muted animate-pulse sm:max-w-md" />

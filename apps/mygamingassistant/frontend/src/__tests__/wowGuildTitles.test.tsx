@@ -94,7 +94,7 @@ describe("awarding titles", () => {
     expect(titles.awarded.find((t) => t.title === "Deathless")?.holders.map((m) => m.slug)).toEqual(["a"]);
   });
 
-  it("orders a member's titles: all-time first, then professions, then this week's", () => {
+  it("orders a member's titles rarest first, then all-time, professions, this week's within a tier", () => {
     const since = { day: "2026-11-05", level: null, honorable_kills: 10, killing_blows: null, total_kills: null, dungeons_done: null };
     const titles = awardGuildTitles([
       member("a", {
@@ -105,8 +105,10 @@ describe("awarding titles", () => {
       member("c", { honorable_kills: 15, baseline: since, professions: [{ id: PROFESSION_SKILL_LINES.mining, skill: 76, max_skill: 150 }] }),
     ]);
     const mine = titles.bySlug.get("a") ?? [];
-    expect(mine.map((t) => t.title)).toEqual(["Bloodletter", "Deepdelver", "Bloodthirsty"]);
-    expect(mine.map((t) => t.weekly)).toEqual([false, false, true]);
+    // Legendary Bloodletter, rare Bloodthirsty, uncommon Deepdelver.
+    expect(mine.map((t) => t.title)).toEqual(["Bloodletter", "Bloodthirsty", "Deepdelver"]);
+    expect(mine.map((t) => t.weekly)).toEqual([false, true, false]);
+    expect(mine.map((t) => t.tier)).toEqual(["legendary", "rare", "uncommon"]);
   });
 });
 
@@ -117,28 +119,41 @@ describe("showing titles", () => {
     member("c", { honorable_kills: 15, killing_blows: 1, total_kills: 40 }),
   ]);
 
-  it("shows a member's first title and '+N' for the rest, named in full for screen readers", () => {
-    render(<GuildMemberTitles titles={titles.bySlug.get("a")} />);
+  const many = awardGuildTitles([
+    member("a", { honorable_kills: 90, killing_blows: 30, total_kills: 200, level: 60 }),
+    member("b", { honorable_kills: 20, killing_blows: 3, total_kills: 50, level: 20 }),
+    member("c", { honorable_kills: 15, killing_blows: 1, total_kills: 40, level: 10 }),
+  ]);
+
+  it("shows a member's three rarest titles and '+N' for the rest, named in full for screen readers", () => {
+    render(<GuildMemberTitles titles={many.bySlug.get("a")} />);
+    // Legendary Bloodletter, then the epic ones in board order: Trailblazer, Deathblow (Reaper is the fourth).
     expect(screen.getByText("Bloodletter")).toBeInTheDocument();
-    expect(screen.getByText("Deathblow")).not.toBeVisible();
-    expect(screen.getAllByText(/Guild title:/)[0].parentElement).toHaveTextContent("Guild title: Bloodletter (most honorable kills)");
-    const more = screen.getByRole("button", { name: "Show 2 more guild titles" });
-    expect(more).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(more);
+    expect(screen.getByText("Trailblazer")).toBeVisible();
     expect(screen.getByText("Deathblow")).toBeVisible();
+    expect(screen.getByText("Reaper")).not.toBeVisible();
+    expect(screen.getAllByText(/Guild title:/)[0].parentElement).toHaveTextContent("Guild title: Bloodletter (most honorable kills)");
+    const more = screen.getByRole("button", { name: "Show 1 more guild title" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    expect(more).toHaveTextContent("+1");
+    fireEvent.click(more);
     expect(screen.getByText("Reaper")).toBeVisible();
     expect(screen.getByRole("button", { name: "Show fewer guild titles" })).toHaveAttribute("aria-expanded", "true");
     // The button controls the extra titles, hidden until opened.
-    expect(document.getElementById(more.getAttribute("aria-controls") ?? "")).toHaveTextContent("Guild title: Deathblow (most killing blows)Guild title: Reaper (most total kills)");
+    expect(document.getElementById(more.getAttribute("aria-controls") ?? "")).toHaveTextContent("Guild title: Reaper (most total kills)");
   });
 
-  it("names one more title in the singular", () => {
-    const two = awardGuildTitles([
-      member("a", { honorable_kills: 90, killing_blows: 30 }), member("b", { honorable_kills: 20, killing_blows: 3 }),
-      member("c", { honorable_kills: 15, killing_blows: 1 }),
+  it("names more titles in the plural, and shows up to three with no button", () => {
+    const five = awardGuildTitles([
+      member("a", { honorable_kills: 90, killing_blows: 30, total_kills: 200, level: 60, dungeons_done: 9 }),
+      member("b", { honorable_kills: 20, killing_blows: 3, total_kills: 50, level: 20, dungeons_done: 2 }),
+      member("c", { honorable_kills: 15, killing_blows: 1, total_kills: 40, level: 10, dungeons_done: 1 }),
     ]);
-    render(<GuildMemberTitles titles={two.bySlug.get("a")} />);
-    expect(screen.getByRole("button", { name: "Show 1 more guild title" })).toHaveTextContent("+1");
+    const { unmount } = render(<GuildMemberTitles titles={five.bySlug.get("a")} />);
+    expect(screen.getByRole("button", { name: "Show 2 more guild titles" })).toHaveTextContent("+2");
+    unmount();
+    render(<GuildMemberTitles titles={titles.bySlug.get("a")?.slice(0, 3)} />);
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
   it("shows nothing for a member without titles", () => {
@@ -156,10 +171,21 @@ describe("showing titles", () => {
     const list = screen.getByRole("list", { name: "Titles and who holds them" });
     const cards = within(list).getAllByRole("listitem");
     expect(cards[0]).toHaveTextContent("Bloodletter");
+    expect(cards[0]).toHaveTextContent("Legendary");
+    expect(cards[0]).toHaveTextContent("The battlemasters know this name by heart.");
     expect(within(cards[0]).getByRole("link")).toHaveTextContent("a X");
-    expect(cards[1]).toHaveTextContent(`${GUILD_TITLE_COPY.weekly}:Bloodthirsty`);
+    expect(cards[1]).toHaveTextContent(GUILD_TITLE_COPY.weekly);
+    expect(cards[1]).toHaveTextContent("Bloodthirsty");
     expect(cards[1]).toHaveTextContent("most honorable kills gained · +80");
     expect(screen.getByText(GUILD_TITLE_COPY.note)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Hall of Titles" })).toBeInTheDocument();
+  });
+
+  it("shows the closest challenger and how far behind on each card", () => {
+    render(<MemoryRouter><GuildTitlesStrip titles={many} /></MemoryRouter>);
+    const bloodletter = within(screen.getByRole("list", { name: "Titles and who holds them" }))
+      .getAllByRole("listitem").find((li) => li.textContent?.includes("Bloodletter"));
+    expect(bloodletter).toHaveTextContent("Closest challenger: b X, 70 HKs behind");
   });
 
   it("says when there are no titles yet", () => {

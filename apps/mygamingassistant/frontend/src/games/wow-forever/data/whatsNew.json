@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-12",
+    "title": "The Guild page is a guild hall",
+    "summary": "TopDeadCenter's page now opens with a guild banner, this week's heroes, the closest races for first place, and shiny rarity badges for every title. Look yourself up and it lists the titles you could steal next.",
+    "to": "/wow-forever/guild"
+  },
+  {
+    "date": "2026-11-12",
     "title": "The Guild page is TopDeadCenter's",
     "summary": "Guild in the menu now opens TopDeadCenter's page straight away. The search for other guilds is gone, and only TopDeadCenter's badge on a character links to a guild page.",
     "to": "/wow-forever/guild"

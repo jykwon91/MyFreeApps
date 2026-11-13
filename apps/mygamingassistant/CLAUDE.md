@@ -1119,6 +1119,20 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`WowLegacyGuildRedirect`). On a character sheet only a topdeadcenter badge
   links to the guild page; any other guild is plain text. Never re-add a guild
   finder or a per-slug guild page — the operator asked for topdeadcenter only.
+- The guild page is a guild HALL, not a dashboard (operator: "fun and something
+  guild members want to participate in"). Order: heraldic banner
+  (`GuildSummary` — faction gradient, guild master, totals chips from
+  `lib/guild/guildTotals.ts`), "This week's heroes" (`guildHeroes.ts`, label
+  says "last 7 days" from `gains_window_days`, never "resets"), "Your quests"
+  (`guildQuests.ts`, needs `?me=`; else a one-line nudge), "Hot races"
+  (`guildHotRaces.ts`, relative gap ≤ 0.5), "Hall of Titles" (rarity-tier
+  medallions from `data/guild/titleTiers.ts` — poor…legendary, `guild-shine`
+  sweep on epic/legendary only, off under `motion-reduce`; each card names the
+  closest challenger via `guildChase.ts`), "The Arena" (leaderboards; podium
+  "Champion" ribbon), recipe search, then the collapsible "Roll call". Copy
+  lives in `data/guild/guildHallCopy.ts` and title flavour in `guildTitles.ts`.
+  Never invent gold, achievements, guild ranks or past winners — we have no
+  data for them. Tests: `wowGuildHallLogic.test.ts`, `wowGuildHall.test.tsx`.
 - Guild "Refresh now" (next to "Roster updated …", `components/guild/GuildRefreshButton.tsx`,
   `hooks/useGuildRefresh.ts`): ONLY for the operator's guild — `GUILD_SLUG`
   (`topdeadcenter`) in `core/wow_guild.py`; the guild response carries `can_refresh`

@@ -6,6 +6,8 @@
  *   - leaderboards: pick a board, ties share a rank, the board lives in the URL
  *   - gains boards ("This week"): who gained what since when, and who isn't ranked
  *   - faction standing board: pick a faction (in the URL), ranked by tier, an old link falls back, retry
+ *   - Hall of Titles: rarity medallions, flavour, challengers; the fun sections (heroes, quests, hot races) come first
+ *   - 375px phone: the heroes row snaps sideways inside itself, nothing overflows
  *   - members by rank; a name opens that member's character page
  *   - search, class filter and column sort, kept in the URL across Back
  *   - nothing matches → Clear filters brings everyone back
@@ -180,7 +182,7 @@ test("skeleton while loading, then the member list in the same place", async ({ 
   const summaryBox = await summary.boundingBox();
   expect(Math.abs((summaryBox?.x ?? 0) - (skeletonBox?.x ?? 0))).toBeLessThan(2);
   await expect(memberNames(page)).toHaveCount(3);
-  await expect(page.getByRole("region", { name: "Leaderboards" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "The Arena" })).toBeVisible();
   // The podium skeleton is the loaded podium's size, so the board doesn't jump when it arrives.
   const loadedCards = await podiumHeights(page.getByRole("list", { name: "Level leaderboard" }).locator("li"));
   loadedCards.forEach((height, i) => expect(Math.abs(height - skeletonCards[i])).toBeLessThan(4));
@@ -271,7 +273,7 @@ test("leaderboards look like a game's: a podium with 1st in the middle, medals, 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
   // The section fits the screen (the page clips sideways overflow, so check the box), the select too.
-  const section = await page.getByRole("region", { name: "Leaderboards" }).boundingBox();
+  const section = await page.getByRole("region", { name: "The Arena" }).boundingBox();
   expect(section!.x + section!.width).toBeLessThanOrEqual(375);
   const select = await page.getByLabel("Rank members by").boundingBox();
   expect(select!.x + select!.width).toBeLessThanOrEqual(section!.x + section!.width);
@@ -284,7 +286,7 @@ test("leaderboards look like a game's: a podium with 1st in the middle, medals, 
   }
 });
 
-test("guild titles: a leader's badge by their name, every title and holder in the strip, '+N' for more, on a phone too", async ({ page }) => {
+test("Hall of Titles: medallion badges by a leader's name (rarest first), every title and holder in the hall, on a phone too", async ({ page }) => {
   const g = guild();
   const kb = [1, 2, 5];
   await page.route(GUILD_PATTERN, (route) =>
@@ -293,33 +295,58 @@ test("guild titles: a leader's badge by their name, every title and holder in th
   await page.route(SHEET_PATTERN, (route) => json(route, character(new URL(route.request().url()).pathname.split("/").pop() ?? "")));
   await page.goto("/wow-forever/guild");
 
-  // The strip: Tiny John leads honorable kills (112) and killing blows; Big Sue is the only 60.
-  const strip = page.getByRole("region", { name: "Guild titles" });
+  // The hall: Tiny John leads honorable kills (112) and killing blows; Big Sue is the only 60.
+  const strip = page.getByRole("region", { name: "Hall of Titles" });
   await expect(strip).toContainText("Not in-game titles");
   const cards = strip.getByRole("listitem");
   await expect(cards).toHaveCount(3);
   await expect(cards.filter({ hasText: "Trailblazer" }).getByRole("link")).toHaveText("Big Sue");
   const bloodletter = cards.filter({ hasText: "Bloodletter" });
   await expect(bloodletter).toContainText("most honorable kills · 112");
+  await expect(bloodletter).toContainText("Legendary");
+  await expect(bloodletter).toContainText("The battlemasters know this name by heart.");
+  await expect(bloodletter).toContainText("Closest challenger: Big Sue, 72 HKs behind");
   await expect(bloodletter.getByRole("link")).toHaveText("Tiny John");
+  // Rarest first: the legendary title leads the hall.
+  await expect(cards.first()).toContainText("Bloodletter");
 
-  // By the name in the member table: the first title, then "+1" for the other.
+  // By the name in the member table: up to three titles, rarest first, so both show and there's no "+N".
   const row = page.getByRole("table").getByRole("row").filter({ hasText: "Tiny John" });
   await expect(row).toContainText("Guild title: Bloodletter (most honorable kills)");
-  await expect(row.getByText("Deathblow", { exact: true })).toBeHidden();
-  await row.getByRole("button", { name: "Show 1 more guild title" }).click();
   await expect(row.getByText("Deathblow", { exact: true })).toBeVisible();
+  await expect(row.getByRole("button", { name: /more guild title/ })).toHaveCount(0);
   // A member with no title gets no badge.
   await expect(page.getByRole("table").getByRole("row").filter({ hasText: "Jason Kwon" })).not.toContainText("Guild title");
 
   await page.setViewportSize({ width: 375, height: 812 });
   const card = page.getByRole("list", { name: "Guild members" }).getByRole("listitem").filter({ hasText: "Tiny John" });
   await expect(card).toContainText("Bloodletter");
-  const more = await card.getByRole("button", { name: "Show 1 more guild title" }).boundingBox();
-  expect(more!.height).toBeGreaterThanOrEqual(44);
+  await expect(card).toContainText("Deathblow");
+  const medallion = await card.locator("span[aria-hidden='true'].border-2").first().boundingBox();
+  expect(medallion!.height).toBeGreaterThanOrEqual(28);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+/** Three members with gains on all five "This week" boards and close races, for the fun sections. */
+function funGuild() {
+  const base = guild();
+  const since = (level: number, hk: number, kb: number, tk: number, dungeons: number) => ({
+    day: "2026-11-05", level, honorable_kills: hk, killing_blows: kb, total_kills: tk, dungeons_done: dungeons,
+  });
+  const stats = (hk: number, kb: number, tk: number, dungeons: number) => ({
+    honorable_kills: hk, killing_blows: kb, total_kills: tk, dungeons_done: dungeons,
+  });
+  return {
+    ...base,
+    roster_size: 3,
+    members: [
+      { ...base.members[0], ...stats(400, 30, 500, 6), baseline: since(35, 300, 20, 400, 3) },
+      { ...base.members[1], ...stats(380, 28, 450, 5), baseline: since(60, 300, 20, 400, 3) },
+      { ...base.members[2], ...stats(360, 5, 100, 1), baseline: since(12, 300, 3, 90, 0) },
+    ],
+  };
+}
 
 function gainsGuild() {
   const base = guild();
@@ -519,4 +546,81 @@ test("Guild menu item opens topdeadcenter, and an old link to any guild lands th
   expect(new Set(asked)).toEqual(new Set(["topdeadcenter"]));
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("375px phone: heroes snap sideways inside their own row, hot races and your quests fit, nothing overflows", async ({ page }) => {
+  await stubAll(page);
+  await page.route(GUILD_PATTERN, (route) => json(route, funGuild()));
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/wow-forever/guild/topdeadcenter?me=tiny-john");
+
+  // The banner: the guild's name, and three brag chips.
+  const banner = page.getByRole("region", { name: "Guild", exact: true });
+  await expect(banner).toContainText("<TopDeadCenter>");
+  await expect(banner.getByRole("list", { name: "Guild totals" }).getByRole("listitem")).toHaveText([
+    "1,140 honorable kills", "12 dungeon clears", "1 of 3 at level 60",
+  ]);
+
+  // This week's heroes: one card per gains board, labelled as a rolling window, scrolling inside the row.
+  const heroes = page.getByRole("region", { name: "This week's heroes" });
+  await expect(heroes).toContainText("last 7 days");
+  await expect(heroes).not.toContainText(/reset/i);
+  const strip = page.getByRole("list", { name: "This week's heroes" });
+  const cards = strip.getByRole("listitem");
+  await expect(cards).toHaveCount(5);
+  await expect(cards.filter({ hasText: "Honorable kills gained" })).toContainText("+100");
+  await expect(cards.filter({ hasText: "Honorable kills gained" })).toContainText("Big Sue is 20 HKs behind — defend the crown!");
+  const row = await strip.evaluate((el) => ({
+    scrolls: el.scrollWidth > el.clientWidth,
+    snap: getComputedStyle(el).scrollSnapType,
+    right: el.getBoundingClientRect().right,
+  }));
+  expect(row.scrolls).toBe(true);
+  expect(row.snap).toContain("x");
+  expect(row.right).toBeLessThanOrEqual(375);
+  const heroLink = await cards.first().getByRole("link").boundingBox();
+  expect(heroLink!.height).toBeGreaterThanOrEqual(44);
+
+  // Your quests: the viewer's closest steals, at most three, each naming the title and who holds it.
+  const quests = page.getByRole("list", { name: "Your quests" }).getByRole("listitem");
+  const questCount = await quests.count();
+  expect(questCount).toBeGreaterThanOrEqual(1);
+  expect(questCount).toBeLessThanOrEqual(3);
+  await expect(quests.first()).toContainText(/to take .+ from /);
+
+  // Hot races: duel cards, two names and a VS, inside the screen.
+  const duels = page.getByRole("list", { name: "Hot races" }).getByRole("listitem");
+  await expect(duels).toHaveCount(3);
+  await expect(duels.first()).toContainText("Honorable kills · Bloodletter");
+  await expect(duels.first()).toContainText("VS");
+  await expect(duels.first().getByRole("link")).toHaveText(["Jason Kwon", "Big Sue"]);
+  for (const i of [0, 1, 2]) {
+    const box = (await duels.nth(i).boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(375);
+  }
+
+  // The fun sections come first, the roll call last.
+  const names = ["This week's heroes", "Your quests", "Hot races", "Hall of Titles", "The Arena"];
+  const tops = await Promise.all(names.map(async (name) => (await page.getByRole("region", { name }).boundingBox())!.y));
+  expect([...tops].sort((a, b) => a - b)).toEqual(tops);
+  const rollCall = await page.getByText("Roll call (3)").boundingBox();
+  expect(rollCall!.y).toBeGreaterThan(tops[4]);
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("without ?me= your quests become a one-line nudge, and the roll call folds the members away", async ({ page }) => {
+  await stubAll(page);
+  await page.route(GUILD_PATTERN, (route) => json(route, funGuild()));
+  await page.goto("/wow-forever/guild/topdeadcenter");
+  await expect(page.getByRole("region", { name: "Your quests" })).toHaveCount(0);
+  await expect(page.getByText(/Want your own quests\?/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Look up your character" })).toHaveAttribute("href", "/wow-forever/character");
+
+  await expect(memberNames(page)).toHaveCount(3);
+  await page.getByText("Roll call (3)").click();
+  await expect(page.getByRole("table")).toBeHidden();
+  await page.getByText("Roll call (3)").click();
+  await expect(memberNames(page)).toHaveCount(3);
 });
