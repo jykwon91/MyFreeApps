@@ -1134,6 +1134,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   level band and sort live in the URL (`GUILD_PARAMS`, defaults left out,
   `replace` so Back skips keystrokes). Tests: `tests/test_wow_guild_page.py`,
   `src/__tests__/wowGuildPage.test.tsx`, `e2e/mocked/wow-forever-guild.spec.ts`.
+  Every member name goes through `GuildMemberLink`: bold, class-coloured,
+  `size` sm|md|lg|xl (`GUILD_MEMBER_NAME_SIZES`), `onDark` on the banner. Never
+  style a name at the call site. The menu item is titled "topdeadcenter".
 - ONE guild only: the site shows and refreshes just the operator's guild,
   `GUILD_SLUG` = "topdeadcenter" (`core/wow_guild.py`; frontend `GUILD_SLUG` in
   `data/guild/guildConfig.ts`). Every `/api/wow/guilds/{slug}` route 404s any

@@ -528,7 +528,7 @@ test("faction standing board: a problem offers a retry that brings the standings
 
 // --- the Guild menu item (/wow-forever/guild): topdeadcenter only ------------------
 
-test("Guild menu item opens topdeadcenter, and an old link to any guild lands there too, on a phone", async ({ page }) => {
+test("The topdeadcenter menu item opens its guild page, and an old link to any guild lands there too, on a phone", async ({ page }) => {
   const asked: string[] = [];
   page.on("request", (r) => {
     const path = new URL(r.url()).pathname;
@@ -536,7 +536,7 @@ test("Guild menu item opens topdeadcenter, and an old link to any guild lands th
   });
   await stubAll(page);
   await page.goto("/wow-forever");
-  await page.getByRole("link", { name: "Guild", exact: true }).first().click();
+  await page.getByRole("link", { name: "topdeadcenter", exact: true }).first().click();
   await expect(page).toHaveURL(/\/wow-forever\/guild$/);
   await expect(page.getByRole("heading", { name: "<TopDeadCenter>" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Find another guild/ })).toHaveCount(0);

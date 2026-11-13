@@ -24,11 +24,12 @@ export default function GuildTitleCard({ title }: GuildTitleCardProps) {
       <p className="text-xs text-muted-foreground">
         {title.earnedFor} · {title.display}
       </p>
-      <p className="flex flex-wrap items-center gap-x-1 text-sm">
+      {/* Sized to match the names so the commas between them line up. */}
+      <p className="flex flex-wrap items-center gap-x-1 text-xl sm:text-2xl">
         {title.holders.map((holder, i) => (
           <Fragment key={holder.slug}>
             {i > 0 ? <span aria-hidden>,</span> : null}
-            <GuildMemberLink member={holder} />
+            <GuildMemberLink member={holder} size="xl" />
           </Fragment>
         ))}
       </p>

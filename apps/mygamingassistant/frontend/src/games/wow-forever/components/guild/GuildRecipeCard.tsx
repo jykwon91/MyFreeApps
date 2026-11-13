@@ -17,7 +17,7 @@ export default function GuildRecipeCard({ recipe }: { recipe: GuildRecipe }) {
           return (
             <li key={crafter.slug} className="flex items-center gap-3">
               <span className="min-w-0 flex-1">
-                <GuildMemberLink member={crafter} />
+                <GuildMemberLink member={crafter} size="sm" />
                 {crafter.class_name ? <span className="ml-2 text-xs text-muted-foreground">{crafter.class_name}</span> : null}
               </span>
               {skill ? <span className="shrink-0 text-sm tabular-nums text-muted-foreground">{skill}</span> : null}

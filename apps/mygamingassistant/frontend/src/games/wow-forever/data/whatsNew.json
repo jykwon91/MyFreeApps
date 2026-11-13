@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "topdeadcenter in the menu, names stand out",
+    "summary": "The Guild link in the menu is now called topdeadcenter. On its page every member's name is bold in their class colour, and bigger where it matters: title holders, this week's heroes and the guild master.",
+    "to": "/wow-forever/guild"
+  },
+  {
+    "date": "2026-11-13",
     "title": "MGA Loot: is this roll an upgrade?",
     "summary": "A new addon, MGA Loot, writes above each loot roll whether the item is an upgrade over what you wear and by how much, scored with Item compare's weights for your class and spec. It also says when your class can't use it. Download it from Item compare.",
     "to": "/wow-forever/compare"

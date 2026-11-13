@@ -38,7 +38,7 @@ export default function GuildMemberTable({ members, rosterUpdatedAt, titles, sor
           {members.map((m) => (
             <tr key={m.slug} className="border-b last:border-b-0">
               <td className="px-3 py-1">
-                <GuildMemberLink member={m} />
+                <GuildMemberLink member={m} size="sm" />
                 <GuildMemberTitles titles={titles.get(m.slug)} />
                 <GuildMemberStaleNote member={m} rosterUpdatedAt={rosterUpdatedAt} />
               </td>
