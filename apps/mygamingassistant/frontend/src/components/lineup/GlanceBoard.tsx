@@ -13,8 +13,9 @@
  */
 import { useMemo } from "react";
 import type { Lineup } from "@/types/game";
-import { utilDisplay } from "@/constants/utilityDisplay";
 import { zoneAnchorId } from "./glanceBoardUtils";
+import { groupByZone } from "@/lib/lineup/groupByZone";
+import LineupBoardEmpty from "./LineupBoardEmpty";
 import GlanceBoardTile from "./GlanceBoardTile";
 import GlanceBoardSkeleton from "./GlanceBoardSkeleton";
 import { DEFAULT_KNOBS } from "@/hooks/useDesignKnobs";
@@ -45,84 +46,6 @@ const GRID_COLS_CLASS: Record<1 | 2 | 3 | 4, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Zone ordering
-// ---------------------------------------------------------------------------
-const ZONE_ORDER_PREFIXES = [
-  "a site", "a-site", "a_site",
-  "b site", "b-site", "b_site",
-  "mid",
-];
-
-function zoneOrder(zoneName: string): number {
-  const lower = zoneName.toLowerCase();
-  const idx = ZONE_ORDER_PREFIXES.findIndex((prefix) => lower.startsWith(prefix));
-  return idx === -1 ? ZONE_ORDER_PREFIXES.length : idx;
-}
-
-function compareZones(a: string, b: string): number {
-  const orderDiff = zoneOrder(a) - zoneOrder(b);
-  if (orderDiff !== 0) return orderDiff;
-  return a.localeCompare(b);
-}
-
-// ---------------------------------------------------------------------------
-// Lineup ordering within a zone — keyed by utility slug via utilDisplay
-// ---------------------------------------------------------------------------
-const SIDE_ORDER: Record<string, number> = {
-  side_a: 0,
-  side_b: 1,
-  any:    2,
-};
-
-function compareLineups(a: Lineup, b: Lineup): number {
-  const utilA = utilDisplay(a.utility_type?.slug).sortOrder;
-  const utilB = utilDisplay(b.utility_type?.slug).sortOrder;
-  if (utilA !== utilB) return utilA - utilB;
-  const sideA = SIDE_ORDER[a.side ?? "any"] ?? 99;
-  const sideB = SIDE_ORDER[b.side ?? "any"] ?? 99;
-  return sideA - sideB;
-}
-
-// ---------------------------------------------------------------------------
-// Grouping
-// ---------------------------------------------------------------------------
-interface ZoneGroup {
-  zoneName: string;
-  zoneSlug: string;
-  lineups: Lineup[];
-}
-
-function groupByZone(lineups: Lineup[]): ZoneGroup[] {
-  const map = new Map<string, ZoneGroup>();
-  for (const l of lineups) {
-    const name = l.target_zone?.name ?? "Unknown Zone";
-    const slug = l.target_zone?.slug ?? "unknown";
-    if (!map.has(name)) {
-      map.set(name, { zoneName: name, zoneSlug: slug, lineups: [] });
-    }
-    map.get(name)!.lineups.push(l);
-  }
-  const groups = [...map.values()];
-  for (const g of groups) {
-    g.lineups.sort(compareLineups);
-  }
-  return groups.sort((a, b) => compareZones(a.zoneName, b.zoneName));
-}
-
-// ---------------------------------------------------------------------------
-// Empty state helpers
-// ---------------------------------------------------------------------------
-function buildEmptyMessage(mapName: string, side: string, filteredUtils: string[]): string {
-  const sideLabel = side === "side_a" ? "T" : side === "side_b" ? "CT" : null;
-  const utilLabel = filteredUtils.length > 0 ? filteredUtils.join(", ") : null;
-  if (!sideLabel && !utilLabel) return `No lineups on ${mapName} yet.`;
-  const parts: string[] = [];
-  if (utilLabel) parts.push(utilLabel);
-  if (sideLabel) parts.push(sideLabel);
-  return `No ${parts.join(" ")} lineups on this map.`;
-}
-
-// ---------------------------------------------------------------------------
 // GlanceBoard
 // ---------------------------------------------------------------------------
 export default function GlanceBoard({
@@ -142,22 +65,7 @@ export default function GlanceBoard({
   }
 
   if (lineups.length === 0) {
-    const isFiltered = filteredUtils.length > 0 || side !== "any";
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3">
-        <p className="text-sm text-muted-foreground text-center">
-          {buildEmptyMessage(mapName, side, filteredUtils)}
-        </p>
-        {isFiltered && (
-          // Placeholder anchor — parent passes an onClearFilters via the
-          // empty-state link rendered directly in MapPage, not here.
-          // GlanceBoard itself is filter-agnostic; it just renders.
-          <span className="text-xs text-muted-foreground">
-            Try clearing filters in the top bar.
-          </span>
-        )}
-      </div>
-    );
+    return <LineupBoardEmpty mapName={mapName} side={side} filteredUtils={filteredUtils} />;
   }
 
   return (
