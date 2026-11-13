@@ -119,6 +119,21 @@ test("edits a pizza's price and 86es another", async ({ page }) => {
   ]);
 });
 
+test("a pizza or topping name of only spaces can't be saved", async ({ page }) => {
+  const writes = await stubMenuApi(page);
+
+  await page.goto("/menu");
+  for (const heading of ["Pizzas", "Toppings"]) {
+    const row = section(page, heading).getByRole("listitem").first();
+    await row.getByRole("button", { name: "Edit" }).click();
+    await row.getByLabel("Name").fill("   ");
+    await expect(row.getByRole("button", { name: "Save" })).toBeDisabled();
+    await row.getByLabel("Name").fill(" Renamed ");
+    await expect(row.getByRole("button", { name: "Save" })).toBeEnabled();
+  }
+  expect(writes).toEqual([]);
+});
+
 test("adds a topping with its price", async ({ page }) => {
   const writes = await stubMenuApi(page);
 

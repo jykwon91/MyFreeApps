@@ -12,19 +12,22 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from app.schemas.text_fields.customer_notes import CustomerNotes
+from app.schemas.text_fields.customer_phone import CustomerPhone
+from app.schemas.text_fields.required_name import RequiredName
 
 
 class CustomerCreate(BaseModel):
     """Inline customer payload embedded in a public order request.
 
     Phone is normalized to digits-only by the service before persisting.
-    Name is trimmed; empty after trim is rejected (Field min_length=1 catches
-    pre-trim emptiness, but the service also defends post-trim).
+    Name and phone are trimmed by the schema; empty after trim is rejected (422).
+    The service still defends post-trim as a second line.
     """
 
-    name: str = Field(..., min_length=1, max_length=100)
-    phone: str = Field(..., min_length=1, max_length=20)
+    name: RequiredName
+    phone: CustomerPhone
 
 
 class CustomerRead(BaseModel):
@@ -59,4 +62,4 @@ class CustomerListItem(BaseModel):
 class CustomerNotesUpdate(BaseModel):
     """Owner-only patch shape for the ``notes`` column."""
 
-    notes: Optional[str] = Field(None, max_length=2000)
+    notes: Optional[CustomerNotes] = None
