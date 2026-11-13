@@ -17,6 +17,7 @@ export const NO_AUCTION_FILTERS: AuctionFilters = {
   minLevel: null,
   maxLevel: null,
   usable: false,
+  classId: null,
   bis: null,
   bisLevel: null,
 };

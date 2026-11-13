@@ -4,11 +4,8 @@ import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import AuctionFilterChips from "@/games/wow-forever/components/auctionHouse/AuctionFilterChips";
 import AuctionRangeFields from "@/games/wow-forever/components/auctionHouse/AuctionRangeFields";
 import FilterChipsSkeleton from "@/games/wow-forever/components/auctionHouse/FilterChipsSkeleton";
-import { bisLegend } from "@/games/wow-forever/data/auctionHouse/auctionBisCopy";
-import { BIS_CHIPS, BIS_OFF_CHIP_ID } from "@/games/wow-forever/data/auctionHouse/auctionBisOptions";
-import { bisPatch } from "@/games/wow-forever/lib/auctionHouse/bisPatch";
-import { AUCTION_LOAD_COPY, FILTER_PANEL_COPY, usableChipLabel } from "@/games/wow-forever/data/auctionHouse/auctionFilterLabels";
-import { GEAR_SKELETON_CHIPS, LEVEL_FILTER_DECIMALS, MAX_FILTER_LEVEL, MIN_FILTER_LEVEL, SLOT_CHIPS, TYPE_CHIPS, USABLE_CHIP_ID } from "@/games/wow-forever/data/auctionHouse/auctionFilterOptions";
+import { AUCTION_LOAD_COPY, FILTER_PANEL_COPY } from "@/games/wow-forever/data/auctionHouse/auctionFilterLabels";
+import { GEAR_SKELETON_CHIPS, LEVEL_FILTER_DECIMALS, MAX_FILTER_LEVEL, MIN_FILTER_LEVEL, SLOT_CHIPS, TYPE_CHIPS } from "@/games/wow-forever/data/auctionHouse/auctionFilterOptions";
 import type { ClientItemsState } from "@/games/wow-forever/hooks/useClientItems";
 import type { AuctionFilters } from "@/games/wow-forever/types/auctionHouse/auctionFilters";
 
@@ -19,14 +16,10 @@ interface AuctionGearFiltersProps {
   gear: ClientItemsState;
   open: boolean;
   onToggleOpen: () => void;
-  /** The player's class, e.g. "Warlock". */
-  classLabel: string;
-  /** The level the top picks are for (the player's, or the link's). */
-  bisLevel: number;
 }
 
-/** Slot, armor/weapon type, required level and "usable by my class": a group that loads the item list when opened. */
-export default function AuctionGearFilters({ filters, onFilters, gear, open, onToggleOpen, classLabel, bisLevel }: AuctionGearFiltersProps) {
+/** Slot, armor/weapon type and required level: a group that loads the item list when opened. */
+export default function AuctionGearFilters({ filters, onFilters, gear, open, onToggleOpen }: AuctionGearFiltersProps) {
   return (
     <div className="space-y-3" data-testid="auction-gear-group">
       <button
@@ -69,20 +62,6 @@ export default function AuctionGearFilters({ filters, onFilters, gear, open, onT
             limit={MAX_FILTER_LEVEL}
             decimals={LEVEL_FILTER_DECIMALS}
             testId="auction-filter-level"
-          />
-          <AuctionFilterChips
-            legend={FILTER_PANEL_COPY.classGroup}
-            options={[{ id: USABLE_CHIP_ID, label: usableChipLabel(classLabel) }]}
-            value={filters.usable ? [USABLE_CHIP_ID] : []}
-            onToggle={() => onFilters({ usable: !filters.usable })}
-            testId="auction-filter-usable"
-          />
-          <AuctionFilterChips
-            legend={bisLegend(bisLevel)}
-            options={BIS_CHIPS}
-            value={[filters.bis === null ? BIS_OFF_CHIP_ID : `${filters.bis}`]}
-            onToggle={(id) => onFilters(bisPatch(id, filters.bis))}
-            testId="auction-filter-bis"
           />
         </div>
       )}

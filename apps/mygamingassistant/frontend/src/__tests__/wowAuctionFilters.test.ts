@@ -205,7 +205,7 @@ describe("filtersFromParams / writeFiltersToParams", () => {
   });
 
   it("reads every param", () => {
-    expect(parse("q=ring&sort=gap&quality=epic,rare&min=1.5&max=200&qty=10&listings=5&slot=head&type=Plate&lvl=20-40&usable=1")).toEqual({
+    expect(parse("q=ring&sort=gap&quality=epic,rare&min=1.5&max=200&qty=10&listings=5&slot=head&type=Plate&lvl=20-40&usable=1&class=priest")).toEqual({
       query: "ring",
       sort: "gap",
       qualities: ["rare", "epic"],
@@ -220,13 +220,14 @@ describe("filtersFromParams / writeFiltersToParams", () => {
       minLevel: 20,
       maxLevel: 40,
       usable: true,
+      classId: "priest",
       bis: null,
       bisLevel: null,
     });
   });
 
   it("drops anything that is not an allowed value", () => {
-    expect(parse("sort=chaos&quality=mythic,rare,rare&min=-4&max=abc&qty=7&listings=0&slot=hat&type=Cloth;DROP&lvl=x-y&usable=yes")).toEqual({
+    expect(parse("sort=chaos&quality=mythic,rare,rare&min=-4&max=abc&qty=7&listings=0&slot=hat&type=Cloth;DROP&lvl=x-y&usable=yes&class=deathknight")).toEqual({
       ...NO_AUCTION_FILTERS,
       qualities: ["rare"],
     });

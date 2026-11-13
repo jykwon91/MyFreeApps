@@ -198,8 +198,8 @@ describe("top picks in the link and the chips", () => {
     expect(bisActiveLabel(2, { level: 24, label: "Warlock" })).toBe("#2 pick for level 24 Warlock");
     expect(bisActiveLabel("any", { level: 60, label: "Warlock" })).toBe("Top 3 BiS for level 60 Warlock");
     expect(bisActiveLabel(1, { level: 60, label: "Warlock" })).toBe("#1 BiS for level 60 Warlock");
-    expect(bisLegend(24)).toBe("Top picks for my level");
-    expect(bisLegend(60)).toContain("BiS");
+    expect(bisLegend(24, "Warlock")).toBe("Top picks for level 24 Warlock");
+    expect(bisLegend(60, "Priest")).toBe("Best in slot (BiS) for Priest");
     expect(bisBadgeText({ rank: 1, slot: "Head" })).toBe("#1 Head");
   });
 

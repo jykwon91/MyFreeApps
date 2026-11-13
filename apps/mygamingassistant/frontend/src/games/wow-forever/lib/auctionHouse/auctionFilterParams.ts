@@ -20,6 +20,7 @@ import {
   AUCTION_BIS_LEVEL_PARAM,
   AUCTION_BIS_PARAM,
   AUCTION_CATEGORY_PARAM,
+  AUCTION_CLASS_PARAM,
   AUCTION_LEVEL_PARAM,
   AUCTION_LISTINGS_PARAM,
   AUCTION_MAX_GOLD_PARAM,
@@ -33,6 +34,7 @@ import {
   AUCTION_TYPE_PARAM,
   AUCTION_USABLE_PARAM,
 } from "@/games/wow-forever/data/auctionHouse/auctionHouseParams";
+import { WOW_CLASSES } from "@/games/wow-forever/data/classes";
 import { NO_AUCTION_FILTERS } from "@/games/wow-forever/data/auctionHouse/noAuctionFilters";
 import { DEFAULT_AUCTION_SORT, parseAuctionSort } from "@/games/wow-forever/data/auctionSortOptions";
 import type { ItemSlot } from "@/games/wow-forever/data/itemSlots";
@@ -115,6 +117,7 @@ export function filtersFromParams(params: URLSearchParams): AuctionFilters {
     minLevel,
     maxLevel,
     usable: params.get(AUCTION_USABLE_PARAM) === "1",
+    classId: WOW_CLASSES.find((c) => c.id === params.get(AUCTION_CLASS_PARAM))?.id ?? null,
     bis,
     bisLevel: bis === null ? null : parseBisLevel(params.get(AUCTION_BIS_LEVEL_PARAM)),
   };
@@ -149,6 +152,7 @@ export function writeFiltersToParams(params: URLSearchParams, filters: AuctionFi
   setOrDelete(params, AUCTION_TYPE_PARAM, filters.itemType);
   setOrDelete(params, AUCTION_LEVEL_PARAM, levelText(filters.minLevel, filters.maxLevel));
   setOrDelete(params, AUCTION_USABLE_PARAM, filters.usable ? "1" : null);
+  setOrDelete(params, AUCTION_CLASS_PARAM, filters.classId);
   setOrDelete(params, AUCTION_BIS_PARAM, filters.bis === null ? null : String(filters.bis));
   setOrDelete(params, AUCTION_BIS_LEVEL_PARAM, filters.bis === null ? null : numberText(filters.bisLevel));
   return params;

@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "Auction house: BiS for any class and level",
+    "summary": "The auction house now has a Gear for card right under the search: pick a class (say Warlock), type a level (say 39), and tap #1, #2 or #3 to see the best pieces for that class and level that are for sale right now. It used to be hidden inside Filters.",
+    "to": "/wow-forever/auction-house"
+  },
+  {
+    "date": "2026-11-13",
     "title": "topdeadcenter in the menu, names stand out",
     "summary": "The Guild link in the menu is now called topdeadcenter. On its page every member's name is bold in their class colour, and bigger where it matters: title holders, this week's heroes and the guild master.",
     "to": "/wow-forever/guild"

@@ -128,10 +128,8 @@ describe("Auction house top picks filter", () => {
 
   it("restricts to one rank from a chip, and Off clears it", async () => {
     renderPage();
-    await userEvent.click(screen.getByTestId("auction-filters-button"));
-    const sheet = await screen.findByRole("dialog", { name: "Filters" });
-    await userEvent.click(within(sheet).getByRole("button", { name: /Gear filters/ }));
-    const chips = within(await within(sheet).findByTestId("auction-filter-bis"));
+    // On the page itself, not inside the Filters panel.
+    const chips = within(await screen.findByTestId("auction-filter-bis"));
     expect(chips.getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "true");
 
     await userEvent.click(chips.getByRole("button", { name: "#2" }));
@@ -159,6 +157,52 @@ describe("Auction house top picks filter", () => {
     renderPage("/wow-forever/auction-house?bis=any");
     await waitFor(() => expect(names()).toEqual(["Neck 15"]));
     expect(screen.getByRole("button", { name: "Remove filter: Top 3 for level 20 Mage" })).toBeInTheDocument();
+  });
+
+  it("picks for a level typed on the page, turning the picks on", async () => {
+    renderPage();
+    const level = await screen.findByLabelText("Level");
+    await userEvent.type(level, "2");
+    // Nothing applies mid-typing: only Enter or leaving the box.
+    expect(url()).toBe("");
+    await userEvent.type(level, "0{Enter}");
+    expect(url()).toBe("?bis=any&bisLvl=20");
+    await waitFor(() => expect(names()).toEqual(["Neck 15"]));
+    expect(screen.getByRole("button", { name: "Remove filter: Top 3 for level 20 Warlock" })).toBeInTheDocument();
+    await userEvent.clear(level);
+    await userEvent.tab();
+    expect(url()).toBe("?bis=any");
+  });
+
+  it("flags a level out of range and keeps the picks where they were", async () => {
+    renderPage("/wow-forever/auction-house?bis=any&bisLvl=20");
+    const level = await screen.findByLabelText("Level");
+    await userEvent.clear(level);
+    await userEvent.type(level, "70{Enter}");
+    expect(level).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("A level from 1 to 60")).toBeInTheDocument();
+    expect(url()).toBe("?bis=any&bisLvl=20");
+  });
+
+  it("empties the level box when the picks are switched off", async () => {
+    renderPage("/wow-forever/auction-house?bis=any&bisLvl=20");
+    const level = await screen.findByLabelText("Level");
+    expect(level).toHaveValue("20");
+    await userEvent.click(within(screen.getByTestId("auction-filter-bis")).getByRole("button", { name: "Off" }));
+    expect(level).toHaveValue("");
+  });
+
+  it("names whose picks they are even with Any class picked", async () => {
+    renderPage("/wow-forever/auction-house?bis=any");
+    expect(await screen.findByLabelText("Gear for")).toHaveValue("");
+    expect(within(screen.getByTestId("auction-filter-bis")).getByText(/Warlock/)).toBeInTheDocument();
+  });
+
+  it("picks for the class chosen on the page instead of the saved one", async () => {
+    renderPage("/wow-forever/auction-house?bis=any&bisLvl=20&class=mage");
+    await waitFor(() => expect(names()).toEqual(["Neck 15"]));
+    expect(screen.getByRole("button", { name: "Remove filter: Top 3 for level 20 Mage" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Gear for")).toHaveValue("mage");
   });
 
   it("removing the chip drops the filter and the level from the link", async () => {

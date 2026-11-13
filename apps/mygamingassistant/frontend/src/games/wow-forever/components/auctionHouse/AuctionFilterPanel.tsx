@@ -17,14 +17,10 @@ interface AuctionFilterPanelProps {
   gear: ClientItemsState;
   gearOpen: boolean;
   onToggleGear: () => void;
-  /** The player's class name, e.g. "Warlock". */
-  classLabel: string;
-  /** The level the top picks are for. */
-  bisLevel: number;
 }
 
 /** Every filter group; the same panel sits in the phone's bottom sheet and inline from sm. */
-export default function AuctionFilterPanel({ filters, onFilters, categories, gear, gearOpen, onToggleGear, classLabel, bisLevel }: AuctionFilterPanelProps) {
+export default function AuctionFilterPanel({ filters, onFilters, categories, gear, gearOpen, onToggleGear }: AuctionFilterPanelProps) {
   return (
     <div className="space-y-5" data-testid="auction-filter-panel">
       <AuctionCategoryFilters filters={filters} onFilters={onFilters} categories={categories} />
@@ -62,7 +58,7 @@ export default function AuctionFilterPanel({ filters, onFilters, categories, gea
         onChange={(minListings) => onFilters({ minListings })}
         testId="auction-filter-listings"
       />
-      <AuctionGearFilters filters={filters} onFilters={onFilters} gear={gear} open={gearOpen} onToggleOpen={onToggleGear} classLabel={classLabel} bisLevel={bisLevel} />
+      <AuctionGearFilters filters={filters} onFilters={onFilters} gear={gear} open={gearOpen} onToggleOpen={onToggleGear} />
     </div>
   );
 }

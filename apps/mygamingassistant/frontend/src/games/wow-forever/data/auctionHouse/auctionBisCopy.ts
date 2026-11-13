@@ -8,9 +8,9 @@ function isTopLevel(level: number): boolean {
   return level >= BIS_LEVEL;
 }
 
-/** The legend over the picks' chips. */
-export function bisLegend(level: number): string {
-  return isTopLevel(level) ? "Best in slot (BiS) for my class" : "Top picks for my level";
+/** The legend over the picks' chips, naming whose picks they are (the picked class, else the player's). */
+export function bisLegend(level: number, className: string): string {
+  return isTopLevel(level) ? `Best in slot (BiS) for ${className}` : `Top picks for level ${level} ${className}`;
 }
 
 /** The active-filter chip, naming the level and class (and spec at the top level) the picks were worked out for. */
