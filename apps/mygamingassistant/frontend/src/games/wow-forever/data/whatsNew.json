@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "topdeadcenter links show the guild",
+    "summary": "Paste the guild page's link in Discord and the picture is now the guild itself: its banner colours, its name, and the top three for honorable kills and dungeon clears, not the generic WoW Forever card.",
+    "to": "/wow-forever/topdeadcenter"
+  },
+  {
+    "date": "2026-11-13",
     "title": "Find guild members by profession",
     "summary": "The Roster tab has a Profession filter. Pick one to see only members who have learned it, with each member's skill.",
     "to": "/wow-forever/topdeadcenter?tab=roster"

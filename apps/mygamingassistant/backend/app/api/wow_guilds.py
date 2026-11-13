@@ -6,6 +6,9 @@ GET /wow/guilds/{slug}/recipes?q= — the guild's known recipes whose name
 contains ``q``, each with the members who know it.
 GET /wow/guilds/{slug}/reputations?faction= — the factions members have met,
 and each member's standing with one (default: the one most have met).
+GET /wow/guilds/{slug}/preview.png — the guild's link-preview picture (Open Graph
+image), drawn from the stored guild; the generic WoW Forever card (302) when the
+guild isn't stored or can't be drawn, so an unfurl never gets an error.
 POST /wow/guilds/{slug}/refresh — "Refresh now": re-pull the roster and members
 from Blizzard in the background (202), at most once per cooldown per guild.
 
@@ -23,9 +26,11 @@ Errors:
   - 429 — too many look-ups (or refreshes) from this IP
 """
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request, Response, status
+from fastapi.responses import RedirectResponse
 
 from platform_shared.core.request_utils import get_client_ip
 
+from app.core.guild_preview import CACHE_CONTROL, FALLBACK_IMAGE_PATH
 from app.core.rate_limit import RateLimiter, check_with_retry_after
 from app.core.wow_guild import (
     FACTION_ID_MAX,
@@ -43,6 +48,7 @@ from app.schemas.wow.guild.guild_refresh_response import GuildRefreshResponse
 from app.schemas.wow.guild.guild_reputation_response import GuildReputationResponse
 from app.schemas.wow.guild.guild_response import GuildResponse
 from app.services.wow.guild import (
+    guild_preview_service,
     guild_recipe_search_service,
     guild_refresh_service,
     guild_reputation_service,
@@ -84,6 +90,14 @@ async def get_guild(slug: str, request: Request) -> GuildResponse:
     if guild is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=GUILD_NOT_FOUND)
     return guild
+
+
+@router.get("/{slug}/preview.png", response_class=Response, responses={200: {"content": {"image/png": {}}}})
+async def get_guild_preview(slug: str, request: Request) -> Response:
+    png = await guild_preview_service.get_preview_png(_checked_slug(slug, request))
+    if png is None:
+        return RedirectResponse(FALLBACK_IMAGE_PATH, status_code=status.HTTP_302_FOUND)
+    return Response(content=png, media_type="image/png", headers={"Cache-Control": CACHE_CONTROL})
 
 
 @router.get("/{slug}/recipes", response_model=GuildRecipeSearchResponse)
