@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-12",
+    title: "Guild in the menu",
+    summary:
+      "A new Guild menu item opens your guild's page in one tap, and you can find any other guild the site knows by typing part of its name.",
+    to: "/wow-forever/guild",
+  },
+  {
+    date: "2026-11-12",
     title: "Guild pages refresh every hour",
     summary:
       "Your guild's roster and every member's stats now update every hour instead of every 6 hours, so leaderboards and titles keep up with the game.",

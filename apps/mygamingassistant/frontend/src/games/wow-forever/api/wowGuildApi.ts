@@ -4,9 +4,13 @@ import type { GuildRecipeSearchArgs } from "@/games/wow-forever/types/guild/guil
 import type { GuildReputations } from "@/games/wow-forever/types/guild/guildReputations";
 import type { GuildReputationsArgs } from "@/games/wow-forever/types/guild/guildReputationsArgs";
 import type { GuildResponse } from "@/games/wow-forever/types/guild/guildResponse";
+import type { GuildSearch } from "@/games/wow-forever/types/guild/guildSearch";
 
 export const wowGuildApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
+    searchGuilds: build.query<GuildSearch, string>({
+      query: (q) => ({ url: "/wow/guilds", method: "GET", params: { q } }),
+    }),
     getGuild: build.query<GuildResponse, string>({
       query: (slug) => ({ url: `/wow/guilds/${encodeURIComponent(slug)}`, method: "GET" }),
     }),
@@ -27,4 +31,4 @@ export const wowGuildApi = baseApi.injectEndpoints({
   }),
 });
 
-export const { useGetGuildQuery, useSearchGuildRecipesQuery, useGetGuildReputationsQuery } = wowGuildApi;
+export const { useSearchGuildsQuery, useGetGuildQuery, useSearchGuildRecipesQuery, useGetGuildReputationsQuery } = wowGuildApi;
