@@ -1,19 +1,24 @@
 """The transaction list can be ordered by a chosen column and narrowed to tax-relevant rows, on the server, so paging stays right."""
 import csv
+import uuid
 import io
 from contextlib import asynccontextmanager
 from datetime import date
 from decimal import Decimal
-from unittest.mock import patch
+from typing import get_args
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.transaction_sort_constants import TransactionSortField
 from app.models.organization.organization import Organization
 from app.models.properties.property import Property
 from app.models.user.user import User
 from app.repositories import transaction_repo
+from app.repositories.transactions import transaction_list_repo
 from tests.test_transaction_repo import _make_transaction
 from tests.test_transaction_routes import (  # noqa: F401  (fixtures)
     _patch_service_session,
@@ -99,23 +104,75 @@ class TestListFilteredOrder:
         assert [t.vendor for t in descending] == ["Zeta", "Acme", None]
 
     @pytest.mark.asyncio
-    async def test_pages_of_a_sorted_list_neither_repeat_nor_skip_rows(
+    async def test_a_vendor_sort_ignores_case_and_puts_blank_vendors_last(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
-        # Every row shares its category, so only the tie-breakers keep the pages apart.
-        for index in range(7):
-            await transaction_repo.create(
-                db, _make_transaction(test_org.id, test_user.id, vendor=f"Row {index}", transaction_date=date(2025, 1, 1 + index % 2)),
-            )
+        for vendor in ("Zeta", "", "acme", "   ", "Beta"):
+            await transaction_repo.create(db, _make_transaction(test_org.id, test_user.id, vendor=vendor))
         await db.commit()
 
-        pages = [
-            await transaction_repo.list_filtered(db, test_org.id, sort_by="category", sort_dir="asc", limit=3, offset=offset)
-            for offset in (0, 3, 6)
+        ascending = await transaction_repo.list_filtered(db, test_org.id, sort_by="vendor", sort_dir="asc")
+        descending = await transaction_repo.list_filtered(db, test_org.id, sort_by="vendor", sort_dir="desc")
+
+        assert [t.vendor for t in ascending][:3] == ["acme", "Beta", "Zeta"]
+        assert {t.vendor for t in ascending[3:]} == {"", "   "}
+        assert [t.vendor for t in descending][:3] == ["Zeta", "Beta", "acme"]
+        assert {t.vendor for t in descending[3:]} == {"", "   "}
+
+    @pytest.mark.asyncio
+    async def test_equal_sort_keys_come_back_newest_first_then_by_id(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        # Inserted oldest first, so insertion order is the opposite of the expected order.
+        rows = [
+            _make_transaction(test_org.id, test_user.id, vendor=f"Row {index}", transaction_date=date(2025, 1, 1 + index // 2))
+            for index in range(6)
         ]
-        ids = [t.id for page in pages for t in page]
-        assert len(ids) == 7
-        assert len(set(ids)) == 7
+        for row in rows:
+            await transaction_repo.create(db, row)
+        await db.commit()
+
+        expected = [t.id for t in sorted(rows, key=lambda t: (t.transaction_date, t.id), reverse=True)]
+        pages = [
+            await transaction_repo.list_filtered(db, test_org.id, sort_by="category", sort_dir="asc", limit=2, offset=offset)
+            for offset in (0, 2, 4)
+        ]
+
+        assert [t.id for page in pages for t in page] == expected
+
+
+async def _compiled_order_by(**kwargs: object) -> str:
+    captured: list[object] = []
+    session = MagicMock()
+
+    async def _execute(stmt: object) -> MagicMock:
+        captured.append(stmt)
+        return MagicMock()
+
+    session.execute = AsyncMock(side_effect=_execute)
+    await transaction_list_repo.list_filtered(session, uuid.uuid4(), **kwargs)  # type: ignore[arg-type]
+    sql = str(captured[0].compile(dialect=postgresql.dialect()))  # type: ignore[attr-defined]
+    return sql[sql.index("ORDER BY"):]
+
+
+class TestListFilteredOrderSql:
+    @pytest.mark.asyncio
+    async def test_default_order_is_plain_date_desc_so_the_date_index_serves_it(self) -> None:
+        order_by = await _compiled_order_by()
+
+        assert "NULLS LAST" not in order_by
+        assert order_by.startswith("ORDER BY transactions.transaction_date DESC, transactions.transaction_date DESC, transactions.id DESC")
+
+    @pytest.mark.asyncio
+    async def test_vendor_order_puts_missing_last_and_keeps_the_tie_breakers(self) -> None:
+        order_by = await _compiled_order_by(sort_by="vendor")
+
+        assert "NULLS LAST" in order_by
+        assert "lower(nullif(trim(transactions.vendor), %(" in order_by
+        assert order_by.endswith("transactions.transaction_date DESC, transactions.id DESC")
+
+    def test_every_sortable_field_has_a_column_and_nothing_else_does(self) -> None:
+        assert set(transaction_list_repo._SORT_COLUMNS) == set(get_args(TransactionSortField))
 
 
 class TestListRouteOrderAndTaxFilter:

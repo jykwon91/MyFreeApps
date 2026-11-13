@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { BANK_IMPORT_MESSAGES as IMPORT_MESSAGES } from "../../constants/bankImport";
 import { TRANSACTION_EXPORT_FORMATS, TRANSACTION_EXPORT_MESSAGES as EXPORT_MESSAGES } from "../../constants/transactionExport";
-import { NO_FILTERS, TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
+import { TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import type { TransactionFilters } from "../../types/TransactionFilters";
 import { monthName } from "../../lib/localDate";
 import { useRowSelection } from "../../lib/useRowSelection";
@@ -18,7 +18,7 @@ import { categoryLabel, customRangeLabel, propertyLabel, sortLabel, taxFilterLab
 import TransactionSelectionBar from "./TransactionSelectionBar";
 import { isBulkApprovable } from "./bulkApprovable";
 import TransactionFilterSheet from "./TransactionFilterSheet";
-import { activeFilterCount, isSorted, reviewLink, toListParams } from "./transactionFilters";
+import { activeFilterCount, clearedFilters, isSorted, reviewLink, toListParams } from "./transactionFilters";
 import TransactionRow from "./TransactionRow";
 import { useBulkApprove } from "./useBulkApprove";
 import { useBulkDeleteTransactions } from "./useBulkDeleteTransactions";
@@ -123,7 +123,7 @@ export default function TransactionsScreen({
 
   function clearNarrowing(): void {
     clearSearch();
-    onFiltersChange({ ...NO_FILTERS, view: filters.view });
+    onFiltersChange(clearedFilters(filters));
   }
 
   if (isLoading) return <TransactionsSkeleton />;

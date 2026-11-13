@@ -5,13 +5,14 @@ import type { Property } from "@mybookkeeper/api-client/types/property/property"
 import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
-import { NO_FILTERS, TAX_FILTER, TRANSACTION_PERIODS, TRANSACTION_TYPES, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
+import { TAX_FILTER, TRANSACTION_PERIODS, TRANSACTION_TYPES, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import { isoFromDate, monthName } from "../../lib/localDate";
 import type { TransactionFilters } from "../../types/TransactionFilters";
 import FilterSheetSection from "../shell/FilterSheetSection";
 import SortSections from "../shell/SortSections";
 import CustomRangeFields from "./CustomRangeFields";
 import { categoryLabel } from "./transactionDisplay";
+import { clearedFilters } from "./transactionFilters";
 
 /** Picking "Custom range" starts from the first of this month to today, or from the range already chosen. */
 function customRangeStart(draft: TransactionFilters): Partial<TransactionFilters> {
@@ -156,7 +157,7 @@ export default function TransactionFilterSheet({
         </ScrollView>
         <View style={{ flexDirection: "row", gap: spacing.sm, padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border }}>
           <LoadingButton
-            onPress={() => setDraft({ ...NO_FILTERS, view: draft.view, vendor: draft.vendor, approvedOnly: draft.approvedOnly })}
+            onPress={() => setDraft({ ...clearedFilters(draft), vendor: draft.vendor, approvedOnly: draft.approvedOnly })}
             style={{ flex: 1 }}
             variant="secondary"
           >

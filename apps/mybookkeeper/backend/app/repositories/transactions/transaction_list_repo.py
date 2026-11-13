@@ -1,9 +1,9 @@
 import uuid
 from collections.abc import Sequence
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 
-from sqlalchemy import Row, func, select
+from sqlalchemy import ColumnElement, Row, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -21,14 +21,20 @@ from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.repositories.transactions.summary_repo import txn_active_property_filter
 
-_SORT_COLUMNS = {
+# Case-insensitive, and a blank vendor counts as a missing one. Not normalized_vendor:
+# it drops company suffixes and is only filled by ORM events, not every write path.
+_VENDOR_SORT_KEY = func.lower(func.nullif(func.trim(Transaction.vendor), ""))
+
+_SORT_COLUMNS: dict[TransactionSortField, ColumnElement[Any]] = {
     "transaction_date": Transaction.transaction_date,
     "amount": Transaction.amount,
-    "vendor": Transaction.vendor,
+    "vendor": _VENDOR_SORT_KEY,
     "category": Transaction.category,
     "status": Transaction.status,
     "transaction_type": Transaction.transaction_type,
 }
+
+_NULLABLE_SORT_FIELDS: frozenset[TransactionSortField] = frozenset({"vendor"})
 
 
 async def list_filtered(
@@ -97,12 +103,13 @@ async def list_filtered(
 
     column = _SORT_COLUMNS[sort_by]
     primary = column.asc() if sort_dir == "asc" else column.desc()
+    if sort_by in _NULLABLE_SORT_FIELDS:
+        # A missing vendor sorts last either way. Not applied to NOT NULL columns,
+        # where it would keep Postgres from using ix_txn_org_date for the default order.
+        primary = primary.nulls_last()
     # Newest first, then id, break ties: rows sharing a sort value would
-    # otherwise repeat or go missing between pages. A missing vendor sorts last
-    # either way.
-    stmt = stmt.order_by(
-        primary.nulls_last(), Transaction.transaction_date.desc(), Transaction.id.desc(),
-    )
+    # otherwise repeat or go missing between pages.
+    stmt = stmt.order_by(primary, Transaction.transaction_date.desc(), Transaction.id.desc())
 
     if offset is not None:
         stmt = stmt.offset(offset)

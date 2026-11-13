@@ -188,4 +188,28 @@ describe("Transactions sort and tax filter", () => {
     expect(screen.queryByRole("radio", { name: "Amount" })).toBeNull();
     expect(screen.getByRole("radio", { name: "Yes" })).toBeTruthy();
   });
+
+  it("leaves the review queue's hidden order alone on Clear all, and when clearing filters", async () => {
+    startTransactionServer([aTransaction({ status: "pending", tax_relevant: true })]);
+    const seen = jest.fn<void, [TransactionFilters]>();
+    function Spy() {
+      const [filters, setFilters] = useState<TransactionFilters>({ ...NO_FILTERS, view: "review", sortBy: "amount", sortDir: "asc", taxRelevant: "true" });
+      return <TransactionsScreen filters={filters} onFiltersChange={(next) => { seen(next); setFilters(next); }} onVendorChange={() => undefined} />;
+    }
+    await render(
+      <Provider store={store}>
+        <ToastProvider bottomOffset={0}>
+          <Spy />
+        </ToastProvider>
+      </Provider>,
+    );
+    await screen.findByText("Home Depot");
+
+    await fireEvent.press(screen.getByRole("button", { name: "Filters, 1 on" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Clear all" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Show results" }));
+
+    await waitFor(() => expect(seen).toHaveBeenCalled());
+    expect(seen.mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({ view: "review", sortBy: "amount", sortDir: "asc", taxRelevant: null }));
+  });
 });

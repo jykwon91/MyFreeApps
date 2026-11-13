@@ -69,6 +69,12 @@ export function toListParams(filters: TransactionFilters, today: Date): Transact
   return params;
 }
 
+/** Everything back to its default, but the view stays, and so does the order on the review queue, where it can't be picked and so can't be put back. */
+export function clearedFilters(filters: TransactionFilters): TransactionFilters {
+  const order = filters.view === "review" ? { sortBy: filters.sortBy, sortDir: filters.sortDir } : {};
+  return { ...NO_FILTERS, view: filters.view, ...order };
+}
+
 export function activeFilterCount(filters: TransactionFilters): number {
   return [filters.view !== "review" && (filters.period !== "all" || filters.month !== null), filters.view !== "review" && filters.approvedOnly, filters.type, filters.propertyId, filters.category, filters.taxRelevant].filter(Boolean).length;
 }
