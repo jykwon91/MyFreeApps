@@ -23,6 +23,7 @@
  */
 import type { Locator, Page, Route } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const GUILD_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+$/.test(url.pathname);
 const RECIPES_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+\/recipes$/.test(url.pathname);
@@ -580,7 +581,7 @@ test("375px phone: heroes snap sideways inside their own row, hot races and your
   expect(row.snap).toContain("x");
   expect(row.right).toBeLessThanOrEqual(375);
   const heroLink = await cards.first().getByRole("link").boundingBox();
-  expect(heroLink!.height).toBeGreaterThanOrEqual(44);
+  expect(heroLink!.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
 
   // Your quests: the viewer's closest steals, at most three, each naming the title and who holds it.
   const quests = page.getByRole("list", { name: "Your quests" }).getByRole("listitem");

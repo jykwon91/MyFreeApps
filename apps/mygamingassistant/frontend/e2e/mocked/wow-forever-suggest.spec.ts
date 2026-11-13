@@ -7,6 +7,7 @@
  */
 import type { Page, Route } from "@playwright/test";
 import { expect, test } from "@platform/ui/test-support/crashGuard";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const LIST_PATH = "/api/wow/feature-requests";
 const IDEA = "Show me the cheapest way to level Alchemy from 1 to 300.";
@@ -376,7 +377,7 @@ test("the phone layout: no sideways scroll, a full-width send button and 44px ta
   const send = await page.getByRole("button", { name: "Send my idea" }).boundingBox();
   expect(send?.width).toBeCloseTo(box?.width ?? 0, 0);
   const meToo = await boardCard(page, "Alchemy leveling route").getByRole("button", { name: /^Me too/ }).boundingBox();
-  expect(meToo?.height).toBeGreaterThanOrEqual(44);
+  expect(meToo?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   // The idea box is the page's first control after the back link.
   const firstControls = await page.evaluate(() =>
     Array.from(document.querySelectorAll("main a[href], main button, main textarea, main select"))

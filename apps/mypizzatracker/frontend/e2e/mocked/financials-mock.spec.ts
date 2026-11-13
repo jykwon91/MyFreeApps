@@ -9,7 +9,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { toast } from "@platform/ui/test-support/toast";
 import { apiPath } from "@platform/ui/test-support/apiPath";
 import { SKELETON_BAR } from "./constants/layoutSelectors";
-import { MID_PHONE_VIEWPORT, PHONE_VIEWPORT } from "./constants/phoneViewport";
+import { MID_PHONE_VIEWPORT, PHONE_VIEWPORT } from "@platform/ui/test-support/constants/phoneViewport";
 import { FIXTURE_NOW, ON_DROP_DATE } from "./constants/fixtureTimes";
 import { ACTIVE_DROP_ID, PLANNING_DROP_ID } from "./fixtures/dropFixtures";
 import { expectBoxesLineUp, measureBoxes } from "@platform/ui/test-support/layoutShift";

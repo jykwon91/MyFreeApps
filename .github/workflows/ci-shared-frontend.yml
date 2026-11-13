@@ -39,6 +39,14 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
+      # Before the install below rewrites package-lock.json, so the key matches the
+      # app workflows' and this job shares their playwright-chromium-* cache.
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('package-lock.json') }}
+
       - name: Install workspace dependencies
         # `npm install`, not `npm ci`: see ci-mybookkeeper.yml frontend-build
         # (npm/cli#4828, workspace + optional platform-specific deps).
@@ -65,3 +73,91 @@ jobs:
       - name: Typecheck @platform/core
         if: ${{ !cancelled() }}
         run: npm run typecheck --workspace=@platform/core
+
+  web-scaffold:
+    name: web-scaffold
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Generates a throwaway app from infra/templates/scaffold/ the way new_app does
+    # and runs what every new app starts with: its typechecks, lint, unit tests,
+    # build and no-backend Playwright suite. The template builds on @platform/ui and its
+    # test-support helpers, so a change to either can break it; that's why this
+    # lives here, in a workflow every PR runs (see the note at the top).
+    env:
+      SLUG: scaffoldcheck
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Generate a throwaway app from the scaffold
+        # --skip-render: the deploy/CI files it would write aren't under test, and the
+        # app is gone when the job ends. --skip-uv: no backend runs here. The pins
+        # match packages/shared-backend/uv.lock.
+        run: |
+          python -m pip install jinja2==3.1.6 pyyaml==6.0.3
+          (cd packages/shared-backend && python -m platform_shared.infra.new_app "$SLUG" \
+            --display-name "Scaffold Check" --api-port 8999 --caddy-port 8998 --frontend-port 5198 \
+            --skip-render --skip-uv --skip-npm)
+
+      # Before the install below rewrites package-lock.json, so the key matches the
+      # app workflows' and this job shares their playwright-chromium-* cache.
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('package-lock.json') }}
+
+      - name: Install workspace dependencies
+        # `npm install`, not `npm ci`: the lockfile has no entry for the new
+        # workspace, which is what new_app's own npm step adds.
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck --workspace="$SLUG-frontend"
+
+      - name: Typecheck E2E tests
+        if: ${{ !cancelled() }}
+        run: npm run typecheck:e2e --workspace="$SLUG-frontend"
+
+      - name: Lint
+        if: ${{ !cancelled() }}
+        run: npm run lint --workspace="$SLUG-frontend"
+
+      - name: Test
+        if: ${{ !cancelled() }}
+        run: npm test --workspace="$SLUG-frontend"
+
+      - name: Build
+        if: ${{ !cancelled() }}
+        run: npm run build --workspace="$SLUG-frontend"
+
+      - name: Install Playwright Chromium
+        if: ${{ !cancelled() }}
+        working-directory: apps/${{ env.SLUG }}/frontend
+        timeout-minutes: 4
+        run: npx playwright install chromium
+
+      - name: Run mocked E2E tests (no backend)
+        if: ${{ !cancelled() }}
+        working-directory: apps/${{ env.SLUG }}/frontend
+        run: npx playwright test --config=playwright.layout.config.ts
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: web-scaffold-playwright-report
+          path: apps/${{ env.SLUG }}/frontend/e2e/test-results-mocked/
+          retention-days: 7

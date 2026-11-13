@@ -9,6 +9,7 @@ import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { createGate } from "@platform/ui/test-support/gate";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const DEADMINES = "/wow-forever/dungeons/deadmines";
 
@@ -155,10 +156,10 @@ test.describe("at 375px", () => {
     await page.goto("/wow-forever/dungeons/scarlet-monastery");
     await expect(page.getByTestId("dungeon-door").filter({ hasText: "Armory" })).toBeVisible();
     const directions = page.getByRole("link", { name: "Directions to the Armory door" });
-    expect((await directions.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect((await directions.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     expect(await noSideways(page)).toBeLessThanOrEqual(0);
     const box = await page.getByTestId("boss-loot-row").first().boundingBox();
-    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   });
 });
 

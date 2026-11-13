@@ -9,6 +9,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { ALL_ITEMS } from "./fixtures/wowForeverDataCounts";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const ITEMS = "/wow-forever/items";
 const PAGE_SIZE = 60;
@@ -181,7 +182,7 @@ test.describe("at 375px", () => {
       await panel.getByTestId("item-filter-slot").getByRole("button").first().boundingBox(),
       await page.getByTestId("item-browser-direction").boundingBox(),
     ]) {
-      expect(box?.height).toBeGreaterThanOrEqual(44);
+      expect(box?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     }
 
     await page.getByRole("radio", { name: "Grid" }).click();

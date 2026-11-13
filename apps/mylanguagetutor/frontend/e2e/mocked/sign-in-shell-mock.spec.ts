@@ -8,11 +8,16 @@
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { ISSUED_TOKEN } from "@platform/ui/test-support/constants/issuedToken";
+import { LOGIN_BAD_CREDENTIALS } from "@platform/ui/test-support/constants/loginBadCredentials";
+import { LOGIN_ENDPOINT } from "@platform/ui/test-support/constants/loginEndpoint";
+import { TEST_PASSWORD } from "@platform/ui/test-support/constants/testPassword";
+import { WRONG_PASSWORD } from "@platform/ui/test-support/constants/wrongPassword";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { TEST_USER, stubCurrentUser } from "@platform/ui/test-support/mockSession";
-import { ISSUED_TOKEN, TEST_PASSWORD, TOTP_CODE, WRONG_PASSWORD } from "./constants/accountCredentials";
-import { LOGIN_ENDPOINT, RESEND_ENDPOINT } from "./constants/accountEndpoints";
-import { LOGIN_BAD_CREDENTIALS, LOGIN_USER_NOT_VERIFIED } from "./constants/refusalDetails";
+import { TOTP_CODE } from "./constants/accountCredentials";
+import { RESEND_ENDPOINT } from "./constants/accountEndpoints";
+import { LOGIN_USER_NOT_VERIFIED } from "./constants/refusalDetails";
 import { BAD_CREDENTIALS_COPY, VERIFICATION_SENT_COPY, VERIFY_EMAIL_FIRST_COPY } from "./constants/signInCopy";
 import { signedInTutor } from "./fixtures/signedInTutor";
 import type { TutorApiStubOptions } from "./types/TutorApiStubOptions";

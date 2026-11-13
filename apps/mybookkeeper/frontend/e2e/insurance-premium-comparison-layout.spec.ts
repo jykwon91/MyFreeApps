@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext, type Page } from "@playwright/tes
 import { createProperty } from "./fixtures/seed-data";
 import { seededOrg } from "./fixtures/seeded-org";
 import { localDateOffset, localToday } from "./fixtures/local-today";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 /**
  * Layout E2E for the dashboard premium-comparison card and the market-premium
@@ -185,7 +186,7 @@ test.describe("Insurance premium comparison layout", () => {
     ]) {
       const box = await page.getByTestId(field).boundingBox();
       expect(box, `${field} has no box`).not.toBeNull();
-      expect(box!.height, `${field} height`).toBeGreaterThanOrEqual(44);
+      expect(box!.height, `${field} height`).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     }
 
     const close = page
@@ -193,7 +194,7 @@ test.describe("Insurance premium comparison layout", () => {
       .getByRole("button", { name: "Close" });
     const box = await close.boundingBox();
     expect(box, "close control has no box").not.toBeNull();
-    expect(box!.width, "close width").toBeGreaterThanOrEqual(44);
-    expect(box!.height, "close height").toBeGreaterThanOrEqual(44);
+    expect(box!.width, "close width").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+    expect(box!.height, "close height").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   });
 });

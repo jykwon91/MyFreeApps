@@ -17,6 +17,7 @@ import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { MAP_STYLE_STORAGE_KEY } from "../../src/games/wow-forever/data/worldMap/mapStyle";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const PHONE = { width: 375, height: 812 };
 const ELWYNN = "/wow-forever/map?m=1429";
@@ -149,8 +150,8 @@ test.describe("on a phone", () => {
     await openMap(page);
     for (const name of ["Map", "Satellite"] as const) {
       const box = await styleRadio(page, name).boundingBox();
-      expect(box!.height).toBeGreaterThanOrEqual(44);
-      expect(box!.width).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+      expect(box!.width).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     }
     await styleRadio(page, "Satellite").click();
     await expectSatelliteShown(page);

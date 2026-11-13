@@ -21,6 +21,7 @@
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
@@ -36,7 +37,6 @@ const PROPERTY_ID = "00000000-0000-0000-0000-0000000000c1";
 const DOCUMENT_ID = "00000000-0000-0000-0000-0000000000d1";
 
 const IPHONE = { width: 390, height: 844 };
-const MIN_TOUCH_TARGET = 44;
 
 const EFL_FILE = {
   name: "rhythm-efl.pdf",

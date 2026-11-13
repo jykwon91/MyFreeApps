@@ -346,7 +346,8 @@ class TestTokens:
 
     def test_the_web_scaffold_still_substitutes_every_token(self) -> None:
         replacements = {token: "v" for token in new_app._TOKEN_ORDER}
-        assert new_app._substitute(" ".join(new_app._TOKEN_ORDER), replacements) == "v v v v v"
+        expected = " ".join("v" for _ in new_app._TOKEN_ORDER)
+        assert new_app._substitute(" ".join(new_app._TOKEN_ORDER), replacements) == expected
 
 
 class TestRefusals:

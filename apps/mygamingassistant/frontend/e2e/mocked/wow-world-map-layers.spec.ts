@@ -14,6 +14,7 @@ import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { MAP_LAYERS_KEY } from "./fixtures/mapLayers";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const PLAYER_KEY = "mga.wowForever.worldMap.player.v1";
 const ELWYNN = 1429;
@@ -146,7 +147,7 @@ test("on a phone the Layers panel is a bottom sheet that opens and closes, with 
 
   const button = page.getByRole("button", { name: /^Layers \(\d+\)/ });
   const buttonBox = await button.boundingBox();
-  expect(buttonBox?.height).toBeGreaterThanOrEqual(44);
+  expect(buttonBox?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
 
   const panel = await openLayers(page);
   const sheet = await panel.boundingBox();

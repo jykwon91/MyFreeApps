@@ -13,6 +13,7 @@
  */
 import type { Page, Route } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 /** The live endpoint only — a glob for it would also catch `/history`. */
 const LIVE_PATTERN = (url: URL) => url.pathname.endsWith("/wow/server-status");
@@ -206,5 +207,5 @@ test("375px phone layout: the page has no horizontal overflow", async ({ page })
   }
   const toggle = page.getByRole("radio", { name: "Last 7 days" });
   const box = await toggle.boundingBox();
-  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
 });

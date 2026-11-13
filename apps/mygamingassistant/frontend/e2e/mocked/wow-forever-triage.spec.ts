@@ -10,6 +10,9 @@
  */
 import type { Page, Request } from "@playwright/test";
 import { expect, test } from "@platform/ui/test-support/crashGuard";
+import { LOGIN_ENDPOINT } from "@platform/ui/test-support/constants/loginEndpoint";
+import { LOGIN_BAD_CREDENTIALS } from "@platform/ui/test-support/constants/loginBadCredentials";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const PAGE = "/wow-forever/triage";
 const OPERATOR_EMAIL = "operator@fixture.example";
@@ -128,10 +131,10 @@ async function mockTriage(page: Page, api: Api): Promise<void> {
     (url) => url.pathname.startsWith("/api/"),
     (route) => route.fulfill({ status: 404, json: { detail: "Not Found" } }),
   );
-  await page.route("**/api/auth/totp/login", (route) => {
+  await page.route(LOGIN_ENDPOINT, (route) => {
     const { email, password } = route.request().postDataJSON() as { email: string; password: string };
     if (email !== OPERATOR_EMAIL || password !== OPERATOR_PASSWORD) {
-      return route.fulfill({ status: 400, json: { detail: "LOGIN_BAD_CREDENTIALS" } });
+      return route.fulfill({ status: 400, json: { detail: LOGIN_BAD_CREDENTIALS } });
     }
     api.expired = false;
     return route.fulfill({ json: { access_token: FIXTURE_TOKEN, token_type: "bearer" } });
@@ -360,12 +363,12 @@ test.describe("phone", () => {
     const approve = card(page, "A very long title").getByRole("button", { name: "Approve" });
     const box = await approve.boundingBox();
     const cardBox = await card(page, "A very long title").boundingBox();
-    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     // Full width inside the card's padding.
     expect(box?.width ?? 0).toBeGreaterThan((cardBox?.width ?? 0) - 40);
     for (const name of ["Edit", "Merge…", "More", "Sign out"]) {
       const b = await workspace(page).getByRole("button", { name, exact: true }).first().boundingBox();
-      expect(b?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect(b?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     }
   });
 });

@@ -8,6 +8,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { toast } from "@platform/ui/test-support/toast";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const LIST_NAME = "E2E Warlock pre-raid";
 const PHONE = { width: 375, height: 812 };
@@ -113,7 +114,7 @@ test("at 375px: no horizontal overflow, 44px touch targets", async ({ page, cont
 
   const chest = slotRow(page, "chest");
   const pickButton = chest.getByRole("button", { name: "Pick an item for Chest" });
-  expect((await pickButton.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect((await pickButton.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   await pickButton.click();
   await chest.getByRole("combobox", { name: "Item name" }).fill("robe");
   await expect(chest.getByRole("option").first()).toBeVisible();
@@ -121,10 +122,10 @@ test("at 375px: no horizontal overflow, 44px touch targets", async ({ page, cont
 
   for (const name of [/Copy link/, "Rename", "Duplicate", "Delete"]) {
     const box = await page.getByRole("button", { name, exact: typeof name === "string" }).boundingBox();
-    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   }
   const checkbox = slotRow(page, "head").locator("label", { hasText: "I have it" });
-  expect((await checkbox.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect((await checkbox.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
 
   await page.getByRole("button", { name: /Copy link/ }).click();
   const url = await page.evaluate(() => navigator.clipboard.readText());

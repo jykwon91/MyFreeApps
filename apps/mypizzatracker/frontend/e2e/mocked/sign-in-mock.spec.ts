@@ -6,11 +6,12 @@
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
-import { json } from "@platform/ui/test-support/mockResponse";
+import { ISSUED_TOKEN } from "@platform/ui/test-support/constants/issuedToken";
+import { LOGIN_BAD_CREDENTIALS } from "@platform/ui/test-support/constants/loginBadCredentials";
+import { TEST_PASSWORD } from "@platform/ui/test-support/constants/testPassword";
+import { WRONG_PASSWORD } from "@platform/ui/test-support/constants/wrongPassword";
 import { TEST_USER, stubCurrentUser, stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
-import { ISSUED_TOKEN, TEST_PASSWORD, WRONG_PASSWORD } from "./constants/accountCredentials";
-import { LOGIN_ENDPOINT } from "./constants/authEndpoints";
-import { LOGIN_BAD_CREDENTIALS } from "./constants/refusalDetails";
+import { stubLogin } from "@platform/ui/test-support/stubLogin";
 import { BAD_CREDENTIALS_COPY, LANDING_HEADING } from "./constants/signInCopy";
 import { stubMenuApi } from "./fixtures/stubMenuApi";
 
@@ -18,16 +19,6 @@ import { stubMenuApi } from "./fixtures/stubMenuApi";
 async function signedOutOperator(page: Page): Promise<void> {
   await stubUnmatchedApi(page);
   await stubCurrentUser(page, TEST_USER);
-}
-
-/** POST /auth/totp/login answers `reply` with `status`; returns every body sent. */
-async function stubLogin(page: Page, reply: unknown, status = 200): Promise<unknown[]> {
-  const sent: unknown[] = [];
-  await page.route(LOGIN_ENDPOINT, (route) => {
-    sent.push(route.request().postDataJSON());
-    return route.fulfill(json(reply, status));
-  });
-  return sent;
 }
 
 async function submitLogin(page: Page, password: string): Promise<void> {

@@ -2,6 +2,7 @@ import { test, expect } from "./fixtures/auth";
 import { holdRequests } from "./fixtures/hold-requests";
 import { expectCardsMatchSkeleton, skeletonCardBox } from "./fixtures/skeleton-card-fit";
 import { deleteVendor, seedVendor } from "./fixtures/seed-data";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 /**
  * Layout E2E for the Vendors rolodex list + detail (PR 4.1b).
@@ -105,12 +106,12 @@ test.describe("Vendors layout (PR 4.1b)", () => {
     const allChip = page.getByTestId("vendor-filter-all");
     await expect(allChip).toBeVisible();
     const box = await allChip.boundingBox();
-    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
 
     const preferredToggle = page.getByTestId("vendor-preferred-toggle");
     await expect(preferredToggle).toBeVisible();
     const preferredBox = await preferredToggle.boundingBox();
-    expect(preferredBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(preferredBox?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   });
 
   test("detail skeleton section headers match the loaded page", async ({

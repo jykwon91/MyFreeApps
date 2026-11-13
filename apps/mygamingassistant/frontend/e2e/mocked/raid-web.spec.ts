@@ -19,6 +19,7 @@ import {
   leaveAndUnroute,
 } from "../fixtures/raidPage";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const SITE_TITLE = "MyGamingAssistant";
 
@@ -155,7 +156,7 @@ test("on a phone it never scrolls sideways, and Refresh is a tap away", async ({
   const refresh = page.getByRole("button", { name: "Refresh" });
   await refresh.scrollIntoViewIfNeeded();
   const box = await refresh.boundingBox();
-  expect(box?.height).toBeGreaterThanOrEqual(44);
+  expect(box?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   await refresh.click();
   await expect.poll(routes.reads).toBe(2);
   await expect(page.getByText("Updated just now")).toBeVisible();

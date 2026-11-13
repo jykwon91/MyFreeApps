@@ -6,11 +6,11 @@
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 import { createGate } from "@platform/ui/test-support/gate";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 const TRAINERS = "/wow-forever/trainers";
-const MIN_TARGET_PX = 44;
 
 async function sidewaysOverflow(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -81,7 +81,7 @@ test("phones: no sideways scroll and full-size targets", async ({ page }) => {
   ];
   for (const target of targets) {
     const box = await target.boundingBox();
-    expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TARGET_PX);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   }
 });
 

@@ -12,6 +12,8 @@
  */
 import type { Locator } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { LOGIN_ENDPOINT } from "@platform/ui/test-support/constants/loginEndpoint";
+import { TOTP_STATUS_ENDPOINT } from "@platform/ui/test-support/constants/totpStatusEndpoint";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
@@ -61,7 +63,7 @@ test.describe("2FA — Login challenge step Verify button alignment", () => {
 
   test("Verify button is horizontally centered inside the login card on the TOTP challenge step", async ({ page }) => {
     // Mock the login endpoint to return totp_required so the UI advances to the challenge step.
-    await page.route("**/api/auth/totp/login", (route) => {
+    await page.route(LOGIN_ENDPOINT, (route) => {
       route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -106,7 +108,7 @@ test.describe("2FA — Security setup Verify & Enable button alignment", () => {
     // the verify step.
     await plantAuth(page);
     await stubWorkspaceShell(page, "owner");
-    await page.route("**/api/auth/totp/status", (route) => route.fulfill(json({ enabled: false })));
+    await page.route(TOTP_STATUS_ENDPOINT, (route) => route.fulfill(json({ enabled: false })));
     await page.route("**/api/auth/totp/setup", (route) =>
       route.fulfill(
         json({

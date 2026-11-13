@@ -15,6 +15,7 @@
  */
 import type { Page, Route } from "@playwright/test";
 import { expect, test } from "@platform/ui/test-support/crashGuard";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 const TURN_PATH = "/api/wow/chat/turn";
 const QUESTION = "where's the closest warlock trainer if i'm in desolace";
@@ -510,9 +511,9 @@ test("the phone layout: no sideways scroll, 44px targets, the card fits", async 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
   const row = await card.getByRole("listitem").first().getByRole("button").first().boundingBox();
-  expect(row?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect(row?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   const send = await page.getByRole("button", { name: "Send", exact: true }).boundingBox();
-  expect(send?.height ?? 0).toBeGreaterThanOrEqual(44);
+  expect(send?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   const cardBox = await card.boundingBox();
   expect((cardBox?.x ?? 0) + (cardBox?.width ?? 0)).toBeLessThanOrEqual(375);
 });

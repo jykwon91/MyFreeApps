@@ -6,10 +6,10 @@
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 const DOWNRANK = "/wow-forever/downrank";
-const MIN_TARGET_PX = 44;
 
 function row(page: Page, rank: number) {
   return page.locator(`[data-testid="downrank-row"][data-rank="${rank}"]`);
@@ -95,10 +95,10 @@ test("phones get cards, no sideways scroll and full-size targets", async ({ page
   expect(await sidewaysOverflow(page)).toBeLessThanOrEqual(0);
   for (const control of [page.getByLabel("Class"), page.getByLabel("Spell", { exact: true }), page.getByLabel("Your level"), page.getByLabel("+Healing")]) {
     const box = await control.boundingBox();
-    expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TARGET_PX);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   }
   const copyBox = await page.getByRole("button", { name: /^Copy macro:/ }).first().boundingBox();
-  expect(copyBox?.height ?? 0).toBeGreaterThanOrEqual(MIN_TARGET_PX);
+  expect(copyBox?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
 });
 
 test("the skeleton shows while the spell data loads", async ({ page }) => {

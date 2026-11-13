@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { createProperty, deleteProperty } from "./fixtures/seed-data";
 import { localDateOffset, localToday } from "./fixtures/local-today";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 /**
  * Layout E2E for the dashboard rate-comparison card and the market-rate dialog.
@@ -202,8 +203,8 @@ test.describe("Utility plan comparison layout", () => {
         .getByRole("button", { name: "Close" });
       const box = await close.boundingBox();
       expect(box, "close control has no box").not.toBeNull();
-      expect(box!.width, "close width").toBeGreaterThanOrEqual(44);
-      expect(box!.height, "close height").toBeGreaterThanOrEqual(44);
+      expect(box!.width, "close width").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+      expect(box!.height, "close height").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     } finally {
       if (benchmarkRecorded) {
         await api.delete(BENCHMARK_URL).catch(() => {});

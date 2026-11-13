@@ -2,6 +2,7 @@ import { test, expect } from "./fixtures/auth";
 import { toastRegion } from "@platform/ui/test-support/toast";
 import { APP_PAGES } from "./fixtures/app-pages";
 import { PHONE_VIEWPORT as MOBILE_VIEWPORT } from "./fixtures/phone-viewport";
+import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
 // Common phone sizes — viewport width is the only thing that matters for
 // layout regression. Kept to 3 to balance coverage with suite runtime.
@@ -266,7 +267,7 @@ test.describe("Mobile responsiveness", () => {
       const addBtn = page.getByRole("button", { name: /add transaction/i });
       await expect(addBtn).toBeVisible();
       const box = await addBtn.boundingBox();
-      expect(box!.height).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     });
   });
 
@@ -282,7 +283,7 @@ test.describe("Mobile responsiveness", () => {
       const signInBtn = page.getByRole("button", { name: "Sign in" });
       await expect(signInBtn).toBeVisible();
       const box = await signInBtn.boundingBox();
-      expect(box!.height).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     });
   });
 
