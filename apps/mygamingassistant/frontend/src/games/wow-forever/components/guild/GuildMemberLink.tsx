@@ -1,25 +1,32 @@
 import clsx from "clsx";
-import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { CHARACTER_PAGE_PATH } from "@/games/wow-forever/data/character/characterConfig";
+import { GUILD_MEMBER_NAME_SIZES } from "@/games/wow-forever/data/guild/guildMemberNameSizes";
+import { CLASS_NAME_TEXT, CLASS_NAME_TEXT_ON_DARK } from "@/games/wow-forever/data/guild/guildStyles";
 import { memberFullName } from "@/games/wow-forever/lib/guild/guildMembers";
+import { memberClassStyle } from "@/games/wow-forever/lib/guild/memberClassStyle";
 import type { GuildMemberName } from "@/games/wow-forever/types/guild/guildMemberName";
+import type { GuildMemberNameSize } from "@/games/wow-forever/types/guild/guildMemberNameSize";
 
 interface GuildMemberLinkProps {
   member: GuildMemberName;
-  /** Extra classes and style (the leaderboards' class colour). */
+  size?: GuildMemberNameSize;
+  /** On the guild banner, which is dark in both themes. */
+  onDark?: boolean;
+  /** Layout only (alignment, wrapping): size and colour come from `size` and `onDark`. */
   className?: string;
-  style?: CSSProperties;
 }
 
-/** A member's name, linking to their character page. */
-export default function GuildMemberLink({ member, className, style }: GuildMemberLinkProps) {
+/** A member's name, bold in their class colour so the eye lands on it, linking to their character page. */
+export default function GuildMemberLink({ member, size = "md", onDark = false, className }: GuildMemberLinkProps) {
   return (
     <Link
       to={`${CHARACTER_PAGE_PATH}/${member.slug}`}
-      style={style}
+      style={memberClassStyle(member.class_name)}
       className={clsx(
-        "inline-flex min-h-[44px] items-center rounded font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "inline-flex min-h-[44px] items-center rounded font-bold tracking-tight underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        GUILD_MEMBER_NAME_SIZES[size],
+        onDark ? CLASS_NAME_TEXT_ON_DARK : CLASS_NAME_TEXT,
         className,
       )}
     >

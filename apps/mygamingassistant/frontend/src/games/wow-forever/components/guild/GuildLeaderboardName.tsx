@@ -1,8 +1,6 @@
 import clsx from "clsx";
 import GuildMemberLink from "@/games/wow-forever/components/guild/GuildMemberLink";
 import { BADGE } from "@/games/wow-forever/data/badgeStyles";
-import { CLASS_NAME_TEXT } from "@/games/wow-forever/data/guild/guildStyles";
-import { memberClassStyle } from "@/games/wow-forever/lib/guild/memberClassStyle";
 import type { LeaderboardEntry } from "@/games/wow-forever/types/guild/leaderboardEntry";
 
 interface GuildLeaderboardNameProps {
@@ -19,7 +17,7 @@ export default function GuildLeaderboardName({ entry, mine, centered }: GuildLea
   return (
     <span className="block min-w-0">
       <span className={clsx("flex flex-wrap items-center gap-x-2", centered && "sm:justify-center")}>
-        <GuildMemberLink member={entry.member} className={CLASS_NAME_TEXT} style={memberClassStyle(entry.member.class_name)} />
+        <GuildMemberLink member={entry.member} />
         {mine ? <span className={BADGE}>You</span> : null}
       </span>
       {subline ? <span className="block truncate text-xs text-muted-foreground">{subline}</span> : null}
