@@ -152,7 +152,9 @@ class ScheduleELineItem(BaseModel):
 
 
 # Optional on the row and meaningful when empty: no property, no vendor name.
-_CLEARABLE_FIELDS = ("property_id", "vendor_id", "vendor", "description")
+_CLEARABLE_FIELDS = (
+    "property_id", "vendor_id", "vendor", "description", "channel", "payment_method",
+)
 
 
 class TransactionUpdate(BaseModel):

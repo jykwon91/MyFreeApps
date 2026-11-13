@@ -325,6 +325,26 @@ class TestClearingFields:
         assert body["description"] is None
 
     @pytest.mark.asyncio
+    async def test_explicit_null_clears_channel_and_payment_method(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User, prop: Property,
+    ) -> None:
+        txn = await _seed_transaction(db, org, owner, property_id=prop.id)
+        txn.channel = "airbnb"
+        txn.payment_method = "check"
+        await db.commit()
+
+        resp = await client.patch(
+            f"/transactions/{txn.id}", json={"channel": None, "payment_method": None},
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["channel"] is None
+        assert resp.json()["payment_method"] is None
+        fetched = await client.get(f"/transactions/{txn.id}")
+        assert fetched.json()["channel"] is None
+        assert fetched.json()["payment_method"] is None
+
+    @pytest.mark.asyncio
     async def test_omitting_a_field_keeps_it(
         self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User, prop: Property,
     ) -> None:

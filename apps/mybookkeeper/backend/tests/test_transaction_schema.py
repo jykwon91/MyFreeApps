@@ -117,9 +117,11 @@ class TestTransactionUpdateVendorId:
     def test_explicit_null_clears_the_clearable_fields(self) -> None:
         txn = TransactionUpdate(
             property_id=None, vendor_id=None, vendor=None, description=None,
+            channel=None, payment_method=None,
         )
         assert txn.to_update_dict() == {
             "property_id": None, "vendor_id": None, "vendor": None, "description": None,
+            "channel": None, "payment_method": None,
         }
 
     def test_null_on_a_required_column_is_dropped(self) -> None:
