@@ -11,6 +11,7 @@
  * Run: npx playwright test --config=playwright.layout.config.ts discord-activity
  */
 import type { Page } from "@playwright/test";
+import { PIXEL_PNG } from "@platform/ui/test-support/constants/pixelPng";
 import { expect, test } from "@platform/ui/test-support/crashGuard";
 
 const CLIENT_ID = "1555249458542022666";
@@ -28,10 +29,6 @@ const GAMES = [
 const R2_PATH = "/mga-media/minimaps/mirage.webp?X-Amz-Signature=0f1e2d";
 const MINIMAP_URL = `https://0a1b2c3d.r2.cloudflarestorage.com${R2_PATH}`;
 const MAPS = [{ id: "m-mirage", slug: "mirage", name: "Mirage", minimap_url: MINIMAP_URL }];
-const PIXEL_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
-  "base64",
-);
 
 // Discord's answers to the SDK's handshake.
 const READY = [

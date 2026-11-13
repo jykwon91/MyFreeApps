@@ -164,6 +164,7 @@ interface RoundModeCardWrapperProps {
 function RoundModeCardWrapper({ lineup, isActive, pins }: RoundModeCardWrapperProps) {
   return (
     <div
+      aria-current={isActive ? "true" : undefined}
       className={[
         "rounded-xl overflow-hidden transition-all duration-200",
         isActive ? "ring-2 ring-primary shadow-lg scale-[1.01]" : "",
