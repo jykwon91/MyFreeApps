@@ -13,6 +13,7 @@ import { DEFAULT_API_BASE } from "./constants/defaultApiBase";
 import { escapeRegExp } from "./escapeRegExp";
 import { json, plainText } from "./mockResponse";
 import { TEST_USER } from "./mockSession";
+import { recordWrite } from "./recordWrite";
 import type { AccountApiStubOptions } from "./types/AccountApiStubOptions";
 import type { SentRequest } from "./types/SentRequest";
 
@@ -28,8 +29,7 @@ export async function stubAccountApi<TUser extends object = CurrentUser>(
     const request = route.request();
     const method = request.method();
     if (method === "GET") return route.fulfill(json(current));
-    const body = (request.postDataJSON() as unknown) ?? null;
-    sent.push({ method, path: ME_PATH, body });
+    const body = recordWrite(sent, request, apiBase);
     if (refuse) {
       const refusal =
         "plainText" in refuse ? plainText(refuse.plainText, refuse.status) : json({ detail: refuse.detail }, refuse.status);

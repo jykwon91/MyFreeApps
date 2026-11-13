@@ -149,8 +149,57 @@ jobs:
       - name: Lint frontend
         run: npm run lint --workspace=mypizzatracker-frontend
 
+      - name: Typecheck E2E tests
+        # The build only typechecks src/, and Playwright runs TS unchecked.
+        run: npm run typecheck:e2e --workspace=mypizzatracker-frontend
+
       - name: Test frontend
         run: npm test --workspace=mypizzatracker-frontend
+
+  frontend-layout-e2e:
+    name: frontend-layout-e2e / mypizzatracker
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Mocked specs in e2e/mocked/ answer every API call via page.route(); no
+    # backend is started. They exercise real user flows (sign-in, drops, menu,
+    # service, financials, customers, the public order flow, settings) against
+    # stubbed responses. MyPizzaTracker has no full-stack e2e suite.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        working-directory: apps/mypizzatracker/frontend
+        timeout-minutes: 4
+        run: npx playwright install chromium
+
+      - name: Run mocked E2E tests (no backend)
+        working-directory: apps/mypizzatracker/frontend
+        run: npx playwright test --config=playwright.layout.config.ts
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: apps/mypizzatracker/frontend/e2e/test-results-mocked/
+          retention-days: 7
 
   caddy-image:
     name: caddy-image / mypizzatracker

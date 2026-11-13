@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { holdRequests } from "./fixtures/hold-requests";
-import { expectCardsMatchSkeleton, skeletonCardHeight } from "./fixtures/skeleton-card-fit";
+import { expectCardsMatchSkeleton, skeletonCardBox } from "./fixtures/skeleton-card-fit";
 import { deleteApplicant } from "./fixtures/applicants";
 
 /**
@@ -62,13 +62,13 @@ test.describe("Applicants layout (PR 3.1b)", () => {
       const releaseList = await holdRequests(page, (url) => url.pathname === "/api/applicants");
       await page.goto("/applicants");
       await expect(page.getByTestId("applicants-skeleton")).toBeVisible({ timeout: 5000 });
-      const skeletonHeight = await skeletonCardHeight(page.locator('[data-testid="applicants-skeleton"] ul.md\\:hidden li'));
+      const skeletonCard = await skeletonCardBox(page.locator('[data-testid="applicants-skeleton"] ul.md\\:hidden li'));
 
       releaseList();
       await expectCardsMatchSkeleton(
         page.locator('[data-testid="applicants-mobile"] li').filter({ hasText: `E2E Layout Applicant ${runId}` }),
         APPLICANT_COUNT,
-        skeletonHeight,
+        skeletonCard,
       );
     } finally {
       for (const id of applicantIds) await deleteApplicant(api, id);

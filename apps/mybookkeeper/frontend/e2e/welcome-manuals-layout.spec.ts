@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures/auth";
 import { createWelcomeManual, deleteWelcomeManual } from "./fixtures/welcome-manual";
 import { holdRequests } from "./fixtures/hold-requests";
-import { expectCardsMatchSkeleton, skeletonCardHeight } from "./fixtures/skeleton-card-fit";
+import { expectCardsMatchSkeleton, skeletonCardBox } from "./fixtures/skeleton-card-fit";
 
 /**
  * Layout E2E for the Welcome Manuals list + detail pages (PR 4b).
@@ -41,13 +41,13 @@ test.describe("Welcome Manuals layout (PR 4b)", () => {
       await page.goto("/welcome-manuals");
       await expect(page.getByTestId("welcome-manuals-skeleton")).toBeVisible({ timeout: 5000 });
 
-      const skeletonHeight = await skeletonCardHeight(page.locator('[data-testid="welcome-manuals-skeleton"] ul.md\\:hidden li'));
+      const skeletonCard = await skeletonCardBox(page.locator('[data-testid="welcome-manuals-skeleton"] ul.md\\:hidden li'));
 
       release();
       await expectCardsMatchSkeleton(
         page.locator('[data-testid="welcome-manuals-mobile"] li').filter({ hasText: titlePrefix }),
         MANUAL_COUNT,
-        skeletonHeight,
+        skeletonCard,
       );
     } finally {
       for (const id of manualIds) await deleteWelcomeManual(api, id);

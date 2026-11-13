@@ -4,21 +4,15 @@
  * stands in for does (x, y, width, height), so nothing moves on arrival.
  */
 import { expect, type Page } from "@playwright/test";
-import { createGate } from "@platform/ui/test-support/gate";
-import { BOX_TOLERANCE_PX } from "../constants/layoutTolerance";
+import { expectBoxesLineUp, measureBoxes } from "@platform/ui/test-support/layoutShift";
+import { holdReads } from "@platform/ui/test-support/routeControls";
 import { SCENARIOS } from "./catalogFixtures";
 import { signedInTutor } from "./signedInTutor";
 
-const SIDES = ["x", "y", "width", "height"] as const;
-
 export async function expectSkeletonRowsLineUp(page: Page): Promise<void> {
   await signedInTutor(page);
-  const gate = createGate();
   // Registered after the stub, so it runs first: hold the list, then let the stub answer.
-  await page.route(/\/api\/scenarios(\?|$)/, async (route) => {
-    await gate.wait;
-    await route.fallback();
-  });
+  const gate = await holdReads(page, /\/api\/scenarios(\?|$)/);
 
   try {
     await page.goto("/scenarios");
@@ -29,22 +23,13 @@ export async function expectSkeletonRowsLineUp(page: Page): Promise<void> {
     const placeholders = await skeletonRows.count();
     expect(placeholders).toBeGreaterThan(1);
     expect(placeholders).toBeLessThanOrEqual(SCENARIOS.length);
-    const skeletonBoxes = await Promise.all(
-      Array.from({ length: placeholders }, (_, index) => skeletonRows.nth(index).boundingBox()),
-    );
+    const skeletonBoxes = await measureBoxes(skeletonRows);
 
     gate.release();
     const loadedRows = page.getByRole("main").getByRole("listitem");
     await expect(loadedRows).toHaveCount(SCENARIOS.length);
     await expect(skeleton).toHaveCount(0);
-    for (const [index, skeletonBox] of skeletonBoxes.entries()) {
-      const loadedBox = await loadedRows.nth(index).boundingBox();
-      expect(skeletonBox, `skeleton row ${index}`).not.toBeNull();
-      expect(loadedBox, `loaded row ${index}`).not.toBeNull();
-      for (const side of SIDES) {
-        expect(Math.abs(loadedBox![side] - skeletonBox![side]), `row ${index} ${side}`).toBeLessThanOrEqual(BOX_TOLERANCE_PX);
-      }
-    }
+    await expectBoxesLineUp(skeletonBoxes, loadedRows);
   } finally {
     gate.release();
   }

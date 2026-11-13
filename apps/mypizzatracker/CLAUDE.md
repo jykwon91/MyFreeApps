@@ -88,6 +88,23 @@ npm run lint
 npm test
 ```
 
+**Mocked E2E (no backend)** (from `apps/mypizzatracker/frontend/`): Playwright specs in
+`e2e/mocked/` answer every API call with `page.route()`, so no backend or database runs.
+CI runs them in the `frontend-layout-e2e` job.
+```bash
+npx playwright test -c playwright.layout.config.ts   # port 5186 (PW_PORT overrides)
+npm run typecheck:e2e                                # Playwright doesn't typecheck; CI runs this in frontend-build
+```
+- Every spec imports `test`/`expect` from `@platform/ui/test-support/crashGuard`, so an uncaught
+  error or an error-boundary catch fails the test.
+- Use the shared helpers in `@platform/ui/test-support` before writing local ones. A helper another
+  app also needs belongs in shared-frontend/test-support.
+- Stateful API stubs live in `e2e/mocked/fixtures/stub*Api.ts` and record writes, so specs can check
+  what was sent. Loading and error states use `holdReads` / `failReads`, and `logReads` counts reads
+  (`@platform/ui/test-support/routeControls`).
+  Skeleton specs compare placeholder boxes to the loaded layout with `expectSameColumns`.
+- A failing spec means the app is broken. Fix the app, not the test.
+
 ## Architecture Rules
 
 **No register route.** `fastapi_users.get_register_router()` is never mounted.

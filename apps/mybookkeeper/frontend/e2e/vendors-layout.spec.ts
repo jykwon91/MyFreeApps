@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures/auth";
 import { holdRequests } from "./fixtures/hold-requests";
-import { expectCardsMatchSkeleton, skeletonCardHeight } from "./fixtures/skeleton-card-fit";
+import { expectCardsMatchSkeleton, skeletonCardBox } from "./fixtures/skeleton-card-fit";
 import { deleteVendor, seedVendor } from "./fixtures/seed-data";
 
 /**
@@ -39,13 +39,13 @@ test.describe("Vendors layout (PR 4.1b)", () => {
       const releaseList = await holdRequests(page, (url) => url.pathname === "/api/vendors");
       await page.goto("/vendors");
       await expect(page.getByTestId("vendors-skeleton")).toBeVisible({ timeout: 5000 });
-      const skeletonHeight = await skeletonCardHeight(page.locator('[data-testid="vendors-skeleton"] ul.md\\:hidden li'));
+      const skeletonCard = await skeletonCardBox(page.locator('[data-testid="vendors-skeleton"] ul.md\\:hidden li'));
 
       releaseList();
       await expectCardsMatchSkeleton(
         page.locator('[data-testid="vendors-mobile"] li').filter({ hasText: `E2E Layout Vendor ${runId}` }),
         VENDOR_COUNT,
-        skeletonHeight,
+        skeletonCard,
       );
     } finally {
       for (const id of vendorIds) await deleteVendor(api, id);
