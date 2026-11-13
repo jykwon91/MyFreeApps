@@ -5,8 +5,6 @@ This module owns:
   * :func:`build_export` — assembles a full per-user data export
     (properties, documents, transactions, integrations). MBK-specific
     because the domain rows differ across apps.
-  * :func:`delete_account` — hard-delete the user row; the FK cascade
-    wipes every related domain row. Also app-specific.
 
 The lockout-policy half (``record_failed_login``,
 ``record_successful_login``, ``is_locked``, ``_lock_duration_for``)
@@ -19,7 +17,6 @@ through ``app.core.config.settings.lockout_threshold`` and
 those values into the shared helpers so production behaviour is
 byte-identical with pre-M7.
 """
-import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -40,10 +37,7 @@ from app.repositories.documents import document_repo
 from app.repositories.integrations import integration_repo
 from app.repositories.properties import property_repo
 from app.repositories.transactions import transaction_repo
-from app.repositories.user import user_repo
 from platform_shared.services.auth_event_service import log_auth_event
-
-logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -201,27 +195,3 @@ async def build_export(
         "integrations": [_integration_to_export_dict(i) for i in integrations],
     }
 
-
-async def delete_account(db: AsyncSession, user: User) -> None:
-    """Hard-delete the user row; all related rows cascade-delete via FK.
-
-    Logs the ACCOUNT_DELETED event BEFORE the cascade so the event row
-    is written in the same transaction and survives if the delete fails.
-    """
-    logger.warning(
-        "Account deletion: user_id=%s email=%s",
-        user.id,
-        user.email,
-    )
-    loaded_user = await user_repo.get_by_id(db, user.id)
-    if loaded_user is None:
-        return
-    # Log BEFORE delete — the auth_events table has no FK to users, so the
-    # event row is safe even after the user cascade completes.
-    await log_auth_event(
-        db,
-        event_type=AuthEventType.ACCOUNT_DELETED,
-        user_id=user.id,
-        succeeded=True,
-    )
-    await db.delete(loaded_user)
