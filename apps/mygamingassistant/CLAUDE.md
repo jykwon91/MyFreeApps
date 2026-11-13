@@ -1155,6 +1155,18 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`lib/guild/guildMemberProfessions.ts`); a link naming one nobody has shows everyone. While
   it's set the table gains a skill column (`GuildMemberSkillCell`, "148 / 225") and cards add
   "Tailoring 148 / 225". Best-by-skill ranking stays on the Arena's profession boards.
+- Guild link preview: Discord shows `GET /api/wow/guilds/topdeadcenter/preview.png` for the guild page
+  (`frontend/src/constants/linkPreview.ts`; unfurlers run no JS, so the backend draws it from the stored
+  guild, never Blizzard). 1200x630 PNG (`guild_preview_image.py`, Pillow, bundled Inter in
+  `backend/data/fonts/` + its OFL): the banner's diagonal faction gradient, `<Name>`, "Alliance · 31 members ·
+  12 at 60", and two top-3 panels (honorable kills, dungeon clears; a board nobody has numbers on gives way to
+  Highest level; zeros and missing numbers are never ranked; ranking/format in `guild_preview_boards.py`).
+  Bytes are cached in memory per (slug, roster_updated_at, newest member refreshed_at) by
+  `guild_preview_service.py`, drawn off the event loop under one lock, `Cache-Control: public, max-age=3600`. Guild not
+  stored or render raises (logged) -> 302 to `/link-preview/wow-forever.png`, never an error. No time-relative
+  text (Discord caches the image). Colours live in `app/core/guild_preview.py`; `tests/test_guild_preview_colors.py`
+  reads `classColors.ts`, `guildBannerConfig.ts`, `medalStyles.ts` and `levelCap.ts` and fails on drift. Tests:
+  `tests/test_guild_preview_{boards,image,endpoint,colors}.py` (no DB), `src/__tests__/linkPreviewConfig.test.ts`.
 - ONE guild only: the site shows and refreshes just the operator's guild,
   `GUILD_SLUG` = "topdeadcenter" (`core/wow_guild.py`; frontend `GUILD_SLUG` in
   `data/guild/guildConfig.ts`). Every `/api/wow/guilds/{slug}` route 404s any
