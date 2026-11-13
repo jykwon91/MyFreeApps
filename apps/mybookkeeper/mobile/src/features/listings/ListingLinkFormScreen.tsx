@@ -4,9 +4,9 @@ import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/l
 import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/listing-response";
 import type { ListingSource } from "@mybookkeeper/api-client/types/listing/listing-source";
 import { externalIdChanged, externalIdProblem } from "@mybookkeeper/api-client/utils/externalIdForm";
-import { Banner, EmptyState, FormField, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { ScrollView } from "react-native";
+
 import { LISTING_LINK_MESSAGES as MESSAGES } from "../../constants/listingLinks";
 import { useSaveListingLink } from "./useSaveListingLink";
 
@@ -42,7 +42,7 @@ export default function ListingLinkFormScreen({ listing, original }: ListingLink
 
   return (
     <>
-      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <PickerField disabled={locked || original !== null} hint={EXTERNAL_ID_SOURCE_HINTS[source]} label={MESSAGES.source} onPress={() => setIsPicking(true)} valueLabel={LISTING_SOURCE_LABELS[source]} />
         <FormField
@@ -67,7 +67,7 @@ export default function ListingLinkFormScreen({ listing, original }: ListingLink
         <LoadingButton disabled={locked} isLoading={isBusy} loadingText={original ? MESSAGES.saving : MESSAGES.adding} onPress={save}>
           {original ? MESSAGES.save : MESSAGES.addSubmit}
         </LoadingButton>
-      </ScrollView>
+      </KeyboardAwareScroll>
       <OptionSheet<ListingSource>
         isOpen={isPicking}
         onClose={() => setIsPicking(false)}

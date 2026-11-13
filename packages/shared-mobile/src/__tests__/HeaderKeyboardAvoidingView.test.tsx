@@ -2,21 +2,6 @@ import { render, screen } from "@testing-library/react-native";
 import { Platform, Text } from "react-native";
 import HeaderKeyboardAvoidingView from "../components/HeaderKeyboardAvoidingView";
 
-const mockHeaderHeight = 96;
-
-jest.mock("expo-router/react-navigation", () => ({ useHeaderHeight: () => mockHeaderHeight }));
-jest.mock("react-native/Libraries/Components/Keyboard/KeyboardAvoidingView", () => {
-  const { View } = jest.requireActual("react-native");
-  return {
-    __esModule: true,
-    default: ({ children, ...props }: { children: unknown } & Record<string, unknown>) => (
-      <View {...props} testID="keyboard-avoiding-view">
-        {children as never}
-      </View>
-    ),
-  };
-});
-
 async function renderBar(): Promise<void> {
   await render(
     <HeaderKeyboardAvoidingView>
@@ -25,27 +10,28 @@ async function renderBar(): Promise<void> {
   );
 }
 
+// The keyboard controller's avoiding view renders as a View given its props under Jest.
+function avoidingView() {
+  return screen.getByText("Send").parent!;
+}
+
 describe("HeaderKeyboardAvoidingView", () => {
   const originalOs = Platform.OS;
   afterEach(() => {
     Platform.OS = originalOs;
   });
 
-  // The header sits between the view's frame in its parent and the keyboard's position on the screen, so
-  // without its height as an offset the padding comes up short by that much and the pinned bar stays covered.
-  it("pads on iOS, offset by the height of the header", async () => {
-    Platform.OS = "ios";
+  // Without its real position in the window, the view takes its top to be the screen's, so the padding comes up
+  // short by the header above it and the pinned bar stays covered. Android draws edge to edge, so its window no
+  // longer shrinks for the keyboard: it needs the same padding.
+  it.each(["ios", "android"] as const)("pads on %s, measured from where it sits in the window", async (os) => {
+    Platform.OS = os;
     await renderBar();
-    const view = screen.getByTestId("keyboard-avoiding-view");
+    const view = avoidingView();
     expect(view.props.behavior).toBe("padding");
-    expect(view.props.keyboardVerticalOffset).toBe(mockHeaderHeight);
-    expect(screen.getByText("Send")).toBeTruthy();
-  });
-
-  // Android is unchanged: its window's soft-input mode handles the keyboard, as before.
-  it("leaves Android unchanged", async () => {
-    Platform.OS = "android";
-    await renderBar();
-    expect(screen.getByTestId("keyboard-avoiding-view").props.behavior).toBeUndefined();
+    expect(view.props.automaticOffset).toBe(true);
+    // The measured position already counts the header; an offset on top would pad by it twice.
+    expect(view.props.keyboardVerticalOffset).toBeUndefined();
+    expect(view.props.style).toEqual({ flex: 1 });
   });
 });

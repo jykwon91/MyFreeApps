@@ -1,10 +1,9 @@
 import { useLazyGetSignedLeaseByIdQuery, useCreateSignedLeaseMutation } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import type { MergedPlaceholder } from "@mybookkeeper/api-client/types/lease/merged-placeholder";
-import { Banner, HeaderKeyboardAvoidingView, LoadingButton, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { Banner, HeaderKeyboardAvoidingView, LoadingButton, PinnedBar, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Keyboard, ScrollView, type ScrollViewInstance, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PLACEHOLDER_PROBLEM_MESSAGES } from "../../constants/placeholderProblems";
 import { draftMade, leaseFor, NEW_LEASE_MESSAGES as MESSAGES, PROVENANCE_CAPTIONS, usedIn } from "../../constants/newLease";
 import type { NewLeaseFlow } from "../../types/NewLeaseFlow";
@@ -29,7 +28,6 @@ interface NewLeaseFormProps {
 
 export default function NewLeaseForm({ flow, applicantId, applicantName, fields, computed, templateNames, onOutOfDate }: NewLeaseFormProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const leaveFlow = useLeaveNewLeaseFlow();
   const [createLease, { isLoading }] = useCreateSignedLeaseMutation();
@@ -183,11 +181,11 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
           </LoadingButton>
         ) : null}
       </ScrollView>
-      <View
+      <PinnedBar
+        bottomSpacing={spacing.md}
         style={{
           paddingHorizontal: spacing.lg,
           paddingTop: spacing.md,
-          paddingBottom: insets.bottom + spacing.md,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           backgroundColor: colors.background,
@@ -196,7 +194,7 @@ export default function NewLeaseForm({ flow, applicantId, applicantName, fields,
         <LoadingButton isLoading={isBusy} loadingText={MESSAGES.creatingDraft} onPress={() => void submit()}>
           {MESSAGES.createDraft}
         </LoadingButton>
-      </View>
+      </PinnedBar>
     </HeaderKeyboardAvoidingView>
   );
 }

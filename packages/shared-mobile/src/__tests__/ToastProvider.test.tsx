@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { useState } from "react";
-import { Keyboard, Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text } from "react-native";
+import { type IKeyboardState, useKeyboardState } from "react-native-keyboard-controller";
 import ToastProvider from "../components/ToastProvider";
 import { useToast } from "../hooks/useToast";
 import { spacing } from "../theme/spacing";
@@ -70,25 +71,37 @@ describe("ToastProvider", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  // The keyboard controller measures from the bottom of the screen, nav bar included, which is where the toast is
+  // placed from: Android draws edge to edge, and React Native's own keyboard height left the nav bar out.
   it("sits above the keyboard while it's up, and back above the tab bar after", async () => {
-    const handlers: Record<string, (event: { endCoordinates: { height: number } }) => void> = {};
-    jest.spyOn(Keyboard, "addListener").mockImplementation(((name: string, handler: (typeof handlers)[string]) => {
-      handlers[name] = handler;
-      return { remove: jest.fn() };
-    }) as unknown as typeof Keyboard.addListener);
-    await render(
+    let keyboard: IKeyboardState = { height: 0, isVisible: false, duration: 0, timestamp: 0, target: -1, type: "default", appearance: "light" };
+    const mockedState = jest.mocked(useKeyboardState);
+    const libraryMock = mockedState.getMockImplementation();
+    mockedState.mockImplementation(((select: (state: IKeyboardState) => unknown) => select(keyboard)) as typeof useKeyboardState);
+    // A new element each time, so a rerender reads the keyboard again.
+    const toaster = () => (
       <ToastProvider bottomOffset={80}>
         <Sender />
-      </ToastProvider>,
+      </ToastProvider>
     );
-    await fireEvent.press(screen.getByText("Send"));
-    // The message is the alert; the box placing it holds it.
-    const bottom = () => StyleSheet.flatten(screen.getByRole("alert").parent?.props.style).bottom;
-    expect(bottom()).toBe(80);
-    await act(async () => handlers.keyboardDidShow({ endCoordinates: { height: 300 } }));
-    expect(bottom()).toBe(300 + spacing.md);
-    await act(async () => handlers.keyboardDidHide({ endCoordinates: { height: 0 } }));
-    expect(bottom()).toBe(80);
+    try {
+      const tree = await render(toaster());
+      await fireEvent.press(screen.getByText("Send"));
+      // The message is the alert; the box placing it holds it.
+      const bottom = () => StyleSheet.flatten(screen.getByRole("alert").parent?.props.style).bottom;
+      expect(bottom()).toBe(80);
+
+      keyboard = { ...keyboard, height: 336, isVisible: true };
+      await act(async () => tree.rerender(toaster()));
+      expect(bottom()).toBe(336 + spacing.md);
+
+      // A hidden keyboard can keep its last height; only a visible one moves the toast.
+      keyboard = { ...keyboard, isVisible: false };
+      await act(async () => tree.rerender(toaster()));
+      expect(bottom()).toBe(80);
+    } finally {
+      mockedState.mockImplementation(libraryMock);
+    }
   });
 
   it("fails loudly without a provider", async () => {

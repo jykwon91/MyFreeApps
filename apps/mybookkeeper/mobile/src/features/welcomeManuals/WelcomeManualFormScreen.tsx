@@ -3,9 +3,9 @@ import { WELCOME_MANUAL_TITLE_MAX_LENGTH } from "@mybookkeeper/api-client/consta
 import type { WelcomeManualFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-form-values";
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 import { manualEditProblems } from "@mybookkeeper/api-client/utils/welcomeManualProblems";
-import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { ScrollView } from "react-native";
+
 import { WELCOME_MANUAL_FORM_MESSAGES as MESSAGES, WELCOME_MANUAL_INTRO_MIN_HEIGHT } from "../../constants/welcomeManualForms";
 import { useSnapshotForm } from "../../lib/useSnapshotForm";
 import { NO_PROPERTY_VALUE, propertyOptions } from "./welcomeManualPropertyOptions";
@@ -37,7 +37,7 @@ export default function WelcomeManualFormScreen({ original }: { original: Welcom
 
   return (
     <>
-      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <FormField
           editable={!locked}
@@ -65,7 +65,7 @@ export default function WelcomeManualFormScreen({ original }: { original: Welcom
         <LoadingButton disabled={locked} isLoading={isBusy} loadingText={original ? MESSAGES.saving : MESSAGES.creating} onPress={save}>
           {original ? MESSAGES.save : MESSAGES.create}
         </LoadingButton>
-      </ScrollView>
+      </KeyboardAwareScroll>
       <OptionSheet
         isOpen={isPickerOpen}
         onClose={() => setIsPickerOpen(false)}

@@ -4,9 +4,9 @@ import type { LeasePlaceholderFormField } from "@mybookkeeper/api-client/types/l
 import type { LeasePlaceholderFormValues } from "@mybookkeeper/api-client/types/lease/lease-placeholder-form-values";
 import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
 import { placeholderDirtyFields, placeholderFormProblems, placeholderToFormValues } from "@mybookkeeper/api-client/utils/leasePlaceholderForm";
-import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { ScrollView, Text } from "react-native";
+import { Text } from "react-native";
 import { PLACEHOLDER_MESSAGES as MESSAGES } from "../../constants/leasePlaceholderEdit";
 import type { PlaceholderFormScreenProps } from "../../types/PlaceholderFormScreenProps";
 import { useSavePlaceholder } from "./useSavePlaceholder";
@@ -42,7 +42,7 @@ export default function PlaceholderFormScreen({ templateId, placeholder }: Place
 
   return (
     <>
-      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {message ? <Banner message={message} /> : null}
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`${MESSAGES.key}: [${placeholder.key}]`}</Text>
         <FormField
@@ -80,7 +80,7 @@ export default function PlaceholderFormScreen({ templateId, placeholder }: Place
         <LoadingButton disabled={locked || !isDirty} isLoading={isBusy} loadingText={MESSAGES.saving} onPress={save}>
           {MESSAGES.save}
         </LoadingButton>
-      </ScrollView>
+      </KeyboardAwareScroll>
       <OptionSheet<LeasePlaceholderInputType>
         isOpen={isPickerOpen}
         onClose={() => setIsPickerOpen(false)}

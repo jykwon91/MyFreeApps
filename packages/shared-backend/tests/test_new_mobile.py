@@ -85,6 +85,16 @@ class TestGeneratedFiles:
         assert "buildType" not in eas["build"]["production"].get("android", {})
         assert "production" in eas["submit"]
 
+    def test_runs_in_a_development_build(self, repo: Path) -> None:
+        _generate(repo)
+        generated = _mobile_dir(repo)
+        eas = json.loads((generated / "eas.json").read_text("utf-8"))
+        manifest = json.loads((generated / "package.json").read_text("utf-8"))
+
+        assert eas["build"]["development"] == {"developmentClient": True, "distribution": "internal"}
+        assert eas["build"]["development-simulator"] == {"extends": "development", "ios": {"simulator": True}}
+        assert "expo-dev-client" in manifest["dependencies"]
+
     def test_names_the_app(self, repo: Path) -> None:
         _generate(repo)
         generated = _mobile_dir(repo)

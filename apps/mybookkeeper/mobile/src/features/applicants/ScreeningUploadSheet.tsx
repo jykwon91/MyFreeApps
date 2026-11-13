@@ -1,9 +1,9 @@
 import { useUploadScreeningResultMutation } from "@mybookkeeper/api-client/store/screeningApi";
 import { ADVERSE_OUTCOMES, SCREENING_UPLOAD_OUTCOMES } from "@mybookkeeper/api-client/constants/screeningStatus";
 import type { ScreeningStatus } from "@mybookkeeper/api-client/types/applicant/screening-status";
-import { Banner, filePart, FormField, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
+import { Banner, filePart, FormField, KeyboardAwareScroll, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
-import { Modal, ScrollView, Text, View } from "react-native";
+import { Modal, Text, View } from "react-native";
 import { SCREENING_MESSAGES, SCREENING_PHOTO_NAME, SCREENING_REASON_MAX_LENGTH, SCREENING_REPORT_FILE_TYPES } from "../../constants/applicantScreening";
 import { screeningOutcomeLabel } from "./applicantDisplay";
 import { confirmDiscard } from "../uploads/confirmDiscard";
@@ -67,7 +67,7 @@ export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: {
   return (
     <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible={isOpen}>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+        <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
           <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
             {SCREENING_MESSAGES.sheetTitle}
           </Text>
@@ -116,7 +116,7 @@ export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: {
           <LoadingButton disabled={isUploading || isPicking} onPress={close} variant="ghost">
             {SCREENING_MESSAGES.cancel}
           </LoadingButton>
-        </ScrollView>
+        </KeyboardAwareScroll>
       </View>
     </Modal>
   );

@@ -4,9 +4,9 @@ import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendo
 import type { VendorFormValues } from "@mybookkeeper/api-client/types/vendor/vendor-form-values";
 import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendor-response";
 import { EMPTY_VENDOR_FORM, vendorDirtyFields, vendorFormProblems, vendorToFormValues } from "@mybookkeeper/api-client/utils/vendorForm";
-import { Banner, FormField, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { ScrollView } from "react-native";
+
 import { VENDOR_FORM_MESSAGES as MESSAGES } from "../../constants/vendorForm";
 import { useSaveVendor } from "./useSaveVendor";
 
@@ -41,7 +41,7 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
 
   return (
     <>
-      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
         {failure ? <Banner message={failure} /> : null}
         <FormField
           editable={!locked}
@@ -110,7 +110,7 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
         <LoadingButton disabled={locked} isLoading={isBusy} loadingText={original ? MESSAGES.saving : MESSAGES.adding} onPress={save}>
           {original ? MESSAGES.save : MESSAGES.add}
         </LoadingButton>
-      </ScrollView>
+      </KeyboardAwareScroll>
       <OptionSheet<VendorCategory>
         isOpen={isPickerOpen}
         onClose={() => setIsPickerOpen(false)}

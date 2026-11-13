@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Modal, ScrollView, Text, View } from "react-native";
+import { Modal, Text, View } from "react-native";
 import { requestTwoStepDisable } from "../auth/twoStepApi";
 import { TWO_STEP_MESSAGES as MESSAGES } from "../constants/twoStep";
 import { useSecondFactorCode } from "../hooks/useSecondFactorCode";
@@ -7,6 +7,7 @@ import { useTheme } from "../theme/useTheme";
 import type { TwoStepTurnOffSheetProps } from "../types/TwoStepTurnOffSheetProps";
 import Banner from "./Banner";
 import FormField from "./FormField";
+import KeyboardAwareScroll from "./KeyboardAwareScroll";
 import LoadingButton from "./LoadingButton";
 
 export default function TwoStepTurnOffSheet({ onClose, onSettled }: TwoStepTurnOffSheetProps) {
@@ -43,7 +44,7 @@ export default function TwoStepTurnOffSheet({ onClose, onSettled }: TwoStepTurnO
   return (
     <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+        <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
           <Text accessibilityRole="header" style={{ color: colors.foreground, fontSize: fontSize.lg, fontWeight: "600" }}>
             {MESSAGES.turnOffCodeHeading}
           </Text>
@@ -72,7 +73,7 @@ export default function TwoStepTurnOffSheet({ onClose, onSettled }: TwoStepTurnO
             {MESSAGES.cancel}
           </LoadingButton>
           <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{MESSAGES.turnOffNote}</Text>
-        </ScrollView>
+        </KeyboardAwareScroll>
       </View>
     </Modal>
   );

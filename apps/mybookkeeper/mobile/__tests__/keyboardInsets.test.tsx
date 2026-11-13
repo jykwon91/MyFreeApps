@@ -1,5 +1,6 @@
-import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
+import { KEYBOARD_FIELD_CLEARANCE } from "@platform/mobile";
+import { codeOf, keyboardHandlingProblems } from "@platform/mobile/test-support/keyboardHandlingProblems";
 import { nodesOfType } from "@platform/mobile/test-support/renderedNodes";
 import type { RenderedNode } from "@platform/mobile/test-support/types/RenderedNode";
 import { screen } from "@testing-library/react-native";
@@ -18,6 +19,7 @@ jest.mock("expo-router", () => ({
 const FEATURES = join(__dirname, "..", "src", "features");
 
 // Each has a scroll view and nothing pinned below it: 7 are page-sheet modals, the rest sit under a stack header.
+// MoreScreen's search scrolls the same way.
 const SCROLL_ONLY = [
   "applicants/ApplicantStageSheet",
   "applicants/ScreeningUploadSheet",
@@ -32,6 +34,7 @@ const SCROLL_ONLY = [
   "listings/ListingFormScreen",
   "listings/ListingLinkFormScreen",
   "members/InviteSheet",
+  "more/MoreScreen",
   "mortgages/MortgageForm",
   "properties/PropertyFormScreen",
   "reconciliation/ReconciliationAddForm",
@@ -56,33 +59,24 @@ const PINNED_BAR = [
   "replyTemplates/ReplyTemplateForm",
 ];
 
-/** The file's code with its comments taken out, so a mention in a comment can't satisfy or fail a check. */
-function codeOf(path: string): string {
-  return readFileSync(path, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|\s)\/\/.*$/gm, "$1");
-}
+// Where each of those draws its pinned bar: the reply-template form leaves it to its variable bar.
+const BAR_DRAWN_IN = [...PINNED_BAR.filter((feature) => feature !== "replyTemplates/ReplyTemplateForm"), "replyTemplates/ReplyTemplateVariableBar"];
 
 function sourceOf(feature: string): string {
   return codeOf(join(FEATURES, `${feature}.tsx`));
 }
 
-const TRACKS_KEYBOARD = /\bautomaticallyAdjustKeyboardInsets(?!=\{false\})/;
+const KEYBOARD_AWARE_SCROLL = /<KeyboardAwareScroll[\s>]/;
 
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) return sourceFiles(path);
-    return /\.tsx?$/.test(entry.name) ? [path] : [];
-  });
-}
-
-// KeyboardAvoidingView pads by comparing the view's position in its parent with the keyboard's position on the
-// screen. A page sheet or a screen under a header sits lower on the screen than in its parent, so the padding
-// came up short by that gap and the last fields stayed under the keyboard. The scroll view measures itself
-// natively instead, so it needs no offset.
+// Android draws edge to edge, so its window no longer shrinks for the keyboard, and automaticallyAdjustKeyboardInsets
+// only works on iOS: the last fields stayed under the keyboard. KeyboardAwareScroll pads and scrolls on both, by where
+// the field is on the screen, so a page sheet or a header above needs no offset. Under Jest it renders the library's
+// mock, a ScrollView given the props, so the clearance only it sets shows which scroll view rendered.
 function expectsScrollViewToTrackKeyboard(): void {
   const [outermost] = nodesOfType(screen.toJSON() as RenderedNode | null, "RCTScrollView");
   expect(outermost).toBeDefined();
-  expect(outermost.props.automaticallyAdjustKeyboardInsets).toBe(true);
+  expect(outermost.props.bottomOffset).toBe(KEYBOARD_FIELD_CLEARANCE);
+  expect(outermost.props.automaticallyAdjustKeyboardInsets).toBeUndefined();
 }
 
 describe("keyboard insets", () => {
@@ -103,22 +97,30 @@ describe("keyboard insets", () => {
     expectsScrollViewToTrackKeyboard();
   });
 
-  it.each(SCROLL_ONLY)("%s tracks the keyboard on its scroll view, not with a keyboard-avoiding view", (feature) => {
+  it.each(SCROLL_ONLY)("%s tracks the keyboard with the shared keyboard-aware scroll view", (feature) => {
     const source = sourceOf(feature);
     expect(source).not.toContain("KeyboardAvoidingView");
-    expect(source).toMatch(TRACKS_KEYBOARD);
+    expect(source).toMatch(KEYBOARD_AWARE_SCROLL);
+    expect(source).not.toMatch(/<ScrollView[\s>]/);
   });
 
   it.each(PINNED_BAR)("%s lifts its pinned bar by the header's height", (feature) => {
     const source = sourceOf(feature);
     expect(source).toMatch(/<HeaderKeyboardAvoidingView[\s>]/);
     expect(source).not.toMatch(/<KeyboardAvoidingView/);
-    expect(source).not.toMatch(TRACKS_KEYBOARD);
+    // The avoiding view already lifts everything above the keyboard; a keyboard-aware scroll inside would pad again.
+    expect(source).not.toMatch(KEYBOARD_AWARE_SCROLL);
   });
 
-  it("nothing in the app uses a bare KeyboardAvoidingView", () => {
-    const root = join(__dirname, "..");
-    const offenders = [...sourceFiles(join(root, "src")), ...sourceFiles(join(root, "app"))].filter((path) => /\bKeyboardAvoidingView\b/.test(codeOf(path)));
-    expect(offenders.map((path) => path.replace(root, ""))).toEqual([]);
+  // The keyboard covers the home indicator, so a bar padded for it while the keyboard is up floats that far above it.
+  it.each(BAR_DRAWN_IN)("%s drops its home-indicator padding as the keyboard opens", (feature) => {
+    const source = sourceOf(feature);
+    expect(source).toMatch(/<PinnedBar[\s>]/);
+    expect(source).not.toContain("useSafeAreaInsets");
+  });
+
+  // Covers a bare KeyboardAvoidingView too, however it's reached.
+  it("nothing in the app leaves a field under the keyboard on Android", () => {
+    expect(keyboardHandlingProblems(join(__dirname, ".."), ["src", "app"])).toEqual([]);
   });
 });

@@ -4,12 +4,11 @@ import {
   useLazyRenderReplyTemplateQuery,
 } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
-import { Banner, EmptyState, FormField, HeaderKeyboardAvoidingView, LoadingButton, OptionSheet, useAnnouncement, useOpenWebsite, useTheme, useToast } from "@platform/mobile";
+import { Banner, EmptyState, FormField, HeaderKeyboardAvoidingView, LoadingButton, OptionSheet, PinnedBar, useAnnouncement, useOpenWebsite, useTheme, useToast } from "@platform/mobile";
 import { router, usePreventRemove } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useReplySend } from "@mybookkeeper/api-client/hooks/useReplySend";
 import { Alert, ScrollView, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WEB_BASE_URL } from "../../constants/api";
 import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
 import { REPLY_BODY_MAX_LENGTH, REPLY_BODY_MIN_HEIGHT, REPLY_SUBJECT_MAX_LENGTH, WRITE_MY_OWN_OPTION } from "../../constants/replies";
@@ -29,7 +28,6 @@ import { useReplyDraft } from "./useReplyDraft";
 
 export default function InquiryReplyBody({ id }: { id: string }) {
   const { colors, spacing, fontSize } = useTheme();
-  const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const openWebsite = useOpenWebsite();
   const { currentData: inquiry, error: loadError, isFetching, refetch: refetchInquiry } = useGetInquiryByIdQuery(id);
@@ -234,11 +232,11 @@ export default function InquiryReplyBody({ id }: { id: string }) {
           value={draft.body}
         />
       </ScrollView>
-      <View
+      <PinnedBar
+        bottomSpacing={spacing.md}
         style={{
           paddingHorizontal: spacing.lg,
           paddingTop: spacing.md,
-          paddingBottom: insets.bottom + spacing.md,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           backgroundColor: colors.background,
@@ -253,7 +251,7 @@ export default function InquiryReplyBody({ id }: { id: string }) {
         >
           {REPLY_SEND_LABELS[sendAction]}
         </LoadingButton>
-      </View>
+      </PinnedBar>
       <OptionSheet
         isOpen={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}

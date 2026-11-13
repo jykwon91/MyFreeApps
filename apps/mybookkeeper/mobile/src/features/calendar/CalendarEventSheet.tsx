@@ -1,8 +1,8 @@
 import { isReadOnlySource } from "@mybookkeeper/api-client/constants/calendarSources";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
-import { LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { KeyboardAwareScroll, LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { useEffect, useRef } from "react";
-import { Alert, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Modal, Platform, Pressable, Text, View } from "react-native";
 import { CALENDAR_MESSAGES } from "../../constants/calendar";
 import { EVENT_MESSAGES } from "../../constants/calendarEventDetail";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -74,7 +74,7 @@ export default function CalendarEventSheet({ event, isOpen, onClose, onOpenLease
             <Text style={{ fontSize: fontSize.md, color: colors.primary }}>{CALENDAR_MESSAGES.close}</Text>
           </Pressable>
         </View>
-        <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
+        <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
           <CalendarEventFacts event={event} />
           {isLease ? (
             <View style={{ gap: spacing.sm }}>
@@ -90,7 +90,7 @@ export default function CalendarEventSheet({ event, isOpen, onClose, onOpenLease
               {canWrite ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{EVENT_MESSAGES.notAllowed}</Text>}
             </>
           )}
-        </ScrollView>
+        </KeyboardAwareScroll>
       </View>
     </Modal>
   );

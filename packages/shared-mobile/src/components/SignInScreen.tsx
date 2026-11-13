@@ -1,5 +1,5 @@
 import { type ComponentRef, useEffect, useRef, useState } from "react";
-import { BackHandler, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { BackHandler, Pressable, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signInFailureMessage } from "../auth/signInFailureMessage";
 import { useSession } from "../hooks/useSession";
@@ -10,6 +10,7 @@ import type { SignInResult } from "../types/SignInResult";
 import type { SignInScreenProps } from "../types/SignInScreenProps";
 import Banner from "./Banner";
 import FormField from "./FormField";
+import KeyboardAwareScroll from "./KeyboardAwareScroll";
 import LoadingButton from "./LoadingButton";
 import SecondFactorForm from "./SecondFactorForm";
 import ToastProvider from "./ToastProvider";
@@ -83,8 +84,7 @@ export default function SignInScreen({ appName, webBaseUrl, onSignedIn }: SignIn
   return (
     <ToastProvider bottomOffset={bottom + spacing.lg}>
       <View style={{ flex: 1 }}>
-        <ScrollView
-          automaticallyAdjustKeyboardInsets
+        <KeyboardAwareScroll
           contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
@@ -165,7 +165,7 @@ export default function SignInScreen({ appName, webBaseUrl, onSignedIn }: SignIn
               </View>
             </>
           )}
-        </ScrollView>
+        </KeyboardAwareScroll>
       </View>
     </ToastProvider>
   );

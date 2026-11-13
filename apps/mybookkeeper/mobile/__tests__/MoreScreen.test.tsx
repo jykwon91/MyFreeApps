@@ -1,4 +1,4 @@
-import { ToastProvider } from "@platform/mobile";
+import { KEYBOARD_FIELD_CLEARANCE, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { AccessibilityInfo, Text as MockText } from "react-native";
 import { MORE_MENU } from "../src/constants/moreMenu";
@@ -168,7 +168,8 @@ describe("MoreScreen search", () => {
     const scroll = screen.getByTestId("more-scroll");
     expect(scroll.props.keyboardDismissMode).toBe("on-drag");
     expect(scroll.props.keyboardShouldPersistTaps).toBe("handled");
-    expect(scroll.props.automaticallyAdjustKeyboardInsets).toBe(true);
+    // The keyboard-aware scroll view, which keeps the field clear of the keyboard on Android as well as iOS.
+    expect(scroll.props.bottomOffset).toBe(KEYBOARD_FIELD_CLEARANCE);
     expect(scroll.props.stickyHeaderIndices).toEqual([0]);
   });
 });

@@ -2,13 +2,15 @@ import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/properties
 import { useUpdateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { Banner, FormField, LoadingButton, OptionSheet, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, Text } from "react-native";
-import { DEFAULT_CATEGORY, NO_PROPERTY_OPTION } from "../../constants/transactionEdit";
+import { Alert, Text } from "react-native";
+import { DEFAULT_CATEGORY, NO_PROPERTY_OPTION, TRANSACTION_EDIT_SHEET, TRANSACTION_SAVE_ACTION } from "../../constants/transactionEdit";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
+import type { TransactionEditSheet } from "../../types/TransactionEditSheet";
 import type { TransactionEditValues } from "../../types/TransactionEditValues";
+import type { TransactionSaveAction } from "../../types/TransactionSaveAction";
 import PeriodDateRow from "../shell/PeriodDateRow";
 import PickerField from "./PickerField";
 import { confirmTaxYearChange } from "./confirmTaxYearChange";
@@ -24,8 +26,8 @@ export default function TransactionEditForm({ original }: { original: Transactio
   const [updateTransaction, { isLoading: isSaving }] = useUpdateTransactionMutation();
   const [values, setValues] = useState<TransactionEditValues>(() => toEditValues(original));
   const [showAmountError, setShowAmountError] = useState(false);
-  const [openSheet, setOpenSheet] = useState<"category" | "property" | null>(null);
-  const [savingAction, setSavingAction] = useState<"approve" | "save" | null>(null);
+  const [openSheet, setOpenSheet] = useState<TransactionEditSheet | null>(null);
+  const [savingAction, setSavingAction] = useState<TransactionSaveAction | null>(null);
   const [categoryWasReset, setCategoryWasReset] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const [isDateOpen, setIsDateOpen] = useState(false);
@@ -76,7 +78,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
     const choice = newTaxYear === null ? "keep" : await confirmTaxYearChange(original.tax_year, newTaxYear);
     if (choice === "cancel") return;
     const data: Partial<Transaction> = choice === "move" && newTaxYear !== null ? { ...approval, tax_year: newTaxYear } : approval;
-    setSavingAction(approve ? "approve" : "save");
+    setSavingAction(approve ? TRANSACTION_SAVE_ACTION.approve : TRANSACTION_SAVE_ACTION.save);
     try {
       const result = await updateTransaction({ id: original.id, data }).unwrap();
       const learned = changes.category && vendor ? ` I'll file ${vendor} under ${categoryLabel(values.category)} from now on.` : "";
@@ -107,8 +109,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
 
   return (
     <>
-      <ScrollView
-        automaticallyAdjustKeyboardInsets
+      <KeyboardAwareScroll
         contentContainerStyle={{ gap: spacing.lg, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
@@ -124,8 +125,8 @@ export default function TransactionEditForm({ original }: { original: Transactio
           value={values.amount}
         />
         <SegmentedControl accessibilityLabel="Type" onChange={changeType} segments={TRANSACTION_TYPES} value={values.type} />
-        <PickerField hint={categoryHint} label="Category" onPress={() => setOpenSheet("category")} value={categoryLabel(values.category)} />
-        <PickerField hint={propertyHint} label="Property" onPress={() => setOpenSheet("property")} value={propertyLabel(values.propertyId, properties)} />
+        <PickerField hint={categoryHint} label="Category" onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.category)} value={categoryLabel(values.category)} />
+        <PickerField hint={propertyHint} label="Property" onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.property)} value={propertyLabel(values.propertyId, properties)} />
         <FormField
           label="Description"
           multiline
@@ -138,7 +139,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
             {values.propertyId ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>Choose a property to approve.</Text>}
             <LoadingButton
               disabled={!values.propertyId || isSaving}
-              isLoading={savingAction === "approve"}
+              isLoading={savingAction === TRANSACTION_SAVE_ACTION.approve}
               loadingText="Saving…"
               onPress={() => save(true)}
             >
@@ -146,7 +147,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
             </LoadingButton>
             <LoadingButton
               disabled={isSaving}
-              isLoading={savingAction === "save"}
+              isLoading={savingAction === TRANSACTION_SAVE_ACTION.save}
               loadingText="Saving…"
               onPress={() => save(false)}
               variant="ghost"
@@ -155,14 +156,14 @@ export default function TransactionEditForm({ original }: { original: Transactio
             </LoadingButton>
           </>
         ) : (
-          <LoadingButton disabled={isSaving} isLoading={savingAction === "save"} loadingText="Saving…" onPress={() => save(false)}>
+          <LoadingButton disabled={isSaving} isLoading={savingAction === TRANSACTION_SAVE_ACTION.save} loadingText="Saving…" onPress={() => save(false)}>
             Save
           </LoadingButton>
         )}
-      </ScrollView>
+      </KeyboardAwareScroll>
 
       <OptionSheet
-        isOpen={openSheet === "category"}
+        isOpen={openSheet === TRANSACTION_EDIT_SHEET.category}
         onClose={() => setOpenSheet(null)}
         onSelect={(category) => {
           setOpenSheet(null);
@@ -174,7 +175,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
         value={values.category}
       />
       <OptionSheet
-        isOpen={openSheet === "property"}
+        isOpen={openSheet === TRANSACTION_EDIT_SHEET.property}
         onClose={() => setOpenSheet(null)}
         onSelect={(propertyId) => {
           setOpenSheet(null);

@@ -4,7 +4,7 @@ import { characterCounter } from "@platform/core/utils/characterCounter";
 import { companyNameProblem } from "@myjobhunter/api-client/utils/companyNameProblem";
 import { filterCompanies } from "@myjobhunter/api-client/utils/filterCompanies";
 import { findCompanyByName } from "@myjobhunter/api-client/utils/findCompanyByName";
-import { Banner, CharacterCounter, LoadingButton, MIN_TOUCH_TARGET, SearchField, useTheme } from "@platform/mobile";
+import { Banner, CharacterCounter, KeyboardAwareScroll, LoadingButton, MIN_TOUCH_TARGET, SearchField, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { FlatList, Modal, Pressable, Text, View } from "react-native";
 import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../../constants/addApplication";
@@ -107,6 +107,8 @@ export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onA
           data={matches}
           keyExtractor={(company) => company.id}
           keyboardShouldPersistTaps="handled"
+          // The keyboard covers the bottom of the list while searching, so the last companies need room to scroll above it.
+          renderScrollComponent={(props) => <KeyboardAwareScroll {...props} />}
           renderItem={({ item }) => (
             <CompanyPickerRow detail={item.primary_domain} disabled={isAdding} label={item.name} onPress={() => onSelect(item)} />
           )}

@@ -1,19 +1,18 @@
-import { useHeaderHeight } from "expo-router/react-navigation";
-import { KeyboardAvoidingView, Platform } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import type { HeaderKeyboardAvoidingViewProps } from "../types/HeaderKeyboardAvoidingViewProps";
 
 /**
- * Lifts a bottom-pinned bar (a send or save button, a toolbar) above the keyboard on a screen under a stack header.
+ * Lifts a bottom-pinned bar (a send or save button, a toolbar) above the keyboard on a screen under a stack header,
+ * on iOS and Android. Android draws edge to edge, so its window no longer shrinks for the keyboard and the bar
+ * needs the same padding iOS gets.
  *
- * KeyboardAvoidingView pads by comparing its position in its parent with the keyboard's position on the screen,
- * and the header sits between the two, so it needs the header's height as an offset. A screen that only scrolls
- * should use `automaticallyAdjustKeyboardInsets` on its scroll view instead, which needs no offset.
+ * The view pads by how far its bottom edge sits below the keyboard's top. automaticOffset measures where the view
+ * really is in the window, so the header above it, whatever its height, and a status bar drawn over are counted
+ * without an offset. A screen that only scrolls should use KeyboardAwareScroll instead.
  */
 export default function HeaderKeyboardAvoidingView({ children }: HeaderKeyboardAvoidingViewProps) {
-  const headerHeight = useHeaderHeight();
-
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={headerHeight} style={{ flex: 1 }}>
+    <KeyboardAvoidingView automaticOffset behavior="padding" style={{ flex: 1 }}>
       {children}
     </KeyboardAvoidingView>
   );

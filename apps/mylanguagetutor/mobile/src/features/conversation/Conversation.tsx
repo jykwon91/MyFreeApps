@@ -5,10 +5,9 @@ import { startConversationPrompt } from "@mylanguagetutor/api-client/utils/start
 import { replayRate } from "@mylanguagetutor/api-client/utils/replayRate";
 import { typedAnswerPlaceholder } from "@mylanguagetutor/api-client/utils/typedAnswerPlaceholder";
 import { usageBlock } from "@mylanguagetutor/api-client/utils/usageBlock";
-import { HeaderKeyboardAvoidingView, useAnnouncement, useTheme } from "@platform/mobile";
+import { HeaderKeyboardAvoidingView, PinnedBar, useAnnouncement, useTheme } from "@platform/mobile";
 import { type ComponentRef, useRef, useState } from "react";
-import { type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, Text, type TextInput, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, Text, type TextInput } from "react-native";
 import { CORRECTIONS_GRACE_MS } from "../../constants/conversation";
 import { useAwakeUntilIdle } from "../../hooks/useAwakeUntilIdle";
 import { useOnBackground } from "../../hooks/useOnBackground";
@@ -57,7 +56,6 @@ export default function Conversation({ language, scenario, level }: Conversation
     stopSpeaking: synthesis.cancel,
   });
   const usage = useGetUsageTodayQuery();
-  const insets = useSafeAreaInsets();
   const [completeDismissed, setCompleteDismissed] = useState(false);
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   const { scroller, onScroll, onContentSizeChange, onLayout, stick } = useStickToBottom();
@@ -132,7 +130,7 @@ export default function Conversation({ language, scenario, level }: Conversation
         {session.scenarioState.complete && !completeDismissed ? <ScenarioCompleteBanner onKeepTalking={() => setCompleteDismissed(true)} /> : null}
         {session.failure ? <TurnErrorBanner failure={session.failure} onDismiss={session.dismissFailure} onRetry={session.retry} /> : null}
       </ScrollView>
-      <View style={{ padding: spacing.lg, paddingBottom: insets.bottom + spacing.lg, borderTopWidth: 1, borderColor: colors.border }}>
+      <PinnedBar bottomSpacing={spacing.lg} style={{ padding: spacing.lg, borderTopWidth: 1, borderColor: colors.border }}>
         {block ? (
           <SessionBlockNotice block={block} />
         ) : (
@@ -147,7 +145,7 @@ export default function Conversation({ language, scenario, level }: Conversation
             voice={voice}
           />
         )}
-      </View>
+      </PinnedBar>
       {awake && !block ? <KeepAwake /> : null}
     </HeaderKeyboardAvoidingView>
   );

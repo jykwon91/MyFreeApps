@@ -1,7 +1,7 @@
-import { AccountSettings, AppVersion, MoreMenuGroups, SearchField, useTheme } from "@platform/mobile";
+import { AccountSettings, AppVersion, KeyboardAwareScroll, MoreMenuGroups, SearchField, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { View } from "react-native";
 import { WEB_BASE_URL } from "../../constants/api";
 import { ALL_DESTINATIONS } from "../../constants/allDestinations";
 import { MORE_MENU } from "../../constants/moreMenu";
@@ -24,9 +24,8 @@ export default function MoreScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView
+      <KeyboardAwareScroll
         contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}
-        automaticallyAdjustKeyboardInsets
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         stickyHeaderIndices={[0]}
@@ -49,7 +48,7 @@ export default function MoreScreen() {
             <AppVersion />
           </>
         )}
-      </ScrollView>
+      </KeyboardAwareScroll>
     </View>
   );
 }

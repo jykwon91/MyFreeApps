@@ -1,6 +1,6 @@
 import type { TotpSetup } from "@platform/core/types/security/totp-setup";
 import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { fetchTwoFactorEnabled } from "../auth/mobileAuthApi";
 import { requestTwoStepVerify } from "../auth/twoStepApi";
 import { TWO_STEP_MESSAGES as MESSAGES } from "../constants/twoStep";
@@ -13,6 +13,7 @@ import type { TwoStepTurnOnStep } from "../types/TwoStepTurnOnStep";
 import type { TwoStepVerifyResult } from "../types/TwoStepVerifyResult";
 import type { TwoStepTurnOnScreenProps } from "../types/TwoStepTurnOnScreenProps";
 import Banner from "./Banner";
+import KeyboardAwareScroll from "./KeyboardAwareScroll";
 import LoadingButton from "./LoadingButton";
 import TwoStepAddStep from "./TwoStepAddStep";
 import TwoStepPasswordStep from "./TwoStepPasswordStep";
@@ -83,8 +84,7 @@ export default function TwoStepTurnOnScreen({ appName, onFinished, onLeaveRiskCh
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView
-        automaticallyAdjustKeyboardInsets
+      <KeyboardAwareScroll
         contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
@@ -139,7 +139,7 @@ export default function TwoStepTurnOnScreen({ appName, onFinished, onLeaveRiskCh
           </>
         ) : null}
         {isTurningOff ? <TwoStepTurnOffSheet onClose={() => setIsTurningOff(false)} onSettled={turnOffSettled} /> : null}
-      </ScrollView>
+      </KeyboardAwareScroll>
     </View>
   );
 }

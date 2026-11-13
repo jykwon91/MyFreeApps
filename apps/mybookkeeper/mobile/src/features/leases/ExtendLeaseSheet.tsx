@@ -1,9 +1,9 @@
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useExtendSignedLeaseMutation, useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, FormField, LoadingButton, MIN_TOUCH_TARGET, useTheme, useToast } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, type KeyboardAwareScrollRef, LoadingButton, MIN_TOUCH_TARGET, useTheme, useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Modal, ScrollView, type ScrollViewInstance, Switch, Text, View } from "react-native";
+import { Alert, Modal, Switch, Text, View } from "react-native";
 import {
   alreadyEnds,
   emailAddendumLabel,
@@ -43,7 +43,7 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
   const [failure, setFailure] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const isSubmitting = useRef(false);
-  const scroller = useRef<ScrollViewInstance>(null);
+  const scroller = useRef<KeyboardAwareScrollRef>(null);
   const isLater = picked !== null && picked > endsOn;
 
   // The buttons sit below the calendar and note, so a message at the top would be off screen.
@@ -125,8 +125,7 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
   return (
     <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <ScrollView
-          automaticallyAdjustKeyboardInsets
+        <KeyboardAwareScroll
           contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
@@ -174,7 +173,7 @@ export default function ExtendLeaseSheet({ leaseId, applicantId, tenantName, end
           <LoadingButton disabled={isBusy} onPress={close} variant="ghost">
             {LEASE_MESSAGES.cancel}
           </LoadingButton>
-        </ScrollView>
+        </KeyboardAwareScroll>
       </View>
     </Modal>
   );
