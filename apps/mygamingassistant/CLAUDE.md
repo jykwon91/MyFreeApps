@@ -296,7 +296,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   by class then kind (`macroKinds.ts`, hover cast always first). Class picker:
   `?class=` wins, else `mga.wowForever.macros.class.v1`, else all classes
   (`hooks/useMacroClassFilter.ts`). The old `/wow-forever/warlock-macros`
-  redirects to `/wow-forever/macros?class=warlock`.
+  redirects to `/wow-forever/macros?class=warlock`. A macro that names a
+  player by surname uses `/run SendChatMessage(... GetUnitName("target",true)
+  ...)` (`%t` may give only the first name), marked unconfirmed `fullName`.
   `wowMacros.test.ts` checks every macro's spell/item names against
   `data/macros/macroNames.json`, **GENERATED** by
   `python -m scripts.wow_macros.build` (each class's talent-tree skill lines,
