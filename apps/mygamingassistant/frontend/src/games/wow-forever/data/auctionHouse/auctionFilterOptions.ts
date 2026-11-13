@@ -91,7 +91,7 @@ export const SEARCH_LIMIT = 200;
 /** The inline filter panel replaces the phone's bottom sheet from this width (Tailwind's sm). */
 export const AUCTION_WIDE_QUERY = "(min-width: 640px)";
 
-/** Placeholder chips shown while the item list loads. */
+/** Placeholder chips shown while the item list (gear filters) or the item categories load. */
 export const GEAR_SKELETON_CHIPS = 8;
 
 export const QUALITY_CHIPS: readonly AuctionChipOption<AuctionQualityFilter>[] = QUALITY_FILTER_OPTIONS.map((id) => ({

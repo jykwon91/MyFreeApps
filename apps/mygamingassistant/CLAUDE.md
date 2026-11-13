@@ -1416,8 +1416,21 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   filters. Gold is compared in whole copper (`Math.round`). A backwards price
   or level range stays as typed in the URL and boxes and is read low to high by
   `normalizeFilterRanges` (list + chips); typed numbers are clamped (gold ≥ 0,
-  level 1–60). An item category filter (potions, herbs,
-  trade goods) needs item class/subclass in the items generator first.
+  level 1–60). Category filter (`?cat=consumable|trade-goods|gear|recipe|
+  reagent|container|projectile|quiver|misc`, `?sub=<subclass id>`; the first
+  group in the panel, `AuctionCategoryFilters`): one chip row of categories,
+  then that category's subclasses as the game names them (Potions, Elixirs,
+  Herb, Cloth ...). Gear is one chip with no subclass row (the Gear group
+  below already splits slot and type). Data is `data/items/itemCategories.json`,
+  **GENERATED** by `python -m scripts.wow_items.categories [--hotfix-cache PATH]`
+  (also run by `wow_refresh apply`): item id -> `<class>.<subclass>` from the
+  Forever client's Item table (modern split: Potions 0.1, Herb 7.9, Cloth 7.5),
+  weapons and armor folded into `gear`, Quest/Key and "(OBSOLETE)" subclasses
+  left out. ~130 KB (~55 KB gzipped), fetched lazily by
+  `lib/itemCategoriesLoader.ts` / `hooks/useItemCategories.ts` only once a
+  category is picked or a link has `?cat=`; until it loads the list shows the
+  skeleton, never an unfiltered list. An item the file doesn't list counts as
+  Miscellaneous.
 - Auction house profession filter (`?prof=<crafting profession>`, replace;
   `?recipe=<spell id>`, push to set / replace to clear; changing `prof` drops
   `recipe`; `hooks/useAuctionMaterialFilter.ts`): `AuctionProfessionSelect`

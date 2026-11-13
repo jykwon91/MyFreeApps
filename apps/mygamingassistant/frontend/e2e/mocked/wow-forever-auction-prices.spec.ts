@@ -22,6 +22,8 @@
  *   - the Auction house page filters by quality, price and units on sale, keeps every filter in
  *     its link (a deep link opens the filtered view, Back undoes a change), and on a phone opens
  *     them in a bottom sheet that doesn't scroll sideways
+ *   - the Auction house page filters by item category (Trade Goods, then Metal & Stone), loading
+ *     the item categories only once a category is picked, and keeps both in its link
  *   - "Download the addon" zips MGA Prices with every house's prices in Data.lua, plus crafting demand per material
  *   - nothing scrolls sideways at 375px
  *
@@ -360,6 +362,47 @@ test("the Auction house page filters by quality, price and units on sale, and Ba
   await expect(page).toHaveURL(/qty=10/);
   await page.goBack();
   await expect(page).toHaveURL(/\/wow-forever$/);
+});
+
+const ITEM_CATEGORIES = "**/itemCategories*.json";
+
+/** Linen Cloth is Trade Goods > Cloth, Gold Bar is Trade Goods > Metal & Stone, the rare test item a Potion. */
+const CATEGORIES_FILE = {
+  source: "test",
+  clientBuild: "1.60.1.70888",
+  attribution: "test",
+  subclasses: { "0.1": "Potions", "7.5": "Cloth", "7.7": "Metal & Stone" },
+  items: { "0.1": [720], "7.5": [2589], "7.7": [3577] },
+};
+
+test("the Auction house page filters by category and subclass, and loads the categories only when one is picked", async ({ page }) => {
+  await stubFilterPrices(page);
+  let categoryRequests = 0;
+  await page.route(ITEM_CATEGORIES, (route) => {
+    categoryRequests += 1;
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(CATEGORIES_FILE) });
+  });
+  await page.goto("/wow-forever/auction-house");
+  await expect(page.getByTestId("auction-row")).toHaveCount(3);
+  await page.getByTestId("auction-filters-button").click();
+  const panel = page.getByTestId("auction-filter-panel");
+  expect(categoryRequests).toBe(0);
+
+  await panel.getByTestId("auction-filter-category").getByRole("button", { name: "Trade Goods" }).click();
+  await expect(page).toHaveURL(/cat=trade-goods/);
+  expect(await rowNames(page, 2)).toEqual(["Linen Cloth", "Gold Bar"]);
+  const kinds = panel.getByTestId("auction-filter-subcategory");
+  await expect(kinds.getByRole("button")).toHaveText(["All trade goods", "Cloth", "Metal & Stone"]);
+
+  await kinds.getByRole("button", { name: "Metal & Stone" }).click();
+  await expect(page).toHaveURL(/cat=trade-goods&sub=7/);
+  expect(await rowNames(page, 1)).toEqual(["Gold Bar"]);
+  await expect(page.getByRole("button", { name: "Remove filter: Category: Metal & Stone" })).toBeVisible();
+  expect(categoryRequests).toBe(1);
+
+  await page.getByRole("button", { name: "Remove filter: Category: Metal & Stone" }).click();
+  await expect(page).not.toHaveURL(/cat=|sub=/);
+  await expect(page.getByTestId("auction-row")).toHaveCount(3);
 });
 
 test("a link to a filtered Auction house view opens it filtered, with the filters shown", async ({ page }) => {

@@ -10,8 +10,9 @@ import { AUCTION_WIDE_QUERY } from "@/games/wow-forever/data/auctionHouse/auctio
 import { findClass } from "@/games/wow-forever/data/classes";
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
 import { useClientItems } from "@/games/wow-forever/hooks/useClientItems";
+import { useItemCategories } from "@/games/wow-forever/hooks/useItemCategories";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
-import { describeActiveFilters, gearFilterActive, removalPatch } from "@/games/wow-forever/lib/auctionHouse/auctionActiveFilters";
+import { categoryFilterActive, describeActiveFilters, gearFilterActive, removalPatch } from "@/games/wow-forever/lib/auctionHouse/auctionActiveFilters";
 import { auctionResultsKey } from "@/games/wow-forever/lib/auctionHouse/auctionResultsKey";
 import { lookupAuctionItems } from "@/games/wow-forever/lib/auctionHouse/auctionLookup";
 import { itemQuality } from "@/games/wow-forever/lib/icons/wowIcons";
@@ -36,21 +37,29 @@ export default function AuctionLookup({ house, filters, onFilters, onClear, mate
   const [gearOpen, setGearOpen] = useState(() => gearFilterActive(filters));
   // The ~600 KB item list is fetched only once the gear group is opened (or a link already filters by gear).
   const gear = useClientItems(gearOpen || gearFilterActive(filters));
+  // The item categories are fetched only once a category is picked (or a link already has one).
+  const categories = useItemCategories(categoryFilterActive(filters));
   const priceState = useAuctionPrices(house);
 
   const classLabel = findClass(player.classId)?.name ?? player.classId;
-  const active = describeActiveFilters(filters, classLabel);
+  const categoriesIndex = categories.status === LOAD_STATUS.ready ? categories.index : null;
+  const active = describeActiveFilters(filters, classLabel, categoriesIndex);
   const gearById = gear.status === LOAD_STATUS.ready ? gear.list.byId : null;
-  const context = useMemo(() => ({ qualityOf: itemQuality, gear: gearById, classId: player.classId }), [gearById, player.classId]);
+  const context = useMemo(
+    () => ({ qualityOf: itemQuality, gear: gearById, categories: categoriesIndex, classId: player.classId }),
+    [gearById, categoriesIndex, player.classId],
+  );
   const { prices } = priceState;
   const lookup = useMemo(() => (prices ? lookupAuctionItems(prices.byId, materials, filters, context) : null), [prices, materials, filters, context]);
   const gearPending = gearFilterActive(filters) && gear.status !== LOAD_STATUS.ready;
-  const resultCount = lookup && !gearPending ? lookup.items.length : null;
+  const categoryPending = categoryFilterActive(filters) && categories.status !== LOAD_STATUS.ready;
+  const resultCount = lookup && !gearPending && !categoryPending ? lookup.items.length : null;
 
   const panel = (
     <AuctionFilterPanel
       filters={filters}
       onFilters={onFilters}
+      categories={categories}
       gear={gear}
       gearOpen={gearOpen}
       onToggleGear={() => setGearOpen((open) => !open)}
@@ -76,7 +85,7 @@ export default function AuctionLookup({ house, filters, onFilters, onClear, mate
         </AuctionFilterSheet>
       )}
       <AuctionActiveFilters active={active} onRemove={(group) => onFilters(removalPatch(group))} onClear={onClear} />
-      <AuctionLookupList priceState={priceState} gear={gear} filters={filters} active={active} lookup={lookup} resultsKey={auctionResultsKey(house, professionLabel, filters)} professionLabel={professionLabel} onClear={onClear} />
+      <AuctionLookupList priceState={priceState} gear={gear} categories={categories} filters={filters} active={active} lookup={lookup} resultsKey={auctionResultsKey(house, professionLabel, filters)} professionLabel={professionLabel} onClear={onClear} />
     </div>
   );
 }

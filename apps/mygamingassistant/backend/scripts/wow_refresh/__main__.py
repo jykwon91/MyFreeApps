@@ -88,6 +88,8 @@ def generators(*, art: bool, hotfix_cache: Path, quest_cache: Path, creature_cac
         ["scripts.wow_gold.build"],
         ["scripts.wow_consumables.build"],
         ["scripts.wow_items.build", *cache],
+        # The Auction house's item categories, from the same client tables.
+        ["scripts.wow_items.categories", *cache],
         # Reads the World Map, Professions and Item output above.
         ["scripts.wow_item_pages.build", *cache],
         # The live talent trees, from Blizzard's Game Data API (BLIZZARD_CLIENT_ID / _SECRET, checked in apply).

@@ -10,6 +10,8 @@ export const NO_AUCTION_FILTERS: AuctionFilters = {
   maxGold: null,
   minQuantity: null,
   minListings: null,
+  category: null,
+  subcategory: null,
   slot: null,
   itemType: null,
   minLevel: null,

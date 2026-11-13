@@ -1,7 +1,8 @@
 /** Filter and order the auction-house price list for the lookup page. Pure: no state, no clock. */
 import { COPPER_PER_GOLD } from "@/games/wow-forever/crafting/matPrices";
 import { BROWSE_LIMIT, SEARCH_LIMIT } from "@/games/wow-forever/data/auctionHouse/auctionFilterOptions";
-import { gearFilterActive } from "@/games/wow-forever/lib/auctionHouse/auctionActiveFilters";
+import { categoryFilterActive, gearFilterActive } from "@/games/wow-forever/lib/auctionHouse/auctionActiveFilters";
+import { inCategory } from "@/games/wow-forever/lib/auctionHouse/itemCategoryLookup";
 import { normalizeFilterRanges } from "@/games/wow-forever/lib/auctionHouse/normalizeFilterRanges";
 import { usableByClass } from "@/games/wow-forever/lib/auctionHouse/usableByClass";
 import { ITEM_QUALITIES } from "@/games/wow-forever/data/itemSlots";
@@ -79,17 +80,19 @@ function matchesGear(item: AuctionPrice, filters: AuctionFilters, context: Aucti
 /**
  * The items that match the search and every filter that is on (a filter left off
  * lets everything through), in the order given. A reversed price or level range is read low to high. Gear filters wait for
- * `context.gear`: until the item list has loaded they don't apply.
+ * `context.gear`, and the category filter for `context.categories`: until those have loaded they don't apply.
  */
 export function filterAuctionItems(items: Iterable<AuctionPrice>, asked: AuctionFilters, context: AuctionFilterContext): AuctionPrice[] {
   const filters = normalizeFilterRanges(asked);
   const needle = filters.query.trim().toLowerCase();
   const gear = gearFilterActive(filters) ? context.gear : null;
+  const categories = categoryFilterActive(filters) ? context.categories : null;
   return [...items].filter((item) => {
     if (!matchesQuery(item, needle) || !inGoldRange(item, filters)) return false;
     if (filters.minQuantity !== null && item.quantity < filters.minQuantity) return false;
     if (filters.minListings !== null && item.listings < filters.minListings) return false;
     if (filters.qualities.length > 0 && !filters.qualities.includes(context.qualityOf(item.itemId) ?? "unknown")) return false;
+    if (categories !== null && !inCategory(item.itemId, filters, categories)) return false;
     return gear === null || matchesGear(item, filters, context, gear);
   });
 }
