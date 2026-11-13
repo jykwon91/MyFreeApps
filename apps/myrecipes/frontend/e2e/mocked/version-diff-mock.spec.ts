@@ -5,22 +5,20 @@
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
-import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
-import { diffVersions } from "./fixtures/diffVersions";
+import { stubRecipeApi } from "./fixtures/stubRecipeApi";
 import {
   SALT_LINEAGE_KEY,
   recipeIdAt,
-  detailOf,
   stepIdOf,
   versionIdOf,
   versionOf,
-  versionSummaryOf,
 } from "./fixtures/recipeFixtures";
 
 const RECIPE_ID = recipeIdAt(4);
 const VERSION_COUNT = 3;
+const DIFF_SEGMENT = "/diff";
 // Worded as VERSION_COPY in @myrecipes/api-client; Playwright can't import that CommonJS-typed package at runtime.
 const VERSION_COPY = {
   nothing: "nothing",
@@ -29,8 +27,6 @@ const VERSION_COPY = {
     "One of these versions isn't part of this recipe, or no longer exists. Go back and pick two versions to compare.",
   recipeOrVersionGone: "This recipe or one of its versions no longer exists.",
 } as const;
-const NOT_FOUND = { detail: "Not Found" };
-const BAD_AGAINST = { detail: "against version is not a version of this recipe" };
 
 // v1 and v2 share the default body; v3 doubles the salt and adds a step, so v1 -> v3 has two changes.
 const V3_BASE = versionOf(RECIPE_ID, VERSION_COUNT, { change_note: "Change 3" });
@@ -45,43 +41,17 @@ const VERSIONS: VersionResponse[] = [
     steps: [...V3_BASE.steps, { id: stepIdOf(VERSION_COUNT, 1), position: 1, instruction: "Stir." }],
   },
 ];
-const RECIPE = detailOf(RECIPE_ID, {
-  is_owner: false,
-  version_count: VERSION_COUNT,
-  latest_version_number: VERSION_COUNT,
-  latest_version: VERSIONS[VERSION_COUNT - 1]!,
-});
-
-const versionById = (id: string | undefined): VersionResponse | undefined =>
-  VERSIONS.find((version) => version.id === id);
 
 /**
- * Answers the recipe's public reads like the backend (recipes.py diff_version):
- * a version that is not the recipe's is 404; an `against` that is not the
- * recipe's is 400; without `against` the diff is against the parent, and the
- * first version, which has none, gets everything as added. The diff itself is
- * derived from the versions' bodies. Returns each diff URL asked for.
+ * Someone else's recipe with three versions, read through the shared recipe stub
+ * (its diff answers like recipes.py diff_version). Returns each diff URL asked for.
  */
 async function stubRecipe(page: Page): Promise<URL[]> {
   const diffs: URL[] = [];
-  await page.route(/\/api\/recipes(\?|$)/, (route) => route.fulfill(json([])));
-  await page.route(new RegExp(`/api/recipes/${RECIPE_ID}(/.*)?(\\?.*)?$`), (route) => {
-    const url = new URL(route.request().url());
-    const [, versionId, diff] = /\/versions\/([^/]+)(\/diff)?$/.exec(url.pathname) ?? [];
-    const version = versionById(versionId);
-    if (url.pathname.endsWith(`/recipes/${RECIPE_ID}`)) return route.fulfill(json(RECIPE));
-    if (url.pathname.endsWith("/versions")) return route.fulfill(json(VERSIONS.map((v) => versionSummaryOf(v))));
-    if (!version) return route.fulfill(json(NOT_FOUND, 404));
-    if (!diff) return route.fulfill(json(version));
-
-    diffs.push(url);
-    const against = url.searchParams.get("against");
-    if (against !== null) {
-      const from = versionById(against);
-      return route.fulfill(from ? json(diffVersions(from, version)) : json(BAD_AGAINST, 400));
-    }
-    return route.fulfill(json(diffVersions(versionById(version.parent_version_id ?? undefined) ?? null, version)));
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname.endsWith(DIFF_SEGMENT)) diffs.push(new URL(request.url()));
   });
+  await stubRecipeApi(page, RECIPE_ID, { isOwner: false, versions: VERSIONS });
   return diffs;
 }
 

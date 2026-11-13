@@ -16,6 +16,7 @@ import type { Page } from "@playwright/test";
 import type { CurrentUser } from "@platform/core/types/user/current-user";
 import { pathUnderBase } from "./apiPath";
 import { DEFAULT_API_BASE } from "./constants/defaultApiBase";
+import { NOT_FOUND_BODY } from "./constants/notFoundBody";
 import { json } from "./mockResponse";
 import { unsignedJwt } from "./unsignedJwt";
 import type { ApiBaseOption } from "./types/ApiBaseOption";
@@ -68,7 +69,7 @@ export async function stubUnmatchedApi(
   await page.route((url) => pathUnderBase(url, apiBase) !== null, (route) =>
     route.fulfill(
       answer === "notFound"
-        ? json({ detail: "Not Found" }, 404)
+        ? json(NOT_FOUND_BODY, 404)
         : json(route.request().method() === "GET" ? [] : {}),
     ),
   );

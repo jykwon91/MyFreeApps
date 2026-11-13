@@ -5,9 +5,11 @@
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { DEFAULT_API_BASE } from "@platform/ui/test-support/constants/defaultApiBase";
 import { json } from "@platform/ui/test-support/mockResponse";
-import { stubSignedInShell, TEST_USER } from "@platform/ui/test-support/mockSession";
+import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { recipeIdAt } from "./fixtures/recipeFixtures";
+import { stubRecipeCreate } from "./fixtures/stubRecipeCreate";
 
 const CREATED_ID = recipeIdAt(2);
 const DRAFT = {
@@ -30,38 +32,12 @@ const PHOTO = {
 /** POST /recipes/extract answers each status in turn; POST /recipes creates from what was posted. */
 async function stubImport(page: Page, extractStatuses: number[]) {
   const extracts: string[] = [];
-  const posted: Array<Record<string, unknown>> = [];
-  await page.route(/\/api\/recipes\/extract$/, (route) => {
+  await page.route(new RegExp(`${DEFAULT_API_BASE}/recipes/extract$`), (route) => {
     extracts.push(route.request().headers()["content-type"] ?? "");
     const status = extractStatuses[extracts.length - 1] ?? 200;
     return route.fulfill(status === 200 ? json(DRAFT) : json({ detail: "no" }, status));
   });
-  await page.route(/\/api\/recipes(\?|$)/, (route) => {
-    if (route.request().method() !== "POST") return route.fulfill(json([]));
-    const body = route.request().postDataJSON() as Record<string, unknown>;
-    posted.push(body);
-    return route.fulfill(
-      json(
-        {
-          id: CREATED_ID,
-          title: body.title,
-          description: null,
-          source: body.source,
-          created_at: "2026-11-11T00:00:00Z",
-          updated_at: "2026-11-11T00:00:00Z",
-          version_count: 1,
-          latest_version_number: 1,
-          is_owner: true,
-          owner_display_name: TEST_USER.display_name,
-          best_rating: null,
-          last_cooked_at: null,
-          latest_version: null,
-        },
-        201,
-      ),
-    );
-  });
-  await page.route(new RegExp(`/api/recipes/${CREATED_ID}(/.*)?(\\?.*)?$`), (route) => route.fulfill(json({ detail: "Not Found" }, 404)));
+  const posted = await stubRecipeCreate(page, CREATED_ID);
   return { extracts, posted };
 }
 
@@ -88,6 +64,8 @@ test("reads a photo into the editor, then creates the recipe from it", async ({ 
 
   await page.getByRole("button", { name: "Create recipe" }).click();
   await expect(page).toHaveURL(new RegExp(`/recipes/${CREATED_ID}$`));
+  await expect(page.getByRole("heading", { name: DRAFT.title })).toBeVisible();
+  await expect(page.getByText("Simmer.")).toBeVisible();
   expect(posted).toEqual([expect.objectContaining({ title: DRAFT.title, source: DRAFT.source, prep_minutes: 10 })]);
 });
 

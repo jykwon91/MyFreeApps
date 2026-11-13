@@ -6,36 +6,13 @@
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
-import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
-import type { RecipeCreateRequest } from "@myrecipes/api-client/types/recipe/recipe-requests";
-import { VERSION_1_ID, VERSION_2_ID, detailFromCreateRequest, lineageKeyAt, recipeIdAt } from "./fixtures/recipeFixtures";
+import { detailFromCreateRequest, recipeIdAt } from "./fixtures/recipeFixtures";
+import { stubRecipeApi } from "./fixtures/stubRecipeApi";
+import { stubRecipeCreate } from "./fixtures/stubRecipeCreate";
 import { toast } from "@platform/ui/test-support/toast";
 
 const CREATED_ID = recipeIdAt(1);
-
-/** POST /recipes answers `postStatus`; the new recipe's detail reads answer from what was posted. */
-async function stubRecipes(page: Page, postStatus: number): Promise<RecipeCreateRequest[]> {
-  const posted: RecipeCreateRequest[] = [];
-  let created: ReturnType<typeof detailFromCreateRequest> | null = null;
-  await page.route(/\/api\/recipes(\?|$)/, (route) => {
-    const request = route.request();
-    if (request.method() !== "POST") return route.fulfill(json([]));
-    const body = request.postDataJSON() as RecipeCreateRequest;
-    posted.push(body);
-    if (postStatus !== 201) return route.fulfill(json({ detail: "boom" }, postStatus));
-    created = detailFromCreateRequest(CREATED_ID, body);
-    return route.fulfill(json(created, 201));
-  });
-  await page.route(new RegExp(`/api/recipes/${CREATED_ID}(/.*)?(\\?.*)?$`), (route) => {
-    const path = new URL(route.request().url()).pathname;
-    if (!created) return route.fulfill(json({ detail: "Not Found" }, 404));
-    if (path.endsWith(`/recipes/${CREATED_ID}`)) return route.fulfill(json(created));
-    if (path.endsWith(`/versions/${VERSION_1_ID}`)) return route.fulfill(json(created.latest_version));
-    return route.fulfill(json([]));
-  });
-  return posted;
-}
 
 async function fillRequired(page: Page) {
   await page.getByLabel(/^Title/).fill("Tomato soup");
@@ -45,7 +22,7 @@ async function fillRequired(page: Page) {
 
 test("fills, reorders and creates a recipe, then lands on it", async ({ page }) => {
   await stubSignedInShell(page);
-  const posted = await stubRecipes(page, 201);
+  const posted = await stubRecipeCreate(page, CREATED_ID);
 
   await page.goto("/");
   await page.getByRole("button", { name: "New recipe" }).first().click();
@@ -100,7 +77,7 @@ test("fills, reorders and creates a recipe, then lands on it", async ({ page }) 
 
 test("an amount it can't read, or one with no ingredient, stops the save instead of being dropped", async ({ page }) => {
   await stubSignedInShell(page);
-  const posted = await stubRecipes(page, 201);
+  const posted = await stubRecipeCreate(page, CREATED_ID);
 
   await page.goto("/recipes/new");
   await fillRequired(page);
@@ -127,7 +104,7 @@ test("an amount it can't read, or one with no ingredient, stops the save instead
 
 test("a server error keeps everything typed so it can be sent again", async ({ page }) => {
   await stubSignedInShell(page);
-  const posted = await stubRecipes(page, 500);
+  const posted = await stubRecipeCreate(page, CREATED_ID, 500);
 
   await page.goto("/recipes/new");
   await fillRequired(page);
@@ -147,7 +124,7 @@ test.describe("in a comma-decimal locale", () => {
 
   test("reads amounts and minutes with a comma, and refuses a dot rather than guess", async ({ page }) => {
     await stubSignedInShell(page);
-    const posted = await stubRecipes(page, 201);
+    const posted = await stubRecipeCreate(page, CREATED_ID);
     const hint = "Use a comma for decimals, like 1,25, and no thousands separators, like 1250.";
 
     await page.goto("/recipes/new");
@@ -190,16 +167,8 @@ test.describe("in a comma-decimal locale", () => {
       ],
       steps: [{ instruction: "Simmer." }],
     });
-    const tweaks: Array<Record<string, unknown>> = [];
-    await page.route(new RegExp(`/api/recipes/${CREATED_ID}(/.*)?(\\?.*)?$`), (route) => {
-      const path = new URL(route.request().url()).pathname;
-      if (route.request().method() === "POST" && path.endsWith("/versions")) {
-        tweaks.push(route.request().postDataJSON() as Record<string, unknown>);
-        return route.fulfill(json({ ...existing.latest_version, id: VERSION_2_ID, version_number: 2 }, 201));
-      }
-      if (path.endsWith(`/recipes/${CREATED_ID}`)) return route.fulfill(json(existing));
-      return route.fulfill(json([]));
-    });
+    const { writes } = await stubRecipeApi(page, CREATED_ID, { recipe: existing });
+    const keyOf = (index: number) => existing.latest_version?.ingredients[index]?.lineage_key;
 
     await page.goto(`/recipes/${CREATED_ID}/tweak`);
     await expect(page.getByLabel("Quantity", { exact: true }).nth(0)).toHaveValue("0,5");
@@ -211,13 +180,13 @@ test.describe("in a comma-decimal locale", () => {
     await page.getByRole("button", { name: "Save new version" }).click();
 
     await expect(page).toHaveURL(new RegExp(`/recipes/${CREATED_ID}$`));
-    expect(tweaks).toEqual([
+    expect(writes.map((write) => write.body)).toEqual([
       expect.objectContaining({
         prep_minutes: 15,
         ingredients: [
-          expect.objectContaining({ name: "salt", quantity: 0.5, lineage_key: lineageKeyAt(0) }),
-          expect.objectContaining({ name: "butter", quantity: 2.125, lineage_key: lineageKeyAt(1) }),
-          expect.objectContaining({ name: "water", quantity: 1250, lineage_key: lineageKeyAt(2) }),
+          expect.objectContaining({ name: "salt", quantity: 0.5, lineage_key: keyOf(0) }),
+          expect.objectContaining({ name: "butter", quantity: 2.125, lineage_key: keyOf(1) }),
+          expect.objectContaining({ name: "water", quantity: 1250, lineage_key: keyOf(2) }),
         ],
       }),
     ]);
