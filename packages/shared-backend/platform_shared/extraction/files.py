@@ -5,7 +5,7 @@ functions, zero domain coupling — any app that needs to turn an
 uploaded PDF / DOCX / spreadsheet / zip / .eml into text or base64 for
 a model call uses these.
 
-The heavy third-party parsers (pypdf, mammoth, openpyxl) are imported
+The heavy third-party parsers (pypdf, mammoth, openpyxl, xlrd) are imported
 lazily inside the functions that use them, so an app that imports
 ``platform_shared`` but never parses documents doesn't need them
 installed (same optional-dependency convention as
@@ -31,7 +31,22 @@ import io
 import mimetypes
 import re
 import zipfile
+from collections.abc import Iterable, Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from xlrd.sheet import Cell
+
+MAX_SPREADSHEET_ROWS = 500
+OLE2_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"  # legacy BIFF .xls container
+
+# Starts with "Unsupported file type" so callers that map that phrase to a 415
+# (MBK's upload_error_status) keep doing so.
+LEGACY_DOC_MESSAGE = (
+    "Unsupported file type: legacy .doc files can't be read. Open the file in "
+    "Word, save it as .docx, and upload it again."
+)
 
 MAX_ZIP_FILES = 500
 MAX_ZIP_DECOMPRESSED_BYTES = 500 * 1024 * 1024  # 500MB
@@ -53,19 +68,53 @@ def _docx_text(content: bytes) -> str:
     return result.value.strip()
 
 
+def _sheet_rows_text(sheets: Iterable[tuple[str, Iterable[Sequence[object]]]]) -> str:
+    rows: list[str] = []
+    for title, sheet_rows in sheets:
+        rows.append(f"Sheet: {title}")
+        for row in sheet_rows:
+            if any(cell is not None and cell != "" for cell in row):
+                rows.append("\t".join("" if c is None else str(c) for c in row))
+        if len(rows) > MAX_SPREADSHEET_ROWS:
+            break
+    return "\n".join(rows)
+
+
 def _workbook_text(content: bytes) -> str:
     import openpyxl
 
     wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-    rows = []
-    for sheet in wb.worksheets:
-        rows.append(f"Sheet: {sheet.title}")
-        for row in sheet.iter_rows(values_only=True):
-            if any(cell is not None for cell in row):
-                rows.append("\t".join(str(c) if c is not None else "" for c in row))
-        if len(rows) > 500:
-            break
-    return "\n".join(rows)
+    return _sheet_rows_text((s.title, s.iter_rows(values_only=True)) for s in wb.worksheets)
+
+
+def _xls_cell_value(cell: "Cell", datemode: int) -> object:
+    import xlrd
+
+    if cell.ctype == xlrd.XL_CELL_DATE:
+        return xlrd.xldate.xldate_as_datetime(cell.value, datemode)
+    if cell.ctype == xlrd.XL_CELL_NUMBER and float(cell.value).is_integer():
+        return int(cell.value)
+    if cell.ctype == xlrd.XL_CELL_BOOLEAN:
+        return bool(cell.value)
+    if cell.ctype in (xlrd.XL_CELL_ERROR, xlrd.XL_CELL_EMPTY, xlrd.XL_CELL_BLANK):
+        return None
+    return cell.value
+
+
+def _xls_text(content: bytes) -> str:
+    import xlrd
+
+    book = xlrd.open_workbook(file_contents=content, on_demand=True)
+    return _sheet_rows_text(
+        (
+            sheet.name,
+            (
+                [_xls_cell_value(c, book.datemode) for c in sheet.row(i)]
+                for i in range(sheet.nrows)
+            ),
+        )
+        for sheet in book.sheets()
+    )
 
 
 async def extract_text_from_pdf(content: bytes) -> str | None:
@@ -77,19 +126,31 @@ async def extract_text_from_docx(content: bytes) -> str:
 
 
 async def extract_text_from_spreadsheet(content: bytes, filename: str, *, max_chars: int) -> str:
-    if filename.endswith(".csv"):
+    if _suffix(filename) == ".csv":
         text = content.decode("utf-8", errors="replace")
         return text[:max_chars]
+    if content.startswith(OLE2_MAGIC):
+        return await asyncio.to_thread(_xls_text, content)
     return await asyncio.to_thread(_workbook_text, content)
 
 
+def _suffix(filename: str) -> str:
+    return Path(filename).suffix.lower()
+
+
+def unsupported_file_message(filename: str) -> str:
+    if _suffix(filename) == ".doc":
+        return LEGACY_DOC_MESSAGE
+    return "Unsupported file type"
+
+
 def detect_file_type(filename: str, content_type: str) -> str:
-    ext = Path(filename).suffix.lower()
+    ext = _suffix(filename)
     if ext in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
         return "image"
     if ext == ".pdf":
         return "pdf"
-    if ext in (".doc", ".docx"):
+    if ext == ".docx":
         return "docx"
     if ext in (".xls", ".xlsx", ".csv"):
         return "spreadsheet"
@@ -106,7 +167,7 @@ def extract_zip_files(content: bytes) -> list[tuple[str, bytes, str]]:
     Returns list of (filename, file_content, content_type) tuples.
     Raises ValueError if limits are exceeded.
     """
-    supported_exts = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".csv", ".eml"}
+    supported_exts = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf", ".docx", ".xls", ".xlsx", ".csv", ".eml"}
     results: list[tuple[str, bytes, str]] = []
     total_bytes = 0
 
@@ -114,7 +175,7 @@ def extract_zip_files(content: bytes) -> list[tuple[str, bytes, str]]:
         for info in zf.infolist():
             if info.is_dir():
                 continue
-            ext = Path(info.filename).suffix.lower()
+            ext = _suffix(info.filename)
             if ext not in supported_exts:
                 continue
             if info.file_size > MAX_ZIP_FILE_BYTES:

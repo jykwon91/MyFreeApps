@@ -729,6 +729,7 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0.36" },
     { name = "twilio", marker = "extra == 'dev'", specifier = ">=9.10.0" },
     { name = "urllib3", specifier = ">=2.0.0" },
+    { name = "xlrd", marker = "extra == 'dev'", specifier = ">=2.0.2" },
 ]
 provides-extras = ["dev"]
 

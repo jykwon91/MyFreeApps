@@ -46,6 +46,7 @@ dev = [
     "pypdf>=6.15.0",
     "mammoth>=1.12.0",
     "openpyxl>=3.1.5",
+    "xlrd>=2.0.2",
     # Required for tests of platform_shared.auth.jwt_backend that exercise
     # the real JWTStrategy write/read paths. Runtime apps that authenticate
     # pull fastapi-users in via their own pyproject.toml.

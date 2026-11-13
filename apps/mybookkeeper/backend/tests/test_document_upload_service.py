@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.upload_errors import upload_error_status
 from app.models.documents.document import Document
 from app.services.documents.document_upload_service import accept_upload
 from app.core.context import worker_context
@@ -38,6 +39,15 @@ class TestAcceptUploadValidation:
         ctx = _make_ctx()
         with pytest.raises(ValueError, match="File is empty"):
             await accept_upload(ctx, content=b"", filename="test.pdf", content_type="application/pdf")
+
+    @pytest.mark.anyio
+    async def test_legacy_doc_rejected_with_save_as_docx_message(self) -> None:
+        ctx = _make_ctx()
+        with pytest.raises(ValueError, match=r"Unsupported file type.*\.docx") as exc:
+            await accept_upload(
+                ctx, content=b"\xd0\xcf\x11\xe0", filename="Lease.doc", content_type="application/msword",
+            )
+        assert upload_error_status(str(exc.value)) == 415
 
 
 @pytest.mark.asyncio
