@@ -55,7 +55,7 @@ Thumbs.db
 **/playwright-report/
 **/blob-report/
 **/e2e/test-results/
-**/e2e/test-results-mocked/
+**/e2e/test-results-mocked*/
 **/e2e/.auth-token
 **/e2e/.auth-org
 **/e2e/.worker-pid

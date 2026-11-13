@@ -214,6 +214,59 @@ jobs:
       - name: Build frontend
         run: npm run build --workspace=mygamingassistant-frontend
 
+  frontend-layout-e2e:
+    name: frontend-layout-e2e / mygamingassistant
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Mocked specs in e2e/mocked/ and e2e/mocked-serve-only/ answer every API
+    # call via page.route(); no backend is started. The serve-only ones need a
+    # dev server built with VITE_SERVE_ONLY, so they have a config of their own.
+    # The full-stack specs elsewhere in e2e/ need a live backend and are not
+    # run here (both e2e/ configs ignore the mocked folders).
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        working-directory: apps/mygamingassistant/frontend
+        timeout-minutes: 4
+        run: npx playwright install chromium
+
+      - name: Run mocked E2E tests (no backend)
+        working-directory: apps/mygamingassistant/frontend
+        run: npx playwright test --config=playwright.layout.config.ts
+
+      - name: Run serve-only mocked E2E tests (no backend)
+        if: ${{ !cancelled() }}
+        working-directory: apps/mygamingassistant/frontend
+        run: npx playwright test --config=playwright.layout.serve-only.config.ts
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: |
+            apps/mygamingassistant/frontend/e2e/test-results-mocked/
+            apps/mygamingassistant/frontend/e2e/test-results-mocked-serve-only/
+          retention-days: 7
+
   caddy-image:
     name: caddy-image / mygamingassistant
     runs-on: ubuntu-latest
