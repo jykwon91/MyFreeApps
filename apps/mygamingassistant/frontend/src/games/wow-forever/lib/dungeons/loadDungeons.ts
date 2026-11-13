@@ -10,6 +10,7 @@ export function loadDungeons(): Promise<DungeonsData> {
   if (!cached) {
     cached = Promise.all([
       import("@/games/wow-forever/data/worldMap/classic/classicDungeons.json"),
+      import("@/games/wow-forever/data/worldMap/foreverDungeons.json"),
       import("@/games/wow-forever/data/worldMap/classic/classicInteriors.json"),
       import("@/games/wow-forever/data/worldMap/zones.json"),
       import("@/games/wow-forever/data/worldMap/travel.json"),
@@ -19,10 +20,11 @@ export function loadDungeons(): Promise<DungeonsData> {
       import("@/games/wow-forever/data/dungeons/classic/entryRequirements.json"),
       import("@/games/wow-forever/data/dungeons/classic/dungeonQuests.json"),
       import("@/games/wow-forever/data/dungeons/dungeonQuestsSeen.json"),
-    ]).then(([dungeons, interiors, zones, travel, bossLoot, lootItems, facts, entry, quests, seenQuests]) =>
+    ]).then(([dungeons, foreverDungeons, interiors, zones, travel, bossLoot, lootItems, facts, entry, quests, seenQuests]) =>
       decodeDungeons(
         {
           dungeons: dungeons.default,
+          foreverDungeons: foreverDungeons.default,
           interiors: interiors.default,
           bossLoot: bossLoot.default,
           lootItems: lootItems.default,

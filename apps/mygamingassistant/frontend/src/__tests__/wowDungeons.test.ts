@@ -18,6 +18,7 @@ import type { DungeonDataFiles } from "@/games/wow-forever/types/dungeons/dungeo
 import type { DungeonWorld } from "@/games/wow-forever/types/dungeons/dungeonWorld";
 import type { FlightNode, WorldZone } from "@/games/wow-forever/types/worldMap";
 
+const FOREVER_COLUMNS = ["instance", "name", "minLevel", "maxLevel", "zone", "area", "x", "y"];
 const DUNGEON_COLUMNS = ["trigger", "instance", "name", "wing", "type", "minLevel", "maxLevel", "requiredLevel", "zone", "subzone", "x", "y", "z"];
 
 function fixture(): DungeonDataFiles {
@@ -32,6 +33,7 @@ function fixture(): DungeonDataFiles {
         [5, 12, "Twin Halls", "East, back door", "dungeon", 30, 30, 25, 100, "Lower Wilds", 41, 61, 1],
       ],
     },
+    foreverDungeons: { columns: FOREVER_COLUMNS, bossColumns: ["encounter", "name"], rows: [], bosses: {} },
     interiors: {
       entranceColumns: ["trigger", "x", "y", "z"],
       bossColumns: ["encounter", "name", "x", "y", "z", "spots"],
@@ -172,6 +174,53 @@ describe("decodeDungeons", () => {
     expect(lost.dungeons[0].entrances[0]).toMatchObject({ zoneName: "", flightPaths: [] });
   });
 
+  it("adds Forever's own dungeons among the Classic ones by level: level and bosses known, the rest null or empty", () => {
+    const files = fixture();
+    files.foreverDungeons.rows = [
+      [900, "New Vault", 25, 25, 100, "Vault Hill", 50, 50],
+      [901, "Lost Deep", 40, 40, null, null, null, null],
+    ];
+    files.foreverDungeons.bosses = { "900": [[7, "Warden"], [8, "Warden"]], "901": [] };
+    files.facts.maxPlayers["900"] = 5;
+    const merged = decodeDungeons(files, WORLD);
+    expect(merged.dungeons.map((d) => [d.name, d.newInForever])).toEqual([
+      ["Test Keep", false],
+      ["New Vault", true],
+      ["Twin Halls", false],
+      ["Lost Deep", true],
+    ]);
+    const vault = findDungeon(merged, "new-vault");
+    expect(vault).toMatchObject({
+      instanceId: 900,
+      levelMin: 25,
+      levelMax: 25,
+      requiredLevel: null,
+      entryRequirements: null,
+      maxPlayers: 5,
+      lockedDoorKeys: [],
+      interior: null,
+      quests: [],
+    });
+    expect(vault?.bosses).toEqual([
+      { encounter: 7, name: "Warden", slug: "warden", loot: null },
+      { encounter: 8, name: "Warden", slug: "warden-2", loot: null },
+    ]);
+    // Only the area: its zone, no doors, flight paths measured from the area.
+    expect(vault?.entrances).toEqual([
+      {
+        zoneId: 100,
+        zoneName: "Hillshire",
+        subzone: "Vault Hill",
+        doors: [],
+        flightPaths: [
+          { faction: "A", name: "Near Alliance", yards: 100 },
+          { faction: "H", name: "Neutral Post", yards: 200 },
+        ],
+      },
+    ]);
+    expect(findDungeon(merged, "lost-deep")?.entrances).toEqual([]);
+  });
+
   it("finds a dungeon by slug", () => {
     expect(findDungeon(data, "twin-halls")?.instanceId).toBe(12);
     expect(findDungeon(data, "nope")).toBeNull();
@@ -194,7 +243,7 @@ describe("the committed dungeon data", () => {
     const lastBoss = deadmines?.bosses[deadmines.bosses.length - 1];
     expect(lastBoss?.slug).toBe("edwin-vancleef");
     expect(lastBoss?.loot?.some((l) => l.id === 5193)).toBe(true);
-    for (const d of data.dungeons) {
+    for (const d of data.dungeons.filter((x) => !x.newInForever)) {
       expect(d.entrances.every((e) => e.zoneName !== "" && e.doors.length > 0)).toBe(true);
       expect(d.entryRequirements).toEqual([]);
       for (const b of d.bosses) {
@@ -205,6 +254,36 @@ describe("the committed dungeon data", () => {
       }
     }
     expect(data.dungeons.some((d) => d.name === "Molten Core")).toBe(false);
+  });
+
+  it("lists Forever's nine new dungeons, City of Dalaran in Alterac Mountains with its bosses", async () => {
+    const data = await loadDungeons();
+    const added = data.dungeons.filter((d) => d.newInForever);
+    expect(added.map((d) => d.name).sort()).toEqual([
+      "Alcaz Prison",
+      "Blackmaw Hold",
+      "City of Dalaran",
+      "Excavation Site: Wetlands",
+      "Krol'dok Stronghold",
+      "Ruins of Lordaeron",
+      "The Drowned City",
+      "The Hall of Thanes",
+      "The Shaper's Terrace",
+    ]);
+    // Lowest level first, Classic and new together.
+    const levels = data.dungeons.map((d) => d.levelMin);
+    expect(levels).toEqual([...levels].sort((a, b) => a - b));
+    const dalaran = findDungeon(data, "city-of-dalaran");
+    expect(dalaran).toMatchObject({ newInForever: true, levelMin: 28, requiredLevel: null, entryRequirements: null });
+    expect(dalaran?.entrances.map((e) => [e.zoneName, e.subzone, e.doors.length])).toEqual([
+      ["Alterac Mountains", "City of Dalaran", 0],
+    ]);
+    expect(dalaran?.bosses.map((b) => b.name).slice(-1)).toEqual(["Shade of the Archmage"]);
+    for (const d of added) {
+      expect(d.bosses.length).toBeGreaterThan(0);
+      expect(d.bosses.every((b) => b.loot === null)).toBe(true);
+      expect(d.entrances.every((e) => e.zoneName !== "" && e.doors.length === 0)).toBe(true);
+    }
   });
 
   // Dungeons allowed to show "no boss list", by slug, each with the reason.

@@ -1,5 +1,6 @@
 import DungeonFactRow from "@/games/wow-forever/components/dungeons/DungeonFactRow";
 import { DETAIL_SECTION } from "@/games/wow-forever/components/food/detail/detailStyles";
+import { FOREVER_DUNGEON_COPY } from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
 import { entryText, groupSizeText } from "@/games/wow-forever/lib/dungeons/describeDungeon";
 import type { Dungeon } from "@/games/wow-forever/types/dungeons/dungeon";
 import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
@@ -16,17 +17,25 @@ export default function DungeonWhen({ dungeon }: { dungeon: Dungeon }) {
         <DungeonFactRow label="Recommended level" provenance={PROVENANCE.client}>
           {instanceLevelText(dungeon)}
         </DungeonFactRow>
-        <DungeonFactRow label="Lowest level to go in" provenance={PROVENANCE.classic}>
-          Level {dungeon.requiredLevel}
-        </DungeonFactRow>
+        {dungeon.requiredLevel !== null ? (
+          <DungeonFactRow label="Lowest level to go in" provenance={PROVENANCE.classic}>
+            Level {dungeon.requiredLevel}
+          </DungeonFactRow>
+        ) : (
+          <DungeonFactRow label="Lowest level to go in">{FOREVER_DUNGEON_COPY.notKnown}</DungeonFactRow>
+        )}
         {dungeon.maxPlayers !== null ? (
           <DungeonFactRow label="Group size" provenance={PROVENANCE.client}>
             {groupSizeText(dungeon.maxPlayers)}
           </DungeonFactRow>
         ) : null}
-        <DungeonFactRow label="Key or attunement to go in" provenance={PROVENANCE.classic}>
-          {entryText(dungeon.entryRequirements)}
-        </DungeonFactRow>
+        {dungeon.entryRequirements !== null ? (
+          <DungeonFactRow label="Key or attunement to go in" provenance={PROVENANCE.classic}>
+            {entryText(dungeon.entryRequirements)}
+          </DungeonFactRow>
+        ) : (
+          <DungeonFactRow label="Key or attunement to go in">{FOREVER_DUNGEON_COPY.notKnown}</DungeonFactRow>
+        )}
         {dungeon.lockedDoorKeys.length > 0 ? (
           <DungeonFactRow label="Locked doors inside open with" provenance={PROVENANCE.classic}>
             {dungeon.lockedDoorKeys.join(", ")}

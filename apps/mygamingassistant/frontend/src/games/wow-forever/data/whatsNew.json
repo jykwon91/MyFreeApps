@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "Forever's new dungeons are listed",
+    "summary": "City of Dalaran, Ruins of Lordaeron, Hall of Thanes and the other six dungeons WoW Forever added now show on the Dungeons page, tagged New in Forever, with their level, their bosses and the area the game puts them in.",
+    "to": "/wow-forever/dungeons"
+  },
+  {
+    "date": "2026-11-13",
     "title": "Every auction house item has its name",
     "summary": "About 3,300 more items for sale now show their names and turn up in search, like Dreadmist Belt and Underworld Band, where some used to show only as \"Item\" and a number.",
     "to": "/wow-forever/auction-house"

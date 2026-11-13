@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import DungeonQuests from "@/games/wow-forever/components/dungeons/quests/DungeonQuests";
 import {
+  DUNGEON_QUESTS_EMPTY,
   QUEST_CHAIN_AFTER_SHOWN,
   QUEST_GIVER_MAP_SCALE,
   QUEST_SHARING_COPY,
@@ -241,6 +242,14 @@ describe("the Quests section", () => {
     expect(badges).toContain("classic");
   });
 
+  it("shows only the empty line for a dungeon with no quests: no faction toggle, no claim over nothing", () => {
+    renderSection([]);
+    const section = screen.getByTestId("dungeon-quests");
+    expect(section).toHaveTextContent(DUNGEON_QUESTS_EMPTY.none);
+    expect(within(section).queryByRole("radiogroup")).toBeNull();
+    expect(within(section).queryByText(/Every quest here/)).toBeNull();
+  });
+
   it("badges each row with whether it can be shared and its step in the line", () => {
     renderSection(decoded());
     const [keep, letter] = screen.getAllByTestId("dungeon-quest-row");
@@ -293,9 +302,9 @@ describe("the Quests section", () => {
 });
 
 describe("the committed quest data", () => {
-  it("gives every dungeon quests, with The Defias Brotherhood's chain, giver and seen rewards", async () => {
+  it("gives every Classic dungeon quests, with The Defias Brotherhood's chain, giver and seen rewards", async () => {
     const data = await loadDungeons();
-    for (const d of data.dungeons) {
+    for (const d of data.dungeons.filter((x) => !x.newInForever)) {
       expect(d.quests.length, d.name).toBeGreaterThan(0);
       for (const q of d.quests) {
         expect(q.title).not.toBe("");

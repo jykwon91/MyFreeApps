@@ -1,7 +1,8 @@
 /**
  * The dungeon pages' data, built from files other pages already ship: the
  * World Map's entrances (`classicDungeons.json` — Forever levels, Classic
- * doors), interiors (`classicInteriors.json` — the Forever client's bosses in
+ * doors), Forever's own dungeons (`foreverDungeons.json` — the client's level,
+ * bosses and area, nothing else), interiors (`classicInteriors.json` — the Forever client's bosses in
  * order, Classic locked doors), zones and flight masters (decoded by the World
  * Map, `DungeonWorld`), plus the dungeon generator's boss loot
  * (`dungeons/classic/bossLoot.json`, Classic chances), item names
@@ -31,7 +32,11 @@ import { decodeInteriors, type Interior } from "@/games/wow-forever/worldMap/int
 
 const DUNGEON_TYPE = "dungeon";
 
-type DungeonBase = Omit<Dungeon, "bosses" | "interior" | "maxPlayers" | "entryRequirements" | "lockedDoorKeys" | "quests">;
+/** A Classic dungeon before its bosses and the rest are joined: its door always gives a level. */
+type DungeonBase = Omit<
+  Dungeon,
+  "bosses" | "interior" | "maxPlayers" | "entryRequirements" | "lockedDoorKeys" | "quests" | "newInForever" | "requiredLevel"
+> & { requiredLevel: number };
 
 function lootItems(files: DungeonDataFiles): ReadonlyMap<number, LootItemInfo> {
   const col = columnIndexes("lootItems.json", files.lootItems.columns, ["name", "slot", "itemType"] as const);
@@ -110,7 +115,59 @@ function bossesOf(interior: Interior | undefined, loot: ReadonlyMap<number, Boss
   return bosses.map((b, i) => ({ encounter: b.encounter, name: b.name, slug: slugs[i], loot: loot.get(b.encounter) ?? null }));
 }
 
-/** Every dungeon (raids are left out), in the entrances file's order: lowest level first. */
+/** The area a new Forever dungeon is in, as a door-less entrance zone; none when the game names no area. */
+function foreverArea(
+  row: readonly unknown[],
+  col: Record<"zone" | "area" | "x" | "y", number>,
+  zoneById: ReadonlyMap<number, WorldZone>,
+  nodes: readonly FlightNode[],
+): DungeonEntranceZone[] {
+  if (row[col.zone] === null) return [];
+  const zoneId = Number(row[col.zone]);
+  const zone = zoneById.get(zoneId);
+  if (!zone) return [];
+  return [{
+    zoneId,
+    zoneName: zone.name,
+    subzone: String(row[col.area] ?? ""),
+    doors: [],
+    flightPaths: nearestFlightPaths(zoneToWorld(zone, Number(row[col.x]), Number(row[col.y])), nodes),
+  }];
+}
+
+/** Forever's own dungeons: the client's level, bosses and area; no door, loot, quests or entry rules. */
+function decodeForeverDungeons(files: DungeonDataFiles, world: DungeonWorld, zoneById: ReadonlyMap<number, WorldZone>): Dungeon[] {
+  const file = files.foreverDungeons;
+  const col = columnIndexes("foreverDungeons.json", file.columns, [
+    "instance", "name", "minLevel", "maxLevel", "zone", "area", "x", "y",
+  ] as const);
+  const bossCol = columnIndexes("foreverDungeons.json bosses", file.bossColumns, ["encounter", "name"] as const);
+  return file.rows.map((row) => {
+    const instanceId = Number(row[col.instance]);
+    const name = String(row[col.name]);
+    const bosses = (file.bosses[String(instanceId)] ?? []).map((b) => ({ encounter: Number(b[bossCol.encounter]), name: String(b[bossCol.name]) }));
+    const slugs = uniqueSlugs(bosses.map((b) => b.name));
+    return {
+      slug: dungeonSlug(name),
+      instanceId,
+      name,
+      newInForever: true,
+      aliases: INSTANCE_ALIASES[name] ?? [],
+      levelMin: Number(row[col.minLevel]),
+      levelMax: Number(row[col.maxLevel]),
+      requiredLevel: null,
+      maxPlayers: files.facts.maxPlayers[String(instanceId)] ?? null,
+      entryRequirements: null,
+      lockedDoorKeys: [],
+      entrances: foreverArea(row, col, zoneById, world.flightNodes),
+      bosses: bosses.map((b, i) => ({ ...b, slug: slugs[i], loot: null })),
+      interior: null,
+      quests: [],
+    };
+  });
+}
+
+/** Every dungeon (raids are left out), Classic and Forever's own together, lowest level first. */
 export function decodeDungeons(files: DungeonDataFiles, world: DungeonWorld): DungeonsData {
   const col = columnIndexes("classicDungeons.json", files.dungeons.columns, [
     "trigger", "instance", "name", "wing", "type", "minLevel", "maxLevel", "requiredLevel", "zone", "subzone", "x", "y",
@@ -163,6 +220,7 @@ export function decodeDungeons(files: DungeonDataFiles, world: DungeonWorld): Du
     const interior = interiors.get(d.instanceId);
     return {
       ...d,
+      newInForever: false,
       maxPlayers: files.facts.maxPlayers[String(d.instanceId)] ?? null,
       entryRequirements: entryRequirements(files, d.instanceId),
       lockedDoorKeys: lockedDoorKeys(interior),
@@ -171,7 +229,9 @@ export function decodeDungeons(files: DungeonDataFiles, world: DungeonWorld): Du
       quests: quests(d.instanceId),
     };
   });
-  return { dungeons, clientBuild: files.lootItems.clientBuild };
+  // A stable sort keeps each file's own order within a level.
+  const all = [...dungeons, ...decodeForeverDungeons(files, world, zoneById)].sort((a, b) => a.levelMin - b.levelMin);
+  return { dungeons: all, clientBuild: files.lootItems.clientBuild };
 }
 
 /** The dungeon a page's slug names, or null. */

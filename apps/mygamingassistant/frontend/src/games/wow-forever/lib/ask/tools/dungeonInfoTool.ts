@@ -6,6 +6,7 @@
 import { levelRange } from "@/games/wow-forever/lib/ask/levelRange";
 import { ASK_CARD } from "@/games/wow-forever/data/ask/askCardKinds";
 import { ASK_TOOL } from "@/games/wow-forever/data/ask/askTools";
+import { FOREVER_DUNGEON_UNKNOWN } from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
 import type { AskDungeonCard } from "@/games/wow-forever/types/ask/askDungeonCard";
 import type { AskDungeonMatch } from "@/games/wow-forever/types/ask/askDungeonMatch";
 import type { AskQueryInput } from "@/games/wow-forever/types/ask/askQueryInput";
@@ -61,10 +62,11 @@ export async function dungeonInfoTool(input: AskQueryInput, data: AskToolData): 
   const result = {
     name: found.name,
     levels: levelRange(found.levelMin, found.levelMax),
-    lowest_level_to_enter: found.requiredLevel,
+    lowest_level_to_enter: found.requiredLevel ?? FOREVER_DUNGEON_UNKNOWN.value,
     entrance_zones: found.zones,
     bosses: found.bosses,
     matched_boss: found.matchedBoss,
+    ...(match.dungeon.newInForever ? { new_in_forever: true, not_known_yet: FOREVER_DUNGEON_UNKNOWN.facts } : {}),
   };
   return { content: JSON.stringify(result), isError: false, card: found };
 }

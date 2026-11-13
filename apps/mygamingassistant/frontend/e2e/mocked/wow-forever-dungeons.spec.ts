@@ -36,7 +36,7 @@ test("the index lists the dungeons lowest level first and opens one", async ({ p
   const rows = page.getByTestId("dungeon-list-row");
   await expect(rows.first()).toContainText("Ragefire Chasm");
   await expect(rows.filter({ hasText: "Molten Core" })).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Dungeons" }).getByTestId("provenance-badge")).toHaveCount(2);
+  await expect(page.getByRole("region", { name: "Dungeons" }).getByTestId("provenance-badge")).toHaveCount(3);
 
   await rows.filter({ hasText: "Deadmines" }).click();
   await expect(page).toHaveURL(DEADMINES);
@@ -50,6 +50,50 @@ test("the index lists the dungeons lowest level first and opens one", async ({ p
 
   // The left nav carries the page.
   await expect(page.locator("#main-sidebar").getByRole("link", { name: "Dungeons", exact: true })).toBeVisible();
+});
+
+test("a dungeon Forever added is listed, tagged, and its page says what isn't known instead of inventing it", async ({ page }) => {
+  await page.goto("/wow-forever/dungeons");
+  const dalaranRow = page.getByTestId("dungeon-list-row").filter({ hasText: "City of Dalaran" });
+  await expect(dalaranRow.getByTestId("dungeon-new-tag")).toHaveText("New in Forever");
+  await expect(dalaranRow).toContainText("Level 28");
+  await expect(dalaranRow).toContainText("Alterac Mountains");
+  await expect(page.getByTestId("dungeon-list-row").filter({ hasText: "Deadmines" }).getByTestId("dungeon-new-tag")).toHaveCount(0);
+
+  await dalaranRow.click();
+  await expect(page).toHaveURL("/wow-forever/dungeons/city-of-dalaran");
+  await expect(page.getByRole("heading", { level: 1, name: "City of Dalaran" })).toBeVisible();
+  const when = page.getByRole("region", { name: "When you can go" });
+  await expect(when.getByText("Level 28", { exact: true })).toBeVisible();
+  await expect(when.getByText("Not known yet")).toHaveCount(2);
+  await expect(when.getByText("None. Only the level.")).toHaveCount(0);
+
+  const where = page.getByRole("region", { name: "Where it is" });
+  await expect(where).toContainText("Alterac Mountains · City of Dalaran");
+  await expect(where).toContainText("The exact door isn't known yet.");
+  await expect(where.getByTestId("dungeon-door")).toHaveCount(0);
+  await expect(where.getByRole("link", { name: /Directions/ })).toHaveCount(0);
+
+  const bosses = page.getByTestId("dungeon-forever-bosses");
+  await expect(bosses).toContainText("9 bosses, in the game's list order");
+  await expect(bosses.getByRole("listitem").last()).toHaveText("Shade of the Archmage");
+  await expect(bosses).toContainText("What the bosses drop isn't known yet");
+  await expect(page.getByText("Drops", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Bosses" })).toHaveCount(0);
+  const quests = page.getByTestId("dungeon-quests");
+  await expect(quests).toContainText("No quests for this dungeon in our data yet.");
+  await expect(quests.getByRole("radiogroup")).toHaveCount(0);
+
+  await where.getByRole("link", { name: "Show Alterac Mountains on the World Map" }).click();
+  await expect(page).toHaveURL(/\/wow-forever\/map\?m=1416/);
+});
+
+test("a Forever dungeon the game gives no area for says the entrance isn't known", async ({ page }) => {
+  await page.goto("/wow-forever/dungeons/the-drowned-city");
+  const where = page.getByRole("region", { name: "Where it is" });
+  await expect(where).toContainText("We don't know where the entrance is yet.");
+  await expect(where.getByRole("link")).toHaveCount(0);
+  await expect(where.getByTestId("provenance-badge")).toHaveCount(0);
 });
 
 test("a boss deep link opens the page scrolled to that boss; the jump list moves between bosses", async ({ page }) => {

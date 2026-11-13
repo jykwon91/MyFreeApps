@@ -1,5 +1,6 @@
 import DungeonListRow from "@/games/wow-forever/components/dungeons/DungeonListRow";
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
+import { FOREVER_DUNGEON_COPY } from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
 import type { Dungeon } from "@/games/wow-forever/types/dungeons/dungeon";
 import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
@@ -12,6 +13,8 @@ export default function DungeonList({ dungeons }: { dungeons: readonly Dungeon[]
         <ProvenanceBadge provenance={PROVENANCE.client} />
         <span>Zones</span>
         <ProvenanceBadge provenance={PROVENANCE.classic} />
+        <span>{FOREVER_DUNGEON_COPY.legend}</span>
+        <ProvenanceBadge provenance={PROVENANCE.client} />
       </p>
       <ul className="divide-y">
         {dungeons.map((d) => (

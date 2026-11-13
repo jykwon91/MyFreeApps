@@ -8,7 +8,11 @@ export default function DungeonFootnote({ clientBuild }: { clientBuild: string }
         boss drops and the drop chances are Classic data (cmangos classic-db), and only items the Forever client has
         are listed. Flight-path distances are straight lines, not the walk.
       </p>
-      <p>Raids and Forever's new dungeons aren't listed yet; recipes, reagents and quest items aren't in the drop lists.</p>
+      <p>
+        Forever&apos;s new dungeons come from the Forever client alone: its level, its bosses in the game&apos;s list
+        order and the area the game puts it in. Their doors, keys, loot and quests aren&apos;t known yet.
+      </p>
+      <p>Raids aren&apos;t listed yet; recipes, reagents and quest items aren&apos;t in the drop lists.</p>
     </aside>
   );
 }

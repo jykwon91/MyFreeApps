@@ -142,6 +142,16 @@ describe("other cards", () => {
     expect(screen.getByRole("link", { name: "Open the dungeon page" }).getAttribute("href")).toBe("/wow-forever/dungeons/deadmines");
   });
 
+  it("dungeon with an unknown entry level says nothing about entering", () => {
+    inRouter(
+      <DungeonCard
+        card={{ kind: ASK_CARD.dungeon, slug: "the-drowned-city", name: "The Drowned City", levelMin: 35, levelMax: 35, requiredLevel: null, zones: [], bosses: ["A"], matchedBoss: null }}
+      />,
+    );
+    expect(screen.getByText(/Level 35/)).toBeTruthy();
+    expect(screen.queryByText(/Can enter/)).toBeNull();
+  });
+
   it("items link to their item pages", () => {
     const list = decodeClientItems(FIXTURE_FILE, []);
     const items = list.items.slice(0, 2);
