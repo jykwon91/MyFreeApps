@@ -8,12 +8,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.tags import EXPENSE_TAGS, NON_DEDUCTIBLE_TAGS, REVENUE_TAGS
+from app.core.transaction_sort_constants import (
+    DEFAULT_SORT_DIRECTION,
+    DEFAULT_TRANSACTION_SORT_FIELD,
+    SortDirection,
+    TransactionSortField,
+)
 from app.core.transaction_statuses import REVIEWABLE_STATUSES
 from app.models.extraction.extraction import Extraction
 from app.models.properties.property import Property
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.repositories.transactions.summary_repo import txn_active_property_filter
+
+_SORT_COLUMNS = {
+    "transaction_date": Transaction.transaction_date,
+    "amount": Transaction.amount,
+    "vendor": Transaction.vendor,
+    "category": Transaction.category,
+    "status": Transaction.status,
+    "transaction_type": Transaction.transaction_type,
+}
 
 
 async def list_filtered(
@@ -31,8 +46,11 @@ async def list_filtered(
     start_date: date | None = None,
     end_date: date | None = None,
     tax_year: int | None = None,
+    tax_relevant: bool | None = None,
     summary_kind: Literal["revenue", "expenses"] | None = None,
     active_properties_only: bool = False,
+    sort_by: TransactionSortField = DEFAULT_TRANSACTION_SORT_FIELD,
+    sort_dir: SortDirection = DEFAULT_SORT_DIRECTION,
     limit: int | None = None,
     offset: int | None = None,
 ) -> Sequence[Transaction]:
@@ -70,14 +88,21 @@ async def list_filtered(
         stmt = stmt.where(Transaction.transaction_date <= end_date)
     if tax_year is not None:
         stmt = stmt.where(Transaction.tax_year == tax_year)
+    if tax_relevant is not None:
+        stmt = stmt.where(Transaction.tax_relevant.is_(tax_relevant))
     if summary_kind is not None:
         stmt = stmt.where(Transaction.category.in_(REVENUE_TAGS if summary_kind == "revenue" else EXPENSE_TAGS))
     if active_properties_only:
         stmt = stmt.outerjoin(Property, Transaction.property_id == Property.id).where(*txn_active_property_filter())
 
-    # id breaks ties: rows sharing a date would otherwise repeat or go missing
-    # between pages.
-    stmt = stmt.order_by(Transaction.transaction_date.desc(), Transaction.id.desc())
+    column = _SORT_COLUMNS[sort_by]
+    primary = column.asc() if sort_dir == "asc" else column.desc()
+    # Newest first, then id, break ties: rows sharing a sort value would
+    # otherwise repeat or go missing between pages. A missing vendor sorts last
+    # either way.
+    stmt = stmt.order_by(
+        primary.nulls_last(), Transaction.transaction_date.desc(), Transaction.id.desc(),
+    )
 
     if offset is not None:
         stmt = stmt.offset(offset)

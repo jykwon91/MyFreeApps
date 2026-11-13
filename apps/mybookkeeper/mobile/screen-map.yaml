@@ -101,10 +101,10 @@ routes:
     screen: (app)/applicants/[id]
   /terms:
     not_on_mobile: Opens on the website.
-  # On the website only: bulk delete, import, and vendor rules. Adding by hand is
-  # (app)/transactions/new; bulk approve, a custom date range and export are on the
-  # Money tab; the duplicates tab is (app)/duplicates/index, opened from the Money tab
-  # and Home.
+  # Adding by hand is (app)/transactions/new and import is (app)/transactions/import;
+  # bulk approve and delete, a custom date range, sorting, the tax filter and export
+  # are on the Money tab; vendor rules are (app)/vendor-rules; the duplicates tab is
+  # (app)/duplicates/index, opened from the Money tab and Home.
   /transactions:
     screen: (app)/(tabs)/money
   /user-activity:

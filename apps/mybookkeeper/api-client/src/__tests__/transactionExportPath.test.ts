@@ -16,9 +16,12 @@ describe("transactionExportPath", () => {
         tax_year: 2026,
         unassigned: true,
         to_review: true,
+        tax_relevant: false,
+        sort_by: "amount",
+        sort_dir: "asc",
       }),
     ).toBe(
-      "/exports/transactions/csv?property_id=p1&unassigned=true&applicant_id=a1&status=approved&to_review=true&transaction_type=expense&category=maintenance&vendor=Home%20Depot&start_date=2026-01-01&end_date=2026-01-31&tax_year=2026",
+      "/exports/transactions/csv?property_id=p1&unassigned=true&applicant_id=a1&status=approved&to_review=true&transaction_type=expense&category=maintenance&vendor=Home%20Depot&start_date=2026-01-01&end_date=2026-01-31&tax_year=2026&tax_relevant=false&sort_by=amount&sort_dir=asc",
     );
   });
 

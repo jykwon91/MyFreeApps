@@ -13,6 +13,7 @@ import { useTransactionColumns } from "@/shared/hooks/useTransactionColumns";
 import { APPROVABLE_STATUSES } from "@/shared/lib/transaction-config";
 import { useTransactionPageState } from "@/app/features/transactions/hooks/useTransactionPageState";
 import { formatTag } from "@/shared/utils/tag";
+import { TAX_RELEVANT_OPTIONS } from "@mybookkeeper/api-client/constants/taxRelevantOptions";
 import TransactionTable from "@/app/features/transactions/TransactionTable";
 import TransactionPanel from "@/app/features/transactions/TransactionPanel";
 import ManualEntryForm from "@/app/features/transactions/ManualEntryForm";
@@ -115,10 +116,7 @@ export default function Transactions() {
         { value: "__empty__", label: "(No property)" },
         ...properties.map((p) => ({ value: p.id, label: p.name })),
       ],
-      tax_relevant: [
-        { value: "true", label: "Yes" },
-        { value: "false", label: "No" },
-      ],
+      tax_relevant: [...TAX_RELEVANT_OPTIONS],
     }),
     [transactions, properties],
   );
