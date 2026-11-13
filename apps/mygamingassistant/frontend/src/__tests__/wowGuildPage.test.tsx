@@ -205,6 +205,10 @@ describe("guild member list logic", () => {
     expect(isMemberStale(member({ refreshed_at: old }), ROSTER_AT)).toBe(true);
     expect(isMemberStale(member({}), ROSTER_AT)).toBe(false);
     expect(isMemberStale(member({ refreshed_at: old }), null)).toBe(false);
+    const hoursBefore = (hours: number) => new Date(Date.parse(ROSTER_AT) - hours * 3_600_000).toISOString();
+    // Hourly rosters; a big guild's members are refreshed over a few runs.
+    expect(isMemberStale(member({ refreshed_at: hoursBefore(5) }), ROSTER_AT)).toBe(false);
+    expect(isMemberStale(member({ refreshed_at: hoursBefore(7) }), ROSTER_AT)).toBe(true);
   });
 });
 

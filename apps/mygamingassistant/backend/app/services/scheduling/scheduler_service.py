@@ -24,7 +24,7 @@ Scheduled jobs (bodies in ``scheduled_jobs``):
   purge_wow_character_metrics — every 24 hours. Stored characters' daily
                       history older than 400 days (``character_store_service``).
   refresh_wow_guild_rosters — every 30 minutes. Watched WoW Forever guilds
-                      whose roster is over 6 hours old: roster + every member
+                      whose roster is due (hourly): roster + every member
                       (``app/services/wow/guild/guild_roster_service.py``).
 
 Switches: the purges and refresh_wow_guild_rosters always run (it does nothing

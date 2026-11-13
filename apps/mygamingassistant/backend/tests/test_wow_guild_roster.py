@@ -18,7 +18,13 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.wow_guild import GUILD_NOT_FOUND_ERROR, GUILD_ROSTER_STALE_AFTER, GUILD_TRACKED_FOR
+from app.core.wow_guild import (
+    GUILD_NOT_FOUND_ERROR,
+    GUILD_ROSTER_JOB_INTERVAL,
+    GUILD_ROSTER_REFRESH_EVERY,
+    GUILD_ROSTER_STALE_AFTER,
+    GUILD_TRACKED_FOR,
+)
 from app.models.wow.character import WowCharacter
 from app.models.wow.character_recipe import WowCharacterRecipe
 from app.models.wow.guild import WowGuild
@@ -149,9 +155,24 @@ async def test_a_guild_is_due_while_watched_and_stale(bound_unit_of_work: AsyncS
 
     guild = await _guild(db)
     await guild_repo.record_roster(db, guild.id, 1, NOW)
-    assert await due(NOW + timedelta(hours=1)) == []
-    assert await due(NOW + GUILD_ROSTER_STALE_AFTER + timedelta(minutes=1)) == ["topdeadcenter"]
+    # Not on the next run, but on the one an hour after (the runs are half an hour apart).
+    assert await due(NOW + GUILD_ROSTER_JOB_INTERVAL) == []
+    assert await due(NOW + GUILD_ROSTER_REFRESH_EVERY) == ["topdeadcenter"]
     assert await due(NOW + GUILD_TRACKED_FOR + timedelta(minutes=1)) == []
+
+
+async def test_a_roster_stamped_during_a_run_is_due_on_the_run_an_hour_later(
+    bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = bound_unit_of_work
+    guild = await _watched_guild_with_jason(db)
+    monkeypatch.setattr(character_service, "new_client", lambda: _blizzard([("jason-kwon", 1, 0)]))
+    # However long the run takes, the roster is stamped with the run's start.
+    assert await guild_roster_service.refresh_due(now=NOW) == 1
+    await db.refresh(guild)
+    assert guild.roster_checked_at == NOW
+    assert await guild_roster_service.refresh_due(now=NOW + GUILD_ROSTER_JOB_INTERVAL) == 0
+    assert await guild_roster_service.refresh_due(now=NOW + GUILD_ROSTER_REFRESH_EVERY) == 1
 
 
 # --- the roster refresh ----------------------------------------------------------
@@ -333,6 +354,27 @@ async def test_members_refreshed_lately_are_not_fetched_and_the_run_keeps_to_its
     monkeypatch.setattr(character_lookup_service, "get_character", spy)
     await guild_roster_service.refresh_due(now=NOW)
     assert fetched == ["tiny-john"]
+
+
+async def test_members_fetched_during_last_hours_run_are_fetched_again_on_this_one(
+    bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = bound_unit_of_work
+    # Last hour's run started at NOW and reached jason a few minutes in.
+    await character_store_service.record(make_fetch(), now=NOW + timedelta(minutes=5), viewed=True)
+    guild = await _guild(db)
+    await guild_repo.record_roster(db, guild.id, 1, NOW)
+    monkeypatch.setattr(character_service, "new_client", lambda: _blizzard([("jason-kwon", 1, 0)]))
+    fetched: list[str] = []
+    real_get = character_lookup_service.get_character
+
+    async def spy(slug: str, *, viewed: bool = True) -> Any:
+        fetched.append(slug)
+        return await real_get(slug, viewed=viewed)
+
+    monkeypatch.setattr(character_lookup_service, "get_character", spy)
+    assert await guild_roster_service.refresh_due(now=NOW + GUILD_ROSTER_REFRESH_EVERY) == 1
+    assert fetched == ["jason-kwon"]
 
 
 async def test_one_guild_failing_unexpectedly_is_recorded_and_the_next_still_refreshes(

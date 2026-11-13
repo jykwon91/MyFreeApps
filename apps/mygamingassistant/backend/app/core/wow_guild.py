@@ -23,8 +23,16 @@ GUILD_FACTIONS: Final = frozenset({"ALLIANCE", "HORDE"})
 
 # How often the scheduler looks for guilds whose roster is due.
 GUILD_ROSTER_JOB_INTERVAL: Final = timedelta(minutes=30)
-# A roster (and its members' sheets) is refreshed when older than this.
-GUILD_ROSTER_STALE_AFTER: Final = timedelta(hours=6)
+# How often a watched guild's roster and its members' sheets are refreshed.
+GUILD_ROSTER_REFRESH_EVERY: Final = timedelta(hours=1)
+# A roster, or a member, refreshed before this long ago is due. Half a job
+# interval short of the hour: runs are a job interval apart, so one falls an
+# hour after the last, and a member is fetched a little after its run starts —
+# a full hour would still count last hour's run as fresh and push the refresh to
+# every 90 minutes (members to 2 hours). A roster is stamped with its run's
+# start, so only a member fetched more than half an interval into a run waits
+# an extra run.
+GUILD_ROSTER_STALE_AFTER: Final = GUILD_ROSTER_REFRESH_EVERY - GUILD_ROSTER_JOB_INTERVAL / 2
 # A guild nobody has looked at for this long stops being refreshed.
 GUILD_TRACKED_FOR: Final = timedelta(days=14)
 # At most this many guilds per run, oldest roster first; the rest wait for the next run.

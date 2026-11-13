@@ -120,7 +120,7 @@ async def refresh_guild(guild: WowGuild, *, budget: int, now: datetime | None = 
     rate_limited = asyncio.Event()
     limit = asyncio.Semaphore(GUILD_MEMBER_FETCH_CONCURRENCY)
     await asyncio.gather(*(_fetch_member(slug, limit, rate_limited) for slug in slugs))
-    await _apply_roster(guild, roster)
+    await _apply_roster(guild, roster, at)
     return GuildRefreshOutcome(fetched=len(slugs), rate_limited=rate_limited.is_set())
 
 
@@ -166,8 +166,8 @@ async def _record_error(guild: WowGuild, message: str) -> None:
     logger.warning("Guild %s roster not refreshed: %s", guild.slug, message)
 
 
-async def _apply_roster(guild: WowGuild, roster: GuildRoster) -> None:
-    at = _now()
+async def _apply_roster(guild: WowGuild, roster: GuildRoster, at: datetime) -> None:
+    """Store the roster, stamped with the run's start (``at``) so the next run an hour on finds it due."""
     async with unit_of_work() as db:
         await guild_repo.record_roster(db, guild.id, roster.listed, at)
         await character_repo.apply_roster(db, guild.id, {m.blizzard_character_id: m.rank for m in roster.members})

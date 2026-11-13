@@ -13,6 +13,13 @@ import type { WhatsNewEntry } from "@/games/wow-forever/types/whatsNew/whatsNewE
 export const WHATS_NEW: readonly WhatsNewEntry[] = [
   {
     date: "2026-11-12",
+    title: "Guild pages refresh every hour",
+    summary:
+      "Your guild's roster and every member's stats now update every hour instead of every 6 hours, so leaderboards and titles keep up with the game.",
+    to: "/wow-forever/character",
+  },
+  {
+    date: "2026-11-12",
     title: "Guild titles",
     summary:
       "Whoever leads a guild leaderboard earns a title and badge, like Bloodletter for the most honorable kills, shown by their name and in a new Guild titles list.",

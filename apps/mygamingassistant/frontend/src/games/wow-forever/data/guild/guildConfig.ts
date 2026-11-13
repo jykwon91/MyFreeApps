@@ -30,10 +30,16 @@ export const GUILD_DIRECTION_ASC = "asc";
 /** The level filter's choices (0 = any level). */
 export const GUILD_LEVEL_BANDS: readonly number[] = [0, 60, 50, 40, 30, 20, 10];
 
-/** A roster older than this gets the "updates when someone looks up a member" note. */
-export const GUILD_ROSTER_FRESH_HOURS = 12;
-/** A member refreshed this much before the roster says when they were last updated. */
-export const GUILD_MEMBER_STALE_HOURS = 24;
+/**
+ * A roster older than this gets the "updates when someone looks up a member" note. The roster
+ * refreshes hourly (``GUILD_ROSTER_REFRESH_EVERY``), so this is a few missed refreshes.
+ */
+export const GUILD_ROSTER_FRESH_HOURS = 3;
+/**
+ * A member refreshed this much before the roster says when they were last updated. Looser than the
+ * roster: a guild bigger than one run's member budget is refreshed over a few runs.
+ */
+export const GUILD_MEMBER_STALE_HOURS = 6;
 
 /** How the search box waits before writing to the URL. */
 export const GUILD_SEARCH_DEBOUNCE_MS = 250;
