@@ -193,7 +193,5 @@ async def test_only_the_operators_guild_can_be_refreshed(
     assert refused.status_code == 404 and refused.json()["detail"] == "guild_not_found"
     assert ran == []
     assert await guild_refresh_service.claim("other-guild", now=SERVICE_NOW) is None
-    # The page says which guild has the button.
-    assert (await client.get("/wow/guilds/other-guild")).json()["can_refresh"] is False
     await _stored_guild(db, checked_at=None)
     assert (await client.get("/wow/guilds/topdeadcenter")).json()["can_refresh"] is True

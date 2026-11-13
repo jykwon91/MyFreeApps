@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@platform/ui";
 import { Check } from "lucide-react";
 import { FACTION_LABELS } from "@/games/wow-forever/data/character/characterConfig";
-import { GUILD_PAGE_PATH } from "@/games/wow-forever/data/guild/guildConfig";
+import { GUILD_PAGE_PATH, GUILD_SLUG } from "@/games/wow-forever/data/guild/guildConfig";
 import { LEADERBOARD_PARAMS } from "@/games/wow-forever/data/guild/leaderboardConfig";
 import { BADGE } from "@/games/wow-forever/data/badgeStyles";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
@@ -16,8 +16,8 @@ export default function CharacterHeader({ character }: { character: CharacterRes
   const wanted = playerSettingsFromCharacter(character);
   const inUse = wanted !== null && settingsMatchCharacter(settings, wanted);
   const guild = character.guild ? `<${character.guild}>` : null;
-  // A guild with a page is a link there; the badge stays plain text otherwise.
-  const guildLinked = guild !== null && character.guild_slug !== null;
+  // topdeadcenter (the site's one guild page) is a link there; any other guild stays plain text.
+  const guildLinked = guild !== null && character.guild_slug === GUILD_SLUG;
   const badges = [FACTION_LABELS[character.faction], character.ruleset, guildLinked ? null : guild].filter(
     (b): b is string => Boolean(b),
   );
@@ -53,7 +53,7 @@ export default function CharacterHeader({ character }: { character: CharacterRes
         ))}
         {guildLinked ? (
           <Link
-            to={`${GUILD_PAGE_PATH}/${character.guild_slug}?${LEADERBOARD_PARAMS.me}=${encodeURIComponent(character.slug)}`}
+            to={`${GUILD_PAGE_PATH}?${LEADERBOARD_PARAMS.me}=${encodeURIComponent(character.slug)}`}
             className="inline-flex min-h-[44px] items-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={`Guild ${character.guild}: see its members`}
           >

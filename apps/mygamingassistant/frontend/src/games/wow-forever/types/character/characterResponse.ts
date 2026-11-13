@@ -20,7 +20,7 @@ export interface CharacterResponse {
   /** alliance / horde */
   faction: string;
   guild: string | null;
-  /** The guild page's slug (/wow-forever/guild/:slug); null when guildless. */
+  /** The guild's Blizzard slug (only topdeadcenter has a page); null when guildless. */
   guild_slug: string | null;
   ruleset: string | null;
   equipped_item_level: number | null;

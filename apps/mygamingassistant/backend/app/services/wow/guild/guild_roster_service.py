@@ -1,11 +1,11 @@
-"""Refresh watched guilds' rosters, and their members' characters, on a schedule.
+"""Refresh the site's one guild (``GUILD_SLUG``) and its members' characters, on a schedule.
 
-A guild is watched while someone looked up one of its members on "Your
+The guild is watched while someone looked up one of its members on "Your
 character" within ``GUILD_TRACKED_FOR``. Each run (``refresh_wow_guild_rosters``)
-takes up to ``GUILD_ROSTER_MAX_GUILDS_PER_RUN`` watched guilds whose roster is
-older than ``GUILD_ROSTER_STALE_AFTER``, never-asked first, and fetches at most
-``GUILD_ROSTER_MAX_MEMBER_FETCHES_PER_RUN`` members across them (the Blizzard
-quota is shared with every other caller). Per guild:
+refreshes it when its roster is older than ``GUILD_ROSTER_STALE_AFTER``, fetching
+at most ``GUILD_ROSTER_MAX_MEMBER_FETCHES_PER_RUN`` members (the Blizzard quota is
+shared with every other caller). Other guilds a character look-up stored are never
+refreshed. A refresh:
 
 1. Blizzard's guild and roster. Two 404s in a row, or the name now belonging to
    another guild, mark the guild gone and its members guildless; any other
@@ -18,8 +18,8 @@ quota is shared with every other caller). Per guild:
 3. one short transaction: the member count, and the stored members become
    exactly the roster, each with its rank.
 
-A guild that fails unexpectedly is recorded and the run goes on; a 429 from
-Blizzard ends the run. No database connection is held while Blizzard answers.
+A refresh that fails unexpectedly is recorded so it waits for the next run; a 429
+from Blizzard ends the run. No database connection is held while Blizzard answers.
 """
 from __future__ import annotations
 
@@ -35,9 +35,9 @@ from app.core.wow_guild import (
     GUILD_NOT_FOUND_ERROR,
     GUILD_REFRESH_COOLDOWN,
     GUILD_REFRESH_NOW_MAX_MEMBER_FETCHES,
-    GUILD_ROSTER_MAX_GUILDS_PER_RUN,
     GUILD_ROSTER_MAX_MEMBER_FETCHES_PER_RUN,
     GUILD_ROSTER_STALE_AFTER,
+    GUILD_SLUG,
     GUILD_TRACKED_FOR,
 )
 from app.db.session import unit_of_work
@@ -65,9 +65,9 @@ async def refresh_due(*, now: datetime | None = None) -> int:
     async with unit_of_work() as db:
         due = await guild_repo.due_for_roster(
             db,
+            slug=GUILD_SLUG,
             viewed_since=at - GUILD_TRACKED_FOR,
             checked_before=at - GUILD_ROSTER_STALE_AFTER,
-            limit=GUILD_ROSTER_MAX_GUILDS_PER_RUN,
         )
     budget = GUILD_ROSTER_MAX_MEMBER_FETCHES_PER_RUN
     attempted = 0

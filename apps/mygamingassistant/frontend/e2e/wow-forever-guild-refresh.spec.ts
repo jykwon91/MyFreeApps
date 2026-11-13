@@ -5,7 +5,6 @@
  *     a success toast shows, and the button waits out the cooldown (disabled, with the minutes left)
  *   - a guild inside its cooldown on load: the button is disabled and says for how long
  *   - a failed refresh says Blizzard didn't answer, and the list stays
- *   - any other guild (`can_refresh: false`): no button at all
  *
  * Stubbed: `/wow/guilds/<slug>` (stateful: the refresh moves its roster time) and
  * `/wow/guilds/<slug>/refresh`.
@@ -36,7 +35,7 @@ function iso(offsetMs: number): string {
 function guildBody(state: GuildState) {
   return {
     slug: state.slug,
-    name: state.slug === "topdeadcenter" ? "TopDeadCenter" : "Other Guild",
+    name: "TopDeadCenter",
     faction: "alliance",
     roster_size: 1,
     roster_updated_at: state.rosterUpdatedAt,
@@ -89,7 +88,7 @@ async function stub(page: Page, state: GuildState, outcome: "ok" | "blizzard_dow
 
 test("Refresh now shows loading at the click, then the roster reads just now and the button waits out the cooldown", async ({ page }) => {
   const calls = await stub(page, newState());
-  await page.goto("/wow-forever/guild/topdeadcenter");
+  await page.goto("/wow-forever/guild");
   await expect(page.getByText(/Roster updated/)).toContainText("2 hours ago");
 
   await page.getByRole("button", { name: "Refresh now" }).click();
@@ -107,7 +106,7 @@ test("Refresh now shows loading at the click, then the roster reads just now and
 
 test("a guild refreshed a moment ago starts with the button disabled and says for how long", async ({ page }) => {
   await stub(page, newState({ refreshAvailableAt: iso(3 * MINUTE_MS - 5_000) }));
-  await page.goto("/wow-forever/guild/topdeadcenter");
+  await page.goto("/wow-forever/guild");
 
   await expect(page.getByRole("button", { name: "Refresh now" })).toBeDisabled();
   await expect(page.getByText("Refreshed recently — you can refresh again in 3 minutes.")).toBeVisible();
@@ -115,19 +114,10 @@ test("a guild refreshed a moment ago starts with the button disabled and says fo
 
 test("a refresh Blizzard did not answer says so and keeps the list", async ({ page }) => {
   await stub(page, newState(), "blizzard_down");
-  await page.goto("/wow-forever/guild/topdeadcenter");
+  await page.goto("/wow-forever/guild");
 
   await page.getByRole("button", { name: "Refresh now" }).click();
 
   await expect(page.getByText("Blizzard didn't answer the refresh. The list is unchanged; we'll try again soon.", { exact: true })).toBeVisible();
   await expect(page.getByRole("table").getByRole("link", { name: "Jason Kwon" })).toBeVisible();
-});
-
-test("a guild that is not the operator's has no Refresh now button", async ({ page }) => {
-  await stub(page, newState({ slug: "other-guild", canRefresh: false }));
-  await page.goto("/wow-forever/guild/other-guild");
-
-  await expect(page.getByRole("heading", { name: "<Other Guild>" })).toBeVisible();
-  await expect(page.getByText(/Roster updated/)).toBeVisible();
-  await expect(page.getByRole("button", { name: /Refresh now|Refreshing/ })).toHaveCount(0);
 });

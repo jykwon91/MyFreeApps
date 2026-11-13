@@ -1,5 +1,5 @@
 /**
- * The guild page (/wow-forever/guild/:slug): the recipe search, the leaderboards, the member
+ * The guild page (/wow-forever/guild, topdeadcenter only): the recipe search, the leaderboards, the member
  * list's search, filters and sort (kept in the URL), and the states that stand
  * in for the list.
  */
@@ -29,6 +29,7 @@ import {
   sortMembers,
 } from "@/games/wow-forever/lib/guild/guildMembers";
 import WowGuildPage from "@/games/wow-forever/pages/WowGuildPage";
+import WowLegacyGuildRedirect from "@/games/wow-forever/pages/WowLegacyGuildRedirect";
 import type { GuildCrafter } from "@/games/wow-forever/types/guild/guildCrafter";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
 import type { GuildMemberBaseline } from "@/games/wow-forever/types/guild/guildMemberBaseline";
@@ -39,7 +40,7 @@ import type { GuildResponse } from "@/games/wow-forever/types/guild/guildRespons
 const mockQuery = vi.fn();
 const mockRecipes = vi.fn();
 vi.mock("@/games/wow-forever/api/wowGuildApi", () => ({
-  useGetGuildQuery: (slug: string, opts: { skip: boolean }) => mockQuery(slug, opts),
+  useGetGuildQuery: (slug: string) => mockQuery(slug),
   useSearchGuildRecipesQuery: (args: GuildRecipeSearchArgs) => mockRecipes(args),
 }));
 
@@ -110,7 +111,8 @@ function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/wow-forever/guild/:slug" element={<WowGuildPage />} />
+        <Route path="/wow-forever/guild" element={<WowGuildPage />} />
+        <Route path="/wow-forever/guild/:slug" element={<WowLegacyGuildRedirect />} />
       </Routes>
       <LocationProbe />
     </MemoryRouter>,
@@ -309,10 +311,10 @@ describe("guild leaderboard logic", () => {
 });
 
 describe("guild page", () => {
-  it("asks for the lowercased slug and lists members by rank with links to their characters", () => {
+  it("always asks for topdeadcenter and lists members by rank with links to their characters", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
-    renderAt("/wow-forever/guild/TopDeadCenter");
-    expect(mockQuery).toHaveBeenCalledWith("topdeadcenter", { skip: false });
+    renderAt("/wow-forever/guild");
+    expect(mockQuery).toHaveBeenCalledWith("topdeadcenter");
     expect(screen.getByRole("heading", { name: "<TopDeadCenter>" })).toBeInTheDocument();
     expect(screen.getByText("4 of 6 members shown")).toBeInTheDocument();
     expect(screen.getByText(/2 members have no profile from Blizzard/)).toBeInTheDocument();
@@ -324,36 +326,44 @@ describe("guild page", () => {
     );
   });
 
+  it("sends an old guild link, for any guild, to topdeadcenter's page with its query kept", () => {
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    renderAt("/wow-forever/guild/some-other-guild?me=jason-kwon");
+    expect(screen.getByTestId("location")).toHaveTextContent(/^\/wow-forever\/guild\?me=jason-kwon$/);
+    expect(mockQuery).toHaveBeenCalledWith("topdeadcenter");
+    expect(mockQuery).not.toHaveBeenCalledWith("some-other-guild");
+  });
+
   it("sorts from a column header and keeps the sort in the URL", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
-    renderAt("/wow-forever/guild/topdeadcenter");
+    renderAt("/wow-forever/guild");
     fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Level" }));
     expect(tableNames()).toEqual(["Big Sue", "Jason Kwon", "Tiny John", "New Guy"]);
-    expect(screen.getByTestId("location")).toHaveTextContent("/wow-forever/guild/topdeadcenter?sort=level");
+    expect(screen.getByTestId("location")).toHaveTextContent("/wow-forever/guild?sort=level");
     const header = within(screen.getByRole("table")).getByRole("columnheader", { name: /Level/ });
     expect(header).toHaveAttribute("aria-sort", "descending");
   });
 
   it("ignores a class from an old link that nobody in the guild plays", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
-    renderAt("/wow-forever/guild/topdeadcenter?class=Druid");
+    renderAt("/wow-forever/guild?class=Druid");
     expect(screen.getByText("Showing 4 of 4 members")).toBeInTheDocument();
     expect(screen.getByLabelText("Class")).toHaveValue("");
   });
 
   it("filters by class and name from the URL, and Clear filters brings everyone back", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
-    renderAt("/wow-forever/guild/topdeadcenter?class=Mage&q=sue");
+    renderAt("/wow-forever/guild?class=Mage&q=sue");
     expect(screen.getByText("No members match.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(screen.getByText("Showing 4 of 4 members")).toBeInTheDocument();
-    expect(screen.getByTestId("location")).toHaveTextContent(/^\/wow-forever\/guild\/topdeadcenter$/);
+    expect(screen.getByTestId("location")).toHaveTextContent(/^\/wow-forever\/guild$/);
   });
 
   it("searches by name after a short pause", () => {
     vi.useFakeTimers();
     mockQuery.mockReturnValue(query({ data: GUILD }));
-    renderAt("/wow-forever/guild/topdeadcenter");
+    renderAt("/wow-forever/guild");
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "sue" } });
     act(() => {
       vi.advanceTimersByTime(GUILD_SEARCH_DEBOUNCE_MS);
@@ -364,15 +374,15 @@ describe("guild page", () => {
 
   it("says when we don't have the guild yet", () => {
     mockQuery.mockReturnValue(query({ error: { status: 404, data: { detail: "guild_not_found" } } }));
-    renderAt("/wow-forever/guild/nobody");
-    expect(screen.getByText(/We don't have this guild yet/)).toBeInTheDocument();
+    renderAt("/wow-forever/guild");
+    expect(screen.getByText(/We don't have <TopDeadCenter> yet/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Look up a character" })).toHaveAttribute("href", "/wow-forever/character");
   });
 
   it("says when the roster is still being collected, with a way to check again", () => {
     const refetch = vi.fn();
     mockQuery.mockReturnValue(query({ data: { ...GUILD, roster_size: null, roster_updated_at: null, members: [] }, refetch }));
-    renderAt("/wow-forever/guild/topdeadcenter");
+    renderAt("/wow-forever/guild");
     expect(screen.getByText(/collecting this guild's roster/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
     expect(refetch).toHaveBeenCalled();
@@ -380,25 +390,25 @@ describe("guild page", () => {
 
   it("says when Blizzard no longer lists the guild, and when the last refresh failed", () => {
     mockQuery.mockReturnValue(query({ data: { ...GUILD, gone: true, members: [] } }));
-    const { unmount } = renderAt("/wow-forever/guild/topdeadcenter");
+    const { unmount } = renderAt("/wow-forever/guild");
     expect(screen.getByText(/Blizzard no longer lists this guild/)).toBeInTheDocument();
     unmount();
 
     mockQuery.mockReturnValue(query({ data: { ...GUILD, refresh_failed: true } }));
-    renderAt("/wow-forever/guild/topdeadcenter");
+    renderAt("/wow-forever/guild");
     expect(screen.getByText(/didn't answer the last roster update/)).toBeInTheDocument();
     expect(tableNames()).toHaveLength(4);
   });
 
   it("shows a skeleton while loading and a plain problem when the server can't be reached", () => {
     mockQuery.mockReturnValue(query({ isFetching: true }));
-    const { container, unmount } = renderAt("/wow-forever/guild/topdeadcenter");
+    const { container, unmount } = renderAt("/wow-forever/guild");
     expect(container.querySelector(".animate-pulse")).not.toBeNull();
     unmount();
 
     const refetch = vi.fn();
     mockQuery.mockReturnValue(query({ error: { status: "FETCH_ERROR", error: "offline" }, refetch }));
-    renderAt("/wow-forever/guild/topdeadcenter");
+    renderAt("/wow-forever/guild");
     expect(screen.getByRole("alert")).toHaveTextContent(/Couldn't load this guild/);
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refetch).toHaveBeenCalled();
@@ -406,7 +416,7 @@ describe("guild page", () => {
 
   it("shows the level board by default and switches boards from the picker, keeping the member filters", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
-    renderAt("/wow-forever/guild/topdeadcenter?class=Warlock");
+    renderAt("/wow-forever/guild?class=Warlock");
     expect(boardNames("Level leaderboard")).toEqual(["Big Sue", "Jason Kwon", "Tiny John"]);
     expect(screen.getByText(/1 member has no number for this yet/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Rank members by"), { target: { value: "dungeons" } });
@@ -419,7 +429,7 @@ describe("guild page", () => {
       member({ slug: `m-${i}`, name: `M${String(i).padStart(2, "0")}`, surname: "X", level: 60 - i }),
     );
     mockQuery.mockReturnValue(query({ data: { ...GUILD, members: [...many, member({ level: 2 })] } }));
-    renderAt("/wow-forever/guild/topdeadcenter?me=Jason-Kwon");
+    renderAt("/wow-forever/guild?me=Jason-Kwon");
     expect(boardNames("Level leaderboard")).toHaveLength(10);
     const pinned = screen.getByRole("list", { name: "Your character" });
     expect(within(pinned).getByText("12")).toBeInTheDocument();
@@ -431,7 +441,7 @@ describe("guild page", () => {
 
   it("says when the viewer's character isn't on the board", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
-    renderAt("/wow-forever/guild/topdeadcenter?board=fewest-deaths&me=jason-kwon");
+    renderAt("/wow-forever/guild?board=fewest-deaths&me=jason-kwon");
     expect(screen.getByText(/Your character isn't on this board/)).toBeInTheDocument();
   });
 
@@ -442,7 +452,7 @@ describe("guild page", () => {
       member({ slug: "new-guy", name: "New", surname: "Guy", level: 5 }),
     ];
     mockQuery.mockReturnValue(query({ data: { ...GUILD, members } }));
-    renderAt("/wow-forever/guild/topdeadcenter?board=levels-gained&me=new-guy");
+    renderAt("/wow-forever/guild?board=levels-gained&me=new-guy");
     const board = screen.getByRole("list", { name: "Levels gained leaderboard" });
     expect(within(board).getByText("+3")).toBeInTheDocument();
     expect(within(board).getByText("Warlock · since Nov 12")).toBeInTheDocument();
@@ -454,13 +464,13 @@ describe("guild page", () => {
 
   it("says plainly when nobody has a gain yet", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
-    renderAt("/wow-forever/guild/topdeadcenter?board=dungeons-gained");
+    renderAt("/wow-forever/guild?board=dungeons-gained");
     expect(screen.getByText(/No gains to show yet/)).toBeInTheDocument();
   });
 
   it("changing a member filter keeps the board in the URL", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
-    renderAt("/wow-forever/guild/topdeadcenter?board=exalted&me=jason-kwon");
+    renderAt("/wow-forever/guild?board=exalted&me=jason-kwon");
     fireEvent.change(screen.getByLabelText("Class"), { target: { value: "Mage" } });
     expect(screen.getByTestId("location")).toHaveTextContent("?board=exalted&me=jason-kwon&class=Mage");
   });
@@ -498,7 +508,7 @@ describe("guild recipe search", () => {
     vi.useFakeTimers();
     mockQuery.mockReturnValue(query({ data: GUILD }));
     mockRecipes.mockReturnValue(recipes({ currentData: LINEN }));
-    renderAt("/wow-forever/guild/topdeadcenter?board=exalted");
+    renderAt("/wow-forever/guild?board=exalted");
     typeRecipe("  linen ");
 
     expect(screen.getByTestId("location")).toHaveTextContent("?board=exalted&recipe=linen");
@@ -516,18 +526,18 @@ describe("guild recipe search", () => {
   it("doesn't search one letter, and clearing the box drops it from the URL", () => {
     vi.useFakeTimers();
     mockQuery.mockReturnValue(query({ data: GUILD }));
-    renderAt("/wow-forever/guild/topdeadcenter?recipe=linen");
+    renderAt("/wow-forever/guild?recipe=linen");
     typeRecipe("l");
     expect(screen.getByTestId("location")).toHaveTextContent("?recipe=l");
     expect(mockRecipes).not.toHaveBeenCalledWith({ slug: "topdeadcenter", query: "l" });
     typeRecipe("");
-    expect(screen.getByTestId("location").textContent).toBe("/wow-forever/guild/topdeadcenter");
+    expect(screen.getByTestId("location").textContent).toBe("/wow-forever/guild");
   });
 
   it("opens with the search from the URL", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
     mockRecipes.mockReturnValue(recipes({ currentData: LINEN }));
-    renderAt("/wow-forever/guild/topdeadcenter?recipe=linen");
+    renderAt("/wow-forever/guild?recipe=linen");
     expect(screen.getByLabelText("Recipe")).toHaveValue("linen");
     expect(screen.getByText("Bolt of Linen Cloth")).toBeInTheDocument();
   });
@@ -535,18 +545,18 @@ describe("guild recipe search", () => {
   it("shows a skeleton while searching, says when nobody knows it, and offers a retry on a problem", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
     mockRecipes.mockReturnValue(recipes({ isFetching: true }));
-    const first = renderAt("/wow-forever/guild/topdeadcenter?recipe=zzz");
+    const first = renderAt("/wow-forever/guild?recipe=zzz");
     expect(screen.getByTestId("guild-recipe-skeleton")).toBeInTheDocument();
     first.unmount();
 
     mockRecipes.mockReturnValue(recipes({ currentData: { query: "zzz", recipes: [], truncated: false } }));
-    const second = renderAt("/wow-forever/guild/topdeadcenter?recipe=zzz");
+    const second = renderAt("/wow-forever/guild?recipe=zzz");
     expect(screen.getByText(/Nobody in the guild knows a recipe matching "zzz"/)).toBeInTheDocument();
     second.unmount();
 
     const refetch = vi.fn();
     mockRecipes.mockReturnValue(recipes({ isError: true, refetch }));
-    renderAt("/wow-forever/guild/topdeadcenter?recipe=zzz");
+    renderAt("/wow-forever/guild?recipe=zzz");
     expect(screen.getByText("Couldn't search the guild's recipes.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Try again|Retry/ }));
     expect(refetch).toHaveBeenCalled();

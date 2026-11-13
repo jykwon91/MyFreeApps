@@ -1,6 +1,5 @@
 """WoW Forever guild page — PUBLIC, both serve-only and full-auth mode.
 
-GET /wow/guilds?q= — stored guilds whose name contains ``q`` (the guild menu page).
 GET /wow/guilds/{slug} — a stored guild and its members (level, class, item
 level, rank, leaderboard numbers).
 GET /wow/guilds/{slug}/recipes?q= — the guild's known recipes whose name
@@ -10,14 +9,16 @@ and each member's standing with one (default: the one most have met).
 POST /wow/guilds/{slug}/refresh — "Refresh now": re-pull the roster and members
 from Blizzard in the background (202), at most once per cooldown per guild.
 
-Read from the database only: a guild is stored when someone looks up one of
+Only the operator's guild (``GUILD_SLUG``) is served: any other slug is a 404.
+Read from the database only: the guild is stored when someone looks up one of
 its members on "Your character", and the scheduled roster refresh fills in the
 rest.
 
 Errors:
-  - 404 — no stored guild by that slug (``guild_not_found``); a gone guild's
+  - 404 (``guild_not_found``) — any slug but the operator's guild, or it is not stored
+    yet; a gone guild's
     recipe search and reputation board find nothing
-  - 422 — a guild or recipe query shorter or longer than allowed, or holding control
+  - 422 — a recipe query shorter or longer than allowed, or holding control
     characters (Postgres refuses NUL)
   - 429 — too many look-ups (or refreshes) from this IP
 """
@@ -35,21 +36,16 @@ from app.core.wow_guild import (
     GUILD_REFRESH_RATE_WINDOW_SECONDS,
     GUILD_RECIPE_QUERY_MAX_LENGTH,
     GUILD_RECIPE_QUERY_MIN_LENGTH,
-    GUILD_SEARCH_QUERY_MAX_LENGTH,
-    GUILD_SEARCH_QUERY_MIN_LENGTH,
-    GUILD_SLUG_MAX_LENGTH,
-    GUILD_SLUG_PATTERN,
+    GUILD_SLUG,
 )
 from app.schemas.wow.guild.guild_recipe_search_response import GuildRecipeSearchResponse
 from app.schemas.wow.guild.guild_refresh_response import GuildRefreshResponse
 from app.schemas.wow.guild.guild_reputation_response import GuildReputationResponse
 from app.schemas.wow.guild.guild_response import GuildResponse
-from app.schemas.wow.guild.guild_search_response import GuildSearchResponse
 from app.services.wow.guild import (
     guild_recipe_search_service,
     guild_refresh_service,
     guild_reputation_service,
-    guild_search_service,
     guild_view_service,
 )
 
@@ -61,15 +57,13 @@ guild_refresh_limiter = RateLimiter(max_attempts=GUILD_REFRESH_RATE_LIMIT, windo
 GUILD_NOT_FOUND = "guild_not_found"
 RECIPE_QUERY_TOO_SHORT = "recipe_query_too_short"
 RECIPE_QUERY_INVALID = "recipe_query_invalid"
-GUILD_QUERY_TOO_SHORT = "guild_query_too_short"
-GUILD_QUERY_INVALID = "guild_query_invalid"
 
 
 def _checked_slug(slug: str, request: Request) -> str:
-    """The per-IP limit, then the slug lowercased; an impossible slug is a 404."""
+    """The per-IP limit, then the slug lowercased; any guild but the operator's is a 404."""
     check_with_retry_after(guild_limiter, f"wow-guild:{get_client_ip(request)}")
     slug = slug.lower()
-    if len(slug) > GUILD_SLUG_MAX_LENGTH or not GUILD_SLUG_PATTERN.fullmatch(slug):
+    if slug != GUILD_SLUG:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=GUILD_NOT_FOUND)
     return slug
 
@@ -82,18 +76,6 @@ def _checked_query(query: str, *, min_length: int, too_short: str, invalid: str)
     if GUILD_QUERY_FORBIDDEN.search(query):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=invalid)
     return query
-
-
-@router.get("", response_model=GuildSearchResponse)
-async def search_guilds(
-    request: Request,
-    q: str = Query(min_length=GUILD_SEARCH_QUERY_MIN_LENGTH, max_length=GUILD_SEARCH_QUERY_MAX_LENGTH),
-) -> GuildSearchResponse:
-    check_with_retry_after(guild_limiter, f"wow-guild:{get_client_ip(request)}")
-    query = _checked_query(
-        q, min_length=GUILD_SEARCH_QUERY_MIN_LENGTH, too_short=GUILD_QUERY_TOO_SHORT, invalid=GUILD_QUERY_INVALID,
-    )
-    return await guild_search_service.search(query)
 
 
 @router.get("/{slug}", response_model=GuildResponse)

@@ -70,19 +70,18 @@ async def touch_viewed(db: AsyncSession, blizzard_guild_id: int, at: datetime) -
 
 
 async def due_for_roster(
-    db: AsyncSession, *, viewed_since: datetime, checked_before: datetime, limit: int,
+    db: AsyncSession, *, slug: str, viewed_since: datetime, checked_before: datetime,
 ) -> list[WowGuild]:
-    """The live guilds someone looked at since ``viewed_since`` whose roster
-    wasn't asked for since ``checked_before`` — never-asked first, then oldest."""
+    """The live guild ``slug`` (at most one: a slug is unique among live guilds), if someone
+    looked at it since ``viewed_since`` and its roster wasn't asked for since ``checked_before``."""
     result = await db.execute(
         select(WowGuild)
         .where(
+            WowGuild.slug == slug,
             WowGuild.gone_at.is_(None),
             WowGuild.last_viewed_at >= viewed_since,
             or_(WowGuild.roster_checked_at.is_(None), WowGuild.roster_checked_at < checked_before),
         )
-        .order_by(WowGuild.roster_checked_at.asc().nulls_first())
-        .limit(limit)
     )
     return list(result.scalars())
 
@@ -142,18 +141,6 @@ async def get_by_slug(db: AsyncSession, slug: str) -> WowGuild | None:
         .limit(1)
     )
     return result.scalar_one_or_none()
-
-
-async def search_live(db: AsyncSession, text: str, *, limit: int) -> list[WowGuild]:
-    """Live guilds whose name contains ``text`` (any case): biggest first, then by name."""
-    result = await db.execute(
-        select(WowGuild)
-        # autoescape: LIKE's own wildcards in ``text`` are taken literally.
-        .where(WowGuild.gone_at.is_(None), WowGuild.name.icontains(text, autoescape=True))
-        .order_by(WowGuild.member_count.desc().nulls_last(), func.lower(WowGuild.name), WowGuild.slug)
-        .limit(limit)
-    )
-    return list(result.scalars())
 
 
 async def members(db: AsyncSession, guild_id: uuid.UUID, *, gains_since: date) -> list[GuildMemberRow]:

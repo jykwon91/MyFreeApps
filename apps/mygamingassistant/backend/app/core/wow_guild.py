@@ -1,8 +1,9 @@
-"""WoW Forever guilds: Blizzard paths and the roster-refresh schedule.
+"""WoW Forever guild: Blizzard paths and the roster-refresh schedule.
 
-A guild is stored the first time a member is looked up on "Your character".
-The scheduler then refreshes its roster, and every member's character, while
-someone keeps looking at the guild (``GUILD_TRACKED_FOR``).
+The site shows and refreshes one guild only, the operator's (``GUILD_SLUG``).
+It is stored the first time a member is looked up on "Your character"; the
+scheduler then refreshes its roster, and every member's character, while
+someone keeps looking at it (``GUILD_TRACKED_FOR``).
 """
 from __future__ import annotations
 
@@ -35,8 +36,6 @@ GUILD_ROSTER_REFRESH_EVERY: Final = timedelta(hours=1)
 GUILD_ROSTER_STALE_AFTER: Final = GUILD_ROSTER_REFRESH_EVERY - GUILD_ROSTER_JOB_INTERVAL / 2
 # A guild nobody has looked at for this long stops being refreshed.
 GUILD_TRACKED_FOR: Final = timedelta(days=14)
-# At most this many guilds per run, oldest roster first; the rest wait for the next run.
-GUILD_ROSTER_MAX_GUILDS_PER_RUN: Final = 5
 # At most this many members fetched from Blizzard per run, across its guilds. A
 # member fetch is about 11 Blizzard calls and the client's hourly quota is
 # shared with the AH price refresh and every page look-up: 200 a run (two runs
@@ -58,8 +57,8 @@ GUILD_GAINS_WINDOW_DAYS: Final = 7
 # GET /wow/guilds/{slug}/reputations?faction=: a faction id is a positive INT.
 FACTION_ID_MAX: Final = 2_147_483_647
 
-# The operator's own guild (Blizzard's slug): the only one "Refresh now" works for.
-GUILD_REFRESHABLE_SLUG: Final = "topdeadcenter"
+# The operator's own guild (Blizzard's slug): the only guild the site shows and refreshes.
+GUILD_SLUG: Final = "topdeadcenter"
 # POST /wow/guilds/{slug}/refresh ("Refresh now"): the guild can be refreshed on demand
 # once per cooldown, counted from the last time its roster was asked for (the
 # scheduler's runs and failed tries count too), however many people click.
@@ -80,11 +79,6 @@ GUILD_RATE_WINDOW_SECONDS: Final = 60
 # GET /wow/guilds/{slug}/recipes?q=: who in the guild knows a recipe.
 GUILD_RECIPE_QUERY_MIN_LENGTH: Final = 2
 GUILD_RECIPE_QUERY_MAX_LENGTH: Final = 60
-# GET /wow/guilds?q=: find a stored guild by part of its name.
-GUILD_SEARCH_QUERY_MIN_LENGTH: Final = 2
-GUILD_SEARCH_QUERY_MAX_LENGTH: Final = GUILD_NAME_MAX_LENGTH
-# Guilds per answer; more matches = ``truncated`` (type more of the name).
-GUILD_SEARCH_RESULT_LIMIT: Final = 20
 
 # Control characters are never in a recipe or guild name, and Postgres refuses NUL in text.
 GUILD_QUERY_FORBIDDEN: Final = re.compile(r"[\x00-\x1f\x7f]")

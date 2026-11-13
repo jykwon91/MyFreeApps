@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 from datetime import datetime, timezone
 
-from app.core.wow_guild import GUILD_REFRESH_COOLDOWN, GUILD_REFRESHABLE_SLUG
+from app.core.wow_guild import GUILD_REFRESH_COOLDOWN, GUILD_SLUG
 from app.db.session import unit_of_work
 from app.repositories.wow import guild_repo
 from app.services.wow.guild import guild_roster_service
@@ -20,7 +20,7 @@ from app.services.wow.guild.guild_refresh_claim import GuildRefreshClaim
 
 async def claim(slug: str, *, now: datetime | None = None) -> GuildRefreshClaim | None:
     """Claim a refresh of the live guild with this slug; None unless it is the refreshable guild and stored."""
-    if slug != GUILD_REFRESHABLE_SLUG:
+    if slug != GUILD_SLUG:
         return None
     at = now or datetime.now(timezone.utc)
     async with unit_of_work() as db:

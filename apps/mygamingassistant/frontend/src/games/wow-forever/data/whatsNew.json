@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-12",
+    "title": "The Guild page is TopDeadCenter's",
+    "summary": "Guild in the menu now opens TopDeadCenter's page straight away. The search for other guilds is gone, and only TopDeadCenter's badge on a character links to a guild page.",
+    "to": "/wow-forever/guild"
+  },
+  {
+    "date": "2026-11-12",
     "title": "Game data for the Nov 11 hotfixes",
     "summary": "Items, quests, rares and hunter pets now match the Nov 11 WoW Forever hotfixes, and rares, tamable beasts and Library rewards our game client met before it keep their \"Seen in game\" mark with the day it was seen.",
     "to": "/wow-forever"
