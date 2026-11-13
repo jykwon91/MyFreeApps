@@ -1,7 +1,8 @@
 import { VENDOR_CATEGORY_LABELS } from "@mybookkeeper/api-client/constants/vendorLabels";
 import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendor-category";
 import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
-import { formatRelativeTime } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
+import { formatHourlyRate } from "@mybookkeeper/api-client/utils/formatHourlyRate";
+import { formatVendorLastUsed } from "@mybookkeeper/api-client/utils/formatVendorLastUsed";
 import { formatRate } from "@mybookkeeper/api-client/utils/formatRate";
 import { VENDOR_FILTER_MESSAGES, VENDOR_MESSAGES } from "../../constants/vendors";
 import { contactLinks } from "../inquiries/inquiryContactLinks";
@@ -12,8 +13,13 @@ export function vendorFilterLabel(category: VendorCategory | null, preferredOnly
   return active.length > 0 ? `${VENDOR_FILTER_MESSAGES.button}: ${active.join(", ")}` : VENDOR_FILTER_MESSAGES.button;
 }
 
+/** The rate and when the vendor was last used, as the website's rows say them. */
+export function vendorRowFacts(vendor: VendorSummary): string {
+  return `${formatHourlyRate(vendor.hourly_rate)} · ${formatVendorLastUsed(vendor.last_used_at)}`;
+}
+
 export function vendorRowLabel(vendor: VendorSummary): string {
-  return [vendor.name, VENDOR_CATEGORY_LABELS[vendor.category], vendor.preferred ? VENDOR_MESSAGES.preferred : null]
+  return [vendor.name, VENDOR_CATEGORY_LABELS[vendor.category], vendor.preferred ? VENDOR_MESSAGES.preferred : null, vendorRowFacts(vendor)]
     .filter(Boolean)
     .join(", ");
 }
@@ -34,5 +40,5 @@ export function directionsUrl(address: string, os: string): string {
 
 /** Null when the vendor has never been used, which the screen says in its own words. */
 export function lastUsedText(lastUsedAt: string | null): string | null {
-  return lastUsedAt ? `${VENDOR_MESSAGES.lastUsed} ${formatRelativeTime(lastUsedAt)}` : null;
+  return lastUsedAt ? `${VENDOR_MESSAGES.lastUsed} ${formatVendorLastUsed(lastUsedAt)}` : null;
 }

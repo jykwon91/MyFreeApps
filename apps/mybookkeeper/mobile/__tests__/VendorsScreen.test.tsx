@@ -110,7 +110,7 @@ describe("VendorsScreen", () => {
   it("opens the vendor when the row is tapped", async () => {
     startServer(aPage([aSummary({ preferred: true })]));
     await show(<VendorsScreen />);
-    await fireEvent.press(await screen.findByRole("button", { name: "Reliable Plumbing, Plumber, Preferred" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Reliable Plumbing, Plumber, Preferred, $95/hr · Never used" }));
     expect(mockPush).toHaveBeenCalledWith("/vendors/v1");
   });
 
