@@ -1,3 +1,4 @@
+import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 import { AlertBox } from "@platform/ui";
 import AuctionResultsSkeleton from "@/games/wow-forever/components/auctionHouse/AuctionResultsSkeleton";
 import ProfessionAuctionReady from "@/games/wow-forever/components/auctionHouse/ProfessionAuctionReady";
@@ -7,8 +8,8 @@ import type { ProfessionAuctionProps } from "@/games/wow-forever/types/auctionHo
 /** The Auction house narrowed to one profession: its materials, or one recipe's. Loads the profession's recipes first. */
 export default function ProfessionAuction(props: ProfessionAuctionProps) {
   const state = useCraftingData(props.profession);
-  if (state.status === "loading") return <AuctionResultsSkeleton />;
-  if (state.status === "error") {
+  if (state.status === LOAD_STATUS.loading) return <AuctionResultsSkeleton />;
+  if (state.status === LOAD_STATUS.error) {
     return (
       <AlertBox variant="error">
         Couldn&apos;t load the {props.professionLabel} recipes.{" "}

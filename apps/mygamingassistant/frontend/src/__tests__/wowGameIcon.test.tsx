@@ -117,6 +117,30 @@ describe("GameIcon", () => {
   });
 });
 
+describe("GameIcon frame options", () => {
+  const icon = { fileDataId: 133217, quality: "rare" as const };
+
+  it("keeps a fixed inline size and a 1px frame by default, so other callers do not change", () => {
+    render(<GameIcon icon={icon} size={16} alt="" />);
+    const frame = screen.getByTestId("game-icon").parentElement as HTMLElement;
+    expect(frame.style.width).toBe("16px");
+    expect(frame.className.split(" ")).toContain("border");
+    expect(frame.className).not.toContain("border-2");
+    expect(frame.className).not.toContain("var(--icon");
+  });
+
+  it("can switch size at sm and use a 2px frame, on the icon and on its placeholder", () => {
+    render(<GameIcon icon={icon} size={48} smSize={40} thickBorder alt="" />);
+    render(<GameIcon icon={null} size={48} smSize={40} thickBorder alt="" />);
+    for (const frame of [screen.getByTestId("game-icon").parentElement as HTMLElement, screen.getByTestId("game-icon-placeholder")]) {
+      expect(frame.getAttribute("style")).toContain("--icon-size: 48px");
+      expect(frame.getAttribute("style")).toContain("--icon-sm-size: 40px");
+      expect(frame.className).toContain("border-2");
+      expect(frame.className).toContain("sm:w-[var(--icon-sm-size)]");
+    }
+  });
+});
+
 describe("WowLegalNotice", () => {
   it("credits Blizzard and disclaims affiliation", () => {
     render(<WowLegalNotice />);

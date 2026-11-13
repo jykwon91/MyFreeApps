@@ -1,11 +1,8 @@
 /** A crafting profession's materials and recipes, priced on one auction house. Pure. */
 import { recipeIcon } from "@/games/wow-forever/lib/icons/wowIcons";
-import { searchAuctionItems, SEARCH_LIMIT } from "@/games/wow-forever/prices/auctionSearch";
 import type { AuctionPrice } from "@/games/wow-forever/types/auctionPrice";
-import type { ProfessionMaterialsResult } from "@/games/wow-forever/types/auctionHouse/professionMaterialsResult";
 import type { RecipeOption } from "@/games/wow-forever/types/auctionHouse/recipeOption";
 import type { RecipePriceBreakdown } from "@/games/wow-forever/types/auctionHouse/recipePriceBreakdown";
-import type { AuctionSort } from "@/games/wow-forever/types/auctionSort";
 import type { CraftRecipe } from "@/games/wow-forever/types/crafting";
 
 /** Every reagent any of the recipes uses: item id -> name. */
@@ -15,25 +12,6 @@ export function professionMaterials(recipes: Iterable<CraftRecipe>): Map<number,
     for (const reagent of recipe.reagents) materials.set(reagent.id, reagent.name);
   }
   return materials;
-}
-
-/** The materials on sale on this house that match the search, plus how many matching ones aren't on sale. */
-export function searchProfessionMaterials(
-  materials: ReadonlyMap<number, string>,
-  byId: ReadonlyMap<number, AuctionPrice>,
-  query: string,
-  sort: AuctionSort,
-): ProfessionMaterialsResult {
-  const needle = query.trim().toLowerCase();
-  const onSale: AuctionPrice[] = [];
-  let notOnSale = 0;
-  for (const [id, name] of materials) {
-    const price = byId.get(id);
-    if (price) onSale.push(price);
-    else if (!needle || name.toLowerCase().includes(needle) || String(id) === needle) notOnSale += 1;
-  }
-  // A profession's materials are a short list: up to the search cap, typed or not.
-  return { ...searchAuctionItems(onSale, query, sort, SEARCH_LIMIT), notOnSale };
 }
 
 /** The recipes, lowest skill first (then by name), labelled with that skill. */

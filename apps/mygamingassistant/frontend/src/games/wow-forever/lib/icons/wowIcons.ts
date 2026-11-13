@@ -27,6 +27,11 @@ export function itemIcon(itemId: number, icons: WowIconFile = WOW_ICONS): WowIco
   return { fileDataId, quality: qualityOf(quality) };
 }
 
+/** An item's quality, or null when the icon map doesn't have the item. */
+export function itemQuality(itemId: number, icons: WowIconFile = WOW_ICONS): ItemQuality | null {
+  return itemIcon(itemId, icons)?.quality ?? null;
+}
+
 /** A spell's icon (no quality), or null. */
 export function spellIcon(spellId: number, icons: WowIconFile = WOW_ICONS): WowIcon | null {
   const fileDataId = icons.spells[String(spellId)];

@@ -1398,6 +1398,26 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   cheapest, on sale ("23,980 in 910 auctions", `onSaleText`). Filter/sort is
   the pure `prices/auctionSearch.ts` (default "Most on sale"; 50 browse /
   200 search cap).
+- Auction house filters (operator: "more robust … icons are too small … more
+  filters"): every filter and the sort live in the URL via
+  `hooks/useAuctionFilters.ts` (allowlisted params, replace-history, defaults
+  left out; `lib/auctionHouse/auctionFilterParams.ts`). Pure filtering is
+  `filterAuctionItems` in `prices/auctionSearch.ts` (quality, price range in
+  gold, min quantity, min listings) plus a gear group (slot, type, level range,
+  "usable by my class" at the cap, `lib/auctionHouse/usableByClass.ts`) whose
+  ~600 KB items.json loads only when the Gear group opens or a link already
+  filters by gear. Sorts add Most listings, Biggest gap, Highest quality.
+  Rows use `GameIcon` at 48px on phones / 40px from sm with a 2px quality
+  border. Phone filters open in a bottom sheet built on the shared `Panel`
+  (`AuctionFilterSheet`); from sm up an inline panel. Active filters show as
+  removable chips; "Show 50 more" paging (restarts only when
+  `auctionResultsKey` — house, profession, filters — changes, never on a price
+  refetch); amber stale-prices banner; the empty state names the active
+  filters. Gold is compared in whole copper (`Math.round`). A backwards price
+  or level range stays as typed in the URL and boxes and is read low to high by
+  `normalizeFilterRanges` (list + chips); typed numbers are clamped (gold ≥ 0,
+  level 1–60). An item category filter (potions, herbs,
+  trade goods) needs item class/subclass in the items generator first.
 - Auction house profession filter (`?prof=<crafting profession>`, replace;
   `?recipe=<spell id>`, push to set / replace to clear; changing `prof` drops
   `recipe`; `hooks/useAuctionMaterialFilter.ts`): `AuctionProfessionSelect`

@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import AuctionHouseBody from "@/games/wow-forever/components/auctionHouse/AuctionHouseBody";
-import AuctionSearchControls from "@/games/wow-forever/components/auctionHouse/AuctionSearchControls";
+import AuctionLookup from "@/games/wow-forever/components/auctionHouse/AuctionLookup";
 import BackToMaterialsButton from "@/games/wow-forever/components/auctionHouse/BackToMaterialsButton";
-import ProfessionMaterialsBody from "@/games/wow-forever/components/auctionHouse/ProfessionMaterialsBody";
 import RecipeFinder from "@/games/wow-forever/components/auctionHouse/RecipeFinder";
 import RecipePricePanel from "@/games/wow-forever/components/auctionHouse/RecipePricePanel";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
@@ -11,7 +10,7 @@ import type { ProfessionAuctionProps } from "@/games/wow-forever/types/auctionHo
 import type { CraftingData } from "@/games/wow-forever/types/craftingData";
 
 /** A profession's loaded recipes: the recipe finder + materials list, or one recipe's prices. */
-export default function ProfessionAuctionReady({ data, professionLabel, house, recipe, onRecipe, query, onQuery, sort, onSort }: ProfessionAuctionProps & { data: CraftingData }) {
+export default function ProfessionAuctionReady({ data, professionLabel, house, recipe, onRecipe, filters, onFilters, onClearFilters }: ProfessionAuctionProps & { data: CraftingData }) {
   const materials = useMemo(() => professionMaterials(data.file.recipes), [data]);
   const options = useMemo(() => recipeOptions(data.file.recipes), [data]);
 
@@ -32,12 +31,14 @@ export default function ProfessionAuctionReady({ data, professionLabel, house, r
   return (
     <div className="space-y-6">
       <RecipeFinder options={options} professionLabel={professionLabel} onPick={onRecipe} />
-      <AuctionSearchControls query={query} onQuery={onQuery} sort={sort} onSort={onSort} />
-      <AuctionHouseBody faction={house}>
-        {(prices) => (
-          <ProfessionMaterialsBody materials={materials} professionLabel={professionLabel} prices={prices} query={query} sort={sort} />
-        )}
-      </AuctionHouseBody>
+      <AuctionLookup
+        house={house}
+        filters={filters}
+        onFilters={onFilters}
+        onClear={onClearFilters}
+        materials={materials}
+        professionLabel={professionLabel}
+      />
     </div>
   );
 }

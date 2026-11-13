@@ -25,7 +25,7 @@ import { usePlayerSettings, type PlayerSettings } from "@/games/wow-forever/hook
 import { useTravelSettings } from "@/games/wow-forever/hooks/useTravelSettings";
 import { useTripPlanner } from "@/games/wow-forever/hooks/useTripPlanner";
 import { useWorldMap } from "@/games/wow-forever/hooks/useWorldMap";
-import { LOAD_STATUS } from "@/games/wow-forever/hooks/useWorldMapData";
+import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 import { isReadOnly } from "@/lib/readOnly";
 import type { MapFit } from "@/games/wow-forever/worldMap/mapLayers";
 import { buildPlaces } from "@/games/wow-forever/worldMap/places";

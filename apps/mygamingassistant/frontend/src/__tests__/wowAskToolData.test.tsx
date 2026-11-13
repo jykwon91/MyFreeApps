@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { LOAD_STATUS } from "@/games/wow-forever/hooks/useWorldMapData";
+import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 import { useAskToolData } from "@/games/wow-forever/hooks/ask/useAskToolData";
 import type { WorldMapData } from "@/games/wow-forever/types/worldMap";
 import { ASK_WORLD } from "./wowAskWorld";

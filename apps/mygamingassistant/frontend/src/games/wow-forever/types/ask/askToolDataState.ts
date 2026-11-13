@@ -1,4 +1,4 @@
-import type { LoadStatus } from "@/games/wow-forever/hooks/useWorldMapData";
+import type { LoadStatus } from "@/games/wow-forever/types/loadStatus";
 import type { PlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
 import type { AskToolData } from "@/games/wow-forever/types/ask/askToolData";
 

@@ -19,6 +19,9 @@
  *   - prices that fail to load leave the route usable, with a retry
  *   - the Auction house page narrows to one profession's materials, and prices one recipe
  *     (each material, the total, what it sells for, the difference) from its link
+ *   - the Auction house page filters by quality, price and units on sale, keeps every filter in
+ *     its link (a deep link opens the filtered view, Back undoes a change), and on a phone opens
+ *     them in a bottom sheet that doesn't scroll sideways
  *   - "Download the addon" zips MGA Prices with every house's prices in Data.lua, plus crafting demand per material
  *   - nothing scrolls sideways at 375px
  *
@@ -297,6 +300,98 @@ test("the Auction house page narrows to a profession's materials and prices one 
   await page.goForward();
   await page.getByTestId("recipe-back").click();
   await expect(page).not.toHaveURL(/recipe=/);
+});
+
+/** Linen Cloth (common), Gold Bar (uncommon) and an item the icon map calls rare, with different prices and stock. */
+const FILTER_ROWS: [number, number, number, number, string][] = [
+  [2589, 10, 500, 12, "Linen Cloth"],
+  [3577, 5000, 5, 2, "Gold Bar"],
+  [720, 200000, 1, 1, "Rare Test Item"],
+];
+
+async function stubFilterPrices(page: Page) {
+  await page.route(PRICES, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...priceBody([], "alliance"),
+        items: FILTER_ROWS.map(([id, value, quantity, listings, name]) => [id, value, value, quantity, listings, name]),
+      }),
+    }),
+  );
+}
+
+/** The row names once the list has settled on `count` rows (the prices load, then the filters apply). */
+async function rowNames(page: Page, count: number): Promise<string[]> {
+  await expect(page.getByTestId("auction-row")).toHaveCount(count);
+  return page.getByTestId("auction-item-name").allTextContents();
+}
+
+test("the Auction house page filters by quality, price and units on sale, and Back leaves it in one step", async ({ page }) => {
+  await stubFilterPrices(page);
+  await page.goto("/wow-forever");
+  await page.goto("/wow-forever/auction-house");
+  await expect(page.getByTestId("auction-row")).toHaveCount(3);
+  await page.getByTestId("auction-filters-button").click();
+  const panel = page.getByTestId("auction-filter-panel");
+
+  await panel.getByTestId("auction-filter-quality").getByRole("button", { name: "Uncommon" }).click();
+  await expect(page).toHaveURL(/quality=uncommon/);
+  expect(await rowNames(page, 1)).toEqual(["Gold Bar"]);
+  await expect(page.getByTestId("auction-results-note")).toContainText("1 item match");
+  await expect(page.getByTestId("auction-filters-count")).toHaveText("1");
+
+  await panel.getByTestId("auction-filter-quality").getByRole("button", { name: "Uncommon" }).click();
+  await panel.getByTestId("auction-filter-quantity").getByRole("button", { name: "100+" }).click();
+  await expect(page).toHaveURL(/qty=100/);
+  expect(await rowNames(page, 1)).toEqual(["Linen Cloth"]);
+
+  await panel.getByLabel("From gold").fill("1");
+  await expect(page).toHaveURL(/min=1/);
+  await expect(page.getByTestId("auction-row")).toHaveCount(0);
+  await expect(page.getByText(/No items match/)).toBeVisible();
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await expect(page.getByTestId("auction-row")).toHaveCount(3);
+  await expect(page).not.toHaveURL(/qty=|min=|quality=/);
+
+  // Filter changes replace the history entry, so one Back leaves for the page before, not through each change.
+  await panel.getByTestId("auction-filter-quantity").getByRole("button", { name: "10+" }).click();
+  await expect(page).toHaveURL(/qty=10/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/wow-forever$/);
+});
+
+test("a link to a filtered Auction house view opens it filtered, with the filters shown", async ({ page }) => {
+  await stubFilterPrices(page);
+  await page.goto("/wow-forever/auction-house?quality=rare,uncommon&max=10&sort=high");
+  expect(await rowNames(page, 1)).toEqual(["Gold Bar"]);
+  await expect(page.getByTestId("auction-filters-count")).toHaveText("2");
+  await expect(page.getByRole("button", { name: /^Remove filter:/ })).toHaveCount(2);
+  await page.getByRole("button", { name: /^Remove filter: Price/ }).click();
+  await expect(page).not.toHaveURL(/max=/);
+  expect(await rowNames(page, 2)).toEqual(["Rare Test Item", "Gold Bar"]);
+});
+
+test("on a phone the filters open in a bottom sheet that doesn't scroll sideways", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await stubFilterPrices(page);
+  await page.goto("/wow-forever/auction-house");
+  await expect(page.getByTestId("auction-row")).toHaveCount(3);
+  await expectNoSidewaysScroll(page);
+  const button = page.getByTestId("auction-filters-button");
+  await button.click();
+  const sheet = page.getByTestId("auction-filter-sheet");
+  await expect(sheet).toBeVisible();
+  await expectNoSidewaysScroll(page);
+  await sheet.getByTestId("auction-filter-quality").getByRole("button", { name: "Common", exact: true }).click();
+  await expect(sheet.getByRole("button", { name: /^Apply · 1 item$/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
+  await expect(button).toBeFocused();
+  await expect(page).toHaveURL(/quality=common/);
+  expect(await rowNames(page, 1)).toEqual(["Linen Cloth"]);
+  await expectNoSidewaysScroll(page);
 });
 
 test("the Auction house page downloads the MGA Prices addon with every house's prices inside", async ({ page }) => {

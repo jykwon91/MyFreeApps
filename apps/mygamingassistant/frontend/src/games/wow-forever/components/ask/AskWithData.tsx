@@ -3,7 +3,7 @@ import AskChat from "@/games/wow-forever/components/ask/AskChat";
 import AskPageSkeleton from "@/games/wow-forever/components/ask/AskPageSkeleton";
 import { ASK_COPY } from "@/games/wow-forever/data/ask/askCopy";
 import { useAskToolData } from "@/games/wow-forever/hooks/ask/useAskToolData";
-import { LOAD_STATUS } from "@/games/wow-forever/hooks/useWorldMapData";
+import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 
 interface AskWithDataProps {
   initialQuestion: string | null;
