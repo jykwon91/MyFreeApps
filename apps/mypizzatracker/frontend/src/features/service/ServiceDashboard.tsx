@@ -29,6 +29,7 @@ export function ServiceDashboard({
     isLoading: isLoadingDrops,
     isError: isDropsError,
     error: dropsError,
+    refetch: refetchDrops,
   } = useListDropsQuery({ status: "active" });
 
   // Auto-select most-recent active drop if none chosen yet.
@@ -52,7 +53,7 @@ export function ServiceDashboard({
     isFetching,
     isError: isDashboardError,
     error: dashboardError,
-    refetch,
+    refetch: refetchDashboard,
   } = useGetDashboardQuery(effectiveDropId ?? "", {
     skip: !effectiveDropId || tabHidden,
     pollingInterval: tabHidden ? 0 : POLL_INTERVAL_MS,
@@ -66,7 +67,7 @@ export function ServiceDashboard({
         <EmptyState
           heading="Could not load drops"
           body={extractErrorMessage(dropsError) || "Please try again."}
-          action={{ label: "Retry", onClick: () => refetch() }}
+          action={{ label: "Retry", onClick: () => refetchDrops() }}
         />
       </main>
     );
@@ -129,7 +130,7 @@ export function ServiceDashboard({
         <EmptyState
           heading="Could not load dashboard"
           body={extractErrorMessage(dashboardError) || "Please try again."}
-          action={{ label: "Retry", onClick: () => refetch() }}
+          action={{ label: "Retry", onClick: () => refetchDashboard() }}
         />
       ) : null}
 

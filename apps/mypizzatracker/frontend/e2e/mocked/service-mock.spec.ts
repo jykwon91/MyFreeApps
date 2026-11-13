@@ -1,7 +1,7 @@
 /**
  * No-backend E2E for /service: the active drop's dashboard loads one column
- * per pickup slot with its orders, a failed load offers a retry, and
- * advancing an order sends the new status and shows it.
+ * per pickup slot with its orders, a failed load of the drops or the dashboard
+ * offers a retry, and advancing an order sends the new status and shows it.
  *
  * The dashboard polls every few seconds, and a poll would reload it whether or
  * not Retry or the advance's cache invalidation work. So the dashboard reads
@@ -22,6 +22,7 @@ import { FIRST_ORDER_ID } from "./fixtures/serviceFixtures";
 import { stubDropsApi } from "./fixtures/stubDropsApi";
 import { stubServiceApi } from "./fixtures/stubServiceApi";
 
+const DROPS_LIST = apiPath(/^\/drops$/);
 const DASHBOARD_READ = apiPath(/^\/service\/drops\/[^/]+$/);
 
 /** The action caused the one read after the first: it came before any poll could. */
@@ -93,4 +94,19 @@ test("a failed dashboard load says so and Retry loads it", async ({ page }) => {
   await expect(slotColumns(page)).toHaveCount(4);
   await expect(page.getByRole("heading", { name: "Could not load dashboard" })).toHaveCount(0);
   await expectReadCausedByAction(reads);
+});
+
+test("a failed drops load says so and Retry reads the drops again and loads the dashboard", async ({ page }) => {
+  await stubServiceApi(page);
+  await failReads(page, DROPS_LIST);
+  const dropsReads = await logReads(page, DROPS_LIST);
+
+  await page.goto("/service");
+  await expect(page.getByRole("heading", { name: "Could not load drops" })).toBeVisible();
+  expect(dropsReads).toHaveLength(1);
+  await page.getByRole("button", { name: "Retry" }).click();
+
+  await expect.poll(() => dropsReads.length).toBe(2);
+  await expect(slotColumns(page)).toHaveCount(4);
+  await expect(page.getByRole("heading", { name: "Could not load drops" })).toHaveCount(0);
 });
