@@ -43,3 +43,6 @@ export const INQUIRY_LISTING_MESSAGES = {
   loading: "Loading the listing",
   unavailable: "This listing is no longer available.",
 } as const;
+
+/** A linked listing that answers with one of these was deleted or isn't yours to open. */
+export const INQUIRY_LISTING_GONE_STATUSES: readonly number[] = [403, 404];

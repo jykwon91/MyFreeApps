@@ -4,12 +4,11 @@ import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
-import { INQUIRY_LISTING_MESSAGES } from "../../constants/inquiries";
+import { INQUIRY_LISTING_GONE_STATUSES, INQUIRY_LISTING_MESSAGES } from "../../constants/inquiries";
+import type { InquiryListingRowProps } from "../../types/InquiryListingRowProps";
 import TransactionFact from "../transactions/TransactionFact";
 
-const GONE_STATUSES: readonly number[] = [403, 404];
-
-export default function InquiryListingRow({ listingId }: { listingId: string | null }) {
+export default function InquiryListingRow({ listingId }: InquiryListingRowProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { data: listing, error, isLoading } = useGetListingByIdQuery(listingId ?? "", { skip: !listingId });
 
@@ -23,7 +22,7 @@ export default function InquiryListingRow({ listingId }: { listingId: string | n
     );
   }
   const status = httpStatus(error);
-  if (status !== undefined && GONE_STATUSES.includes(status)) {
+  if (status !== undefined && INQUIRY_LISTING_GONE_STATUSES.includes(status)) {
     return <TransactionFact label={INQUIRY_LISTING_LABELS.heading} value={INQUIRY_LISTING_MESSAGES.unavailable} />;
   }
 
