@@ -1,6 +1,6 @@
 import { INQUIRY_FIELD_MAX_LENGTH as MAX_LENGTH, INQUIRY_FORM_LABELS as LABELS, INQUIRY_FORM_PLACEHOLDERS as PLACEHOLDERS } from "@mybookkeeper/api-client/constants/inquiryForm";
 import { INQUIRY_SOURCE_LABELS, INQUIRY_SOURCES } from "@mybookkeeper/api-client/constants/inquiryLabels";
-import { inquiriesApi, useCreateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
+import { useCreateInquiryMutation } from "@mybookkeeper/api-client/store/inquiriesApi";
 import type { InquiryFormValues } from "@mybookkeeper/api-client/types/inquiry/inquiry-form-values";
 import type { InquiryResponse } from "@mybookkeeper/api-client/types/inquiry/inquiry-response";
 import type { InquirySource } from "@mybookkeeper/api-client/types/inquiry/inquiry-source";
@@ -14,16 +14,14 @@ import {
 import { FormField, FormSheet, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { useDispatch } from "react-redux";
 import { INQUIRY_CREATE_MESSAGES as MESSAGES } from "../../constants/inquiryCreate";
 import { confirmDiscard } from "../../lib/confirmDiscard";
 import { dateFromIso } from "../../lib/localDate";
-import type { AppDispatch } from "../../lib/store";
 import type { NewInquirySheetProps } from "../../types/NewInquirySheetProps";
 import OptionalDateField from "../shell/OptionalDateField";
 import { useFormSubmit } from "../shell/useFormSubmit";
 import InquiryChoiceGroup from "./InquiryChoiceGroup";
-import { inquiryCreateFailure, isInquiryCreateUnsure } from "./inquiryCreateFailure";
+import { inquiryCreateFailure } from "./inquiryCreateFailure";
 import InquiryListingField from "./InquiryListingField";
 import InquiryReceivedAtField from "./InquiryReceivedAtField";
 
@@ -33,7 +31,6 @@ const SOURCE_CHOICES = INQUIRY_SOURCES.map((source) => ({ value: source, label: 
 export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
-  const dispatch = useDispatch<AppDispatch>();
   const [createInquiry] = useCreateInquiryMutation();
   const { isBusy, failure, submit } = useFormSubmit();
   const [initial] = useState(() => blankInquiryForm(new Date()));
@@ -54,12 +51,6 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
     else onClose();
   }
 
-  /** An unsure failure may have saved it anyway, so the list behind the sheet is refetched to show it. */
-  function describeFailure(error: unknown): string {
-    if (isInquiryCreateUnsure(error)) dispatch(inquiriesApi.util.invalidateTags([{ type: "Inquiry", id: "LIST" }]));
-    return inquiryCreateFailure(error);
-  }
-
   async function save(): Promise<void> {
     if (isBusy) return;
     if (Object.keys(inquiryFormProblems(values)).length > 0) {
@@ -69,7 +60,7 @@ export default function NewInquirySheet({ onClose, onCreated }: NewInquirySheetP
     const result: { inquiry?: InquiryResponse } = {};
     const landed = await submit(async () => {
       result.inquiry = await createInquiry(inquiryFormToCreateRequest(values)).unwrap();
-    }, describeFailure);
+    }, inquiryCreateFailure);
     if (!landed || !result.inquiry) return;
     onClose();
     showToast(MESSAGES.added(values.inquirer_name.trim()));

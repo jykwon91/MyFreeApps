@@ -7,12 +7,6 @@ const FORBIDDEN = 403;
 const CLIENT_ERROR = 400;
 const SERVER_ERROR = 500;
 
-/** Whether the server may have saved the inquiry even though the call failed: no answer at all, or a server error. */
-export function isInquiryCreateUnsure(error: unknown): boolean {
-  const status = httpStatus(error);
-  return status === undefined || status >= SERVER_ERROR;
-}
-
 /**
  * What to say on the form when adding an inquiry fails. A 400, 409 or 422 is the server explaining
  * what it refused (an ID it needs, dates the wrong way round), so its own reason is shown. A lost answer or a
