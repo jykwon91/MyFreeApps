@@ -43,7 +43,7 @@ export default function Tenants() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
         title="Tenants"
         subtitle="Applicants you've moved to lease_signed stage. Manage active tenancies here."
@@ -74,6 +74,6 @@ export default function Tenants() {
         isFetching={isFetching}
         onLoadMore={handleLoadMore}
       />
-    </main>
+    </div>
   );
 }

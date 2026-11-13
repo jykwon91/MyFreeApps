@@ -14,7 +14,7 @@ const ROWS = numbersTo(GROUP_SIZE);
 /** The planner's shape while the plan loads — header, toolbar, "Not in a group" and a few groups — so nothing jumps. */
 export default function PlannerSkeleton() {
   return (
-    <main className={PLANNER_MAIN_CLASS} aria-busy="true">
+    <div className={PLANNER_MAIN_CLASS} aria-busy="true">
       <RaidPageMeta title="Groups" />
       <div className="space-y-2" aria-hidden>
         <div className="h-7 w-2/3 max-w-md animate-pulse rounded bg-muted" />
@@ -28,7 +28,7 @@ export default function PlannerSkeleton() {
           <div className={PLANNER_GROUPS_CLASS}>{numbersTo(PLANNER_SKELETON_GROUPS).map(skeletonCard)}</div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 

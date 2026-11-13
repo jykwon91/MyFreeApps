@@ -50,7 +50,7 @@ export default function WelcomeManuals() {
   });
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
         title="Welcome Manuals"
         subtitle="Guest guides you can email as a polished PDF — Wi-Fi, parking, check-out, and more."
@@ -90,6 +90,6 @@ export default function WelcomeManuals() {
           }}
         />
       ) : null}
-    </main>
+    </div>
   );
 }

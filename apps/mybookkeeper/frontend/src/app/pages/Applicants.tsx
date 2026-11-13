@@ -67,7 +67,7 @@ export default function Applicants() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
         title="Applicants"
         subtitle="People you've promoted from inquiries — track screening and approvals here."
@@ -88,6 +88,6 @@ export default function Applicants() {
         isFetching={isFetching}
         onLoadMore={handleLoadMore}
       />
-    </main>
+    </div>
   );
 }

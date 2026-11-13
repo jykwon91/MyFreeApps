@@ -6,7 +6,7 @@ import { NOT_FOUND_MESSAGE } from "@/games/wow-forever/lib/raidPageError";
 /** No raid at this link — mistyped, deleted, or never posted — and the way back to WoW Forever. */
 export default function RaidNotFound() {
   return (
-    <main className={RAID_MAIN_CLASS}>
+    <div className={RAID_MAIN_CLASS}>
       <RaidPageMeta title="Raid not found" />
       <section aria-labelledby="raid-not-found" className="space-y-3 rounded-xl border bg-card p-6">
         <h1 id="raid-not-found" className="text-xl font-semibold">
@@ -17,6 +17,6 @@ export default function RaidNotFound() {
           Go to WoW Forever
         </Link>
       </section>
-    </main>
+    </div>
   );
 }

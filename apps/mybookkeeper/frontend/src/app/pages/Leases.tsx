@@ -37,7 +37,7 @@ export default function Leases() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       {showImportDialog ? (
         <LeaseImportDialog onClose={() => setShowImportDialog(false)} />
       ) : null}
@@ -78,6 +78,6 @@ export default function Leases() {
         onDelete={handleDelete}
         isDeleting={isDeleting}
       />
-    </main>
+    </div>
   );
 }

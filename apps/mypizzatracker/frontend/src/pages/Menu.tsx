@@ -8,7 +8,7 @@ export default function MenuPage() {
   const { data, isLoading, isError, error, refetch } = useGetMenuQuery();
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-5xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
       <header>
         <h1 className="text-2xl font-semibold">Menu</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -32,6 +32,6 @@ export default function MenuPage() {
           <ToppingSection toppings={data.toppings} />
         </>
       ) : null}
-    </main>
+    </div>
   );
 }

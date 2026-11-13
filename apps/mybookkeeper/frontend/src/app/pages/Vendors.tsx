@@ -97,7 +97,7 @@ export default function Vendors() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
         title="Vendors"
         subtitle="Your rolodex of trusted handymen, plumbers, cleaners, and other trades."
@@ -139,6 +139,6 @@ export default function Vendors() {
       {showCreateForm ? (
         <VendorForm onClose={() => setShowCreateForm(false)} />
       ) : null}
-    </main>
+    </div>
   );
 }

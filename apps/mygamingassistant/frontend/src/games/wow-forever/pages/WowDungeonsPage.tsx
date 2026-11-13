@@ -11,7 +11,7 @@ export default function WowDungeonsPage() {
   useDocumentTitle("Dungeons · WoW Forever");
   const state = useDungeons();
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader
         title="Dungeons"
         subtitle="Every dungeon's level, where its door is, its bosses in order and what they drop."
@@ -28,6 +28,6 @@ export default function WowDungeonsPage() {
           <DungeonFootnote clientBuild={state.data.clientBuild} />
         </>
       ) : null}
-    </main>
+    </div>
   );
 }

@@ -18,7 +18,7 @@ export default function InsurancePolicyDetail() {
   const mode = resolveDetailLoadMode({ hasData: policy !== undefined, hasError: error !== undefined });
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <Link
         to="/insurance-policies"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground min-h-[44px]"
@@ -32,6 +32,6 @@ export default function InsurancePolicyDetail() {
       ) : null}
 
       <InsurancePolicyDetailBody mode={mode} policy={policy} />
-    </main>
+    </div>
   );
 }

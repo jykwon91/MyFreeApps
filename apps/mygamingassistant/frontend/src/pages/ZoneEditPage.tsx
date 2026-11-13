@@ -280,24 +280,24 @@ export default function ZoneEditPage() {
   // ---- Loading / error states ----
   if (mapLoading || !draft.ready) {
     return (
-      <main className="p-4 sm:p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         <div className="h-10 w-1/3 bg-muted/40 rounded animate-pulse" />
         <div className="h-96 bg-muted/40 rounded-xl animate-pulse" />
-      </main>
+      </div>
     );
   }
 
   if (mapError || !mapDetail) {
     return (
-      <main className="p-4 sm:p-6">
+      <div className="p-4 sm:p-6">
         <p className="text-sm text-destructive">Failed to load map. Please refresh.</p>
-      </main>
+      </div>
     );
   }
 
   return (
     <>
-      <main className="flex flex-col h-[calc(100vh-3.5rem)]">
+      <div className="flex flex-col h-[calc(100vh-3.5rem)]">
         <ZoneEditorTopBar
           gameSlug={gameSlug ?? ""}
           mapSlug={mapSlug ?? ""}
@@ -388,7 +388,7 @@ export default function ZoneEditPage() {
             </div>
           </section>
         </div>
-      </main>
+      </div>
 
       <ConfirmDialog
         open={confirmDiscard}

@@ -13,7 +13,7 @@ export default function WowHunterPetsPage() {
   const state = useHunterPets();
   const data = state.status === HUNTER_PETS_STATUS.ready ? state.data : null;
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader
         title="Hunter pets"
         subtitle="Pet families and their modifiers, every pet ability rank and which beasts teach it, and the beasts you can tame."
@@ -26,6 +26,6 @@ export default function WowHunterPetsPage() {
       ) : null}
       {data ? <HunterPetsContent data={data} /> : null}
       {state.status === HUNTER_PETS_STATUS.loading ? <HunterPetsSkeleton /> : null}
-    </main>
+    </div>
   );
 }

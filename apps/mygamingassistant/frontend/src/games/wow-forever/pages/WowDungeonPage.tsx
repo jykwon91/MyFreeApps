@@ -27,7 +27,7 @@ export default function WowDungeonPage() {
   useScrollToHash(dungeon !== null);
 
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       {state.status === "loading" ? <DungeonPageSkeleton /> : null}
       {state.status === "error" ? (
         <LoadErrorRetry message="Couldn't load this dungeon." onRetry={state.retry} retrying={state.retrying} />
@@ -57,6 +57,6 @@ export default function WowDungeonPage() {
           <DungeonFootnote clientBuild={state.data.clientBuild} />
         </>
       ) : null}
-    </main>
+    </div>
   );
 }

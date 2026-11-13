@@ -47,7 +47,7 @@ export default function LineupPackages() {
   ];
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold">Lineup Packages</h1>
@@ -184,6 +184,6 @@ export default function LineupPackages() {
           onClose={() => setShowCreateDialog(false)}
         />
       )}
-    </main>
+    </div>
   );
 }

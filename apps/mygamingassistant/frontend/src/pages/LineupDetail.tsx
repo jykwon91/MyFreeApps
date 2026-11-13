@@ -69,7 +69,7 @@ export default function LineupDetail() {
 
   if (notFound) {
     return (
-      <main className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
         <Link
           to="/"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -78,7 +78,7 @@ export default function LineupDetail() {
           Home
         </Link>
         <p className="text-sm text-muted-foreground">Lineup not found.</p>
-      </main>
+      </div>
     );
   }
 

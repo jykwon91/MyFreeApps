@@ -11,7 +11,7 @@ export default function WowGuildPage() {
   useDocumentTitle(`${guild ? `<${guild.name}>` : "Guild"} · WoW Forever`);
 
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-5xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-5xl">
       <WowPageHeader
         title={guild ? `<${guild.name}>` : "Guild"}
         subtitle="Everyone in the guild we have from Blizzard — find a member and open their character."
@@ -19,6 +19,6 @@ export default function WowGuildPage() {
         backLabel="Back to WoW Forever"
       />
       <GuildPageBody guild={guild} error={error} isFetching={isFetching} onRetry={refetch} />
-    </main>
+    </div>
   );
 }

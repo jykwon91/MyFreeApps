@@ -18,7 +18,7 @@ export default function WowGearPage() {
   const mine = settings.view === GEAR_VIEW.mine || shared.present;
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-5xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
       <WowPageHeader
         title="Best gear"
         subtitle="The top items per slot for your class, spec and level — the next upgrades while leveling, then a pre-raid list for level 60 — and lists of your own to share."
@@ -43,6 +43,6 @@ export default function WowGearPage() {
       ) : (
         <GearRankingSection settings={settings} state={state} />
       )}
-    </main>
+    </div>
   );
 }

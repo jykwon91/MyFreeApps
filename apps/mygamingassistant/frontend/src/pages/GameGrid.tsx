@@ -15,7 +15,7 @@ export default function GameGrid() {
 
   if (isLoading) {
     return (
-      <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+      <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
         <h1 className="text-2xl font-semibold">Games</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[1, 2].map((i) => (
@@ -26,22 +26,22 @@ export default function GameGrid() {
             />
           ))}
         </div>
-      </main>
+      </div>
     );
   }
 
   if (isError || !games) {
     return (
-      <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+      <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
         <h1 className="text-2xl font-semibold">Games</h1>
         <LoadErrorRetry message="Couldn't load the games." retrying={isFetching} onRetry={refetch} />
-      </main>
+      </div>
     );
   }
 
   if (games.length === 0) {
     return (
-      <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+      <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
         <h1 className="text-2xl font-semibold">Games</h1>
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Gamepad2 className="h-12 w-12 text-muted-foreground mb-4" />
@@ -50,12 +50,12 @@ export default function GameGrid() {
             Run <code className="font-mono">python -m app.cli load-fixtures</code> to seed game data.
           </p>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <h1 className="text-2xl font-semibold">Games</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {games.map((game) => (
@@ -70,6 +70,6 @@ export default function GameGrid() {
           </Link>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

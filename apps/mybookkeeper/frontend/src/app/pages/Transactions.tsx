@@ -146,7 +146,7 @@ export default function Transactions() {
   const deleteTarget = confirmDeleteId ? transactions.find((t) => t.id === confirmDeleteId) : null;
 
   return (
-    <main className="p-4 sm:p-8 space-y-4 md:h-screen md:flex md:flex-col md:overflow-hidden">
+    <div className="p-4 sm:p-8 space-y-4 md:h-screen md:flex md:flex-col md:overflow-hidden">
       <SectionHeader
         title="Transactions"
         actions={
@@ -325,6 +325,6 @@ export default function Transactions() {
           onError={showError}
         />
       ) : null}
-    </main>
+    </div>
   );
 }

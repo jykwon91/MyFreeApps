@@ -92,6 +92,12 @@ describe("RootLayout inside the Discord Activity", () => {
     expect(screen.queryByTestId("guest-shell")).not.toBeInTheDocument();
   });
 
+  it("frames the page in the one main landmark", () => {
+    renderAt(`/${LAUNCH_QUERY}`);
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+    expect(screen.getByRole("main")).toContainElement(screen.getByTestId("outlet"));
+  });
+
   it("ignores a sign-in left in storage: no account shell", () => {
     auth.isAuthenticated = true;
     renderAt(`/${LAUNCH_QUERY}`);

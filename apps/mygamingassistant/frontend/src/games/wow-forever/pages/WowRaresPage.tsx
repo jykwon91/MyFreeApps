@@ -13,7 +13,7 @@ export default function WowRaresPage() {
   const state = useRares();
   const data = state.status === RARES_STATUS.ready ? state.data : null;
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader
         title="Rares"
         subtitle="Rare and rare elite creatures: where they spawn, what they drop, a /target macro to find them and a list to tick off."
@@ -26,6 +26,6 @@ export default function WowRaresPage() {
       ) : null}
       {data ? <RaresList data={data} /> : null}
       {state.status === RARES_STATUS.loading || state.status === RARES_STATUS.idle ? <RaresSkeleton /> : null}
-    </main>
+    </div>
   );
 }

@@ -81,7 +81,7 @@ export default function RaidPlanner({ initialPlan, args, isReloading, reload }: 
   const readOnlyMessage = readOnlyMessageOf(plan.state, refusedAsOver);
   const readOnly = readOnlyMessage !== null;
   return (
-    <main className={PLANNER_MAIN_CLASS}>
+    <div className={PLANNER_MAIN_CLASS}>
       <RaidPageMeta title={`Groups — ${plan.title}`} />
       <PlannerHeader plan={plan} now={now} />
       {readOnlyMessage !== null && <PlannerReadOnlyBanner message={readOnlyMessage} />}
@@ -101,7 +101,7 @@ export default function RaidPlanner({ initialPlan, args, isReloading, reload }: 
         <GroupPlanner board={{ plan, placements, readOnly, locked: isSaving, onPlace: groups.place }} />
       )}
       <UnsavedChangesGuard when={dirty && !readOnly} />
-    </main>
+    </div>
   );
 }
 

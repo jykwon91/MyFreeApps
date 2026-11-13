@@ -17,7 +17,7 @@ export default function Reconciliation() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
         title="Reconciliation"
         subtitle="Compare 1099 forms against your reservation records"
@@ -40,6 +40,6 @@ export default function Reconciliation() {
 
       <ReconciliationWizard onToast={handleToast} canWrite={canWrite} />
 
-    </main>
+    </div>
   );
 }

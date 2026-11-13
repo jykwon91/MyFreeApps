@@ -32,7 +32,7 @@ export default function Mortgages() {
   });
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <SectionHeader
         title="Mortgages"
         subtitle="Track what you owe on each property, and whether a better rate exists."
@@ -71,6 +71,6 @@ export default function Mortgages() {
           onClose={() => setEditing(null)}
         />
       ) : null}
-    </main>
+    </div>
   );
 }

@@ -80,7 +80,7 @@ export default function Listings() {
   });
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
         title="Listings"
         subtitle="Rooms and units you have available for rent."
@@ -120,6 +120,6 @@ export default function Listings() {
           onClose={() => setShowForm(false)}
         />
       ) : null}
-    </main>
+    </div>
   );
 }

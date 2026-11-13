@@ -63,15 +63,15 @@ export default function DemoUsers() {
 
   if (isLoading) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <DemoUsersSkeleton />
-      </main>
+      </div>
     );
   }
 
   if (isError) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <EmptyState
           icon={<Sparkles className="w-12 h-12 text-destructive" />}
           heading="Couldn't load demo accounts"
@@ -81,7 +81,7 @@ export default function DemoUsers() {
               : "Try refreshing the page."
           }
         />
-      </main>
+      </div>
     );
   }
 
@@ -90,7 +90,7 @@ export default function DemoUsers() {
   if (users.length === 0) {
     return (
       <>
-        <main className="p-4 sm:p-8 space-y-6">
+        <div className="p-4 sm:p-8 space-y-6">
           <header className="space-y-1">
             <h1 className="text-2xl font-semibold">Demo accounts</h1>
             <p className="text-sm text-muted-foreground">
@@ -101,7 +101,7 @@ export default function DemoUsers() {
           <DemoUsersEmptyState
             onCreate={() => setShowCreateDialog(true)}
           />
-        </main>
+        </div>
         <CreateDemoDialog
           open={showCreateDialog}
           isLoading={isCreating}
@@ -120,7 +120,7 @@ export default function DemoUsers() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">Demo accounts</h1>
         <p className="text-sm text-muted-foreground">
@@ -171,6 +171,6 @@ export default function DemoUsers() {
           onCancel={() => setPendingDelete(null)}
         />
       )}
-    </main>
+    </div>
   );
 }

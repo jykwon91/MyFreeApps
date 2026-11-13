@@ -11,7 +11,7 @@ interface RaidLoadErrorProps {
 /** The raid couldn't be read — too many requests, the server, the network: what happened, and [Retry]. */
 export default function RaidLoadError({ message, isRetrying, onRetry }: RaidLoadErrorProps) {
   return (
-    <main className={RAID_MAIN_CLASS}>
+    <div className={RAID_MAIN_CLASS}>
       <RaidPageMeta title="Raid" />
       <section aria-labelledby="raid-load-error" className="space-y-3 rounded-xl border bg-card p-6">
         <h1 id="raid-load-error" className="text-xl font-semibold">
@@ -24,6 +24,6 @@ export default function RaidLoadError({ message, isRetrying, onRetry }: RaidLoad
           Retry
         </LoadingButton>
       </section>
-    </main>
+    </div>
   );
 }

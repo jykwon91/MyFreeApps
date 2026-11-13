@@ -14,7 +14,7 @@ export default function WowForeverLanding() {
   const features = COMPANION_GAMES[WOW_FOREVER_SLUG].features;
   const updates = useUpdateDots();
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <div className="space-y-2">
         <WowPageHeader
           title="World of Warcraft: Forever"
@@ -36,6 +36,6 @@ export default function WowForeverLanding() {
           <WowFeatureTile key={f.path} feature={f} hasUpdate={updates.has(f.path)} />
         ))}
       </div>
-    </main>
+    </div>
   );
 }

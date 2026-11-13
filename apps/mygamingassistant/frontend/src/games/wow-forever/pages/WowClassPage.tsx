@@ -33,7 +33,7 @@ export default function WowClassPage() {
 
   if (!classParam || !wowClass) {
     return (
-      <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+      <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
         <WowPageHeader
           title="Classes"
           subtitle="Pick a class."
@@ -42,7 +42,7 @@ export default function WowClassPage() {
         />
         <EmptyStateNote message={classParam ? `There's no class called "${classParam}".` : "Pick a class to get started."} />
         <ClassPickerList />
-      </main>
+      </div>
     );
   }
 
@@ -51,7 +51,7 @@ export default function WowClassPage() {
   const roles = uniqueRoleLabels(wowClass.specs.map((s) => s.role));
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <WowPageHeader
         title={wowClass.name}
         subtitle="Races, proficiencies, spellbook, talents, macros and what Forever changed."
@@ -84,7 +84,7 @@ export default function WowClassPage() {
       {proficiency ? <ClassProficienciesSection proficiency={proficiency} /> : null}
       <ClassChangesLoader classId={wowClass.id} />
       <ClassNavLinks classId={wowClass.id} wowClass={wowClass} />
-    </main>
+    </div>
   );
 }
 

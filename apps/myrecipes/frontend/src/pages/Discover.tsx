@@ -121,7 +121,7 @@ export default function Discover() {
   // page recorded as the source so the provenance survives the save.
   if (isSaving && detail) {
     return (
-      <main className="space-y-6 p-4 sm:p-8">
+      <div className="space-y-6 p-4 sm:p-8">
         <EditorHeader
           backTo="/discover"
           backLabel="Discover"
@@ -133,14 +133,14 @@ export default function Discover() {
           initialDraft={discoveredRecipeDraft(detail)}
           onCancel={() => setIsSaving(false)}
         />
-      </main>
+      </div>
     );
   }
 
   // Detail step — reading one result, or the read itself.
   if (selected) {
     return (
-      <main className="space-y-6 p-4 sm:p-8">
+      <div className="space-y-6 p-4 sm:p-8">
         {detail ? (
           <DiscoveryDetailView
             detail={detail}
@@ -154,7 +154,7 @@ export default function Discover() {
             <DiscoveryResultsSkeleton />
           </div>
         )}
-      </main>
+      </div>
     );
   }
 
@@ -192,7 +192,7 @@ export default function Discover() {
   }
 
   return (
-    <main className="space-y-6 p-4 sm:p-8">
+    <div className="space-y-6 p-4 sm:p-8">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Discover recipes</h1>
         <p className="text-sm text-muted-foreground">{DISCOVERY_INTRO}</p>
@@ -244,6 +244,6 @@ export default function Discover() {
       {error ? <AlertBox variant="warning">{error}</AlertBox> : null}
 
       {content}
-    </main>
+    </div>
   );
 }

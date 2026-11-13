@@ -89,7 +89,7 @@ export default function Properties() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader title="Properties" />
 
       {!infoDismissed && (
@@ -203,6 +203,6 @@ export default function Properties() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDeleteId(null)}
       />
-    </main>
+    </div>
   );
 }

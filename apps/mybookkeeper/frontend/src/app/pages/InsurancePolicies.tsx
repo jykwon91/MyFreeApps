@@ -36,7 +36,7 @@ export default function InsurancePolicies() {
   });
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <SectionHeader
         title="Insurance"
         subtitle="Track coverage and expiration across all properties."
@@ -90,6 +90,6 @@ export default function InsurancePolicies() {
       {showBenchmarkDialog ? (
         <InsuranceBenchmarkDialog onClose={() => setShowBenchmarkDialog(false)} />
       ) : null}
-    </main>
+    </div>
   );
 }

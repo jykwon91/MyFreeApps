@@ -23,7 +23,7 @@ export default function WowTrainersPage() {
   useDocumentTitle(subject ? `${subject.label} trainers · WoW Forever` : `${PAGE_TITLE} · WoW Forever`);
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <WowPageHeader
         title={subject ? `${subject.label} trainers` : PAGE_TITLE}
         subtitle="What every class and profession unlocks at each level, and where its trainers are for your faction."
@@ -65,6 +65,6 @@ export default function WowTrainersPage() {
       ) : null}
       {!subject && slug ? <EmptyStateNote message={`There's no class or profession called "${slug}". Pick one above.`} /> : null}
       {!slug ? <EmptyStateNote message="Pick a class or profession to see what it unlocks and where to train it." /> : null}
-    </main>
+    </div>
   );
 }

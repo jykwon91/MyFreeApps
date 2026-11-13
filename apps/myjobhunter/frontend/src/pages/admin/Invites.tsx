@@ -18,7 +18,7 @@ export default function AdminInvites() {
   const [createOpen, setCreateOpen] = useState(false);
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Invites</h1>
@@ -39,6 +39,6 @@ export default function AdminInvites() {
       <InvitesList />
 
       <CreateInviteDialog open={createOpen} onOpenChange={setCreateOpen} />
-    </main>
+    </div>
   );
 }

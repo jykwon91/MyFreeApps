@@ -118,7 +118,7 @@ export default function Recipes() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Recipes</h1>
         <div className="flex flex-wrap items-center gap-2">
@@ -177,6 +177,6 @@ export default function Recipes() {
       </div>
 
       {content}
-    </main>
+    </div>
   );
 }

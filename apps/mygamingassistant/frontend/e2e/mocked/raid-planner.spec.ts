@@ -229,7 +229,7 @@ test("Auto-fill seats a 40-man in its eight groups by role, and Save sends all f
   for (const [index, tally] of tallies.entries()) {
     await expect(page.getByRole("region", { name: `Group ${index + 1}`, exact: true })).toContainText(tally);
   }
-  await page.locator("main").first().evaluate((shell) => shell.scrollTo(0, 0));
+  await page.getByRole("main").evaluate((shell) => shell.scrollTo(0, 0));
   await page.screenshot({ path: testInfo.outputPath("planner-40-light.png") });
 
   await page.getByRole("button", { name: "Save" }).click();
@@ -318,10 +318,10 @@ test("on a phone it never scrolls sideways, every control is a 44 px tap, and Mo
   const routes = await routePlan(page, smallPlanFixture());
   await openPlanner(page);
 
-  // The window, the shell's scrolling <main> and the page's own.
+  // The window and the shell's scrolling <main>, which holds the page.
   const overflow = await page.evaluate(() => {
-    const mains = Array.from(document.querySelectorAll("main"));
-    const inside = Math.max(0, ...mains.map((main) => main.scrollWidth - main.clientWidth));
+    const main = document.querySelector("main");
+    const inside = main ? main.scrollWidth - main.clientWidth : 0;
     return Math.max(document.documentElement.scrollWidth - window.innerWidth, inside);
   });
   expect(overflow).toBeLessThanOrEqual(0);
@@ -355,7 +355,7 @@ test("on a phone it never scrolls sideways, every control is a 44 px tap, and Mo
   // The whole page in one picture, to look at: the app scrolls inside its shell, not the window.
   await page.getByRole("button", { name: "Note from Jory" }).click();
   await page.setViewportSize({ width: 375, height: 3000 });
-  await page.locator("main").first().evaluate((shell) => shell.scrollTo(0, 0));
+  await page.getByRole("main").evaluate((shell) => shell.scrollTo(0, 0));
   await page.screenshot({ path: testInfo.outputPath("planner-375.png") });
 });
 

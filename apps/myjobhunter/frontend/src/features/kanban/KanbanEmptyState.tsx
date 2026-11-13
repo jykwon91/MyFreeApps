@@ -10,7 +10,7 @@ export default function KanbanEmptyState() {
   const navigate = useNavigate();
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <EmptyState
         icon={<Search className="w-12 h-12" />}
         heading="Your hunt starts here"
@@ -20,6 +20,6 @@ export default function KanbanEmptyState() {
           onClick: () => navigate("/analyze"),
         }}
       />
-    </main>
+    </div>
   );
 }

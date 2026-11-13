@@ -35,7 +35,7 @@ export default function RaidPageContent({
   onRefresh,
 }: RaidPageContentProps) {
   return (
-    <main className={RAID_MAIN_CLASS}>
+    <div className={RAID_MAIN_CLASS}>
       <RaidPageMeta title={page.title} />
       <RaidHeader page={page} now={now} />
       <RaidDescription segments={page.description} now={now} />
@@ -58,6 +58,6 @@ export default function RaidPageContent({
         />
         <RaidCredits />
       </footer>
-    </main>
+    </div>
   );
 }

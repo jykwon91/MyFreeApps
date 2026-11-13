@@ -37,7 +37,7 @@ export default function CustomersPage() {
   );
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-5xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
       <header>
         <h1 className="text-2xl font-semibold">Customers</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -87,7 +87,7 @@ export default function CustomersPage() {
           <CustomerList rows={query.data} />
         )
       ) : null}
-    </main>
+    </div>
   );
 }
 

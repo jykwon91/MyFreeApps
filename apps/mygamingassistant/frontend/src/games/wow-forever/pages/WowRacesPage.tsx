@@ -22,7 +22,7 @@ export default function WowRacesPage() {
   useDocumentTitle(race ? `${race.name} · WoW Forever` : "Races · WoW Forever");
 
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader
         title={race ? `Races: ${race.name}` : "Races"}
         subtitle="Each race's faction, starting zone, classes and racial traits, and what Forever changed from Classic."
@@ -51,6 +51,6 @@ export default function WowRacesPage() {
           )}
         </div>
       ) : null}
-    </main>
+    </div>
   );
 }

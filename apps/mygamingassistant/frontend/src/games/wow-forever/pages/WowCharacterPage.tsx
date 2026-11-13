@@ -27,7 +27,7 @@ export default function WowCharacterPage() {
   if (!rawSlug && recent.length > 0) return <Navigate to={`${CHARACTER_PAGE_PATH}/${recent[0]}`} replace />;
 
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-5xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-5xl">
       <WowPageHeader
         title="Your character"
         subtitle="Your character's look and gear, with the stats each item rolled — straight from Blizzard, no login."
@@ -41,6 +41,6 @@ export default function WowCharacterPage() {
         onLookup={(next) => navigate(`${CHARACTER_PAGE_PATH}/${next}`)}
       />
       <CharacterSheet slug={slug} rawSlug={rawSlug} shown={shown} error={error} isFetching={isFetching} />
-    </main>
+    </div>
   );
 }

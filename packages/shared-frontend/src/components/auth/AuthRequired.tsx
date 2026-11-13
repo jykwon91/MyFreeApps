@@ -73,7 +73,7 @@ export default function AuthRequired({
   }
 
   return (
-    <main className="p-4 sm:p-8">
+    <div className="p-4 sm:p-8">
       <div className="mx-auto max-w-md rounded-xl border bg-card shadow-xs p-8 flex flex-col items-center text-center gap-4">
         <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
           <Lock className="w-5 h-5 text-primary" aria-hidden />
@@ -84,6 +84,6 @@ export default function AuthRequired({
           Sign in
         </Button>
       </div>
-    </main>
+    </div>
   );
 }

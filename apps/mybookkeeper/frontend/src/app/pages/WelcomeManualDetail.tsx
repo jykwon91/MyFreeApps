@@ -150,7 +150,7 @@ export default function WelcomeManualDetail() {
   const hasSections = sortedSections.length > 0;
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-[96rem]">
+    <div className="p-4 sm:p-8 space-y-6 max-w-[96rem]">
       <Link
         to="/welcome-manuals"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground min-h-[44px]"
@@ -412,6 +412,6 @@ export default function WelcomeManualDetail() {
           />
         </>
       ) : null}
-    </main>
+    </div>
   );
 }

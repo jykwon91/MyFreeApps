@@ -194,7 +194,7 @@ export default function Calendar() {
   });
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
         title="Calendar"
         subtitle="Every booking across every channel and listing, in one view."
@@ -274,6 +274,6 @@ export default function Calendar() {
         anchorIso={anchorIso}
         todayIso={todayIso()}
       />
-    </main>
+    </div>
   );
 }

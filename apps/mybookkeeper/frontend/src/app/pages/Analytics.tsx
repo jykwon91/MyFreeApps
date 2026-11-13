@@ -26,7 +26,7 @@ export default function Analytics() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 md:h-screen md:flex md:flex-col md:overflow-hidden">
+    <div className="p-4 sm:p-8 space-y-6 md:h-screen md:flex md:flex-col md:overflow-hidden">
       <SectionHeader title="Analytics" />
 
       {!infoDismissed && (
@@ -65,6 +65,6 @@ export default function Analytics() {
       <div className="md:flex-1 md:overflow-auto">
         {activeTab === "utility-trends" && <UtilityTrends />}
       </div>
-    </main>
+    </div>
   );
 }

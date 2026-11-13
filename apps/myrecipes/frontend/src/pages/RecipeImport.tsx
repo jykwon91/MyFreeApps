@@ -81,16 +81,16 @@ export default function RecipeImport() {
 
   if (step === "extracting") {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <EditorHeader backTo="/" backLabel="Recipes" title={PHOTO_IMPORT_COPY.title} />
         <RecipeExtractionProgress />
-      </main>
+      </div>
     );
   }
 
   if (step === "review" && draft) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <EditorHeader
           backTo="/"
           backLabel="Recipes"
@@ -98,12 +98,12 @@ export default function RecipeImport() {
           subtitle="We've pre-filled what we could from your photo — edit anything that looks off, then save."
         />
         <RecipeEditorForm mode="create" initialDraft={draft} onCancel={() => setStep("upload")} />
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <EditorHeader
         backTo="/"
         backLabel="Recipes"
@@ -125,6 +125,6 @@ export default function RecipeImport() {
         </Link>
         .
       </p>
-    </main>
+    </div>
   );
 }

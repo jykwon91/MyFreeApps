@@ -326,7 +326,7 @@ export default function LiveCs2Calibrate() {
   }
 
   return (
-    <main className="flex flex-col h-[calc(100vh-3.5rem)]">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)]">
       <CalibrateTopBar
         maps={mapsList}
         mapSlug={urlMap}
@@ -403,7 +403,7 @@ export default function LiveCs2Calibrate() {
       />
 
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
-    </main>
+    </div>
   );
 }
 

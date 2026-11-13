@@ -140,7 +140,7 @@ export default function Review() {
   };
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold flex items-center gap-2">
@@ -330,6 +330,6 @@ export default function Review() {
           </button>
         </div>
       )}
-    </main>
+    </div>
   );
 }

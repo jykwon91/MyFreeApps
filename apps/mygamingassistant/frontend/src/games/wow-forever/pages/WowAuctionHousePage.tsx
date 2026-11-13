@@ -43,7 +43,7 @@ export default function WowAuctionHousePage() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <WowPageHeader
         title="Auction house prices"
         subtitle="Look up what any item sells for on the US auction houses, straight from Blizzard, or price a profession's materials and recipes."
@@ -72,6 +72,6 @@ export default function WowAuctionHousePage() {
           <AuctionHouseBody faction={house}>{(prices) => <AuctionReadyBody prices={prices} query={query} sort={sort} />}</AuctionHouseBody>
         </>
       )}
-    </main>
+    </div>
   );
 }

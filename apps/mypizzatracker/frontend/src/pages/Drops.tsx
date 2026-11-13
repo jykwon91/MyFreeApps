@@ -29,7 +29,7 @@ export default function DropsPage() {
   const [showCreate, setShowCreate] = useState(false);
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-5xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
       <header className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold">Drops</h1>
@@ -87,6 +87,6 @@ export default function DropsPage() {
           ))}
         </div>
       ) : null}
-    </main>
+    </div>
   );
 }

@@ -9,7 +9,7 @@ const TITLE = "Planner link missing or expired";
 /** No working planner link in this tab — none, mistyped, expired, or replaced by a newer one — and how to get one. */
 export default function PlannerLinkProblem() {
   return (
-    <main className={RAID_MAIN_CLASS}>
+    <div className={RAID_MAIN_CLASS}>
       <RaidPageMeta title={TITLE} />
       <section aria-labelledby="planner-link-problem" className="space-y-3 rounded-xl border bg-card p-6">
         <KeyRound aria-hidden className="h-6 w-6 text-muted-foreground" />
@@ -21,6 +21,6 @@ export default function PlannerLinkProblem() {
           Go to WoW Forever
         </Link>
       </section>
-    </main>
+    </div>
   );
 }

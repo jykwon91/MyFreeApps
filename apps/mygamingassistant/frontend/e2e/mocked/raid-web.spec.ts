@@ -144,10 +144,10 @@ test("on a phone it never scrolls sideways, and Refresh is a tap away", async ({
   await openRaid(page);
   await page.getByRole("heading", { level: 2, name: "Tentative · Bench · Absence" }).scrollIntoViewIfNeeded();
 
-  // The window, the shell's scrolling <main> and the page's own.
+  // The window and the shell's scrolling <main>, which holds the page.
   const overflow = await page.evaluate(() => {
-    const mains = Array.from(document.querySelectorAll("main"));
-    const inside = Math.max(0, ...mains.map((main) => main.scrollWidth - main.clientWidth));
+    const main = document.querySelector("main");
+    const inside = main ? main.scrollWidth - main.clientWidth : 0;
     return Math.max(document.documentElement.scrollWidth - window.innerWidth, inside);
   });
   expect(overflow).toBeLessThanOrEqual(0);
@@ -163,7 +163,7 @@ test("on a phone it never scrolls sideways, and Refresh is a tap away", async ({
 
   // The whole page in one picture, to look at: the app scrolls inside its shell, not the window.
   await page.setViewportSize({ width: 375, height: 3200 });
-  await page.locator("main").first().evaluate((shell) => shell.scrollTo(0, 0));
+  await page.getByRole("main").evaluate((shell) => shell.scrollTo(0, 0));
   await page.screenshot({ path: testInfo.outputPath("raid-375.png") });
 });
 

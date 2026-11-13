@@ -12,7 +12,7 @@ import { TAG_SECTION_ID } from "@/games/wow-forever/data/macros/tagMacro";
 /** /wow-forever/macros (`#tag` jumps to the tag-macro builder) — hover-cast, tag and other macros to paste into the in-game macro window, for every class. */
 export default function WowMacrosPage() {
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <WowPageHeader
         title="Macros"
         subtitle="Hover-cast and other macros to paste into the in-game macro window, for every class. No addon needed."
@@ -34,6 +34,6 @@ export default function WowMacrosPage() {
       <HoverCastSection />
       <TagMacroSection />
       <ClassMacroList />
-    </main>
+    </div>
   );
 }

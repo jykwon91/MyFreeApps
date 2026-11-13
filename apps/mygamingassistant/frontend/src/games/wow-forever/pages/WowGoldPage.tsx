@@ -28,7 +28,7 @@ export default function WowGoldPage() {
   const [player, updatePlayer] = usePlayerSettings();
   const [showAllClasses, setShowAllClasses] = useState(false);
   return (
-    <main className="p-4 sm:p-8 space-y-8 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-8 max-w-4xl">
       <WowPageHeader
         title="Making gold"
         subtitle={`${GOLD_DATA_STATUS.summary} · checked ${GOLD_DATA_STATUS.checkedOn}`}
@@ -65,6 +65,6 @@ export default function WowGoldPage() {
       <GoldGatheringSection />
       <GoldSellSection />
       <GoldDontDoSection />
-    </main>
+    </div>
   );
 }

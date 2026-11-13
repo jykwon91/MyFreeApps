@@ -18,7 +18,7 @@ export default function WowSpellbookPage() {
   useDocumentTitle(wowClass ? `${wowClass.name} spellbook · WoW Forever` : `${PAGE_TITLE} · WoW Forever`);
 
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader
         title={wowClass ? `${wowClass.name} spellbook` : PAGE_TITLE}
         subtitle="Every spell a class can train in Forever: ranks, learn levels, costs, tooltips and what changed from Classic."
@@ -36,6 +36,6 @@ export default function WowSpellbookPage() {
       ) : null}
       {!wowClass && classParam ? <EmptyStateNote message={`There's no class called "${classParam}". Pick one above.`} /> : null}
       {!classParam ? <EmptyStateNote message="Pick a class to see its spells." /> : null}
-    </main>
+    </div>
   );
 }

@@ -17,7 +17,7 @@ export default function InquiryDetail() {
   const mode = resolveDetailLoadMode({ hasData: inquiry !== undefined, hasError: error !== undefined });
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <Link
         to="/inquiries"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground min-h-[44px]"
@@ -31,6 +31,6 @@ export default function InquiryDetail() {
       ) : null}
 
       <InquiryDetailBody mode={mode} inquiry={inquiry} />
-    </main>
+    </div>
   );
 }

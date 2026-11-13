@@ -71,9 +71,9 @@ export default function Profile() {
 
   if (profileError || !profile) {
     return (
-      <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+      <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
         <p className="text-destructive">Couldn't load profile. Try refreshing.</p>
-      </main>
+      </div>
     );
   }
 
@@ -114,7 +114,7 @@ export default function Profile() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       {/* ------------------------------------------------------------------ */}
       {/* Header section */}
       {/* ------------------------------------------------------------------ */}
@@ -505,6 +505,6 @@ export default function Profile() {
         existing={screeningEditTarget}
         existingKeys={existingAnswerKeys}
       />
-    </main>
+    </div>
   );
 }

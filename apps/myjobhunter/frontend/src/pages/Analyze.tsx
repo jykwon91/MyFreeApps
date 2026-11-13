@@ -161,7 +161,7 @@ export default function Analyze() {
   // Render
   // ---------------------------------------------------------------------
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       {pending ? (
         <AnalyzeProcessingView sourcePath={pending.source} longRunning={longRunning} />
       ) : lastResult ? (
@@ -186,6 +186,6 @@ export default function Analyze() {
           onPasteUrl={handlePasteUrl}
         />
       )}
-    </main>
+    </div>
   );
 }

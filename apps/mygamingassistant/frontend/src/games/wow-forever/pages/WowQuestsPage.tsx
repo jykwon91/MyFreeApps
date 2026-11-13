@@ -13,7 +13,7 @@ export default function WowQuestsPage() {
   const state = useQuestIndex();
   const { seenIds } = useQuestSeen();
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader
         title="Quests"
         subtitle="Every quest the WoW Forever client has. Search by name, filter by zone, faction or level, or look up a specific quest's details."
@@ -27,6 +27,6 @@ export default function WowQuestsPage() {
         <QuestList index={state.data} seenIds={seenIds} />
       ) : null}
       {state.status === QUESTS_STATUS.loading ? <QuestListSkeleton /> : null}
-    </main>
+    </div>
   );
 }

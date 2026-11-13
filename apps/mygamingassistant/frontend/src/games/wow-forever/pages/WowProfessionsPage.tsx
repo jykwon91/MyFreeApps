@@ -26,7 +26,7 @@ export default function WowProfessionsPage() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-8 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-8 max-w-4xl">
       <WowPageHeader
         title="Professions"
         subtitle={`${PROFESSIONS_DATA_STATUS.summary} · checked ${PROFESSIONS_DATA_STATUS.checkedOn}`}
@@ -56,6 +56,6 @@ export default function WowProfessionsPage() {
       </div>
 
       <ProfessionGuideView profession={profession} faction={player.faction} zoneId={player.zoneId} level={player.level} position={player.position} />
-    </main>
+    </div>
   );
 }

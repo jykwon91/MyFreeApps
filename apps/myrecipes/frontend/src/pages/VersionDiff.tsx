@@ -44,18 +44,18 @@ export default function VersionDiff() {
 
   if (isLoading) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         {backLink}
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-40 w-full" />
-      </main>
+      </div>
     );
   }
 
   if (isError || !data) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         {backLink}
         <EmptyState
           icon={<GitCompare className="w-12 h-12 text-destructive" />}
@@ -66,14 +66,14 @@ export default function VersionDiff() {
             onClick: () => navigate(`/recipes/${recipeId}`),
           }}
         />
-      </main>
+      </div>
     );
   }
 
   const summary = diffSummary(data);
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       {backLink}
 
       <header className="space-y-1">
@@ -143,6 +143,6 @@ export default function VersionDiff() {
           </LoadingButton>
         </div>
       ) : null}
-    </main>
+    </div>
   );
 }

@@ -10,7 +10,7 @@ export default function WowChangesPage() {
   useDocumentTitle("Changes vs Classic · WoW Forever");
   const [filters, setFilters] = useChangeFilters();
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader
         title="Changes vs Classic"
         subtitle="Talents, class spells, items, quests and zones that WoW Forever changed or added, old and new side by side."
@@ -20,6 +20,6 @@ export default function WowChangesPage() {
       <ChangeFeedNote />
       <ChangeFiltersBar filters={filters} onChange={setFilters} />
       <ChangeFeedBody filters={filters} />
-    </main>
+    </div>
   );
 }

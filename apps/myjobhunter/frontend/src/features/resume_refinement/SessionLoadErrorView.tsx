@@ -6,7 +6,7 @@ interface SessionLoadErrorViewProps {
 
 export default function SessionLoadErrorView({ onStartNew }: SessionLoadErrorViewProps) {
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <ResumeRefinementHeader />
       <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
         We couldn't load that session.{" "}
@@ -15,6 +15,6 @@ export default function SessionLoadErrorView({ onStartNew }: SessionLoadErrorVie
         </button>
         .
       </div>
-    </main>
+    </div>
   );
 }

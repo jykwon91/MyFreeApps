@@ -36,12 +36,12 @@ export default function ActiveSessionLayout({
   controls,
 }: ActiveSessionLayoutProps) {
   return (
-    <main className="p-4 sm:p-6 flex flex-col gap-4 lg:h-[calc(100dvh-7rem)] max-w-screen-2xl mx-auto">
+    <div className="p-4 sm:p-6 flex flex-col gap-4 lg:h-[calc(100dvh-7rem)] max-w-screen-2xl mx-auto">
       <div className="shrink-0">{header}</div>
       <div className="flex-1 min-h-0 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="min-h-0 flex flex-col">{draft}</div>
         <div className="min-h-0 flex flex-col">{controls}</div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -128,7 +128,7 @@ export default function LiveCs2Setup() {
 
   if (!inTauri) {
     return (
-      <main className="p-8 max-w-2xl space-y-4">
+      <div className="p-8 max-w-2xl space-y-4">
         <Link
           to="/"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
@@ -149,12 +149,12 @@ export default function LiveCs2Setup() {
             <li>About one minute to click "Install"</li>
           </ul>
         </Card>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <div className="flex items-center gap-2">
         <Link
           to="/live/cs2"
@@ -245,7 +245,7 @@ export default function LiveCs2Setup() {
         ready={cvHook.ready}
         onRefresh={cvHook.refresh}
       />
-    </main>
+    </div>
   );
 }
 

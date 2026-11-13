@@ -2,7 +2,7 @@
  * Unit tests for RootLayout rendering branches.
  *
  * RootLayout has three branches:
- *   - ?compact=1                 → no shell (Outlet directly)
+ *   - ?compact=1                 → no shell (Outlet in a bare <main>)
  *   - authenticated              → AppShell (full sidebar + user dropdown)
  *   - unauthenticated (default)  → GuestShell (public nav + Sign in CTA)
  *
@@ -101,8 +101,9 @@ describe("RootLayout branches", () => {
     render(<RootLayout />);
     expect(screen.queryByTestId("app-shell")).toBeNull();
     expect(screen.queryByTestId("guest-shell")).toBeNull();
-    // Outlet should render directly
-    expect(screen.getByTestId("outlet")).toBeDefined();
+    // The page renders in a bare frame that is its one main landmark.
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+    expect(screen.getByRole("main")).toContainElement(screen.getByTestId("outlet"));
   });
 
   it("hides both shells when ?compact=1 (unauthenticated)", () => {
@@ -115,6 +116,7 @@ describe("RootLayout branches", () => {
     render(<RootLayout />);
     expect(screen.queryByTestId("app-shell")).toBeNull();
     expect(screen.queryByTestId("guest-shell")).toBeNull();
-    expect(screen.getByTestId("outlet")).toBeDefined();
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+    expect(screen.getByRole("main")).toContainElement(screen.getByTestId("outlet"));
   });
 });

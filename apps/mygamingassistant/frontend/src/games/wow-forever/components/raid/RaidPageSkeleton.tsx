@@ -7,7 +7,7 @@ const ROWS = Array.from({ length: RAID_SKELETON.ROWS }, (_, index) => index);
 /** The page's shape while the raid loads (header, then cards of rows), so nothing jumps when it lands. */
 export default function RaidPageSkeleton() {
   return (
-    <main className={RAID_MAIN_CLASS} aria-busy="true">
+    <div className={RAID_MAIN_CLASS} aria-busy="true">
       <RaidPageMeta title="Raid" />
       <div className="overflow-hidden rounded-xl border bg-card" aria-hidden>
         <div className="aspect-[4/1] w-full animate-pulse bg-muted" />
@@ -27,6 +27,6 @@ export default function RaidPageSkeleton() {
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

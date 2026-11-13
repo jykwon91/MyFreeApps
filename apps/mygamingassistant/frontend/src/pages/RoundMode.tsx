@@ -89,7 +89,7 @@ export default function RoundMode({
       </div>
 
       {/* Body */}
-      <main className="p-4 sm:p-6">
+      <div className="p-4 sm:p-6">
         {isFetching ? (
           <RoundModeLoadingSkeleton />
         ) : pinnedLineups.length === 0 ? (
@@ -101,7 +101,7 @@ export default function RoundMode({
             pins={pins}
           />
         )}
-      </main>
+      </div>
     </div>
   );
 }
