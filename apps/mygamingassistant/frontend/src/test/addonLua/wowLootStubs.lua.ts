@@ -7,6 +7,8 @@
  * record what they're given into `out` as "frame: ..." and "chat: ...".
  * `link(id)` builds an item link; `rollWindow(rollID)` a newer-UI roll frame;
  * `talentShape = "retail"` makes GetTalentTabInfo return points 5th.
+ * `hover(id)` / `clickLink(id)` show an item tooltip (lines recorded as
+ * "GameTooltip: ..." / "ItemRefTooltip: ..."); `bagItems[bag] = { ids }` fills bags.
  */
 export const WOW_LOOT_STUBS = `
 floor = math.floor
@@ -77,6 +79,49 @@ function GroupLootFrame1:CreateFontString() return fontString() end
 function rollWindow(rollID)
   return { rollID = rollID, IsShown = function() return true end, CreateFontString = function() return fontString() end }
 end
+
+-- Tooltips record each line as "<name>: <line>". Like the client, showing an item clears the
+-- tooltip, then runs every item hook: the post-calls, and OnTooltipSetItem when
+-- \`setItemScript\` is true (older clients). GetItem gives the full link; the post-call data
+-- only the id. hover(id) shows it on GameTooltip; clickLink(id) opens a chat link on
+-- ItemRefTooltip, whose SetHyperlink gets the raw "item:..." string, as the client's does.
+setItemScript = false
+local postcalls = {}
+local function show(t, id, full)
+  t.link = full
+  if t.scripts.OnTooltipCleared then t.scripts.OnTooltipCleared(t) end
+  for _, f in ipairs(postcalls) do f(t, { id = id }) end
+  if t.scripts.OnTooltipSetItem then t.scripts.OnTooltipSetItem(t) end
+end
+local function tip(name)
+  local t = { name = name, scripts = {} }
+  function t:GetName() return self.name end
+  function t:AddLine(l) table.insert(out, self.name .. ": " .. l) end
+  function t:HookScript(ev, fn) self.scripts[ev] = fn end
+  function t:HasScript(ev) return ev ~= "OnTooltipSetItem" or setItemScript end
+  function t:GetItem() return nil, self.link end
+  function t:SetHyperlink(raw) local id = tonumber(raw:match("item:(%d+)")); show(self, id, link(id)) end
+  function t:Show() end
+  return t
+end
+GameTooltip = tip("GameTooltip"); ItemRefTooltip = tip("ItemRefTooltip")
+Enum = { TooltipDataType = { Item = 0 } }
+TooltipDataProcessor = { AddTooltipPostCall = function(_, fn) table.insert(postcalls, fn) end }
+function hooksecurefunc(target, name, fn)
+  local original = target[name]
+  target[name] = function(...) local r = original and original(...); fn(...); return r end
+end
+function hover(id, linkText) show(GameTooltip, id, linkText or link(id)) end
+-- Another hook firing for the same tooltip show, without clearing it first.
+function refire(id) for _, f in ipairs(postcalls) do f(GameTooltip, { id = id }) end end
+function clickLink(id) ItemRefTooltip:SetHyperlink("item:" .. id .. "::::::::60:::::") end
+
+-- bagItems[bag] = { id, id, ... }; bag 0 is the backpack.
+bagItems = {}
+C_Container = {
+  GetContainerNumSlots = function(bag) return bagItems[bag] and #bagItems[bag] or 0 end,
+  GetContainerItemLink = function(bag, slot) local id = bagItems[bag] and bagItems[bag][slot]; return id and link(id) or nil end,
+}
 
 local handler
 CreateFrame = function()

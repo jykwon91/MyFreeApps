@@ -1645,7 +1645,16 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   there; armor never compares with a two-hander; "already wear it" only
   blocks Unique items; trinkets get no score. Spec at 60 = `/mgaloot spec <id>`
   (saved in `MGALootSettings`) else the talent tab with the most points.
-  `/mgaloot check <link>` judges any item. Every client API is feature-checked
+  `/mgaloot check <link>` judges any item. Since 1.1.0 the same verdict (`judge(link, true)`:
+  no bind/level tags, the tooltip has them) is added to every GameTooltip /
+  ItemRefTooltip item via the MGA Prices hook trio (TooltipDataProcessor
+  post-call, OnTooltipSetItem, SetHyperlink), once per show (`mgaLootItem`
+  item-id guard, reset on OnTooltipCleared — the hooks see a full link OR the
+  raw `item:` string, so never guard on link text; left unset while the item is
+  still loading), using `GetItem()`'s full link; nothing on an item you wear
+  (compared by `itemString`). `/mgaloot tooltip on|off` (saved). `/mgaloot bags` lists
+  bag 0..`NUM_BAG_SLOTS` upgrades biggest first (empty slot on top, "needs
+  level N" noted; `C_Container` else the old globals). Every client API is feature-checked
   (Forever's are undocumented). Download = the folded card on Item compare
   (`components/compare/LootAddonCard.tsx`, zip via the shared
   `lib/addons/zipAddonFolder.ts`). Tests run the real Lua under fengari
