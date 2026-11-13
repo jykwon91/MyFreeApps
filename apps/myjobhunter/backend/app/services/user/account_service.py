@@ -7,19 +7,12 @@ This module owns:
     MJH-specific because the domain rows differ across apps. Excludes
     every secret / encrypted column so an exported JSON dump never
     leaks credentials.
-  * :func:`delete_account` — hard-delete the user row; the FK ON DELETE
-    CASCADE wipes every related domain row in a single statement.
-    The ``ACCOUNT_DELETED`` auth event is emitted BEFORE the cascade so
-    the row is written in the same transaction (and survives because
-    ``auth_events.user_id`` has no FK to ``users.id`` — see
-    ``platform_shared.db.models.auth_event`` for the rationale).
 
 Lockout-policy helpers (``record_failed_login``, ``record_successful_login``,
 ``is_locked``) are NOT mirrored here — MJH does not yet wire login lockout
 (C5 will). When that lands, follow MBK's M7 pattern and re-export shims
 from ``platform_shared.services.account_lockout``.
 """
-import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -45,8 +38,6 @@ from app.models.profile.skill import Skill
 from app.models.profile.work_history import WorkHistory
 from app.models.system.extraction_log import ExtractionLog
 from app.models.user.user import User
-
-logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -352,46 +343,3 @@ async def build_export(db: AsyncSession, user: User) -> dict:
         "resume_upload_jobs": [_resume_upload_job_to_export_dict(j) for j in resume_upload_jobs],
         "extraction_logs": [_extraction_log_to_export_dict(l) for l in extraction_logs],
     }
-
-
-# ---------------------------------------------------------------------------
-# Delete
-# ---------------------------------------------------------------------------
-
-
-async def delete_account(db: AsyncSession, user: User) -> None:
-    """Hard-delete ``user``; all related rows cascade-delete via FK.
-
-    Order matters:
-      1. ``log_auth_event(ACCOUNT_DELETED)`` writes the audit row in the
-         same transaction. The ``auth_events.user_id`` column has NO
-         foreign key to ``users.id`` (intentional — see
-         ``platform_shared.db.models.auth_event``) so the row survives
-         the cascade and remains queryable for the admin audit log.
-      2. ``db.delete(user)`` issues ``DELETE FROM users WHERE id=...``.
-         Every MJH-owned table has ``ON DELETE CASCADE`` on its
-         ``user_id`` FK, so the single statement wipes all 15 domain
-         tables for this user atomically.
-
-    The caller is responsible for committing the surrounding transaction
-    (this function does not flush or commit).
-    """
-    logger.warning(
-        "Account deletion: user_id=%s email=%s",
-        user.id,
-        user.email,
-    )
-    # Re-fetch via the session so SQLAlchemy emits a real DELETE statement
-    # (rather than a no-op when the caller passed a detached instance).
-    loaded_user = await db.get(User, user.id)
-    if loaded_user is None:
-        return
-    # Log BEFORE delete — the auth_events table has no FK to users, so the
-    # event row is safe even after the user cascade completes.
-    await log_auth_event(
-        db,
-        event_type=AuthEventType.ACCOUNT_DELETED,
-        user_id=user.id,
-        succeeded=True,
-    )
-    await db.delete(loaded_user)
