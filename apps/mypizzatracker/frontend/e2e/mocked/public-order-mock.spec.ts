@@ -2,34 +2,51 @@
  * No-backend E2E for the customer pages, signed out: a customer picks a slot,
  * builds two pizzas, places the order, sees the confirmation and tracks it at
  * /order/status/{id}, which this browser then lists at /order/status; a
- * returning customer reorders their usual; no running drop, a failed load and
- * an unknown order each get their own state; and the order-status skeleton
- * has the loaded layout.
+ * returning customer reorders their usual; no running drop, a failed drop
+ * load, a failed menu load, a failed order read and an unknown order each get
+ * their own state, and each Retry re-reads what failed; and the order-status
+ * skeleton has the loaded layout.
  */
+import type { PublicOrderConfirmation } from "@/types/public/public";
+import { apiPath } from "@platform/ui/test-support/apiPath";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { measureBoxes } from "@platform/ui/test-support/layoutShift";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { failReads, holdReads, logReads } from "@platform/ui/test-support/routeControls";
 import { CARD } from "./constants/layoutSelectors";
 import {
   DROP_LOAD_FAILED_HEADING,
+  MENU_LOAD_FAILED_HEADING,
   NO_ACTIVE_DROP_HEADING,
+  ORDER_LOAD_FAILED_HEADING,
   ORDER_PAGE_HEADING,
   ORDER_PLACED_HEADING,
   ORDER_STATUS_HEADING,
 } from "./constants/publicCopy";
-import { apiPath } from "./fixtures/apiPath";
 import { ACTIVE_DROP_ID } from "./fixtures/dropFixtures";
 import { orderIdAt, pizzaIdAt, slotIdAt, toppingIdAt } from "./fixtures/fixtureIds";
 import { confirmationFromOrder } from "./fixtures/publicFixtures";
 import { fillDetails, pizzaLine } from "./fixtures/publicOrderForm";
-import { failReads, holdReads } from "./fixtures/routeControls";
 import { expectSameColumns, looseSkeletonBars } from "./fixtures/skeletonLayout";
 import { stubPublicApi } from "./fixtures/stubPublicApi";
 
 const CURRENT_DROP = apiPath(/^\/public\/drops\/current$/);
+const MENU_READ = apiPath(/^\/public\/menu$/);
 const ORDER_READ = apiPath(/^\/public\/orders\/[^/]+$/);
 const PLACED_ID = orderIdAt(100);
 const RETURNING_PHONE = "5125550101";
+
+/** An order already placed for the 5:00 PM slot: one Margherita, paying cash. */
+function placedOrder(): PublicOrderConfirmation {
+  return confirmationFromOrder(PLACED_ID, {
+    drop_id: ACTIVE_DROP_ID,
+    slot_id: slotIdAt(1),
+    customer_name: "Dana Cruz",
+    customer_phone: "5125550199",
+    payment_method_tag: "cash",
+    pizzas: [{ pizza_type_id: pizzaIdAt(1), topping_type_ids: [], modifications_text: null }],
+  });
+}
 
 test.beforeEach(async ({ page }) => {
   await stubUnmatchedApi(page);
@@ -47,6 +64,7 @@ test("places an order, sees it confirmed, tracks it and finds it among this brow
 
   await page.getByRole("button", { name: /^5:30 PM/ }).click();
   await pizzaLine(page, 0).getByRole("button", { name: "Mushrooms +$1.50" }).click();
+  await pizzaLine(page, 0).getByRole("button", { name: "Basil" }).click();
   await pizzaLine(page, 0).getByLabel("Modifications (optional)").fill("  well done ");
   await page.getByRole("button", { name: "Add pizza" }).click();
   await pizzaLine(page, 1).getByLabel("Pick a pizza").selectOption({ label: "Pepperoni -- $14.50" });
@@ -69,7 +87,7 @@ test("places an order, sees it confirmed, tracks it and finds it among this brow
         customer_phone: "(512) 555-0199",
         payment_method_tag: "zelle",
         pizzas: [
-          { pizza_type_id: pizzaIdAt(1), topping_type_ids: [toppingIdAt(2)], modifications_text: "well done" },
+          { pizza_type_id: pizzaIdAt(1), topping_type_ids: [toppingIdAt(2), toppingIdAt(1)], modifications_text: "well done" },
           { pizza_type_id: pizzaIdAt(2), topping_type_ids: [], modifications_text: null },
         ],
       },
@@ -81,9 +99,12 @@ test("places an order, sees it confirmed, tracks it and finds it among this brow
   await expect(page.getByRole("heading", { name: ORDER_STATUS_HEADING })).toBeVisible();
   await expect(page.getByText("Not started", { exact: true })).toBeVisible();
   await expect(page.getByText("Zelle (Not yet paid)")).toBeVisible();
+  // The server keeps the phone's digits only; the page formats them.
+  await expect(page.getByText("(512) 555-0199", { exact: true })).toBeVisible();
   const lines = page.getByRole("main").getByRole("listitem");
   await expect(lines).toHaveCount(2);
-  await expect(lines.nth(0)).toContainText('Margherita+ Mushrooms"well done"$13.50');
+  // The server lists a pizza's toppings by name, not in the order they were picked.
+  await expect(lines.nth(0)).toContainText('Margherita+ Basil, Mushrooms"well done"$13.50');
   await expect(lines.nth(1)).toContainText("Pepperoni$14.50");
 
   await page.goto("/order/status");
@@ -149,6 +170,39 @@ test("a failed load of the drop says so and Retry shows the order form", async (
   await expect(page.getByRole("button", { name: "Place order" })).toBeVisible();
 });
 
+test("a failed menu load says so and Retry re-reads the menu and shows the order form", async ({ page }) => {
+  await stubPublicApi(page);
+  await failReads(page, MENU_READ);
+  const menuReads = await logReads(page, MENU_READ);
+  const dropReads = await logReads(page, CURRENT_DROP);
+
+  await page.goto("/order");
+  await expect(page.getByRole("heading", { name: MENU_LOAD_FAILED_HEADING })).toBeVisible();
+  await page.getByRole("button", { name: "Retry" }).click();
+
+  await expect(page.getByRole("heading", { name: "Friday Night Drop" })).toBeVisible();
+  await expect(pizzaLine(page, 0).getByLabel("Pick a pizza")).toBeVisible();
+  await expect(page.getByRole("heading", { name: MENU_LOAD_FAILED_HEADING })).toHaveCount(0);
+  expect(menuReads).toHaveLength(2);
+  expect(dropReads).toHaveLength(1);
+});
+
+test("a failed order read that isn't a 404 says so and Retry loads the order", async ({ page }) => {
+  await stubPublicApi(page, { orders: [placedOrder()] });
+  await failReads(page, ORDER_READ);
+  const reads = await logReads(page, ORDER_READ);
+
+  await page.goto(`/order/status/${PLACED_ID}`);
+  await expect(page.getByRole("heading", { name: ORDER_LOAD_FAILED_HEADING })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Order not found" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Retry" }).click();
+
+  await expect(page.getByText("Not started", { exact: true })).toBeVisible();
+  await expect(page.getByText("Cash (Not yet paid)")).toBeVisible();
+  await expect(page.getByRole("heading", { name: ORDER_LOAD_FAILED_HEADING })).toHaveCount(0);
+  expect(reads).toHaveLength(2);
+});
+
 test("an order id this server never issued is reported as not found", async ({ page }) => {
   await stubPublicApi(page);
 
@@ -157,15 +211,7 @@ test("an order id this server never issued is reported as not found", async ({ p
 });
 
 test("the order status skeleton has one placeholder per loaded card, in their column", async ({ page }) => {
-  const order = confirmationFromOrder(PLACED_ID, {
-    drop_id: ACTIVE_DROP_ID,
-    slot_id: slotIdAt(1),
-    customer_name: "Dana Cruz",
-    customer_phone: "5125550199",
-    payment_method_tag: "cash",
-    pizzas: [{ pizza_type_id: pizzaIdAt(1), topping_type_ids: [], modifications_text: null }],
-  });
-  await stubPublicApi(page, { orders: [order] });
+  await stubPublicApi(page, { orders: [placedOrder()] });
   const gate = await holdReads(page, ORDER_READ);
 
   try {

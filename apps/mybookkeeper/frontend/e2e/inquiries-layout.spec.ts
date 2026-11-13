@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures/auth";
 import { holdRequests } from "./fixtures/hold-requests";
-import { expectCardsMatchSkeleton, skeletonCardHeight } from "./fixtures/skeleton-card-fit";
+import { expectCardsMatchSkeleton, skeletonCardBox } from "./fixtures/skeleton-card-fit";
 import { deleteInquiry, seedInquiry } from "./fixtures/inquiries";
 
 /**
@@ -37,13 +37,13 @@ test.describe("Inquiries layout (PR 2.1b)", () => {
       const release = await holdRequests(page, (url) => url.pathname === "/api/inquiries");
       await page.goto("/inquiries");
       await expect(page.getByTestId("inquiries-skeleton")).toBeVisible({ timeout: 5000 });
-      const skeletonHeight = await skeletonCardHeight(page.locator('[data-testid="inquiries-skeleton"] ul.md\\:hidden li'));
+      const skeletonCard = await skeletonCardBox(page.locator('[data-testid="inquiries-skeleton"] ul.md\\:hidden li'));
 
       release();
       await expectCardsMatchSkeleton(
         page.locator('[data-testid="inquiries-mobile"] li').filter({ hasText: `E2E Layout Inquiry ${runId}` }),
         INQUIRY_COUNT,
-        skeletonHeight,
+        skeletonCard,
       );
     } finally {
       for (const id of inquiryIds) await deleteInquiry(api, id);

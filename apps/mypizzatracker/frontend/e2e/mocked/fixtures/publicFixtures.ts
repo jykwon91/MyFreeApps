@@ -6,7 +6,9 @@ import type {
   PublicOrderCreateBody,
 } from "@/types/public/public";
 import { DROP_DATE, FIXTURE_NOW } from "../constants/fixtureTimes";
-import { ACTIVE_DROP_ID, sampleDrops } from "./dropFixtures";
+import { byLowercase } from "./byLowercase";
+import { digitsOnly } from "./digitsOnly";
+import { ACTIVE_DROP_ID, activeDrop } from "./dropFixtures";
 import { sampleMenu } from "./menuFixtures";
 
 /** Only active rows reach the customer menu. */
@@ -20,7 +22,7 @@ export function samplePublicMenu(): PublicMenu {
 
 /** The active drop with its slots' remaining room; the last slot is full. */
 export function samplePublicDrop(): PublicDrop {
-  const drop = sampleDrops()[0];
+  const drop = activeDrop();
   const lastIndex = drop.slots.length - 1;
   return {
     id: ACTIVE_DROP_ID,
@@ -37,7 +39,11 @@ export function samplePublicDrop(): PublicDrop {
   };
 }
 
-/** What POST /public/orders answers for `body`, priced from the menu like the order service does. */
+/**
+ * What POST /public/orders answers for `body`, priced from the menu like the
+ * order service does, with the phone stored digits-only and each pizza's
+ * toppings sorted by name (public_service).
+ */
 export function confirmationFromOrder(orderId: string, body: PublicOrderCreateBody): PublicOrderConfirmation {
   const menu = samplePublicMenu();
   const drop = samplePublicDrop();
@@ -51,7 +57,7 @@ export function confirmationFromOrder(orderId: string, body: PublicOrderCreateBo
     return {
       pizza_name: pizza.name,
       pizza_price: pizza.price,
-      toppings: toppings.map((t) => t.name),
+      toppings: toppings.map((t) => t.name).sort(byLowercase),
       toppings_price_delta_total: toppingsTotal.toFixed(2),
       modifications_text: line.modifications_text ?? null,
       line_total: (Number(pizza.price) + toppingsTotal).toFixed(2),
@@ -63,7 +69,7 @@ export function confirmationFromOrder(orderId: string, body: PublicOrderCreateBo
     drop_date: drop.date,
     slot_pickup_time: slot.pickup_time,
     customer_name: body.customer_name,
-    customer_phone: body.customer_phone,
+    customer_phone: digitsOnly(body.customer_phone),
     payment_method_tag: body.payment_method_tag,
     payment_status: "unpaid",
     status: "not_started",

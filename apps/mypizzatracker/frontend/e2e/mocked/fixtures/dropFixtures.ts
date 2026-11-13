@@ -1,4 +1,4 @@
-/** Drops as GET /drops answers them (DropRead, app/schemas/drop/drop_schemas.py), newest first. */
+/** Drops as GET /drops answers them (DropRead, app/schemas/drop/drop_schemas.py). */
 import type { Drop, DropCreateBody, Slot, SlotCreateBody } from "@/types/drop/drop";
 import { DROP_DATE, FIXTURE_NOW } from "../constants/fixtureTimes";
 import { dropIdAt, slotIdAt } from "./fixtureIds";
@@ -37,11 +37,24 @@ export function slotFromCreate(dropId: string, n: number, body: SlotCreateBody):
   return slotOf(dropId, n, body.pickup_time, body.max_pizzas);
 }
 
-/** One drop of each status, so each card's actions differ. */
+/** Drops in GET /drops order: newest date first, then newest created (drop_repo.list_drops). */
+export function newestFirst(drops: Drop[]): Drop[] {
+  return [...drops].sort((a, b) => b.date.localeCompare(a.date) || b.created_at.localeCompare(a.created_at));
+}
+
+/** The active drop, wherever it falls in the list. */
+export function activeDrop(drops: Drop[] = sampleDrops()): Drop {
+  const drop = drops.find((d) => d.id === ACTIVE_DROP_ID);
+  if (!drop) throw new Error("no active drop in the fixtures");
+  return drop;
+}
+
+/** One drop of each status, so each card's actions differ, newest first. */
 export function sampleDrops(): Drop[] {
-  return [
+  return newestFirst([
     dropOf(ACTIVE_DROP_ID, {
       status: "active",
+      tip_total: "15.00",
       slots: [
         slotOf(ACTIVE_DROP_ID, 1, "17:00:00", 6),
         slotOf(ACTIVE_DROP_ID, 2, "17:30:00", 6),
@@ -57,5 +70,5 @@ export function sampleDrops(): Drop[] {
       tip_total: "35.00",
       slots: [slotOf(CLOSED_DROP_ID, 9, "18:00:00", 8)],
     }),
-  ];
+  ]);
 }

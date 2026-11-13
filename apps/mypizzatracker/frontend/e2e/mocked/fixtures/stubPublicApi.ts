@@ -11,10 +11,11 @@ import type { PublicOrderConfirmation, PublicOrderCreateBody } from "@/types/pub
 import { NO_ACTIVE_DROP, NO_CUSTOMER } from "../constants/refusalDetails";
 import type { PublicApiStub } from "../types/PublicApiStub";
 import type { PublicApiStubOptions } from "../types/PublicApiStubOptions";
-import { apiPath, pathId } from "./apiPath";
+import { apiPath, pathId } from "@platform/ui/test-support/apiPath";
+import { digitsOnly } from "./digitsOnly";
 import { orderIdAt } from "./fixtureIds";
 import { confirmationFromOrder, samplePublicDrop, samplePublicMenu } from "./publicFixtures";
-import { recordWrite } from "./recordWrite";
+import { recordWrite } from "@platform/ui/test-support/recordWrite";
 
 const MENU = /^\/public\/menu$/;
 const CURRENT_DROP = /^\/public\/drops\/current$/;
@@ -51,7 +52,7 @@ export async function stubPublicApi(
   await page.route(apiPath(LOOKUP), (route) => {
     const phone = new URL(route.request().url()).searchParams.get("phone") ?? "";
     stub.lookups.push(phone);
-    const customer = knownCustomers[phone.replace(/\D/g, "")];
+    const customer = knownCustomers[digitsOnly(phone)];
     return route.fulfill(customer ? json(customer) : json({ detail: NO_CUSTOMER }, 404));
   });
 

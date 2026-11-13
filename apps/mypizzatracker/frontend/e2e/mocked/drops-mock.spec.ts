@@ -10,8 +10,8 @@ import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { toast } from "@platform/ui/test-support/toast";
 import { CARD } from "./constants/layoutSelectors";
 import { PLANNING_DROP_ID, sampleDrops } from "./fixtures/dropFixtures";
-import { apiPath } from "./fixtures/apiPath";
-import { failReads, holdReads } from "./fixtures/routeControls";
+import { apiPath } from "@platform/ui/test-support/apiPath";
+import { failReads, holdReads } from "@platform/ui/test-support/routeControls";
 import { expectSameColumns, skeletonCards } from "./fixtures/skeletonLayout";
 import { stubDropsApi } from "./fixtures/stubDropsApi";
 
@@ -21,12 +21,13 @@ test.beforeEach(async ({ page }) => {
   await stubSignedInShell(page);
 });
 
-test("lists every drop with its status, window, slots and the actions its status allows", async ({ page }) => {
+test("lists every drop, newest first, with its status, window, slots and the actions its status allows", async ({ page }) => {
   await stubDropsApi(page);
 
   await page.goto("/drops");
   const cards = page.getByRole("main").locator(CARD);
-  await expect(cards).toHaveCount(3);
+  // Newest date first, like the server lists them.
+  await expect(cards.getByRole("heading", { level: 2 })).toHaveText(["Holiday Drop", "Friday Night Drop", "Opening Night"]);
 
   const active = cards.filter({ has: page.getByRole("heading", { name: "Friday Night Drop" }) });
   await expect(active.getByText("Active", { exact: true })).toBeVisible();

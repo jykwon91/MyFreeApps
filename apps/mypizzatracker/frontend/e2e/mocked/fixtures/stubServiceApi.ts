@@ -8,8 +8,8 @@ import type { Page } from "@playwright/test";
 import { json } from "@platform/ui/test-support/mockResponse";
 import type { SentRequest } from "@platform/ui/test-support/types/SentRequest";
 import type { AdvanceOrderResponse, OrderStatus, ServiceDashboardPayload } from "@/types/service/service";
-import { apiPath, pathId } from "./apiPath";
-import { recordWrite } from "./recordWrite";
+import { apiPath, pathId } from "@platform/ui/test-support/apiPath";
+import { recordWrite } from "@platform/ui/test-support/recordWrite";
 import { sampleDashboard } from "./serviceFixtures";
 
 const DASHBOARD = /^\/service\/drops\/([^/]+)$/;

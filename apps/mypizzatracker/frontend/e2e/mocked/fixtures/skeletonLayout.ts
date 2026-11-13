@@ -16,7 +16,7 @@ export function skeletonCards(page: Page): Locator {
 
 /** The main area's skeleton bars that sit directly in it, outside any card. */
 export function looseSkeletonBars(page: Page): Locator {
-  return page.getByRole("main").locator(SKELETON_BAR);
+  return page.getByRole("main").locator(`${SKELETON_BAR}:not(${CARD} ${SKELETON_BAR})`);
 }
 
 /** `loaded` has one element per measured skeleton box, each in its column, the first starting where the skeleton did. */

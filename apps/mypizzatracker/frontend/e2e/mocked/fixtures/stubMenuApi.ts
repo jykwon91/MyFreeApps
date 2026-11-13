@@ -1,7 +1,7 @@
 /**
  * Stubs the operator's menu API (app/api/menu.py) over state the writes
- * change: GET /menu answers pizzas and toppings; POST adds a row; PATCH merges
- * the body into the row.
+ * change: GET /menu answers pizzas and toppings, each sorted by name like
+ * menu_repo; POST adds a row; PATCH merges the body into the row.
  */
 import type { Page } from "@playwright/test";
 import { json } from "@platform/ui/test-support/mockResponse";
@@ -13,9 +13,9 @@ import type {
   ToppingTypeCreateBody,
   ToppingTypeUpdateBody,
 } from "@/types/menu/menu";
-import { apiPath, pathId } from "./apiPath";
-import { pizzaFromCreate, sampleMenu, toppingFromCreate } from "./menuFixtures";
-import { recordWrite } from "./recordWrite";
+import { apiPath, pathId } from "@platform/ui/test-support/apiPath";
+import { byName, pizzaFromCreate, sampleMenu, toppingFromCreate } from "./menuFixtures";
+import { recordWrite } from "@platform/ui/test-support/recordWrite";
 
 const MENU = /^\/menu$/;
 const PIZZAS = /^\/menu\/pizzas$/;
@@ -30,7 +30,9 @@ export async function stubMenuApi(page: Page, menu: Menu = sampleMenu()): Promis
   const state: Menu = { pizzas: [...menu.pizzas], toppings: [...menu.toppings] };
   let created = FIRST_NEW;
 
-  await page.route(apiPath(MENU), (route) => route.fulfill(json(state)));
+  await page.route(apiPath(MENU), (route) =>
+    route.fulfill(json({ pizzas: byName(state.pizzas), toppings: byName(state.toppings) })),
+  );
 
   await page.route(apiPath(PIZZAS), (route) => {
     const pizza = pizzaFromCreate(created++, recordWrite(writes, route.request()) as PizzaTypeCreateBody);

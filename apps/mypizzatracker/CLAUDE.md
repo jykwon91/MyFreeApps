@@ -100,7 +100,8 @@ npm run typecheck:e2e                                # Playwright doesn't typech
 - Use the shared helpers in `@platform/ui/test-support` before writing local ones. A helper another
   app also needs belongs in shared-frontend/test-support.
 - Stateful API stubs live in `e2e/mocked/fixtures/stub*Api.ts` and record writes, so specs can check
-  what was sent. Loading and error states use `holdReads` / `failReads` (`fixtures/routeControls.ts`).
+  what was sent. Loading and error states use `holdReads` / `failReads`, and `logReads` counts reads
+  (`@platform/ui/test-support/routeControls`).
   Skeleton specs compare placeholder boxes to the loaded layout with `expectSameColumns`.
 - A failing spec means the app is broken. Fix the app, not the test.
 

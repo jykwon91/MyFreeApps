@@ -10,9 +10,9 @@ import { measureBoxes } from "@platform/ui/test-support/layoutShift";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { toast } from "@platform/ui/test-support/toast";
 import { CARD } from "./constants/layoutSelectors";
-import { apiPath } from "./fixtures/apiPath";
+import { apiPath } from "@platform/ui/test-support/apiPath";
 import { pizzaIdAt } from "./fixtures/fixtureIds";
-import { failReads, holdReads } from "./fixtures/routeControls";
+import { failReads, holdReads } from "@platform/ui/test-support/routeControls";
 import { expectSameColumns, skeletonCards } from "./fixtures/skeletonLayout";
 import { stubMenuApi } from "./fixtures/stubMenuApi";
 
@@ -32,15 +32,14 @@ test("lists pizzas and toppings with prices, descriptions and which are 86'd", a
   await page.goto("/menu");
   const pizzas = section(page, "Pizzas").getByRole("listitem");
   await expect(pizzas).toHaveCount(3);
-  await expect(pizzas.nth(0)).toContainText("Margherita$12.00Tomato, mozzarella, basil");
-  await expect(pizzas.nth(1)).toContainText("Pepperoni$14.50");
-  await expect(pizzas.nth(2).getByText("86'd", { exact: true })).toBeVisible();
-  await expect(pizzas.nth(2).getByRole("button", { name: "Un-86" })).toBeVisible();
+  await expect(pizzas).toContainText(["Margherita$12.00Tomato, mozzarella, basil", "Pepperoni$14.50", "White Pie$13.00"]);
+  const whitePie = pizzas.filter({ hasText: "White Pie" });
+  await expect(whitePie.getByText("86'd", { exact: true })).toBeVisible();
+  await expect(whitePie.getByRole("button", { name: "Un-86" })).toBeVisible();
 
   const toppings = section(page, "Toppings").getByRole("listitem");
   await expect(toppings).toHaveCount(2);
-  await expect(toppings.nth(0)).toContainText("Basilfree");
-  await expect(toppings.nth(1)).toContainText("Mushrooms+$1.50");
+  await expect(toppings).toContainText(["Basilfree", "Mushrooms+$1.50"]);
 });
 
 test("the loading skeleton has the page's two sections, in their column", async ({ page }) => {
@@ -87,8 +86,9 @@ test("adds a pizza, which the list then shows", async ({ page }) => {
   await pizzas.getByRole("button", { name: "Add", exact: true }).click();
 
   await expect(toast(page, "Pizza added")).toBeVisible();
+  // The list is read back sorted by name, so the new pizza leads it.
   await expect(pizzas.getByRole("listitem")).toHaveCount(4);
-  await expect(pizzas.getByRole("listitem").nth(3)).toContainText("Calabrese$15.25Spicy salami");
+  await expect(pizzas.getByRole("listitem")).toContainText(["Calabrese$15.25Spicy salami", "Margherita", "Pepperoni", "White Pie"]);
   expect(writes).toEqual([
     { method: "POST", path: "/menu/pizzas", body: { name: "Calabrese", price: "15.25", description: "Spicy salami" } },
   ]);
@@ -99,6 +99,8 @@ test("edits a pizza's price and 86es another", async ({ page }) => {
 
   await page.goto("/menu");
   const rows = section(page, "Pizzas").getByRole("listitem");
+  await expect(rows).toHaveCount(3);
+  await expect(rows).toContainText(["Margherita", "Pepperoni", "White Pie"]);
   await rows.nth(1).getByRole("button", { name: "Edit" }).click();
   await rows.nth(1).getByLabel("Price").fill("15.00");
   await rows.nth(1).getByRole("button", { name: "Save" }).click();
@@ -128,6 +130,7 @@ test("adds a topping with its price", async ({ page }) => {
   await toppings.getByRole("button", { name: "Add", exact: true }).click();
 
   await expect(toast(page, "Topping added")).toBeVisible();
-  await expect(toppings.getByRole("listitem").nth(2)).toContainText("Jalapeño+$0.75");
+  await expect(toppings.getByRole("listitem")).toHaveCount(3);
+  await expect(toppings.getByRole("listitem")).toContainText(["Basilfree", "Jalapeño+$0.75", "Mushrooms+$1.50"]);
   expect(writes).toEqual([{ method: "POST", path: "/menu/toppings", body: { name: "Jalapeño", price_delta: "0.75" } }]);
 });

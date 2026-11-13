@@ -1,7 +1,7 @@
 /** The service dashboard as GET /service/drops/{id} answers it (app/schemas/service/service_schemas.py). */
 import type { DashboardOrder, DashboardSlot, ServiceDashboardPayload } from "@/types/service/service";
 import { DROP_DATE, FIXTURE_NOW } from "../constants/fixtureTimes";
-import { ACTIVE_DROP_ID, sampleDrops } from "./dropFixtures";
+import { ACTIVE_DROP_ID, activeDrop } from "./dropFixtures";
 import { customerIdAt, orderIdAt, orderPizzaIdAt, pizzaIdAt, toppingIdAt } from "./fixtureIds";
 
 export const FIRST_ORDER_ID = orderIdAt(1);
@@ -35,7 +35,7 @@ function firstOrder(slotId: string): DashboardOrder {
 
 /** The active drop's four slots, the first holding one order. */
 export function sampleDashboard(): ServiceDashboardPayload {
-  const drop = sampleDrops()[0];
+  const drop = activeDrop();
   const slots: DashboardSlot[] = drop.slots.map((slot, index) => {
     const orders = index === 0 ? [firstOrder(slot.id)] : [];
     const pizzaCount = orders.reduce((sum, order) => sum + order.pizza_count, 0);

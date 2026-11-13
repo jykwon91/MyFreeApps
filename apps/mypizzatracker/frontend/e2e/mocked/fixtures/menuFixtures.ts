@@ -38,6 +38,11 @@ export function toppingFromCreate(n: number, body: ToppingTypeCreateBody): Toppi
   return toppingOf(n, { name: body.name, price_delta: body.price_delta ?? "0.00", active: body.active ?? true });
 }
 
+/** Rows in the order GET /menu lists them: by name, ascending (menu_repo.list_pizzas / list_toppings). */
+export function byName<T extends { name: string }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export function sampleMenu(): Menu {
   return {
     pizzas: [

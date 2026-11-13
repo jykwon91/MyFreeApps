@@ -4,19 +4,15 @@
  * stands in for does (x, y, width, height), so nothing moves on arrival.
  */
 import { expect, type Page } from "@playwright/test";
-import { createGate } from "@platform/ui/test-support/gate";
 import { expectBoxesLineUp, measureBoxes } from "@platform/ui/test-support/layoutShift";
+import { holdReads } from "@platform/ui/test-support/routeControls";
 import { SCENARIOS } from "./catalogFixtures";
 import { signedInTutor } from "./signedInTutor";
 
 export async function expectSkeletonRowsLineUp(page: Page): Promise<void> {
   await signedInTutor(page);
-  const gate = createGate();
   // Registered after the stub, so it runs first: hold the list, then let the stub answer.
-  await page.route(/\/api\/scenarios(\?|$)/, async (route) => {
-    await gate.wait;
-    await route.fallback();
-  });
+  const gate = await holdReads(page, /\/api\/scenarios(\?|$)/);
 
   try {
     await page.goto("/scenarios");

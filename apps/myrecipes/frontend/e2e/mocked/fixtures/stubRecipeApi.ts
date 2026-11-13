@@ -9,6 +9,7 @@
  */
 import type { Page } from "@playwright/test";
 import { json } from "@platform/ui/test-support/mockResponse";
+import { recordWrite } from "@platform/ui/test-support/recordWrite";
 import type { CookLogCreateRequest, CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-log";
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
 import type { RecipeUpdateRequest } from "@myrecipes/api-client/types/recipe/recipe-requests";
@@ -107,8 +108,7 @@ export async function stubRecipeApi(
     const notFound = () => route.fulfill(json(NOT_FOUND, 404));
 
     if (method !== "GET") {
-      const body = method === "DELETE" ? null : (request.postDataJSON() as unknown);
-      log.writes.push({ method, path, body });
+      const body = recordWrite(log.writes, request);
       const problem = validationProblem(method, suffix, body);
       if (problem) return route.fulfill(json({ detail: problem }, 422));
       const failure = failWith[`${method} ${suffix || "/"}`];

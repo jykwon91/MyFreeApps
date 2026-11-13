@@ -14,6 +14,7 @@
  */
 import type { Page } from "@playwright/test";
 import type { CurrentUser } from "@platform/core/types/user/current-user";
+import { pathUnderBase } from "./apiPath";
 import { DEFAULT_API_BASE } from "./constants/defaultApiBase";
 import { json } from "./mockResponse";
 import { unsignedJwt } from "./unsignedJwt";
@@ -41,13 +42,13 @@ function apiUrl(path: string, apiBase: string = DEFAULT_API_BASE): string {
  * Plants an unexpired (unsigned) JWT under the web platform's "token" key so
  * the auth guard lets the page render, plus any `storage` entries given.
  */
-export async function plantAuth(page: Page, storage: Record<string, string> = {}): Promise<void> {
+export async function plantAuth(page: Page, storage: Record<string, string> = {}, token: string = unsignedJwt()): Promise<void> {
   await page.addInitScript(
     ({ token, entries }) => {
       window.localStorage.setItem("token", token);
       for (const [key, value] of Object.entries(entries)) window.localStorage.setItem(key, value);
     },
-    { token: unsignedJwt(), entries: storage },
+    { token, entries: storage },
   );
 }
 
@@ -57,16 +58,14 @@ export async function plantAuth(page: Page, storage: Record<string, string> = {}
  * empty answer (see UnmatchedAnswer). Register it FIRST: Playwright tries the
  * most recently added route first.
  *
- * Matches paths that start with the API base, not a glob: `**${apiBase}/**` also
- * matches the dev server's own modules in any folder named like the base
- * (MyGamingAssistant's src/games/wow-forever/api/), and answering those 404
- * breaks the page.
+ * Matches paths under the API base (see apiPath.ts), not a glob, so the dev
+ * server's own modules in a folder named like the base still load.
  */
 export async function stubUnmatchedApi(
   page: Page,
   { apiBase = DEFAULT_API_BASE, answer = "notFound" }: UnmatchedApiOptions = {},
 ): Promise<void> {
-  await page.route((url) => url.pathname.startsWith(`${apiBase}/`), (route) =>
+  await page.route((url) => pathUnderBase(url, apiBase) !== null, (route) =>
     route.fulfill(
       answer === "notFound"
         ? json({ detail: "Not Found" }, 404)
@@ -102,10 +101,10 @@ export async function stubJsonRoutes(
  */
 export async function stubSignedInShell<TUser extends object = CurrentUser>(
   page: Page,
-  { user, apiBase, storage, routes = [], unmatched }: SignedInShellOptions<TUser> = {},
+  { user, apiBase, token, storage, routes = [], unmatched }: SignedInShellOptions<TUser> = {},
 ): Promise<void> {
   await stubUnmatchedApi(page, { apiBase, answer: unmatched });
-  await plantAuth(page, storage);
+  await plantAuth(page, storage, token);
   await stubCurrentUser(page, user ?? TEST_USER, { apiBase });
   await stubJsonRoutes(page, routes, { apiBase });
 }

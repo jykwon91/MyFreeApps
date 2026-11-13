@@ -11,6 +11,7 @@
  */
 import type { Page, Route } from "@playwright/test";
 import { json, plainText } from "@platform/ui/test-support/mockResponse";
+import { recordWrite } from "@platform/ui/test-support/recordWrite";
 import type { Profile } from "@mylanguagetutor/api-client/types/tutor/profile";
 import type { ProfileUpdate } from "@mylanguagetutor/api-client/types/tutor/profile-update";
 import type { SessionCreate } from "@mylanguagetutor/api-client/types/tutor/session-create";
@@ -81,11 +82,13 @@ export async function stubTutorApi(
     const path = url.pathname.replace(API_PREFIX, "");
     const key = `${method} ${path}`;
 
-    const body: unknown = method === "GET" ? null : request.postDataJSON();
     const turnSession = method === "POST" ? TURN_PATH.exec(path)?.[1] : undefined;
+    let body: unknown = null;
     if (method === "GET") api.reads.push(path + url.search);
-    else if (turnSession) api.turnRequests.push({ sessionId: turnSession, body, authorization: request.headers().authorization ?? null });
-    else api.writes.push({ method, path, body });
+    else if (turnSession) {
+      body = request.postDataJSON();
+      api.turnRequests.push({ sessionId: turnSession, body, authorization: request.headers().authorization ?? null });
+    } else body = recordWrite(api.writes, request);
     if (failing.has(key)) return route.fulfill(plainText(INTERNAL_ERROR, 500));
 
     if (method === "GET" && path === "/languages") return route.fulfill(json(languages));

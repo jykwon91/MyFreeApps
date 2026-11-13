@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
 import { holdRequests } from "./fixtures/hold-requests";
-import { expectCardsMatchSkeleton, skeletonCardHeight } from "./fixtures/skeleton-card-fit";
+import { expectCardsMatchSkeleton, skeletonCardBox } from "./fixtures/skeleton-card-fit";
 import { createProperty, deleteListing, deleteProperty } from "./fixtures/seed-data";
 
 /**
@@ -52,13 +52,13 @@ test.describe("Listings layout (PR 1.1b)", () => {
       const release = await holdRequests(page, (url) => url.pathname === "/api/listings");
       await page.goto("/listings");
       await expect(page.getByTestId("listings-skeleton")).toBeVisible({ timeout: 5000 });
-      const skeletonHeight = await skeletonCardHeight(page.locator('[data-testid="listings-skeleton"] ul.md\\:hidden li'));
+      const skeletonCard = await skeletonCardBox(page.locator('[data-testid="listings-skeleton"] ul.md\\:hidden li'));
 
       release();
       await expectCardsMatchSkeleton(
         page.locator('[data-testid="listings-mobile"] li').filter({ hasText: `E2E Layout Listing ${runId}` }),
         LISTING_COUNT,
-        skeletonHeight,
+        skeletonCard,
       );
     } finally {
       for (const id of listingIds) await deleteListing(api, id);

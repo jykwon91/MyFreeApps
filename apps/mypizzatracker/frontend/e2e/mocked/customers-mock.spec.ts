@@ -4,36 +4,49 @@
  * offers a retry, a search reads only matching customers, and editing notes
  * saves them and shows them.
  */
+import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { measureBoxes } from "@platform/ui/test-support/layoutShift";
-import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { toast } from "@platform/ui/test-support/toast";
+import { FIXTURE_NOW } from "./constants/fixtureTimes";
 import { CARD } from "./constants/layoutSelectors";
-import { apiPath } from "./fixtures/apiPath";
+import { apiPath } from "@platform/ui/test-support/apiPath";
 import { customerIdAt } from "./fixtures/fixtureIds";
-import { failReads, holdReads } from "./fixtures/routeControls";
+import { failReads, holdReads } from "@platform/ui/test-support/routeControls";
 import { expectSameColumns, skeletonCards } from "./fixtures/skeletonLayout";
 import { stubCustomersApi } from "./fixtures/stubCustomersApi";
+import { stubSignedInShellAt } from "./fixtures/stubSignedInShellAt";
 
 const CUSTOMERS_READ = apiPath(/^\/customers$/);
 
+function customerCard(page: Page, name: string) {
+  return page.getByRole("main").getByRole("listitem").filter({ has: page.getByRole("heading", { name }) });
+}
+
 test.beforeEach(async ({ page }) => {
-  await stubSignedInShell(page);
+  // "Last:" is relative to today, so pin today to the fixtures' instant.
+  await page.clock.setFixedTime(FIXTURE_NOW);
+  await stubSignedInShellAt(page, FIXTURE_NOW);
 });
 
-test("lists every customer with their phone, orders and notes", async ({ page }) => {
+test("lists customers by most recent order, with their phone, orders, last order and notes", async ({ page }) => {
   await stubCustomersApi(page);
 
   await page.goto("/customers");
   const cards = page.getByRole("main").getByRole("listitem");
-  await expect(cards).toHaveCount(3);
-  await expect(cards.nth(0).getByRole("heading", { name: "Ana Lopez" })).toBeVisible();
-  await expect(cards.nth(0)).toContainText("(512) 555-0101");
-  await expect(cards.nth(0)).toContainText("4 orders");
-  await expect(cards.nth(0)).toContainText("Last: never");
-  await expect(cards.nth(0)).toContainText("Prefers extra crispy");
-  await expect(cards.nth(1)).toContainText("1 order");
-  await expect(cards.nth(1).getByText("No notes yet")).toBeVisible();
+  await expect(cards.getByRole("heading")).toHaveText(["Ana Lopez", "Cleo Park", "Ben Ortiz"]);
+
+  const ana = customerCard(page, "Ana Lopez");
+  await expect(ana).toContainText("(512) 555-0101");
+  await expect(ana).toContainText("4 orders");
+  await expect(ana).toContainText("Last: yesterday");
+  await expect(ana).toContainText("Prefers extra crispy");
+  await expect(customerCard(page, "Cleo Park")).toContainText("2 orders");
+  await expect(customerCard(page, "Cleo Park")).toContainText("Last: 2w ago");
+  const ben = customerCard(page, "Ben Ortiz");
+  await expect(ben).toContainText("0 orders");
+  await expect(ben).toContainText("Last: never");
+  await expect(ben.getByText("No notes yet")).toBeVisible();
 });
 
 test("the loading skeleton has one card per customer, in the list's column", async ({ page }) => {
@@ -66,26 +79,29 @@ test("a failed load says so and Retry loads the customers", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "Could not load customers" })).toHaveCount(0);
 });
 
-test("a search reads only the customers that match", async ({ page }) => {
+test("a search reads only the customers whose name or phone matches", async ({ page }) => {
   const api = await stubCustomersApi(page);
+  const search = page.getByPlaceholder("Search by name or phone...");
+  const cards = page.getByRole("main").getByRole("listitem");
 
   await page.goto("/customers");
-  await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(3);
-  await page.getByPlaceholder("Search by name or phone...").fill("  ben ");
+  await expect(cards).toHaveCount(3);
+  await search.fill("  ben ");
+  await expect(cards.getByRole("heading")).toHaveText(["Ben Ortiz"]);
 
-  await expect(page.getByRole("main").getByRole("listitem")).toHaveCount(1);
-  await expect(page.getByRole("heading", { name: "Ben Ortiz" })).toBeVisible();
-  expect(api.searches).toEqual(["", "ben"]);
+  await search.fill("555-0103");
+  await expect(cards.getByRole("heading")).toHaveText(["Cleo Park"]);
 
-  await page.getByPlaceholder("Search by name or phone...").fill("zzz");
+  await search.fill("zzz");
   await expect(page.getByRole("heading", { name: 'No customers match "zzz"' })).toBeVisible();
+  expect(api.searches).toEqual(["", "ben", "555-0103", "zzz"]);
 });
 
 test("saves a customer's notes and shows them", async ({ page }) => {
   const api = await stubCustomersApi(page);
 
   await page.goto("/customers");
-  const ben = page.getByRole("main").getByRole("listitem").nth(1);
+  const ben = customerCard(page, "Ben Ortiz");
   await ben.getByRole("button", { name: "Edit notes for Ben Ortiz" }).click();
   await ben.getByRole("textbox").fill("Allergic to mushrooms");
   await ben.getByRole("button", { name: "Save" }).click();
