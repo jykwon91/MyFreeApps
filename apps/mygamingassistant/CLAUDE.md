@@ -383,7 +383,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`useRecordWowPageVisit`), which clears that page's dot; the first-ever visit
   marks every current entry seen, so new players see no dots. Tiles use the left nav's icons
   (`data/featureIcons.ts`, `WowFeatureIcon`). Tests: `wowWhatsNew.test.ts`,
-  `wowForeverLanding.test.tsx`, `e2e/wow-forever-whats-new.spec.ts`.
+  `wowForeverLanding.test.tsx`, `e2e/mocked/wow-forever-whats-new.spec.ts`.
 
 #### Best gear (`/wow-forever/gear`)
 
@@ -451,7 +451,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   row and says how many. A link opens read-only with "Save to my lists".
   Bump the version (and keep decoding v1) for any format change. Tests:
   `wowBisLists.test.ts`, `wowBisListsView.test.tsx`,
-  `e2e/wow-forever-gear-lists.spec.ts`.
+  `e2e/mocked/wow-forever-gear-lists.spec.ts`.
 
 #### Item pages (`/wow-forever/items/:id`)
 
@@ -601,7 +601,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`boss_loot.py`). A boss with no loot table reads "No loot list for this
   boss yet"; one whose Classic loot isn't in Forever yet says so.
   `tests/test_wow_dungeons_generator.py`, `src/__tests__/wowDungeons.test.ts`,
-  `e2e/wow-forever-dungeons.spec.ts`.
+  `e2e/mocked/wow-forever-dungeons.spec.ts`.
 - Every dungeon on the index has a boss list — `test_wow_interiors_generator.py`
   and `wowDungeons.test.ts` fail otherwise (the vitest's
   `NO_BOSS_LIST_EXCEPTIONS` is the only place to excuse one, with a reason).
@@ -944,7 +944,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `lib/trainers/serviceTrainers.ts`, capitals first). Forever added trainers Classic doesn't
   have (Horde Paladin, Alliance Shaman, …): an empty list says so, never invents one.
   Tests: `src/__tests__/wowTrainers.test.ts`, `wowTrainersPage.test.tsx`,
-  `e2e/wow-forever-trainers.spec.ts`.
+  `e2e/mocked/wow-forever-trainers.spec.ts`.
 - Icons: every picker chip shows its class / profession icon (`lib/trainers/trainerSubjectIcon.ts`)
   and every unlock its spell's icon (`LevelUnlock.icon`, from the spellbook data).
 

@@ -2,9 +2,12 @@
  * WoW Forever "Best gear" → "My lists": player-made lists kept in this
  * browser, shared by a link that carries the list in its fragment.
  *
- * Run: npx playwright test --config e2e/playwright.config.ts wow-forever-gear-lists
+ * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-gear-lists
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { toast } from "@platform/ui/test-support/toast";
 
 const LIST_NAME = "E2E Warlock pre-raid";
 const PHONE = { width: 375, height: 812 };
@@ -39,7 +42,13 @@ async function createWithHood(page: Page) {
   await expect(head.getByRole("link", { name: "Felcloth Hood" })).toHaveAttribute("href", "/wow-forever/items/14111");
 }
 
-test("create → pick → reload keeps it → copy link → a fresh browser opens it read-only → save it", async ({ page, context, browser }) => {
+// Any API call this spec does not stub (icons, prices, server status, ...) answers 404,
+// so nothing reaches a backend through the dev server.
+test.beforeEach(async ({ page }) => {
+  await stubUnmatchedApi(page);
+});
+
+test("create → pick → reload keeps it → copy link → a fresh browser opens it read-only → save it", async ({ page, context, browser, guardContext }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await createWithHood(page);
 
@@ -48,13 +57,15 @@ test("create → pick → reload keeps it → copy link → a fresh browser open
   await expect(slotRow(page, "head").getByRole("link", { name: "Felcloth Hood" })).toBeVisible();
 
   await page.getByRole("button", { name: /Copy link/ }).click();
-  await expect(page.getByText(`Link to “${LIST_NAME}” copied`)).toBeVisible();
+  await expect(toast(page, `Link to “${LIST_NAME}” copied — anyone with it can see the list`)).toBeVisible();
   const url = await page.evaluate(() => navigator.clipboard.readText());
   expect(url).toMatch(/\/wow-forever\/gear\?view=mine#list=1~warlock~affliction~preraid~head:14111~/);
 
   // A different person: no saved lists, no settings.
   const other = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  await guardContext(other);
   const friend = await other.newPage();
+  await stubUnmatchedApi(friend);
   await friend.goto(url);
   const shared = friend.getByTestId("bis-shared-list");
   await expect(shared.getByRole("heading", { name: LIST_NAME })).toBeVisible();
@@ -69,12 +80,11 @@ test("create → pick → reload keeps it → copy link → a fresh browser open
   await expect(shared.getByRole("heading", { name: LIST_NAME })).toBeVisible();
 
   await friend.getByRole("button", { name: "Save to my lists" }).click();
-  await expect(friend.getByText(`Saved “${LIST_NAME}” to your lists`)).toBeVisible();
+  await expect(toast(friend, `Saved “${LIST_NAME}” to your lists`)).toBeVisible();
   await expect(friend.getByTestId("bis-list-editor").getByRole("heading", { name: LIST_NAME })).toBeVisible();
   await expect(friend).not.toHaveURL(/#list=/);
   await friend.reload();
   await expect(friend.getByTestId("bis-list-editor").getByRole("heading", { name: LIST_NAME })).toBeVisible();
-  await other.close();
 });
 
 test("a broken share link says so and goes back to my lists", async ({ page }) => {

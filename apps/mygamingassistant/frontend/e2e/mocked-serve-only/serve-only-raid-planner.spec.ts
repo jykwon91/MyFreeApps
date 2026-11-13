@@ -6,6 +6,7 @@
  * Run: npx playwright test --config=playwright.layout.serve-only.config.ts serve-only-raid-planner
  */
 import { expect, test } from "@platform/ui/test-support/crashGuard";
+import { toast } from "@platform/ui/test-support/toast";
 import {
   PLANNER_AUTHORIZATION,
   PLANNER_HEADING,
@@ -28,7 +29,7 @@ test("the planner works on the serve-only site, with no sign-in anywhere", async
 
   await page.getByRole("combobox", { name: "Move Fenn to" }).selectOption("slot:1:4");
   await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Groups saved")).toBeVisible();
+  await expect(toast(page, "Groups saved")).toBeVisible();
   expect(routes.saves()).toHaveLength(1);
   expect(new Set(routes.authorizations())).toEqual(new Set([PLANNER_AUTHORIZATION]));
 });

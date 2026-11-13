@@ -1,7 +1,7 @@
 /**
  * Totals the WoW Forever pages show, counted from the committed game data, so a
- * data refresh (`wow_refresh`) that adds beasts, items, books or changes doesn't
- * break the mocked specs. Counted from the raw JSON, not through the pages' own
+ * data refresh (`wow_refresh`) that adds beasts, items, books or changes, or a new
+ * "What's new" entry, doesn't break the mocked specs. Counted from the raw JSON, not through the pages' own
  * decoders, so a decoder that drops or doubles rows still fails the spec.
  * Rares and races, which also need their filters counted, have their own files.
  */
@@ -13,6 +13,7 @@ import hunterPetsJson from "../../../src/games/wow-forever/data/hunterPets/hunte
 import itemIndexJson from "../../../src/games/wow-forever/data/items/itemIndex.json" with { type: "json" };
 import legacyJson from "../../../src/games/wow-forever/data/legacy/legacy.json" with { type: "json" };
 import libraryJson from "../../../src/games/wow-forever/data/library/library.json" with { type: "json" };
+import whatsNewJson from "../../../src/games/wow-forever/data/whatsNew.json" with { type: "json" };
 
 function column(columns: readonly string[], name: string, file: string): number {
   const at = columns.indexOf(name);
@@ -84,3 +85,6 @@ export const LEGACY_CHALLENGES = legacyJson.categories.reduce(
   (sum, category) => sum + category.groups.reduce((groupSum, group) => groupSum + group.challenges.length, 0),
   0,
 );
+
+/** Every entry in the hub's "What's new on this site", as "Show all" lists them. */
+export const WHATS_NEW_ENTRIES = whatsNewJson.length;
