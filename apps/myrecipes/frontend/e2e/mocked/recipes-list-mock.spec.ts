@@ -13,7 +13,9 @@ import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import type { ListAnswer } from "./types/ListAnswer";
 import type { ListCall } from "./types/ListCall";
-import { recipeIdAt, summaryOf } from "./fixtures/recipeFixtures";
+import { detailOf, recipeIdAt, summaryOf, versionOf } from "./fixtures/recipeFixtures";
+import { RECIPES_COLLECTION_ROUTE } from "./fixtures/recipeRoutes";
+import { stubRecipeRoutes } from "./fixtures/stubRecipeApi";
 
 const TOMATO = summaryOf(recipeIdAt(1), "Tomato soup", { description: "Weeknight soup", best_rating: 4 });
 const PANCAKES = summaryOf(recipeIdAt(2), "Pancakes");
@@ -22,7 +24,8 @@ const SOMEONE_ELSES = summaryOf(recipeIdAt(3), "Tomato salad", { is_owner: false
 /** GET /recipes answers `answer(call)` and records every call's filters. */
 async function stubList(page: Page, answer: (call: ListCall) => ListAnswer | Promise<ListAnswer>): Promise<ListCall[]> {
   const calls: ListCall[] = [];
-  await page.route(/\/api\/recipes(\?|$)/, async (route) => {
+  await page.route(RECIPES_COLLECTION_ROUTE, async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
     const params = new URL(route.request().url()).searchParams;
     const call = { search: params.get("search"), owner: params.get("owner") };
     calls.push(call);
@@ -102,7 +105,8 @@ test("My recipes narrows the list to the user's own and toggles back", async ({ 
 test("a recipe card shows its rollups and opens the recipe", async ({ page }) => {
   await stubSignedInShell(page);
   await stubList(page, () => ({ body: [{ ...TOMATO, version_count: 3, latest_version_number: 3 }, SOMEONE_ELSES] }));
-  await page.route(new RegExp(`/api/recipes/${TOMATO.id}(/.*)?(\\?.*)?$`), (route) => route.fulfill(json({ detail: "Not Found" }, 404)));
+  const recipe = detailOf(TOMATO.id, { ...TOMATO, version_count: 3, latest_version_number: 3, latest_version: versionOf(TOMATO.id, 3) });
+  await stubRecipeRoutes(page, TOMATO.id, { recipe });
 
   await page.goto("/");
   const mine = page.getByRole("link", { name: /Tomato soup/ });
@@ -115,6 +119,7 @@ test("a recipe card shows its rollups and opens the recipe", async ({ page }) =>
 
   await mine.click();
   await expect(page).toHaveURL(new RegExp(`/recipes/${TOMATO.id}$`));
+  await expect(page.getByRole("heading", { name: "Tomato soup", level: 1 })).toBeVisible();
 });
 
 test("an empty library offers New recipe, which opens the editor", async ({ page }) => {

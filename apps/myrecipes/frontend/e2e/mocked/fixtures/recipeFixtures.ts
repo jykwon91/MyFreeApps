@@ -1,6 +1,6 @@
 /** Recipe response builders shared by the no-backend specs that need a stored recipe. */
 import type { RecipeDetailResponse, RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
-import type { RecipeCreateRequest } from "@myrecipes/api-client/types/recipe/recipe-requests";
+import type { RecipeCreateRequest, VersionCreateRequest } from "@myrecipes/api-client/types/recipe/recipe-requests";
 import type { VersionResponse, VersionSummary } from "@myrecipes/api-client/types/recipe/version";
 import type { CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-log";
 import { TEST_USER } from "@platform/ui/test-support/mockSession";
@@ -35,6 +35,10 @@ export const SALT_LINEAGE_KEY = lineageKeyAt(1);
 const ROWS_PER_VERSION = 100;
 export const ingredientIdOf = (versionNumber: number, index: number): string =>
   fixtureId(INGREDIENT_GROUP, versionNumber * ROWS_PER_VERSION + index + 1);
+/** The key the server assigns an ingredient that carries none; unique per version row, unlike lineageKeyAt. */
+const NEW_LINEAGE_OFFSET = 10_000;
+const newLineageKeyOf = (versionNumber: number, index: number): string =>
+  fixtureId(LINEAGE_GROUP, NEW_LINEAGE_OFFSET + versionNumber * ROWS_PER_VERSION + index);
 export const stepIdOf = (versionNumber: number, index: number): string =>
   fixtureId(STEP_GROUP, versionNumber * ROWS_PER_VERSION + index + 1);
 
@@ -84,15 +88,20 @@ export function detailOf(id: string, overrides: Partial<RecipeDetailResponse> = 
   };
 }
 
-/** The recipe the server stores for a create request: its first version holds the posted rows, in order. */
-export function detailFromCreateRequest(id: string, body: RecipeCreateRequest): RecipeDetailResponse {
-  const version = versionOf(id, 1, {
+/** The version the server stores for a create or tweak request: the posted rows, in order, numbered from 1 in each version. */
+export function versionFromRequest(
+  recipeId: string,
+  versionNumber: number,
+  body: RecipeCreateRequest | VersionCreateRequest,
+  overrides: Partial<VersionResponse> = {},
+): VersionResponse {
+  return versionOf(recipeId, versionNumber, {
     servings: body.servings ?? null,
     prep_minutes: body.prep_minutes ?? null,
     cook_minutes: body.cook_minutes ?? null,
     ingredients: body.ingredients.map((ingredient, index) => ({
-      id: ingredientIdOf(1, index),
-      lineage_key: lineageKeyAt(index),
+      id: ingredientIdOf(versionNumber, index),
+      lineage_key: ingredient.lineage_key ?? newLineageKeyOf(versionNumber, index),
       position: index,
       name: ingredient.name,
       quantity: ingredient.quantity ?? null,
@@ -100,16 +109,21 @@ export function detailFromCreateRequest(id: string, body: RecipeCreateRequest): 
       note: ingredient.note ?? null,
     })),
     steps: body.steps.map((step, index) => ({
-      id: stepIdOf(1, index),
+      id: stepIdOf(versionNumber, index),
       position: index,
       instruction: step.instruction,
     })),
+    ...overrides,
   });
+}
+
+/** The recipe the server stores for a create request: its first version holds the posted rows, in order. */
+export function detailFromCreateRequest(id: string, body: RecipeCreateRequest): RecipeDetailResponse {
   return detailOf(id, {
     title: body.title,
     description: body.description ?? null,
     source: body.source ?? null,
-    latest_version: version,
+    latest_version: versionFromRequest(id, 1, body),
   });
 }
 
