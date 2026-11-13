@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react"; // useEffect: drop_id URL sync
 import { useSearchParams } from "react-router-dom";
-import { Select, Skeleton } from "@platform/ui";
+import { EmptyState, Select, Skeleton, extractErrorMessage } from "@platform/ui";
 import { useListDropsQuery } from "@/store/dropsApi";
 import FinancialsBody from "@/features/financials/FinancialsBody";
 
@@ -30,6 +30,18 @@ export default function Financials() {
       <div className="p-4 space-y-3">
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (drops.isError) {
+    return (
+      <div className="p-4">
+        <EmptyState
+          heading="Could not load drops"
+          body={extractErrorMessage(drops.error) || "Please try again."}
+          action={{ label: "Retry", onClick: () => drops.refetch() }}
+        />
       </div>
     );
   }
