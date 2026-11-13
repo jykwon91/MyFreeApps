@@ -5,8 +5,10 @@ export default defineConfig({
   testMatch: "**/*.spec.ts",
   // serve-only*.spec.ts run against a dedicated VITE_SERVE_ONLY=true dev server
   // (playwright.serve-only.config.ts) — they would fail against this full-auth
-  // server, so exclude them from the default run.
-  testIgnore: "**/serve-only*.spec.ts",
+  // server, so exclude them from the default run. e2e/mocked/ and
+  // e2e/mocked-serve-only/ run with no backend, under playwright.layout.config.ts
+  // and playwright.layout.serve-only.config.ts.
+  testIgnore: ["**/serve-only*.spec.ts", /[\\/]e2e[\\/]mocked[^\\/]*[\\/]/],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

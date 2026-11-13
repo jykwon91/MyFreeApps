@@ -15,7 +15,9 @@ import { defineConfig, devices } from "@playwright/test";
  *
  * No backend auth is needed (serve-only mounts no auth routes), but the public
  * read endpoints still require the backend on :8004 with fixtures loaded — the
- * same prerequisite as the public-browse assertions in smoke.spec.ts.
+ * same prerequisite as the public-browse assertions in smoke.spec.ts. The
+ * serve-only specs that need no backend are in e2e/mocked-serve-only/ and run
+ * under playwright.layout.serve-only.config.ts instead.
  */
 const SERVE_ONLY_PORT = 5177;
 const BASE_URL = process.env.SERVE_ONLY_BASE_URL ?? `http://localhost:${SERVE_ONLY_PORT}`;
@@ -23,6 +25,7 @@ const BASE_URL = process.env.SERVE_ONLY_BASE_URL ?? `http://localhost:${SERVE_ON
 export default defineConfig({
   testDir: "./",
   testMatch: "**/serve-only*.spec.ts",
+  testIgnore: /[\\/]e2e[\\/]mocked[^\\/]*[\\/]/,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

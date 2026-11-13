@@ -294,3 +294,13 @@ async function servePng(route: Route, dir: URL): Promise<void> {
   }
   await route.fulfill({ status: 200, contentType: "image/png", body });
 }
+
+/**
+ * Leave the page, then drop its routes. A test can end with the raid's icons still loading (it waits for the
+ * heading, not the art), and a request still in flight when its route is dropped goes on to the dev-server proxy, and
+ * to a backend if one is running. Leaving for about:blank first cancels those requests while the routes still answer.
+ */
+export async function leaveAndUnroute(page: Page): Promise<void> {
+  await page.goto("about:blank");
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+}

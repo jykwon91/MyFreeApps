@@ -490,7 +490,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`loot_chances.py`: equal-share groups, references rolled `maxcount` times, a
   reference ≥10 creatures share is a "world drop" with a level range).
   `tests/test_wow_item_pages_generator.py`, `src/__tests__/wowItemPage*.test.ts(x)`,
-  `e2e/wow-forever-item-page.spec.ts`.
+  `e2e/mocked/wow-forever-item-page.spec.ts`.
 
 #### Item browser (`/wow-forever/items`)
 
@@ -531,7 +531,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`lib/itemBrowser/loadItemIndex.ts`), decoded by `decodeItemIndex.ts`; never
   import the item-page shards for the list. Tests:
   `tests/test_wow_item_index_generator.py`, `src/__tests__/wowItemBrowser.test.ts`,
-  `e2e/wow-forever-item-browser.spec.ts`.
+  `e2e/mocked/wow-forever-item-browser.spec.ts`.
 
 #### Dungeon pages (`/wow-forever/dungeons`, `/wow-forever/dungeons/:slug`)
 
@@ -616,7 +616,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Reward items are in `wanted_ids()` for icons. Tests:
   `tests/test_wow_dungeon_quests_generator.py`,
   `src/__tests__/wowDungeonQuests.test.tsx`,
-  `e2e/wow-forever-dungeon-quests.spec.ts`.
+  `e2e/mocked/wow-forever-dungeon-quests.spec.ts`.
 - **Sharing and quest lines.** `shareable` is the client cache's quest flags
   bit 8 (int[25]) on the seen row, else cmangos `QuestFlags & 8` — they agree
   on every dungeon quest checked. A seen row written before that column holds
@@ -682,7 +682,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`NOTABLE_DROP_CHANCE`; shared-table greens drop out) and only items in
   `items.json`; their ids are in `wanted_ids()` for icons.
   Tests: `tests/test_wow_rares_generator.py`, `src/__tests__/wowRares.test.ts`,
-  `e2e/wow-forever-rares.spec.ts`.
+  `e2e/mocked/wow-forever-rares.spec.ts`.
 
 #### Library books (`/wow-forever/library`)
 
@@ -709,7 +709,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   reward missing from `items.json` stops the run. Book, card and reward ids
   are in `wanted_ids()` for icons. Tests:
   `tests/test_wow_library_generator.py`, `src/__tests__/wowLibrary.test.ts`,
-  `e2e/wow-forever-library.spec.ts`.
+  `e2e/mocked/wow-forever-library.spec.ts`.
 
 #### Legacy planner (`/wow-forever/legacy`)
 
@@ -750,7 +750,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   source rows (merged by text + title, by category), and the "Renown - Legacy
   Rank" reward track. Currency, node, challenge and reward icons are in
   `wanted_ids()`. Tests: `tests/test_wow_legacy_generator.py`,
-  `src/__tests__/wowLegacy.test.ts`, `e2e/wow-forever-legacy.spec.ts`.
+  `src/__tests__/wowLegacy.test.ts`, `e2e/mocked/wow-forever-legacy.spec.ts`.
 
 #### Races (`/wow-forever/races`, `/wow-forever/races/:race`)
 
@@ -788,7 +788,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   racial is `partial`; statuses compare the texts with "?" in place. Never
   fill one from another source. Racial icons go into `wowIcons.json` `files`.
   Tests: `tests/test_wow_races_generator.py`, `tests/test_wow_spell_tooltip.py`,
-  `src/__tests__/wowRaces.test.ts`, `e2e/wow-forever-races.spec.ts`.
+  `src/__tests__/wowRaces.test.ts`, `e2e/mocked/wow-forever-races.spec.ts`.
 
 #### Talent calculator (`/wow-forever/talents`, `/wow-forever/talents/:class`)
 
@@ -839,7 +839,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `wowIcons.json` `files` (publish them with `wow_icons.publish`).
   Tests: `tests/test_wow_talents_generator.py`,
   `tests/test_wow_spell_tooltip.py`, `src/__tests__/wowTalentRules.test.ts`,
-  `src/__tests__/wowTalentBuildCode.test.ts`, `e2e/wow-forever-talents.spec.ts`.
+  `src/__tests__/wowTalentBuildCode.test.ts`, `e2e/mocked/wow-forever-talents.spec.ts`.
 - `?talent=<id>` (`TALENT_PICK_PARAM`, `lib/talents/findTalentPosition.ts`)
   opens the calculator on that talent's tree with its details showing — the
   Changes feed links with it. Read once on load; an unknown id is ignored.
@@ -879,7 +879,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Each row's `since` = the build its content first appeared in (`stamp.py`,
   read from the previous files before they're overwritten). Tests:
   `tests/test_wow_changes_generator.py`, `src/__tests__/wowChanges.test.ts`,
-  `e2e/wow-forever-changes.spec.ts`.
+  `e2e/mocked/wow-forever-changes.spec.ts`.
 
 #### Spellbook (`/wow-forever/spellbook`, `/wow-forever/spellbook/:class`)
 
@@ -919,7 +919,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   class is its own lazy chunk (`data/spellbook/spellbookFiles.ts`,
   `lib/spellbook/loadSpellbookClass.ts`). Spell icons go into `wowIcons.json` `files`
   (publish them with `wow_icons.publish`). Tests: `tests/test_wow_spellbook_generator.py`,
-  `src/__tests__/wowSpellbook.test.ts`, `e2e/wow-forever-spellbook.spec.ts`.
+  `src/__tests__/wowSpellbook.test.ts`, `e2e/mocked/wow-forever-spellbook.spec.ts`.
 
 #### Trainers (`/wow-forever/trainers`, `/wow-forever/trainers/:subject`)
 
@@ -982,7 +982,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`data/downrank/downrankFiles.ts`, `lib/downrank/loadDownrank.ts`). Family
   icons go into `wowIcons.json` `files`. Tests:
   `tests/test_wow_downrank_generator.py`, `src/__tests__/wowDownrank.test.ts`,
-  `e2e/wow-forever-downrank.spec.ts`.
+  `e2e/mocked/wow-forever-downrank.spec.ts`.
 
 #### Server status (`/wow-forever/server-status`)
 
@@ -1018,7 +1018,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   that error. Tests: `tests/test_wow_server_status_history.py`,
   `src/__tests__/wowServerStatusHistory.test.ts`,
   `src/__tests__/wowServerStatusPage.test.tsx`,
-  `e2e/wow-server-status-history.spec.ts`.
+  `e2e/mocked/wow-server-status-history.spec.ts`.
 
 #### Your character (`/wow-forever/character[/:slug]`)
 
@@ -1106,7 +1106,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (filter/sort; a missing value always sorts last, never as 0); search, class,
   level band and sort live in the URL (`GUILD_PARAMS`, defaults left out,
   `replace` so Back skips keystrokes). Tests: `tests/test_wow_guild_page.py`,
-  `src/__tests__/wowGuildPage.test.tsx`, `e2e/wow-forever-guild.spec.ts`.
+  `src/__tests__/wowGuildPage.test.tsx`, `e2e/mocked/wow-forever-guild.spec.ts`.
 - ONE guild only: the site shows and refreshes just the operator's guild,
   `GUILD_SLUG` = "topdeadcenter" (`core/wow_guild.py`; frontend `GUILD_SLUG` in
   `data/guild/guildConfig.ts`). Every `/api/wow/guilds/{slug}` route 404s any
@@ -1150,7 +1150,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   and says how long), then polls the guild until `roster_updated_at` or
   `refresh_failed_at` changes and toasts the result. Tests:
   `tests/test_wow_guild_refresh.py`, `src/__tests__/wowGuildRefreshButton.test.tsx`,
-  `e2e/wow-forever-guild-refresh.spec.ts`.
+  `e2e/mocked/wow-forever-guild-refresh.spec.ts`.
 - Guild leaderboards (above the member list, `GuildLeaderboards`): each member
   carries every number of its newest daily metric plus its professions from
   `guild_repo.member_skills` — the newest day that HAS skills (a day whose
@@ -1242,7 +1242,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`mga.wowForever.character.statsTab.v1`). `stats: null` = Blizzard has none
   yet. Tests:
   `tests/test_wow_characters.py`, `src/__tests__/wowCharacterPage.test.tsx`,
-  `src/__tests__/wowCharacterStats.test.ts`, `e2e/wow-forever-character.spec.ts`.
+  `src/__tests__/wowCharacterStats.test.ts`, `e2e/mocked/wow-forever-character.spec.ts`.
 - Talents (`CharacterTalentsPanel`, `lib/character/characterTalents.ts`):
   `/specializations` keeps only each talent's id + rank per saved set (active
   first, empty sets dropped); names, icons and rank text come from the talent
@@ -1468,8 +1468,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Typed prices are optional overrides (`mga.wowForever.professions.priceOverrides.v2`,
   priced professions only); the pre-auction key `...prices.v1` is removed on read.
 - Tests stub the hook with `src/test/auctionPricesStub.ts`; E2E stubs
-  `**/wow/prices**` per house (`e2e/wow-forever-auction-prices.spec.ts`;
-  specs that only need "no prices yet" use `e2e/fixtures/emptyPrices.ts`).
+  `**/wow/prices**` per house (`e2e/mocked/wow-forever-auction-prices.spec.ts`;
+  specs that only need "no prices yet" use `e2e/mocked/fixtures/emptyPrices.ts`).
   `e2e/wow-forever-prices-api.spec.ts` checks the live endpoint.
 
 #### Feature requests (anonymous; Claude-refined; operator-only triage)
@@ -1521,8 +1521,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `TriageSubmissionQuote` with hidden characters revealed
   (`revealHiddenChars.ts`). Approve / Not planned / Hide are delayed with Undo
   (`useDelayedAction`, flushed on pagehide); Merge confirms and is immediate.
-  Tests: `src/__tests__/wowTriage*.test.ts(x)`, `e2e/wow-forever-triage.spec.ts`,
-  `e2e/serve-only-operator.spec.ts`.
+  Tests: `src/__tests__/wowTriage*.test.ts(x)`, `e2e/mocked/wow-forever-triage.spec.ts`,
+  `e2e/mocked-serve-only/serve-only-operator.spec.ts`.
 - Retention: scheduler job `purge_wow_feature_submissions` (daily) and
   `python -m app.cli purge-wow-feature-submissions`.
 
@@ -1630,7 +1630,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   real data in `wowAskTools.test.ts` / `wowAskGuideTools.test.ts` (no live-data
   examples: they'd depend on today's prices). Live tools: `wowAskLiveTools.test.tsx`. Tests:
   `src/__tests__/wowAsk*.test.ts(x)`,
-  `e2e/wow-forever-ask.spec.ts` (relay mocked).
+  `e2e/mocked/wow-forever-ask.spec.ts` (relay mocked).
 
 #### Food picker (`/wow-forever/food`, "What should I eat?")
 
@@ -1717,7 +1717,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`data/worldMap/mapStyle.ts`) darken label / route halos and rim markers
   only on the satellite view. Tests: `tests/test_wow_satellite_generator.py`
   (grid math, crop, Farley's inn in its tile, idempotent publish),
-  `wowWorldMapSatellite.test.tsx`, `e2e/wow-world-map-satellite.spec.ts`
+  `wowWorldMapSatellite.test.tsx`, `e2e/mocked/wow-world-map-satellite.spec.ts`
   (set `MGA_SATELLITE_DIR` to the build folder for alignment screenshots).
 - **Pan / zoom viewer** (`MapCanvas` → `hooks/useMapViewer.ts`): Leaflet 1.9
   (`CRS.Simple`), wrapped by our own hook — never react-leaflet (Hippocratic
@@ -1745,7 +1745,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   zoom are off (a click opens a zone). Unzoomed, `touch-action: pan-y` lets a
   finger scroll the page; zoomed it's `none` and the finger drags the map.
   Tests: `wowWorldMapViewport.test.ts`, `wowWorldMapZoomQueue.test.ts`,
-  `e2e/wow-world-map-viewer.spec.ts`.
+  `e2e/mocked/wow-world-map-viewer.spec.ts`.
 - **Navigation like the in-game map.** `zones.json` carries every map's UiMap
   `parent` (Azeroth `947` → continents → zones → capitals), `levels` and
   `territory`; `decodeMapTree` builds the tree. The viewed map lives in the URL
@@ -1872,9 +1872,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   continent maps: name + "5–10" / "City" / "New in Forever", at each zone's
   deepest mask point; labels that would overlap at the picture's on-screen
   size are dropped, biggest zones first (zooming in brings more back). Tests:
-  `wowWorldMapLayers.test.ts`, `e2e/wow-world-map-layers.spec.ts`; specs
+  `wowWorldMapLayers.test.ts`, `e2e/mocked/wow-world-map-layers.spec.ts`; specs
   that click a zone's ground switch layers off first
-  (`e2e/fixtures/mapLayers.ts`).
+  (`e2e/mocked/fixtures/mapLayers.ts`).
 - **My marks, my route, Share this view** (P3; browser-only, no server):
   - **Map menu** (`useMapPressMenu`, `MapContextMenu`): right-click, a ~500 ms
     press with a finger (`LONG_PRESS_MS`; a ring fills from 150 ms; any drag
@@ -1917,7 +1917,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     so a reload drops it. Bump the version (and keep decoding v1) for any
     format change.
   - Tests: `wowWorldMapMarks.test.ts` (incl. hostile labels and links),
-    `e2e/wow-world-map-marks.spec.ts`.
+    `e2e/mocked/wow-world-map-marks.spec.ts`.
 - Level rules (`worldMap/levels.ts`): trainers are never filtered by level;
   quests show when min level ≤ your level + 2; dungeons are coloured by the
   Classic con bands (grey/green/yellow/orange/red) and flagged "too low to
@@ -2063,7 +2063,13 @@ npm run build     # TypeScript check + Vite build
 npm run typecheck
 npm run lint
 npm test
+npm run typecheck:e2e
+npx playwright test -c playwright.layout.config.ts               # e2e/mocked/, no backend (CI runs it)
+npx playwright test -c playwright.layout.serve-only.config.ts    # e2e/mocked-serve-only/, VITE_SERVE_ONLY=true
+npm run test:e2e                                                 # the rest of e2e/, needs the backend on :8004
 ```
+A spec goes in `e2e/mocked/` when every request it makes is stubbed. Specs that sign in, seed through
+`/api/_test/*`, or check a live endpoint stay in `e2e/`.
 
 ## Architecture Rules
 
@@ -2410,7 +2416,7 @@ Enable Activities only **after** the Entry-Point-preserving
    - In the operator's server, launch MyGamingAssistant from the App Launcher, or
      from the rocket button in a voice call.
 
-`e2e/discord-activity.spec.ts` covers the in-Discord flow without Discord. It uses
+`e2e/mocked/discord-activity.spec.ts` covers the in-Discord flow without Discord. It uses
 a same-origin host page that plays Discord's client.
 
 ## Tech Debt Policy

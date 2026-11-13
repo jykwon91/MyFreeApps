@@ -56,12 +56,17 @@ export async function plantAuth(page: Page, storage: Record<string, string> = {}
  * the (absent) backend through the dev-server proxy: a 404 by default, or an
  * empty answer (see UnmatchedAnswer). Register it FIRST: Playwright tries the
  * most recently added route first.
+ *
+ * Matches paths that start with the API base, not a glob: `**${apiBase}/**` also
+ * matches the dev server's own modules in any folder named like the base
+ * (MyGamingAssistant's src/games/wow-forever/api/), and answering those 404
+ * breaks the page.
  */
 export async function stubUnmatchedApi(
   page: Page,
-  { apiBase, answer = "notFound" }: UnmatchedApiOptions = {},
+  { apiBase = DEFAULT_API_BASE, answer = "notFound" }: UnmatchedApiOptions = {},
 ): Promise<void> {
-  await page.route(apiUrl("/**", apiBase), (route) =>
+  await page.route((url) => url.pathname.startsWith(`${apiBase}/`), (route) =>
     route.fulfill(
       answer === "notFound"
         ? json({ detail: "Not Found" }, 404)
