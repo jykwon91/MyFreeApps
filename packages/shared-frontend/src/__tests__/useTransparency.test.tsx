@@ -48,4 +48,34 @@ describe("useTransparency", () => {
     const { result } = renderHook(() => useTransparency());
     await waitFor(() => expect(result.current.status).toBe("error"));
   });
+
+  it("reads as loading again, then refetches, when baseUrl changes", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(DATA) })),
+    );
+    const { result, rerender } = renderHook(({ baseUrl }) => useTransparency(baseUrl), {
+      initialProps: { baseUrl: "/api" },
+    });
+    await waitFor(() => expect(result.current.status).toBe("ok"));
+    rerender({ baseUrl: "/other-api" });
+    expect(result.current).toEqual({ status: "loading" });
+    await waitFor(() => expect(result.current.status).toBe("ok"));
+    expect(fetch).toHaveBeenLastCalledWith("/other-api/transparency", expect.anything());
+  });
+
+  it("does not show A's earlier result when going A -> B -> A while B is still loading", async () => {
+    const fetchMock = vi.fn(() => new Promise(() => undefined));
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve(DATA) }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { result, rerender } = renderHook(({ baseUrl }) => useTransparency(baseUrl), {
+      initialProps: { baseUrl: "/api" },
+    });
+    await waitFor(() => expect(result.current.status).toBe("ok"));
+    rerender({ baseUrl: "/b" });
+    rerender({ baseUrl: "/api" });
+    expect(result.current).toEqual({ status: "loading" });
+  });
 });

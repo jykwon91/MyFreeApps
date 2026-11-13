@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import type { InfinitePagesQuery } from "../types/paging/infinite-pages-query";
 import type { InfinitePagesResult } from "../types/paging/infinite-pages-result";
 import type { PageOfItems } from "../types/paging/page-of-items";
@@ -16,23 +16,35 @@ export function useInfinitePages<T extends { id: string }>(query: InfinitePagesQ
   const items = useMemo(() => flattenPagesById(pages), [pages]);
   // The argument (serialized, so equal arguments match) a load-more is waiting for; null when none is.
   const [queuedFor, setQueuedFor] = useState<string | null>(null);
+  // Bumped each time a queued load-more is released, which is what makes the effect below fetch.
+  const [releases, setReleases] = useState(0);
   const argsKey = JSON.stringify(query.originalArgs ?? null);
   const isLoadMoreQueued = queuedFor === argsKey;
   const { isFetching, hasNextPage, fetchNextPage } = query;
 
-  useEffect(() => {
-    if (queuedFor === null) return;
-    if (queuedFor !== argsKey) {
-      setQueuedFor(null);
-      return;
-    }
-    if (isFetching) return;
+  // Adjusting state during render rather than in an effect: a queued load-more is dropped when the
+  // argument changed, and released (fetched, if there still is a next page) once the request settles.
+  if (queuedFor !== null && (!isLoadMoreQueued || !isFetching)) {
     setQueuedFor(null);
-    if (hasNextPage) void fetchNextPage();
-  }, [queuedFor, argsKey, isFetching, hasNextPage, fetchNextPage]);
+    if (isLoadMoreQueued && hasNextPage) setReleases(releases + 1);
+  }
+
+  const fetchReleasedPage = useEffectEvent(() => {
+    void fetchNextPage();
+  });
+
+  // Effects can re-run without `releases` changing (Activity hide/show, Fast Refresh, StrictMode), so each release fetches once.
+  const firedReleases = useRef(0);
+  useEffect(() => {
+    if (releases <= firedReleases.current) return;
+    firedReleases.current = releases;
+    fetchReleasedPage();
+  }, [releases]);
 
   function loadMore(): void {
-    // One request at a time: behind a first page, a refetch or another page, it waits its turn.
+    // A page already on its way is the page this call asks for, so a repeat call must not load a second one.
+    if (query.isFetchingNextPage) return;
+    // One request at a time: behind a first page or a refetch, it waits its turn.
     if (isFetching) {
       setQueuedFor(argsKey);
       return;

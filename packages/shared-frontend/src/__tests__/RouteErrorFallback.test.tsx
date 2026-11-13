@@ -100,7 +100,11 @@ describe("withRouteErrorBoundary", () => {
   });
 
   it("shows the reloading state when the guarded auto-reload fires", async () => {
-    mockReloadOnce.mockReturnValue(true);
+    // The real guard with the page reload stubbed, so it marks the reload as scheduled like production does.
+    const actual = await vi.importActual<typeof import("../lib/stale-chunk")>("../lib/stale-chunk");
+    mockReloadOnce.mockImplementation(() =>
+      actual.reloadOnceForStaleChunk({ storage: memoryStorage(), pathname: "/x", now: Date.now(), reload: vi.fn() }),
+    );
     const Stale = failingLazy("Failed to fetch dynamically imported module: /assets/a-1234abcd.js");
     renderAt("/x", [
       {

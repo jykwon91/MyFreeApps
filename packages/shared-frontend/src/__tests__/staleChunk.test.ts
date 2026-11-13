@@ -15,6 +15,7 @@ import {
   isChunkLoadError,
   isStaleChunkReloadScheduled,
   reloadOnceForStaleChunk,
+  subscribeStaleChunkReloadScheduled,
   type StaleChunkReloadDeps,
 } from "../lib/stale-chunk";
 
@@ -71,6 +72,16 @@ describe("reloadOnceForStaleChunk", () => {
       "1000000",
     );
     expect(isStaleChunkReloadScheduled()).toBe(true);
+  });
+
+  it("notifies subscribers when a reload is scheduled, and not after they unsubscribe", () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeStaleChunkReloadScheduled(listener);
+    reloadOnceForStaleChunk(deps());
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+    reloadOnceForStaleChunk(deps({ pathname: "/other" }));
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   it("does NOT reload again for the same path inside the window (no loop)", () => {

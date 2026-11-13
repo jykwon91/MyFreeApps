@@ -1,6 +1,6 @@
 name: Shared Frontend CI
 
-# Runs the unit tests and typecheck of the shared web packages, @platform/ui
+# Runs the unit tests, typecheck and lint of the shared web packages, @platform/ui
 # (packages/shared-frontend) and @platform/core (packages/shared-core), on every
 # pull request to main and every push to main. Each app's CI builds and tests
 # that app, but no app runs these packages' own tests.
@@ -66,6 +66,11 @@ jobs:
         if: ${{ !cancelled() }}
         run: npm run typecheck:test-support --workspace=@platform/ui
 
+      - name: Lint @platform/ui
+        # Covers src/ and test-support/ (eslint . from the package root).
+        if: ${{ !cancelled() }}
+        run: npm run lint --workspace=@platform/ui
+
       - name: Test @platform/core
         if: ${{ !cancelled() }}
         run: npm test --workspace=@platform/core
@@ -73,6 +78,10 @@ jobs:
       - name: Typecheck @platform/core
         if: ${{ !cancelled() }}
         run: npm run typecheck --workspace=@platform/core
+
+      - name: Lint @platform/core
+        if: ${{ !cancelled() }}
+        run: npm run lint --workspace=@platform/core
 
   web-scaffold:
     name: web-scaffold

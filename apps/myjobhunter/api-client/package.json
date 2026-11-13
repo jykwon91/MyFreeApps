@@ -15,7 +15,7 @@
   },
   "peerDependencies": {
     "@reduxjs/toolkit": "^2",
-    "react": "^19",
+    "react": "^19.2.0",
     "react-redux": "^9"
   },
   "devDependencies": {

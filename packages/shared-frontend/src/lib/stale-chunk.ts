@@ -50,6 +50,13 @@ export interface StaleChunkReloadDeps {
 }
 
 let reloadScheduled = false;
+const reloadScheduledListeners = new Set<() => void>();
+
+/** Subscribes to {@link isStaleChunkReloadScheduled} changes (the `useSyncExternalStore` contract). */
+export function subscribeStaleChunkReloadScheduled(listener: () => void): () => void {
+  reloadScheduledListeners.add(listener);
+  return () => reloadScheduledListeners.delete(listener);
+}
 
 /** True when `error` is a failed dynamic import / chunk preload. */
 export function isChunkLoadError(error: unknown): boolean {
@@ -111,6 +118,7 @@ export function reloadOnceForStaleChunk(deps: StaleChunkReloadDeps = defaultDeps
     return false;
   }
   reloadScheduled = true;
+  reloadScheduledListeners.forEach((listener) => listener());
   reload();
   return true;
 }
@@ -136,7 +144,8 @@ export function installStaleChunkRecovery(
   return () => target.removeEventListener(VITE_PRELOAD_ERROR_EVENT, onPreloadError);
 }
 
-/** Test-only: reset module state between tests. */
+/** Test-only: reset module state between tests. Also clears every subscriber added by `subscribeStaleChunkReloadScheduled`. */
 export function __resetStaleChunkStateForTests(): void {
   reloadScheduled = false;
+  reloadScheduledListeners.clear();
 }
