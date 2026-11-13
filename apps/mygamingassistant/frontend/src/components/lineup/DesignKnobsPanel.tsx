@@ -12,44 +12,7 @@ import { useState } from "react";
 import { Settings2, X, RotateCcw } from "lucide-react";
 import { useDesignKnobs } from "@/hooks/useDesignKnobs";
 import type { PaneMode, LandingMode, TilesPerRow } from "@/hooks/useDesignKnobs";
-
-interface SegmentedProps<T extends string | number> {
-  label: string;
-  value: T;
-  options: ReadonlyArray<{ label: string; value: T }>;
-  onChange: (next: T) => void;
-}
-
-function Segmented<T extends string | number>({ label, value, options, onChange }: SegmentedProps<T>) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-        {label}
-      </span>
-      <div className="flex rounded-md border border-border overflow-hidden">
-        {options.map((opt) => {
-          const active = opt.value === value;
-          return (
-            <button
-              key={String(opt.value)}
-              type="button"
-              onClick={() => onChange(opt.value)}
-              className={[
-                "px-2.5 py-1 text-[11px] font-medium transition-colors",
-                active
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
-              ].join(" ")}
-              aria-pressed={active}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+import Segmented from "./Segmented";
 
 export default function DesignKnobsPanel() {
   const { knobs, setKnob, reset } = useDesignKnobs();
@@ -153,7 +116,7 @@ export default function DesignKnobsPanel() {
         onChange={(v) => setKnob("tilesPerRow", v)}
       />
 
-      <p className="text-[10px] text-muted-foreground/70 leading-snug pt-1">
+      <p className="text-[10px] text-muted-foreground leading-snug pt-1">
         URL-backed — refresh keeps choices. Tell me the combo you like and I'll lock it in as the default.
       </p>
     </aside>

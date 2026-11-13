@@ -163,7 +163,7 @@ export default function PinEditPanel({ editor, minimapUrl }: Props) {
         <span className="font-medium text-foreground">orange Target pin</span> where it
         lands. Scroll to zoom for pixel precision, then{" "}
         <span className="font-medium text-foreground">Save</span>.
-        <span className="block text-muted-foreground/70">
+        <span className="block text-muted-foreground">
           Ignore the in-game minimap corner — it rotates with the crosshair and won’t
           line up with this map. “Reset” just snaps a pin back to the auto spot.
         </span>

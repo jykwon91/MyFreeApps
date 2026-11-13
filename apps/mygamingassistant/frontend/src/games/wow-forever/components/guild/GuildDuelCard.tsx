@@ -12,7 +12,7 @@ interface GuildDuelCardProps {
 /** A close race as a duel: the board (and the title at stake), both names with their numbers around a "VS", and how far apart they are. */
 export default function GuildDuelCard({ race, stake }: GuildDuelCardProps) {
   return (
-    <li className="space-y-2 rounded-xl border-2 border-red-500/40 bg-gradient-to-b from-red-500/10 to-[hsl(var(--card))] p-3">
+    <li className="space-y-2 rounded-xl border-2 border-red-500/40 bg-gradient-to-b from-red-500/10 to-card p-3">
       <p className="text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {race.board.label}
         {stake ? ` · ${stake}` : ""}

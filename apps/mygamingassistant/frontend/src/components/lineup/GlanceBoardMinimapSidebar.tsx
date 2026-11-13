@@ -120,8 +120,8 @@ export default function GlanceBoardMinimapSidebar({
               onClick={() => handleZoneClick(zone.slug)}
               aria-pressed={usingFilterMode ? isActive : undefined}
               className={[
-                "text-left px-2 py-1 rounded text-[12px] hover:bg-muted/40 transition-colors flex items-center justify-between gap-2",
-                isActive && "bg-primary/15 text-primary font-medium",
+                "text-left px-2 py-1 rounded text-[12px] transition-colors flex items-center justify-between gap-2",
+                isActive ? "bg-primary/10 text-primary font-medium hover:underline" : "hover:bg-muted/40",
               ].filter(Boolean).join(" ")}
             >
               <span className="truncate">{zone.name}</span>

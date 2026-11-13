@@ -16,6 +16,7 @@ import type { Lineup } from "@/types/game";
 import { utilDisplay } from "@/constants/utilityDisplay";
 import { zoneAnchorId } from "./glanceBoardUtils";
 import GlanceBoardTile from "./GlanceBoardTile";
+import GlanceBoardSkeleton from "./GlanceBoardSkeleton";
 import { DEFAULT_KNOBS } from "@/hooks/useDesignKnobs";
 import type { DesignKnobs } from "@/hooks/useDesignKnobs";
 
@@ -109,33 +110,6 @@ function groupByZone(lineups: Lineup[]): ZoneGroup[] {
 }
 
 // ---------------------------------------------------------------------------
-// Skeleton loader (2 tiles per row)
-//
-// aspectRatio mirrors the CURRENT tile shape so the loading state doesn't
-// pop/reflow once real data lands. The preview-stills tile (header +
-// 2-still row + footer) is much shorter than the old 4-pane storyboard
-// (~180-200px vs ~346px at typical tile width) — "4.5 / 1" approximates
-// that width:height ratio. Update this alongside any future change to
-// GlanceBoardTile's header/body/footer proportions.
-// ---------------------------------------------------------------------------
-function GlanceBoardSkeleton() {
-  return (
-    <div className="space-y-8">
-      {[1, 2].map((s) => (
-        <div key={s} className="space-y-3">
-          <div className="h-5 w-48 bg-muted/40 rounded animate-pulse" />
-          <div className="grid grid-cols-2 gap-4">
-            {[1, 2].map((t) => (
-              <div key={t} className="rounded-lg bg-muted/40 animate-pulse" style={{ aspectRatio: "4.5 / 1" }} />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Empty state helpers
 // ---------------------------------------------------------------------------
 function buildEmptyMessage(mapName: string, side: string, filteredUtils: string[]): string {
@@ -178,7 +152,7 @@ export default function GlanceBoard({
           // Placeholder anchor — parent passes an onClearFilters via the
           // empty-state link rendered directly in MapPage, not here.
           // GlanceBoard itself is filter-agnostic; it just renders.
-          <span className="text-xs text-muted-foreground/60">
+          <span className="text-xs text-muted-foreground">
             Try clearing filters in the top bar.
           </span>
         )}
@@ -195,7 +169,7 @@ export default function GlanceBoard({
             <span className="flex-1 border-t border-border" />
             <span>
               {group.zoneName}
-              <span className="ml-1.5 font-normal text-muted-foreground/60">
+              <span className="ml-1.5 font-normal text-muted-foreground">
                 ({group.lineups.length})
               </span>
             </span>

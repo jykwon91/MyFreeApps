@@ -96,7 +96,7 @@ export default function TwoFactorSetup() {
   if (isStatusLoading || enabled === null) {
     return (
       <div className="p-6">
-        <div className="h-8 w-48 bg-muted/40 rounded animate-pulse" />
+        <div className="h-8 w-48 bg-muted rounded animate-pulse" />
       </div>
     );
   }

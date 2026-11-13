@@ -1223,9 +1223,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   for 4.5:1 on white. Bars (`barPercent`, value / leader) only on boards with
   `showBar` (off for fewest-first and faction standings). The picker is
   category chips (`aria-pressed`; a chip picks its group's first board) plus
-  "Rank members by" listing only that group. This app's colour utilities are
-  hand-written in `src/index.css`: `ring-primary`, `bg-primary/10`,
-  `bg-muted/40` are NO-OPS — use `ring-[hsl(var(--primary))]` style values.
+  "Rank members by" listing only that group.
 - Guild titles (`GuildTitlesStrip` above the leaderboards, `GuildMemberTitles`
   by each name in the member table/cards): frontend-only, `awardGuildTitles`
   ranks every board with `rankBoard` and gives its `GUILD_TITLES` entry (board
@@ -2458,6 +2456,12 @@ page on the real site.
 
 ### Rules when changing the frontend
 
+- **Theme colors:** the design tokens are Tailwind theme colors (`@theme
+  inline` in `src/index.css`), so token classes work with opacity and variants
+  (`bg-primary/10`, `hover:bg-muted/40`) in light and dark. Use them, never
+  `[hsl(var(--x))]` arbitrary values; `e2e/mocked/theme-tokens.spec.ts` guards
+  it. Muted text stays plain `text-muted-foreground`: its opacity forms fall
+  below 4.5:1.
 - **New external origin**, i.e. a host added to `csp` in `app.yaml`: add it to
   `MGA_DISCORD_URL_MAPPINGS` **and** the Developer Portal, or list it as
   deliberately unmapped. `discordActivityMappings.test.ts` fails otherwise.

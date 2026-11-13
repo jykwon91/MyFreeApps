@@ -2,7 +2,8 @@
  * WoW Forever feature-request triage (/wow-forever/triage) — the operator signs in with their account
  * (signed out → /login → back here), the inbox with Approve / Undo, Merge, an All requests status change to
  * Shipped (path checked), Sign out sending a pending write and dropping every private row, a 401 mid-session
- * returning to sign in and back to the same place, the phone layout and the list skeleton. Login,
+ * returning to sign in and back to the same place, the phone layout, the list skeleton and the inbox count
+ * pill (readable on the selected and unselected tab, light and dark). Login,
  * `/users/me` and the triage API are mocked; the triage mock answers 401 without the operator's Bearer
  * token. Every other /api call answers 404. No backend needed.
  *
@@ -13,6 +14,10 @@ import { expect, test } from "@platform/ui/test-support/crashGuard";
 import { LOGIN_ENDPOINT } from "@platform/ui/test-support/constants/loginEndpoint";
 import { LOGIN_BAD_CREDENTIALS } from "@platform/ui/test-support/constants/loginBadCredentials";
 import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
+import { COLOR_SCHEMES } from "./constants/colorSchemes";
+import { WCAG_CONTRAST } from "./constants/wcagContrast";
+import { expectColorScheme } from "./fixtures/colorScheme";
+import { paintedContrast } from "./fixtures/contrast";
 
 const PAGE = "/wow-forever/triage";
 const OPERATOR_EMAIL = "operator@fixture.example";
@@ -398,3 +403,26 @@ test("the All requests skeleton has the loaded list's structure", async ({ page 
   await expect(loaded.locator('[data-section="story-row"]')).toHaveCount(5);
   expect(await shape(loaded)).toEqual(loading);
 });
+
+for (const scheme of COLOR_SCHEMES) {
+  test.describe(`${scheme} theme`, () => {
+    test.use({ colorScheme: scheme });
+
+    test("the inbox count pill and its number stand out on the selected and unselected tab", async ({ page }) => {
+      const waiting = story(1, { status: "submitted" });
+      await mockTriage(page, newApi([item(1, waiting)], [waiting]));
+      await signIn(page);
+      await expectColorScheme(page, scheme);
+
+      const pill = page.getByLabel("1 waiting");
+      for (const tab of ["Inbox", "All requests"]) {
+        await page.getByRole("tab", { name: new RegExp(`^${tab}`) }).click();
+        await expect(page.getByRole("tab", { name: new RegExp(`^${tab}`) })).toHaveAttribute("aria-selected", "true");
+        await expect(pill).toBeVisible();
+        const contrast = await paintedContrast(pill);
+        expect(contrast.text, `${tab} selected: the number on the pill`).toBeGreaterThanOrEqual(WCAG_CONTRAST.TEXT);
+        expect(contrast.box, `${tab} selected: the pill on the tab`).toBeGreaterThanOrEqual(WCAG_CONTRAST.NON_TEXT);
+      }
+    });
+  });
+}

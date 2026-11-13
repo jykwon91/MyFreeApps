@@ -356,7 +356,7 @@ export default function MinimapPinEditor({
       </div>
 
       {/* Interaction hint. */}
-      <p className="text-[10px] leading-snug text-muted-foreground/70">
+      <p className="text-[10px] leading-snug text-muted-foreground">
         Scroll to zoom · drag empty map to pan · click a pin then arrow-nudge
         (Alt = pixel-fine, Shift = coarse).
       </p>

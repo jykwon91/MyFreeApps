@@ -16,8 +16,8 @@
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import type { Game, MapDetail, Lineup } from "@/types/game";
-import LineupCard from "@/components/lineup/LineupCard";
 import type { UsePinsReturn } from "@/hooks/usePins";
+import RoundModeBody from "@/components/roundMode/RoundModeBody";
 
 const SIDE_BG: Record<string, string> = {
   side_a: "rgba(239,68,68,0.08)",
@@ -66,8 +66,9 @@ export default function RoundMode({
 
   return (
     <div
+      data-testid="round-mode"
       className="min-h-screen bg-background transition-colors duration-300"
-      style={{ background: `color-mix(in srgb, var(--background) 92%, ${sideBg})` }}
+      style={{ background: `color-mix(in srgb, hsl(var(--background)) 92%, ${sideBg})` }}
     >
       {/* Minimal status strip */}
       <div className="flex items-center justify-between px-4 py-2 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
@@ -90,98 +91,14 @@ export default function RoundMode({
 
       {/* Body */}
       <div className="p-4 sm:p-6">
-        {isFetching ? (
-          <RoundModeLoadingSkeleton />
-        ) : pinnedLineups.length === 0 ? (
-          <RoundModeEmpty planModeHref={planModeHref} />
-        ) : (
-          <RoundModeCards
-            lineups={pinnedLineups}
-            activeCardIndex={activeCardIndex}
-            pins={pins}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-function RoundModeLoadingSkeleton() {
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
-      {[1, 2].map((i) => (
-        <div key={i} className="h-96 rounded-xl bg-muted/40 animate-pulse" />
-      ))}
-    </div>
-  );
-}
-
-function RoundModeEmpty({ planModeHref }: { planModeHref: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
-      <p className="text-muted-foreground">No pins yet.</p>
-      <Link
-        to={planModeHref}
-        className="text-sm text-primary hover:underline"
-      >
-        Open plan mode to pin some.
-      </Link>
-    </div>
-  );
-}
-
-interface RoundModeCardsProps {
-  lineups: Lineup[];
-  activeCardIndex: number;
-  pins: UsePinsReturn;
-}
-
-function RoundModeCards({ lineups, activeCardIndex, pins }: RoundModeCardsProps) {
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
-      {lineups.map((lineup, i) => (
-        <RoundModeCardWrapper
-          key={lineup.id}
-          lineup={lineup}
-          isActive={i === activeCardIndex}
+        <RoundModeBody
+          isFetching={isFetching}
+          pinnedLineups={pinnedLineups}
+          activeCardIndex={activeCardIndex}
           pins={pins}
+          planModeHref={planModeHref}
         />
-      ))}
-    </div>
-  );
-}
-
-interface RoundModeCardWrapperProps {
-  lineup: Lineup;
-  isActive: boolean;
-  pins: UsePinsReturn;
-}
-
-function RoundModeCardWrapper({ lineup, isActive, pins }: RoundModeCardWrapperProps) {
-  return (
-    <div
-      aria-current={isActive ? "true" : undefined}
-      className={[
-        "rounded-xl overflow-hidden transition-all duration-200",
-        isActive ? "ring-2 ring-primary shadow-lg scale-[1.01]" : "",
-      ].join(" ")}
-    >
-      <LineupCard
-        lineup={lineup}
-        variant="expanded"
-        isPinned={pins.isPinned(lineup.id)}
-        onPinToggle={() => {
-          if (pins.isPinned(lineup.id)) {
-            pins.unpin(lineup.id);
-          } else {
-            pins.pin(lineup.id);
-          }
-        }}
-      />
+      </div>
     </div>
   );
 }

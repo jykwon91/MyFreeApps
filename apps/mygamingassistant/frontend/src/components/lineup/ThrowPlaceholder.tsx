@@ -32,7 +32,7 @@ export function ThrowPlaceholder({ placement = "thrown" }: ThrowPlaceholderProps
           {isPlaced ? "Placed — no throw" : "No clip yet"}
         </span>
         {isPlaced ? (
-          <span className="text-[10px] text-muted-foreground/70">
+          <span className="text-[10px] text-muted-foreground">
             Mounted in place
           </span>
         ) : null}
