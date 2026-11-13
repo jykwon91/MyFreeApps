@@ -7,9 +7,9 @@ interface NoSessionViewProps {
 
 export default function NoSessionView({ onSessionStarted }: NoSessionViewProps) {
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <ResumeRefinementHeader />
       <SessionStartPanel onSessionStarted={onSessionStarted} />
-    </main>
+    </div>
   );
 }

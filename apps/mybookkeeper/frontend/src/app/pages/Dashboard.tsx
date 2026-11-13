@@ -147,7 +147,7 @@ export default function Dashboard() {
     summary.by_property.length === 0;
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 sm:space-y-8">
+    <div className="p-4 sm:p-8 space-y-6 sm:space-y-8">
       {healthSummary && healthSummary.status !== "healthy" && (
         <HealthBanner status={healthSummary.status} />
       )}
@@ -358,6 +358,6 @@ export default function Dashboard() {
           onClose={() => setDrillDown(null)}
         />
       )}
-    </main>
+    </div>
   );
 }

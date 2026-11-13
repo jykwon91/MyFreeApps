@@ -25,7 +25,7 @@ export default function PendingReceipts() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
         title="Pending Receipts"
         subtitle={
@@ -51,6 +51,6 @@ export default function PendingReceipts() {
       )}
 
       <PendingReceiptsListBody mode={mode} receipts={receipts} canSend={gmailState === "ready"} />
-    </main>
+    </div>
   );
 }

@@ -218,13 +218,13 @@ describe("raid web page", () => {
   it("shows the page's shape while it loads, with no loading text, then the raid", () => {
     setQuery({ isFetching: true });
     const view = renderPage();
-    expect(screen.getByRole("main")).toHaveAttribute("aria-busy", "true");
+    expect(view.container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
     expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
 
     showRaid();
     view.rerender(tree());
     expect(screen.getByRole("heading", { level: 1, name: TITLE })).toBeInTheDocument();
-    expect(screen.getByRole("main")).not.toHaveAttribute("aria-busy");
+    expect(view.container.querySelector("[aria-busy]")).not.toBeInTheDocument();
   });
 
   it("shows the raid as its Discord post does", () => {

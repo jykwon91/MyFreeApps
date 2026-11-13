@@ -32,7 +32,7 @@ export default function TaxDocuments() {
   }, []);
 
   return (
-    <main className="p-4 sm:p-8 space-y-4 md:h-screen md:flex md:flex-col md:overflow-hidden">
+    <div className="p-4 sm:p-8 space-y-4 md:h-screen md:flex md:flex-col md:overflow-hidden">
       <div className="flex items-center justify-between">
         <SectionHeader title="Tax Documents" />
         {availableYears.length > 0 && (
@@ -86,6 +86,6 @@ export default function TaxDocuments() {
           onClose={() => setViewingDocId(null)}
         />
       ) : null}
-    </main>
+    </div>
   );
 }

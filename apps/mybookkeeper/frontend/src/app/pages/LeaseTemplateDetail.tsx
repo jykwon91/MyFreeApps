@@ -67,7 +67,7 @@ export default function LeaseTemplateDetail() {
   );
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <Link
         to="/lease-templates"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground min-h-[44px]"
@@ -188,6 +188,6 @@ export default function LeaseTemplateDetail() {
           </section>
         </>
       ) : null}
-    </main>
+    </div>
   );
 }

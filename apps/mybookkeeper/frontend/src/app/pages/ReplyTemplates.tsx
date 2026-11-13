@@ -9,7 +9,7 @@ import ReplyTemplatesManager from "@/app/features/inquiries/ReplyTemplatesManage
  */
 export default function ReplyTemplates() {
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <Link
         to="/inquiries"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground min-h-[44px]"
@@ -22,6 +22,6 @@ export default function ReplyTemplates() {
         subtitle="Manage the canned replies available in the inquiry-reply panel."
       />
       <ReplyTemplatesManager />
-    </main>
+    </div>
   );
 }

@@ -50,7 +50,7 @@ export default function TaxReturns() {
   const sortedReturns = [...returns].sort((a, b) => b.tax_year - a.tax_year);
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
         title="Tax Returns"
         actions={
@@ -157,6 +157,6 @@ export default function TaxReturns() {
         </div>
       )}
 
-    </main>
+    </div>
   );
 }

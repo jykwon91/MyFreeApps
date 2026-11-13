@@ -10,7 +10,7 @@ interface DashboardLoadErrorProps {
 /** Shown when the board fails to load, so a failure is never mistaken for an empty board. */
 export default function DashboardLoadError({ onRetry, isRetrying }: DashboardLoadErrorProps) {
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <div role="alert">
         <EmptyState
           icon={<AlertTriangle className="w-12 h-12" />}
@@ -19,6 +19,6 @@ export default function DashboardLoadError({ onRetry, isRetrying }: DashboardLoa
           action={{ label: MESSAGES.retry, onClick: onRetry, loading: isRetrying }}
         />
       </div>
-    </main>
+    </div>
   );
 }

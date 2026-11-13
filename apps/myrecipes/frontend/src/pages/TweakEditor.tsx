@@ -22,7 +22,7 @@ export default function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
 
   if (isLoading) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <EditorHeader
           backTo={`/recipes/${recipeId}`}
           backLabel="Back to recipe"
@@ -33,20 +33,20 @@ export default function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-48 w-full" />
         </div>
-      </main>
+      </div>
     );
   }
 
   if (isError || !data || !data.latest_version) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <EmptyState
           icon={<ChefHat className="w-12 h-12 text-destructive" />}
           heading="Recipe not found"
           body="This recipe doesn't exist or has no version to tweak."
           action={{ label: "Back to recipes", onClick: onMissing }}
         />
-      </main>
+      </div>
     );
   }
 
@@ -56,7 +56,7 @@ export default function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
   // show a clear message with a way back to the recipe instead.
   if (!data.is_owner) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <EditorHeader
           backTo={`/recipes/${recipeId}`}
           backLabel="Back to recipe"
@@ -71,12 +71,12 @@ export default function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
             onClick: () => navigate(`/recipes/${recipeId}`),
           }}
         />
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <EditorHeader
         backTo={`/recipes/${recipeId}`}
         backLabel="Back to recipe"
@@ -88,6 +88,6 @@ export default function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
         recipeId={recipeId}
         baseVersion={data.latest_version}
       />
-    </main>
+    </div>
   );
 }

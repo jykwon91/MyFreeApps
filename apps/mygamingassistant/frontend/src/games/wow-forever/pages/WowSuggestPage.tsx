@@ -42,7 +42,7 @@ export default function WowSuggestPage() {
   }, [submit]);
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <WowPageHeader
         title={SUGGEST_COPY.title}
         subtitle={SUGGEST_COPY.subtitle}
@@ -61,6 +61,6 @@ export default function WowSuggestPage() {
         pinned={pinned}
         onWriteIdea={writeIdea}
       />
-    </main>
+    </div>
   );
 }

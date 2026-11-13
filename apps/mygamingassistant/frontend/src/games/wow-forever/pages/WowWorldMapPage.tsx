@@ -130,7 +130,7 @@ export default function WowWorldMapPage() {
   const showMap = () => document.getElementById(MAP_PANEL_ID)?.scrollIntoView({ block: "start" });
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-7xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-7xl">
       <WowPageHeader
         title="World Map"
         subtitle="Find the nearest trainer, flight master, inn, bank, quest or dungeon — and how to get there."
@@ -269,6 +269,6 @@ export default function WowWorldMapPage() {
           {canImport && <CaptureImport data={data} />}
         </>
       )}
-    </main>
+    </div>
   );
 }

@@ -71,7 +71,7 @@ export default function Discover() {
   const hasSources = (sources?.length ?? 0) > 0;
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Discovery</h1>
@@ -112,6 +112,6 @@ export default function Discover() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
       />
-    </main>
+    </div>
   );
 }

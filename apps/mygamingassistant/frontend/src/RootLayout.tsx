@@ -237,13 +237,18 @@ export default function RootLayout() {
 
   // Compact mode strips the shell entirely so the inner UI fills the viewport
   // (designed for a second-monitor window). Auth is not enforced here — the
-  // inner routes use ``<AuthRequired>`` for their own gating.
+  // inner routes use ``<AuthRequired>`` for their own gating. Pages never render
+  // their own <main>, so this bare frame supplies the page's one main landmark.
+  // body is overflow:hidden and #root is 100% tall (index.css), so the frame
+  // scrolls itself, as the shells' <main> does.
   if (isCompact) {
     return (
       <>
         <ScrollRestoration />
         <StepUpModal />
-        <Outlet />
+        <main className="h-full overflow-y-auto">
+          <Outlet />
+        </main>
       </>
     );
   }

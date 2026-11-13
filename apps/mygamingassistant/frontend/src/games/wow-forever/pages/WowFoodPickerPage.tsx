@@ -38,7 +38,7 @@ export default function WowFoodPickerPage() {
   else if (result) status = "Nothing fits yet.";
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <WowPageHeader
         title="What should I eat?"
         subtitle="The best food to cook for your level, class and what you're doing."
@@ -70,6 +70,6 @@ export default function WowFoodPickerPage() {
           <FoodDataNote weightsLabel={result.weights.label} />
         </div>
       )}
-    </main>
+    </div>
   );
 }

@@ -188,7 +188,7 @@ export default function Documents() {
   const failedDocs = documents.filter((d) => d.status === "failed");
 
   return (
-    <main className="p-4 sm:p-8 space-y-4 md:h-screen md:flex md:flex-col md:overflow-hidden">
+    <div className="p-4 sm:p-8 space-y-4 md:h-screen md:flex md:flex-col md:overflow-hidden">
       <SectionHeader title="Documents" />
 
       {!infoDismissed && (
@@ -319,6 +319,6 @@ export default function Documents() {
           onClose={() => setViewingDocId(null)}
         />
       )}
-    </main>
+    </div>
   );
 }

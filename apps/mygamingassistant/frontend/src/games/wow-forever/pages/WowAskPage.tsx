@@ -29,9 +29,9 @@ export default function WowAskPage() {
   }, [params, setParams]);
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <WowPageHeader title={ASK_COPY.title} subtitle={ASK_COPY.subtitle} backTo="/wow-forever" backLabel="Back to WoW Forever" />
       <AskPanel initialQuestion={initialQuestion} />
-    </main>
+    </div>
   );
 }

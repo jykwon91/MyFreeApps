@@ -89,16 +89,16 @@ export default function Applications() {
 
   if (list.isLoading) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <ApplicationsSkeleton />
-      </main>
+      </div>
     );
   }
 
   if (list.loadError !== undefined) {
     const { loadError } = list;
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <EmptyState
           icon={<FilePlus className="w-12 h-12 text-destructive" />}
           heading="Couldn't load applications"
@@ -108,7 +108,7 @@ export default function Applications() {
               : "Try refreshing the page."
           }
         />
-      </main>
+      </div>
     );
   }
 
@@ -117,21 +117,21 @@ export default function Applications() {
   if (items.length === 0 && !list.isSorting) {
     return (
       <>
-        <main className="p-4 sm:p-8 space-y-6">
+        <div className="p-4 sm:p-8 space-y-6">
           <EmptyState
             icon={<FilePlus className="w-12 h-12" />}
             heading={copy.heading}
             body={copy.body}
             action={{ label: copy.actionLabel, onClick: handleAddApplication }}
           />
-        </main>
+        </div>
         <AddApplicationDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       </>
     );
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Applications</h1>
         <button
@@ -166,6 +166,6 @@ export default function Applications() {
         onLoadMore={list.loadMore}
         messages={APPLICATIONS_LIST_MESSAGES}
       />
-    </main>
+    </div>
   );
 }

@@ -8,7 +8,7 @@ import { useDocumentTitle } from "@/games/wow-forever/hooks/useDocumentTitle";
 export default function WowServerStatusPage() {
   useDocumentTitle("Server status · WoW Forever");
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader
         title="Server status"
         subtitle="Is the realm up, how has it been lately, and what to do when you can't log in."
@@ -18,6 +18,6 @@ export default function WowServerStatusPage() {
       <WowServerStatusSection historyLink={false} />
       <ServerStatusHistorySection />
       <LoginErrorHelp />
-    </main>
+    </div>
   );
 }

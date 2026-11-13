@@ -100,35 +100,35 @@ export default function TaxReturnDetail() {
 
   if (returnMode === "loading" || (returnMode === "content" && sectionsPending)) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <TaxReturnSkeleton />
-      </main>
+      </div>
     );
   }
 
   if (!taxReturn && isNotFound(returnQuery.error)) {
     return (
-      <main className="p-4 sm:p-8">
+      <div className="p-4 sm:p-8">
         <div className="text-center py-16 text-muted-foreground">
           <p className="text-lg font-medium">I couldn't find that tax return.</p>
           <Button variant="link" onClick={() => navigate("/tax-returns")} className="mt-2">
             Back to Tax Returns
           </Button>
         </div>
-      </main>
+      </div>
     );
   }
 
   if (!taxReturn) {
     return (
-      <main className="p-4 sm:p-8">
+      <div className="p-4 sm:p-8">
         {backButton}
         <LoadErrorAlert
           message="I couldn't load this tax return. Want me to try again?"
           isRetrying={returnQuery.isFetching}
           onRetry={() => returnQuery.refetch()}
         />
-      </main>
+      </div>
     );
   }
 
@@ -138,7 +138,7 @@ export default function TaxReturnDetail() {
   const formSummaries = summarizeForms(formsOverview ?? [], validationResults);
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <div>
         {backButton}
         {returnQuery.error ? (
@@ -274,6 +274,6 @@ export default function TaxReturnDetail() {
         </>
       )}
 
-    </main>
+    </div>
   );
 }

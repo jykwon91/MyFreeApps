@@ -133,7 +133,7 @@ export default function LeaseNew() {
     hasTemplate && !!resolvedApplicantId && applicantMode === "loading";
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl" data-testid="lease-new-page">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl" data-testid="lease-new-page">
       <Link
         to="/leases"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground min-h-[44px]"
@@ -258,6 +258,6 @@ export default function LeaseNew() {
           />
         </section>
       ) : null}
-    </main>
+    </div>
   );
 }

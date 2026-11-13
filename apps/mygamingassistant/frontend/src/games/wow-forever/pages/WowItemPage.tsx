@@ -22,7 +22,7 @@ export default function WowItemPage() {
   const back = backFromState(location.state) ?? DEFAULT_ITEM_BACK;
 
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       {state.status === "loading" ? <ItemPageSkeleton /> : null}
       {state.status === "error" ? (
         <LoadErrorRetry message="Couldn't load this item." onRetry={state.retry} retrying={state.retrying} />
@@ -38,6 +38,6 @@ export default function WowItemPage() {
           <ItemPageFootnote faction={faction} clientBuild={state.result.page.clientBuild} />
         </>
       ) : null}
-    </main>
+    </div>
   );
 }

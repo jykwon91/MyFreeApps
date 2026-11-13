@@ -199,13 +199,14 @@ Files to mirror:
   with `.dark`) and avoid handcrafted `dark:bg-...` overrides. Reach for
   explicit `dark:` only when the token system can't express the variant
   (rare — usually a sign the token system needs another variable).
-- **Page wrapper semantic + responsive padding:** every authenticated
-  page in MBK uses `<main className="p-4 sm:p-8 space-y-6 ...">` (not
-  `<div className="p-6 ...">`). The `sm:p-8` doubles the padding on
-  larger viewports, which makes the page feel less cramped on desktop;
-  `p-4` keeps mobile dense. Use `<main>` semantic — there should be
-  exactly one main landmark per route. Loaded / loading / error / empty
-  states all share the same wrapper element so the layout doesn't shift.
+- **Page wrapper + responsive padding:** every authenticated page uses
+  `<div className="p-4 sm:p-8 space-y-6 ...">` as its root. The `sm:p-8`
+  doubles the padding on larger viewports, which makes the page feel less
+  cramped on desktop; `p-4` keeps mobile dense. Don't render `<main>`:
+  AppShell already wraps the route in the page's single main landmark, and
+  `test_single_main_landmark.py` fails CI on a page-level `<main>`. Loaded /
+  loading / error / empty states all share the same wrapper element so the
+  layout doesn't shift.
 - `RootLayout.tsx` consumes `@platform/ui`'s `AppShell` — sticky header
   is the responsibility of the shell, not the route.
 

@@ -68,7 +68,7 @@ export default function UtilityPlans() {
     // Wider than the app's usual `max-w-3xl`: this page puts a current plan
     // beside a stat-grid comparison, and at 3xl the grid collapses to two
     // columns and the rail drops below the offers it exists to anchor.
-    <main className="p-4 sm:p-8 space-y-6 max-w-5xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-5xl">
       <SectionHeader
         title="Utility Plans"
         subtitle="Track what each property pays for power and gas, get warned before a fixed rate lapses, and check the live market for a better rate."
@@ -155,6 +155,6 @@ export default function UtilityPlans() {
         onConfirm={() => void handleConfirmDelete()}
         onCancel={() => setPlanPendingDelete(null)}
       />
-    </main>
+    </div>
   );
 }

@@ -27,7 +27,7 @@ const SAFE_AREA_PADDING: CSSProperties = {
  */
 export default function DiscordActivityShell({ children }: DiscordActivityShellProps) {
   // Pages scroll inside this frame rather than the window: open each new page at its top.
-  const contentRef = useScrollTopOnNavigate<HTMLDivElement>();
+  const contentRef = useScrollTopOnNavigate<HTMLElement>();
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground" style={SAFE_AREA_PADDING}>
@@ -49,9 +49,9 @@ export default function DiscordActivityShell({ children }: DiscordActivityShellP
           <OpenInBrowserButton />
         </div>
       </header>
-      <div ref={contentRef} data-testid="activity-content" className="min-h-0 flex-1 overflow-y-auto">
+      <main ref={contentRef} data-testid="activity-content" className="min-h-0 flex-1 overflow-y-auto">
         {children}
-      </div>
+      </main>
     </div>
   );
 }

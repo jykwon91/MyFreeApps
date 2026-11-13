@@ -40,7 +40,7 @@ export default function TaxReport() {
   }, [year, showError]);
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
         title="Tax Report"
         actions={
@@ -210,6 +210,6 @@ export default function TaxReport() {
           )}
         </div>
       ) : null}
-    </main>
+    </div>
   );
 }

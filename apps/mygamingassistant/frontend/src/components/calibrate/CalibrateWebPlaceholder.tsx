@@ -10,7 +10,7 @@ import { ArrowLeft, Crosshair, Settings as SettingsIcon } from "lucide-react";
 
 export default function CalibrateWebPlaceholder() {
   return (
-    <main className="p-8 max-w-2xl space-y-4">
+    <div className="p-8 max-w-2xl space-y-4">
       <Link
         to="/"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
@@ -35,6 +35,6 @@ export default function CalibrateWebPlaceholder() {
         <SettingsIcon className="w-4 h-4" />
         View live mode setup
       </Link>
-    </main>
+    </div>
   );
 }

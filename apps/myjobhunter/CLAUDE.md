@@ -243,7 +243,8 @@ and copy its pattern**:
   tripwire)
 - Theme bootstrap script in `frontend/index.html`, AppShell layout in
   `frontend/src/RootLayout.tsx`, semantic page wrappers in
-  `frontend/src/pages/*.tsx` (`<main className="p-4 sm:p-8 space-y-6 ...">`)
+  `frontend/src/pages/*.tsx` (`<div className="p-4 sm:p-8 space-y-6 ...">`; AppShell
+  owns the page's single `<main>`)
 
 **Divergence requires explicit justification.** Acceptable divergences:
 

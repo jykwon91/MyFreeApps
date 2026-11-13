@@ -24,7 +24,7 @@ export default function LeaseTemplates() {
   });
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
         title="Lease Templates"
         subtitle="Reusable lease bundles. Upload once, generate filled leases per applicant."
@@ -58,6 +58,6 @@ export default function LeaseTemplates() {
           })
         }
       />
-    </main>
+    </div>
   );
 }

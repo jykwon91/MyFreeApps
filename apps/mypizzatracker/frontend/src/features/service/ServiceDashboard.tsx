@@ -67,24 +67,24 @@ export function ServiceDashboard({
 
   if (isDropsError) {
     return (
-      <main className="p-4 sm:p-8">
+      <div className="p-4 sm:p-8">
         <EmptyState
           heading="Could not load drops"
           body={extractErrorMessage(dropsError) || "Please try again."}
           action={{ label: "Retry", onClick: () => refetchDrops() }}
         />
-      </main>
+      </div>
     );
   }
 
   if (!activeDrops || activeDrops.length === 0) {
     return (
-      <main className="p-4 sm:p-8">
+      <div className="p-4 sm:p-8">
         <EmptyState
           heading="No active drop"
           body="Activate a drop on the Drops page to start service."
         />
-      </main>
+      </div>
     );
   }
 

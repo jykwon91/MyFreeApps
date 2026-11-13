@@ -14,14 +14,14 @@ export default function DashboardSkeleton() {
 
   if (isMobile) {
     return (
-      <main className="p-4 space-y-6" aria-label="Loading dashboard" aria-busy="true">
+      <div className="p-4 space-y-6" aria-label="Loading dashboard" aria-busy="true">
         <DashboardMobileSkeleton />
-      </main>
+      </div>
     );
   }
 
   return (
-    <main
+    <div
       className="p-4 sm:p-8 flex flex-col h-[calc(100vh-4rem)] min-h-0"
       aria-label="Loading dashboard"
       aria-busy="true"
@@ -38,6 +38,6 @@ export default function DashboardSkeleton() {
       <div className="mt-4 rounded-lg border bg-muted/30 px-3 py-2">
         <Skeleton className="h-5 w-24" />
       </div>
-    </main>
+    </div>
   );
 }

@@ -31,20 +31,20 @@ export default function WowFoodDetailPage() {
 
   if (!food) {
     return (
-      <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+      <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
         <WowPageHeader title="Food not found" subtitle="" backTo={backTo} backLabel="Back to What should I eat?" />
         <EmptyStateNote message="There's no food with that link. Pick one from What should I eat?" />
         <Link to={backTo} className={DETAIL_LINK}>
           Back to What should I eat?
         </Link>
-      </main>
+      </div>
     );
   }
 
   const sources = recipeSourcesFor(food.id);
   const learnAt = food.learn.skill ?? TRAINER_SKILLS[String(food.id)] ?? null;
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader
         title={food.name}
         icon={<ItemIcon itemId={food.id} size={32} />}
@@ -83,6 +83,6 @@ export default function WowFoodDetailPage() {
           <ProvenanceBadge provenance={PROVENANCE.client} />
         </p>
       </aside>
-    </main>
+    </div>
   );
 }

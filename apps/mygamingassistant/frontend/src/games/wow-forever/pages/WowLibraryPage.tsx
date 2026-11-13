@@ -15,7 +15,7 @@ export default function WowLibraryPage() {
   const state = useLibrary();
   const data = state.status === LIBRARY_STATUS.ready ? state.data : null;
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader
         title="Library books"
         subtitle="The books hidden around the world for the library: every book in the game files, the reward for turning them in and a list to tick off."
@@ -34,6 +34,6 @@ export default function WowLibraryPage() {
         </>
       ) : null}
       {state.status === LIBRARY_STATUS.loading || state.status === LIBRARY_STATUS.idle ? <LibrarySkeleton /> : null}
-    </main>
+    </div>
   );
 }

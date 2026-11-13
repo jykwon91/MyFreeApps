@@ -12,7 +12,7 @@ export default function WowLegacyPage() {
   useDocumentTitle("Legacy planner · WoW Forever");
   const state = useLegacy();
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-6xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-6xl">
       <WowPageHeader
         title="Legacy planner"
         subtitle="Plan where a character spends its Legacy points, tick off the challenges that earn them, and see what your account's Legacy rank unlocks."
@@ -25,6 +25,6 @@ export default function WowLegacyPage() {
       ) : null}
       {state.status === LEGACY_STATUS.ready ? <LegacyPlannerView data={state.data} /> : null}
       {state.status === LEGACY_STATUS.loading ? <LegacySkeleton /> : null}
-    </main>
+    </div>
   );
 }

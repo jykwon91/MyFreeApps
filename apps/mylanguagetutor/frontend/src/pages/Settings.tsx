@@ -4,7 +4,7 @@ import { Card } from "@platform/ui";
 
 export default function Settings() {
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-2xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-2xl">
       <div>
         <h1 className="text-xl font-semibold">Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -37,6 +37,6 @@ export default function Settings() {
           Add app-specific settings here.
         </p>
       </Card>
-    </main>
+    </div>
   );
 }

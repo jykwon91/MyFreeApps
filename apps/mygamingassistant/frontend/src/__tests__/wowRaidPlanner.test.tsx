@@ -79,7 +79,7 @@ describe("the group planner: reading", () => {
   it("shows the planner's shape while the plan loads, with no loading text", () => {
     setQuery({ isFetching: true });
     renderPlanner();
-    expect(screen.getByRole("main")).toHaveAttribute("aria-busy", "true");
+    expect(document.body.querySelector('[aria-busy="true"]')).toBeInTheDocument();
     expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
   });
 

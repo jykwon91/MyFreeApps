@@ -24,7 +24,7 @@ export default function WowQuestPage() {
   useDocumentTitle(title ? `${title} · WoW Forever` : "Quest · WoW Forever");
 
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       {state.status === "loading" ? (
         <>
           <WowPageHeader title="Quest" subtitle="" backTo={QUESTS_PATH} backLabel={BACK_LABEL} />
@@ -56,6 +56,6 @@ export default function WowQuestPage() {
           <QuestDetailView quest={state.quest} dungeonSlug={state.dungeonSlug} />
         </>
       ) : null}
-    </main>
+    </div>
   );
 }

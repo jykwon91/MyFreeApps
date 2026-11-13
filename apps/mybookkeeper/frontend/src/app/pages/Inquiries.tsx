@@ -140,7 +140,7 @@ export default function Inquiries() {
   });
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <SectionHeader
         title="Inquiries"
         subtitle="Travel nurses and other guests reaching out about your rooms."
@@ -194,6 +194,6 @@ export default function Inquiries() {
           onClose={() => setShowForm(false)}
         />
       ) : null}
-    </main>
+    </div>
   );
 }

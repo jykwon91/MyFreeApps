@@ -287,7 +287,7 @@ export default function MapPage() {
 
   if (mapError || !mapDetail) {
     return (
-      <main className="p-4 sm:p-8">
+      <div className="p-4 sm:p-8">
         <button
           type="button"
           onClick={() => navigate(`/${gameSlug}`)}
@@ -299,7 +299,7 @@ export default function MapPage() {
         <div className="mt-4">
           <LoadErrorRetry message="Couldn't load this map." retrying={mapFetching} onRetry={refetchMapDetail} />
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -415,7 +415,7 @@ export default function MapPage() {
           </aside>
 
           {/* Main board column — scrolls as part of AppShell's <main> */}
-          <main className="flex-1 min-w-0 p-4 lg:p-6">
+          <div className="flex-1 min-w-0 p-4 lg:p-6">
 
             {/* Active zone-filter chip — only when a zone is selected.
                 Click the × to clear; clicking the active zone polygon on
@@ -478,7 +478,7 @@ export default function MapPage() {
                 </Link>
               </div>
             )}
-          </main>
+          </div>
         </div>
       </div>
 

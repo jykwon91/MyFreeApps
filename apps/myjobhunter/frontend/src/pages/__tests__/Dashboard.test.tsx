@@ -84,9 +84,9 @@ describe("Dashboard page", () => {
     expect(screen.getByTestId("board")).toHaveAttribute("data-stale", "false");
   });
 
-  it("keeps a single main landmark in the error state", () => {
+  it("leaves the main landmark to the app shell in the error state", () => {
     query.mockReturnValue(result({ isError: true }));
     renderPage();
-    expect(screen.getAllByRole("main")).toHaveLength(1);
+    expect(screen.queryAllByRole("main")).toHaveLength(0);
   });
 });

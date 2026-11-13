@@ -5,7 +5,7 @@ import DesktopBadge from "@/components/desktop/DesktopBadge";
 
 export default function Settings() {
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-2xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-2xl">
       <div>
         <h1 className="text-xl font-semibold">Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -42,6 +42,6 @@ export default function Settings() {
       {/* Desktop build smoke test — renders nothing in the web build,
           renders a version badge under Tauri. See PR 7 of the MGA plan. */}
       <DesktopBadge />
-    </main>
+    </div>
   );
 }

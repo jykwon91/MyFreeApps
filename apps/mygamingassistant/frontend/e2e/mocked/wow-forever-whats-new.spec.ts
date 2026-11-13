@@ -87,7 +87,7 @@ test("375px: the hub fits the screen and the bottom nav carries the dots", async
   const bottomNav = page.getByRole("navigation", { name: "Mobile navigation" });
   await expect(bottomNav.getByRole("link", { name: "Best gear (new since your last visit)" })).toBeVisible();
   const overflow = await page.evaluate(() => {
-    const main = document.querySelector("main main") ?? document.querySelector("main");
+    const main = document.querySelector("main");
     return {
       doc: document.documentElement.scrollWidth - window.innerWidth,
       main: main ? main.scrollWidth - main.clientWidth : 0,

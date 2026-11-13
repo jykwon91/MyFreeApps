@@ -17,10 +17,10 @@ export default function RecipeEditor() {
 
   if (!isTweak) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <EditorHeader backTo="/" backLabel="Recipes" title="New recipe" />
         <RecipeEditorForm mode="create" />
-      </main>
+      </div>
     );
   }
 

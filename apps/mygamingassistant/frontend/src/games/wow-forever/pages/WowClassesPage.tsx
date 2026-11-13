@@ -11,7 +11,7 @@ const CLASS_DETAILS = (classDetailsRaw as unknown as ClassDetailsFile).classes;
 export default function WowClassesPage() {
   useDocumentTitle("Classes · WoW Forever");
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <WowPageHeader
         title="Classes"
         subtitle="Pick a class to see its races, spellbook, talents, macros and what Forever changed."
@@ -31,6 +31,6 @@ export default function WowClassesPage() {
           })}
         </ul>
       </section>
-    </main>
+    </div>
   );
 }

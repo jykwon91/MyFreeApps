@@ -23,7 +23,7 @@ export default function MapGrid() {
 
   if (isLoading) {
     return (
-      <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+      <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -44,13 +44,13 @@ export default function MapGrid() {
             />
           ))}
         </div>
-      </main>
+      </div>
     );
   }
 
   if (isError || !maps) {
     return (
-      <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+      <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -63,13 +63,13 @@ export default function MapGrid() {
           <h1 className="text-2xl font-semibold">{gameTitle}</h1>
         </div>
         <LoadErrorRetry message="Couldn't load the maps." retrying={isFetching} onRetry={refetch} />
-      </main>
+      </div>
     );
   }
 
   if (maps.length === 0) {
     return (
-      <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+      <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -85,12 +85,12 @@ export default function MapGrid() {
           <Map className="h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-muted-foreground">No maps available for this game.</p>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -107,6 +107,6 @@ export default function MapGrid() {
           <MapGridCard key={map.id} map={map} gameSlug={gameSlug ?? ""} />
         ))}
       </div>
-    </main>
+    </div>
   );
 }

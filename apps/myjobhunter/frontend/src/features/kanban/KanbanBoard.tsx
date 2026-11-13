@@ -84,7 +84,7 @@ export default function KanbanBoard({ items, onSelectCard, isStale = false }: Ka
 
   if (isMobile) {
     return (
-      <main className="p-4 space-y-6">
+      <div className="p-4 space-y-6">
         {isStale ? <DashboardStaleBanner /> : null}
         <KanbanMobileList
           itemsByColumn={itemsByColumn}
@@ -95,14 +95,14 @@ export default function KanbanBoard({ items, onSelectCard, isStale = false }: Ka
           focusId={focusId}
           onFocused={clearFocus}
         />
-      </main>
+      </div>
     );
   }
 
   const activeItem = activeId ? itemById.get(activeId) ?? null : null;
 
   return (
-    <main className="p-4 sm:p-8 flex flex-col h-[calc(100vh-4rem)] min-h-0">
+    <div className="p-4 sm:p-8 flex flex-col h-[calc(100vh-4rem)] min-h-0">
       {isStale ? <DashboardStaleBanner /> : null}
       <header className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Pipeline</h1>
@@ -147,6 +147,6 @@ export default function KanbanBoard({ items, onSelectCard, isStale = false }: Ka
           ) : null}
         </DragOverlay>
       </DndContext>
-    </main>
+    </div>
   );
 }

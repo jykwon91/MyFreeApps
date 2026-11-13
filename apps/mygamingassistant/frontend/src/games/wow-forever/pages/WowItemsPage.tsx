@@ -12,7 +12,7 @@ export default function WowItemsPage() {
   useDocumentTitle("Items · WoW Forever");
   const state = useItemIndex();
   return (
-    <main className="p-4 sm:p-8 space-y-4 max-w-5xl">
+    <div className="p-4 sm:p-8 space-y-4 max-w-5xl">
       <WowPageHeader
         title="Items"
         subtitle="Search and filter the gear the Forever game files have shown so far, then open an item to see its tooltip and how to get it."
@@ -25,6 +25,6 @@ export default function WowItemsPage() {
       ) : null}
       {state.status === ITEM_INDEX_STATUS.ready ? <ItemBrowser index={state.data} /> : null}
       {state.status === ITEM_INDEX_STATUS.loading ? <ItemBrowserSkeleton /> : null}
-    </main>
+    </div>
   );
 }

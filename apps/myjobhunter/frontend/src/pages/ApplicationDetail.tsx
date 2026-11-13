@@ -59,7 +59,7 @@ export default function ApplicationDetail() {
         ? (error as { status: number }).status
         : null;
     return (
-      <main className="p-4 sm:p-8 flex flex-col items-center text-center gap-4 py-20">
+      <div className="p-4 sm:p-8 flex flex-col items-center text-center gap-4 py-20">
         <p className="text-4xl font-bold text-muted-foreground">{errorStatus ?? 404}</p>
         <h1 className="text-xl font-semibold">
           {errorStatus === 404 || errorStatus === null
@@ -73,7 +73,7 @@ export default function ApplicationDetail() {
           <ChevronLeft className="w-4 h-4" />
           Back to dashboard
         </Link>
-      </main>
+      </div>
     );
   }
 
@@ -124,7 +124,7 @@ export default function ApplicationDetail() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <Link
         to="/dashboard"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
@@ -197,6 +197,6 @@ export default function ApplicationDetail() {
         onConfirm={handleDelete}
         onCancel={() => setConfirmDeleteOpen(false)}
       />
-    </main>
+    </div>
   );
 }

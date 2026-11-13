@@ -201,7 +201,7 @@ export default function LiveCs2() {
   const hasAnyMap = effectiveMapSlug.length > 0;
 
   return (
-    <main className="h-screen w-screen overflow-hidden bg-background text-foreground flex flex-col">
+    <div className="h-screen w-screen overflow-hidden bg-background text-foreground flex flex-col">
       <LiveTopBar
         ready={ready}
         running={status?.running ?? false}
@@ -241,7 +241,7 @@ export default function LiveCs2() {
           {status?.running ? `Receiver :${status.port}` : "Receiver not running"}
         </span>
       </footer>
-    </main>
+    </div>
   );
 }
 
@@ -392,7 +392,7 @@ function LiveEmptyState({ ready, running, payloadsReceived }: LiveEmptyStateProp
 
 function LiveCs2WebPlaceholder() {
   return (
-    <main className="p-8 max-w-2xl space-y-4">
+    <div className="p-8 max-w-2xl space-y-4">
       <Link
         to="/"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
@@ -420,6 +420,6 @@ function LiveCs2WebPlaceholder() {
         <SettingsIcon className="w-4 h-4" />
         View setup instructions
       </Link>
-    </main>
+    </div>
   );
 }

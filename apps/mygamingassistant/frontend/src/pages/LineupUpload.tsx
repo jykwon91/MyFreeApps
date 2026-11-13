@@ -274,7 +274,7 @@ export default function LineupUpload() {
   const canSubmit = !isCreating && !isUploadBusy && !!standKey && !!aimKey;
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <h1 className="text-2xl font-semibold">Add Lineup</h1>
 
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
@@ -496,6 +496,6 @@ export default function LineupUpload() {
           </button>
         </div>
       </form>
-    </main>
+    </div>
   );
 }

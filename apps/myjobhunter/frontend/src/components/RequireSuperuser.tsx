@@ -22,10 +22,10 @@ export default function RequireSuperuser({ children }: RequireSuperuserProps) {
 
   if (isLoading) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <Skeleton className="h-7 w-48" />
         <Skeleton className="h-4 w-72" />
-      </main>
+      </div>
     );
   }
 

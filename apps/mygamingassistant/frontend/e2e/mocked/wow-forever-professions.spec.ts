@@ -11,7 +11,7 @@ import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTa
 
 /** The page's text without the recipe vendors' Classic list prices (the vendor list and route "Buy … from …" lines) — what's left must carry no auction price. */
 function textWithoutVendorPrices(page: Page): Promise<string> {
-  return page.locator("main").last().evaluate((main) => {
+  return page.getByRole("main").evaluate((main) => {
     const copy = main.cloneNode(true) as HTMLElement;
     copy.querySelectorAll('#vendors, [data-testid="recipe-buy-line"]').forEach((n) => n.remove());
     return copy.textContent ?? "";

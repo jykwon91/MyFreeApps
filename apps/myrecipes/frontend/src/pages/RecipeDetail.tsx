@@ -89,22 +89,22 @@ export default function RecipeDetail() {
 
   if (recipeQuery.isLoading) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <RecipeDetailSkeleton />
-      </main>
+      </div>
     );
   }
 
   if (recipeQuery.isError || !recipeQuery.data) {
     return (
-      <main className="p-4 sm:p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <EmptyState
           icon={<ChefHat className="w-12 h-12 text-destructive" />}
           heading="Recipe not found"
           body="This recipe doesn't exist. It may have been deleted."
           action={{ label: "Back to recipes", onClick: () => navigate("/") }}
         />
-      </main>
+      </div>
     );
   }
 
@@ -112,7 +112,7 @@ export default function RecipeDetail() {
   const versions = versionsQuery.data ?? [];
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
+    <div className="p-4 sm:p-8 space-y-6">
       <div>
         <Link
           to="/"
@@ -253,6 +253,6 @@ export default function RecipeDetail() {
           onCancel={() => setDeleteOpen(false)}
         />
       )}
-    </main>
+    </div>
   );
 }

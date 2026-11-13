@@ -21,7 +21,7 @@ export default function WowComparePage() {
   const sameAs = useMemo(() => sameItemPositions(items), [items]);
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-6xl">
+    <div className="p-4 sm:p-8 space-y-6 max-w-6xl">
       <WowPageHeader
         title="Item Compare"
         subtitle="Search, paste or screenshot two or more items to see which is better for your class and spec."
@@ -53,6 +53,6 @@ export default function WowComparePage() {
       ) : null}
       <CompareResultPanel result={result} weightsLabel={describeWeights(settings, result.weightSource)} />
       <ClientDataFooter />
-    </main>
+    </div>
   );
 }
