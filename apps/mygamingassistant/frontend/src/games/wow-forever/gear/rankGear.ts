@@ -48,7 +48,7 @@ export function compareRanked(a: Candidate, b: Candidate): number {
   );
 }
 
-export function scorer(settings: GearSettings, leveling: boolean): (item: ClientItem, build: string) => number {
+export function scorer(settings: Pick<GearSettings, "classId" | "specId">, leveling: boolean): (item: ClientItem, build: string) => number {
   const specId = leveling ? LEVELING_SPEC_ID : settings.specId;
   const { weights } = resolveWeights({
     classId: settings.classId,

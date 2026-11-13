@@ -16,4 +16,11 @@ export const ITEM_COMPARE_COPY = {
   noChanges: "No stat changes",
   equippedUnknown: "Stats not known: this item isn't in the game files with fixed stats.",
   candidateUnknown: "Its stats depend on its random enchantment, so it can't be compared.",
+  verdictWords: { upgrade: "Upgrade", downgrade: "Downgrade", same: "About the same" },
+  statsOnly: "(by stats; procs, on-use and damage not counted)",
+  bothHands: "Against your main hand and off hand together",
+  scoredFor: (label: string) => `Scored for ${label}`,
+  scoredForLeveling: (label: string) => `Scored for ${label} leveling (the spec counts at 60)`,
+  cantUse: (level: number, className: string) => `Your level ${level} ${className} can't use this.`,
+  cantUseType: (level: number, className: string, itemType: string) => `Your level ${level} ${className} can't use this (${itemType}).`,
 } as const;

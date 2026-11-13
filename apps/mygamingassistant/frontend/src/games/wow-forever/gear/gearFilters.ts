@@ -1,5 +1,6 @@
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 import { CLASS_PROFICIENCIES } from "@/games/wow-forever/data/gear/classProficiencies";
+import { GEAR_SLOT_GROUPS } from "@/games/wow-forever/data/gear/gearSlotGroups";
 import type { ItemSlot } from "@/games/wow-forever/data/itemSlots";
 import type { ClientItem } from "@/games/wow-forever/types/clientItem";
 import type { GearSlotGroup } from "@/games/wow-forever/types/gearSlotGroup";
@@ -45,6 +46,17 @@ export function canEquip(item: ClientItem, group: GearSlotGroup, classId: WowCla
       // Neck, back, rings, trinkets, held in off hand: anyone.
       return true;
   }
+}
+
+/**
+ * Can the class wear this item anywhere at this level? Only a known "no" counts: an item whose
+ * type the game files don't give, or in a slot no slot card covers (relics, shirts, tabards), only
+ * fails when the item names other classes.
+ */
+export function canWear(item: ClientItem, classId: WowClassId, level: number): boolean {
+  const carded = item.slot !== "relic" && GEAR_SLOT_GROUPS.some((group) => group.slots.includes(item.slot));
+  if (item.itemType === null || !carded) return item.classes === null || item.classes.includes(classId);
+  return GEAR_SLOT_GROUPS.some((group) => canEquip(item, group, classId, level));
 }
 
 /** Does the class ever fill this card? (No two-hander for a Rogue, no ranged slot for a Paladin.) */
