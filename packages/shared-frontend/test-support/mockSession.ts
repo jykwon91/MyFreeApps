@@ -16,6 +16,7 @@ import type { Page } from "@playwright/test";
 import type { CurrentUser } from "@platform/core/types/user/current-user";
 import { DEFAULT_API_BASE } from "./constants/defaultApiBase";
 import { json } from "./mockResponse";
+import { unsignedJwt } from "./unsignedJwt";
 import type { ApiBaseOption } from "./types/ApiBaseOption";
 import type { ShellRoute } from "./types/ShellRoute";
 import type { SignedInShellOptions } from "./types/SignedInShellOptions";
@@ -41,13 +42,13 @@ function apiUrl(path: string, apiBase: string = DEFAULT_API_BASE): string {
  * the auth guard lets the page render, plus any `storage` entries given.
  */
 export async function plantAuth(page: Page, storage: Record<string, string> = {}): Promise<void> {
-  await page.addInitScript((entries) => {
-    const futureExp = Math.floor(Date.now() / 1000) + 3600;
-    const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-    const payload = btoa(JSON.stringify({ sub: "test-user", exp: futureExp }));
-    window.localStorage.setItem("token", `${header}.${payload}.fake-signature`);
-    for (const [key, value] of Object.entries(entries)) window.localStorage.setItem(key, value);
-  }, storage);
+  await page.addInitScript(
+    ({ token, entries }) => {
+      window.localStorage.setItem("token", token);
+      for (const [key, value] of Object.entries(entries)) window.localStorage.setItem(key, value);
+    },
+    { token: unsignedJwt(), entries: storage },
+  );
 }
 
 /**

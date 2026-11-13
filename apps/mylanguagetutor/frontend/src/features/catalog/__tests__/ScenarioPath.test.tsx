@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy";
@@ -7,6 +7,15 @@ import type { Language } from "@mylanguagetutor/api-client/types/catalog/languag
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 import type { Profile } from "@mylanguagetutor/api-client/types/tutor/profile";
 import type { UsageToday } from "@mylanguagetutor/api-client/types/tutor/usage-today";
+import {
+  CATALOG_HEADER,
+  CATALOG_HEADER_LINE,
+  CATALOG_TOUCH_ROW,
+  SCENARIO_CARD_BOX,
+  SCENARIO_LIST,
+  SCENARIO_SKELETON_ROWS,
+  TWO_TEXT_LINES,
+} from "@/constants/catalogLayout";
 import ScenarioPath from "@/features/catalog/ScenarioPath";
 
 const refetchLanguages = vi.fn();
@@ -56,8 +65,22 @@ describe("ScenarioPath", () => {
   it("shows a placeholder until the scenarios load", () => {
     scenarios = { data: undefined, isError: false };
     renderPath();
-    expect(screen.getByLabelText("Loading scenarios")).toHaveAttribute("aria-busy", "true");
+    const skeleton = screen.getByLabelText("Loading scenarios");
+    expect(skeleton).toHaveAttribute("aria-busy", "true");
     expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    // Its boxes are the loaded page's (catalogLayout), so nothing moves when the path arrives.
+    const [header, list] = Array.from(skeleton.children);
+    expect(header).toHaveClass(CATALOG_HEADER);
+    expect(header.children).toHaveLength(3);
+    const [, levelLine, pickLine] = Array.from(header.children);
+    expect(levelLine).toHaveClass(CATALOG_HEADER_LINE);
+    expect(levelLine.firstElementChild).toHaveClass(CATALOG_TOUCH_ROW);
+    // The pick line wraps on a phone and beside the sidebar, so two lines are held for it.
+    expect(pickLine).toHaveClass(TWO_TEXT_LINES);
+    expect(list).toHaveClass(SCENARIO_LIST);
+    const rows = within(list as HTMLElement).getAllByRole("listitem");
+    expect(rows).toHaveLength(SCENARIO_SKELETON_ROWS);
+    for (const row of rows) expect(row).toHaveClass(SCENARIO_CARD_BOX);
   });
 
   it("lists the scenarios for the learner's language, with their level and a way to change it", () => {

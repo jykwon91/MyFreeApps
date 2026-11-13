@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
+import { cn } from "@platform/ui";
+import { SCENARIO_CARD_BOX, SCENARIO_GOAL_GAP, TWO_TEXT_LINES } from "@/constants/catalogLayout";
 import { practicePath } from "@mylanguagetutor/api-client/utils/practicePath";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 
@@ -13,7 +15,7 @@ export default function ScenarioCard({ scenario }: ScenarioCardProps) {
     <li>
       <Link
         to={practicePath(scenario.slug)}
-        className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border bg-card p-4 hover:bg-muted"
+        className={cn("flex min-h-[44px] items-center justify-between gap-3 bg-card hover:bg-muted", SCENARIO_CARD_BOX)}
       >
         <span>
           <span className="flex items-baseline gap-2">
@@ -22,7 +24,7 @@ export default function ScenarioCard({ scenario }: ScenarioCardProps) {
             </span>
             <span className="font-medium">{scenario.title}</span>
           </span>
-          <span className="mt-1 block text-sm text-muted-foreground">{scenario.goal}</span>
+          <span className={cn("block text-sm text-muted-foreground", SCENARIO_GOAL_GAP, TWO_TEXT_LINES)}>{scenario.goal}</span>
         </span>
         <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
       </Link>

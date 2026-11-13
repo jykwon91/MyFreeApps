@@ -4,24 +4,27 @@ Issues discovered during development. New entries are appended; resolved entries
 are removed. Project policy is **log-only** (see `CLAUDE.md` -> Tech Debt Policy):
 fix only Critical items that block the current feature.
 
-**Open issues: 10 (Critical: 0 / High: 1 / Medium: 6 / Low: 3)**
+**Open issues: 10 (Critical: 0 / High: 0 / Medium: 7 / Low: 3)**
 
 ---
 
-## High
+## Medium
 
-### [Testing] No E2E coverage for the conversation loop
+### [Testing] No full-stack E2E run against the backend's fake Claude
 
 **Effort:** M
-**Location:** `apps/mylanguagetutor/frontend/` (a `test:e2e` script exists; no `e2e/` folder or CI job)
-**Problem:** onboarding -> scenarios -> practice -> streamed reply is covered by
-backend API tests (fake Claude) and frontend unit/component tests (mocked
-stream + speech), but no test drives the real browser flow end to end.
-**Recommendation:** add `e2e/playwright.config.ts` plus one spec using typed
-practice (speech APIs aren't scriptable), with a backend fake-Claude switch
-for test environments. Wire it into CI.
-
-## Medium
+**Location:** `apps/mylanguagetutor/frontend/e2e/`, `apps/mylanguagetutor/backend/tests/conftest.py` (`FakeClaude`)
+**Problem:** the browser flows (sign-in, onboarding, scenarios, typed practice,
+every turn refusal, account settings) are covered by the mocked Playwright suite
+in `e2e/mocked/` (CI job `frontend-layout-e2e`). Its stubs follow the backend's
+shapes by hand, so a contract change on one side only (an SSE payload, a
+refusal code, a schema field) can pass both suites. The scripted fake Anthropic
+client exists only as a pytest fixture, so no browser test can drive the real
+backend.
+**Recommendation:** add a test-only backend switch that serves `FakeClaude`
+instead of Anthropic, then an `e2e/playwright.config.ts` that starts the backend
+and runs a few typed-practice specs against it (start a session, stream a turn,
+one refusal), wired into CI.
 
 ### [Infra] The scaffolder has no multi-user variant
 

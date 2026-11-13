@@ -1,8 +1,17 @@
 import { Link } from "react-router-dom";
+import { cn } from "@platform/ui";
 import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy";
 import { useScenarioPath } from "@mylanguagetutor/api-client/hooks/useScenarioPath";
 import { levelLabel } from "@mylanguagetutor/api-client/utils/levelLabel";
 import { onboardingLevelPath } from "@mylanguagetutor/api-client/utils/onboardingLevelPath";
+import {
+  CATALOG_HEADER,
+  CATALOG_HEADER_LINE,
+  CATALOG_PAGE,
+  CATALOG_TOUCH_ROW,
+  SCENARIO_LIST,
+  TWO_TEXT_LINES,
+} from "@/constants/catalogLayout";
 import CatalogSkeleton from "@/features/catalog/CatalogSkeleton";
 import CatalogError from "@/features/catalog/CatalogError";
 import ScenarioCard from "@/features/catalog/ScenarioCard";
@@ -21,22 +30,22 @@ export default function ScenarioPath({ profile }: ScenarioPathProps) {
   if (!scenarios) return <CatalogSkeleton />;
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-1">
+    <div className={CATALOG_PAGE}>
+      <div className={CATALOG_HEADER}>
         <h1 className="text-2xl font-semibold">{`${CATALOG_COPY.practicePrefix} ${languageName}`}</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className={cn(CATALOG_HEADER_LINE, "text-muted-foreground")}>
           {`${CATALOG_COPY.levelPrefix} ${levelLabel(profile.level)}`} ·{" "}
           <Link
             to={onboardingLevelPath(profile.language_code)}
-            className="inline-flex min-h-[44px] items-center underline"
+            className={cn(CATALOG_TOUCH_ROW, "underline")}
           >
             {CATALOG_COPY.changeLevel}
           </Link>
         </p>
-        <p className="text-sm text-muted-foreground">{CATALOG_COPY.pickScenario}</p>
+        <p className={cn(CATALOG_HEADER_LINE, "text-muted-foreground", TWO_TEXT_LINES)}>{CATALOG_COPY.pickScenario}</p>
       </div>
       {isCapReached && <SessionBlockNotice block="daily_limit" />}
-      <ul className="space-y-3">
+      <ul className={SCENARIO_LIST}>
         {scenarios.map((scenario) => (
           <ScenarioCard key={scenario.slug} scenario={scenario} />
         ))}
