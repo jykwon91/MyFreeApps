@@ -209,8 +209,9 @@ All AI-facing UI (extraction feedback, status messages, error states) should fee
 - Returns 429 if exceeded
 
 **File size:**
-- 10MB max — configured in `core/config.py`
-- Returns 413 if exceeded
+- Caddy caps every request body at 30 MB (decimal, `max_size 30MB` in `docker/Caddyfile.docker`) and answers 413 with no body; the clients hold one file to 29 MB (`api-client/src/constants/requestBodyLimit.ts`, checked against the Caddyfile by `requestBodyLimit.test.ts`)
+- The backend's own `max_upload_size_bytes` (100 MiB, `core/config.py`) sits behind that cap
+- Caddy's `read_body` timeout is 2 minutes per server, so an upload slower than that is cut off
 
 **Claude extraction prompt:**
 - Code is source of truth in `services/extraction/prompts/base_prompt.py`
