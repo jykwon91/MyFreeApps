@@ -27,8 +27,8 @@ export default function SegmentedControl<Value extends string>({
         return (
           <Pressable
             accessibilityRole={role}
-            // A radio is announced as checked; a tab as selected.
-            accessibilityState={isRadio ? { checked: isSelected, selected: isSelected, disabled } : { selected: isSelected, disabled }}
+            // A radio is announced as checked and a tab as selected; giving a radio both would read it out twice.
+            accessibilityState={isRadio ? { checked: isSelected, disabled } : { selected: isSelected, disabled }}
             disabled={disabled}
             key={segment.value}
             onPress={() => onChange(segment.value)}

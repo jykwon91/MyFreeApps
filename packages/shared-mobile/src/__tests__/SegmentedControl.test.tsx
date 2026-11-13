@@ -49,7 +49,9 @@ describe("SegmentedControl", () => {
     );
     // The group stays not-accessible itself, so a screen reader still reaches each radio inside it.
     expect(screen.getByLabelText("Pick").props.accessibilityRole).toBe("radiogroup");
-    expect(screen.getByRole("radio", { name: "Two", checked: true, selected: true })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Two", checked: true })).toBeTruthy();
+    // Checked only, as the apps' other radios: a screen reader would say "selected" on top of "checked".
+    expect(screen.getByRole("radio", { name: "Two" }).props.accessibilityState).toEqual({ checked: true, disabled: false });
     expect(screen.getByRole("radio", { name: "One", checked: false })).toBeTruthy();
     expect(screen.queryByRole("tab")).toBeNull();
   });

@@ -29,7 +29,7 @@ describe("ThemeSettings", () => {
   it("switches to the theme pressed and keeps it for next time", async () => {
     await render(<ThemeSettings />);
     await fireEvent.press(screen.getByRole("radio", { name: "Dark" }));
-    expect(screen.getByRole("radio", { name: "Dark", checked: true, selected: true })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Dark", checked: true })).toBeTruthy();
     expect(screen.getByRole("radio", { name: "System", checked: false })).toBeTruthy();
     expect(storedItems.get(THEME_PREFERENCE_KEY)).toBe("dark");
   });
