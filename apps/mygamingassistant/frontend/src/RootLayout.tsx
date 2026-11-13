@@ -15,7 +15,6 @@ import {
   GuestShell,
   StepUpModal,
   ThemeToggle,
-  Toaster,
   useIsAuthenticated,
   type NavItem,
   type NavSection,
@@ -199,7 +198,6 @@ export default function RootLayout() {
     return (
       <>
         <ScrollRestoration />
-        <Toaster />
         <DiscordActivityShell>
           <Outlet />
         </DiscordActivityShell>
@@ -216,7 +214,6 @@ export default function RootLayout() {
     return (
       <>
         <ScrollRestoration />
-        <Toaster />
         <GuestShell
           logo={LOGO}
           logoIcon={LOGO_ICON}
@@ -245,7 +242,6 @@ export default function RootLayout() {
     return (
       <>
         <ScrollRestoration />
-        <Toaster />
         <StepUpModal />
         <Outlet />
       </>
@@ -257,7 +253,6 @@ export default function RootLayout() {
     return (
       <>
         <ScrollRestoration />
-        <Toaster />
         <StepUpModal />
         <GuestShell
           logo={LOGO}
@@ -278,7 +273,6 @@ export default function RootLayout() {
   return (
     <>
       <ScrollRestoration />
-      <Toaster />
       <StepUpModal />
       <AppShell
         logo={LOGO}

@@ -13,7 +13,7 @@ import {
   Telescope,
   UserCircle,
 } from "lucide-react";
-import { AppShell, RequireAuth, StepUpModal, Toaster, useIsAuthenticated } from "@platform/ui";
+import { AppShell, RequireAuth, StepUpModal, useIsAuthenticated } from "@platform/ui";
 import { buildNav, buildBottomNav } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -94,7 +94,6 @@ export default function RootLayout() {
   return (
     <RequireAuth>
       <ScrollRestoration />
-      <Toaster />
       <StepUpModal />
       <AppShell
         logo={logo}

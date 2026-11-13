@@ -30,7 +30,6 @@ vi.mock("@platform/ui", async (importOriginal) => {
     GuestShell: ({ children }: { children: ReactNode }) => <div data-testid="guest-shell">{children}</div>,
     StepUpModal: () => null,
     ThemeToggle: () => <div data-testid="theme-toggle" />,
-    Toaster: () => null,
     useIsAuthenticated: () => auth.isAuthenticated,
   };
 });
