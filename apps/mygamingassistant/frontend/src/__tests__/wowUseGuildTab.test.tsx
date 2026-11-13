@@ -33,6 +33,18 @@ describe("useGuildTab", () => {
     expect(router.state.location.pathname).toBe("/");
   });
 
+  it.each(["week", "arena"])("a retired ?tab=%s link opens Home and drops the param in place", (old) => {
+    renderAt(`/guild?tab=${old}&me=tiny`);
+    expect(screen.getByTestId("tab")).toHaveTextContent("home");
+    expect(screen.getByTestId("search")).toHaveTextContent("?me=tiny");
+  });
+
+  it("a ?board= link is on Home already, with nothing written in", () => {
+    renderAt("/guild?board=exalted");
+    expect(screen.getByTestId("tab")).toHaveTextContent("home");
+    expect(screen.getByTestId("search")).toHaveTextContent("?board=exalted");
+  });
+
   it("picking a tab replaces the history entry", async () => {
     const router = renderAt("/guild");
     expect(screen.getByTestId("search")).toBeEmptyDOMElement();

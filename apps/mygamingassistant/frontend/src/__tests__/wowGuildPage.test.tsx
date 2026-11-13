@@ -417,12 +417,12 @@ describe("guild page", () => {
 
   it("shows the level board by default and switches boards from the picker, keeping the member filters", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
-    renderAt("/wow-forever/guild?tab=arena&class=Warlock");
+    renderAt("/wow-forever/guild?tab=home&class=Warlock");
     expect(boardNames("Level leaderboard")).toEqual(["Big Sue", "Jason Kwon", "Tiny John"]);
     expect(screen.getByText(/1 member has no number for this yet/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Rank members by"), { target: { value: "dungeons" } });
     expect(screen.getByText(/Nobody in the guild has a number for Dungeons cleared yet/)).toBeInTheDocument();
-    expect(screen.getByTestId("location")).toHaveTextContent("?tab=arena&class=Warlock&board=dungeons");
+    expect(screen.getByTestId("location")).toHaveTextContent("?tab=home&class=Warlock&board=dungeons");
   });
 
   it("marks the viewer's character and pins it under the top 10 when it ranks lower", () => {
@@ -430,7 +430,7 @@ describe("guild page", () => {
       member({ slug: `m-${i}`, name: `M${String(i).padStart(2, "0")}`, surname: "X", level: 60 - i }),
     );
     mockQuery.mockReturnValue(query({ data: { ...GUILD, members: [...many, member({ level: 2 })] } }));
-    renderAt("/wow-forever/guild?tab=arena&me=Jason-Kwon");
+    renderAt("/wow-forever/guild?me=Jason-Kwon");
     expect(boardNames("Level leaderboard")).toHaveLength(10);
     const pinned = screen.getByRole("list", { name: "Your character" });
     expect(within(pinned).getByText("12")).toBeInTheDocument();

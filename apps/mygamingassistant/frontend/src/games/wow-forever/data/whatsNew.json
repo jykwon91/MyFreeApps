@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "Guild home: the Arena and this week together",
+    "summary": "topdeadcenter's page now opens on a Home tab with the Arena on top, then this week's heroes, your quests and the hot races. The tabs are Home, Titles, Who can craft? and Roster, and older links to This week or Arena open Home.",
+    "to": "/wow-forever/guild"
+  },
+  {
+    "date": "2026-11-13",
     "title": "Refresh Auction House prices on demand",
     "summary": "The Auction House page has a Refresh now button next to the updated time. It pulls fresh prices from Blizzard for the house you're viewing, and says so if Blizzard hasn't published newer prices yet. It can be used once every 10 minutes.",
     "to": "/wow-forever/auction-house"

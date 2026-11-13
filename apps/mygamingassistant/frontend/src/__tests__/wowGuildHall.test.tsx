@@ -75,13 +75,13 @@ describe("the banner", () => {
 });
 
 describe("the fun sections", () => {
-  it("sit in tabs: this week (heroes, your quests, hot races) open first, then titles, the Arena, crafting and the roster", () => {
+  it("sit in tabs: Home (the Arena, then heroes, your quests, hot races) opens first, then titles, crafting and the roster", () => {
     renderSections("?me=tiny");
     const tabs = within(screen.getByRole("tablist", { name: "Guild sections" })).getAllByRole("tab");
-    expect(tabs.map((t) => t.textContent)).toEqual(["This week", "Titles", "Arena", "Who can craft?", "Roster"]);
+    expect(tabs.map((t) => t.textContent)).toEqual(["Home", "Titles", "Who can craft?", "Roster"]);
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
-    const panel = screen.getByRole("tabpanel", { name: "This week" });
-    expect(within(panel).getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["This week's heroes", "Your quests", "Hot races"]);
+    const panel = screen.getByRole("tabpanel", { name: "Home" });
+    expect(within(panel).getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["The Arena", "This week's heroes", "Your quests", "Hot races"]);
     // Only the open tab renders.
     expect(screen.queryByRole("region", { name: "Hall of Titles" })).toBeNull();
     expect(screen.queryByText("Roll call (3)")).toBeNull();
@@ -92,11 +92,11 @@ describe("the fun sections", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Roster" }));
     expect(screen.getByRole("tabpanel", { name: "Roster" })).toHaveTextContent("Roll call (3)");
     expect(screen.getByRole("tab", { name: "Roster" })).toHaveAttribute("tabIndex", "0");
-    expect(screen.getByRole("tab", { name: "This week" })).toHaveAttribute("tabIndex", "-1");
+    expect(screen.getByRole("tab", { name: "Home" })).toHaveAttribute("tabIndex", "-1");
     fireEvent.keyDown(screen.getByRole("tab", { name: "Roster" }), { key: "ArrowRight" });
-    expect(screen.getByRole("tab", { name: "This week" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: "This week" })).toHaveFocus();
-    fireEvent.keyDown(screen.getByRole("tab", { name: "This week" }), { key: "End" });
+    expect(screen.getByRole("tab", { name: "Home" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Home" })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Home" }), { key: "End" });
     expect(screen.getByRole("region", { name: /Roll call/ })).toBeInTheDocument();
   });
 

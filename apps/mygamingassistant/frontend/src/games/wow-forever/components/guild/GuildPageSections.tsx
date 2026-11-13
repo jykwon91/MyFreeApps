@@ -21,8 +21,8 @@ interface GuildPageSectionsProps {
 }
 
 /**
- * A guild with members, in tabs kept in the URL: this week (heroes, the viewer's quests, hot races),
- * the Hall of Titles, the Arena, the recipe search, and the roster (member list, titles by each name).
+ * A guild with members, in tabs kept in the URL: Home (the Arena, then this week's heroes, the viewer's
+ * quests and hot races), the Hall of Titles, the recipe search, and the roster (member list, titles by each name).
  * Only the open tab renders.
  */
 export default function GuildPageSections({ guild, tab, onTab }: GuildPageSectionsProps) {
@@ -41,15 +41,15 @@ export default function GuildPageSections({ guild, tab, onTab }: GuildPageSectio
         layout="scroll"
       />
       <div role="tabpanel" id={tabPanelId(idPrefix)} aria-labelledby={tabId(idPrefix, tab)} tabIndex={0} className="space-y-4 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-        {tab === "week" && (
+        {tab === "home" && (
           <>
+            <GuildLeaderboards slug={guild.slug} members={guild.members} gainsWindowDays={guild.gains_window_days} />
             <GuildHeroes members={guild.members} gainsWindowDays={guild.gains_window_days} />
             <GuildQuests members={guild.members} titles={titles} me={me} />
             <GuildHotRaces members={guild.members} titles={titles} />
           </>
         )}
         {tab === "titles" && <GuildTitlesStrip titles={titles} />}
-        {tab === "arena" && <GuildLeaderboards slug={guild.slug} members={guild.members} gainsWindowDays={guild.gains_window_days} />}
         {tab === "crafting" && <GuildRecipeSearch slug={guild.slug} />}
         {tab === "roster" && <GuildRollCall members={guild.members} rosterUpdatedAt={guild.roster_updated_at} titles={titles.bySlug} />}
       </div>

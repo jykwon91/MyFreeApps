@@ -25,9 +25,13 @@ export default function GuildPageSkeleton({ tab }: GuildPageSkeletonProps) {
           </div>
         ))}
       </div>
-      {tab === "week" && <GuildWeekSkeleton />}
+      {tab === "home" && (
+        <>
+          <GuildArenaSkeleton />
+          <GuildWeekSkeleton />
+        </>
+      )}
       {tab === "titles" && <GuildTitlesSkeleton />}
-      {tab === "arena" && <GuildArenaSkeleton />}
       {tab === "crafting" && <GuildCraftingSkeleton />}
       {tab === "roster" && <GuildRosterSkeleton />}
     </div>
