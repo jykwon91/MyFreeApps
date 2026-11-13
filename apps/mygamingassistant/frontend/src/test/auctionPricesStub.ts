@@ -44,3 +44,19 @@ export function pricesLoading() {
 export function pricesFailed() {
   return { data: undefined, currentData: undefined, isError: true, isFetching: false, refetch: vi.fn() };
 }
+
+/**
+ * The "Refresh now" hooks of the same module for pages that show the button but test something else:
+ * the refresh state never loads, so there is no button. Spread it into the mock:
+ *
+ *   vi.mock("@/games/wow-forever/api/wowPricesApi", async () => ({
+ *     useGetWowPricesQuery: usePricesQuery,
+ *     ...(await import("@/test/auctionPricesStub")).refreshApiStub,
+ *   }));
+ */
+export const refreshApiStub = {
+  useGetWowPriceRefreshStateQuery: () => ({ currentData: undefined, isError: true, refetch: vi.fn() }),
+  useRefreshWowPricesMutation: () => [vi.fn()],
+  useLoadFreshWowPricesMutation: () => [vi.fn()],
+  useFinishPriceRefreshMutation: () => [vi.fn()],
+};

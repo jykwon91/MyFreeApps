@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "Refresh Auction House prices on demand",
+    "summary": "The Auction House page has a Refresh now button next to the updated time. It pulls fresh prices from Blizzard for the house you're viewing, and says so if Blizzard hasn't published newer prices yet. It can be used once every 10 minutes.",
+    "to": "/wow-forever/auction-house"
+  },
+  {
+    "date": "2026-11-13",
     "title": "The guild page in tabs",
     "summary": "topdeadcenter's page is split into tabs: This week, Titles, Arena, Who can craft? and Roster, so each opens on its own instead of one long scroll. The tab is kept in the link, so you can share it, and older links still open the right one.",
     "to": "/wow-forever/guild"

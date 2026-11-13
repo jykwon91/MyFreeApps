@@ -12,7 +12,10 @@ import { PRICE_COLUMNS, pricesFailed, pricesLoading, pricesReady } from "@/test/
 import { iconSources, itemIconFile } from "./wowIconFiles";
 
 const usePricesQuery = vi.hoisted(() => vi.fn());
-vi.mock("@/games/wow-forever/api/wowPricesApi", () => ({ useGetWowPricesQuery: usePricesQuery }));
+vi.mock("@/games/wow-forever/api/wowPricesApi", async () => ({
+  useGetWowPricesQuery: usePricesQuery,
+  ...(await import("@/test/auctionPricesStub")).refreshApiStub,
+}));
 
 function response(items: PriceListResponse["items"], faction: PriceFaction = "alliance"): PriceListResponse {
   return {

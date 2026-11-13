@@ -6,7 +6,7 @@ import type { Page } from "@playwright/test";
 
 /** The shape the backend serves before its first Blizzard refresh, for whichever faction is asked for. */
 export async function stubEmptyPrices(page: Page): Promise<void> {
-  await page.route("**/wow/prices**", (route) => {
+  await page.route(/\/wow\/prices(\?|$)/, (route) => {
     const faction = new URL(route.request().url()).searchParams.get("faction") ?? "alliance";
     return route.fulfill({
       json: {

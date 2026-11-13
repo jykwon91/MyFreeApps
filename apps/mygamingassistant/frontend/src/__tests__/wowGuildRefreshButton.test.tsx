@@ -11,9 +11,9 @@ import {
   GUILD_REFRESH_COPY,
   GUILD_REFRESH_POLL_MS,
   GUILD_REFRESH_WATCH_TIMEOUT_MS,
-  guildRefreshCooldownCopy,
 } from "@/games/wow-forever/data/guild/guildRefreshConfig";
-import { cooldownLeftMs, cooldownMinutes } from "@/games/wow-forever/lib/guild/refreshCooldown";
+import { refreshCooldownCopy } from "@/games/wow-forever/data/refreshCooldownCopy";
+import { cooldownLeftMs, cooldownMinutes } from "@/games/wow-forever/lib/refreshCooldown";
 import type { GuildRefreshResponse } from "@/games/wow-forever/types/guild/guildRefreshResponse";
 import type { GuildResponse } from "@/games/wow-forever/types/guild/guildResponse";
 
@@ -112,7 +112,7 @@ describe("GuildRefreshButton", () => {
     expect(showSuccess).toHaveBeenCalledWith(GUILD_REFRESH_COPY.success);
     expect(screen.queryByRole("button", { name: GUILD_REFRESH_COPY.loading })).toBeNull();
     expect(screen.getByRole("button", { name: GUILD_REFRESH_COPY.button })).toBeDisabled();
-    expect(screen.getByRole("status").textContent).toBe(guildRefreshCooldownCopy(5));
+    expect(screen.getByRole("status").textContent).toBe(refreshCooldownCopy(5));
   });
 
   it("says so when Blizzard did not answer the refresh", async () => {
@@ -140,7 +140,7 @@ describe("GuildRefreshButton", () => {
   it("is disabled during the cooldown and says for how long", () => {
     render(<GuildRefreshButton guild={guild({ refresh_available_at: inMinutes(3) })} refetch={vi.fn()} />);
     expect(screen.getByRole("button", { name: GUILD_REFRESH_COPY.button })).toBeDisabled();
-    expect(screen.getByRole("status").textContent).toBe(guildRefreshCooldownCopy(3));
+    expect(screen.getByRole("status").textContent).toBe(refreshCooldownCopy(3));
   });
 
   it("comes back on its own when the cooldown runs out", () => {
@@ -156,8 +156,9 @@ describe("GuildRefreshButton", () => {
 
     await click();
 
-    expect(showError).toHaveBeenCalledWith(guildRefreshCooldownCopy(2));
-    expect(screen.getByRole("button", { name: GUILD_REFRESH_COPY.button })).toBeEnabled();
+    expect(showError).toHaveBeenCalledWith(refreshCooldownCopy(2));
+    // The server's wait is counted from now, so the button waits it out too.
+    expect(screen.getByRole("button", { name: GUILD_REFRESH_COPY.button })).toBeDisabled();
   });
 
   it.each([

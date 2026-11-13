@@ -9,7 +9,10 @@ import { PRICE_COLUMNS, pricesReady } from "@/test/auctionPricesStub";
 import { ELIXIR, fixtureCategories, HELM, JUNK, LINEN_CLOTH, PEACEBLOOM, POTION } from "@/__tests__/wowItemCategoriesFixture";
 
 const usePricesQuery = vi.hoisted(() => vi.fn());
-vi.mock("@/games/wow-forever/api/wowPricesApi", () => ({ useGetWowPricesQuery: usePricesQuery }));
+vi.mock("@/games/wow-forever/api/wowPricesApi", async () => ({
+  useGetWowPricesQuery: usePricesQuery,
+  ...(await import("@/test/auctionPricesStub")).refreshApiStub,
+}));
 
 const loadItemCategories = vi.hoisted(() => vi.fn());
 vi.mock("@/games/wow-forever/lib/itemCategoriesLoader", () => ({ loadItemCategories }));
