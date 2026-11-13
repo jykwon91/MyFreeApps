@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useRouteError } from "react-router-dom";
 import { AlertTriangle } from "lucide-react";
 import Button from "../ui/Button";
@@ -7,6 +7,7 @@ import {
   isChunkLoadError,
   isStaleChunkReloadScheduled,
   reloadOnceForStaleChunk,
+  subscribeStaleChunkReloadScheduled,
 } from "../../lib/stale-chunk";
 import { announceUnlessReloading } from "../../lib/caught-error";
 import { describeRouteError } from "../../utils/describeRouteError";
@@ -24,13 +25,15 @@ import { describeRouteError } from "../../utils/describeRouteError";
 export default function RouteErrorFallback() {
   const error = useRouteError();
   const isStaleChunk = isChunkLoadError(error);
-  const [isReloading, setIsReloading] = useState<boolean>(isStaleChunkReloadScheduled);
+  const isReloading = useSyncExternalStore(
+    subscribeStaleChunkReloadScheduled,
+    isStaleChunkReloadScheduled,
+    isStaleChunkReloadScheduled,
+  );
 
   useEffect(() => {
     console.error("[RouteErrorFallback]", error);
-    if (isStaleChunk && !isStaleChunkReloadScheduled() && reloadOnceForStaleChunk()) {
-      setIsReloading(true);
-    }
+    if (isStaleChunk && !isStaleChunkReloadScheduled()) reloadOnceForStaleChunk();
     // After the reload attempt, so a chunk error the reload guard declined is announced.
     announceUnlessReloading("RouteErrorFallback", error);
   }, [error, isStaleChunk]);

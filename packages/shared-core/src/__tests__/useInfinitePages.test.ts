@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { Activity, createElement, StrictMode, type ReactNode } from "react";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useInfinitePages } from "../hooks/useInfinitePages";
@@ -114,5 +115,40 @@ describe("useInfinitePages loadMore", () => {
     rerender({ query: { ...failed } });
     expect(refetching.fetchNextPage).toHaveBeenCalledTimes(1);
     expect(result.current.isFetchingNextPage).toBe(false);
+  });
+});
+
+describe("useInfinitePages effect re-runs and repeat calls", () => {
+  function releaseOnce(wrapper?: ({ children }: { children: ReactNode }) => ReactNode) {
+    const refetching = makeQuery({ isFetching: true });
+    const hook = renderHook(({ query }) => useInfinitePages(query), { initialProps: { query: refetching }, wrapper });
+    act(() => hook.result.current.loadMore());
+    hook.rerender({ query: makeQuery({ fetchNextPage: refetching.fetchNextPage }) });
+    return { ...hook, fetchNextPage: refetching.fetchNextPage };
+  }
+
+  it("fetches once per release under StrictMode", () => {
+    const { fetchNextPage } = releaseOnce(StrictMode);
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fetch again when the effects re-run after an Activity hide and show", () => {
+    let mode: "visible" | "hidden" = "visible";
+    const wrapper = ({ children }: { children: ReactNode }) => createElement(Activity, { mode, children });
+    const { fetchNextPage, rerender } = releaseOnce(wrapper);
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    mode = "hidden";
+    rerender({ query: makeQuery({ fetchNextPage }) });
+    mode = "visible";
+    rerender({ query: makeQuery({ fetchNextPage }) });
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a second loadMore while the next page is already loading", () => {
+    const query = makeQuery({ isFetching: true, isFetchingNextPage: true });
+    const { result, rerender } = renderHook(({ q }) => useInfinitePages(q), { initialProps: { q: query } });
+    act(() => result.current.loadMore());
+    rerender({ q: makeQuery({ fetchNextPage: query.fetchNextPage }) });
+    expect(query.fetchNextPage).not.toHaveBeenCalled();
   });
 });

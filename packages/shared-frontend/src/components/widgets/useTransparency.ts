@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { TransparencyState } from "../../types/transparency-state";
 
 /**
  * Platform-wide cost-transparency figures for the current month.
@@ -31,24 +32,28 @@ export type TransparencyResult =
  * to a public endpoint.
  */
 export function useTransparency(baseUrl = "/api"): TransparencyResult {
-  const [result, setResult] = useState<TransparencyResult>({ status: "loading" });
+  const [state, setState] = useState<TransparencyState>({ baseUrl, result: { status: "loading" } });
+
+  // Adjusting state during render rather than in an effect: a changed `baseUrl` starts over from loading,
+  // so a result for an earlier URL (including one from a URL we've since returned to) is never shown.
+  if (state.baseUrl !== baseUrl) setState({ baseUrl, result: { status: "loading" } });
 
   useEffect(() => {
     const controller = new AbortController();
-    setResult({ status: "loading" });
+    const settle = (result: TransparencyResult): void => setState({ baseUrl, result });
 
     fetch(`${baseUrl}/transparency`, { credentials: "omit", signal: controller.signal })
       .then((res) =>
         res.ok ? (res.json() as Promise<TransparencyData>) : Promise.reject(new Error(`HTTP ${res.status}`)),
       )
-      .then((data) => setResult({ status: "ok", data }))
+      .then((data) => settle({ status: "ok", data }))
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        setResult({ status: "error" });
+        settle({ status: "error" });
       });
 
     return () => controller.abort();
   }, [baseUrl]);
 
-  return result;
+  return state.baseUrl === baseUrl ? state.result : { status: "loading" };
 }

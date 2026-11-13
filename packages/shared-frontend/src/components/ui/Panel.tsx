@@ -72,9 +72,3 @@ export default function Panel({ position, width, onClose, children }: PanelProps
     </Dialog.Root>
   );
 }
-
-/**
- * Names the panel for screen readers. Wrap the panel's visible heading:
- * `<PanelTitle asChild><h3>…</h3></PanelTitle>`. Every panel needs one.
- */
-export const PanelTitle = Dialog.Title;
