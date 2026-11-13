@@ -599,9 +599,22 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   differently) — never a door, never guessed; no area = "We don't know where
   the entrance is yet." They are `newInForever` ("New in Forever" tag on the
   list), `requiredLevel` / `entryRequirements` null ("Not known yet", no
-  badge), no quests, and `ForeverDungeonBosses`: one unnumbered list "in the
+  badge), and `ForeverDungeonBosses`: one unnumbered list "in the
   game's list order" plus one loot-unknown line. Re-pull after each client
   update.
+- **Forever dungeon quests come from Blizzard's Game Data API** (the source of
+  truth — check it before client/Classic data): `scripts/wow_forever_quests/`
+  writes `data/dungeons/foreverDungeonQuests.json` (in `wow_refresh` after the
+  quest build; needs `BLIZZARD_CLIENT_ID/_SECRET`). A dungeon's quests = the
+  "Dungeon"-typed (81) quests in each `/data/wow/quest/area/{id}` whose
+  `AreaTable.ContinentID` is the instance or whose name is the dungeon's. Only
+  type 81: the areas also hold the town's own quests (City of Dalaran has 4
+  Dungeon quests a faction) and Classic "Blackmaw Hold" quests.
+  `BlizzardStatic` retries a dropped connection with backoff. The API has
+  no level, giver or objectives — the page (`ForeverDungeonQuests`, Official
+  badge) shows a level only from `quests/questSeen.json` ("Seen in game"),
+  never inferred; a one-item "choice" shows as "You get". Quests filed under the
+  surrounding zone aren't listed.
 - **Loot, group sizes and entry requirements are GENERATED** —
   `python -m scripts.wow_dungeons.build` (from `backend/`, after the World Map
   and Items builds; group sizes from wago.tools `Map`, entry requirements in

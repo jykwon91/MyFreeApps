@@ -18,6 +18,7 @@ from scripts.wow_icons.build import (
     PROFESSION_SKILL_LINES,
     cooking_item_ids,
     dungeon_quest_item_ids,
+    forever_dungeon_quest_item_ids,
     gathering_item_ids,
     gear_item_ids,
     race_icon_files,
@@ -191,6 +192,15 @@ def test_dungeon_quest_items_are_the_rewards_classic_and_seen(tmp_path: Path) ->
     seen.write_text(json.dumps({"columns": ["title", "rewards", "choices"],
                                 "quests": {"166": ["The Defias Brotherhood", [], [[2059, 1]]]}}), encoding="utf-8")
     assert dungeon_quest_item_ids((classic, seen)) == {2000, 6087, 2059}
+
+
+def test_forever_dungeon_quest_items_are_every_rewarded_item(tmp_path: Path) -> None:
+    path = tmp_path / "foreverDungeonQuests.json"
+    path.write_text(json.dumps({"columns": ["id", "items"], "quests": {
+        "2999": [[96400, [[279837, "Arcane Band"], [279838, "Arcane Ring"]]]],
+        "3065": [[96393, []]],
+    }}), encoding="utf-8")
+    assert forever_dungeon_quest_item_ids(path) == {279837, 279838}
 
 
 def test_map_file_puts_one_id_per_line_and_stays_json(tmp_path: Path) -> None:

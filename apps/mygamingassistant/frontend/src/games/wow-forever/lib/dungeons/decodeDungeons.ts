@@ -8,12 +8,14 @@
  * (`dungeons/classic/bossLoot.json`, Classic chances), item names
  * (`dungeons/lootItems.json`), group sizes (`dungeons/dungeonFacts.json`, the
  * Forever client), entry requirements (`dungeons/classic/entryRequirements.json`)
- * and quests (`decodeDungeonQuests`).
+ * and quests (`decodeDungeonQuests`; Forever's own dungeons' from Blizzard's
+ * Game Data API, `decodeForeverDungeonQuests`).
  */
 import { isItemSlot } from "@/games/wow-forever/data/itemSlots";
 import { INSTANCE_ALIASES } from "@/games/wow-forever/data/worldMap/placeNames";
 import { columnIndexes } from "@/games/wow-forever/lib/dungeons/columnIndexes";
 import { decodeDungeonQuests } from "@/games/wow-forever/lib/dungeons/decodeDungeonQuests";
+import { decodeForeverDungeonQuests } from "@/games/wow-forever/lib/dungeons/decodeForeverDungeonQuests";
 import { uniqueSlugs, dungeonSlug } from "@/games/wow-forever/lib/dungeons/dungeonSlug";
 import { nearestFlightPaths } from "@/games/wow-forever/lib/dungeons/nearestFlightPaths";
 import type { BossLootItem } from "@/games/wow-forever/types/dungeons/bossLootItem";
@@ -35,7 +37,7 @@ const DUNGEON_TYPE = "dungeon";
 /** A Classic dungeon before its bosses and the rest are joined: its door always gives a level. */
 type DungeonBase = Omit<
   Dungeon,
-  "bosses" | "interior" | "maxPlayers" | "entryRequirements" | "lockedDoorKeys" | "quests" | "newInForever" | "requiredLevel"
+  "bosses" | "interior" | "maxPlayers" | "entryRequirements" | "lockedDoorKeys" | "quests" | "foreverQuests" | "newInForever" | "requiredLevel"
 > & { requiredLevel: number };
 
 function lootItems(files: DungeonDataFiles): ReadonlyMap<number, LootItemInfo> {
@@ -135,8 +137,9 @@ function foreverArea(
   }];
 }
 
-/** Forever's own dungeons: the client's level, bosses and area; no door, loot, quests or entry rules. */
+/** Forever's own dungeons: the client's level, bosses and area, the Game Data API's quests; no door, loot or entry rules. */
 function decodeForeverDungeons(files: DungeonDataFiles, world: DungeonWorld, zoneById: ReadonlyMap<number, WorldZone>): Dungeon[] {
+  const foreverQuests = decodeForeverDungeonQuests(files);
   const file = files.foreverDungeons;
   const col = columnIndexes("foreverDungeons.json", file.columns, [
     "instance", "name", "minLevel", "maxLevel", "zone", "area", "x", "y",
@@ -163,6 +166,7 @@ function decodeForeverDungeons(files: DungeonDataFiles, world: DungeonWorld, zon
       bosses: bosses.map((b, i) => ({ ...b, slug: slugs[i], loot: null })),
       interior: null,
       quests: [],
+      foreverQuests: foreverQuests(instanceId),
     };
   });
 }
@@ -227,6 +231,7 @@ export function decodeDungeons(files: DungeonDataFiles, world: DungeonWorld): Du
       bosses: bossesOf(interior, instanceLoot(files, d.instanceId, items)),
       interior: interior ?? null,
       quests: quests(d.instanceId),
+      foreverQuests: [],
     };
   });
   // A stable sort keeps each file's own order within a level.

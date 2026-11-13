@@ -1,4 +1,4 @@
-"""Blizzard's Game Data API, read for the talent build (``static-forever-us``).
+"""Blizzard's Game Data API (``static-forever-us``), read by the talent, reputation and dungeon-quest builds.
 
 * ``POST https://oauth.battle.net/token`` (client credentials, HTTP Basic) →
   a bearer token, one per run.
@@ -16,6 +16,8 @@ the OAuth ``error``). The credentials and the token are never printed.
 from __future__ import annotations
 
 import re
+import time
+from collections.abc import Callable
 from typing import Any
 
 import httpx
@@ -28,6 +30,10 @@ USER_AGENT = "MyGamingAssistant/1.0 (+https://mygamingassistant.myfreeapps.org/w
 # The versioned namespace Blizzard answers with: static-1.60.1_70399-forever-us.
 _NAMESPACE_BUILD = re.compile(r"namespace=static-(\d+\.\d+\.\d+)_(\d+)-")
 _REASON_MAX = 200
+# A dropped connection (DNS, reset) is retried; an HTTP error answer never is.
+_CONNECT_ATTEMPTS = 3
+# Seconds before retry n (1, 2, ...) is this times n.
+_RETRY_BACKOFF_SECONDS = 2.0
 
 
 def blizzard_credentials() -> tuple[str, str]:
@@ -65,8 +71,17 @@ def namespace_build(href: str) -> str:
 class BlizzardStatic:
     """``with BlizzardStatic(id, secret) as api:`` — one token per block."""
 
-    def __init__(self, client_id: str, client_secret: str, *, transport: httpx.BaseTransport | None = None) -> None:
+    def __init__(
+        self,
+        client_id: str,
+        client_secret: str,
+        *,
+        transport: httpx.BaseTransport | None = None,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
         self._credentials = (client_id, client_secret)
+        # Tests pass a no-op so retries don't wait.
+        self._sleep = sleep
         # Tests pass an httpx.MockTransport; the build uses the default.
         self._http = httpx.Client(transport=transport, timeout=BLIZZARD_TIMEOUT_SECONDS, headers={"User-Agent": USER_AGENT})
         self._token = ""
@@ -96,20 +111,30 @@ class BlizzardStatic:
         # An href from an answer gets the bearer token, so it must stay on the API's host.
         if not target.startswith(f"{BLIZZARD_API_BASE}/"):
             raise SystemExit(f"Blizzard API: refusing a link outside {BLIZZARD_API_BASE}: {target[:_REASON_MAX]}")
-        try:
-            response = self._http.get(
-                target,
-                params={"namespace": STATIC_NAMESPACE, "locale": BLIZZARD_LOCALE},
-                headers={"Authorization": f"Bearer {self._token}"},
-            )
-        except httpx.HTTPError as exc:
-            raise SystemExit(f"Blizzard API {target}: request failed: {type(exc).__name__}") from exc
+        response = self._send(target)
         if response.status_code != httpx.codes.OK:
             raise _failure(target, response)
         body = response.json()
         if not isinstance(body, dict):
             raise SystemExit(f"Blizzard API {target}: answer is not a JSON object")
         return body
+
+    def _send(self, target: str) -> httpx.Response:
+        dropped: httpx.ConnectError | None = None
+        for attempt in range(_CONNECT_ATTEMPTS):
+            if attempt:
+                self._sleep(_RETRY_BACKOFF_SECONDS * attempt)
+            try:
+                return self._http.get(
+                    target,
+                    params={"namespace": STATIC_NAMESPACE, "locale": BLIZZARD_LOCALE},
+                    headers={"Authorization": f"Bearer {self._token}"},
+                )
+            except httpx.ConnectError as exc:
+                dropped = exc
+            except httpx.HTTPError as exc:
+                raise SystemExit(f"Blizzard API {target}: request failed: {type(exc).__name__}") from exc
+        raise SystemExit(f"Blizzard API {target}: request failed: ConnectError") from dropped
 
     def talent_trees(self) -> tuple[str, list[dict[str, Any]]]:
         """The API's build and every spec's talent tree, in the index's order."""

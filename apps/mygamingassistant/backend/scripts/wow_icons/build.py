@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 
 from scripts.wow_food.build import WOW_DATA_DIR
+from scripts.wow_forever_quests.paths import FOREVER_DUNGEON_QUESTS_FILE
 from scripts.wow_icons.ids import (
     IconIds,
     appearance_icon_map,
@@ -113,6 +114,13 @@ def dungeon_quest_item_ids(paths: tuple[Path, ...] = DUNGEON_QUEST_FILES) -> set
     return ids
 
 
+def forever_dungeon_quest_item_ids(path: Path = FOREVER_DUNGEON_QUESTS_FILE) -> set[int]:
+    """The reward items of Forever's own dungeons' quests (``scripts.wow_forever_quests.build``)."""
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    at_items = doc["columns"].index("items")
+    return {int(item) for rows in doc["quests"].values() for row in rows for item, _ in row[at_items]}
+
+
 def quest_database_item_ids(path: Path = QUEST_REWARD_ITEMS_FILE) -> set[int]:
     """The reward items the quest database pages name (``scripts.wow_quests.build``)."""
     if not path.exists():
@@ -179,7 +187,7 @@ def legacy_icon_files(path: Path = LEGACY_FILE) -> set[int]:
 
 def wanted_ids() -> IconIds:
     ids = IconIds(
-        items=gathering_item_ids() | cooking_item_ids() | gear_item_ids() | dungeon_quest_item_ids() | quest_database_item_ids() | rare_drop_item_ids()
+        items=gathering_item_ids() | cooking_item_ids() | gear_item_ids() | dungeon_quest_item_ids() | forever_dungeon_quest_item_ids() | quest_database_item_ids() | rare_drop_item_ids()
         | library_item_ids(),
         files=talent_icon_files() | downrank_icon_files() | spellbook_icon_files() | race_icon_files() | class_icon_files() | hunter_pet_icon_files()
         | legacy_icon_files(),

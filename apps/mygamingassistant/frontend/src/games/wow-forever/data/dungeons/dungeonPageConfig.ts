@@ -35,7 +35,7 @@ export const FOREVER_DUNGEON_COPY = {
  */
 export const FOREVER_DUNGEON_UNKNOWN = {
   value: "not known yet",
-  facts: ["lowest_level_to_enter", "entrance_door", "keys_or_attunement", "boss_loot", "quests"],
+  facts: ["lowest_level_to_enter", "entrance_door", "keys_or_attunement", "boss_loot"],
 } as const;
 
 /** Quest rows the dungeon page's skeleton draws in its Quests section. */
@@ -45,6 +45,22 @@ export const DUNGEON_SKELETON_QUESTS = 4;
 export const DUNGEON_QUESTS_EMPTY = {
   none: "No quests for this dungeon in our data yet.",
   noneForFaction: "No quests for this dungeon for your faction in our data yet.",
+} as const;
+
+/** What a new Forever dungeon's Quests section (Blizzard's Game Data API) says. */
+export const FOREVER_DUNGEON_QUESTS_COPY = {
+  source: "From Blizzard's own game data",
+  notInData: "Blizzard's data has no quest levels, givers or objectives.",
+  none: "Blizzard's data lists no quests for this dungeon.",
+  noneForFaction: "Blizzard's data lists no quests in this dungeon for your faction.",
+  zoneQuests: "Quests filed under the surrounding zone aren't shown here.",
+  repeatable: "Repeatable",
+  needs: "Needs",
+  rewards: "Rewards",
+  spell: "Spell",
+  heading: "Quests",
+  factionLabel: "Quests for",
+  bothFactions: "Both factions",
 } as const;
 
 /** An opened quest's "Quest chain" lists this many of the quests after it, then says how many more. */

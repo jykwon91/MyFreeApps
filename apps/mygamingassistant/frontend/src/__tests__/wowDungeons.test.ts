@@ -19,6 +19,10 @@ import type { DungeonWorld } from "@/games/wow-forever/types/dungeons/dungeonWor
 import type { FlightNode, WorldZone } from "@/games/wow-forever/types/worldMap";
 
 const FOREVER_COLUMNS = ["instance", "name", "minLevel", "maxLevel", "zone", "area", "x", "y"];
+const FOREVER_QUEST_COLUMNS = [
+  "id", "title", "side", "type", "repeatable", "classes", "needsReputation",
+  "xp", "money", "reputations", "items", "itemsChoice", "spell", "description",
+];
 const DUNGEON_COLUMNS = ["trigger", "instance", "name", "wing", "type", "minLevel", "maxLevel", "requiredLevel", "zone", "subzone", "x", "y", "z"];
 
 function fixture(): DungeonDataFiles {
@@ -72,6 +76,8 @@ function fixture(): DungeonDataFiles {
       targets: {},
     },
     seenQuests: { seenOn: "2026-11-07", columns: ["title", "level", "minLevel", "objectives", "rewards", "choices", "shareable", "seenOn"], quests: {} },
+    foreverQuests: { build: "1.60.1.70399", columns: FOREVER_QUEST_COLUMNS, quests: {} },
+    questSeen: { columns: ["title", "level", "minLevel", "objectives", "rewards", "choices", "shareable", "seenOn"], quests: {} },
   };
 }
 
@@ -221,6 +227,48 @@ describe("decodeDungeons", () => {
     expect(findDungeon(merged, "lost-deep")?.entrances).toEqual([]);
   });
 
+  it("gives a Forever dungeon its Game Data API quests, seen ones by level first, the level from the seen file", () => {
+    const files = fixture();
+    files.foreverDungeons.rows = [[900, "New Vault", 25, 25, null, null, null, null]];
+    files.foreverQuests.quests = {
+      "900": [
+        [3, "Zeta", "N", null, false, [], [], 0, 0, [], [], false, null, ""],
+        [2, "Beta", "A", "Dungeon", true, ["Mage"], [["Timbermaw Hold", "Neutral"]], 3200, 18000, [["Ironforge", 100]], [[11, "Ring"], [12, "Band"]], true, "Teleport: Dalaran", "Go.\n\nNow."],
+        [1, "Alpha", "H", "Dungeon", false, [], [], 100, 0, [], [[13, "Cup"]], true, null, ""],
+        [4, "Aardvark", "H", null, false, [], [], 0, 0, [], [], false, null, ""],
+      ],
+    };
+    // Zeta's seen row has no level, so it counts as unseen rather than getting a made-up one.
+    files.questSeen.quests = {
+      "1": ["Alpha", 30, 24, [], [], [], true, "2026-11-12"],
+      "2": ["Beta", 28, 20, [], [], [], true, "2026-11-10"],
+      "3": ["Zeta", null, 20, [], [], [], true, "2026-11-10"],
+    };
+    const vault = findDungeon(decodeDungeons(files, WORLD), "new-vault");
+    expect(vault?.foreverQuests.map((q) => q.title)).toEqual(["Beta", "Alpha", "Aardvark", "Zeta"]);
+    expect(vault?.foreverQuests[0]).toEqual({
+      id: 2,
+      title: "Beta",
+      side: "A",
+      type: "Dungeon",
+      repeatable: true,
+      classes: ["Mage"],
+      needsReputation: [{ faction: "Timbermaw Hold", standing: "Neutral" }],
+      xp: 3200,
+      money: 18000,
+      reputations: [{ faction: "Ironforge", amount: 100 }],
+      items: [{ id: 11, name: "Ring", count: 1 }, { id: 12, name: "Band", count: 1 }],
+      itemsChoice: true,
+      spell: "Teleport: Dalaran",
+      description: "Go.\n\nNow.",
+      seen: { level: 28, minLevel: 20, seenOn: "2026-11-10" },
+    });
+    expect(vault?.foreverQuests[1]).toMatchObject({ items: [{ id: 13, name: "Cup", count: 1 }], itemsChoice: false });
+    expect(vault?.foreverQuests[3]).toMatchObject({ side: "N", type: null, seen: null });
+    // Classic dungeons never get Forever quests.
+    expect(findDungeon(decodeDungeons(files, WORLD), "twin-halls")?.foreverQuests).toEqual([]);
+  });
+
   it("finds a dungeon by slug", () => {
     expect(findDungeon(data, "twin-halls")?.instanceId).toBe(12);
     expect(findDungeon(data, "nope")).toBeNull();
@@ -283,7 +331,16 @@ describe("the committed dungeon data", () => {
       expect(d.bosses.length).toBeGreaterThan(0);
       expect(d.bosses.every((b) => b.loot === null)).toBe(true);
       expect(d.entrances.every((e) => e.zoneName !== "" && e.doors.length === 0)).toBe(true);
+      expect(d.foreverQuests.length).toBeGreaterThan(0);
     }
+    // Only Blizzard's Dungeon-typed quests: City of Dalaran has four for each faction, none of the town's own.
+    const dalaranQuests = dalaran?.foreverQuests ?? [];
+    expect(dalaranQuests.filter((q) => q.side === "A")).toHaveLength(4);
+    expect(dalaranQuests.filter((q) => q.side === "H")).toHaveLength(4);
+    expect(data.dungeons.filter((d) => d.newInForever).every((d) => d.foreverQuests.every((q) => q.type === "Dungeon"))).toBe(true);
+    expect(dalaranQuests.find((q) => q.title === "Special Access")).toBeUndefined();
+    expect(dalaran?.foreverQuests.find((q) => q.title === "Starving Arcane")?.seen?.level).toBe(33);
+    expect(data.dungeons.filter((d) => !d.newInForever).every((d) => d.foreverQuests.length === 0)).toBe(true);
   });
 
   // Dungeons allowed to show "no boss list", by slug, each with the reason.

@@ -3,7 +3,8 @@
  * (World Map link with the giver marked, directions), the quests leading up to
  * it, the objectives inside the dungeon and its rewards (item pages); whether
  * it can be shared and where it sits in its quest line; the faction toggle;
- * badges; the phone layout and the loading skeleton.
+ * badges; the phone layout and the loading skeleton. A dungeon Forever added
+ * lists Blizzard's Game Data API quests instead (no giver, level only when seen).
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-dungeon-quests
  */
@@ -16,6 +17,15 @@ const DEADMINES = "/wow-forever/dungeons/deadmines";
 const RAGEFIRE = "/wow-forever/dungeons/ragefire-chasm";
 const DEFIAS_BROTHERHOOD = 166;
 const UNSENT_LETTER = 373;
+const DALARAN = "/wow-forever/dungeons/city-of-dalaran";
+const WETLANDS_DIG = "/wow-forever/dungeons/excavation-site-wetlands";
+const BLACKMAW_HOLD = "/wow-forever/dungeons/blackmaw-hold";
+const STARVING_ARCANE = 92457;
+const A_GREEN_SAMPLE = 92456;
+const THE_GRAVE_KNIGHT = 96986;
+const HEARTWOVEN = 95809;
+const OPEN_THE_MAW = 95682;
+const THE_TWIN_BEARS = 92066;
 
 function quests(page: Page): Locator {
   return page.getByRole("region", { name: "Quests" });
@@ -23,6 +33,10 @@ function quests(page: Page): Locator {
 
 function questRow(page: Page, id: number): Locator {
   return quests(page).locator(`[data-testid="dungeon-quest-row"][data-quest-id="${id}"]`);
+}
+
+function foreverQuestRow(page: Page, id: number): Locator {
+  return quests(page).locator(`[data-testid="forever-quest-row"][data-quest-id="${id}"]`);
 }
 
 async function noSideways(page: Page): Promise<number> {
@@ -121,6 +135,53 @@ test("each quest says whether it can be shared and where it sits in its line", a
   await expect(first.getByTestId("quest-chain-more")).toHaveText("then 8 more quests");
 });
 
+test("a dungeon Forever added lists Blizzard's Dungeon quests: four a faction in Dalaran, seen level first", async ({ page }) => {
+  await page.goto(DALARAN);
+  await expect(quests(page)).toContainText("From Blizzard's own game data");
+  await expect(quests(page).getByTestId("provenance-badge").first()).toContainText("Official");
+  await expect(quests(page)).toContainText("Blizzard's data has no quest levels, givers or objectives.");
+  await expect(quests(page).getByTestId("dungeon-quest-row")).toHaveCount(0);
+
+  await quests(page).getByRole("radio", { name: "Alliance" }).click();
+  await expect(quests(page).getByTestId("forever-quest-row")).toHaveCount(4);
+  const arcane = foreverQuestRow(page, STARVING_ARCANE);
+  await expect(arcane).toContainText("Level 33");
+  await expect(arcane.getByTestId("forever-quest-seen")).toBeVisible();
+  await expect(arcane.getByTestId("forever-quest-badges")).toContainText("Dungeon");
+  const sample = foreverQuestRow(page, A_GREEN_SAMPLE);
+  await expect(sample).not.toContainText("Level");
+  await expect(sample.getByTestId("forever-quest-seen")).toHaveCount(0);
+
+  await quests(page).getByRole("radio", { name: "Horde" }).click();
+  await expect(quests(page).getByTestId("forever-quest-row")).toHaveCount(4);
+  await expect(foreverQuestRow(page, STARVING_ARCANE)).toHaveCount(0);
+  await expect(foreverQuestRow(page, THE_GRAVE_KNIGHT)).toBeVisible();
+  await expect(page.locator('a[href*="wowhead"]')).toHaveCount(0);
+});
+
+test("a Forever quest opens to its rewards: a choice, a single item, and the standing it needs", async ({ page }) => {
+  await page.goto(WETLANDS_DIG);
+  await quests(page).getByRole("radio", { name: "Alliance" }).click();
+  const heart = foreverQuestRow(page, HEARTWOVEN);
+  await heart.getByTestId("forever-quest-toggle").click();
+  await expect(heart.getByTestId("forever-quest-toggle")).toHaveAttribute("aria-expanded", "true");
+  const details = heart.getByTestId("forever-quest-details");
+  await expect(details.getByText("Choose one of")).toBeVisible();
+  await expect(details.getByTestId("quest-reward-row")).toHaveCount(2);
+
+  // Blizzard calls its one item a choice; a choice of one is shown as what you get.
+  const maw = foreverQuestRow(page, OPEN_THE_MAW);
+  await maw.getByTestId("forever-quest-toggle").click();
+  await expect(maw.getByTestId("forever-quest-details").getByText("You get")).toBeVisible();
+  await maw.getByTestId("quest-reward-row").first().getByRole("link").click();
+  await expect(page).toHaveURL("/wow-forever/items/271745");
+
+  await page.goto(BLACKMAW_HOLD);
+  const bears = foreverQuestRow(page, THE_TWIN_BEARS);
+  await bears.getByTestId("forever-quest-toggle").click();
+  await expect(bears.getByTestId("forever-quest-details")).toContainText("Neutral or better with Timbermaw Hold");
+});
+
 test.describe("at 375px", () => {
   test.use({ viewport: { width: 375, height: 740 } });
 
@@ -134,6 +195,16 @@ test.describe("at 375px", () => {
     const mapLink = row.getByTestId("quest-giver-map-link");
     expect((await mapLink.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     expect((await row.getByTestId("quest-reward-row").first().boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+    expect(await noSideways(page)).toBeLessThanOrEqual(0);
+  });
+
+  test("a Forever dungeon's quests fit the phone with tap-sized rows", async ({ page }) => {
+    await page.goto(WETLANDS_DIG);
+    const toggle = foreverQuestRow(page, OPEN_THE_MAW).getByTestId("forever-quest-toggle");
+    expect((await toggle.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+    await toggle.click();
+    const reward = foreverQuestRow(page, OPEN_THE_MAW).getByTestId("quest-reward-row").first();
+    expect((await reward.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     expect(await noSideways(page)).toBeLessThanOrEqual(0);
   });
 });
