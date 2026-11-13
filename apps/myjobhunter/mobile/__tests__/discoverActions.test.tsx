@@ -225,6 +225,20 @@ describe("a discovered posting's actions", () => {
     expect(await screen.findByText(ACTIONS.undoFailed)).toBeTruthy();
   });
 
+  it("says in plain words when a dismissed posting can no longer be brought back, instead of the server's not-found", async () => {
+    serveJobs([POSTING], {
+      "POST /discover/j1/undo-dismiss": () => ({ status: 404, data: { detail: "Discovery resource not found" } }),
+    });
+    await showPosting();
+
+    await dismissFor("Not interested");
+    await fireEvent.press(await screen.findByRole("button", { name: ACTIONS.undo }));
+
+    expect(await screen.findByText(ACTIONS.undoDismissGone)).toBeTruthy();
+    expect(screen.queryByText("Discovery resource not found")).toBeNull();
+    expect(screen.queryByText(ACTIONS.undone)).toBeNull();
+  });
+
   it("shows Opening… from the tap until the posting's own page opens", async () => {
     let opened: () => void = () => undefined;
     openURL.mockImplementationOnce(() => new Promise<void>((resolve) => (opened = resolve)));

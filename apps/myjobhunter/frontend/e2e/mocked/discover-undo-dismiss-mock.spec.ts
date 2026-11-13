@@ -3,7 +3,7 @@
  * backend, the stubbed inbox leaves a dismissed posting out, so its card
  * unmounts at once; the "Dismissed." toast must outlive it. Undo restores the
  * posting through undo-dismiss; letting the toast expire keeps it dismissed; a
- * refused Undo says why.
+ * refused Undo (404: already brought back, or gone) says so in plain words.
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import type { Page } from "@playwright/test";
@@ -63,6 +63,7 @@ const POSTING = {
 const TOAST_EXPIRY_MS = 6_500;
 // The detail the backend's undo-dismiss answers 404 with (`_NOT_FOUND_DETAIL` in app/api/discover.py).
 const NOT_FOUND_DETAIL = "Discovery resource not found";
+const UNDO_DISMISS_GONE = "This posting can no longer be brought back. It may already be in your inbox.";
 
 /** Stubs the inbox with one posting and records each dismiss / undo-dismiss call. */
 async function stubInbox(page: Page, { refuseUndo = false }: { refuseUndo?: boolean } = {}): Promise<string[]> {
@@ -124,14 +125,15 @@ test("ignoring the Undo toast lets the dismissal stand", async ({ page }) => {
   expect(actions).toEqual(["dismiss"]);
 });
 
-test("a refused Undo shows the server's reason, and the posting stays dismissed", async ({ page }) => {
+test("a refused Undo says in plain words it can no longer be brought back, and the posting stays dismissed", async ({ page }) => {
   const actions = await stubInbox(page, { refuseUndo: true });
   await dismissThePosting(page);
 
   await expect(dismissedToast(page)).toBeVisible();
   await page.getByRole("button", { name: "Undo" }).click();
 
-  await expect(toast(page, NOT_FOUND_DETAIL)).toBeVisible();
+  await expect(toast(page, UNDO_DISMISS_GONE)).toBeVisible();
+  await expect(page.getByText(NOT_FOUND_DETAIL)).toHaveCount(0);
   await expect(dismissedToast(page)).toHaveCount(0);
   await expect(postingTitle(page)).toHaveCount(0);
   expect(actions).toEqual(["dismiss", "undo-dismiss"]);

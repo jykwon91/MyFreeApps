@@ -38,6 +38,14 @@ export const DISCOVER_ACTION_MESSAGES = {
   undoHint: "Brings the posting back to your list",
   undone: "Posting brought back",
   undoFailed: "Couldn't undo dismiss",
+  restore: "Restore",
+  restoring: "Restoring…",
+  /** What Restore does, for screen readers. */
+  restoreHint: "Moves the posting back to your inbox",
+  restored: "Posting restored to your inbox",
+  restoreFailed: "Couldn't restore this posting",
+  // undo-dismiss's 404 (Undo or Restore): brought back on another device, or expired/closed since.
+  undoDismissGone: "This posting can no longer be brought back. It may already be in your inbox.",
   removed: "Saved search removed",
   removeFailed: "Couldn't remove saved search",
   frequencyUpdated: "Refresh frequency updated",
@@ -47,4 +55,10 @@ export const DISCOVER_ACTION_MESSAGES = {
   defaultsFailed: "Saved search created, but couldn't update your defaults",
   updated: "Saved search updated",
   updateFailed: "Couldn't update saved search",
+} as const;
+
+/** A dismissed posting's line in the Dismissed view: when, and why if the user said. */
+export const DISMISSAL_MESSAGES = {
+  dismissedAgo: (ago: string) => `Dismissed ${ago}`,
+  withReason: (when: string, reason: string) => `${when} · ${reason}`,
 } as const;

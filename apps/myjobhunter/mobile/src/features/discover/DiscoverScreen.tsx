@@ -12,7 +12,7 @@ import { unscoredCount } from "@myjobhunter/api-client/utils/unscoredCount";
 import { EmptyState, LoadMoreFooter, OptionSheet, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { FlatList, View } from "react-native";
-import { ALL_SOURCES, DISCOVER_SCREEN_MESSAGES as MESSAGES } from "../../constants/discoverScreen";
+import { ALL_SOURCES, DISCOVER_SCREEN_MESSAGES as MESSAGES, DISCOVER_VIEW_COPY } from "../../constants/discoverScreen";
 import { PAGED_LIST_MESSAGES } from "../../constants/pagedListMessages";
 import DiscoveredJobCard from "./DiscoveredJobCard";
 import DiscoverJobsSkeleton from "./DiscoverJobsSkeleton";
@@ -20,9 +20,10 @@ import DiscoverListHeader from "./DiscoverListHeader";
 import SavedSearchSheet from "./SavedSearchSheet";
 
 /**
- * The website's Discovery page: saved searches with refresh, schedule, edit and remove; the inbox and
- * saved postings a page at a time, filtered by saved search, with Apply, Save, Dismiss and Open; and
- * the scores filling in for a short while after a refresh.
+ * The website's Discovery page: saved searches with refresh, schedule, edit and remove; the inbox,
+ * saved and dismissed postings a page at a time, filtered by saved search, with Apply, Save, Dismiss
+ * and Open (Restore and Open for a dismissed one); and the scores filling in for a short while after
+ * a refresh.
  */
 export default function DiscoverScreen() {
   const { colors, spacing } = useTheme();
@@ -53,23 +54,20 @@ export default function DiscoverScreen() {
   useAnnouncement(isInbox && isScoringActive ? MESSAGES.scoring : undefined);
 
   function emptyList() {
+    const copy = DISCOVER_VIEW_COPY[view];
     if (needsSavedSearch) return <EmptyState body={MESSAGES.noSavedSearchesBody} heading={MESSAGES.noSavedSearchesHeading} />;
-    if (list.isLoading || list.isFiltering || sourcesQuery.isLoading) return <DiscoverJobsSkeleton />;
+    if (list.isLoading || list.isFiltering || sourcesQuery.isLoading) return <DiscoverJobsSkeleton view={view} />;
     if (!isCurrent) {
       return (
         <EmptyState
           action={{ label: MESSAGES.tryAgain, onPress: refresh, isLoading: isRefreshing }}
           body={MESSAGES.tryAgainOffer}
-          heading={isInbox ? MESSAGES.couldntLoadInbox : MESSAGES.couldntLoadSaved}
+          heading={copy.couldntLoad}
         />
       );
     }
     const showAll = sourceId ? { label: MESSAGES.showAllSources, onPress: () => setChosenSourceId(ALL_SOURCES) } : undefined;
-    return isInbox ? (
-      <EmptyState action={showAll} body={MESSAGES.inboxEmptyBody} heading={MESSAGES.inboxEmptyHeading} />
-    ) : (
-      <EmptyState action={showAll} body={MESSAGES.savedEmptyBody} heading={MESSAGES.savedEmptyHeading} />
-    );
+    return <EmptyState action={showAll} body={copy.emptyBody} heading={copy.emptyHeading} />;
   }
 
   return (

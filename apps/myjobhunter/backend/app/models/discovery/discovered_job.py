@@ -38,6 +38,8 @@ Indexes:
   the second silently drops at insert time.
 - ``ix_discovered_inbox``: the triage view. Partial WHERE not-dismissed,
   not-saved, not-promoted keeps the index lean.
+- ``ix_discovered_dismissed``: the Dismissed view, newest-dismissed
+  first with ``id`` as the paging tiebreak. Partial WHERE dismissed.
 - ``ix_discovered_score_pending``: scoring worker scans for
   ``score IS NULL`` rows.
 
@@ -273,6 +275,13 @@ class DiscoveredJob(Base):
             postgresql_where=text(
                 "saved_at IS NOT NULL AND dismissed_at IS NULL",
             ),
+        ),
+        Index(
+            "ix_discovered_dismissed",
+            "user_id",
+            text("dismissed_at DESC"),
+            text("id DESC"),
+            postgresql_where=text("dismissed_at IS NOT NULL"),
         ),
         Index(
             "ix_discovered_promoted_app",

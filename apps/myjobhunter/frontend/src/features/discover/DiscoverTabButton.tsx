@@ -16,11 +16,12 @@ export default function DiscoverTabButton({
   const isActive = view === activeView;
   return (
     <button
+      type="button"
       role="tab"
       aria-selected={isActive}
       onClick={() => onSelect(view)}
       className={[
-        "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+        "min-h-[44px] px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
         isActive
           ? "border-primary text-foreground"
           : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",

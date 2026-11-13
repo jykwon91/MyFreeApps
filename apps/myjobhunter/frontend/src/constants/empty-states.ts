@@ -39,6 +39,17 @@ export const DISCOVER_EMPTY_STATES = {
     body: "You haven't saved a posting from this saved search yet.",
     actionLabel: "Show every saved search",
   },
+  dismissed_empty: {
+    iconName: "Telescope",
+    heading: "No dismissed jobs",
+    body: "Postings you dismiss show up here while they're still open, newest first, so you can restore one if you change your mind.",
+  },
+  dismissed_empty_filtered: {
+    iconName: "Telescope",
+    heading: "No dismissed jobs from this search",
+    body: "You haven't dismissed a posting from this saved search.",
+    actionLabel: "Show every saved search",
+  },
 } as const satisfies Record<string, EmptyStateCopy | EmptyStateCopyNoAction>;
 
 export const EMPTY_STATES = {

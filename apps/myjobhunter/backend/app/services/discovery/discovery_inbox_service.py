@@ -11,6 +11,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.discovered_job_state import DiscoveredJobState
 from app.repositories.discovery import (
     discovery_inbox_repository,
     discovery_repository,
@@ -70,7 +71,7 @@ async def list_discovered_page(
     db: AsyncSession,
     user_id: uuid.UUID,
     *,
-    state: str,
+    state: DiscoveredJobState,
     limit: int,
     offset: int,
     source_id: uuid.UUID | None,
@@ -83,7 +84,7 @@ async def list_discovered_page(
     # Coverage is only meaningful for the triage inbox: most fetched rows
     # stay unscored (the scorer only rates the prefilter top-N per day),
     # and the frontend surfaces "Scored N of M" so that tail reads as
-    # "daily limit reached" rather than "broken". The saved/all views
+    # "daily limit reached" rather than "broken". The other views
     # don't carry the framing, so leave the counts null there.
     scored_count: int | None = None
     total_count: int | None = None

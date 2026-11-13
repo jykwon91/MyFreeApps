@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@platform/ui";
 import DiscoverInboxView from "@/features/discover/DiscoverInboxView";
-import DiscoverSavedView from "@/features/discover/DiscoverSavedView";
+import DiscoverListView from "@/features/discover/DiscoverListView";
 import DiscoverViewTabs from "@/features/discover/DiscoverViewTabs";
 import NewSavedSearchDialog from "@/features/discover/NewSavedSearchDialog";
 import SavedSearchesPanel from "@/features/discover/SavedSearchesPanel";
@@ -11,16 +11,18 @@ import SourceFilterChips from "@/features/discover/SourceFilterChips";
 import { useScoringWindow } from "@myjobhunter/api-client/hooks/useScoringWindow";
 import { useListDiscoverySourcesQuery } from "@myjobhunter/api-client/store/discoverApi";
 import type { DiscoverView } from "@myjobhunter/api-client/types/discovery/discover-view";
+import { isDiscoverView } from "@myjobhunter/api-client/utils/isDiscoverView";
 
 /**
  * /discover — proactive job-posting inbox.
  *
  * Pulls postings from the configured saved searches (today: JSearch /
  * Google Jobs only) into a triage list. The operator clicks "Save",
- * "Dismiss", or the external "Open" link per posting.
+ * "Dismiss", or the external "Open" link per posting; the Dismissed tab
+ * lists dismissed postings, each with "Restore".
  *
- * Tab state lives in ?view=inbox (default) | ?view=saved so deep-linking
- * and back-button work correctly.
+ * Tab state lives in ?view=inbox (default) | ?view=saved | ?view=dismissed
+ * so deep-linking and back-button work correctly.
  *
  * Source filter lives in ?source=<uuid> — selecting a chip sets the param,
  * selecting "All" deletes it. Uses replace: true so back-button goes to the
@@ -31,7 +33,7 @@ export default function Discover() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const rawView = searchParams.get("view");
-  const activeView: DiscoverView = rawView === "saved" ? "saved" : "inbox";
+  const activeView: DiscoverView = isDiscoverView(rawView) ? rawView : "inbox";
 
   const activeSourceId = searchParams.get("source");
   // Owned here, above both the saved searches (whose refresh opens it) and the inbox (which it polls).
@@ -105,7 +107,12 @@ export default function Discover() {
           scoringWindow={scoringWindow}
         />
       ) : (
-        <DiscoverSavedView activeSourceId={activeSourceId} onShowAllSources={() => setSourceFilter(null)} />
+        <DiscoverListView
+          key={activeView}
+          view={activeView}
+          activeSourceId={activeSourceId}
+          onShowAllSources={() => setSourceFilter(null)}
+        />
       )}
 
       <NewSavedSearchDialog

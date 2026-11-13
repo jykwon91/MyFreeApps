@@ -1,4 +1,5 @@
 import DiscoverTabButton from "@/features/discover/DiscoverTabButton";
+import { DISCOVER_VIEW_LABELS, DISCOVER_VIEWS } from "@myjobhunter/api-client/constants/discoverViewLabels";
 import type { DiscoverView } from "@myjobhunter/api-client/types/discovery/discover-view";
 
 interface DiscoverViewTabsProps {
@@ -16,18 +17,15 @@ export default function DiscoverViewTabs({
       aria-label="Discovery views"
       className="flex gap-1 border-b border-border"
     >
-      <DiscoverTabButton
-        label="Inbox"
-        view="inbox"
-        activeView={activeView}
-        onSelect={onSelect}
-      />
-      <DiscoverTabButton
-        label="Saved"
-        view="saved"
-        activeView={activeView}
-        onSelect={onSelect}
-      />
+      {DISCOVER_VIEWS.map((view) => (
+        <DiscoverTabButton
+          key={view}
+          label={DISCOVER_VIEW_LABELS[view]}
+          view={view}
+          activeView={activeView}
+          onSelect={onSelect}
+        />
+      ))}
     </div>
   );
 }

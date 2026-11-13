@@ -90,6 +90,7 @@ const discoverApi = apiWithTags.injectEndpoints({
         url: `/discover/${jobId}/undo-dismiss`,
         method: "POST",
       }),
+      // The array form invalidates on failure too: a 404 (restored elsewhere) still refetches the lists.
       invalidatesTags: ["DiscoveredJob"],
     }),
     saveDiscoveredJob: build.mutation<void, string>({

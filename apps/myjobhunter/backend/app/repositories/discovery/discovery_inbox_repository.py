@@ -2,9 +2,10 @@
 
 Split out of ``discovery_repository`` (which is already a large module) to
 keep that file from growing further per the project's no-growth file-size
-policy. Holds read-only aggregate queries over the inbox population that
-reuse the same active-only predicate as ``discovery_repository.list_discovered``
-so the counts always describe the same rows the list endpoint returns.
+policy. Holds the per-view row predicate and the read-only aggregate queries over
+it. ``discovery_repository.list_discovered`` filters with the same
+``discovered_state_predicate`` so the counts always describe the same rows the
+list endpoint returns.
 """
 from __future__ import annotations
 
@@ -13,21 +14,18 @@ import uuid
 from sqlalchemy import func, or_, outerjoin, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.discovered_job_state import DiscoveredJobState
 from app.models.discovery.discovered_job import DiscoveredJob
 from app.models.discovery.discovery_fetch import DiscoveryFetch
 
 
 def active_only_predicate() -> tuple:
-    """Shared "active" predicate for the inbox/saved views.
+    """Shared "active" predicate for the inbox/saved/dismissed views.
 
     A row is active unless we observed it vanish upstream (``expired_at``
     set) or its feed-declared close date is in the past.
     ``source_expires_at IS NULL`` rows (no declared expiry — e.g. all
-    Greenhouse/Lever rows) stay active. Single source of truth, imported by
-    ``discovery_repository.list_discovered`` and reused by the coverage
-    count below, so the two populations never drift apart. Lives here
-    (rather than in ``discovery_repository``) to keep that already-large
-    module from growing under the no-growth file-size policy.
+    Greenhouse/Lever rows) stay active.
     """
     return (
         DiscoveredJob.expired_at.is_(None),
@@ -38,6 +36,44 @@ def active_only_predicate() -> tuple:
     )
 
 
+def discovered_state_predicate(state: DiscoveredJobState) -> tuple:
+    """The WHERE clauses for one ``GET /discover`` view.
+
+    The single source of truth for which rows a view holds: the list query
+    (``discovery_repository.list_discovered``), its pagination ``total``
+    (``count_discovered``) and the inbox coverage (``count_inbox_coverage``)
+    all filter with it, so the populations never drift apart.
+
+    - ``inbox``: not dismissed, not saved, not promoted, and active.
+    - ``saved``: saved (so not dismissed — chk_discovered_state) and active.
+    - ``dismissed``: dismissed, not promoted, and active. These are exactly the
+      rows Restore (``undo_dismiss_discovered``) brings back into the inbox:
+      restoring an expired/closed posting or one already turned into an
+      application would make it vanish from every view, so neither is listed.
+    - ``all``: every row, expired and closed ones included.
+    """
+    if state == "inbox":
+        return (
+            DiscoveredJob.dismissed_at.is_(None),
+            DiscoveredJob.saved_at.is_(None),
+            DiscoveredJob.promoted_application_id.is_(None),
+            *active_only_predicate(),
+        )
+    if state == "saved":
+        return (
+            DiscoveredJob.saved_at.isnot(None),
+            DiscoveredJob.dismissed_at.is_(None),
+            *active_only_predicate(),
+        )
+    if state == "dismissed":
+        return (
+            DiscoveredJob.dismissed_at.isnot(None),
+            DiscoveredJob.promoted_application_id.is_(None),
+            *active_only_predicate(),
+        )
+    return ()
+
+
 async def count_inbox_coverage(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -46,9 +82,8 @@ async def count_inbox_coverage(
 ) -> tuple[int, int]:
     """Return ``(scored_count, total_count)`` for the active inbox.
 
-    Both counts use the exact same active-only + triage predicate as the
-    ``state="inbox"`` branch of ``discovery_repository.list_discovered``
-    (via the shared ``active_only_predicate``), so the coverage line the
+    Both counts use the exact same predicate as the ``state="inbox"`` list
+    (``discovered_state_predicate("inbox")``), so the coverage line the
     frontend renders ("Scored N of M") matches the rows actually shown —
     not a different population. The counts span the WHOLE inbox,
     independent of the list endpoint's ``limit``/``offset`` page, which is
@@ -59,10 +94,7 @@ async def count_inbox_coverage(
     """
     base = select(func.count(DiscoveredJob.id)).where(
         DiscoveredJob.user_id == user_id,
-        DiscoveredJob.dismissed_at.is_(None),
-        DiscoveredJob.saved_at.is_(None),
-        DiscoveredJob.promoted_application_id.is_(None),
-        *active_only_predicate(),
+        *discovered_state_predicate("inbox"),
     )
     if source_id is not None:
         # Mirror list_discovered's source filter: join the fetch row and
@@ -86,37 +118,22 @@ async def count_discovered(
     db: AsyncSession,
     user_id: uuid.UUID,
     *,
-    state: str = "inbox",
+    state: DiscoveredJobState = "inbox",
     source_id: uuid.UUID | None = None,
 ) -> int:
     """Total rows matching the ``state`` / ``source_id`` filter — the pagination
     ``total`` for ``GET /discover``.
 
-    Mirrors the WHERE logic of ``discovery_repository.list_discovered`` (same
-    state branches + the shared ``active_only_predicate``) so ``total``
-    describes exactly the population the list endpoint paginates over,
-    independent of ``limit`` / ``offset``. The route reuses
-    ``count_inbox_coverage``'s ``total_count`` for the inbox (same population),
-    so this is called for the ``saved`` / ``all`` views.
+    Filters with the same ``discovered_state_predicate`` as
+    ``discovery_repository.list_discovered`` so ``total`` describes exactly the
+    population the list endpoint paginates over, independent of ``limit`` /
+    ``offset``. The service reuses ``count_inbox_coverage``'s ``total_count``
+    for the inbox (same population), so this is called for the other views.
     """
     stmt = select(func.count(DiscoveredJob.id)).where(
         DiscoveredJob.user_id == user_id,
+        *discovered_state_predicate(state),
     )
-    active_only = active_only_predicate()
-    if state == "inbox":
-        stmt = stmt.where(
-            DiscoveredJob.dismissed_at.is_(None),
-            DiscoveredJob.saved_at.is_(None),
-            DiscoveredJob.promoted_application_id.is_(None),
-            *active_only,
-        )
-    elif state == "saved":
-        stmt = stmt.where(
-            DiscoveredJob.saved_at.isnot(None),
-            DiscoveredJob.dismissed_at.is_(None),
-            *active_only,
-        )
-    # else "all": no extra filter — counts expired/closed rows too.
     if source_id is not None:
         stmt = stmt.select_from(
             outerjoin(

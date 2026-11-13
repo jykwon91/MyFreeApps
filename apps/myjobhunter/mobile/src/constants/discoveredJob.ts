@@ -21,6 +21,8 @@ export const DISCOVERED_JOB_MESSAGES = {
   dismiss: "Dismiss",
   dismissing: "Dismissing…",
   dismissSheetTitle: "Why are you dismissing this?",
+  restore: "Restore",
+  restoring: "Restoring…",
   actionFor: (action: string, title: string, company: string) => `${action} ${title} at ${company}`,
 } as const;
 

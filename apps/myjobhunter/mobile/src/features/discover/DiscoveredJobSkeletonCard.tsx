@@ -1,9 +1,14 @@
-import { CHIP_HEIGHT, MIN_TOUCH_TARGET, Skeleton, useTheme } from "@platform/mobile";
+import { CHIP_HEIGHT, Skeleton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { DISCOVER_SKELETON_HEIGHTS as HEIGHTS } from "../../constants/discoverSkeleton";
+import type { DiscoveredJobSkeletonCardProps } from "../../types/DiscoveredJobSkeletonCardProps";
+import ButtonRowSkeleton from "./ButtonRowSkeleton";
 
-/** The chips, title, company, facts, description and two rows of buttons: the same lines as DiscoveredJobCard. */
-export default function DiscoveredJobSkeletonCard() {
+/**
+ * The chips, title, company, facts, description and the buttons: the same lines as DiscoveredJobCard.
+ * Two rows of triage buttons, or (Dismissed) the dismissal line and one row of Open + Restore.
+ */
+export default function DiscoveredJobSkeletonCard({ view }: DiscoveredJobSkeletonCardProps) {
   const { colors, spacing, radius } = useTheme();
   return (
     <View
@@ -20,22 +25,17 @@ export default function DiscoveredJobSkeletonCard() {
       <Skeleton height={HEIGHTS.line} />
       <Skeleton height={HEIGHTS.line} />
       <Skeleton height={HEIGHTS.line} width="80%" />
-      <View style={{ flexDirection: "row", gap: spacing.sm }}>
-        <View style={{ flex: 1 }}>
-          <Skeleton borderRadius={radius.md} height={MIN_TOUCH_TARGET} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Skeleton borderRadius={radius.md} height={MIN_TOUCH_TARGET} />
-        </View>
-      </View>
-      <View style={{ flexDirection: "row", gap: spacing.sm }}>
-        <View style={{ flex: 1 }}>
-          <Skeleton borderRadius={radius.md} height={MIN_TOUCH_TARGET} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Skeleton borderRadius={radius.md} height={MIN_TOUCH_TARGET} />
-        </View>
-      </View>
+      {view === "dismissed" ? (
+        <>
+          <Skeleton height={HEIGHTS.caption} testID="dismissal-summary-skeleton" width="45%" />
+          <ButtonRowSkeleton />
+        </>
+      ) : (
+        <>
+          <ButtonRowSkeleton />
+          <ButtonRowSkeleton />
+        </>
+      )}
     </View>
   );
 }
