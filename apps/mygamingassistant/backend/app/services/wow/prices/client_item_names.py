@@ -6,6 +6,7 @@ Blizzard's auction data carries item ids only. The committed
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from functools import lru_cache
@@ -17,9 +18,9 @@ _DATA_PATH = Path(__file__).resolve().parents[4] / "data" / "wow" / "item_names.
 
 @dataclass(frozen=True)
 class ClientItemNames:
-    # The client build the names came from — part of the price ETag, so a new
-    # names file reaches browsers holding a cached response.
-    client_build: str
+    # A hash of the names file — part of the price ETag, so a regenerated file
+    # reaches browsers holding a cached response, even for the same client build.
+    version: str
     names: dict[int, str]
 
     def name_for(self, item_id: int) -> str:
@@ -27,10 +28,18 @@ class ClientItemNames:
         return self.names.get(item_id, "")
 
 
-@lru_cache(maxsize=1)
-def client_item_names() -> ClientItemNames:
-    payload = json.loads(_DATA_PATH.read_text(encoding="utf-8"))
+VERSION_LENGTH = 16
+
+
+def parse_client_item_names(raw: bytes) -> ClientItemNames:
+    """The names in an ``item_names.json`` file, versioned by its content."""
+    payload = json.loads(raw.decode("utf-8"))
     return ClientItemNames(
-        client_build=payload["clientBuild"],
+        version=hashlib.sha256(raw).hexdigest()[:VERSION_LENGTH],
         names={int(item_id): name for item_id, name in payload["names"].items()},
     )
+
+
+@lru_cache(maxsize=1)
+def client_item_names() -> ClientItemNames:
+    return parse_client_item_names(_DATA_PATH.read_bytes())

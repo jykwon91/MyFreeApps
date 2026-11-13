@@ -2,10 +2,13 @@
 
 Usage (from ``apps/mygamingassistant/backend``)::
 
-    python -m scripts.wow_item_names.build
+    python -m scripts.wow_item_names.build [--hotfix-cache <DBCache.bin>]
 
 Writes ``backend/data/wow/item_names.json``: every tradeable item's name from
-the Forever client's ``ItemSparse`` (the build pinned in sources.py). The price
+the Forever client's ``ItemSparse`` (the build pinned in sources.py) plus the
+client's hotfix cache, the same rows the Item build reads. Without the cache,
+thousands of items the auction house sells (Dreadmist Belt, Underworld Band)
+have no name and can't be searched. The price
 API (``app/services/wow/prices/client_item_names.py``) names every priced
 item from it — Blizzard's auction data carries item ids only.
 
@@ -13,11 +16,13 @@ Game data © Blizzard Entertainment, accessed via wago.tools DB2 export.
 """
 from __future__ import annotations
 
+import argparse
 import json
 from collections.abc import Iterable
 from pathlib import Path
 
-from scripts.wow_world_map.sources import WAGO_BRANCH, WAGO_BUILD, wago_table
+from scripts.wow_items.forever_items import hotfix_cache_path, load_forever_item_tables
+from scripts.wow_world_map.sources import WAGO_BRANCH, WAGO_BUILD
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 OUT_PATH = BACKEND_DIR / "data" / "wow" / "item_names.json"
@@ -45,8 +50,11 @@ def tradeable_names(rows: Iterable[dict[str, str]]) -> dict[int, str]:
 
 
 def main() -> None:
-    print(f"Loading ItemSparse from wago.tools ({WAGO_BRANCH} {WAGO_BUILD})...")
-    names = tradeable_names(wago_table("ItemSparse"))
+    parser = argparse.ArgumentParser(description="Build the WoW Forever auction-house item names.")
+    parser.add_argument("--hotfix-cache", help="the Forever client's Cache/ADB/enUS/DBCache.bin")
+    cache_path = hotfix_cache_path(parser.parse_args().hotfix_cache)
+    print(f"Loading ItemSparse from wago.tools ({WAGO_BRANCH} {WAGO_BUILD}) and the hotfix cache...")
+    names = tradeable_names(load_forever_item_tables(cache_path).sparse)
     payload = {
         "clientBuild": WAGO_BUILD,
         "attribution": ATTRIBUTION,

@@ -45,4 +45,4 @@ async def served_prices(db: AsyncSession, server: PriceServer, faction: PriceFac
             for r in rows
         ],
     })
-    return ServedPrices(body=body, etag=_etag(house_id, f"{feed.fetched_at.isoformat()}:{names.client_build}"))
+    return ServedPrices(body=body, etag=_etag(house_id, f"{feed.fetched_at.isoformat()}:{names.version}"))
