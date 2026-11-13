@@ -1,19 +1,21 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { FormField, KeyboardAwareScroll, LoadingButton, MIN_TOUCH_TARGET, OptionSheet, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Switch, Text, View } from "react-native";
+import { Alert, View } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
 import { DEFAULT_CATEGORY, NO_PROPERTY_OPTION } from "../../constants/transactionEdit";
+import { TRANSACTION_FIELD_LABELS as LABELS } from "../../constants/transactionFieldLabels";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
 import type { TransactionChoice } from "../../types/TransactionChoice";
+import type { TransactionSheetConfig } from "../../types/TransactionSheetConfig";
 import type { TransactionCreateValues } from "../../types/TransactionCreateValues";
 import PeriodDateRow from "../shell/PeriodDateRow";
 import PickerField from "./PickerField";
 import { categoryLabel, propertyLabel } from "./transactionDisplay";
-import { blankCreateValues, choiceLabel, createAmountError, createPayload } from "./transactionCreateValues";
+import { blankCreateValues, choiceLabel, createAmountError, createPayload, fromChoice } from "./transactionCreateValues";
 import { categoryChoices, selectableProperties } from "./transactionEditValues";
 import { createFailureMessage } from "./transactionMessages";
 
@@ -22,13 +24,13 @@ type SheetName = "category" | "property" | "channel" | "paymentMethod";
 const SHEET_TITLES: Record<SheetName, string> = {
   category: "Category",
   property: "Property",
-  channel: "Channel",
-  paymentMethod: "Payment method",
+  channel: LABELS.channel,
+  paymentMethod: LABELS.paymentMethod,
 };
 
 /** Adds a transaction by hand, with the same fields and the same request as the website's form. */
 export default function NewTransactionForm() {
-  const { colors, spacing, fontSize } = useTheme();
+  const { spacing } = useTheme();
   const { showToast } = useToast();
   const { data: properties = [] } = useGetPropertiesQuery();
   const [createTransaction, { isLoading: isSaving }] = useCreateTransactionMutation();
@@ -77,7 +79,7 @@ export default function NewTransactionForm() {
     { value: NO_PROPERTY_OPTION, label: "No property" },
     ...selectableProperties(properties, null).map((property) => ({ value: property.id, label: property.name })),
   ];
-  const sheets: Record<SheetName, { options: TransactionChoice[]; value: string; apply: (value: string) => void }> = {
+  const sheets: Record<SheetName, TransactionSheetConfig> = {
     category: {
       options: categoryChoices(values.type, values.category).map((category) => ({ value: category, label: categoryLabel(category) })),
       value: values.category,
@@ -86,17 +88,17 @@ export default function NewTransactionForm() {
     property: {
       options: propertyChoices,
       value: values.propertyId ?? NO_PROPERTY_OPTION,
-      apply: (propertyId) => update({ propertyId: propertyId === NO_PROPERTY_OPTION ? null : propertyId }),
+      apply: (propertyId) => update({ propertyId: fromChoice(propertyId) || null }),
     },
     channel: {
       options: CHANNEL_OPTIONS,
       value: values.channel || NO_PROPERTY_OPTION,
-      apply: (channel) => update({ channel: channel === NO_PROPERTY_OPTION ? "" : channel }),
+      apply: (channel) => update({ channel: fromChoice(channel) }),
     },
     paymentMethod: {
       options: PAYMENT_METHOD_CHOICES,
       value: values.paymentMethod || NO_PROPERTY_OPTION,
-      apply: (paymentMethod) => update({ paymentMethod: paymentMethod === NO_PROPERTY_OPTION ? "" : paymentMethod }),
+      apply: (paymentMethod) => update({ paymentMethod: fromChoice(paymentMethod) }),
     },
   };
   const sheet = openSheet ? sheets[openSheet] : null;
@@ -135,16 +137,9 @@ export default function NewTransactionForm() {
           <FormField label="Description" multiline onChangeText={(description) => update({ description })} placeholder="Optional details" value={values.description} />
           <PickerField label="Category" onPress={() => setOpenSheet("category")} value={categoryLabel(values.category)} />
           <PickerField label="Property" onPress={() => setOpenSheet("property")} value={propertyLabel(values.propertyId, properties)} />
-          <PickerField label="Channel" onPress={() => setOpenSheet("channel")} value={choiceLabel(CHANNEL_OPTIONS, values.channel)} />
-          <PickerField label="Payment method" onPress={() => setOpenSheet("paymentMethod")} value={choiceLabel(PAYMENT_METHOD_CHOICES, values.paymentMethod)} />
-          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: MIN_TOUCH_TARGET }}>
-            <Text style={{ flex: 1, fontSize: fontSize.md, color: colors.foreground }}>Include in tax reports</Text>
-            <Switch
-              accessibilityLabel="Include in tax reports"
-              onValueChange={(taxRelevant) => update({ taxRelevant })}
-              value={values.taxRelevant}
-            />
-          </View>
+          <PickerField label={LABELS.channel} onPress={() => setOpenSheet("channel")} value={choiceLabel(CHANNEL_OPTIONS, values.channel)} />
+          <PickerField label={LABELS.paymentMethod} onPress={() => setOpenSheet("paymentMethod")} value={choiceLabel(PAYMENT_METHOD_CHOICES, values.paymentMethod)} />
+          <SwitchRow label={LABELS.taxRelevant} onValueChange={(taxRelevant) => update({ taxRelevant })} value={values.taxRelevant} />
         </View>
         <LoadingButton isLoading={isSaving} loadingText="Adding…" onPress={save}>
           Add transaction

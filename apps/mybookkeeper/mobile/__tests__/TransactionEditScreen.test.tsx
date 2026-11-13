@@ -8,7 +8,7 @@ import TransactionEditScreen from "../src/features/transactions/TransactionEditS
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
-import { aProperty, aTransaction, lastPatch, startTransactionServer } from "../test-support/transactionsServer";
+import { aProperty, aSavedVendor, aTransaction, lastPatch, startTransactionServer } from "../test-support/transactionsServer";
 import { holdWrites } from "../test-support/holdWrites";
 
 const mockBack = jest.fn();
@@ -185,6 +185,105 @@ describe("TransactionEditScreen", () => {
     await renderScreen();
     await fireEvent.press(await screen.findByLabelText("Property, Old Place"));
     expect(await screen.findByRole("radio", { name: "Old Place" })).toBeTruthy();
+  });
+
+  describe("tax year, saved vendor, channel, payment method and tax relevance", () => {
+    const filled = { vendor_id: "v1", channel: "airbnb", payment_method: "check", tax_relevant: true, tax_year: 2026 };
+
+    async function save() {
+      await fireEvent.press(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    }
+
+    it("shows them filled in from the transaction", async () => {
+      const server = startTransactionServer([aTransaction(filled)]);
+      server.vendors = [aSavedVendor()];
+      await renderScreen();
+      expect(await screen.findByLabelText("Saved vendor, Ace Plumbing")).toBeTruthy();
+      expect(screen.getByLabelText("Tax year").props.value).toBe("2026");
+      expect(screen.getByLabelText("Channel, Airbnb")).toBeTruthy();
+      expect(screen.getByLabelText("Payment method, Check")).toBeTruthy();
+      expect(screen.getByLabelText("Include in tax reports").props.value).toBe(true);
+    });
+
+    it("sends a new tax year, without asking about the date", async () => {
+      const server = startTransactionServer([aTransaction()]);
+      const alert = jest.spyOn(Alert, "alert");
+      alert.mockClear();
+      await renderScreen();
+      await fireEvent.changeText(await screen.findByLabelText("Tax year"), "2025");
+      await save();
+      expect(lastPatch(server)).toEqual({ tax_year: 2025 });
+      expect(alert).not.toHaveBeenCalled();
+    });
+
+    it("won't save a tax year outside the allowed years", async () => {
+      const server = startTransactionServer([aTransaction()]);
+      await renderScreen();
+      await fireEvent.changeText(await screen.findByLabelText("Tax year"), "2019");
+      await fireEvent.press(screen.getByRole("button", { name: "Save" }));
+      expect(await screen.findByText("Use a year from 2020 to 2099.")).toBeTruthy();
+      expect(server.requests.some((request) => request.method === "patch")).toBe(false);
+    });
+
+    it("links a saved vendor", async () => {
+      const server = startTransactionServer([aTransaction()]);
+      server.vendors = [aSavedVendor(), aSavedVendor({ id: "v2", name: "Bright Electric" })];
+      await renderScreen();
+      await fireEvent.press(await screen.findByLabelText("Saved vendor, None"));
+      await fireEvent.press(await screen.findByRole("radio", { name: "Bright Electric" }));
+      await save();
+      expect(lastPatch(server)).toEqual({ vendor_id: "v2" });
+    });
+
+    it("takes a saved vendor off", async () => {
+      const server = startTransactionServer([aTransaction({ vendor_id: "v1" })]);
+      server.vendors = [aSavedVendor()];
+      await renderScreen();
+      await fireEvent.press(await screen.findByLabelText("Saved vendor, Ace Plumbing"));
+      await fireEvent.press(await screen.findByRole("radio", { name: "None" }));
+      await save();
+      expect(lastPatch(server)).toEqual({ vendor_id: null });
+    });
+
+    it("sends a new channel and payment method", async () => {
+      const server = startTransactionServer([aTransaction()]);
+      await renderScreen();
+      await fireEvent.press(await screen.findByLabelText("Channel, None"));
+      await fireEvent.press(await screen.findByRole("radio", { name: "Vrbo" }));
+      await fireEvent.press(screen.getByLabelText("Payment method, None"));
+      await fireEvent.press(await screen.findByRole("radio", { name: "Bank Transfer" }));
+      await save();
+      expect(lastPatch(server)).toEqual({ channel: "vrbo", payment_method: "bank_transfer" });
+    });
+
+    it("clears a channel and payment method as null, the way the website does", async () => {
+      const server = startTransactionServer([aTransaction(filled)]);
+      await renderScreen();
+      await fireEvent.press(await screen.findByLabelText("Channel, Airbnb"));
+      await fireEvent.press(await screen.findByRole("radio", { name: "None" }));
+      await fireEvent.press(screen.getByLabelText("Payment method, Check"));
+      await fireEvent.press(await screen.findByRole("radio", { name: "None" }));
+      await save();
+      expect(lastPatch(server)).toEqual({ channel: null, payment_method: null });
+    });
+
+    it("turns tax reports on and off", async () => {
+      const server = startTransactionServer([aTransaction()]);
+      await renderScreen();
+      await fireEvent(await screen.findByLabelText("Include in tax reports"), "valueChange", true);
+      expect(mockPreventRemove.active).toBe(true);
+      await save();
+      expect(lastPatch(server)).toEqual({ tax_relevant: true });
+    });
+
+    it("turns tax reports off for one that was in them", async () => {
+      const server = startTransactionServer([aTransaction({ tax_relevant: true })]);
+      await renderScreen();
+      await fireEvent(await screen.findByLabelText("Include in tax reports"), "valueChange", false);
+      await save();
+      expect(lastPatch(server)).toEqual({ tax_relevant: false });
+    });
   });
 
   describe("changing the date", () => {

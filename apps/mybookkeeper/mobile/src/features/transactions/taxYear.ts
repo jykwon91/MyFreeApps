@@ -1,8 +1,5 @@
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
-
-export function taxYearOf(isoDate: string): number {
-  return Number(isoDate.slice(0, 4));
-}
+import { taxYearOf } from "@mybookkeeper/api-client/utils/transactionTaxYear";
 
 /** The year a new date falls in, when it isn't the tax year the transaction is filed under. */
 export function otherTaxYear(newDate: string, original: Transaction): number | null {

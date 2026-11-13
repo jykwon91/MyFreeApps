@@ -1,14 +1,15 @@
 import { CHANNEL_OPTIONS } from "../src/constants/transactionCreateOptions";
 import { isBulkApprovable } from "../src/features/transactions/bulkApprovable";
-import { otherTaxYear, taxYearOf } from "../src/features/transactions/taxYear";
+import { savedVendorChoices, savedVendorLabel } from "../src/features/transactions/savedVendor";
+import { otherTaxYear } from "../src/features/transactions/taxYear";
 import { blankCreateValues, choiceLabel, createAmountError, createPayload } from "../src/features/transactions/transactionCreateValues";
 import { nextToReview } from "../src/features/transactions/nextToReview";
 import { displayAmount, isMoneyIn, rowAccessibilityLabel, shortDate, spokenAmount, spokenMoney } from "../src/features/transactions/transactionDisplay";
-import { amountError, categoryChoices, changedFields, selectableProperties, toEditValues } from "../src/features/transactions/transactionEditValues";
+import { amountError, categoryChoices, changedFields, selectableProperties, taxYearError, toEditValues } from "../src/features/transactions/transactionEditValues";
 import { activeFilterCount, filtersFromParams, filtersToParams, periodRange, reviewLink, reviewQueueParams, toListParams, transactionsLink } from "../src/features/transactions/transactionFilters";
 import { approveFailureMessage, bulkDeleteConfirmBody, bulkDeleteConfirmTitle, bulkDeleteFailureMessage, othersUpdatedSentence, saveFailureMessage } from "../src/features/transactions/transactionMessages";
 import { NO_FILTERS, UNASSIGNED_PROPERTY } from "../src/constants/transactionFilters";
-import { aProperty, aTransaction } from "../test-support/transactionsServer";
+import { aProperty, aSavedVendor, aTransaction } from "../test-support/transactionsServer";
 
 describe("amounts", () => {
   it("signs money in and money out", () => {
@@ -159,6 +160,48 @@ describe("the edit form", () => {
     });
   });
 
+  it("sends the tax year, saved vendor, channel, payment method and tax relevance the way the website does", () => {
+    expect(
+      changedFields({ ...values, taxYear: "2025", vendorId: "v1", channel: "airbnb", paymentMethod: "check", taxRelevant: true }, original),
+    ).toEqual({ tax_year: 2025, vendor_id: "v1", channel: "airbnb", payment_method: "check", tax_relevant: true });
+  });
+
+  it("sends null for a cleared saved vendor, channel or payment method", () => {
+    const linked = aTransaction({ vendor_id: "v1", channel: "vrbo", payment_method: "cash" });
+    expect(changedFields({ ...toEditValues(linked), vendorId: null, channel: "", paymentMethod: "" }, linked)).toEqual({
+      vendor_id: null,
+      channel: null,
+      payment_method: null,
+    });
+  });
+
+  it.each([
+    ["2026", undefined],
+    ["2020", undefined],
+    ["2099", undefined],
+    ["2019", "Use a year from 2020 to 2099."],
+    ["2100", "Use a year from 2020 to 2099."],
+    ["20", "Use a year from 2020 to 2099."],
+    ["", "Use a year from 2020 to 2099."],
+  ])("checks a tax year of %p", (taxYear, expected) => {
+    expect(taxYearError({ ...values, taxYear }, original)).toBe(expected);
+  });
+
+  it("doesn't hold back a row already filed under a year outside the range", () => {
+    const old = aTransaction({ tax_year: 2018 });
+    expect(taxYearError(toEditValues(old), old)).toBeUndefined();
+  });
+
+  it("offers None first, then the saved vendors, and never names a link as none", () => {
+    expect(savedVendorChoices([aSavedVendor()])).toEqual([
+      { value: "none", label: "None" },
+      { value: "v1", label: "Ace Plumbing" },
+    ]);
+    expect(savedVendorLabel(null, [])).toBe("None");
+    expect(savedVendorLabel("v1", [aSavedVendor()])).toBe("Ace Plumbing");
+    expect(savedVendorLabel("gone", [])).toBe("A saved vendor");
+  });
+
   it("leaves an untouched refund alone but checks a changed amount", () => {
     const refund = aTransaction({ amount: "-20.00" });
     const refundValues = toEditValues(refund);
@@ -248,10 +291,6 @@ describe("tax years", () => {
     expect(otherTaxYear("2026-12-31", aTransaction())).toBeNull();
     expect(otherTaxYear("2027-01-01", aTransaction())).toBe(2027);
     expect(otherTaxYear("2026-01-02", aTransaction({ tax_year: 2025 }))).toBe(2026);
-  });
-
-  it("reads the year from the date without time zones", () => {
-    expect(taxYearOf("2025-12-31")).toBe(2025);
   });
 });
 

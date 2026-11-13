@@ -1,31 +1,48 @@
+import { ASSIGN_VENDOR_LIST_ARGS } from "@mybookkeeper/api-client/constants/assignVendorList";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useUpdateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
+import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Text } from "react-native";
+import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
 import { DEFAULT_CATEGORY, NO_PROPERTY_OPTION, TRANSACTION_EDIT_SHEET, TRANSACTION_SAVE_ACTION } from "../../constants/transactionEdit";
+import { SAVED_VENDOR_MESSAGES, TRANSACTION_FIELD_LABELS as LABELS } from "../../constants/transactionFieldLabels";
 import { TRANSACTION_TYPES } from "../../constants/transactionFilters";
 import type { TransactionEditSheet } from "../../types/TransactionEditSheet";
 import type { TransactionEditValues } from "../../types/TransactionEditValues";
 import type { TransactionSaveAction } from "../../types/TransactionSaveAction";
+import type { TransactionSheetConfig } from "../../types/TransactionSheetConfig";
 import PeriodDateRow from "../shell/PeriodDateRow";
 import PickerField from "./PickerField";
 import { confirmTaxYearChange } from "./confirmTaxYearChange";
+import { savedVendorChoices, savedVendorLabel } from "./savedVendor";
 import { otherTaxYear } from "./taxYear";
+import { choiceLabel, fromChoice } from "./transactionCreateValues";
 import { categoryLabel, isReviewable, propertyLabel } from "./transactionDisplay";
-import { amountError, categoryChoices, categoryFitsType, changedFields, selectableProperties, toEditValues } from "./transactionEditValues";
+import { amountError, categoryChoices, categoryFitsType, changedFields, selectableProperties, taxYearError, toEditValues } from "./transactionEditValues";
 import { othersUpdatedSentence, saveFailureMessage } from "./transactionMessages";
+
+const SHEET_TITLES: Record<TransactionEditSheet, string> = {
+  category: "Category",
+  property: "Property",
+  savedVendor: LABELS.savedVendor,
+  channel: LABELS.channel,
+  paymentMethod: LABELS.paymentMethod,
+};
 
 export default function TransactionEditForm({ original }: { original: Transaction }) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
   const { data: properties = [] } = useGetPropertiesQuery();
+  const { data: vendorList, isError: vendorsFailed, isLoading: vendorsLoading } = useGetVendorsQuery(ASSIGN_VENDOR_LIST_ARGS);
+  const vendors = vendorList?.items ?? [];
   const [updateTransaction, { isLoading: isSaving }] = useUpdateTransactionMutation();
   const [values, setValues] = useState<TransactionEditValues>(() => toEditValues(original));
-  const [showAmountError, setShowAmountError] = useState(false);
+  const [showProblems, setShowProblems] = useState(false);
   const [openSheet, setOpenSheet] = useState<TransactionEditSheet | null>(null);
   const [savingAction, setSavingAction] = useState<TransactionSaveAction | null>(null);
   const [categoryWasReset, setCategoryWasReset] = useState(false);
@@ -36,7 +53,8 @@ export default function TransactionEditForm({ original }: { original: Transactio
   const isDirty = Object.keys(changes).length > 0;
   const reviewable = isReviewable(original.status);
   const vendor = values.vendor.trim();
-  const amountProblem = showAmountError ? amountError(values, original) : undefined;
+  const amountProblem = showProblems ? amountError(values, original) : undefined;
+  const taxYearProblem = showProblems ? taxYearError(values, original) : undefined;
 
   useConfirmLeave(isDirty && !isLeaving, (leave) => {
     if (isSaving) return;
@@ -65,8 +83,8 @@ export default function TransactionEditForm({ original }: { original: Transactio
   }
 
   async function save(approve: boolean): Promise<void> {
-    if (amountError(values, original)) {
-      setShowAmountError(true);
+    if (amountError(values, original) || taxYearError(values, original)) {
+      setShowProblems(true);
       return;
     }
     const approval: Partial<Transaction> = approve ? { ...changes, status: "approved" } : changes;
@@ -74,7 +92,8 @@ export default function TransactionEditForm({ original }: { original: Transactio
       setIsLeaving(true);
       return;
     }
-    const newTaxYear = changes.transaction_date ? otherTaxYear(changes.transaction_date, original) : null;
+    // A tax year typed in is already the answer, so only a new date alone asks which year it files under.
+    const newTaxYear = changes.transaction_date && changes.tax_year === undefined ? otherTaxYear(changes.transaction_date, original) : null;
     const choice = newTaxYear === null ? "keep" : await confirmTaxYearChange(original.tax_year, newTaxYear);
     if (choice === "cancel") return;
     const data: Partial<Transaction> = choice === "move" && newTaxYear !== null ? { ...approval, tax_year: newTaxYear } : approval;
@@ -91,14 +110,41 @@ export default function TransactionEditForm({ original }: { original: Transactio
     }
   }
 
-  const propertyOptions = [
-    { value: NO_PROPERTY_OPTION, label: "No property" },
-    ...selectableProperties(properties, original.property_id).map((property) => ({ value: property.id, label: property.name })),
-  ];
-  const categoryOptions = categoryChoices(values.type, values.category).map((category) => ({
-    value: category,
-    label: categoryLabel(category),
-  }));
+  const sheets: Record<TransactionEditSheet, TransactionSheetConfig> = {
+    category: {
+      options: categoryChoices(values.type, values.category).map((category) => ({ value: category, label: categoryLabel(category) })),
+      value: values.category,
+      apply: (category) => {
+        setCategoryWasReset(false);
+        update({ category });
+      },
+    },
+    property: {
+      options: [
+        { value: NO_PROPERTY_OPTION, label: "No property" },
+        ...selectableProperties(properties, original.property_id).map((property) => ({ value: property.id, label: property.name })),
+      ],
+      value: values.propertyId ?? NO_PROPERTY_OPTION,
+      apply: (propertyId) => update({ propertyId: fromChoice(propertyId) || null }),
+    },
+    savedVendor: {
+      options: savedVendorChoices(vendors),
+      value: values.vendorId ?? NO_PROPERTY_OPTION,
+      apply: (vendorId) => update({ vendorId: fromChoice(vendorId) || null }),
+      description: vendorsFailed ? SAVED_VENDOR_MESSAGES.loadFailed : SAVED_VENDOR_MESSAGES.sheetDescription,
+    },
+    channel: {
+      options: CHANNEL_OPTIONS,
+      value: values.channel || NO_PROPERTY_OPTION,
+      apply: (channel) => update({ channel: fromChoice(channel) }),
+    },
+    paymentMethod: {
+      options: PAYMENT_METHOD_CHOICES,
+      value: values.paymentMethod || NO_PROPERTY_OPTION,
+      apply: (paymentMethod) => update({ paymentMethod: fromChoice(paymentMethod) }),
+    },
+  };
+  const sheet = openSheet ? sheets[openSheet] : null;
   const categoryHint = categoryWasReset
     ? `I changed the category to ${categoryLabel(values.category)}. Change it if that's wrong.`
     : changes.category && vendor
@@ -116,7 +162,21 @@ export default function TransactionEditForm({ original }: { original: Transactio
       >
         {original.status === "approved" ? <Banner message="This one is approved, so changes show up in your totals right away." /> : null}
         <PeriodDateRow isOpen={isDateOpen} label="Date" onChange={(date) => update({ date })} onToggle={() => setIsDateOpen((open) => !open)} value={values.date} />
+        <FormField
+          error={taxYearProblem}
+          keyboardType="number-pad"
+          label={LABELS.taxYear}
+          maxLength={4}
+          onChangeText={(taxYear) => update({ taxYear })}
+          value={values.taxYear}
+        />
         <FormField label="Vendor" onChangeText={(vendorText) => update({ vendor: vendorText })} value={values.vendor} />
+        <PickerField
+          disabled={vendorsLoading}
+          label={LABELS.savedVendor}
+          onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.savedVendor)}
+          value={vendorsLoading ? SAVED_VENDOR_MESSAGES.loading : savedVendorLabel(values.vendorId, vendors)}
+        />
         <FormField
           error={amountProblem}
           keyboardType="decimal-pad"
@@ -133,6 +193,13 @@ export default function TransactionEditForm({ original }: { original: Transactio
           onChangeText={(description) => update({ description })}
           value={values.description}
         />
+        <PickerField label={LABELS.channel} onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.channel)} value={choiceLabel(CHANNEL_OPTIONS, values.channel)} />
+        <PickerField
+          label={LABELS.paymentMethod}
+          onPress={() => setOpenSheet(TRANSACTION_EDIT_SHEET.paymentMethod)}
+          value={choiceLabel(PAYMENT_METHOD_CHOICES, values.paymentMethod)}
+        />
+        <SwitchRow label={LABELS.taxRelevant} onValueChange={(taxRelevant) => update({ taxRelevant })} value={values.taxRelevant} />
 
         {reviewable ? (
           <>
@@ -163,27 +230,16 @@ export default function TransactionEditForm({ original }: { original: Transactio
       </KeyboardAwareScroll>
 
       <OptionSheet
-        isOpen={openSheet === TRANSACTION_EDIT_SHEET.category}
+        description={sheet?.description}
+        isOpen={sheet !== null}
         onClose={() => setOpenSheet(null)}
-        onSelect={(category) => {
+        onSelect={(value) => {
+          sheet?.apply(value);
           setOpenSheet(null);
-          setCategoryWasReset(false);
-          update({ category });
         }}
-        options={categoryOptions}
-        title="Category"
-        value={values.category}
-      />
-      <OptionSheet
-        isOpen={openSheet === TRANSACTION_EDIT_SHEET.property}
-        onClose={() => setOpenSheet(null)}
-        onSelect={(propertyId) => {
-          setOpenSheet(null);
-          update({ propertyId: propertyId === NO_PROPERTY_OPTION ? null : propertyId });
-        }}
-        options={propertyOptions}
-        title="Property"
-        value={values.propertyId ?? NO_PROPERTY_OPTION}
+        options={sheet?.options ?? []}
+        title={openSheet ? SHEET_TITLES[openSheet] : ""}
+        value={sheet?.value ?? null}
       />
     </>
   );

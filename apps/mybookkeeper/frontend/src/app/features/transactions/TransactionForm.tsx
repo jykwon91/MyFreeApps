@@ -14,6 +14,9 @@ import type { SourcePreview } from "@/shared/types/transaction/source-preview";
 import Select from "@/shared/components/ui/Select";
 import TransactionDuplicateActions from "@/app/features/transactions/TransactionDuplicateActions";
 import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
+import { ASSIGN_VENDOR_LIST_ARGS } from "@mybookkeeper/api-client/constants/assignVendorList";
+import { MAX_TAX_RETURN_YEAR, MIN_TAX_RETURN_YEAR } from "@mybookkeeper/api-client/constants/taxReturnYears";
+import { scheduleELineLabel } from "@mybookkeeper/api-client/utils/scheduleELineLabel";
 import SourcePreviewBody from "./SourcePreviewBody";
 
 export interface TransactionFormProps {
@@ -54,12 +57,8 @@ export default function TransactionForm({
   const transactionType = watch("transaction_type");
   const categories = transactionType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORY_LIST;
 
-  // PR 4.2: vendor rolodex for the "Assign vendor" dropdown. Bound is
-  // generous — listing 100 vendors at once is fine for typical hosts.
-  const { data: vendorsData, isLoading: vendorsLoading } = useGetVendorsQuery({
-    limit: 100,
-    offset: 0,
-  });
+  // PR 4.2: vendor rolodex for the "Assign vendor" dropdown.
+  const { data: vendorsData, isLoading: vendorsLoading } = useGetVendorsQuery(ASSIGN_VENDOR_LIST_ARGS);
   const vendors = vendorsData?.items ?? [];
 
   const revokePreview = useCallback(() => {
@@ -180,8 +179,8 @@ export default function TransactionForm({
             type="number"
             {...register("tax_year", { valueAsNumber: true })}
             className={fieldClass("tax_year")}
-            min={2020}
-            max={2099}
+            min={MIN_TAX_RETURN_YEAR}
+            max={MAX_TAX_RETURN_YEAR}
             {...field}
           />
         )}
@@ -333,7 +332,7 @@ export default function TransactionForm({
 
       {transaction.schedule_e_line && (
         <div className="text-xs text-muted-foreground">
-          Schedule E: {formatTag(transaction.schedule_e_line)}
+          Schedule E: {scheduleELineLabel(transaction.schedule_e_line)}
         </div>
       )}
     </form>

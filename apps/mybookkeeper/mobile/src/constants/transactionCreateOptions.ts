@@ -4,10 +4,10 @@ import { formatTag } from "@platform/core/utils/tag";
 import type { TransactionChoice } from "../types/TransactionChoice";
 import { NO_PROPERTY_OPTION } from "./transactionEdit";
 
-const NONE: TransactionChoice = { value: NO_PROPERTY_OPTION, label: "None" };
+export const NONE_CHOICE: TransactionChoice = { value: NO_PROPERTY_OPTION, label: "None" };
 
 function withNone(values: readonly string[]): TransactionChoice[] {
-  return [NONE, ...values.map((value) => ({ value, label: formatTag(value) }))];
+  return [NONE_CHOICE, ...values.map((value) => ({ value, label: formatTag(value) }))];
 }
 
 export const CHANNEL_OPTIONS = withNone(CHANNELS);
