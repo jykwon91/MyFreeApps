@@ -72,6 +72,12 @@ def _reset_limiters() -> None:
     wow_prices.price_refresh_state_limiter._buckets.clear()
 
 
+@pytest.fixture(autouse=True)
+def _refreshes_switched_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    """CI runs with WOW_PRICE_REFRESH_ENABLED=false; these tests are about the switched-on route (the switched-off test sets it back)."""
+    monkeypatch.setattr(settings, "wow_price_refresh_enabled", True)
+
+
 @pytest.fixture
 def ran(monkeypatch: pytest.MonkeyPatch) -> list[PriceRefreshClaim]:
     """The claims the route handed to the background refresh (which is not run here)."""
