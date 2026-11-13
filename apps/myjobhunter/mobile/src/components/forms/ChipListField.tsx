@@ -1,9 +1,8 @@
-import { FormField, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { ChipButton, FormField, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { CHIP_FIELD_MESSAGES as MESSAGES, CHIP_FIELD_SEPARATOR } from "../../constants/savedSearchSheet";
 import { addChipValues } from "../../lib/addChipValues";
 import type { ChipListFieldProps } from "../../types/ChipListFieldProps";
-import ChipButton from "./ChipButton";
 
 /**
  * The phone's form of the website's chip input: type an entry and tap Add, Return or a comma, or

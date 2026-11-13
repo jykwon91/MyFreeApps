@@ -1,7 +1,11 @@
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { versionBadgeLabel } from "@myrecipes/api-client/utils/versionBadgeLabel";
+import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
-import { countLabel } from "../../utils/countLabel";
+import { lastCookedText } from "../../utils/lastCookedText";
+import { recipeCardFacts } from "../../utils/recipeCardFacts";
+import { recipeCardLabel } from "../../utils/recipeCardLabel";
+import StarRating from "./StarRating";
 
 interface RecipeCardProps {
   recipe: RecipeSummary;
@@ -10,14 +14,12 @@ interface RecipeCardProps {
 
 export default function RecipeCard({ recipe, onPress }: RecipeCardProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
-  const versions = recipe.version_count > 0 ? countLabel(recipe.version_count, "version") : null;
-  const owner = recipe.owner_display_name ? `by ${recipe.owner_display_name}` : null;
-  const label = [recipe.title, versions, owner].filter(Boolean).join(", ");
+  const { versions, owner } = recipeCardFacts(recipe);
 
   return (
     <Pressable
       accessibilityHint="Opens recipe"
-      accessibilityLabel={label}
+      accessibilityLabel={recipeCardLabel(recipe)}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => ({
@@ -30,26 +32,33 @@ export default function RecipeCard({ recipe, onPress }: RecipeCardProps) {
         backgroundColor: pressed ? colors.muted : colors.card,
       })}
     >
-      <Text
-        numberOfLines={2}
-        style={{ color: colors.foreground, fontSize: fontSize.md, fontWeight: "600" }}
-      >
-        {recipe.title}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.sm }}>
+        <Text
+          numberOfLines={2}
+          style={{ flex: 1, color: colors.foreground, fontSize: fontSize.md, fontWeight: "600" }}
+        >
+          {recipe.title}
+        </Text>
+        <Chip label={versionBadgeLabel(recipe.latest_version_number)} tone="info" />
+      </View>
       {recipe.description ? (
         <Text numberOfLines={2} style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>
           {recipe.description}
         </Text>
       ) : null}
-      {versions || owner ? (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: spacing.md }}>
-          {versions ? (
-            <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>{versions}</Text>
-          ) : null}
-          {owner ? (
-            <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>{owner}</Text>
-          ) : null}
+      {versions ? (
+        <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>{versions}</Text>
+      ) : null}
+      {recipe.is_owner ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: spacing.md }}>
+          <StarRating rating={recipe.best_rating} />
+          <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>
+            {lastCookedText(recipe.last_cooked_at)}
+          </Text>
         </View>
+      ) : null}
+      {owner ? (
+        <Text style={{ color: colors.mutedForeground, fontSize: fontSize.xs }}>{owner}</Text>
       ) : null}
     </Pressable>
   );

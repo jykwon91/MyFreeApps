@@ -1,11 +1,22 @@
 import { useListRecipesQuery } from "@myrecipes/api-client/store/recipesApi";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import { useDebouncedValue } from "@platform/core/hooks/useDebouncedValue";
-import { EmptyState, ListSeparator, SearchField, Toast, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
+import {
+  ChipButton,
+  EmptyState,
+  ListSeparator,
+  SearchField,
+  Toast,
+  useAnnouncement,
+  useRefresh,
+  useSession,
+  useTheme,
+} from "@platform/mobile";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { FlatList, View } from "react-native";
 import { NEW_RECIPE_MESSAGES } from "../../constants/newRecipe";
+import { RECIPES_MESSAGES } from "../../constants/recipes";
 import { countLabel } from "../../utils/countLabel";
 import RecipeCard from "./RecipeCard";
 import RecipeListSkeleton from "./RecipeListSkeleton";
@@ -16,6 +27,14 @@ export default function RecipesScreen() {
   // `clears` counts each time the field empties, so a term still waiting on the debounce
   // can be told apart from what's in the field now and can't come back after clearing.
   const [search, setSearch] = useState({ text: "", clears: 0 });
+  // Kept apart from the search so typing or clearing it never turns the filter off.
+  const [isMineOnly, setIsMineOnly] = useState(false);
+  const { state } = useSession();
+  // As on the website, the filter is for people who are signed in.
+  const canFilterMine = state.status === "signedIn";
+  const ownerMe = canFilterMine && isMineOnly;
+  // Signing out turns it off for good, so the next account to sign in starts unfiltered.
+  if (!canFilterMine && isMineOnly) setIsMineOnly(false);
 
   const trimmed = search.text.trim();
   const debounced = useDebouncedValue(search);
@@ -23,7 +42,7 @@ export default function RecipesScreen() {
   const term = trimmed && debounced.clears === search.clears ? debounced.text.trim() : "";
 
   const { currentData, data, error, isError, isFetching, refetch } = useListRecipesQuery(
-    term ? { search: term } : undefined,
+    term || ownerMe ? { search: term || undefined, owner: ownerMe ? "me" : undefined } : undefined,
   );
 
   const { dismissError, isErrorDismissed, isRefreshing, refreshControl } = useRefresh(refetch, error);
@@ -36,7 +55,7 @@ export default function RecipesScreen() {
   useAnnouncement(
     isError && !rows?.length
       ? "Can't load recipes"
-      : term && rows && isSearchSettled
+      : (term || ownerMe) && rows && isSearchSettled
         ? countLabel(rows.length, "recipe")
         : undefined,
   );
@@ -69,6 +88,15 @@ export default function RecipesScreen() {
         />
       );
     }
+    if (ownerMe) {
+      return (
+        <EmptyState
+          action={{ label: RECIPES_MESSAGES.showAll, onPress: () => setIsMineOnly(false) }}
+          body={RECIPES_MESSAGES.mineEmptyBody}
+          heading={RECIPES_MESSAGES.mineEmptyHeading}
+        />
+      );
+    }
     return (
       <EmptyState
         action={{ label: NEW_RECIPE_MESSAGES.newRecipe, onPress: () => router.push("/recipes/new") }}
@@ -87,7 +115,7 @@ export default function RecipesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={{ padding: spacing.lg, paddingBottom: spacing.sm }}>
+      <View style={{ padding: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm }}>
         <SearchField
           accessibilityLabel="Search recipes by title"
           onChangeText={changeSearch}
@@ -95,6 +123,15 @@ export default function RecipesScreen() {
           placeholder="Search recipes"
           value={search.text}
         />
+        {canFilterMine ? (
+          <View style={{ flexDirection: "row" }}>
+            <ChipButton
+              isChecked={isMineOnly}
+              label={RECIPES_MESSAGES.myRecipes}
+              onPress={() => setIsMineOnly((on) => !on)}
+            />
+          </View>
+        ) : null}
       </View>
       {hasFailedOverRows ? (
         <Toast

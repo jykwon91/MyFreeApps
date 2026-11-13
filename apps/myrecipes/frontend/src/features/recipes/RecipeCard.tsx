@@ -3,6 +3,7 @@ import { GitBranch } from "lucide-react";
 import { Badge, formatDate } from "@platform/ui";
 import StarRating from "@/features/recipes/StarRating";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
+import { versionBadgeLabel } from "@myrecipes/api-client/utils/versionBadgeLabel";
 
 interface Props {
   recipe: RecipeSummary;
@@ -20,10 +21,7 @@ interface Props {
  * "by {owner}" attribution when the owner's display name is known.
  */
 export default function RecipeCard({ recipe }: Props) {
-  const versionLabel =
-    recipe.latest_version_number === null
-      ? "Draft"
-      : `v${recipe.latest_version_number}`;
+  const versionLabel = versionBadgeLabel(recipe.latest_version_number);
 
   return (
     <Link

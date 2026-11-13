@@ -1,7 +1,6 @@
-import { useTheme } from "@platform/mobile";
+import { ChipButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import type { ToggleChipsFieldProps } from "../../types/ToggleChipsFieldProps";
-import ChipButton from "./ChipButton";
 
 /** Options to switch on and off, any number of them, as the website's toggle chips. */
 export default function ToggleChipsField({ label, options, values, onChange, disabled = false }: ToggleChipsFieldProps) {
