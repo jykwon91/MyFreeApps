@@ -11,7 +11,8 @@
  *   - No templates links to the Reply Templates page, and following it closes the panel.
  *   - The failure state fits a phone, with a full-size Try again.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";

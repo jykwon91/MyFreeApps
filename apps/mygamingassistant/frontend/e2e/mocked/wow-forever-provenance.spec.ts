@@ -4,7 +4,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-provenance
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubEmptyPrices } from "./fixtures/emptyPrices";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
@@ -35,8 +36,9 @@ for (const { name, path } of PAGES) {
     }
   });
 
-  test(`${name} has no horizontal overflow at 375px, and a tap explains a badge`, async ({ browser }) => {
+  test(`${name} has no horizontal overflow at 375px, and a tap explains a badge`, async ({ browser, guardContext }) => {
     const context = await browser.newContext({ viewport: PHONE, hasTouch: true, isMobile: true });
+    await guardContext(context);
     const page = await context.newPage();
     await stubUnmatchedApi(page);
     await stubEmptyPrices(page);
@@ -58,7 +60,6 @@ for (const { name, path } of PAGES) {
     await page.getByTestId("provenance-guide").getByText("How to read these tags").tap();
     await expect(tooltip).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
-    await context.close();
   });
 }
 

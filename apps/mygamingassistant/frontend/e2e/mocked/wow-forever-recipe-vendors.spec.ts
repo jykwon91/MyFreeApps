@@ -4,7 +4,7 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-recipe-vendors
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubEmptyPrices } from "./fixtures/emptyPrices";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 

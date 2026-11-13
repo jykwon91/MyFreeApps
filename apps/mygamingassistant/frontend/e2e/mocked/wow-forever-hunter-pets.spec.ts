@@ -5,7 +5,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-hunter-pets
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { ALL_BEASTS, PET_FAMILIES, familyBeastCount } from "./fixtures/wowForeverDataCounts";
 

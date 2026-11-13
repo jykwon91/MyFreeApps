@@ -11,7 +11,8 @@
  *   - Cancelling an invite that's already gone says so and reloads the list.
  *   - An invite whose email fails reports an error with a step the admin can take.
  */
-import { test, expect, type Page, type Request } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgInvite";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";

@@ -14,7 +14,8 @@
  *   - The prompt's buttons are at least 44px tall and fit a phone-width screen.
  *   - Fields are named by their visible labels, and clicking a label focuses its field.
  */
-import { test, expect, type Page, type Request } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";
 

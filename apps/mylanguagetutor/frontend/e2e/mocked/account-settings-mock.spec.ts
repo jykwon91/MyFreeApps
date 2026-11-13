@@ -6,7 +6,8 @@
  * server refuses it says so and keeps what was typed.
  */
 import { readFile } from "node:fs/promises";
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { ME_PATH, stubAccountApi } from "@platform/ui/test-support/accountApi";
 import { createGate } from "@platform/ui/test-support/gate";
 import { json, plainText } from "@platform/ui/test-support/mockResponse";

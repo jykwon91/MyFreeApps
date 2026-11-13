@@ -5,7 +5,7 @@
  * posting through undo-dismiss; letting the toast expire keeps it dismissed; a
  * refused Undo says why.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import type { Page } from "@playwright/test";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";

@@ -3,7 +3,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-macros
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 const HOVER_CAST_HEADING = "Hover-cast macros (mouseover)";

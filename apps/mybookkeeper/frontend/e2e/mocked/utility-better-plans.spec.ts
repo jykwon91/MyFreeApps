@@ -25,7 +25,8 @@
  *     horizontal scroll onto the page before the label was allowed to wrap.
  *   - A 503 from the feed renders "nothing is wrong with your plans".
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";

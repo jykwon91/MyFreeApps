@@ -7,7 +7,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-legacy
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { LEGACY_CHALLENGES as TOTAL_CHALLENGES } from "./fixtures/wowForeverDataCounts";
 

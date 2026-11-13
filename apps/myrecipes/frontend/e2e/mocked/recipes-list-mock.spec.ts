@@ -5,7 +5,8 @@
  * failed load says so instead of showing an empty library, and the loading
  * skeleton has the same grid as the loaded list.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { createGate } from "@platform/ui/test-support/gate";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";

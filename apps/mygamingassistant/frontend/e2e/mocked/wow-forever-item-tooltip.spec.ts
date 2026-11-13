@@ -4,7 +4,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-item-tooltip
  */
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 async function openGearAtLevel60(page: Page): Promise<Locator> {

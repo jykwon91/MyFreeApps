@@ -17,26 +17,45 @@
  * an all-clear, or no plans at all, so the card would vanish. While the retry
  * runs, the card must keep its error up and show the retry in progress.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
+import { EMPTY_PREMIUM_COMPARISON } from "./fixtures/mockDashboard";
+import type { InsurancePremiumComparison } from "@mybookkeeper/api-client/types/insurance/insurance-premium-comparison";
+import type { MarketRateBenchmark } from "@mybookkeeper/api-client/types/utility/market-rate-benchmark";
+import type { UtilityPlanListResponse } from "@mybookkeeper/api-client/types/utility/utility-plan-list-response";
 
 const COMPARISON_ERROR = "Couldn't compare your utility rates to the market.";
 const RENEWAL_ERROR = "Couldn't check utility plan renewals.";
 const INSURANCE_ERROR = "Couldn't compare your insurance premiums to the market.";
 
-const PLAN_PAGE = { items: [{ id: "00000000-0000-0000-0000-0000000000a1" }], total: 1, has_more: false };
-const CLEAR_RENEWALS = { window_days: 45, expired: [], expiring_soon: [], total_needing_attention: 0 };
-const CLEAR_COMPARISON = {
-  material_gap_pct: 10,
-  above_market: [],
-  not_compared: [],
-  total_above_market: 0,
-  has_stale_benchmark: false,
+/** One current plan, so the utility cards have something to check. */
+const PLAN_PAGE: UtilityPlanListResponse = {
+  items: [
+    {
+      id: "00000000-0000-0000-0000-0000000000a1",
+      property_id: "00000000-0000-0000-0000-0000000000a2",
+      property_name: "Main Street Duplex",
+      service_type: "electricity",
+      provider_name: "Reliant",
+      plan_name: "Truly Free Weekends 12",
+      rate_type: "fixed",
+      avg_price_cents_per_kwh_at_1000: "13.9000",
+      term_end_date: null,
+      days_until_term_end: null,
+      renewal_status: "not_applicable",
+      is_current: true,
+      created_at: "2026-10-01T00:00:00Z",
+      updated_at: "2026-10-01T00:00:00Z",
+    },
+  ],
+  total: 1,
+  has_more: false,
 };
-const BENCHMARK = {
+const BENCHMARK: MarketRateBenchmark = {
   id: "00000000-0000-0000-0000-0000000000b1",
   service_type: "electricity",
   rate_cents_per_kwh: "12.5000",
@@ -49,35 +68,7 @@ const BENCHMARK = {
   updated_at: "2026-10-01T00:00:00Z",
 };
 
-const EMPTY_SUMMARY = {
-  revenue: 0,
-  expenses: 0,
-  profit: 0,
-  by_category: {},
-  by_property: [],
-  by_month: [],
-  by_month_expense: [],
-  by_property_month: [],
-};
-
-const EMPTY_PROPERTY_PNL = {
-  since: "2026-11-01",
-  until: "2026-11-07",
-  properties: [],
-  total_revenue_cents: 0,
-  total_expenses_cents: 0,
-  total_net_cents: 0,
-};
-const EMPTY_PREMIUM_COMPARISON = {
-  material_gap_pct: 10,
-  benchmark: null,
-  above_market: [],
-  not_compared: [],
-  total_above_market: 0,
-  total_considered: 0,
-  has_stale_benchmark: false,
-};
-const CLEAR_PREMIUM_COMPARISON = {
+const CLEAR_PREMIUM_COMPARISON: InsurancePremiumComparison = {
   ...EMPTY_PREMIUM_COMPARISON,
   benchmark: {
     id: "00000000-0000-0000-0000-0000000000c1",
@@ -94,23 +85,12 @@ const CLEAR_PREMIUM_COMPARISON = {
   },
   total_considered: 1,
 };
-const EMPTY_ATTRIBUTION_QUEUE = { items: [], total: 0, pending_count: 0 };
 
 async function stubDashboard(page: Page): Promise<void> {
   await stubUnmatchedApi(page, { answer: "empty" });
+  // The shell answers the rest of the dashboard with its real (empty) shapes.
   await stubWorkspaceShell(page, "admin");
-  // The rest of the dashboard, answered with its real (empty) shapes so the page renders.
-  await page.route(/\/api\/summary(\?|$)/, (route) => route.fulfill(json(EMPTY_SUMMARY)));
-  await page.route(/\/api\/dashboard\/property-pnl(\?|$)/, (route) => route.fulfill(json(EMPTY_PROPERTY_PNL)));
-  await page.route(/\/api\/insurance-policies\/premium-comparison(\?|$)/, (route) =>
-    route.fulfill(json(EMPTY_PREMIUM_COMPARISON)),
-  );
-  await page.route(/\/api\/transactions\/attribution-review-queue(\?|$)/, (route) =>
-    route.fulfill(json(EMPTY_ATTRIBUTION_QUEUE)),
-  );
   await page.route(/\/api\/utility-plans(\?|$)/, (route) => route.fulfill(json(PLAN_PAGE)));
-  await page.route(/\/api\/utility-plans\/rate-comparison(\?|$)/, (route) => route.fulfill(json(CLEAR_COMPARISON)));
-  await page.route(/\/api\/utility-plans\/renewal-alerts(\?|$)/, (route) => route.fulfill(json(CLEAR_RENEWALS)));
   await page.route(/\/api\/market-rate-benchmarks(\?|$)/, (route) => route.fulfill(json([BENCHMARK])));
 }
 

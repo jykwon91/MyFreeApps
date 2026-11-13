@@ -3,7 +3,8 @@
  * per card. A successful move shows the card under its new stage with a
  * success toast; a refused move (500) puts the card back with an error toast.
  */
-import { test, expect, devices, type Page } from "@playwright/test";
+import { devices, type Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 

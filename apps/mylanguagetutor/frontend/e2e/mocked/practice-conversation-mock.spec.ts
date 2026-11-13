@@ -8,7 +8,7 @@
  * off and a finished scenario says so. In a browser that can recognise speech,
  * "Type instead" switches to typing without ever starting the microphone.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { createGate } from "@platform/ui/test-support/gate";
 import { NORMAL_RATE, SLOW_RATE } from "@mylanguagetutor/api-client/constants/speechRates";
 import { practicePath } from "@mylanguagetutor/api-client/utils/practicePath";

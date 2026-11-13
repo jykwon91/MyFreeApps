@@ -5,7 +5,7 @@
  *
  * Run: npx playwright test --config=playwright.layout.serve-only.config.ts serve-only-raid-planner
  */
-import { expect, test } from "@playwright/test";
+import { expect, test } from "@platform/ui/test-support/crashGuard";
 import {
   PLANNER_AUTHORIZATION,
   PLANNER_HEADING,

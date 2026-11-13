@@ -4,7 +4,8 @@
  * previous save) draws above the backdrop, and dismissing it closes the toast,
  * not the dialog, so what was typed stays put.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell, TEST_USER } from "@platform/ui/test-support/mockSession";
 import { toast, toastAboveModal } from "@platform/ui/test-support/toast";

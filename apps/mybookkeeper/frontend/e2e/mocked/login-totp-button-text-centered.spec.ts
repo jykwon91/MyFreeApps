@@ -15,7 +15,7 @@
  * this test closes by measuring the rendered text node's center against the
  * button's center.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 
 test.describe("Login TOTP challenge — Verify button text centered within button", () => {
   test("the 'Verify' text is horizontally centered inside the Verify button", async ({ page }) => {

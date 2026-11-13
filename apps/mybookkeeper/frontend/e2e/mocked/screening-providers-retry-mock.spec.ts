@@ -8,11 +8,13 @@
  * page" with nothing to press. It now offers Retry, keeps the message while the
  * retry is in flight, and shows the provider cards once they load.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
+import { stubNoSignedLeases } from "./fixtures/emptyLists";
 import { APPLICANT_DETAIL, APPLICANT_ID, SCREENING_ELIGIBLE, SCREENING_PROVIDERS } from "./fixtures/mockApplicant";
 
 async function signIn(page: Page): Promise<void> {
@@ -20,6 +22,7 @@ async function signIn(page: Page): Promise<void> {
   // Registered first so the specific routes win; the page's other reads get an empty answer.
   await stubUnmatchedApi(page, { answer: "empty" });
   await stubWorkspaceShell(page, "admin");
+  await stubNoSignedLeases(page);
   await page.route(new RegExp(`/api/applicants/${APPLICANT_ID}$`), (route) => route.fulfill(json(APPLICANT_DETAIL)));
   await page.route(new RegExp(`/api/applicants/${APPLICANT_ID}/screening/eligibility$`), (route) =>
     route.fulfill(json(SCREENING_ELIGIBLE)),

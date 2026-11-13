@@ -6,7 +6,7 @@
  * and leaves the recipe and what was typed as they were. Someone else's recipe
  * offers none of them.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { COOK_ID, VERSION_1_ID, cookOf, recipeIdAt } from "./fixtures/recipeFixtures";
 import { stubRecipeApi } from "./fixtures/stubRecipeApi";

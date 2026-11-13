@@ -19,7 +19,7 @@
  * binary API responses. This contract test enforces that scoping so the
  * regression cannot ship again silently.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";

@@ -7,7 +7,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-rares
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { RARE_FIT_LEVELS_ABOVE, RARE_FIT_LEVELS_BELOW } from "../../src/games/wow-forever/data/rares/raresConfig";
 import { ALL_RARES, CONFIRMED_RARES, FIT_LEVELS_ABOVE, FIT_LEVELS_BELOW, rareCount } from "./fixtures/wowRaresDataCounts";

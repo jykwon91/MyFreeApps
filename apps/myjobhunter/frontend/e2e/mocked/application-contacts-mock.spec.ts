@@ -8,7 +8,8 @@
  * The stubs hold the contacts in memory, so the list the UI shows after each
  * write is what the refetched GET /applications/{id} returned.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import type { ApplicationContact } from "@myjobhunter/api-client/types/contact/application-contact";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";

@@ -3,7 +3,8 @@
  * POST /companies, a success toast shows, and the refetched list now holds
  * the new row; a 500 on POST shows an error toast and keeps the dialog open.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { mockCompany } from "./fixtures/mockData";

@@ -15,7 +15,7 @@
  *       `processing`/`extracting` docs, so the failed row drops out while the
  *       worker re-runs, then the document reappears in its reprocessed state.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 

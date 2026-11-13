@@ -3,7 +3,7 @@
  * the stubbed list answers, the empty state, the error state on a 500, and
  * paging past the first page.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { mockApplication } from "./fixtures/mockData";

@@ -11,10 +11,11 @@
  * retry's answer open, and check that the error stays with Retry busy until the
  * record lands.
  */
-import { test, expect, type Locator, type Page } from "@playwright/test";
-import { json } from "@platform/ui/test-support/mockResponse";
+import type { Locator, Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { stubNoListings } from "./fixtures/emptyLists";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
 import { LISTING, LISTING_ID } from "./fixtures/mockListing";
 import { INQUIRY_DETAIL, INQUIRY_ID } from "./fixtures/mockInquiry";
@@ -73,7 +74,7 @@ async function signIn(page: Page): Promise<void> {
   // Registered first so the specific routes win; the page's other reads get an empty answer.
   await stubUnmatchedApi(page, { answer: "empty" });
   await stubWorkspaceShell(page, "admin");
-  await page.route(/\/api\/listings(\?.*)?$/, (route) => route.fulfill(json({ items: [], total: 0, has_more: false })));
+  await stubNoListings(page);
 }
 
 for (const detail of PAGES) {

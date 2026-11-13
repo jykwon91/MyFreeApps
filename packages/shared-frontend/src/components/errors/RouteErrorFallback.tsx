@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { isRouteErrorResponse, useRouteError } from "react-router-dom";
+import { useRouteError } from "react-router-dom";
 import { AlertTriangle } from "lucide-react";
 import Button from "../ui/Button";
 import NewVersionPrompt from "./NewVersionPrompt";
@@ -8,12 +8,8 @@ import {
   isStaleChunkReloadScheduled,
   reloadOnceForStaleChunk,
 } from "../../lib/stale-chunk";
-
-function describeRouteError(error: unknown): string {
-  if (isRouteErrorResponse(error)) return `${error.status} ${error.statusText}`;
-  if (error instanceof Error) return error.message;
-  return "Unknown error";
-}
+import { announceUnlessReloading } from "../../lib/caught-error";
+import { describeRouteError } from "../../utils/describeRouteError";
 
 /**
  * Data-router `errorElement` shared by every app (see `withRouteErrorBoundary`).
@@ -35,6 +31,8 @@ export default function RouteErrorFallback() {
     if (isStaleChunk && !isStaleChunkReloadScheduled() && reloadOnceForStaleChunk()) {
       setIsReloading(true);
     }
+    // After the reload attempt, so a chunk error the reload guard declined is announced.
+    announceUnlessReloading("RouteErrorFallback", error);
   }, [error, isStaleChunk]);
 
   if (isStaleChunk) return <NewVersionPrompt isReloading={isReloading} />;

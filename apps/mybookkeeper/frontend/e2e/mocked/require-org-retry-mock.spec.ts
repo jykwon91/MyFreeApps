@@ -11,7 +11,7 @@
  * an existing user to create one. While the retry runs, the error must stay up
  * with Try again showing it is busy, and the page must load once it succeeds.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import type { OrgWithRole } from "@/shared/types/organization/org-with-role";

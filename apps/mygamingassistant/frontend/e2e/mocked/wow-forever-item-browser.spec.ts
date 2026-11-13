@@ -6,7 +6,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-item-browser
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { ALL_ITEMS } from "./fixtures/wowForeverDataCounts";
 
 const ITEMS = "/wow-forever/items";

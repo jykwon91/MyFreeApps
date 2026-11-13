@@ -7,7 +7,7 @@
  * Try again, which sends exactly what the learner said; blocks say why and stop
  * further turns; a rejected token signs the learner out.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import {
   DAILY_LIMIT_REACHED,
   RATE_LIMIT_GENERIC_DETAIL,

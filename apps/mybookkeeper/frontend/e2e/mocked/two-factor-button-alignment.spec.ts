@@ -10,7 +10,8 @@
  * — checking class presence is not enough because the bug lives at the
  * parent-flex-container level, not on the button itself.
  */
-import { test, expect, type Locator } from "@playwright/test";
+import type { Locator } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";

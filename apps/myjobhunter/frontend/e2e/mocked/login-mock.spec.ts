@@ -3,7 +3,7 @@
  * /auth/totp/login endpoint, stores the token and lands signed in on the
  * dashboard; a rejected login shows the error and keeps the user on /login.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell, stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { unsignedJwt } from "@platform/ui/test-support/unsignedJwt";

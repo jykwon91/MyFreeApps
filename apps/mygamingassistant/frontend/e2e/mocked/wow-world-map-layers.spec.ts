@@ -10,7 +10,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-world-map-layers
  */
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { MAP_LAYERS_KEY } from "./fixtures/mapLayers";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 

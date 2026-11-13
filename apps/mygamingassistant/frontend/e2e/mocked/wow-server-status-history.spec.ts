@@ -11,7 +11,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-server-status-history
  */
-import { test, expect, type Page, type Route } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 
 /** The live endpoint only — a glob for it would also catch `/history`. */
 const LIVE_PATTERN = (url: URL) => url.pathname.endsWith("/wow/server-status");

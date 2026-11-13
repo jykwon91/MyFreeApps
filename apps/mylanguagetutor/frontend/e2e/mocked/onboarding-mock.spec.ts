@@ -5,7 +5,7 @@
  * and keeps the choice so it can be sent again; Change level starts from the
  * saved level; a failed or empty language list says so.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { LIST_LANGUAGES, SAVE_PROFILE } from "./constants/stubbedEndpoints";
 import {
   LANGUAGE_STEP,

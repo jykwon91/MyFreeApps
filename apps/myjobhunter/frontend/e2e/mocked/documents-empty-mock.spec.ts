@@ -3,7 +3,7 @@
  * nothing says so and can be cleared, and an account with no documents at all
  * gets the "no documents yet" state instead.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { mockDocument } from "./fixtures/mockData";

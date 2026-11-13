@@ -2,7 +2,7 @@
  * No-backend E2E for the Discovery inbox: Load more pages past the old 200-row cap, appending each
  * page, and a list that fails to load offers Retry.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 

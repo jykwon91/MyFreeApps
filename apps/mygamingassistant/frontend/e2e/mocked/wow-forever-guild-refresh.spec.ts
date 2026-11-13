@@ -11,7 +11,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-guild-refresh
  */
-import { test, expect, type Page, type Route } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 
 const GUILD_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+$/.test(url.pathname);
 const REFRESH_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+\/refresh$/.test(url.pathname);

@@ -10,7 +10,8 @@
  *   - Another member's row still offers them, and its role list never includes Owner.
  *   - Removing that member asks first, then sends the delete for them only.
  */
-import { test, expect, type Page, type Request } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";

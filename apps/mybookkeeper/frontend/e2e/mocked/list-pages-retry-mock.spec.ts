@@ -14,11 +14,13 @@
  * the retry's answer open, and check that the page keeps its error with Retry
  * busy and never claims the list is empty until the real (empty) answer lands.
  */
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { failUntilRecovered } from "./fixtures/flakyEndpoint";
+import { stubNoListings } from "./fixtures/emptyLists";
 
 const EMPTY_PAGE = { items: [], total: 0, has_more: false };
 
@@ -42,7 +44,7 @@ const LIST_PAGES: ListPage[] = [
   { name: "properties", path: "/properties", endpoint: /\/api\/properties(\?|$)/, error: "I couldn't load your properties.", empty: (p) => p.getByText(/Add your first property above/), emptyAnswer: [] },
   { name: "tenants", path: "/tenants", endpoint: /\/api\/applicants\/tenants(\?|$)/, error: "I couldn't load your tenants.", empty: (p) => p.getByText(/No active tenants/) },
   { name: "vendors", path: "/vendors", endpoint: /\/api\/vendors(\?|$)/, error: "I couldn't load your vendors.", empty: (p) => p.getByText(/No vendors yet/) },
-  { name: "inquiries", path: "/inquiries", endpoint: /\/api\/inquiries(\?|$)/, error: "I couldn't load your inquiries.", empty: (p) => p.getByText(/No inquiries yet/) },
+  { name: "inquiries", path: "/inquiries", endpoint: /\/api\/inquiries(\?|$)/, error: "I couldn't load your inquiries.", empty: (p) => p.getByText(/No inquiries yet/), stubPanels: stubNoListings },
   { name: "leases", path: "/leases", endpoint: /\/api\/signed-leases(\?|$)/, error: "I couldn't load your leases.", empty: (p) => p.getByText(/No leases yet/) },
   { name: "lease templates", path: "/lease-templates", endpoint: /\/api\/lease-templates(\?|$)/, error: "I couldn't load your templates.", empty: (p) => p.getByText(/No templates yet/) },
   { name: "listings", path: "/listings", endpoint: /\/api\/listings(\?|$)/, error: "I couldn't load your listings.", empty: (p) => p.getByText(/No listings yet/) },

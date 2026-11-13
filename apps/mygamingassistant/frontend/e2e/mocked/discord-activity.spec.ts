@@ -10,7 +10,8 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts discord-activity
  */
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "@platform/ui/test-support/crashGuard";
 
 const CLIENT_ID = "1555249458542022666";
 const SITE_URL = "https://mygamingassistant.myfreeapps.org";

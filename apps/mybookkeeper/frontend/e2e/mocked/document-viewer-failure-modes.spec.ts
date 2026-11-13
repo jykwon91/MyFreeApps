@@ -3,7 +3,7 @@
  * scenarios that produced the 2026-04-30 "i still can't see the source documents"
  * report. Mocks the API surface so the test runs without a backend.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 

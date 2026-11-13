@@ -12,7 +12,8 @@
  *   - Detail skeleton mirrors the loaded header + sections structure.
  *   - No horizontal scroll on either page across mobile / tablet / desktop.
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 

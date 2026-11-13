@@ -11,7 +11,8 @@
  *   - Expand: sidebar restores to full width
  *   - 375px: WoW group appears in mobile bottom nav, no overflow, ≥44px targets
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 const COLLAPSE_KEY = "platform.sidebar.collapsed.v1";
