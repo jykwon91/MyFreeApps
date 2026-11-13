@@ -9,6 +9,8 @@ import {
   MS_PER_HOUR,
   type GuildSortKey,
 } from "@/games/wow-forever/data/guild/guildConfig";
+import { isGuideProfession } from "@/games/wow-forever/lib/guideProfession";
+import { memberProfessionSkill } from "@/games/wow-forever/lib/guild/guildMemberProfessions";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
 import type { GuildMemberFilters } from "@/games/wow-forever/types/guild/guildMemberFilters";
 import type { GuildMemberName } from "@/games/wow-forever/types/guild/guildMemberName";
@@ -35,10 +37,12 @@ export function filtersFromParams(params: URLSearchParams): GuildMemberFilters {
   const sort = isSortKey(rawSort) ? rawSort : GUILD_SORT_KEYS.rank;
   const rawLevel = Number(params.get(GUILD_PARAMS.minLevel) ?? "0");
   const direction = params.get(GUILD_PARAMS.direction);
+  const rawProfession = params.get(GUILD_PARAMS.profession);
   return {
     query: params.get(GUILD_PARAMS.query) ?? "",
     className: params.get(GUILD_PARAMS.className) ?? "",
     minLevel: GUILD_LEVEL_BANDS.includes(rawLevel) ? rawLevel : 0,
+    profession: isGuideProfession(rawProfession) ? rawProfession : "",
     sort,
     descending: direction === null ? GUILD_SORT_DESCENDING_FIRST.has(sort) : direction === GUILD_DIRECTION_DESC,
   };
@@ -50,6 +54,7 @@ export function paramsFromFilters(filters: GuildMemberFilters): URLSearchParams 
   if (filters.query) params.set(GUILD_PARAMS.query, filters.query);
   if (filters.className) params.set(GUILD_PARAMS.className, filters.className);
   if (filters.minLevel) params.set(GUILD_PARAMS.minLevel, String(filters.minLevel));
+  if (filters.profession) params.set(GUILD_PARAMS.profession, filters.profession);
   if (filters.sort !== GUILD_SORT_KEYS.rank) params.set(GUILD_PARAMS.sort, filters.sort);
   if (filters.descending !== GUILD_SORT_DESCENDING_FIRST.has(filters.sort)) {
     params.set(GUILD_PARAMS.direction, filters.descending ? GUILD_DIRECTION_DESC : GUILD_DIRECTION_ASC);
@@ -63,7 +68,8 @@ export function filterMembers(members: readonly GuildMember[], filters: GuildMem
     (m) =>
       (!query || memberFullName(m).toLowerCase().includes(query)) &&
       (!filters.className || m.class_name === filters.className) &&
-      (!filters.minLevel || (m.level !== null && m.level >= filters.minLevel)),
+      (!filters.minLevel || (m.level !== null && m.level >= filters.minLevel)) &&
+      (!filters.profession || memberProfessionSkill(m, filters.profession) !== null),
   );
 }
 

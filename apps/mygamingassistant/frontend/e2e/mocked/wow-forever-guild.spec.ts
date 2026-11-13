@@ -153,6 +153,35 @@ test("search, class filter and sort live in the URL and survive Back", async ({ 
   await expect(page).toHaveURL(/\/wow-forever\/topdeadcenter\?tab=roster$/);
 });
 
+test("profession filter: only members who have it, their skill shown, kept in the URL across Back, on a phone too", async ({ page }) => {
+  await stubAll(page);
+  await page.goto("/wow-forever/topdeadcenter?tab=roster");
+
+  await expect(page.getByLabel("Profession").locator("option")).toHaveText(["Any profession", "Tailoring (1)"]);
+  await page.getByLabel("Profession").selectOption("tailoring");
+  await expect(page).toHaveURL(/prof=tailoring/);
+  await expect(memberNames(page)).toHaveText(["Jason Kwon"]);
+  await expect(page.getByRole("columnheader", { name: "Tailoring" })).toBeVisible();
+  await expect(page.getByRole("table").getByRole("cell", { name: "148 / 225" })).toBeVisible();
+
+  await memberNames(page).first().click();
+  await expect(page).toHaveURL(/\/wow-forever\/character\/jason-kwon$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/prof=tailoring/);
+  await expect(memberNames(page)).toHaveText(["Jason Kwon"]);
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  const cards = page.getByRole("list", { name: "Guild members" }).locator("li");
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toContainText("Tailoring 148 / 225");
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+
+  await page.getByLabel("Profession").selectOption("");
+  await expect(cards).toHaveCount(3);
+  await expect(page).not.toHaveURL(/prof=/);
+});
+
 test("before we have the guild, the page says how to get it collected", async ({ page }) => {
   await page.route(GUILD_PATTERN, (route) => json(route, { detail: "guild_not_found" }, 404));
   await page.goto("/wow-forever/topdeadcenter");

@@ -16,5 +16,10 @@ export function isGatheringProfession(profession: string | null): profession is 
 
 /** A `?p=` value: any listed profession; anything else opens Cooking. */
 export function parseGuideProfession(raw: string | null): GuideProfession {
-  return PROFESSION_GROUPS.flatMap((g) => g.options).find((o) => o.id === raw)?.id ?? PROFESSION.cooking;
+  return isGuideProfession(raw) ? raw : PROFESSION.cooking;
+}
+
+/** Any listed profession — crafting, gathering or secondary. */
+export function isGuideProfession(profession: string | null): profession is GuideProfession {
+  return PROFESSION_GROUPS.some((g) => g.options.some((o) => o.id === profession));
 }
