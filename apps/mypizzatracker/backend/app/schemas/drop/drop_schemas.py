@@ -17,6 +17,7 @@ from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
+from app.schemas.text_fields.required_name import RequiredName
 
 DROP_STATUSES: tuple[str, ...] = ("planning", "active", "closed")
 
@@ -50,7 +51,7 @@ class SlotRead(BaseModel):
 
 class DropCreate(BaseModel):
     date: _date
-    name: str = Field(..., min_length=1, max_length=100)
+    name: RequiredName
     slot_window_start: _time
     slot_window_end: _time
 
@@ -62,7 +63,7 @@ class DropCreate(BaseModel):
 
 
 class DropUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    name: Optional[RequiredName] = None
     date: Optional[_date] = None
     slot_window_start: Optional[_time] = None
     slot_window_end: Optional[_time] = None

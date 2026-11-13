@@ -103,6 +103,7 @@ export default function PizzaRow({ pizza }: PizzaRowProps) {
             size="sm"
             isLoading={isSaving}
             onClick={save}
+            disabled={!draft.name?.trim()}
             aria-label="Save"
           >
             <Check className="h-4 w-4" />

@@ -7,6 +7,9 @@ from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
+from app.schemas.text_fields.expense_category import ExpenseCategory
+from app.schemas.text_fields.expense_description import ExpenseDescription
+from app.schemas.text_fields.expense_vendor import ExpenseVendor
 
 
 def _validate_amount(v: Decimal) -> Decimal:
@@ -16,10 +19,10 @@ def _validate_amount(v: Decimal) -> Decimal:
 
 
 class ExpenseCreate(BaseModel):
-    vendor: str = Field(min_length=1, max_length=100)
-    category: str = Field(min_length=1, max_length=60)
+    vendor: ExpenseVendor
+    category: ExpenseCategory
     amount: Decimal = Field(max_digits=10, decimal_places=2)
-    description: Optional[str] = Field(default=None, max_length=500)
+    description: Optional[ExpenseDescription] = None
 
     @field_validator("amount")
     @classmethod
@@ -30,10 +33,10 @@ class ExpenseCreate(BaseModel):
 class ExpenseUpdate(BaseModel):
     """All fields optional; only supplied keys get patched."""
 
-    vendor: Optional[str] = Field(default=None, min_length=1, max_length=100)
-    category: Optional[str] = Field(default=None, min_length=1, max_length=60)
+    vendor: Optional[ExpenseVendor] = None
+    category: Optional[ExpenseCategory] = None
     amount: Optional[Decimal] = Field(default=None, max_digits=10, decimal_places=2)
-    description: Optional[str] = Field(default=None, max_length=500)
+    description: Optional[ExpenseDescription] = None
 
     @field_validator("amount")
     @classmethod
