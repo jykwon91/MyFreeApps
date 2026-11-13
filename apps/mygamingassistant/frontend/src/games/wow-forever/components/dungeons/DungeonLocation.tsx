@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import DungeonDoorRow from "@/games/wow-forever/components/dungeons/DungeonDoorRow";
 import { DETAIL_LINK, DETAIL_SECTION, FACTION_NAME } from "@/games/wow-forever/components/food/detail/detailStyles";
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
+import { FOREVER_DUNGEON_COPY } from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
 import { worldMapZoneHref } from "@/games/wow-forever/lib/dungeons/dungeonHref";
 import type { Dungeon } from "@/games/wow-forever/types/dungeons/dungeon";
 import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
@@ -11,6 +12,7 @@ import { formatYards } from "@/games/wow-forever/worldMap/geometry";
 /**
  * "Where is it?": per zone, the area, the World Map link, the nearest flight path
  * for each faction, then each door with directions and the bosses behind it.
+ * A new Forever dungeon has no doors: only the area the game puts it in, or nothing.
  */
 export default function DungeonLocation({ dungeon }: { dungeon: Dungeon }) {
   return (
@@ -19,8 +21,11 @@ export default function DungeonLocation({ dungeon }: { dungeon: Dungeon }) {
         <h2 id="dungeon-where" className="font-semibold">
           Where it is
         </h2>
-        <ProvenanceBadge provenance={PROVENANCE.classic} />
+        {dungeon.entrances.length > 0 ? (
+          <ProvenanceBadge provenance={dungeon.newInForever ? PROVENANCE.client : PROVENANCE.classic} />
+        ) : null}
       </div>
+      {dungeon.entrances.length === 0 ? <p className="text-sm text-muted-foreground">{FOREVER_DUNGEON_COPY.noPlace}</p> : null}
       <ul className="space-y-4">
         {dungeon.entrances.map((zone) => (
           <li key={zone.zoneId} className="space-y-2" data-testid="dungeon-entrance">
@@ -29,9 +34,10 @@ export default function DungeonLocation({ dungeon }: { dungeon: Dungeon }) {
                 <span className="font-medium">{zone.zoneName}</span>
                 {zone.subzone ? <span className="text-muted-foreground"> · {zone.subzone}</span> : null}
               </p>
+              {zone.doors.length === 0 ? <p className="text-sm text-muted-foreground">{FOREVER_DUNGEON_COPY.areaOnly}</p> : null}
               <Link to={worldMapZoneHref(zone.zoneId)} className={DETAIL_LINK}>
                 <MapPin className="h-4 w-4" aria-hidden />
-                Show entrance on the World Map
+                {zone.doors.length > 0 ? FOREVER_DUNGEON_COPY.entranceLink : FOREVER_DUNGEON_COPY.areaLink(zone.zoneName)}
               </Link>
             </div>
             {zone.flightPaths.length > 0 ? (

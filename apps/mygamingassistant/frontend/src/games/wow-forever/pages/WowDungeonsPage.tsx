@@ -14,7 +14,7 @@ export default function WowDungeonsPage() {
     <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
       <WowPageHeader
         title="Dungeons"
-        subtitle="Every dungeon's level, where its door is, its bosses in order and what they drop."
+        subtitle="Every dungeon's level, where it is, its bosses and, for the Classic ones, what they drop."
         backTo="/wow-forever"
         backLabel="Back to WoW Forever"
       />

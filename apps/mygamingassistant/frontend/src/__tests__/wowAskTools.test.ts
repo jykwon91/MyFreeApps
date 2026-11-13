@@ -111,6 +111,22 @@ describe("the empty chat's example questions are answered from real data", () =>
     expect(out.card.bosses).toContain("Edwin VanCleef");
   });
 
+  it("a dungeon Forever added says what isn't known, never a missing rule", async () => {
+    const out = await runAskTool(call(ASK_TOOL.dungeonInfo, { query: "City of Dalaran" }), askToolData());
+    expect(out.card).toMatchObject({ kind: ASK_CARD.dungeon, slug: "city-of-dalaran", requiredLevel: null, zones: ["Alterac Mountains"] });
+    const result = JSON.parse(out.content);
+    expect(result.lowest_level_to_enter).toBe("not known yet");
+    expect(result.new_in_forever).toBe(true);
+    expect(result.not_known_yet).toContain("entrance_door");
+  });
+
+  it("a Classic dungeon carries no not-known list", async () => {
+    const out = await runAskTool(call(ASK_TOOL.dungeonInfo, { query: "Deadmines" }), askToolData());
+    const result = JSON.parse(out.content);
+    expect(result.lowest_level_to_enter).toBe(10);
+    expect(result).not.toHaveProperty("not_known_yet");
+  });
+
   it("finds a dungeon by one of its bosses", async () => {
     const out = await runAskTool(call(ASK_TOOL.dungeonInfo, { query: "VanCleef" }), askToolData());
     expect(out.card).toMatchObject({ kind: ASK_CARD.dungeon, slug: "deadmines" });

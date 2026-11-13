@@ -1,8 +1,8 @@
 /** The dungeon index; each dungeon's page is under it. */
 export const DUNGEONS_PAGE_PATH = "/wow-forever/dungeons";
 
-/** Rows the index skeleton draws while the data loads (the Classic dungeons Forever has: 19). */
-export const DUNGEON_LIST_SKELETON_ROWS = 19;
+/** Rows the index skeleton draws while the data loads (19 Classic dungeons Forever has + 9 it added). */
+export const DUNGEON_LIST_SKELETON_ROWS = 28;
 
 /** Boss sections, and loot rows in each, the dungeon page's skeleton draws. */
 export const DUNGEON_SKELETON_BOSSES = 3;
@@ -15,6 +15,27 @@ export const DUNGEON_LOOT_EMPTY = {
   noList: "No loot list for this boss yet.",
   notInForever: "None of this boss's Classic loot is in the Forever game files yet.",
   noBosses: "The boss list for this dungeon isn't in our data yet.",
+} as const;
+
+/** What a new Forever dungeon's page says where the client gives us nothing. */
+export const FOREVER_DUNGEON_COPY = {
+  tag: "New in Forever",
+  notKnown: "Not known yet",
+  areaOnly: "The game lists it in this area. The exact door isn't known yet.",
+  noPlace: "We don't know where the entrance is yet.",
+  loot: "What the bosses drop isn't known yet for Forever's new dungeons.",
+  legend: "Where Forever's new dungeons are",
+  entranceLink: "Show entrance on the World Map",
+  areaLink: (zoneName: string) => `Show ${zoneName} on the World Map`,
+} as const;
+
+/**
+ * What the Ask chat's `dungeon_info` tells the model it doesn't know about a
+ * dungeon Forever added, so a missing fact never reads as "there's no rule".
+ */
+export const FOREVER_DUNGEON_UNKNOWN = {
+  value: "not known yet",
+  facts: ["lowest_level_to_enter", "entrance_door", "keys_or_attunement", "boss_loot", "quests"],
 } as const;
 
 /** Quest rows the dungeon page's skeleton draws in its Quests section. */

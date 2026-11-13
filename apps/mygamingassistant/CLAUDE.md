@@ -557,8 +557,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     links, then each boss's section (`#boss-<slug>`, a shareable deep link;
     `hooks/useScrollToHash.ts` scrolls to it once the data has loaded) with its
     drops: icon, `ItemNameLink` (hover tooltip → item page), slot/type and
-    drop chance (Classic data). Raids are left out; Forever-only dungeons have
-    no rows yet.
+    drop chance (Classic data). Raids are left out.
   - **Quests** (`components/dungeons/quests/DungeonQuests`, after "Where it
     is"; `Dungeon.quests`, decoded by `lib/dungeons/decodeDungeonQuests.ts`):
     the quests for your faction (the World Map's saved faction, a "Quests for"
@@ -590,6 +589,19 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   README), all lazy-loaded once by `lib/dungeons/loadDungeons.ts` and decoded
   by the pure `decodeDungeons.ts`. Slugs: `dungeonSlug` / `uniqueSlugs` (a
   repeated boss name gets `-2`) — don't change them, they're links.
+- **Forever's own dungeons** (City of Dalaran, Ruins of Lordaeron, … — the nine
+  LFGDungeons rows whose `Map` isn't in `classicDungeons.json`; Demon Fall
+  Canyon / Karazhan Crypts / Manor Mistmantle aren't in the finder and stay
+  out) come from `data/worldMap/foreverDungeons.json`, client-only, written by
+  `scripts/wow_world_map/forever_dungeons.py` in the World Map build. The
+  client has no entrance trigger for them, so "Where it is" is the AREA the
+  game puts it in (`areas.json` label, `_AREA_NAMES` when it's named
+  differently) — never a door, never guessed; no area = "We don't know where
+  the entrance is yet." They are `newInForever` ("New in Forever" tag on the
+  list), `requiredLevel` / `entryRequirements` null ("Not known yet", no
+  badge), no quests, and `ForeverDungeonBosses`: one unnumbered list "in the
+  game's list order" plus one loot-unknown line. Re-pull after each client
+  update.
 - **Loot, group sizes and entry requirements are GENERATED** —
   `python -m scripts.wow_dungeons.build` (from `backend/`, after the World Map
   and Items builds; group sizes from wago.tools `Map`, entry requirements in

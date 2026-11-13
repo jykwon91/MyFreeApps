@@ -14,6 +14,7 @@ const FACTION_LABEL = "Quests for";
 /**
  * The dungeon's quests for your faction (the World Map's saved faction):
  * the ones filed under it and the ones with an objective only found inside.
+ * With none at all, just the empty line (no faction toggle over nothing).
  */
 export default function DungeonQuests({ dungeon }: { dungeon: Pick<Dungeon, "quests"> }) {
   const [player, setPlayer] = usePlayerSettings();
@@ -23,18 +24,22 @@ export default function DungeonQuests({ dungeon }: { dungeon: Pick<Dungeon, "que
       <h2 id="dungeon-quests" className="font-semibold">
         Quests
       </h2>
-      <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        Every quest here is in the Forever game files <ProvenanceBadge provenance={PROVENANCE.client} />
-      </p>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="text-xs font-medium text-muted-foreground">{FACTION_LABEL}</span>
-        <SegmentedToggle
-          label={FACTION_LABEL}
-          options={PLAYER_FACTION_OPTIONS}
-          value={player.faction}
-          onChange={(faction) => setPlayer({ faction })}
-        />
-      </div>
+      {dungeon.quests.length > 0 ? (
+        <>
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            Every quest here is in the Forever game files <ProvenanceBadge provenance={PROVENANCE.client} />
+          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-xs font-medium text-muted-foreground">{FACTION_LABEL}</span>
+            <SegmentedToggle
+              label={FACTION_LABEL}
+              options={PLAYER_FACTION_OPTIONS}
+              value={player.faction}
+              onChange={(faction) => setPlayer({ faction })}
+            />
+          </div>
+        </>
+      ) : null}
       {shown.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           {dungeon.quests.length === 0 ? DUNGEON_QUESTS_EMPTY.none : DUNGEON_QUESTS_EMPTY.noneForFaction}

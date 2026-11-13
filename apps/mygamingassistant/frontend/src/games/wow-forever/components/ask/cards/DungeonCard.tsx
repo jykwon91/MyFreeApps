@@ -14,7 +14,8 @@ export default function DungeonCard({ card }: DungeonCardProps) {
     <section aria-label={card.name} className="space-y-2 rounded-xl border bg-card p-3 text-sm">
       <h3 className="font-semibold">{card.name}</h3>
       <p className="text-muted-foreground">
-        {ASK_COPY.levels(levelRange(card.levelMin, card.levelMax))} · {ASK_COPY.canEnter(card.requiredLevel)}
+        {ASK_COPY.levels(levelRange(card.levelMin, card.levelMax))}
+        {card.requiredLevel !== null ? ` · ${ASK_COPY.canEnter(card.requiredLevel)}` : null}
         {card.zones.length ? ` · ${card.zones.join(", ")}` : null}
       </p>
       {card.matchedBoss ? <p>{ASK_COPY.bossMatch(card.matchedBoss)}</p> : null}

@@ -19,6 +19,8 @@ Writes (paths relative to ``apps/mygamingassistant/frontend``):
   cmangos classic-db, so GPL-3.0 — see the LICENSE file in that folder.
 * ``.../classic/classicQuests.json`` — quest givers and their quests (GPL-3.0).
 * ``.../classic/classicDungeons.json`` — dungeon / raid entrances (GPL-3.0).
+* ``src/games/wow-forever/data/worldMap/foreverDungeons.json`` — the dungeons
+  Forever added, which the Classic file can't have (Forever client tables).
 * ``public/wow-maps/<uiMapId>.webp`` — the in-game map art of each map
   (world, continents, zones, cities), stitched from the client's 256px tiles.
 * ``public/wow-maps/highlight/<uiMapId>.webp`` — the hover highlight of each
@@ -42,6 +44,7 @@ from scripts.wow_world_map.areas import build_areas
 from scripts.wow_world_map.coords import ZoneBounds
 from scripts.wow_world_map.dungeons import COLUMNS as DUNGEON_COLUMNS
 from scripts.wow_world_map.dungeons import build_dungeons
+from scripts.wow_world_map.forever_dungeons import write_forever_dungeons
 from scripts.wow_world_map.highlights import MASK_H, MASK_W, MapHighlights
 from scripts.wow_world_map.interiors import (
     BOSS_COLUMNS,
@@ -177,6 +180,7 @@ def main() -> None:
         "rows": dungeon_rows,
     })
     print(f"dungeon / raid entrances: {len(dungeon_rows)}")
+    print(f"Forever's own dungeons: {write_forever_dungeons(DATA_DIR, write_json, BLIZZARD_SOURCE)}")
 
     interiors = write_interiors(dungeon_rows)
     if not args.no_walk:

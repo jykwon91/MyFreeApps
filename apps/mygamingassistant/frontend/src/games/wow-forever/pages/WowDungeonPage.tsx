@@ -7,6 +7,7 @@ import DungeonFootnote from "@/games/wow-forever/components/dungeons/DungeonFoot
 import DungeonWhen from "@/games/wow-forever/components/dungeons/DungeonWhen";
 import DungeonNotFound from "@/games/wow-forever/components/dungeons/DungeonNotFound";
 import DungeonPageSkeleton from "@/games/wow-forever/components/dungeons/DungeonPageSkeleton";
+import ForeverDungeonBosses from "@/games/wow-forever/components/dungeons/ForeverDungeonBosses";
 import DungeonQuests from "@/games/wow-forever/components/dungeons/quests/DungeonQuests";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
@@ -50,10 +51,15 @@ export default function WowDungeonPage() {
           <DungeonLocation dungeon={dungeon} />
           <DungeonQuests dungeon={dungeon} />
           {dungeon.bosses.length === 0 ? <EmptyStateNote message={DUNGEON_LOOT_EMPTY.noBosses} /> : null}
-          {dungeon.bosses.length > 0 ? <DungeonBossNav bosses={dungeon.bosses} /> : null}
-          {dungeon.bosses.map((boss, i) => (
-            <DungeonBossSection key={boss.slug} boss={boss} order={i + 1} />
-          ))}
+          {dungeon.newInForever && dungeon.bosses.length > 0 ? <ForeverDungeonBosses bosses={dungeon.bosses} /> : null}
+          {!dungeon.newInForever && dungeon.bosses.length > 0 ? (
+            <>
+              <DungeonBossNav bosses={dungeon.bosses} />
+              {dungeon.bosses.map((boss, i) => (
+                <DungeonBossSection key={boss.slug} boss={boss} order={i + 1} />
+              ))}
+            </>
+          ) : null}
           <DungeonFootnote clientBuild={state.data.clientBuild} />
         </>
       ) : null}

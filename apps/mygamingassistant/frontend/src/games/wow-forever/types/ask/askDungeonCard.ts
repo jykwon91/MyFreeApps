@@ -7,7 +7,8 @@ export interface AskDungeonCard {
   name: string;
   levelMin: number;
   levelMax: number;
-  requiredLevel: number;
+  /** Null for a new Forever dungeon: its door isn't known. */
+  requiredLevel: number | null;
   /** The zones its doors are in. */
   zones: string[];
   bosses: string[];
