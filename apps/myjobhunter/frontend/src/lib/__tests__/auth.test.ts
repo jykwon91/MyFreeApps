@@ -171,9 +171,11 @@ describe("auth helpers", () => {
     it("posts the email to /auth/request-verify-token", async () => {
       mockApiPost.mockResolvedValueOnce({ data: null });
       await requestVerifyToken("u@e.com");
-      expect(mockApiPost).toHaveBeenCalledWith("/auth/request-verify-token", {
-        email: "u@e.com",
-      });
+      expect(mockApiPost).toHaveBeenCalledWith(
+        "/auth/request-verify-token",
+        { email: "u@e.com" },
+        { timeout: undefined },
+      );
     });
   });
 

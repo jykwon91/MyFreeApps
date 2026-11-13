@@ -1,9 +1,11 @@
+import { requestVerifyToken } from "@platform/core/auth/requestVerifyToken";
 import api from "@platform/core/lib/api";
 import { isAxiosError } from "axios";
 import { AUTH_REQUEST_TIMEOUT_MS, DELETE_ACCOUNT_TIMEOUT_MS, LOGOUT_TIMEOUT_MS, TWO_STEP_TIMEOUT_MS } from "../constants/session";
 import type { DeleteAccountDetails } from "../types/DeleteAccountDetails";
 import type { DeleteAccountResult } from "../types/DeleteAccountResult";
 import type { MobileTokens } from "../types/MobileTokens";
+import type { ResendVerificationOutcome } from "../types/ResendVerificationOutcome";
 import type { SignedInDevice } from "../types/SignedInDevice";
 import type { SignInCredentials } from "../types/SignInCredentials";
 import type { SignInFailure } from "../types/SignInFailure";
@@ -39,6 +41,15 @@ export async function requestLogin(
     return data.detail === TOTP_REQUIRED_DETAIL ? "totp_required" : "unexpected";
   } catch (error) {
     return classifyLoginError(error);
+  }
+}
+
+export async function resendVerificationEmail(email: string): Promise<ResendVerificationOutcome> {
+  try {
+    await requestVerifyToken(email, AUTH_REQUEST_TIMEOUT_MS);
+    return "sent";
+  } catch (error) {
+    return isAxiosError(error) && error.response?.status === 429 ? "rate_limited" : "failed";
   }
 }
 

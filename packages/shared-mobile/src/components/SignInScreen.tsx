@@ -12,6 +12,7 @@ import Banner from "./Banner";
 import FormField from "./FormField";
 import KeyboardAwareScroll from "./KeyboardAwareScroll";
 import LoadingButton from "./LoadingButton";
+import ResendVerificationEmail from "./ResendVerificationEmail";
 import SecondFactorForm from "./SecondFactorForm";
 import ToastProvider from "./ToastProvider";
 import WebLink from "./WebLink";
@@ -25,6 +26,7 @@ export default function SignInScreen({ appName, webBaseUrl, onSignedIn }: SignIn
   const [emailError, setEmailError] = useState<string>();
   const [passwordError, setPasswordError] = useState<string>();
   const [failure, setFailure] = useState<SignInFailure | null>(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const [needsCode, setNeedsCode] = useState(false);
   const passwordInput = useRef<ComponentRef<typeof TextInput>>(null);
   const { bottom } = useSafeAreaInsets();
@@ -54,6 +56,7 @@ export default function SignInScreen({ appName, webBaseUrl, onSignedIn }: SignIn
       setPasswordError(signInFailureMessage(next, appName));
       passwordInput.current?.focus();
     } else {
+      if (next === "not_verified") setUnverifiedEmail(email.trim());
       setFailure(next);
     }
   }
@@ -153,6 +156,7 @@ export default function SignInScreen({ appName, webBaseUrl, onSignedIn }: SignIn
                 value={password}
               />
               {failure ? <Banner message={signInFailureMessage(failure, appName)} /> : null}
+              {failure === "not_verified" ? <ResendVerificationEmail email={unverifiedEmail} /> : null}
               <LoadingButton loadingText="Signing in..." onPress={submitCredentials}>
                 Sign in
               </LoadingButton>
