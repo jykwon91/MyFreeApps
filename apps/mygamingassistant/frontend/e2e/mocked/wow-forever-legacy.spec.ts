@@ -9,6 +9,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { LEGACY_CHALLENGES as TOTAL_CHALLENGES } from "./fixtures/wowForeverDataCounts";
 
 const LEGACY = "/wow-forever/legacy";
 const CHECKLIST_KEY = "mga.wowForever.legacy.checklist.v1";
@@ -20,7 +21,6 @@ const WELL_RESTED = 110301; // Adventure, 5 ranks, open
 const THRILL = 110296; // Adventure, 5 ranks, open
 const REINFORCE = 110318; // Resourcefulness, 5 ranks, open
 const DEDICATED_STUDY = 110284; // Professions, 1 rank, 10-point gate
-const TOTAL_CHALLENGES = 65;
 
 function node(page: Page, id: number) {
   return page.getByTestId(`legacy-node-${id}`);

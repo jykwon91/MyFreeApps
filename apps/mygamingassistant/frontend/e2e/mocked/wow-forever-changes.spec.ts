@@ -7,6 +7,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { CHANGES_PREVIOUS_BUILD, TALENT_CHANGES, ZONE_CHANGES, ZONES_SINCE_LAST_BUILD } from "./fixtures/wowForeverDataCounts";
 
 const CHANGES = "/wow-forever/changes";
 
@@ -30,7 +31,7 @@ test("filter by category, class and search; the URL keeps it", async ({ page }) 
   await expect(page).toHaveTitle(/Changes vs Classic/);
   // Talents by default.
   await expect(entries(page).first()).toBeVisible();
-  await expect(page.getByTestId("change-count")).toContainText("387 changes");
+  await expect(page.getByTestId("change-count")).toContainText(`${TALENT_CHANGES.toLocaleString("en-US")} changes`);
 
   await page.getByLabel("Class").selectOption("mage");
   await expect(page).toHaveURL(/[?&]class=mage(&|$)/);
@@ -58,9 +59,21 @@ test("filter by category, class and search; the URL keeps it", async ({ page }) 
   await page.getByRole("radio", { name: /Zones & maps/ }).click();
   await expect(page).toHaveURL(/[?&]cat=zones(&|$)/);
   await expect(page.getByLabel("Class")).toHaveCount(0);
+  await expect(entries(page)).toHaveCount(ZONE_CHANGES);
   await expect(entries(page).filter({ hasText: "Mount Hyjal" })).toHaveCount(1);
-  // "Since last build" waits for a second data refresh.
-  await expect(page.getByTestId("change-since-note")).toBeVisible();
+  // The data has a previous build, so "since last build" is a filter, not a note,
+  // and ticking it must leave some zones but not all of them.
+  expect(CHANGES_PREVIOUS_BUILD).not.toBeNull();
+  expect(ZONES_SINCE_LAST_BUILD).toBeGreaterThan(0);
+  expect(ZONES_SINCE_LAST_BUILD).toBeLessThan(ZONE_CHANGES);
+  await expect(page.getByTestId("change-since-note")).toHaveCount(0);
+  // The box is checked through the URL a beat after the click, so click and then wait for it
+  // (`check()` reads the state straight away).
+  const sinceLastBuild = page.getByLabel(`Only what changed since build ${CHANGES_PREVIOUS_BUILD}`);
+  await sinceLastBuild.click();
+  await expect(sinceLastBuild).toBeChecked();
+  await expect(page).toHaveURL(/[?&]since=1(&|$)/);
+  await expect(entries(page)).toHaveCount(ZONES_SINCE_LAST_BUILD);
 });
 
 test("a talent row opens the calculator on that talent", async ({ page }) => {

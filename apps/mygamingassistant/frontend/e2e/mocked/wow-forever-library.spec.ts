@@ -10,13 +10,14 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { LIBRARY_BOOKS as ALL_BOOKS, LIBRARY_CARDS, libraryQuestRewardCount } from "./fixtures/wowForeverDataCounts";
 
 const LIBRARY = "/wow-forever/library";
 const CHECKLIST_KEY = "mga.wowForever.library.checklist.v1";
-/** Books in the Forever client's ItemSparse (committed data). */
-const ALL_BOOKS = 40;
 const ANTONIDAS = "Archmage Antonidas: The Unabridged Autobiography";
 const ANTONIDAS_ID = "203754";
+/** The Library reward quest. */
+const FRIEND_OF_THE_LIBRARY = 78150;
 
 function storedFound(page: Page): Promise<string | null> {
   return page.evaluate((key) => window.localStorage.getItem(key), CHECKLIST_KEY);
@@ -60,16 +61,16 @@ test("ticking a book found from the full list, with its facts and tags, then cle
   await expect(antonidas.getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "client");
 
   const cards = page.getByTestId("library-card");
-  await expect(cards).toHaveCount(2);
+  await expect(cards).toHaveCount(LIBRARY_CARDS);
   await expect(cards.first()).toContainText("Stormwind Library Card");
 
   const rewards = page.getByTestId("library-rewards");
   await expect(rewards.getByTestId("library-turn-in")).toHaveText("Not known yet");
   await expect(rewards.getByTestId("library-books-needed")).toHaveText("Not known yet");
   const quest = rewards.getByTestId("library-quest");
-  await expect(quest.getByRole("link", { name: "Friend of the Library" })).toHaveAttribute("href", "/wow-forever/quests/78150");
+  await expect(quest.getByRole("link", { name: "Friend of the Library" })).toHaveAttribute("href", `/wow-forever/quests/${FRIEND_OF_THE_LIBRARY}`);
   await expect(quest.getByTestId("provenance-badge")).toHaveAttribute("data-provenance", "seen");
-  await expect(quest.getByTestId("library-reward-item")).toHaveCount(2);
+  await expect(quest.getByTestId("library-reward-item")).toHaveCount(libraryQuestRewardCount(FRIEND_OF_THE_LIBRARY));
   await expect(quest).toContainText("Scholarly Pendant");
   await expect(quest).toContainText("Erudite's Amulet");
 

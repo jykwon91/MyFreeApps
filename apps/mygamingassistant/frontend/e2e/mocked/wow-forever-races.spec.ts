@@ -8,13 +8,11 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { ALL_RACES, ALL_RACIALS, raceListing, racialsWithStatus } from "./fixtures/wowRacesDataCounts";
 
 const RACES = "/wow-forever/races";
-/** Committed data (`data/races/races.json` counts). */
-const ALL_RACES = 10;
-const ALL_RACIALS = 51;
-const UNCHANGED = 6;
-const REMOVED = 11;
+const UNCHANGED = racialsWithStatus("unchanged");
+const REMOVED = racialsWithStatus("removed");
 
 async function noSideways(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -76,31 +74,40 @@ test("filter chips show counts, narrow the list, live in the URL and reset", asy
   await expect(cards).toHaveCount(ALL_RACES);
   await expect(page.getByTestId("race-status-unchanged-count")).toHaveText(String(UNCHANGED));
 
+  const horde = raceListing({ faction: "horde" });
+  const hordeUnchanged = raceListing({ faction: "horde", status: "unchanged" });
+  expect(horde.races).toBeLessThan(ALL_RACES);
+  expect(hordeUnchanged.races).toBeLessThan(horde.races);
+  expect(hordeUnchanged.racials).toBeLessThan(horde.racials);
   await page.getByTestId("race-faction-horde").click();
   await expect(page).toHaveURL(/faction=horde/);
-  await expect(cards).toHaveCount(5);
+  await expect(cards).toHaveCount(horde.races);
   await expect(page.locator("#human")).toHaveCount(0);
   await expect(page.getByTestId("race-faction-horde")).toHaveAttribute("aria-pressed", "true");
 
   await page.getByTestId("race-status-unchanged").click();
   await expect(page).toHaveURL(/status=unchanged/);
-  await expect(cards).toHaveCount(4);
-  await expect(page.getByTestId("racial-row")).toHaveCount(5);
-  await expect(page.getByTestId("race-faction-alliance-count")).toHaveText("1");
+  await expect(cards).toHaveCount(hordeUnchanged.races);
+  await expect(page.getByTestId("racial-row")).toHaveCount(hordeUnchanged.racials);
+  await expect(page.getByTestId("race-faction-alliance-count")).toHaveText(
+    String(raceListing({ faction: "alliance", status: "unchanged" }).races),
+  );
 
   // A shared link opens with the same filters.
   await page.reload();
   await expect(page.getByTestId("race-status-unchanged")).toHaveAttribute("aria-pressed", "true");
-  await expect(cards).toHaveCount(4);
+  await expect(cards).toHaveCount(hordeUnchanged.races);
 
   await page.getByLabel("Can be a").selectOption("paladin");
   await expect(page).toHaveURL(/class=paladin/);
-  await expect(cards).toHaveCount(1);
+  await expect(cards).toHaveCount(raceListing({ faction: "horde", status: "unchanged", classId: "paladin" }).races);
   await expect(page.locator("#undead")).toBeVisible();
 
   await page.getByLabel("Can be a").selectOption("druid");
-  await expect(cards).toHaveCount(1);
+  await expect(cards).toHaveCount(raceListing({ faction: "horde", status: "unchanged", classId: "druid" }).races);
   await page.getByTestId("race-faction-alliance").click();
+  // The empty state below needs this filter set to match nothing.
+  expect(raceListing({ faction: "alliance", status: "unchanged", classId: "druid" }).races).toBe(0);
   await expect(cards).toHaveCount(0);
   await expect(page.getByTestId("races-empty")).toBeVisible();
   await page.getByTestId("races-empty").getByRole("button", { name: "Reset filters" }).click();
@@ -112,7 +119,8 @@ test("Only changed hides unchanged racials and keeps removed ones", async ({ pag
   await page.goto(RACES);
   await page.getByTestId("race-changed-only").click();
   await expect(page).toHaveURL(/changed=1/);
-  await expect(page.getByTestId("races-count")).toHaveText(`${ALL_RACES} races · ${ALL_RACIALS - UNCHANGED} racials`);
+  const changed = raceListing({ changedOnly: true });
+  await expect(page.getByTestId("races-count")).toHaveText(`${changed.races} races · ${changed.racials} racials`);
   await expect(page.locator('[data-testid="racial-status"][data-status="unchanged"]')).toHaveCount(0);
   await expect(page.locator('[data-testid="racial-status"][data-status="removed"]')).toHaveCount(REMOVED);
 });

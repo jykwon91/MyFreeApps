@@ -7,10 +7,9 @@
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-item-browser
  */
 import { test, expect, type Page } from "@playwright/test";
+import { ALL_ITEMS } from "./fixtures/wowForeverDataCounts";
 
 const ITEMS = "/wow-forever/items";
-/** Items in the committed `data/items/itemIndex.json`. */
-const ALL_ITEMS = 9486;
 const PAGE_SIZE = 60;
 
 async function noSideways(page: Page): Promise<number> {

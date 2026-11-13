@@ -7,14 +7,11 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { ALL_BEASTS, PET_FAMILIES, familyBeastCount } from "./fixtures/wowForeverDataCounts";
 
 const PAGE = "/wow-forever/hunter-pets";
-/** Tamable Classic beasts plus the ones only the Forever client has met (committed data). */
-const ALL_BEASTS = 536;
 /** Beasts shown before "Show more". */
 const FIRST_PAGE = 40;
-/** Families in the committed data. */
-const FAMILIES = 18;
 
 async function noSideways(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -30,7 +27,7 @@ test("the page lists the families, the abilities and the beasts a page at a time
   await page.goto(PAGE);
   await expect(page.getByRole("heading", { level: 1, name: "Hunter pets" })).toBeVisible();
   await expect(page).toHaveTitle(/Hunter pets/);
-  await expect(page.getByTestId("family-card")).toHaveCount(FAMILIES);
+  await expect(page.getByTestId("family-card")).toHaveCount(PET_FAMILIES);
   await expect(page.getByTestId("ability-card").first()).toBeVisible();
   await expect(page.getByTestId("beast-count")).toHaveText(`${ALL_BEASTS} of ${ALL_BEASTS} beasts`);
   await expect(page.getByTestId("beast-row")).toHaveCount(FIRST_PAGE);
@@ -57,7 +54,10 @@ test("a family narrows the beasts and the abilities, and is kept in the URL", as
   await expect(page).toHaveURL(/family=spider/);
   await expect(page.getByRole("heading", { name: "Spider abilities" })).toBeVisible();
   const count = page.getByTestId("beast-count");
-  await expect(count).not.toHaveText(`${ALL_BEASTS} of ${ALL_BEASTS} beasts`);
+  const spiders = familyBeastCount("spider");
+  expect(spiders).toBeGreaterThan(0);
+  expect(spiders).toBeLessThan(ALL_BEASTS);
+  await expect(count).toHaveText(`${spiders} of ${ALL_BEASTS} beasts`);
   for (const row of await page.getByTestId("beast-row").all()) await expect(row).toContainText("Spider");
   await page.reload();
   await expect(page.locator('[data-testid="family-card"][data-family="spider"]')).toHaveAttribute("aria-pressed", "true");
