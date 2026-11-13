@@ -1,11 +1,13 @@
 /**
  * WoW Forever World Map — search a destination, get directions from anywhere, and say where you are in words.
  *
- * Run: npm run test:e2e -- wow-world-map-search
+ * Run: npx playwright test --config=playwright.layout.config.ts wow-world-map-search
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 test.beforeEach(async ({ page }) => {
+  await stubUnmatchedApi(page);
   await page.goto("/wow-forever/map");
   await page.evaluate(() => window.localStorage.clear());
 });
@@ -107,7 +109,9 @@ test("minimap text puts you on the city's map", async ({ page }) => {
 
 test("a Cooking trainer's Show on map link opens the map on them", async ({ page }) => {
   await page.goto("/wow-forever/professions");
-  await page.getByRole("link", { name: "Show Stephen Ryback on the map" }).click();
+  // The trainer list; the leveling route links the same trainer again at its rank-up steps.
+  const getStarted = page.getByRole("region", { name: "Get started: train it first" });
+  await getStarted.getByRole("link", { name: "Show Stephen Ryback on the map" }).click();
   await expect(page).toHaveURL(/\/wow-forever\/map\?npc=5482/);
   await expect(page.getByRole("article", { name: "Stephen Ryback" })).toBeVisible();
 });

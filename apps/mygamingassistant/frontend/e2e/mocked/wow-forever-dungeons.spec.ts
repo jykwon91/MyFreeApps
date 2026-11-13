@@ -3,15 +3,31 @@
  * where it is, directions, the wing breakdown), boss deep links, the World Map
  * link, loot tooltips, the phone layout and the loading skeletons.
  *
- * Run: npx playwright test --config e2e/playwright.config.ts wow-forever-dungeons
+ * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-dungeons
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { createGate } from "@platform/ui/test-support/gate";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 const DEADMINES = "/wow-forever/dungeons/deadmines";
+
+/** Opens "Inside" on the Gnomeregan door called `label` and returns its route list (there only once the walk loads). */
+async function openRoutesInside(page: Page, label: string): Promise<Locator> {
+  const door = page.getByTestId("dungeon-door").filter({ has: page.getByText(new RegExp(`^${label} · `)) });
+  await door.getByRole("button", { name: /Inside · bosses & routes/ }).click();
+  return door.getByRole("region", { name: "Inside Gnomeregan" }).getByRole("list", { name: "Bosses in Gnomeregan" });
+}
 
 async function noSideways(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
+
+// Any API call this spec does not stub (icons, prices, server status, ...) answers 404,
+// so nothing reaches a backend through the dev server.
+test.beforeEach(async ({ page }) => {
+  await stubUnmatchedApi(page);
+});
 
 test("the index lists the dungeons lowest level first and opens one", async ({ page }) => {
   await page.goto("/wow-forever/dungeons");
@@ -32,7 +48,7 @@ test("the index lists the dungeons lowest level first and opens one", async ({ p
   await expect(when.getByText("None. Only the level.")).toBeVisible();
 
   // The left nav carries the page.
-  await expect(page.getByRole("link", { name: "Dungeons" }).first()).toBeVisible();
+  await expect(page.locator("#main-sidebar").getByRole("link", { name: "Dungeons", exact: true })).toBeVisible();
 });
 
 test("a boss deep link opens the page scrolled to that boss; the jump list moves between bosses", async ({ page }) => {
@@ -83,9 +99,15 @@ test("Gnomeregan lists its five bosses in order, with drops and a route inside",
   await expect(jump).toHaveText([/Grubbis$/, /Viscous Fallout$/, /Electrocutioner 6000$/, /Crowd Pummeler 9-60$/, /Mekgineer Thermaplugg$/]);
   await expect(page.locator("#boss-mekgineer-thermaplugg").getByTestId("boss-loot-row").first()).toContainText("%");
   await expect(page.getByText("The boss list for this dungeon isn't in our data yet.")).toHaveCount(0);
-  const inside = page.getByTestId("dungeon-door").first().getByRole("button", { name: /Inside · bosses & routes/ });
-  await inside.click();
-  await expect(page.getByRole("region", { name: "Inside Gnomeregan" }).first()).toContainText("Mekgineer Thermaplugg");
+  // Each door lists the bosses it's the shortest walk to: Thermaplugg is behind the back door, the train depot, not
+  // the front entrance. Every boss name shows while a door's walk loads; its route list, with each walk's length,
+  // replaces them once it's in.
+  const thermapluggRoute = /^\d+\. Mekgineer Thermaplugg · ~[\d,]+ yd$/;
+  const front = await openRoutesInside(page, "Entrance");
+  await expect(front.getByRole("button", { name: /^\d+\. Viscous Fallout · ~[\d,]+ yd$/ })).toBeVisible();
+  await expect(front.getByRole("button", { name: thermapluggRoute })).toHaveCount(0);
+  const back = await openRoutesInside(page, "Train depot");
+  await expect(back.getByRole("button", { name: thermapluggRoute })).toBeVisible();
 });
 
 test("hovering a loot item shows its tooltip; a click opens its item page", async ({ page }) => {
@@ -141,38 +163,32 @@ test.describe("at 375px", () => {
 });
 
 test("the skeletons show while the dungeon data loads, then the page", async ({ page }) => {
-  let release: () => void = () => undefined;
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
+  const gate = createGate();
   // The data files only — the page's own code also lives under data/dungeons/.
   await page.route(/data\/dungeons\/.*\.json/, async (route) => {
-    await held;
+    await gate.wait;
     await route.continue();
   });
 
   await page.goto(DEADMINES);
   const skeleton = page.getByTestId("dungeon-page-skeleton");
   await expect(skeleton).toBeVisible();
-  release();
+  gate.release();
   await expect(skeleton).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 1, name: "Deadmines" })).toBeVisible();
 });
 
 test("the index skeleton shows while the data loads", async ({ page }) => {
-  let release: () => void = () => undefined;
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
+  const gate = createGate();
   await page.route(/data\/dungeons\/.*\.json/, async (route) => {
-    await held;
+    await gate.wait;
     await route.continue();
   });
 
   await page.goto("/wow-forever/dungeons");
   const skeleton = page.getByTestId("dungeon-list-skeleton");
   await expect(skeleton).toBeVisible();
-  release();
+  gate.release();
   await expect(skeleton).toHaveCount(0);
   await expect(page.getByTestId("dungeon-list-row").first()).toBeVisible();
 });

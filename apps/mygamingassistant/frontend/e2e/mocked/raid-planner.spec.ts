@@ -4,11 +4,13 @@
  * No backend: each test routes its plan (`fixtures/raidPlan.ts` — the reads and saves are the fixture, the icons the
  * bot's own files), seats players with the mouse, the keyboard and the Move-to lists, saves, and checks what it sent.
  *
- * Run: npm run test:e2e -- raid-planner
+ * Run: npx playwright test --config=playwright.layout.config.ts raid-planner
  */
-import { expect, test, type Locator, type Page } from "@playwright/test";
-import type { PlanAssignment } from "../src/games/wow-forever/types/raidPlan";
-import { fulfillJson } from "./fixtures/raidPage";
+import type { Locator, Page } from "@playwright/test";
+import { expect, test } from "@platform/ui/test-support/crashGuard";
+import { toast } from "@platform/ui/test-support/toast";
+import type { PlanAssignment } from "../../src/games/wow-forever/types/raidPlan";
+import { fulfillJson } from "../fixtures/raidPage";
 import {
   PLANNER_AUTHORIZATION,
   PLANNER_HEADING,
@@ -18,11 +20,12 @@ import {
   routePlan,
   smallPlanFixture,
   type PlanRoutes,
-} from "./fixtures/raidPlan";
+} from "../fixtures/raidPlan";
 
 const SITE_TITLE = "MyGamingAssistant";
 const LINK_PROBLEM = "Planner link missing or expired";
 const SAVED = "Groups saved";
+const CHANGED = "Someone else saved the groups — showing their version.";
 const UNSAVED = "Unsaved changes";
 /** Room for the pool and both of the 10-man's groups on one screen. */
 const DESKTOP = { width: 1280, height: 1200 };
@@ -80,15 +83,43 @@ async function centerOf(locator: Locator): Promise<{ x: number; y: number }> {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-/** Press, move past dnd-kit's 4 px before it lifts, then on to `target` in steps it can follow, and let go. */
-async function dragWithMouse(page: Page, from: Locator, target: Locator): Promise<void> {
+/** The copy of `name` that follows the pointer while they're dragged: hidden from screen readers, which hear the moves. */
+function liftedCopy(page: Page, name: string): Locator {
+  return page.locator('[aria-hidden="true"]', { has: page.getByTitle(name, { exact: true }) });
+}
+
+/**
+ * Press `name`'s handle, move past dnd-kit's 4 px until the drag starts, then on to `target` in steps it can follow,
+ * let go, and wait until dnd-kit lets clicks through again.
+ */
+async function dragWithMouse(page: Page, name: string, from: Locator, target: Locator): Promise<void> {
   const start = await centerOf(from);
   const end = await centerOf(target);
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   await page.mouse.move(start.x + 12, start.y + 6, { steps: 4 });
+  await expect(from).toHaveAttribute("aria-pressed", "true");
+  await expect(liftedCopy(page, name)).toBeVisible();
   await page.mouse.move(end.x, end.y, { steps: 20 });
   await page.mouse.up();
+  await expect.poll(() => clicksReachThePage(page)).toBe(true);
+}
+
+/**
+ * Whether a click on the page's body gets to it. For a moment after a drop, dnd-kit stops every click on the document
+ * before it reaches anything (its guard against the drop's own click), so a click sent then — Save, say — is lost.
+ */
+function clicksReachThePage(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    let reached = false;
+    const onClick = () => {
+      reached = true;
+    };
+    document.body.addEventListener("click", onClick);
+    document.body.click();
+    document.body.removeEventListener("click", onClick);
+    return reached;
+  });
 }
 
 /** Every plan request sent the link's token, and only it. */
@@ -126,12 +157,12 @@ test("drags a player into an empty seat with the mouse, and Save sends the group
   await openPlanner(page);
   expect(await seatsIn(page, 1)).toEqual(["Aldren", "Brisa", "Cael", "", ""]);
 
-  await dragWithMouse(page, handle(page, "Fenn, Fury Warrior"), seat(page, 1, 4));
+  await dragWithMouse(page, "Fenn", handle(page, "Fenn, Fury Warrior"), seat(page, 1, 4));
   await expect.poll(() => seatsIn(page, 1)).toEqual(["Aldren", "Brisa", "Cael", "Fenn", ""]);
   await expect(page.getByText(UNSAVED)).toBeVisible();
 
   await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText(SAVED)).toBeVisible();
+  await expect(toast(page, SAVED)).toBeVisible();
   await expect(page.getByText(UNSAVED)).toHaveCount(0);
   expect(routes.saves()).toEqual([
     { version: 3, published: false, assignments: firstGroupsWith(assignment("Fenn", 1, 4)) },
@@ -201,7 +232,7 @@ test("Auto-fill seats a 40-man in its eight groups by role, and Save sends all f
   await page.screenshot({ path: testInfo.outputPath("planner-40-light.png") });
 
   await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText(SAVED)).toBeVisible();
+  await expect(toast(page, SAVED)).toBeVisible();
   const [save] = routes.saves();
   expect(save.version).toBe(1);
   expect(save.assignments).toHaveLength(40);
@@ -232,7 +263,7 @@ test("when someone else saved first, it says so and shows their groups", async (
   await expect.poll(() => seatsIn(page, 1)).toEqual(["Aldren", "Brisa", "Cael", "Fenn", ""]);
   await page.getByRole("button", { name: "Save" }).click();
 
-  await expect(page.getByText("Someone else saved the groups — showing their version.")).toBeVisible();
+  await expect(toast(page, CHANGED)).toBeVisible();
   await expect.poll(() => seatsIn(page, 2)).toEqual(["Edda", "Gwyn", "Dara", "", ""]);
   expect(await seatsIn(page, 1)).toEqual(["Aldren", "Brisa", "Cael", "", ""]);
   await expect(page.getByText(UNSAVED)).toHaveCount(0);
@@ -315,7 +346,7 @@ test("on a phone it never scrolls sideways, every control is a 44 px tap, and Mo
   await page.getByRole("switch", { name: "Visible to raiders" }).click();
   await expect(page.getByRole("switch", { name: "Visible to raiders" })).toHaveAttribute("aria-checked", "true");
   await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText(SAVED)).toBeVisible();
+  await expect(toast(page, SAVED)).toBeVisible();
   expect(routes.saves()).toEqual([
     { version: 3, published: true, assignments: firstGroupsWith(assignment("Fenn", 1, 4)) },
   ]);

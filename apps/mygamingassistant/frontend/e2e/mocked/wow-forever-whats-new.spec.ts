@@ -2,9 +2,12 @@
  * WoW Forever hub: the data-build line, "What's new on this site", and the
  * update dots on hub tiles and left-nav items.
  *
- * Run: npm run test:e2e -- wow-forever-whats-new
+ * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-whats-new
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
+import { WHATS_NEW_ENTRIES } from "./fixtures/wowForeverDataCounts";
 
 const VISITS_KEY = "mga.wowForever.pageVisits.v1";
 
@@ -21,9 +24,10 @@ function tile(page: Page, title: string) {
   return page.locator("main .grid").getByRole("link", { name: new RegExp(`^${title}`) });
 }
 
+// Any API call this spec does not stub (icons, prices, server status, ...) answers 404,
+// so nothing reaches a backend through the dev server.
 test.beforeEach(async ({ page }) => {
-  // The hub's live server status isn't what these tests check.
-  await page.route("**/wow/server-status**", (route) => route.abort());
+  await stubUnmatchedApi(page);
 });
 
 test("the hub shows the data build and the latest changes", async ({ page }) => {
@@ -34,7 +38,7 @@ test("the hub shows the data build and the latest changes", async ({ page }) => 
   const whatsNew = page.getByRole("region", { name: "What’s new on this site" });
   await expect(whatsNew.getByRole("listitem")).toHaveCount(5);
   await whatsNew.getByRole("button", { name: /^Show all/ }).click();
-  await expect(whatsNew.getByRole("listitem")).toHaveCount(35);
+  await expect(whatsNew.getByRole("listitem")).toHaveCount(WHATS_NEW_ENTRIES);
   await whatsNew.getByRole("link", { name: /One Macros page/ }).click();
   await expect(page).toHaveURL(/\/wow-forever\/macros$/);
 });

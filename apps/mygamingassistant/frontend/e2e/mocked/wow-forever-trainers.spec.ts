@@ -2,9 +2,12 @@
  * WoW Forever trainers — picking a class or profession, the level ladder folding at your level, your
  * faction's trainers, the phone layout and the loading skeleton.
  *
- * Run: npx playwright test --config e2e/playwright.config.ts wow-forever-trainers
+ * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-trainers
  */
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "@platform/ui/test-support/crashGuard";
+import { createGate } from "@platform/ui/test-support/gate";
+import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 
 const TRAINERS = "/wow-forever/trainers";
 const MIN_TARGET_PX = 44;
@@ -12,6 +15,12 @@ const MIN_TARGET_PX = 44;
 async function sidewaysOverflow(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
+
+// Any API call this spec does not stub (icons, prices, server status, ...) answers 404,
+// so nothing reaches a backend through the dev server.
+test.beforeEach(async ({ page }) => {
+  await stubUnmatchedApi(page);
+});
 
 test("the picker opens a class; a wrong slug says so", async ({ page }) => {
   await page.goto(TRAINERS);
@@ -28,7 +37,9 @@ test("the picker opens a class; a wrong slug says so", async ({ page }) => {
 
 test("your level folds the levels below it and marks the next; faction picks the trainers", async ({ page }) => {
   await page.goto(`${TRAINERS}/warlock`);
-  const levels = page.getByTestId("trainers-level");
+  // The class's own ladder; a Warlock's demons have a second one that folds on its own.
+  const ladder = page.getByRole("region", { name: "What you can learn at each level" });
+  const levels = ladder.getByTestId("trainers-level");
   await expect(levels.first()).toBeVisible();
   const all = await levels.count();
 
@@ -36,7 +47,7 @@ test("your level folds the levels below it and marks the next; faction picks the
   await expect(levels.first()).toContainText("Next");
   const ahead = await levels.count();
   expect(ahead).toBeLessThan(all);
-  await page.getByRole("button", { name: /below yours/ }).click();
+  await ladder.getByRole("button", { name: /below yours/ }).click();
   await expect(levels).toHaveCount(all);
 
   await page.getByRole("radio", { name: "Horde" }).click();
@@ -75,17 +86,14 @@ test("phones: no sideways scroll and full-size targets", async ({ page }) => {
 });
 
 test("the skeleton shows while the class loads", async ({ page }) => {
-  let release: () => void = () => undefined;
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
+  const gate = createGate();
   await page.route(/data\/spellbook\/.*\.json/, async (route) => {
-    await held;
+    await gate.wait;
     await route.continue();
   });
   await page.goto(`${TRAINERS}/priest`);
   await expect(page.getByTestId("trainers-skeleton")).toBeVisible();
-  release();
+  gate.release();
   await expect(page.getByTestId("trainers-skeleton")).toHaveCount(0);
   await expect(page.getByTestId("trainers-level").first()).toBeVisible();
 });
