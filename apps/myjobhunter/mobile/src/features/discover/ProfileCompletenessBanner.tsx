@@ -3,7 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import { PROFILE_BANNER_MESSAGES as MESSAGES } from "../../constants/profileBanner";
 import type { ProfileCompletenessBannerProps } from "../../types/ProfileCompletenessBannerProps";
 
-/** The website's reminder that postings can't be scored without a resume or skills, with its link and dismiss. */
+/** The reminder that postings can't be scored without a resume or skills, with its link and dismiss. */
 export default function ProfileCompletenessBanner({ onSetUp, onDismiss }: ProfileCompletenessBannerProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
   const tone = useToneColor("warning");
