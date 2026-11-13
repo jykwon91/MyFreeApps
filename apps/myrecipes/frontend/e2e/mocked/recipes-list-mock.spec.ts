@@ -6,6 +6,7 @@
  * skeleton has the same grid as the loaded list.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { createGate } from "@platform/ui/test-support/gate";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
@@ -143,13 +144,10 @@ test("a failed load says so instead of showing an empty library, and a refresh r
 
 test("while loading, the skeleton has the same grid as the loaded list", async ({ page }) => {
   await stubSignedInShell(page);
-  let release: () => void = () => undefined;
-  const gate = new Promise<void>((resolve) => {
-    release = resolve;
-  });
+  const gate = createGate();
   let skeletonCards = 0;
   await stubList(page, async () => {
-    await gate;
+    await gate.wait;
     return { body: Array.from({ length: skeletonCards }, (_, i) => summaryOf(recipeIdAt(10 + i), `Recipe ${i + 1}`)) };
   });
 
@@ -163,7 +161,7 @@ test("while loading, the skeleton has the same grid as the loaded list", async (
     const skeletonColumns = await skeleton.evaluate((el) => getComputedStyle(el).gridTemplateColumns);
     const skeletonFirst = await skeletonItems.first().boundingBox();
 
-    release();
+    gate.release();
     const loaded = page.locator('[aria-busy="false"]').filter({ has: page.getByRole("link") });
     await expect(page.getByRole("heading", { name: "Recipe 1", exact: true })).toBeVisible();
     await expect(skeleton).toHaveCount(0);
@@ -176,6 +174,6 @@ test("while loading, the skeleton has the same grid as the loaded list", async (
     expect(Math.abs(loadedFirst!.x - skeletonFirst!.x)).toBeLessThanOrEqual(BOX_TOLERANCE_PX);
     expect(Math.abs(loadedFirst!.width - skeletonFirst!.width)).toBeLessThanOrEqual(BOX_TOLERANCE_PX);
   } finally {
-    release();
+    gate.release();
   }
 });

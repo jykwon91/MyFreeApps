@@ -10,32 +10,8 @@ import { test, expect, type Page } from "@playwright/test";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell, TEST_USER } from "@platform/ui/test-support/mockSession";
 import { toast, toastAboveModal } from "@platform/ui/test-support/toast";
-import type { SentRequest } from "./types/SentRequest";
-
-const ME_PATH = "/users/me";
-
-/** /users/me: reads answer the current user; a PATCH or DELETE is recorded and, when `writeStatus` is an error, refused with `detail`. */
-async function stubAccount(
-  page: Page,
-  { writeStatus = 200, totp = false, detail = "Something went wrong." } = {},
-): Promise<SentRequest[]> {
-  const sent: SentRequest[] = [];
-  let user = { ...TEST_USER, totp_enabled: totp };
-  await page.route(/\/api\/users\/me$/, (route) => {
-    const request = route.request();
-    const method = request.method();
-    if (method === "GET") return route.fulfill(json(user));
-    const body = request.postDataJSON() as unknown;
-    sent.push({ method, path: ME_PATH, body });
-    if (writeStatus >= 400) return route.fulfill(json({ detail }, writeStatus));
-    if (method === "PATCH") {
-      user = { ...user, ...(body as object) };
-      return route.fulfill(json(user));
-    }
-    return route.fulfill({ status: 204 });
-  });
-  return sent;
-}
+import { ME_PATH, stubAccountApi } from "@platform/ui/test-support/accountApi";
+import { createGate } from "@platform/ui/test-support/gate";
 
 test("Settings links to Security", async ({ page }) => {
   await stubSignedInShell(page);
@@ -51,7 +27,7 @@ test("Settings links to Security", async ({ page }) => {
 test.describe("display name", () => {
   test("saves the trimmed name and then has nothing left to save", async ({ page }) => {
     await stubSignedInShell(page);
-    const sent = await stubAccount(page);
+    const sent = await stubAccountApi(page);
 
     await page.goto("/security");
     const input = page.getByPlaceholder("e.g. Jane Smith");
@@ -70,7 +46,7 @@ test.describe("display name", () => {
 
   test("a refused save says so and keeps what was typed so it can be sent again", async ({ page }) => {
     await stubSignedInShell(page);
-    const sent = await stubAccount(page, { writeStatus: 500 });
+    const sent = await stubAccountApi(page, { refuse: { status: 500, plainText: "Internal Server Error" } });
 
     await page.goto("/security");
     const input = page.getByPlaceholder("e.g. Jane Smith");
@@ -88,14 +64,11 @@ test.describe("data export", () => {
   test("asks for the data with a GET, shows it is preparing, then downloads a dated JSON file with it", async ({ page }) => {
     await stubSignedInShell(page);
     const exported = { email: TEST_USER.email, display_name: TEST_USER.display_name, recipes: [] };
-    let release: () => void = () => undefined;
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
+    const gate = createGate();
     const methods: string[] = [];
     await page.route(/\/api\/users\/me\/export$/, async (route) => {
       methods.push(route.request().method());
-      await gate;
+      await gate.wait;
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(exported) });
     });
 
@@ -105,7 +78,7 @@ test.describe("data export", () => {
       await page.getByRole("button", { name: "Download my data" }).click();
       await expect(page.getByRole("button", { name: "Download my data" })).toBeDisabled();
       await expect(page.getByText("Preparing...")).toBeVisible();
-      release();
+      gate.release();
 
       const file = await download;
       expect(file.suggestedFilename()).toMatch(/^myrecipes-export-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.json$/);
@@ -114,7 +87,7 @@ test.describe("data export", () => {
       await expect(page.getByRole("button", { name: "Download my data" })).toBeEnabled();
       expect(methods).toEqual(["GET"]);
     } finally {
-      release();
+      gate.release();
     }
   });
 
@@ -140,7 +113,7 @@ test.describe("delete account", () => {
 
   test("needs the email and password before it can be sent, and cancelling sends nothing", async ({ page }) => {
     await stubSignedInShell(page);
-    const sent = await stubAccount(page);
+    const sent = await stubAccountApi(page);
 
     const dialog = await openDialog(page);
     const confirm = dialog.getByRole("button", { name: "Delete forever" });
@@ -157,7 +130,7 @@ test.describe("delete account", () => {
 
   test("deletes the account with the typed email and password, then signs the user out", async ({ page }) => {
     await stubSignedInShell(page);
-    const sent = await stubAccount(page);
+    const sent = await stubAccountApi(page);
 
     const dialog = await openDialog(page);
     await dialog.getByLabel("Type your email address to confirm").fill(TEST_USER.email);
@@ -171,16 +144,16 @@ test.describe("delete account", () => {
     await expect(page.getByRole("button", { name: "Delete my account" })).toHaveCount(0);
   });
 
-  test("a refused delete shows the server's reason and keeps the dialog, the typing and the session", async ({ page }) => {
+  test("a wrong password (403) shows the server's reason and keeps the dialog, the typing and the session", async ({ page }) => {
     await stubSignedInShell(page);
-    const sent = await stubAccount(page, { writeStatus: 400, detail: "Incorrect password." });
+    const sent = await stubAccountApi(page, { refuse: { status: 403, detail: "Incorrect password" } });
 
     const dialog = await openDialog(page);
     await dialog.getByLabel("Type your email address to confirm").fill(TEST_USER.email);
     await dialog.getByLabel("Password").fill("wrong-password");
     await dialog.getByRole("button", { name: "Delete forever" }).click();
 
-    await expect(toastAboveModal(page, "Incorrect password.")).toBeVisible();
+    await expect(toastAboveModal(page, "Incorrect password")).toBeVisible();
     await expect(dialog.getByLabel("Password")).toHaveValue("wrong-password");
     await expect(dialog.getByRole("button", { name: "Delete forever" })).toBeEnabled();
     expect(await page.evaluate(() => window.localStorage.getItem("token"))).not.toBeNull();
@@ -189,7 +162,7 @@ test.describe("delete account", () => {
 
   test("with 2FA on, it also asks for the code and sends it", async ({ page }) => {
     await stubSignedInShell(page, { user: { ...TEST_USER, totp_enabled: true } });
-    const sent = await stubAccount(page, { totp: true });
+    const sent = await stubAccountApi(page, { user: { ...TEST_USER, totp_enabled: true } });
 
     const dialog = await openDialog(page);
     const confirm = dialog.getByRole("button", { name: "Delete forever" });
