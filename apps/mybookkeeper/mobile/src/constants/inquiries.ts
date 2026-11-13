@@ -46,3 +46,6 @@ export const INQUIRY_LISTING_MESSAGES = {
 
 /** A linked listing that answers with one of these was deleted or isn't yours to open. */
 export const INQUIRY_LISTING_GONE_STATUSES: readonly number[] = [403, 404];
+
+/** The sheets the inquiry detail screen can open. */
+export const INQUIRY_DETAIL_SHEET = { STAGE: "stage", MORE: "more" } as const;
