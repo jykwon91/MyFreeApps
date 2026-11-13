@@ -369,7 +369,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
 - Under the header: "Game data: patch 1.60.1 (build 70790) · updated <date>" from
   `data/dataRefresh.json`, **written by `wow_refresh apply`** (never by hand; a
   backend test checks its build matches `sources.WAGO_BUILD`).
-- **What's new on this site** (`data/whatsNew.ts`, hand-written, newest first,
+- **What's new on this site** (`data/whatsNew.json`, typed by `whatsNew.ts`; hand-written, newest first,
   date = the day it merged): the latest `WHATS_NEW_HUB_COUNT` (5) + "Show all".
   Add an entry in the same PR as any player-visible change. An entry's `to` path
   (query dropped) must be the hub or a hub tile — that page gets the dot.
