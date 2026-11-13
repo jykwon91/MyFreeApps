@@ -19,6 +19,7 @@ import { formatMoney } from "@/lib/formatMoney";
 import { saveOrder } from "@/features/public-order/savedOrders";
 import { countPhoneDigits, selectOrderableTheUsual } from "@/features/public-order/applyTheUsual";
 import { computeTotalForDrafts, cryptoRandomId, newDraft } from "@/features/public-order/pizzaDrafts";
+import OrderStack from "@/features/public-order/OrderStack";
 import SlotPicker from "@/features/public-order/SlotPicker";
 import PizzaLineRow from "@/features/public-order/PizzaLineRow";
 import WelcomeBack from "@/features/public-order/WelcomeBack";
@@ -148,7 +149,7 @@ export default function OrderBuilder({ drop, menu, onPlaced }: OrderBuilderProps
   }
 
   return (
-    <div className="space-y-4">
+    <OrderStack>
       <SlotPicker
         slots={drop.slots}
         selectedSlotId={selectedSlotId}
@@ -275,6 +276,6 @@ export default function OrderBuilder({ drop, menu, onPlaced }: OrderBuilderProps
           Place order
         </LoadingButton>
       </Card>
-    </div>
+    </OrderStack>
   );
 }

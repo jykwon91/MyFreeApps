@@ -3,6 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { EmptyState, Select, Skeleton, extractErrorMessage } from "@platform/ui";
 import { useListDropsQuery } from "@/store/dropsApi";
 import FinancialsBody from "@/features/financials/FinancialsBody";
+import FinancialsBodySkeleton from "@/features/financials/FinancialsBodySkeleton";
+import FinancialsHeader from "@/features/financials/FinancialsHeader";
 
 export default function Financials() {
   const drops = useListDropsQuery();
@@ -25,15 +27,8 @@ export default function Financials() {
     }
   }, [selectedDropId, dropIdParam, setParams]);
 
-  if (drops.isLoading) {
-    return (
-      <div className="p-4 space-y-3">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    );
-  }
-
+  // The error and empty states stand alone, without the header: they replace
+  // the page rather than fill it, so there is no layout to hold steady.
   if (drops.isError) {
     return (
       <div className="p-4">
@@ -46,7 +41,7 @@ export default function Financials() {
     );
   }
 
-  if (!drops.data || drops.data.length === 0) {
+  if (drops.data?.length === 0) {
     return (
       <div className="p-4 rounded border bg-card text-center space-y-1">
         <p className="font-medium">No drops yet</p>
@@ -59,23 +54,26 @@ export default function Financials() {
 
   return (
     <div className="p-4 space-y-4">
-      <header className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-xl font-semibold">Financials</h1>
-        <Select
-          aria-label="Select drop"
-          value={selectedDropId ?? ""}
-          onChange={(e) => setParams({ drop_id: e.target.value }, { replace: true })}
-          className="min-w-[12rem]"
-        >
-          {drops.data.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name} — {d.date} ({d.status})
-            </option>
-          ))}
-        </Select>
-      </header>
+      <FinancialsHeader>
+        {drops.data ? (
+          <Select
+            aria-label="Select drop"
+            value={selectedDropId ?? ""}
+            onChange={(e) => setParams({ drop_id: e.target.value }, { replace: true })}
+            className="w-full"
+          >
+            {drops.data.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name} — {d.date} ({d.status})
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <Skeleton className="h-[2.375rem] w-full" />
+        )}
+      </FinancialsHeader>
 
-      {selectedDropId ? <FinancialsBody dropId={selectedDropId} /> : null}
+      {selectedDropId ? <FinancialsBody dropId={selectedDropId} /> : <FinancialsBodySkeleton />}
     </div>
   );
 }

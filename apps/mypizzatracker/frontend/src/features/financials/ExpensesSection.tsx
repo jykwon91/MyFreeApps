@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@platform/ui";
+import FinancialsSection from "@/features/financials/FinancialsSection";
 import ExpenseForm from "@/features/financials/ExpenseForm";
 import ExpenseRow from "@/features/financials/ExpenseRow";
 import type { ExpensesSectionProps } from "@/types/financials/ExpensesSectionProps";
@@ -8,7 +9,7 @@ export default function ExpensesSection({ data, readOnly }: ExpensesSectionProps
   const [showForm, setShowForm] = useState(false);
 
   return (
-    <section className="rounded-lg border bg-card p-4 space-y-3">
+    <FinancialsSection>
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-base font-semibold">Expenses</h3>
         {!readOnly ? (
@@ -47,6 +48,6 @@ export default function ExpensesSection({ data, readOnly }: ExpensesSectionProps
           ))}
         </ul>
       )}
-    </section>
+    </FinancialsSection>
   );
 }

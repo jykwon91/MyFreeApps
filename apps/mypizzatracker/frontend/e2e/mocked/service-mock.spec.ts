@@ -1,6 +1,7 @@
 /**
  * No-backend E2E for /service: the active drop's dashboard loads one column
- * per pickup slot with its orders, a failed load of the drops or the dashboard
+ * per pickup slot with its orders, the skeleton has the loaded layout in both
+ * loading states, a failed load of the drops or the dashboard
  * offers a retry, and advancing an order sends the new status and shows it.
  *
  * The dashboard polls every few seconds, and a poll would reload it whether or
@@ -13,12 +14,14 @@ import type { Page } from "@playwright/test";
 import { apiPath } from "@platform/ui/test-support/apiPath";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
-import { failReads, logReads } from "@platform/ui/test-support/routeControls";
+import { measureBoxes } from "@platform/ui/test-support/layoutShift";
+import { failReads, holdReads, logReads } from "@platform/ui/test-support/routeControls";
 import { toast } from "@platform/ui/test-support/toast";
 import type { LoggedRead } from "@platform/ui/test-support/types/LoggedRead";
 import { DASHBOARD_POLL_INTERVAL_MS } from "./constants/servicePolling";
 import { ACTIVE_DROP_ID } from "./fixtures/dropFixtures";
 import { FIRST_ORDER_ID } from "./fixtures/serviceFixtures";
+import { expectSameColumns, skeletonCards } from "./fixtures/skeletonLayout";
 import { stubDropsApi } from "./fixtures/stubDropsApi";
 import { stubServiceApi } from "./fixtures/stubServiceApi";
 
@@ -58,6 +61,32 @@ test("shows the active drop's slots as columns, each with its orders", async ({ 
   await expect(order).toContainText("Margherita + Mushrooms -- extra crispy");
   await expect(order.getByText("Not started", { exact: true })).toBeVisible();
   await expect(columns.nth(3).getByText("No orders yet")).toBeVisible();
+});
+
+test("the loading skeletons have one card per slot column, in the columns' grid", async ({ page }) => {
+  await stubServiceApi(page);
+  const drops = await holdReads(page, DROPS_LIST);
+  const dashboard = await holdReads(page, DASHBOARD_READ);
+
+  try {
+    await page.goto("/service");
+    const skeleton = skeletonCards(page);
+    await expect(skeleton).toHaveCount(4);
+    const whileDropsLoad = await measureBoxes(skeleton);
+
+    drops.release();
+    await expect(page.getByRole("heading", { name: "Service", level: 1 })).toBeVisible();
+    await expect(skeleton).toHaveCount(4);
+    const whileDashboardLoads = await measureBoxes(skeleton);
+
+    dashboard.release();
+    await expect(skeleton).toHaveCount(0);
+    await expectSameColumns(whileDropsLoad, slotColumns(page));
+    await expectSameColumns(whileDashboardLoads, slotColumns(page));
+  } finally {
+    drops.release();
+    dashboard.release();
+  }
 });
 
 test("advancing an order sends its new status and shows it", async ({ page }) => {

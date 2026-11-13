@@ -1,4 +1,5 @@
 import { StatusBadge } from "@platform/ui";
+import FinancialsSection from "@/features/financials/FinancialsSection";
 import { HEALTH_LABELS, HEALTH_TONES } from "@/features/financials/health";
 import TipEditor from "@/features/financials/TipEditor";
 import { formatMoney } from "@/lib/formatMoney";
@@ -6,7 +7,7 @@ import type { SummaryCardProps } from "@/types/financials/SummaryCardProps";
 
 export default function SummaryCard({ data, readOnly }: SummaryCardProps) {
   return (
-    <section className="rounded-lg border bg-card p-4 space-y-3">
+    <FinancialsSection>
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-lg font-semibold">{data.drop.name}</h2>
@@ -43,6 +44,6 @@ export default function SummaryCard({ data, readOnly }: SummaryCardProps) {
           ${formatMoney(data.profit)}
         </dd>
       </dl>
-    </section>
+    </FinancialsSection>
   );
 }
