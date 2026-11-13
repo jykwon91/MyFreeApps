@@ -85,6 +85,7 @@ describe("every ready-made macro against the Forever client", () => {
       if (m.text.includes("[mod:")) expect(m.unconfirmed).toContain("modifier");
       if (m.text.includes("[nopet]")) expect(m.unconfirmed).toContain("nopet");
       if (m.text.includes("%t")) expect(m.unconfirmed).toContain("chatTarget");
+      expect(m.text.includes("GetUnitName(")).toBe(m.unconfirmed.includes("fullName"));
       for (const syntax of m.unconfirmed) expect(SYNTAX_NOTES[syntax]).toBeTruthy();
     }
   });
@@ -107,7 +108,7 @@ describe("the Warlock macros", () => {
       "/cast Spell Lock", "@focus,harm,nodead][] Spell Lock", "/cast Suffering", "/cast Sacrifice", "/stopcasting\n/cast Fear",
       "/stopcasting\n/cast Death Coil", "[@mouseover,harm,nodead][] Corruption", "[@mouseover,harm,nodead][] Bane of Agony",
       "@mouseover,exists,nodead][] Devour Magic", "@focus,harm,nodead][] Fear", "@focus,harm,nodead][] Banish", "/use Major Healthstone",
-      "/use Major Healing Potion", "/cast Create Healthstone", "/use Major Soulstone", "/p Soulstone on %t", "/p Summoning %t",
+      "/use Major Healing Potion", "/cast Create Healthstone", "/use Major Soulstone", "/p Soulstone on %t", 'GetUnitName("target",true) if n then SendChatMessage("Summoning "..n.." - click the portal!","PARTY") end',
       "/cast Life Tap", "[@mouseover,harm,nodead][] Drain Soul", "/castsequence reset=target/combat Corruption, Bane of Agony, Immolate",
       "/cast Amplify Curse\n/cast Bane of Agony",
     ]) {

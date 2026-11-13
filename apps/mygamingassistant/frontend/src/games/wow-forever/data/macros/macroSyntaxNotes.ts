@@ -9,5 +9,7 @@ export const SYNTAX_NOTES: Readonly<Record<MacroSyntax, string>> = {
   modifier: "Picks a spell by held key ([mod:shift], [mod:ctrl]). Not confirmed to work in Forever.",
   nopet: "Uses [nopet] to check you have no pet out. Not confirmed to work in Forever.",
   chatTarget: "Puts your target's name in chat with %t. Not confirmed to work in Forever.",
+  fullName:
+    "Puts your target's full name, surname included, in chat with a /run script (GetUnitName with its second argument set, which in Classic adds the realm). Not confirmed in Forever: if only the first name shows, use /p with %t instead.",
   petCast: "Casts a pet ability with /cast. Not confirmed in Forever; if nothing happens, use the pet's action bar.",
 };

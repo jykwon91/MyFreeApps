@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-13",
+    "title": "Summon macro names the surname",
+    "summary": "The Warlock \"Summon, then tell the party\" macro now tells your party the full name, surname included, of who you're summoning. It's marked unconfirmed until it's checked in game.",
+    "to": "/wow-forever/macros?class=warlock"
+  },
+  {
+    "date": "2026-11-13",
     "title": "Quests for Forever's new dungeons",
     "summary": "Each of WoW Forever's nine new dungeons now lists its quests from Blizzard's own game data, about 80 in all (four a faction in City of Dalaran), with what each one gives (XP, gold, items, reputation) and any reputation it needs.",
     "to": "/wow-forever/dungeons"
