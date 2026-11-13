@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { nextTabIndex } from "../tabKeyboard";
+import { nextTabIndex } from "../utils/tabKeyboard";
 
 describe("nextTabIndex", () => {
   it("moves right and wraps from the last tab to the first", () => {

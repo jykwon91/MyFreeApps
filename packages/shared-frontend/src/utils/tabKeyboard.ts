@@ -1,4 +1,4 @@
-import { TAB_KEYS } from "@/constants/tab-keys";
+import { TAB_KEYS } from "../constants/tab-keys";
 
 /**
  * The index of the tab a key moves to from `current`, or null when the key is not a tab-navigation key.

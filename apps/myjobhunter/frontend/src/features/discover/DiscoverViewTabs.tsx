@@ -1,7 +1,7 @@
 import { useRef, type KeyboardEvent } from "react";
 import { DISCOVER_TABLIST_LABEL } from "@/constants/discover-tabs";
 import DiscoverTabButton from "@/features/discover/DiscoverTabButton";
-import { nextTabIndex } from "@/utils/tabKeyboard";
+import { nextTabIndex } from "@platform/ui";
 import { DISCOVER_VIEW_LABELS, DISCOVER_VIEWS } from "@myjobhunter/api-client/constants/discoverViewLabels";
 import type { DiscoverView } from "@myjobhunter/api-client/types/discovery/discover-view";
 

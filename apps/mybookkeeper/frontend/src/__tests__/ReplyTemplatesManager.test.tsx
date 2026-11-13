@@ -357,4 +357,15 @@ describe("the Active and Archived tabs", () => {
     await user.keyboard("{ArrowLeft}");
     expect(screen.getByRole("tab", { name: "Active" })).toHaveFocus();
   });
+
+  it("jumps to the last and first tab with End and Home", async () => {
+    const user = userEvent.setup();
+    renderManager();
+    screen.getByRole("tab", { name: "Active" }).focus();
+    await user.keyboard("{End}");
+    expect(screen.getByRole("tab", { name: "Archived" })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: "Archived" })).toHaveAttribute("aria-selected", "true");
+    await user.keyboard("{Home}");
+    expect(screen.getByRole("tab", { name: "Active" })).toHaveFocus();
+  });
 });
