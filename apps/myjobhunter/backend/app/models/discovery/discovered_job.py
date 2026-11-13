@@ -27,6 +27,11 @@ State invariants:
   (chk_discovered_state).
 - ``promoted_application_id`` and ``promoted_at`` rise/fall together
   (chk_discovered_promoted).
+- A promoted row is an application and leaves triage: Promote clears
+  ``saved_at`` / ``dismissed_at``, and Dismiss / Save refuse it (409) —
+  enforced in ``discovery_inbox_service``. Rows dismissed after promotion
+  by the earlier behaviour keep their data; no view lists them, and their
+  application stays in the Applications pipeline.
 
 Indexes:
 

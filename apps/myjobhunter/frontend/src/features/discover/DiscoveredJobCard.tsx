@@ -17,6 +17,8 @@ import { DISCOVER_ACTION_MESSAGES } from "@myjobhunter/api-client/constants/disc
 import { discoveredJobFacts } from "@myjobhunter/api-client/utils/discoveredJobFacts";
 import { discoveredJobUrl } from "@myjobhunter/api-client/utils/discoveredJobUrl";
 import { discoverFailureMessage } from "@myjobhunter/api-client/utils/discoverFailureMessage";
+import { isDiscoverConflictError } from "@myjobhunter/api-client/utils/isDiscoverConflictError";
+import { triageFailureMessage } from "@myjobhunter/api-client/utils/triageFailureMessage";
 import { undoDismissFailureMessage } from "@myjobhunter/api-client/utils/undoDismissFailureMessage";
 import { STATUS_TONE_BADGE_COLORS } from "@/constants/statusToneBadgeColors";
 import DismissedJobFooter from "./DismissedJobFooter";
@@ -67,7 +69,7 @@ export default function DiscoveredJobCard({
 }: DiscoveredJobCardProps) {
   const [dismiss, { isLoading: isDismissing }] = useDismissDiscoveredJobMutation();
   const [save, { isLoading: isSaving }] = useSaveDiscoveredJobMutation();
-  const [promote, { isLoading: isPromoting }] = usePromoteDiscoveredJobMutation();
+  const [promote, { isLoading: isPromoting, isSuccess: hasPromoted }] = usePromoteDiscoveredJobMutation();
   const dispatch = useDispatch<DiscoverCacheDispatch>();
   const [showReasons, setShowReasons] = useState(false);
 
@@ -93,7 +95,9 @@ export default function DiscoveredJobCard({
         onClick: handleUndo,
       });
     } catch (err) {
-      showError(discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.dismissFailed));
+      // A coded 409 is final (applied elsewhere), so picking another reason can't help.
+      if (isDiscoverConflictError(err)) setShowReasons(false);
+      showError(triageFailureMessage(err, DISCOVER_ACTION_MESSAGES.dismissFailed));
     }
   }
 
@@ -102,7 +106,7 @@ export default function DiscoveredJobCard({
       await save(job.id).unwrap();
       showSuccess(DISCOVER_ACTION_MESSAGES.saved);
     } catch (err) {
-      showError(discoverFailureMessage(err, DISCOVER_ACTION_MESSAGES.saveFailed));
+      showError(triageFailureMessage(err, DISCOVER_ACTION_MESSAGES.saveFailed));
     }
   }
 
@@ -128,6 +132,11 @@ export default function DiscoveredJobCard({
     sourceName: sourceBadgeLabel,
   } = discoveredJobFacts(job, profileUpdatedAt, sources);
   const postingUrl = discoveredJobUrl(job);
+  // An applied posting is an application, not something to triage: no Save or Dismiss.
+  // Applying here counts from success on, until the refetched list drops the card.
+  const isApplied = isAlreadyPromoted || hasPromoted;
+  // One triage action at a time: each would move the posting somewhere else.
+  const isTriaging = isPromoting || isSaving || isDismissing;
 
   return (
     <Card className="p-4 sm:p-5 space-y-3">
@@ -262,33 +271,38 @@ export default function DiscoveredJobCard({
               onClick={handlePromote}
               isLoading={isPromoting}
               loadingText="Adding…"
+              disabled={hasPromoted || isSaving || isDismissing}
             >
               <Briefcase className="w-4 h-4 mr-1" />
               Apply
             </LoadingButton>
           )}
-          <LoadingButton
-            size="sm"
-            variant="secondary"
-            onClick={handleSave}
-            isLoading={isSaving}
-            loadingText="Saving…"
-            disabled={isAlreadySaved || isAlreadyPromoted}
-            data-testid="save-button"
-          >
-            <Bookmark className="w-4 h-4 mr-1" />
-            {isAlreadySaved ? "Saved" : "Save"}
-          </LoadingButton>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setShowReasons(true)}
-            disabled={isDismissing}
-            className="ml-auto"
-            aria-label="Dismiss this posting"
-          >
-            <X className="w-4 h-4" />
-          </Button>
+          {!isApplied && (
+            <>
+              <LoadingButton
+                size="sm"
+                variant="secondary"
+                onClick={handleSave}
+                isLoading={isSaving}
+                loadingText="Saving…"
+                disabled={isAlreadySaved || isTriaging}
+                data-testid="save-button"
+              >
+                <Bookmark className="w-4 h-4 mr-1" />
+                {isAlreadySaved ? "Saved" : "Save"}
+              </LoadingButton>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowReasons(true)}
+                disabled={isTriaging}
+                className="ml-auto"
+                aria-label="Dismiss this posting"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </>
+          )}
         </div>
       )}
     </Card>

@@ -388,8 +388,8 @@ async def list_discovered(
     limit: int = 50,
     offset: int = 0,
     source_id: uuid.UUID | None = None,
-) -> list[DiscoveredJob]:
-    """List discovered jobs scoped to user.
+) -> list[tuple[DiscoveredJob, uuid.UUID | None]]:
+    """List discovered jobs scoped to user, each with its saved search's id.
 
     Which rows each ``state`` holds is ``discovered_state_predicate``'s call
     (shared with the pagination and coverage counts). The dismissed view is
@@ -399,14 +399,14 @@ async def list_discovered(
     source_id:
       When provided, restricts results to rows whose fetch_id points to a
       DiscoveryFetch whose discovery_source_id matches.  Uses a LEFT JOIN
-      on discovery_fetches to also populate ``discovery_source_id`` on
-      every returned row (no N+1).
+      on discovery_fetches to also return each row's ``discovery_source_id``
+      (no N+1).
     """
-    # Always join discovery_fetches so we can populate discovery_source_id
-    # on each row without a second round-trip.  LEFT JOIN keeps rows whose
+    # Always join discovery_fetches so we can return discovery_source_id
+    # with each row without a second round-trip.  LEFT JOIN keeps rows whose
     # fetch_id is NULL (legacy rows or fetch reaped after SET NULL cascade).
     stmt = (
-        select(DiscoveredJob, DiscoveryFetch.discovery_source_id.label("_dsrc_id"))
+        select(DiscoveredJob, DiscoveryFetch.discovery_source_id)
         .select_from(
             outerjoin(
                 DiscoveredJob,
@@ -430,43 +430,33 @@ async def list_discovered(
     stmt = stmt.order_by(*order).limit(limit).offset(offset)
 
     result = await db.execute(stmt)
-    rows = []
-    for job, dsrc_id in result.all():
-        # Attach discovery_source_id as a plain Python attribute so the
-        # Pydantic schema (from_attributes=True, discovery_source_id field)
-        # can read it without an ORM relationship.
-        job.discovery_source_id = dsrc_id
-        rows.append(job)
-    return rows
+    return [(job, source_id) for job, source_id in result.all()]
 
 
 async def get_discovered(
-    db: AsyncSession, job_id: uuid.UUID, user_id: uuid.UUID,
+    db: AsyncSession, job_id: uuid.UUID, user_id: uuid.UUID, *, for_update: bool = False,
 ) -> DiscoveredJob | None:
+    """``for_update`` locks the row until commit, so concurrent triage writes
+    (Promote vs Dismiss/Save) serialize, and reloads it past the identity map."""
     stmt = select(DiscoveredJob).where(
         DiscoveredJob.id == job_id,
         DiscoveredJob.user_id == user_id,
     )
+    if for_update:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
 
 async def dismiss_discovered(
-    db: AsyncSession,
-    job_id: uuid.UUID,
-    user_id: uuid.UUID,
-    *,
-    reason: str | None = None,
-) -> bool:
-    """Mark a discovered job as dismissed. Idempotent.
+    db: AsyncSession, job: DiscoveredJob, *, reason: str | None = None,
+) -> None:
+    """Mark a loaded discovered job as dismissed. Idempotent.
 
     ``reason`` is an optional structured signal used for future scoring
     iterations. The CHECK constraint enforces the enum at the DB layer;
     callers should validate / coerce before calling.
     """
-    job = await get_discovered(db, job_id, user_id)
-    if job is None:
-        return False
     if job.saved_at is not None:
         # The state CHECK constraint forbids both being set.
         job.saved_at = None
@@ -475,50 +465,45 @@ async def dismiss_discovered(
     if reason is not None:
         job.dismissed_reason = reason
     await db.flush()
-    return True
 
 
-async def save_discovered(
-    db: AsyncSession, job_id: uuid.UUID, user_id: uuid.UUID,
-) -> bool:
-    """Mark a discovered job as saved (kept for later). Idempotent."""
-    job = await get_discovered(db, job_id, user_id)
-    if job is None:
-        return False
+async def save_discovered(db: AsyncSession, job: DiscoveredJob) -> None:
+    """Mark a loaded discovered job as saved (kept for later). Idempotent."""
     if job.dismissed_at is not None:
         job.dismissed_at = None
         job.dismissed_reason = None
     if job.saved_at is None:
         job.saved_at = datetime.now(timezone.utc)
-        await db.flush()
-    return True
+    await db.flush()
 
 
-async def undo_dismiss_discovered(
-    db: AsyncSession,
-    job_id: uuid.UUID,
-    user_id: uuid.UUID,
+async def get_restorable(
+    db: AsyncSession, job_id: uuid.UUID, user_id: uuid.UUID,
 ) -> DiscoveredJob | None:
-    """Clear dismissed_at / dismissed_reason so the job returns to the inbox.
+    """The caller's posting, locked, iff the Dismissed view lists it.
 
-    Restores only rows the Dismissed view lists (same predicate), so Restore
-    never moves a posting into no view. None (→ 404 in the service) when the
-    job isn't the caller's, isn't dismissed, has expired/closed, or was
-    already turned into an application.
+    Restore takes only those rows (same predicate), so it never moves a posting
+    into no view. None (→ 404 in the service) when the job isn't the caller's,
+    isn't dismissed, has expired/closed, or is an application.
     """
-    stmt = select(DiscoveredJob).where(
-        DiscoveredJob.id == job_id,
-        DiscoveredJob.user_id == user_id,
-        *discovered_state_predicate("dismissed"),
+    stmt = (
+        select(DiscoveredJob)
+        .where(
+            DiscoveredJob.id == job_id,
+            DiscoveredJob.user_id == user_id,
+            *discovered_state_predicate("dismissed"),
+        )
+        .with_for_update()
+        .execution_options(populate_existing=True)
     )
-    job = (await db.execute(stmt)).scalar_one_or_none()
-    if job is None:
-        return None
+    return (await db.execute(stmt)).scalar_one_or_none()
+
+
+async def undo_dismiss_discovered(db: AsyncSession, job: DiscoveredJob) -> None:
+    """Clear a loaded job's dismissal so it returns to the inbox."""
     job.dismissed_at = None
     job.dismissed_reason = None
     await db.flush()
-    await db.refresh(job)
-    return job
 
 
 async def list_unscored_for_user(

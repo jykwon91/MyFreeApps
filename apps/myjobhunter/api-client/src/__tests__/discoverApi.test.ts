@@ -4,6 +4,7 @@ import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { configureStore } from "@reduxjs/toolkit";
 import { AxiosError, type AxiosAdapter, type InternalAxiosRequestConfig } from "axios";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { DISCOVER_CONFLICT_CODES } from "../constants/discoverConflictCodes";
 import { discoverApi } from "../store/discoverApi";
 import { undoDismissDiscoveredJob } from "../store/undoDismissDiscoveredJob";
 
@@ -143,5 +144,23 @@ describe("moving a posting between the Inbox and Dismissed lists", () => {
 
     await expect.poll(() => listed(store, "dismissed")).toEqual([]);
     await expect.poll(() => listed(store, "inbox")).toEqual(["j1"]);
+  });
+
+  it("refetches the lists when Dismiss is refused because the posting is already an application, so its card goes", async () => {
+    views = { inbox: ["j1", "j2"], dismissed: [] };
+    const store = await openBothLists();
+    await expect.poll(() => listed(store, "inbox")).toEqual(["j1", "j2"]);
+    // Added to Applications on another device: the server lists it nowhere and refuses Dismiss.
+    views = { inbox: ["j2"], dismissed: [] };
+    respond = (config) =>
+      config.url === "/discover/j1/dismiss"
+        ? { status: 409, data: { detail: { code: DISCOVER_CONFLICT_CODES.alreadyApplied, message: "This posting is already in your Applications" } } }
+        : serve(config);
+
+    const result = await store.dispatch(discoverApi.endpoints.dismissDiscoveredJob.initiate({ jobId: "j1" }));
+
+    expect(result).toMatchObject({ error: { status: 409 } });
+    await expect.poll(() => listed(store, "inbox")).toEqual(["j2"]);
+    expect(listed(store, "dismissed")).toEqual([]);
   });
 });

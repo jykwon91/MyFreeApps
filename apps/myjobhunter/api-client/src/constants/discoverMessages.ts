@@ -46,6 +46,12 @@ export const DISCOVER_ACTION_MESSAGES = {
   restoreFailed: "Couldn't restore this posting",
   // undo-dismiss's 404 (Undo or Restore): brought back on another device, or expired/closed since.
   undoDismissGone: "This posting can no longer be brought back. It may already be in your inbox.",
+  // Dismiss, Save or Restore's coded 409: the posting was already added to Applications (on another device, or a moment ago).
+  alreadyApplied: "This posting is already in your Applications.",
+  // Save or Restore's coded 409: a dismissed posting whose twin from another source is already in Discover.
+  duplicate: "This posting is already in Discover from another source.",
+  // Save or Restore's coded 409: that twin has since expired or closed.
+  noLongerListed: "This posting is no longer listed.",
   removed: "Saved search removed",
   removeFailed: "Couldn't remove saved search",
   frequencyUpdated: "Refresh frequency updated",
