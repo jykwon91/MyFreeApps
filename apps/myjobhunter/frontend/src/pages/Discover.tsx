@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { Button } from "@platform/ui";
 import DiscoverInboxView from "@/features/discover/DiscoverInboxView";
 import DiscoverListView from "@/features/discover/DiscoverListView";
+import DiscoverTabPanel from "@/features/discover/DiscoverTabPanel";
 import DiscoverViewTabs from "@/features/discover/DiscoverViewTabs";
 import NewSavedSearchDialog from "@/features/discover/NewSavedSearchDialog";
 import SavedSearchesPanel from "@/features/discover/SavedSearchesPanel";
@@ -100,20 +101,22 @@ export default function Discover() {
 
       <DiscoverViewTabs activeView={activeView} onSelect={setView} />
 
-      {activeView === "inbox" ? (
-        <DiscoverInboxView
-          hasSources={hasSources}
-          activeSourceId={activeSourceId}
-          scoringWindow={scoringWindow}
-        />
-      ) : (
-        <DiscoverListView
-          key={activeView}
-          view={activeView}
-          activeSourceId={activeSourceId}
-          onShowAllSources={() => setSourceFilter(null)}
-        />
-      )}
+      <DiscoverTabPanel activeView={activeView}>
+        {activeView === "inbox" ? (
+          <DiscoverInboxView
+            hasSources={hasSources}
+            activeSourceId={activeSourceId}
+            scoringWindow={scoringWindow}
+          />
+        ) : (
+          <DiscoverListView
+            key={activeView}
+            view={activeView}
+            activeSourceId={activeSourceId}
+            onShowAllSources={() => setSourceFilter(null)}
+          />
+        )}
+      </DiscoverTabPanel>
 
       <NewSavedSearchDialog
         open={dialogOpen}
