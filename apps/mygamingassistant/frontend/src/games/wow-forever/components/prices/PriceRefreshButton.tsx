@@ -16,7 +16,7 @@ export default function PriceRefreshButton({ house }: { house: PriceHouse }) {
     return <div className="h-11 w-32 rounded bg-muted/40 animate-pulse" aria-hidden data-testid="price-refresh-skeleton" />;
   }
   const coolingDown = cooldownLeft > 0 && !isRefreshing;
-  const note = notice ?? refreshCooldownCopy(cooldownMinutes(cooldownLeft));
+  const note = notice ?? (coolingDown ? refreshCooldownCopy(cooldownMinutes(cooldownLeft)) : null);
   return (
     <div className="flex flex-wrap items-center gap-2" data-testid="price-refresh">
       <LoadingButton
@@ -30,7 +30,7 @@ export default function PriceRefreshButton({ house }: { house: PriceHouse }) {
       >
         {PRICE_REFRESH_COPY.button}
       </LoadingButton>
-      {coolingDown ? (
+      {note ? (
         <span role="status" className="text-xs text-muted-foreground">
           {note}
         </span>

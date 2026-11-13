@@ -182,6 +182,98 @@ async def test_a_claim_while_a_refresh_holds_the_lock_costs_no_cooldown(
     assert again is not None and again.status == "started"
 
 
+async def test_a_started_claim_remembers_the_stamp_it_replaced(
+    bound_unit_of_work: AsyncSession, wow_game: Game,
+) -> None:
+    before = NOW - timedelta(hours=2)
+    await _asked_for(bound_unit_of_work, wow_game, before)
+
+    claim = await price_refresh_now_service.claim("pvp", "alliance", now=NOW)
+
+    assert claim is not None and claim.claimed_at == NOW and claim.previous_checked_at == before
+
+
+async def test_a_refresh_that_loses_the_lock_hands_the_cooldown_back_and_says_so(
+    bound_unit_of_work: AsyncSession, db_engine, wow_game: Game,
+) -> None:
+    before = NOW - timedelta(hours=2)
+    await _asked_for(bound_unit_of_work, wow_game, before)
+    claim = await price_refresh_now_service.claim("pvp", "alliance", now=NOW)
+    assert claim is not None and claim.status == "started"
+
+    # Between the claim's peek and the refresh, a scheduled run takes the game's lock.
+    other_worker = async_sessionmaker(bind=db_engine)
+    async with other_worker() as other, other.begin():
+        assert await price_feed_repo.try_refresh_lock(other, wow_game.id)
+        await price_refresh_now_service.run(claim)
+
+    feed = await _feed(bound_unit_of_work, wow_game)
+    assert feed.checked_at == before and feed.last_error is not None
+    state = await price_refresh_now_service.state(bound_unit_of_work, "pvp", "alliance")
+    assert state.refresh_failed_at is not None
+    again = await price_refresh_now_service.claim("pvp", "alliance", now=NOW + timedelta(minutes=1))
+    assert again is not None and again.status == "started"
+
+
+async def test_a_refresh_that_crashes_before_storing_hands_the_cooldown_back_and_says_so(
+    bound_unit_of_work: AsyncSession, wow_game: Game, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    claim = await price_refresh_now_service.claim("pvp", "alliance", now=NOW)
+    assert claim is not None and claim.status == "started"
+
+    async def crash(houses: list[MappedHouse] | None = None) -> HouseResults:
+        raise RuntimeError("connection reset")
+
+    monkeypatch.setattr(price_refresh_service, "fetch_house_prices", crash)
+
+    await price_refresh_now_service.run(claim)
+
+    feed = await _feed(bound_unit_of_work, wow_game)
+    assert feed.checked_at is None and feed.last_error is not None and feed.last_error_at is not None
+
+
+async def test_a_refresh_that_stored_its_failure_keeps_its_own_cooldown(
+    bound_unit_of_work: AsyncSession, wow_game: Game, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    claim = await price_refresh_now_service.claim("pvp", "alliance", now=NOW)
+    assert claim is not None
+
+    async def blizzard_down(houses: list[MappedHouse] | None = None) -> HouseResults:
+        return {ALLIANCE.house_id: PriceFetchError("Service Unavailable", status_code=503, code="BLZWEBAPI00000503")}
+
+    monkeypatch.setattr(price_refresh_service, "fetch_house_prices", blizzard_down)
+
+    await price_refresh_now_service.run(claim)
+
+    feed = await _feed(bound_unit_of_work, wow_game)
+    assert feed.checked_at is not None and feed.checked_at != claim.previous_checked_at
+    assert feed.last_error is not None and "503" in feed.last_error
+
+
+async def test_release_claim_never_undoes_a_later_stamp(bound_unit_of_work: AsyncSession, wow_game: Game) -> None:
+    await _asked_for(bound_unit_of_work, wow_game, NOW + timedelta(minutes=3))
+
+    released = await price_feed_repo.release_claim(
+        bound_unit_of_work, wow_game.id, "us", ALLIANCE.house_id,
+        claimed_at=NOW, restore_to=None, error="x", error_at=NOW,
+    )
+
+    assert released is False
+    assert (await _feed(bound_unit_of_work, wow_game)).checked_at == NOW + timedelta(minutes=3)
+
+
+async def test_a_house_that_lists_nothing_and_has_no_prices_still_moves_fetched_at(
+    bound_unit_of_work: AsyncSession, wow_game: Game,
+) -> None:
+    await price_refresh_service.store_house(
+        bound_unit_of_work, wow_game.id, ALLIANCE, HousePrices(prices=[], snapshot_at=SNAPSHOT), NOW,
+    )
+
+    state = await price_refresh_now_service.state(bound_unit_of_work, "pvp", "alliance")
+
+    assert state.fetched_at == NOW and state.refresh_failed_at is None
+
+
 async def test_no_game_cannot_be_claimed(bound_unit_of_work: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
     async def no_game(db: AsyncSession, slug: str) -> None:
         return None

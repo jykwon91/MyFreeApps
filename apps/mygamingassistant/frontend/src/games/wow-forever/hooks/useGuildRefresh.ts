@@ -33,7 +33,7 @@ interface GuildRefresh {
 export function useGuildRefresh(guild: GuildResponse, refetch: () => unknown): GuildRefresh {
   const [start] = useRefreshGuildMutation();
   const [watching, setWatching] = useState<GuildRefreshBaseline | null>(null);
-  const { cooldownLeft, syncClock } = useRefreshCooldown(guild.refresh_available_at);
+  const { cooldownLeft, syncClock, startCooldown } = useRefreshCooldown(guild.refresh_available_at);
 
   // The roster or failure time moved: the refresh is done.
   const finished = watching !== null && refreshFinished(watching, guild);
@@ -68,6 +68,7 @@ export function useGuildRefresh(guild: GuildResponse, refetch: () => unknown): G
       syncClock();
       if (answer.status === "cooldown") {
         setWatching(null);
+        startCooldown(answer.retry_after_seconds);
         showError(refreshCooldownCopy(cooldownMinutes(answer.retry_after_seconds * 1000)));
       }
     } catch (error) {
@@ -76,7 +77,7 @@ export function useGuildRefresh(guild: GuildResponse, refetch: () => unknown): G
     }
     // Either way the guild has a new cooldown to show.
     void refetch();
-  }, [guild, start, refetch, syncClock]);
+  }, [guild, start, refetch, syncClock, startCooldown]);
 
   return { isRefreshing, cooldownLeft, refresh };
 }

@@ -157,7 +157,8 @@ describe("GuildRefreshButton", () => {
     await click();
 
     expect(showError).toHaveBeenCalledWith(refreshCooldownCopy(2));
-    expect(screen.getByRole("button", { name: GUILD_REFRESH_COPY.button })).toBeEnabled();
+    // The server's wait is counted from now, so the button waits it out too.
+    expect(screen.getByRole("button", { name: GUILD_REFRESH_COPY.button })).toBeDisabled();
   });
 
   it.each([

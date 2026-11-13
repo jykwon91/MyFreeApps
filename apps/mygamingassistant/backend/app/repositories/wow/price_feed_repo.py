@@ -30,6 +30,18 @@ async def get(db: AsyncSession, game_id: uuid.UUID, region: str, house_id: int) 
     return result.scalar_one_or_none()
 
 
+async def get_checked_at(db: AsyncSession, game_id: uuid.UUID, region: str, house_id: int) -> datetime | None:
+    """The house's ``checked_at`` as the database holds it now (not a cached entity); None if unset or no feed."""
+    result = await db.execute(
+        select(WowPriceFeed.checked_at).where(
+            WowPriceFeed.game_id == game_id,
+            WowPriceFeed.region == region,
+            WowPriceFeed.house_id == house_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_or_create(
     db: AsyncSession, game_id: uuid.UUID, region: str, house_id: int, faction: str,
 ) -> WowPriceFeed:
@@ -113,3 +125,31 @@ def update(feed: WowPriceFeed, values: dict[str, object]) -> None:
 
 async def flush(db: AsyncSession) -> None:
     await db.flush()
+
+
+async def release_claim(
+    db: AsyncSession,
+    game_id: uuid.UUID,
+    region: str,
+    house_id: int,
+    *,
+    claimed_at: datetime,
+    restore_to: datetime | None,
+    error: str,
+    error_at: datetime,
+) -> bool:
+    """Hand back a claim whose refresh never stored a result: put ``checked_at`` back to ``restore_to``
+    and record ``error`` so the house's state reports it. Only while ``checked_at`` is still the
+    claim's own stamp, so a refresh that did store a result (or a later claim) is never undone."""
+    result = await db.execute(
+        sql_update(WowPriceFeed)
+        .where(
+            WowPriceFeed.game_id == game_id,
+            WowPriceFeed.region == region,
+            WowPriceFeed.house_id == house_id,
+            WowPriceFeed.checked_at == claimed_at,
+        )
+        .values(checked_at=restore_to, last_error=error, last_error_at=error_at)
+        .returning(WowPriceFeed.id)
+    )
+    return result.scalar_one_or_none() is not None

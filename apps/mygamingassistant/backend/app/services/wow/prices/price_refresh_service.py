@@ -88,7 +88,9 @@ async def store_house(
             logger.warning("wow prices: %s listed nothing — keeping %d stored prices", label, feed.item_count)
             _record_failure(feed, "Blizzard's house listed nothing", at)
         else:
-            price_feed_repo.update(feed, {"checked_at": at, "last_error": None, "last_error_at": None})
+            price_feed_repo.update(
+                feed, {"fetched_at": at, "checked_at": at, "last_error": None, "last_error_at": None},
+            )
         await price_feed_repo.flush(db)
         return _outcome(house, OUTCOME_EMPTY, feed.item_count)
 

@@ -58,4 +58,5 @@ export const refreshApiStub = {
   useGetWowPriceRefreshStateQuery: () => ({ currentData: undefined, isError: true, refetch: vi.fn() }),
   useRefreshWowPricesMutation: () => [vi.fn()],
   useLoadFreshWowPricesMutation: () => [vi.fn()],
+  useFinishPriceRefreshMutation: () => [vi.fn()],
 };

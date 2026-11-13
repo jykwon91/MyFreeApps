@@ -13,6 +13,7 @@ export const PRICE_REFRESH_COPY = {
   slow: "The refresh is still running. Check back in a few minutes.",
   startFailed: "Couldn't start the refresh. Try again in a moment.",
   unavailable: "Price refreshes are switched off right now.",
+  alreadyRunning: "A refresh is already running — prices will update shortly.",
   tooMany: "Too many refreshes from your connection. Try again in a few minutes.",
 } as const;
 

@@ -1,6 +1,9 @@
 import { baseApi } from "@platform/ui";
+import { PRICE_REFRESH_POLL_MS, PRICE_REFRESH_WATCH_TIMEOUT_MS } from "@/games/wow-forever/data/priceRefreshConfig";
+import { refreshOutcome } from "@/games/wow-forever/prices/priceRefresh";
 import type { PriceHouse } from "@/games/wow-forever/types/priceHouse";
 import type { PriceListResponse } from "@/games/wow-forever/types/priceListResponse";
+import type { PriceRefreshBaseline } from "@/games/wow-forever/types/priceRefreshBaseline";
 import type { PriceRefreshResponse } from "@/games/wow-forever/types/priceRefreshResponse";
 import type { PriceRefreshState } from "@/games/wow-forever/types/priceRefreshState";
 
@@ -38,6 +41,27 @@ export const wowPricesApi = baseApi.injectEndpoints({
         if (fresh) dispatch(wowPricesApi.util.upsertQueryData("getWowPrices", house, fresh.data));
       },
     }),
+    /**
+     * Finish a refresh the page walked away from (another house was picked, or the page closed): keep
+     * reading the house's state until the refresh lands and, if it brought new prices, load them past
+     * the browser cache, so the next visit to that house doesn't show the old set.
+     */
+    finishPriceRefresh: build.mutation<null, { house: PriceHouse; baseline: PriceRefreshBaseline }>({
+      async queryFn({ house, baseline }, { dispatch }) {
+        const giveUpAt = Date.now() + PRICE_REFRESH_WATCH_TIMEOUT_MS;
+        while (Date.now() < giveUpAt) {
+          await new Promise((resolve) => setTimeout(resolve, PRICE_REFRESH_POLL_MS));
+          const state = await dispatch(
+            wowPricesApi.endpoints.getWowPriceRefreshState.initiate(house, { forceRefetch: true, subscribe: false }),
+          ).unwrap();
+          const outcome = refreshOutcome(baseline, state);
+          if (outcome === "pending") continue;
+          if (outcome === "updated") await dispatch(wowPricesApi.endpoints.loadFreshWowPrices.initiate(house)).unwrap();
+          break;
+        }
+        return { data: null };
+      },
+    }),
   }),
 });
 
@@ -46,4 +70,5 @@ export const {
   useGetWowPriceRefreshStateQuery,
   useRefreshWowPricesMutation,
   useLoadFreshWowPricesMutation,
+  useFinishPriceRefreshMutation,
 } = wowPricesApi;

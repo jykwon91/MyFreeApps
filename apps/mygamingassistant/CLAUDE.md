@@ -1192,7 +1192,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   "Blizzard hasn't published newer prices yet — try again in ~N minutes" (inline note + error
   toast, `@platform/ui` has no info toast); only `refresh_failed_at` moved = failed. Shares
   `lib/refreshCooldown.ts`, `data/refreshCooldownCopy.ts`, `hooks/useRefreshCooldown.ts` and
-  `hooks/useRefreshWatch.ts` with the guild button. The page keys the button by house. Tests:
+  `hooks/useRefreshWatch.ts` with the guild button (the cooldown hook ticks by the minute and counts a server "cooldown" answer from this device's clock). A click shows loading at once, re-reads the state to take its baseline, then POSTs; "cooldown", "nothing newer" and "already running" are neutral inline notes, not error toasts. A run that loses the lock or crashes before storing hands the cooldown back (`price_feed_repo.release_claim`, conditional on the claim's own stamp) and records the failure. The page keys the button by house; walking away mid-refresh runs `finishPriceRefresh` so that house's prices are re-read past the cache. Tests:
   `tests/test_wow_prices_refresh_now.py` (the service is in `_UOW_CONSUMERS` in
   `tests/conftest.py`), `__tests__/wowPriceRefreshButton.test.tsx`,
   `e2e/mocked/wow-forever-auction-house-refresh.spec.ts`. Page tests that mock `wowPricesApi`

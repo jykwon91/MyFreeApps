@@ -21,9 +21,11 @@ import type { PriceRefreshState } from "@/games/wow-forever/types/priceRefreshSt
 
 const mockStart = vi.fn();
 const mockLoadFresh = vi.fn();
+const mockFinish = vi.fn();
 let stateResult: { currentData: PriceRefreshState | undefined; isError: boolean; refetch: () => unknown };
 vi.mock("@/games/wow-forever/api/wowPricesApi", () => ({
   useGetWowPriceRefreshStateQuery: () => stateResult,
+  useFinishPriceRefreshMutation: () => [mockFinish],
   useRefreshWowPricesMutation: () => [(house: PriceHouse) => ({ unwrap: () => mockStart(house) })],
   useLoadFreshWowPricesMutation: () => [(house: PriceHouse) => ({ unwrap: () => mockLoadFresh(house) })],
 }));
@@ -54,7 +56,11 @@ function refreshState(overrides: Partial<PriceRefreshState> = {}): PriceRefreshS
   };
 }
 
-function show(state: PriceRefreshState | undefined, isError = false, refetch: () => unknown = vi.fn()) {
+function show(
+  state: PriceRefreshState | undefined,
+  isError = false,
+  refetch: () => unknown = vi.fn(() => ({ unwrap: async () => state })),
+) {
   stateResult = { currentData: state, isError, refetch };
   return refetch;
 }
@@ -73,6 +79,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   mockStart.mockReset();
   mockLoadFresh.mockReset();
+  mockFinish.mockReset();
   mockLoadFresh.mockResolvedValue({});
   show(refreshState());
 });
@@ -171,10 +178,69 @@ describe("PriceRefreshButton", () => {
     });
 
     const message = priceRefreshUnchangedCopy(30);
-    expect(showError).toHaveBeenCalledWith(message);
+    // Not a fault: no red toast, just a plain note that stays until the next click.
+    expect(showError).not.toHaveBeenCalled();
     expect(showSuccess).not.toHaveBeenCalled();
     expect(mockLoadFresh).not.toHaveBeenCalled();
-    expect(screen.getByRole("status").textContent).toBe(message);
+    const note = screen.getByRole("status");
+    expect(note.textContent).toBe(message);
+    expect(note.className).toContain("text-muted-foreground");
+  });
+
+  it("keeps the nothing-newer note after the cooldown and clears it at the next click", async () => {
+    mockStart.mockResolvedValue(started());
+    show(refreshState());
+    const { rerender } = render(<PriceRefreshButton house={HOUSE} />);
+    await click();
+    // A re-read at the next click returns the same state the page now shows.
+    show(refreshState({ fetched_at: at(0), refresh_available_at: at(-MINUTE_MS) }));
+    await act(async () => {
+      rerender(<PriceRefreshButton house={HOUSE} />);
+    });
+    expect(screen.getByRole("status").textContent).toBe(priceRefreshUnchangedCopy(30));
+    expect(screen.getByRole("button", { name: PRICE_REFRESH_COPY.button })).toBeEnabled();
+
+    await click();
+
+    expect(screen.queryByText(priceRefreshUnchangedCopy(30))).toBeNull();
+  });
+
+  it("measures a refresh from the state read at the click, not the page's older copy", async () => {
+    mockStart.mockResolvedValue(started());
+    // The page loaded this, then a scheduled run downloaded the house before the click.
+    const loaded = refreshState();
+    const afterScheduledRun = refreshState({ fetched_at: at(-1000), source_updated_at: at(-2000) });
+    // The re-read at the click updates the page's copy too, as the real query does.
+    const reread = vi.fn(() => {
+      stateResult = { ...stateResult, currentData: afterScheduledRun };
+      return { unwrap: async () => afterScheduledRun };
+    });
+    show(loaded, false, reread);
+    render(<PriceRefreshButton house={HOUSE} />);
+
+    // Nothing has finished yet: the poll sees that same scheduled-run state.
+    await click();
+
+    expect(screen.getByRole("button", { name: PRICE_REFRESH_COPY.loading })).toBeDisabled();
+    expect(showSuccess).not.toHaveBeenCalled();
+    expect(mockLoadFresh).not.toHaveBeenCalled();
+  });
+
+  it("shows loading at the click, before the state is read again", async () => {
+    let release: (state: PriceRefreshState) => void = () => undefined;
+    const pending = new Promise<PriceRefreshState>((resolve) => {
+      release = resolve;
+    });
+    mockStart.mockResolvedValue(started());
+    show(refreshState(), false, vi.fn(() => ({ unwrap: () => pending })));
+    render(<PriceRefreshButton house={HOUSE} />);
+
+    await click();
+
+    expect(screen.getByRole("button", { name: PRICE_REFRESH_COPY.loading })).toBeDisabled();
+    expect(mockStart).not.toHaveBeenCalled();
+    await act(async () => release(refreshState()));
+    expect(mockStart).toHaveBeenCalledWith(HOUSE);
   });
 
   it("says so when Blizzard did not answer the refresh", async () => {
@@ -193,19 +259,19 @@ describe("PriceRefreshButton", () => {
     expect(mockLoadFresh).not.toHaveBeenCalled();
   });
 
-  it("keeps waiting when a scheduled refresh is already running, and reports that one's result", async () => {
+  it("stops waiting and says a refresh is already running when a scheduled one holds the lock", async () => {
     mockStart.mockResolvedValue({ status: "refreshing", retry_after_seconds: 0 });
-    const refetch = show(refreshState());
-    const { rerender } = render(<PriceRefreshButton house={HOUSE} />);
+    show(refreshState());
+    render(<PriceRefreshButton house={HOUSE} />);
+
     await click();
-    expect(screen.getByRole("button", { name: PRICE_REFRESH_COPY.loading })).toBeDisabled();
 
-    show(refreshState({ fetched_at: at(0), source_updated_at: at(-1000) }), false, refetch);
-    await act(async () => {
-      rerender(<PriceRefreshButton house={HOUSE} />);
-    });
-
-    expect(showSuccess).toHaveBeenCalledWith(PRICE_REFRESH_COPY.success);
+    // The lock is per game, so that run may be for another house: no waiting on a house that never moves.
+    expect(screen.getByRole("status").textContent).toBe(PRICE_REFRESH_COPY.alreadyRunning);
+    expect(screen.getByRole("button", { name: PRICE_REFRESH_COPY.button })).toBeEnabled();
+    expect(showError).not.toHaveBeenCalled();
+    act(() => void vi.advanceTimersByTime(PRICE_REFRESH_WATCH_TIMEOUT_MS));
+    expect(showError).not.toHaveBeenCalled();
   });
 
   it("stops waiting after a while and says it is still running", async () => {
@@ -234,14 +300,36 @@ describe("PriceRefreshButton", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 
-  it("explains a cooldown the server enforced (a click from another tab)", async () => {
+  it("waits out a cooldown the server enforced (a click from another tab), without an error toast", async () => {
     mockStart.mockResolvedValue({ status: "cooldown", retry_after_seconds: 240 });
     render(<PriceRefreshButton house={HOUSE} />);
 
     await click();
 
-    expect(showError).toHaveBeenCalledWith(refreshCooldownCopy(4));
-    expect(screen.getByRole("button", { name: PRICE_REFRESH_COPY.button })).toBeEnabled();
+    expect(showError).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: PRICE_REFRESH_COPY.button })).toBeDisabled();
+    expect(screen.getByRole("status").textContent).toBe(refreshCooldownCopy(4));
+  });
+
+  it("counts the server's wait from this device's clock, not the server's timestamp", async () => {
+    // The server's timestamp is far in the past by this device's clock (clock skew).
+    show(refreshState({ refresh_available_at: at(-3 * HOUR_MS) }));
+    mockStart.mockResolvedValue({ status: "cooldown", retry_after_seconds: 540 });
+    render(<PriceRefreshButton house={HOUSE} />);
+
+    await click();
+
+    expect(screen.getByRole("status").textContent).toBe(refreshCooldownCopy(9));
+  });
+
+  it("counts the cooldown note down by the minute", () => {
+    show(refreshState({ refresh_available_at: at(7 * MINUTE_MS - 5_000) }));
+    render(<PriceRefreshButton house={HOUSE} />);
+    expect(screen.getByRole("status").textContent).toBe(refreshCooldownCopy(7));
+
+    act(() => void vi.advanceTimersByTime(MINUTE_MS));
+
+    expect(screen.getByRole("status").textContent).toBe(refreshCooldownCopy(6));
   });
 
   it.each([
@@ -268,5 +356,24 @@ describe("PriceRefreshButton", () => {
     rerender(<PriceRefreshButton key="pvp-horde" house={{ server: "pvp", faction: "horde" }} />);
 
     expect(screen.getByRole("button", { name: PRICE_REFRESH_COPY.button })).toBeEnabled();
+  });
+
+  it("follows a refresh to its end when the page walks away from it, so that house's prices don't stay stale", async () => {
+    mockStart.mockResolvedValue(started());
+    const { unmount } = render(<PriceRefreshButton key="pvp-alliance" house={HOUSE} />);
+    await click();
+    expect(mockFinish).not.toHaveBeenCalled();
+
+    unmount();
+
+    expect(mockFinish).toHaveBeenCalledWith({ house: HOUSE, baseline: refreshBaselineOf(refreshState()) });
+  });
+
+  it("leaves nothing to follow when no refresh is running", () => {
+    const { unmount } = render(<PriceRefreshButton house={HOUSE} />);
+
+    unmount();
+
+    expect(mockFinish).not.toHaveBeenCalled();
   });
 });
