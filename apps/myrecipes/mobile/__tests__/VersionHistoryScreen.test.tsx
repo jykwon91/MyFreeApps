@@ -123,24 +123,22 @@ describe("VersionHistoryScreen", () => {
     expect(row("v2").props.accessibilityLabel).toBe("v2, Change 2, Nov 2, 2026, 1 cook, best rating 3 out of 5");
   });
 
-  it("opens a version's changes from its parent, once for a double tap, but not v1's", async () => {
+  it("opens a version in full, v1 included, once for a double tap", async () => {
     await show();
     await screen.findByTestId("version-v2");
 
     expect(row("v2").props.accessibilityRole).toBe("button");
-    expect(row("v2").props.accessibilityHint).toBe("Shows what changed from the version it was based on.");
+    expect(row("v2").props.accessibilityHint).toBe("Shows this version's ingredients and steps.");
     await fireEvent.press(row("v2"));
     await fireEvent.press(row("v2"));
     expect(mockPush).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith({
-      pathname: "/recipes/[id]/versions/[vid]/diff",
-      params: { id: "r1", vid: "v2", from: "versions" },
-    });
+    expect(mockPush).toHaveBeenCalledWith({ pathname: "/recipes/[id]/versions/[vid]", params: { id: "r1", vid: "v2" } });
 
     await act(async () => mockFocus.forEach((callback) => callback()));
-    expect(row("v1").props.accessibilityRole).toBeUndefined();
+    expect(row("v1").props.accessibilityRole).toBe("button");
     await fireEvent.press(row("v1"));
-    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledTimes(2);
+    expect(mockPush).toHaveBeenLastCalledWith({ pathname: "/recipes/[id]/versions/[vid]", params: { id: "r1", vid: "v1" } });
   });
 
   it("compares two picked versions, newer against older, and won't pick a third", async () => {
@@ -181,7 +179,7 @@ describe("VersionHistoryScreen", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.getByRole("button", { name: "Compare versions" })).toBeTruthy();
     expect(row("v2").props.accessibilityRole).toBe("button");
-    expect(row("v2").props.accessibilityHint).toBe("Shows what changed from the version it was based on.");
+    expect(row("v2").props.accessibilityHint).toBe("Shows this version's ingredients and steps.");
 
     await fireEvent.press(screen.getByRole("button", { name: "Compare versions" }));
     expect(row("v2").props.accessibilityState.checked).toBe(false);
@@ -245,6 +243,7 @@ describe("VersionHistoryScreen", () => {
 describe("diffBackTitle", () => {
   it("names Back for where the diff was opened, and Recipes for a link", () => {
     expect(diffBackTitle("versions")).toBe("Versions");
+    expect(diffBackTitle("version")).toBe("Version");
     expect(diffBackTitle(undefined)).toBe("Recipes");
     expect(diffBackTitle("constructor")).toBe("Recipes");
   });

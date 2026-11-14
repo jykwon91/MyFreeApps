@@ -24,9 +24,7 @@ export const VERSION_HISTORY_MESSAGES = {
   compare: "Compare",
   compareHint: "Opens what changed between the two versions you picked.",
   pickTwo: (picked: number) => `Pick two versions to compare (${picked} of ${COMPARE_VERSION_COUNT}).`,
-  // The server diffs against the version it was based on, which a restore or a tweak of an older
-  // version makes older than the one numbered just before.
-  openDiffHint: "Shows what changed from the version it was based on.",
+  openVersionHint: "Shows this version's ingredients and steps.",
   pickHint: "Picks this version to compare.",
   bestRating: (rating: number) => `Best ${rating}/5`,
   bestRatingLabel: (rating: number) => `best rating ${rating} out of 5`,
@@ -39,8 +37,28 @@ export const VERSION_DIFF_MESSAGES = {
   goBack: "Go back",
 } as const;
 
+/** Copy for one version shown in full, as the website shows the version picked in its timeline. */
+export const VERSION_VIEW_MESSAGES = {
+  screenTitle: "Version",
+  loading: "Loading version",
+  loadFailedHeading: "Can't load this version",
+  loadFailedBody: "Check your connection and try again.",
+  updateFailed: "Couldn't update this version. Check your connection and try again.",
+  tryAgain: "Try again",
+  notFoundHeading: "Version not found",
+  notFoundBody: "It may have been deleted, or the link may be wrong.",
+  goBack: "Go back",
+  changes: "What changed",
+  // The server diffs against the version it was based on, which a restore or a tweak of an older
+  // version makes older than the one numbered just before.
+  changesHint: "Shows what changed from the version it was based on.",
+} as const;
+
 /** What the version list tells a diff it opens, so the diff's Back is named for it. */
 export const VERSION_LIST_ENTRY_POINT: DiffEntryPoint = "versions";
+
+/** What a version shown in full tells the diff its What changed opens. */
+export const VERSION_VIEW_ENTRY_POINT: DiffEntryPoint = "version";
 
 /** What a diff tells the tweak form it opens, so the form's Back is named for it. */
 export const DIFF_TWEAK_ENTRY_POINT = "diff";
@@ -48,6 +66,9 @@ export const DIFF_TWEAK_ENTRY_POINT = "diff";
 /** How many rows the loading list and loading diff show. */
 export const VERSION_SKELETON_ROWS = 4;
 export const DIFF_SKELETON_ROWS = 3;
+/** How many ingredient and step rows a version shows while it loads. */
+export const VERSION_VIEW_SKELETON_INGREDIENTS = 5;
+export const VERSION_VIEW_SKELETON_STEPS = 3;
 
 /** The phone's colour for each kind of change, the web's green, red and amber. Never the only signal. */
 export const DIFF_CHANGE_TONES: Record<DiffChangeKind, Exclude<ChipTone, "neutral">> = {
