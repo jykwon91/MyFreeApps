@@ -1,4 +1,5 @@
 import { useRef, type KeyboardEvent } from "react";
+import { nextTabIndex } from "@platform/ui";
 import { REPLY_TEMPLATE_MESSAGES } from "@/shared/lib/reply-template-messages";
 import type { ReplyTemplatesView } from "@/shared/types/inquiry/reply-templates-view";
 
@@ -17,10 +18,9 @@ export default function ReplyTemplatesViewTabs({ view, onChange, panelId }: Repl
   const tabs = useRef<Array<HTMLButtonElement | null>>([]);
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+    const next = nextTabIndex(event.key, TABS.findIndex((tab) => tab.view === view), TABS.length);
+    if (next === null) return;
     event.preventDefault();
-    const at = TABS.findIndex((tab) => tab.view === view);
-    const next = (at + (event.key === "ArrowRight" ? 1 : -1) + TABS.length) % TABS.length;
     onChange(TABS[next].view);
     tabs.current[next]?.focus();
   }

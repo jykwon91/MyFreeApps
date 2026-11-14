@@ -24,6 +24,8 @@ export { formatCount } from "./utils/count";
 export { formatCurrency } from "./utils/currency";
 export { formatDate, timeAgo } from "./utils/date";
 export { formatFileSize } from "./utils/file-size";
+export { nextTabIndex } from "./utils/tabKeyboard";
+export { TAB_KEYS } from "./constants/tab-keys";
 export { formatSalaryRange, SALARY_PERIOD_LABELS } from "./utils/salary-range";
 export { formatTag } from "./utils/tag";
 export { isNotFound } from "./utils/isNotFound";
