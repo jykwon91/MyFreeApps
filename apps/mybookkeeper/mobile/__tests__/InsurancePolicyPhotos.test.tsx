@@ -3,6 +3,7 @@ import api from "@platform/core/lib/api";
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import * as ImagePicker from "expo-image-picker";
+import { POLICY_ATTACHMENT_MESSAGES } from "../src/constants/insuranceForm";
 import { removeHeldFileLabel } from "../src/constants/uploads";
 import PolicyDetailScreen from "../src/features/insurance/PolicyDetailScreen";
 import { preparePhoto } from "../src/features/capture/preparePhoto";
@@ -87,7 +88,7 @@ describe("adding several photos to a policy", () => {
     await pickPhotos(3);
     rejectPhoto("policy-2.jpg");
     await fireEvent.press(screen.getByRole("button", { name: "Upload" }));
-    expect(await screen.findByText("policy-2.jpg: That file's too big. I can take up to 10MB.")).toBeTruthy();
+    expect(await screen.findByText(POLICY_ATTACHMENT_MESSAGES.failedNamed("policy-2.jpg", POLICY_ATTACHMENT_MESSAGES.tooBig))).toBeTruthy();
     expect(await screen.findByText("2 documents added.")).toBeTruthy();
     await waitFor(() => expect(server.policies[0].attachments).toHaveLength(3));
     expect(screen.getByText("policy-2.jpg")).toBeTruthy();
