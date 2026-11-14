@@ -5,44 +5,71 @@ import type { InsuranceAttachmentKind } from "@mybookkeeper/api-client/types/ins
 import { Banner, filePart, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Modal, ScrollView, Text, View } from "react-native";
-import { DEFAULT_ATTACHMENT_KIND, POLICY_ATTACHMENT_MESSAGES, POLICY_PHOTO_NAME, POLICY_READER_MESSAGES } from "../../constants/insuranceForm";
+import { DEFAULT_ATTACHMENT_KIND, POLICY_ATTACHMENT_MESSAGES, POLICY_PHOTO_NAME, POLICY_PHOTO_NO_SELECTION_LIMIT, POLICY_READER_MESSAGES, policyPhotoName } from "../../constants/insuranceForm";
+import { UPLOAD_MESSAGES } from "../../constants/uploads";
+import type { PhotoPreparing } from "../../types/PhotoPreparing";
 import { confirmDiscard } from "../uploads/confirmDiscard";
 import HeldFileButtons from "../uploads/HeldFileButtons";
-import { useHeldFile } from "../uploads/useHeldFile";
+import HeldFilesList from "../uploads/HeldFilesList";
+import { useHeldFiles } from "../uploads/useHeldFiles";
+import { useHeldPhotoPicker } from "../uploads/useHeldPhotoPicker";
 import { attachmentUploadFailure } from "./policyFailure";
 
 export default function PolicyAttachmentSheet({ policyId, onClose }: { policyId: string; onClose: () => void }) {
   const { colors, spacing, fontSize } = useTheme();
   const { showToast } = useToast();
-  const [upload, { isLoading: isUploading }] = useUploadInsurancePolicyAttachmentMutation();
+  const [upload] = useUploadInsurancePolicyAttachmentMutation();
   const [kind, setKind] = useState<InsuranceAttachmentKind>(DEFAULT_ATTACHMENT_KIND);
   const [failure, setFailure] = useState<string | null>(null);
-  const { file, isPicking, pick, forget } = useHeldFile(setFailure);
+  const [progress, setProgress] = useState<PhotoPreparing | null>(null);
+  const held = useHeldFiles(setFailure);
+  const made = useRef(0);
+  const picker = useHeldPhotoPicker({
+    onReady: held.add,
+    nextName: () => policyPhotoName((made.current += 1)),
+    selectionLimit: POLICY_PHOTO_NO_SELECTION_LIMIT,
+    messages: UPLOAD_MESSAGES,
+  });
   const isSubmitting = useRef(false);
+  const isUploading = progress !== null;
+  const isPicking = held.isPicking || picker.isBusy;
+  const files = held.files;
 
   function close(): void {
     if (isUploading || isPicking) return;
-    if (file) confirmDiscard(onClose);
+    if (files.length > 0) confirmDiscard(onClose);
     else onClose();
   }
 
+  /** One at a time, like the web. A file that went up is let go, so a retry sends only what's left. */
   async function submit(): Promise<void> {
-    if (!file || isPicking || isSubmitting.current) return;
+    if (files.length === 0 || isPicking || isSubmitting.current) return;
     isSubmitting.current = true;
     setFailure(null);
-    const form = new FormData();
-    form.append("file", filePart(file));
-    form.append("kind", kind);
+    const problems: string[] = [];
+    let added = 0;
     try {
-      await upload({ policyId, form }).unwrap();
-      forget();
-      onClose();
-      showToast(POLICY_ATTACHMENT_MESSAGES.uploaded);
-    } catch (error) {
-      setFailure(attachmentUploadFailure(error));
+      for (const [index, file] of files.entries()) {
+        setProgress({ done: index, total: files.length });
+        const form = new FormData();
+        form.append("file", filePart(file));
+        form.append("kind", kind);
+        try {
+          await upload({ policyId, form }).unwrap();
+          held.drop(file.uri);
+          added += 1;
+        } catch (error) {
+          const reason = attachmentUploadFailure(error);
+          problems.push(files.length === 1 ? reason : POLICY_ATTACHMENT_MESSAGES.failedNamed(file.name, reason));
+        }
+      }
     } finally {
       isSubmitting.current = false;
+      setProgress(null);
     }
+    if (added > 0) showToast(added === 1 ? POLICY_ATTACHMENT_MESSAGES.uploaded : POLICY_ATTACHMENT_MESSAGES.uploadedMany(added));
+    if (problems.length === 0) onClose();
+    else setFailure(problems.join("\n"));
   }
 
   return (
@@ -65,16 +92,24 @@ export default function PolicyAttachmentSheet({ policyId, onClose }: { policyId:
             />
           ))}
         </View>
+        <HeldFilesList emptyText={POLICY_ATTACHMENT_MESSAGES.noFilesYet} files={files} isDisabled={isUploading} onRemove={held.drop} />
+        {picker.problem ? <Banner message={picker.problem} /> : null}
         <HeldFileButtons
-          file={file}
+          file={null}
           fileTypes={INSURANCE_UPLOAD_MIME_TYPES}
           isDisabled={isUploading}
           isPicking={isPicking}
-          onPick={(from) => void pick(from)}
+          onPick={(from) => void held.pick(from)}
+          onPickPhoto={(source) => void picker.add(source)}
           photoName={POLICY_PHOTO_NAME}
           takePhotoLabel={POLICY_READER_MESSAGES.takePhoto}
         />
-        <LoadingButton disabled={!file || isPicking} isLoading={isUploading} loadingText={POLICY_ATTACHMENT_MESSAGES.uploading} onPress={() => void submit()}>
+        <LoadingButton
+          disabled={files.length === 0 || isPicking}
+          isLoading={isUploading}
+          loadingText={progress ? POLICY_ATTACHMENT_MESSAGES.uploadingProgress(progress.done, progress.total) : POLICY_ATTACHMENT_MESSAGES.uploading}
+          onPress={() => void submit()}
+        >
           {POLICY_ATTACHMENT_MESSAGES.uploadFile}
         </LoadingButton>
         <LoadingButton disabled={isUploading || isPicking} onPress={close} variant="ghost">

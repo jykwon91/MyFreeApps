@@ -186,7 +186,8 @@ export function startInsuranceServer(overrides: Partial<FakeInsuranceServer> = {
     const policy = server.policies.find((row) => row.id === policyId);
     if (!policy) return respond({ detail: "Not found" }, 404);
     if (url.endsWith("/attachments") && method === "post") {
-      const added = anAttachment({ id: "fnew" });
+      // Each its own id, as the server gives: several can be added in a row.
+      const added = anAttachment({ id: `fnew-${policy.attachments.length + 1}` });
       policy.attachments = [...policy.attachments, added];
       return respond(added, 201);
     }
