@@ -52,6 +52,17 @@ describe("InquiriesScreen", () => {
     expect(mockPush).toHaveBeenCalledWith("/inquiries/i1");
   });
 
+  it("shows the linked listing's name on the row, and a dash when it isn't linked", async () => {
+    const server = startInquiryServer([
+      anInquiry({ id: "a", inquirer_name: "Linked Lin", listing_id: "l1" }),
+      anInquiry({ id: "b", inquirer_name: "Loose Lou", listing_id: null }),
+    ]);
+    server.listings = [{ id: "l1", title: "Garage Suite A" }];
+    await renderScreen();
+    expect(await screen.findByText("Garage Suite A")).toBeTruthy();
+    expect(screen.getAllByText("—")).toHaveLength(1);
+  });
+
   it("the inbox shows email inquiries that never got a spam score, and leaves out spam", async () => {
     const server = startInquiryServer([
       anInquiry({ id: "a", inquirer_name: "Unscored Una", spam_status: "unscored" }),
@@ -62,7 +73,7 @@ describe("InquiriesScreen", () => {
     expect(await screen.findByText("Unscored Una")).toBeTruthy();
     expect(screen.getByText("Cleared Cal")).toBeTruthy();
     expect(screen.queryByText("Spam Sam")).toBeNull();
-    expect(server.requests.at(-1)?.params).toMatchObject({ inbox_only: true });
+    expect(server.requests.filter((request) => request.url === "/inquiries").at(-1)?.params).toMatchObject({ inbox_only: true });
   });
 
   it("marks spam only on the All view, where it can be mixed in", async () => {

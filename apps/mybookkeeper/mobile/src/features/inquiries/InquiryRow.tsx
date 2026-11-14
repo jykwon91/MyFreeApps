@@ -1,17 +1,20 @@
 import type { InquirySummary } from "@mybookkeeper/api-client/types/inquiry/inquiry-summary";
 import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
+import { INQUIRY_ROW_NO_LISTING } from "../../constants/inquiries";
 import { inquirerName, qualityLabel, receivedAgo, rowAccessibilityLabel, rowDetails, shortSource, spamLabel, stageLabel } from "./inquiryDisplay";
 
 export default function InquiryRow({
   inquiry,
   showStage,
   showSpam,
+  listingTitle,
   onPress,
 }: {
   inquiry: InquirySummary;
   showStage: boolean;
   showSpam: boolean;
+  listingTitle: string | null;
   onPress: () => void;
 }) {
   const { colors, spacing, fontSize } = useTheme();
@@ -41,6 +44,9 @@ export default function InquiryRow({
       </View>
       <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
         {rowDetails(inquiry)}
+      </Text>
+      <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        {listingTitle ?? INQUIRY_ROW_NO_LISTING}
       </Text>
       {inquiry.last_message_preview ? (
         <Text numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.foreground }}>

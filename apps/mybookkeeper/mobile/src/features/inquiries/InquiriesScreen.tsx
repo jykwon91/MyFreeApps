@@ -1,4 +1,5 @@
 import { INQUIRY_STAGES } from "@mybookkeeper/api-client/constants/inquiryLabels";
+import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useListInquiryPagesInfiniteQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
 import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
@@ -7,7 +8,7 @@ import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { ALL_STAGES_OPTION, INQUIRY_EMPTY_WORDS, INQUIRY_VIEWS } from "../../constants/inquiries";
-import { INQUIRY_CREATE_MESSAGES } from "../../constants/inquiryCreate";
+import { INQUIRY_CREATE_MESSAGES, INQUIRY_LISTING_CHOICE_LIMIT } from "../../constants/inquiryCreate";
 import { uniqueById } from "../../lib/uniqueById";
 import type { InquiryView } from "../../types/InquiryView";
 import LoadMoreFailed from "../shell/LoadMoreFailed";
@@ -49,6 +50,12 @@ export default function InquiriesScreen({
     setListThatFailedToLoadMore(null);
     await refetch();
   }, error);
+
+  const { currentData: listingsData } = useGetListingsQuery({ limit: INQUIRY_LISTING_CHOICE_LIMIT });
+  const listingTitleById = useMemo(
+    () => new Map((listingsData?.items ?? []).map((listing) => [listing.id, listing.title])),
+    [listingsData],
+  );
 
   const rows = useMemo(() => uniqueById(currentData?.pages.flatMap((page) => page.items) ?? []), [currentData]);
 
@@ -111,6 +118,7 @@ export default function InquiriesScreen({
         renderItem={({ item }) => (
           <InquiryRow
             inquiry={item}
+            listingTitle={item.listing_id ? (listingTitleById.get(item.listing_id) ?? null) : null}
             onPress={() => router.push(`/inquiries/${item.id}`)}
             showSpam={view === "all"}
             showStage={stage === null}
