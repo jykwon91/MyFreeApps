@@ -71,6 +71,13 @@ describe("documentsApi", () => {
     expect(JSON.parse(String(sent[1].data))).toEqual({ ids: ["d1", "d2"] });
   });
 
+  it("files an upload in the workspace it names, not the active one", async () => {
+    const form = new FormData();
+    await makeStore().dispatch(endpoints.uploadDocument.initiate({ form, workspaceId: "w2" }));
+    await makeStore().dispatch(endpoints.uploadDocument.initiate({ form }));
+    expect(sent.map((config) => config.headers["X-Organization-Id"])).toEqual(["w2", "w1"]);
+  });
+
   it("marks a document reference-only with a patch", async () => {
     await makeStore().dispatch(endpoints.toggleEscrowPaid.initiate({ id: "d1", is_escrow_paid: true }));
     expect(`${sent[0].method} ${sent[0].url}`).toBe("patch /documents/d1/escrow-paid");

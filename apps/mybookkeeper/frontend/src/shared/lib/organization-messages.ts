@@ -42,3 +42,7 @@ export function cancelInviteLabel(email: string): string {
 export function sendInviteAgainLabel(email: string): string {
   return `Send the invite to ${email} again`;
 }
+
+export const CREATE_ORGANIZATION_MESSAGES = {
+  couldntCreate: "I couldn't create that organization. Try again.",
+} as const;

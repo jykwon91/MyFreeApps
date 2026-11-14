@@ -6,18 +6,28 @@ import type { AxiosAdapter } from "axios";
 import { AppState, Linking, Text } from "react-native";
 import { Provider } from "react-redux";
 import { WEB_BASE_URL } from "../src/constants/api";
+import { MEMBERS_MESSAGES } from "../src/constants/members";
+import { readSavedWorkspace, saveWorkspace } from "../src/features/workspace/savedWorkspace";
+import WorkspaceLostToast from "../src/features/workspace/WorkspaceLostToast";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import WorkspaceGate from "../src/features/workspace/WorkspaceGate";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
+import { resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("@platform/mobile", () => ({
   ...jest.requireActual("@platform/mobile"),
   useSession: () => ({ session: { signOut: jest.fn() }, state: { status: "signedIn" } }),
 }));
 
 const WORKSPACE = { id: "w1", name: "Mine", org_role: "owner" };
+const SECOND = { ...WORKSPACE, id: "w2", name: "Second" };
 const originalAdapter = api.defaults.adapter;
+
+function signedInAs(email: string): void {
+  jest.spyOn(session, "getState").mockReturnValue({ status: "signedIn", email } as never);
+}
 
 function respondWith(status: number | "offline", data: unknown = []): AxiosAdapter {
   return (config) => {
@@ -33,6 +43,7 @@ async function renderGate() {
     <Provider store={store}>
       <ToastProvider bottomOffset={0}>
         <WorkspaceGate>
+          <WorkspaceLostToast />
           <Text>Inside</Text>
         </WorkspaceGate>
       </ToastProvider>
@@ -41,6 +52,7 @@ async function renderGate() {
 }
 
 beforeEach(() => {
+  resetFakeFiles();
   session.tokenStore.set("token");
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen(null));
@@ -65,6 +77,44 @@ describe("WorkspaceGate", () => {
     };
     await api.get("/transactions");
     expect(sent).toBe("w1");
+  });
+
+  it("reopens the workspace picked last time", async () => {
+    signedInAs("me@example.com");
+    saveWorkspace({ id: "w2", name: "Second" });
+    api.defaults.adapter = respondWith(200, [WORKSPACE, SECOND]);
+    await renderGate();
+    await waitFor(() => expect(screen.getByText("Inside")).toBeTruthy());
+    expect(store.getState().workspace.activeId).toBe("w2");
+    expect(screen.queryByText(/no longer have access/)).toBeNull();
+  });
+
+  it("opens the first when the one picked last time is gone, says so, and remembers that instead", async () => {
+    signedInAs("me@example.com");
+    saveWorkspace({ id: "gone", name: "Lake House" });
+    api.defaults.adapter = respondWith(200, [WORKSPACE, SECOND]);
+    await renderGate();
+    await waitFor(() => expect(store.getState().workspace.activeId).toBe("w1"));
+    expect(await screen.findByText(MEMBERS_MESSAGES.workspaceLost("Lake House", "Mine"))).toBeTruthy();
+    await waitFor(() => expect(readSavedWorkspace()).toEqual({ id: "w1", name: "Mine" }));
+  });
+
+  it("says nothing on a first launch, with no workspace saved", async () => {
+    signedInAs("me@example.com");
+    api.defaults.adapter = respondWith(200, [WORKSPACE]);
+    await renderGate();
+    await waitFor(() => expect(screen.getByText("Inside")).toBeTruthy());
+    expect(screen.queryByText(/no longer have access/)).toBeNull();
+  });
+
+  it("ignores what someone else picked on this phone", async () => {
+    signedInAs("someone@example.com");
+    saveWorkspace({ id: "w2", name: "Second" });
+    signedInAs("me@example.com");
+    api.defaults.adapter = respondWith(200, [WORKSPACE, SECOND]);
+    await renderGate();
+    await waitFor(() => expect(store.getState().workspace.activeId).toBe("w1"));
+    expect(screen.queryByText(/no longer have access/)).toBeNull();
   });
 
   it("moves off a workspace the person was removed from when the app comes back", async () => {

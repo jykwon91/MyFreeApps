@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
+import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 import { persistActiveOrgId, readActiveOrgId } from "@/shared/lib/activeOrganizationStorage";
 import { baseApi } from "./baseApi";
 

@@ -5,9 +5,14 @@ import type { RootState, AppDispatch } from "@/shared/store";
 import { switchOrg } from "@/shared/store/organizationSlice";
 import { useCurrentOrg } from "@/shared/hooks/useCurrentOrg";
 import { useState } from "react";
-import { useCreateOrganizationMutation } from "@/shared/store/organizationsApi";
+import { useCreateOrganizationMutation } from "@mybookkeeper/api-client/store/organizationsApi";
+import { showError } from "@platform/ui";
+import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
+import { CREATE_ORGANIZATION_MESSAGES } from "@/shared/lib/organization-messages";
 
 import { ROLE_LABELS } from "@mybookkeeper/api-client/constants/orgRoles";
+import { ORGANIZATION_NAME_MAX_LENGTH } from "@mybookkeeper/api-client/constants/organizationName";
+import { organizationNameProblem } from "@mybookkeeper/api-client/utils/organizationNameProblem";
 
 export default function OrgSwitcher() {
   const dispatch = useDispatch<AppDispatch>();
@@ -23,8 +28,14 @@ export default function OrgSwitcher() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!newName.trim()) return;
-    await createOrg({ name: newName.trim() });
+    if (organizationNameProblem(newName)) return;
+    try {
+      await createOrg({ name: newName.trim() }).unwrap();
+    } catch (err) {
+      // The form stays open with the name, so it can be sent again.
+      showError(getApiErrorDetail(err, CREATE_ORGANIZATION_MESSAGES.couldntCreate));
+      return;
+    }
     setNewName("");
     setShowCreate(false);
   }
@@ -79,13 +90,14 @@ export default function OrgSwitcher() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Organization name"
+            maxLength={ORGANIZATION_NAME_MAX_LENGTH}
             className="w-full border rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
             autoFocus
           />
           <div className="flex gap-1">
             <button
               type="submit"
-              disabled={creating || !newName.trim()}
+              disabled={creating || organizationNameProblem(newName) !== null}
               className="flex-1 text-xs bg-primary text-primary-foreground rounded px-2 py-1 disabled:opacity-50 flex items-center justify-center gap-1"
             >
               {creating ? (

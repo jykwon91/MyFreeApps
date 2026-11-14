@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { patchCacheAfterSuccess } from "@platform/core/store/patchCacheAfterSuccess";
 import type { ExtendLeaseRequest } from "../types/lease/extend-lease-request";
 import type { LeaseAttachmentKind } from "../types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachmentUploadRequest } from "../types/lease/signed-lease-attachment-upload-request";
@@ -109,14 +110,10 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
       }),
       // The response is the whole lease, so a screen shows the change straight
       // away rather than the old value until the refetch lands.
-      async onQueryStarted({ leaseId }, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
+      onQueryStarted: ({ leaseId }, { dispatch, queryFulfilled }) =>
+        patchCacheAfterSuccess(queryFulfilled, (data) => {
           dispatch(signedLeasesApi.util.updateQueryData("getSignedLeaseById", leaseId, () => data));
-        } catch {
-          // The caller reports the failure, and the cache still holds the old value.
-        }
-      },
+        }),
       invalidatesTags: (_r, _e, { leaseId }) => [
         { type: "SignedLease", id: leaseId },
         { type: "SignedLease", id: "LIST" },
@@ -131,14 +128,10 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
     generateSignedLease: builder.mutation<SignedLeaseDetail, string>({
       query: (id) => ({ url: `/signed-leases/${id}/generate`, method: "POST", data: { today: localToday() } }),
       // Until the refetch lands the lease would still look like a draft, and a second tap makes a second set of files.
-      async onQueryStarted(id, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
+      onQueryStarted: (id, { dispatch, queryFulfilled }) =>
+        patchCacheAfterSuccess(queryFulfilled, (data) => {
           dispatch(signedLeasesApi.util.updateQueryData("getSignedLeaseById", id, () => data));
-        } catch {
-          // The caller reports the failure, and the cache still holds the old value.
-        }
-      },
+        }),
       invalidatesTags: (_r, _e, id) => [
         { type: "SignedLease", id },
         { type: "SignedLease", id: "LIST" },
@@ -166,14 +159,10 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
       }),
       // The response is the whole lease, so a screen shows the change straight
       // away rather than the old value until the refetch lands.
-      async onQueryStarted({ leaseId }, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
+      onQueryStarted: ({ leaseId }, { dispatch, queryFulfilled }) =>
+        patchCacheAfterSuccess(queryFulfilled, (data) => {
           dispatch(signedLeasesApi.util.updateQueryData("getSignedLeaseById", leaseId, () => data));
-        } catch {
-          // The caller reports the failure, and the cache still holds the old value.
-        }
-      },
+        }),
       invalidatesTags: tagsAfterTermChange,
     }),
 
@@ -187,14 +176,10 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
       }),
       // The response is the whole lease, so a screen shows the change straight
       // away rather than the old value until the refetch lands.
-      async onQueryStarted({ leaseId }, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
+      onQueryStarted: ({ leaseId }, { dispatch, queryFulfilled }) =>
+        patchCacheAfterSuccess(queryFulfilled, (data) => {
           dispatch(signedLeasesApi.util.updateQueryData("getSignedLeaseById", leaseId, () => data));
-        } catch {
-          // The caller reports the failure, and the cache still holds the old value.
-        }
-      },
+        }),
       invalidatesTags: tagsAfterTermChange,
     }),
 

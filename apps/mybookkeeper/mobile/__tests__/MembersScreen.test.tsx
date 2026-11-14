@@ -13,12 +13,12 @@ import { ALREADY_MEMBER_DETAIL, MEMBERS_MESSAGES as MESSAGES, NOT_A_MEMBER_DETAI
 import { inviteStatusLine, memberFirstName, memberName } from "../src/features/members/membersDisplay";
 import MembersScreen from "../src/features/members/MembersScreen";
 import WorkspaceGate from "../src/features/workspace/WorkspaceGate";
-import { workspaceApi } from "../src/features/workspace/workspaceApi";
+import { organizationsApi } from "@mybookkeeper/api-client/store/organizationsApi";
 import WorkspaceLostToast from "../src/features/workspace/WorkspaceLostToast";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { type RootState, store } from "../src/lib/store";
 import { useToday } from "../src/lib/useToday";
-import type { Workspace } from "../src/types/Workspace";
+import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn() } }));
 jest.mock("../src/lib/useToday", () => ({ useToday: jest.fn() }));
@@ -34,7 +34,7 @@ jest.mock("@platform/mobile", () => ({
 const NOW = new Date("2026-11-05T12:00:00Z");
 const originalAdapter = api.defaults.adapter;
 const ORG = "org1";
-const ACME: Workspace = { id: ORG, name: "Acme", org_role: "owner", is_demo: false };
+const ACME: OrgWithRole = { id: ORG, name: "Acme", org_role: "owner", is_demo: false, created_at: "2024-01-01T00:00:00Z" };
 
 function aMember(overrides: Partial<OrgMember> = {}): OrgMember {
   return {
@@ -75,7 +75,7 @@ interface Refusal {
 interface Server {
   members: OrgMember[];
   invites: OrgInvite[];
-  workspaces: Workspace[];
+  workspaces: OrgWithRole[];
   calls: { method: string; url: string; body: unknown }[];
   refuse: Record<string, Refusal>;
   createAnswer?: Partial<OrgInvite>;
@@ -131,7 +131,7 @@ function serve(partial: Partial<Server> = {}): Server {
   return server;
 }
 
-async function show(workspace: Workspace = ACME): Promise<void> {
+async function show(workspace: OrgWithRole = ACME): Promise<void> {
   await render(
     <Provider store={store}>
       <ToastProvider bottomOffset={0}>
@@ -688,7 +688,7 @@ describe("losing access", () => {
   }
 
   it("moves me to another workspace, says so and drops what was cached", async () => {
-    const other: Workspace = { id: "org2", name: "Other", org_role: "user", is_demo: false };
+    const other: OrgWithRole = { id: "org2", name: "Other", org_role: "user", is_demo: false, created_at: "2024-01-01T00:00:00Z" };
     const server = serve({ workspaces: [ACME, other] });
     await showGated();
     await waitFor(() => expect(screen.getByTestId("active").props.children).toBe(ORG));
@@ -697,7 +697,7 @@ describe("losing access", () => {
     });
     server.workspaces = [other];
     await act(async () => {
-      await store.dispatch(workspaceApi.endpoints.listWorkspaces.initiate(undefined, { forceRefetch: true }));
+      await store.dispatch(organizationsApi.endpoints.listOrganizations.initiate(undefined, { forceRefetch: true }));
     });
     expect(await screen.findByText(MESSAGES.workspaceLost("Acme", "Other"))).toBeTruthy();
     expect(screen.getByTestId("active").props.children).toBe("org2");

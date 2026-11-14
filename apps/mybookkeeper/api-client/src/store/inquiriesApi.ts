@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { patchCacheAfterSuccess } from "@platform/core/store/patchCacheAfterSuccess";
 import { INQUIRY_PAGE_SIZE } from "../constants/inquiryPaging";
 import { INQUIRY_SEND_TIMEOUT_MS } from "../constants/inquiryRequests";
 import type { InquiryCreateRequest } from "../types/inquiry/inquiry-create-request";
@@ -81,14 +82,10 @@ export const inquiriesApi = baseApi.enhanceEndpoints({
       query: ({ id, data }) => ({ url: `/inquiries/${id}`, method: "PATCH", data }),
       // The response is the whole inquiry, so a screen shows the change straight
       // away rather than the old value until the refetch lands.
-      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
+      onQueryStarted: ({ id }, { dispatch, queryFulfilled }) =>
+        patchCacheAfterSuccess(queryFulfilled, (data) => {
           dispatch(inquiriesApi.util.updateQueryData("getInquiryById", id, () => data));
-        } catch {
-          // The caller reports the failure, and the cache still holds the old value.
-        }
-      },
+        }),
       invalidatesTags: (_result, _err, arg) => [
         { type: "Inquiry", id: arg.id },
         { type: "Inquiry", id: "LIST" },
@@ -129,9 +126,8 @@ export const inquiriesApi = baseApi.enhanceEndpoints({
       // The lists are the only reads there are, so they show the change straight away,
       // with a restored or archived template already in the right one, rather than the
       // old state until the refetch lands.
-      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
-        try {
-          const { data } = await queryFulfilled;
+      onQueryStarted: (_arg, { dispatch, queryFulfilled }) =>
+        patchCacheAfterSuccess(queryFulfilled, (data) => {
           dispatch(
             inquiriesApi.util.updateQueryData("getReplyTemplates", undefined, (templates) =>
               placeReplyTemplate(templates, data, !data.is_archived),
@@ -142,10 +138,7 @@ export const inquiriesApi = baseApi.enhanceEndpoints({
               placeReplyTemplate(templates, data, data.is_archived),
             ),
           );
-        } catch {
-          // The caller reports the failure, and the cache still holds the old words.
-        }
-      },
+        }),
       invalidatesTags: (_result, _err, arg) => [
         { type: "ReplyTemplate", id: arg.id },
         { type: "ReplyTemplate", id: "LIST" },
@@ -153,13 +146,12 @@ export const inquiriesApi = baseApi.enhanceEndpoints({
     }),
     archiveReplyTemplate: builder.mutation<void, string>({
       query: (id) => ({ url: `/reply-templates/${id}`, method: "DELETE" }),
-      async onQueryStarted(id, { dispatch, getState, queryFulfilled }) {
+      onQueryStarted(id, { dispatch, getState, queryFulfilled }) {
         // The server answers with nothing, so the row comes from the list it was archived from.
         const archived = inquiriesApi.endpoints.getReplyTemplates
           .select()(getState())
           .data?.find((template) => template.id === id);
-        try {
-          await queryFulfilled;
+        return patchCacheAfterSuccess(queryFulfilled, () => {
           dispatch(
             inquiriesApi.util.updateQueryData("getReplyTemplates", undefined, (templates) =>
               templates.filter((template) => template.id !== id),
@@ -172,9 +164,7 @@ export const inquiriesApi = baseApi.enhanceEndpoints({
               ),
             );
           }
-        } catch {
-          // The caller reports the failure, and the cache still holds the row.
-        }
+        });
       },
       invalidatesTags: (_result, _err, id) => [
         { type: "ReplyTemplate", id },

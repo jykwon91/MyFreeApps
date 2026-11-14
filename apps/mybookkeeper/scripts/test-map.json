@@ -459,6 +459,7 @@
         "test_organization.py",
         "test_member_removal_gmail.py",
         "test_organization_routes.py",
+        "test_organization_name_validation.py",
         "test_invite_email.py",
         "test_org_data_isolation.py",
         "test_org_idor.py",

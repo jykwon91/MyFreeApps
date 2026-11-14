@@ -135,6 +135,13 @@ describe("request headers and base URL", () => {
     expect(seen[0].headers.Authorization).toBe("RaidPlanner abc");
   });
 
+  it("keep a request's own workspace", async () => {
+    configurePlatform(fakePlatform().config);
+    const seen: InternalAxiosRequestConfig[] = [];
+    await api.get("/things", { adapter: okAdapter(seen), headers: { "X-Organization-Id": "org-chosen" } });
+    expect(seen[0].headers["X-Organization-Id"]).toBe("org-chosen");
+  });
+
   it("follow a later configurePlatform()", async () => {
     configurePlatform(fakePlatform().config);
     configurePlatform(fakePlatform({ baseURL: "https://other.test" }).config);

@@ -12,6 +12,7 @@ import { useGetBatchStatusQuery, useGetDocumentsQuery, useGetSingleUploadStatusQ
 import { showError } from "@platform/ui";
 import { DOCUMENT_UPLOAD_MESSAGES } from "@/shared/lib/document-upload-messages";
 import type { DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
+import type { UploadDocumentArgs } from "@mybookkeeper/api-client/types/document/UploadDocumentArgs";
 
 const mockUploadDocument = vi.fn(() => ({
   unwrap: () => Promise.resolve({ document_id: "doc-1", batch_id: null, batch_total: 1 }),
@@ -91,7 +92,7 @@ describe("DocumentUploadZone", () => {
 
     await user.upload(input, file);
 
-    const form = (mockUploadDocument.mock.calls as unknown as [FormData][])[0][0];
+    const { form } = (mockUploadDocument.mock.calls as unknown as [UploadDocumentArgs][])[0][0];
     expect(form.get("file")).toBe(file);
   });
 

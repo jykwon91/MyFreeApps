@@ -1,6 +1,6 @@
 import { useSelector } from "react-redux";
 import type { RootState } from "@/shared/store";
-import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
+import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 
 export function useCurrentOrg(): OrgWithRole | null {
   return useSelector((state: RootState) => {

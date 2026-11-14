@@ -8,11 +8,11 @@ import { useEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { MEMBERS_MESSAGES as MESSAGES } from "../../constants/members";
 import { useToday } from "../../lib/useToday";
-import type { Workspace } from "../../types/Workspace";
+import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 import { isServerAnswer } from "../../utils/isServerAnswer";
 import { askOnce } from "../../lib/askOnce";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { useListWorkspacesQuery } from "../workspace/workspaceApi";
+import { useListOrganizationsQuery } from "@mybookkeeper/api-client/store/organizationsApi";
 import InviteSheet from "./InviteSheet";
 import MemberRow from "./MemberRow";
 import MembersSkeleton from "./MembersSkeleton";
@@ -24,7 +24,7 @@ import { useMemberActions } from "./useMemberActions";
 
 const NEW_INVITE = { email: "", role: "user", resendingTo: null } as const;
 
-export default function MembersScreen({ workspace }: { workspace: Workspace }) {
+export default function MembersScreen({ workspace }: { workspace: OrgWithRole }) {
   const { colors, spacing, fontSize } = useTheme();
   const { session } = useSession();
   const now = useToday();
@@ -33,7 +33,7 @@ export default function MembersScreen({ workspace }: { workspace: Workspace }) {
   const isAdmin = workspace.org_role === "owner" || workspace.org_role === "admin";
   const members = useListMembersQuery(workspace.id);
   const invitesQuery = useListInvitesQuery(workspace.id, { skip: !isAdmin });
-  const { refetch: refetchWorkspaces } = useListWorkspacesQuery();
+  const { refetch: refetchWorkspaces } = useListOrganizationsQuery();
   const { busy: memberBusy, changeRole, removeMember } = useMemberActions(workspace.id);
   const { busy: inviteBusy, cancelInvite, sendInvite } = useInviteActions(workspace.id, workspace.name);
   const [chosenId, setChosenId] = useState<string | null>(null);

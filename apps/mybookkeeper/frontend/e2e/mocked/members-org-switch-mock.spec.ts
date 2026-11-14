@@ -14,7 +14,7 @@ import type { OrgInvite } from "@mybookkeeper/api-client/types/organization/OrgI
 import type { OrgMember } from "@mybookkeeper/api-client/types/organization/OrgMember";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
-import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
+import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 import { ORG_ID, plantAuth, stubWorkspaceShell, workspaceOf } from "./fixtures/mockSession";
 
 const OTHER_ORG_ID = "00000000-0000-0000-0000-000000000020";

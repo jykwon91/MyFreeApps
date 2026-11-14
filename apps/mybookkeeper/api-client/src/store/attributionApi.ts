@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { patchCacheAfterSuccess } from "@platform/core/store/patchCacheAfterSuccess";
 import { RECEIPTS_PENDING_TAG } from "../constants/receiptsPendingTag";
 import type { AttributeTransactionRequest } from "../types/attribution/attribute-transaction-request";
 import type { AttributionReviewQueueResponse } from "../types/attribution/attribution-review-queue-response";
@@ -42,14 +43,10 @@ export const attributionApi = baseApi.enhanceEndpoints({
           property_id: property_id ?? null,
         },
       }),
-      onQueryStarted: async ({ review_id }, { dispatch, queryFulfilled }) => {
-        try {
-          await queryFulfilled;
+      onQueryStarted: ({ review_id }, { dispatch, queryFulfilled }) =>
+        patchCacheAfterSuccess(queryFulfilled, () => {
           dispatch(attributionApi.util.updateQueryData("getAttributionReviewQueue", undefined, withoutReview(review_id)));
-        } catch {
-          // The caller reports the failure, and the row stays.
-        }
-      },
+        }),
       invalidatesTags: (result) => [
         QUEUE_TAG,
         { type: "Transaction", id: "LIST" },
@@ -66,14 +63,10 @@ export const attributionApi = baseApi.enhanceEndpoints({
         method: "POST",
         data: {},
       }),
-      onQueryStarted: async ({ review_id }, { dispatch, queryFulfilled }) => {
-        try {
-          await queryFulfilled;
+      onQueryStarted: ({ review_id }, { dispatch, queryFulfilled }) =>
+        patchCacheAfterSuccess(queryFulfilled, () => {
           dispatch(attributionApi.util.updateQueryData("getAttributionReviewQueue", undefined, withoutReview(review_id)));
-        } catch {
-          // The caller reports the failure, and the row stays.
-        }
-      },
+        }),
       invalidatesTags: [QUEUE_TAG],
     }),
     attributeTransactionManually: builder.mutation<{ ok: boolean; transaction_id: string }, AttributeTransactionRequest>({

@@ -15,7 +15,7 @@ import reducer, {
   setOrganizations,
   forgetOrganizations,
 } from "@/shared/store/organizationSlice";
-import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
+import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 
 function makeOrg(overrides: Partial<OrgWithRole> = {}): OrgWithRole {
   return {

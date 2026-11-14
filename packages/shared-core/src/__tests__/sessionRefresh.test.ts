@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StepUpReauthRequiredError } from "../auth/errors/StepUpReauthRequiredError";
 import { _resetForTests as _resetStepUpForTests, getState as getStepUpState, submitCode } from "../auth/stepUpController";
+import { ORGANIZATION_HEADER } from "../constants/organizationHeader";
 import { REFRESH_COOLDOWN_MS } from "../constants/sessionRefresh";
 import api from "../lib/api";
 import { notifyAuthChange } from "../lib/auth-store";
@@ -287,6 +288,30 @@ describe("what a retry sends", () => {
     await api.post("/recipes", { title: "Soup" });
 
     expect(bodies).toEqual([JSON.stringify({ title: "Soup" }), JSON.stringify({ title: "Soup" })]);
+  });
+
+  it("goes to the workspace the request started in, after a switch during the refresh", async () => {
+    let workspace = "A";
+    let harness: ReturnType<typeof setUp> | undefined = undefined;
+    harness = setUp(
+      async () => {
+        workspace = "B";
+        harness?.setToken("new");
+        return "refreshed";
+      },
+      { orgStore: { get: () => workspace } },
+    );
+    const sentTo: unknown[] = [];
+    const accept = api.defaults.adapter as AxiosAdapter;
+    api.defaults.adapter = (config) => {
+      sentTo.push(config.headers[ORGANIZATION_HEADER]);
+      return accept(config);
+    };
+
+    expect((await api.post("/documents/upload", {})).status).toBe(200);
+    expect(sentTo).toEqual(["A", "A"]);
+    expect((await api.get("/documents")).status).toBe(200);
+    expect(sentTo).toEqual(["A", "A", "B"]);
   });
 
   it("keeps a caller's own Authorization and leaves its 401 alone", async () => {
