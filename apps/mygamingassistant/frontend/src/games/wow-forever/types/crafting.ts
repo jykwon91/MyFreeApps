@@ -41,7 +41,8 @@ export interface CraftRecipe {
   yellow: number;
   grey: number;
   reagents: CraftReagent[];
-  creates?: { id: number; name: string; count: number; quality: number };
+  /** `itemClass` = the made item's class in the game files (0 consumable, 2 weapon, 4 armor, 7 trade goods…). */
+  creates?: { id: number; name: string; count: number; quality: number; itemClass?: number };
   /** An uncommon+ weapon or armour piece an enchanter can break down. */
   disenchantable?: true;
   /** An enchant — makes no item. */

@@ -90,6 +90,7 @@ class TestBuildRecipes:
 
         gloves = by_spell[GLOVES]
         assert gloves["disenchantable"] is True
+        assert gloves["creates"]["itemClass"] == 4 and bolt["creates"]["itemClass"] == 7
         assert gloves["learn"] == {"source": "trainer"}
         assert gloves["classic"]["yellow"] == 60 and gloves["classic"]["grey"] == 95
         assert [r["count"] for r in gloves["classic"]["reagents"]] == [2, 2]

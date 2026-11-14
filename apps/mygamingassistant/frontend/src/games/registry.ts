@@ -105,6 +105,12 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Cooking, Fishing, Tailoring and Enchanting: where to train, the fastest route to 300 and a shopping list.",
       },
       {
+        path: "/wow-forever/recipes",
+        title: "Recipes",
+        iconName: "NotebookText",
+        description: "Search every recipe from every profession: what it makes, the ingredients, and where to learn it.",
+      },
+      {
         path: "/wow-forever/food",
         title: "What should I eat?",
         iconName: "Utensils",
