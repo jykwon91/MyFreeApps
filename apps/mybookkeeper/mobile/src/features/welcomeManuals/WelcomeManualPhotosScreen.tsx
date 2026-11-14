@@ -15,13 +15,15 @@ import type { WelcomeManualSectionScreenProps } from "../../types/WelcomeManualS
 
 export default function WelcomeManualPhotosScreen({ manualId, sectionId }: WelcomeManualSectionScreenProps) {
   const canWrite = useCanWrite();
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [viewId, setViewId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
   return (
     <WelcomeManualSectionGate manualId={manualId} sectionId={sectionId}>
       {({ refreshControl }, section) => {
-        const open: WelcomeManualSectionImageResponse | undefined = section.images.find((image) => image.id === openId);
+        const open: WelcomeManualSectionImageResponse | undefined = section.images.find((image) => image.id === editId);
+        const viewIndex = section.images.findIndex((image) => image.id === viewId);
         return (
           <>
             <WelcomeManualItemList
@@ -39,7 +41,7 @@ export default function WelcomeManualPhotosScreen({ manualId, sectionId }: Welco
                 <WelcomeManualItemRow
                   accessibilityLabel={`${MESSAGES.view}, ${image.caption ?? MESSAGES.noCaption}`}
                   leading={<WelcomeManualPhoto image={image} size={THUMBNAIL} />}
-                  onPress={() => setOpenId(image.id)}
+                  onPress={() => setViewId(image.id)}
                   subtitle={image.caption ?? MESSAGES.noCaption}
                   title={MESSAGES.view}
                 />
@@ -47,8 +49,15 @@ export default function WelcomeManualPhotosScreen({ manualId, sectionId }: Welco
               reorderLabel={MESSAGES.reorder}
               testID="welcome-manual-photos-list"
             />
-            {open && canWrite ? <WelcomeManualPhotoSheet image={open} manualId={manualId} onClose={() => setOpenId(null)} sectionId={sectionId} /> : null}
-            {open && !canWrite ? <WelcomeManualPhotoViewer image={open} onClose={() => setOpenId(null)} /> : null}
+            {viewIndex >= 0 ? (
+              <WelcomeManualPhotoViewer
+                images={section.images}
+                onClose={() => setViewId(null)}
+                onEdit={canWrite ? (image) => { setViewId(null); setEditId(image.id); } : undefined}
+                startIndex={viewIndex}
+              />
+            ) : null}
+            {open ? <WelcomeManualPhotoSheet image={open} manualId={manualId} onClose={() => setEditId(null)} sectionId={sectionId} /> : null}
             {isUploading ? <WelcomeManualPhotoUploadSheet existingCount={section.images.length} manualId={manualId} onClose={() => setIsUploading(false)} sectionId={sectionId} /> : null}
             {isReordering ? <WelcomeManualPhotosReorder manualId={manualId} onClose={() => setIsReordering(false)} section={section} /> : null}
           </>

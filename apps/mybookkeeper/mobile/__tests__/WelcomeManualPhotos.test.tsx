@@ -118,10 +118,33 @@ describe("the photos of a section", () => {
     startWelcomeManualsServer({ manuals: [withPhotos()], role: "viewer" });
     await open();
     await fireEvent.press(await screen.findByRole("button", { name: "Photo, The router" }));
+    expect(screen.queryByRole("button", { name: /^Edit photo/ })).toBeNull();
     expect(screen.queryByRole("button", { name: PHOTO.save })).toBeNull();
     expect(screen.queryByRole("button", { name: PHOTO.delete })).toBeNull();
     expect(screen.queryByRole("button", { name: PHOTO.add })).toBeNull();
     expect(screen.queryByRole("button", { name: PHOTO.reorder })).toBeNull();
+  });
+
+  it("opens a viewer at the tapped photo for someone who can only look", async () => {
+    startWelcomeManualsServer({ manuals: [withPhotos()], role: "viewer" });
+    await open();
+    await fireEvent.press(await screen.findByRole("button", { name: `Photo, ${PHOTO.noCaption}` }));
+    expect(screen.getByText("2 of 2")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Close photo viewer" }));
+    expect(screen.queryByText("2 of 2")).toBeNull();
+  });
+});
+
+describe("viewing as someone who can change photos", () => {
+  it("pages through the photos and edits the one on screen", async () => {
+    startWelcomeManualsServer({ manuals: [withPhotos()] });
+    await open();
+    await fireEvent.press(await screen.findByRole("button", { name: "Photo, The router" }));
+    await fireEvent.press(button("Next photo"));
+    await fireEvent.press(button("Edit photo 2 of 2"));
+    expect(screen.queryByText("2 of 2")).toBeNull();
+    expect(button(PHOTO.save)).toBeTruthy();
+    expect(screen.getByLabelText(PHOTO.captionLabel).props.value).toBe("");
   });
 });
 
@@ -381,7 +404,10 @@ describe("adding photos", () => {
 });
 
 describe("changing a photo", () => {
-  const openPhoto = async () => fireEvent.press(await screen.findByRole("button", { name: "Photo, The router" }));
+  const openPhoto = async () => {
+    await fireEvent.press(await screen.findByRole("button", { name: "Photo, The router" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Edit photo 1 of 2" }));
+  };
 
   it("changes the caption, sending only that", async () => {
     const server = startWelcomeManualsServer({ manuals: [withPhotos()] });
