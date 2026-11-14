@@ -1,6 +1,6 @@
 import { documentsApi } from "@mybookkeeper/api-client/store/documentsApi";
 import { progressPercent } from "@mybookkeeper/api-client/utils/progressPercent";
-import type { DocumentUploadRequest } from "@mybookkeeper/api-client/types/document/DocumentUploadRequest";
+import type { UploadDocumentArgs } from "@mybookkeeper/api-client/types/document/UploadDocumentArgs";
 import type { ApiError } from "@platform/core/types/api-error";
 import {
   FILE_REJECTED_STATUSES,
@@ -26,7 +26,7 @@ import {
 
 let isDraining = false;
 
-function reportProgress(upload: PendingUpload, dispatch: AppDispatch): NonNullable<DocumentUploadRequest["onUploadProgress"]> {
+function reportProgress(upload: PendingUpload, dispatch: AppDispatch): NonNullable<UploadDocumentArgs["onUploadProgress"]> {
   return ({ loaded, total }) => {
     // Without a total there's nothing to say how far along it is.
     if (total) dispatch(uploadFileProgressed({ uri: upload.uri, percent: Math.round(progressPercent(loaded, total)) }));
