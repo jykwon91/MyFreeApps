@@ -25,6 +25,15 @@ jest.mock("expo-router", () => ({
   router: { push: (path: string) => mockPush(path), back: () => mockBack() },
 }));
 
+const mockQrValue = jest.fn();
+jest.mock("react-native-qrcode-svg", () => ({
+  __esModule: true,
+  default: ({ value }: { value: string }) => {
+    mockQrValue(value);
+    return null;
+  },
+}));
+
 const originalAdapter = api.defaults.adapter;
 
 function aSummary(overrides: Partial<ListingSummary> = {}): ListingSummary {
@@ -265,6 +274,17 @@ describe("ListingDetailScreen", () => {
     expect(screen.getByText("Anyone with this link can send you an inquiry.")).toBeTruthy();
   });
 
+  it("shows the apply QR code for the same link on request, and hides it again", async () => {
+    startServer();
+    await show(<ListingDetailScreen id="l1" />);
+    expect(screen.queryByLabelText("QR code for the apply link to Garden room")).toBeNull();
+    await fireEvent.press(await screen.findByRole("button", { name: "Show QR code" }));
+    expect(screen.getByLabelText("QR code for the apply link to Garden room")).toBeTruthy();
+    expect(mockQrValue).toHaveBeenCalledWith(`${WEB_BASE_URL}/apply/garden-room`);
+    await fireEvent.press(screen.getByRole("button", { name: "Hide QR code" }));
+    expect(screen.queryByLabelText("QR code for the apply link to Garden room")).toBeNull();
+  });
+
   it("says so if sharing won't open", async () => {
     jest.spyOn(Share, "share").mockRejectedValue(new Error("no"));
     startServer();
@@ -278,6 +298,7 @@ describe("ListingDetailScreen", () => {
     await show(<ListingDetailScreen id="l1" />);
     await screen.findByText("Garden room");
     expect(screen.queryByRole("button", { name: "Share inquiry form link" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Show QR code" })).toBeNull();
   });
 
   it("shows the host's pet note", async () => {

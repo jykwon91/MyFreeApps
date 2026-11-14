@@ -575,6 +575,8 @@
         "api-client/src/constants/channelListingForm.ts",
         "api-client/src/utils/listingForm.ts",
         "api-client/src/utils/listingPhotoOrder.ts",
+        "api-client/src/utils/applyUrl.ts",
+        "api-client/src/constants/applyUrl.ts",
         "api-client/src/utils/externalIdForm.ts",
         "api-client/src/utils/channelListingForm.ts",
         "api-client/src/utils/channelImport.ts",

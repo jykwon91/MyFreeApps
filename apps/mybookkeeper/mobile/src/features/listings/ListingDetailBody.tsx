@@ -11,6 +11,7 @@ import { askOnce } from "../../lib/askOnce";
 import { plainFromMarkdown } from "../../lib/plainFromMarkdown";
 import TransactionFact from "../transactions/TransactionFact";
 import ListingFacts from "./ListingFacts";
+import ListingApplyQr from "./ListingApplyQr";
 import ListingShareLink from "./ListingShareLink";
 import ListingSummaryRow from "./ListingSummaryRow";
 import ListingSummaryRows from "./ListingSummaryRows";
@@ -52,6 +53,7 @@ export default function ListingDetailBody({ listing, propertyName, canWrite, has
       </View>
       {propertyName ? <ListingSummaryRow label={LISTING_MESSAGES.property} onPress={() => router.push(`/properties/${listing.property_id}`)} value={propertyName} /> : null}
       {listing.slug ? <ListingShareLink slug={listing.slug} /> : null}
+      {listing.slug ? <ListingApplyQr slug={listing.slug} title={listing.title} /> : null}
       {listing.pets_on_premises ? (
         <TransactionFact label={LISTING_MESSAGES.petsLabel} value={listing.large_dog_disclosure?.trim() || LISTING_MESSAGES.petsDefault} />
       ) : null}

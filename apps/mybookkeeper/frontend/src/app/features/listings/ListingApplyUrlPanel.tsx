@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Copy, Check, QrCode } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { buildApplyUrl } from "@mybookkeeper/api-client/utils/applyUrl";
 import { LoadingButton, showError, showSuccess } from "@platform/ui";
 
 export interface ListingApplyUrlPanelProps {
@@ -23,7 +24,7 @@ export default function ListingApplyUrlPanel({ slug }: ListingApplyUrlPanelProps
     return null;
   }
 
-  const applyUrl = `${window.location.origin}/apply/${slug}`;
+  const applyUrl = buildApplyUrl(window.location.origin, slug);
 
   async function handleCopy() {
     try {

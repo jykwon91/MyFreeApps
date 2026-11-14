@@ -3,12 +3,7 @@ import type { ListingResponse } from "@mybookkeeper/api-client/types/listing/lis
 import type { ListingStatus } from "@mybookkeeper/api-client/types/listing/listing-status";
 import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/listing-summary";
 import { formatRate } from "@mybookkeeper/api-client/utils/formatRate";
-import { WEB_BASE_URL } from "../../constants/api";
 import { LISTING_MESSAGES } from "../../constants/listings";
-
-export function inquiryFormLink(slug: string): string {
-  return `${WEB_BASE_URL}/apply/${slug}`;
-}
 
 function days(count: number): string {
   return count === 1 ? "1 day" : `${count} days`;
