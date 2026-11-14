@@ -9,7 +9,7 @@ import TransactionDetailScreen from "../src/features/transactions/TransactionDet
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
-import { aProperty, aTransaction, lastPatch, startTransactionServer } from "../test-support/transactionsServer";
+import { aProperty, aSavedVendor, aTransaction, lastPatch, startTransactionServer } from "../test-support/transactionsServer";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -59,6 +59,58 @@ describe("TransactionDetailScreen", () => {
     expect(screen.getByText("The total looks off")).toBeTruthy();
     expect(screen.getByText("Maintenance")).toBeTruthy();
     expect(await screen.findByText("Oak Street")).toBeTruthy();
+  });
+
+  it("shows the tax year, saved vendor, channel, payment method, tax treatment and Schedule E line", async () => {
+    const server = startTransactionServer([
+      aTransaction({
+        vendor_id: "v1",
+        channel: "airbnb",
+        payment_method: "bank_transfer",
+        tax_relevant: true,
+        schedule_e_line: "line_14_repairs",
+        tax_year: 2025,
+      }),
+    ]);
+    server.vendors = [aSavedVendor()];
+    await renderScreen();
+    expect(await screen.findByText("Ace Plumbing")).toBeTruthy();
+    expect(screen.getByText("Tax year")).toBeTruthy();
+    expect(screen.getByText("2025")).toBeTruthy();
+    expect(screen.getByText("Airbnb")).toBeTruthy();
+    expect(screen.getByText("Bank Transfer")).toBeTruthy();
+    expect(screen.getByText("Tax reports")).toBeTruthy();
+    expect(screen.getByText("Included")).toBeTruthy();
+    expect(screen.getByText("Schedule E line")).toBeTruthy();
+    expect(screen.getByText("Line 14 Repairs")).toBeTruthy();
+  });
+
+  it("leaves out what isn't set, and says when it's out of tax reports", async () => {
+    startTransactionServer([aTransaction()]);
+    await renderScreen();
+    expect(await screen.findByText("Left out")).toBeTruthy();
+    expect(screen.queryByText("Saved vendor")).toBeNull();
+    expect(screen.queryByText("Channel")).toBeNull();
+    expect(screen.queryByText("Payment method")).toBeNull();
+    expect(screen.queryByText("Schedule E line")).toBeNull();
+  });
+
+  it("never shows a linked saved vendor as none, even when its name can't be loaded", async () => {
+    startTransactionServer([aTransaction({ vendor_id: "gone" })]);
+    await renderScreen();
+    expect(await screen.findByText("A saved vendor")).toBeTruthy();
+  });
+
+  it("says it couldn't load a saved vendor, and tries again on tap", async () => {
+    const server = startTransactionServer([aTransaction({ vendor_id: "v1" })]);
+    server.vendors = [aSavedVendor()];
+    server.failVendorsWith = 500;
+    await renderScreen();
+    const retry = await screen.findByRole("button", { name: "Retry loading the saved vendor" });
+    expect(screen.queryByText("A saved vendor")).toBeNull();
+    server.failVendorsWith = null;
+    await fireEvent.press(retry);
+    expect(await screen.findByText("Ace Plumbing")).toBeTruthy();
   });
 
   it("offers to link income to a tenant", async () => {

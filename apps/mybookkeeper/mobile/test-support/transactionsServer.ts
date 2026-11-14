@@ -8,6 +8,7 @@ import type { ImportResult } from "@mybookkeeper/api-client/types/transaction/Im
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { UtilityPlanRateComparison } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-comparison";
 import type { UtilityPlanRenewalAlert } from "@mybookkeeper/api-client/types/utility/utility-plan-renewal-alert";
+import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 
 export function aTransaction(overrides: Partial<Transaction> = {}): Transaction {
@@ -17,11 +18,16 @@ export function aTransaction(overrides: Partial<Transaction> = {}): Transaction 
     transaction_date: "2026-03-14",
     tax_year: 2026,
     vendor: "Home Depot",
+    vendor_id: null,
     description: "Lumber",
     amount: "84.20",
     transaction_type: "expense",
     category: "maintenance",
     status: "approved",
+    channel: null,
+    payment_method: null,
+    tax_relevant: false,
+    schedule_e_line: null,
     address: null,
     review_reason: null,
     source_document_id: null,
@@ -34,9 +40,15 @@ export function aProperty(overrides: Partial<Property> = {}): Property {
   return { id: "p1", name: "Oak Street", address: null, is_active: true, ...overrides } as Property;
 }
 
+export function aSavedVendor(overrides: Partial<VendorSummary> = {}): VendorSummary {
+  return { id: "v1", name: "Ace Plumbing", category: "plumber", phone: null, hourly_rate: null, preferred: false, ...overrides } as VendorSummary;
+}
+
 export interface FakeTransactionServer {
   transactions: Transaction[];
   properties: Property[];
+  /** The saved vendors a transaction can be linked to. */
+  vendors: VendorSummary[];
   role: string;
   offline: boolean;
   /** The status every transaction write fails with, while set. */
@@ -56,6 +68,8 @@ export interface FakeTransactionServer {
   pendingPayments: number;
   /** Fails summary requests while set. */
   failSummary: boolean;
+  /** The status every saved-vendor read fails with, while set. */
+  failVendorsWith: number | null;
   renewalAlerts: UtilityPlanRenewalAlert;
   rateComparison: UtilityPlanRateComparison;
   premiumComparison: InsurancePremiumComparison;
@@ -108,6 +122,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
   const server: FakeTransactionServer = {
     transactions,
     properties,
+    vendors: [],
     role: "owner",
     offline: false,
     failWritesWith: null,
@@ -121,6 +136,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     pendingReceipts: 0,
     pendingPayments: 0,
     failSummary: false,
+    failVendorsWith: null,
     renewalAlerts: noRenewalAlerts(),
     rateComparison: noRateComparison(),
     premiumComparison: noPremiumComparison(),
@@ -147,6 +163,12 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     server.requests.push(config);
     if (server.offline) return Promise.reject(Object.assign(new Error("Network Error"), { config }));
     if (config.url === "/properties") return respond(server.properties);
+    if (server.failVendorsWith !== null && config.url?.startsWith("/vendors")) return respond({ detail: "nope" }, server.failVendorsWith);
+    if (config.url === "/vendors") return respond({ items: server.vendors, total: server.vendors.length, has_more: false });
+    if (config.url?.startsWith("/vendors/")) {
+      const vendor = server.vendors.find((row) => row.id === config.url?.split("/")[2]);
+      return vendor ? respond(vendor) : respond({ detail: "Vendor not found" }, 404);
+    }
     if (config.url === "/documents") return respond(server.documents);
     if (config.url === "/summary/years") return respond(server.summaryYears);
     if (config.url === "/transactions/attribution-review-queue") {

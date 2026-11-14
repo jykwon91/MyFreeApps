@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form";
-import { getYear, format } from "date-fns";
+import { format } from "date-fns";
+import { taxYearOf } from "@mybookkeeper/api-client/utils/transactionTaxYear";
 import { formatTag } from "@/shared/utils/tag";
 import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES, PAYMENT_METHODS, CHANNELS } from "@/shared/lib/constants";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
@@ -17,10 +18,10 @@ export interface ManualEntryFormProps {
 }
 
 function buildDefaults(): TransactionFormValues {
-  const now = new Date();
+  const today = format(new Date(), "yyyy-MM-dd");
   return {
-    transaction_date: format(now, "yyyy-MM-dd"),
-    tax_year: getYear(now),
+    transaction_date: today,
+    tax_year: taxYearOf(today),
     vendor: "",
     // PR 4.2: vendor_id dropdown lives only on the edit panel; manual entry
     // defaults to no rolodex link. Hosts can attach a vendor afterwards.
@@ -91,7 +92,7 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
               {...register("transaction_date", {
                 onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
                   if (e.target.value) {
-                    setValue("tax_year", getYear(new Date(e.target.value + "T00:00:00")));
+                    setValue("tax_year", taxYearOf(e.target.value));
                   }
                 },
               })}
