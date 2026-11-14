@@ -169,6 +169,75 @@ describe("upload queue", () => {
     expect(uploads().phase).toBe("unreachable");
   });
 
+  function addInOrder(...names: string[]): void {
+    const now = jest.spyOn(Date, "now");
+    names.forEach((name, index) => {
+      now.mockReturnValueOnce(100 + index);
+      addFile("w1", name);
+    });
+    now.mockRestore();
+  }
+
+  it("doesn't let one file the connection drops on hold up the rest", async () => {
+    addInOrder("big.jpg", "small.jpg");
+    const server = serverAnswering("offline");
+    await drain();
+    expect(server.sent).toHaveLength(2);
+    expect(waiting()).toEqual(["big.jpg"]);
+    expect(uploads().phase).toBe("unreachable");
+  });
+
+  it("stops after two connection failures in a row", async () => {
+    addInOrder("a.jpg", "b.jpg", "c.jpg");
+    const server = serverAnswering("offline", "offline");
+    await drain();
+    expect(server.sent).toHaveLength(2);
+    expect(waiting()).toHaveLength(3);
+    expect(uploads().phase).toBe("unreachable");
+  });
+
+  it("counts connection failures in a row, so a success in between starts over", async () => {
+    addInOrder("a.jpg", "b.jpg", "c.jpg", "d.jpg");
+    const server = serverAnswering("offline", 202, "offline");
+    await drain();
+    expect(server.sent).toHaveLength(4);
+    expect(waiting()).toEqual(["a.jpg", "c.jpg"]);
+  });
+
+  it("tries a file that failed in the last drain after the others", async () => {
+    addInOrder("big.jpg", "small.jpg");
+    serverAnswering("offline", 202);
+    await drain();
+    addInOrder("later.jpg");
+    const server = serverAnswering();
+    await drain();
+    expect(partsOf(server.sent[0])[0].name).toBe("later.jpg");
+    expect(partsOf(server.sent[1])[0].name).toBe("big.jpg");
+  });
+
+  it("puts a file that failed on a server error behind the others next time", async () => {
+    addInOrder("bad.jpg");
+    serverAnswering(500);
+    await drain();
+    addInOrder("new.jpg");
+    const server = serverAnswering();
+    await drain();
+    expect(partsOf(server.sent[0])[0].name).toBe("new.jpg");
+  });
+
+  it("forgets a file's failure once it has sent", async () => {
+    addInOrder("big.jpg");
+    serverAnswering("offline");
+    await drain();
+    serverAnswering();
+    await drain();
+    expect(waiting()).toEqual([]);
+    addInOrder("again.jpg", "other.jpg");
+    const server = serverAnswering();
+    await drain();
+    expect(partsOf(server.sent[0])[0].name).toBe("again.jpg");
+  });
+
   it("can send again after something unexpected goes wrong", async () => {
     addFile("w1", "a.jpg");
     const uri = pendingUploads("w1")[0].uri;
