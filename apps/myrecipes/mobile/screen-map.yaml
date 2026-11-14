@@ -16,7 +16,8 @@ routes:
   /recipes/:id/tweak:
     screen: recipes/[id]/tweak
   # Opened from the recipe's Version history (recipes/[id]/versions, which the website shows on the
-  # recipe page itself): tap a version for its changes, or pick two to compare.
+  # recipe page itself): tap a version to see it in full (recipes/[id]/versions/[vid], the website's
+  # timeline pick, with its own "I made it") and then What changed, or pick two to compare.
   /recipes/:id/versions/:vid/diff:
     screen: recipes/[id]/versions/[vid]/diff
   /recipes/import:

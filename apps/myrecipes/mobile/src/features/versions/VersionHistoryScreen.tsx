@@ -48,9 +48,13 @@ export default function VersionHistoryScreen() {
     });
   });
 
+  const openVersion = useOpenOnce((versionId: string) => {
+    router.push({ pathname: "/recipes/[id]/versions/[vid]", params: { id, vid: versionId } });
+  });
+
   function chooseRow(version: VersionSummary): void {
     if (isComparing) setPicked((current) => toggleCompareId(current, version.id));
-    else openDiff(version.id);
+    else openVersion(version.id);
   }
 
   function compare(): void {

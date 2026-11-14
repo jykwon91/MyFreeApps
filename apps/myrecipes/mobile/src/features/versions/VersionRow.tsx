@@ -10,14 +10,12 @@ import CompareCheckbox from "./CompareCheckbox";
 
 /**
  * One version in the history: its number, note, date, and the owner's cooks and best rating.
- * Tapping it shows what changed from the version it was based on, except for v1, which has none. While
- * picking two to compare, it's a checkbox instead.
+ * Tapping it shows that version in full, as picking it in the website's timeline does. While picking
+ * two to compare, it's a checkbox instead.
  */
 export default function VersionRow({ version, isLatest, isComparing, isPicked, isPickDisabled, onChoose }: VersionRowProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
   const note = versionNote(version);
-  const isFirst = version.version_number === 1;
-  const isPressable = isComparing || !isFirst;
   const muted = { color: colors.mutedForeground, fontSize: fontSize.xs };
 
   const body = (
@@ -55,20 +53,10 @@ export default function VersionRow({ version, isLatest, isComparing, isPicked, i
     borderRadius: radius.md,
     borderColor: isComparing && isPicked ? colors.primary : colors.border,
   };
-  const label = versionRowLabel(version, isLatest);
-
-  if (!isPressable) {
-    return (
-      <View accessibilityLabel={label} accessible style={{ ...frame, backgroundColor: colors.card }} testID={`version-${version.id}`}>
-        {body}
-      </View>
-    );
-  }
-
   return (
     <Pressable
-      accessibilityHint={isComparing ? (isPickDisabled ? undefined : MESSAGES.pickHint) : MESSAGES.openDiffHint}
-      accessibilityLabel={label}
+      accessibilityHint={isComparing ? (isPickDisabled ? undefined : MESSAGES.pickHint) : MESSAGES.openVersionHint}
+      accessibilityLabel={versionRowLabel(version, isLatest)}
       accessibilityRole={isComparing ? "checkbox" : "button"}
       accessibilityState={isComparing ? { checked: isPicked, disabled: isPickDisabled } : undefined}
       disabled={isComparing && isPickDisabled}

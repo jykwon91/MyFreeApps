@@ -7,6 +7,9 @@ export const RECIPES_BACK_TITLE = "Recipes";
 /** Back's title on a screen opened from a recipe, which goes back to it. */
 export const RECIPE_BACK_TITLE = "Recipe";
 
+/** Back's title on a screen opened from a recipe's version history. */
+export const VERSIONS_BACK_TITLE = "Versions";
+
 /** What a recipe screen's Back button says when it was opened from somewhere other than Recipes. */
 export const ENTRY_POINT_BACK_TITLES: Record<RecipeEntryPoint, string> = {
   discover: "Discover",
@@ -14,7 +17,8 @@ export const ENTRY_POINT_BACK_TITLES: Record<RecipeEntryPoint, string> = {
 
 /** What a diff's Back button says when it was opened from somewhere in the app; a link has Recipes behind it. */
 export const DIFF_ENTRY_POINT_BACK_TITLES: Record<DiffEntryPoint, string> = {
-  versions: "Versions",
+  versions: VERSIONS_BACK_TITLE,
+  version: "Version",
 };
 
 /** What the tweak form's Back button says when it was opened from somewhere other than the recipe. */

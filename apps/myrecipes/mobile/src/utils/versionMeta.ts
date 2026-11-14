@@ -5,7 +5,7 @@ import { countLabel } from "./countLabel";
 import { formatVersionDate } from "./formatVersionDate";
 
 /** A version's date, then the owner's cook count and best rating, which are null for anyone else. */
-export function versionMeta(version: VersionSummary): VersionMetaPart[] {
+export function versionMeta(version: Pick<VersionSummary, "created_at" | "cook_count" | "best_rating">): VersionMetaPart[] {
   const date = formatVersionDate(version.created_at);
   const parts: VersionMetaPart[] = [{ text: date, spoken: date }];
   if (version.cook_count !== null) {

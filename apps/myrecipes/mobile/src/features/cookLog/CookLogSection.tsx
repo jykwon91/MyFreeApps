@@ -1,15 +1,14 @@
 import { COOK_LOG_MESSAGES as SHARED } from "@myrecipes/api-client/constants/cookLog";
 import { useListRecipeCooksQuery } from "@myrecipes/api-client/store/recipesApi";
 import { cooksNewestFirst } from "@myrecipes/api-client/utils/cooksNewestFirst";
-import { LoadingButton, SectionError, useTheme } from "@platform/mobile";
-import { useState } from "react";
+import { SectionError, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { COOK_LOG_PHONE_MESSAGES as MESSAGES } from "../../constants/cookLog";
 import type { CookLogSectionProps } from "../../types/CookLogSectionProps";
 import RecipeSectionHeading from "../recipes/RecipeSectionHeading";
 import CookLogRow from "./CookLogRow";
 import CookLogSkeleton from "./CookLogSkeleton";
-import LogCookSheet from "./LogCookSheet";
+import LogCookButton from "./LogCookButton";
 import { useVersionNumberById } from "./useVersionNumberById";
 
 /**
@@ -18,7 +17,6 @@ import { useVersionNumberById } from "./useVersionNumberById";
  */
 export default function CookLogSection({ recipeId, versionId, versionNumber, versionCount }: CookLogSectionProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const [isLogging, setIsLogging] = useState(false);
   // Reopening asks again, so cooks logged or deleted on the website show.
   const { data: cooks, isError, refetch } = useListRecipeCooksQuery(recipeId, { refetchOnMountOrArgChange: true });
   const versionNumberById = useVersionNumberById(recipeId, versionCount);
@@ -43,18 +41,8 @@ export default function CookLogSection({ recipeId, versionId, versionNumber, ver
   return (
     <View style={{ gap: spacing.md }}>
       <RecipeSectionHeading>{SHARED.historyTitle}</RecipeSectionHeading>
-      <LoadingButton accessibilityHint={MESSAGES.madeItHint} onPress={() => setIsLogging(true)} variant="secondary">
-        {SHARED.madeIt}
-      </LoadingButton>
+      <LogCookButton recipeId={recipeId} versionId={versionId} versionNumber={versionNumber} />
       {renderCooks()}
-      {isLogging ? (
-        <LogCookSheet
-          onClose={() => setIsLogging(false)}
-          recipeId={recipeId}
-          versionId={versionId}
-          versionNumber={versionNumber}
-        />
-      ) : null}
     </View>
   );
 }
