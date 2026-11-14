@@ -46,3 +46,6 @@ export const INQUIRY_LISTING_GONE_STATUSES: readonly number[] = [403, 404];
 
 /** The sheets the inquiry detail screen can open. */
 export const INQUIRY_DETAIL_SHEET = { STAGE: "stage", MORE: "more" } as const;
+
+/** What a row shows when the inquiry isn't linked to a listing (or its title isn't known), as on the web. */
+export const INQUIRY_ROW_NO_LISTING = "—";
