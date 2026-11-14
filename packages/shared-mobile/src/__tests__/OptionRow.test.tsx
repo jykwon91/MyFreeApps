@@ -7,6 +7,15 @@ describe("OptionRow", () => {
     expect(screen.getByRole("radio", { name: "Oak St" }).props.accessibilityState).toEqual({ checked: true });
   });
 
+  it("is announced as disabled and ignores presses when disabled", async () => {
+    const onPress = jest.fn();
+    await render(<OptionRow disabled isSelected={false} label="Oak St" onPress={onPress} />);
+    const row = screen.getByRole("radio", { name: "Oak St" });
+    expect(row.props.accessibilityState).toEqual({ checked: false, disabled: true });
+    await fireEvent.press(row);
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
   it("can be a checkbox, for a list that takes several", async () => {
     const onPress = jest.fn();
     await render(<OptionRow isSelected={false} kind="checkbox" label="Airbnb" onPress={onPress} />);

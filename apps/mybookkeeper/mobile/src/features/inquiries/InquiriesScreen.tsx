@@ -3,16 +3,20 @@ import { useListInquiryPagesInfiniteQuery } from "@mybookkeeper/api-client/store
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
 import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
+import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { ALL_STAGES_OPTION, INQUIRY_EMPTY_WORDS, INQUIRY_VIEWS } from "../../constants/inquiries";
+import { INQUIRY_CREATE_MESSAGES } from "../../constants/inquiryCreate";
 import { uniqueById } from "../../lib/uniqueById";
 import type { InquiryView } from "../../types/InquiryView";
 import LoadMoreFailed from "../shell/LoadMoreFailed";
+import { useCanWrite } from "../workspace/useCanWrite";
 import InquiriesSkeleton, { InquirySkeletonRow } from "./InquiriesSkeleton";
 import { stageLabel } from "./inquiryDisplay";
 import { toPageArgs } from "./inquiryFilters";
 import InquiryRow from "./InquiryRow";
+import NewInquirySheet from "./NewInquirySheet";
 
 const STAGE_OPTIONS = [
   { value: ALL_STAGES_OPTION, label: "All" },
@@ -31,7 +35,9 @@ export default function InquiriesScreen({
   onStageChange: (stage: InquiryStage | null) => void;
 }) {
   const { colors, spacing, fontSize } = useTheme();
+  const canWrite = useCanWrite();
   const [isStageSheetOpen, setIsStageSheetOpen] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
   const [listThatFailedToLoadMore, setListThatFailedToLoadMore] = useState<string | null>(null);
 
   const args = useMemo(() => toPageArgs(view, stage), [view, stage]);
@@ -51,30 +57,34 @@ export default function InquiriesScreen({
     setListThatFailedToLoadMore(result.isError ? listKey : null);
   }
 
-  const emptyList = !currentData && isFetching ? (
-    <InquiriesSkeleton />
-  ) : error ? (
-    <EmptyState action={{ label: "Try again", onPress: refresh }} body="Want me to try again?" heading="I couldn't load your inquiries." />
-  ) : stage ? (
-    <EmptyState action={{ label: "Clear filter", onPress: () => onStageChange(null) }} body="No inquiries are at that stage here." heading="Nothing matches that" />
-  ) : (
-    <EmptyState body={INQUIRY_EMPTY_WORDS[view].body} heading={INQUIRY_EMPTY_WORDS[view].heading} />
-  );
+  function emptyList(): ReactElement {
+    if (!currentData && isFetching) return <InquiriesSkeleton />;
+    if (error) return <EmptyState action={{ label: "Try again", onPress: refresh }} body="Want me to try again?" heading="I couldn't load your inquiries." />;
+    if (stage) {
+      return <EmptyState action={{ label: "Clear filter", onPress: () => onStageChange(null) }} body="No inquiries are at that stage here." heading="Nothing matches that" />;
+    }
+    return <EmptyState body={INQUIRY_EMPTY_WORDS[view].body} heading={INQUIRY_EMPTY_WORDS[view].heading} />;
+  }
 
-  const footer = isFetchingNextPage ? (
-    <InquirySkeletonRow />
-  ) : loadMoreFailed ? (
-    <LoadMoreFailed onRetry={() => void loadMore()} />
-  ) : undefined;
+  function footer(): ReactElement | undefined {
+    if (isFetchingNextPage) return <InquirySkeletonRow />;
+    if (loadMoreFailed) return <LoadMoreFailed onRetry={() => void loadMore()} />;
+    return undefined;
+  }
 
   return (
     <View style={{ flex: 1 }}>
       <FlatList
-        ListEmptyComponent={isLoading ? <InquiriesSkeleton /> : emptyList}
-        ListFooterComponent={footer}
+        ListEmptyComponent={isLoading ? <InquiriesSkeleton /> : emptyList()}
+        ListFooterComponent={footer()}
         ListHeaderComponent={
           <View style={{ gap: spacing.md, padding: spacing.lg }}>
             {error && rows.length > 0 && !loadMoreFailed ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
+            {canWrite ? (
+              <LoadingButton accessibilityHint={INQUIRY_CREATE_MESSAGES.addHint} onPress={() => setIsAdding(true)}>
+                {INQUIRY_CREATE_MESSAGES.addInquiry}
+              </LoadingButton>
+            ) : null}
             <SegmentedControl accessibilityLabel="Which inquiries to show" onChange={onViewChange} segments={INQUIRY_VIEWS} value={view} />
             <LoadingButton onPress={() => setIsStageSheetOpen(true)} variant="secondary">
               {`Stage: ${stage ? stageLabel(stage) : "All"}`}
@@ -119,6 +129,7 @@ export default function InquiriesScreen({
         title="Show which stage?"
         value={stage ?? ALL_STAGES_OPTION}
       />
+      {isAdding ? <NewInquirySheet onClose={() => setIsAdding(false)} onCreated={(inquiry) => router.push(`/inquiries/${inquiry.id}`)} /> : null}
     </View>
   );
 }
