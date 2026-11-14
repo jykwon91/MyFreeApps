@@ -13,7 +13,7 @@
 import type { Page } from "@playwright/test";
 import { plantAuth as plantSharedAuth, stubCurrentUser, stubJsonRoutes } from "@platform/ui/test-support/mockSession";
 import type { OrgRole } from "@mybookkeeper/api-client/types/organization/OrgRole";
-import type { OrgWithRole } from "@/shared/types/organization/org-with-role";
+import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 import type { TaxProfile } from "@/shared/types/organization/tax-profile";
 import type { UserProfile } from "@/shared/types/user";
 import type { VersionInfo } from "@/shared/types/version/version-info";
