@@ -1,12 +1,15 @@
 import { EVENT_TYPE_TONES } from "@myjobhunter/api-client/constants/eventTypeTones";
+import type { ApplicationEventType } from "@myjobhunter/api-client/types/application-event-type";
 import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
 import { KANBAN_COLUMN_LABELS } from "@myjobhunter/api-client/constants/kanbanColumnLabels";
 import { KANBAN_COLUMN_ORDER } from "@myjobhunter/api-client/constants/kanbanColumnOrder";
 import { render, screen } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
+import EventCard from "../src/features/applicationDetail/EventCard";
 import ApplicationHeader from "../src/features/applicationDetail/ApplicationHeader";
 import ApplicationRow from "../src/features/applications/ApplicationRow";
 import { applicationRecord } from "../test-support/applicationRecord";
+import { eventRecord } from "../test-support/eventRecord";
 
 // The colours the shared Chip paints each tone with in the light theme (see shared-mobile toneColors).
 const LIGHT_TONE_BACKGROUND = {
@@ -62,5 +65,16 @@ describe("application header chips", () => {
 
     expect(backgroundOf("Archived")).toBe(LIGHT_TONE_BACKGROUND.neutral);
     expect(backgroundOf("Remote")).toBe(LIGHT_TONE_BACKGROUND.info);
+  });
+});
+
+describe("timeline event label", () => {
+  it.each<[ApplicationEventType, string]>([
+    ["rejected", LIGHT_TONE_BACKGROUND.danger],
+    ["offer_received", LIGHT_TONE_BACKGROUND.success],
+  ])("colours a %s event by its tone, as the web does", async (eventType, background) => {
+    await render(<EventCard event={eventRecord({ id: "e", application_id: "a", event_type: eventType })} onEdit={jest.fn()} />);
+
+    expect(backgroundOf(formatEventType(eventType))).toBe(background);
   });
 });

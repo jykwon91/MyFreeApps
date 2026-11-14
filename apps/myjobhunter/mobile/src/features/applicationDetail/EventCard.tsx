@@ -1,5 +1,6 @@
 import { INTERVIEW_EVENT_TYPES } from "@myjobhunter/api-client/constants/interviewEventTypes";
 import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
+import { toneForEventType } from "@myjobhunter/api-client/utils/toneForEventType";
 import { Chip, LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { APPLICATION_EVENT_MESSAGES as MESSAGES } from "../../constants/applicationEvents";
@@ -17,7 +18,7 @@ export default function EventCard({ event, onEdit }: EventCardProps) {
       testID={`event-${event.id}`}
     >
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm }}>
-        <Chip label={formatEventType(event.event_type)} />
+        <Chip label={formatEventType(event.event_type)} tone={toneForEventType(event.event_type)} />
         <Text style={{ flexShrink: 1, fontSize: fontSize.sm, color: colors.mutedForeground }}>{formatDateTime(event.occurred_at)}</Text>
       </View>
       {event.interview_details ? <InterviewDetailsSummary details={event.interview_details} /> : null}
