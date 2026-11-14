@@ -12,6 +12,7 @@ import io
 import threading
 import zipfile
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 
 import openpyxl
 import pytest
@@ -27,6 +28,8 @@ class TestDetectFileType:
             ("a.png", "", "image"),
             ("invoice.pdf", "", "pdf"),
             ("notes.docx", "", "docx"),
+            ("old.doc", "application/msword", "unknown"),
+            ("legacy.XLS", "", "spreadsheet"),
             ("ledger.xlsx", "", "spreadsheet"),
             ("ledger.csv", "", "spreadsheet"),
             ("mail.eml", "", "eml"),
@@ -48,6 +51,46 @@ class TestSpreadsheetCsv:
     async def test_csv_under_cap_returns_all(self) -> None:
         out = await files.extract_text_from_spreadsheet(b"a,b", "x.csv", max_chars=999)
         assert out == "a,b"
+
+
+    async def test_uppercase_csv_is_parsed_as_text(self) -> None:
+        out = await files.extract_text_from_spreadsheet(b"a,b\n1,2\n", "BANK.CSV", max_chars=999)
+        assert out == "a,b\n1,2\n"
+
+
+XLS_FIXTURE = Path(__file__).parent / "fixtures" / "legacy_ledger.xls"
+
+
+class TestSpreadsheetXls:
+    async def test_legacy_xls_cells_extracted(self) -> None:
+        out = await files.extract_text_from_spreadsheet(
+            XLS_FIXTURE.read_bytes(), "legacy.xls", max_chars=10,
+        )
+        assert out.splitlines()[:5] == [
+            "Sheet: Ledger", "vendor\tamount", "Acme\t42", "Bob's Hardware\t19.5", "Sheet: Empty",
+        ]
+
+    async def test_xls_detected_by_content_when_filename_missing(self) -> None:
+        out = await files.extract_text_from_spreadsheet(XLS_FIXTURE.read_bytes(), "", max_chars=10)
+        assert "Acme\t42" in out
+
+
+class TestLegacyDoc:
+    def test_doc_is_not_accepted_as_docx(self) -> None:
+        assert files.detect_file_type("Lease.DOC", "application/msword") == "unknown"
+
+    def test_doc_refusal_message_tells_user_to_save_as_docx(self) -> None:
+        assert ".docx" in files.unsupported_file_message("Lease.DOC")
+
+    def test_other_unknown_types_get_generic_message(self) -> None:
+        assert files.unsupported_file_message("a.bin") == "Unsupported file type"
+
+    def test_zip_skips_doc_members(self) -> None:
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("old.doc", b"x")
+            zf.writestr("new.docx", b"x")
+        assert [n for n, _, _ in files.extract_zip_files(buf.getvalue())] == ["new.docx"]
 
 
 class TestSpreadsheetXlsx:

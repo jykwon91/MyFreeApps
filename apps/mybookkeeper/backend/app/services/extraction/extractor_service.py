@@ -16,6 +16,7 @@ from platform_shared.extraction.files import (
     extract_text_from_pdf,
     extract_zip_files,
     parse_eml,
+    unsupported_file_message,
 )
 from platform_shared.extraction.files import (
     extract_text_from_spreadsheet as _shared_extract_text_from_spreadsheet,
@@ -28,6 +29,7 @@ __all__ = [
     "detect_file_type",
     "extract_zip_files",
     "parse_eml",
+    "unsupported_file_message",
 ]
 
 

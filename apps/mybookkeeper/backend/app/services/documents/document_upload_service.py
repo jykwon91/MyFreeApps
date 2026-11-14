@@ -12,6 +12,7 @@ from app.repositories.demo import demo_repo
 from app.services.extraction.extractor_service import (
     detect_file_type,
     extract_zip_files,
+    unsupported_file_message,
 )
 from app.services.storage.stored_file_cleanup import delete_stored_files
 from app.services.storage.attachment_content import (
@@ -80,7 +81,7 @@ async def accept_upload(
 
     file_type = detect_file_type(filename, content_type)
     if file_type == "unknown":
-        raise ValueError("Unsupported file type")
+        raise ValueError(unsupported_file_message(filename))
 
     if file_type != "zip":
         content = await clean_document_file(content, filename)

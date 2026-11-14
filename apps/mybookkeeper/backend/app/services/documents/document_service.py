@@ -11,7 +11,10 @@ from app.repositories import document_repo, transaction_repo
 from app.services.documents.document_errors import DocumentBeingReadError
 from app.services.documents.document_read_state import is_being_read, is_claimed_by_worker
 from app.services.documents.document_upload_service import clean_document_file
-from app.services.extraction.extractor_service import detect_file_type
+from app.services.extraction.extractor_service import (
+    detect_file_type,
+    unsupported_file_message,
+)
 from app.services.storage.stored_file_cleanup import delete_stored_files
 
 logger = logging.getLogger(__name__)
@@ -66,7 +69,7 @@ async def replace_file(
 
     file_type = detect_file_type(filename, content_type)
     if file_type == "unknown":
-        raise ValueError("Unsupported file type")
+        raise ValueError(unsupported_file_message(filename))
 
     content = await clean_document_file(content, filename)
 
