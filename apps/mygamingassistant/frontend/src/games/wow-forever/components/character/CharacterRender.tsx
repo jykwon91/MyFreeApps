@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { UserRound } from "lucide-react";
+import { useImageFailed } from "@/games/wow-forever/hooks/useImageFailed";
 import { characterRenderUrl } from "@/games/wow-forever/lib/character/characterRenderUrl";
 
 interface CharacterRenderProps {
@@ -11,8 +11,8 @@ interface CharacterRenderProps {
 /** Blizzard's picture of the character in their gear, or a plain placeholder when there's none. */
 export default function CharacterRender({ slug, name, hasRender }: CharacterRenderProps) {
   const src = characterRenderUrl(slug);
-  const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const showImage = hasRender && failedSrc !== src;
+  const { failed, onError } = useImageFailed(src);
+  const showImage = hasRender && !failed;
   return (
     <figure className="flex h-72 items-end justify-center rounded-xl bg-gradient-to-b from-slate-800 to-slate-950 p-3 sm:h-96">
       {showImage ? (
@@ -20,7 +20,7 @@ export default function CharacterRender({ slug, name, hasRender }: CharacterRend
           src={src}
           alt={`${name} in their current gear`}
           className="max-h-full max-w-full object-contain drop-shadow-xl"
-          onError={() => setFailedSrc(src)}
+          onError={onError}
         />
       ) : (
         <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-300">

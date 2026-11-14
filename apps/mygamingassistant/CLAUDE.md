@@ -1287,6 +1287,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `showBar` (off for fewest-first and faction standings). The picker is
   category chips (`aria-pressed`; a chip picks its group's first board) plus
   "Rank members by" listing only that group.
+- Arena champion render (`GuildChampionRender` on the rank-1 `GuildPodiumCard`, every tied 1st too):
+  Blizzard's render via the existing `GET /wow/characters/{slug}/render.png` (cached, own rate limit).
+  Decorative (`alt=""`, the name is beside it); hidden when the image fails. Only the champion, so a
+  board switch costs one image request.
 - Guild shout-out card (`GuildShoutout`, top of the Home tab): one member, named by slug in
   `data/guild/guildShoutout.ts` (`GUILD_SHOUTOUT`, with the badge text), shown with a heart badge.
   Renders nothing when that slug isn't on the roster. Change the member or badge there.

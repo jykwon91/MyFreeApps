@@ -517,6 +517,28 @@ describe("guild page", () => {
     expect(screen.getByTestId("location")).toHaveTextContent("?tab=home&class=Warlock&board=dungeons");
   });
 
+  it("shows the Arena champion in their gear, only on the champion's card, and drops the picture when Blizzard has none", () => {
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    renderAt("/wow-forever/topdeadcenter?tab=home");
+    const renders = screen.getAllByTestId("guild-champion-render");
+    expect(renders).toHaveLength(1);
+    expect(renders[0]).toHaveAttribute("src", expect.stringMatching(/\/characters\/big-sue\/render\.png$/));
+    expect(renders[0].closest("li")).toHaveTextContent("Big Sue");
+    fireEvent.error(renders[0]);
+    expect(screen.queryByTestId("guild-champion-render")).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("guild-champion-render-missing").closest("li") as HTMLElement).getByText("Big Sue")).toBeInTheDocument();
+  });
+
+  it("shows every member tied for 1st in their gear", () => {
+    const tied = [member({ slug: "a-a", name: "A", surname: "A", level: 60 }), member({ slug: "b-b", name: "B", surname: "B", level: 60 }), member({ slug: "c-c", name: "C", surname: "C", level: 40 })];
+    mockQuery.mockReturnValue(query({ data: { ...GUILD, members: tied } }));
+    renderAt("/wow-forever/topdeadcenter?tab=home");
+    expect(screen.getAllByTestId("guild-champion-render").map((img) => img.getAttribute("src"))).toEqual([
+      expect.stringMatching(/a-a/),
+      expect.stringMatching(/b-b/),
+    ]);
+  });
+
   it("marks the viewer's character and pins it under the top 10 when it ranks lower", () => {
     const many = Array.from({ length: 11 }, (_, i) =>
       member({ slug: `m-${i}`, name: `M${String(i).padStart(2, "0")}`, surname: "X", level: 60 - i }),

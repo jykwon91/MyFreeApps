@@ -23,6 +23,10 @@ export const PODIUM_CLASS_TOP = "relative border-t-4 border-t-[color:var(--c-lig
 export const PODIUM_RIBBON =
   "absolute left-3 top-0 -translate-y-1/2 rounded-full bg-[#F2C94C] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-slate-900 shadow sm:left-1/2 sm:-translate-x-1/2";
 export const PODIUM_CARD_OTHER = "sm:min-h-[172px]";
+/** The champion's render on their card: a small portrait beside the name on a phone, a tall one above it on wide screens. */
+export const PODIUM_RENDER = "h-20 w-14 shrink-0 object-contain object-bottom drop-shadow-lg sm:h-40 sm:w-full";
+/** The same space when Blizzard has no picture: a muted silhouette. */
+export const PODIUM_RENDER_MISSING = "flex h-20 w-14 shrink-0 items-end justify-center text-muted-foreground sm:h-40 sm:w-full";
 /** Where each podium card stands on wide screens: the first in the middle, the second left, the third right. */
 export const PODIUM_SLOTS = ["sm:col-start-2", "sm:col-start-1", "sm:col-start-3"] as const;
 /** A board category chip, and the one picked. */

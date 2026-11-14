@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import { Crown } from "lucide-react";
+import GuildChampionRender from "@/games/wow-forever/components/guild/GuildChampionRender";
 import GuildLeaderboardBar from "@/games/wow-forever/components/guild/GuildLeaderboardBar";
 import GuildLeaderboardName from "@/games/wow-forever/components/guild/GuildLeaderboardName";
 import GuildRankMedal from "@/games/wow-forever/components/guild/GuildRankMedal";
@@ -25,7 +26,7 @@ interface GuildPodiumCardProps {
   barPercent: number | null;
 }
 
-/** A top-3 member's card: a class-coloured top border, a medal (a crown, glow and "Champion" ribbon for 1st), class-coloured name, and their number, large. */
+/** A top-3 member's card: a class-coloured top border, a medal (a crown, glow, "Champion" ribbon and their character in their gear for 1st), class-coloured name, and their number, large. */
 export default function GuildPodiumCard({ entry, mine, slot, barPercent }: GuildPodiumCardProps) {
   const first = entry.rank === 1;
   const classStyle = memberClassStyle(entry.member.class_name);
@@ -44,6 +45,7 @@ export default function GuildPodiumCard({ entry, mine, slot, barPercent }: Guild
         {first ? <Crown aria-hidden className={clsx("h-5 w-5", GOLD_TEXT)} /> : null}
         <GuildRankMedal rank={entry.rank} tied={entry.tied} size="podium" />
       </span>
+      {first ? <GuildChampionRender slug={entry.member.slug} /> : null}
       <span className="min-w-0 flex-1 sm:w-full sm:flex-none">
         <GuildLeaderboardName entry={entry} mine={mine} centered />
       </span>
