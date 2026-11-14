@@ -12,6 +12,7 @@ const WowForeverLanding = lazy(() => import("@/games/wow-forever/pages/WowForeve
 const WowComparePage = lazy(() => import("@/games/wow-forever/pages/WowComparePage"));
 const WowWorldMapPage = lazy(() => import("@/games/wow-forever/pages/WowWorldMapPage"));
 const WowProfessionsPage = lazy(() => import("@/games/wow-forever/pages/WowProfessionsPage"));
+const WowRecipesPage = lazy(() => import("@/games/wow-forever/pages/WowRecipesPage"));
 const WowFoodPickerPage = lazy(() => import("@/games/wow-forever/pages/WowFoodPickerPage"));
 const WowFoodDetailPage = lazy(() => import("@/games/wow-forever/pages/WowFoodDetailPage"));
 const WowGoldPage = lazy(() => import("@/games/wow-forever/pages/WowGoldPage"));
@@ -89,6 +90,7 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/compare", element: withSuggestFooter(<WowComparePage />, "gear_upgrades") },
   { path: "/wow-forever/map", element: withSuggestFooter(<WowWorldMapPage />, "map_travel") },
   { path: "/wow-forever/professions", element: withSuggestFooter(<WowProfessionsPage />, "professions") },
+  { path: "/wow-forever/recipes", element: withSuggestFooter(<WowRecipesPage />, "professions") },
   { path: "/wow-forever/food", element: withSuggestFooter(<WowFoodPickerPage />, "food_consumables") },
   { path: "/wow-forever/food/:foodId", element: withSuggestFooter(<WowFoodDetailPage />, "food_consumables") },
   { path: "/wow-forever/gold", element: withSuggestFooter(<WowGoldPage />, "gold_economy") },

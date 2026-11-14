@@ -103,6 +103,8 @@ def build_recipes(
             item, count = made
             quality = items.quality.get(item, 1)
             record["creates"] = {"id": item, "name": items.names.get(item, name), "count": count, "quality": quality}
+            if (item_class := items.item_class.get(item)) is not None:
+                record["creates"]["itemClass"] = item_class
             if quality >= UNCOMMON and items.item_class.get(item) in DISENCHANTABLE_CLASSES:
                 record["disenchantable"] = True
         elif spell in forever.enchants:

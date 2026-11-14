@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-14",
+    "title": "Every recipe in one search",
+    "summary": "A new Recipes page searches every profession's recipes at once: type a recipe, the item it makes or an ingredient, or pick a profession or what it makes. Each recipe shows its ingredients and where to learn it: trainer, vendor, drop or quest.",
+    "to": "/wow-forever/recipes"
+  },
+  {
+    "date": "2026-11-14",
     "title": "The Arena champion, in their gear",
     "summary": "The #1 card at the top of the guild's Arena now shows the champion's character in their current gear, as Blizzard draws them. Switch boards and the picture follows the new champion.",
     "to": "/wow-forever/topdeadcenter"

@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/library`, `/wow-forever/legacy`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/spellbook`, `/wow-forever/trainers`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/recipes`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/library`, `/wow-forever/legacy`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/spellbook`, `/wow-forever/trainers`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -197,6 +197,14 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `classic/sources.json` (cmangos GPL — keep LICENSE + README).
   `tests/test_wow_professions_generator.py`, `tests/test_wow_engineering_generator.py`. A route row that names a spell
   missing from the data throws, so re-run the route test after regenerating.
+- **Recipes** (`/wow-forever/recipes`, `?q=` `&p=<profession>` `&c=<category>`): one search over
+  every crafting profession's recipes plus Cooking (`lib/recipes/buildRecipeBook.ts`, loaded once by
+  `loadRecipeBook`). Search ranks name > recipe item > exact ingredient > ingredient words > typo
+  (`searchRecipes`); nothing lists until there's a query or a filter. "Makes" comes from the made
+  item's game class (`creates.itemClass`, written by the professions generator — weapons vs armor,
+  which the Auction house folds into one "gear" place) and its Auction house place
+  (`recipeCategory`), never from the name. Forever-only recipes reuse `sourceUnknown` + its chip;
+  recipe-item sources are Classic data with the provenance badge.
 - **Gathering guides** (`?p=mining|herbalism|skinning`, `&skill=N`; the picker's Gathering group,
   `isGatheringProfession`): `components/gathering/GatheringGuideView.tsx`
   switches on the guide's `kind` (`GatheringGuide` = `NodeGatheringGuide` |
