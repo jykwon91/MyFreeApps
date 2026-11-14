@@ -22,7 +22,7 @@ routes:
     screen: (app)/(tabs)/index
   # On More rather than a tab: the website's own phone tab bar leaves it out too. Its new and edit
   # saved-search dialogs are one sheet; the source filter, refresh frequency and dismiss reason are
-  # choice sheets; Undo is on the toast; the profile reminder's link opens the website's profile.
+  # choice sheets; Undo is on the toast; the profile reminder's link opens the Profile tab.
   /discover:
     screen: (app)/discover
   # On More rather than a tab: the website's own phone tab bar leaves it out too. Its Add document

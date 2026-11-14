@@ -4,10 +4,9 @@ import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { act, fireEvent, waitFor, within } from "@testing-library/react-native";
 import { screen } from "expo-router/testing-library";
 import { AccessibilityInfo, Linking } from "react-native";
-import { WEB_BASE_URL } from "../src/constants/api";
 import { DISCOVERED_JOB_MESSAGES as JOB } from "../src/constants/discoveredJob";
 import { DISCOVER_SCREEN_MESSAGES as MESSAGES } from "../src/constants/discoverScreen";
-import { PROFILE_BANNER_DISMISSED_KEY, PROFILE_BANNER_MESSAGES as BANNER, PROFILE_WEB_PATH } from "../src/constants/profileBanner";
+import { PROFILE_BANNER_DISMISSED_KEY, PROFILE_BANNER_MESSAGES as BANNER } from "../src/constants/profileBanner";
 import { SAVED_SEARCH_MESSAGES as SAVED } from "../src/constants/savedSearches";
 import { store } from "../src/lib/store";
 import { discoveredJobRecord } from "../test-support/discoveredJobRecord";
@@ -251,15 +250,20 @@ describe("the Discovery screen", () => {
 });
 
 describe("the profile reminder", () => {
-  it("asks for a resume or skills when the profile has neither, and opens the website's profile", async () => {
-    serve(discoverRoutes(SOURCES, JOBS, { profile: profileRecord({ resume_file_path: null }), skills: 0 }));
-    await renderDiscover();
+  it("asks for a resume or skills when the profile has neither, and opens the Profile tab", async () => {
+    serve({
+      "POST /auth/mobile/refresh": () => ({ status: 200, data: tokens(1) }),
+      "GET /auth/mobile/sessions": () => ({ status: 200, data: [] }),
+      ...discoverRoutes(SOURCES, JOBS, { profile: profileRecord({ resume_file_path: null }), skills: 0 }),
+    });
+    await renderApp("/discover");
 
     expect(await screen.findByRole("header", { name: BANNER.heading })).toBeTruthy();
     expect(screen.getByText(BANNER.body)).toBeTruthy();
     await fireEvent.press(screen.getByRole("link", { name: BANNER.setUp }));
 
-    expect(openURL).toHaveBeenCalledWith(`${WEB_BASE_URL}${PROFILE_WEB_PATH}`);
+    expect(screen).toHavePathname("/profile");
+    expect(openURL).not.toHaveBeenCalled();
   });
 
   it("stays away once dismissed, on this phone", async () => {
