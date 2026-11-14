@@ -7,6 +7,7 @@
  *   - navSections: section hidden when route does not match prefix
  *   - collapsible: collapse toggle sets aria-expanded correctly
  *   - collapsible: collapsed state hides label text and shows only icon
+ *   - navSections: each section is a named group; on the collapsed rail its heading becomes a divider
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -133,6 +134,18 @@ describe("AppShell — collapsible", () => {
     fireEvent.click(toggle);
     // After collapse: "Games" text is gone (icon only)
     expect(screen.queryByText("Games")).toBeNull();
+  });
+
+  it("names each section's group, and swaps its heading for a divider on the collapsed rail", () => {
+    const gear: NavSection = { id: "gear", title: "Gear", routePrefix: "/wow-forever", items: WOW_SECTION.items.slice(0, 1) };
+    renderShell("/wow-forever/map", [WOW_SECTION, gear], true);
+    expect(screen.getByRole("group", { name: "Gear" })).toBeInTheDocument();
+    expect(screen.getByText("Gear")).toBeInTheDocument();
+    expect(screen.queryByTestId("nav-section-divider")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(screen.queryByText("Gear")).toBeNull();
+    expect(screen.getAllByTestId("nav-section-divider")).toHaveLength(2);
+    expect(screen.getByRole("group", { name: "Gear" })).toBeInTheDocument();
   });
 
   it("dotLabel: no dot by default", () => {

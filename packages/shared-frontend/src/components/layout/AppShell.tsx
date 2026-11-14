@@ -164,12 +164,11 @@ export default function AppShell({
             </nav>
 
             {activeSections.map((section) => (
-              <div key={section.id} className="px-2 py-1">
-                {!collapsed && (
-                  <div
-                    className="text-xs font-medium text-muted-foreground px-3 py-1.5 uppercase tracking-wide"
-                    aria-label={section.title}
-                  >
+              <div key={section.id} role="group" aria-label={section.title} className="px-2 py-1">
+                {collapsed ? (
+                  <div className="mx-3 my-1 border-t" aria-hidden data-testid="nav-section-divider" />
+                ) : (
+                  <div className="text-xs font-medium text-muted-foreground px-3 py-1.5 uppercase tracking-wide">
                     {section.title}
                   </div>
                 )}

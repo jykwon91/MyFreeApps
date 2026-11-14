@@ -89,7 +89,7 @@ function wowNavItem(path: string, label: string, iconName: string, updates: Read
   };
 }
 
-/** "Overview" hub item shown at the top of the WoW Forever sidebar section. */
+/** "Overview" hub item shown at the top of the first WoW Forever sidebar group. */
 function wowOverviewItem(updates: ReadonlySet<string>): NavItem {
   return wowNavItem(WOW_HUB_PATH, "Overview", "LayoutDashboard", updates);
 }
@@ -98,15 +98,21 @@ function wowFeatureItem(f: GameFeature, updates: ReadonlySet<string>): NavItem {
   return wowNavItem(f.path, f.title, f.iconName, updates);
 }
 
-/** Full WoW nav section — displayed in the desktop sidebar on `/wow-forever*` routes. */
-function buildWowNavSection(updates: ReadonlySet<string>): NavSection {
-  const features = COMPANION_GAMES[WOW_FOREVER_SLUG].features;
-  return {
-    id: "wow-forever",
-    title: "WoW Forever",
+/**
+ * The WoW nav, one headed group per registry category (Overview leads the first) —
+ * displayed in the desktop sidebar on `/wow-forever*` routes.
+ */
+function buildWowNavSections(updates: ReadonlySet<string>): NavSection[] {
+  const { categories, features } = COMPANION_GAMES[WOW_FOREVER_SLUG];
+  return categories.map((category, i) => ({
+    id: `wow-forever-${category.id}`,
+    title: category.title,
     routePrefix: "/wow-forever",
-    items: [wowOverviewItem(updates), ...features.map((f) => wowFeatureItem(f, updates))],
-  };
+    items: [
+      ...(i === 0 ? [wowOverviewItem(updates)] : []),
+      ...features.filter((f) => f.category === category.id).map((f) => wowFeatureItem(f, updates)),
+    ],
+  }));
 }
 
 /**
@@ -174,7 +180,7 @@ export default function RootLayout() {
   // Update dots ("new since your last visit") on the WoW items; opening a page clears its dot.
   useRecordWowPageVisit(location.pathname);
   const wowUpdates = useUpdateDots();
-  const wowNavSection = useMemo(() => buildWowNavSection(wowUpdates), [wowUpdates]);
+  const wowNavSections = useMemo(() => buildWowNavSections(wowUpdates), [wowUpdates]);
   const wowMobileItems = useMemo(() => buildWowMobileItems(wowUpdates), [wowUpdates]);
 
   const isCompact = searchParams.get("compact") === "1";
@@ -219,7 +225,7 @@ export default function RootLayout() {
           logo={LOGO}
           logoIcon={LOGO_ICON}
           nav={nav}
-          navSections={[wowNavSection]}
+          navSections={wowNavSections}
           bottomNav={mobileBottomNav}
           collapsible
           headerActions={
@@ -264,7 +270,7 @@ export default function RootLayout() {
           logo={LOGO}
           logoIcon={LOGO_ICON}
           nav={nav}
-          navSections={[wowNavSection]}
+          navSections={wowNavSections}
           bottomNav={mobileBottomNav}
           collapsible
           headerActions={<ThemeToggle />}
@@ -284,7 +290,7 @@ export default function RootLayout() {
         logo={LOGO}
         logoIcon={LOGO_ICON}
         nav={nav}
-        navSections={[wowNavSection]}
+        navSections={wowNavSections}
         bottomNav={mobileBottomNav}
         collapsible
         user={user}
