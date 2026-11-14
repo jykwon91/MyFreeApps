@@ -17,6 +17,7 @@ import {
   useDeleteRecipeMutation,
 } from "@myrecipes/api-client/store/recipesApi";
 import { RECIPE_MANAGE_MESSAGES } from "@myrecipes/api-client/constants/recipeManage";
+import { COOK_LOG_MESSAGES } from "@myrecipes/api-client/constants/cookLog";
 import { COMPARE_VERSION_COUNT } from "@myrecipes/api-client/constants/versions";
 import { orderForCompare } from "@myrecipes/api-client/utils/orderForCompare";
 import { toggleCompareId } from "@myrecipes/api-client/utils/toggleCompareId";
@@ -156,7 +157,7 @@ export default function RecipeDetail() {
             >
               <span className="inline-flex items-center gap-1.5">
                 <UtensilsCrossed className="w-4 h-4" />
-                I made it
+                {COOK_LOG_MESSAGES.madeIt}
               </span>
             </Button>
             <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
@@ -202,7 +203,7 @@ export default function RecipeDetail() {
 
           {isOwner && (
             <section className="bg-card border rounded-lg p-6">
-              <h2 className="text-base font-medium mb-4">Cook log</h2>
+              <h2 className="text-base font-medium mb-4">{COOK_LOG_MESSAGES.historyTitle}</h2>
               <CookLogHistory
                 recipeId={recipeId}
                 cooks={cooksQuery.data ?? []}

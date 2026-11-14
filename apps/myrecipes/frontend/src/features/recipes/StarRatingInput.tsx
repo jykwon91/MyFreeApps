@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { COOK_LOG_MESSAGES as MESSAGES } from "@myrecipes/api-client/constants/cookLog";
 
 interface Props {
   /** Current selection 1-5, or null when unset. */
@@ -17,7 +18,7 @@ export default function StarRatingInput({ value, onChange, disabled }: Props) {
   const selected = value ?? 0;
 
   return (
-    <div className="flex items-center gap-1" role="radiogroup" aria-label="Rating">
+    <div className="flex items-center gap-1" role="radiogroup" aria-label={MESSAGES.ratingGroupLabel}>
       {Array.from({ length: MAX_STARS }).map((_, i) => {
         const starValue = i + 1;
         const isFilled = starValue <= selected;
@@ -29,7 +30,7 @@ export default function StarRatingInput({ value, onChange, disabled }: Props) {
             onClick={() => onChange(starValue)}
             role="radio"
             aria-checked={starValue === selected}
-            aria-label={`${starValue} star${starValue > 1 ? "s" : ""}`}
+            aria-label={MESSAGES.starLabel(starValue)}
             className="flex h-11 w-11 items-center justify-center rounded-md hover:bg-muted disabled:opacity-50"
           >
             <Star

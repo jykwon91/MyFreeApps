@@ -9,6 +9,7 @@ routes:
     not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   /login:
     screen: sign-in
+  # The owner's cook log and its "I made it" dialog (a sheet) are on the recipe screen, as on the website.
   /recipes/:id:
     screen: recipes/[id]
   # Owner only, opened from the recipe's "Tweak this recipe" button, as on the website.

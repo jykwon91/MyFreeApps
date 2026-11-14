@@ -4,6 +4,8 @@ import { ConfirmDialog, formatDate, showError, showSuccess } from "@platform/ui"
 import StarRating from "@/features/recipes/StarRating";
 import { useDeleteCookMutation } from "@myrecipes/api-client/store/recipesApi";
 import type { CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-log";
+import { COOK_LOG_MESSAGES as MESSAGES } from "@myrecipes/api-client/constants/cookLog";
+import { cooksNewestFirst } from "@myrecipes/api-client/utils/cooksNewestFirst";
 
 interface Props {
   recipeId: string;
@@ -25,27 +27,22 @@ export default function CookLogHistory({
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [deleteCook, { isLoading: isDeleting }] = useDeleteCookMutation();
 
-  const ordered = [...cooks].sort(
-    (a, b) => new Date(b.cooked_at).getTime() - new Date(a.cooked_at).getTime(),
-  );
+  const ordered = cooksNewestFirst(cooks);
 
   async function handleDelete() {
     if (!pendingDelete) return;
     try {
       await deleteCook({ recipeId, cookId: pendingDelete }).unwrap();
-      showSuccess("Cook log deleted.");
+      showSuccess(MESSAGES.deleted);
       setPendingDelete(null);
     } catch {
-      showError("Couldn't delete that cook log — please try again.");
+      showError(MESSAGES.couldntDelete);
     }
   }
 
   if (ordered.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground italic">
-        No cooks logged yet. Hit "I made it" after you cook this to start
-        tracking how each version turns out.
-      </p>
+      <p className="text-sm text-muted-foreground italic">{MESSAGES.empty}</p>
     );
   }
 
@@ -78,7 +75,7 @@ export default function CookLogHistory({
               <button
                 type="button"
                 onClick={() => setPendingDelete(cook.id)}
-                aria-label="Delete cook log"
+                aria-label={MESSAGES.deleteLabel}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-destructive"
               >
                 <Trash2 className="w-4 h-4" />
@@ -90,9 +87,9 @@ export default function CookLogHistory({
 
       <ConfirmDialog
         open={pendingDelete !== null}
-        title="Delete cook log?"
-        description="This removes this cook record. It won't change any recipe version."
-        confirmLabel="Delete"
+        title={MESSAGES.deleteTitle}
+        description={MESSAGES.deleteBody}
+        confirmLabel={MESSAGES.deleteConfirm}
         variant="destructive"
         isLoading={isDeleting}
         onConfirm={handleDelete}

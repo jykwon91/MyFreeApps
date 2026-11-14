@@ -3,6 +3,7 @@ import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/re
 import { useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import StartCookingButton from "../cook/StartCookingButton";
+import CookLogSection from "../cookLog/CookLogSection";
 import { buildCookPages } from "../../utils/buildCookPages";
 import { hasCookSteps } from "../../utils/hasCookSteps";
 import RecipeFacts from "./RecipeFacts";
@@ -46,6 +47,14 @@ export default function RecipeContent({ recipe }: { recipe: RecipeDetailResponse
           ) : null}
           <RecipeIngredients ingredients={version.ingredients} />
           <RecipeSteps steps={version.steps} />
+          {recipe.is_owner ? (
+            <CookLogSection
+              recipeId={recipe.id}
+              versionCount={recipe.version_count}
+              versionId={version.id}
+              versionNumber={version.version_number}
+            />
+          ) : null}
         </>
       ) : (
         <Text style={muted}>This recipe has no ingredients or steps yet.</Text>
