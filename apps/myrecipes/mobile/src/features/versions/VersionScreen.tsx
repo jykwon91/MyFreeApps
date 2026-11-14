@@ -1,4 +1,4 @@
-import { useGetRecipeQuery, useGetVersionQuery } from "@myrecipes/api-client/store/recipesApi";
+import { useGetRecipeQuery, useGetVersionQuery, useListVersionsQuery } from "@myrecipes/api-client/store/recipesApi";
 import { EmptyState, Toast, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { ScrollView, View } from "react-native";
@@ -24,6 +24,13 @@ export default function VersionScreen() {
   // For whether it's the latest and whether the owner can log a cook. Usually cached from the recipe.
   const recipe = useGetRecipeQuery(params.id).currentData;
   const isOwner = recipe?.is_owner ?? false;
+  // This version's timeline entry, usually cached from Version history: its owner-only cooks and best
+  // rating, and, before the version itself loads, whether it's v1. A cook logged here refreshes it.
+  const { summary } = useListVersionsQuery(params.id, {
+    selectFromResult: ({ currentData }) => ({ summary: currentData?.find((entry) => entry.id === params.vid) }),
+  });
+  // Only v1 has no version it was based on, so no What changed. Unknown until the list loads.
+  const isFirst = summary?.version_number === 1;
   const { dismissError, isErrorDismissed, refreshControl } = useRefresh(refetch, error);
 
   const hasFailed = useErrorSinceOpening(error, isError);
@@ -38,6 +45,7 @@ export default function VersionScreen() {
           isLatest={version.id === recipe?.latest_version?.id}
           isOwner={isOwner}
           recipeId={params.id}
+          summary={summary}
           version={version}
         />
       );
@@ -52,7 +60,7 @@ export default function VersionScreen() {
       );
     }
     // What changed, then the owner's I made it.
-    return <VersionSkeleton buttonCount={isOwner ? 2 : 1} />;
+    return <VersionSkeleton buttonCount={(isFirst ? 0 : 1) + (isOwner ? 1 : 0)} />;
   }
 
   return (

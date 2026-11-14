@@ -1,7 +1,7 @@
 import { COOK_LOG_MESSAGES as SHARED } from "@myrecipes/api-client/constants/cookLog";
 import type { CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-log";
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
-import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
+import type { VersionResponse, VersionSummary } from "@myrecipes/api-client/types/recipe/version";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { serve } from "@platform/mobile/test-support/fakeServer";
@@ -50,6 +50,20 @@ const V1 = version(1);
 const V2 = version(2);
 const V3 = version(3);
 
+/** The timeline entry Version history caches: the owner's cooks and best rating. */
+function summary(v: VersionResponse, cookCount: number | null, bestRating: number | null): VersionSummary {
+  return {
+    id: v.id,
+    version_number: v.version_number,
+    change_note: v.change_note,
+    created_at: v.created_at,
+    cook_count: cookCount,
+    best_rating: bestRating,
+  };
+}
+
+const TIMELINE = [summary(V1, 1, 3), summary(V2, 0, null), summary(V3, 0, null)];
+
 const SOUP: RecipeDetailResponse = {
   id: "r1",
   title: "Tomato soup",
@@ -94,6 +108,7 @@ function held() {
 async function show(routes: Parameters<typeof serve>[0] = {}, recipe: RecipeDetailResponse = SOUP) {
   sent = serve({
     "GET /recipes/r1": () => reply(200, recipe),
+    "GET /recipes/r1/versions": () => reply(200, TIMELINE),
     "GET /recipes/r1/versions/v1": () => reply(200, V1),
     "GET /recipes/r1/versions/v2": () => reply(200, V2),
     "GET /recipes/r1/versions/v3": () => reply(200, V3),
@@ -135,7 +150,8 @@ describe("a version shown in full", () => {
 
     expect(await screen.findByRole("header", { name: "v1" })).toBeTruthy();
     expect(screen.getByText("Original recipe")).toBeTruthy();
-    expect(screen.getByText(formatVersionDate(V1.created_at))).toBeTruthy();
+    const meta = await screen.findByText(`${formatVersionDate(V1.created_at)} · 1 cook · Best 3/5`);
+    expect(meta.props.accessibilityLabel).toBe(`${formatVersionDate(V1.created_at)}, 1 cook, best rating 3 out of 5`);
     expect(screen.getByLabelText("Servings: 4")).toBeTruthy();
     expect(screen.getByText("1 cans tomatoes")).toBeTruthy();
     expect(screen.getByLabelText("Step 1. Simmer 10 minutes.")).toBeTruthy();
@@ -176,7 +192,8 @@ describe("a version shown in full", () => {
 
   it("shows a placeholder shaped like the version while it loads", async () => {
     const load = held();
-    await show({ "GET /recipes/r1/versions/v1": load.route });
+    mockParams = { id: "r1", vid: "v2" };
+    await show({ "GET /recipes/r1/versions/v2": load.route });
 
     expect(screen.getByLabelText(MESSAGES.loading)).toBeTruthy();
     expect(screen.getAllByTestId("version-skeleton-ingredient", { includeHiddenElements: true })).toHaveLength(5);
@@ -184,9 +201,27 @@ describe("a version shown in full", () => {
     // What changed and the owner's I made it, once the recipe says who owns it.
     await waitFor(() => expect(screen.getAllByTestId("version-skeleton-button", { includeHiddenElements: true })).toHaveLength(2));
 
+    await load.answer(reply(200, V2));
+    expect(await screen.findByRole("header", { name: "v2" })).toBeTruthy();
+    expect(screen.queryByLabelText(MESSAGES.loading)).toBeNull();
+    expect(screen.getByRole("button", { name: MESSAGES.changes })).toBeTruthy();
+    expect(screen.getByRole("button", { name: SHARED.madeIt })).toBeTruthy();
+  });
+
+  it("holds no place for What changed while v1 loads, once the version list says it's v1", async () => {
+    const load = held();
+    const timeline = held();
+    await show({ "GET /recipes/r1/versions/v1": load.route, "GET /recipes/r1/versions": timeline.route });
+
+    // Until the list says which version this is, What changed keeps its place, as most versions have one.
+    await waitFor(() => expect(screen.getAllByTestId("version-skeleton-button", { includeHiddenElements: true })).toHaveLength(2));
+    await timeline.answer(reply(200, TIMELINE));
+    await waitFor(() => expect(screen.getAllByTestId("version-skeleton-button", { includeHiddenElements: true })).toHaveLength(1));
+
     await load.answer(reply(200, V1));
     expect(await screen.findByRole("header", { name: "v1" })).toBeTruthy();
-    expect(screen.queryByLabelText(MESSAGES.loading)).toBeNull();
+    expect(screen.queryByRole("button", { name: MESSAGES.changes })).toBeNull();
+    expect(screen.getByRole("button", { name: SHARED.madeIt })).toBeTruthy();
   });
 
   it("says when the version can't load, and tries again", async () => {
@@ -219,12 +254,16 @@ describe("a version shown in full", () => {
     expect(screen.getByLabelText("Step 1. Simmer 10 minutes.")).toBeTruthy();
   });
 
-  it("doesn't offer I made it on someone else's recipe", async () => {
-    await show({}, { ...SOUP, is_owner: false });
+  it("doesn't offer I made it on someone else's recipe, or show its cooks", async () => {
+    await show(
+      { "GET /recipes/r1/versions": () => reply(200, [summary(V1, null, null), summary(V2, null, null), summary(V3, null, null)]) },
+      { ...SOUP, is_owner: false },
+    );
     await screen.findByRole("header", { name: "v1" });
     await waitFor(() => expect(sent.some(({ route }) => route === "GET /recipes/r1")).toBe(true));
 
     expect(screen.queryByRole("button", { name: SHARED.madeIt })).toBeNull();
+    expect(screen.getByTestId("version-meta").props.children).toBe(formatVersionDate(V1.created_at));
   });
 });
 
@@ -245,6 +284,25 @@ describe("logging a cook of an older version", () => {
     expect(cookPosts()[0].body).toEqual({ rating: 4, outcome_notes: "Better than v3" });
     expect(await screen.findByRole("alert", { name: SHARED.logged })).toBeTruthy();
     expect(screen.queryByRole("header", { name: SHARED.logTitle })).toBeNull();
+  });
+
+  it("refreshes the version's cooks and best rating after logging one, as the website's timeline does", async () => {
+    let logged = false;
+    await show({
+      "GET /recipes/r1/versions": () => reply(200, logged ? [summary(V1, 2, 4), ...TIMELINE.slice(1)] : TIMELINE),
+      "POST /recipes/r1/versions/v1/cooks": () => {
+        logged = true;
+        return reply(201, COOKED);
+      },
+    });
+    expect(await screen.findByText(`${formatVersionDate(V1.created_at)} · 1 cook · Best 3/5`)).toBeTruthy();
+
+    await fireEvent.press(await screen.findByRole("button", { name: SHARED.madeIt }));
+    await fireEvent.press(screen.getByRole("radio", { name: SHARED.starLabel(4) }));
+    await fireEvent.press(saveButton());
+
+    expect(await screen.findByText(`${formatVersionDate(V1.created_at)} · 2 cooks · Best 4/5`)).toBeTruthy();
+    expect(sent.filter(({ route }) => route === "GET /recipes/r1/versions")).toHaveLength(2);
   });
 
   it("shows the save in flight on its button and won't send it twice", async () => {
