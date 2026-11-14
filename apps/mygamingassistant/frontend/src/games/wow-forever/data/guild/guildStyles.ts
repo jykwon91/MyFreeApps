@@ -27,6 +27,18 @@ export const PODIUM_CARD_OTHER = "sm:min-h-[172px]";
 export const PODIUM_RENDER = "h-20 w-14 shrink-0 object-contain object-bottom drop-shadow-lg sm:h-40 sm:w-full";
 /** The same space when Blizzard has no picture: a muted silhouette. */
 export const PODIUM_RENDER_MISSING = "flex h-20 w-14 shrink-0 items-end justify-center text-muted-foreground sm:h-40 sm:w-full";
+/** 2nd and 3rd place's render: a size down from the champion's, so 1st still stands tallest. */
+export const PODIUM_RENDER_RUNNER_UP = "h-16 w-12 shrink-0 object-contain object-bottom drop-shadow sm:h-28 sm:w-full";
+/** Their silhouette when Blizzard has no picture. */
+export const PODIUM_RENDER_RUNNER_UP_MISSING = "flex h-16 w-12 shrink-0 items-end justify-center text-muted-foreground sm:h-28 sm:w-full";
+/** The silhouette icon inside each missing-picture box. */
+export const PODIUM_RENDER_ICON = "h-8 w-8 sm:h-14 sm:w-14";
+export const PODIUM_RENDER_RUNNER_UP_ICON = "h-7 w-7 sm:h-10 sm:w-10";
+/** The classes a podium render takes, by whether it's the champion's (bigger) or a runner-up's. */
+export const PODIUM_RENDER_CLASSES = {
+  champion: { image: PODIUM_RENDER, missing: PODIUM_RENDER_MISSING, icon: PODIUM_RENDER_ICON },
+  runnerUp: { image: PODIUM_RENDER_RUNNER_UP, missing: PODIUM_RENDER_RUNNER_UP_MISSING, icon: PODIUM_RENDER_RUNNER_UP_ICON },
+} as const;
 /** Where each podium card stands on wide screens: the first in the middle, the second left, the third right. */
 export const PODIUM_SLOTS = ["sm:col-start-2", "sm:col-start-1", "sm:col-start-3"] as const;
 /** A board category chip, and the one picked. */

@@ -281,6 +281,11 @@ test("leaderboards look like a game's: a podium with 1st in the middle, medals, 
   expect(second!.x).toBeLessThan(first!.x);
   expect(first!.x).toBeLessThan(third!.x);
   expect(first!.height).toBeGreaterThan(second!.height);
+  // All three stand in their gear (a silhouette here: no backend), 1st's picture the biggest.
+  const picture = (i: number) => cards.nth(i).locator('[data-testid="guild-podium-render"], [data-testid="guild-podium-render-missing"]');
+  for (const i of [0, 1, 2]) await expect(picture(i)).toHaveCount(1);
+  const [firstPic, secondPic] = await Promise.all([picture(0).boundingBox(), picture(1).boundingBox()]);
+  expect(firstPic!.height).toBeGreaterThan(secondPic!.height);
   // Each card's bar sits inside it, under the number.
   for (const [i, value] of ["112", "40", "40"].entries()) {
     const card = (await cards.nth(i).boundingBox())!;
