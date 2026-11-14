@@ -5,6 +5,8 @@
  *   - Every feature in the registry has a unique path and a non-empty iconName
  *   - The iconName has an icon in FEATURE_ICONS (the left nav + hub tiles)
  *   - Every feature path matches a registered WoW route
+ *   - Every feature sits in a declared category; each category is non-empty, has an icon,
+ *     and its features are listed together (the registry order is the nav order)
  *   - The registry is the single source of truth (hub tile count === section item count)
  */
 import { describe, expect, it } from "vitest";
@@ -50,6 +52,24 @@ describe("WoW Forever registry — nav section contract", () => {
     const paths = features.map((f) => f.path);
     const unique = new Set(paths);
     expect(unique.size).toBe(paths.length);
+  });
+
+  it("every feature names a declared category, and every category has pages and an icon", () => {
+    const { categories } = COMPANION_GAMES[WOW_FOREVER_SLUG];
+    const ids = categories.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const f of features) expect(ids, `"${f.title}" has unknown category "${f.category}"`).toContain(f.category);
+    for (const c of categories) {
+      expect(c.title, `title missing on category "${c.id}"`).toBeTruthy();
+      expect(KNOWN_ICON_NAMES.has(c.iconName), `category "${c.id}" icon "${c.iconName}" not in FEATURE_ICONS`).toBe(true);
+      expect(features.some((f) => f.category === c.id), `category "${c.id}" has no pages`).toBe(true);
+    }
+  });
+
+  it("lists each category's features together, in category order", () => {
+    const { categories } = COMPANION_GAMES[WOW_FOREVER_SLUG];
+    const order = features.map((f) => categories.findIndex((c) => c.id === f.category));
+    expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
   it("all features start with /wow-forever/", () => {

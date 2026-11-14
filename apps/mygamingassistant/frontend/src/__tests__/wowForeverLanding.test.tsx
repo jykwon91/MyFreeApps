@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+import { COMPANION_GAMES, WOW_FOREVER_SLUG } from "@/games/registry";
 import { WHATS_NEW } from "@/games/wow-forever/data/whatsNew";
 import { WHATS_NEW_HUB_COUNT } from "@/games/wow-forever/data/whatsNewSettings";
 
@@ -54,6 +55,20 @@ describe("WoW Forever hub", () => {
     expect(dots).toHaveLength(1);
     expect(dots[0].closest("a")).toHaveAttribute("href", "/wow-forever/gear");
     expect(screen.getByRole("link", { name: /Best gear\s*new since your last visit/ })).toBeInTheDocument();
+  });
+
+  it("groups the tiles under the same headed categories as the left nav", () => {
+    renderHub();
+    const { categories, features } = COMPANION_GAMES[WOW_FOREVER_SLUG];
+    const groups = screen.getAllByTestId("wow-feature-group");
+    expect(groups).toHaveLength(categories.length);
+    categories.forEach((category, i) => {
+      const group = groups[i]!;
+      expect(within(group).getByRole("heading", { level: 2 })).toHaveTextContent(category.title);
+      const expected = features.filter((f) => f.category === category.id).map((f) => f.path);
+      const hrefs = [...group.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+      expect(hrefs).toEqual(expected);
+    });
   });
 
   it("gives every tile its left-nav icon", () => {

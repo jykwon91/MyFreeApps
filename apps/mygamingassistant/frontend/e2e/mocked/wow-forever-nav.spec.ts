@@ -4,9 +4,9 @@
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-nav
  *
  * Covers:
- *   - On /wow-forever/macros the sidebar shows the WoW section with Macros active
+ *   - On /wow-forever/macros the sidebar shows the WoW groups in order, Macros active under Class
  *   - Clicking another section item navigates to that page
- *   - Collapse toggle: sidebar shrinks to icon rail, labels hidden
+ *   - Collapse toggle: sidebar shrinks to icon rail, labels hidden, group headings become dividers
  *   - Reload after collapse: sidebar stays collapsed (localStorage persisted)
  *   - Expand: sidebar restores to full width
  *   - 375px: WoW group appears in mobile bottom nav, no overflow, ≥44px targets
@@ -46,8 +46,23 @@ test.describe("WoW Forever sidebar nav", () => {
   test("WoW section renders on /wow-forever/macros with Macros active", async ({ page }) => {
     await page.goto("/wow-forever/macros");
     const sb = sidebar(page);
-    // Section header
-    await expect(sb.getByText("WoW Forever")).toBeVisible();
+    // The groups, headed, in order (the first carries Overview)
+    await expect(sb.getByTestId("nav-section")).toHaveCount(7);
+    expect(await sb.getByRole("heading").allTextContents()).toEqual([
+      "Start here",
+      "World",
+      "Class",
+      "Gear",
+      "Gold & crafting",
+      "You",
+      "Realm",
+    ]);
+    const section = (title: string) => sb.getByTestId("nav-section").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
+    await expect(section("Start here").getByRole("link", { name: "Overview" })).toBeVisible();
+    await expect(section("Class").getByRole("link", { name: "Macros" })).toBeVisible();
+    await expect(section("Gold & crafting").getByRole("link", { name: "Recipes" })).toBeVisible();
+    // A heading, not a label: the "Class" section can't clash with a page's Class picker.
+    await expect(sb.getByLabel("Class", { exact: true })).toHaveCount(0);
     // All section items present
     await expect(sb.getByRole("link", { name: "Overview" })).toBeVisible();
     await expect(sb.getByRole("link", { name: "World Map" })).toBeVisible();
@@ -60,7 +75,7 @@ test.describe("WoW Forever sidebar nav", () => {
     await page.goto("/");
     const sb = sidebar(page);
     // Section should be absent when route is not /wow-forever*
-    await expect(sb.getByText("WoW Forever")).not.toBeVisible();
+    await expect(sb.getByRole("heading", { name: "Start here" })).toHaveCount(0);
   });
 
   test("clicking World Map in the section navigates to the map page", async ({ page }) => {
@@ -74,13 +89,16 @@ test.describe("WoW Forever sidebar nav", () => {
     const sb = sidebar(page);
     // Before collapse: "World Map" text label is visible
     await expect(sb.getByText("World Map")).toBeVisible();
-    // Before collapse: section header visible
-    await expect(sb.getByText("WoW Forever")).toBeVisible();
+    // Before collapse: group heading visible, no dividers
+    await expect(sb.getByText("Start here")).toBeVisible();
+    await expect(sb.getByTestId("nav-section-divider")).toHaveCount(0);
     // Click collapse
     await sb.getByRole("button", { name: "Collapse sidebar" }).click();
     // After collapse: text nodes are removed from DOM (icon-only rail)
     await expect(sb.getByText("World Map")).not.toBeVisible();
-    await expect(sb.getByText("WoW Forever")).not.toBeVisible();
+    await expect(sb.getByText("Start here")).not.toBeVisible();
+    // Each group is set off by a divider on the rail
+    await expect(sb.getByTestId("nav-section-divider")).toHaveCount(7);
     // The link is still accessible via aria-label for screen readers / keyboard nav
     await expect(sb.getByRole("link", { name: "World Map" })).toHaveAttribute("aria-label", "World Map");
   });
@@ -102,7 +120,7 @@ test.describe("WoW Forever sidebar nav", () => {
     await sidebar(page).getByRole("button", { name: "Expand sidebar" }).click();
     // Labels are visible again
     await expect(sidebar(page).getByRole("link", { name: "World Map" })).toBeVisible();
-    await expect(sidebar(page).getByText("WoW Forever")).toBeVisible();
+    await expect(sidebar(page).getByText("Start here")).toBeVisible();
   });
 });
 

@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-14",
+    "title": "The menu, in groups",
+    "summary": "The left menu is grouped now: Start here, World, Class, Gear, Gold & crafting, You and Realm. The Overview page lists every page under the same headings, so on a phone it's the quick way to find one.",
+    "to": "/wow-forever"
+  },
+  {
+    "date": "2026-11-14",
     "title": "The Arena's top 3, in their gear",
     "summary": "2nd and 3rd place in the guild's Arena now stand in their gear too, beside the champion. The champion's picture stays the biggest.",
     "to": "/wow-forever/topdeadcenter"

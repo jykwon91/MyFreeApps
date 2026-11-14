@@ -154,14 +154,13 @@ export default function GuestShell({
             </nav>
 
             {activeSections.map((section) => (
-              <div key={section.id} className="px-2 py-1">
-                {!collapsed && (
-                  <div
-                    className="text-xs font-medium text-muted-foreground px-3 py-1.5 uppercase tracking-wide"
-                    aria-label={section.title}
-                  >
+              <div key={section.id} className="px-2 py-1" data-testid="nav-section">
+                {collapsed ? (
+                  <div className="mx-3 my-1 border-t" aria-hidden data-testid="nav-section-divider" />
+                ) : (
+                  <h2 className="text-xs font-medium text-muted-foreground px-3 py-1.5 uppercase tracking-wide">
                     {section.title}
-                  </div>
+                  </h2>
                 )}
                 <div className="space-y-0.5">
                   {section.items.map((item) => (

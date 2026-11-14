@@ -394,6 +394,16 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   marks every current entry seen, so new players see no dots. Tiles use the left nav's icons
   (`data/featureIcons.ts`, `WowFeatureIcon`). Tests: `wowWhatsNew.test.ts`,
   `wowForeverLanding.test.tsx`, `e2e/mocked/wow-forever-whats-new.spec.ts`.
+- **Menu groups**: every registry feature has a `category`, one of the entry's ordered
+  `categories` (`FeatureCategory`: id, title, icon — Start here, World, Class, Gear,
+  Gold & crafting, You, Realm). The registry lists features grouped, in category order, and that
+  order is the nav order. `RootLayout.buildWowNavSections` emits one `NavSection` per category
+  (Overview leads the first); the shared shells render each section under an `<h2>` heading (a
+  divider on the collapsed rail), never an `aria-label`: a section named "Class" would clash with
+  every page's Class picker (`getByLabel("Class")`). The hub groups its tiles the same way
+  (`WowFeatureGroup`, icon heading), the phone's way to every page beyond the 5 bottom-nav items.
+  A new page needs a `category`. Tests: `wowNavSection.test.ts` (category contract + order),
+  `wowForeverLanding.test.tsx`, `e2e/mocked/wow-forever-nav.spec.ts`.
 
 #### Best gear (`/wow-forever/gear`)
 

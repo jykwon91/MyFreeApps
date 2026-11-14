@@ -7,6 +7,7 @@
  *   - navigation items render
  *   - clicking Sign in routes to /login with the current location captured
  *   - hideSignIn suppresses the Sign in CTAs
+ *   - each nav section is headed (not labelled, so it can't clash with a form field); on the collapsed rail its heading becomes a divider
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -134,5 +135,28 @@ describe("GuestShell", () => {
     );
     expect(screen.getAllByTestId("nav-item-dot")).toHaveLength(1);
     expect(screen.getByRole("link", { name: "News (new)" })).toBeInTheDocument();
+  });
+
+  it("heads each section, never labels it, and swaps its heading for a divider on the collapsed rail", () => {
+    renderWithRouter(
+      <GuestShell
+        logo={<div>logo</div>}
+        nav={SAMPLE_NAV}
+        collapsible
+        navSections={[
+          { id: "one", title: "World", items: [{ path: "/quests", label: "Quests", icon: <span /> }] },
+          { id: "two", title: "Gear", items: [{ path: "/gear", label: "Best gear", icon: <span /> }] },
+        ]}
+      >
+        <div>content</div>
+      </GuestShell>,
+    );
+    expect(screen.getByRole("heading", { name: "Gear" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Gear")).toBeNull();
+    expect(screen.getByText("World")).toBeInTheDocument();
+    expect(screen.queryByTestId("nav-section-divider")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(screen.queryByText("World")).toBeNull();
+    expect(screen.getAllByTestId("nav-section-divider")).toHaveLength(2);
   });
 });
