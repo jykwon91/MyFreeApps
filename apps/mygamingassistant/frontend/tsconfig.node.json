@@ -25,6 +25,8 @@
     "src/constants/linkPreview.ts",
     "src/games/registry.ts",
     "src/games/wow-forever/data/guild/guildConfig.ts",
+    "src/types/featureCategory.ts",
+    "src/types/featureCategoryId.ts",
     "src/types/game.ts",
     "../../../packages/shared-frontend/src/vite/linkPreview/**/*.ts"
   ]
