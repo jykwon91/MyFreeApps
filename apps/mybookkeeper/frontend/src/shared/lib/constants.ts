@@ -195,8 +195,6 @@ export const UTILITY_SUB_CATEGORIES = ["electricity", "water", "gas", "internet"
 /** Bills with no single utility type. Only shown when there are some, so the cards always add up to the total. */
 export const UTILITY_UNTYPED_BUCKET = "other";
 
-export const SUPPORTED_EXTENSIONS = new Set([".pdf", ".jpg", ".jpeg", ".png", ".webp", ".doc", ".docx", ".xls", ".xlsx", ".csv", ".zip"]);
-
 export const POLLING_OPTIONS = { pollingInterval: 3000 } as const;
 
 export const EMPTY_QUEUE: readonly EmailQueueItem[] = [];

@@ -3,12 +3,12 @@ import { ORGANIZATION_HEADER } from "@platform/core/constants/organizationHeader
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { waitFor } from "@testing-library/react-native";
-import type { AxiosAdapter } from "axios";
+import type { AxiosAdapter, AxiosProgressEvent } from "axios";
 import { UPLOAD_TIMEOUT_MS } from "../src/constants/capture";
 import { drainUploadQueue } from "../src/features/capture/drainUploadQueue";
 import { addToQueue, clearUploadQueue, pendingUploads } from "../src/features/capture/uploadQueueFiles";
 import { uploadForm } from "../src/features/capture/uploadForm";
-import { uploadStatusDismissed } from "../src/features/capture/uploadsSlice";
+import { uploadSentSettled, uploadStatusDismissed } from "../src/features/capture/uploadsSlice";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
@@ -49,7 +49,18 @@ function serverAnswering(...answers: Answer[]): { sent: FormData[] } {
   return record;
 }
 
+type Part = { fieldName: string; name: string; type: string; uri: string };
+
+function partsOf(form: FormData): Part[] {
+  return (form as unknown as { getParts: () => Part[] }).getParts();
+}
+
+function progressEvent(loaded: number, total: number): AxiosProgressEvent {
+  return { loaded, total, bytes: loaded, lengthComputable: true };
+}
+
 const drain = () => store.dispatch(drainUploadQueue());
+const rows = () => store.getState().uploads.files.map(({ name, status, percent }) => ({ name, status, percent }));
 const waiting = () => pendingUploads("w1").map((upload) => upload.name);
 const uploads = () => store.getState().uploads;
 
@@ -118,6 +129,14 @@ describe("upload queue", () => {
     expect(waiting()).toEqual([]);
     expect(uploads().rejections[0]).toContain("Unsupported file type");
     expect(uploads().phase).toBe("sent");
+  });
+
+  it("names the size limit when the proxy refuses a file as too big, since its 413 says nothing", async () => {
+    addFile("w1", "scans.zip");
+    serverAnswering(413);
+    await drain();
+    expect(waiting()).toEqual([]);
+    expect(uploads().rejections).toEqual(["scans.zip is over 29 MB, which is more than I can take. Try a smaller file, or split it up."]);
   });
 
   it("doesn't say it's reading anything when every file was refused", async () => {
@@ -286,5 +305,123 @@ describe("upload queue", () => {
     addFile("w1", "a.jpg");
     clearUploadQueue();
     expect(fakeFiles()).toEqual([]);
+  });
+
+  it.each([
+    ["lease.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+    ["ledger.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+    ["bank.csv", "text/csv"],
+    ["receipts.zip", "application/zip"],
+    ["old.doc", "application/msword"],
+    ["old.xls", "application/vnd.ms-excel"],
+  ])("sends %s with its own name and type", async (name, type) => {
+    addFile("w1", name);
+    const server = serverAnswering();
+    await drain();
+    expect(partsOf(server.sent[0])[0]).toMatchObject({ fieldName: "file", name, type });
+    expect(waiting()).toEqual([]);
+  });
+
+  it("shows each file waiting, then sending with how far it's got, then sent", async () => {
+    const now = jest.spyOn(Date, "now");
+    now.mockReturnValueOnce(9).mockReturnValueOnce(10);
+    addFile("w1", "lease.docx");
+    addFile("w1", "bank.csv");
+    now.mockRestore();
+    const seen: ReturnType<typeof rows>[] = [];
+    const adapter: AxiosAdapter = (config) => {
+      seen.push(rows());
+      config.onUploadProgress?.(progressEvent(40, 100));
+      seen.push(rows());
+      return Promise.resolve({ data: { document_id: "d" }, status: 202, statusText: "", headers: {}, config });
+    };
+    api.defaults.adapter = adapter;
+
+    await drain();
+
+    expect(seen[0]).toEqual([
+      { name: "lease.docx", status: "uploading", percent: null },
+      { name: "bank.csv", status: "queued", percent: null },
+    ]);
+    expect(seen[1][0]).toEqual({ name: "lease.docx", status: "uploading", percent: 40 });
+    expect(seen[3]).toEqual([
+      { name: "lease.docx", status: "done", percent: null },
+      { name: "bank.csv", status: "uploading", percent: 40 },
+    ]);
+    expect(rows()).toEqual([
+      { name: "lease.docx", status: "done", percent: null },
+      { name: "bank.csv", status: "done", percent: null },
+    ]);
+    expect(uploads().phase).toBe("sent");
+  });
+
+  it("says nothing about progress when the size isn't known", async () => {
+    addFile("w1", "receipts.zip");
+    const percents: (number | null)[] = [];
+    const adapter: AxiosAdapter = (config) => {
+      config.onUploadProgress?.({ loaded: 10, bytes: 10, lengthComputable: false });
+      percents.push(store.getState().uploads.files[0].percent);
+      return Promise.resolve({ data: { document_id: "d" }, status: 202, statusText: "", headers: {}, config });
+    };
+    api.defaults.adapter = adapter;
+    await drain();
+    expect(percents).toEqual([null]);
+  });
+
+  it("clears the sent files once the message has been up long enough", async () => {
+    addFile("w1", "ledger.xlsx");
+    serverAnswering();
+    await drain();
+    store.dispatch(uploadSentSettled());
+    expect(rows()).toEqual([]);
+    expect(uploads().phase).toBe("idle");
+  });
+
+  it("marks a refused file as failed and keeps saying so until it's dismissed", async () => {
+    addFile("w1", "receipts.zip");
+    serverAnswering(415);
+    await drain();
+    expect(rows()).toEqual([{ name: "receipts.zip", status: "failed", percent: null }]);
+    store.dispatch(uploadStatusDismissed());
+    expect(rows()).toEqual([]);
+  });
+
+  it("marks a file the server failed on, then sends it again on the next try", async () => {
+    addFile("w1", "lease.docx");
+    serverAnswering(500);
+    await drain();
+    expect(rows()).toEqual([{ name: "lease.docx", status: "failed", percent: null }]);
+    await drain();
+    expect(rows()).toEqual([{ name: "lease.docx", status: "done", percent: null }]);
+  });
+
+  it("marks the file being sent as failed when the connection drops", async () => {
+    addFile("w1", "bank.csv");
+    serverAnswering("offline");
+    await drain();
+    expect(rows()).toEqual([{ name: "bank.csv", status: "failed", percent: null }]);
+    expect(waiting()).toEqual(["bank.csv"]);
+  });
+
+  it("lists nothing as on its way at the daily limit: the files wait for tomorrow", async () => {
+    addFile("w1", "a.docx");
+    addFile("w1", "b.docx");
+    serverAnswering(429);
+    await drain();
+    expect(rows()).toEqual([]);
+    expect(waiting()).toHaveLength(2);
+  });
+
+  it("shows only the chosen workspace's files once another is chosen mid-send", async () => {
+    addFile("w1", "theirs.xlsx");
+    addFile("w2", "mine.csv");
+    const adapter: AxiosAdapter = (config) => {
+      store.dispatch(workspaceChosen("w2"));
+      return Promise.resolve({ data: { document_id: "d" }, status: 202, statusText: "", headers: {}, config });
+    };
+    api.defaults.adapter = adapter;
+    await drain();
+    await waitFor(() => expect(pendingUploads("w2")).toEqual([]));
+    await waitFor(() => expect(rows()).toEqual([{ name: "mine.csv", status: "done", percent: null }]));
   });
 });

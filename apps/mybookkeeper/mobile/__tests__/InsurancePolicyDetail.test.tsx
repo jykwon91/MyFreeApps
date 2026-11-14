@@ -158,7 +158,7 @@ describe("policy documents", () => {
   });
 
   it.each([
-    [413, "That file's too big. I can take up to 10MB."],
+    [413, "That file's too big. I can take up to 25 MB."],
     [415, "I can't take that kind of file. A PDF, Word document or photo works."],
     [404, "That policy isn't there any more."],
     [403, "You have view-only access, so I can't change documents."],

@@ -1,7 +1,7 @@
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
-import { MAX_FILES_AT_ONCE } from "../../constants/capture";
-import type { PickedPdf } from "../../types/PickedPdf";
+import { DOCUMENT_PICKER_TYPES, MAX_FILES_AT_ONCE } from "../../constants/capture";
+import type { PickedDocument } from "../../types/PickedDocument";
 import type { PickedPhoto } from "../../types/PickedPhoto";
 
 export async function pickPhotos(): Promise<PickedPhoto[]> {
@@ -14,11 +14,14 @@ export async function pickPhotos(): Promise<PickedPhoto[]> {
   return result.canceled ? [] : result.assets;
 }
 
-export async function pickPdfs(): Promise<PickedPdf[]> {
+export async function pickDocuments(): Promise<PickedDocument[]> {
   const result = await DocumentPicker.getDocumentAsync({
-    type: "application/pdf",
+    type: [...DOCUMENT_PICKER_TYPES],
     multiple: true,
     copyToCacheDirectory: true,
   });
-  return result.canceled ? [] : result.assets.slice(0, MAX_FILES_AT_ONCE);
+  if (result.canceled) return [];
+  return result.assets
+    .slice(0, MAX_FILES_AT_ONCE)
+    .map(({ uri, name, mimeType, size }) => ({ uri, name, mimeType, size }));
 }

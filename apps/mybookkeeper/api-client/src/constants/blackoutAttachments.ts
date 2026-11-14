@@ -1,5 +1,9 @@
-/** Client-side pre-check for a booking attachment — matches the backend cap. */
-export const BLACKOUT_ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
+import { MIB } from "./byteUnits";
+
+/** Client-side pre-check for a booking attachment — matches the backend cap, ``max_blackout_attachment_size_bytes``. */
+export const BLACKOUT_ATTACHMENT_MAX_BYTES = 25 * MIB;
+
+export const BLACKOUT_ATTACHMENT_MAX_LABEL = `${BLACKOUT_ATTACHMENT_MAX_BYTES / MIB} MB`;
 
 export const BLACKOUT_ATTACHMENT_MIME_TYPES: readonly string[] = [
   "image/png",

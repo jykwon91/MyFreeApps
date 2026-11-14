@@ -1,3 +1,6 @@
+import { MIB } from "./byteUnits";
+import { REQUEST_BODY_MAX_BYTES, REQUEST_OVERHEAD_BYTES } from "./requestBodyLimit";
+
 /** Mirrors ``ALLOWED_TEMPLATE_MIME_TYPES`` in ``lease_template_service``: the server refuses anything else. */
 export const LEASE_TEMPLATE_MIME_TYPES = [
   "text/markdown",
@@ -12,19 +15,11 @@ export const LEASE_TEMPLATE_EXTENSIONS = [".md", ".txt", ".docx"] as const;
 
 export const LEASE_TEMPLATE_EXTENSIONS_LABEL = LEASE_TEMPLATE_EXTENSIONS.join(", ");
 
-const MEGABYTE = 1024 * 1024;
-
 /** ``settings.max_blackout_attachment_size_bytes`` (``core/config.py``), which ``lease_template_service`` applies to each file. */
-export const LEASE_TEMPLATE_FILE_MAX_BYTES = 25 * MEGABYTE;
+export const LEASE_TEMPLATE_FILE_MAX_BYTES = 25 * MIB;
 
-/** Caddy's ``request_body max_size`` (``docker/Caddyfile.docker``): a bigger request is refused before the app sees it, with no message. */
-export const LEASE_TEMPLATE_REQUEST_MAX_BYTES = 30 * MEGABYTE;
-
-/** Room under that ceiling for the multipart boundaries and the name and description. */
-export const LEASE_TEMPLATE_REQUEST_OVERHEAD_BYTES = MEGABYTE;
-
-/** What the files together may come to for the whole request to get through. */
-export const LEASE_TEMPLATE_FILES_TOTAL_MAX_BYTES = LEASE_TEMPLATE_REQUEST_MAX_BYTES - LEASE_TEMPLATE_REQUEST_OVERHEAD_BYTES;
+/** What the files together may come to for the whole request to get through, with room for the name and description. */
+export const LEASE_TEMPLATE_FILES_TOTAL_MAX_BYTES = REQUEST_BODY_MAX_BYTES - REQUEST_OVERHEAD_BYTES;
 
 export const LEASE_TEMPLATE_FILE_MAX_LABEL = "25 MB";
 export const LEASE_TEMPLATE_FILES_TOTAL_MAX_LABEL = "29 MB";

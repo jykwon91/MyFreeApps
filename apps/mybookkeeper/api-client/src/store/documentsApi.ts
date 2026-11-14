@@ -22,11 +22,12 @@ export const documentsApi = baseApi.enhanceEndpoints({
           : [{ type: "Document", id: "LIST" }],
     }),
     uploadDocument: builder.mutation<UploadResponse, UploadDocumentArgs>({
-      query: ({ form, workspaceId }) => ({
+      query: ({ form, workspaceId, onUploadProgress }) => ({
         url: "/documents/upload",
         method: "POST",
         data: form,
         headers: workspaceId ? { [ORGANIZATION_HEADER]: workspaceId } : undefined,
+        onUploadProgress,
       }),
       invalidatesTags: ["Document", "Summary", "Transaction"],
     }),

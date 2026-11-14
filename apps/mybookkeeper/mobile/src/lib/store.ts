@@ -5,7 +5,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
 import { stopAi } from "../features/aiPermission/aiPermission";
 import { clearUploadQueue } from "../features/capture/uploadQueueFiles";
-import uploads, { uploadStatusDismissed } from "../features/capture/uploadsSlice";
+import uploads, { uploadsReset } from "../features/capture/uploadsSlice";
 import { clearDocumentFiles } from "../features/documents/openDocumentFile";
 import { clearReplyDrafts } from "../features/inquiries/replyDrafts";
 import { clearReplyRequestIds } from "../features/inquiries/replyRequestIds";
@@ -40,7 +40,7 @@ refetchOnForeground(store.dispatch);
 onAccountLeft(session, () => {
   store.dispatch(workspaceChosen(null));
   store.dispatch(workspaceLost(null));
-  store.dispatch(uploadStatusDismissed());
+  store.dispatch(uploadsReset());
   // Each has to run whatever the others do: these are someone's records. Nothing may
   // escape either, or the session's next listener, which clears the cache, never runs.
   for (const clear of [clearDocumentFiles, clearDataExportFiles, clearUploadQueue, clearReplyDrafts, clearReplyRequestIds, clearHeldFiles, clearSavedWorkspace, stopAi]) {

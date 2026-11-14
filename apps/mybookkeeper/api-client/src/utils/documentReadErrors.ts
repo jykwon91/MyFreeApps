@@ -1,3 +1,5 @@
+import { DOCUMENT_UPLOAD_MAX_LABEL } from "../constants/documentUpload";
+
 /**
  * What to tell the operator when reading a form out of a document fails.
  *
@@ -11,13 +13,10 @@
  * the same four ways, and the advice does not depend on which one it was.
  */
 
-/** Largest upload the backend accepts, mirrored from ``max_upload_size_bytes``. */
-export const MAX_UPLOAD_MB = 10;
-
 export function readDocumentErrorMessage(status: number | undefined): string {
   switch (status) {
     case 413:
-      return `That file's too big for me — I can take up to ${MAX_UPLOAD_MB}MB. Try a smaller scan, or a photo at lower resolution.`;
+      return `That file's too big for me — I can take up to ${DOCUMENT_UPLOAD_MAX_LABEL}. Try a smaller scan, or a photo at lower resolution.`;
     case 415:
       return "I can't read that kind of file. A PDF or a photo (JPG, PNG, or WEBP) works best.";
     case 429:

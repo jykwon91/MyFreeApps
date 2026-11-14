@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Upload } from "lucide-react";
-import { MAX_UPLOAD_MB } from "@mybookkeeper/api-client/utils/documentReadErrors";
+import { DOCUMENT_UPLOAD_MAX_LABEL } from "@mybookkeeper/api-client/constants/documentUpload";
 
 /** Formats the reader will accept. Matches the backend's content sniff. */
 const ACCEPTED_MIME = [
@@ -62,7 +62,7 @@ export default function DocumentFileDropzone({
         Add a photo or PDF
       </button>
       <p className="text-xs text-muted-foreground/70">
-        or drop one here · PDF, JPG, PNG, WEBP · up to {MAX_UPLOAD_MB}MB
+        or drop one here · PDF, JPG, PNG, WEBP · up to {DOCUMENT_UPLOAD_MAX_LABEL}
       </p>
       <input
         ref={inputRef}

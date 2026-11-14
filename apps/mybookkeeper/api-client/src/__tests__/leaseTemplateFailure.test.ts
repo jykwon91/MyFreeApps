@@ -43,7 +43,9 @@ describe("leaseTemplateFailure", () => {
 });
 
 const file = (name: string, size?: number) => ({ name, size });
-const MB = 1024 * 1024;
+/** The server counts its per-file limit in MiB; Caddy counts the request ceiling in decimal MB. */
+const MIB = 1024 * 1024;
+const MB = 1000 * 1000;
 
 describe("leaseTemplateUploadProblems", () => {
   it("wants a name and at least one file", () => {
@@ -63,13 +65,18 @@ describe("leaseTemplateUploadProblems", () => {
   });
 
   it("refuses a file over the server's 25 MB, and lets exactly 25 MB through", () => {
-    expect(leaseTemplateUploadProblems("T", [file("a.docx", 25 * MB)])).toEqual({});
-    expect(leaseTemplateUploadProblems("T", [file("a.docx", 25 * MB + 1)])).toEqual({ files: "file_too_big" });
+    expect(leaseTemplateUploadProblems("T", [file("a.docx", 25 * MIB)])).toEqual({});
+    expect(leaseTemplateUploadProblems("T", [file("a.docx", 25 * MIB + 1)])).toEqual({ files: "file_too_big" });
   });
 
   it("refuses files that fit one by one but not through the proxy together", () => {
     expect(leaseTemplateUploadProblems("T", [file("a.docx", 20 * MB), file("b.docx", 20 * MB)])).toEqual({ files: "files_too_big_together" });
     expect(leaseTemplateUploadProblems("T", [file("a.docx", 20 * MB), file("b.docx", 9 * MB)])).toEqual({});
+    expect(leaseTemplateUploadProblems("T", [file("a.docx", 20 * MB), file("b.docx", 9 * MB + 1)])).toEqual({ files: "files_too_big_together" });
+  });
+
+  it("counts the proxy ceiling in decimal MB, so 29 MiB together is turned away before Caddy's bodyless 413", () => {
+    expect(leaseTemplateUploadProblems("T", [file("a.docx", 20 * MIB), file("b.docx", 9 * MIB)])).toEqual({ files: "files_too_big_together" });
   });
 
   it("leaves a file whose size isn't known to the server", () => {

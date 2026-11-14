@@ -7,6 +7,7 @@ import { AppState, Linking, Text } from "react-native";
 import { Provider } from "react-redux";
 import { WEB_BASE_URL } from "../src/constants/api";
 import { MEMBERS_MESSAGES } from "../src/constants/members";
+import { uploadFilesQueued, uploadPhaseChanged, uploadRejected } from "../src/features/capture/uploadsSlice";
 import { readSavedWorkspace, saveWorkspace } from "../src/features/workspace/savedWorkspace";
 import WorkspaceLostToast from "../src/features/workspace/WorkspaceLostToast";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
@@ -127,6 +128,22 @@ describe("WorkspaceGate", () => {
     const [, listener] = addListener.mock.calls[addListener.mock.calls.length - 1];
     await act(async () => listener("active"));
     await waitFor(() => expect(store.getState().workspace.activeId).toBe("w2"));
+  });
+
+  it("clears the upload list when it moves to another workspace, since none of it is that one's", async () => {
+    const addListener = jest.spyOn(AppState, "addEventListener");
+    api.defaults.adapter = respondWith(200, [WORKSPACE, { ...WORKSPACE, id: "w2" }]);
+    await renderGate();
+    await waitFor(() => expect(store.getState().workspace.activeId).toBe("w1"));
+    store.dispatch(uploadPhaseChanged("sending"));
+    store.dispatch(uploadRejected("notes.txt was turned away"));
+    store.dispatch(uploadFilesQueued([{ uri: "q:/a", name: "a.pdf", mimeType: "application/pdf" }]));
+
+    api.defaults.adapter = respondWith(200, [{ ...WORKSPACE, id: "w2" }]);
+    const [, listener] = addListener.mock.calls[addListener.mock.calls.length - 1];
+    await act(async () => listener("active"));
+    await waitFor(() => expect(store.getState().workspace.activeId).toBe("w2"));
+    expect(store.getState().uploads).toEqual({ phase: "idle", rejections: [], files: [] });
   });
 
   it("moves off a workspace this account can't see", async () => {

@@ -1,6 +1,11 @@
 const TYPES_BY_EXTENSION: Readonly<Record<string, string>> = {
   pdf: "application/pdf",
+  doc: "application/msword",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  csv: "text/csv",
+  zip: "application/zip",
   md: "text/markdown",
   txt: "text/plain",
   jpg: "image/jpeg",
