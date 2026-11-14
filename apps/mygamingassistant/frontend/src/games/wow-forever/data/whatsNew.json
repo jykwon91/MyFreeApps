@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-14",
+    "title": "The Arena's top 3, in their gear",
+    "summary": "2nd and 3rd place in the guild's Arena now stand in their gear too, beside the champion. The champion's picture stays the biggest.",
+    "to": "/wow-forever/topdeadcenter"
+  },
+  {
+    "date": "2026-11-14",
     "title": "Every recipe in one search",
     "summary": "A new Recipes page searches every profession's recipes at once: type a recipe, the item it makes or an ingredient, or pick a profession or what it makes. Each recipe shows its ingredients and where to learn it: trainer, vendor, drop or quest.",
     "to": "/wow-forever/recipes"

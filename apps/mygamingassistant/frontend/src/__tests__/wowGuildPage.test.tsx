@@ -39,6 +39,7 @@ import type { GuildMemberBaseline } from "@/games/wow-forever/types/guild/guildM
 import type { GuildRecipeSearch } from "@/games/wow-forever/types/guild/guildRecipeSearch";
 import type { GuildRecipeSearchArgs } from "@/games/wow-forever/types/guild/guildRecipeSearchArgs";
 import type { GuildResponse } from "@/games/wow-forever/types/guild/guildResponse";
+import { PODIUM_RENDER_CLASSES } from "@/games/wow-forever/data/guild/guildStyles";
 
 const mockQuery = vi.fn();
 const mockRecipes = vi.fn();
@@ -517,26 +518,37 @@ describe("guild page", () => {
     expect(screen.getByTestId("location")).toHaveTextContent("?tab=home&class=Warlock&board=dungeons");
   });
 
-  it("shows the Arena champion in their gear, only on the champion's card, and drops the picture when Blizzard has none", () => {
+  it("shows the top 3 in their gear, each on their own card, and drops a picture when Blizzard has none", () => {
     mockQuery.mockReturnValue(query({ data: GUILD }));
     renderAt("/wow-forever/topdeadcenter?tab=home");
-    const renders = screen.getAllByTestId("guild-champion-render");
-    expect(renders).toHaveLength(1);
+    const board = screen.getByRole("list", { name: "Level leaderboard" });
+    const renders = within(board).getAllByTestId("guild-podium-render");
+    expect(renders).toHaveLength(3);
+    expect(renders.map((img) => img.closest("li")?.textContent)).toEqual([
+      expect.stringContaining("Big Sue"),
+      expect.stringContaining("Jason Kwon"),
+      expect.stringContaining("Tiny John"),
+    ]);
     expect(renders[0]).toHaveAttribute("src", expect.stringMatching(/\/characters\/big-sue\/render\.png$/));
-    expect(renders[0].closest("li")).toHaveTextContent("Big Sue");
-    fireEvent.error(renders[0]);
-    expect(screen.queryByTestId("guild-champion-render")).not.toBeInTheDocument();
-    expect(within(screen.getByTestId("guild-champion-render-missing").closest("li") as HTMLElement).getByText("Big Sue")).toBeInTheDocument();
+    // The champion's picture is the bigger one.
+    expect(renders[0]).toHaveClass(PODIUM_RENDER_CLASSES.champion.image);
+    expect(renders[1]).toHaveClass(PODIUM_RENDER_CLASSES.runnerUp.image);
+    fireEvent.error(renders[1]!);
+    expect(within(board).getAllByTestId("guild-podium-render")).toHaveLength(2);
+    expect(within(within(board).getByTestId("guild-podium-render-missing").closest("li") as HTMLElement).getByText("Jason Kwon")).toBeInTheDocument();
   });
 
-  it("shows every member tied for 1st in their gear", () => {
+  it("gives every member tied for 1st the champion's picture", () => {
     const tied = [member({ slug: "a-a", name: "A", surname: "A", level: 60 }), member({ slug: "b-b", name: "B", surname: "B", level: 60 }), member({ slug: "c-c", name: "C", surname: "C", level: 40 })];
     mockQuery.mockReturnValue(query({ data: { ...GUILD, members: tied } }));
     renderAt("/wow-forever/topdeadcenter?tab=home");
-    expect(screen.getAllByTestId("guild-champion-render").map((img) => img.getAttribute("src"))).toEqual([
+    const renders = within(screen.getByRole("list", { name: "Level leaderboard" })).getAllByTestId("guild-podium-render");
+    expect(renders.map((img) => img.getAttribute("src"))).toEqual([
       expect.stringMatching(/a-a/),
       expect.stringMatching(/b-b/),
+      expect.stringMatching(/c-c/),
     ]);
+    expect(renders.map((img) => img.className === PODIUM_RENDER_CLASSES.champion.image)).toEqual([true, true, false]);
   });
 
   it("marks the viewer's character and pins it under the top 10 when it ranks lower", () => {
