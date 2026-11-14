@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useTheme } from "../theme/useTheme";
 
 // Header and scene colours for a native Stack, from the same tokens the tab bar uses, so a
-// pushed screen follows the system light/dark scheme instead of the native light default.
+// pushed screen follows the chosen light/dark theme instead of the native light default.
 export function useStackScreenOptions(): NativeStackNavigationOptions {
   const { colors } = useTheme();
   return useMemo(

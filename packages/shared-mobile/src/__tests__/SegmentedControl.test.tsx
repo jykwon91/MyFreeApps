@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import SegmentedControl from "../components/SegmentedControl";
+import { SEGMENT_ROLE } from "../constants/segmentRole";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 
 const SEGMENTS = [
@@ -40,5 +41,18 @@ describe("SegmentedControl", () => {
     expect(tab.props.accessibilityState).toMatchObject({ disabled: true });
     fireEvent.press(tab);
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("reads as radios that pick a setting when asked to", async () => {
+    await render(
+      <SegmentedControl accessibilityLabel="Pick" onChange={jest.fn()} role={SEGMENT_ROLE.radio} segments={SEGMENTS} value="two" />,
+    );
+    // The group stays not-accessible itself, so a screen reader still reaches each radio inside it.
+    expect(screen.getByLabelText("Pick").props.accessibilityRole).toBe("radiogroup");
+    expect(screen.getByRole("radio", { name: "Two", checked: true })).toBeTruthy();
+    // Checked only, as the apps' other radios: a screen reader would say "selected" on top of "checked".
+    expect(screen.getByRole("radio", { name: "Two" }).props.accessibilityState).toEqual({ checked: true, disabled: false });
+    expect(screen.getByRole("radio", { name: "One", checked: false })).toBeTruthy();
+    expect(screen.queryByRole("tab")).toBeNull();
   });
 });
