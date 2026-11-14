@@ -5,6 +5,7 @@ import GuildLeaderboards from "@/games/wow-forever/components/guild/GuildLeaderb
 import GuildQuests from "@/games/wow-forever/components/guild/GuildQuests";
 import GuildRecipeSearch from "@/games/wow-forever/components/guild/GuildRecipeSearch";
 import GuildRollCall from "@/games/wow-forever/components/guild/GuildRollCall";
+import GuildShoutout from "@/games/wow-forever/components/guild/GuildShoutout";
 import GuildTitlesStrip from "@/games/wow-forever/components/guild/GuildTitlesStrip";
 import TabList from "@/games/wow-forever/components/shared/TabList";
 import { GUILD_TAB_LABELS, GUILD_TABS, GUILD_TABS_LABEL } from "@/games/wow-forever/data/guild/guildTabs";
@@ -21,9 +22,9 @@ interface GuildPageSectionsProps {
 }
 
 /**
- * A guild with members, in tabs kept in the URL: Home (the Arena, then this week's heroes, the viewer's
- * quests and hot races), the Hall of Titles, the recipe search, and the roster (member list, titles by each name).
- * Only the open tab renders.
+ * A guild with members, in tabs kept in the URL: Home (a member's shout-out card, the Arena, then this
+ * week's heroes, the viewer's quests and hot races), the Hall of Titles, the recipe search, and the roster
+ * (member list, titles by each name). Only the open tab renders.
  */
 export default function GuildPageSections({ guild, tab, onTab }: GuildPageSectionsProps) {
   const titles = useMemo(() => awardGuildTitles(guild.members), [guild.members]);
@@ -43,6 +44,7 @@ export default function GuildPageSections({ guild, tab, onTab }: GuildPageSectio
       <div role="tabpanel" id={tabPanelId(idPrefix)} aria-labelledby={tabId(idPrefix, tab)} tabIndex={0} className="space-y-4 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
         {tab === "home" && (
           <>
+            <GuildShoutout members={guild.members} />
             <GuildLeaderboards slug={guild.slug} members={guild.members} gainsWindowDays={guild.gains_window_days} />
             <GuildHeroes members={guild.members} gainsWindowDays={guild.gains_window_days} />
             <GuildQuests members={guild.members} titles={titles} me={me} />

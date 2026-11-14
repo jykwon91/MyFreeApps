@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-11-14",
+    "title": "The cutest guild member",
+    "summary": "The guild's Home tab opens with a shout-out card for Cutethug Xo, wearing the Cutest guild member badge.",
+    "to": "/wow-forever/topdeadcenter"
+  },
+  {
     "date": "2026-11-13",
     "title": "topdeadcenter links show the guild",
     "summary": "Paste the guild page's link in Discord and the picture is now the guild itself: its banner colours, its name, and the top three for honorable kills and dungeon clears, not the generic WoW Forever card.",

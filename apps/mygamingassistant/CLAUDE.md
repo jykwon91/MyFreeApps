@@ -1287,6 +1287,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `showBar` (off for fewest-first and faction standings). The picker is
   category chips (`aria-pressed`; a chip picks its group's first board) plus
   "Rank members by" listing only that group.
+- Guild shout-out card (`GuildShoutout`, top of the Home tab): one member, named by slug in
+  `data/guild/guildShoutout.ts` (`GUILD_SHOUTOUT`, with the badge text), shown with a heart badge.
+  Renders nothing when that slug isn't on the roster. Change the member or badge there.
 - Guild titles (`GuildTitlesStrip` above the leaderboards, `GuildMemberTitles`
   by each name in the member table/cards): frontend-only, `awardGuildTitles`
   ranks every board with `rankBoard` and gives its `GUILD_TITLES` entry (board
