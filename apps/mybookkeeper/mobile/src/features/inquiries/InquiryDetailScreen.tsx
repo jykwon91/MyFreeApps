@@ -1,5 +1,4 @@
 import { useGetInquiryByIdQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { INQUIRY_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
 import { Banner, Chip, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
@@ -7,6 +6,8 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { INQUIRY_DETAIL_SHEET } from "../../constants/inquiries";
+import type { InquiryDetailSheet } from "../../types/InquiryDetailSheet";
 import type { InquiryMoreAction } from "../../types/InquiryMoreAction";
 import TransactionFact from "../transactions/TransactionFact";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
@@ -16,6 +17,7 @@ import { moreOptions, stageOptions } from "./inquiryActionOptions";
 import InquiryContact from "./InquiryContact";
 import { inquirerName, receivedAgo, stageLabel, stayDates } from "./inquiryDisplay";
 import InquiryExtras from "./InquiryExtras";
+import InquiryListingRow from "./InquiryListingRow";
 import InquiryMessages from "./InquiryMessages";
 import InquiryNotes from "./InquiryNotes";
 import InquirySection from "./InquirySection";
@@ -27,9 +29,8 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
   const insets = useSafeAreaInsets();
   const canWrite = useCanWrite();
   const { currentData: inquiry, error, isFetching, refetch } = useGetInquiryByIdQuery(id);
-  const { data: listing } = useGetListingByIdQuery(inquiry?.listing_id ?? "", { skip: !inquiry?.listing_id });
   const actions = useInquiryActions(id);
-  const [openSheet, setOpenSheet] = useState<"stage" | "more" | null>(null);
+  const [openSheet, setOpenSheet] = useState<InquiryDetailSheet | null>(null);
   const { refresh, refreshControl } = useRefresh(refetch, error);
   const hasDraft = useHasReplyDraft(id);
   // iOS drops an Alert raised while a sheet is still closing, so More's choice waits for it to go.
@@ -112,7 +113,7 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
         <InquirySection title="Stay">
           <TransactionFact label="Dates" value={stayDates(inquiry.desired_start_date, inquiry.desired_end_date)} />
           {inquiry.inquirer_employer?.trim() ? <TransactionFact label="Employer" value={inquiry.inquirer_employer.trim()} /> : null}
-          {listing ? <TransactionFact label="Listing" value={listing.title} /> : null}
+          <InquiryListingRow listingId={inquiry.listing_id} />
         </InquirySection>
 
         <InquirySection title="Contact">
@@ -154,20 +155,20 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
             disabled={actions.isBusy}
             isLoading={actions.isUpdating}
             loadingText="Moving…"
-            onPress={() => setOpenSheet("stage")}
+            onPress={() => setOpenSheet(INQUIRY_DETAIL_SHEET.STAGE)}
             style={{ flex: 2 }}
             variant="secondary"
           >
             {stageLabel(inquiry.stage)}
           </LoadingButton>
-          <LoadingButton disabled={actions.isBusy} onPress={() => setOpenSheet("more")} style={{ flex: 1 }} variant="secondary">
+          <LoadingButton disabled={actions.isBusy} onPress={() => setOpenSheet(INQUIRY_DETAIL_SHEET.MORE)} style={{ flex: 1 }} variant="secondary">
             More
           </LoadingButton>
         </View>
       ) : null}
 
       <OptionSheet
-        isOpen={openSheet === "stage"}
+        isOpen={openSheet === INQUIRY_DETAIL_SHEET.STAGE}
         onClose={() => setOpenSheet(null)}
         onSelect={(stage) => {
           setOpenSheet(null);
@@ -178,7 +179,7 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
         value={inquiry.stage}
       />
       <OptionSheet
-        isOpen={openSheet === "more"}
+        isOpen={openSheet === INQUIRY_DETAIL_SHEET.MORE}
         onClose={() => setOpenSheet(null)}
         onClosed={runChosenAction}
         onSelect={(action) => {

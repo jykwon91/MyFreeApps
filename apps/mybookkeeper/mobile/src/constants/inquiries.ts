@@ -37,3 +37,15 @@ export const INQUIRY_EMPTY_WORDS: Record<InquiryView, { heading: string; body: s
 export const MAX_NEW_INQUIRY_BADGE = 99;
 
 export const INQUIRY_REPLY_VIEW_ONLY_BODY = "Ask the workspace owner if you need to reply.";
+
+/** Phone-only wording for the listing row, beside the shared labels. */
+export const INQUIRY_LISTING_MESSAGES = {
+  loading: "Loading the listing",
+  unavailable: "This listing is no longer available.",
+} as const;
+
+/** A linked listing that answers with one of these was deleted or isn't yours to open. */
+export const INQUIRY_LISTING_GONE_STATUSES: readonly number[] = [403, 404];
+
+/** The sheets the inquiry detail screen can open. */
+export const INQUIRY_DETAIL_SHEET = { STAGE: "stage", MORE: "more" } as const;

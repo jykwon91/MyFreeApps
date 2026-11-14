@@ -58,6 +58,8 @@ export interface FakeInquiryServer {
   inquiries: InquiryResponse[];
   assessments: InquirySpamAssessment[];
   listingTitle: string | null;
+  /** While set, the listing's answer waits for it. */
+  holdListing: Promise<void> | null;
   role: string;
   offline: boolean;
   /** The status every inquiry write fails with, while set. */
@@ -85,6 +87,7 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
     inquiries,
     assessments: [],
     listingTitle: null,
+    holdListing: null,
     role: "owner",
     offline: false,
     failWritesWith: null,
@@ -132,7 +135,8 @@ export function startInquiryServer(inquiries: InquiryResponse[]): FakeInquirySer
       return respond({ items, total: matches.length, has_more: offset + limit < matches.length });
     }
     if (config.url?.startsWith("/listings/")) {
-      return server.listingTitle ? respond({ id: "l1", title: server.listingTitle }) : respond({ detail: "nope" }, 404);
+      const answer = () => (server.listingTitle ? respond({ id: "l1", title: server.listingTitle }) : respond({ detail: "nope" }, 404));
+      return server.holdListing ? server.holdListing.then(answer) : answer();
     }
     const [, , id, action] = (config.url ?? "").split("/");
     const inquiry = server.inquiries.find((row) => row.id === id);
