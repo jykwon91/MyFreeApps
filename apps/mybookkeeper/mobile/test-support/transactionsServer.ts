@@ -6,10 +6,12 @@ import type { SummaryResponse } from "@mybookkeeper/api-client/types/summary/sum
 import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
 import type { ImportResult } from "@mybookkeeper/api-client/types/transaction/ImportResult";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
+import type { TransactionListParams } from "@mybookkeeper/api-client/types/transaction/TransactionListParams";
 import type { UtilityPlanRateComparison } from "@mybookkeeper/api-client/types/utility/utility-plan-rate-comparison";
 import type { UtilityPlanRenewalAlert } from "@mybookkeeper/api-client/types/utility/utility-plan-renewal-alert";
 import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
+import { inListOrder } from "./transactionListOrder";
 
 export function aTransaction(overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -251,9 +253,10 @@ export function startTransactionServer(transactions: Transaction[], properties: 
           (!params.status || row.status === params.status) &&
           (!params.start_date || row.transaction_date >= String(params.start_date)) &&
           (!params.end_date || row.transaction_date <= String(params.end_date)) &&
-          (!params.vendor || (row.vendor ?? "").toLowerCase().includes(String(params.vendor).toLowerCase())),
+          (!params.vendor || (row.vendor ?? "").toLowerCase().includes(String(params.vendor).toLowerCase())) &&
+          (params.tax_relevant === undefined || Boolean(row.tax_relevant) === params.tax_relevant),
       );
-      return respond(matches.slice(offset, offset + Number(params.limit ?? 1000)));
+      return respond(inListOrder(matches, config.params as TransactionListParams | undefined).slice(offset, offset + Number(params.limit ?? 1000)));
     }
     const id = config.url?.split("/")[2];
     const index = server.transactions.findIndex((row) => row.id === id);

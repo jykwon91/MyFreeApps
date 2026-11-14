@@ -1,4 +1,4 @@
-import type { DocumentSortDirection } from "./DocumentSortDirection";
+import type { SortDirection } from "../sort/SortDirection";
 import type { DocumentSortField } from "./DocumentSortField";
 
 /** How a list of documents is narrowed and ordered. An empty choice list means no narrowing on that column. */
@@ -8,5 +8,5 @@ export interface DocumentListView {
   types: readonly string[];
   sources: readonly string[];
   sortField: DocumentSortField;
-  sortDirection: DocumentSortDirection;
+  sortDirection: SortDirection;
 }

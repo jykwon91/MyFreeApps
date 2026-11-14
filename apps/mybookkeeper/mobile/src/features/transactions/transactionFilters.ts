@@ -1,4 +1,8 @@
+import { TAX_RELEVANT_OPTIONS } from "@mybookkeeper/api-client/constants/taxRelevantOptions";
+import { TRANSACTION_SORT_FIELDS } from "@mybookkeeper/api-client/constants/transactionSort";
 import type { TransactionListParams } from "@mybookkeeper/api-client/types/transaction/TransactionListParams";
+import { taxRelevantParam } from "@mybookkeeper/api-client/utils/taxRelevantParam";
+import { SORT_DIRECTIONS } from "../../constants/sortSheet";
 import { DAY_PATTERN, MONTH_PATTERN, NO_FILTERS, TRANSACTION_PERIODS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import { monthBounds } from "../../lib/localDate";
 import type { MoneyParams } from "../../types/MoneyParams";
@@ -33,6 +37,11 @@ export function periodRange(period: TransactionPeriod, today: Date): { start_dat
   }
 }
 
+/** Whether the order differs from newest first, the order the server keeps unless told otherwise. */
+export function isSorted(filters: TransactionFilters): boolean {
+  return filters.sortBy !== NO_FILTERS.sortBy || filters.sortDir !== NO_FILTERS.sortDir;
+}
+
 export function toListParams(filters: TransactionFilters, today: Date): TransactionListParams {
   const params: TransactionListParams = {};
   if (filters.view === "review") {
@@ -45,9 +54,14 @@ export function toListParams(filters: TransactionFilters, today: Date): Transact
       params.end_date = filters.endDate;
     }
     if (filters.approvedOnly) params.status = "approved";
+    if (isSorted(filters)) {
+      params.sort_by = filters.sortBy;
+      params.sort_dir = filters.sortDir;
+    }
   }
   if (filters.type) params.transaction_type = filters.type;
   if (filters.category) params.category = filters.category;
+  if (filters.taxRelevant) params.tax_relevant = taxRelevantParam(filters.taxRelevant);
   if (filters.propertyId === UNASSIGNED_PROPERTY) params.unassigned = true;
   else if (filters.propertyId) params.property_id = filters.propertyId;
   const term = filters.vendor.trim();
@@ -55,8 +69,14 @@ export function toListParams(filters: TransactionFilters, today: Date): Transact
   return params;
 }
 
+/** Everything back to its default, but the view stays, and so does the order on the review queue, where it can't be picked and so can't be put back. */
+export function clearedFilters(filters: TransactionFilters): TransactionFilters {
+  const order = filters.view === "review" ? { sortBy: filters.sortBy, sortDir: filters.sortDir } : {};
+  return { ...NO_FILTERS, view: filters.view, ...order };
+}
+
 export function activeFilterCount(filters: TransactionFilters): number {
-  return [filters.view !== "review" && (filters.period !== "all" || filters.month !== null), filters.view !== "review" && filters.approvedOnly, filters.type, filters.propertyId, filters.category].filter(Boolean).length;
+  return [filters.view !== "review" && (filters.period !== "all" || filters.month !== null), filters.view !== "review" && filters.approvedOnly, filters.type, filters.propertyId, filters.category, filters.taxRelevant].filter(Boolean).length;
 }
 
 export function filtersFromParams(params: Partial<MoneyParams>): TransactionFilters {
@@ -74,6 +94,9 @@ export function filtersFromParams(params: Partial<MoneyParams>): TransactionFilt
     category: params.category || null,
     vendor: params.vendor ?? "",
     approvedOnly: params.status === "approved",
+    taxRelevant: TAX_RELEVANT_OPTIONS.find((option) => option.value === params.tax)?.value ?? null,
+    sortBy: TRANSACTION_SORT_FIELDS.find((option) => option.value === params.sort)?.value ?? NO_FILTERS.sortBy,
+    sortDir: SORT_DIRECTIONS.find((option) => option.value === params.order)?.value ?? NO_FILTERS.sortDir,
   };
 }
 
@@ -89,6 +112,9 @@ export function filtersToParams(filters: TransactionFilters): Omit<MoneyParams, 
     category: filters.category ?? "",
     vendor: filters.vendor,
     status: filters.approvedOnly ? "approved" : "",
+    tax: filters.taxRelevant ?? "",
+    sort: isSorted(filters) ? filters.sortBy : "",
+    order: isSorted(filters) ? filters.sortDir : "",
   };
 }
 
@@ -98,6 +124,7 @@ export function reviewLink(id: string, filters: TransactionFilters): string {
   if (filters.type) query.set("type", filters.type);
   if (filters.propertyId) query.set("property", filters.propertyId);
   if (filters.category) query.set("category", filters.category);
+  if (filters.taxRelevant) query.set("tax", filters.taxRelevant);
   if (filters.vendor.trim()) query.set("vendor", filters.vendor.trim());
   return `/transactions/${id}?${query.toString()}`;
 }

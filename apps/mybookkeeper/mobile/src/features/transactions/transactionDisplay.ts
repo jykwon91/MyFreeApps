@@ -1,7 +1,14 @@
+import { TRANSACTION_SORT_FIELDS } from "@mybookkeeper/api-client/constants/transactionSort";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
+import type { SortDirection } from "@mybookkeeper/api-client/types/sort/SortDirection";
+import type { TaxRelevantChoice } from "@mybookkeeper/api-client/types/transaction/TaxRelevantChoice";
+import type { TransactionSortField } from "@mybookkeeper/api-client/types/transaction/TransactionSortField";
+import { taxRelevantParam } from "@mybookkeeper/api-client/utils/taxRelevantParam";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionStatus } from "@mybookkeeper/api-client/types/transaction/TransactionStatus";
 import { formatCurrency } from "@platform/core/utils/currency";
+import { SORT_DIRECTIONS } from "../../constants/sortSheet";
+import { TAX_FILTER } from "../../constants/transactionFilters";
 import { fullDateLabel } from "../../lib/localDate";
 import { formatTag } from "@platform/core/utils/tag";
 
@@ -119,4 +126,15 @@ export function rowAccessibilityLabel(transaction: Transaction, propertyName: st
   ]
     .filter(Boolean)
     .join(", ");
+}
+
+export function taxFilterLabel(choice: TaxRelevantChoice): string {
+  return taxRelevantParam(choice) ? TAX_FILTER.included : TAX_FILTER.leftOut;
+}
+
+/** "Amount, ascending": how a list ordered other than newest first says so. */
+export function sortLabel(field: TransactionSortField, direction: SortDirection): string {
+  const fieldName = TRANSACTION_SORT_FIELDS.find((option) => option.value === field)?.label ?? field;
+  const directionName = SORT_DIRECTIONS.find((option) => option.value === direction)?.label ?? direction;
+  return `${fieldName}, ${directionName.toLowerCase()}`;
 }

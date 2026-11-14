@@ -1,3 +1,4 @@
+import { DEFAULT_TRANSACTION_SORT_DIRECTION, DEFAULT_TRANSACTION_SORT_FIELD } from "@mybookkeeper/api-client/constants/transactionSort";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
 import type { TransactionFilters } from "../types/TransactionFilters";
 import type { TransactionPeriod } from "../types/TransactionPeriod";
@@ -21,7 +22,17 @@ export const NO_FILTERS: TransactionFilters = {
   category: null,
   vendor: "",
   approvedOnly: false,
+  taxRelevant: null,
+  sortBy: DEFAULT_TRANSACTION_SORT_FIELD,
+  sortDir: DEFAULT_TRANSACTION_SORT_DIRECTION,
 };
+
+export const TAX_FILTER = {
+  title: "In your tax report",
+  either: "Either",
+  included: "In tax report",
+  leftOut: "Not in tax report",
+} as const;
 
 export const TRANSACTION_VIEWS: readonly { value: TransactionView; label: string }[] = [
   { value: "all", label: "All" },

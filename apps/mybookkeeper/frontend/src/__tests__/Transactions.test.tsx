@@ -246,6 +246,18 @@ describe("Transactions", () => {
     expect(screen.getAllByText("Tenant Rent").length).toBeGreaterThan(0);
   });
 
+  it("filters the Tax column to the rows left out of the tax report", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Transactions />);
+
+    await user.click(screen.getByLabelText("Filter tax_relevant"));
+    expect(screen.getByRole("checkbox", { name: "Yes" })).toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: "No" }));
+
+    expect(screen.queryAllByText("Home Depot")).toHaveLength(0);
+    expect(screen.queryAllByText("Tenant Rent")).toHaveLength(0);
+  });
+
   it("renders filter bar with select elements", () => {
     renderWithProviders(<Transactions />);
 

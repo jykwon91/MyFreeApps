@@ -8,17 +8,17 @@ import { useEffect, useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { BANK_IMPORT_MESSAGES as IMPORT_MESSAGES } from "../../constants/bankImport";
 import { TRANSACTION_EXPORT_FORMATS, TRANSACTION_EXPORT_MESSAGES as EXPORT_MESSAGES } from "../../constants/transactionExport";
-import { NO_FILTERS, TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
+import { TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import type { TransactionFilters } from "../../types/TransactionFilters";
 import { monthName } from "../../lib/localDate";
 import { useRowSelection } from "../../lib/useRowSelection";
 import { useToday } from "../../lib/useToday";
 import { useCanWrite } from "../workspace/useCanWrite";
-import { categoryLabel, customRangeLabel, propertyLabel } from "./transactionDisplay";
+import { categoryLabel, customRangeLabel, propertyLabel, sortLabel, taxFilterLabel } from "./transactionDisplay";
 import TransactionSelectionBar from "./TransactionSelectionBar";
 import { isBulkApprovable } from "./bulkApprovable";
 import TransactionFilterSheet from "./TransactionFilterSheet";
-import { activeFilterCount, reviewLink, toListParams } from "./transactionFilters";
+import { activeFilterCount, clearedFilters, isSorted, reviewLink, toListParams } from "./transactionFilters";
 import TransactionRow from "./TransactionRow";
 import { useBulkApprove } from "./useBulkApprove";
 import { useBulkDeleteTransactions } from "./useBulkDeleteTransactions";
@@ -90,6 +90,8 @@ export default function TransactionsScreen({
             ? TRANSACTION_PERIODS.find((option) => option.value === filters.period)?.label
             : null,
     filters.approvedOnly && filters.view !== "review" ? "Approved" : null,
+    filters.taxRelevant ? taxFilterLabel(filters.taxRelevant) : null,
+    isSorted(filters) && filters.view !== "review" ? sortLabel(filters.sortBy, filters.sortDir) : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -121,7 +123,7 @@ export default function TransactionsScreen({
 
   function clearNarrowing(): void {
     clearSearch();
-    onFiltersChange({ ...NO_FILTERS, view: filters.view });
+    onFiltersChange(clearedFilters(filters));
   }
 
   if (isLoading) return <TransactionsSkeleton />;

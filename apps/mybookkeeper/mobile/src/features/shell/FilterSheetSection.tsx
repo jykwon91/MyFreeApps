@@ -2,7 +2,7 @@ import { useTheme } from "@platform/mobile";
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 
-export default function DocumentFilterSection({ title, children }: { title: string; children: ReactNode }) {
+export default function FilterSheetSection({ title, children }: { title: string; children: ReactNode }) {
   const { colors, spacing, fontSize } = useTheme();
   return (
     <View>

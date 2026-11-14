@@ -10,6 +10,7 @@ export default function TransactionRoute() {
     property?: string;
     category?: string;
     vendor?: string;
+    tax?: string;
   }>();
   return (
     <>

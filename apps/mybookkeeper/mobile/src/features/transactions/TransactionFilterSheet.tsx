@@ -1,13 +1,18 @@
+import { TAX_RELEVANT_OPTIONS } from "@mybookkeeper/api-client/constants/taxRelevantOptions";
 import { INCOME_CATEGORIES, EXPENSE_CATEGORY_LIST } from "@mybookkeeper/api-client/constants/transactionCategories";
+import { TRANSACTION_SORT_FIELDS } from "@mybookkeeper/api-client/constants/transactionSort";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import { LoadingButton, MIN_TOUCH_TARGET, OptionRow, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
-import { TRANSACTION_PERIODS, TRANSACTION_TYPES, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
+import { TAX_FILTER, TRANSACTION_PERIODS, TRANSACTION_TYPES, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import { isoFromDate, monthName } from "../../lib/localDate";
 import type { TransactionFilters } from "../../types/TransactionFilters";
+import FilterSheetSection from "../shell/FilterSheetSection";
+import SortSections from "../shell/SortSections";
 import CustomRangeFields from "./CustomRangeFields";
 import { categoryLabel } from "./transactionDisplay";
+import { clearedFilters } from "./transactionFilters";
 
 /** Picking "Custom range" starts from the first of this month to today, or from the range already chosen. */
 function customRangeStart(draft: TransactionFilters): Partial<TransactionFilters> {
@@ -18,21 +23,6 @@ function customRangeStart(draft: TransactionFilters): Partial<TransactionFilters
     startDate: draft.startDate ?? isoFromDate(new Date(today.getFullYear(), today.getMonth(), 1)),
     endDate: draft.endDate ?? isoFromDate(today),
   };
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  const { colors, spacing, fontSize } = useTheme();
-  return (
-    <View>
-      <Text
-        accessibilityRole="header"
-        style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xs, fontSize: fontSize.sm, fontWeight: "600", color: colors.mutedForeground }}
-      >
-        {title}
-      </Text>
-      {children}
-    </View>
-  );
 }
 
 /** Mounted only while open, so its choices start from what's applied and Close discards them. */
@@ -74,7 +64,7 @@ export default function TransactionFilterSheet({
         </View>
         <ScrollView>
           {draft.view === "review" ? null : (
-            <Section title="Period">
+            <FilterSheetSection title="Period">
               {/* A month comes from a link, such as a bar on Home, so it's offered only when it was applied. */}
               {filters.month ? (
                 <OptionRow
@@ -103,9 +93,9 @@ export default function TransactionFilterSheet({
                   startDate={draft.startDate}
                 />
               ) : null}
-            </Section>
+            </FilterSheetSection>
           )}
-          <Section title="Type">
+          <FilterSheetSection title="Type">
             <OptionRow isSelected={draft.type === null} label="Income and expenses" onPress={() => update({ type: null })} />
             {TRANSACTION_TYPES.map((option) => (
               <OptionRow
@@ -115,8 +105,8 @@ export default function TransactionFilterSheet({
                 onPress={() => update({ type: option.value, category: null })}
               />
             ))}
-          </Section>
-          <Section title="Property">
+          </FilterSheetSection>
+          <FilterSheetSection title="Property">
             <OptionRow isSelected={draft.propertyId === null} label="All properties" onPress={() => update({ propertyId: null })} />
             {properties.map((property) => (
               <OptionRow
@@ -131,8 +121,8 @@ export default function TransactionFilterSheet({
               label="No property"
               onPress={() => update({ propertyId: UNASSIGNED_PROPERTY })}
             />
-          </Section>
-          <Section title="Category">
+          </FilterSheetSection>
+          <FilterSheetSection title="Category">
             <OptionRow isSelected={draft.category === null} label="All categories" onPress={() => update({ category: null })} />
             {categories.map((category) => (
               <OptionRow
@@ -142,11 +132,32 @@ export default function TransactionFilterSheet({
                 onPress={() => update({ category })}
               />
             ))}
-          </Section>
+          </FilterSheetSection>
+          <FilterSheetSection title={TAX_FILTER.title}>
+            <OptionRow isSelected={draft.taxRelevant === null} label={TAX_FILTER.either} onPress={() => update({ taxRelevant: null })} />
+            {TAX_RELEVANT_OPTIONS.map((option) => (
+              <OptionRow
+                isSelected={draft.taxRelevant === option.value}
+                key={option.value}
+                label={option.label}
+                onPress={() => update({ taxRelevant: option.value })}
+              />
+            ))}
+          </FilterSheetSection>
+          {/* The review queue keeps its order, so approving walks on to the next one in it. */}
+          {draft.view === "review" ? null : (
+            <SortSections
+              direction={draft.sortDir}
+              field={draft.sortBy}
+              fields={TRANSACTION_SORT_FIELDS}
+              onDirectionChange={(sortDir) => update({ sortDir })}
+              onFieldChange={(sortBy) => update({ sortBy })}
+            />
+          )}
         </ScrollView>
         <View style={{ flexDirection: "row", gap: spacing.sm, padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border }}>
           <LoadingButton
-            onPress={() => update({ period: "all", month: null, startDate: null, endDate: null, type: null, propertyId: null, category: null })}
+            onPress={() => setDraft({ ...clearedFilters(draft), vendor: draft.vendor, approvedOnly: draft.approvedOnly })}
             style={{ flex: 1 }}
             variant="secondary"
           >

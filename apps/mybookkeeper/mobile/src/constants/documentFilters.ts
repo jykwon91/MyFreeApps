@@ -11,10 +11,6 @@ export const DOCUMENT_FILTER_SHEET = {
   status: "Status",
   type: "Type",
   source: "Source",
-  sortBy: "Sort by",
-  order: "Order",
-  ascending: "Ascending",
-  descending: "Descending",
   clearAll: "Clear all",
   apply: "Show results",
 } as const;

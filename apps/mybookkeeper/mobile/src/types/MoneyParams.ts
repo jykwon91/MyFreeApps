@@ -13,4 +13,7 @@ export interface MoneyParams extends Record<string, string> {
   category: string;
   vendor: string;
   status: string;
+  tax: string;
+  sort: string;
+  order: string;
 }
