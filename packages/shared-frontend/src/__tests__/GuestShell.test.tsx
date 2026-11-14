@@ -7,7 +7,7 @@
  *   - navigation items render
  *   - clicking Sign in routes to /login with the current location captured
  *   - hideSignIn suppresses the Sign in CTAs
- *   - each nav section is a named group; on the collapsed rail its heading becomes a divider
+ *   - each nav section is headed (not labelled, so it can't clash with a form field); on the collapsed rail its heading becomes a divider
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -137,7 +137,7 @@ describe("GuestShell", () => {
     expect(screen.getByRole("link", { name: "News (new)" })).toBeInTheDocument();
   });
 
-  it("names each section's group, and swaps its heading for a divider on the collapsed rail", () => {
+  it("heads each section, never labels it, and swaps its heading for a divider on the collapsed rail", () => {
     renderWithRouter(
       <GuestShell
         logo={<div>logo</div>}
@@ -151,7 +151,8 @@ describe("GuestShell", () => {
         <div>content</div>
       </GuestShell>,
     );
-    expect(screen.getByRole("group", { name: "Gear" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Gear" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Gear")).toBeNull();
     expect(screen.getByText("World")).toBeInTheDocument();
     expect(screen.queryByTestId("nav-section-divider")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));

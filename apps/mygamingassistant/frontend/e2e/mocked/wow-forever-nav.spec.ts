@@ -47,9 +47,8 @@ test.describe("WoW Forever sidebar nav", () => {
     await page.goto("/wow-forever/macros");
     const sb = sidebar(page);
     // The groups, headed, in order (the first carries Overview)
-    const groups = sb.getByRole("group");
-    await expect(groups).toHaveCount(7);
-    expect(await groups.evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")))).toEqual([
+    await expect(sb.getByTestId("nav-section")).toHaveCount(7);
+    expect(await sb.getByRole("heading").allTextContents()).toEqual([
       "Start here",
       "World",
       "Class",
@@ -58,9 +57,12 @@ test.describe("WoW Forever sidebar nav", () => {
       "You",
       "Realm",
     ]);
-    await expect(sb.getByRole("group", { name: "Start here" }).getByRole("link", { name: "Overview" })).toBeVisible();
-    await expect(sb.getByRole("group", { name: "Class" }).getByRole("link", { name: "Macros" })).toBeVisible();
-    await expect(sb.getByRole("group", { name: "Gold & crafting" }).getByRole("link", { name: "Recipes" })).toBeVisible();
+    const section = (title: string) => sb.getByTestId("nav-section").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
+    await expect(section("Start here").getByRole("link", { name: "Overview" })).toBeVisible();
+    await expect(section("Class").getByRole("link", { name: "Macros" })).toBeVisible();
+    await expect(section("Gold & crafting").getByRole("link", { name: "Recipes" })).toBeVisible();
+    // A heading, not a label: the "Class" section can't clash with a page's Class picker.
+    await expect(sb.getByLabel("Class", { exact: true })).toHaveCount(0);
     // All section items present
     await expect(sb.getByRole("link", { name: "Overview" })).toBeVisible();
     await expect(sb.getByRole("link", { name: "World Map" })).toBeVisible();
@@ -73,7 +75,7 @@ test.describe("WoW Forever sidebar nav", () => {
     await page.goto("/");
     const sb = sidebar(page);
     // Section should be absent when route is not /wow-forever*
-    await expect(sb.getByRole("group", { name: "Start here" })).toHaveCount(0);
+    await expect(sb.getByRole("heading", { name: "Start here" })).toHaveCount(0);
   });
 
   test("clicking World Map in the section navigates to the map page", async ({ page }) => {
