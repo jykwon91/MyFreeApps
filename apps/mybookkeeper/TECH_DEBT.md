@@ -149,7 +149,7 @@ Circular-import avoided by moving `TemplateNotFoundError` and `extract_text_from
 **Effort:** M (per-file investigation; ~30 min each)
 **Location:**
 - `apps/mybookkeeper/frontend/src/__tests__/Documents.test.tsx` — "renders document file names from API data", "still renders the document table for viewer"
-- `apps/mybookkeeper/frontend/src/__tests__/hourly-rate.test.ts` — "rounds to two decimal places", "returns em-dash for non-numeric strings"
+- `apps/mybookkeeper/api-client/src/__tests__/formatHourlyRate.test.ts` — "rounds to two decimal places", "returns em-dash for non-numeric strings"
 - `apps/mybookkeeper/frontend/src/__tests__/LeaseTemplateUploadDialog.test.tsx` — "shows AI suggesting loader after successful upload, then calls onCreated with suggestions"
 - `apps/mybookkeeper/frontend/src/__tests__/PromoteFromInquiryPanel.test.tsx` — "pre-fills name, employer, and contract dates from the inquiry", "shows an orange warning hint next to fields the inquiry didn't supply", "blocks submission and shows an inline error when end date is before start"
 - `apps/mybookkeeper/frontend/src/__tests__/PublicInquiryForm.test.tsx` — "renders the friendly tell-more error from the backend"

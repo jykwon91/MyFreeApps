@@ -1,17 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { Star } from "lucide-react";
-import { formatRelativeTime } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { formatHourlyRate } from "@/shared/utils/hourly-rate";
+import { formatVendorLastUsed } from "@mybookkeeper/api-client/utils/formatVendorLastUsed";
+import { formatHourlyRate } from "@mybookkeeper/api-client/utils/formatHourlyRate";
 import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
 import VendorCategoryBadge from "./VendorCategoryBadge";
 
 export interface VendorRowProps {
   vendor: VendorSummary;
   showCategoryBadge: boolean;
-}
-
-function formatLastUsed(lastUsedAt: string | null): string {
-  return !lastUsedAt ? "Never used" : formatRelativeTime(lastUsedAt);
 }
 
 /**
@@ -48,7 +44,7 @@ export default function VendorRow({ vendor, showCategoryBadge }: VendorRowProps)
         {formatHourlyRate(vendor.hourly_rate)}
       </td>
       <td className="px-4 py-3 text-muted-foreground">
-        {formatLastUsed(vendor.last_used_at)}
+        {formatVendorLastUsed(vendor.last_used_at)}
       </td>
     </tr>
   );

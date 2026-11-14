@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatHourlyRate } from "@/shared/utils/hourly-rate";
+import { formatHourlyRate } from "../utils/formatHourlyRate";
 
 describe("formatHourlyRate", () => {
   it("adds /hr, with cents only when there are some", () => {

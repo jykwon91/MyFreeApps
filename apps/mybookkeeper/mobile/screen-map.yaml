@@ -114,7 +114,8 @@ routes:
   /vendors:
     screen: (app)/vendors/index
   # Adding is (app)/vendors/new and changing one is (app)/vendors/[id]/edit, both
-  # opened from these screens. The web page has them as side panels.
+  # opened from these screens. The web page has them as side panels. Rows carry the
+  # hourly rate and when the vendor was last used, as the web rows do.
   /vendors/:vendorId:
     screen: (app)/vendors/[id]/index
   /verify-email:

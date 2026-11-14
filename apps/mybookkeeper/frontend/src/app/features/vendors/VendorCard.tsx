@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Star } from "lucide-react";
-import { formatRelativeTime } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { formatHourlyRate } from "@/shared/utils/hourly-rate";
+import { formatVendorLastUsed } from "@mybookkeeper/api-client/utils/formatVendorLastUsed";
+import { formatHourlyRate } from "@mybookkeeper/api-client/utils/formatHourlyRate";
 import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
 import VendorCategoryBadge from "./VendorCategoryBadge";
 
@@ -13,10 +13,6 @@ export interface VendorCardProps {
    * redundant — it's implied by the active chip.
    */
   showCategoryBadge: boolean;
-}
-
-function formatLastUsed(lastUsedAt: string | null): string {
-  return !lastUsedAt ? "Never used" : formatRelativeTime(lastUsedAt);
 }
 
 /**
@@ -58,7 +54,7 @@ export default function VendorCard({ vendor, showCategoryBadge }: VendorCardProp
       </div>
       <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
         <span className="truncate">{formatHourlyRate(vendor.hourly_rate)}</span>
-        <span className="shrink-0 ml-2">{formatLastUsed(vendor.last_used_at)}</span>
+        <span className="shrink-0 ml-2">{formatVendorLastUsed(vendor.last_used_at)}</span>
       </div>
     </Link>
   );

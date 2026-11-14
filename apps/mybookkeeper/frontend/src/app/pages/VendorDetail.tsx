@@ -15,7 +15,7 @@ import VendorCategoryBadge from "@/app/features/vendors/VendorCategoryBadge";
 import VendorDetailSkeleton from "@/app/features/vendors/VendorDetailSkeleton";
 import VendorForm from "@/app/features/vendors/VendorForm";
 import DeleteVendorModal from "@/app/features/vendors/DeleteVendorModal";
-import { formatHourlyRate } from "@/shared/utils/hourly-rate";
+import { formatHourlyRate } from "@mybookkeeper/api-client/utils/formatHourlyRate";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveDetailLoadMode } from "@/shared/lib/detail-load-mode";
 
