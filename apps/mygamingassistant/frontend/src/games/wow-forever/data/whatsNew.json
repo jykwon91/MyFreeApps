@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-14",
+    "title": "Bigger profession and class icons",
+    "summary": "The icons on the profession, class and talent-tree buttons are bigger, so you can spot the one you want at a glance. On a phone each icon sits above its name, still three to a row.",
+    "to": "/wow-forever/recipes"
+  },
+  {
+    "date": "2026-11-14",
     "title": "The menu, in groups",
     "summary": "The left menu is grouped now: Start here, World, Class, Gear, Gold & crafting, You and Realm. The Overview page lists every page under the same headings, so on a phone it's the quick way to find one.",
     "to": "/wow-forever"

@@ -22,7 +22,7 @@ export default function RecipesSkeleton({ listing }: RecipesSkeletonProps) {
         <div className="h-5 w-20 rounded bg-muted" />
         <div className="grid grid-cols-3 gap-1 rounded-lg border bg-card p-1 sm:grid-cols-5">
           {Array.from({ length: PROFESSION_BUTTONS }, (_, i) => (
-            <div key={i} className="h-11 rounded-md bg-muted sm:h-9" />
+            <div key={i} className="h-[54px] rounded-md bg-muted sm:h-9" />
           ))}
         </div>
       </div>
