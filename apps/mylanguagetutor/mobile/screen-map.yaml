@@ -4,7 +4,7 @@ routes:
   /:
     screen: (app)/(tabs)/index
   /forgot-password:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   /login:
     screen: sign-in
   # Opened over the Practice tab by its profile gate, before a learner has picked a language.
@@ -17,9 +17,9 @@ routes:
   /practice:
     screen: (app)/practice
   /register:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   /reset-password:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   # The Practice tab. A scenario opens /practice.
   /scenarios:
     screen: (app)/(tabs)/index
@@ -32,4 +32,4 @@ routes:
   /support-myfreeapps:
     not_on_mobile: Opens on the website.
   /verify-email:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.

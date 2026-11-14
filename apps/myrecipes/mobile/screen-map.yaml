@@ -6,7 +6,7 @@ routes:
   /discover:
     screen: (tabs)/discover
   /forgot-password:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   /login:
     screen: sign-in
   /recipes/:id:
@@ -23,9 +23,9 @@ routes:
   /recipes/new:
     screen: recipes/new
   /register:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   /reset-password:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   # In Settings, when signed in. Its Turn on dialog is a screen of its own, security/turn-on; the Turn off
   # dialog is a sheet; the export downloads to the share sheet; Delete account opens delete-account.
   /security:
@@ -35,4 +35,4 @@ routes:
   /support-myfreeapps:
     not_on_mobile: Opens on the website.
   /verify-email:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.

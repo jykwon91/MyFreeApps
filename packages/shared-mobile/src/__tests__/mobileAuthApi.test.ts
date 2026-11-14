@@ -1,6 +1,6 @@
 import api from "@platform/core/lib/api";
 import { _resetPlatformForTests, configurePlatform } from "@platform/core/platform/configurePlatform";
-import type { AxiosAdapter } from "axios";
+import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import {
   fetchDevices,
   fetchTwoFactorEnabled,
@@ -8,6 +8,7 @@ import {
   requestLogin,
   requestLogout,
   requestRefresh,
+  resendVerificationEmail,
   revokeDevice,
 } from "../auth/mobileAuthApi";
 
@@ -158,4 +159,32 @@ describe("fetchTwoFactorEnabled", () => {
       await expect(fetchTwoFactorEnabled()).rejects.toThrow();
     },
   );
+});
+
+describe("resendVerificationEmail", () => {
+  it("posts the email with the sign-in timeout", async () => {
+    let sent: InternalAxiosRequestConfig | undefined;
+    api.defaults.adapter = async (config) => {
+      sent = config;
+      return { status: 202, data: null, statusText: "", headers: {}, config };
+    };
+    await expect(resendVerificationEmail("a@example.com")).resolves.toBe("sent");
+    expect(sent?.url).toBe("/auth/request-verify-token");
+    expect(JSON.parse(String(sent?.data))).toEqual({ email: "a@example.com" });
+    expect(sent?.timeout).toBe(15000);
+  });
+
+  it.each([
+    [429, "rate_limited"],
+    [400, "failed"],
+    [503, "failed"],
+  ])("maps %i to %s", async (status, expected) => {
+    api.defaults.adapter = answering(status, {});
+    await expect(resendVerificationEmail("a@example.com")).resolves.toBe(expected);
+  });
+
+  it("fails rather than claiming it sent with no connection", async () => {
+    api.defaults.adapter = offline;
+    await expect(resendVerificationEmail("a@example.com")).resolves.toBe("failed");
+  });
 });

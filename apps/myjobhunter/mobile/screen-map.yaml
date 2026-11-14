@@ -30,7 +30,7 @@ routes:
   /documents:
     screen: (app)/documents
   /forgot-password:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   /login:
     screen: sign-in
   # The website embeds its resume upload here; on the phone the upload, with its read status, is on the
@@ -39,9 +39,9 @@ routes:
   /profile:
     screen: (app)/(tabs)/profile
   /register:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   /reset-password:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   # On More rather than a tab: the website's own phone tab bar leaves it out too. Its two columns are
   # a Review and Draft switch; tapping a draft line opens Review on its new suggestion; Write my own is
   # a sheet; the downloads open the share sheet. It also holds the Profile page's resume upload: the
@@ -57,7 +57,7 @@ routes:
   /support-myfreeapps:
     not_on_mobile: Opens on the website.
   /verify-email:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   ADMIN_ROUTES.DASHBOARD:
     not_on_mobile: Operator dashboards, for the website.
   ADMIN_ROUTES.DEMO_USERS:

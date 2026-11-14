@@ -23,6 +23,7 @@ export type { Args } from "./types/api-args";
 export type { ApiError } from "./types/api-error";
 
 export { createAuthClient } from "./auth/createAuthClient";
+export { requestVerifyToken } from "./auth/requestVerifyToken";
 export type { AuthClientStore } from "./auth/types/AuthClientStore";
 export type { LoginResult } from "./types/security/login-result";
 export type { TotpSetup } from "./types/security/totp-setup";

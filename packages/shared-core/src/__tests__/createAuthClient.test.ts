@@ -172,7 +172,11 @@ describe("the account recovery calls", () => {
   it("requestVerifyToken posts the email", async () => {
     respondWith(null);
     await client.requestVerifyToken("u@e.com");
-    expect(post).toHaveBeenCalledWith("/auth/request-verify-token", { email: "u@e.com" });
+    expect(post).toHaveBeenCalledWith(
+      "/auth/request-verify-token",
+      { email: "u@e.com" },
+      { timeout: undefined },
+    );
   });
 
   it("forgotPassword sends no Turnstile header without a token", async () => {

@@ -4,6 +4,7 @@ import { getPlatform } from "../platform/configurePlatform";
 import { baseApi } from "../store/baseApi";
 import type { LoginResponse } from "../types/security/login-response";
 import type { LoginResult } from "../types/security/login-result";
+import { requestVerifyToken } from "./requestVerifyToken";
 import type { AuthClientStore } from "./types/AuthClientStore";
 
 function turnstileHeaders(turnstileToken: string): Record<string, string> {
@@ -86,13 +87,9 @@ export function createAuthClient(store: AuthClientStore) {
       );
     },
 
-    /**
-     * Request a fresh verification email for an unverified account. The endpoint
-     * always returns 202, even for unknown or already-verified emails, to avoid
-     * leaking which addresses are registered.
-     */
-    async requestVerifyToken(email: string): Promise<void> {
-      await api.post("/auth/request-verify-token", { email });
+    /** See `requestVerifyToken`, which the phone apps call directly. */
+    requestVerifyToken(email: string): Promise<void> {
+      return requestVerifyToken(email);
     },
 
     /**

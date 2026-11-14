@@ -1,11 +1,16 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { Linking } from "react-native";
+import { resendVerificationEmail } from "../auth/mobileAuthApi";
 import { SessionContext } from "../auth/SessionContext";
 import SignInScreen from "../components/SignInScreen";
 import type { MobileSession } from "../types/MobileSession";
 import type { SessionState } from "../types/SessionState";
 import type { SignInResult } from "../types/SignInResult";
 
+jest.mock("../auth/mobileAuthApi", () => ({
+  ...jest.requireActual("../auth/mobileAuthApi"),
+  resendVerificationEmail: jest.fn(),
+}));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) }));
 
 const SIGNED_OUT: SessionState = { status: "signedOut", endedByServer: false, lastEmail: "kept@example.com" };
@@ -51,6 +56,10 @@ async function fillAndSubmit(password = "secret") {
 }
 
 const failed = (failure: string) => ({ outcome: "failed", failure }) as SignInResult;
+const resend = jest.mocked(resendVerificationEmail);
+const RESEND = { name: "Resend verification email" };
+
+beforeEach(() => resend.mockReset());
 
 describe("SignInScreen", () => {
   it("fills in the email it last knew", async () => {
@@ -103,6 +112,46 @@ describe("SignInScreen", () => {
     await fillAndSubmit();
     expect(screen.getByText(message, { exact: false })).toBeTruthy();
     expect(screen.getByLabelText("Password").props.value).toBe("secret");
+  });
+
+  describe("resending the verification email", () => {
+    it.each(["bad_credentials", "rate_limited", "unreachable", "unexpected"])("isn't offered for %s", async (failure) => {
+      await renderScreen(jest.fn().mockResolvedValue(failed(failure)));
+      await fillAndSubmit();
+      expect(screen.queryByRole("button", RESEND)).toBeNull();
+    });
+
+    it("sends it to the address that couldn't sign in, then says so", async () => {
+      let answer: (outcome: "sent") => void = () => {};
+      resend.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+      await renderScreen(jest.fn().mockResolvedValue(failed("not_verified")));
+      await fillAndSubmit();
+      await fireEvent.changeText(screen.getByLabelText("Email"), "typo@example.com");
+      await fireEvent.press(screen.getByRole("button", RESEND));
+
+      expect(resend).toHaveBeenCalledWith("me@example.com");
+      const busy = screen.getByRole("button", { name: /Sending/ });
+      expect(busy.props.accessibilityState).toMatchObject({ busy: true, disabled: true });
+
+      await act(async () => answer("sent"));
+      expect(screen.getByText("Verification email sent. Check your inbox.")).toBeTruthy();
+      expect(screen.queryByRole("button", RESEND)).toBeNull();
+    });
+
+    it.each([
+      ["rate_limited", "Too many requests. Wait a few minutes, then try again."],
+      ["failed", "Couldn't resend right now. Try again shortly."],
+    ] as const)("explains %s and lets them try again", async (outcome, message) => {
+      resend.mockResolvedValueOnce(outcome).mockResolvedValueOnce("sent");
+      await renderScreen(jest.fn().mockResolvedValue(failed("not_verified")));
+      await fillAndSubmit();
+      await fireEvent.press(screen.getByRole("button", RESEND));
+      expect(await screen.findByText(message)).toBeTruthy();
+
+      await fireEvent.press(screen.getByRole("button", RESEND));
+      expect(await screen.findByText("Verification email sent. Check your inbox.")).toBeTruthy();
+      expect(screen.queryByText(message)).toBeNull();
+    });
   });
 
   it("opens the website for what the app doesn't do", async () => {

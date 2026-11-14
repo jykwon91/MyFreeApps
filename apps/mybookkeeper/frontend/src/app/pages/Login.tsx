@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { requestVerifyToken } from "@platform/core/auth/requestVerifyToken";
 import { login } from "@/shared/lib/auth";
-import api from "@/shared/lib/api";
 import {
   AuthPageFooter,
   describeAuthError,
@@ -92,7 +92,7 @@ export default function Login() {
   async function handleResendVerification() {
     setResendStatus("sending");
     try {
-      await api.post("/auth/request-verify-token", { email: email.trim() });
+      await requestVerifyToken(email.trim());
       setResendStatus("sent");
     } catch {
       setResendStatus("error");

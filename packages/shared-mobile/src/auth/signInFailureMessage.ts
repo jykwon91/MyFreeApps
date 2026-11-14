@@ -5,7 +5,7 @@ export function signInFailureMessage(failure: SignInFailure, appName: string): s
     case "bad_credentials":
       return "That email or password isn't right. Check them and try again.";
     case "not_verified":
-      return "Verify your email before signing in. We sent a link when you signed up. To get a new one, open the website and try signing in there.";
+      return "Verify your email before signing in. Check your inbox for the verification link.";
     case "invalid_totp":
       return "Invalid authentication code. Each code works once, so wait for the next one and try again.";
     case "rate_limited":

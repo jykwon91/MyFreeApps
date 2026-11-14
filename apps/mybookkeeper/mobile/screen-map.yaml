@@ -22,7 +22,7 @@ routes:
   /forbidden:
     not_on_mobile: A web-only error page.
   /forgot-password:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   /guide/:token:
     not_on_mobile: A public page for guests, on the website.
   /inquiries:
@@ -74,11 +74,11 @@ routes:
   /reconciliation:
     screen: (app)/reconciliation/index
   /register:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   /reply-templates:
     screen: (app)/reply-templates/index
   /reset-password:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   /security:
     screen: (app)/security/index
   /support-myfreeapps:
@@ -119,7 +119,7 @@ routes:
   /vendors/:vendorId:
     screen: (app)/vendors/[id]/index
   /verify-email:
-    not_on_mobile: Done on the website, which the sign-in screen links to.
+    not_on_mobile: Opened from the link in the verification email, which goes to the website. Sign-in can resend that email.
   /welcome-manuals:
     screen: (app)/welcome-manuals/index
   # Adding is (app)/welcome-manuals/new. A manual opens as a short summary with a row
