@@ -1,6 +1,7 @@
 import GuildArenaSkeleton from "@/games/wow-forever/components/guild/GuildArenaSkeleton";
 import GuildCraftingSkeleton from "@/games/wow-forever/components/guild/GuildCraftingSkeleton";
 import GuildRosterSkeleton from "@/games/wow-forever/components/guild/GuildRosterSkeleton";
+import GuildShoutoutSkeleton from "@/games/wow-forever/components/guild/GuildShoutoutSkeleton";
 import GuildTitlesSkeleton from "@/games/wow-forever/components/guild/GuildTitlesSkeleton";
 import GuildWeekSkeleton from "@/games/wow-forever/components/guild/GuildWeekSkeleton";
 import { GUILD_TAB_LABELS, GUILD_TABS } from "@/games/wow-forever/data/guild/guildTabs";
@@ -27,6 +28,7 @@ export default function GuildPageSkeleton({ tab }: GuildPageSkeletonProps) {
       </div>
       {tab === "home" && (
         <>
+          <GuildShoutoutSkeleton />
           <GuildArenaSkeleton />
           <GuildWeekSkeleton />
         </>

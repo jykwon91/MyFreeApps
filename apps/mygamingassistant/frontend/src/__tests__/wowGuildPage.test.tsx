@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { shoutoutDetail } from "@/games/wow-forever/lib/guild/guildShoutout";
 import { GUILD_SEARCH_DEBOUNCE_MS, GUILD_SORT_KEYS } from "@/games/wow-forever/data/guild/guildConfig";
 import { RECIPE_SEARCH_DEBOUNCE_MS } from "@/games/wow-forever/data/guild/recipeSearchConfig";
 import {
@@ -473,6 +474,7 @@ describe("guild page", () => {
     mockQuery.mockReturnValue(query({ isFetching: true }));
     const { container, unmount } = renderAt("/wow-forever/topdeadcenter");
     expect(container.querySelector(".animate-pulse")).not.toBeNull();
+    expect(screen.getByTestId("guild-shoutout-skeleton")).toBeInTheDocument();
     unmount();
 
     const refetch = vi.fn();
@@ -481,6 +483,28 @@ describe("guild page", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(/Couldn't load this guild/);
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it("puts the shout-out card above the Arena, and leaves it out when that member isn't on the roster", () => {
+    const cutie = member({ slug: "cutethug-xo", name: "Cutethug", surname: "Xo", class_name: "Druid", level: 44 });
+    mockQuery.mockReturnValue(query({ data: { ...GUILD, members: [...MEMBERS, cutie] } }));
+    const { unmount } = renderAt("/wow-forever/topdeadcenter?tab=home");
+    const card = screen.getByTestId("guild-shoutout");
+    expect(card).toHaveTextContent("Cutest guild member");
+    expect(within(card).getByRole("link", { name: "Cutethug Xo" })).toHaveAttribute("href", "/wow-forever/character/cutethug-xo");
+    expect(card).toHaveTextContent("Level 44 Druid");
+    expect(card.compareDocumentPosition(screen.getByLabelText("Rank members by")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    unmount();
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    renderAt("/wow-forever/topdeadcenter?tab=home");
+    expect(screen.queryByTestId("guild-shoutout")).not.toBeInTheDocument();
+  });
+
+  it("names the shout-out's level and class, leaving out what Blizzard didn't give", () => {
+    expect(shoutoutDetail(44, "Druid")).toBe("Level 44 Druid");
+    expect(shoutoutDetail(null, "Druid")).toBe("Druid");
+    expect(shoutoutDetail(44, null)).toBe("Level 44");
+    expect(shoutoutDetail(null, null)).toBe("");
   });
 
   it("shows the level board by default and switches boards from the picker, keeping the member filters", () => {

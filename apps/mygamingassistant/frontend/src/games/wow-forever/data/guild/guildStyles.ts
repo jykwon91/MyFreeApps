@@ -60,3 +60,9 @@ export const HERO_CARD =
   "relative flex w-[78%] min-w-[240px] shrink-0 snap-start flex-col gap-1 rounded-xl border-2 border-[#ff8000]/50 bg-gradient-to-b from-[#ff8000]/10 to-card p-3 sm:w-auto sm:min-w-0";
 /** The banner's text on its dark field, in a member's in-game class colour (the light-theme darkening would be too dim here). */
 export const CLASS_NAME_TEXT_ON_DARK = "text-[var(--c-dark,currentColor)]";
+/** The Home tab's shout-out card, pink so it reads as a celebration rather than a stat. */
+export const SHOUTOUT_CARD =
+  "flex flex-col gap-2 rounded-xl border-2 border-pink-400/50 bg-gradient-to-b from-pink-400/15 to-card p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-4";
+/** Its badge: a pink pill with a heart. */
+export const SHOUTOUT_BADGE =
+  "inline-flex w-fit items-center gap-1.5 rounded-full border border-pink-500/40 bg-pink-500/15 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-pink-700 dark:text-pink-300";
