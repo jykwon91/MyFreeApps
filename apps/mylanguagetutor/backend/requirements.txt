@@ -53,7 +53,7 @@ cryptography==50.0.1
     #   mylanguagetutor-backend
     #   platform-shared
     #   pyjwt
-dnspython==2.9.1
+dnspython==2.9.2
     # via email-validator
 docstring-parser==0.18.0
     # via anthropic
