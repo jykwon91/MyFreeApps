@@ -191,7 +191,6 @@ describe("CaptureScreen", () => {
       expect.arrayContaining([
         "application/pdf",
         "image/jpeg",
-        "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/vnd.ms-excel",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -199,12 +198,11 @@ describe("CaptureScreen", () => {
         "application/zip",
       ]),
     );
-    expect(screen.getByText(/Word, Excel, CSV and zip files\. Up to 10 at a time, 29 MB each\./)).toBeTruthy();
+    expect(screen.getByText(/Word \(\.docx\), Excel, CSV and zip files\. Up to 10 at a time, 29 MB each\./)).toBeTruthy();
   });
 
   it.each([
     ["lease.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
-    ["old.doc", "application/msword"],
     ["ledger.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
     ["old.xls", "application/vnd.ms-excel"],
     ["bank.csv", "text/csv"],
@@ -235,11 +233,22 @@ describe("CaptureScreen", () => {
     await renderScreen();
     await fireEvent.press(screen.getByRole("button", { name: "Files" }));
     expect(
-      await screen.findByText("I can't read notes.txt. I take PDFs, photos (JPG, PNG, WEBP), Word, Excel, CSV and zip files."),
+      await screen.findByText("I can't read notes.txt. I take PDFs, photos (JPG, PNG, WEBP), Word (.docx), Excel, CSV and zip files."),
     ).toBeTruthy();
     expect(server.names).toEqual([]);
     expect(fakeFiles()).not.toContain("cache:/notes.txt");
     expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
+  });
+
+  it("turns away an old .doc, and points to .docx, and sends nothing", async () => {
+    pickerReturns({ uri: "cache:/old.doc", name: "old.doc", mimeType: "application/msword", size: 100 });
+    const server = acceptUploads();
+    await renderScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "Files" }));
+    expect(
+      await screen.findByText("I can't read old.doc. I take PDFs, photos (JPG, PNG, WEBP), Word (.docx), Excel, CSV and zip files."),
+    ).toBeTruthy();
+    expect(server.names).toEqual([]);
   });
 
   it("turns away a file too big to get through, says how big it may be, and sends the rest", async () => {

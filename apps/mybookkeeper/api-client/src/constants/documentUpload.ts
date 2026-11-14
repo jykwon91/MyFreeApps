@@ -13,7 +13,6 @@ export const DOCUMENT_UPLOAD_EXTENSIONS = [
   ".jpeg",
   ".png",
   ".webp",
-  ".doc",
   ".docx",
   ".xls",
   ".xlsx",
@@ -35,4 +34,4 @@ export const DOCUMENT_UPLOAD_MAX_BYTES = Math.min(DOCUMENT_UPLOAD_SERVER_MAX_BYT
 
 export const DOCUMENT_UPLOAD_MAX_LABEL = `${DOCUMENT_UPLOAD_MAX_BYTES / MB} MB`;
 
-export const DOCUMENT_UPLOAD_KINDS_LABEL = "PDFs, photos (JPG, PNG, WEBP), Word, Excel, CSV and zip files";
+export const DOCUMENT_UPLOAD_KINDS_LABEL = "PDFs, photos (JPG, PNG, WEBP), Word (.docx), Excel, CSV and zip files";

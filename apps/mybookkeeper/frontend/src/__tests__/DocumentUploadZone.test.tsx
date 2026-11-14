@@ -87,7 +87,7 @@ describe("DocumentUploadZone", () => {
 
     const input = document.querySelector("input[type='file']") as HTMLInputElement;
     expect(input).not.toBeNull();
-    expect(input.accept).toBe(".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.csv,.zip");
+    expect(input.accept).toBe(".pdf,.jpg,.jpeg,.png,.webp,.docx,.xls,.xlsx,.csv,.zip");
     expect(input.className).toContain("hidden");
   });
 
