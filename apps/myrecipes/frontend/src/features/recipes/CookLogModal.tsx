@@ -3,6 +3,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { LoadingButton, Button, showError, showSuccess } from "@platform/ui";
 import StarRatingInput from "@/features/recipes/StarRatingInput";
 import { useLogCookMutation } from "@myrecipes/api-client/store/recipesApi";
+import { COOK_LOG_MESSAGES as MESSAGES, COOK_NOTES_MAX_LENGTH } from "@myrecipes/api-client/constants/cookLog";
+import { buildCookLogCreateRequest } from "@myrecipes/api-client/utils/buildCookLogCreateRequest";
 
 interface Props {
   open: boolean;
@@ -47,16 +49,13 @@ export default function CookLogModal({
       await logCook({
         recipeId,
         versionId,
-        body: {
-          rating,
-          outcome_notes: notes.trim() || null,
-        },
+        body: buildCookLogCreateRequest({ rating, notes }),
       }).unwrap();
-      showSuccess("Cook logged.");
+      showSuccess(MESSAGES.logged);
       reset();
       onClose();
     } catch {
-      showError("Couldn't log that cook — please try again.");
+      showError(MESSAGES.couldntLog);
     }
   }
 
@@ -66,15 +65,15 @@ export default function CookLogModal({
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-[70]" />
         <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-full max-w-md rounded-lg border bg-card p-6 shadow-lg">
           <Dialog.Title className="text-base font-semibold">
-            Log a cook
+            {MESSAGES.logTitle}
           </Dialog.Title>
           <Dialog.Description className="text-sm text-muted-foreground mt-1">
-            Recording how v{versionNumber} turned out this time.
+            {MESSAGES.logIntro(versionNumber)}
           </Dialog.Description>
 
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <div>
-              <span className="block text-sm font-medium mb-1.5">How was it?</span>
+              <span className="block text-sm font-medium mb-1.5">{MESSAGES.ratingLabel}</span>
               <StarRatingInput
                 value={rating}
                 onChange={setRating}
@@ -84,7 +83,8 @@ export default function CookLogModal({
 
             <div>
               <label htmlFor="cook-notes" className="block text-sm font-medium mb-1">
-                Notes <span className="text-muted-foreground font-normal">(optional)</span>
+                {MESSAGES.notesLabel}{" "}
+                <span className="text-muted-foreground font-normal">{MESSAGES.notesOptional}</span>
               </label>
               <textarea
                 id="cook-notes"
@@ -92,7 +92,8 @@ export default function CookLogModal({
                 onChange={(e) => setNotes(e.target.value)}
                 disabled={isLoading}
                 rows={3}
-                placeholder="Too salty, needs 5 more minutes, doubled the garlic..."
+                maxLength={COOK_NOTES_MAX_LENGTH}
+                placeholder={MESSAGES.notesPlaceholder}
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
             </div>
@@ -113,7 +114,7 @@ export default function CookLogModal({
                 isLoading={isLoading}
                 loadingText="Saving..."
               >
-                Save cook
+                {MESSAGES.save}
               </LoadingButton>
             </div>
           </form>

@@ -5,12 +5,15 @@ import type { StarRatingProps } from "../../types/StarRatingProps";
 import { ratingLabel } from "../../utils/ratingLabel";
 
 /** A rating out of five as stars, or a dash when unrated. Read as words, not as symbols. */
-export default function StarRating({ rating }: StarRatingProps) {
+export default function StarRating({ rating, accessibilityLabel }: StarRatingProps) {
   const { colors, fontSize } = useTheme();
   const stars = rating === null ? NO_RATING_DASH : FILLED_STAR.repeat(rating) + EMPTY_STAR.repeat(MAX_STARS - rating);
 
   return (
-    <Text accessibilityLabel={ratingLabel(rating)} style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>
+    <Text
+      accessibilityLabel={accessibilityLabel ?? ratingLabel(rating)}
+      style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}
+    >
       {stars}
     </Text>
   );

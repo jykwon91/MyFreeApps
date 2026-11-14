@@ -71,6 +71,8 @@ let store: ReturnType<typeof makeStore>;
 let requestCount = 0;
 
 const adapter: AxiosAdapter = async (config) => {
+  // The owner's cook log (and its version numbers) are asked for too; this file is about the recipe.
+  if (config.url !== "/recipes/r1") return { status: 200, data: [], statusText: "", headers: {}, config };
   requestCount += 1;
   await gate;
   if (reply === "offline") throw Object.assign(new Error("Network Error"), { config });
