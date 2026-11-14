@@ -1,3 +1,6 @@
+import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
+import { RECIPES_TEXT } from "@/games/wow-forever/data/recipes/recipesConfig";
+
 const ROWS = 6;
 /** "All" plus the eight professions. */
 const PROFESSION_BUTTONS = 9;
@@ -17,9 +20,9 @@ export default function RecipesSkeleton({ listing }: RecipesSkeletonProps) {
       </div>
       <div className="space-y-1">
         <div className="h-5 w-20 rounded bg-muted" />
-        <div className="grid grid-cols-3 gap-1 rounded-lg border bg-card p-1 sm:flex sm:flex-wrap">
+        <div className="grid grid-cols-3 gap-1 rounded-lg border bg-card p-1 sm:grid-cols-5">
           {Array.from({ length: PROFESSION_BUTTONS }, (_, i) => (
-            <div key={i} className="h-11 rounded-md bg-muted sm:h-9 sm:w-28" />
+            <div key={i} className="h-11 rounded-md bg-muted sm:h-9" />
           ))}
         </div>
       </div>
@@ -31,7 +34,10 @@ export default function RecipesSkeleton({ listing }: RecipesSkeletonProps) {
           ))}
         </ul>
       ) : (
-        <div className="h-[110px] rounded-xl border border-dashed bg-card sm:h-[70px]" data-testid="recipes-skeleton-prompt" />
+        <div data-testid="recipes-skeleton-prompt">
+          {/* Fixed copy, not data: the real prompt, so it wraps exactly like the loaded one. */}
+          <EmptyStateNote message={RECIPES_TEXT.prompt} />
+        </div>
       )}
     </div>
   );

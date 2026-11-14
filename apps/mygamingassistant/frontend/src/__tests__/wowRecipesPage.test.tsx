@@ -47,7 +47,9 @@ describe("WowRecipesPage", { timeout: 30000 }, () => {
   it("shows the skeleton, then asks for a search before listing anything", async () => {
     renderAt("/wow-forever/recipes");
     expect(screen.getByTestId("recipes-skeleton")).toBeInTheDocument();
-    expect(await screen.findByText(RECIPES_TEXT.prompt, undefined, LOAD)).toBeInTheDocument();
+    expect(await screen.findByTestId("recipe-search", undefined, LOAD)).toBeInTheDocument();
+    expect(screen.queryByTestId("recipes-skeleton")).toBeNull();
+    expect(screen.getByText(RECIPES_TEXT.prompt)).toBeInTheDocument();
     expect(screen.queryByTestId("recipe-row")).toBeNull();
   });
 

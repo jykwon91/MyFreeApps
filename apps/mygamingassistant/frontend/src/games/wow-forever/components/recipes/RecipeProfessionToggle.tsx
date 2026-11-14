@@ -16,7 +16,7 @@ interface RecipeProfessionToggleProps {
   onChange: (profession: RecipeProfession | undefined) => void;
 }
 
-/** The profession filter as icon buttons: three to a row on a phone, one wrapping row from sm up. */
+/** The profession filter as icon buttons: three to a row on a phone, five from sm up (a fixed grid, so the skeleton matches whatever the font). */
 export default function RecipeProfessionToggle({ value, onChange }: RecipeProfessionToggleProps) {
   return (
     <div className="space-y-1">
@@ -28,7 +28,7 @@ export default function RecipeProfessionToggle({ value, onChange }: RecipeProfes
         options={OPTIONS}
         value={value ?? RECIPE_ALL_PROFESSIONS}
         onChange={(next) => onChange(next === RECIPE_ALL_PROFESSIONS ? undefined : next)}
-        className="grid w-full grid-cols-3 sm:flex sm:flex-wrap"
+        className="grid w-full grid-cols-3 sm:grid-cols-5"
         compact
       />
     </div>

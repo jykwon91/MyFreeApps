@@ -139,7 +139,7 @@ for (const viewport of [
     await expect(skeleton).toHaveCount(0);
     const browser = page.getByTestId("recipe-browser");
     const loadedHeights = await childHeights(browser, 4);
-    for (const [i, h] of loadedHeights.entries()) expect(Math.abs(h - skeletonHeights[i]!)).toBeLessThanOrEqual(4);
+    for (const [i, h] of loadedHeights.entries()) expect(Math.abs(h - skeletonHeights[i]!), `block ${i}: ${JSON.stringify({ skeletonHeights, loadedHeights })}`).toBeLessThanOrEqual(4);
   });
 }
 
