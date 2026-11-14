@@ -15,7 +15,7 @@ import {
 
 describe("the document upload allowlist", () => {
   it("offers a file input exactly the types the server reads", () => {
-    expect(DOCUMENT_UPLOAD_ACCEPT).toBe(".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,.csv,.zip");
+    expect(DOCUMENT_UPLOAD_ACCEPT).toBe(".pdf,.jpg,.jpeg,.png,.webp,.docx,.xls,.xlsx,.csv,.zip");
   });
 
   it("lists each type once for a picker that filters by type", () => {
@@ -24,7 +24,6 @@ describe("the document upload allowlist", () => {
       "image/jpeg",
       "image/png",
       "image/webp",
-      "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "application/vnd.ms-excel",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -33,14 +32,14 @@ describe("the document upload allowlist", () => {
     ]);
   });
 
-  it.each(["scan.pdf", "IMG.JPG", "photo.jpeg", "a.png", "a.webp", "old.doc", "lease.docx", "old.xls", "ledger.xlsx", "bank.csv", "receipts.zip"])(
+  it.each(["scan.pdf", "IMG.JPG", "photo.jpeg", "a.png", "a.webp", "lease.docx", "old.xls", "ledger.xlsx", "bank.csv", "receipts.zip"])(
     "takes %s",
     (name) => {
       expect(isSupportedDocumentUpload(name)).toBe(true);
     },
   );
 
-  it.each(["notes.txt", "photo.heic", "movie.mov", "archive.tar.gz", "no-extension", "pdf"])("turns away %s", (name) => {
+  it.each(["old.doc", "notes.txt", "photo.heic", "movie.mov", "archive.tar.gz", "no-extension", "pdf"])("turns away %s", (name) => {
     expect(isSupportedDocumentUpload(name)).toBe(false);
   });
 
@@ -87,7 +86,7 @@ describe("documentUploadProblem", () => {
 describe("documentUploadProblemMessage", () => {
   it("says which file and what it takes instead", () => {
     expect(documentUploadProblemMessage("notes.txt", "unsupported")).toBe(
-      "I can't read notes.txt. I take PDFs, photos (JPG, PNG, WEBP), Word, Excel, CSV and zip files.",
+      "I can't read notes.txt. I take PDFs, photos (JPG, PNG, WEBP), Word (.docx), Excel, CSV and zip files.",
     );
   });
 

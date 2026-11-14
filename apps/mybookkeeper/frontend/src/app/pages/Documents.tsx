@@ -197,7 +197,7 @@ export default function Documents() {
             <p className="font-medium">Upload your financial documents and I'll extract the data automatically.</p>
             <p className="text-muted-foreground">
               I can read <strong>invoices</strong>, <strong>receipts</strong>, <strong>utility bills</strong>, <strong>bank statements</strong>, <strong>1099s</strong>, <strong>W-2s</strong>, <strong>1098s</strong>, and other tax forms.
-              Supported formats: <strong>PDF</strong>, <strong>images</strong> (PNG, JPG), <strong>Word docs</strong>, and <strong>spreadsheets</strong> (XLSX, CSV).
+              Supported formats: <strong>PDF</strong>, <strong>images</strong> (PNG, JPG), <strong>Word</strong> (.docx), and <strong>spreadsheets</strong> (XLSX, CSV).
             </p>
           </div>
           <button

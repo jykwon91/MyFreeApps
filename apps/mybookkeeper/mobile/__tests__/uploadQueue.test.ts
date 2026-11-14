@@ -381,7 +381,6 @@ describe("upload queue", () => {
     ["ledger.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
     ["bank.csv", "text/csv"],
     ["receipts.zip", "application/zip"],
-    ["old.doc", "application/msword"],
     ["old.xls", "application/vnd.ms-excel"],
   ])("sends %s with its own name and type", async (name, type) => {
     addFile("w1", name);
