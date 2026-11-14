@@ -5,6 +5,7 @@ import type { ApiError } from "@platform/core/types/api-error";
 import {
   FILE_REJECTED_STATUSES,
   LIMIT_REACHED_STATUS,
+  NETWORK_FAILURES_BEFORE_STOP,
   SERVER_ERROR_STATUS,
   UPLOAD_TIMEOUT_MS,
 } from "../../constants/capture";
@@ -12,6 +13,7 @@ import type { AppDispatch, RootState } from "../../lib/store";
 import type { PendingUpload } from "../../types/PendingUpload";
 import type { UploadPhase } from "../../types/UploadPhase";
 import { hasAiPermission } from "../aiPermission/aiPermission";
+import { failedLast } from "./failedLast";
 import { rejectionMessage } from "./rejectionMessage";
 import { uploadForm } from "./uploadForm";
 import { pendingUploads, removeFromQueue } from "./uploadQueueFiles";
@@ -25,6 +27,8 @@ import {
 } from "./uploadsSlice";
 
 let isDraining = false;
+/** Files that failed in an earlier drain, so they don't keep going first. Forgotten when the app restarts. */
+const failedEarlier = new Set<string>();
 
 function reportProgress(upload: PendingUpload, dispatch: AppDispatch): NonNullable<UploadDocumentArgs["onUploadProgress"]> {
   return ({ loaded, total }) => {
@@ -54,9 +58,13 @@ async function send(upload: PendingUpload, workspaceId: string, dispatch: AppDis
 async function sendAll(workspaceId: string, dispatch: AppDispatch, getState: () => RootState): Promise<UploadPhase> {
   const failed = new Set<string>();
   let sentAny = false;
+  let networkFailuresInARow = 0;
   while (getState().workspace.activeId === workspaceId) {
     // Read each time round: files added while one is sending join the end of the line.
-    const waiting = pendingUploads(workspaceId).filter((upload) => !failed.has(upload.uri));
+    const waiting = failedLast(
+      pendingUploads(workspaceId).filter((upload) => !failed.has(upload.uri)),
+      failedEarlier,
+    );
     dispatch(uploadFilesQueued(waiting));
     const [next] = waiting;
     if (!next) return failed.size > 0 ? "unreachable" : sentAny ? "sent" : "idle";
@@ -67,8 +75,10 @@ async function sendAll(workspaceId: string, dispatch: AppDispatch, getState: () 
     const result = await send(next, workspaceId, dispatch);
     if (!("error" in result)) {
       removeFromQueue(next);
+      failedEarlier.delete(next.uri);
       dispatch(uploadFileChanged({ uri: next.uri, status: "done" }));
       sentAny = true;
+      networkFailuresInARow = 0;
       continue;
     }
     const error = result.error as ApiError;
@@ -82,10 +92,21 @@ async function sendAll(workspaceId: string, dispatch: AppDispatch, getState: () 
     if (status !== undefined && FILE_REJECTED_STATUSES.includes(status)) {
       dispatch(uploadRejected(rejectionMessage(next.name, error)));
       removeFromQueue(next);
+      failedEarlier.delete(next.uri);
+      networkFailuresInARow = 0;
     } else if (status !== undefined && status >= SERVER_ERROR_STATUS) {
       // It may be this file, so it mustn't hold up the ones behind it.
       failed.add(next.uri);
+      failedEarlier.add(next.uri);
+      networkFailuresInARow = 0;
+    } else if (status === undefined) {
+      // No answer at all: a file too big for a slow link looks the same as a dead connection.
+      failed.add(next.uri);
+      failedEarlier.add(next.uri);
+      networkFailuresInARow += 1;
+      if (networkFailuresInARow >= NETWORK_FAILURES_BEFORE_STOP) return "unreachable";
     } else {
+      // Answered, but not about this file (signed out, not allowed): the same for every file.
       return "unreachable";
     }
   }
