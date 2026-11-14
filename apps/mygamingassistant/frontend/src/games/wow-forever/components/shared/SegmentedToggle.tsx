@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { cn } from "@platform/ui";
 import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import { TOGGLE_ICON_SIZE } from "@/games/wow-forever/data/icons/wowIconConfig";
 import type { SegmentedOption } from "@/games/wow-forever/types/segmentedOption";
 
 interface SegmentedToggleProps<T extends string> {
@@ -31,11 +32,13 @@ export default function SegmentedToggle<T extends string>({ label, options, valu
           className={clsx(
             "inline-flex items-center justify-center gap-1.5 rounded-md min-h-[44px] sm:min-h-[36px] transition-colors",
             compact ? "px-1 text-xs sm:px-3 sm:text-sm" : "px-3 text-sm",
+            // A compact option with an icon stacks it over the name on a phone, so a big icon still fits three to a row.
+            compact && o.icon !== undefined && "flex-col gap-0.5 py-1 sm:flex-row sm:gap-2 sm:py-0",
             o.id === value && "bg-primary text-primary-foreground",
             o.id !== value && "hover:bg-muted/40",
           )}
         >
-          {o.icon !== undefined && <GameIcon icon={o.icon} size={16} alt="" />}
+          {o.icon !== undefined && <GameIcon icon={o.icon} size={TOGGLE_ICON_SIZE} alt="" />}
           {o.label}
         </button>
       ))}

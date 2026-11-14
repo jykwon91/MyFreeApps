@@ -1463,7 +1463,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   make the generator emit the id (skinning `leatherIds`, gold farms `clothId`/`skinId`).
   Classes and professions show their icon wherever they are picked or headed (class
   links and chips, macro / gold class headings, profession picker, gold gathering
-  tiles); `SegmentedToggle` options take an optional `icon` (`types/segmentedOption.ts`).
+  tiles); `SegmentedToggle` options take an optional `icon` (`types/segmentedOption.ts`), drawn at `TOGGLE_ICON_SIZE` (24px, `wowIconConfig.ts`); a `compact` option with an icon stacks it over the name below sm (so skeletons of compact icon grids use 54px phone buttons, e.g. `RecipesSkeleton`).
   Every class drop-down is `components/shared/ClassSelect` (the picked class's icon
   beside a native select; optional `classes` subset and `allOption`) — never hand-roll one.
   Talent trees, talents, racials and pet abilities use `fileIcon` on their generated
