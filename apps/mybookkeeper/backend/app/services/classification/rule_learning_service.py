@@ -9,10 +9,12 @@ from app.core.tags import (
     schedule_e_line_after_category_change,
     transaction_type_for_category,
 )
+from app.core.tax_total_inputs import tax_total_inputs
 from app.core.vendors import normalize_address, normalize_vendor
 from app.models.transactions.transaction import Transaction
 from app.repositories import transaction_repo
 from app.repositories.classification import classification_rule_repo
+from app.repositories.tax import tax_return_repo
 from app.services.system.event_service import record_event
 
 logger = logging.getLogger(__name__)
@@ -166,16 +168,21 @@ async def _retroactive_category_fix(
     )
 
     updated = 0
+    totals_moved = False
     for txn in candidates:
         if normalize_vendor(txn.vendor) == normalized:
+            old_tax_inputs = tax_total_inputs(txn)
             txn.schedule_e_line = schedule_e_line_after_category_change(
                 txn.schedule_e_line, txn.category, new_category,
             )
             txn.category = new_category
             txn.transaction_type = transaction_type_for_category(new_category)
             txn.activity_id = new_activity_id
+            totals_moved = totals_moved or tax_total_inputs(txn) != old_tax_inputs
             updated += 1
 
+    if totals_moved:
+        await tax_return_repo.flag_unfiled_for_recompute(db, organization_id)
     return updated
 
 
@@ -198,13 +205,17 @@ async def _retroactive_property_fix(
     )
 
     updated = 0
+    totals_moved = False
     for txn in candidates:
         if (
             normalize_vendor(txn.vendor) == normalized_vendor
             and normalize_address(txn.address) == normalized_addr
             and txn.property_id != new_property_id
         ):
+            totals_moved = totals_moved or tax_total_inputs(txn) is not None
             txn.property_id = new_property_id
             updated += 1
 
+    if totals_moved:
+        await tax_return_repo.flag_unfiled_for_recompute(db, organization_id)
     return updated

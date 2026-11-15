@@ -1810,7 +1810,8 @@
         "test_schedule_e_report.py",
         "test_schedule_e_backfill_migration.py",
         "test_tax_field_empty_migration.py",
-        "test_core_parsers.py"
+        "test_core_parsers.py",
+        "test_tax_return_staleness.py"
       ],
       "frontend_tests": [
         "TaxDocuments.test.tsx",
@@ -1945,7 +1946,9 @@
         "frontend/src/app/features/transactions/BankStatementImport.tsx",
         "mobile/src/features/bankImport/",
         "mobile/src/constants/bankImport.ts",
-        "mobile/app/(app)/transactions/import.tsx"
+        "mobile/app/(app)/transactions/import.tsx",
+        "backend/app/core/tax_total_inputs.py",
+        "backend/app/core/transaction_statuses.py"
       ],
       "backend_tests": [
         "test_bank_csv_parser.py",
@@ -1967,7 +1970,8 @@
         "test_transaction_service.py",
         "test_vendor_normalization.py",
         "test_metered_usage_extraction.py",
-        "test_cleanup_seed_routes.py"
+        "test_cleanup_seed_routes.py",
+        "test_tax_return_staleness.py"
       ],
       "frontend_tests": [
         "Transactions.test.tsx",
@@ -2042,7 +2046,8 @@
         "mobile/src/types/TenantChoice.ts",
         "mobile/src/features/paymentReview/",
         "mobile/src/features/tenants/TenantPickerSheet.tsx",
-        "mobile/src/constants/tenantPicker.ts"
+        "mobile/src/constants/tenantPicker.ts",
+        "backend/app/services/transactions/airbnb_payout_attribution.py"
       ],
       "backend_tests": [
         "test_attribution_matcher.py",

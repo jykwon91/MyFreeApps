@@ -16,20 +16,17 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.tax_total_inputs import tax_total_inputs
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.transactions.transaction import Transaction
 from app.repositories import attribution_repo
 from app.repositories import payer_alias_repo
-from app.repositories import booking_statement_repo
 from app.repositories.applicants import applicant_repo
-from app.repositories.listings import listing_repo
 from app.repositories.properties import property_repo
+from app.repositories.tax import tax_return_repo
 from app.repositories import transaction_repo as txn_repo
 from app.services.leases import receipt_service
-from app.services.transactions.airbnb_payout_matcher import (
-    decide_airbnb_attribution,
-    parse_res_code,
-)
+from app.services.transactions.airbnb_payout_attribution import attribute_airbnb_payout
 from app.services.transactions.attribution_helpers import (
     _get_lease_signed_applicants,
     _get_property_id_for_applicant,
@@ -60,8 +57,27 @@ async def maybe_attribute_payment(
     flushed into the caller's session; the caller owns the commit.
 
     This function is idempotent — it silently skips if the transaction already
-    has an ``applicant_id`` set.
+    has an ``applicant_id`` set. An attribution that changes what the row adds to
+    a tax return's totals marks the unfiled returns out of date.
     """
+    old_tax_inputs = tax_total_inputs(txn)
+    await _attribute_payment(
+        db, txn=txn, payer_name=payer_name, organization_id=organization_id,
+        user_id=user_id, is_airbnb_payout=is_airbnb_payout, payer_handle=payer_handle,
+    )
+    await tax_return_repo.flag_unfiled_if_totals_moved(db, txn, old_tax_inputs)
+
+
+async def _attribute_payment(
+    db: AsyncSession,
+    *,
+    txn: Transaction,
+    payer_name: str | None,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    is_airbnb_payout: bool,
+    payer_handle: str | None,
+) -> None:
     if txn.applicant_id is not None:
         return  # already attributed
 
@@ -76,7 +92,7 @@ async def maybe_attribute_payment(
 
     # --- Airbnb payout path ---------------------------------------------------
     if is_airbnb_payout:
-        await _attribute_airbnb_payout(db, txn=txn, organization_id=organization_id, user_id=user_id)
+        await attribute_airbnb_payout(db, txn=txn, organization_id=organization_id, user_id=user_id)
         return
 
     if not payer_name:
@@ -207,87 +223,6 @@ async def maybe_attribute_payment(
     )
 
 
-async def _attribute_airbnb_payout(
-    db: AsyncSession,
-    *,
-    txn: Transaction,
-    organization_id: uuid.UUID,
-    user_id: uuid.UUID,
-) -> None:
-    """Attribute an Airbnb payout to a property via the matcher cascade.
-
-    res_code→property and single-linked-listing auto-attribute; a listing
-    title found in the payout text is proposed for review; anything else is
-    queued unmatched. See ``airbnb_payout_matcher``.
-    """
-    airbnb_listings = await listing_repo.list_by_channel(
-        db,
-        organization_id=organization_id,
-        user_id=user_id,
-        channel="airbnb",
-    )
-
-    res_code = parse_res_code(txn.description)
-    stmt = (
-        await booking_statement_repo.find_by_res_code(db, organization_id, res_code)
-        if res_code
-        else None
-    )
-    match = decide_airbnb_attribution(
-        res_code_property_id=stmt.property_id if stmt else None,
-        airbnb_listings=airbnb_listings,
-        txn_description=txn.description,
-        txn_address=txn.address,
-    )
-
-    if match.confidence == "auto":
-        # decide_airbnb_attribution only returns "auto" with a non-None
-        # property_id (both auto branches gate on `... is not None`).
-        # Preserve the idempotency guard — never overwrite a set property_id.
-        if txn.property_id is None:
-            txn.property_id = match.property_id
-        txn.attribution_source = "auto_exact"
-        txn.category = "rental_revenue"
-        # Auto-attributing a payout to a property verifies it (see the tenant
-        # auto-attribution branches in maybe_attribute_payment).
-        txn.status = "approved"
-        logger.info(
-            "Auto-attributed Airbnb payout %s to property %s (res_code=%s)",
-            txn.id, match.property_id, res_code,
-        )
-        return
-
-    if match.confidence == "propose":
-        await attribution_repo.create(
-            db,
-            user_id=user_id,
-            organization_id=organization_id,
-            transaction_id=txn.id,
-            proposed_applicant_id=None,
-            proposed_property_id=match.property_id,
-            confidence="fuzzy",
-        )
-        logger.info(
-            "Queued Airbnb payout %s for review with proposed property %s",
-            txn.id, match.property_id,
-        )
-        return
-
-    # Unmatched — queue for review with no proposal
-    await attribution_repo.create(
-        db,
-        user_id=user_id,
-        organization_id=organization_id,
-        transaction_id=txn.id,
-        proposed_applicant_id=None,
-        confidence="unmatched",
-    )
-    logger.info(
-        "Queued Airbnb payout %s for review (unmatched; %d airbnb listings)",
-        txn.id, len(airbnb_listings),
-    )
-
-
 # ---------------------------------------------------------------------------
 # API-level service functions
 # ---------------------------------------------------------------------------
@@ -343,6 +278,7 @@ async def confirm_review(
         txn = await txn_repo.get_by_id(db, row.transaction_id, organization_id)
         if not txn:
             raise ValueError("Transaction not found")
+        old_tax_inputs = tax_total_inputs(txn)
 
         chosen_applicant_id = applicant_id or (None if property_id else row.proposed_applicant_id)
         if chosen_applicant_id:
@@ -393,6 +329,7 @@ async def confirm_review(
                     source="confirm",
                     payer_handle=txn.payer_handle,
                 )
+            await tax_return_repo.flag_unfiled_if_totals_moved(db, txn, old_tax_inputs)
             return {"ok": True, "transaction_id": str(txn.id)}
 
         # Property path — Airbnb payout, no tenant. Fail closed: a bad or
@@ -412,6 +349,7 @@ async def confirm_review(
             # Confirming the payout against a property verifies it.
             txn.status = "approved"
             await attribution_repo.resolve(db, row, "confirmed")
+            await tax_return_repo.flag_unfiled_if_totals_moved(db, txn, old_tax_inputs)
             return {"ok": True, "transaction_id": str(txn.id)}
 
         raise ValueError("No applicant or property specified and no proposed candidate")
@@ -450,6 +388,7 @@ async def attribute_manually(
         txn = await txn_repo.get_by_id(db, transaction_id, organization_id)
         if not txn:
             raise ValueError("Transaction not found")
+        old_tax_inputs = tax_total_inputs(txn)
 
         applicant = await applicant_repo.get(
             db,
@@ -498,4 +437,6 @@ async def attribute_manually(
                 source="manual_link",
                 payer_handle=txn.payer_handle,
             )
+        await tax_return_repo.flag_unfiled_if_totals_moved(db, txn, old_tax_inputs)
         return {"ok": True, "transaction_id": str(txn.id)}
+

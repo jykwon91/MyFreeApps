@@ -9,7 +9,7 @@ import type { UploadDocumentArgs } from "../types/document/UploadDocumentArgs";
 import type { UploadResponse } from "../types/document/UploadResponse";
 
 export const documentsApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["Document", "Summary", "Transaction", "SignedLease"],
+  addTagTypes: ["Document", "Summary", "Transaction", "SignedLease", "TaxReturn"],
 }).injectEndpoints({
   endpoints: (builder) => ({
     getDocuments: builder.query<Document[], { status?: string; propertyId?: string; excludeProcessing?: boolean }>({
@@ -45,12 +45,12 @@ export const documentsApi = baseApi.enhanceEndpoints({
     deleteDocument: builder.mutation<void, string>({
       query: (id) => ({ url: `/documents/${id}`, method: "DELETE" }),
       // Deleting a document soft-deletes its payments and their pending receipts.
-      invalidatesTags: ["Document", "Summary", "Transaction", RECEIPTS_PENDING_TAG],
+      invalidatesTags: ["Document", "Summary", "Transaction", RECEIPTS_PENDING_TAG, "TaxReturn"],
     }),
     bulkDeleteDocuments: builder.mutation<BulkDeleteDocumentsResponse, string[]>({
       query: (ids) => ({ url: "/documents/bulk-delete", method: "POST", data: { ids } }),
       // Deleting a document soft-deletes its payments and their pending receipts.
-      invalidatesTags: ["Document", "Summary", "Transaction", RECEIPTS_PENDING_TAG],
+      invalidatesTags: ["Document", "Summary", "Transaction", RECEIPTS_PENDING_TAG, "TaxReturn"],
     }),
     reExtractDocument: builder.mutation<{ status: string }, string>({
       query: (id) => ({ url: `/documents/${id}/re-extract`, method: "POST" }),
