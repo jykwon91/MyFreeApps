@@ -20,7 +20,7 @@ import { pathWithQuery } from "../utils/pathWithQuery";
 import { transactionListQuery } from "../utils/transactionListQuery";
 
 export const transactionsApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["Summary", "Transaction", "SignedLease", "TaxReturn"],
+  addTagTypes: ["Summary", "Transaction", "SignedLease", "TaxReturn", "ClassificationRule"],
 }).injectEndpoints({
   endpoints: (builder) => ({
     listTransactions: builder.query<Transaction[], TransactionListParams>({
@@ -85,7 +85,9 @@ export const transactionsApi = baseApi.enhanceEndpoints({
     // so every such mutation refetches TaxReturn and the "Needs recompute" banner shows without a reload.
     updateTransaction: builder.mutation<TransactionUpdateResult, { id: string; data: Partial<Transaction> }>({
       query: ({ id, data }) => ({ url: `/transactions/${id}`, method: "PATCH", data }),
-      invalidatesTags: ["Transaction", "Summary", "TaxReturn"],
+      // The pending rent receipts read amount, date, payer, method and vendor live from the payment, and
+      // a category or property correction makes the server learn a classification rule.
+      invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG, "ClassificationRule", "TaxReturn"],
     }),
     deleteTransaction: builder.mutation<void, string>({
       query: (id) => ({ url: `/transactions/${id}`, method: "DELETE" }),
