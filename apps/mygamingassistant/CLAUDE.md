@@ -1736,7 +1736,16 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   else a ready stone in bags; else none in bags, only once Create Soulstone is
   trained), Well Fed (quiet while
   eating), and Fortitude / Arcane Intellect (by class: not Warriors or Rogues, so shapeshifted Druids keep it) / Mark of the Wild
-  only when that class is in the group, naming who to ask. Buff/item names and
+  / a Paladin Blessing (any of Might/Wisdom/Kings/Light + Greater; missing only,
+  never "running out" — 5-minute buff; Forever's client has no Salvation)
+  only when that class is in the group, naming who to ask; Healthstone (none in
+  bags, any of the 15 rank/Improved ids: Warlock who knows Create Healthstone →
+  make one; anyone else → ask a live Warlock 10+ in the group); and "party"
+  (in a group, for each buff you can cast — any client spell id under its names
+  via IsPlayerSpell, plus Divine Spirit, caster-only since nobody can see your
+  talent — "X missing on Bob, Ann, Lee and N more", out-of-range members
+  counted via UnitInRange, dead/offline skipped, mana-only buffs skip Warriors
+  and Rogues). Buff/item names and
   ids are checked against the Forever client (Soulstone items 5232/16892/16893/
   16895/16896 → buff spells 20707/20762-20765; 109 of 114 buff foods give
   "Well Fed", the rest "Increased Stamina/Spell Damage/Healing Power").

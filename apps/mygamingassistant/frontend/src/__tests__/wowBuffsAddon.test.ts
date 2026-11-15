@@ -141,7 +141,7 @@ describe("MGA Buffs group buffs", () => {
 
   it("keeps Arcane Intellect for a Druid in Bear or Cat form, and says to cast what you can cast", () => {
     const setup = `units.player = unit("DRUID", 60, "Me", { buffs = { buff("Well Fed", now + 600), buff("Mark of the Wild", now + 900) } }); group = "party"; units.party1 = unit("MAGE", 60, "Ann")`;
-    expect(rows(run(setup))).toEqual(["No Arcane Intellect: ask Ann (Mage)"]);
+    expect(rows(run(setup))).toEqual(["No Arcane Intellect: ask Ann (Mage)", "Mark of the Wild missing on Ann"]);
     expect(rows(run(`${me}; units.player = unit("PRIEST", 60, "Me", { buffs = { buff("Inner Fire", now + 500), buff("Well Fed", now + 600) } })`))).toEqual(["No Fortitude: cast it"]);
   });
 
@@ -158,6 +158,88 @@ describe("MGA Buffs group buffs", () => {
   it("reads raid members", () => {
     const setup = `${me}; group = "raid"; raid = { units.player, unit("DRUID", 60, "Lee") }; units.raid1 = raid[1]; units.raid2 = raid[2]`;
     expect(rows(run(setup))).toEqual(["No Mark of the Wild: ask Lee (Druid)"]);
+  });
+});
+
+describe("MGA Buffs Healthstone", () => {
+  const NO_STONE = "bags[4] = nil";
+  const warlock = `${ARMORED}; ${FED}; units.player.level = 15; ${NO_STONE}`;
+  const rogue = `units.player = unit("ROGUE", 30, "Me", { buffs = { buff("Well Fed", now + 600) } }); ${NO_STONE}`;
+
+  it("tells a Warlock with no Healthstone to make one, once Create Healthstone is trained", () => {
+    expect(rows(run(warlock))).toEqual(["No Healthstone in your bags: Create Healthstone"]);
+    const untrained = [6201, 6202, 5699, 11729, 11730, 11731, 20018, 23517, 23518, 23519, 23520, 23521, 23522, 23813, 23814, 23815, 23816, 23817, 23818, 23819, 23820, 23821, 28023]
+      .map((id) => `knownSpells[${id}] = false`).join("; ");
+    expect(rows(run(`${warlock}; ${untrained}`))).toEqual([]);
+  });
+
+  it("counts every rank, the Improved Healthstone ones too", () => {
+    expect(rows(run(`${warlock}; bags[1] = { 19013 }`))).toEqual([]);
+    expect(rows(run(`${warlock}; bags[2] = { 5512 }`))).toEqual([]);
+  });
+
+  it("asks the Warlock in your group, and stays quiet solo or with a Warlock under 10", () => {
+    expect(rows(run(rogue))).toEqual([]);
+    expect(rows(run(`${rogue}; group = "party"; units.party1 = unit("WARLOCK", 40, "Kim")`))).toEqual(["No Healthstone: ask Kim (Warlock)"]);
+    expect(rows(run(`${rogue}; group = "party"; units.party1 = unit("WARLOCK", 9, "Kim")`))).toEqual([]);
+    expect(rows(run(`${rogue}; group = "party"; units.party1 = unit("WARLOCK", 40, "Kim", { dead = true })`))).toEqual([]);
+  });
+
+  it("turns off from the slash command", () => {
+    expect(rows(run(warlock, `clear(); SlashCmdList.MGABUFFS("healthstone"); clear(); tick()`))).toEqual([]);
+  });
+});
+
+describe("MGA Buffs Paladin Blessings", () => {
+  const rogue = `units.player = unit("ROGUE", 30, "Me", { buffs = { buff("Well Fed", now + 600) } }); group = "party"; units.party1 = unit("PALADIN", 40, "Pat")`;
+
+  it("asks the Paladin in your group for a Blessing, any one of them", () => {
+    expect(rows(run(rogue))).toEqual(["No Blessing: ask Pat (Paladin)"]);
+    expect(rows(run(`${rogue}; table.insert(units.player.buffs, buff("Blessing of Kings", now + 60))`))).toEqual([]);
+    expect(rows(run(`${rogue}; table.insert(units.player.buffs, buff("Greater Blessing of Might", now + 800))`))).toEqual([]);
+  });
+
+  it("doesn't call a 5-minute Blessing \"running out\"", () => {
+    expect(rows(run(`${rogue}; table.insert(units.player.buffs, buff("Blessing of Might", now + 120))`))).toEqual([]);
+  });
+});
+
+describe("MGA Buffs party: buffs you can cast", () => {
+  const priest = `units.player = unit("PRIEST", 60, "Me", { buffs = { buff("Inner Fire", now + 900), buff("Well Fed", now + 600), buff("Power Word: Fortitude", now + 900), buff("Divine Spirit", now + 900), buff("Arcane Intellect", now + 900) } }); group = "party"`;
+  const DIVINE_SPIRIT_OFF = [14752, 14818, 14819, 16875, 27841, 27681].map((id) => `knownSpells[${id}] = false`).join("; ");
+
+  it("names who in your party is missing your buffs, and skips Divine Spirit on a Warrior", () => {
+    const party = `${priest}; units.party1 = unit("WARRIOR", 60, "Bob"); units.party2 = unit("MAGE", 60, "Ann")`;
+    expect(rows(run(party))).toEqual(["Fortitude missing on Bob, Ann", "Divine Spirit missing on Ann"]);
+  });
+
+  it("counts a group version and a groupmate's own buff as covered", () => {
+    const party = `${priest}; ${DIVINE_SPIRIT_OFF}; units.party1 = unit("WARRIOR", 60, "Bob", { buffs = { buff("Prayer of Fortitude", now + 900) } })`;
+    expect(rows(run(party))).toEqual([]);
+  });
+
+  it("leaves Divine Spirit out when you don't have the talent, and never asks others for it", () => {
+    expect(rows(run(`${priest}; ${DIVINE_SPIRIT_OFF}; units.party1 = unit("MAGE", 60, "Ann", { buffs = { buff("Power Word: Fortitude", now + 900) } })`))).toEqual([]);
+    const mage = `units.player = unit("MAGE", 60, "Me", { buffs = { buff("Ice Armor", now + 900), buff("Arcane Intellect", now + 900), buff("Well Fed", now + 600), buff("Power Word: Fortitude", now + 900) } }); group = "party"; units.party1 = unit("PRIEST", 60, "Pri", { buffs = { buff("Arcane Intellect", now + 900) } })`;
+    expect(rows(run(mage))).toEqual([]);
+  });
+
+  it("counts groupmates out of range instead of naming them, and skips dead or offline ones", () => {
+    const party = `${priest}; ${DIVINE_SPIRIT_OFF}; units.party1 = unit("WARRIOR", 60, "Bob"); units.party2 = unit("ROGUE", 60, "Ann"); inRange.party2 = false; units.party3 = unit("HUNTER", 60, "Dee", { dead = true }); units.party4 = unit("WARLOCK", 60, "Kim", { connected = false })`;
+    expect(rows(run(party))).toEqual(["Fortitude missing on Bob (+1 out of range)"]);
+    expect(rows(run(`${party}; inRange.party1 = false`))).toEqual(["Fortitude missing on 2 out of range"]);
+  });
+
+  it("shortens a long raid list", () => {
+    const names = ["Ann", "Bob", "Cat", "Dee", "Eve"];
+    const raid = names.map((n, i) => `units.raid${i + 2} = unit("WARRIOR", 60, "${n}")`).join("; ");
+    expect(rows(run(`${priest}; ${DIVINE_SPIRIT_OFF}; group = "raid"; units.raid1 = units.player; ${raid}`))).toEqual(["Fortitude missing on Ann, Bob, Cat and 2 more"]);
+  });
+
+  it("stays quiet solo, and turns off from the slash command", () => {
+    expect(rows(run(priest))).toEqual([]);
+    const party = `${priest}; units.party1 = unit("WARRIOR", 60, "Bob")`;
+    expect(rows(run(party, `clear(); SlashCmdList.MGABUFFS("party"); clear(); tick()`))).toEqual([]);
   });
 });
 
@@ -214,7 +296,7 @@ describe("MGA Buffs options window", () => {
       [
         ["MGABuffs.lua", addonLua],
         ["then", `MGABuffsSettings = { food = false, minutes = 5, locked = false }; fire("PLAYER_LOGIN")
-          for _, k in ipairs({ "armor", "soulstone", "food", "group", "sound", "unlock" }) do
+          for _, k in ipairs({ "armor", "soulstone", "healthstone", "food", "group", "party", "sound", "unlock" }) do
             DEFAULT_CHAT_FRAME:AddMessage(k .. "=" .. tostring(_G["MGABuffsOptions_" .. k]:GetChecked()))
           end
           DEFAULT_CHAT_FRAME:AddMessage(MGABuffsOptions_minutesText.text)`],
@@ -225,8 +307,10 @@ describe("MGA Buffs options window", () => {
     expect(lines.filter((l) => l.startsWith("chat: "))).toEqual([
       "chat: armor=true",
       "chat: soulstone=true",
+      "chat: healthstone=true",
       "chat: food=false",
       "chat: group=true",
+      "chat: party=true",
       "chat: sound=true",
       "chat: unlock=true",
       "chat: 5 minutes",
@@ -267,7 +351,7 @@ describe("MGA Buffs options window", () => {
   it("shows what's missing in chat with its button", () => {
     const lines = run("units.player.level = 15", `clear(); click(MGABuffsOptions_status)`);
     expect(lines.slice(0, 3)).toEqual([
-      "chat: MGA Buffs: armor on, soulstone on, food on, group on; warns 3 min before a buff runs out; sound on.",
+      "chat: MGA Buffs: armor on, soulstone on, healthstone on, food on, group on, party on; warns 3 min before a buff runs out; sound on.",
       "chat: MGA Buffs: No Demon Skin",
       "chat: MGA Buffs: Not Well Fed: eat buff food",
     ]);
@@ -326,7 +410,7 @@ describe("MGA Buffs slash command", () => {
 
   it("explains itself for anything else", () => {
     expect(run("", `clear(); ${slash("help")}`)).toEqual([
-      "chat: MGA Buffs: /mgabuffs opens the options. Shortcuts: status | armor | soulstone | food | group | minutes N | sound | unlock | lock | reset",
+      "chat: MGA Buffs: /mgabuffs opens the options. Shortcuts: status | armor | soulstone | healthstone | food | group | party | minutes N | sound | unlock | lock | reset",
     ]);
   });
 });

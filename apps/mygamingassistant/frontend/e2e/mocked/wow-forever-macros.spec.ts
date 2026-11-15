@@ -162,9 +162,11 @@ test("the link at the top of the Macros page jumps to the tag macro builder", as
 test("the Macros page downloads the MGA Buffs addon and lists what it reminds you about", async ({ page }) => {
   await page.goto("/wow-forever/macros");
   const card = page.getByTestId("buffs-addon");
-  await card.getByText("Buff reminder addon: armor, Soulstone, food and group buffs").click();
+  await card.getByText("Buff reminder addon: armor, Soulstone, Healthstone, food and party buffs").click();
   const checks = card.getByRole("list", { name: "What it reminds you about" }).getByRole("listitem");
-  await expect(checks).toHaveCount(4);
+  await expect(checks).toHaveCount(6);
+  await expect(checks.nth(2)).toContainText("Healthstone. None in your bags");
+  await expect(checks.nth(5)).toContainText("Buff your party. When you can cast one of those");
   await expect(checks.first()).toContainText("Your armor. Demon Skin or Demon Armor for Warlocks");
   await expect(checks.nth(1).locator("svg")).toBeVisible();
   await expect(card).toContainText(String.raw`World of Warcraft\_forever_\Interface\AddOns`);

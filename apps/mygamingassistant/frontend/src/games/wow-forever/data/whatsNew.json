@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-15",
+    "title": "Healthstone and party buff reminders",
+    "summary": "MGA Buffs now reminds you when you have no Healthstone: Warlocks are told to make one, everyone else to ask the Warlock in the group. It also asks the Paladin in your group for a Blessing, and when you can cast a buff yourself (Fortitude, Arcane Intellect, Mark of the Wild, a Blessing, Divine Spirit), it names who in your party is missing it. Download the new version from the Macros page.",
+    "to": "/wow-forever/macros"
+  },
+  {
+    "date": "2026-11-15",
     "title": "Help each other — enchants and gear upgrades",
     "summary": "The guild page now has a Help each other tab. It finds every guild member who can enchant a slot that a guildie has left unenchanted, or craft an item that scores better than what a guildie currently wears — with the recipe, the full reagent list, and an estimated Auction House cost. Filter by Enchants / Gear upgrades, or pick a specific member to see what their guildies can make for them.",
     "to": "/wow-forever/topdeadcenter?tab=help"
