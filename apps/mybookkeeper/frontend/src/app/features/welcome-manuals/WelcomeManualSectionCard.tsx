@@ -4,7 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { DoorOpen, GripVertical, Trash2 } from "lucide-react";
 import { ConfirmDialog, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import Markdown from "@/shared/components/ui/Markdown";
-import { SHARED_ROOM_OPTION } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { SHARED_ROOM_OPTION, WELCOME_MANUAL_SECTION_TITLE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import { NEW_SECTION_DEFAULT_TITLE } from "@/shared/lib/welcome-manual-constants";
 import {
   useDeleteSectionMutation,
@@ -130,6 +130,7 @@ const WelcomeManualSectionCard = forwardRef<HTMLElement, WelcomeManualSectionCar
           <div className="flex-1 min-w-0">
             <input
               {...editor.register("title", { required: "Title is required" })}
+              maxLength={WELCOME_MANUAL_SECTION_TITLE_MAX_LENGTH}
               className="w-full border rounded-md px-3 py-2 text-base font-medium min-h-[44px]"
               data-testid="welcome-manual-section-title"
               aria-label="Section title"

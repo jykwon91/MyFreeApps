@@ -2,6 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X } from "lucide-react";
 import type { WelcomeManualSectionFieldResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-field-response";
+import { WELCOME_MANUAL_FIELD_LABEL_MAX_LENGTH, WELCOME_MANUAL_FIELD_VALUE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 
 export interface WelcomeManualSectionFieldCardProps {
   field: WelcomeManualSectionFieldResponse;
@@ -64,6 +65,7 @@ export default function WelcomeManualSectionFieldCard({
       <input
         key={`label-${field.label}`}
         defaultValue={field.label}
+        maxLength={WELCOME_MANUAL_FIELD_LABEL_MAX_LENGTH}
         onBlur={handleLabelBlur}
         placeholder="Field name"
         className="flex-1 min-w-0 border rounded-md px-2 py-2 text-sm min-h-[44px] bg-transparent focus:outline-none focus:bg-muted/40"
@@ -73,6 +75,7 @@ export default function WelcomeManualSectionFieldCard({
       <input
         key={`value-${field.value ?? ""}`}
         defaultValue={field.value ?? ""}
+        maxLength={WELCOME_MANUAL_FIELD_VALUE_MAX_LENGTH}
         onBlur={handleValueBlur}
         placeholder="Value"
         className="flex-1 min-w-0 border rounded-md px-2 py-2 text-sm min-h-[44px] bg-transparent focus:outline-none focus:bg-muted/40"

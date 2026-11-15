@@ -8,6 +8,7 @@ import type { Property } from "@mybookkeeper/api-client/types/property/property"
 import type { WelcomeManualFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-form-values";
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
 import { manualUpdateRequest } from "@mybookkeeper/api-client/utils/welcomeManualRequests";
+import { WELCOME_MANUAL_TITLE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 
 export interface WelcomeManualFormProps {
   manual: WelcomeManualResponse;
@@ -95,6 +96,7 @@ export default function WelcomeManualForm({
               <>
                 <input
                   {...register("title", { required: "Title is required" })}
+                  maxLength={WELCOME_MANUAL_TITLE_MAX_LENGTH}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   data-testid="welcome-manual-edit-title"
                   {...field}
