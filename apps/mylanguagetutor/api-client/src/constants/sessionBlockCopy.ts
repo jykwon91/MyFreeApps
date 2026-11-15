@@ -10,6 +10,14 @@ export const SESSION_BLOCK_COPY: Record<Exclude<SessionBlock, "daily_limit">, st
   session_ended: "This conversation has ended. Start a new one to keep going.",
 };
 
+/** The daily-limit notice; ``when`` is e.g. "today at 6:00 PM". */
+export function dailyLimitCopy(when: string): string {
+  return `You've used today's practice time. It resets ${when}.`;
+}
+
+/** The day word in the reset time, relative to the learner's own date. */
+export const RESET_DAY_COPY = { today: "today", tomorrow: "tomorrow" } as const;
+
 /** Whether picking another scenario gets the learner going again. */
 export const SESSION_BLOCK_CAN_START_NEW: Record<SessionBlock, boolean> = {
   daily_limit: false,

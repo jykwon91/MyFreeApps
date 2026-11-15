@@ -1,3 +1,4 @@
+import { RESET_DAY_COPY } from "../constants/sessionBlockCopy";
 import { nextUtcMidnight } from "./nextUtcMidnight";
 
 const DAY_OPTIONS: Intl.DateTimeFormatOptions = { year: "numeric", month: "numeric", day: "numeric" };
@@ -12,5 +13,5 @@ export function dailyResetWhen(now: Date, timeZone?: string): string {
   const reset = nextUtcMidnight(now);
   const sameLocalDay = now.toLocaleDateString("en-US", { ...DAY_OPTIONS, timeZone }) === reset.toLocaleDateString("en-US", { ...DAY_OPTIONS, timeZone });
   const time = reset.toLocaleTimeString("en-US", { ...TIME_OPTIONS, timeZone });
-  return `${sameLocalDay ? "today" : "tomorrow"} at ${time}`;
+  return `${sameLocalDay ? RESET_DAY_COPY.today : RESET_DAY_COPY.tomorrow} at ${time}`;
 }
