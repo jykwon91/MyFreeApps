@@ -22,6 +22,16 @@ from app.models.recipe.recipe import Recipe
 _UPDATABLE_COLUMNS: frozenset[str] = frozenset({"title", "description", "source"})
 
 
+async def list_all_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[Recipe]:
+    """Every non-deleted recipe the user owns, oldest first (data export)."""
+    result = await db.execute(
+        select(Recipe)
+        .where(Recipe.user_id == user_id, Recipe.deleted_at.is_(None))
+        .order_by(Recipe.created_at.asc(), Recipe.id.asc())
+    )
+    return list(result.scalars().all())
+
+
 async def get_by_id(
     db: AsyncSession,
     recipe_id: uuid.UUID,

@@ -9,6 +9,7 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.recipe.recipe import Recipe
 from app.models.recipe.recipe_ingredient import RecipeIngredient
 from app.models.recipe.recipe_step import RecipeStep
 from app.models.recipe.recipe_version import RecipeVersion
@@ -148,3 +149,36 @@ async def counts_and_latest_by_recipe(
         .group_by(RecipeVersion.recipe_id)
     )
     return {row[0]: (int(row[1]), int(row[2])) for row in result.all()}
+
+
+async def list_all_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[RecipeVersion]:
+    """Every version of the user's non-deleted recipes, in timeline order (data export)."""
+    result = await db.execute(
+        select(RecipeVersion)
+        .join(Recipe, RecipeVersion.recipe_id == Recipe.id)
+        .where(RecipeVersion.user_id == user_id, Recipe.deleted_at.is_(None))
+        .order_by(RecipeVersion.recipe_id.asc(), RecipeVersion.version_number.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_ingredients_for_versions(
+    db: AsyncSession, version_ids: list[uuid.UUID],
+) -> list[RecipeIngredient]:
+    result = await db.execute(
+        select(RecipeIngredient)
+        .where(RecipeIngredient.version_id.in_(version_ids))
+        .order_by(RecipeIngredient.version_id.asc(), RecipeIngredient.position.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_steps_for_versions(
+    db: AsyncSession, version_ids: list[uuid.UUID],
+) -> list[RecipeStep]:
+    result = await db.execute(
+        select(RecipeStep)
+        .where(RecipeStep.version_id.in_(version_ids))
+        .order_by(RecipeStep.version_id.asc(), RecipeStep.position.asc())
+    )
+    return list(result.scalars().all())
