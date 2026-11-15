@@ -14,7 +14,8 @@ import { useUpdateApplicationMutation } from "@myjobhunter/api-client/store/appl
 import { APPLICATION_NOTES_MAX_LENGTH } from "@myjobhunter/api-client/constants/textFieldLimits";
 import { characterCounter } from "@platform/core/utils/characterCounter";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
-import { extractErrorMessage, FieldFeedback, fieldFeedbackAria } from "@platform/ui";
+import { extractErrorMessage, FieldFeedback, fieldFeedbackAria, showError } from "@platform/ui";
+import { NOTES_MESSAGES } from "@/constants/notes-messages";
 import NotesSaveStatus from "./NotesSaveStatus";
 import type { NotesSaveState } from "./NotesSaveState";
 
@@ -120,7 +121,13 @@ export default function NotesSection({ applicationId, initialValue }: NotesSecti
       window.clearTimeout(debounceRef.current);
       const pending = valueRef.current;
       if (pending === lastSavedRef.current || tooLongProblem(pending, APPLICATION_NOTES_MAX_LENGTH)) return;
-      void updateApplicationRef.current({ id: applicationIdRef.current, patch: { notes: pending } });
+      // This section is gone, so its own status can't show a failure: report it on the global toaster.
+      updateApplicationRef
+        .current({ id: applicationIdRef.current, patch: { notes: pending } })
+        .unwrap()
+        .catch((err: unknown) => {
+          showError(`${NOTES_MESSAGES.lastEditNotSaved}: ${extractErrorMessage(err)}`);
+        });
     };
   }, []);
 
