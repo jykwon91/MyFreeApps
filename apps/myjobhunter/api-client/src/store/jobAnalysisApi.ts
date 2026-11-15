@@ -10,6 +10,7 @@
  * navigates there.
  */
 import { baseApi } from "@platform/core/store/baseApi";
+import { COMPANIES_LIST_ID, COMPANIES_TAG } from "../constants/companiesTags";
 import { APPLICATIONS_KANBAN_LIST_ID } from "../constants/applicationsKanbanListId";
 import type { Application } from "../types/application";
 import type { JobAnalysis } from "../types/job-analysis/job-analysis";
@@ -22,7 +23,7 @@ const jobAnalysisApi = baseApi
   // Both tag types must be enumerated here — the apply mutation
   // invalidates BOTH the analysis row (it now points at an application)
   // AND the applications list (which has a new row to show).
-  .enhanceEndpoints({ addTagTypes: [JOB_ANALYSIS_TAG, APPLICATIONS_TAG] })
+  .enhanceEndpoints({ addTagTypes: [JOB_ANALYSIS_TAG, APPLICATIONS_TAG, COMPANIES_TAG] })
   .injectEndpoints({
     endpoints: (build) => ({
       analyzeJob: build.mutation<JobAnalysis, JobAnalysisRequest>({
@@ -50,6 +51,8 @@ const jobAnalysisApi = baseApi
           { type: JOB_ANALYSIS_TAG, id },
           { type: APPLICATIONS_TAG, id: "LIST" },
           { type: APPLICATIONS_TAG, id: APPLICATIONS_KANBAN_LIST_ID },
+          // Apply finds-or-creates the company, so the companies list may have a new row.
+          { type: COMPANIES_TAG, id: COMPANIES_LIST_ID },
         ],
       }),
     }),

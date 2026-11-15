@@ -1,6 +1,7 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
 import { DISCOVERED_JOBS_PAGE_SIZE, FIRST_DISCOVERED_JOBS_OFFSET } from "../constants/discoverPaging";
+import { COMPANIES_LIST_ID, COMPANIES_TAG } from "../constants/companiesTags";
 import { DISCOVERED_JOB_TAG } from "../constants/discoverTags";
 import type { Application } from "../types/application";
 import type { DiscoveredJobListResponse } from "../types/discovery/discovered-job-list-response";
@@ -12,7 +13,7 @@ import type { DiscoveryFetchResult } from "../types/discovery/discovery-fetch-re
 import type { DismissalReason } from "../types/discovery/dismissal-reason";
 
 const apiWithTags = baseApi.enhanceEndpoints({
-  addTagTypes: ["DiscoverySource", DISCOVERED_JOB_TAG, "Applications"],
+  addTagTypes: ["DiscoverySource", DISCOVERED_JOB_TAG, "Applications", COMPANIES_TAG],
 });
 
 const discoverApi = apiWithTags.injectEndpoints({
@@ -107,8 +108,9 @@ const discoverApi = apiWithTags.injectEndpoints({
         method: "POST",
       }),
       // Promote creates an Application + flips the discovered_job's
-      // promoted_application_id, so both caches need invalidating.
-      invalidatesTags: [DISCOVERED_JOB_TAG, "Applications"],
+      // promoted_application_id, and finds-or-creates the posting's company,
+      // so all three caches need invalidating.
+      invalidatesTags: [DISCOVERED_JOB_TAG, "Applications", { type: COMPANIES_TAG, id: COMPANIES_LIST_ID }],
     }),
   }),
 });
