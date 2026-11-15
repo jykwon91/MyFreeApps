@@ -86,6 +86,7 @@ describe("PracticeSession", () => {
       failure: null,
       start: startRecognition,
       stop: vi.fn(),
+      abort: vi.fn(),
       clearFailure: vi.fn(),
     };
     sessionState = {
@@ -189,6 +190,19 @@ describe("PracticeSession", () => {
     expect(screen.getByText("Microphone is blocked")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Type instead" }));
 
+    expect(screen.getByLabelText("Type your answer")).toBeInTheDocument();
+  });
+
+  it("drops what was being said when the learner types instead while listening", () => {
+    localStorage.setItem("ltutor.voicePrivacyAck.v1", "1");
+    recognition = { ...recognition, listening: true, interim: "Quiero un" };
+    renderScreen();
+
+    fireEvent.click(screen.getByRole("button", { name: "Type instead" }));
+
+    expect(recognition.abort).toHaveBeenCalledTimes(1);
+    expect(recognition.stop).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Type your answer")).toBeInTheDocument();
   });
 

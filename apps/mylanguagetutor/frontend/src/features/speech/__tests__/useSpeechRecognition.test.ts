@@ -146,6 +146,50 @@ describe("useSpeechRecognition", () => {
     expect(onFinal).toHaveBeenCalledWith("Hola");
   });
 
+  it("aborts by dropping what was heard, with no failure, even if the browser then sends results and ends", () => {
+    const { result, onFinal } = listen();
+    const recognition = latest();
+    recognition.abort = vi.fn();
+    act(() => recognition.hear(["Quiero un ca", false]));
+    act(() => result.current.abort());
+    expect(recognition.abort).toHaveBeenCalledTimes(1);
+    expect(recognition.stop).not.toHaveBeenCalled();
+    act(() => recognition.hear(["Quiero un café", true]));
+    act(() => recognition.onend?.());
+    expect(onFinal).not.toHaveBeenCalled();
+    expect(result.current).toMatchObject({ listening: false, interim: "", failure: null });
+  });
+
+  it("aborts by dropping what was heard when the browser answers with aborted", () => {
+    const { result, onFinal } = listen();
+    act(() => latest().hear(["Quiero", false]));
+    act(() => result.current.abort());
+    expect(onFinal).not.toHaveBeenCalled();
+    expect(result.current).toMatchObject({ listening: false, failure: null });
+  });
+
+  it("does nothing on abort when not listening", () => {
+    const onFinal = vi.fn();
+    const { result } = renderHook(() => useSpeechRecognition("es-MX", onFinal));
+    act(() => result.current.abort());
+    expect(FakeRecognition.instances).toHaveLength(0);
+    expect(result.current).toMatchObject({ listening: false, failure: null });
+  });
+
+  it("listens afresh after an abort, and sends the next answer", () => {
+    const { result, onFinal } = listen();
+    act(() => latest().hear(["Quiero", false]));
+    act(() => result.current.abort());
+    act(() => result.current.start());
+    expect(FakeRecognition.instances).toHaveLength(2);
+    act(() => latest().hear(["Quiero un café", true]));
+    act(() => latest().onend?.());
+    expect(onFinal).toHaveBeenCalledTimes(1);
+    expect(onFinal).toHaveBeenCalledWith("Quiero un café");
+    act(() => result.current.abort());
+    expect(latest().abort).not.toHaveBeenCalled();
+  });
+
   it("says recognition isn't working when the browser refuses to start", () => {
     FakeRecognition.refuses = true;
     const { result } = listen();

@@ -7,7 +7,7 @@ import type { VoiceInputConfig } from "../types/session/voice-input-config";
 import type { SpeechRecognitionControls } from "../types/speech/speech-recognition-controls";
 
 function recognition(overrides: Partial<SpeechRecognitionControls> = {}): SpeechRecognitionControls {
-  return { supported: true, listening: false, interim: "", failure: null, start: vi.fn(), stop: vi.fn(), clearFailure: vi.fn(), ...overrides };
+  return { supported: true, listening: false, interim: "", failure: null, start: vi.fn(), stop: vi.fn(), abort: vi.fn(), clearFailure: vi.fn(), ...overrides };
 }
 
 function config(overrides: Partial<VoiceInputConfig> = {}): VoiceInputConfig {
@@ -64,12 +64,13 @@ describe("useVoiceInput", () => {
     expect(settings.recognition.start).toHaveBeenCalledTimes(1);
   });
 
-  it("stops listening and clears the last failure on switching to typing, and switches back", () => {
+  it("drops what was being said and clears the last failure on switching to typing, and switches back", () => {
     const settings = config({ recognition: recognition({ failure: "denied" }) });
     const { result } = renderHook(() => useVoiceInput(settings));
     expect(result.current.view).toBe("denied");
     act(() => result.current.switchToText());
-    expect(settings.recognition.stop).toHaveBeenCalledTimes(1);
+    expect(settings.recognition.abort).toHaveBeenCalledTimes(1);
+    expect(settings.recognition.stop).not.toHaveBeenCalled();
     expect(settings.recognition.clearFailure).toHaveBeenCalledTimes(1);
     expect(result.current).toMatchObject({ mode: "text", view: "text" });
     act(() => result.current.switchToVoice());

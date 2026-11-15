@@ -11,5 +11,7 @@ export interface SpeechRecognitionControls {
   start: () => void;
   /** Stop listening; whatever was heard so far is delivered as final. */
   stop: () => void;
+  /** Stop listening and drop whatever was heard: nothing is delivered and no failure is shown. Does nothing when not listening. */
+  abort: () => void;
   clearFailure: () => void;
 }
