@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-14",
+    "title": "Buff reminder addon",
+    "summary": "MGA Buffs reminds you in game, out of combat, when Demon Armor (or a Mage or Priest armor), your Soulstone, Well Fed or a group buff like Fortitude is missing or nearly out. It shows a small list with icons and flashes new reminders. Download it from the Macros page.",
+    "to": "/wow-forever/macros"
+  },
+  {
+    "date": "2026-11-14",
     "title": "Your guild at the top of the menu",
     "summary": "The You group, with topdeadcenter, your character and the Legacy planner, now sits at the top of the left menu and the Overview page, so the guild is one click away.",
     "to": "/wow-forever/topdeadcenter"

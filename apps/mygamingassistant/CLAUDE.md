@@ -1626,6 +1626,23 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   auctions), what the made item sells for, and the difference (`craftProfit`,
   only when everything is priced; enchants make no item). An unknown `?recipe`
   says "wasn't found"; an invalid `?prof` is ignored.
+- MGA Buffs addon (`frontend/addon/MGABuffs/`, Interface 16001, static: no
+  generated data): out of combat and alive, a movable icon list (plus a
+  mid-screen flash + sound the first time a reminder appears) for missing or
+  expiring (≤ `/mgabuffs minutes`, default 3) class armor (Demon Skin/Armor,
+  Frost/Ice/Mage Armor, Inner Fire), Warlock Soulstone from 18 (your stone on a
+  groupmate expiring → timed from your cast when the client gives no timer;
+  else a ready stone in bags; else none in bags), Well Fed (quiet while
+  eating), and Fortitude / Arcane Intellect (mana users) / Mark of the Wild
+  only when that class is in the group, naming who to ask. Buff/item names and
+  ids are checked against the Forever client (Soulstone items 5232/16892/16893/
+  16895/16896 → buff spells 20707/20762-20765; 109 of 114 buff foods give
+  "Well Fed", the rest "Increased Stamina/Spell Damage/Healing Power").
+  Prefers `C_UnitAuras.GetAuraDataByIndex`, falls back to `UnitBuff`; a Lua
+  error is reported once in chat, not every tick. Download card
+  `BuffsAddonCard` on the Macros page (below hover cast, which must stay in the
+  first screen). `src/__tests__/wowBuffsAddon.test.ts` runs the real Lua under
+  fengari on `src/test/addonLua/wowBuffStubs.lua.ts`. Never tested in game.
 - MGA Prices addon (`frontend/addon/MGAPrices/`, Interface 16001; inside the
   frontend so the caddy image's build context has it): item tooltips show the
   player's faction house price (×stack on a bag stack, cheapest · on sale),

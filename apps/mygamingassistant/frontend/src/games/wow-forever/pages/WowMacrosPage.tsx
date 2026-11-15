@@ -1,4 +1,5 @@
 import { AlertBox } from "@platform/ui";
+import BuffsAddonCard from "@/games/wow-forever/components/buffsAddon/BuffsAddonCard";
 import ClassMacroList from "@/games/wow-forever/components/macros/ClassMacroList";
 import HoverCastSection from "@/games/wow-forever/components/macros/HoverCastSection";
 import MacroHowToCard from "@/games/wow-forever/components/macros/MacroHowToCard";
@@ -15,7 +16,7 @@ export default function WowMacrosPage() {
     <div className="p-4 sm:p-8 space-y-6 max-w-4xl">
       <WowPageHeader
         title="Macros"
-        subtitle="Hover-cast and other macros to paste into the in-game macro window, for every class. No addon needed."
+        subtitle="Hover-cast and other macros to paste into the in-game macro window, for every class: no addon needed. Plus an addon that reminds you about missing buffs."
         backTo="/wow-forever"
         backLabel="Back to WoW Forever"
       />
@@ -32,6 +33,7 @@ export default function WowMacrosPage() {
       </p>
       <MacroHowToCard />
       <HoverCastSection />
+      <BuffsAddonCard />
       <TagMacroSection />
       <ClassMacroList />
     </div>
