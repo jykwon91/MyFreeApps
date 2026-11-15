@@ -7,26 +7,6 @@ export interface PaymentDocumentCardProps {
   transaction: Transaction;
 }
 
-const PAYMENT_VENDOR_PATTERNS = [
-  "zelle",
-  "venmo",
-  "cash app",
-  "cashapp",
-  "paypal",
-  "apple pay",
-  "google pay",
-  "airbnb",
-  "vrbo",
-];
-
-export function isPaymentTransaction(txn: Transaction): boolean {
-  if (txn.transaction_type !== "income") return false;
-  if (!txn.amount || parseFloat(txn.amount) <= 0) return false;
-  const vendor = (txn.vendor ?? "").toLowerCase();
-  if (!vendor) return false;
-  return PAYMENT_VENDOR_PATTERNS.some((p) => vendor.includes(p));
-}
-
 export default function PaymentDocumentCard({ transaction }: PaymentDocumentCardProps) {
   const amount = parseFloat(transaction.amount);
   // ``--card`` and ``--background`` resolve to the same near-black in dark
