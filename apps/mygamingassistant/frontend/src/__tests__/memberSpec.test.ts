@@ -96,7 +96,7 @@ describe("talentTrees.json", () => {
       "../games/wow-forever/data/talents/*.json",
       { eager: true, import: "default" },
     );
-    const index = files["../games/wow-forever/data/talents/talentTrees.json"] as unknown as Record<string, unknown>;
+    const index = files["../games/wow-forever/data/guild/talentTrees.json"] as unknown as Record<string, unknown>;
     const classIds = Object.keys(index);
     expect(classIds.length).toBeGreaterThan(0);
     for (const classId of classIds) {

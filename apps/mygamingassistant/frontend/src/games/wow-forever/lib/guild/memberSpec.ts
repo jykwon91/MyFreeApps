@@ -6,7 +6,7 @@
  * the most points; a tie keeps the first one in that order.
  */
 import type { WowClassId } from "@/games/wow-forever/data/classes";
-import talentTreesRaw from "@/games/wow-forever/data/talents/talentTrees.json";
+import talentTreesRaw from "@/games/wow-forever/data/guild/talentTrees.json";
 import { fileIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import type { GuildMemberTalentTree } from "@/games/wow-forever/types/guild/guildMemberTalentTree";
 import type { MemberSpec } from "@/games/wow-forever/types/guild/memberSpec";

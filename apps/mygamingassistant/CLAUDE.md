@@ -1193,7 +1193,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Each member's dominant spec (tree with the most points) is shown via `GuildMemberSpec` +
   `lib/guild/memberSpec.ts` → `resolveSpec()`: the tree with the highest `points` from
   `GuildMember.talents` (null = fetch failed; [] = no points yet). Tree data is an index from
-  the class talent JSON files: `data/talents/talentTrees.json` (`{classId → [{id, name, icon}]}`).
+  the class talent JSON files: `data/guild/talentTrees.json` (`{classId → [{id, name, icon}]}`).
   The spec column is in the table (hidden below `lg`); a spec line appears on phone cards below
   the class/level details. The backend stores the active set's per-tree point totals in
   `wow_character.talent_points` (nullable JSONB: null = failed, [] = no points, [{tree_id, points}…]);
