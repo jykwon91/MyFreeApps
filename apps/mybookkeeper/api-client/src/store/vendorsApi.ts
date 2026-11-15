@@ -13,7 +13,7 @@ import type { VendorUpdateRequest } from "../types/vendor/vendor-update-request"
  * Tag strategy mirrors ``applicantsApi``: each item carries its own
  * ``Vendor:{id}`` tag plus a single shared ``Vendor:LIST`` tag for the
  * paginated list. PR 4.2 adds ``createVendor`` / ``updateVendor`` /
- * ``deleteVendor`` mutations and invalidates ``Transaction:LIST`` on
+ * ``deleteVendor`` mutations and invalidates the ``Transaction`` tag on
  * delete because vendor deletion clears ``Transaction.vendor_id`` rows.
  */
 export const vendorsApi = baseApi.enhanceEndpoints({
@@ -83,14 +83,14 @@ export const vendorsApi = baseApi.enhanceEndpoints({
     }),
     deleteVendor: builder.mutation<void, string>({
       query: (id) => ({ url: `/vendors/${id}`, method: "DELETE" }),
-      // Hard-deleting a vendor clears every linked Transaction.vendor_id —
-      // invalidate the Transaction cache so the vendor dropdown rerenders
-      // without the gone vendor (and any open transaction edit panel
-      // refetches with vendor_id=null).
+      // Hard-deleting a vendor clears Transaction.vendor_id on every linked row.
+      // Cached transaction details and list pages are tagged per transaction id,
+      // so the whole Transaction tag is invalidated, not just its LIST tag —
+      // otherwise open detail screens keep showing the deleted vendor.
       invalidatesTags: (_result, _err, id) => [
         { type: "Vendor", id },
         { type: "Vendor", id: "LIST" },
-        { type: "Transaction", id: "LIST" },
+        "Transaction",
       ],
     }),
   }),
