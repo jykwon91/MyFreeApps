@@ -75,21 +75,21 @@ async def find_successor(
     return result.scalar_one_or_none()
 
 
-async def list_replaced_by_successor_starting_on_or_before(
+async def list_replaced_with_successor_starting_on_or_before(
     db: AsyncSession,
     *,
     cutoff: _dt.date,
-) -> list[SignedLease]:
-    """Return live parent leases whose live successor's starts_on <= cutoff.
+) -> list[tuple[SignedLease, SignedLease]]:
+    """Return ``(parent, successor)`` for live signed/active parents whose
+    live successor's ``starts_on`` <= cutoff.
 
-    Used by the auto-end scheduler job to find leases in signed/active
-    status that should transition to ``ended`` because their successor's
-    start date has arrived. Tenancy-agnostic — the scheduler runs across
-    all users.
+    Used by the lease hand-over job, which still checks each successor's
+    ``starts_on`` against the host's local date. Tenancy-agnostic — the
+    scheduler runs across all users.
     """
     successor = aliased(SignedLease)
     result = await db.execute(
-        select(SignedLease)
+        select(SignedLease, successor)
         .join(successor, successor.parent_lease_id == SignedLease.id)
         .where(
             SignedLease.deleted_at.is_(None),
@@ -99,7 +99,7 @@ async def list_replaced_by_successor_starting_on_or_before(
             successor.starts_on <= cutoff,
         )
     )
-    return list(result.scalars().all())
+    return [(parent, child) for parent, child in result.all()]
 
 
 async def get(
