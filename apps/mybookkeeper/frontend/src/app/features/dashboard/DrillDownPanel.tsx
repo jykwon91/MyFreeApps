@@ -3,6 +3,8 @@ import { ArrowLeft, ChevronRight } from "lucide-react";
 import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { drillDownListParams, drillDownTotal, filterDrillDownTransactions, isDrillDownTruncated } from "@mybookkeeper/api-client/utils/drillDown";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { DRILL_DOWN_PROPERTIES_LOAD_ERROR } from "@/shared/lib/drill-down-messages";
 import { useToast } from "@/shared/hooks/useToast";
 import { formatCurrency } from "@/shared/utils/currency";
 import { Panel, PanelCloseButton, PanelTitle } from "@platform/ui";
@@ -24,9 +26,19 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
   const transactionPanelRef = useRef<TransactionPanelHandle>(null);
 
-  const { data: allTransactions = [], isLoading } = useListTransactionsQuery(drillDownListParams(filter));
+  // Decided on `error`, not `isError`: RTK clears `isError` while Retry runs, which
+  // would drop the alert and show an empty list. `currentData` (not `data`) so a
+  // changed filter never shows the previous filter's rows.
+  const { currentData, error, isFetching, refetch } = useListTransactionsQuery(drillDownListParams(filter));
+  const allTransactions = useMemo(() => currentData ?? [], [currentData]);
+  const hasError = error !== undefined;
 
-  const { data: properties = [] } = useGetPropertiesQuery();
+  const {
+    data: properties = [],
+    error: propertiesError,
+    isFetching: isFetchingProperties,
+    refetch: refetchProperties,
+  } = useGetPropertiesQuery();
 
   const transactions = useMemo(
     () => filterDrillDownTransactions(allTransactions, filter),
@@ -40,7 +52,8 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
 
   const mode = useDrillDownBodyMode({
     selectedTxn,
-    isLoading,
+    isLoading: currentData === undefined && !hasError,
+    hasError,
     transactionCount: transactions.length,
   });
 
@@ -78,9 +91,11 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
               <PanelTitle asChild>
                 <p className="font-medium">{filter.label}</p>
               </PanelTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {transactions.length} transaction{transactions.length !== 1 ? "s" : ""} — {formatCurrency(total)}
-              </p>
+              {currentData && !hasError ? (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {transactions.length} transaction{transactions.length !== 1 ? "s" : ""} — {formatCurrency(total)}
+                </p>
+              ) : null}
             </>
           )}
         </div>
@@ -93,12 +108,24 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
         </p>
       ) : null}
 
+      {propertiesError !== undefined && !hasError ? (
+        <div className="px-5 pt-3">
+          <LoadErrorAlert
+            message={DRILL_DOWN_PROPERTIES_LOAD_ERROR}
+            isRetrying={isFetchingProperties}
+            onRetry={() => void refetchProperties()}
+          />
+        </div>
+      ) : null}
+
       {/* Content: dispatched to sub-components via mode */}
       <DrillDownPanelBody
         mode={mode}
         transactions={paging.visible}
         remaining={paging.remaining}
         onShowMore={paging.showMore}
+        isRetrying={isFetching}
+        onRetry={() => void refetch()}
         selectedTxn={selectedTxn}
         properties={properties}
         onSelectTxn={setSelectedTxn}

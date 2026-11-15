@@ -12,25 +12,31 @@ const txn = { id: "t1" } as Transaction;
 describe("useDrillDownBodyMode", () => {
   it('returns "detail" when selectedTxn is set (even if loading)', () => {
     expect(
-      useDrillDownBodyMode({ selectedTxn: txn, isLoading: true, transactionCount: 0 }),
+      useDrillDownBodyMode({ selectedTxn: txn, isLoading: true, hasError: false, transactionCount: 0 }),
     ).toBe("detail");
   });
 
   it('returns "loading" when no selected txn and isLoading is true', () => {
     expect(
-      useDrillDownBodyMode({ selectedTxn: null, isLoading: true, transactionCount: 0 }),
+      useDrillDownBodyMode({ selectedTxn: null, isLoading: true, hasError: false, transactionCount: 0 }),
     ).toBe("loading");
+  });
+
+  it('returns "error" when the load failed, even though there are no rows', () => {
+    expect(
+      useDrillDownBodyMode({ selectedTxn: null, isLoading: false, hasError: true, transactionCount: 0 }),
+    ).toBe("error");
   });
 
   it('returns "empty" when not loading and transaction count is 0', () => {
     expect(
-      useDrillDownBodyMode({ selectedTxn: null, isLoading: false, transactionCount: 0 }),
+      useDrillDownBodyMode({ selectedTxn: null, isLoading: false, hasError: false, transactionCount: 0 }),
     ).toBe("empty");
   });
 
   it('returns "list" when not loading and there are transactions', () => {
     expect(
-      useDrillDownBodyMode({ selectedTxn: null, isLoading: false, transactionCount: 3 }),
+      useDrillDownBodyMode({ selectedTxn: null, isLoading: false, hasError: false, transactionCount: 3 }),
     ).toBe("list");
   });
 });

@@ -48,7 +48,11 @@ const filter: DrillDownFilter = { category: "contract_work", label: "Contract Wo
 function setRows(rows: Transaction[]) {
   vi.mocked(useListTransactionsQuery).mockReturnValue({
     data: rows,
+    currentData: rows,
     isLoading: false,
+    isFetching: false,
+    error: undefined,
+    refetch: vi.fn(),
   } as unknown as ReturnType<typeof useListTransactionsQuery>);
 }
 

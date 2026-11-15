@@ -4,6 +4,7 @@ import type { DrillDownBodyMode } from "@/shared/types/dashboard/drill-down-body
 interface UseDrillDownBodyModeArgs {
   selectedTxn: Transaction | null;
   isLoading: boolean;
+  hasError: boolean;
   transactionCount: number;
 }
 
@@ -15,9 +16,11 @@ interface UseDrillDownBodyModeArgs {
 export function useDrillDownBodyMode({
   selectedTxn,
   isLoading,
+  hasError,
   transactionCount,
 }: UseDrillDownBodyModeArgs): DrillDownBodyMode {
   if (selectedTxn) return "detail";
+  if (hasError) return "error";
   if (isLoading) return "loading";
   if (transactionCount === 0) return "empty";
   return "list";
