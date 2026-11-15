@@ -197,4 +197,15 @@ describe("NewTransactionScreen", () => {
     alert.mock.calls[0]?.[2]?.find((button) => button.style === "destructive")?.onPress?.();
     expect(mockDispatch).toHaveBeenCalledWith("go-back");
   });
+
+  it("does not add the transaction twice when Add is pressed again while the screen slides away", async () => {
+    const server = startTransactionServer([]);
+    await renderScreen();
+    await fireEvent.changeText(await screen.findByLabelText("Amount (USD), required"), "10");
+    const add = screen.getByRole("button", { name: "Add transaction" });
+    await fireEvent.press(add);
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    await fireEvent.press(screen.getByRole("button", { name: "Add transaction" }));
+    expect(server.requests.filter((request) => request.method === "post" && request.url === "/transactions")).toHaveLength(1);
+  });
 });
