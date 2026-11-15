@@ -6,10 +6,12 @@
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
+import { toast, toastRegion } from "@platform/ui/test-support/toast";
 import { mockApplication, mockCompany } from "./fixtures/mockData";
 
 const APPLICATION = mockApplication();
 const DETAIL = new RegExp(`/api/applications/${APPLICATION.id}$`);
+const WARNING = "Your last notes edit wasn't saved: Server error";
 
 test("closing the drawer right after typing notes warns when the final save fails", async ({ page }) => {
   await stubSignedInShell(page);
@@ -32,6 +34,8 @@ test("closing the drawer right after typing notes warns when the final save fail
   await page.getByLabel("Application notes").fill("last-minute thought");
   await page.keyboard.press("Escape");
 
-  await expect(page.getByText(/Your last notes edit wasn't saved: /)).toBeVisible();
+  await expect(toast(page, WARNING)).toBeVisible();
+  // One lost edit, one warning: nothing else in the toast region repeats it.
+  await expect(toastRegion(page).getByText(WARNING, { exact: true })).toHaveCount(1);
   expect(patched).toEqual([{ notes: "last-minute thought" }]);
 });
