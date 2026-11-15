@@ -45,7 +45,9 @@ def reputations_json(*standings: tuple[int, str, int, int, int]) -> dict[str, An
     ]}
 
 
-def profile_json(slug: str, blizzard_id: int, guild: dict[str, Any] | None) -> dict[str, Any]:
+def profile_json(
+    slug: str, blizzard_id: int, guild: dict[str, Any] | None, *, last_login_timestamp: int | None = None,
+) -> dict[str, Any]:
     first, surname = (part.capitalize() for part in slug.split("-"))
     body: dict[str, Any] = {
         "id": blizzard_id, "name": first, "surname": surname, "level": 30,
@@ -54,6 +56,8 @@ def profile_json(slug: str, blizzard_id: int, guild: dict[str, Any] | None) -> d
     }
     if guild is not None:
         body["guild"] = guild
+    if last_login_timestamp is not None:
+        body["last_login_timestamp"] = last_login_timestamp
     return body
 
 
@@ -61,10 +65,12 @@ def make_fetch(
     slug: str = "jason-kwon", blizzard_id: int = 1, guild: dict[str, Any] | None = GUILD,
     professions: dict[str, Any] | None = None, reputations: dict[str, Any] | None = None,
     specializations: dict[str, Any] | None = _NO_SPEC_POINTS,
+    last_login_timestamp: int | None = None,
 ) -> CharacterFetch:
     """``specializations=None`` = Blizzard's call failed (keep stored value); ``{}`` = no points yet."""
     profile = CharacterProfile(
-        profile=profile_json(slug, blizzard_id, guild), media=None, equipment=None, statistics=None,
+        profile=profile_json(slug, blizzard_id, guild, last_login_timestamp=last_login_timestamp),
+        media=None, equipment=None, statistics=None,
         specializations=specializations, professions=professions, reputations=reputations, pvp_summary=None,
         achievement_statistics=None, mounts={}, pets={},
     )

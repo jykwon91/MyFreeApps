@@ -37,3 +37,6 @@ class GuildMemberResponse(BaseModel):
     rank: int | None
     # When the member's character was last fetched from Blizzard.
     refreshed_at: datetime
+    # When Blizzard's snapshot of this character was last taken (their last log-out).
+    # None for characters fetched before migration 0058, or when Blizzard omitted the field.
+    blizzard_updated_at: datetime | None

@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-15",
+    "title": "Guild roster shows when Blizzard last saved each member",
+    "summary": "Each member on the Roster tab now shows how long ago Blizzard captured their data, with a note that it only updates when they log out. A short explainer near the Refresh button explains why the data may look unchanged after a refresh.",
+    "to": "/wow-forever/topdeadcenter?tab=roster"
+  },
+  {
+    "date": "2026-11-15",
     "title": "Leveling routes no longer list recipes your trainer can't teach",
     "summary": "The game files hold copies of some recipes from another version of Classic that Forever doesn't teach, like a second Earthen Vest that stays orange longer. They're gone from the Professions guides, the Recipes page and item pages, so the cheapest route now only picks recipes you can actually learn, and every step it suggests still gives skill points. Recipes a trainer never taught, like the Felcloth Bag, now name the pattern, quest or NPC that does, and stay off the cheapest route until you tick them as learned.",
     "to": "/wow-forever/professions?p=tailoring"

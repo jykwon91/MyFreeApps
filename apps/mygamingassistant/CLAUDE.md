@@ -1233,6 +1233,16 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   updated with `active_tree_points()` from `character_talents_mapper.py` on each fresh fetch.
   Migration 0057. `guild_repo.members()` SELECTs it directly (no sheet decode). Tests:
   `tests/test_wow_guild_roster.py`, `src/__tests__/memberSpec.test.ts`, `e2e/mocked/wow-forever-guild.spec.ts`.
+- Each Roster member shows when Blizzard last saved their data: a muted Clock line "Blizzard data
+  from X ago · updates when they log out" (desktop table and phone card, `GuildMemberDataAge.tsx`).
+  The explainer near "Refresh now" (`GuildBannerFooter`) notes this when `can_refresh` is true.
+  `wow_character.blizzard_updated_at` (nullable `DateTime(timezone=True)`, migration 0058) is
+  populated from `last_login_timestamp` (ms epoch) on every fresh Blizzard fetch; always overwritten
+  (None = Blizzard didn't send it this fetch, unlike `talent_points` which is kept on failure).
+  `character_store_service.record()` → `FETCHED_FIELDS` → `guild_repo.members()` →
+  `GuildMemberRow.blizzard_updated_at` → `GuildMemberResponse.blizzard_updated_at` → frontend.
+  Tests: `test_wow_guild_roster.py::test_blizzard_updated_at_is_stored_from_last_login_timestamp`,
+  `src/__tests__/wowGuildMemberDataAge.test.tsx`, `e2e/mocked/wow-forever-guild.spec.ts`.
 - Guild link preview: Discord shows `GET /api/wow/guilds/topdeadcenter/preview.png` for the guild page
   (`frontend/src/constants/linkPreview.ts`; unfurlers run no JS, so the backend draws it from the stored
   guild, never Blizzard). 1200x630 PNG (`guild_preview_image.py`, Pillow, bundled Inter in

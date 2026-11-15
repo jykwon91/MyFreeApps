@@ -16,7 +16,8 @@ function member(slug: string, extra: Partial<GuildMember> = {}): GuildMember {
   return {
     slug, name: slug, surname: "X", class_name: "Mage", level: null, item_level: null, honorable_kills: null,
     killing_blows: null, deaths_from_players: null, total_kills: null, total_deaths: null, dungeons_done: null,
-    exalted_reputations: null, baseline: null, professions: [], talents: null, rank: 1, refreshed_at: "2026-11-12T00:00:00Z", ...extra,
+    exalted_reputations: null, baseline: null, professions: [], talents: null, rank: 1, refreshed_at: "2026-11-12T00:00:00Z",
+    blizzard_updated_at: extra.blizzard_updated_at ?? null, ...extra,
   };
 }
 

@@ -74,6 +74,7 @@ def to_guild_response(
                 ),
                 rank=row.rank,
                 refreshed_at=row.fetched_at,
+                blizzard_updated_at=row.blizzard_updated_at,
             )
             for row in rows
         ],

@@ -3,6 +3,7 @@ import { GUILD_NUMBER_CELL } from "@/games/wow-forever/data/guild/guildStyles";
 import GuildMemberLink from "@/games/wow-forever/components/guild/GuildMemberLink";
 import GuildMemberTitles from "@/games/wow-forever/components/guild/GuildMemberTitles";
 import GuildMemberStaleNote from "@/games/wow-forever/components/guild/GuildMemberStaleNote";
+import GuildMemberDataAge from "@/games/wow-forever/components/guild/GuildMemberDataAge";
 import GuildMemberProfessions from "@/games/wow-forever/components/guild/GuildMemberProfessions";
 import GuildMemberSpec from "@/games/wow-forever/components/guild/GuildMemberSpec";
 import GuildSortHeader from "@/games/wow-forever/components/guild/GuildSortHeader";
@@ -56,6 +57,7 @@ export default function GuildMemberTable({ members, rosterUpdatedAt, titles, pro
                 <GuildMemberLink member={m} size="sm" />
                 <GuildMemberTitles titles={titles.get(m.slug)} />
                 <GuildMemberStaleNote member={m} rosterUpdatedAt={rosterUpdatedAt} />
+                <GuildMemberDataAge blizzard_updated_at={m.blizzard_updated_at} />
               </td>
               <td className={GUILD_NUMBER_CELL}>{m.level ?? GUILD_MISSING_VALUE}</td>
               <td className="px-3 py-1">{m.class_name ?? GUILD_MISSING_VALUE}</td>

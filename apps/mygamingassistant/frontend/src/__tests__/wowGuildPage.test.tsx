@@ -75,6 +75,7 @@ function member(overrides: Partial<GuildMember>): GuildMember {
     talents: null,
     rank: 0,
     refreshed_at: ROSTER_AT,
+    blizzard_updated_at: overrides.blizzard_updated_at ?? null,
     ...overrides,
   };
 }
