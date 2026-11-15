@@ -21,6 +21,7 @@ import { COOK_LOG_MESSAGES } from "@myrecipes/api-client/constants/cookLog";
 import { COMPARE_VERSION_COUNT } from "@myrecipes/api-client/constants/versions";
 import { orderForCompare } from "@myrecipes/api-client/utils/orderForCompare";
 import { toggleCompareId } from "@myrecipes/api-client/utils/toggleCompareId";
+import { VERSION_LOAD_FAILED_MESSAGES } from "@/constants/recipe-detail-messages";
 import RecipeDetailSkeleton from "@/features/recipes/RecipeDetailSkeleton";
 import VersionTimeline from "@/features/recipes/VersionTimeline";
 import VersionBody from "@/features/recipes/VersionBody";
@@ -60,6 +61,10 @@ export default function RecipeDetail() {
     { recipeId, versionId: effectiveVersionId ?? "" },
     { skip: !recipeId || !effectiveVersionId },
   );
+
+  // currentData belongs to the selected version only; `data` would keep showing
+  // the previously selected one while this one loads or after it fails.
+  const selectedVersion = versionQuery.currentData;
 
   const versionNumberById = useMemo(() => {
     const map: Record<string, number> = {};
@@ -153,7 +158,7 @@ export default function RecipeDetail() {
               variant="secondary"
               size="sm"
               onClick={() => setCookOpen(true)}
-              disabled={!effectiveVersionId}
+              disabled={!selectedVersion}
             >
               <span className="inline-flex items-center gap-1.5">
                 <UtensilsCrossed className="w-4 h-4" />
@@ -182,23 +187,33 @@ export default function RecipeDetail() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          {versionQuery.isLoading || !versionQuery.data ? (
-            <RecipeDetailSkeleton />
-          ) : (
+          {selectedVersion ? (
             <>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">
-                  Viewing v{versionQuery.data.version_number}
+                  Viewing v{selectedVersion.version_number}
                 </span>
-                {versionQuery.data.id === latestVersionId ? (
+                {selectedVersion.id === latestVersionId ? (
                   <span className="text-primary">(latest)</span>
                 ) : null}
-                {versionQuery.data.change_note ? (
-                  <span className="truncate">— {versionQuery.data.change_note}</span>
+                {selectedVersion.change_note ? (
+                  <span className="truncate">— {selectedVersion.change_note}</span>
                 ) : null}
               </div>
-              <VersionBody version={versionQuery.data} />
+              <VersionBody version={selectedVersion} />
             </>
+          ) : versionQuery.isError ? (
+            <EmptyState
+              icon={<ChefHat className="w-12 h-12 text-destructive" />}
+              heading={VERSION_LOAD_FAILED_MESSAGES.heading}
+              body={VERSION_LOAD_FAILED_MESSAGES.body}
+              action={{
+                label: VERSION_LOAD_FAILED_MESSAGES.tryAgain,
+                onClick: () => void versionQuery.refetch(),
+              }}
+            />
+          ) : (
+            <RecipeDetailSkeleton />
           )}
 
           {isOwner && (
@@ -225,13 +240,13 @@ export default function RecipeDetail() {
         </div>
       </div>
 
-      {isOwner && effectiveVersionId && versionQuery.data ? (
+      {isOwner && selectedVersion ? (
         <CookLogModal
           open={cookOpen}
           onClose={() => setCookOpen(false)}
           recipeId={recipeId}
-          versionId={effectiveVersionId}
-          versionNumber={versionQuery.data.version_number}
+          versionId={selectedVersion.id}
+          versionNumber={selectedVersion.version_number}
         />
       ) : null}
 
