@@ -1417,6 +1417,23 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   highest skill first. A gone guild finds nothing. `?recipe=` holds the search.
   `wow_recipe.id` is the SkillLineAbility id, not a spell id. Tests:
   `tests/test_wow_guild_recipe_search.py`.
+- Guild help tab ("Help each other", `GuildHelpTab`): `GET /api/wow/guilds/{slug}/help`
+  returns every live member's stored sheet slimmed down to equipped slots (slot,
+  item_id, name, item_level, inventory_type, enchantments) plus recipe ability
+  ids and profession skill rows. The frontend computes two kinds of match entirely
+  client-side (scoring + crafting data are TypeScript; not ported to Python):
+  **enchant matches** (`lib/guild/guildEnchantMatches.ts`) — a crafter knows an
+  Enchanting recipe for a slot the beneficiary wears unenchanted, deduped to the
+  highest-skill enchanter per (beneficiary, slot);
+  **gear matches** (`lib/guild/guildGearMatches.ts`) — a crafter knows a recipe
+  that creates an item scoring ≥ `UPGRADE_THRESHOLD_PCT` (2%) better than what
+  the beneficiary wears, using `LEVELING_SPEC_ID` weights for all members, deduped
+  to the best upgrade per (beneficiary, slot). Both use `recipeSpell()` to map
+  the SkillLineAbility id from the sheet to the crafting JSON's spell id.
+  Filter chips (All / Enchants / Gear upgrades) and a member picker use `?help_type=`
+  / `?help_for=` URL params. AH prices show per-reagent and total estimated cost.
+  Backend: `services/wow/guild/guild_help_service.py`, repo: `guild_repo.member_sheets`.
+  Tests: `tests/test_wow_guild_help.py`.
 - Frontend: `pages/WowCharacterPage.tsx`, `components/character/`,
   `lib/character/`. Names are remembered per browser only after a successful
   load (`mga.wowForever.character.v1`, 5 max); `/wow-forever/character`

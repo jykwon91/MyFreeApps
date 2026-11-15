@@ -1,7 +1,7 @@
 /**
  * WoW Forever guild page (/wow-forever/topdeadcenter; old /wow-forever/guild links redirect) — E2E, network-stubbed.
  *
- *   - tabs (Home / Titles / Who can craft? / Roster) kept in `?tab=`; older links open
+ *   - tabs (Home / Titles / Who can craft? / Roster / Help each other) kept in `?tab=`; older links open
  *     the tab holding what they point at (`?tab=week|arena` and `?board=` open Home); the tab row scrolls sideways on a 375px phone
  *   - the guild badge on a character's sheet opens the guild page, marking that character
  *   - recipe search: who knows a recipe, with their skill; the search lives in the URL
@@ -19,7 +19,7 @@
  *   - the Guild menu item: search by name → open a guild; once a character is looked up it opens
  *     their guild, and "Find another guild" gets back to the search (on a phone too)
  *
- * Stubbed: `/wow/guilds/<slug>`, `/wow/guilds/<slug>/recipes`, `/wow/guilds/<slug>/reputations`, `/wow/characters/<slug>` and its render.
+ * Stubbed: `/wow/guilds/<slug>`, `/wow/guilds/<slug>/recipes`, `/wow/guilds/<slug>/reputations`, `/wow/guilds/<slug>/help`, `/wow/characters/<slug>` and its render.
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-guild
  */
@@ -677,12 +677,12 @@ test("375px phone: heroes snap sideways inside their own row, hot races and your
     expect(box.x + box.width).toBeLessThanOrEqual(375);
   }
 
-  // Home runs the Arena, then heroes, quests, hot races; the tabs run Home to Roster.
+  // Home runs the Arena, then heroes, quests, hot races; the tabs run Home to Help each other.
   const names = ["The Arena", "This week's heroes", "Your quests", "Hot races"];
   const tops = await Promise.all(names.map(async (name) => (await page.getByRole("region", { name }).boundingBox())!.y));
   expect([...tops].sort((a, b) => a - b)).toEqual(tops);
   await expect(page.getByRole("tablist", { name: "Guild sections" }).getByRole("tab")).toHaveText([
-    "Home", "Titles", "Who can craft?", "Roster",
+    "Home", "Titles", "Who can craft?", "Roster", "Help each other",
   ]);
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -713,8 +713,8 @@ test("375px phone: the tab row scrolls sideways, tabs are 44px tall, and a link 
   const rosterBox = (await roster.boundingBox())!;
   expect(rosterBox.x + rosterBox.width).toBeLessThanOrEqual(375);
   const tabs = page.getByRole("tablist", { name: "Guild sections" }).getByRole("tab");
-  await expect(tabs).toHaveCount(4);
-  for (const i of [0, 1, 2, 3]) {
+  await expect(tabs).toHaveCount(5);
+  for (const i of [0, 1, 2, 3, 4]) {
     const box = (await tabs.nth(i).boundingBox())!;
     expect(box.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
   }
@@ -898,4 +898,163 @@ test("recipe search: the recipe has icons and a hover tooltip, and opens in full
   const row = page.getByTestId("recipe-row").filter({ hasText: "Bolt of Linen Cloth" }).first();
   await expect(row.locator("details")).toHaveAttribute("open", "");
   await expect(row.getByRole("link", { name: /Tailoring leveling guide/i })).toBeVisible();
+});
+
+// ---------------------------------------------------------------------------
+// Help each other tab
+// ---------------------------------------------------------------------------
+
+const HELP_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+\/help$/.test(url.pathname);
+
+/**
+ * A minimal /help response:
+ *   - "enchanter" has Enchanting 100/300 and knows ability 4289 → spell 7418
+ *     "Enchant Bracer - Inferior Stamina" (a Bracer enchant in enchanting.json)
+ *   - "needy" wears an unenchanted WRIST item and an already-enchanted CHEST
+ *
+ * This should produce exactly one enchant match (WRIST only), no gear matches.
+ */
+function helpResponse() {
+  return {
+    members: [
+      {
+        slug: "enchanter",
+        name: "Enchanter",
+        surname: "",
+        class_name: "Mage",
+        level: 60,
+        equipped: [],
+        recipe_ability_ids: [4289], // → spell 7418 "Enchant Bracer - Inferior Stamina"
+        professions: [{ profession_id: 333, name: "Enchanting", skill: 100, max_skill: 300 }],
+      },
+      {
+        slug: "needy",
+        name: "Needy",
+        surname: "",
+        class_name: "Warrior",
+        level: 40,
+        equipped: [
+          {
+            slot: "WRIST",
+            item_id: 1001,
+            name: "Linen Bracers",
+            item_level: 10,
+            inventory_type: "WRIST",
+            enchantments: [],
+          },
+          {
+            slot: "CHEST",
+            item_id: 1002,
+            name: "Linen Robe",
+            item_level: 12,
+            inventory_type: "CHEST",
+            enchantments: ["Enchant Chest - Minor Stats"],
+          },
+        ],
+        recipe_ability_ids: [],
+        professions: [],
+      },
+    ],
+  };
+}
+
+async function stubHelp(page: Page) {
+  await stubAll(page);
+  await page.route(HELP_PATTERN, (route) => json(route, helpResponse()));
+}
+
+test("help tab: shows enchant matches, type chips filter, member picker filters, URL params preserved", async ({ page }) => {
+  await stubHelp(page);
+  await page.goto("/wow-forever/topdeadcenter?tab=help");
+
+  // Tab is selected
+  await expect(page.getByRole("tab", { name: "Help each other", exact: true })).toHaveAttribute("aria-selected", "true");
+
+  // Wait for the match list (crafting files load lazily; give them 10 s)
+  const matchList = page.getByTestId("help-match-list");
+  await expect(matchList).toBeVisible({ timeout: 10_000 });
+
+  // The one enchant match is visible
+  const card = page.getByTestId("guild-match-card");
+  await expect(card).toHaveCount(1);
+  await expect(card).toContainText("Enchanting");
+  await expect(card).toContainText("Enchanter");
+  await expect(card).toContainText("Needy");
+  // WRIST slot was matched, CHEST (already enchanted) was not
+  await expect(card).toContainText("Bracer");
+
+  // Type chips are present
+  const chips = page.getByTestId("help-type-chips");
+  await expect(chips.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+  await expect(chips.getByRole("button", { name: "Enchants" })).toBeVisible();
+  await expect(chips.getByRole("button", { name: "Gear upgrades" })).toBeVisible();
+
+  // Filtering by "Enchants" keeps the match
+  await chips.getByRole("button", { name: "Enchants" }).click();
+  await expect(page).toHaveURL(/help_type=enchant/);
+  await expect(page.getByTestId("guild-match-card")).toHaveCount(1);
+
+  // Filtering by "Gear upgrades" shows the empty state
+  await chips.getByRole("button", { name: "Gear upgrades" }).click();
+  await expect(page).toHaveURL(/help_type=gear/);
+  await expect(page.getByTestId("help-empty")).toBeVisible();
+
+  // Back to All
+  await chips.getByRole("button", { name: "All" }).click();
+  await expect(page.getByTestId("guild-match-card")).toHaveCount(1);
+});
+
+test("help tab: member picker filters to that member's matches, kept in URL", async ({ page }) => {
+  await stubHelp(page);
+  await page.goto("/wow-forever/topdeadcenter?tab=help");
+  const matchList = page.getByTestId("help-match-list");
+  await expect(matchList).toBeVisible({ timeout: 10_000 });
+
+  const picker = page.getByTestId("help-for-picker");
+  await expect(picker).toBeVisible();
+
+  // Select "Needy" — the one beneficiary
+  await picker.selectOption({ label: "Needy" });
+  await expect(page).toHaveURL(/help_for=needy/);
+  await expect(page.getByTestId("guild-match-card")).toHaveCount(1);
+
+  // Select "Enchanter" — no one can help the enchanter (no gear upgrades either)
+  await picker.selectOption({ label: "Enchanter" });
+  await expect(page.getByTestId("help-empty")).toBeVisible();
+
+  // Back to everyone
+  await picker.selectOption({ value: "" });
+  await expect(page.getByTestId("guild-match-card")).toHaveCount(1);
+});
+
+test("help tab: skeleton while loading, then shows matches", async ({ page }) => {
+  await stubAll(page);
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  await page.route(HELP_PATTERN, async (route) => { await held; await json(route, helpResponse()); });
+
+  await page.goto("/wow-forever/topdeadcenter?tab=help");
+  await expect(page.getByTestId("guild-help-skeleton")).toBeVisible();
+  release();
+  await expect(page.getByTestId("guild-help-skeleton")).toHaveCount(0);
+  await expect(page.getByTestId("help-match-list")).toBeVisible({ timeout: 10_000 });
+});
+
+test("help tab: 375px phone — tabs scroll, card renders without overflow, touch targets ≥44px", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await stubHelp(page);
+  await page.goto("/wow-forever/topdeadcenter?tab=help");
+  await expect(page.getByTestId("help-match-list")).toBeVisible({ timeout: 10_000 });
+
+  const card = page.getByTestId("guild-match-card").first();
+  await expect(card).toBeVisible();
+
+  // No horizontal overflow on the page
+  const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  expect(scrollWidth).toBeLessThanOrEqual(375);
+
+  // Type chip touch targets are at least 44 px tall
+  const chip = page.getByTestId("help-type-chips").getByRole("button").first();
+  const chipBox = await chip.boundingBox();
+  expect(chipBox?.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
 });

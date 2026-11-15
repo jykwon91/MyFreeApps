@@ -14,8 +14,13 @@ import type { GuildResponse } from "@/games/wow-forever/types/guild/guildRespons
 import GuildSectionsHarness from "@/test/GuildSectionsHarness";
 import { Swords } from "lucide-react";
 
+vi.mock("@/games/wow-forever/hooks/useAuctionPrices", () => ({
+  useAuctionPrices: () => ({ status: "loading", server: "us", faction: "alliance", prices: null, retry: vi.fn(), retrying: false }),
+}));
+
 vi.mock("@/games/wow-forever/api/wowGuildApi", () => ({
   useSearchGuildRecipesQuery: () => ({ data: undefined, error: undefined, isFetching: false, refetch: vi.fn() }),
+  useGetGuildHelpQuery: () => ({ data: undefined, error: undefined, isLoading: true, isFetching: true, refetch: vi.fn() }),
 }));
 
 const NOW = new Date(Date.now() - 3_600_000).toISOString();
@@ -76,10 +81,10 @@ describe("the banner", () => {
 });
 
 describe("the fun sections", () => {
-  it("sit in tabs: Home (the Arena, then heroes, your quests, hot races) opens first, then titles, crafting and the roster", () => {
+  it("sit in tabs: Home (the Arena, then heroes, your quests, hot races) opens first, then titles, crafting, the roster and helping each other", () => {
     renderSections("?me=tiny");
     const tabs = within(screen.getByRole("tablist", { name: "Guild sections" })).getAllByRole("tab");
-    expect(tabs.map((t) => t.textContent)).toEqual(["Home", "Titles", "Who can craft?", "Roster"]);
+    expect(tabs.map((t) => t.textContent)).toEqual(["Home", "Titles", "Who can craft?", "Roster", "Help each other"]);
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
     const panel = screen.getByRole("tabpanel", { name: "Home" });
     expect(within(panel).getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["The Arena", "This week's heroes", "Your quests", "Hot races"]);
@@ -95,10 +100,12 @@ describe("the fun sections", () => {
     expect(screen.getByRole("tab", { name: "Roster" })).toHaveAttribute("tabIndex", "0");
     expect(screen.getByRole("tab", { name: "Home" })).toHaveAttribute("tabIndex", "-1");
     fireEvent.keyDown(screen.getByRole("tab", { name: "Roster" }), { key: "ArrowRight" });
+    expect(screen.getByRole("tab", { name: "Help each other" })).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Help each other" }), { key: "ArrowRight" });
     expect(screen.getByRole("tab", { name: "Home" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tab", { name: "Home" })).toHaveFocus();
     fireEvent.keyDown(screen.getByRole("tab", { name: "Home" }), { key: "End" });
-    expect(screen.getByRole("region", { name: /Roll call/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Help each other" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("heroes: one card per gains board with the leader, '+N', a chase hint, and a rolling window (never 'resets')", () => {

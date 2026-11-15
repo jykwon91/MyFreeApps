@@ -43,11 +43,13 @@ from app.core.wow_guild import (
     GUILD_RECIPE_QUERY_MIN_LENGTH,
     GUILD_SLUG,
 )
+from app.schemas.wow.guild.guild_help_response import GuildHelpResponse
 from app.schemas.wow.guild.guild_recipe_search_response import GuildRecipeSearchResponse
 from app.schemas.wow.guild.guild_refresh_response import GuildRefreshResponse
 from app.schemas.wow.guild.guild_reputation_response import GuildReputationResponse
 from app.schemas.wow.guild.guild_response import GuildResponse
 from app.services.wow.guild import (
+    guild_help_service,
     guild_preview_service,
     guild_recipe_search_service,
     guild_refresh_service,
@@ -100,6 +102,15 @@ async def get_guild_preview(slug: str, request: Request) -> Response:
     if png is None:
         return RedirectResponse(FALLBACK_IMAGE_PATH, status_code=status.HTTP_302_FOUND)
     return Response(content=png, media_type="image/png", headers={"Cache-Control": CACHE_CONTROL})
+
+
+@router.get("/{slug}/help", response_model=GuildHelpResponse)
+async def get_guild_help(slug: str, request: Request) -> GuildHelpResponse:
+    """Each live member's equipped items and known recipe ability ids for the Help tab."""
+    result = await guild_help_service.get_help(_checked_slug(slug, request))
+    if result is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=GUILD_NOT_FOUND)
+    return result
 
 
 @router.get("/{slug}/recipes", response_model=GuildRecipeSearchResponse)
