@@ -9,7 +9,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { holdReads } from "@platform/ui/test-support/routeControls";
 import type { SentRequest } from "@platform/ui/test-support/types/SentRequest";
-import { SALT_LINEAGE_KEY, TOMATOES_LINEAGE_KEY, VERSION_1_ID, recipeIdAt } from "./fixtures/recipeFixtures";
+import { SALT_LINEAGE_KEY, TOMATOES_LINEAGE_KEY, VERSION_1_ID, VERSION_2_ID, recipeIdAt } from "./fixtures/recipeFixtures";
 import { stubRecipeApi } from "./fixtures/stubRecipeApi";
 import { toast } from "@platform/ui/test-support/toast";
 
@@ -105,4 +105,42 @@ test("right after a save, the recipe shows the version it was read at until the 
 
   await expect(page.getByText("Viewing v2")).toBeVisible();
   await expect(page.getByText("2 tsp salt")).toBeVisible();
+});
+
+test("a tweak made elsewhere since the recipe was read is the starting point, not the version cached earlier", async ({ page }) => {
+  await stubSignedInShell(page);
+  const { writes } = await stubRecipeApi(page, RECIPE_ID);
+
+  await page.goto(`/recipes/${RECIPE_ID}`);
+  await expect(page.getByText("Viewing v1")).toBeVisible();
+
+  // The phone tweaks the recipe to v2 while this tab still holds v1.
+  await page.evaluate(
+    async ({ path, body }) => {
+      await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    },
+    {
+      path: `/api/recipes/${RECIPE_ID}/versions`,
+      body: {
+        base_version_id: VERSION_1_ID,
+        change_note: "From the phone",
+        ingredients: [
+          { name: "tomatoes", quantity: 5, unit: "cans", note: null, lineage_key: TOMATOES_LINEAGE_KEY },
+          { name: "salt", quantity: 1, unit: "tsp", note: null, lineage_key: SALT_LINEAGE_KEY },
+        ],
+        steps: [{ instruction: "Simmer." }],
+      },
+    },
+  );
+
+  await page.getByRole("button", { name: "Tweak this recipe" }).click();
+  await expect(page.getByText("Starting from v2.")).toBeVisible();
+  await expect(page.getByLabel("Quantity", { exact: true }).first()).toHaveValue("5");
+
+  await page.getByLabel("What did you change?").fill("More salt");
+  await page.getByRole("button", { name: "Save new version" }).click();
+  await expect(toast(page, "New version saved.")).toBeVisible();
+
+  const sent = posted(writes) as { base_version_id: string }[];
+  expect(sent.at(-1)?.base_version_id).toBe(VERSION_2_ID);
 });

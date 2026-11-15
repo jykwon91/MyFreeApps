@@ -4,7 +4,7 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { VERSIONS_BACK_TITLE } from "../../constants/backTitles";
 import { VERSION_VIEW_MESSAGES as MESSAGES } from "../../constants/versions";
-import { useErrorSinceOpening } from "../../hooks/useErrorSinceOpening";
+import { useErrorSinceOpening } from "@myrecipes/api-client/hooks/useErrorSinceOpening";
 import { goBackOrOpenRecipe } from "../../utils/goBackOrOpenRecipe";
 import { isNotFoundError } from "../../utils/isNotFoundError";
 import VersionContent from "./VersionContent";

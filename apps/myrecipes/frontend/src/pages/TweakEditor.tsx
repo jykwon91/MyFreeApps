@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ChefHat } from "lucide-react";
 import { EmptyState, Skeleton } from "@platform/ui";
-import { useGetRecipeQuery } from "@myrecipes/api-client/store/recipesApi";
+import { useTweakBase } from "@myrecipes/api-client/hooks/useTweakBase";
 import EditorHeader from "@/features/recipes/EditorHeader";
 import RecipeEditorForm from "@/features/recipes/RecipeEditorForm";
 
@@ -12,15 +12,16 @@ interface TweakEditorProps {
 
 /**
  * Tweak mode of the recipe editor (/recipes/:id/tweak) — creates a new
- * version of an existing recipe, prefilled from its latest version (lineage
+ * version of an existing recipe, prefilled from its latest version as of opening (lineage
  * keys carried for the diff). Rendered by RecipeEditor when the path has an
  * id.
  */
 export default function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
   const navigate = useNavigate();
-  const { data, isLoading, isError } = useGetRecipeQuery(recipeId);
+  const { base, freshRecipe, hasFailed } = useTweakBase(recipeId);
+  const isMissing = !base && (hasFailed || (!!freshRecipe && !freshRecipe.latest_version));
 
-  if (isLoading) {
+  if (!base && !isMissing) {
     return (
       <div className="p-4 sm:p-8 space-y-6">
         <EditorHeader
@@ -37,7 +38,7 @@ export default function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
     );
   }
 
-  if (isError || !data || !data.latest_version) {
+  if (!base) {
     return (
       <div className="p-4 sm:p-8 space-y-6">
         <EmptyState
@@ -54,7 +55,8 @@ export default function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
   // new version on the owner's recipe — only they can do that. A non-owner who
   // deep-links to /tweak must NOT get a fillable form that would 404 on submit;
   // show a clear message with a way back to the recipe instead.
-  if (!data.is_owner) {
+  const { recipe, version } = base;
+  if (!recipe.is_owner) {
     return (
       <div className="p-4 sm:p-8 space-y-6">
         <EditorHeader
@@ -80,13 +82,13 @@ export default function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
       <EditorHeader
         backTo={`/recipes/${recipeId}`}
         backLabel="Back to recipe"
-        title={`Tweak "${data.title}"`}
-        subtitle={`Starting from v${data.latest_version.version_number}. Saving creates a new version and the diff shows exactly what changed.`}
+        title={`Tweak "${recipe.title}"`}
+        subtitle={`Starting from v${version.version_number}. Saving creates a new version and the diff shows exactly what changed.`}
       />
       <RecipeEditorForm
         mode="tweak"
         recipeId={recipeId}
-        baseVersion={data.latest_version}
+        baseVersion={version}
       />
     </div>
   );

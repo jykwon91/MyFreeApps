@@ -2,7 +2,7 @@ import { useDeleteRecipeMutation, useGetRecipeQuery } from "@myrecipes/api-clien
 import { EmptyState, Toast, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
-import { useErrorSinceOpening } from "../../hooks/useErrorSinceOpening";
+import { useErrorSinceOpening } from "@myrecipes/api-client/hooks/useErrorSinceOpening";
 import { deleteRecipeCacheKey } from "../../utils/deleteRecipeCacheKey";
 import { isNotFoundError } from "../../utils/isNotFoundError";
 import { recipeBackTitle } from "../../utils/recipeBackTitle";
