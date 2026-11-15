@@ -4,8 +4,13 @@
 --   Soulstone: Warlocks from level 18 — your Soulstone on someone in the group running out, none
 --              on anyone while a stone in your bags is ready, or no stone in your bags at all.
 --   Food:      Well Fed (and the few foods whose buff has another name). Quiet while you eat.
---   Group:     Fortitude, Arcane Intellect (not Warriors or Rogues) and Mark of the Wild — only when a
---              Priest, Mage or Druid is in your group (or you are one), naming who to ask.
+--   Healthstone: none in your bags. Warlocks who know Create Healthstone make one; everyone else
+--              asks the Warlock in the group.
+--   Group:     Fortitude, Arcane Intellect (not Warriors or Rogues), Mark of the Wild and a Paladin
+--              Blessing — only when a Priest, Mage, Druid or Paladin is in your group (or you are
+--              one), naming who to ask.
+--   Party:     when you can cast one of those (or Divine Spirit), who in your group is missing it.
+--              Out-of-range members are counted, not named.
 --
 -- Warnings show in a small movable list with icons. A new one also flashes mid-screen with a
 -- sound. In combat, dead or a ghost, the list hides: buffs wait until you can do something.
@@ -15,7 +20,7 @@
 --
 --   /mgabuffs                 open the options
 --   /mgabuffs status          what's on, and what's missing right now
---   /mgabuffs armor           turn a check off or on (also: soulstone, food, group)
+--   /mgabuffs armor           turn a check off or on (also: soulstone, healthstone, food, group, party)
 --   /mgabuffs minutes 5       warn this many minutes before a buff runs out (1-30, default 3)
 --   /mgabuffs sound           turn the sound and mid-screen flash off or on
 --   /mgabuffs unlock | lock   drag the list somewhere else, then lock it
@@ -24,14 +29,15 @@
 local ADDON = "MGA Buffs"
 local PREFIX = "|cff33aaff" .. ADDON .. ":|r "
 local TICK_SECONDS = 1
-local MAX_ROWS = 6
+local MAX_ROWS = 9
 local ROW_HEIGHT = 26
 local ICON_SIZE = 22
 local SOULSTONE_LEVEL = 18
 local SOULSTONE_SECONDS = 30 * 60
 local FOOD_ICON = "Interface\\Icons\\Spell_Misc_Food"
-local CHECKS = { "armor", "soulstone", "food", "group" }
-local DEFAULTS = { armor = true, soulstone = true, food = true, group = true, minutes = 3, sound = true, locked = true }
+local CHECKS = { "armor", "soulstone", "healthstone", "food", "group", "party" }
+local DEFAULTS = { armor = true, soulstone = true, healthstone = true, food = true, group = true, party = true, minutes = 3, sound = true, locked = true }
+local PARTY_NAMES_SHOWN = 3
 local DEFAULT_POINT = { "TOP", "TOP", 0, -140 }
 
 local WARN = { 1, 0.82, 0 }
@@ -50,12 +56,31 @@ local SOULSTONE_ICON = 136210
 local CREATE_SOULSTONE = { 693, 20752, 20755, 20756, 20757 }
 local FOOD_BUFFS = { ["Well Fed"] = true, ["Increased Healing Power"] = true, ["Increased Spell Damage"] = true, ["Increased Stamina"] = true }
 local EATING = { ["Food"] = true, ["Drink"] = true }
+-- Every Healthstone rank, and the Improved Healthstone talent's versions of each (same names, own ids).
+local HEALTHSTONE_ITEMS = { 5512, 19004, 19005, 5511, 19006, 19007, 5509, 19008, 19009, 5510, 19010, 19011, 9421, 19012, 19013 }
+local HEALTHSTONE_ICON = 135230
+local HEALTHSTONE_LEVEL = 10
+local CREATE_HEALTHSTONE = { 6201, 6202, 5699, 11729, 11730, 11731, 20018, 23517, 23518, 23519, 23520, 23521, 23522, 23813, 23814, 23815, 23816, 23817, 23818, 23819, 23820, 23821, 28023 }
+-- `spells`: every id the client has under the buff's names, so knowing any rank counts as being able to cast it.
+-- `casterOnly`: a talent nobody else can see you have, so only the caster is reminded.
+-- `noExpiring`: a 5-minute buff would always read as "running out", so only a missing one is shown.
 local GROUP_BUFFS = {
-  { label = "Fortitude", class = "PRIEST", names = { "Power Word: Fortitude", "Prayer of Fortitude" }, icon = 135987 },
-  { label = "Arcane Intellect", class = "MAGE", names = { "Arcane Intellect", "Arcane Brilliance" }, icon = 135932, manaOnly = true },
-  { label = "Mark of the Wild", class = "DRUID", names = { "Mark of the Wild", "Gift of the Wild" }, icon = 136078 },
+  { label = "Fortitude", class = "PRIEST", names = { "Power Word: Fortitude", "Prayer of Fortitude" }, icon = 135987,
+    spells = { 1243, 1244, 1245, 2791, 10937, 10938, 10939, 10940, 13864, 23947, 23948, 21562, 21564, 450086 } },
+  { label = "Arcane Intellect", class = "MAGE", names = { "Arcane Intellect", "Arcane Brilliance" }, icon = 135932, manaOnly = true,
+    spells = { 1459, 1460, 1461, 10156, 10157, 13326, 16876, 364161, 23028 } },
+  { label = "Mark of the Wild", class = "DRUID", names = { "Mark of the Wild", "Gift of the Wild" }, icon = 136078,
+    spells = { 1126, 5232, 5234, 5286, 5287, 6756, 8907, 8908, 9884, 9885, 16878, 24752, 364163, 1291335, 21849, 21850 } },
+  -- Forever's client has no Blessing of Salvation (only a test copy), so it isn't listed.
+  { label = "Blessing", class = "PALADIN", icon = 135906, noExpiring = true,
+    names = { "Blessing of Might", "Blessing of Wisdom", "Blessing of Kings", "Blessing of Light",
+      "Greater Blessing of Might", "Greater Blessing of Wisdom", "Greater Blessing of Kings" },
+    spells = { 19740, 19834, 19835, 19836, 19837, 19838, 25291, 19742, 19850, 19852, 19853, 19854, 25290, 20217, 26650,
+      25782, 25916, 25894, 25918, 25898 } },
+  { label = "Divine Spirit", class = "PRIEST", names = { "Divine Spirit", "Prayer of Spirit" }, icon = 135898, manaOnly = true, casterOnly = true,
+    spells = { 14752, 14818, 14819, 16875, 27841, 27681 } },
 }
-local CLASS_LABEL = { PRIEST = "Priest", MAGE = "Mage", DRUID = "Druid" }
+local CLASS_LABEL = { PRIEST = "Priest", MAGE = "Mage", DRUID = "Druid", PALADIN = "Paladin" }
 -- By class, not current power: a Druid in Bear or Cat form still wants Arcane Intellect.
 local NO_MANA = { WARRIOR = true, ROGUE = true }
 
@@ -168,13 +193,28 @@ local function bagItems()
   return found
 end
 
-local function knowsCreateSoulstone()
+-- Clients without a spell check count as knowing it, so the reminder errs on showing.
+local function knowsAny(ids)
   local known = IsPlayerSpell or IsSpellKnown
   if not known then return true end
-  for _, id in ipairs(CREATE_SOULSTONE) do
+  for _, id in ipairs(ids) do
     if known(id) then return true end
   end
   return false
+end
+
+local function hasAny(inBags, itemIds)
+  for _, id in ipairs(itemIds) do
+    if inBags[id] then return true end
+  end
+  return false
+end
+
+-- Party and raid members answer UnitInRange; a client without it counts everyone as near.
+local function near(unit)
+  if not UnitInRange then return true end
+  local inRange, checked = UnitInRange(unit)
+  return inRange or not checked
 end
 
 local function itemCooldownLeft(itemId, now)
@@ -220,8 +260,21 @@ local function soulstoneWarning(units, now)
       return { key = "soulstone-ready", icon = SOULSTONE_ICON, text = "Soulstone ready: put it on " .. onWho, urgent = true }
     end
   end
-  if not knowsCreateSoulstone() then return nil end
+  if not knowsAny(CREATE_SOULSTONE) then return nil end
   return { key = "soulstone-none", icon = SOULSTONE_ICON, text = "No Soulstone in your bags: Create Soulstone", urgent = true }
+end
+
+local function healthstoneWarning(units, inBags)
+  if hasAny(inBags, HEALTHSTONE_ITEMS) then return nil end
+  if classOf("player") == "WARLOCK" then
+    if not knowsAny(CREATE_HEALTHSTONE) then return nil end
+    return { key = "healthstone-none", icon = HEALTHSTONE_ICON, text = "No Healthstone in your bags: Create Healthstone", urgent = true }
+  end
+  for _, unit in ipairs(units) do
+    if classOf(unit) == "WARLOCK" and present(unit) and UnitLevel(unit) >= HEALTHSTONE_LEVEL then
+      return { key = "healthstone-ask", icon = HEALTHSTONE_ICON, text = "No Healthstone: ask " .. nameOf(unit) .. " (Warlock)" }
+    end
+  end
 end
 
 local function foodWarning(myBuffs, now)
@@ -237,7 +290,7 @@ local function groupWarnings(units, myBuffs, now)
   local warnings = {}
   local usesMana = not NO_MANA[classOf("player")]
   for _, buff in ipairs(GROUP_BUFFS) do
-    if usesMana or not buff.manaOnly then
+    if (usesMana or not buff.manaOnly) and not buff.casterOnly then
       local caster
       for _, unit in ipairs(units) do
         if classOf(unit) == buff.class and present(unit) then
@@ -251,9 +304,51 @@ local function groupWarnings(units, myBuffs, now)
         local aura = find(myBuffs, buff.nameSet)
         if not aura then
           table.insert(warnings, { key = "group-" .. buff.class, icon = buff.icon, text = "No " .. buff.label .. ": " .. who })
-        elseif expiring(aura, now) then
+        elseif expiring(aura, now) and not buff.noExpiring then
           table.insert(warnings, { key = "group-" .. buff.class .. "-expiring", icon = aura.icon or buff.icon, text = buff.label .. ": " .. leftText(aura, now) .. ", " .. who })
         end
+      end
+    end
+  end
+  return warnings
+end
+
+-- "Bob, Ann, Lee and 2 more"
+local function nameList(names)
+  local shown = {}
+  for i = 1, math.min(#names, PARTY_NAMES_SHOWN) do shown[i] = names[i] end
+  local text = table.concat(shown, ", ")
+  if #names > PARTY_NAMES_SHOWN then text = text .. " and " .. (#names - PARTY_NAMES_SHOWN) .. " more" end
+  return text
+end
+
+local function missingText(label, missing, far)
+  if #missing == 0 then return label .. " missing on " .. far .. " out of range" end
+  local text = label .. " missing on " .. nameList(missing)
+  if far > 0 then text = text .. " (+" .. far .. " out of range)" end
+  return text
+end
+
+-- The buffs you can cast, and who else in the group is missing each one.
+local function partyWarnings(units)
+  local warnings = {}
+  local myClass = classOf("player")
+  local auras = {} -- one aura read per unit per tick, however many buffs you cast
+  local function aurasOf(unit)
+    auras[unit] = auras[unit] or buffs(unit)
+    return auras[unit]
+  end
+  for _, buff in ipairs(GROUP_BUFFS) do
+    if buff.class == myClass and knowsAny(buff.spells) then
+      local missing, far = {}, 0
+      for _, unit in ipairs(units) do
+        local wants = not buff.manaOnly or not NO_MANA[classOf(unit)]
+        if wants and not UnitIsUnit(unit, "player") and present(unit) and not find(aurasOf(unit), buff.nameSet) then
+          if near(unit) then table.insert(missing, nameOf(unit)) else far = far + 1 end
+        end
+      end
+      if #missing > 0 or far > 0 then
+        table.insert(warnings, { key = "party-" .. buff.label, icon = buff.icon, text = missingText(buff.label, missing, far) })
       end
     end
   end
@@ -271,9 +366,13 @@ local function currentWarnings()
   local function add(w) if w then table.insert(warnings, w) end end
   if s.armor then add(armorWarning(myBuffs, now)) end
   if s.soulstone then add(soulstoneWarning(units, now)) end
+  if s.healthstone then add(healthstoneWarning(units, bagItems())) end
   if s.food then add(foodWarning(myBuffs, now)) end
   if s.group then
     for _, w in ipairs(groupWarnings(units, myBuffs, now)) do add(w) end
+  end
+  if s.party and #units > 1 then
+    for _, w in ipairs(partyWarnings(units)) do add(w) end
   end
   return warnings
 end
@@ -456,8 +555,10 @@ end
 local OPTION_CHECKS = {
   { key = "armor", label = "Your armor", hint = "Demon Skin or Demon Armor, Frost, Ice or Mage Armor, Inner Fire" },
   { key = "soulstone", label = "Soulstone", hint = "Warlocks from level 18" },
+  { key = "healthstone", label = "Healthstone", hint = "None in your bags: make one, or ask the Warlock in your group" },
   { key = "food", label = "Well Fed", hint = "Quiet while you eat" },
-  { key = "group", label = "Group buffs", hint = "Fortitude, Arcane Intellect, Mark of the Wild, when that class is in your group" },
+  { key = "group", label = "Group buffs on you", hint = "Fortitude, Arcane Intellect, Mark of the Wild, a Blessing, when that class is in your group" },
+  { key = "party", label = "Buff your party", hint = "Who in your group is missing a buff you can cast" },
 }
 
 local openCategory = nil
@@ -595,7 +696,7 @@ SlashCmdList.MGABUFFS = function(message)
     resetPosition()
     say("list back in its starting place.")
   else
-    say("/mgabuffs opens the options. Shortcuts: status | armor | soulstone | food | group | minutes N | sound | unlock | lock | reset")
+    say("/mgabuffs opens the options. Shortcuts: status | armor | soulstone | healthstone | food | group | party | minutes N | sound | unlock | lock | reset")
   end
 end
 

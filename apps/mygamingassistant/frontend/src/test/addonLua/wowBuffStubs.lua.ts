@@ -3,7 +3,9 @@
  * fengari. Tests fill `units.<unit>` (class, level, name, buffs, dead,
  * connected), set `group` ("solo", "party" or "raid", whose raidN entries
  * point at the same unit tables), `bags[bag] = { itemIds }`,
- * `cooldowns[itemId] = { start, duration }`, `now` (GetTime) and `combat`,
+ * (bag 4 starts with a Healthstone, so that check stays quiet until a test sets
+ * `bags[4] = nil`), `cooldowns[itemId] = { start, duration }`, `inRange[unit] = false`
+ * for a groupmate too far away (UnitInRange), `now` (GetTime) and `combat`,
  * then `fire(event, ...)` and `tick()` (the addon's ticker). A buff is
  * `{ name, icon, expires, source, spellId }`. `knownSpells[id] = false`
  * unlearns a spell. `C_UnitAuras = nil` leaves only
@@ -18,7 +20,9 @@ function clear() for k in pairs(out) do out[k] = nil end end
 now = 1000
 combat = false
 group = "solo"
-bags = {}
+bags = { [4] = { 5509 } }
+inRange = {}
+function UnitInRange(u) return inRange[u] ~= false, true end
 cooldowns = {}
 NUM_BAG_SLOTS = 4
 

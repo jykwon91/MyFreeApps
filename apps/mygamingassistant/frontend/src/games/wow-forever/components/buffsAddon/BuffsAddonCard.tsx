@@ -9,7 +9,7 @@ export default function BuffsAddonCard() {
     <details className="rounded-md border border-border bg-card p-3 text-sm" data-testid="buffs-addon">
       <summary className="min-h-[44px] flex items-center gap-2 cursor-pointer font-medium">
         <BellRing size={18} className="text-primary shrink-0" aria-hidden />
-        Buff reminder addon: armor, Soulstone, food and group buffs
+        Buff reminder addon: armor, Soulstone, Healthstone, food and party buffs
       </summary>
       <div className="space-y-3 pt-2">
         <p>
