@@ -1,11 +1,12 @@
 /**
  * Just enough of the WoW client API for the MGA Buffs addon to run under
- * fengari. Tests fill `units.<unit>` (class, level, name, power, buffs, dead,
+ * fengari. Tests fill `units.<unit>` (class, level, name, buffs, dead,
  * connected), set `group` ("solo", "party" or "raid", whose raidN entries
  * point at the same unit tables), `bags[bag] = { itemIds }`,
  * `cooldowns[itemId] = { start, duration }`, `now` (GetTime) and `combat`,
  * then `fire(event, ...)` and `tick()` (the addon's ticker). A buff is
- * `{ name, icon, expires, source, spellId }`. `C_UnitAuras = nil` leaves only
+ * `{ name, icon, expires, source, spellId }`. `knownSpells[id] = false`
+ * unlearns a spell. `C_UnitAuras = nil` leaves only
  * the older UnitBuff. Lines go into `out`: "row: ..." for each list row it
  * draws, "hidden" when the list hides, "flash: ..." for a mid-screen message,
  * "sound", and "chat: ...". `clear()` empties `out`.
@@ -21,7 +22,7 @@ cooldowns = {}
 NUM_BAG_SLOTS = 4
 
 function unit(class, level, name, extra)
-  local u = { class = class, level = level or 60, name = name, power = 0, buffs = {}, dead = false, connected = true }
+  local u = { class = class, level = level or 60, name = name, buffs = {}, dead = false, connected = true }
   for k, v in pairs(extra or {}) do u[k] = v end
   return u
 end
@@ -33,11 +34,13 @@ function buff(name, expires, extra)
 end
 
 function GetTime() return now end
+-- knownSpells[id] = false makes a spell unlearned; everything else is known.
+knownSpells = {}
+function IsPlayerSpell(id) return knownSpells[id] ~= false end
 function UnitExists(u) return units[u] ~= nil end
-function UnitClass(u) return units[u] and units[u].class, units[u] and units[u].class end
+function UnitClass(u) local c = units[u] and units[u].class; return c and (c:sub(1, 1) .. c:sub(2):lower()), c end
 function UnitLevel(u) return units[u].level end
-function UnitName(u) return units[u].name end
-function UnitPowerType(u) return units[u].power end
+function UnitName(u) return units[u] and units[u].name end
 function UnitIsConnected(u) return units[u].connected end
 function UnitIsDeadOrGhost(u) return units[u].dead end
 function UnitIsUnit(a, b) return units[a] ~= nil and units[a] == units[b] end

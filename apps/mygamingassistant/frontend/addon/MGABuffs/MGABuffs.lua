@@ -43,6 +43,7 @@ local SOULSTONE_ITEMS = { 16896, 16895, 16893, 16892, 5232 } -- Major first: the
 local SOULSTONE_BUFFS = { [20707] = true, [20762] = true, [20763] = true, [20764] = true, [20765] = true }
 local SOULSTONE_BUFF = "Soulstone Resurrection"
 local SOULSTONE_ICON = 136210
+local CREATE_SOULSTONE = { 693, 20752, 20755, 20756, 20757 }
 local FOOD_BUFFS = { ["Well Fed"] = true, ["Increased Healing Power"] = true, ["Increased Spell Damage"] = true, ["Increased Stamina"] = true }
 local EATING = { ["Food"] = true, ["Drink"] = true }
 local GROUP_BUFFS = {
@@ -51,7 +52,8 @@ local GROUP_BUFFS = {
   { label = "Mark of the Wild", class = "DRUID", names = { "Mark of the Wild", "Gift of the Wild" }, icon = 136078 },
 }
 local CLASS_LABEL = { PRIEST = "Priest", MAGE = "Mage", DRUID = "Druid" }
-local MANA = 0
+-- By class, not current power: a Druid in Bear or Cat form still wants Arcane Intellect.
+local NO_MANA = { WARRIOR = true, ROGUE = true }
 
 local function say(message)
   DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. message)
@@ -70,6 +72,15 @@ local function set(list)
   local s = {}
   for _, v in ipairs(list) do s[v] = true end
   return s
+end
+
+for _, armor in pairs(ARMOR) do armor.nameSet = set(armor.names) end
+for _, buff in ipairs(GROUP_BUFFS) do buff.nameSet = set(buff.names) end
+local CHECK_SET = set(CHECKS)
+
+-- A unit that just joined may not have its name loaded yet.
+local function nameOf(unit)
+  return UnitName(unit) or "someone"
 end
 
 -- Each helpful aura on a unit as { name, icon, expires, mine, spellId }. Forever runs the modern
@@ -138,18 +149,28 @@ local function present(unit)
   return UnitExists(unit) and (not UnitIsConnected or UnitIsConnected(unit)) and not UnitIsDeadOrGhost(unit)
 end
 
--- Bag scanning: Forever has C_Container; older clients have the globals.
-local function bagItemCount(itemId)
+-- Every item id in your bags, in one pass. Forever has C_Container; older clients have the globals.
+local function bagItems()
   local slotsIn = (C_Container and C_Container.GetContainerNumSlots) or GetContainerNumSlots
   local idAt = (C_Container and C_Container.GetContainerItemID) or GetContainerItemID
-  if not slotsIn or not idAt then return 0 end
-  local count = 0
+  local found = {}
+  if not slotsIn or not idAt then return found end
   for bag = 0, NUM_BAG_SLOTS or 4 do
     for slot = 1, slotsIn(bag) or 0 do
-      if idAt(bag, slot) == itemId then count = count + 1 end
+      local id = idAt(bag, slot)
+      if id then found[id] = true end
     end
   end
-  return count
+  return found
+end
+
+local function knowsCreateSoulstone()
+  local known = IsPlayerSpell or IsSpellKnown
+  if not known then return true end
+  for _, id in ipairs(CREATE_SOULSTONE) do
+    if known(id) then return true end
+  end
+  return false
 end
 
 local function itemCooldownLeft(itemId, now)
@@ -160,13 +181,11 @@ local function itemCooldownLeft(itemId, now)
   return math.max(0, start + duration - now)
 end
 
-local lastSoulstoneCast = nil
-
 local function armorWarning(myBuffs, now)
   local armor = ARMOR[classOf("player")]
   local level = UnitLevel("player")
   if not armor or level < (armor.minLevel or 1) then return nil end
-  local aura = find(myBuffs, set(armor.names))
+  local aura = find(myBuffs, armor.nameSet)
   local label = armor.label(level)
   if not aura then return { key = "armor", icon = armor.icon, text = "No " .. label, urgent = true } end
   if expiring(aura, now) then
@@ -180,21 +199,24 @@ local function soulstoneWarning(units, now)
     for _, aura in ipairs(buffs(unit)) do
       if aura.mine and (SOULSTONE_BUFFS[aura.spellId] or aura.name == SOULSTONE_BUFF) then
         -- Some clients don't give other players' buff timers; fall back to when you cast it.
-        if aura.expires == 0 and lastSoulstoneCast then aura.expires = lastSoulstoneCast + SOULSTONE_SECONDS end
+        local cast = settings().lastSoulstoneCast
+        if aura.expires == 0 and cast then aura.expires = cast + SOULSTONE_SECONDS end
         if expiring(aura, now) then
-          return { key = "soulstone-expiring", icon = aura.icon or SOULSTONE_ICON, text = "Soulstone on " .. UnitName(unit) .. ": " .. leftText(aura, now) }
+          return { key = "soulstone-expiring", icon = aura.icon or SOULSTONE_ICON, text = "Soulstone on " .. nameOf(unit) .. ": " .. leftText(aura, now) }
         end
         return nil
       end
     end
   end
+  local inBags = bagItems()
   for _, itemId in ipairs(SOULSTONE_ITEMS) do
-    if bagItemCount(itemId) > 0 then
+    if inBags[itemId] then
       if itemCooldownLeft(itemId, now) > 0 then return nil end
       local onWho = #units > 1 and "someone" or "yourself"
       return { key = "soulstone-ready", icon = SOULSTONE_ICON, text = "Soulstone ready: put it on " .. onWho, urgent = true }
     end
   end
+  if not knowsCreateSoulstone() then return nil end
   return { key = "soulstone-none", icon = SOULSTONE_ICON, text = "No Soulstone in your bags: Create Soulstone", urgent = true }
 end
 
@@ -209,7 +231,7 @@ end
 
 local function groupWarnings(units, myBuffs, now)
   local warnings = {}
-  local usesMana = not UnitPowerType or UnitPowerType("player") == MANA
+  local usesMana = not NO_MANA[classOf("player")]
   for _, buff in ipairs(GROUP_BUFFS) do
     if usesMana or not buff.manaOnly then
       local caster
@@ -221,8 +243,8 @@ local function groupWarnings(units, myBuffs, now)
         end
       end
       if caster then
-        local who = UnitIsUnit(caster, "player") and "cast it" or ("ask " .. UnitName(caster) .. " (" .. CLASS_LABEL[buff.class] .. ")")
-        local aura = find(myBuffs, set(buff.names))
+        local who = UnitIsUnit(caster, "player") and "cast it" or ("ask " .. nameOf(caster) .. " (" .. CLASS_LABEL[buff.class] .. ")")
+        local aura = find(myBuffs, buff.nameSet)
         if not aura then
           table.insert(warnings, { key = "group-" .. buff.class, icon = buff.icon, text = "No " .. buff.label .. ": " .. who })
         elseif expiring(aura, now) then
@@ -286,6 +308,9 @@ end
 
 local shownSignature = nil
 local alerted = {}
+-- The first check after login or /reload only notes what's missing: the list shows it,
+-- without a flash and a sound every time you log in.
+local seeded = false
 
 local function render(warnings)
   local unlocked = not settings().locked
@@ -318,35 +343,48 @@ local function render(warnings)
   if #list > 0 then frame:Show() else frame:Hide() end
 end
 
+local flashWorks = true
+local function flash(text)
+  if RaidNotice_AddMessage and RaidWarningFrame then
+    RaidNotice_AddMessage(RaidWarningFrame, text, ChatTypeInfo and ChatTypeInfo["RAID_WARNING"] or { r = 1, g = 0.82, b = 0 })
+  end
+  if PlaySound then PlaySound(SOUNDKIT and SOUNDKIT.RAID_WARNING or 8959) end
+end
+
 -- A warning that wasn't showing a moment ago flashes mid-screen once, with a sound.
 local function alert(warnings)
   local now = {}
   for _, w in ipairs(warnings) do
     now[w.key] = true
-    if not alerted[w.key] and settings().sound then
-      if RaidNotice_AddMessage and RaidWarningFrame then
-        RaidNotice_AddMessage(RaidWarningFrame, w.text, ChatTypeInfo and ChatTypeInfo["RAID_WARNING"] or { r = 1, g = 0.82, b = 0 })
+    if seeded and flashWorks and not alerted[w.key] and settings().sound then
+      local ok, problem = pcall(flash, w.text)
+      if not ok then
+        -- The list still works; only the flash and sound stop, for this session.
+        flashWorks = false
+        say("can't flash reminders mid-screen: " .. tostring(problem) .. ". The list still shows them.")
       end
-      if PlaySound then PlaySound(SOUNDKIT and SOUNDKIT.RAID_WARNING or 8959) end
     end
   end
   alerted = now
+  seeded = true
 end
 
-local failed = false
-local function check()
-  local ok, result = pcall(currentWarnings)
-  if not ok then
-    -- A client API that behaves differently from what this addon expects: say so once, not every second.
-    if not failed then say("stopped checking: " .. tostring(result) .. ". Tell MyGamingAssistant.") end
-    failed = true
-    render({})
-    return
-  end
+local function update()
+  local warnings = currentWarnings()
   -- In combat or dead: hide, but remember what was already flashed so it doesn't flash again after.
-  if not result then render({}) return end
-  alert(result)
-  render(result)
+  if not warnings then render({}) return end
+  render(warnings)
+  alert(warnings)
+end
+
+local failing = false
+local function check()
+  local ok, problem = pcall(update)
+  if ok then failing = false return end
+  -- A client API that behaves differently from what this addon expects: say so once, not every second.
+  if not failing then say("stopped checking: " .. tostring(problem) .. ". Tell MyGamingAssistant.") end
+  failing = true
+  pcall(render, {})
 end
 
 -- Slash command -------------------------------------------------------------
@@ -360,8 +398,10 @@ local function status()
   local parts = {}
   for _, key in ipairs(CHECKS) do table.insert(parts, key .. " " .. onOff(s[key])) end
   say(table.concat(parts, ", ") .. "; warns " .. s.minutes .. " min before a buff runs out; sound " .. onOff(s.sound) .. ".")
-  local warnings = currentWarnings()
-  if not warnings then
+  local ok, warnings = pcall(currentWarnings)
+  if not ok then
+    say("couldn't check: " .. tostring(warnings) .. ". Tell MyGamingAssistant.")
+  elseif not warnings then
     say("buffs are checked once you're out of combat and alive.")
   elseif #warnings == 0 then
     say("nothing missing right now.")
@@ -376,7 +416,7 @@ SlashCmdList.MGABUFFS = function(message)
   local command, arg = (message or ""):lower():match("^%s*(%S*)%s*(.-)%s*$")
   if command == "" then
     status()
-  elseif set(CHECKS)[command] then
+  elseif CHECK_SET[command] then
     s[command] = not s[command]
     say(command .. " reminders " .. onOff(s[command]) .. ".")
   elseif command == "minutes" then
@@ -431,6 +471,6 @@ events:SetScript("OnEvent", function(_, event, unit, _, spellId)
   elseif event == "PLAYER_REGEN_DISABLED" then
     render({})
   elseif event == "UNIT_SPELLCAST_SUCCEEDED" and unit == "player" and SOULSTONE_BUFFS[spellId] then
-    lastSoulstoneCast = GetTime()
+    settings().lastSoulstoneCast = GetTime()
   end
 end)

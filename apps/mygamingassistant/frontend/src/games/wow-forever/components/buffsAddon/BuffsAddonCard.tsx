@@ -1,14 +1,7 @@
 import { BellRing, Download } from "lucide-react";
-import { Button, showSuccess } from "@platform/ui";
+import { Button } from "@platform/ui";
 import { BUFFS_ADDON_CHECKS } from "@/games/wow-forever/data/buffsAddon/buffsAddonChecks";
-import { BUFFS_ADDON_ZIP_NAME } from "@/games/wow-forever/data/buffsAddon/buffsAddonFiles";
-import { buffsAddonZip } from "@/games/wow-forever/lib/buffsAddon/buffsAddonZip";
-import { downloadZip } from "@/lib/downloadBlob";
-
-function download() {
-  downloadZip(buffsAddonZip(), BUFFS_ADDON_ZIP_NAME);
-  showSuccess("MGA Buffs is downloading. Unzip it into your AddOns folder.");
-}
+import { downloadBuffsAddon } from "@/games/wow-forever/lib/buffsAddon/downloadBuffsAddon";
 
 /** "Never forget a buff": the MGA Buffs addon download, what it watches and how to install it. Folded away until opened. */
 export default function BuffsAddonCard() {
@@ -20,8 +13,8 @@ export default function BuffsAddonCard() {
       </summary>
       <div className="space-y-3 pt-2">
         <p>
-          The MGA Buffs addon shows a small list with icons when a buff you want is missing or has less than 3 minutes left. A
-          new reminder also flashes mid-screen with a sound. It hides in combat and while you&apos;re dead, so it only speaks
+          The MGA Buffs addon shows a small list with icons when a buff you want is missing or about to run out (3 minutes before, unless
+          you pick another time). A new reminder also flashes mid-screen with a sound. It hides in combat and while you&apos;re dead, so it only speaks
           when you can do something about it.
         </p>
         <ul className="grid gap-2 sm:grid-cols-2" aria-label="What it reminds you about">
@@ -51,7 +44,7 @@ export default function BuffsAddonCard() {
             <code>/mgabuffs unlock</code> lets you drag the list, <code>/mgabuffs lock</code> fixes it in place.
           </li>
         </ol>
-        <Button onClick={download} data-testid="buffs-addon-download">
+        <Button onClick={downloadBuffsAddon} data-testid="buffs-addon-download">
           <span className="flex items-center gap-2">
             <Download size={16} aria-hidden />
             Download the addon

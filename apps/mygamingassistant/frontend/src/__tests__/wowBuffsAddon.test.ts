@@ -43,11 +43,16 @@ describe("MGA Buffs files", () => {
 });
 
 describe("MGA Buffs armor", () => {
-  it("flags a Warlock with no armor, no Soulstone and no food, flashing each once with a sound", () => {
+  it("lists what a Warlock is missing at login without a flash, then flashes a new reminder once with a sound", () => {
     const lines = run("");
     expect(rows(lines)).toEqual(["No Demon Armor", "No Soulstone in your bags: Create Soulstone", "Not Well Fed: eat buff food"]);
-    expect(lines.filter((l) => l.startsWith("flash: "))).toHaveLength(3);
-    expect(lines.filter((l) => l === "sound")).toHaveLength(3);
+    expect(lines.filter((l) => l.startsWith("flash: ") || l === "sound")).toEqual([]);
+    const later = run(`${ARMORED}; ${FED}; ${STONE_IN_BAGS}; cooldowns[${MAJOR_SOULSTONE}] = { start = now, duration = 1800 }`, "clear(); units.player.buffs = {}; tick(); tick()");
+    expect(later).toEqual(["row: No Demon Armor", "row: Not Well Fed: eat buff food", "flash: No Demon Armor", "sound", "flash: Not Well Fed: eat buff food", "sound"]);
+  });
+
+  it("stays silent with the sound off", () => {
+    expect(run(FED, `clear(); SlashCmdList.MGABUFFS("sound"); clear(); units.player.buffs = {}; tick()`).filter((l) => l.startsWith("flash: ") || l === "sound")).toEqual([]);
   });
 
   it("says Demon Skin before level 20, and skips the Soulstone before 18", () => {
@@ -78,9 +83,13 @@ describe("MGA Buffs Soulstone", () => {
 
   it("says a ready stone in your bags should go on you when solo, on someone in a group", () => {
     expect(rows(run(ready))).toEqual(["Soulstone ready: put it on yourself"]);
-    expect(rows(run(`${ready}; group = "party"; units.party1 = unit("WARRIOR", 60, "Bob", { power = 1 })`))).toEqual([
+    expect(rows(run(`${ready}; group = "party"; units.party1 = unit("WARRIOR", 60, "Bob")`))).toEqual([
       "Soulstone ready: put it on someone",
     ]);
+  });
+
+  it("doesn't ask for a stone before you've trained Create Soulstone", () => {
+    expect(rows(run(`${ARMORED}; ${FED}; for _, id in ipairs({ 693, 20752, 20755, 20756, 20757 }) do knownSpells[id] = false end`))).toEqual([]);
   });
 
   it("stays quiet while the stone is on cooldown", () => {
@@ -88,7 +97,7 @@ describe("MGA Buffs Soulstone", () => {
   });
 
   it("warns when your Soulstone on a groupmate is about to run out", () => {
-    const party = `${ready}; group = "party"; units.party1 = unit("WARRIOR", 60, "Bob", { power = 1 })`;
+    const party = `${ready}; group = "party"; units.party1 = unit("WARRIOR", 60, "Bob")`;
     const onBob = (expires: string, source = "player") =>
       `${party}; units.party1.buffs = { buff("Soulstone Resurrection", ${expires}, { spellId = ${SOULSTONE_BUFF}, source = "${source}" }) }`;
     expect(rows(run(onBob("now + 120")))).toEqual(["Soulstone on Bob: 2 min left"]);
@@ -101,7 +110,7 @@ describe("MGA Buffs Soulstone", () => {
 
   it("times the stone from your cast when the client gives no timer for a groupmate's buff", () => {
     const later = 'units.player.buffs = { buff("Demon Armor", now + 5000), buff("Well Fed", now + 5000) }';
-    const setup = `${ready}; ${later}; group = "party"; units.party1 = unit("WARRIOR", 60, "Bob", { power = 1 })
+    const setup = `${ready}; ${later}; group = "party"; units.party1 = unit("WARRIOR", 60, "Bob")
       units.party1.buffs = { buff("Soulstone Resurrection", 0, { spellId = ${SOULSTONE_BUFF} }) }`;
     const then = `fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", ${SOULSTONE_BUFF}); now = now + 1700; clear(); tick()`;
     expect(rows(run(setup, then))).toEqual(["Soulstone on Bob: 2 min left"]);
@@ -124,9 +133,21 @@ describe("MGA Buffs group buffs", () => {
   it("names who to ask, only for classes in the group, and Arcane Intellect only for mana users", () => {
     const party = `${me}; units.party1 = unit("PRIEST", 60, "Bob"); units.party2 = unit("MAGE", 60, "Ann")`;
     expect(rows(run(party))).toEqual(["No Fortitude: ask Bob (Priest)", "No Arcane Intellect: ask Ann (Mage)"]);
-    expect(rows(run(`${party}; units.player.power = 1`))).toEqual(["No Fortitude: ask Bob (Priest)"]);
+    expect(rows(run(`${party}; units.player = unit("WARRIOR", 60, "Me", { buffs = { buff("Well Fed", now + 600) } })`))).toEqual(["No Fortitude: ask Bob (Priest)"]);
     expect(rows(run(`${party}; table.insert(units.player.buffs, buff("Prayer of Fortitude", now + 100)); table.insert(units.player.buffs, buff("Arcane Intellect", now + 900))`))).toEqual([
       "Fortitude: 2 min left, ask Bob (Priest)",
+    ]);
+  });
+
+  it("keeps Arcane Intellect for a Druid in Bear or Cat form, and says to cast what you can cast", () => {
+    const setup = `units.player = unit("DRUID", 60, "Me", { buffs = { buff("Well Fed", now + 600), buff("Mark of the Wild", now + 900) } }); group = "party"; units.party1 = unit("MAGE", 60, "Ann")`;
+    expect(rows(run(setup))).toEqual(["No Arcane Intellect: ask Ann (Mage)"]);
+    expect(rows(run(`${me}; units.player = unit("PRIEST", 60, "Me", { buffs = { buff("Inner Fire", now + 500), buff("Well Fed", now + 600) } })`))).toEqual(["No Fortitude: cast it"]);
+  });
+
+  it("asks someone whose name hasn't loaded yet", () => {
+    expect(rows(run(`${me}; units.party1 = unit("PRIEST", 60, nil)`))).toEqual([
+      "No Fortitude: ask someone (Priest)",
     ]);
   });
 
@@ -171,6 +192,13 @@ describe("MGA Buffs list", () => {
     ).filter((l) => l.startsWith("row: "))).toEqual(["row: No Demon Armor"]);
   });
 
+  it("still draws the list when the mid-screen flash breaks, and says so once", () => {
+    const lines = run(FED, 'clear(); RaidNotice_AddMessage = function() error("no frame") end; units.player.buffs = {}; tick(); tick()');
+    expect(rows(lines)).toEqual(["No Demon Armor", "No Soulstone in your bags: Create Soulstone", "Not Well Fed: eat buff food"]);
+    expect(lines.filter((l) => l.startsWith("chat: MGA Buffs: can't flash reminders mid-screen:"))).toHaveLength(1);
+    expect(lines).not.toContain("hidden");
+  });
+
   it("says once, not every second, when a client API surprises it", () => {
     const lines = run("", 'clear(); UnitLevel = function() error("no level") end; tick(); tick()');
     expect(lines.filter((l) => l.startsWith("chat: MGA Buffs: stopped checking:"))).toHaveLength(1);
@@ -183,7 +211,7 @@ describe("MGA Buffs slash command", () => {
 
   it("warns earlier with minutes, and rejects a bad number", () => {
     const lines = run(base, `clear(); ${slash("minutes 5")}`);
-    expect(lines).toEqual(["chat: MGA Buffs: warning 5 min before a buff runs out.", "flash: Demon Armor: 4 min left", "sound", "row: Demon Armor: 4 min left"]);
+    expect(lines).toEqual(["chat: MGA Buffs: warning 5 min before a buff runs out.", "row: Demon Armor: 4 min left", "flash: Demon Armor: 4 min left", "sound"]);
     expect(run(base, `clear(); ${slash("minutes 99")}`)[0]).toBe("chat: MGA Buffs: give a number of minutes from 1 to 30, like /mgabuffs minutes 5.");
   });
 

@@ -1628,12 +1628,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   says "wasn't found"; an invalid `?prof` is ignored.
 - MGA Buffs addon (`frontend/addon/MGABuffs/`, Interface 16001, static: no
   generated data): out of combat and alive, a movable icon list (plus a
-  mid-screen flash + sound the first time a reminder appears) for missing or
+  mid-screen flash + sound the first time a reminder appears, never on the
+  first check after login/`/reload`; a broken flash is reported once and only
+  the flash stops) for missing or
   expiring (≤ `/mgabuffs minutes`, default 3) class armor (Demon Skin/Armor,
   Frost/Ice/Mage Armor, Inner Fire), Warlock Soulstone from 18 (your stone on a
   groupmate expiring → timed from your cast when the client gives no timer;
-  else a ready stone in bags; else none in bags), Well Fed (quiet while
-  eating), and Fortitude / Arcane Intellect (mana users) / Mark of the Wild
+  else a ready stone in bags; else none in bags, only once Create Soulstone is
+  trained), Well Fed (quiet while
+  eating), and Fortitude / Arcane Intellect (by class: not Warriors or Rogues, so shapeshifted Druids keep it) / Mark of the Wild
   only when that class is in the group, naming who to ask. Buff/item names and
   ids are checked against the Forever client (Soulstone items 5232/16892/16893/
   16895/16896 → buff spells 20707/20762-20765; 109 of 114 buff foods give
