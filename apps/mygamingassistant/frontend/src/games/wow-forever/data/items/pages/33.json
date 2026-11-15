@@ -217,7 +217,7 @@
 "12065":{"bind":1,"buy":99484},
 "12257":{"bind":2,"buy":19429},
 "12641":{"bind":2,"buy":219182,"crafted":[["leatherworking",295,16746,"Invulnerable Mail",[[249427,20,"Pristine Leather"],[12810,30,"Enchanted Leather"],[12364,6,"Huge Emerald"],[12800,6,"Azerothian Diamond"],[249429,10,"Pristine Scale"],[14341,2,"Rune Thread"]],"item","Pattern: Invulnerable Mail"]]},
-"12769":{"bind":2,"buy":230772,"crafted":[["blacksmithing",270,16965,"Bleakwood Hew",[[12359,30,"Thorium Bar"],[12803,6,"Living Essence"],[8153,6,"Wildvine"],[12799,6,"Large Opal"],[12644,2,"Dense Grinding Stone"],[8170,8,"Rugged Leather"]],"trainer",""]]},
+"12769":{"bind":2,"buy":230772,"crafted":[["blacksmithing",245,16965,"Bleakwood Hew",[[12359,30,"Thorium Bar"],[12803,6,"Living Essence"],[8153,6,"Wildvine"],[12799,6,"Large Opal"],[12644,2,"Dense Grinding Stone"],[8170,8,"Rugged Leather"]],"item","Plans: Bleakwood Hew"]]},
 "13025":{"bind":2,"buy":52324},
 "13089":{"bind":2,"buy":32156},
 "13217":{"bind":1,"buy":104458},

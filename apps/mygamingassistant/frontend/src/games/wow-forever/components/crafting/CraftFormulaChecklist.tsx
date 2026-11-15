@@ -1,4 +1,5 @@
 import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
+import { classicTeacherText } from "@/games/wow-forever/crafting/learnText";
 import { matSummary } from "@/games/wow-forever/crafting/matSources";
 import { hasSources } from "@/games/wow-forever/food/recipeSources";
 import type { CraftRecipe } from "@/games/wow-forever/types/crafting";
@@ -14,11 +15,13 @@ interface CraftFormulaChecklistProps {
   place: CraftPlace;
 }
 
-/** "Skill 110 · Sold by Dalria, Astranaar (limited, 1)" — or that nobody knows where yet. */
+/** "Skill 110 · Sold by Dalria, Astranaar (limited, 1)" / "About skill 285 · Quest: Sacred Cloth (Classic)" — or that nobody knows where yet. */
 function learnLine(recipe: CraftRecipe, place: CraftPlace): string {
-  if (recipe.learn.source !== "item") return "";
-  const skill = `Skill ${recipe.learn.skill}`;
-  const sources = place.sources.recipe(recipe.learn.itemId);
+  const { learn } = recipe;
+  if (learn.source === "quest" || learn.source === "npc") return `About skill ${recipe.yellow} · ${classicTeacherText(learn)}`;
+  if (learn.source !== "item") return "";
+  const skill = learn.estimated ? `About skill ${learn.skill}` : `Skill ${learn.skill}`;
+  const sources = place.sources.recipe(learn.itemId);
   if (!hasSources(sources)) return `${skill} · Where it's sold isn't known yet`;
   return `${skill} · ${matSummary({ sources, madeBy: null }, place)}`;
 }
@@ -35,8 +38,8 @@ function formulaIcon(recipe: CraftRecipe): WowIcon | null {
 }
 
 /**
- * Patterns / Formulas you own. Only these join the cheapest route — a recipe
- * you'd have to go and buy isn't "cheapest" until you have it.
+ * Patterns / Formulas (and quest / NPC recipes) you own. Only these join the cheapest
+ * route — a recipe you'd have to go and get isn't "cheapest" until you have it.
  */
 export default function CraftFormulaChecklist({ title, formulas, known, onToggle, place }: CraftFormulaChecklistProps) {
   if (!formulas.length) return null;

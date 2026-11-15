@@ -9,22 +9,46 @@ Cloth is yellow at 25 and grey at 50; Heavy Linen Gloves moved from Classic's
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from scripts.wow_food import recipe_sources
-from scripts.wow_food.recipe_sources import MIN_FARM_CHANCE, VENDOR_COLUMNS, _gather_locks, _stock, territory_of
-from scripts.wow_professions.build import DISENCHANT_COLUMNS, _best_giver, _disenchant_kind, _roll_chances, with_child_skill_lines
-from scripts.wow_professions import specs
+from scripts.wow_food.recipe_sources import (
+    MIN_FARM_CHANCE,
+    VENDOR_COLUMNS,
+    _gather_locks,
+    _stock,
+    territory_of,
+)
+from scripts.wow_professions import classic_teaching, specs
+from scripts.wow_professions.build import (
+    DISENCHANT_COLUMNS,
+    _best_giver,
+    _disenchant_kind,
+    _roll_chances,
+    with_child_skill_lines,
+)
+from scripts.wow_professions.classic_teaching import (
+    _by_recipe,
+    _recipes_taught,
+    era_teaching_items,
+    gossip_teachers,
+    quest_teachers,
+)
 from scripts.wow_professions.crafts import (
+    ClassicTeaching,
     ClientRecipes,
     Items,
     _changes,
     build_recipes,
+    classic_learn,
+    classic_source,
     forever_trainer_skill,
     mining_records,
     smelting_for,
+    sod_only_spells,
 )
 
 CRAFTING_DATA = (
@@ -60,6 +84,12 @@ def forever() -> ClientRecipes:
 
 
 @pytest.fixture
+def classic() -> ClassicTeaching:
+    """Classic trainers teach Heavy Linen Gloves; Classic has the Linen and Bolt items."""
+    return ClassicTeaching(trainer=frozenset({GLOVES}), items=frozenset({LINEN, BOLT_ITEM, GLOVES_ITEM}))
+
+
+@pytest.fixture
 def era() -> ClientRecipes:
     return ClientRecipes(
         abilities={BOLT: (25, 50, True), GLOVES: (60, 95, False)},
@@ -81,8 +111,8 @@ class TestChanges:
 
 
 class TestBuildRecipes:
-    def test_records(self, forever: ClientRecipes, era: ClientRecipes, items: Items) -> None:
-        by_spell = {r["spell"]: r for r in build_recipes(forever, era, items)}
+    def test_records(self, forever: ClientRecipes, era: ClientRecipes, items: Items, classic: ClassicTeaching) -> None:
+        by_spell = {r["spell"]: r for r in build_recipes(forever, era, items, classic)}
 
         bolt = by_spell[BOLT]
         assert bolt["learn"] == {"source": "start", "skill": 1}
@@ -91,7 +121,7 @@ class TestBuildRecipes:
         gloves = by_spell[GLOVES]
         assert gloves["disenchantable"] is True
         assert gloves["creates"]["itemClass"] == 4 and bolt["creates"]["itemClass"] == 7
-        assert gloves["learn"] == {"source": "trainer"}
+        assert gloves["learn"] == {"source": "trainer", "classic": "trainer"}
         assert gloves["classic"]["yellow"] == 60 and gloves["classic"]["grey"] == 95
         assert [r["count"] for r in gloves["classic"]["reagents"]] == [2, 2]
 
@@ -100,15 +130,205 @@ class TestBuildRecipes:
         assert motes["tool"] == {"id": ROD, "name": "Runed Copper Rod"}
         assert motes["creates"]["count"] == 3
 
-    def test_sorted_by_grey(self, forever: ClientRecipes, era: ClientRecipes, items: Items) -> None:
-        assert [r["spell"] for r in build_recipes(forever, era, items)] == [MOTES, BOLT, GLOVES]
+    def test_sorted_by_grey(self, forever: ClientRecipes, era: ClientRecipes, items: Items, classic: ClassicTeaching) -> None:
+        assert [r["spell"] for r in build_recipes(forever, era, items, classic)] == [MOTES, BOLT, GLOVES]
 
-    def test_teaching_item_wins_over_trainer(self, forever: ClientRecipes, era: ClientRecipes, items: Items) -> None:
+    def test_teaching_item_wins_over_trainer(
+        self, forever: ClientRecipes, era: ClientRecipes, items: Items, classic: ClassicTeaching,
+    ) -> None:
         taught = Items(**{**items.__dict__, "taught_by": {GLOVES: (9999, "Pattern: Heavy Linen Gloves", 45, 0)}})
-        gloves = next(r for r in build_recipes(forever, era, taught) if r["spell"] == GLOVES)
+        gloves = next(r for r in build_recipes(forever, era, taught, classic) if r["spell"] == GLOVES)
         assert gloves["learn"] == {
-            "source": "item", "skill": 45, "itemId": 9999, "item": "Pattern: Heavy Linen Gloves",
+            "source": "item", "skill": 45, "itemId": 9999, "item": "Pattern: Heavy Linen Gloves", "classic": "trainer",
         }
+
+
+# Season of Discovery filter. Real ids: Earthen Vest is trainer-taught (8764) and has a SoD copy
+# (439100, no teacher); Enchanter's Cowl's Pattern 14630 is a Classic item, SoD's Crimson Silk
+# Belt Pattern isn't; Elixir of Lion's Strength (2329) came with Classic Alchemy but Forever moved
+# it to a trainer; Gordok Ogre Suit (22813) is taught by Knot Thimblejack's gossip script; Glacial
+# Cloak (28208) by a Classic pattern the Forever item table lacks; Mooncloth Boots (19435) by the
+# quest Sacred Cloth (6032); Dust to Motes is new in Forever.
+VEST, SOD_VEST, COWL, SOD_BELT, LIONS, OGRE_SUIT, GLACIAL, MOONCLOTH_BOOTS, MOTES_NEW, BOLT_START = (
+    8764, 439100, 3857, 439098, 2329, 22813, 28208, 19435, 1245320, 2963,
+)
+COWL_PATTERN, SOD_BELT_PATTERN, GLACIAL_PATTERN = 14630, 217258, 22685
+FILTER_SPELLS = [VEST, SOD_VEST, COWL, SOD_BELT, LIONS, OGRE_SUIT, GLACIAL, MOONCLOTH_BOOTS]
+
+
+@pytest.fixture
+def sod_forever() -> ClientRecipes:
+    abilities = {spell: (100, 130, False) for spell in FILTER_SPELLS}
+    abilities |= {MOTES_NEW: (10, 15, False), BOLT_START: (25, 50, True)}
+    return ClientRecipes(abilities=abilities, names={s: f"Recipe {s}" for s in abilities}, reagents={}, creates={})
+
+
+@pytest.fixture
+def sod_era() -> ClientRecipes:
+    """The Classic Era client — shared with Season of Discovery, so its copies are here too."""
+    abilities = {spell: (100, 130, spell == LIONS) for spell in FILTER_SPELLS} | {BOLT_START: (25, 50, True)}
+    return ClientRecipes(abilities=abilities, names={}, reagents={}, creates={})
+
+
+@pytest.fixture
+def sod_items() -> Items:
+    return Items(
+        names={}, quality={}, item_class={},
+        taught_by={
+            COWL: (COWL_PATTERN, "Pattern: Enchanter's Cowl", 130, 0),
+            SOD_BELT: (SOD_BELT_PATTERN, "Pattern: Crimson Silk Belt", 175, 0),
+        },
+    )
+
+
+@pytest.fixture
+def sod_classic() -> ClassicTeaching:
+    return ClassicTeaching(
+        trainer=frozenset({VEST}),
+        items=frozenset({COWL_PATTERN, GLACIAL_PATTERN}),
+        quest={MOONCLOTH_BOOTS: ((6032, "Sacred Cloth"),)},
+        npc={OGRE_SUIT: ("Knot Thimblejack",), GLACIAL: ()},
+        era_item={GLACIAL: (GLACIAL_PATTERN, "Pattern: Glacial Cloak", 100)},
+    )
+
+
+class TestSeasonOfDiscoveryFilter:
+    def test_keeps_what_classic_or_forever_teaches(
+        self, sod_forever: ClientRecipes, sod_era: ClientRecipes, sod_items: Items, sod_classic: ClassicTeaching,
+    ) -> None:
+        by_spell = {r["spell"]: r for r in build_recipes(sod_forever, sod_era, sod_items, sod_classic)}
+        assert by_spell[VEST]["learn"] == {"source": "trainer", "classic": "trainer"}
+        assert by_spell[COWL]["learn"]["source"] == "item" and by_spell[COWL]["learn"]["classic"] == "item"
+        assert by_spell[LIONS]["learn"]["classic"] == "start"
+        assert by_spell[OGRE_SUIT]["learn"]["classic"] == "npc"
+        assert by_spell[GLACIAL]["learn"]["classic"] == "npc"
+        assert by_spell[MOONCLOTH_BOOTS]["learn"]["classic"] == "quest"
+        assert by_spell[MOTES_NEW]["newInForever"] is True and "classic" not in by_spell[MOTES_NEW]["learn"]
+        assert by_spell[BOLT_START]["learn"] == {"source": "start", "skill": 1}
+
+    def test_drops_season_of_discovery_copies(
+        self, sod_forever: ClientRecipes, sod_era: ClientRecipes, sod_items: Items, sod_classic: ClassicTeaching,
+    ) -> None:
+        spells = {r["spell"] for r in build_recipes(sod_forever, sod_era, sod_items, sod_classic)}
+        # The trainer-less copy, and the one whose pattern isn't a Classic item.
+        assert SOD_VEST not in spells and SOD_BELT not in spells
+        assert sod_only_spells(sod_forever, sod_era, sod_items, sod_classic) == {SOD_VEST, SOD_BELT}
+
+    def test_classic_source_order(self, sod_era: ClientRecipes, sod_items: Items, sod_classic: ClassicTeaching) -> None:
+        # A Classic teaching item says "item" even when a trainer teaches it too.
+        both = ClassicTeaching(**{**sod_classic.__dict__, "trainer": frozenset({COWL})})
+        assert classic_source(COWL, sod_era, sod_items, both) == "item"
+        assert classic_source(SOD_BELT, sod_era, sod_items, sod_classic) is None
+        assert classic_source(SOD_VEST, sod_era, sod_items, sod_classic) is None
+
+    def test_recipes_taught_follows_learn_spells(self) -> None:
+        # Knot's script casts 22814, which teaches the suit 22813.
+        assert _recipes_taught({22814, 5}, {22814: [OGRE_SUIT]}) == {22814, OGRE_SUIT, 5}
+
+
+class TestClassicLearn:
+    """Recipes the Forever client names no teaching item for: learned where Classic taught them, not at a trainer."""
+
+    def test_build_recipes_labels_where_classic_teaches(
+        self, sod_forever: ClientRecipes, sod_era: ClientRecipes, sod_items: Items, sod_classic: ClassicTeaching,
+    ) -> None:
+        by_spell = {r["spell"]: r for r in build_recipes(sod_forever, sod_era, sod_items, sod_classic)}
+        assert by_spell[OGRE_SUIT]["learn"] == {"source": "npc", "npcs": ["Knot Thimblejack"], "classic": "npc"}
+        assert by_spell[MOONCLOTH_BOOTS]["learn"] == {
+            "source": "quest", "quests": [{"id": 6032, "title": "Sacred Cloth"}], "classic": "quest",
+        }
+        # Nobody named teaches the Glacial Cloak, so its Classic pattern does.
+        assert by_spell[GLACIAL]["learn"] == {
+            "source": "item", "skill": 100, "itemId": GLACIAL_PATTERN, "item": "Pattern: Glacial Cloak", "classic": "npc",
+        }
+        # A Classic trainer's recipe and one that came with Classic's skill stay at the trainer.
+        assert by_spell[VEST]["learn"] == {"source": "trainer", "classic": "trainer"}
+        assert by_spell[LIONS]["learn"] == {"source": "trainer", "classic": "start"}
+
+    def test_trainer_recipe_stays_at_the_trainer(self) -> None:
+        classic = ClassicTeaching(trainer=frozenset({1}), items=frozenset(), era_item={1: (10, "Pattern: X", 50)})
+        assert classic_learn(1, {"yellow": 50}, classic) is None
+
+    def test_strongest_evidence_first(self) -> None:
+        quest = {1: ((7, "Quest"),)}
+        npc = {1: ("Knot Thimblejack",)}
+        era_item = {1: (10, "Pattern: X", 50)}
+        record = {"yellow": 50}
+        sourced = ClassicTeaching(trainer=frozenset(), items=frozenset(), quest=quest, npc=npc, era_item=era_item, sourced=frozenset({10}))
+        assert classic_learn(1, record, sourced)["source"] == "item"
+        unsourced = replace(sourced, sourced=frozenset())
+        assert classic_learn(1, record, unsourced)["source"] == "quest"
+        assert classic_learn(1, record, replace(unsourced, quest={}))["npcs"] == ["Knot Thimblejack"]
+        assert classic_learn(1, record, replace(unsourced, quest={}, npc={}))["itemId"] == 10
+        assert classic_learn(1, record, replace(unsourced, quest={}, npc={1: ()}))["itemId"] == 10
+        assert classic_learn(1, record, replace(unsourced, quest={}, npc={}, era_item={})) is None
+
+    def test_era_pattern_skill_moves_with_the_recipe(self) -> None:
+        classic = ClassicTeaching(trainer=frozenset(), items=frozenset(), era_item={1: (10, "Pattern: Felcloth Bag", 285)})
+        moved = classic_learn(1, {"yellow": 260, "classic": {"yellow": 300}}, classic)
+        assert moved == {"source": "item", "skill": 245, "itemId": 10, "item": "Pattern: Felcloth Bag", "estimated": True}
+        unchanged = classic_learn(1, {"yellow": 300}, classic)
+        assert unchanged == {"source": "item", "skill": 285, "itemId": 10, "item": "Pattern: Felcloth Bag"}
+
+    def test_by_recipe_follows_learn_spells_in_order(self) -> None:
+        assert _by_recipe({5: ["a", "b"], 3: ["b"]}, {5: [9]}) == {3: ("b",), 5: ("a", "b"), 9: ("a", "b")}
+
+    def test_quest_teachers(self) -> None:
+        quests = [
+            {"entry": "7497", "Title": "The Journey Has Just Begun", "RewSpell": "19094", "RewSpellCast": "0"},
+            {"entry": "7493", "Title": "The Journey Has Just Begun", "RewSpell": "0", "RewSpellCast": "19094"},
+            {"entry": "1", "Title": "No spell", "RewSpell": "0", "RewSpellCast": "0"},
+        ]
+        assert quest_teachers(quests) == {
+            19094: [(7493, "The Journey Has Just Begun"), (7497, "The Journey Has Just Begun")],
+        }
+
+    def test_gossip_teachers_name_the_npc_or_object(self) -> None:
+        tables = {
+            "creature_template": [{"Entry": "14338", "Name": "Knot Thimblejack", "GossipMenuId": "5667"}],
+            "gameobject_template": [
+                {"entry": "180794", "type": "2", "name": "Journal of Jandice Barov", "data3": "6799"},
+                # A chest's data1 is its loot, not a gossip menu.
+                {"entry": "142344", "type": "3", "name": "Artificial Extrapolator", "data3": "6799"},
+            ],
+            "gossip_menu_option": [
+                {"menu_id": "5667", "action_script_id": "566701"},
+                {"menu_id": "6799", "action_script_id": "6799"},
+                {"menu_id": "24401", "action_script_id": "244011"},
+            ],
+            "gossip_menu": [{"entry": "5667", "script_id": "0"}],
+            "dbscripts_on_gossip": [
+                {"id": "566701", "command": "15", "datalong": "22814"},
+                {"id": "6799", "command": "15", "datalong": "26095"},
+                {"id": "244011", "command": "15", "datalong": "28210"},
+                {"id": "566701", "command": "0", "datalong": "999"},
+            ],
+        }
+        assert gossip_teachers(tables) == {
+            22814: ["Knot Thimblejack"], 26095: ["Journal of Jandice Barov"], 28210: [],
+        }
+
+    def test_era_teaching_items_keep_classic_patterns(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        rows = {
+            "ItemSparse": [
+                {"ID": "21369", "Display_lang": "Pattern: Felcloth Bag", "RequiredSkillRank": "285"},
+                {"ID": "236691", "Display_lang": "Pattern: Glacial Cloak", "RequiredSkillRank": "300"},
+                {"ID": "22685", "Display_lang": "Pattern: Glacial Cloak", "RequiredSkillRank": "300"},
+                {"ID": "500", "Display_lang": "Not a pattern", "RequiredSkillRank": "0"},
+            ],
+            "ItemEffect": [
+                {"ParentItemID": "21369", "SpellID": "26095"},
+                {"ParentItemID": "236691", "SpellID": "28210"},
+                {"ParentItemID": "22685", "SpellID": "28210"},
+                {"ParentItemID": "500", "SpellID": "77"},
+            ],
+        }
+        monkeypatch.setattr(classic_teaching, "wago_table", lambda name, **_: rows[name])
+        found = era_teaching_items(frozenset({21369, 22685, 500}), {26095: [26086], 28210: [28208]}, {})
+        assert found[26086] == (21369, "Pattern: Felcloth Bag", 285)
+        # Season of Discovery's 236691 isn't a Classic item.
+        assert found[28208] == (22685, "Pattern: Glacial Cloak", 300)
+        assert 77 not in found
 
 
 class TestForeverTrainerSkill:
@@ -193,6 +413,23 @@ class TestCommittedData:
             assert first_aid[int(spell)]["learn"]["source"] == "trainer"
             assert 1 <= entry["forever"] <= first_aid[int(spell)]["yellow"]
 
+    def test_classic_teachers_replace_the_trainer(self, tailoring: dict[int, dict]) -> None:
+        assert tailoring[26086]["learn"] == {"source": "npc", "npcs": ["Journal of Jandice Barov"], "classic": "npc"}
+        assert tailoring[19435]["learn"]["quests"] == [{"id": 6032, "title": "Sacred Cloth"}]
+        robe = tailoring[7636]["learn"]
+        assert (robe["source"], robe["itemId"], robe["skill"], robe["estimated"]) == ("item", 6273, 65, True)
+
+    def test_every_trainer_recipe_is_a_classic_trainers(self) -> None:
+        """A recipe labelled "trainer" that Forever didn't add is one a Classic trainer teaches — or came with Classic's skill."""
+        skills = json.loads((CRAFTING_DATA / "classic" / "trainerSkills.json").read_text(encoding="utf-8"))
+        for profession, taught in skills.items():
+            if profession == "source":
+                continue
+            for spell, recipe in _recipes(profession).items():
+                learn = recipe["learn"]
+                if learn["source"] == "trainer" and not recipe.get("newInForever") and learn.get("classic") != "start":
+                    assert str(spell) in taught, f"{profession} {spell} {recipe['name']}"
+
     def test_cmangos_license_kept(self) -> None:
         assert (CRAFTING_DATA / "classic" / "LICENSE").is_file()
         assert "cmangos" in (CRAFTING_DATA / "classic" / "README.md").read_text(encoding="utf-8")
@@ -206,7 +443,7 @@ class TestCommittedFirstAid:
 
     def test_manuals_teach_through_the_child_skill_line(self, first_aid: dict[int, dict]) -> None:
         learn = first_aid[HEAVY_SILK_BANDAGE]["learn"]
-        assert learn == {"source": "item", "skill": 180, "itemId": 16112, "item": "Manual: Heavy Silk Bandage"}
+        assert learn == {"source": "item", "skill": 180, "itemId": 16112, "item": "Manual: Heavy Silk Bandage", "classic": "item"}
 
     def test_healing_potions_moved_from_alchemy(self, first_aid: dict[int, dict], alchemy: dict[int, dict]) -> None:
         potion = first_aid[HEALING_POTION_SPELL]

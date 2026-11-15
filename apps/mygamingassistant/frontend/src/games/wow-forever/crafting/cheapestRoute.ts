@@ -9,7 +9,7 @@
  * route doesn't flip-flop on near-ties. A stretch with nothing priced falls
  * back to the hand-written row, flagged so the page can say what to price.
  */
-import { expectedCrafts, learnAt, learnSkill, MAX_CRAFT_SKILL, resolveRoute, skillColors } from "@/games/wow-forever/crafting/craftRoute";
+import { expectedCrafts, learnAt, learnSkill, MAX_CRAFT_SKILL, mustAcquire, resolveRoute, skillColors } from "@/games/wow-forever/crafting/craftRoute";
 import { essencePartner, type PriceBook } from "@/games/wow-forever/crafting/matPrices";
 import { makerOf, shoppingList } from "@/games/wow-forever/crafting/shoppingList";
 import type {
@@ -93,9 +93,9 @@ function exactCrafts(recipe: Pick<CraftRecipe, "yellow" | "grey">, from: number,
   return total;
 }
 
-/** You can use it: a start / trainer recipe, or a formula you bought — and the slot is one you can enchant. */
+/** You can use it: a start / trainer recipe, or a formula / quest / NPC recipe you've learned — and the slot is one you can enchant. */
 export function usable(recipe: CraftRecipe, choices: RouteChoices): boolean {
-  if (recipe.learn.source === "item" && !choices.knownFormulas.has(recipe.spell)) return false;
+  if (mustAcquire(recipe) && !choices.knownFormulas.has(recipe.spell)) return false;
   const slot = enchantSlot(recipe.name);
   return !(slot && choices.excludedSlots.has(slot));
 }
@@ -458,8 +458,10 @@ function nameOf(recipes: readonly CraftRecipe[], itemId: number): string | null 
  */
 export function formulaChoices(ctx: CraftContext, start: number, choices: RouteChoices): CraftRecipe[] {
   return ctx.file.recipes
-    .filter((r): r is CraftRecipe & { learn: { source: "item" } } => r.learn.source === "item")
-    .filter((r) => r.grey > start + 1 && (r.learn.skill < start + FORMULA_WINDOW || choices.knownFormulas.has(r.spell)))
-    .filter((r) => usable(r, { ...choices, knownFormulas: new Set([r.spell]) }))
-    .sort((a, b) => a.learn.skill - b.learn.skill || a.name.localeCompare(b.name));
+    .filter(mustAcquire)
+    .map((r) => ({ recipe: r, skill: learnSkill(learnAt(r, ctx.trainerSkills)) }))
+    .filter(({ recipe: r, skill }) => r.grey > start + 1 && (skill < start + FORMULA_WINDOW || choices.knownFormulas.has(r.spell)))
+    .filter(({ recipe: r }) => usable(r, { ...choices, knownFormulas: new Set([r.spell]) }))
+    .sort((a, b) => a.skill - b.skill || a.recipe.name.localeCompare(b.recipe.name))
+    .map(({ recipe }) => recipe);
 }

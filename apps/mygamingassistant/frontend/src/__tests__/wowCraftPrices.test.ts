@@ -8,6 +8,7 @@ import {
   enchantSlot,
   formulaChoices,
   priceItems,
+  usable,
   type CraftContext,
   type EnchantSlot,
   type RouteChoices,
@@ -51,6 +52,11 @@ const DREAM_DUST = 11176;
 const LINEN_CLOTH = 2589;
 const BOLT_OF_LINEN = 2996;
 const CLOAK_MINOR_AGILITY = 13419;
+const EARTHEN_VEST = 8764;
+/** Season of Discovery's copy (yellow 190 / grey 220): in the client, never taught in Forever. */
+const SOD_EARTHEN_VEST = 439100;
+/** Taught in Classic by the Journal of Jandice Barov in Scholomance, not a trainer. */
+const FELCLOTH_BAG = 26086;
 
 const SILVER = 100;
 const GOLD = 10_000;
@@ -294,6 +300,21 @@ describe("cheapestRoute — Tailoring", () => {
       expect(route.unknown).toBe(true);
     }
   });
+
+  it("at 190 never picks a recipe Forever doesn't teach — Season of Discovery's Earthen Vest (grey 220) is gone", () => {
+    const book = createPriceBook(priceAll("tailoring", {}), ctx.file, ctx.professionLabel);
+    const route = cheapestRoute(ctx, 190, book, NO_CHOICES);
+    expectValid("tailoring", route.entries, 190, NO_CHOICES);
+    const at190 = route.entries.find((e) => e.kind === "craft" && e.step.from <= 190 && 190 < e.step.to);
+    expect(at190?.kind).toBe("craft");
+    if (at190?.kind !== "craft") return;
+    expect(at190.recipe.spell).not.toBe(SOD_EARTHEN_VEST);
+    expect(at190.recipe.grey).toBeGreaterThan(190);
+    expect(route.entries.some((e) => e.kind === "craft" && e.recipe.spell === SOD_EARTHEN_VEST)).toBe(false);
+    // The trainer's Earthen Vest is still in the data — grey at 185, so it gives no points at 190.
+    expect(ctx.recipes.get(EARTHEN_VEST)?.grey).toBe(185);
+    expect(ctx.recipes.has(SOD_EARTHEN_VEST)).toBe(false);
+  });
 });
 
 describe("priceItems and formulaChoices", () => {
@@ -322,5 +343,17 @@ describe("priceItems and formulaChoices", () => {
     const formulas = formulaChoices(context("enchanting"), 111, NO_CHOICES);
     expect(formulas.some((r) => r.spell === CLOAK_MINOR_AGILITY)).toBe(true);
     expect(formulas.every((r) => r.learn.source === "item" && r.grey > 112)).toBe(true);
+  });
+
+  it("asks about a quest / NPC recipe like a formula and keeps it off the route until ticked — Felcloth Bag at 255", () => {
+    const ctx = context("tailoring");
+    const bag = formulaChoices(ctx, 255, NO_CHOICES).find((r) => r.spell === FELCLOTH_BAG);
+    if (!bag) throw new Error("Felcloth Bag isn't offered at 255");
+    expect(bag.learn.source).toBe("npc");
+    expect(usable(bag, NO_CHOICES)).toBe(false);
+    expect(usable(bag, { ...NO_CHOICES, knownFormulas: new Set([FELCLOTH_BAG]) })).toBe(true);
+    const book = createPriceBook(priceAll("tailoring", {}), ctx.file, ctx.professionLabel);
+    const route = cheapestRoute(ctx, 255, book, NO_CHOICES);
+    expect(route.entries.some((e) => e.kind === "craft" && e.recipe.spell === FELCLOTH_BAG)).toBe(false);
   });
 });

@@ -262,7 +262,7 @@
 "19581":{"bind":1,"buy":24727},
 "20093":{"bind":1,"buy":13217},
 "20157":{"bind":1,"buy":13766},
-"20477":{"bind":2,"buy":84490,"crafted":[["leatherworking",310,24850,"Sandstalker Gauntlets",[[20501,2,"Heavy Silithid Carapace"],[20498,30,"Silithid Chitin"],[18512,2,"Larval Acid"],[15407,1,"Cured Rugged Hide"]],"trainer",""]]},
+"20477":{"bind":2,"buy":84490,"crafted":[["leatherworking",290,24850,"Sandstalker Gauntlets",[[20501,2,"Heavy Silithid Carapace"],[20498,30,"Silithid Chitin"],[18512,2,"Larval Acid"],[15407,1,"Cured Rugged Hide"]],"item","Pattern: Sandstalker Gauntlets"]]},
 "21117":{"bind":1,"buy":28230},
 "21373":{"bind":1,"buy":350337},
 "21565":{"bind":1,"buy":40000},

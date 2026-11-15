@@ -227,7 +227,7 @@
 "14821":{"bind":2,"buy":26452},
 "14949":{"bind":2,"buy":19535},
 "15077":{"bind":2,"buy":38077,"crafted":[["leatherworking",255,19048,"Heavy Scorpid Bracers",[[8170,4,"Rugged Leather"],[15408,4,"Heavy Scorpid Scale"],[14341,1,"Rune Thread"]],"item","Pattern: Heavy Scorpid Bracers"]]},
-"15141":{"bind":2,"buy":209688,"crafted":[["leatherworking",320,19106,"Onyxia Scale Breastplate",[[8170,40,"Rugged Leather"],[15410,12,"Scale of Onyxia"],[15416,60,"Black Dragonscale"],[14341,2,"Rune Thread"]],"trainer",""]]},
+"15141":{"bind":2,"buy":209688,"crafted":[["leatherworking",300,19106,"Onyxia Scale Breastplate",[[8170,40,"Rugged Leather"],[15410,12,"Scale of Onyxia"],[15416,60,"Black Dragonscale"],[14341,2,"Rune Thread"]],"item","Pattern: Onyxia Scale Breastplate"]]},
 "15205":{"bind":1,"buy":5317},
 "15269":{"bind":2,"buy":15183},
 "15333":{"bind":2,"buy":2685},

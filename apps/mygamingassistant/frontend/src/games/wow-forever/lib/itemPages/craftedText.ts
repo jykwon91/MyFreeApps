@@ -11,9 +11,17 @@ export function professionLabel(profession: CraftedBy["profession"]): string {
   return [...CRAFTING_GROUP.options, ...SECONDARY_GROUP.options].find((o) => o.id === profession)?.label ?? profession;
 }
 
-/** "Tailoring 215 · from a trainer" / "Tailoring 225 · learn from Pattern: Red Woolen Bag". */
+/** How `learnItem` reads for each kind of teacher. */
+const TEACHER_TEXT: Readonly<Partial<Record<string, (teacher: string) => string>>> = {
+  item: (teacher) => `learn from ${teacher}`,
+  quest: (teacher) => `from the quest ${teacher}`,
+  npc: (teacher) => `taught by ${teacher}`,
+};
+
+/** "Tailoring 215 · from a trainer" / "Tailoring 225 · learn from Pattern: Red Woolen Bag" / "Tailoring 285 · from the quest Sacred Cloth". */
 export function craftedLine(crafted: CraftedBy): string {
-  const learn = crafted.learn === "item" && crafted.learnItem ? `learn from ${crafted.learnItem}` : (LEARN_TEXT[crafted.learn] ?? "");
+  const teacher = TEACHER_TEXT[crafted.learn];
+  const learn = teacher && crafted.learnItem ? teacher(crafted.learnItem) : (LEARN_TEXT[crafted.learn] ?? "");
   return [`${professionLabel(crafted.profession)} ${crafted.skill}`, learn].filter(Boolean).join(" · ");
 }
 

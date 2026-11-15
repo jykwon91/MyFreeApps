@@ -49,7 +49,7 @@ function craftEntry(input: RecipeBookInput, profession: CraftingProfession, data
 function foodLearn(food: FoodRecord, trainerSkills: RecipeBookInput["foodTrainerSkills"]): LearnAt {
   const { learn } = food;
   if (learn.source === "recipe" && learn.recipeItem !== null && learn.recipe !== null) {
-    return { kind: "item", skill: learn.skill ?? 1, itemId: learn.recipeItem, item: learn.recipe };
+    return { kind: "item", skill: learn.skill ?? 1, itemId: learn.recipeItem, item: learn.recipe, estimated: false };
   }
   const skill = trainerSkills[String(food.id)];
   // No recipe item and no trainer asking a skill: Cooking teaches it when you learn the profession.

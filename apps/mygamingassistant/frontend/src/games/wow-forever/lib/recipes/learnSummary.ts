@@ -10,6 +10,8 @@ export function learnSummary(entry: Pick<RecipeEntry, "learn" | "recipeSources" 
   if (learn.kind === "start") return RECIPES_TEXT.knownFromStart;
   if (entry.sourceUnknown) return null;
   if (learn.kind === "trainer") return RECIPES_TEXT.trainer;
+  if (learn.kind === "quest") return RECIPES_TEXT.quest;
+  if (learn.kind === "npc") return RECIPES_TEXT.npc;
   const s = entry.recipeSources;
   if (!s) return RECIPES_TEXT.noSourceListed;
   const kinds: string[] = [];

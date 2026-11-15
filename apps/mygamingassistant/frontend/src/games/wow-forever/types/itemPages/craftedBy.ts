@@ -9,8 +9,8 @@ export interface CraftedBy {
   spell: number;
   recipe: string;
   reagents: readonly CraftedReagent[];
-  /** "start" (known from the start), "trainer", "item" (a pattern / plans), or "" when unknown. */
+  /** "start" (known from the start), "trainer", "item" (a pattern / plans), "quest" / "npc" (Classic's), or "" when unknown. */
   learn: string;
-  /** The pattern / plans / formula that teaches it, when `learn` is "item". */
+  /** Who teaches it: the pattern / plans / formula ("item"), the quest titles ("quest") or the NPC names ("npc"). */
   learnItem: string;
 }

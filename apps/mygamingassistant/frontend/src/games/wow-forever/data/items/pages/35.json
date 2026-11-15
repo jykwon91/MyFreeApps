@@ -183,7 +183,7 @@
 "4771":{"bind":2,"buy":1324},
 "4835":{"bind":2,"buy":10550},
 "6179":{"bind":2,"buy":2782},
-"6243":{"bind":2,"buy":2228,"crafted":[["tailoring",90,7636,"Green Woolen Robe",[[2997,3,"Bolt of Woolen Cloth"],[2321,2,"Fine Thread"],[2605,1,"Green Dye"]],"trainer",""]]},
+"6243":{"bind":2,"buy":2228,"crafted":[["tailoring",65,7636,"Green Woolen Robe",[[2997,3,"Bolt of Woolen Cloth"],[2321,2,"Fine Thread"],[2605,1,"Green Dye"]],"item","Pattern: Green Woolen Robe"]]},
 "6563":{"bind":2,"buy":1478},
 "6627":{"bind":1,"buy":7654},
 "6691":{"bind":1,"buy":43408},

@@ -12,11 +12,13 @@ import {
   expectedCrafts,
   learnAt,
   learnSkill,
+  mustAcquire,
   parseSkill,
   resolveRoute,
   skillColors,
   sourceUnknown,
 } from "@/games/wow-forever/crafting/craftRoute";
+import { learnText } from "@/games/wow-forever/crafting/learnText";
 import { shoppingList, shoppingListText } from "@/games/wow-forever/crafting/shoppingList";
 import { effectText } from "@/games/wow-forever/crafting/craftEffect";
 import { CRAFTING_FEATURES } from "@/games/wow-forever/data/professions/crafting/craftingFeatures";
@@ -114,7 +116,22 @@ describe("learnAt", () => {
   it("keeps patterns and starting recipes", () => {
     expect(learnSkill(learnAt({ ...base, learn: { source: "start", skill: 1 } }, {}))).toBe(1);
     const item = learnAt({ ...base, learn: { source: "item", skill: 175, itemId: 9, item: "Pattern: X" } }, {});
-    expect(item).toEqual({ kind: "item", skill: 175, itemId: 9, item: "Pattern: X" });
+    expect(item).toEqual({ kind: "item", skill: 175, itemId: 9, item: "Pattern: X", estimated: false });
+  });
+
+  it("sends a quest or NPC recipe to its Classic teacher, not a trainer", () => {
+    const quest = learnAt({ ...base, learn: { source: "quest", quests: [{ id: 6032, title: "Sacred Cloth" }] } }, {});
+    expect(quest).toEqual({ kind: "quest", skill: 60, quests: [{ id: 6032, title: "Sacred Cloth" }] });
+    expect(learnText(quest, "Tailoring")).toBe("Quest: Sacred Cloth (Classic), at about skill 60");
+    const npc = learnAt({ ...base, learn: { source: "npc", npcs: ["Journal of Jandice Barov"] } }, {});
+    expect(learnText(npc, "Tailoring")).toBe("Taught by Journal of Jandice Barov (Classic), at about skill 60");
+    expect(mustAcquire({ ...base, learn: { source: "npc", npcs: ["Gloom'rel"] } })).toBe(true);
+    expect(mustAcquire(base)).toBe(false);
+  });
+
+  it("says about for a Classic pattern's moved skill", () => {
+    const item = learnAt({ ...base, learn: { source: "item", skill: 65, itemId: 6273, item: "Pattern: Green Woolen Robe", estimated: true } }, {});
+    expect(learnText(item, "Tailoring")).toBe("Pattern: Green Woolen Robe (about skill 65)");
   });
 });
 

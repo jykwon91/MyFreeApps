@@ -191,7 +191,7 @@
 "6541":{"bind":2,"buy":817},
 "6605":{"bind":2,"buy":4857},
 "6669":{"bind":1,"buy":5515},
-"6733":{"bind":2,"buy":5726,"crafted":[["blacksmithing",140,8368,"Ironforge Gauntlets",[[2841,8,"Bronze Bar"],[1210,3,"Shadowgem"],[3478,4,"Coarse Grinding Stone"]],"trainer",""]]},
+"6733":{"bind":2,"buy":5726,"crafted":[["blacksmithing",110,8368,"Ironforge Gauntlets",[[2841,8,"Bronze Bar"],[1210,3,"Shadowgem"],[3478,4,"Coarse Grinding Stone"]],"item","Plans: Ironforge Gauntlets"]]},
 "6797":{"bind":1,"buy":31813},
 "7053":{"bind":2,"buy":11201,"crafted":[["tailoring",140,8786,"Azure Silk Cloak",[[4305,3,"Bolt of Silk Cloth"],[6260,2,"Blue Dye"],[2321,2,"Fine Thread"]],"item","Pattern: Azure Silk Cloak"]]},
 "7117":{"bind":1,"buy":3441},

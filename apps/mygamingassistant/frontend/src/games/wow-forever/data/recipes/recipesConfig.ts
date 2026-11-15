@@ -97,6 +97,8 @@ export const RECIPES_TEXT = {
   trainer: "Trainer",
   vendor: "Vendor",
   quest: "Quest",
+  /** Taught by an NPC (or an object) in Classic, not a trainer. */
+  npc: "NPC",
   drop: "Drop",
   worldDrop: "World drop",
   container: "Container",

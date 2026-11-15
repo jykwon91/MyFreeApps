@@ -265,7 +265,7 @@
 "22440":{"bind":1,"buy":511958},
 "22504":{"bind":1,"buy":632932},
 "22632":{"bind":1,"buy":2641323},
-"22760":{"bind":2,"buy":146512,"crafted":[["leatherworking",320,28473,"Bramblewood Boots",[[12810,6,"Enchanted Leather"],[18512,2,"Larval Acid"],[12803,2,"Living Essence"],[15407,2,"Cured Rugged Hide"]],"trainer",""]]},
+"22760":{"bind":2,"buy":146512,"crafted":[["leatherworking",300,28473,"Bramblewood Boots",[[12810,6,"Enchanted Leather"],[18512,2,"Larval Acid"],[12803,2,"Living Essence"],[15407,2,"Cured Rugged Hide"]],"item","Pattern: Bramblewood Boots"]]},
 "23272":{"bind":1,"buy":70845},
 "23464":{"bind":1,"buy":228358},
 "212584":{"bind":1,"buy":30770},

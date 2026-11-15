@@ -249,6 +249,17 @@ describe("item page text", () => {
     expect(craftingGuideHref(crafted)).toBe("/wow-forever/professions?p=tailoring&skill=295");
   });
 
+  it("names a recipe's Classic quest or NPC, not a trainer", () => {
+    const { crafted } = decodeItemFacts({
+      crafted: [
+        ["tailoring", 285, 19435, "Mooncloth Boots", [], "quest", "Sacred Cloth"],
+        ["tailoring", 260, 26086, "Felcloth Bag", [], "npc", "Journal of Jandice Barov"],
+      ],
+    });
+    expect(craftedLine(crafted[0])).toBe("Tailoring 285 · from the quest Sacred Cloth");
+    expect(craftedLine(crafted[1])).toBe("Tailoring 260 · taught by Journal of Jandice Barov");
+  });
+
   it("explains an item with no known source", () => {
     expect(noSourceText(200000)).toMatch(/New in WoW Forever/);
     expect(noSourceText(2042)).toMatch(/Classic data/);
