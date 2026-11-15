@@ -1,4 +1,4 @@
-"""The guild help tab: each member's equipped items and known recipe ability ids.
+"""The guild help tab: each member's equipped items, known recipe ability ids, and talents.
 
 The frontend does all matching and scoring; the backend only returns the raw
 sheet data it already has. Recipe ability ids are Blizzard's SkillLineAbility ids
@@ -31,6 +31,14 @@ class GuildHelpProfession(BaseModel):
     max_skill: int
 
 
+class GuildHelpTalentTree(BaseModel):
+    """Points spent in one talent tree (from the active talent set)."""
+
+    # Blizzard's SkillTree id — matches ``talentTrees.json`` tree.id on the frontend.
+    tree_id: int
+    points: int
+
+
 class GuildHelpMember(BaseModel):
     """One live guild member with their latest stored sheet data."""
 
@@ -46,6 +54,9 @@ class GuildHelpMember(BaseModel):
     recipe_ability_ids: list[int]
     # The member's known professions, for the crafter badge and profession filter.
     professions: list[GuildHelpProfession]
+    # Active talent tree point totals; None when never fetched or last call failed.
+    # The frontend maps tree_id → scorer spec id for per-beneficiary gear scoring.
+    talents: list[GuildHelpTalentTree] | None
 
 
 class GuildHelpResponse(BaseModel):

@@ -2,9 +2,10 @@
  * Finds gear upgrade opportunities: member A knows a recipe that creates an
  * item whose score is meaningfully higher than what member B wears in that slot.
  *
- * Scoring uses LEVELING_SPEC_ID (class leveling weights) for everyone — we don't
- * have spec info from the help endpoint.  The scorer is built once per
- * beneficiary class and reused across all slots for that beneficiary.
+ * Scoring uses each beneficiary's real spec (resolved from their talent tree
+ * points) when available, falling back to class leveling weights when talents
+ * are missing or the dominant tree isn't recognised.  The scorer is built once
+ * per (classId, specId) pair and cached across all beneficiaries.
  *
  * Deduplication: for each (beneficiary_slug, blizzard_slot), only the best
  * upgrade is returned (highest score improvement).
@@ -16,6 +17,7 @@ import type { ItemSlot } from "@/games/wow-forever/data/itemSlots";
 import { scorer } from "@/games/wow-forever/gear/rankGear";
 import { recipeSpell } from "@/games/wow-forever/lib/character/characterProfessions";
 import { characterClassId } from "@/games/wow-forever/lib/character/characterClassId";
+import { resolveHelpSpecId } from "@/games/wow-forever/lib/guild/guildHelpSpec";
 import type { ClientItem } from "@/games/wow-forever/types/clientItem";
 import type { ClientItemList } from "@/games/wow-forever/types/clientItemList";
 import type { CraftRecipe, CraftingFile } from "@/games/wow-forever/types/crafting";
@@ -85,16 +87,24 @@ export function computeGearMatches(
   }
   if (gearBySpell.size === 0) return [];
 
-  // Per-beneficiary scorer (class leveling weights), keyed by class_name.
+  // Per-beneficiary scorer, keyed by "{classId}|{specId}" to handle guild mates
+  // of the same class who specced differently.  Uses the beneficiary's real spec
+  // when it can be resolved from their talent trees; falls back to leveling weights.
   const scorerCache = new Map<string, (item: ClientItem) => number>();
-  function scorerFor(className: string | null): ((item: ClientItem) => number) | null {
-    const classId = className ? characterClassId(className) : null;
+  function scorerFor(member: GuildHelpMember): ((item: ClientItem) => number) | null {
+    const classId = member.class_name ? characterClassId(member.class_name) : null;
     if (!classId) return null;
-    const cached = scorerCache.get(classId);
+    const specId = resolveHelpSpecId(member.talents);
+    // specId null → use leveling weights; non-null → use spec's level60 weights
+    // (resolveWeights falls back to leveling if no Pawn entry exists for the spec).
+    const cacheKey = specId !== null ? `${classId}|${specId}` : classId;
+    const cached = scorerCache.get(cacheKey);
     if (cached) return cached;
-    const fn = scorer({ classId, specId: LEVELING_SPEC_ID }, true);
+    const fn = specId !== null
+      ? scorer({ classId, specId }, false)
+      : scorer({ classId, specId: LEVELING_SPEC_ID }, true);
     const wrapped = (item: ClientItem) => fn(item, clientBuild);
-    scorerCache.set(classId, wrapped);
+    scorerCache.set(cacheKey, wrapped);
     return wrapped;
   }
 
@@ -120,7 +130,7 @@ export function computeGearMatches(
     for (const beneficiary of members) {
       if (beneficiary.slug === crafter.slug) continue;
 
-      const scoreItem = scorerFor(beneficiary.class_name);
+      const scoreItem = scorerFor(beneficiary);
       if (!scoreItem) continue; // unknown class — skip scoring
 
       // Index the beneficiary's equipped items by Blizzard slot for fast lookup.

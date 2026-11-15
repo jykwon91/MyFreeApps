@@ -19,10 +19,12 @@ import { describe, expect, it } from "vitest";
 import { PROFESSION_SKILL_LINES } from "@/games/wow-forever/data/professions/professionSkillLines";
 import { computeEnchantMatches } from "@/games/wow-forever/lib/guild/guildEnchantMatches";
 import { computeGearMatches } from "@/games/wow-forever/lib/guild/guildGearMatches";
+import { resolveHelpSpecId, TALENT_TREE_SPEC_ID } from "@/games/wow-forever/lib/guild/guildHelpSpec";
 import type { CraftRecipe, CraftingFile } from "@/games/wow-forever/types/crafting";
 import type { ClientItem } from "@/games/wow-forever/types/clientItem";
 import type { ClientItemList } from "@/games/wow-forever/types/clientItemList";
 import type { GuildHelpMember } from "@/games/wow-forever/types/guild/guildHelpMember";
+import type { GuildMemberTalentTree } from "@/games/wow-forever/types/guild/guildMemberTalentTree";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -36,6 +38,7 @@ function makeMember(
     equipped?: GuildHelpMember["equipped"];
     recipe_ability_ids?: number[];
     professions?: GuildHelpMember["professions"];
+    talents?: GuildMemberTalentTree[] | null;
   } = {},
 ): GuildHelpMember {
   return {
@@ -47,6 +50,8 @@ function makeMember(
     equipped: opts.equipped ?? [],
     recipe_ability_ids: opts.recipe_ability_ids ?? [],
     professions: opts.professions ?? [],
+    // null means "talents never fetched" — the leveling-fallback path.
+    talents: opts.talents !== undefined ? opts.talents : null,
   };
 }
 
@@ -329,5 +334,89 @@ describe("computeGearMatches", () => {
     const craftingFiles = new Map([[TAILORING_SKILL_ID, TAILORING_FILE_SASH]]);
     const itemList = makeItemList([MOCK_SASH_MAGE]);
     expect(computeGearMatches([crafter, beneficiary], craftingFiles, itemList)).toHaveLength(0);
+  });
+
+  it("beneficiary with known spec talents scores via spec path (not leveling fallback)", () => {
+    // A Mage with Arcane talents (tree 237, most points) should score intellect/spell_power gear
+    // higher than leveling weights.  Either way a match is expected — the test verifies
+    // the spec path doesn't throw and produces a valid result.
+    const crafter = makeMember("crafter", {
+      class_name: "Warrior",
+      recipe_ability_ids: [55423],
+      professions: [{ profession_id: TAILORING_SKILL_ID, name: "Tailoring", skill: 100, max_skill: 300 }],
+    });
+    const beneficiary = makeMember("beneficiary", {
+      class_name: "Mage",
+      // Arcane tree (237) with 20 points — resolveHelpSpecId should return "arcane"
+      talents: [
+        { tree_id: 237, points: 20 },
+        { tree_id: 8, points: 5 },
+      ],
+      equipped: [
+        { slot: "WAIST", item_id: 5002, name: "Flimsy Chain Belt", item_level: 1, inventory_type: "WAIST", enchantments: [] },
+      ],
+    });
+    const craftingFiles = new Map([[TAILORING_SKILL_ID, TAILORING_FILE_SASH]]);
+    const itemList = makeItemList([MOCK_SASH_MAGE, MOCK_WORN_WAIST]);
+    const matches = computeGearMatches([crafter, beneficiary], craftingFiles, itemList);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].beneficiary.slug).toBe("beneficiary");
+  });
+
+  it("beneficiary with null talents falls back to leveling weights and still matches", () => {
+    const crafter = makeMember("crafter", {
+      class_name: "Warrior",
+      recipe_ability_ids: [55423],
+      professions: [{ profession_id: TAILORING_SKILL_ID, name: "Tailoring", skill: 100, max_skill: 300 }],
+    });
+    const beneficiary = makeMember("beneficiary", {
+      class_name: "Mage",
+      talents: null, // never fetched — leveling fallback path
+      equipped: [
+        { slot: "WAIST", item_id: 5002, name: "Flimsy Chain Belt", item_level: 1, inventory_type: "WAIST", enchantments: [] },
+      ],
+    });
+    const craftingFiles = new Map([[TAILORING_SKILL_ID, TAILORING_FILE_SASH]]);
+    const itemList = makeItemList([MOCK_SASH_MAGE, MOCK_WORN_WAIST]);
+    const matches = computeGearMatches([crafter, beneficiary], craftingFiles, itemList);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].beneficiary.slug).toBe("beneficiary");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveHelpSpecId
+// ---------------------------------------------------------------------------
+
+describe("resolveHelpSpecId", () => {
+  it("returns the spec id for a known dominant tree", () => {
+    // Warlock Affliction (tree 355) → "affliction"
+    expect(resolveHelpSpecId([{ tree_id: 355, points: 30 }])).toBe("affliction");
+  });
+
+  it("picks the tree with the most points as the dominant one", () => {
+    // Mage Fire (8) has fewer points than Frost (6) — dominant is Frost
+    expect(resolveHelpSpecId([
+      { tree_id: 8, points: 10 },
+      { tree_id: 6, points: 20 },
+      { tree_id: 237, points: 5 },
+    ])).toBe("frost");
+  });
+
+  it("returns null for null talents", () => {
+    expect(resolveHelpSpecId(null)).toBeNull();
+  });
+
+  it("returns null for empty talents array", () => {
+    expect(resolveHelpSpecId([])).toBeNull();
+  });
+
+  it("returns null for an unknown tree id", () => {
+    expect(resolveHelpSpecId([{ tree_id: 99999, points: 50 }])).toBeNull();
+  });
+
+  it("covers all 27 Classic talent trees (TALENT_TREE_SPEC_ID has correct size)", () => {
+    // 9 classes × 3 trees = 27 entries
+    expect(Object.keys(TALENT_TREE_SPEC_ID)).toHaveLength(27);
   });
 });

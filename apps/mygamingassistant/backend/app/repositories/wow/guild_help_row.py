@@ -9,3 +9,5 @@ class GuildHelpRow(NamedTuple):
     class_id: int
     sheet: dict[str, Any]
     sheet_version: int
+    # From wow_character.talent_points; None when never fetched or last call failed.
+    talent_points: list[dict[str, Any]] | None

@@ -9,7 +9,7 @@ from app.api import wow_guilds
 from app.core.rate_limit import RateLimiter
 from app.services.wow.character import character_store_service
 
-from wow_guild_fixtures import GUILD, NOW, make_fetch, professions_json
+from wow_guild_fixtures import GUILD, NOW, make_fetch, professions_json, specializations_json
 
 
 @pytest.fixture(autouse=True)
@@ -98,3 +98,35 @@ async def test_help_rate_limited(
     assert (await client.get("/wow/guilds/topdeadcenter/help")).status_code == 200
     response = await client.get("/wow/guilds/topdeadcenter/help")
     assert response.status_code == 429
+
+
+async def test_help_members_include_talents_when_stored(
+    client: AsyncClient, db: AsyncSession,
+) -> None:
+    """talents field is populated from wow_character.talent_points when present."""
+    # Warlock Affliction tree (355) with 30 points.
+    specs = specializations_json((355, "Affliction", 30), (354, "Demonology", 5))
+    await character_store_service.record(make_fetch(specializations=specs), now=NOW, viewed=True)
+
+    body = (await client.get("/wow/guilds/topdeadcenter/help")).json()
+    jason = next(m for m in body["members"] if m["slug"] == "jason-kwon")
+
+    assert jason["talents"] is not None
+    assert isinstance(jason["talents"], list)
+    assert len(jason["talents"]) > 0
+    affliction_tree = next((t for t in jason["talents"] if t["tree_id"] == 355), None)
+    assert affliction_tree is not None
+    assert affliction_tree["points"] == 30
+
+
+async def test_help_members_talents_null_when_not_stored(
+    client: AsyncClient, db: AsyncSession,
+) -> None:
+    """talents is None when specializations were never fetched (specializations=None)."""
+    # specializations=None means Blizzard's call failed — talent_points stays None.
+    await character_store_service.record(make_fetch(specializations=None), now=NOW, viewed=True)
+
+    body = (await client.get("/wow/guilds/topdeadcenter/help")).json()
+    jason = next(m for m in body["members"] if m["slug"] == "jason-kwon")
+
+    assert jason["talents"] is None

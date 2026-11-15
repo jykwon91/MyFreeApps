@@ -1,4 +1,4 @@
-"""Guild help tab: return each live member's equipped items and known recipe ability ids.
+"""Guild help tab: return each live member's equipped items, recipe ability ids, and talents.
 
 The frontend does all matching and scoring client-side.  The service only reads
 the stored sheets (already in the DB) and projects what the tab needs.  Members
@@ -16,6 +16,7 @@ from app.schemas.wow.guild.guild_help_response import (
     GuildHelpMember,
     GuildHelpProfession,
     GuildHelpResponse,
+    GuildHelpTalentTree,
 )
 from app.services.wow.character.character_sheet_codec import read_sheet
 
@@ -67,6 +68,16 @@ async def get_help(slug: str) -> GuildHelpResponse | None:
                     )
                 )
 
+        # Talent tree points from wow_character.talent_points (active set only).
+        # None when never fetched or the last Blizzard call failed.
+        talents: list[GuildHelpTalentTree] | None = None
+        if row.talent_points is not None:
+            talents = [
+                GuildHelpTalentTree(tree_id=tp["tree_id"], points=tp["points"])
+                for tp in row.talent_points
+                if tp.get("points", 0) > 0
+            ]
+
         members.append(
             GuildHelpMember(
                 slug=sheet.slug,
@@ -77,6 +88,7 @@ async def get_help(slug: str) -> GuildHelpResponse | None:
                 equipped=equipped,
                 recipe_ability_ids=recipe_ability_ids,
                 professions=help_profs,
+                talents=talents,
             )
         )
 

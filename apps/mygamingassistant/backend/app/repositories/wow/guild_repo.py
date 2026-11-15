@@ -275,10 +275,16 @@ async def member_factions(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildFa
 
 
 async def member_sheets(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildHelpRow]:
-    """The live stored members' character sheets (slug, class_id, sheet JSONB, sheet_version)."""
+    """The live stored members' character sheets, including their talent tree points."""
     # WowCharacter.sheet is deferred on the ORM model, but explicit column selects always load.
     result = await db.execute(
-        select(WowCharacter.slug, WowCharacter.class_id, WowCharacter.sheet, WowCharacter.sheet_version)
+        select(
+            WowCharacter.slug,
+            WowCharacter.class_id,
+            WowCharacter.sheet,
+            WowCharacter.sheet_version,
+            WowCharacter.talent_points,
+        )
         .where(WowCharacter.guild_id == guild_id, WowCharacter.gone_at.is_(None))
         .order_by(WowCharacter.slug)
     )
