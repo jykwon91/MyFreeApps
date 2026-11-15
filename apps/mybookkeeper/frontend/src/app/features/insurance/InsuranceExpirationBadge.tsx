@@ -1,6 +1,6 @@
 import { EXPIRES_SOON_DAYS, EXPIRING_SOON_DAYS } from "@mybookkeeper/api-client/constants/insuranceExpiry";
 import { daysUntilExpiry, expiryLabel } from "@mybookkeeper/api-client/utils/insuranceExpiry";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 
 export interface InsuranceExpirationBadgeProps {
   expirationDate: string | null;
