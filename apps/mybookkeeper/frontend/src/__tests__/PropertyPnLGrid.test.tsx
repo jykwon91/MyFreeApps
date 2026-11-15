@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
@@ -65,7 +66,7 @@ describe("PropertyPnLGrid", () => {
 
   it("renders skeleton while loading", () => {
     vi.mocked(useGetPropertyPnlQuery).mockReturnValue({
-      data: undefined,
+      currentData: undefined,
       isLoading: true,
     } as unknown as ReturnType<typeof useGetPropertyPnlQuery>);
 
@@ -78,7 +79,7 @@ describe("PropertyPnLGrid", () => {
 
   it("shows empty state when no data", () => {
     vi.mocked(useGetPropertyPnlQuery).mockReturnValue({
-      data: emptyPnl,
+      currentData: emptyPnl,
       isLoading: false,
     } as unknown as ReturnType<typeof useGetPropertyPnlQuery>);
 
@@ -92,7 +93,7 @@ describe("PropertyPnLGrid", () => {
 
   it("renders roll-up totals correctly", () => {
     vi.mocked(useGetPropertyPnlQuery).mockReturnValue({
-      data: pnlWithData,
+      currentData: pnlWithData,
       isLoading: false,
     } as unknown as ReturnType<typeof useGetPropertyPnlQuery>);
 
@@ -109,7 +110,7 @@ describe("PropertyPnLGrid", () => {
 
   it("renders per-property cards", () => {
     vi.mocked(useGetPropertyPnlQuery).mockReturnValue({
-      data: pnlWithData,
+      currentData: pnlWithData,
       isLoading: false,
     } as unknown as ReturnType<typeof useGetPropertyPnlQuery>);
 
@@ -122,7 +123,7 @@ describe("PropertyPnLGrid", () => {
 
   it("renders net amounts on property cards", () => {
     vi.mocked(useGetPropertyPnlQuery).mockReturnValue({
-      data: pnlWithData,
+      currentData: pnlWithData,
       isLoading: false,
     } as unknown as ReturnType<typeof useGetPropertyPnlQuery>);
 
@@ -138,7 +139,7 @@ describe("PropertyPnLGrid", () => {
   it("skeleton has same grid structure as loaded state", () => {
     // Skeleton renders roll-up row (3 items) + property grid (3 items)
     vi.mocked(useGetPropertyPnlQuery).mockReturnValue({
-      data: undefined,
+      currentData: undefined,
       isLoading: true,
     } as unknown as ReturnType<typeof useGetPropertyPnlQuery>);
 
@@ -148,5 +149,75 @@ describe("PropertyPnLGrid", () => {
     const skeletons = container.querySelectorAll(".animate-pulse");
     // 3 roll-up + 3 property = 6 skeleton items
     expect(skeletons.length).toBe(6);
+  });
+  describe("after a different range is picked", () => {
+    const refetch = vi.fn();
+
+    /**
+     * What RTK's hook returns: Q1's settled answer for Q1, and for any other
+     * range `data` still holding Q1's totals (it keeps the last result) while
+     * `currentData` has nothing yet.
+     */
+    function answerFirstQuarterOnly(pickedRangeState: { isFetching: boolean; error?: unknown }) {
+      vi.mocked(useGetPropertyPnlQuery).mockImplementation(((args: { since: string }) =>
+        args.since === "2026-01-01"
+          ? { data: pnlWithData, currentData: pnlWithData, isLoading: false, isFetching: false, refetch }
+          : {
+              data: pnlWithData,
+              currentData: undefined,
+              isLoading: false,
+              isError: pickedRangeState.error !== undefined,
+              refetch,
+              ...pickedRangeState,
+            }) as unknown as typeof useGetPropertyPnlQuery);
+    }
+
+    function pickSecondQuarter() {
+      const view = renderWithProviders(<PropertyPnLGrid since="2026-01-01" until="2026-03-31" />);
+      expect(screen.getByText("$4,500.00")).toBeInTheDocument();
+      view.rerender(
+        <Provider store={store}>
+          <BrowserRouter>
+            <PropertyPnLGrid since="2026-04-01" until="2026-06-30" />
+          </BrowserRouter>
+        </Provider>,
+      );
+    }
+
+    function expectNoFirstQuarterFigures() {
+      expect(screen.queryByText("$4,500.00")).not.toBeInTheDocument();
+      expect(screen.queryByText("Beach House")).not.toBeInTheDocument();
+      // Its cards would drill into the new range under the old range's amounts.
+      expect(screen.queryByRole("button", { name: /View transactions for/ })).not.toBeInTheDocument();
+    }
+
+    it("shows the skeleton, not the previous range's P&L, while it loads", () => {
+      answerFirstQuarterOnly({ isFetching: true });
+      pickSecondQuarter();
+
+      expectNoFirstQuarterFigures();
+      expect(screen.getByTestId("property-pnl-skeleton")).toBeInTheDocument();
+    });
+
+    it("shows an error with Retry, not the previous range's P&L, when it fails", async () => {
+      answerFirstQuarterOnly({ isFetching: false, error: { status: 500 } });
+      pickSecondQuarter();
+
+      expectNoFirstQuarterFigures();
+      expect(screen.queryByTestId("property-pnl-skeleton")).not.toBeInTheDocument();
+      expect(
+        screen.getByText("I couldn't load your property P&L for this period. Want me to try again?"),
+      ).toBeInTheDocument();
+      await userEvent.setup().click(screen.getByRole("button", { name: "Retry" }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the error up, retrying, while Retry refetches", () => {
+      answerFirstQuarterOnly({ isFetching: true, error: { status: 500 } });
+      pickSecondQuarter();
+
+      expect(screen.getByRole("button", { name: "Retrying..." })).toBeDisabled();
+      expect(screen.queryByTestId("property-pnl-skeleton")).not.toBeInTheDocument();
+    });
   });
 });

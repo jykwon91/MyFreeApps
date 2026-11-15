@@ -13,6 +13,7 @@ import { Button, AlertBox } from "@platform/ui";
 import TaxReportSkeleton from "@/app/features/tax/TaxReportSkeleton";
 import Card from "@/shared/components/ui/Card";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { useDismissable } from "@/shared/hooks/useDismissable";
 
 export default function TaxReport() {
@@ -20,7 +21,11 @@ export default function TaxReport() {
   const { dismissed: infoDismissed, dismiss: dismissInfo } = useDismissable("tax-report-info-dismissed");
   const [year, setYear] = useState(currentYear - 1);
 
-  const { data, isLoading } = useGetTaxSummaryQuery(year);
+  // currentData is only the selected year's answer: `data` would keep showing
+  // the previous year's figures while a newly picked year loads or fails.
+  // Decided on `error`, not `isError`: RTK clears `isError` while Retry
+  // refetches, which would swap the alert for the skeleton mid-retry.
+  const { currentData: data, error, isFetching, refetch } = useGetTaxSummaryQuery(year);
   const { showError } = useToast();
 
   const handleExportPDF = useCallback(async () => {
@@ -77,9 +82,7 @@ export default function TaxReport() {
         </AlertBox>
       )}
 
-      {isLoading ? (
-        <TaxReportSkeleton />
-      ) : data ? (
+      {data ? (
         <div className="space-y-6">
           <section className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <Card>
@@ -209,7 +212,15 @@ export default function TaxReport() {
             </>
           )}
         </div>
-      ) : null}
+      ) : error !== undefined ? (
+        <LoadErrorAlert
+          message={`I couldn't load your ${year} tax summary. Want me to try again?`}
+          isRetrying={isFetching}
+          onRetry={() => void refetch()}
+        />
+      ) : (
+        <TaxReportSkeleton />
+      )}
     </div>
   );
 }

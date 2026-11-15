@@ -2,6 +2,7 @@ import Skeleton from "@/shared/components/ui/Skeleton";
 import Card from "@/shared/components/ui/Card";
 import { formatCurrency } from "@/shared/utils/currency";
 import { useGetPropertyPnlQuery } from "@mybookkeeper/api-client/store/attributionApi";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import PropertyPnLCard from "./PropertyPnLCard";
 
 export interface PropertyPnLGridProps {
@@ -12,11 +13,25 @@ export interface PropertyPnLGridProps {
 const centsToAmount = (cents: number) => cents / 100;
 
 export default function PropertyPnLGrid({ since, until }: PropertyPnLGridProps) {
-  const { data, isLoading } = useGetPropertyPnlQuery({ since, until });
+  // currentData is only this range's answer: `data` would keep the previous
+  // range's totals on screen while a new range loads or fails, under cards
+  // whose drill-down already opens the new range. `error`, not `isError`, so
+  // Retry keeps the alert up while it refetches.
+  const { currentData: data, error, isFetching, refetch } = useGetPropertyPnlQuery({ since, until });
 
-  if (isLoading) {
+  if (!data && error !== undefined) {
     return (
-      <div className="space-y-4">
+      <LoadErrorAlert
+        message="I couldn't load your property P&L for this period. Want me to try again?"
+        isRetrying={isFetching}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="space-y-4" data-testid="property-pnl-skeleton">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-24 w-full rounded-lg" />
@@ -31,7 +46,7 @@ export default function PropertyPnLGrid({ since, until }: PropertyPnLGridProps) 
     );
   }
 
-  if (!data || data.properties.length === 0) {
+  if (data.properties.length === 0) {
     return (
       <Card>
         <div className="py-8 text-center text-sm text-muted-foreground">

@@ -50,7 +50,7 @@ const mockEmptySummary: SummaryResponse = {
 
 vi.mock("@mybookkeeper/api-client/store/summaryApi", () => ({
   useGetSummaryQuery: vi.fn(() => ({
-    data: mockSummaryWithData,
+    currentData: mockSummaryWithData,
     isLoading: false,
   })),
   useGetSummaryYearsQuery: vi.fn(() => ({
@@ -61,7 +61,7 @@ vi.mock("@mybookkeeper/api-client/store/summaryApi", () => ({
 
 vi.mock("@mybookkeeper/api-client/store/attributionApi", () => ({
   useGetPropertyPnlQuery: vi.fn(() => ({
-    data: {
+    currentData: {
       since: "2026-05-01",
       until: "2026-05-31",
       properties: [],
@@ -115,7 +115,7 @@ describe("Dashboard", () => {
     localStorage.clear();
     window.history.replaceState({}, "", "/");
     vi.mocked(useGetSummaryQuery).mockReturnValue({
-      data: mockSummaryWithData,
+      currentData: mockSummaryWithData,
       isLoading: false,
     } as unknown as ReturnType<typeof useGetSummaryQuery>);
     vi.mocked(useGetSummaryYearsQuery).mockReturnValue({
@@ -171,7 +171,7 @@ describe("Dashboard", () => {
 
   it("hides monthly average card when no month data", () => {
     vi.mocked(useGetSummaryQuery).mockReturnValue({
-      data: mockEmptySummary,
+      currentData: mockEmptySummary,
       isLoading: false,
     } as unknown as ReturnType<typeof useGetSummaryQuery>);
 
@@ -194,7 +194,7 @@ describe("Dashboard", () => {
 
   it("shows empty state CTA when no transactions", () => {
     vi.mocked(useGetSummaryQuery).mockReturnValue({
-      data: mockEmptySummary,
+      currentData: mockEmptySummary,
       isLoading: false,
     } as unknown as ReturnType<typeof useGetSummaryQuery>);
 
@@ -207,7 +207,7 @@ describe("Dashboard", () => {
 
   it("hides category chart when no category data", () => {
     vi.mocked(useGetSummaryQuery).mockReturnValue({
-      data: mockEmptySummary,
+      currentData: mockEmptySummary,
       isLoading: false,
     } as unknown as ReturnType<typeof useGetSummaryQuery>);
 
@@ -218,7 +218,7 @@ describe("Dashboard", () => {
 
   it("shows skeleton when loading", () => {
     vi.mocked(useGetSummaryQuery).mockReturnValue({
-      data: undefined,
+      currentData: undefined,
       isLoading: true,
     } as unknown as ReturnType<typeof useGetSummaryQuery>);
 
@@ -230,7 +230,7 @@ describe("Dashboard", () => {
 
   it("links to documents page from empty state", () => {
     vi.mocked(useGetSummaryQuery).mockReturnValue({
-      data: mockEmptySummary,
+      currentData: mockEmptySummary,
       isLoading: false,
     } as unknown as ReturnType<typeof useGetSummaryQuery>);
 
@@ -242,7 +242,7 @@ describe("Dashboard", () => {
 
   it("hides property breakdown table when no property data", () => {
     vi.mocked(useGetSummaryQuery).mockReturnValue({
-      data: mockEmptySummary,
+      currentData: mockEmptySummary,
       isLoading: false,
     } as unknown as ReturnType<typeof useGetSummaryQuery>);
 
@@ -263,7 +263,7 @@ describe("Dashboard", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useGetSummaryYearsQuery>);
     vi.mocked(useGetSummaryQuery).mockReturnValue({
-      data: {
+      currentData: {
         ...mockSummaryWithData,
         by_month: [{ month: `${cy}-01`, revenue: 100, expenses: 0, profit: 100 }],
       },
@@ -288,5 +288,79 @@ describe("Dashboard", () => {
 
     expect(yearFilter.value).toBe(String(cy - 2));
     expect(optionValues()).toEqual(expectedOptions);
+  });
+  describe("after a different year is picked", () => {
+    const cy = new Date().getFullYear();
+    const refetch = vi.fn();
+
+    /**
+     * What RTK's hook returns: the current year's settled summary for its own
+     * dates, and for any other dates `data` still holding the current year's
+     * totals (it keeps the last result) while `currentData` has nothing yet.
+     */
+    function answerCurrentYearOnly(pickedYearState: { isFetching: boolean; error?: unknown }) {
+      vi.mocked(useGetSummaryYearsQuery).mockReturnValue({
+        data: [cy, cy - 1],
+        isLoading: false,
+      } as unknown as ReturnType<typeof useGetSummaryYearsQuery>);
+      vi.mocked(useGetSummaryQuery).mockImplementation(((args: { startDate?: string }) =>
+        args.startDate === `${cy}-01-01`
+          ? { data: mockSummaryWithData, currentData: mockSummaryWithData, isLoading: false, isFetching: false, refetch }
+          : {
+              data: mockSummaryWithData,
+              currentData: undefined,
+              isLoading: false,
+              isError: pickedYearState.error !== undefined,
+              refetch,
+              ...pickedYearState,
+            }) as unknown as typeof useGetSummaryQuery);
+    }
+
+    async function pickLastYear() {
+      renderWithProviders(<Dashboard />);
+      expect(within(screen.getByTestId("dashboard-summary-cards")).getByText("$5,000.00")).toBeInTheDocument();
+      await userEvent.setup().selectOptions(screen.getByTestId("year-filter"), String(cy - 1));
+    }
+
+    const TOTALS_ERROR = "I couldn't load your totals for this selection. Want me to try again?";
+
+    function totalsAlert() {
+      return within(screen.getByText(TOTALS_ERROR).parentElement!);
+    }
+
+    function expectNoCurrentYearTotals() {
+      expect(screen.queryByTestId("dashboard-summary-cards")).not.toBeInTheDocument();
+      expect(screen.queryByText("$5,000.00")).not.toBeInTheDocument();
+      expect(screen.queryByText("Beach House")).not.toBeInTheDocument();
+      expect(screen.queryByText("Monthly Average")).not.toBeInTheDocument();
+    }
+
+    it("shows the skeleton, not the previous year's totals, while it loads", async () => {
+      answerCurrentYearOnly({ isFetching: true });
+      await pickLastYear();
+
+      expectNoCurrentYearTotals();
+      expect(screen.getByTestId("dashboard-skeleton")).toBeInTheDocument();
+    });
+
+    it("shows an error with Retry and keeps the year filter, not the previous year's totals, when it fails", async () => {
+      answerCurrentYearOnly({ isFetching: false, error: { status: 500 } });
+      await pickLastYear();
+
+      expectNoCurrentYearTotals();
+      expect(screen.queryByTestId("dashboard-skeleton")).not.toBeInTheDocument();
+      expect(screen.getByText(TOTALS_ERROR)).toBeInTheDocument();
+      expect((screen.getByTestId("year-filter") as HTMLSelectElement).value).toBe(String(cy - 1));
+      await userEvent.setup().click(totalsAlert().getByRole("button", { name: "Retry" }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the error up, retrying, while Retry refetches", async () => {
+      answerCurrentYearOnly({ isFetching: true, error: { status: 500 } });
+      await pickLastYear();
+
+      expect(totalsAlert().getByRole("button", { name: "Retrying..." })).toBeDisabled();
+      expect(screen.queryByTestId("dashboard-skeleton")).not.toBeInTheDocument();
+    });
   });
 });

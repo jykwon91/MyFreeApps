@@ -25,6 +25,7 @@ import DashboardSkeleton from "@/app/features/dashboard/DashboardSkeleton";
 import HealthBanner from "@/shared/components/HealthBanner";
 import Card from "@/shared/components/ui/Card";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import PropertyPnLGrid from "@/app/features/attribution/PropertyPnLGrid";
 import PnLDateRangeSelector from "@/app/features/attribution/PnLDateRangeSelector";
 import { calendarYearRange, propertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
@@ -62,7 +63,15 @@ export default function Dashboard() {
     return yearToDateRange(selectedYear);
   }, [manualDateRange, selectedYear]);
 
-  const { data: summary, isLoading } = useGetSummaryQuery(
+  // currentData is only the selected year/property filter's answer: `data`
+  // would keep the previous filter's totals on screen while a new one loads or
+  // fails. `error`, not `isError`, so Retry keeps the alert up while it refetches.
+  const {
+    currentData: summary,
+    error: summaryError,
+    isFetching: isFetchingSummary,
+    refetch: refetchSummary,
+  } = useGetSummaryQuery(
     {
       startDate: dateRange?.startDate,
       endDate: dateRange?.endDate,
@@ -132,7 +141,7 @@ export default function Dashboard() {
     [dateRange, activePropertyIds],
   );
 
-  if (isLoading)
+  if (!summary && summaryError === undefined)
     return (
       <div className="p-4 sm:p-8">
         <DashboardSkeleton />
@@ -158,27 +167,37 @@ export default function Dashboard() {
         actions={headerActions}
       />
 
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="dashboard-summary-cards">
-        <SummaryCard
-          label="Total Revenue"
-          amount={filteredSummary?.revenue ?? 0}
-          color="text-green-600"
+      {/* On a failed load the filter bar below still renders (nothing is
+          known to be empty), so a different year or property can be picked. */}
+      {!summary ? (
+        <LoadErrorAlert
+          message="I couldn't load your totals for this selection. Want me to try again?"
+          isRetrying={isFetchingSummary}
+          onRetry={() => void refetchSummary()}
         />
-        <SummaryCard
-          label="Total Expenses"
-          amount={filteredSummary?.expenses ?? 0}
-          color="text-red-500"
-        />
-        <SummaryCard
-          label="Net Profit"
-          amount={filteredSummary?.profit ?? 0}
-          color={
-            (filteredSummary?.profit ?? 0) >= 0
-              ? "text-green-600"
-              : "text-red-500"
-          }
-        />
-      </section>
+      ) : (
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="dashboard-summary-cards">
+          <SummaryCard
+            label="Total Revenue"
+            amount={filteredSummary?.revenue ?? 0}
+            color="text-green-600"
+          />
+          <SummaryCard
+            label="Total Expenses"
+            amount={filteredSummary?.expenses ?? 0}
+            color="text-red-500"
+          />
+          <SummaryCard
+            label="Net Profit"
+            amount={filteredSummary?.profit ?? 0}
+            color={
+              (filteredSummary?.profit ?? 0) >= 0
+                ? "text-green-600"
+                : "text-red-500"
+            }
+          />
+        </section>
+      )}
 
       {/* Sits high on the page and outside the isEmpty branch: a lapsed rate
           plan costs money whether or not any transactions have been imported
