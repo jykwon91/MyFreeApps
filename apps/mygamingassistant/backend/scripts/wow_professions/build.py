@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import shutil
 from collections import defaultdict
+from dataclasses import replace
 
 from scripts.wow_food.build import (
     CLASSIC_LICENSE,
@@ -39,7 +40,12 @@ from scripts.wow_food.build import (
     load_trainer_skill,
     quest_details,
 )
-from scripts.wow_food.recipe_sources import MOB_COLUMNS, VENDOR_COLUMNS, ClassicSources, territory_of
+from scripts.wow_food.recipe_sources import (
+    MOB_COLUMNS,
+    VENDOR_COLUMNS,
+    ClassicSources,
+    territory_of,
+)
 from scripts.wow_food.skinning_sources import SKIN_MOB_COLUMNS
 from scripts.wow_professions.crafts import (
     ACQUIRE_ON_SKILL_LEARN,
@@ -55,12 +61,14 @@ from scripts.wow_professions.crafts import (
     MINING_SKILL_LINE,
     TAILORING_SKILL_LINE,
     TEACHING_PREFIXES,
+    ClassicTeaching,
     ClientRecipes,
     Items,
     build_recipes,
     forever_trainer_skill,
     mining_records,
     smelting_for,
+    sod_only_spells,
 )
 from scripts.wow_professions.effects import add_effects
 from scripts.wow_professions.specs import spec_quests, spec_records, trainer_specs
@@ -98,6 +106,10 @@ CRAFTING_SKILL_LINES = {
     129: "First Aid", 164: "Blacksmithing", 165: "Leatherworking", 171: "Alchemy", 185: "Cooking", 186: "Mining",
     197: "Tailoring", 202: "Engineering", 333: "Enchanting",
 }
+# cmangos ``dbscripts_on_gossip.command``: cast ``datalong`` (an NPC teaching a recipe by casting its teaching spell).
+SCRIPT_COMMAND_CAST_SPELL = 15
+# cmangos ``gameobject_template.type`` whose ``data3`` is its gossip menu (the Journal of Jandice Barov).
+GAMEOBJECT_TYPE_QUESTGIVER = 2
 
 
 def _int(value: str | None) -> int:
@@ -201,10 +213,114 @@ def load_items(skill_lines: set[int]) -> Items:
     )
 
 
-def made_by(items: set[int]) -> dict[str, str]:
-    """Reagent -> the profession that makes it, from the Forever client's recipes."""
+def _recipes_taught(spells: set[int], teaches: dict[int, list[int]]) -> set[int]:
+    """The spells themselves plus the recipes their LEARN_SPELL effects teach."""
+    return {recipe for spell in spells for recipe in [spell, *teaches.get(spell, [])]}
+
+
+def _by_recipe[T](taught_by: dict[int, list[T]], teaches: dict[int, list[int]]) -> dict[int, tuple[T, ...]]:
+    """Teaching spell -> what teaches it, turned into recipe -> the same (through ``_recipes_taught``), in first-seen order."""
+    out: dict[int, list[T]] = defaultdict(list)
+    for spell, teachers in sorted(taught_by.items()):
+        for recipe in sorted(_recipes_taught({spell}, teaches)):
+            out[recipe].extend(t for t in teachers if t not in out[recipe])
+    return {recipe: tuple(teachers) for recipe, teachers in out.items()}
+
+
+def gossip_teachers(tables: dict[str, list[dict]]) -> dict[int, list[str]]:
+    """Teaching spell -> the NPCs and objects whose gossip casts it, from cmangos (empty when no one owns the menu).
+
+    A gossip script runs from a menu option (``action_script_id``) or a whole
+    menu (``script_id``); the menu is a creature's ``GossipMenuId`` or a quest
+    giver object's ``data3``.
+    """
+    owners: dict[int, list[str]] = defaultdict(list)
+    for npc in tables["creature_template"]:
+        if menu := int(npc["GossipMenuId"] or 0):
+            owners[menu].append(npc["Name"])
+    for obj in tables["gameobject_template"]:
+        if int(obj["type"] or 0) == GAMEOBJECT_TYPE_QUESTGIVER and (menu := int(obj["data3"] or 0)):
+            owners[menu].append(obj["name"])
+    menus_of: dict[int, set[int]] = defaultdict(set)
+    for option in tables["gossip_menu_option"]:
+        if script := int(option["action_script_id"] or 0):
+            menus_of[script].add(int(option["menu_id"] or 0))
+    for menu in tables["gossip_menu"]:
+        if script := int(menu["script_id"] or 0):
+            menus_of[script].add(int(menu["entry"] or 0))
+    out: dict[int, list[str]] = defaultdict(list)
+    for r in tables["dbscripts_on_gossip"]:
+        if int(r["command"] or 0) != SCRIPT_COMMAND_CAST_SPELL:
+            continue
+        names = out[int(r["datalong"] or 0)]
+        for menu in sorted(menus_of.get(int(r["id"] or 0), ())):
+            names.extend(n for n in owners.get(menu, []) if n not in names)
+    return out
+
+
+def quest_teachers(quests: list[dict]) -> dict[int, list[tuple[int, str]]]:
+    """Teaching spell -> the cmangos quests whose reward casts it, as (id, title)."""
+    out: dict[int, list[tuple[int, str]]] = defaultdict(list)
+    for q in sorted(quests, key=lambda q: int(q["entry"] or 0)):
+        for key in ("RewSpell", "RewSpellCast"):
+            spell = int(q[key] or 0)
+            quest = (int(q["entry"] or 0), q["Title"])
+            if spell and quest not in out[spell]:
+                out[spell].append(quest)
+    return out
+
+
+def era_teaching_items(classic_items: frozenset[int], teaches: dict[int, list[int]], kw: dict[str, str]) -> dict[int, tuple[int, str, int]]:
+    """Recipe -> the Classic Era client's Pattern / Formula / ... for it that is a Classic item: (id, name, skill it asks).
+
+    Where several teach one recipe, the lowest item id.
+    """
+    sparse = {_int(r["ID"]): r for r in wago_table("ItemSparse", **kw, hotfixes=True)}
+    taught: dict[int, list[tuple[int, str, int]]] = defaultdict(list)
+    for r in wago_table("ItemEffect", **kw):
+        item = _int(r["ParentItemID"])
+        row = sparse.get(item)
+        if item not in classic_items or row is None or not row["Display_lang"].startswith(TEACHING_PREFIXES):
+            continue
+        taught[_int(r["SpellID"])].append((item, row["Display_lang"], _int(row["RequiredSkillRank"])))
+    return {recipe: min(found) for recipe, found in _by_recipe(taught, teaches).items()}
+
+
+def load_classic_teaching(classic_sources: ClassicSources) -> ClassicTeaching:
+    """What cmangos classic-db's NPCs, quests and items teach, for ``build_recipes`` (``trainer`` is per profession: empty here).
+
+    cmangos names teaching spells; the Classic Era client's LEARN_SPELL effects
+    say which recipe each teaches, and its ItemEffect rows which item teaches
+    it. ``classic_sources`` says which of those items anything gives.
+    """
+    kw = {"branch": WAGO_ERA_BRANCH, "build": WAGO_ERA_BUILD}
+    teaches: dict[int, list[int]] = defaultdict(list)
+    for r in wago_table("SpellEffect", **kw):
+        if _int(r["Effect"]) == EFFECT_LEARN_SPELL:
+            teaches[_int(r["SpellID"])].append(_int(r["EffectTriggerSpell"]))
+
+    tables = read_dump(cmangos_dump(), {
+        "item_template", "quest_template", "dbscripts_on_gossip", "gossip_menu", "gossip_menu_option",
+        "creature_template", "gameobject_template",
+    })
+    classic_items = frozenset(int(r["entry"] or 0) for r in tables["item_template"])
+    era_item = era_teaching_items(classic_items, teaches, kw)
+    return ClassicTeaching(
+        trainer=frozenset(),
+        items=classic_items,
+        quest=_by_recipe(quest_teachers(tables["quest_template"]), teaches),
+        npc=_by_recipe(gossip_teachers(tables), teaches),
+        era_item=era_item,
+        sourced=frozenset(i for i, _, _ in era_item.values() if classic_sources.recipe_sources(i)),
+    )
+
+
+def made_by(items: set[int], sod_only: set[int]) -> dict[str, str]:
+    """Reagent -> the profession that makes it, from the Forever client's recipes (Season of Discovery's left out)."""
     lines: dict[int, int] = {}
     for r in wago_table("SkillLineAbility"):
+        if _int(r["Spell"]) in sod_only:
+            continue
         if _int(r["SkillLine"]) in CRAFTING_SKILL_LINES and _int(r["TrivialSkillLineRankHigh"]) > 0:
             lines.setdefault(_int(r["Spell"]), _int(r["SkillLine"]))
     out: dict[str, str] = {}
@@ -342,19 +458,32 @@ Forever may differ; the page labels these as Classic. Generated by
 """
 
 
+def profession_recipes(
+    line: int, items: Items, classic: ClassicTeaching, trainer: dict[int, int], specs: dict[int, int] | None = None,
+) -> tuple[list[dict], set[int]]:
+    """A skill line's Forever recipes (``build_recipes``) and the Season of Discovery ones left out of them."""
+    forever = load_client(line, WAGO_BRANCH, WAGO_BUILD)
+    era = load_client(line, WAGO_ERA_BRANCH, WAGO_ERA_BUILD)
+    taught = replace(classic, trainer=frozenset(trainer))
+    return build_recipes(forever, era, items, taught, specs), sod_only_spells(forever, era, items, taught)
+
+
 def main() -> None:
     items = load_items(set(PROFESSIONS.values()))
+    zone_entries, zone_bounds = load_zones()
+    classic_sources = ClassicSources(zone_bounds, WorldMapArt())
+    classic = load_classic_teaching(classic_sources)
+    trainer_skill = {line: load_trainer_skill(line) for line in [*PROFESSIONS.values(), MINING_SKILL_LINE]}
     recipes: dict[str, list[dict]] = {}
     quests_of: dict[str, list] = {}
+    sod_only: set[int] = set()
     for key, line in PROFESSIONS.items():
-        forever = load_client(line, WAGO_BRANCH, WAGO_BUILD)
-        era = load_client(line, WAGO_ERA_BRANCH, WAGO_ERA_BUILD)
         quests_of[key] = spec_quests(line)
-        recipes[key] = build_recipes(forever, era, items, trainer_specs(line, quests_of[key]))
-    mining = build_recipes(
-        load_client(MINING_SKILL_LINE, WAGO_BRANCH, WAGO_BUILD), load_client(MINING_SKILL_LINE, WAGO_ERA_BRANCH, WAGO_ERA_BUILD), items,
-    )
-    mining_trainer = load_trainer_skill(MINING_SKILL_LINE)
+        recipes[key], dropped = profession_recipes(line, items, classic, trainer_skill[line], trainer_specs(line, quests_of[key]))
+        sod_only |= dropped
+    mining, dropped = profession_recipes(MINING_SKILL_LINE, items, classic, trainer_skill[MINING_SKILL_LINE])
+    sod_only |= dropped
+    mining_trainer = trainer_skill[MINING_SKILL_LINE]
     book, item_spells = load_book(), load_item_spells()
     for key in DESCRIBES_FOR:
         add_effects(recipes[key], book, item_spells)
@@ -367,7 +496,7 @@ def main() -> None:
     })
 
     reagent_ids = {r["id"] for rows in [*recipes.values(), *smelting.values()] for rec in rows for r in rec["reagents"]}
-    crafted = made_by(reagent_ids)
+    crafted = made_by(reagent_ids, sod_only)
     every_recipe = [rec for rows in [*recipes.values(), mining] for rec in rows]
     for key, line in PROFESSIONS.items():
         used = {str(r["id"]) for rec in [*recipes[key], *smelting[key]] for r in rec["reagents"]}
@@ -392,17 +521,15 @@ def main() -> None:
 
     trainer_skills: dict[str, dict[str, dict[str, int]]] = {}
     for key, line in PROFESSIONS.items():
-        classic_skill = load_trainer_skill(line)
+        classic_skill = trainer_skill[line]
         trainer_skills[key] = {
             str(rec["spell"]): {"classic": classic_skill[rec["spell"]], "forever": forever_trainer_skill(classic_skill[rec["spell"]], rec)}
             for rec in recipes[key]
             if rec["learn"]["source"] == "trainer" and rec["spell"] in classic_skill
         }
-    zone_entries, zone_bounds = load_zones()
-    classic = ClassicSources(zone_bounds, WorldMapArt())
     teaching = sorted({rec["learn"]["itemId"] for rows in recipes.values() for rec in rows if rec["learn"].get("itemId")})
-    recipe_sources = {str(i): classic.recipe_sources(i) for i in teaching}
-    reagent_sources = {str(i): classic.reagent_sources(i) for i in sorted(reagent_ids)}
+    recipe_sources = {str(i): classic_sources.recipe_sources(i) for i in teaching}
+    reagent_sources = {str(i): classic_sources.reagent_sources(i) for i in sorted(reagent_ids)}
     everything = [*recipe_sources.values(), *reagent_sources.values()]
     spec_quest_ids = {q.quest for qs in quests_of.values() for q in qs}
     quests = quest_details({q for s in everything for q in s.get("quests", [])} | spec_quest_ids)
@@ -414,7 +541,7 @@ def main() -> None:
     zone_names = {z.ui_map_id: z.name for z in zone_bounds}
     for q in quests.values():
         for giver in q[4]:
-            classic.zone_names[giver[3]] = zone_names[giver[3]]
+            classic_sources.zone_names[giver[3]] = zone_names[giver[3]]
     write_json(CLASSIC_DIR / "trainerSkills.json", {"source": f"cmangos/classic-db@{CMANGOS_COMMIT}", **trainer_skills})
     write_json(CLASSIC_DIR / "sources.json", {
         "source": f"cmangos/classic-db@{CMANGOS_COMMIT}",
@@ -423,28 +550,29 @@ def main() -> None:
         "questColumns": ["id", "title", "level", "side", "givers"],
         "questGiverColumns": ["type", "entry", "name", "zone", "subzone", "x", "y", "faction"],
         "quests": quests,
-        "zones": {str(k): v for k, v in sorted(classic.zone_names.items())},
-        "territory": territory_of(classic.zone_names, zone_entries),
+        "zones": {str(k): v for k, v in sorted(classic_sources.zone_names.items())},
+        "territory": territory_of(classic_sources.zone_names, zone_entries),
         "recipes": {k: v for k, v in recipe_sources.items() if v},
         "reagents": {k: v for k, v in reagent_sources.items() if v},
         "disenchantColumns": DISENCHANT_COLUMNS,
         "disenchant": {str(i): lv for i, lv in sorted(disenchanted_items().items()) if i in reagent_ids},
     })
-    skin_mobs = classic.skinnable_mobs()
+    skin_mobs = classic_sources.skinnable_mobs()
     skin_zones = {int(str(r[4])) for r in skin_mobs}
     write_json(CLASSIC_DIR / "skinning.json", {
         "source": f"cmangos/classic-db@{CMANGOS_COMMIT}",
         "mobColumns": SKIN_MOB_COLUMNS,
         "mobs": skin_mobs,
         "leatherColumns": ["minLevel", "maxLevel", "leathers"],
-        "leather": classic.leather_by_level(),
-        "leatherIds": classic.leather_item_ids(),
+        "leather": classic_sources.leather_by_level(),
+        "leatherIds": classic_sources.leather_item_ids(),
         "zones": {str(z): zone_names[z] for z in sorted(skin_zones)},
         "territory": territory_of(skin_zones, zone_entries),
     })
     shutil.copyfile(CLASSIC_LICENSE, CLASSIC_DIR / "LICENSE")
     (CLASSIC_DIR / "README.md").write_text(CLASSIC_README.format(commit=CMANGOS_COMMIT), encoding="utf-8")
     print(", ".join(f"{k}: {len(v)} recipes" for k, v in recipes.items())
+          + f"; {len(sod_only)} Season of Discovery recipes left out"
           + f"; {len(recipe_sources)} teaching items, {len(reagent_ids)} reagents -> {DATA_DIR}")
 
 

@@ -141,11 +141,16 @@ describe("recipe params", () => {
 });
 
 describe("learnSummary", () => {
-  const itemLearn: LearnAt = { kind: "item", skill: 200, itemId: 1, item: "Pattern: X" };
+  const itemLearn: LearnAt = { kind: "item", skill: 200, itemId: 1, item: "Pattern: X", estimated: false };
 
   it("says when a recipe item has no known source, and leaves a Forever-only recipe to its chip", () => {
     expect(learnSummary(entry({ name: "A", learn: itemLearn }))).toBe("No source listed");
     expect(learnSummary(entry({ name: "B", learn: itemLearn, sourceUnknown: true }))).toBeNull();
     expect(learnSummary(entry({ name: "C", learn: { kind: "trainer", skill: 50, estimated: false, newInForever: false } }))).toBe("Trainer");
+  });
+
+  it("names a Classic quest or NPC instead of a trainer", () => {
+    expect(learnSummary(entry({ name: "D", learn: { kind: "quest", skill: 285, quests: [{ id: 6032, title: "Sacred Cloth" }] } }))).toBe("Quest");
+    expect(learnSummary(entry({ name: "E", learn: { kind: "npc", skill: 230, npcs: ["Gloom'rel"] } }))).toBe("NPC");
   });
 });

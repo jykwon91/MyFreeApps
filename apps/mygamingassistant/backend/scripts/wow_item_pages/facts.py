@@ -18,6 +18,15 @@ CRAFTED_COLUMNS = ["profession", "skill", "spell", "recipe", "reagents", "learn"
 MAX_RECIPES = 4
 
 
+def teacher_name(learn: Mapping[str, Any]) -> str:
+    """Who teaches a recipe, for ``learnItem``: its pattern, its Classic quests' titles, or its Classic NPCs ("" for a trainer)."""
+    if learn.get("source") == "quest":
+        return " or ".join(dict.fromkeys(str(q["title"]) for q in learn["quests"]))
+    if learn.get("source") == "npc":
+        return " or ".join(str(n) for n in learn["npcs"])
+    return str(learn.get("item") or "")
+
+
 def crafted_by(docs: Mapping[str, Mapping[str, Any]], wanted: set[int]) -> dict[int, list[list[Any]]]:
     """Item id -> CRAFTED_COLUMNS rows, lowest skill first, from each profession's ``crafting/<key>.json``.
 
@@ -34,7 +43,7 @@ def crafted_by(docs: Mapping[str, Mapping[str, Any]], wanted: set[int]) -> dict[
             reagents = [[as_int(r["id"]), as_int(r["count"]), str(r["name"])] for r in recipe.get("reagents", [])]
             rows[as_int(creates["id"])].append([
                 key, skill, as_int(recipe["spell"]), str(recipe["name"]), reagents,
-                str(learn.get("source") or ""), str(learn.get("item") or ""),
+                str(learn.get("source") or ""), teacher_name(learn),
             ])
     return {item: sorted(found, key=lambda r: (r[1], r[0], r[2]))[:MAX_RECIPES] for item, found in rows.items()}
 

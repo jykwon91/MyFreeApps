@@ -205,7 +205,7 @@
 "11876":{"bind":1,"buy":81437},
 "12004":{"bind":2,"buy":36652},
 "12260":{"bind":2,"buy":32660,"crafted":[["blacksmithing",165,15973,"Searing Golden Blade",[[3859,10,"Steel Bar"],[3577,4,"Gold Bar"],[7068,2,"Elemental Fire"],[4234,2,"Heavy Leather"]],"item","Plans: Searing Golden Blade"]]},
-"12772":{"bind":2,"buy":194357,"crafted":[["blacksmithing",270,16967,"Inlaid Thorium Hammer",[[12359,30,"Thorium Bar"],[3577,4,"Gold Bar"],[6037,2,"Truesilver Bar"],[12361,2,"Blue Sapphire"],[8170,4,"Rugged Leather"]],"trainer",""]]},
+"12772":{"bind":2,"buy":194357,"crafted":[["blacksmithing",245,16967,"Inlaid Thorium Hammer",[[12359,30,"Thorium Bar"],[3577,4,"Gold Bar"],[6037,2,"Truesilver Bar"],[12361,2,"Blue Sapphire"],[8170,4,"Rugged Leather"]],"item","Plans: Inlaid Thorium Hammer"]]},
 "12964":{"bind":1,"buy":166942},
 "13028":{"bind":2,"buy":263025},
 "13284":{"bind":1,"buy":98926},

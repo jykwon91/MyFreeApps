@@ -275,7 +275,7 @@
 "21320":{"bind":1,"buy":112489},
 "22088":{"bind":1,"buy":62621},
 "22408":{"bind":1,"buy":213818},
-"22664":{"bind":2,"buy":503214,"crafted":[["leatherworking",320,28222,"Icy Scale Breastplate",[[22682,7,"Frozen Rune"],[15408,24,"Heavy Scorpid Scale"],[7080,2,"Essence of Water"],[15407,4,"Cured Rugged Hide"],[14227,4,"Ironweb Spider Silk"]],"trainer",""]]},
+"22664":{"bind":2,"buy":503214,"crafted":[["leatherworking",300,28222,"Icy Scale Breastplate",[[22682,7,"Frozen Rune"],[15408,24,"Heavy Scorpid Scale"],[7080,2,"Essence of Water"],[15407,4,"Cured Rugged Hide"],[14227,4,"Ironweb Spider Silk"]],"item","Pattern: Icy Scale Breastplate"]]},
 "22856":{"bind":1,"buy":60961},
 "23304":{"bind":1,"buy":76019},
 "220808":{"bind":1,"buy":89365},

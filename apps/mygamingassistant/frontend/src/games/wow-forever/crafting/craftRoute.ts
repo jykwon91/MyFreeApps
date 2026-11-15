@@ -36,15 +36,27 @@ export function expectedCrafts(recipe: Pick<CraftRecipe, "yellow" | "grey">, fro
   return Math.ceil(total - 1e-9);
 }
 
-/** Where you learn a recipe: from the start, a Pattern / Formula item, or a trainer (Forever skill estimated). */
+/**
+ * Where you learn a recipe: from the start, a Pattern / Formula item, a Classic quest or NPC, or a
+ * trainer (Forever skill estimated). Nothing says what skill a quest or NPC asks, so theirs is the recipe's yellow.
+ */
 export function learnAt(recipe: CraftRecipe, trainerSkills: TrainerSkills): LearnAt {
   const learn = recipe.learn;
   if (learn.source === "start") return { kind: "start" };
-  if (learn.source === "item") return { kind: "item", skill: learn.skill, itemId: learn.itemId, item: learn.item };
+  if (learn.source === "item") {
+    return { kind: "item", skill: learn.skill, itemId: learn.itemId, item: learn.item, estimated: learn.estimated === true };
+  }
+  if (learn.source === "quest") return { kind: "quest", skill: recipe.yellow, quests: learn.quests };
+  if (learn.source === "npc") return { kind: "npc", skill: recipe.yellow, npcs: learn.npcs };
   const newInForever = recipe.newInForever === true;
   const known = trainerSkills[String(recipe.spell)];
   if (!known) return { kind: "trainer", skill: recipe.yellow, estimated: true, newInForever };
   return { kind: "trainer", skill: known.forever, estimated: known.forever !== known.classic, newInForever };
+}
+
+/** A recipe you go and get — a Pattern / Formula, a quest, an NPC — not one a trainer or the profession itself gives. */
+export function mustAcquire(recipe: CraftRecipe): boolean {
+  return recipe.learn.source === "item" || recipe.learn.source === "quest" || recipe.learn.source === "npc";
 }
 
 /** A recipe Forever added that no Classic source teaches: where to learn it isn't known yet. */

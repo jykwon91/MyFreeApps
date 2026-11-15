@@ -118,9 +118,11 @@ export function reagentDemand(crafting: CraftingByProfession): Map<number, Reage
   return demand;
 }
 
-/** A recipe most crafters can get: trainers, starting recipes, and recipes a vendor sells (not rare drops). */
+/** A recipe most crafters can get: trainers, starting recipes, and recipes a vendor sells (not rare drops, quests or NPCs). */
 function widelyKnown(recipe: CraftRecipe, data: CraftingData): boolean {
-  return recipe.learn.source !== "item" || data.sources.recipe(recipe.learn.itemId).vendors.some((v) => !v.limited);
+  const { learn } = recipe;
+  if (learn.source === "trainer" || learn.source === "start") return true;
+  return learn.source === "item" && data.sources.recipe(learn.itemId).vendors.some((v) => !v.limited);
 }
 
 /** What one unit costs a crafter: its market value, or a vendor's price when that's cheaper; null when neither exists. */

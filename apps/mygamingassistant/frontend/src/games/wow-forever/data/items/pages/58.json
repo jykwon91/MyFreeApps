@@ -229,7 +229,7 @@
 "15546":{"bind":2,"buy":23969},
 "15610":{"bind":2,"buy":21770},
 "15674":{"bind":2,"buy":92321},
-"15802":{"bind":2,"buy":58243,"crafted":[["tailoring",285,19435,"Mooncloth Boots",[[14048,6,"Bolt of Runecloth"],[14342,4,"Mooncloth"],[7971,2,"Black Pearl"],[14341,1,"Rune Thread"]],"trainer",""]]},
+"15802":{"bind":2,"buy":58243,"crafted":[["tailoring",285,19435,"Mooncloth Boots",[[14048,6,"Bolt of Runecloth"],[14342,4,"Mooncloth"],[7971,2,"Black Pearl"],[14341,1,"Rune Thread"]],"quest","Sacred Cloth"]]},
 "15866":{"bind":1,"buy":2250},
 "15930":{"bind":2,"buy":36584},
 "16058":{"bind":1,"buy":115165},

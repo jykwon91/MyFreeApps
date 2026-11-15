@@ -256,7 +256,7 @@
 "22082":{"bind":1,"buy":98845},
 "22274":{"bind":1,"buy":79515},
 "22466":{"bind":1,"buy":574748},
-"22658":{"bind":2,"buy":265227,"crafted":[["tailoring",315,28208,"Glacial Cloak",[[22682,5,"Frozen Rune"],[14048,4,"Bolt of Runecloth"],[7080,2,"Essence of Water"],[14227,4,"Ironweb Spider Silk"]],"trainer",""]]},
+"22658":{"bind":2,"buy":265227,"crafted":[["tailoring",300,28208,"Glacial Cloak",[[22682,5,"Frozen Rune"],[14048,4,"Bolt of Runecloth"],[7080,2,"Essence of Water"],[14227,4,"Ironweb Spider Silk"]],"item","Pattern: Glacial Cloak"]]},
 "23042":{"bind":1,"buy":364641},
 "23298":{"bind":1,"buy":93003},
 "220866":{"bind":1,"buy":39274},

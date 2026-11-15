@@ -2,7 +2,7 @@ import FoodSourceList from "@/games/wow-forever/components/food/detail/FoodSourc
 import RecipeBuyLines from "@/games/wow-forever/components/recipeVendors/RecipeBuyLines";
 import ItemIcon from "@/games/wow-forever/components/shared/ItemIcon";
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
-import { learnText } from "@/games/wow-forever/crafting/learnText";
+import { itemSkillText, learnText } from "@/games/wow-forever/crafting/learnText";
 import { RECIPE_PROFESSION_LABELS, RECIPES_TEXT } from "@/games/wow-forever/data/recipes/recipesConfig";
 import { hasSources } from "@/games/wow-forever/food/recipeSources";
 import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
@@ -25,7 +25,7 @@ export default function RecipeLearnDetail({ entry, place, zoneId, level }: Recip
     <div className="space-y-2">
       <p className="text-sm">
         {RECIPES_TEXT.learnFrom} <ItemIcon itemId={learn.itemId} />
-        <span className="font-medium">{learn.item}</span> <span className="text-muted-foreground">(skill {learn.skill})</span>
+        <span className="font-medium">{learn.item}</span> <span className="text-muted-foreground">({itemSkillText(learn)})</span>
       </p>
       {recipeSources && hasSources(recipeSources) ? (
         <>

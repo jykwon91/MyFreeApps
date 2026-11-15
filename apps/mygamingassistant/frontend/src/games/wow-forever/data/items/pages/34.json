@@ -222,7 +222,7 @@
 "14946":{"bind":2,"buy":20757},
 "15010":{"bind":2,"buy":815},
 "15074":{"bind":2,"buy":34335,"crafted":[["leatherworking",240,19053,"Chimeric Gloves",[[8170,6,"Rugged Leather"],[15423,6,"Chimera Leather"],[14341,1,"Rune Thread"]],"item","Pattern: Chimeric Gloves"]]},
-"15138":{"bind":2,"buy":75993,"crafted":[["leatherworking",320,19093,"Onyxia Scale Cloak",[[15410,1,"Scale of Onyxia"],[14044,1,"Cindercloth Cloak"],[14341,1,"Rune Thread"]],"trainer",""]]},
+"15138":{"bind":2,"buy":75993,"crafted":[["leatherworking",320,19093,"Onyxia Scale Cloak",[[15410,1,"Scale of Onyxia"],[14044,1,"Cindercloth Cloak"],[14341,1,"Rune Thread"]],"quest","The Journey Has Just Begun"]]},
 "15202":{"bind":1,"buy":2579},
 "15266":{"bind":2,"buy":272026},
 "15330":{"bind":2,"buy":5298},

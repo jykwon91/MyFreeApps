@@ -210,6 +210,26 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `classic/sources.json` (cmangos GPL — keep LICENSE + README).
   `tests/test_wow_professions_generator.py`, `tests/test_wow_engineering_generator.py`. A route row that names a spell
   missing from the data throws, so re-run the route test after regenerating.
+  **Season of Discovery recipes are left out**: the Classic Era client shares its tables with
+  SoD, so its copies (Earthen Vest 439100 next to the trainer's 8764) look like old Classic
+  recipes. A recipe is kept only when it's `newInForever`, comes with the skill, or a real
+  Classic source teaches it (`crafts.classic_source`, written as `learn.classic`:
+  `trainer` = cmangos trainer, `item` = a cmangos item teaches it (the Forever pattern, or the
+  Era client's for patterns Forever's item table lacks), `start` = came with the skill in
+  Classic, `quest` = a cmangos quest reward, `npc` = a cmangos gossip script). Never filter by
+  spell-id range or name. `madeBy` ignores the dropped ones too. Checked against Battle.net known
+  recipes (topdeadcenter, 2026-11-15): no dropped recipe is known by anyone.
+  A kept recipe the Forever client names no teaching item for is `learn.source: "trainer"` only
+  when a cmangos trainer teaches it; otherwise `crafts.classic_learn` labels it from Classic, strongest
+  evidence first: the Era client's pattern when something gives it (`item`, skill moved as Forever
+  moved the recipe → `estimated`), the quest (`quest` + `quests[{id,title}]`), the named NPC or
+  object (`npc` + `npcs`: creature `GossipMenuId` / type-2 object `data3`), then the pattern with no
+  source. The Forever hotfix item tables (wago + client cache) had none of these patterns
+  (2026-11-15). The only "trainer" recipe outside `trainerSkills.json` is Elixir of Minor Strength
+  2329 (came with Classic's skill; no Classic teacher). Quest / NPC recipes behave like patterns in
+  the cheapest route (only once ticked).
+  `src/__tests__/wowCraftingClassicSources.test.ts`. After regenerating, also re-run
+  `wow_item_pages.build`, `wow_gear.build` and `wow_icons.build` (they read these files).
 - **Recipes** (`/wow-forever/recipes`, `?q=` `&p=<profession>` `&c=<category>`): one search over
   every crafting profession's recipes plus Cooking (`lib/recipes/buildRecipeBook.ts`, loaded once by
   `loadRecipeBook`). Search ranks name > recipe item > exact ingredient > ingredient words > typo

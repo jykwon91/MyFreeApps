@@ -272,7 +272,7 @@
 "22439":{"bind":1,"buy":509986},
 "22503":{"bind":1,"buy":259395},
 "22631":{"bind":1,"buy":2631380},
-"22759":{"bind":2,"buy":145950,"crafted":[["leatherworking",320,28472,"Bramblewood Helm",[[12810,12,"Enchanted Leather"],[19726,2,"Bloodvine"],[12803,2,"Living Essence"],[15407,2,"Cured Rugged Hide"]],"trainer",""]]},
+"22759":{"bind":2,"buy":145950,"crafted":[["leatherworking",300,28472,"Bramblewood Helm",[[12810,12,"Enchanted Leather"],[19726,2,"Bloodvine"],[12803,2,"Living Essence"],[15407,2,"Cured Rugged Hide"]],"item","Pattern: Bramblewood Helm"]]},
 "22887":{"bind":1,"buy":111979},
 "23207":{"bind":1},
 "212583":{"bind":1,"buy":26402},

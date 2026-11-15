@@ -274,7 +274,7 @@
 "20425":{"bind":1,"buy":15211},
 "22089":{"bind":1,"buy":131332},
 "22409":{"bind":1,"buy":137305},
-"22665":{"bind":2,"buy":252584,"crafted":[["leatherworking",320,28224,"Icy Scale Bracers",[[22682,4,"Frozen Rune"],[15408,16,"Heavy Scorpid Scale"],[7080,2,"Essence of Water"],[15407,2,"Cured Rugged Hide"],[14227,4,"Ironweb Spider Silk"]],"trainer",""]]},
+"22665":{"bind":2,"buy":252584,"crafted":[["leatherworking",300,28224,"Icy Scale Bracers",[[22682,4,"Frozen Rune"],[15408,16,"Heavy Scorpid Scale"],[7080,2,"Essence of Water"],[15407,2,"Cured Rugged Hide"],[14227,4,"Ironweb Spider Silk"]],"item","Pattern: Icy Scale Bracers"]]},
 "22857":{"bind":1,"buy":73757},
 "23305":{"bind":1,"buy":76291},
 "220809":{"bind":1,"buy":119381},
