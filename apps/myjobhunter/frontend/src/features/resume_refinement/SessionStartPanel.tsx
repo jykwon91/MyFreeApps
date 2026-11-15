@@ -26,6 +26,7 @@ export default function SessionStartPanel({ onSessionStarted }: SessionStartPane
   const isReading = resumeJobsInFlight(cached ?? []).length > 0;
   const { data: jobs, isLoading } = useListResumeJobsQuery(undefined, {
     pollingInterval: isReading ? RESUME_JOBS_POLL_INTERVAL_MS : 0,
+    skipPollingIfUnfocused: true,
   });
   const [startSession, { isLoading: isStarting }] = useStartRefinementSessionMutation();
   const [picked, setPicked] = useState<string | null>(null);
