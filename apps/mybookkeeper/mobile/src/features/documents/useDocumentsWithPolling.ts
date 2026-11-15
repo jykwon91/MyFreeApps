@@ -1,5 +1,6 @@
-import { documentsApi, useGetDocumentsQuery } from "@mybookkeeper/api-client/store/documentsApi";
-import { taxDocumentsApi } from "@mybookkeeper/api-client/store/taxDocumentsApi";
+import { EMAIL_DERIVED_TAGS } from "@mybookkeeper/api-client/constants/emailDerivedTags";
+import { useGetDocumentsQuery } from "@mybookkeeper/api-client/store/documentsApi";
+import { integrationsApi } from "@mybookkeeper/api-client/store/integrationsApi";
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { ALL_DOCUMENTS } from "../../constants/documents";
@@ -9,8 +10,8 @@ import { useProcessingPoll } from "./useProcessingPoll";
 
 /**
  * The list, refreshing itself while anything in it is still being read. A document
- * that finishes has just added its transactions, so those and the totals go stale,
- * and it may be a tax form.
+ * that finishes has just changed everything derived from extraction (see
+ * EMAIL_DERIVED_TAGS), so all of it is refreshed.
  */
 export function useDocumentsWithPolling() {
   const dispatch = useDispatch<AppDispatch>();
@@ -22,8 +23,7 @@ export function useDocumentsWithPolling() {
   const lastBeingRead = useRef(beingRead);
   useEffect(() => {
     if (beingRead < lastBeingRead.current) {
-      dispatch(documentsApi.util.invalidateTags(["Summary", "Transaction"]));
-      dispatch(taxDocumentsApi.util.invalidateTags([{ type: "TaxReturn", id: "TAX_DOCS" }]));
+      dispatch(integrationsApi.util.invalidateTags(EMAIL_DERIVED_TAGS));
     }
     lastBeingRead.current = beingRead;
   }, [beingRead, dispatch]);
