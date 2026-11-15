@@ -22,6 +22,7 @@ from app.models.wow.character_reputation import WowCharacterReputation
 from app.models.wow.faction import WowFaction
 from app.models.wow.guild import WowGuild
 from app.repositories.wow.guild_faction_row import GuildFactionRow
+from app.repositories.wow.guild_help_row import GuildHelpRow
 from app.repositories.wow.guild_member_row import GuildMemberRow
 from app.repositories.wow.guild_member_skill_row import GuildMemberSkillRow
 from app.repositories.wow.guild_standing_row import GuildStandingRow
@@ -271,6 +272,17 @@ async def member_factions(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildFa
         .order_by(members.desc(), WowFaction.name, WowFaction.id)
     )
     return [GuildFactionRow(**row._mapping) for row in result.all()]
+
+
+async def member_sheets(db: AsyncSession, guild_id: uuid.UUID) -> list[GuildHelpRow]:
+    """The live stored members' character sheets (slug, class_id, sheet JSONB, sheet_version)."""
+    # WowCharacter.sheet is deferred on the ORM model, but explicit column selects always load.
+    result = await db.execute(
+        select(WowCharacter.slug, WowCharacter.class_id, WowCharacter.sheet, WowCharacter.sheet_version)
+        .where(WowCharacter.guild_id == guild_id, WowCharacter.gone_at.is_(None))
+        .order_by(WowCharacter.slug)
+    )
+    return [GuildHelpRow(*row) for row in result.all()]
 
 
 async def faction_standings(db: AsyncSession, guild_id: uuid.UUID, faction_id: int) -> list[GuildStandingRow]:

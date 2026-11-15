@@ -1,4 +1,5 @@
 import { useId, useMemo } from "react";
+import GuildHelpTab from "@/games/wow-forever/components/guild/GuildHelpTab";
 import GuildHeroes from "@/games/wow-forever/components/guild/GuildHeroes";
 import GuildHotRaces from "@/games/wow-forever/components/guild/GuildHotRaces";
 import GuildLeaderboards from "@/games/wow-forever/components/guild/GuildLeaderboards";
@@ -54,6 +55,7 @@ export default function GuildPageSections({ guild, tab, onTab }: GuildPageSectio
         {tab === "titles" && <GuildTitlesStrip titles={titles} />}
         {tab === "crafting" && <GuildRecipeSearch slug={guild.slug} />}
         {tab === "roster" && <GuildRollCall members={guild.members} rosterUpdatedAt={guild.roster_updated_at} titles={titles.bySlug} />}
+        {tab === "help" && <GuildHelpTab slug={guild.slug} />}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/ui";
+import type { GuildHelpResponse } from "@/games/wow-forever/types/guild/guildHelpResponse";
 import type { GuildRefreshResponse } from "@/games/wow-forever/types/guild/guildRefreshResponse";
 import type { GuildRecipeSearch } from "@/games/wow-forever/types/guild/guildRecipeSearch";
 import type { GuildRecipeSearchArgs } from "@/games/wow-forever/types/guild/guildRecipeSearchArgs";
@@ -28,6 +29,9 @@ export const wowGuildApi = baseApi.injectEndpoints({
         params: faction === null ? {} : { faction },
       }),
     }),
+    getGuildHelp: build.query<GuildHelpResponse, string>({
+      query: (slug) => ({ url: `/wow/guilds/${encodeURIComponent(slug)}/help`, method: "GET" }),
+    }),
   }),
 });
 
@@ -36,4 +40,5 @@ export const {
   useRefreshGuildMutation,
   useSearchGuildRecipesQuery,
   useGetGuildReputationsQuery,
+  useGetGuildHelpQuery,
 } = wowGuildApi;
