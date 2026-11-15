@@ -921,6 +921,32 @@ class TestStaleChunkRecoveryWired:
         assert "createBrowserRouter(withRouteErrorBoundary(routes))" in _read(*scaffold, "App.tsx")
 
 
+# Apps whose web store uses the shared baseApi but does not yet activate its
+# focus/reconnect listeners. mygamingassistant is owned by another session; remove
+# it here once its main.tsx calls setupListeners(store.dispatch).
+_FOCUS_LISTENERS_PENDING = {"mygamingassistant"}
+
+
+class TestWebRefetchListenersActivated:
+    """baseApi sets refetchOnFocus/refetchOnReconnect, which are inert until
+    setupListeners() runs. Without it a web tab never refreshes after regaining
+    focus, so changes made on the phone or by background workers stay invisible.
+    """
+
+    @pytest.mark.parametrize("app", [a for a in _APPS if a not in _FOCUS_LISTENERS_PENDING])
+    def test_main_activates_listeners(self, app: str) -> None:
+        main = _read("apps", app, "frontend", "src", "main.tsx")
+        assert "setupListeners(store.dispatch)" in main, (
+            f"apps/{app}/frontend/src/main.tsx must call "
+            f"`setupListeners(store.dispatch)` (from @reduxjs/toolkit/query) so "
+            f"baseApi's refetchOnFocus / refetchOnReconnect take effect."
+        )
+
+    def test_scaffold_template_activates_listeners(self) -> None:
+        scaffold = ("infra", "templates", "scaffold", "frontend", "src")
+        assert "setupListeners(store.dispatch)" in _read(*scaffold, "main.tsx")
+
+
 class TestContainerResourceLimits:
     """Every app's compose must cap per-container memory, CPU, and PIDs.
 
