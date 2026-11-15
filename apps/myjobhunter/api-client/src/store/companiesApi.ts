@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { APPLICATIONS_TAG } from "../constants/applicationsTag";
 import type { Company } from "../types/company";
 import type { CompanyListResponse } from "../types/company-list-response";
 import type { CompanyCreateRequest } from "../types/company-create-request";
@@ -9,7 +10,7 @@ const COMPANIES_TAG = "Companies";
 const COMPANY_RESEARCH_TAG = "CompanyResearch";
 
 const companiesApi = baseApi
-  .enhanceEndpoints({ addTagTypes: [COMPANIES_TAG, COMPANY_RESEARCH_TAG] })
+  .enhanceEndpoints({ addTagTypes: [COMPANIES_TAG, COMPANY_RESEARCH_TAG, APPLICATIONS_TAG] })
   .injectEndpoints({
     endpoints: (build) => ({
       listCompanies: build.query<CompanyListResponse, void>({
@@ -38,9 +39,16 @@ const companiesApi = baseApi
         invalidatesTags: (_result, _err, { id }) => [
           { type: COMPANIES_TAG, id },
           { type: COMPANIES_TAG, id: "LIST" },
+          // Applications list, kanban and detail embed company name/logo via a
+          // join. The PATCH response carries no application ids, so invalidate
+          // the whole Applications type (list, kanban and every cached detail).
+          { type: APPLICATIONS_TAG },
         ],
       }),
 
+      // No Applications invalidation: the backend refuses to delete a company
+      // that any application still references (CompanyHasApplicationsError),
+      // so a successful delete cannot affect an application view.
       deleteCompany: build.mutation<void, string>({
         query: (id) => ({ url: `/companies/${id}`, method: "DELETE" }),
         invalidatesTags: (_result, _err, id) => [
