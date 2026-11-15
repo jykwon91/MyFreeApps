@@ -44,6 +44,7 @@ export default function NotesSection({ applicationId, initialValue }: NotesSecti
   const valueRef = useRef(initialValue);
   // Counts the saves begun and the edits that outdate one; a result whose number isn't the latest is dropped.
   const saveGenerationRef = useRef(0);
+  const mountedRef = useRef(true);
 
   // Re-sync from server on prop change (e.g. drawer reopens with a different
   // application id) — but only when the user hasn't typed anything yet.
@@ -69,6 +70,11 @@ export default function NotesSection({ applicationId, initialValue }: NotesSecti
       setSaveState({ status: "saved" });
     } catch (err) {
       if (generation !== saveGenerationRef.current) return;
+      // A save already in flight when the drawer closed has no status left to show its failure on.
+      if (!mountedRef.current) {
+        showError(`${NOTES_MESSAGES.lastEditNotSaved}: ${extractErrorMessage(err)}`);
+        return;
+      }
       setSaveState({
         status: "error",
         message: extractErrorMessage(err),
@@ -86,6 +92,7 @@ export default function NotesSection({ applicationId, initialValue }: NotesSecti
   function scheduleSave(next: string) {
     cancelPendingSave();
     debounceRef.current = window.setTimeout(() => {
+      debounceRef.current = null;
       void performSave(next);
     }, DEBOUNCE_MS);
   }
@@ -116,7 +123,9 @@ export default function NotesSection({ applicationId, initialValue }: NotesSecti
 
   // Closing within the debounce window must not lose the edit: save it now, if it fits and is new.
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (debounceRef.current === null) return;
       window.clearTimeout(debounceRef.current);
       const pending = valueRef.current;

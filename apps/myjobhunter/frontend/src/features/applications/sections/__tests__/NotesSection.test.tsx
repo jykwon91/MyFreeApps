@@ -59,4 +59,20 @@ describe("NotesSection closing save", () => {
     expect(updateMock).toHaveBeenCalledTimes(1);
     expect(showErrorMock).not.toHaveBeenCalled();
   });
+
+  it("toasts the reason when a save already in flight at close fails", async () => {
+    vi.useFakeTimers();
+    let reject: (err: Error) => void = () => {};
+    updateMock.mockReturnValue({ unwrap: () => new Promise((_, r) => { reject = r; }) });
+    const { unmount } = render(<NotesSection applicationId="app-1" initialValue="" />);
+    fireEvent.change(screen.getByLabelText("Application notes"), { target: { value: "final thought" } });
+    vi.advanceTimersByTime(500);
+    vi.useRealTimers();
+    unmount();
+    reject(new Error("Server error"));
+    await flush();
+
+    expect(updateMock).toHaveBeenCalledTimes(1);
+    expect(showErrorMock).toHaveBeenCalledWith(`${NOTES_MESSAGES.lastEditNotSaved}: Server error`);
+  });
 });
