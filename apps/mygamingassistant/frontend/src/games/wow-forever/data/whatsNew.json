@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-15",
+    "title": "Professions on the guild roster",
+    "summary": "The Roster tab now lists every member's professions with their icon, skill and rank (Apprentice, Journeyman, Expert or Artisan), on phones too. Filter by a profession and it's listed first.",
+    "to": "/wow-forever/topdeadcenter?tab=roster"
+  },
+  {
+    "date": "2026-11-15",
     "title": "Recipe icons and tooltips on your guild page",
     "summary": "Who can craft? now shows each recipe's icon, the profession's and each crafter's class icon. Hover a recipe to see what it makes, the skill needed and its materials; click it to open the full recipe on the Recipes page.",
     "to": "/wow-forever/topdeadcenter"
