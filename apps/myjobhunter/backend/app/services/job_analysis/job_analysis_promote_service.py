@@ -29,9 +29,9 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.application.application import Application
-from app.models.application.application_event import ApplicationEvent
-from app.repositories.application import application_event_repository, application_repository
+from app.repositories.application import application_repository
 from app.repositories.job_analysis import job_analysis_repository
+from app.services.application.applied_application_creator import create_applied_application
 from app.services.company import company_service
 from app.services.job_analysis._job_analysis_utils import (
     _map_salary_period,
@@ -55,10 +55,14 @@ async def apply_to_application(
     Returns ``None`` if the analysis doesn't exist or belongs to
     another user. Returns the created Application otherwise.
 
+    The row is locked (``FOR UPDATE``) so concurrent Apply requests serialize.
+
     Idempotency: if ``analysis.applied_application_id`` is already set,
     returns the existing application without creating a duplicate.
     """
-    analysis = await job_analysis_repository.get_by_id(db, analysis_id, user_id)
+    analysis = await job_analysis_repository.get_by_id(
+        db, analysis_id, user_id, for_update=True,
+    )
     if analysis is None:
         return None
 
@@ -93,19 +97,7 @@ async def apply_to_application(
         posted_salary_period=_map_salary_period(extracted.get("posted_salary_period")),
         notes=(analysis.verdict_summary or None),
     )
-    application = await application_repository.create(db, application)
-
-    # Mirror application_service.create_application's auto-event so
-    # latest_status is never None after this path.
-    initial_event = ApplicationEvent(
-        user_id=user_id,
-        application_id=application.id,
-        event_type="applied",
-        # No applied_at on JobAnalysis — use the analysis creation time.
-        occurred_at=analysis.created_at,
-        source="system",
-    )
-    await application_event_repository.create(db, initial_event)
+    application = await create_applied_application(db, application, event_source="system")
 
     await job_analysis_repository.update(
         db, analysis, {"applied_application_id": application.id},
