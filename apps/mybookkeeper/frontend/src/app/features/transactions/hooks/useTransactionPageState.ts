@@ -42,6 +42,9 @@ import { runBulkCounts } from "@mybookkeeper/api-client/utils/runBulkCounts";
 import { transactionExportPath } from "@mybookkeeper/api-client/utils/transactionExportPath";
 import { transactionListQuery } from "@mybookkeeper/api-client/utils/transactionListQuery";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { currentListData } from "@/shared/utils/current-list-data";
+import type { ListLoadMode } from "@/shared/types/list-load-mode";
 
 export interface TransactionPageState {
   // Tab
@@ -63,8 +66,13 @@ export interface TransactionPageState {
   pageCount: number;
   categories: string[];
   isLoading: boolean;
-  /** True while another page, filter or order is on its way (the shown rows are the previous ones). */
+  /** True while rows are on their way: another page, filter or order, or a refetch of the shown ones. */
   isFetching: boolean;
+  /** What the table body shows. Rows from another page, filter or order are never shown in its place. */
+  listMode: ListLoadMode;
+  /** The latest load of the rows failed. */
+  loadFailed: boolean;
+  retryLoad: () => void;
   queryParams: TransactionListParams;
   selection: TransactionSelection;
 
@@ -198,7 +206,9 @@ export function useTransactionPageState(): TransactionPageState {
     () => ({ ...queryParams, limit: pagination.pageSize, offset: pagination.pageIndex * pagination.pageSize }),
     [queryParams, pagination],
   );
-  const { data: page, currentData, fulfilledTimeStamp, isLoading, isFetching } = useGetTransactionPageQuery(pageArgs, { skip });
+  const pageQuery = useGetTransactionPageQuery(pageArgs, { skip });
+  const { currentData, fulfilledTimeStamp, isLoading, isFetching, error, refetch } = pageQuery;
+  const page = currentListData(pageQuery, false);
   // Bumped when an edit (or coming back to the tab) refetches the same page, so the ticks are
   // checked again: the edit may have moved ticked rows out of the filters, or deleted them.
   const rowsVersion = useRefetchCount(
@@ -207,10 +217,14 @@ export function useTransactionPageState(): TransactionPageState {
   );
   const { data: categories = [] } = useListTransactionCategoriesQuery(filterBarParams, { skip });
   const transactions = useMemo(() => page?.items ?? [], [page]);
-  const total = page?.total ?? 0;
+  // While another page loads, the total last seen keeps the pager and select-all as they were.
+  const total = page?.total ?? knownTotal ?? 0;
   // Kept in state because the page asked for depends on it; React re-renders straight away.
   if (page && page.total !== knownTotal) setKnownTotal(page.total);
   const pageCount = Math.ceil(total / pagination.pageSize);
+  const listMode = resolveListLoadMode({ hasData: page !== undefined, hasError: error !== undefined, itemCount: transactions.length });
+  const loadFailed = error !== undefined;
+  const retryLoad = useCallback(() => void refetch(), [refetch]);
 
   const rowsStatus = useMemo(
     () => ({ isCurrent: !isFetching, isRefetching: isFetching && currentData !== undefined, version: rowsVersion }),
@@ -392,6 +406,9 @@ export function useTransactionPageState(): TransactionPageState {
     categories,
     isLoading,
     isFetching,
+    listMode,
+    loadFailed,
+    retryLoad,
     queryParams,
     selection,
     bulkAction,

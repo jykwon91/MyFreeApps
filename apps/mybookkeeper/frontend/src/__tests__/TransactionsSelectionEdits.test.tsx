@@ -50,7 +50,8 @@ describe("Transactions ticks after edits", () => {
     await user.click(screen.getByRole("checkbox", { name: "Repairs" }));
     await waitFor(() => expect(lastPageQuery().getAll("categories")).toEqual(["repairs"]));
     await user.keyboard("{Escape}");
-    await user.click(screen.getByRole("checkbox", { name: "Select Row 1" }));
+    // The filtered rows replace the unfiltered ones once they arrive; none are shown in between.
+    await user.click(await screen.findByRole("checkbox", { name: "Select Row 1" }));
     await user.click(screen.getByRole("checkbox", { name: "Select Row 2" }));
     expect(screen.getByText("2 selected")).toBeInTheDocument();
 

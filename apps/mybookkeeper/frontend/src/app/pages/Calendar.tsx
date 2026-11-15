@@ -28,6 +28,7 @@ import ReviewQueueDrawer from "@/app/features/calendar/ReviewQueueDrawer";
 import type { CalendarView } from "@/shared/types/calendar/calendar-view";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { currentListData } from "@/shared/utils/current-list-data";
 import { useLiveSearchParams } from "@platform/ui";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -91,12 +92,9 @@ export default function Calendar() {
     [fromIso, toIso, selectedPropertyIds, selectedSources],
   );
 
-  const {
-    data: events,
-    error,
-    isFetching,
-    refetch,
-  } = useGetCalendarEventsQuery(queryArgs);
+  const eventsQuery = useGetCalendarEventsQuery(queryArgs);
+  const { error, isFetching, refetch } = eventsQuery;
+  const events = currentListData(eventsQuery, false);
   const { data: properties = [] } = useGetPropertiesQuery();
   const { data: listingsEnvelope } = useGetListingsQuery({ limit: 100, offset: 0 });
 
@@ -192,6 +190,8 @@ export default function Calendar() {
     hasError: error !== undefined,
     itemCount: eventsList.length,
   });
+  // While another month or filter loads, keep the freshness shown so far instead of "—" (no events).
+  const syncedEvents = mode === "loading" ? eventsQuery.data ?? [] : eventsList;
 
   return (
     <div className="p-4 sm:p-8 space-y-6">
@@ -200,7 +200,7 @@ export default function Calendar() {
         subtitle="Every booking across every channel and listing, in one view."
         actions={
           <div className="flex items-center gap-3">
-            <CalendarLastSynced events={eventsList} />
+            <CalendarLastSynced events={syncedEvents} />
             <button
               type="button"
               onClick={() => setIsQueueOpen(true)}

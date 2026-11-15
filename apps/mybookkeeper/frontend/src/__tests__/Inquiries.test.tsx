@@ -70,7 +70,7 @@ const mockListings: ListingListResponse = {
 };
 
 const defaultInquiriesState = {
-  data: mockEnvelope,
+  ...queryData(mockEnvelope),
   isLoading: false,
   isFetching: false,
   isError: false,
@@ -106,6 +106,7 @@ vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }))
 import { useGetInquiriesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 type InquiriesQueryReturn = ReturnType<typeof useGetInquiriesQuery>;
 
@@ -155,7 +156,7 @@ describe("Inquiries page", () => {
   it("shows the loading skeleton while fetching", () => {
     vi.mocked(useGetInquiriesQuery).mockReturnValueOnce({
       ...defaultInquiriesState,
-      data: undefined,
+      ...queryData(undefined),
       isLoading: true,
     } as unknown as InquiriesQueryReturn);
     renderInquiries();
@@ -165,7 +166,7 @@ describe("Inquiries page", () => {
   it("renders the unfiltered empty state when there are no inquiries", () => {
     vi.mocked(useGetInquiriesQuery).mockReturnValueOnce({
       ...defaultInquiriesState,
-      data: { items: [], total: 0, has_more: false },
+      ...queryData({ items: [], total: 0, has_more: false }),
     } as unknown as InquiriesQueryReturn);
     renderInquiries();
     expect(screen.getByText(/No inquiries yet/i)).toHaveTextContent('Use "New inquiry" to log one manually.');
@@ -174,7 +175,7 @@ describe("Inquiries page", () => {
   it("renders the filtered empty state when no inquiries match the active stage", () => {
     vi.mocked(useGetInquiriesQuery).mockReturnValueOnce({
       ...defaultInquiriesState,
-      data: { items: [], total: 0, has_more: false },
+      ...queryData({ items: [], total: 0, has_more: false }),
     } as unknown as InquiriesQueryReturn);
     renderInquiries(["/inquiries?stage=approved"]);
     expect(screen.getByText(/No inquiries in this stage/i)).toBeInTheDocument();
@@ -196,7 +197,7 @@ describe("Inquiries page", () => {
   it("renders an error AlertBox + retry button when the query errors", () => {
     vi.mocked(useGetInquiriesQuery).mockReturnValueOnce({
       ...defaultInquiriesState,
-      data: undefined,
+      ...queryData(undefined),
       ...queryStatus({ failed: true, fetching: false }),
     } as unknown as InquiriesQueryReturn);
     renderInquiries();
@@ -212,7 +213,7 @@ describe("Inquiries page", () => {
   it("shows 'Load more' when has_more is true", () => {
     vi.mocked(useGetInquiriesQuery).mockReturnValueOnce({
       ...defaultInquiriesState,
-      data: { ...mockEnvelope, has_more: true },
+      ...queryData({ ...mockEnvelope, has_more: true }),
     } as unknown as InquiriesQueryReturn);
     renderInquiries();
     expect(screen.getByRole("button", { name: /Load more/i })).toBeInTheDocument();
@@ -244,7 +245,7 @@ describe("Inquiries page for a viewer", () => {
   it("doesn't point a viewer at New inquiry when the list is empty", () => {
     vi.mocked(useGetInquiriesQuery).mockReturnValue({
       ...defaultInquiriesState,
-      data: { items: [], total: 0, has_more: false },
+      ...queryData({ items: [], total: 0, has_more: false }),
     } as unknown as InquiriesQueryReturn);
     renderInquiries();
     const empty = screen.getByText(/No inquiries yet/i);

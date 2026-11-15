@@ -85,6 +85,7 @@ const mockListings: ListingListResponse = {
 
 interface QueryState<T> {
   data: T;
+  currentData: T;
   isLoading: boolean;
   isFetching: boolean;
   isError: boolean;
@@ -92,7 +93,7 @@ interface QueryState<T> {
 }
 
 const defaultEventsState: QueryState<CalendarEvent[]> = {
-  data: mockEvents,
+  ...queryData(mockEvents),
   isLoading: false,
   isFetching: false,
   isError: false,
@@ -119,6 +120,7 @@ vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
 import { useGetCalendarEventsQuery } from "@mybookkeeper/api-client/store/calendarApi";
 import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 /**
  * The month grid is the default view, so any assertion about the
@@ -195,7 +197,7 @@ describe("Calendar page", () => {
 
   it("shows skeleton when loading", () => {
     vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
-      { ...defaultEventsState, data: undefined, isLoading: true } as unknown as ReturnType<
+      { ...defaultEventsState, ...queryData(undefined), isLoading: true } as unknown as ReturnType<
         typeof useGetCalendarEventsQuery
       >,
     );
@@ -207,7 +209,7 @@ describe("Calendar page", () => {
   it("shows error banner with retry on error", () => {
     const refetch = vi.fn();
     vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
-      { ...defaultEventsState, data: undefined, ...queryStatus({ failed: true, fetching: false }), refetch } as unknown as ReturnType<
+      { ...defaultEventsState, ...queryData(undefined), ...queryStatus({ failed: true, fetching: false }), refetch } as unknown as ReturnType<
         typeof useGetCalendarEventsQuery
       >,
     );
@@ -218,7 +220,7 @@ describe("Calendar page", () => {
 
   it("keeps the error, not 'No bookings', while Retry refetches", () => {
     vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
-      { ...defaultEventsState, data: undefined, ...queryStatus({ failed: true, fetching: true }) } as unknown as ReturnType<
+      { ...defaultEventsState, ...queryData(undefined), ...queryStatus({ failed: true, fetching: true }) } as unknown as ReturnType<
         typeof useGetCalendarEventsQuery
       >,
     );
@@ -231,7 +233,7 @@ describe("Calendar page", () => {
 
   it("keeps the error, not 'No bookings', when an empty window's filter change fails", () => {
     vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
-      { ...defaultEventsState, data: [], ...queryStatus({ failed: true, fetching: false }) } as unknown as ReturnType<
+      { ...defaultEventsState, ...queryData([]), ...queryStatus({ failed: true, fetching: false }) } as unknown as ReturnType<
         typeof useGetCalendarEventsQuery
       >,
     );
@@ -242,7 +244,7 @@ describe("Calendar page", () => {
 
   it("shows empty-state copy when no events match the window", () => {
     vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
-      { ...defaultEventsState, data: [] } as unknown as ReturnType<typeof useGetCalendarEventsQuery>,
+      { ...defaultEventsState, ...queryData([]) } as unknown as ReturnType<typeof useGetCalendarEventsQuery>,
     );
     renderCalendar();
     expect(screen.getByText(/no bookings in this window/i)).toBeInTheDocument();
@@ -255,7 +257,7 @@ describe("Calendar page", () => {
       >,
     );
     vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
-      { ...defaultEventsState, data: [] } as unknown as ReturnType<typeof useGetCalendarEventsQuery>,
+      { ...defaultEventsState, ...queryData([]) } as unknown as ReturnType<typeof useGetCalendarEventsQuery>,
     );
     renderCalendar();
     expect(screen.getByTestId("calendar-no-listings")).toBeInTheDocument();
@@ -287,7 +289,21 @@ describe("Calendar page", () => {
 
   it('shows "—" for last-synced when there are no events', () => {
     vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
-      { ...defaultEventsState, data: [] } as unknown as ReturnType<typeof useGetCalendarEventsQuery>,
+      { ...defaultEventsState, ...queryData([]) } as unknown as ReturnType<typeof useGetCalendarEventsQuery>,
+    );
+    renderCalendar();
+    expect(screen.getByTestId("calendar-last-synced")).toHaveTextContent("—");
+  });
+
+  it("keeps last-synced while another month loads, but not after it failed", () => {
+    const loading = { ...defaultEventsState, currentData: undefined, isFetching: true };
+    vi.mocked(useGetCalendarEventsQuery).mockReturnValue(loading as unknown as ReturnType<typeof useGetCalendarEventsQuery>);
+    const { unmount } = renderCalendar();
+    expect(screen.getByTestId("calendar-last-synced").textContent).toMatch(/(ago|now)/);
+    unmount();
+
+    vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
+      { ...loading, isFetching: false, error: { status: 500 } } as unknown as ReturnType<typeof useGetCalendarEventsQuery>,
     );
     renderCalendar();
     expect(screen.getByTestId("calendar-last-synced")).toHaveTextContent("—");
@@ -308,7 +324,7 @@ describe("Calendar skeleton", () => {
 
     // Skeleton view
     vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
-      { ...defaultEventsState, data: undefined, isLoading: true } as unknown as ReturnType<
+      { ...defaultEventsState, ...queryData(undefined), isLoading: true } as unknown as ReturnType<
         typeof useGetCalendarEventsQuery
       >,
     );

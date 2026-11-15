@@ -5,6 +5,9 @@ import EmptyState from "@/shared/components/ui/EmptyState";
 import { timeSince } from "@platform/core/utils/timeSince";
 import type { SystemEvent } from "@/shared/types/health/health-summary";
 import { SEVERITY_BADGE_COLOR } from "@/admin/features/health/severity";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import type { ListLoadMode } from "@/shared/types/list-load-mode";
+import { HEALTH_EVENTS_LOAD_FAILED } from "@/shared/lib/health-event-messages";
 
 type SeverityFilter = "all" | "info" | "warning" | "error" | "critical";
 type TypeFilter = string;
@@ -21,7 +24,11 @@ const SEVERITY_OPTIONS: { value: SeverityFilter; label: string }[] = [
 
 interface EventsSectionProps {
   events: SystemEvent[];
-  isLoading: boolean;
+  mode: ListLoadMode;
+  /** The latest load failed; events that loaded earlier for these filters stay listed under the alert. */
+  loadFailed: boolean;
+  isRetrying: boolean;
+  onRetry: () => void;
   eventTypes: string[];
   severityFilter: SeverityFilter;
   typeFilter: TypeFilter;
@@ -33,7 +40,10 @@ interface EventsSectionProps {
 
 export default function EventsSection({
   events,
-  isLoading,
+  mode,
+  loadFailed,
+  isRetrying,
+  onRetry,
   eventTypes,
   severityFilter,
   typeFilter,
@@ -71,13 +81,17 @@ export default function EventsSection({
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-2">
+      {loadFailed ? (
+        <LoadErrorAlert message={HEALTH_EVENTS_LOAD_FAILED} isRetrying={isRetrying} onRetry={onRetry} />
+      ) : null}
+
+      {mode === "error" ? null : mode === "loading" ? (
+        <div className="space-y-2" data-testid="health-events-skeleton">
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className="h-12 animate-pulse rounded bg-muted" />
           ))}
         </div>
-      ) : events.length === 0 ? (
+      ) : mode === "empty" ? (
         <EmptyState message="No events match your filters" />
       ) : (
         <div className="border rounded-lg flex-1 overflow-auto min-h-0">

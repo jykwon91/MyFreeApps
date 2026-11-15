@@ -43,7 +43,7 @@ const mockEnvelope: VendorListResponse = {
 };
 
 const defaultVendorsState = {
-  data: mockEnvelope,
+  ...queryData(mockEnvelope),
   isLoading: false,
   isFetching: false,
   isError: false,
@@ -64,6 +64,7 @@ vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
 
 import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 type ListQueryReturn = ReturnType<typeof useGetVendorsQuery>;
 
@@ -94,7 +95,7 @@ describe("Vendors page", () => {
   it("renders the loading skeleton while fetching", () => {
     vi.mocked(useGetVendorsQuery).mockReturnValueOnce({
       ...defaultVendorsState,
-      data: undefined,
+      ...queryData(undefined),
       isLoading: true,
     } as unknown as ListQueryReturn);
     renderVendors();
@@ -104,7 +105,7 @@ describe("Vendors page", () => {
   it("renders the empty state when there are no vendors", () => {
     vi.mocked(useGetVendorsQuery).mockReturnValueOnce({
       ...defaultVendorsState,
-      data: { items: [], total: 0, has_more: false },
+      ...queryData({ items: [], total: 0, has_more: false }),
     } as unknown as ListQueryReturn);
     renderVendors();
     expect(screen.getByText(/No vendors yet/i)).toBeInTheDocument();
@@ -113,7 +114,7 @@ describe("Vendors page", () => {
   it("renders the filtered empty state when a category filter has no matches", () => {
     vi.mocked(useGetVendorsQuery).mockReturnValueOnce({
       ...defaultVendorsState,
-      data: { items: [], total: 0, has_more: false },
+      ...queryData({ items: [], total: 0, has_more: false }),
     } as unknown as ListQueryReturn);
     renderVendors("/vendors?category=hvac");
     expect(screen.getByText(/No vendors match this filter/i)).toBeInTheDocument();
@@ -122,7 +123,7 @@ describe("Vendors page", () => {
   it("renders an error AlertBox when the query errors", () => {
     vi.mocked(useGetVendorsQuery).mockReturnValueOnce({
       ...defaultVendorsState,
-      data: undefined,
+      ...queryData(undefined),
       ...queryStatus({ failed: true, fetching: false }),
     } as unknown as ListQueryReturn);
     renderVendors();

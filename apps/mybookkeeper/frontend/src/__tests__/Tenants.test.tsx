@@ -47,7 +47,7 @@ const defaultEnvelope: TenantListResponse = {
 };
 
 const defaultQueryState = {
-  data: defaultEnvelope,
+  ...queryData(defaultEnvelope),
   isLoading: false,
   isFetching: false,
   isError: false,
@@ -60,6 +60,7 @@ vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
 
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 type QueryReturn = ReturnType<typeof useGetTenantsQuery>;
 
@@ -93,7 +94,7 @@ describe("Tenants page", () => {
   it("renders the skeleton while loading", () => {
     vi.mocked(useGetTenantsQuery).mockReturnValueOnce({
       ...defaultQueryState,
-      data: undefined,
+      ...queryData(undefined),
       isLoading: true,
     } as unknown as QueryReturn);
     renderTenants();
@@ -103,7 +104,7 @@ describe("Tenants page", () => {
   it("renders empty state for active when no tenants and toggle is off", () => {
     vi.mocked(useGetTenantsQuery).mockReturnValueOnce({
       ...defaultQueryState,
-      data: { items: [], total: 0, has_more: false },
+      ...queryData({ items: [], total: 0, has_more: false }),
     } as unknown as QueryReturn);
     renderTenants();
     expect(
@@ -115,7 +116,7 @@ describe("Tenants page", () => {
     // Mock returns empty for all calls (both initial render and after toggle)
     vi.mocked(useGetTenantsQuery).mockReturnValue({
       ...defaultQueryState,
-      data: { items: [], total: 0, has_more: false },
+      ...queryData({ items: [], total: 0, has_more: false }),
     } as unknown as QueryReturn);
     renderTenants();
     // Toggle on — now includeEnded=true, shows different empty message
@@ -126,7 +127,7 @@ describe("Tenants page", () => {
   it("renders error alert when query errors", () => {
     vi.mocked(useGetTenantsQuery).mockReturnValueOnce({
       ...defaultQueryState,
-      data: undefined,
+      ...queryData(undefined),
       ...queryStatus({ failed: true, fetching: false }),
     } as unknown as QueryReturn);
     renderTenants();

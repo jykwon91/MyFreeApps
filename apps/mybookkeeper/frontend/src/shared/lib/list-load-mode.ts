@@ -9,13 +9,14 @@ import type { ListLoadModeArgs } from "@/shared/types/list-load-mode-args";
  * which a page reading those flags shows as "nothing here yet". `error` stays
  * set until a retry succeeds, so the page keeps its error up instead.
  *
- * Items that loaded earlier still show under the error (a failed refresh or a
- * failed "Load more" shouldn't wipe what's on screen).
+ * Items that loaded earlier for the same filters still show under the error (a
+ * failed refresh or a failed "Load more" shouldn't wipe what's on screen). Pages
+ * pass `currentListData`'s answer, so another filter's items never count here.
  */
 export function resolveListLoadMode({ hasData, hasError, itemCount }: ListLoadModeArgs): ListLoadMode {
   if (!hasData) return hasError ? "error" : "loading";
   if (itemCount > 0) return "list";
-  // Never claim the list is empty while its latest load failed: after a filter
-  // change that failed, `data` is still the previous filter's (empty) answer.
+  // Never claim the list is empty while its latest load failed: the empty answer
+  // may be an earlier one (a failed refresh keeps it).
   return hasError ? "error" : "empty";
 }

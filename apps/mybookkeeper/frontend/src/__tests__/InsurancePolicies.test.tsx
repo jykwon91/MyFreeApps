@@ -18,6 +18,7 @@ import { store } from "@/shared/store";
 import InsurancePolicies from "@/app/pages/InsurancePolicies";
 import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insurance/insurance-policy-summary";
 import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -30,7 +31,7 @@ let mockPolicies: InsurancePolicySummary[] = [];
 vi.mock("@mybookkeeper/api-client/store/insurancePoliciesApi", () => ({
   useGetInsurancePoliciesQuery: vi.fn(() => ({
     // RTK has no data while a first load runs or after it failed.
-    data: mockIsLoading || mockIsError ? undefined : { items: mockPolicies, total: mockPolicies.length, has_more: false },
+    ...queryData(mockIsLoading || mockIsError ? undefined : { items: mockPolicies, total: mockPolicies.length, has_more: false }),
     isLoading: mockIsLoading,
     ...queryStatus({ failed: mockIsError, fetching: mockIsFetching }),
     refetch: mockRefetch,

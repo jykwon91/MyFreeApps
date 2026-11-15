@@ -173,10 +173,11 @@ import {
 } from "@mybookkeeper/api-client/store/transactionsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { downloadFile } from "@/shared/utils/download";
+import { queryData } from "@/test/rtk-query-data";
 
 function mockPage(rows: Transaction[], isLoading = false) {
   vi.mocked(useGetTransactionPageQuery).mockReturnValue({
-    data: isLoading ? undefined : { items: rows, total: rows.length, has_more: false },
+    ...queryData(isLoading ? undefined : { items: rows, total: rows.length, has_more: false }),
     isLoading,
     isFetching: isLoading,
   } as unknown as ReturnType<typeof useGetTransactionPageQuery>);

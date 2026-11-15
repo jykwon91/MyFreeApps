@@ -13,6 +13,8 @@ import InquiryStageFilter from "@/app/features/inquiries/InquiryStageFilter";
 import InquirySpamTabFilter from "@/app/features/inquiries/InquirySpamTabFilter";
 import InquiryForm from "@/app/features/inquiries/InquiryForm";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { currentListData } from "@/shared/utils/current-list-data";
+import { usePageCountForFilter } from "@/shared/hooks/usePageCountForFilter";
 import InquiriesListBody from "@/app/features/inquiries/InquiriesListBody";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
@@ -51,7 +53,7 @@ export default function Inquiries() {
   const [searchParams, setSearchParams] = useLiveSearchParams();
   const stage = parseStageParam(searchParams.get(STAGE_PARAM));
   const spamFilter = parseSpamParam(searchParams.get(SPAM_PARAM));
-  const [pageCount, setPageCount] = useState(1);
+  const { pageCount, loadMore } = usePageCountForFilter(JSON.stringify([stage, spamFilter]));
   const [showForm, setShowForm] = useState(false);
   const canWrite = useCanWrite();
 
@@ -69,7 +71,9 @@ export default function Inquiries() {
     [stage, spamFilter, pageCount],
   );
 
-  const { data, isFetching, error, refetch } = useGetInquiriesQuery(queryArgs);
+  const query = useGetInquiriesQuery(queryArgs);
+  const { isFetching, error, refetch } = query;
+  const data = currentListData(query, pageCount > 1);
   const { data: listingsData } = useGetListingsQuery();
 
   const inquiries = data?.items ?? [];
@@ -104,7 +108,6 @@ export default function Inquiries() {
       },
       { replace: true },
     );
-    setPageCount(1);
   }
 
   function handleSpamFilterChange(next: InquirySpamStatus | null) {
@@ -123,11 +126,6 @@ export default function Inquiries() {
       },
       { replace: true },
     );
-    setPageCount(1);
-  }
-
-  function handleLoadMore() {
-    setPageCount((prev) => prev + 1);
   }
 
   const showStageBadge = !stage;
@@ -184,7 +182,7 @@ export default function Inquiries() {
         listingTitleById={listingTitleById}
         hasMore={hasMore}
         isFetching={isFetching}
-        onLoadMore={handleLoadMore}
+        onLoadMore={loadMore}
         canWrite={canWrite}
       />
 

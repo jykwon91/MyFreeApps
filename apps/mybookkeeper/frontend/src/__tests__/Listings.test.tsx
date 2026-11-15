@@ -53,6 +53,7 @@ const mockProperties: Property[] = [
 
 interface QueryState<T> {
   data: T;
+  currentData: T;
   isLoading: boolean;
   isFetching: boolean;
   isError: boolean;
@@ -60,7 +61,7 @@ interface QueryState<T> {
 }
 
 const defaultListingsState: QueryState<ListingListResponse> = {
-  data: mockEnvelope,
+  ...queryData(mockEnvelope),
   isLoading: false,
   isFetching: false,
   isError: false,
@@ -96,6 +97,7 @@ import { useGetListingsQuery } from "@mybookkeeper/api-client/store/listingsApi"
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { LISTING_MESSAGES } from "@/shared/lib/listing-messages";
 import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 function renderListings(initialEntries: string[] = ["/listings"]) {
   return render(
@@ -170,7 +172,7 @@ describe("Listings page", () => {
   it("renders the skeleton when loading", () => {
     vi.mocked(useGetListingsQuery).mockReturnValueOnce({
       ...defaultListingsState,
-      data: undefined,
+      ...queryData(undefined),
       isLoading: true,
     } as unknown as ReturnType<typeof useGetListingsQuery>);
     renderListings();
@@ -180,7 +182,7 @@ describe("Listings page", () => {
   it("renders the empty state message when no listings exist", () => {
     vi.mocked(useGetListingsQuery).mockReturnValueOnce({
       ...defaultListingsState,
-      data: { items: [], total: 0, has_more: false },
+      ...queryData({ items: [], total: 0, has_more: false }),
     } as unknown as ReturnType<typeof useGetListingsQuery>);
     renderListings();
     expect(screen.getByText(/No listings yet/i)).toBeInTheDocument();
@@ -190,7 +192,7 @@ describe("Listings page", () => {
     const refetchMock = vi.fn();
     vi.mocked(useGetListingsQuery).mockReturnValueOnce({
       ...defaultListingsState,
-      data: undefined,
+      ...queryData(undefined),
       ...queryStatus({ failed: true, fetching: false }),
       refetch: refetchMock,
     } as unknown as ReturnType<typeof useGetListingsQuery>);
@@ -211,7 +213,7 @@ describe("Listings page", () => {
     };
     vi.mocked(useGetListingsQuery).mockReturnValueOnce({
       ...defaultListingsState,
-      data: { items: [orphan], total: 1, has_more: false },
+      ...queryData({ items: [orphan], total: 1, has_more: false }),
     } as unknown as ReturnType<typeof useGetListingsQuery>);
     renderListings();
     expect(screen.getAllByText(/Unknown property/i).length).toBeGreaterThan(0);
@@ -238,7 +240,7 @@ describe("Listings page", () => {
     vi.mocked(useCanWrite).mockReturnValue(false);
     vi.mocked(useGetListingsQuery).mockReturnValueOnce({
       ...defaultListingsState,
-      data: { items: [], total: 0, has_more: false },
+      ...queryData({ items: [], total: 0, has_more: false }),
     } as unknown as ReturnType<typeof useGetListingsQuery>);
     renderListings();
     expect(screen.getByText(LISTING_MESSAGES.noListingsViewer)).toBeInTheDocument();
@@ -253,7 +255,7 @@ describe("Listings page", () => {
   it("shows the Load more button when has_more is true", () => {
     vi.mocked(useGetListingsQuery).mockReturnValueOnce({
       ...defaultListingsState,
-      data: { items: mockListings, total: 50, has_more: true },
+      ...queryData({ items: mockListings, total: 50, has_more: true }),
     } as unknown as ReturnType<typeof useGetListingsQuery>);
     renderListings();
     expect(screen.getByRole("button", { name: /load more/i })).toBeInTheDocument();
