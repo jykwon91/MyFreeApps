@@ -5,7 +5,7 @@ import { EmptyState, Toast, useAnnouncement, useRefresh, useTheme } from "@platf
 import { Stack, useLocalSearchParams } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { VERSION_DIFF_MESSAGES as MESSAGES } from "../../constants/versions";
-import { useErrorSinceOpening } from "../../hooks/useErrorSinceOpening";
+import { useErrorSinceOpening } from "@myrecipes/api-client/hooks/useErrorSinceOpening";
 import { diffBackTitle } from "../../utils/diffBackTitle";
 import { goBackOrOpenRecipe } from "../../utils/goBackOrOpenRecipe";
 import VersionDiffContent from "./VersionDiffContent";

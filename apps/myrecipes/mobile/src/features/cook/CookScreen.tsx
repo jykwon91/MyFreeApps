@@ -5,7 +5,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useErrorSinceOpening } from "../../hooks/useErrorSinceOpening";
+import { useErrorSinceOpening } from "@myrecipes/api-client/hooks/useErrorSinceOpening";
 import { hasCookSteps } from "../../utils/hasCookSteps";
 import { isNotFoundError } from "../../utils/isNotFoundError";
 import CookBarButton from "./CookBarButton";

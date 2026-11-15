@@ -9,7 +9,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { FlatList, View } from "react-native";
 import { VERSION_HISTORY_MESSAGES as MESSAGES, VERSION_LIST_ENTRY_POINT } from "../../constants/versions";
-import { useErrorSinceOpening } from "../../hooks/useErrorSinceOpening";
+import { useErrorSinceOpening } from "@myrecipes/api-client/hooks/useErrorSinceOpening";
 import { useOpenOnce } from "../../hooks/useOpenOnce";
 import { isNotFoundError } from "../../utils/isNotFoundError";
 import CompareBar from "./CompareBar";
