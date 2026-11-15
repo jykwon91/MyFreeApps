@@ -11,8 +11,8 @@
  * - 413/415 errors surface as error toasts (not crashes)
  * - Presigned image URL renders as <img>
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { baseApi } from "@/shared/store/baseApi";
@@ -273,5 +273,99 @@ describe("CalendarEventDetail", () => {
     await waitFor(() => {
       expect(showSuccessSpy).toHaveBeenCalledWith("Notes saved.");
     });
+  });
+});
+
+describe("CalendarEventDetail booking notes autosave", () => {
+  const DEBOUNCE_MS = 600;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function mockUpdate(unwrap: ReturnType<typeof vi.fn>) {
+    const updateFn = vi.fn().mockReturnValue({ unwrap });
+    mockUseUpdateBlackoutMutation.mockReturnValue([updateFn, { isLoading: false }]);
+    return updateFn;
+  }
+
+  it("keeps the field enabled while the debounced save is in flight", async () => {
+    mockUpdate(vi.fn().mockReturnValue(new Promise(() => undefined)));
+    renderDetail(makeEvent());
+    const ta = screen.getByTestId("blackout-notes-textarea");
+    fireEvent.change(ta, { target: { value: "typing" } });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+    });
+    expect(screen.getByLabelText("Saving")).toBeInTheDocument();
+    expect(ta).not.toBeDisabled();
+  });
+
+  it("sends nothing when the field is blurred without a change", async () => {
+    const updateFn = mockUpdate(vi.fn().mockResolvedValue({}));
+    renderDetail(makeEvent({ host_notes: "Guest: Alice" }));
+    const ta = screen.getByTestId("blackout-notes-textarea");
+    fireEvent.focus(ta);
+    fireEvent.blur(ta);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS * 2);
+    });
+    expect(updateFn).not.toHaveBeenCalled();
+  });
+
+  it("saves once per edit when the debounce fires and the field is then blurred", async () => {
+    const showSuccessSpy = vi.spyOn(toastStore, "showSuccess");
+    const updateFn = mockUpdate(vi.fn().mockResolvedValue({}));
+    renderDetail(makeEvent());
+    const ta = screen.getByTestId("blackout-notes-textarea");
+    fireEvent.change(ta, { target: { value: "one edit" } });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+    });
+    fireEvent.blur(ta);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS * 2);
+    });
+    expect(updateFn).toHaveBeenCalledTimes(1);
+    expect(showSuccessSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves a pending edit when the notes close before the debounce fires", async () => {
+    const updateFn = mockUpdate(vi.fn().mockResolvedValue({}));
+    const { unmount } = renderDetail(makeEvent());
+    fireEvent.change(screen.getByTestId("blackout-notes-textarea"), { target: { value: "last words" } });
+    unmount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS * 2);
+    });
+    expect(updateFn).toHaveBeenCalledTimes(1);
+    expect(updateFn).toHaveBeenCalledWith({ blackoutId: "blackout-1", body: { host_notes: "last words" } });
+  });
+
+  it("shows an error toast when the flush on close fails", async () => {
+    const showErrorSpy = vi.spyOn(toastStore, "showError");
+    mockUpdate(vi.fn().mockRejectedValue(new Error("boom")));
+    const { unmount } = renderDetail(makeEvent());
+    fireEvent.change(screen.getByTestId("blackout-notes-textarea"), { target: { value: "lost?" } });
+    unmount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(showErrorSpy).toHaveBeenCalledWith("I couldn't save the notes. Want to try again?");
+  });
+
+  it("does not re-send on close when the edit was already saved", async () => {
+    const updateFn = mockUpdate(vi.fn().mockResolvedValue({}));
+    const { unmount } = renderDetail(makeEvent());
+    fireEvent.change(screen.getByTestId("blackout-notes-textarea"), { target: { value: "done" } });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+    });
+    unmount();
+    expect(updateFn).toHaveBeenCalledTimes(1);
   });
 });
