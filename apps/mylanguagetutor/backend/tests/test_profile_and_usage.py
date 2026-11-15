@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
+from app.repositories.tutor import tutor_profile_repository
 from app.services.tutor import quota_service
 from app.services.tutor.turn_service import minimum_turn_units
 
@@ -37,6 +38,42 @@ class TestProfile:
             got = (await authed.get("/profile")).json()
         assert got["language_code"] == "es"
         assert got["level"] == "conversational"
+
+    @pytest.mark.asyncio
+    async def test_first_save_creates_then_second_updates_same_row(
+        self, user_factory, as_user, db,
+    ) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            first = await authed.put("/profile", json={"language_code": "es", "level": "beginner"})
+            second = await authed.put(
+                "/profile", json={"language_code": "es", "level": "conversational"},
+            )
+        assert first.status_code == 200, first.text
+        assert second.status_code == 200, second.text
+        rows = (
+            await db.execute(
+                text("SELECT level FROM tutor_profile WHERE user_id = CAST(:u AS uuid)"), {"u": user["id"]},
+            )
+        ).all()
+        assert [r.level for r in rows] == ["conversational"]
+
+    @pytest.mark.asyncio
+    async def test_second_first_time_save_does_not_500(
+        self, user_factory, as_user, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Two first-time saves racing: the loser sees no row yet but the row exists by its write."""
+        user = await user_factory()
+
+        async def _no_row_visible(*_args: object, **_kwargs: object) -> None:
+            return None
+
+        monkeypatch.setattr(tutor_profile_repository, "get", _no_row_visible)
+        async with await as_user(user) as authed:
+            first = await authed.put("/profile", json={"language_code": "es", "level": "beginner"})
+            second = await authed.put("/profile", json={"language_code": "es", "level": "beginner"})
+        assert first.status_code == 200, first.text
+        assert second.status_code == 200, second.text
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
