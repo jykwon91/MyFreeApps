@@ -5,6 +5,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { AxiosError, type AxiosAdapter, type InternalAxiosRequestConfig } from "axios";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { DISCOVER_CONFLICT_CODES } from "../constants/discoverConflictCodes";
+import "../store/applicationsApi";
 import { discoverApi } from "../store/discoverApi";
 import { undoDismissDiscoveredJob } from "../store/undoDismissDiscoveredJob";
 
@@ -162,5 +163,21 @@ describe("moving a posting between the Inbox and Dismissed lists", () => {
     expect(result).toMatchObject({ error: { status: 409 } });
     await expect.poll(() => listed(store, "inbox")).toEqual(["j2"]);
     expect(listed(store, "dismissed")).toEqual([]);
+  });
+});
+
+describe("deleteApplication", () => {
+  it("refetches the Discover list so a promoted posting returns to it", async () => {
+    const store = makeStore();
+    await store.dispatch(endpoints.listDiscoveredJobsPages.initiate({ state: "inbox" }));
+    sent.length = 0;
+
+    await store.dispatch(endpoints.deleteApplication.initiate("app-1"));
+    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
+
+    expect(sent.map((config) => `${config.method} ${config.url}`)).toEqual([
+      "delete /applications/app-1",
+      "get /discover",
+    ]);
   });
 });

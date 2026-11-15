@@ -1,6 +1,7 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
 import { DISCOVERED_JOBS_PAGE_SIZE, FIRST_DISCOVERED_JOBS_OFFSET } from "../constants/discoverPaging";
+import { DISCOVERED_JOB_TAG } from "../constants/discoverTags";
 import type { Application } from "../types/application";
 import type { DiscoveredJobListResponse } from "../types/discovery/discovered-job-list-response";
 import type { DiscoveredJobsFilter } from "../types/discovery/discovered-jobs-filter";
@@ -11,7 +12,7 @@ import type { DiscoveryFetchResult } from "../types/discovery/discovery-fetch-re
 import type { DismissalReason } from "../types/discovery/dismissal-reason";
 
 const apiWithTags = baseApi.enhanceEndpoints({
-  addTagTypes: ["DiscoverySource", "DiscoveredJob", "Applications"],
+  addTagTypes: ["DiscoverySource", DISCOVERED_JOB_TAG, "Applications"],
 });
 
 const discoverApi = apiWithTags.injectEndpoints({
@@ -47,7 +48,7 @@ const discoverApi = apiWithTags.injectEndpoints({
         url: `/discover/sources/${sourceId}/refresh`,
         method: "POST",
       }),
-      invalidatesTags: ["DiscoverySource", "DiscoveredJob"],
+      invalidatesTags: ["DiscoverySource", DISCOVERED_JOB_TAG],
     }),
     /**
      * GET /discover one page per offset. The filter keys the cache, so a new view or
@@ -72,7 +73,7 @@ const discoverApi = apiWithTags.injectEndpoints({
           offset: pageParam,
         },
       }),
-      providesTags: ["DiscoveredJob"],
+      providesTags: [DISCOVERED_JOB_TAG],
     }),
     dismissDiscoveredJob: build.mutation<
       void,
@@ -83,7 +84,7 @@ const discoverApi = apiWithTags.injectEndpoints({
         method: "POST",
         data: reason ? { reason } : undefined,
       }),
-      invalidatesTags: ["DiscoveredJob"],
+      invalidatesTags: [DISCOVERED_JOB_TAG],
     }),
     undoDismissDiscoveredJob: build.mutation<void, string>({
       query: (jobId) => ({
@@ -91,14 +92,14 @@ const discoverApi = apiWithTags.injectEndpoints({
         method: "POST",
       }),
       // The array form invalidates on failure too: a 404 (restored elsewhere) still refetches the lists.
-      invalidatesTags: ["DiscoveredJob"],
+      invalidatesTags: [DISCOVERED_JOB_TAG],
     }),
     saveDiscoveredJob: build.mutation<void, string>({
       query: (jobId) => ({
         url: `/discover/${jobId}/save`,
         method: "POST",
       }),
-      invalidatesTags: ["DiscoveredJob"],
+      invalidatesTags: [DISCOVERED_JOB_TAG],
     }),
     promoteDiscoveredJob: build.mutation<Application, string>({
       query: (jobId) => ({
@@ -107,7 +108,7 @@ const discoverApi = apiWithTags.injectEndpoints({
       }),
       // Promote creates an Application + flips the discovered_job's
       // promoted_application_id, so both caches need invalidating.
-      invalidatesTags: ["DiscoveredJob", "Applications"],
+      invalidatesTags: [DISCOVERED_JOB_TAG, "Applications"],
     }),
   }),
 });
