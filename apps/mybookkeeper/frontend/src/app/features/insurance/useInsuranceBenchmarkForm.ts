@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
 import { showError, showSuccess } from "@platform/ui";
-import { benchmarkFormPayload, benchmarkToFormValues } from "@mybookkeeper/api-client/utils/insuranceBenchmarkForm";
+import { benchmarkFormPayload, benchmarkFormProblems, benchmarkToFormValues } from "@mybookkeeper/api-client/utils/insuranceBenchmarkForm";
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import {
   useDeleteInsuranceBenchmarkMutation,
@@ -38,22 +38,30 @@ export function useInsuranceBenchmarkForm({
   const [upsert, { isLoading: isSaving }] = useUpsertInsuranceBenchmarkMutation();
   const [remove, { isLoading: isRemoving }] = useDeleteInsuranceBenchmarkMutation();
 
-  const payload = benchmarkFormPayload({ premium, coverage, regionLabel, source, observedOn, notes });
+  const [hasTried, setHasTried] = useState(false);
+  const values = { premium, coverage, regionLabel, source, observedOn, notes };
+  const today = localToday();
+  const payload = benchmarkFormPayload(values, today);
+  // Shown only once the operator has tried to save, so typing a figure isn't met with an error on the first digit.
+  const problems = hasTried ? benchmarkFormProblems(values, today) : {};
   const isBusy = isSaving || isRemoving;
-  const canSubmit = payload !== null && !isBusy;
+  const canSubmit = premium.trim() !== "" && coverage.trim() !== "" && observedOn !== "" && !isBusy;
   const canRemove = Boolean(existing) && !isBusy;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (payload === null || !canSubmit) return;
+    if (!canSubmit) return;
+    setHasTried(true);
+    if (payload === null) return;
     try {
       await upsert(payload).unwrap();
       showSuccess("Market premium saved.");
       onSaved();
     } catch (err) {
-      // The backend names the rule the payload broke — a future observation
-      // date, a figure past the cents/dollars sanity cap. A generic "try
-      // again" would send the operator to retype a value rejected identically.
+      // The form above already refuses everything the backend refuses, so a
+      // rejection here is unexpected. A plain-string reason from the server is
+      // still shown if there is one; a FastAPI validation list is not, and
+      // falls back to the generic message.
       showError(
         getApiErrorDetail(err, "Couldn't save the market premium. Please try again."),
       );
@@ -90,7 +98,8 @@ export function useInsuranceBenchmarkForm({
     isRemoving,
     canSubmit,
     canRemove,
-    maxObservedOn: localToday(),
+    problems,
+    maxObservedOn: today,
     handleSubmit,
     handleRemove,
   };

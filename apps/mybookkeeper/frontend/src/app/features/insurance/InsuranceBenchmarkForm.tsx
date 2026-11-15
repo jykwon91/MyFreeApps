@@ -1,4 +1,10 @@
 import { Button, LoadingButton } from "@platform/ui";
+import FieldProblem from "@/shared/components/FieldProblem";
+import {
+  BENCHMARK_NOTES_MAX_LENGTH,
+  BENCHMARK_SOURCE_MAX_LENGTH,
+  INSURANCE_BENCHMARK_REGION_MAX_LENGTH,
+} from "@mybookkeeper/api-client/constants/benchmarkForm";
 import { INSURANCE_POLICY_INPUT_CLASS } from "./insurance-policy-input-class";
 import { useInsuranceBenchmarkForm } from "./useInsuranceBenchmarkForm";
 import type { InsuranceBenchmark } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark";
@@ -25,7 +31,7 @@ export default function InsuranceBenchmarkForm({
   const form = useInsuranceBenchmarkForm({ existing, onSaved });
 
   return (
-    <form onSubmit={(e) => void form.handleSubmit(e)} className="space-y-4">
+    <form onSubmit={(e) => void form.handleSubmit(e)} noValidate className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label
@@ -44,8 +50,11 @@ export default function InsuranceBenchmarkForm({
             onChange={(e) => form.setPremium(e.target.value)}
             className={INSURANCE_POLICY_INPUT_CLASS}
             data-testid="insurance-benchmark-premium"
+            aria-invalid={form.problems.premium ? true : undefined}
+            aria-describedby={form.problems.premium ? "insurance-benchmark-premium-problem" : undefined}
             required
           />
+          <FieldProblem id="insurance-benchmark-premium-problem" message={form.problems.premium} />
           <p className="text-xs text-muted-foreground mt-1">
             The yearly cost, even if the quote was monthly.
           </p>
@@ -68,8 +77,11 @@ export default function InsuranceBenchmarkForm({
             onChange={(e) => form.setCoverage(e.target.value)}
             className={INSURANCE_POLICY_INPUT_CLASS}
             data-testid="insurance-benchmark-coverage"
+            aria-invalid={form.problems.coverage ? true : undefined}
+            aria-describedby={form.problems.coverage ? "insurance-benchmark-coverage-problem" : undefined}
             required
           />
+          <FieldProblem id="insurance-benchmark-coverage-problem" message={form.problems.coverage} />
           <p className="text-xs text-muted-foreground mt-1">
             What that premium buys — your policies are measured per $1,000 of it.
           </p>
@@ -86,13 +98,16 @@ export default function InsuranceBenchmarkForm({
         <input
           id="insurance-benchmark-region"
           type="text"
-          maxLength={120}
+          maxLength={INSURANCE_BENCHMARK_REGION_MAX_LENGTH}
           value={form.regionLabel}
           onChange={(e) => form.setRegionLabel(e.target.value)}
           placeholder="Harris County, TX"
           className={INSURANCE_POLICY_INPUT_CLASS}
           data-testid="insurance-benchmark-region"
+          aria-invalid={form.problems.regionLabel ? true : undefined}
+          aria-describedby={form.problems.regionLabel ? "insurance-benchmark-region-problem" : undefined}
         />
+        <FieldProblem id="insurance-benchmark-region-problem" message={form.problems.regionLabel} />
         <p className="text-xs text-muted-foreground mt-1">
           Premiums swing hard by county — coastal wind exposure alone can double
           them, so a figure with no area attached cannot be sanity-checked later.
@@ -109,13 +124,16 @@ export default function InsuranceBenchmarkForm({
         <input
           id="insurance-benchmark-source"
           type="text"
-          maxLength={255}
+          maxLength={BENCHMARK_SOURCE_MAX_LENGTH}
           value={form.source}
           onChange={(e) => form.setSource(e.target.value)}
           placeholder="TDI HelpInsure quote, HO-3, $2,500 deductible"
           className={INSURANCE_POLICY_INPUT_CLASS}
           data-testid="insurance-benchmark-source"
+          aria-invalid={form.problems.source ? true : undefined}
+          aria-describedby={form.problems.source ? "insurance-benchmark-source-problem" : undefined}
         />
+        <FieldProblem id="insurance-benchmark-source-problem" message={form.problems.source} />
         <p className="text-xs text-muted-foreground mt-1">
           Include the policy form and deductible — they are what makes the number
           checkable against your own.
@@ -137,8 +155,11 @@ export default function InsuranceBenchmarkForm({
           onChange={(e) => form.setObservedOn(e.target.value)}
           className={INSURANCE_POLICY_INPUT_CLASS}
           data-testid="insurance-benchmark-observed-on"
+          aria-invalid={form.problems.observedOn ? true : undefined}
+          aria-describedby={form.problems.observedOn ? "insurance-benchmark-observed-on-problem" : undefined}
           required
         />
+        <FieldProblem id="insurance-benchmark-observed-on-problem" message={form.problems.observedOn} />
       </div>
 
       <div>
@@ -154,8 +175,12 @@ export default function InsuranceBenchmarkForm({
           value={form.notes}
           onChange={(e) => form.setNotes(e.target.value)}
           className={`${INSURANCE_POLICY_INPUT_CLASS} resize-none`}
+          maxLength={BENCHMARK_NOTES_MAX_LENGTH}
           data-testid="insurance-benchmark-notes"
+          aria-invalid={form.problems.notes ? true : undefined}
+          aria-describedby={form.problems.notes ? "insurance-benchmark-notes-problem" : undefined}
         />
+        <FieldProblem id="insurance-benchmark-notes-problem" message={form.problems.notes} />
       </div>
 
       {/* Removal sits apart from save/cancel: without it a premium recorded

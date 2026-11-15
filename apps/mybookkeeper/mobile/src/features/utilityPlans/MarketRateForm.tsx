@@ -2,11 +2,13 @@ import type { MarketRateBenchmark } from "@mybookkeeper/api-client/types/utility
 import type { MarketRateFormValues } from "@mybookkeeper/api-client/types/utility/market-rate-form-values";
 import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
-import { isFlatService, isMarketRateFigureValid, marketRateToFormValues } from "@mybookkeeper/api-client/utils/marketRateForm";
+import { BENCHMARK_NOTES_MAX_LENGTH, BENCHMARK_SOURCE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/benchmarkForm";
+import { isFlatService, marketRateFormProblems, marketRateToFormValues } from "@mybookkeeper/api-client/utils/marketRateForm";
+import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
 
-import { MARKET_RATE_MESSAGES as MESSAGES, MARKET_RATE_SOURCE_MAX_LENGTH } from "../../constants/marketRates";
+import { MARKET_RATE_MESSAGES as MESSAGES } from "../../constants/marketRates";
 import { sameFormValues } from "../../lib/sameFormValues";
 import { askOnce } from "../../lib/askOnce";
 import OptionalDateField from "../shell/OptionalDateField";
@@ -28,14 +30,15 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
   const isBusy = isSaving || isRemoving;
   const locked = isBusy || isLeaving;
   const flat = isFlatService(serviceType);
-  const isFigureValid = isMarketRateFigureValid(values.figure);
+  const allProblems = marketRateFormProblems(serviceType, values, localToday());
+  const problems = hasTried ? allProblems : {};
   const set = (field: keyof MarketRateFormValues, value: string) => setValues((current) => ({ ...current, [field]: value }));
 
   useDiscardPrompt(!sameFormValues(values, saved) && !isLeaving, isBusy);
 
   function submit(): void {
     setHasTried(true);
-    if (!isFigureValid || values.observedOn === "") return;
+    if (Object.keys(allProblems).length > 0) return;
     void save(values);
   }
 
@@ -44,7 +47,7 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
       {failure ? <Banner message={failure} /> : null}
       <FormField
         editable={!locked}
-        error={hasTried && !isFigureValid ? MESSAGES.figureRequired : undefined}
+        error={problems.figure}
         hint={flat ? MESSAGES.figureFlatHint : MESSAGES.figureMeteredHint}
         keyboardType="decimal-pad"
         label={flat ? MESSAGES.figureFlat : MESSAGES.figureMetered}
@@ -56,12 +59,13 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
         editable={!locked}
         hint={MESSAGES.sourceHint}
         label={MESSAGES.source}
-        maxLength={MARKET_RATE_SOURCE_MAX_LENGTH}
+        error={problems.source}
+        maxLength={BENCHMARK_SOURCE_MAX_LENGTH}
         onChangeText={(text) => set("source", text)}
         value={values.source}
       />
-      <OptionalDateField disabled={locked} label={MESSAGES.observedOn} maximumDate={new Date()} onChange={(iso) => set("observedOn", iso ?? "")} required startsAt={new Date()} value={values.observedOn || null} />
-      <FormField editable={!locked} label={MESSAGES.notes} multiline onChangeText={(text) => set("notes", text)} value={values.notes} />
+      <OptionalDateField disabled={locked} error={problems.observedOn} label={MESSAGES.observedOn} maximumDate={new Date()} onChange={(iso) => set("observedOn", iso ?? "")} required startsAt={new Date()} value={values.observedOn || null} />
+      <FormField editable={!locked} error={problems.notes} label={MESSAGES.notes} maxLength={BENCHMARK_NOTES_MAX_LENGTH} multiline onChangeText={(text) => set("notes", text)} value={values.notes} />
       <LoadingButton disabled={locked} isLoading={isSaving} loadingText={MESSAGES.saving} onPress={submit}>
         {MESSAGES.save}
       </LoadingButton>

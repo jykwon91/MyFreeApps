@@ -9,7 +9,7 @@ import {
 import type { MarketRateBenchmark } from "@mybookkeeper/api-client/types/utility/market-rate-benchmark";
 import {
   isFlatService,
-  isMarketRateFigureValid,
+  marketRateFormProblems,
   marketRateToFormValues,
   toMarketRateUpsert,
 } from "@mybookkeeper/api-client/utils/marketRateForm";
@@ -45,14 +45,19 @@ export function useMarketRateBenchmarkForm({
   const [upsert, { isLoading: isSaving }] = useUpsertMarketRateBenchmarkMutation();
   const [remove, { isLoading: isRemoving }] = useDeleteMarketRateBenchmarkMutation();
 
-  const isFigureValid = isMarketRateFigureValid(figure);
+  const [hasTried, setHasTried] = useState(false);
+  const allProblems = marketRateFormProblems(serviceType, { figure, source, observedOn, notes }, localToday());
+  // Shown only once the operator has tried to save, so typing a rate isn't met with an error on the first digit.
+  const problems = hasTried ? allProblems : {};
   const isBusy = isSaving || isRemoving;
-  const canSubmit = isFigureValid && observedOn !== "" && !isBusy;
+  const canSubmit = figure.trim() !== "" && observedOn !== "" && !isBusy;
   const canRemove = existing !== undefined && !isBusy;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
+    setHasTried(true);
+    if (Object.keys(allProblems).length > 0) return;
     try {
       await upsert({
         serviceType,
@@ -61,10 +66,10 @@ export function useMarketRateBenchmarkForm({
       showSuccess("Market rate saved.");
       onSaved();
     } catch (err) {
-      // The backend says which rule the payload broke — "electricity is
-      // metered, provide rate_cents_per_kwh", "at most 4 decimal places". A
-      // generic "try again" would send the operator to retype a value that
-      // will be rejected identically.
+      // The form above already refuses everything the backend refuses, so a
+      // rejection here is unexpected. A plain-string reason from the server is
+      // still shown if there is one; a FastAPI validation list is not, and
+      // falls back to the generic message.
       showError(
         getApiErrorDetail(err, "Couldn't save the market rate. Please try again."),
       );
@@ -98,6 +103,7 @@ export function useMarketRateBenchmarkForm({
     isRemoving,
     canSubmit,
     canRemove,
+    problems,
     maxObservedOn: localToday(),
     handleSubmit,
     handleRemove,

@@ -206,8 +206,11 @@ describe("InsuranceBenchmarkDialog — both figures are required", () => {
 
     await user.type(screen.getByTestId("insurance-benchmark-premium"), "0");
     await user.type(screen.getByTestId("insurance-benchmark-coverage"), "400000");
+    await user.click(screen.getByTestId("insurance-benchmark-save-button"));
 
-    expect(screen.getByTestId("insurance-benchmark-save-button")).toBeDisabled();
+    // Saving stays possible so the field can say why it was refused.
+    expect(screen.getByTestId("insurance-benchmark-premium-problem")).toHaveTextContent(/above zero/);
+    expect(mockUpsert).not.toHaveBeenCalled();
   });
 });
 
@@ -273,5 +276,57 @@ describe("InsuranceBenchmarkDialog — removing a premium", () => {
     await user.click(screen.getByTestId("insurance-benchmark-remove-button"));
 
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("InsuranceBenchmarkDialog — rules the backend would refuse", () => {
+  async function fill(user: ReturnType<typeof userEvent.setup>, premium: string, coverage: string) {
+    await user.type(screen.getByTestId("insurance-benchmark-premium"), premium);
+    await user.type(screen.getByTestId("insurance-benchmark-coverage"), coverage);
+  }
+
+  it("says nothing before the first save attempt", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await fill(user, "20000000", "400000");
+
+    expect(screen.queryByTestId("insurance-benchmark-premium-problem")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["a premium over $10,000,000", "10000001", "400000", "insurance-benchmark-premium-problem", /looks like a typo/],
+    ["coverage over $1,000,000,000", "1344", "1000000001", "insurance-benchmark-coverage-problem", /looks like a typo/],
+    ["a fraction of a cent", "1344.555", "400000", "insurance-benchmark-premium-problem", /dollars and cents/],
+  ])("points at the field and sends nothing for %s", async (_name, premium, coverage, problemId, message) => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await fill(user, premium, coverage);
+    await user.click(screen.getByTestId("insurance-benchmark-save-button"));
+
+    expect(screen.getByTestId(problemId)).toHaveTextContent(message);
+    expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
+  it("stops the text fields at the backend's limits", () => {
+    renderDialog();
+
+    expect(screen.getByTestId("insurance-benchmark-region")).toHaveAttribute("maxlength", "120");
+    expect(screen.getByTestId("insurance-benchmark-source")).toHaveAttribute("maxlength", "255");
+    expect(screen.getByTestId("insurance-benchmark-notes")).toHaveAttribute("maxlength", "5000");
+  });
+
+  it("falls back to the generic message for a FastAPI validation list", async () => {
+    mockUpsert.mockReturnValue({
+      unwrap: () => Promise.reject({ status: 422, data: { detail: [{ loc: ["body", "notes"], msg: "too long" }] } }),
+    });
+    const user = userEvent.setup();
+    renderDialog();
+
+    await fill(user, "1344", "400000");
+    await user.click(screen.getByTestId("insurance-benchmark-save-button"));
+
+    expect(showError).toHaveBeenCalledWith("Couldn't save the market premium. Please try again.");
   });
 });

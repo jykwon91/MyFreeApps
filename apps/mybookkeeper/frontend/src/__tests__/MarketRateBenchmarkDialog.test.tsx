@@ -8,7 +8,7 @@
  * *that* type's saved benchmark rather than carrying the previous one across.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { showError } from "@platform/ui";
@@ -238,5 +238,73 @@ describe("MarketRateBenchmarkDialog — removing a rate", () => {
     await user.click(screen.getByTestId("benchmark-remove-button"));
 
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("MarketRateBenchmarkDialog — rules the backend would refuse", () => {
+  it("says nothing before the first save attempt", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(screen.getByTestId("benchmark-figure"), "1500");
+
+    expect(screen.queryByTestId("benchmark-figure-problem")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["a rate past 999.9999", "1000", /999\.9999/],
+    ["more than four decimal places", "11.12345", /4 decimal places/],
+  ])("points at the figure and sends nothing for %s", async (_name, figure, message) => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(screen.getByTestId("benchmark-figure"), figure);
+    await user.click(screen.getByTestId("utility-plan-save-button"));
+
+    expect(screen.getByTestId("benchmark-figure-problem")).toHaveTextContent(message);
+    expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
+  it("does not hold a monthly internet price to the per-kWh ceiling", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.selectOptions(screen.getByTestId("benchmark-service-type"), "internet");
+    await user.type(screen.getByTestId("benchmark-figure"), "1500.00");
+    await user.click(screen.getByTestId("utility-plan-save-button"));
+
+    expect(mockUpsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a future observation date", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(screen.getByTestId("benchmark-figure"), "10.8");
+    fireEvent.change(screen.getByTestId("benchmark-observed-on"), { target: { value: "2999-01-01" } });
+    await user.click(screen.getByTestId("utility-plan-save-button"));
+
+    expect(screen.getByTestId("benchmark-observed-on-problem")).toHaveTextContent("future");
+    expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
+  it("stops the text fields at the backend's limits", () => {
+    renderDialog();
+
+    expect(screen.getByTestId("benchmark-source")).toHaveAttribute("maxlength", "255");
+    expect(screen.getByTestId("benchmark-notes")).toHaveAttribute("maxlength", "5000");
+  });
+
+  it("falls back to the generic message for a FastAPI validation list", async () => {
+    mockUpsert.mockReturnValue({
+      unwrap: () => Promise.reject({ status: 422, data: { detail: [{ loc: ["body", "notes"], msg: "too long" }] } }),
+    });
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(screen.getByTestId("benchmark-figure"), "10.8");
+    await user.click(screen.getByTestId("utility-plan-save-button"));
+
+    expect(showError).toHaveBeenCalledWith("Couldn't save the market rate. Please try again.");
   });
 });

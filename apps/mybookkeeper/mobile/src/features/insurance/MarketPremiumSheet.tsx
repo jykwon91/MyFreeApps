@@ -1,7 +1,8 @@
 import { useUpsertInsuranceBenchmarkMutation } from "@mybookkeeper/api-client/store/insuranceBenchmarksApi";
 import type { InsuranceBenchmark } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark";
 import type { InsuranceBenchmarkFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark-form-values";
-import { benchmarkFormPayload, benchmarkToFormValues } from "@mybookkeeper/api-client/utils/insuranceBenchmarkForm";
+import { BENCHMARK_NOTES_MAX_LENGTH, BENCHMARK_SOURCE_MAX_LENGTH, INSURANCE_BENCHMARK_REGION_MAX_LENGTH } from "@mybookkeeper/api-client/constants/benchmarkForm";
+import { benchmarkFormPayload, benchmarkFormProblems, benchmarkToFormValues } from "@mybookkeeper/api-client/utils/insuranceBenchmarkForm";
 import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Alert, Modal, Text, View } from "react-native";
@@ -26,7 +27,8 @@ export default function MarketPremiumSheet({ existing, onClose }: MarketPremiumS
   const [initial] = useState(() => benchmarkToFormValues(existing, todayIso));
   const [values, setValues] = useState<InsuranceBenchmarkFormValues>(initial);
   const [showError, setShowError] = useState(false);
-  const payload = benchmarkFormPayload(values);
+  const payload = benchmarkFormPayload(values, todayIso);
+  const problems = showError ? benchmarkFormProblems(values, todayIso) : {};
   const isDirty = JSON.stringify(values) !== JSON.stringify(initial);
 
   function change(next: Partial<InsuranceBenchmarkFormValues>): void {
@@ -62,13 +64,12 @@ export default function MarketPremiumSheet({ existing, onClose }: MarketPremiumS
             {existing ? MARKET_MESSAGES.update : MARKET_MESSAGES.record}
           </Text>
           {failure ? <Banner message={failure} /> : null}
-          {showError && !payload ? <Banner message={MARKET_MESSAGES.amountsRequired} /> : null}
-          <FormField keyboardType="decimal-pad" label={MARKET_MESSAGES.premium} onChangeText={(premium) => change({ premium })} required value={values.premium} />
-          <FormField hint={MARKET_MESSAGES.coverageHint} keyboardType="decimal-pad" label={MARKET_MESSAGES.coverage} onChangeText={(coverage) => change({ coverage })} required value={values.coverage} />
-          <FormField label={MARKET_MESSAGES.region} onChangeText={(regionLabel) => change({ regionLabel })} placeholder={MARKET_MESSAGES.regionPlaceholder} value={values.regionLabel} />
-          <FormField label={MARKET_MESSAGES.source} onChangeText={(source) => change({ source })} placeholder={MARKET_MESSAGES.sourcePlaceholder} value={values.source} />
-          <OptionalDateField label={MARKET_MESSAGES.observedOn} maximumDate={new Date()} onChange={(iso) => change({ observedOn: iso ?? todayIso })} required startsAt={dateFromIso(values.observedOn)} value={values.observedOn} />
-          <FormField label={MARKET_MESSAGES.notes} multiline onChangeText={(notes) => change({ notes })} value={values.notes} />
+          <FormField error={problems.premium} keyboardType="decimal-pad" label={MARKET_MESSAGES.premium} onChangeText={(premium) => change({ premium })} required value={values.premium} />
+          <FormField error={problems.coverage} hint={MARKET_MESSAGES.coverageHint} keyboardType="decimal-pad" label={MARKET_MESSAGES.coverage} onChangeText={(coverage) => change({ coverage })} required value={values.coverage} />
+          <FormField error={problems.regionLabel} label={MARKET_MESSAGES.region} maxLength={INSURANCE_BENCHMARK_REGION_MAX_LENGTH} onChangeText={(regionLabel) => change({ regionLabel })} placeholder={MARKET_MESSAGES.regionPlaceholder} value={values.regionLabel} />
+          <FormField error={problems.source} label={MARKET_MESSAGES.source} maxLength={BENCHMARK_SOURCE_MAX_LENGTH} onChangeText={(source) => change({ source })} placeholder={MARKET_MESSAGES.sourcePlaceholder} value={values.source} />
+          <OptionalDateField error={problems.observedOn} label={MARKET_MESSAGES.observedOn} maximumDate={new Date()} onChange={(iso) => change({ observedOn: iso ?? todayIso })} required startsAt={dateFromIso(values.observedOn)} value={values.observedOn} />
+          <FormField error={problems.notes} label={MARKET_MESSAGES.notes} maxLength={BENCHMARK_NOTES_MAX_LENGTH} multiline onChangeText={(notes) => change({ notes })} value={values.notes} />
           <LoadingButton disabled={isBusy} isLoading={isBusy} loadingText={MARKET_MESSAGES.saving} onPress={() => void save()}>
             {MARKET_MESSAGES.save}
           </LoadingButton>
