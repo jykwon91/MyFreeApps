@@ -153,13 +153,17 @@ test("search, class filter and sort live in the URL and survive Back", async ({ 
   await expect(page).toHaveURL(/\/wow-forever\/topdeadcenter\?tab=roster$/);
 });
 
-test("profession filter: only members who have it, their professions with skill and rank shown, kept in the URL across Back, on a phone too", async ({ page }) => {
+test("profession chips: one tap shows only members who have it, sorted by skill, their professions with skill and rank shown, kept in the URL across Back, on a phone too", async ({ page }) => {
   await stubAll(page);
   await page.goto("/wow-forever/topdeadcenter?tab=roster");
 
-  await expect(page.getByLabel("Profession").locator("option")).toHaveText(["Any profession", "Tailoring (1)"]);
-  await page.getByLabel("Profession").selectOption("tailoring");
-  await expect(page).toHaveURL(/prof=tailoring/);
+  const chips = page.getByRole("group", { name: "Profession" }).getByRole("button");
+  await expect(chips).toHaveText(["All 3", "Tailoring 1"]);
+  await expect(chips.getByTestId(/^game-icon/)).toHaveCount(1);
+  for (const chip of await chips.all()) expect((await chip.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await chips.filter({ hasText: "Tailoring" }).click();
+  await expect(page).toHaveURL(/prof=tailoring&sort=skill/);
+  await expect(page.getByLabel("Sort by")).toHaveValue("skill");
   await expect(memberNames(page)).toHaveText(["Jason Kwon"]);
   await expect(page.getByRole("columnheader", { name: "Professions" })).toBeVisible();
   const professions = page.getByRole("table").getByTestId("guild-member-professions").first();
@@ -181,9 +185,9 @@ test("profession filter: only members who have it, their professions with skill 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 
-  await page.getByLabel("Profession").selectOption("");
+  await chips.filter({ hasText: "Tailoring" }).click();
   await expect(cards).toHaveCount(3);
-  await expect(page).not.toHaveURL(/prof=/);
+  await expect(page).not.toHaveURL(/prof=|sort=/);
 });
 
 test("before we have the guild, the page says how to get it collected", async ({ page }) => {
@@ -755,10 +759,13 @@ test("picking a tab keeps it in the URL and the skeleton sketches the open tab",
   await page.goto("/wow-forever/topdeadcenter?tab=roster");
   await expect(page.getByTestId("guild-tabs-skeleton")).toBeVisible();
   await expect(page.getByTestId("guild-roster-skeleton")).toBeVisible();
+  // The profession chips' row, as the loaded tab has it above the toolbar.
+  await expect(page.getByTestId("guild-roster-skeleton-chips")).toBeVisible();
   await expect(page.getByTestId("guild-heroes-skeleton")).toHaveCount(0);
   release();
   await expect(page.getByTestId("guild-page-skeleton")).toHaveCount(0);
   await expect(memberNames(page)).toHaveCount(3);
+  await expect(page.getByTestId("guild-profession-chips")).toBeVisible();
 });
 
 test("recipe search: the recipe has icons and a hover tooltip, and opens in full on the Recipes page", async ({ page }) => {

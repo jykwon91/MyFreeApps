@@ -36,9 +36,13 @@ export default function GuildMemberTable({ members, rosterUpdatedAt, titles, pro
             <GuildSortHeader column={GUILD_SORT_KEYS.className} {...header} className="px-3" />
             <GuildSortHeader column={GUILD_SORT_KEYS.itemLevel} {...header} className="px-3 text-right" />
             <GuildSortHeader column={GUILD_SORT_KEYS.rank} {...header} className="px-3" />
-            <th scope="col" className="px-3 font-medium">
-              Professions
-            </th>
+            {profession ? (
+              <GuildSortHeader column={GUILD_SORT_KEYS.skill} {...header} label="Professions" className="px-3" />
+            ) : (
+              <th scope="col" className="px-3 font-medium">
+                Professions
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>

@@ -1178,10 +1178,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `RecipeProfession` + spell (null = name only) and it renders the same link + tooltip once the shared
   `useRecipeLookup` store has the book (one load per page), plain text otherwise. Use it for any new
   recipe name; skip smelting (Mining) and recipe items, which the Recipes page doesn't list.
-  Roster toolbar (`GuildMemberToolbar`): Name, Class, Level, Profession, Sort, all in the URL
-  (`GUILD_PARAMS`; profession = `?prof=<GuideProfession id>`, e.g. `tailoring`). The Profession
-  select lists only professions someone has, with counts, in the Professions picker's order
-  (`lib/guild/guildMemberProfessions.ts`); a link naming one nobody has shows everyone. Every
+  Roster toolbar (`GuildMemberToolbar`): Name, Class, Level, Sort, all in the URL (`GUILD_PARAMS`).
+  Profession is a row of one-tap chips above it (`GuildProfessionChips`: All + each profession
+  someone has, icon + count, in the Professions picker's order; `?prof=<GuideProfession id>`;
+  tapping the picked chip = All; one sideways-scrolling row on a phone) — the dropdown is gone.
+  `withProfession` switches the default (rank) sort to `skill` = the filtered profession's skill,
+  highest first (ties: level, then rank); a sort the viewer chose stays; All from `skill` = rank. `skill` with no profession
+  becomes Level (`withoutOrphanSkillSort`, in the URL parser and after dropping an unknown
+  profession); the Sort select offers it and the Professions header sorts by it only while a
+  profession is picked. A link naming a profession nobody has shows everyone. Every
   row (table column and phone card) lists the member's professions (`GuildMemberProfessions`):
   icon, skill "148 / 225" and rank by cap (`PROFESSION_RANK_BY_CAP`: 75 Apprentice … 300 Artisan);
   the filtered profession goes first. Chips are spans, not `<li>`, so a card stays one `li`. Best-by-skill ranking stays on the Arena's profession boards.

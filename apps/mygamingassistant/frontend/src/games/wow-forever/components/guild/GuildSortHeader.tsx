@@ -7,10 +7,12 @@ interface GuildSortHeaderProps {
   descending: boolean;
   onSort: (column: GuildSortKey) => void;
   className?: string;
+  /** The header's text; defaults to the column's sort label. */
+  label?: string;
 }
 
 /** A member-table column header that sorts by its column; again reverses. */
-export default function GuildSortHeader({ column, sort, descending, onSort, className }: GuildSortHeaderProps) {
+export default function GuildSortHeader({ column, sort, descending, onSort, className, label }: GuildSortHeaderProps) {
   const active = column === sort;
   let ariaSort: "ascending" | "descending" | "none" = "none";
   if (active) ariaSort = descending ? "descending" : "ascending";
@@ -21,7 +23,7 @@ export default function GuildSortHeader({ column, sort, descending, onSort, clas
         onClick={() => onSort(column)}
         className="inline-flex min-h-[44px] items-center gap-1 rounded font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {GUILD_SORT_LABELS[column]}
+        {label ?? GUILD_SORT_LABELS[column]}
         {active && descending ? <ArrowDown className="h-3 w-3" aria-hidden /> : null}
         {active && !descending ? <ArrowUp className="h-3 w-3" aria-hidden /> : null}
       </button>

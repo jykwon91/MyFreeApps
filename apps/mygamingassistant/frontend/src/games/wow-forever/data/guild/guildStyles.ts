@@ -1,6 +1,11 @@
 /** Shared classes of the guild page's controls. */
 export const GUILD_CONTROL =
   "w-full min-h-[44px] rounded-md border bg-background px-3 py-2 text-base sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+/** A roster profession chip (44px tall; doesn't shrink in the phone's sideways row). */
+export const GUILD_PROFESSION_CHIP =
+  "inline-flex min-h-[44px] shrink-0 snap-start items-center gap-1.5 rounded-full border bg-card px-3 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+/** The picked chip: a ring and tint, and aria-pressed says it too. */
+export const GUILD_PROFESSION_CHIP_ON = "border-primary bg-primary/10 ring-1 ring-primary";
 /** A number cell of the member table. */
 export const GUILD_NUMBER_CELL = "px-3 py-1 text-right tabular-nums";
 /** A leaderboard row (full width under the podium's three columns). */

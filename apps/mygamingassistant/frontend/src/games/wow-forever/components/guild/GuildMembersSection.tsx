@@ -1,10 +1,12 @@
 import { useCallback, useMemo } from "react";
 import GuildMemberList from "@/games/wow-forever/components/guild/GuildMemberList";
+import GuildProfessionChips from "@/games/wow-forever/components/guild/GuildProfessionChips";
 import GuildMemberToolbar from "@/games/wow-forever/components/guild/GuildMemberToolbar";
 import { GUILD_SORT_DESCENDING_FIRST, type GuildSortKey } from "@/games/wow-forever/data/guild/guildConfig";
+import type { GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
 import { useGuildMemberFilters } from "@/games/wow-forever/hooks/useGuildMemberFilters";
 import { professionCounts } from "@/games/wow-forever/lib/guild/guildMemberProfessions";
-import { classCounts, filterMembers, filtersFromParams, sortMembers } from "@/games/wow-forever/lib/guild/guildMembers";
+import { classCounts, filterMembers, filtersFromParams, sortMembers, withProfession, withoutOrphanSkillSort } from "@/games/wow-forever/lib/guild/guildMembers";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
 import type { GuildTitle } from "@/games/wow-forever/types/guild/guildTitle";
 
@@ -24,10 +26,10 @@ export default function GuildMembersSection({ members, rosterUpdatedAt, titles }
   const filters = useMemo(() => {
     const className = classes.some(([name]) => name === urlFilters.className) ? urlFilters.className : "";
     const profession = professions.some((p) => p.id === urlFilters.profession) ? urlFilters.profession : "";
-    return { ...urlFilters, className, profession };
+    return withoutOrphanSkillSort({ ...urlFilters, className, profession });
   }, [classes, professions, urlFilters]);
   const shown = useMemo(
-    () => sortMembers(filterMembers(members, filters), filters.sort, filters.descending),
+    () => sortMembers(filterMembers(members, filters), filters),
     [members, filters],
   );
 
@@ -38,11 +40,21 @@ export default function GuildMembersSection({ members, rosterUpdatedAt, titles }
     },
     [filters, setFilters],
   );
+  const onProfession = useCallback(
+    (profession: GuideProfession | "") => setFilters(withProfession(filters, profession)),
+    [filters, setFilters],
+  );
   const onClearFilters = useCallback(() => setFilters(filtersFromParams(new URLSearchParams())), [setFilters]);
 
   return (
     <>
-      <GuildMemberToolbar filters={filters} classes={classes} professions={professions} onChange={setFilters} />
+      <GuildProfessionChips
+        professions={professions}
+        value={filters.profession}
+        onChange={onProfession}
+        total={members.length}
+      />
+      <GuildMemberToolbar filters={filters} classes={classes} onChange={setFilters} />
       <GuildMemberList
         members={shown}
         total={members.length}
