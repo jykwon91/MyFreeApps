@@ -81,6 +81,7 @@ export default function ScreeningProviderGrid({ applicantId, openWindow }: Scree
               key={provider.name}
               provider={provider}
               isLoading={loadingProvider === provider.name}
+              disabled={loadingProvider !== null}
               onSelect={handleSelectProvider}
             />
           ))}

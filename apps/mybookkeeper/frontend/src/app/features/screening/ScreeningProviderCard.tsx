@@ -5,6 +5,8 @@ import type { ScreeningProviderInfo } from "@mybookkeeper/api-client/types/appli
 export interface ScreeningProviderCardProps {
   provider: ScreeningProviderInfo;
   isLoading: boolean;
+  /** True while any provider's redirect is opening, so no second card can start one. */
+  disabled: boolean;
   onSelect: (providerName: string) => void;
 }
 
@@ -14,10 +16,11 @@ export interface ScreeningProviderCardProps {
  * Shows: name, description, cost, turnaround time, and a "Start screening"
  * CTA. The CTA triggers the redirect flow for this specific provider.
  *
- * ``isLoading`` disables all cards while any redirect fetch is in flight —
- * prevents double-clicks across different cards.
+ * ``isLoading`` marks the card whose redirect is opening; ``disabled`` is set
+ * on every card meanwhile, so a second click on another card can't open a
+ * second dashboard.
  */
-export default function ScreeningProviderCard({ provider, isLoading, onSelect }: ScreeningProviderCardProps) {
+export default function ScreeningProviderCard({ provider, isLoading, disabled, onSelect }: ScreeningProviderCardProps) {
   return (
     <div
       data-testid={`screening-provider-card-${provider.name}`}
@@ -61,7 +64,7 @@ export default function ScreeningProviderCard({ provider, isLoading, onSelect }:
           isLoading={isLoading}
           loadingText="Opening..."
           onClick={() => onSelect(provider.name)}
-          disabled={isLoading}
+          disabled={disabled}
         >
           Start screening
         </LoadingButton>
