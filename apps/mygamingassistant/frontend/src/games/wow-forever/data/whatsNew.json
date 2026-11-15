@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-15",
+    "title": "Recipe tooltips everywhere",
+    "summary": "Recipe names across WoW Forever now work like the guild page: on the Professions guides, the Auction House recipe prices and a character's known recipes, hover a recipe to see what it makes, the skill and its materials, and click it to open the full recipe on the Recipes page. Known recipes on the character page now show their icons too.",
+    "to": "/wow-forever/professions?p=tailoring"
+  },
+  {
+    "date": "2026-11-15",
     "title": "Professions on the guild roster",
     "summary": "The Roster tab now lists every member's professions with their icon, skill and rank (Apprentice, Journeyman, Expert or Artisan), on phones too. Filter by a profession and it's listed first.",
     "to": "/wow-forever/topdeadcenter?tab=roster"

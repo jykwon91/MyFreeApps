@@ -7,7 +7,7 @@ import type { CraftPlace } from "@/games/wow-forever/components/crafting/CraftLe
 import { CRAFT_ROW_GRID, type RowState } from "@/games/wow-forever/components/crafting/craftRowStyles";
 import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
 import type { CraftingRank } from "@/games/wow-forever/data/professions/crafting/craftingTrainers";
-import type { ResolvedRouteEntry, TrainerSkills } from "@/games/wow-forever/types/crafting";
+import type { CraftingProfession, ResolvedRouteEntry, TrainerSkills } from "@/games/wow-forever/types/crafting";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import { CLASSIC_ROUTE_TAG } from "@/games/wow-forever/data/provenance/provenanceTags";
@@ -19,6 +19,8 @@ interface CraftRouteListProps {
   current: number | null;
   trainerSkills: TrainerSkills;
   faction: PlayerFaction;
+  /** Links each recipe name to its full recipe. */
+  profession: CraftingProfession;
   professionLabel: string;
   place: CraftPlace;
   /** Where the route forks into specializations: the decision row, before the first row past that skill. */
@@ -43,6 +45,7 @@ export default function CraftRouteList({
   current,
   trainerSkills,
   faction,
+  profession,
   professionLabel,
   place,
   fork,
@@ -72,6 +75,7 @@ export default function CraftRouteList({
           recipes={entry.recipes}
           trainerSkills={trainerSkills}
           state={state}
+          profession={profession}
           professionLabel={professionLabel}
           place={place}
           specNames={specNames}
@@ -89,6 +93,7 @@ export default function CraftRouteList({
         showChip
         makesTool={entry.recipe.creates !== undefined && tools.has(entry.recipe.creates.id)}
         showEffect={showEffects}
+        profession={profession}
         professionLabel={professionLabel}
         place={place}
         priceBook={priceBook}

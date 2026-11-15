@@ -1,22 +1,25 @@
 import CraftColorsLine from "@/games/wow-forever/components/crafting/CraftColorsLine";
 import CraftLearnLine, { type CraftPlace } from "@/games/wow-forever/components/crafting/CraftLearnLine";
+import RecipeRef from "@/games/wow-forever/components/recipes/RecipeRef";
 import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import CraftReagents from "@/games/wow-forever/components/crafting/CraftReagents";
 import SourceUnknownChip from "@/games/wow-forever/components/crafting/SourceUnknownChip";
 import { learnAt, sourceUnknown } from "@/games/wow-forever/crafting/craftRoute";
 import { recipeIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { transmutes } from "@/games/wow-forever/crafting/transmutes";
-import type { CraftRecipe, TrainerSkills } from "@/games/wow-forever/types/crafting";
+import type { CraftingProfession, CraftRecipe, TrainerSkills } from "@/games/wow-forever/types/crafting";
 
 interface CraftTransmuteListProps {
   recipes: readonly CraftRecipe[];
   trainerSkills: TrainerSkills;
+  /** Links each recipe name to its full recipe. */
+  profession: CraftingProfession;
   professionLabel: string;
   place: CraftPlace;
 }
 
 /** Alchemy's Transmute recipes: not on the route, listed so you know which exist and how to learn them. */
-export default function CraftTransmuteList({ recipes, trainerSkills, professionLabel, place }: CraftTransmuteListProps) {
+export default function CraftTransmuteList({ recipes, trainerSkills, profession, professionLabel, place }: CraftTransmuteListProps) {
   const list = transmutes(recipes);
   if (!list.length) return null;
   return (
@@ -29,8 +32,10 @@ export default function CraftTransmuteList({ recipes, trainerSkills, professionL
         {list.map((recipe) => (
           <li key={recipe.spell} className="rounded-lg border bg-card p-3 space-y-1.5">
             <p className="flex flex-wrap items-center gap-2">
-              <GameIcon icon={recipeIcon(recipe)} size={24} alt="" />
-              <span className="font-medium">{recipe.name}</span>
+              <RecipeRef profession={profession} spell={recipe.spell} name={recipe.name} className="inline-flex items-center gap-2 font-medium">
+                <GameIcon icon={recipeIcon(recipe)} size={24} alt="" />
+                {recipe.name}
+              </RecipeRef>
               {sourceUnknown(recipe) ? <SourceUnknownChip /> : null}
             </p>
             <CraftColorsLine recipe={recipe} />

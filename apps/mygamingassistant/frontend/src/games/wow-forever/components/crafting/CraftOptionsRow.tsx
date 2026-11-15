@@ -6,12 +6,13 @@ import CraftLearnLine, { type CraftPlace } from "@/games/wow-forever/components/
 import CraftReagents from "@/games/wow-forever/components/crafting/CraftReagents";
 import CraftSpecChip from "@/games/wow-forever/components/crafting/CraftSpecChip";
 import SourceUnknownChip from "@/games/wow-forever/components/crafting/SourceUnknownChip";
+import RecipeRef from "@/games/wow-forever/components/recipes/RecipeRef";
 import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
 import { recipeIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { rowStateClass, type RowState } from "@/games/wow-forever/components/crafting/craftRowStyles";
 import { learnAt, sourceUnknown } from "@/games/wow-forever/crafting/craftRoute";
 import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
-import type { CraftRecipe, CraftRouteOptions, TrainerSkills } from "@/games/wow-forever/types/crafting";
+import type { CraftingProfession, CraftRecipe, CraftRouteOptions, TrainerSkills } from "@/games/wow-forever/types/crafting";
 import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 interface CraftOptionsRowProps {
@@ -19,6 +20,8 @@ interface CraftOptionsRowProps {
   recipes: readonly CraftRecipe[];
   trainerSkills: TrainerSkills;
   state: RowState;
+  /** Links each recipe name to its full recipe. */
+  profession: CraftingProfession;
   professionLabel: string;
   place: CraftPlace;
   /** Specialization spell -> its name, for the chip on an option only one can learn. */
@@ -34,6 +37,7 @@ export default function CraftOptionsRow({
   recipes,
   trainerSkills,
   state,
+  profession,
   professionLabel,
   place,
   specNames,
@@ -63,10 +67,10 @@ export default function CraftOptionsRow({
         {recipes.map((recipe, i) => (
           <li key={recipe.spell} className="rounded-lg border bg-card p-3 space-y-1.5">
             <p className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 font-medium">
+              <RecipeRef profession={profession} spell={recipe.spell} name={recipe.name} className="inline-flex items-center gap-2 font-medium">
                 <GameIcon icon={recipeIcon(recipe)} size={24} alt="" />
                 {recipe.name}
-              </span>
+              </RecipeRef>
               {sourceUnknown(recipe) ? <SourceUnknownChip /> : null}
               {recipe.spec !== undefined ? <CraftSpecChip name={specNames.get(recipe.spec) ?? "Specialization"} /> : null}
             </p>

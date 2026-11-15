@@ -1,13 +1,11 @@
-import { useMemo } from "react";
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import CharacterRowSkeletons from "@/games/wow-forever/components/character/CharacterRowSkeletons";
 import GuildRecipeCard from "@/games/wow-forever/components/guild/GuildRecipeCard";
 import { useSearchGuildRecipesQuery } from "@/games/wow-forever/api/wowGuildApi";
 import { RECIPE_SEARCH_PROBLEM, RECIPE_SKELETON_ROWS } from "@/games/wow-forever/data/guild/recipeSearchConfig";
 import { recipeSearchStatus } from "@/games/wow-forever/lib/guild/guildRecipes";
-import { guildRecipeEntry, recipeEntryLookup } from "@/games/wow-forever/lib/guild/guildRecipeEntries";
-import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
-import { useRecipeBook } from "@/games/wow-forever/hooks/useRecipeBook";
+import { guildRecipeEntry } from "@/games/wow-forever/lib/guild/guildRecipeEntries";
+import { useRecipeLookup } from "@/games/wow-forever/hooks/useRecipeLookup";
 
 interface GuildRecipeResultsProps {
   slug: string;
@@ -18,10 +16,8 @@ interface GuildRecipeResultsProps {
 /** The guild's known recipes matching the search, each with who knows it. */
 export default function GuildRecipeResults({ slug, query }: GuildRecipeResultsProps) {
   const { currentData, isFetching, isError, refetch } = useSearchGuildRecipesQuery({ slug, query });
-  // Icons and item links come from the Recipes page's data; until it loads (or if it fails) the names stay plain.
-  const book = useRecipeBook();
-  const entries = book.status === LOAD_STATUS.ready ? book.entries : null;
-  const lookup = useMemo(() => (entries ? recipeEntryLookup(entries) : null), [entries]);
+  // Icons and recipe links come from the Recipes page's data; until it loads (or if it fails) the names stay plain.
+  const lookup = useRecipeLookup();
 
   if (isFetching && !currentData) {
     return (

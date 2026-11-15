@@ -7,6 +7,7 @@ import {
   guideProfession,
   professionGuideHref,
 } from "@/games/wow-forever/lib/character/characterProfessions";
+import { recipeProfession } from "@/games/wow-forever/lib/recipes/recipeProfession";
 import type { CharacterProfession } from "@/games/wow-forever/types/character/characterProfession";
 
 /** An open profession card: a link to our guide, then the recipes the character knows. */
@@ -24,7 +25,7 @@ export default function CharacterProfessionRecipes({ profession }: { profession:
         </Link>
       )}
       {crafting && <CharacterCraftingRecipes profession={profession} crafting={crafting} />}
-      {!crafting && <CharacterRecipeGroups groups={groupKnownRecipes(profession.recipes, profession.skill, null)} />}
+      {!crafting && <CharacterRecipeGroups groups={groupKnownRecipes(profession.recipes, profession.skill, null)} profession={recipeProfession(guide)} />}
     </div>
   );
 }

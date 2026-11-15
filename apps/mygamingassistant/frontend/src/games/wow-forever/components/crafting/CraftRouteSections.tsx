@@ -112,6 +112,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
           current={current}
           trainerSkills={data.trainerSkills}
           faction={faction}
+          profession={profession}
           professionLabel={guide.label}
           place={place}
           fork={
@@ -127,7 +128,7 @@ export default function CraftRouteSections({ profession, faction, zoneId, level,
           priceBook={priced.priceBook}
         />
         {features.transmutes ? (
-          <CraftTransmuteList recipes={data.file.recipes} trainerSkills={data.trainerSkills} professionLabel={guide.label} place={place} />
+          <CraftTransmuteList recipes={data.file.recipes} trainerSkills={data.trainerSkills} profession={profession} professionLabel={guide.label} place={place} />
         ) : null}
       </GuideSection>
       <RecipeVendorsSection recipes={vendorRecipes} place={vendors} />

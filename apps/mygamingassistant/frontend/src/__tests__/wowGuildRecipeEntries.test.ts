@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { guildRecipeEntry, recipeEntryLookup } from "@/games/wow-forever/lib/guild/guildRecipeEntries";
+import { guildRecipeEntry } from "@/games/wow-forever/lib/guild/guildRecipeEntries";
+import { findRecipeEntry, recipeEntryLookup } from "@/games/wow-forever/lib/recipes/recipeEntryLookup";
+import { recipeProfession } from "@/games/wow-forever/lib/recipes/recipeProfession";
 import { exactRecipeMatch } from "@/games/wow-forever/lib/recipes/exactRecipeMatch";
 import { OPEN_RECIPE_STATE } from "@/games/wow-forever/data/recipes/recipesConfig";
 import { wantsOpenRecipe } from "@/games/wow-forever/lib/recipes/openRecipeState";
@@ -45,6 +47,21 @@ describe("a guild recipe's own data", () => {
     expect(recipeHref(BRACER)).toBe(
       "/wow-forever/recipes?q=Enchant+Bracer+-+Inferior+Stamina&p=enchanting",
     );
+  });
+});
+
+describe("finding any recipe name's data", () => {
+  it("finds by spell, else by name in the profession, never across professions", () => {
+    expect(findRecipeEntry(LOOKUP, "tailoring", 2963, "whatever")).toBe(LINEN);
+    expect(findRecipeEntry(LOOKUP, "tailoring", null, "bolt of linen cloth")).toBe(LINEN);
+    expect(findRecipeEntry(LOOKUP, "enchanting", 2963, "Bolt of Linen Cloth")).toBeNull();
+  });
+
+  it("only the Recipes page's professions have recipes to link", () => {
+    expect(recipeProfession("tailoring")).toBe("tailoring");
+    expect(recipeProfession("cooking")).toBe("cooking");
+    expect(recipeProfession("mining")).toBeNull();
+    expect(recipeProfession(null)).toBeNull();
   });
 });
 

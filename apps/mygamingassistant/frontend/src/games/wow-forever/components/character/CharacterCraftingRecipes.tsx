@@ -26,5 +26,5 @@ export default function CharacterCraftingRecipes({ profession, crafting }: Chara
   if (state.status === "error") {
     return <LoadErrorRetry message={`Couldn't load the ${profession.name} recipes.`} onRetry={state.retry} retrying={false} />;
   }
-  return <CharacterRecipeGroups groups={groupKnownRecipes(profession.recipes, profession.skill, state.data.recipes)} />;
+  return <CharacterRecipeGroups groups={groupKnownRecipes(profession.recipes, profession.skill, state.data.recipes)} profession={crafting} />;
 }

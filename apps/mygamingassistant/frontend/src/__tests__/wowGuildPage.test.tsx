@@ -34,6 +34,7 @@ import WowLegacyGuildRedirect from "@/games/wow-forever/pages/WowLegacyGuildRedi
 import type { RecipeEntry } from "@/games/wow-forever/types/recipes/recipeEntry";
 import type { GuildCrafter } from "@/games/wow-forever/types/guild/guildCrafter";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
+import { recipeEntryLookup } from "@/games/wow-forever/lib/recipes/recipeEntryLookup";
 import { memberProfessions, professionCounts } from "@/games/wow-forever/lib/guild/guildMemberProfessions";
 import type { GuildMemberFilters } from "@/games/wow-forever/types/guild/guildMemberFilters";
 import type { GuildMemberBaseline } from "@/games/wow-forever/types/guild/guildMemberBaseline";
@@ -44,8 +45,8 @@ import { PODIUM_RENDER_CLASSES } from "@/games/wow-forever/data/guild/guildStyle
 
 const mockQuery = vi.fn();
 const mockRecipes = vi.fn();
-const mockRecipeBook = vi.fn();
-vi.mock("@/games/wow-forever/hooks/useRecipeBook", () => ({ useRecipeBook: () => mockRecipeBook() }));
+const mockRecipeLookup = vi.fn();
+vi.mock("@/games/wow-forever/hooks/useRecipeLookup", () => ({ useRecipeLookup: () => mockRecipeLookup() }));
 
 vi.mock("@/games/wow-forever/api/wowGuildApi", () => ({
   useGetGuildQuery: (slug: string) => mockQuery(slug),
@@ -173,7 +174,7 @@ function typeRecipe(text: string) {
 beforeEach(() => {
   mockQuery.mockReturnValue(query({}));
   mockRecipes.mockReturnValue(recipes({}));
-  mockRecipeBook.mockReturnValue({ status: "ready", entries: [LINEN_ENTRY] });
+  mockRecipeLookup.mockReturnValue(recipeEntryLookup([LINEN_ENTRY]));
 });
 
 afterEach(() => {
@@ -680,7 +681,7 @@ describe("guild recipe search", () => {
   });
 
   it("keeps the recipe name plain, with a placeholder icon, while our recipe data loads", () => {
-    mockRecipeBook.mockReturnValue({ status: "loading" });
+    mockRecipeLookup.mockReturnValue(null);
     mockQuery.mockReturnValue(query({ data: GUILD }));
     mockRecipes.mockReturnValue(recipes({ currentData: LINEN }));
     renderAt("/wow-forever/topdeadcenter?tab=crafting&recipe=linen");

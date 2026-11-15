@@ -1173,6 +1173,11 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   link goes to the Recipes page (`recipeHref`), NOT an item page: item pages only exist for gear, so
   cloth/potions/food dead-end at "Item not found". Its `OPEN_RECIPE_STATE` makes the Recipes page
   open the one exact-name match (`exactRecipeMatch`); a typed search never auto-opens.
+  Every recipe name elsewhere in WoW Forever (Professions route/options/transmutes, Auction House
+  recipe panel, character known-recipe lists) uses `components/recipes/RecipeRef`: give it the
+  `RecipeProfession` + spell (null = name only) and it renders the same link + tooltip once the shared
+  `useRecipeLookup` store has the book (one load per page), plain text otherwise. Use it for any new
+  recipe name; skip smelting (Mining) and recipe items, which the Recipes page doesn't list.
   Roster toolbar (`GuildMemberToolbar`): Name, Class, Level, Profession, Sort, all in the URL
   (`GUILD_PARAMS`; profession = `?prof=<GuideProfession id>`, e.g. `tailoring`). The Profession
   select lists only professions someone has, with counts, in the Professions picker's order
