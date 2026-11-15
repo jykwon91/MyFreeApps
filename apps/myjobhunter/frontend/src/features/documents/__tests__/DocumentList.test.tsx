@@ -248,7 +248,7 @@ describe("DocumentList", () => {
       const { rerender } = renderList();
       await user.selectOptions(screen.getByRole("combobox"), "Cover Letter");
       await user.click(screen.getByTitle("Delete"));
-      await waitFor(() => expect(mockDelete).toHaveBeenCalledWith("doc-1"));
+      await waitFor(() => expect(mockDelete).toHaveBeenCalledWith({ id: "doc-1", applicationId: null }));
 
       // The delete invalidates the list; the refetched page is empty.
       mockUseDocumentsPages.mockReturnValue(pagesState({ documents: [], total: 0 }));
@@ -433,7 +433,7 @@ describe("DocumentList", () => {
       await user.click(screen.getByTitle("Delete"));
 
       await waitFor(() => {
-        expect(mockDelete).toHaveBeenCalledWith("doc-1");
+        expect(mockDelete).toHaveBeenCalledWith({ id: "doc-1", applicationId: null });
         expect(mockShowSuccess).toHaveBeenCalledWith("Document deleted");
       });
     });

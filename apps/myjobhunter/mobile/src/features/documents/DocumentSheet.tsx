@@ -39,7 +39,7 @@ export default function DocumentSheet({ applicationId, document, onClose }: Docu
       if (document) {
         const patch = documentChangesRequest(document, { title, kind, body });
         if (Object.keys(patch).length > 0) {
-          await updateDocument({ id: document.id, patch }).unwrap();
+          await updateDocument({ id: document.id, patch, applicationId: document.application_id }).unwrap();
           showToast(MESSAGES.updated);
         }
       } else {

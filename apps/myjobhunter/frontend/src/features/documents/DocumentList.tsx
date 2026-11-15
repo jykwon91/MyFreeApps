@@ -33,7 +33,7 @@ export default function DocumentList({ applicationId, hideKindFilter }: Document
 
   async function handleDelete(doc: Document) {
     if (!window.confirm(`Delete "${doc.title}"? This cannot be undone.`)) return;
-    await deleteWithFeedback(() => deleteDocument(doc.id).unwrap(), "Document deleted", "Couldn't delete");
+    await deleteWithFeedback(() => deleteDocument({ id: doc.id, applicationId: doc.application_id }).unwrap(), "Document deleted", "Couldn't delete");
   }
 
   if (list.isLoading) return <DocumentListSkeleton withFilterBar={!hideKindFilter} />;

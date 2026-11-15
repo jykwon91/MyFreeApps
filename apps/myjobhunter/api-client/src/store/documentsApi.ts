@@ -2,17 +2,20 @@ import { baseApi } from "@platform/core/store/baseApi";
 import type { Document } from "../types/document/document";
 import type { DocumentCreateRequest } from "../types/document/document-create-request";
 import type { DocumentListResponse } from "../types/document/document-list-response";
-import type { DocumentUpdateRequest } from "../types/document/document-update-request";
 import type { DocumentsFilter } from "../types/document/documents-filter";
 import { DOCUMENTS_PAGE_SIZE, FIRST_DOCUMENTS_OFFSET } from "../constants/documentsPaging";
 import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
 import { withoutDocument } from "../utils/withoutDocument";
 import { removalIsDone } from "../utils/removalIsDone";
+import { applicationDetailTags } from "../utils/applicationDetailTags";
+import type { DocumentUpdateArgs } from "../types/document/document-update-args";
+import type { DocumentDeleteArgs } from "../types/document/document-delete-args";
 
 const DOCUMENTS_TAG = "Documents";
+const APPLICATIONS_TAG = "Applications";
 
 const documentsApi = baseApi
-  .enhanceEndpoints({ addTagTypes: [DOCUMENTS_TAG] })
+  .enhanceEndpoints({ addTagTypes: [DOCUMENTS_TAG, APPLICATIONS_TAG] })
   .injectEndpoints({
     endpoints: (build) => ({
       /**
@@ -52,43 +55,48 @@ const documentsApi = baseApi
 
       createDocument: build.mutation<Document, DocumentCreateRequest>({
         query: (body) => ({ url: "/documents", method: "POST", data: body }),
-        invalidatesTags: [{ type: DOCUMENTS_TAG, id: "LIST" }],
+        // A job_description document fills its application's empty JD, so that application's detail is stale too.
+        invalidatesTags: (result) => [{ type: DOCUMENTS_TAG, id: "LIST" }, ...applicationDetailTags(result?.application_id)],
       }),
 
       // The caller fills the form with fillDocumentUploadForm: a browser appends a File, a phone a { uri, name, type }.
       uploadDocument: build.mutation<Document, FormData>({
         query: (form) => ({ url: "/documents/upload", method: "POST", data: form }),
-        invalidatesTags: [{ type: DOCUMENTS_TAG, id: "LIST" }],
+        // A job_description document fills its application's empty JD, so that application's detail is stale too.
+        invalidatesTags: (result) => [{ type: DOCUMENTS_TAG, id: "LIST" }, ...applicationDetailTags(result?.application_id)],
       }),
 
-      updateDocument: build.mutation<Document, { id: string; patch: DocumentUpdateRequest }>({
+      updateDocument: build.mutation<Document, DocumentUpdateArgs>({
         query: ({ id, patch }) => ({
           url: `/documents/${id}`,
           method: "PATCH",
           data: patch,
         }),
-        invalidatesTags: (_result, _err, { id }) => [
+        // Both ends of a move between applications: the one the document left and the one it joined.
+        invalidatesTags: (result, _err, { id, applicationId }) => [
           { type: DOCUMENTS_TAG, id },
           { type: DOCUMENTS_TAG, id: "LIST" },
+          ...applicationDetailTags(applicationId, result?.application_id),
         ],
       }),
 
-      deleteDocument: build.mutation<void, string>({
-        query: (id) => ({ url: `/documents/${id}`, method: "DELETE" }),
+      deleteDocument: build.mutation<void, DocumentDeleteArgs>({
+        query: ({ id }) => ({ url: `/documents/${id}`, method: "DELETE" }),
         // Once the document is gone (deleted, or already gone: a 404), every loaded list drops it
         // from whichever page holds it and lowers its total, at once. The reload of every loaded
         // page the invalidation starts then realigns the pages, and if that reload fails the list
         // still doesn't show a document that's gone.
-        async onQueryStarted(id, { dispatch, getState, queryFulfilled }) {
+        async onQueryStarted({ id }, { dispatch, getState, queryFulfilled }) {
           if (!(await removalIsDone(queryFulfilled))) return;
           for (const { endpointName, originalArgs } of documentsApi.util.selectInvalidatedBy(getState(), [{ type: DOCUMENTS_TAG, id }])) {
             if (endpointName !== "listDocuments") continue;
             dispatch(documentsApi.util.updateQueryData("listDocuments", originalArgs as DocumentsFilter, (pages) => withoutDocument(pages, id)));
           }
         },
-        invalidatesTags: (_result, _err, id) => [
+        invalidatesTags: (_result, _err, { id, applicationId }) => [
           { type: DOCUMENTS_TAG, id },
           { type: DOCUMENTS_TAG, id: "LIST" },
+          ...applicationDetailTags(applicationId),
         ],
       }),
 

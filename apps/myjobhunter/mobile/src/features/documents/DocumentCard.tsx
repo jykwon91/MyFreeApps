@@ -16,7 +16,7 @@ export default function DocumentCard({ document, onEdit, onOpenApplication }: Do
   const openLink = useOpenLink();
   const [getDownloadUrl] = useLazyGetDocumentDownloadUrlQuery();
   const [deleteDocument] = useDeleteDocumentMutation();
-  const { isRemoving: isDeleting, confirmRemove: confirmDelete } = useConfirmedRemoval(() => deleteDocument(document.id).unwrap(), {
+  const { isRemoving: isDeleting, confirmRemove: confirmDelete } = useConfirmedRemoval(() => deleteDocument({ id: document.id, applicationId: document.application_id }).unwrap(), {
     removeTitle: MESSAGES.deleteTitle,
     removeBody: `"${document.title}" — ${MESSAGES.deleteBody}`,
     remove: MESSAGES.delete,
