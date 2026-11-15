@@ -287,7 +287,8 @@ async def create_version(
     Raises InvalidBaseVersionError if ``base_version_id`` is given but doesn't
     belong to this recipe.
     """
-    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
+    # Lock the recipe row so two concurrent saves can't read the same max version number.
+    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id, for_update=True)
     if recipe is None:
         return None
 
@@ -327,7 +328,8 @@ async def restore_version(
     db: AsyncSession, user_id: uuid.UUID, recipe_id: uuid.UUID, version_id: uuid.UUID,
 ) -> VersionResponse | None:
     """Copy an old version forward as a new latest version (history-preserving)."""
-    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
+    # Lock the recipe row so two concurrent saves can't read the same max version number.
+    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id, for_update=True)
     if recipe is None:
         return None
     source = await recipe_version_repository.get_by_id(db, version_id, user_id)

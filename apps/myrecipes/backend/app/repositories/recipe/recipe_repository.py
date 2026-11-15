@@ -23,16 +23,25 @@ _UPDATABLE_COLUMNS: frozenset[str] = frozenset({"title", "description", "source"
 
 
 async def get_by_id(
-    db: AsyncSession, recipe_id: uuid.UUID, user_id: uuid.UUID,
+    db: AsyncSession,
+    recipe_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    for_update: bool = False,
 ) -> Recipe | None:
-    """Return the recipe iff it belongs to ``user_id`` and is not soft-deleted."""
-    result = await db.execute(
-        select(Recipe).where(
-            Recipe.id == recipe_id,
-            Recipe.user_id == user_id,
-            Recipe.deleted_at.is_(None),
-        )
+    """Return the recipe iff it belongs to ``user_id`` and is not soft-deleted.
+
+    ``for_update`` locks the row until commit, so concurrent version writes for
+    one recipe run one at a time instead of racing on the next version number.
+    """
+    stmt = select(Recipe).where(
+        Recipe.id == recipe_id,
+        Recipe.user_id == user_id,
+        Recipe.deleted_at.is_(None),
     )
+    if for_update:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
+    result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
 
