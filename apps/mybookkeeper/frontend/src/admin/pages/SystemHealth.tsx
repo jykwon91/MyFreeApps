@@ -15,6 +15,8 @@ import ActiveProblems from "@/admin/features/health/ActiveProblems";
 import StatsGrid from "@/admin/features/health/StatsGrid";
 import EventsSection from "@/admin/features/health/EventsSection";
 import type { HealthSummary } from "@/shared/types/health/health-summary";
+import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { currentListData } from "@/shared/utils/current-list-data";
 
 type SeverityFilter = "all" | "info" | "warning" | "error" | "critical";
 type TypeFilter = string;
@@ -37,8 +39,15 @@ export default function SystemHealth() {
     ...(severityFilter !== "all" ? { severity: severityFilter } : {}),
     ...(typeFilter !== "all" ? { type: typeFilter } : {}),
   };
-  const { data: events, isLoading: eventsLoading } = useGetHealthEventsQuery(eventsParams, {
+  const eventsQuery = useGetHealthEventsQuery(eventsParams, {
     pollingInterval: 30000,
+  });
+  const eventsData = currentListData(eventsQuery, false);
+  const events = eventsData ?? [];
+  const eventsMode = resolveListLoadMode({
+    hasData: eventsData !== undefined,
+    hasError: eventsQuery.error !== undefined,
+    itemCount: events.length,
   });
 
   const [retryFailed, { isLoading: retrying }] = useRetryFailedMutation();
@@ -76,7 +85,10 @@ export default function SystemHealth() {
   const problems = summary?.active_problems ?? [];
   const stats = summary?.stats;
 
-  const eventTypes = Array.from(new Set((events ?? []).map((e) => e.event_type)));
+  // The chosen type stays a choice while its events load, so the select keeps showing it.
+  const eventTypes = Array.from(
+    new Set([...(typeFilter === "all" ? [] : [typeFilter]), ...events.map((e) => e.event_type)]),
+  );
 
   return (
     <div className="p-4 sm:p-8 space-y-6">
@@ -105,8 +117,11 @@ export default function SystemHealth() {
       {stats && <StatsGrid stats={stats} />}
 
       <EventsSection
-        events={events ?? []}
-        isLoading={eventsLoading}
+        events={events}
+        mode={eventsMode}
+        loadFailed={eventsQuery.error !== undefined}
+        isRetrying={eventsQuery.isFetching}
+        onRetry={() => eventsQuery.refetch()}
         eventTypes={eventTypes}
         severityFilter={severityFilter}
         typeFilter={typeFilter}

@@ -23,6 +23,8 @@ import { Button } from "@platform/ui";
 import { ConfirmDialog } from "@platform/ui";
 import { useToast } from "@/shared/hooks/useToast";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { TRANSACTIONS_LOAD_FAILED } from "@/shared/lib/transaction-list-messages";
 
 export default function Transactions() {
   const { showError, showSuccess } = useToast();
@@ -45,6 +47,9 @@ export default function Transactions() {
     categories,
     isLoading,
     isFetching,
+    listMode,
+    loadFailed,
+    retryLoad,
     selection,
     bulkAction,
     confirmBulkDelete,
@@ -218,6 +223,10 @@ export default function Transactions() {
             />
           )}
 
+          {loadFailed ? (
+            <LoadErrorAlert message={TRANSACTIONS_LOAD_FAILED} isRetrying={isFetching} onRetry={retryLoad} />
+          ) : null}
+
           {isLoading ? (
             <TransactionsSkeleton />
           ) : (
@@ -228,6 +237,7 @@ export default function Transactions() {
               editingId={editingTransaction?.id ?? null}
               filterOptions={filterOptions}
               propertyMap={propertyMap}
+              mode={listMode}
               isRefreshing={isFetching}
             />
           )}

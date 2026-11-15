@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import SystemHealth from "@/admin/pages/SystemHealth";
 import type { HealthSummary, SystemEvent } from "@/shared/types/health/health-summary";
+import { queryData } from "@/test/rtk-query-data";
 
 const mockStats = {
   documents_processing: 2,
@@ -48,7 +49,7 @@ const mockEvents: SystemEvent[] = [
 
 vi.mock("@/shared/store/healthApi", () => ({
   useGetHealthSummaryQuery: vi.fn(() => ({ data: mockSummary, isLoading: false })),
-  useGetHealthEventsQuery: vi.fn(() => ({ data: mockEvents, isLoading: false })),
+  useGetHealthEventsQuery: vi.fn(() => ({ ...queryData(mockEvents), isLoading: false })),
   useResolveEventMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useRetryFailedMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
@@ -79,7 +80,7 @@ describe("SystemHealth", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useGetHealthSummaryQuery>);
     vi.mocked(useGetHealthEventsQuery).mockReturnValue({
-      data: mockEvents,
+      ...queryData(mockEvents),
       isLoading: false,
     } as unknown as ReturnType<typeof useGetHealthEventsQuery>);
     vi.mocked(useRetryFailedMutation).mockReturnValue([
@@ -175,7 +176,7 @@ describe("SystemHealth", () => {
       },
     ];
     vi.mocked(useGetHealthEventsQuery).mockReturnValue({
-      data: eventsWithManualResolve,
+      ...queryData(eventsWithManualResolve),
       isLoading: false,
     } as unknown as ReturnType<typeof useGetHealthEventsQuery>);
     renderWithProviders(<SystemHealth />);
@@ -210,7 +211,7 @@ describe("SystemHealth", () => {
 
   it("shows empty events state when no events match filters", () => {
     vi.mocked(useGetHealthEventsQuery).mockReturnValue({
-      data: [],
+      ...queryData([]),
       isLoading: false,
     } as unknown as ReturnType<typeof useGetHealthEventsQuery>);
     renderWithProviders(<SystemHealth />);

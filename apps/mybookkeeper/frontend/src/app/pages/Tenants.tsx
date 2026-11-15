@@ -4,6 +4,7 @@ import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi
 import { APPLICANT_PAGE_SIZE } from "@mybookkeeper/api-client/constants/applicantLabels";
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { currentListData } from "@/shared/utils/current-list-data";
 import TenantsListBody from "@/app/features/tenants/TenantsListBody";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
@@ -21,8 +22,9 @@ export default function Tenants() {
     [includeEnded, pageCount],
   );
 
-  const { data, isFetching, error, refetch } =
-    useGetTenantsQuery(queryArgs);
+  const query = useGetTenantsQuery(queryArgs);
+  const { isFetching, error, refetch } = query;
+  const data = currentListData(query, pageCount > 1);
 
   const tenants = data?.items ?? [];
   const hasMore = data?.has_more ?? false;

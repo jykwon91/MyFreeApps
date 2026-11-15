@@ -1,3 +1,6 @@
+/** When the rows for the current page, filters and order couldn't be loaded. */
+export const TRANSACTIONS_LOAD_FAILED = "I couldn't load your transactions. Want me to try again?";
+
 /** When "select all" couldn't fetch the matching rows of the other pages. */
 export const SELECT_ALL_FAILED = "I couldn't select every matching transaction. Try again.";
 

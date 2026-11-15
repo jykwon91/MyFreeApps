@@ -47,7 +47,7 @@ const mockEnvelope: ApplicantListResponse = {
 };
 
 const defaultApplicantsState = {
-  data: mockEnvelope,
+  ...queryData(mockEnvelope),
   isLoading: false,
   isFetching: false,
   isError: false,
@@ -61,6 +61,7 @@ vi.mock("@mybookkeeper/api-client/store/applicantsApi", () => ({
 
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { queryStatus } from "@/test/rtk-query-status";
+import { queryData } from "@/test/rtk-query-data";
 
 type ListQueryReturn = ReturnType<typeof useGetApplicantsQuery>;
 
@@ -91,7 +92,7 @@ describe("Applicants page", () => {
   it("renders the loading skeleton while fetching", () => {
     vi.mocked(useGetApplicantsQuery).mockReturnValueOnce({
       ...defaultApplicantsState,
-      data: undefined,
+      ...queryData(undefined),
       isLoading: true,
     } as unknown as ListQueryReturn);
     renderApplicants();
@@ -101,7 +102,7 @@ describe("Applicants page", () => {
   it("renders the empty state when there are no applicants", () => {
     vi.mocked(useGetApplicantsQuery).mockReturnValueOnce({
       ...defaultApplicantsState,
-      data: { items: [], total: 0, has_more: false },
+      ...queryData({ items: [], total: 0, has_more: false }),
     } as unknown as ListQueryReturn);
     renderApplicants();
     expect(screen.getByText(/No applicants yet/i)).toBeInTheDocument();
@@ -110,7 +111,7 @@ describe("Applicants page", () => {
   it("renders the filtered empty state when a stage filter has no matches", () => {
     vi.mocked(useGetApplicantsQuery).mockReturnValueOnce({
       ...defaultApplicantsState,
-      data: { items: [], total: 0, has_more: false },
+      ...queryData({ items: [], total: 0, has_more: false }),
     } as unknown as ListQueryReturn);
     renderApplicants("/applicants?stage=approved");
     expect(screen.getByText(/No applicants in this stage/i)).toBeInTheDocument();
@@ -119,7 +120,7 @@ describe("Applicants page", () => {
   it("renders an error AlertBox when the query errors", () => {
     vi.mocked(useGetApplicantsQuery).mockReturnValueOnce({
       ...defaultApplicantsState,
-      data: undefined,
+      ...queryData(undefined),
       ...queryStatus({ failed: true, fetching: false }),
     } as unknown as ListQueryReturn);
     renderApplicants();

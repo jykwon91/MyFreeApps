@@ -28,6 +28,7 @@ import ReviewQueueDrawer from "@/app/features/calendar/ReviewQueueDrawer";
 import type { CalendarView } from "@/shared/types/calendar/calendar-view";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { currentListData } from "@/shared/utils/current-list-data";
 import { useLiveSearchParams } from "@platform/ui";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -91,12 +92,9 @@ export default function Calendar() {
     [fromIso, toIso, selectedPropertyIds, selectedSources],
   );
 
-  const {
-    data: events,
-    error,
-    isFetching,
-    refetch,
-  } = useGetCalendarEventsQuery(queryArgs);
+  const eventsQuery = useGetCalendarEventsQuery(queryArgs);
+  const { error, isFetching, refetch } = eventsQuery;
+  const events = currentListData(eventsQuery, false);
   const { data: properties = [] } = useGetPropertiesQuery();
   const { data: listingsEnvelope } = useGetListingsQuery({ limit: 100, offset: 0 });
 

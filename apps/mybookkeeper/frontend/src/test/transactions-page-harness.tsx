@@ -15,6 +15,7 @@ import type { Transaction } from "@mybookkeeper/api-client/types/transaction/tra
 import type { TransactionListPage } from "@mybookkeeper/api-client/types/transaction/TransactionListPage";
 import type { TransactionSelectionRef } from "@mybookkeeper/api-client/types/transaction/TransactionSelectionRef";
 import Transactions from "@/app/pages/Transactions";
+import { serverError } from "./server-error";
 
 export const TOTAL = 120;
 export const PENDING_TOTAL = 2;
@@ -80,6 +81,8 @@ interface ServerState {
   recategorized: Map<string, string>;
   deleted: Set<string>;
   selectionResponse: (query: URLSearchParams) => Promise<TransactionSelectionRef[]>;
+  /** GET /transactions/page; a rejection answers with a 500. */
+  pageResponse: (query: URLSearchParams) => Promise<TransactionListPage>;
 }
 
 export const server: ServerState = {
@@ -87,6 +90,7 @@ export const server: ServerState = {
   recategorized: new Map(),
   deleted: new Set(),
   selectionResponse: async (query) => selectionFor(query),
+  pageResponse: async (query) => pageFor(query),
 };
 
 function matchingRows(query: URLSearchParams): Transaction[] {
@@ -136,7 +140,13 @@ export const adapter: AxiosAdapter = async (config) => {
   const body: unknown = typeof config.data === "string" ? JSON.parse(config.data) : config.data;
   requests.push({ path: url.pathname, query: url.searchParams, body });
   let data: unknown = config.method === "get" ? [] : {};
-  if (url.pathname === "/transactions/page") data = pageFor(url.searchParams);
+  if (url.pathname === "/transactions/page") {
+    try {
+      data = await server.pageResponse(url.searchParams);
+    } catch {
+      throw serverError(config);
+    }
+  }
   if (url.pathname === "/transactions/selection") data = await server.selectionResponse(url.searchParams);
   if (url.pathname === "/transactions/categories") data = ["repairs", "utilities"];
   if (url.pathname === "/transactions/bulk-delete" && isIdsBody(body)) data = { deleted: body.ids.length, skipped: 0 };
@@ -182,6 +192,7 @@ export function resetServer(): void {
   server.recategorized.clear();
   server.deleted.clear();
   server.selectionResponse = async (query) => selectionFor(query);
+  server.pageResponse = async (query) => pageFor(query);
   api.defaults.adapter = adapter;
 }
 

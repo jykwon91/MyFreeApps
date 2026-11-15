@@ -6,6 +6,7 @@ import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/ap
 import ApplicantStageFilter from "@/app/features/applicants/ApplicantStageFilter";
 import ApplicantsListBody from "@/app/features/applicants/ApplicantsListBody";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { currentListData } from "@/shared/utils/current-list-data";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { useLiveSearchParams } from "@platform/ui";
 
@@ -32,8 +33,9 @@ export default function Applicants() {
     [stage, pageCount],
   );
 
-  const { data, isFetching, error, refetch } =
-    useGetApplicantsQuery(queryArgs);
+  const query = useGetApplicantsQuery(queryArgs);
+  const { isFetching, error, refetch } = query;
+  const data = currentListData(query, pageCount > 1);
 
   const applicants = data?.items ?? [];
   const hasMore = data?.has_more ?? false;

@@ -12,6 +12,7 @@ import VendorCategoryFilter from "@/app/features/vendors/VendorCategoryFilter";
 import VendorPreferredToggle from "@/app/features/vendors/VendorPreferredToggle";
 import VendorForm from "@/app/features/vendors/VendorForm";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { currentListData } from "@/shared/utils/current-list-data";
 import VendorsListBody from "@/app/features/vendors/VendorsListBody";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
@@ -46,8 +47,9 @@ export default function Vendors() {
     [category, preferredOnly, pageCount],
   );
 
-  const { data, isFetching, error, refetch } =
-    useGetVendorsQuery(queryArgs);
+  const query = useGetVendorsQuery(queryArgs);
+  const { isFetching, error, refetch } = query;
+  const data = currentListData(query, pageCount > 1);
 
   const vendors = data?.items ?? [];
   const hasMore = data?.has_more ?? false;

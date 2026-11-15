@@ -10,6 +10,7 @@ import type { ListingSummary } from "@mybookkeeper/api-client/types/listing/list
 import ListingStatusFilter from "@/app/features/listings/ListingStatusFilter";
 import ListingForm from "@/app/features/listings/ListingForm";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { currentListData } from "@/shared/utils/current-list-data";
 import ListingsListBody from "@/app/features/listings/ListingsListBody";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
@@ -37,7 +38,9 @@ export default function Listings() {
     [status, pageCount],
   );
 
-  const { data, isFetching, error, refetch } = useGetListingsQuery(queryArgs);
+  const query = useGetListingsQuery(queryArgs);
+  const { isFetching, error, refetch } = query;
+  const data = currentListData(query, pageCount > 1);
   const { data: properties = [] } = useGetPropertiesQuery();
 
   const listings = data?.items ?? [];

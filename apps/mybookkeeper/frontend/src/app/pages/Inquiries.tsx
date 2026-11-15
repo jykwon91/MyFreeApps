@@ -13,6 +13,7 @@ import InquiryStageFilter from "@/app/features/inquiries/InquiryStageFilter";
 import InquirySpamTabFilter from "@/app/features/inquiries/InquirySpamTabFilter";
 import InquiryForm from "@/app/features/inquiries/InquiryForm";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
+import { currentListData } from "@/shared/utils/current-list-data";
 import InquiriesListBody from "@/app/features/inquiries/InquiriesListBody";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
@@ -69,7 +70,9 @@ export default function Inquiries() {
     [stage, spamFilter, pageCount],
   );
 
-  const { data, isFetching, error, refetch } = useGetInquiriesQuery(queryArgs);
+  const query = useGetInquiriesQuery(queryArgs);
+  const { isFetching, error, refetch } = query;
+  const data = currentListData(query, pageCount > 1);
   const { data: listingsData } = useGetListingsQuery();
 
   const inquiries = data?.items ?? [];

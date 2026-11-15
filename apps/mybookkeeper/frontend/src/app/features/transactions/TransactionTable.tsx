@@ -17,6 +17,9 @@ import { formatCurrency } from "@/shared/utils/currency";
 import { formatDate } from "@/shared/utils/date";
 import { formatTag } from "@/shared/utils/tag";
 import { cn } from "@/shared/utils/cn";
+import Skeleton from "@/shared/components/ui/Skeleton";
+import type { ListLoadMode } from "@/shared/types/list-load-mode";
+import TransactionSkeletonRows from "@/app/features/transactions/TransactionSkeletonRows";
 
 export interface TransactionTableProps {
   table: ReactTable<AppTableFeatures, Transaction>;
@@ -25,11 +28,13 @@ export interface TransactionTableProps {
   editingId: string | null;
   filterOptions?: FilterOptions;
   propertyMap?: ReadonlyMap<string, string>;
-  /** Another page, filter or order is loading; the rows shown are the previous ones. */
+  /** What the body shows. While another page, filter or order loads it holds placeholders, and after that load failed nothing (the page shows the error). */
+  mode: ListLoadMode;
+  /** Rows are on their way: for the shown page and filters (a refetch), or for others (with `mode` "loading"). */
   isRefreshing?: boolean;
 }
 
-export default function TransactionTable({ table, colCount, onRowClick, editingId, filterOptions, propertyMap, isRefreshing = false }: TransactionTableProps) {
+export default function TransactionTable({ table, colCount, onRowClick, editingId, filterOptions, propertyMap, mode, isRefreshing = false }: TransactionTableProps) {
   const { pageIndex, pageSize } = table.state.pagination;
   // The server pages the rows, so the count is every matching row, not just this page's.
   const totalRows = table.getRowCount();
@@ -39,6 +44,9 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
       : "No transactions found";
   const start = pageIndex * pageSize + 1;
   const end = Math.min((pageIndex + 1) * pageSize, totalRows);
+  // The header (and its filters) and the footer stay up; only the body waits for the rows.
+  const hasRows = mode === "list" || mode === "empty";
+  const dimsRows = isRefreshing && hasRows;
 
   return (
     <div
@@ -46,8 +54,15 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
       aria-busy={isRefreshing}
     >
       {/* Mobile card view */}
-      <div className={cn("md:hidden divide-y", isRefreshing && "opacity-60")} data-testid="transaction-cards">
-        {table.getRowModel().rows.length === 0 ? (
+      <div className={cn("md:hidden divide-y", dimsRows && "opacity-60")} data-testid="transaction-cards">
+        {mode === "loading" ? (
+          Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="p-4 space-y-2" data-testid="transaction-card-skeleton">
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+          ))
+        ) : mode === "error" ? null : table.getRowModel().rows.length === 0 ? (
           <EmptyState message={emptyMessage} />
         ) : (
           table.getRowModel().rows.map((row) => {
@@ -127,8 +142,9 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
               </tr>
             ))}
           </thead>
-          <tbody className={cn("divide-y", isRefreshing && "opacity-60")}>
-            {table.getRowModel().rows.map((row) => (
+          <tbody className={cn("divide-y", dimsRows && "opacity-60")}>
+            {mode === "loading" ? <TransactionSkeletonRows /> : null}
+            {hasRows && table.getRowModel().rows.map((row) => (
               <Fragment key={row.original.id}>
                 <tr
                   className={`hover:bg-muted/50 cursor-pointer ${editingId === row.original.id ? "bg-blue-50 dark:bg-blue-950 border-l-2 border-l-blue-500" : ""} ${row.original.status === "pending" && editingId !== row.original.id ? "bg-yellow-50/40 dark:bg-yellow-950/20" : ""}`}
@@ -142,7 +158,7 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
                 </tr>
               </Fragment>
             ))}
-            {table.getRowModel().rows.length === 0 && (
+            {mode === "empty" && (
               <tr>
                 <td colSpan={colCount}>
                   <EmptyState message={emptyMessage} />
@@ -169,7 +185,7 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
         </div>
 
         <div className="flex items-center gap-3">
-          <span>{totalRows > 0 ? `${start}\u2013${end} of ${totalRows}` : "0 results"}</span>
+          {hasRows ? <span>{totalRows > 0 ? `${start}\u2013${end} of ${totalRows}` : "0 results"}</span> : null}
           <div className="flex items-center gap-1">
             <button aria-label="First page" onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()} className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed">
               <ChevronsLeft className="h-4 w-4" />
