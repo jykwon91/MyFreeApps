@@ -1,4 +1,5 @@
 import { AlertBox } from "@platform/ui";
+import BuffsAddonCard from "@/games/wow-forever/components/buffsAddon/BuffsAddonCard";
 import ClassMacroList from "@/games/wow-forever/components/macros/ClassMacroList";
 import HoverCastSection from "@/games/wow-forever/components/macros/HoverCastSection";
 import MacroHowToCard from "@/games/wow-forever/components/macros/MacroHowToCard";
@@ -32,6 +33,7 @@ export default function WowMacrosPage() {
       </p>
       <MacroHowToCard />
       <HoverCastSection />
+      <BuffsAddonCard />
       <TagMacroSection />
       <ClassMacroList />
     </div>

@@ -3,7 +3,9 @@
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-macros
  */
+import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
+import { strFromU8, unzipSync } from "fflate";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
@@ -155,4 +157,36 @@ test("the link at the top of the Macros page jumps to the tag macro builder", as
   await page.getByRole("link", { name: "Tag a mob first: paste its name, get a macro" }).click();
   await expect(page).toHaveURL(/#tag$/);
   await expect(page.getByTestId("tag-mob-names")).toBeInViewport();
+});
+
+test("the Macros page downloads the MGA Buffs addon and lists what it reminds you about", async ({ page }) => {
+  await page.goto("/wow-forever/macros");
+  const card = page.getByTestId("buffs-addon");
+  await card.getByText("Buff reminder addon: armor, Soulstone, food and group buffs").click();
+  const checks = card.getByRole("list", { name: "What it reminds you about" }).getByRole("listitem");
+  await expect(checks).toHaveCount(4);
+  await expect(checks.first()).toContainText("Your armor. Demon Skin or Demon Armor for Warlocks");
+  await expect(checks.nth(1).locator("svg")).toBeVisible();
+  await expect(card).toContainText(String.raw`World of Warcraft\_forever_\Interface\AddOns`);
+  const [download] = await Promise.all([page.waitForEvent("download"), card.getByTestId("buffs-addon-download").click()]);
+  expect(download.suggestedFilename()).toBe("MGABuffs.zip");
+  const files = unzipSync(readFileSync(await download.path()));
+  expect(Object.keys(files).sort()).toEqual(["MGABuffs/", "MGABuffs/MGABuffs.lua", "MGABuffs/MGABuffs.toc"]);
+  expect(strFromU8(files["MGABuffs/MGABuffs.toc"])).toContain("## SavedVariables: MGABuffsSettings");
+  expect(strFromU8(files["MGABuffs/MGABuffs.lua"])).toContain('SLASH_MGABUFFS1 = "/mgabuffs"');
+  await expect(page.getByText("MGA Buffs is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
+});
+
+test("on a phone the MGA Buffs card stacks its checks and keeps the download a full touch target", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/wow-forever/macros");
+  const card = page.getByTestId("buffs-addon");
+  await card.locator("summary").click();
+  const checks = card.getByRole("listitem").filter({ has: page.locator("svg") });
+  const first = await checks.nth(0).boundingBox();
+  const second = await checks.nth(1).boundingBox();
+  expect(second!.y).toBeGreaterThan(first!.y + first!.height - 1);
+  const button = await card.getByTestId("buffs-addon-download").boundingBox();
+  expect(button!.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
