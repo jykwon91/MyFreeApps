@@ -306,6 +306,7 @@ describe("emailing and deleting a lease", () => {
 
     it("refreshes the lease it followed, which would otherwise keep its link", async () => {
       const server = startServer(aLease({ parent_lease_id: "l0" }));
+      server.neighbour = aLease({ id: "l0", successor_lease_id: "l1" });
       store.dispatch(signedLeasesApi.endpoints.getSignedLeaseById.initiate("l0"));
       await waitFor(() => expect(server.neighbourReads).toBe(1));
       const before = server.neighbourReads;

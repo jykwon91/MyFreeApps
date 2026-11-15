@@ -1,11 +1,9 @@
-import { signedLeasesApi, useDeleteSignedLeaseMutation, useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
+import { useDeleteSignedLeaseMutation, useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { LoadingButton, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
-import { useDispatch } from "react-redux";
 import { deleteLeaseLabel, deleteLeaseTitle, LEASE_MESSAGES } from "../../constants/leases";
 import { UPLOAD_MESSAGES } from "../../constants/uploads";
-import type { AppDispatch } from "../../lib/store";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { askOnce } from "../../lib/askOnce";
 
@@ -13,12 +11,9 @@ interface DeleteLeaseButtonProps {
   leaseId: string;
   applicantId: string;
   tenantName: string | null;
-  parentLeaseId: string | null;
-  successorLeaseId: string | null;
 }
 
-export default function DeleteLeaseButton({ leaseId, applicantId, tenantName, parentLeaseId, successorLeaseId }: DeleteLeaseButtonProps) {
-  const dispatch = useDispatch<AppDispatch>();
+export default function DeleteLeaseButton({ leaseId, applicantId, tenantName }: DeleteLeaseButtonProps) {
   const { showToast } = useToast();
   const [deleteLease] = useDeleteSignedLeaseMutation();
   const { refetch } = useGetSignedLeaseByIdQuery(leaseId);
@@ -26,9 +21,6 @@ export default function DeleteLeaseButton({ leaseId, applicantId, tenantName, pa
   const asking = useRef(false);
 
   function finish(): void {
-    // A neighbour still on screen would keep a link to this lease.
-    const neighbours = [parentLeaseId, successorLeaseId].filter((id) => id !== null);
-    dispatch(signedLeasesApi.util.invalidateTags(neighbours.map((id) => ({ type: "SignedLease" as const, id }))));
     if (router.canGoBack()) router.back();
     else router.replace("/leases");
     showToast(LEASE_MESSAGES.deleted);
