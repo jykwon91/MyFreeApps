@@ -71,8 +71,10 @@ burst limiter, 503 `tutor_unavailable` (global cap, kill switch, or no key).
   (see `core/config.py`) against the per-user and global daily buckets, then
   reconciles to actual usage. `LTUTOR_GLOBAL_DAILY_UNITS=0` is the kill switch.
   One turn in flight per user (`services/tutor/turn_slots.py`).
-- **Disconnects.** A client that drops mid-turn keeps the reservation charged.
-  A turn whose `reply.done` was sent is saved `complete` (the learner has the
+- **Disconnects.** A client that drops before the first reply token pays only
+  for usage already known (the corrections call, if it finished) and the rest
+  is released, the same as an upstream error before any token. Once a reply
+  token has streamed, a drop keeps the reservation charged. A turn whose `reply.done` was sent is saved `complete` (the learner has the
   whole reply, so clients don't resend it); before that it is `partial` or
   `failed`. Clients don't abort a turn after `reply.done`, and show a note if
   its corrections never arrive. The phone, back from the background, waits

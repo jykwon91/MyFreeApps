@@ -174,7 +174,8 @@ class FakeClaude:
     stream open (``reply_error_after is None`` -- before any token, like a
     real 429/529) or after that many chunks (mid-stream failure).
     ``create_gate``, when set, holds the corrections and translation calls until
-    it is set, like a slow Sonnet call.
+    it is set, like a slow Sonnet call. ``reply_gate``, when set, holds the
+    reply stream before its first token, like a slow time-to-first-token.
     """
 
     reply_chunks: list[str] = _field(default_factory=lambda: ["¡Hola! ", "¿Qué quieres tomar?"])
@@ -188,6 +189,7 @@ class FakeClaude:
     stream_calls: list[dict[str, Any]] = _field(default_factory=list)
     create_calls: list[dict[str, Any]] = _field(default_factory=list)
     create_gate: asyncio.Event | None = None
+    reply_gate: asyncio.Event | None = None
 
     @property
     def messages(self) -> "FakeClaude":
@@ -225,6 +227,8 @@ class _FakeStream:
     @property
     def text_stream(self):
         async def _gen():
+            if self._fake.reply_gate is not None:
+                await self._fake.reply_gate.wait()
             for i, chunk in enumerate(self._fake.reply_chunks):
                 if self._fake.reply_error is not None and self._fake.reply_error_after == i:
                     raise self._fake.reply_error
