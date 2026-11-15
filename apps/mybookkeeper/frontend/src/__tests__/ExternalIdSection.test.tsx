@@ -5,6 +5,7 @@ import ExternalIdSection from "@/app/features/listings/ExternalIdSection";
 import type { ListingExternalId } from "@mybookkeeper/api-client/types/listing/listing-external-id";
 
 const deleteMutationMock = vi.fn();
+const updateMutationMock = vi.fn();
 
 const showErrorMock = vi.fn();
 const showSuccessMock = vi.fn();
@@ -21,7 +22,7 @@ vi.mock("@mybookkeeper/api-client/store/listingsApi", () => ({
     { isLoading: false },
   ]),
   useUpdateListingExternalIdMutation: vi.fn(() => [
-    vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })),
+    updateMutationMock,
     { isLoading: false },
   ]),
   useDeleteListingExternalIdMutation: vi.fn(() => [
@@ -42,6 +43,34 @@ const oneFFExternalId: ListingExternalId = {
 describe("ExternalIdSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    updateMutationMock.mockReturnValue({ unwrap: () => Promise.resolve(undefined) });
+  });
+
+  it("shows the chosen link's values and saves them to that link when Edit is clicked on a second link", async () => {
+    const airbnb: ListingExternalId = {
+      ...oneFFExternalId,
+      id: "ext-2",
+      source: "Airbnb",
+      external_id: "AB-999",
+      external_url: "https://airbnb.com/rooms/999",
+    };
+    const user = userEvent.setup();
+    render(<ExternalIdSection canWrite listingId="listing-1" externalIds={[oneFFExternalId, airbnb]} />);
+
+    await user.click(screen.getByTestId("external-id-edit-ext-1"));
+    expect(screen.getByTestId("external-id-form-external-id")).toHaveValue("FF-12345");
+
+    await user.click(screen.getByTestId("external-id-edit-ext-2"));
+    expect(screen.getByTestId("external-id-form-source")).toHaveValue("Airbnb");
+    expect(screen.getByTestId("external-id-form-external-id")).toHaveValue("AB-999");
+    expect(screen.getByTestId("external-id-form-external-url")).toHaveValue("https://airbnb.com/rooms/999");
+
+    await user.click(screen.getByTestId("external-id-form-submit"));
+    expect(updateMutationMock).toHaveBeenCalledWith({
+      listingId: "listing-1",
+      externalIdPk: "ext-2",
+      data: { external_id: "AB-999", external_url: "https://airbnb.com/rooms/999" },
+    });
   });
 
   it("shows the empty state with a CTA when no external_ids exist", () => {
