@@ -15,7 +15,7 @@ import uuid
 
 from app.core.applicant_enums import APPLICANT_STAGES
 from app.db.session import unit_of_work
-from app.repositories.applicants import applicant_event_repo, applicant_repo
+from app.repositories.applicants import applicant_event_repo, applicant_lock_repo, applicant_repo
 from app.schemas.applicants.applicant_detail_response import ApplicantDetailResponse
 from app.services.applicants import applicant_service
 
@@ -73,6 +73,11 @@ async def transition_stage(
 ) -> ApplicantDetailResponse:
     """Transition an applicant's stage and record it in the event timeline.
 
+    The applicant row is locked for the duration of the transaction, so two
+    concurrent requests are serialised: the second sees the new stage. A
+    request for the stage the applicant is already at succeeds without writing
+    a second ``stage_changed`` event.
+
     Raises:
         LookupError: applicant not found in the calling tenant.
         InvalidStageError: new_stage is not a known APPLICANT_STAGE.
@@ -84,7 +89,7 @@ async def transition_stage(
     now = _dt.datetime.now(_dt.timezone.utc)
 
     async with unit_of_work() as db:
-        applicant = await applicant_repo.get(
+        applicant = await applicant_lock_repo.get_for_update(
             db,
             applicant_id=applicant_id,
             organization_id=organization_id,
@@ -94,6 +99,12 @@ async def transition_stage(
             raise LookupError(f"Applicant {applicant_id} not found")
 
         old_stage = applicant.stage
+        # A repeat of a move that already landed (double click, retry after a
+        # lost response) is a harmless no-op: no second timeline event.
+        if old_stage == new_stage:
+            return await applicant_service.get_applicant(
+                organization_id, user_id, applicant_id,
+            )
         _validate_transition(old_stage, new_stage)
 
         await applicant_repo.update_stage(

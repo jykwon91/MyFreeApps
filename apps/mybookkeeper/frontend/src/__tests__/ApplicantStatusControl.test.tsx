@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
@@ -26,6 +26,7 @@ vi.mock("@/shared/hooks/useToast", () => ({
 }));
 
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import { useTransitionApplicantStageMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 
 function renderControl(stage: ApplicantStage = "lead") {
   return render(
@@ -131,6 +132,34 @@ describe("ApplicantStatusControl", () => {
         applicantId: "app-123",
         data: { new_stage: "approved", note: null },
       });
+    });
+  });
+
+  describe("while the stage change is saving", () => {
+    beforeEach(() => {
+      vi.mocked(useTransitionApplicantStageMutation).mockReturnValue([
+        mockTransitionStage,
+        { isLoading: true, reset: vi.fn() },
+      ] as unknown as ReturnType<typeof useTransitionApplicantStageMutation>);
+    });
+
+    afterEach(() => {
+      vi.mocked(useTransitionApplicantStageMutation).mockReturnValue([
+        mockTransitionStage,
+        { isLoading: false, reset: vi.fn() },
+      ] as unknown as ReturnType<typeof useTransitionApplicantStageMutation>);
+    });
+
+    it("shows Confirm busy and disables it, the picker, the note and Cancel", () => {
+      renderControl("lead");
+      fireEvent.click(screen.getByTestId("applicant-status-control-trigger"));
+
+      const confirm = screen.getByTestId("applicant-status-confirm") as HTMLButtonElement;
+      expect(confirm).toBeDisabled();
+      expect(confirm).toHaveTextContent("Saving...");
+      expect(screen.getByTestId("applicant-status-stage-select")).toBeDisabled();
+      expect(screen.getByTestId("applicant-status-note")).toBeDisabled();
+      expect(screen.getByTestId("applicant-status-cancel")).toBeDisabled();
     });
   });
 });
