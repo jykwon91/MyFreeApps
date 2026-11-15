@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useAcceptInviteMutation, useGetInviteInfoQuery } from "@mybookkeeper/api-client/store/membersApi";
+import { useParams } from "react-router-dom";
+import { useGetInviteInfoQuery } from "@mybookkeeper/api-client/store/membersApi";
 import { login, signOut } from "@/shared/lib/auth";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { extractErrorMessage } from "@platform/ui";
 import { LoadingButton, TurnstileWidget } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
+import InviteAcceptStatus from "@/shared/components/invite/InviteAcceptStatus";
+import { useAcceptInvite } from "@/shared/hooks/useAcceptInvite";
 import api from "@/shared/lib/api";
 import { USER_NAME_INPUT_MAX_LENGTH } from "@/shared/lib/constants";
 
@@ -16,8 +18,7 @@ function roleLabel(role: string): string {
 
 export default function InviteAccept() {
   const { token } = useParams<{ token: string }>();
-  const navigate = useNavigate();
-  const [acceptInvite] = useAcceptInviteMutation();
+  const { accept, acceptOnce, isAccepting, error: acceptError } = useAcceptInvite(token);
 
   const { data: inviteInfo, isLoading: infoLoading, error: infoError } = useGetInviteInfoQuery(
     token ?? "",
@@ -43,22 +44,11 @@ export default function InviteAccept() {
   const isCorrectUser = authedEmail != null && inviteInfo != null && authedEmail.toLowerCase() === inviteInfo.email.toLowerCase();
   const isWrongUser = authedEmail != null && inviteInfo != null && authedEmail.toLowerCase() !== inviteInfo.email.toLowerCase();
 
-  // Auto-accept when already authenticated as the correct user
+  // Auto-accept once when already authenticated as the correct user (a failure is shown, and retried by hand).
   useEffect(() => {
     if (!token || !inviteInfo || inviteInfo.is_expired || !isCorrectUser) return;
-
-    let cancelled = false;
-    async function accept() {
-      try {
-        await acceptInvite(token!).unwrap();
-        if (!cancelled) navigate("/", { replace: true });
-      } catch {
-        if (!cancelled) navigate("/", { replace: true });
-      }
-    }
-    accept();
-    return () => { cancelled = true; };
-  }, [token, inviteInfo, isCorrectUser, acceptInvite, navigate]);
+    void acceptOnce();
+  }, [token, inviteInfo, isCorrectUser, acceptOnce]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -72,8 +62,7 @@ export default function InviteAccept() {
         setIsSubmitting(false);
         return;
       }
-      await acceptInvite(token).unwrap();
-      navigate("/", { replace: true });
+      await accept();
     } catch (err) {
       setLoginError(extractErrorMessage(err) || "Invalid password");
       setIsSubmitting(false);
@@ -100,8 +89,7 @@ export default function InviteAccept() {
         headers: turnstileToken ? { "X-Turnstile-Token": turnstileToken } : {},
       });
       await login(inviteInfo.email, regPassword);
-      await acceptInvite(token).unwrap();
-      navigate("/", { replace: true });
+      await accept();
     } catch (err) {
       setRegError(extractErrorMessage(err));
       setIsSubmitting(false);
@@ -164,15 +152,15 @@ export default function InviteAccept() {
     </div>
   );
 
-  // Logged in as the correct user — show accepting state while useEffect auto-accepts
-  if (isCorrectUser) {
+  // Signed in as the invited user: show the joining state, or why joining failed
+  if (isCorrectUser || acceptError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted">
-        <div className="bg-card border rounded-lg p-8 w-full max-w-sm shadow-sm text-center space-y-3">
-          <h1 className="text-lg font-semibold">Joining {inviteInfo!.org_name}...</h1>
-          <Skeleton className="h-4 w-40 mx-auto" />
-        </div>
-      </div>
+      <InviteAcceptStatus
+        orgName={inviteInfo.org_name}
+        isAccepting={isAccepting}
+        error={acceptError}
+        onRetry={accept}
+      />
     );
   }
 
