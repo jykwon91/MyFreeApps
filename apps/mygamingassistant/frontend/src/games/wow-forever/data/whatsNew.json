@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-15",
+    "title": "Theater mode on the World Map",
+    "summary": "Click the new Theater mode button on the map to fill your screen with just the map, while still using search, Route there, directions, and zone switching in a compact side panel. Esc or the button exits. Preference saved per device.",
+    "to": "/wow-forever/map"
+  },
+  {
+    "date": "2026-11-15",
     "title": "Trainer recipe lists",
     "summary": "Click any trainer on a crafting profession's trainer page to see exactly what they teach, the skill you need to learn each recipe, and the training cost. Recipes you can learn now are highlighted; enter your skill to see which are in reach. Gathering professions (Mining, Herbalism, Skinning) are unchanged.",
     "to": "/wow-forever/trainers"

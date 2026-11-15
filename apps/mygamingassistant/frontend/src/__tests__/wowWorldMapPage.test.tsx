@@ -65,32 +65,35 @@ describe("WoW Forever World Map page", () => {
     expect(stored).toMatchObject({ faction: "A", classId: "warlock", zoneId: 1429 });
   });
 
-  it("fills the window with the map and Esc puts it back", async () => {
+  it("theater mode fills the window with the map and Esc puts it back", async () => {
     renderPage();
     const viewer = await screen.findByTestId("zone-map", {}, { timeout: 4000 });
-    const section = viewer.closest("section")!;
-    expect(section).not.toHaveAttribute("data-full-size");
+    expect(screen.queryByTestId("theater-overlay")).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Full size map" }));
-    expect(section).toHaveAttribute("data-full-size");
+    await userEvent.click(screen.getByRole("button", { name: "Theater mode" }));
+    const overlay = screen.getByTestId("theater-overlay");
+    const theaterViewer = within(overlay).getByTestId("zone-map");
+    expect(theaterViewer.closest("section")).toHaveAttribute("data-full-size");
     expect(document.body.style.overflow).toBe("hidden");
-    // The page under the map can't be tabbed to or clicked.
+    // The page under the overlay can't be tabbed to or clicked; the planner inside it still works.
     expect(screen.getByLabelText("Class").closest("[inert]")).not.toBeNull();
-    expect(viewer.closest("[inert]")).toBeNull();
+    expect(within(overlay).getByRole("region", { name: "Route planner" }).closest("[inert]")).toBeNull();
+    expect(theaterViewer.closest("[inert]")).toBeNull();
+    expect(viewer).not.toBeInTheDocument();
 
-    // Esc on the map itself leaves full size before it would zoom out.
-    fireEvent.keyDown(viewer, { key: "Escape" });
-    expect(section).not.toHaveAttribute("data-full-size");
+    // Esc on the map itself leaves theater mode before it would zoom out.
+    fireEvent.keyDown(theaterViewer, { key: "Escape" });
+    expect(screen.queryByTestId("theater-overlay")).not.toBeInTheDocument();
     expect(document.body.style.overflow).toBe("");
     expect(screen.getByLabelText("Class").closest("[inert]")).toBeNull();
 
     // Esc anywhere else does too, and so does the button.
-    await userEvent.click(screen.getByRole("button", { name: "Full size map" }));
-    fireEvent.keyDown(screen.getByRole("button", { name: "Exit full size" }), { key: "Escape" });
-    expect(section).not.toHaveAttribute("data-full-size");
-    await userEvent.click(screen.getByRole("button", { name: "Full size map" }));
-    await userEvent.click(screen.getByRole("button", { name: "Exit full size" }));
-    expect(section).not.toHaveAttribute("data-full-size");
+    await userEvent.click(screen.getByRole("button", { name: "Theater mode" }));
+    fireEvent.keyDown(screen.getByRole("button", { name: "Exit theater mode" }), { key: "Escape" });
+    expect(screen.queryByTestId("theater-overlay")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Theater mode" }));
+    await userEvent.click(screen.getByRole("button", { name: "Exit theater mode" }));
+    expect(screen.queryByTestId("theater-overlay")).not.toBeInTheDocument();
   });
 
   it("shows directions for a result and a typed position moves you", async () => {
