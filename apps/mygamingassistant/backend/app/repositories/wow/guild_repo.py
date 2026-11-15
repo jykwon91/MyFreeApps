@@ -194,6 +194,7 @@ async def members(db: AsyncSession, guild_id: uuid.UUID, *, gains_since: date) -
             WowCharacter.fetched_at,
             *newest.c,
             *baseline.c,
+            WowCharacter.talent_points,
         )
         .select_from(WowCharacter)
         .outerjoin(newest, true())

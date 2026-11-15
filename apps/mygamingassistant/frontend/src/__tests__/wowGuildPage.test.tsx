@@ -72,6 +72,7 @@ function member(overrides: Partial<GuildMember>): GuildMember {
     exalted_reputations: null,
     baseline: null,
     professions: [],
+    talents: null,
     rank: 0,
     refreshed_at: ROSTER_AT,
     ...overrides,

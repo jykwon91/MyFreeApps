@@ -31,6 +31,10 @@ class WowCharacter(Base):
     __tablename__ = "wow_character"
     __table_args__ = (
         CheckConstraint("slug = lower(slug)", name="ck_wowcharacter_slug_lower"),
+        CheckConstraint(
+            "talent_points IS NULL OR jsonb_typeof(talent_points) = 'array'",
+            name="ck_wowcharacter_talent_points",
+        ),
         # One live character per slug; a gone row keeps its slug for its history.
         Index("uq_wowcharacter_slug_live", "slug", unique=True, postgresql_where=text("gone_at IS NULL")),
         Index("ix_wowcharacter_guild_id", "guild_id"),
@@ -56,6 +60,10 @@ class WowCharacter(Base):
     guild_rank: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
     sheet: Mapped[dict[str, Any]] = deferred(mapped_column(JSONB, nullable=False))
     sheet_version: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    # Active talent-tree distribution: [{tree_id, points}, …].
+    # None = never fetched / last Blizzard call failed (kept, like professions).
+    # [] = character has no points yet.
+    talent_points: Mapped[Optional[list[dict[str, Any]]]] = mapped_column(JSONB, nullable=True)
     # Last time Blizzard sent the character.
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     # Last time we asked at all, whatever the answer.

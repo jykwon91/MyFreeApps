@@ -1190,6 +1190,16 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   row (table column and phone card) lists the member's professions (`GuildMemberProfessions`):
   icon, skill "148 / 225" and rank by cap (`PROFESSION_RANK_BY_CAP`: 75 Apprentice … 300 Artisan);
   the filtered profession goes first. Chips are spans, not `<li>`, so a card stays one `li`. Best-by-skill ranking stays on the Arena's profession boards.
+  Each member's dominant spec (tree with the most points) is shown via `GuildMemberSpec` +
+  `lib/guild/memberSpec.ts` → `resolveSpec()`: the tree with the highest `points` from
+  `GuildMember.talents` (null = fetch failed; [] = no points yet). Tree data is an index from
+  the class talent JSON files: `data/guild/talentTrees.json` (`{classId → [{id, name, icon}]}`).
+  The spec column is in the table (hidden below `lg`); a spec line appears on phone cards below
+  the class/level details. The backend stores the active set's per-tree point totals in
+  `wow_character.talent_points` (nullable JSONB: null = failed, [] = no points, [{tree_id, points}…]);
+  updated with `active_tree_points()` from `character_talents_mapper.py` on each fresh fetch.
+  Migration 0057. `guild_repo.members()` SELECTs it directly (no sheet decode). Tests:
+  `tests/test_wow_guild_roster.py`, `src/__tests__/memberSpec.test.ts`, `e2e/mocked/wow-forever-guild.spec.ts`.
 - Guild link preview: Discord shows `GET /api/wow/guilds/topdeadcenter/preview.png` for the guild page
   (`frontend/src/constants/linkPreview.ts`; unfurlers run no JS, so the backend draws it from the stored
   guild, never Blizzard). 1200x630 PNG (`guild_preview_image.py`, Pillow, bundled Inter in

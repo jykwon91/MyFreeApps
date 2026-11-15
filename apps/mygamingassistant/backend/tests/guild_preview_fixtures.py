@@ -25,7 +25,7 @@ def make_member(
         slug=f"{name}-{surname}".lower(), name=name, surname=surname, class_name=class_name, level=level,
         item_level=None, honorable_kills=honorable_kills, killing_blows=None, deaths_from_players=None,
         total_kills=None, total_deaths=None, dungeons_done=dungeons_done, exalted_reputations=None,
-        baseline=None, professions=[], rank=rank, refreshed_at=refreshed_at,
+        baseline=None, professions=[], talents=None, rank=rank, refreshed_at=refreshed_at,
     )
 
 

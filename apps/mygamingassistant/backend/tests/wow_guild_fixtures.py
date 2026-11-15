@@ -9,10 +9,25 @@ from app.services.wow.character.character_mapper import to_character_response
 from app.services.wow.character.character_profile import CharacterProfile
 
 NOW = datetime(2026, 11, 12, 18, 0, tzinfo=timezone.utc)
+
+# Sentinel: {} means "Blizzard answered, character has no points". Stored at module
+# level to avoid the mutable-default-argument lint warning on make_fetch.
+_NO_SPEC_POINTS: dict[str, Any] = {}
 GUILD: dict[str, Any] = {
     "id": 230059, "name": "topdeadcenter", "slug": "topdeadcenter", "faction": {"type": "ALLIANCE", "name": "Alliance"},
 }
 OTHER_GUILD: dict[str, Any] = {**GUILD, "id": 999, "name": "Other Guild", "slug": "other-guild"}
+
+
+def specializations_json(*trees: tuple[int, str, int]) -> dict[str, Any]:
+    """Blizzard's /specializations answer for ``(tree_id, tree_name, spent_points)`` active-set entries."""
+    return {"specialization_groups": [
+        {"is_active": True, "specializations": [
+            {"specialization": {"name": name, "id": tree_id}, "spent_points": points, "talents": []}
+            for tree_id, name, points in trees
+            if points > 0
+        ]},
+    ]}
 
 
 def professions_json(*recipes: tuple[int, str]) -> dict[str, Any]:
@@ -45,10 +60,12 @@ def profile_json(slug: str, blizzard_id: int, guild: dict[str, Any] | None) -> d
 def make_fetch(
     slug: str = "jason-kwon", blizzard_id: int = 1, guild: dict[str, Any] | None = GUILD,
     professions: dict[str, Any] | None = None, reputations: dict[str, Any] | None = None,
+    specializations: dict[str, Any] | None = _NO_SPEC_POINTS,
 ) -> CharacterFetch:
+    """``specializations=None`` = Blizzard's call failed (keep stored value); ``{}`` = no points yet."""
     profile = CharacterProfile(
         profile=profile_json(slug, blizzard_id, guild), media=None, equipment=None, statistics=None,
-        specializations={}, professions=professions, reputations=reputations, pvp_summary=None,
+        specializations=specializations, professions=professions, reputations=reputations, pvp_summary=None,
         achievement_statistics=None, mounts={}, pets={},
     )
     return CharacterFetch(response=to_character_response(slug, profile), profile=profile, fresh=True)

@@ -4,6 +4,7 @@ import GuildMemberLink from "@/games/wow-forever/components/guild/GuildMemberLin
 import GuildMemberTitles from "@/games/wow-forever/components/guild/GuildMemberTitles";
 import GuildMemberStaleNote from "@/games/wow-forever/components/guild/GuildMemberStaleNote";
 import GuildMemberProfessions from "@/games/wow-forever/components/guild/GuildMemberProfessions";
+import GuildMemberSpec from "@/games/wow-forever/components/guild/GuildMemberSpec";
 import GuildSortHeader from "@/games/wow-forever/components/guild/GuildSortHeader";
 import type { GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
 import { rankLabel } from "@/games/wow-forever/lib/guild/guildMembers";
@@ -34,6 +35,9 @@ export default function GuildMemberTable({ members, rosterUpdatedAt, titles, pro
             <GuildSortHeader column={GUILD_SORT_KEYS.name} {...header} className="px-3" />
             <GuildSortHeader column={GUILD_SORT_KEYS.level} {...header} className="px-3 text-right" />
             <GuildSortHeader column={GUILD_SORT_KEYS.className} {...header} className="px-3" />
+            <th scope="col" className="hidden px-3 font-medium lg:table-cell">
+              Spec
+            </th>
             <GuildSortHeader column={GUILD_SORT_KEYS.itemLevel} {...header} className="px-3 text-right" />
             <GuildSortHeader column={GUILD_SORT_KEYS.rank} {...header} className="px-3" />
             {profession ? (
@@ -55,6 +59,9 @@ export default function GuildMemberTable({ members, rosterUpdatedAt, titles, pro
               </td>
               <td className={GUILD_NUMBER_CELL}>{m.level ?? GUILD_MISSING_VALUE}</td>
               <td className="px-3 py-1">{m.class_name ?? GUILD_MISSING_VALUE}</td>
+              <td className="hidden px-3 py-1 lg:table-cell">
+                <GuildMemberSpec member={m} emptyText={GUILD_MISSING_VALUE} className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm" />
+              </td>
               <td className={GUILD_NUMBER_CELL}>{m.item_level ?? GUILD_MISSING_VALUE}</td>
               <td className="px-3 py-1">{rankLabel(m.rank) ?? GUILD_MISSING_VALUE}</td>
               <td className="px-3 py-1">

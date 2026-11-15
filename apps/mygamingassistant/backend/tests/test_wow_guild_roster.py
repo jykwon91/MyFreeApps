@@ -37,10 +37,11 @@ from app.services.wow.character import character_lookup_service, character_servi
 from app.services.wow.character.blizzard_character_client import BlizzardCharacterClient
 from app.services.wow.character.character_fetch import CharacterFetch
 from app.services.wow.guild import guild_roster_service
+from app.services.wow.character.character_talents_mapper import active_tree_points
 from app.services.wow.guild.guild_mapper import to_guild_identity, to_roster
 from app.services.wow.guild.guild_refresh_outcome import GuildRefreshOutcome
 
-from wow_guild_fixtures import GUILD, NOW, OTHER_GUILD, make_fetch, professions_json, profile_json
+from wow_guild_fixtures import GUILD, NOW, OTHER_GUILD, make_fetch, professions_json, profile_json, specializations_json
 
 
 async def _character(db: AsyncSession, slug: str) -> WowCharacter:
@@ -55,6 +56,55 @@ async def _known(db: AsyncSession, slug: str) -> set[int]:
     character = await _character(db, slug)
     rows = await db.execute(select(WowCharacterRecipe.recipe_id).where(WowCharacterRecipe.character_id == character.id))
     return set(rows.scalars())
+
+
+# --- pure: active_tree_points -----------------------------------------------
+
+
+def test_active_tree_points_returns_none_when_specializations_failed() -> None:
+    assert active_tree_points(None) is None
+
+
+def test_active_tree_points_returns_empty_when_active_set_has_no_points() -> None:
+    specs = {"specialization_groups": [{"is_active": True, "specializations": []}]}
+    assert active_tree_points(specs) == []
+
+
+def test_active_tree_points_returns_trees_with_points_from_active_set_only() -> None:
+    specs = {
+        "specialization_groups": [
+            {
+                "is_active": False,
+                "specializations": [
+                    {"specialization": {"name": "Destruction", "id": 593}, "spent_points": 10},
+                ],
+            },
+            {
+                "is_active": True,
+                "specializations": [
+                    {"specialization": {"name": "Affliction", "id": 355}, "spent_points": 23},
+                    {"specialization": {"name": "Demonology", "id": 354}, "spent_points": 0},
+                ],
+            },
+        ],
+    }
+    # Inactive set is ignored; zero-point tree is omitted.
+    result = active_tree_points(specs)
+    assert result == [{"tree_id": 355, "points": 23}]
+
+
+def test_active_tree_points_handles_missing_spent_points_field() -> None:
+    specs = {
+        "specialization_groups": [
+            {
+                "is_active": True,
+                "specializations": [
+                    {"specialization": {"name": "Fire", "id": 8}},  # no spent_points key
+                ],
+            },
+        ],
+    }
+    assert active_tree_points(specs) == []
 
 
 # --- pure ---------------------------------------------------------------------
@@ -140,6 +190,30 @@ async def test_known_recipes_are_stored_and_kept_when_blizzard_fails_to_send_the
         make_fetch("tiny-john", 2, professions=professions_json((3915, "Brown Linen Shirt"))), now=NOW,
     )
     assert await _known(db, "tiny-john") == {3915}
+
+
+async def test_talent_points_are_stored_and_kept_when_blizzard_fails_to_send_them(
+    bound_unit_of_work: AsyncSession,
+) -> None:
+    db = bound_unit_of_work
+    # First fetch: active set has 23 pts in Affliction (355).
+    await character_store_service.record(
+        make_fetch(specializations=specializations_json((355, "Affliction", 23))), now=NOW,
+    )
+    character = await _character(db, "jason-kwon")
+    assert character.talent_points == [{"tree_id": 355, "points": 23}]
+
+    # Second fetch: Blizzard's /specializations call failed (None) → keep stored value.
+    await character_store_service.record(make_fetch(specializations=None), now=NOW)
+    await db.refresh(character)
+    assert character.talent_points == [{"tree_id": 355, "points": 23}]
+
+    # Third fetch: Blizzard answers with new data → overwrite.
+    await character_store_service.record(
+        make_fetch(specializations=specializations_json((355, "Affliction", 15), (354, "Demonology", 8))), now=NOW,
+    )
+    await db.refresh(character)
+    assert character.talent_points == [{"tree_id": 355, "points": 15}, {"tree_id": 354, "points": 8}]
 
 
 async def test_a_guild_is_due_while_watched_and_stale(bound_unit_of_work: AsyncSession) -> None:

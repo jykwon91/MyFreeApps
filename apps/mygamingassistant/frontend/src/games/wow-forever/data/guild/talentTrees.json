@@ -1,0 +1,47 @@
+{
+  "druid": [
+    { "id": 574, "name": "Balance", "icon": 136096 },
+    { "id": 134, "name": "Feral Combat", "icon": 132276 },
+    { "id": 573, "name": "Restoration", "icon": 136041 }
+  ],
+  "hunter": [
+    { "id": 50, "name": "Beast Mastery", "icon": 132164 },
+    { "id": 163, "name": "Marksmanship", "icon": 132222 },
+    { "id": 51, "name": "Survival", "icon": 132215 }
+  ],
+  "mage": [
+    { "id": 237, "name": "Arcane", "icon": 135932 },
+    { "id": 8, "name": "Fire", "icon": 135810 },
+    { "id": 6, "name": "Frost", "icon": 135846 }
+  ],
+  "paladin": [
+    { "id": 594, "name": "Holy", "icon": 135920 },
+    { "id": 267, "name": "Protection", "icon": 135893 },
+    { "id": 184, "name": "Retribution", "icon": 135873 }
+  ],
+  "priest": [
+    { "id": 613, "name": "Discipline", "icon": 135987 },
+    { "id": 56, "name": "Holy", "icon": 135920 },
+    { "id": 78, "name": "Shadow Magic", "icon": 136207 }
+  ],
+  "rogue": [
+    { "id": 253, "name": "Assassination", "icon": 132292 },
+    { "id": 38, "name": "Combat", "icon": 132090 },
+    { "id": 39, "name": "Subtlety", "icon": 132320 }
+  ],
+  "shaman": [
+    { "id": 375, "name": "Elemental Combat", "icon": 136048 },
+    { "id": 373, "name": "Enhancement", "icon": 136051 },
+    { "id": 374, "name": "Restoration", "icon": 136052 }
+  ],
+  "warlock": [
+    { "id": 355, "name": "Affliction", "icon": 136145 },
+    { "id": 354, "name": "Demonology", "icon": 136172 },
+    { "id": 593, "name": "Destruction", "icon": 136186 }
+  ],
+  "warrior": [
+    { "id": 26, "name": "Arms", "icon": 132292 },
+    { "id": 256, "name": "Fury", "icon": 132347 },
+    { "id": 257, "name": "Protection", "icon": 132341 }
+  ]
+}
