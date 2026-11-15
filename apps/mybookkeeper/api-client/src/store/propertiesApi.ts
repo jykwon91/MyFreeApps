@@ -1,10 +1,11 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { PROPERTY_CHANGE_TAGS, PROPERTY_DELETE_TAGS } from "../constants/propertyChangeTags";
 import type { Property } from "../types/property/property";
 import type { PropertyClassification } from "../types/property/PropertyClassification";
 import type { PropertyType } from "../types/property/PropertyType";
 
 export const propertiesApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["Property"],
+  addTagTypes: PROPERTY_DELETE_TAGS,
 }).injectEndpoints({
   endpoints: (builder) => ({
     getProperties: builder.query<Property[], void>({
@@ -17,11 +18,11 @@ export const propertiesApi = baseApi.enhanceEndpoints({
     }),
     updateProperty: builder.mutation<Property, { id: string; data: { name?: string; address?: string; classification?: PropertyClassification; type?: PropertyType; is_active?: boolean } }>({
       query: ({ id, data }) => ({ url: `/properties/${id}`, method: "PATCH", data }),
-      invalidatesTags: ["Property"],
+      invalidatesTags: [...PROPERTY_CHANGE_TAGS],
     }),
     deleteProperty: builder.mutation<void, string>({
       query: (id) => ({ url: `/properties/${id}`, method: "DELETE" }),
-      invalidatesTags: ["Property"],
+      invalidatesTags: [...PROPERTY_DELETE_TAGS],
     }),
   }),
 });
