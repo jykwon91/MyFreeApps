@@ -15,13 +15,13 @@ import type { JdUrlExtractRequest } from "../types/application/jd-url-extract-re
 import type { JdUrlExtractResponse } from "../types/application/jd-url-extract-response";
 import type { KanbanColumn } from "../types/kanban/kanban-column";
 import type { KanbanListResponse } from "../types/kanban/kanban-list-response";
+import { APPLICATIONS_KANBAN_LIST_ID } from "../constants/applicationsKanbanListId";
 import { APPLICATIONS_PAGE_SIZE, FIRST_APPLICATIONS_OFFSET } from "../constants/applicationsPaging";
 import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
 import { removalIsDone } from "../utils/removalIsDone";
 
 const APPLICATIONS_TAG = "Applications";
 const APPLICATION_EVENTS_TAG = "ApplicationEvents";
-const APPLICATIONS_KANBAN_LIST_ID = "KANBAN_LIST" as const;
 
 const applicationsApi = baseApi.enhanceEndpoints({
   addTagTypes: [APPLICATIONS_TAG, APPLICATION_EVENTS_TAG],
@@ -88,7 +88,10 @@ const applicationsApi = baseApi.enhanceEndpoints({
 
     createApplication: build.mutation<Application, ApplicationCreateRequest>({
       query: (body) => ({ url: "/applications", method: "POST", data: body }),
-      invalidatesTags: [{ type: APPLICATIONS_TAG, id: "LIST" }],
+      invalidatesTags: [
+        { type: APPLICATIONS_TAG, id: "LIST" },
+        { type: APPLICATIONS_TAG, id: APPLICATIONS_KANBAN_LIST_ID },
+      ],
     }),
 
     updateApplication: build.mutation<
