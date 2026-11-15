@@ -93,11 +93,10 @@ async def record(fetch: CharacterFetch, *, now: datetime | None = None, viewed: 
             "gone_at": None,
             "guild_id": guild_id,
             "guild_rank": row.guild_rank if same_guild else None,
-            # When Blizzard last saved this character (the character's last log-out).
-            # Always overwritten: a None here means Blizzard didn't send it this fetch,
-            # and we reflect that rather than keeping a stale timestamp.
-            "blizzard_updated_at": fresh.last_login,
         }
+        # When Blizzard last saved this character (its last log-out). A fetch without it keeps the stored one.
+        if fresh.last_login is not None:
+            save_values["blizzard_updated_at"] = fresh.last_login
         # None means Blizzard's /specializations call failed — keep any stored value.
         if new_talent_points is not None:
             save_values["talent_points"] = new_talent_points

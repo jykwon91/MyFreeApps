@@ -226,11 +226,10 @@ async def test_blizzard_updated_at_is_stored_from_last_login_timestamp(
     character = await _character(db, "jason-kwon")
     assert character.blizzard_updated_at == NOW
 
-    # Second fetch without last_login_timestamp: blizzard_updated_at is overwritten to None
-    # (unlike talent_points, which is kept on failure).
+    # A later fetch without last_login_timestamp keeps the stored one (like talent_points).
     await character_store_service.record(make_fetch(last_login_timestamp=None), now=NOW)
     await db.refresh(character)
-    assert character.blizzard_updated_at is None
+    assert character.blizzard_updated_at == NOW
 
 
 async def test_a_guild_is_due_while_watched_and_stale(bound_unit_of_work: AsyncSession) -> None:
