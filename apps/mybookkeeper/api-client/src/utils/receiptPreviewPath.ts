@@ -1,5 +1,5 @@
 import type { ReceiptPreviewParams } from "../types/lease/receipt-preview-params";
-import { localToday } from "./localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { queryString } from "./queryString";
 
 /** Dated with the host's day: the server's UTC date is tomorrow on a US evening. */

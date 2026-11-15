@@ -28,7 +28,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 }));
 
 import { addDays, format } from "date-fns";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import api from "@/shared/lib/api";
 
 const mockListing = {

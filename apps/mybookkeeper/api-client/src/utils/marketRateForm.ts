@@ -13,7 +13,7 @@ import type { MarketRateFormProblems } from "../types/utility/market-rate-form-p
 import type { MarketRateFormValues } from "../types/utility/market-rate-form-values";
 import type { UtilityServiceType } from "../types/utility/utility-service-type";
 import { decimalPlaces, isPlainNumber, isTooLong, observedOnProblem } from "./benchmarkFieldChecks";
-import { localToday } from "./localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { formatCents, formatCentsPerKwh } from "./utilityPlanFormat";
 
 /** Internet is quoted per month; every other service per kWh. The service decides, never the operator. */

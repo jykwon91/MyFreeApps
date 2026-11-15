@@ -1,6 +1,6 @@
 import type { ApplicantSummary } from "../types/applicant/applicant-summary";
 import type { TenancyState } from "../types/applicant/tenancy-state";
-import { localToday } from "./localToday";
+import { localToday } from "@platform/core/utils/localToday";
 
 type TenancyFields = Pick<ApplicantSummary, "tenant_ended_at" | "contract_end">;
 

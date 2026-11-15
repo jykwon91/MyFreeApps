@@ -5,7 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import SendReceiptDialog from "@/app/features/receipts/SendReceiptDialog";
 import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 
 const mockSendReceipt = vi.fn();
 

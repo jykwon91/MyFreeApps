@@ -1,5 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
-import { localToday } from "../utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { UTILITY_PLAN_UPLOAD_TIMEOUT_MS } from "../constants/utilityPlanUpload";
 import type { UtilityPlanCreateRequest } from "../types/utility/utility-plan-create-request";
 import type { UtilityPlanDetail } from "../types/utility/utility-plan-detail";

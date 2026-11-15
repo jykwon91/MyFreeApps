@@ -1,5 +1,6 @@
 import JSZip from "jszip";
 import { showError } from "@platform/ui";
+import { localToday } from "@platform/core/utils/localToday";
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
 
 /**
@@ -15,8 +16,7 @@ export async function downloadPhotosAsZip(
   listingSlug: string,
 ): Promise<void> {
   const zip = new JSZip();
-  const today = new Date().toISOString().slice(0, 10);
-  const zipName = `${listingSlug}-photos-${today}.zip`;
+  const zipName = `${listingSlug}-photos-${localToday()}.zip`;
 
   let skippedCount = 0;
 

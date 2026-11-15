@@ -1,5 +1,5 @@
 import { addDays, format } from "date-fns";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import type { FieldErrors, FormState, ValidatedField } from "./public-inquiry-types";
 import { US_STATE_CODES } from "@/shared/types/inquiry/us-state";
 import { DEFAULT_COUNTRY_CODE } from "@/shared/types/inquiry/country";

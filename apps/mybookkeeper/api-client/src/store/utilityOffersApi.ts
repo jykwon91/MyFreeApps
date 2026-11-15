@@ -1,4 +1,4 @@
-import { localToday } from "../utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { baseApi } from "@platform/core/store/baseApi";
 import type { UtilityOfferSearchResponse } from "../types/utility/utility-offer-search-response";
 

@@ -33,6 +33,7 @@ global.URL.revokeObjectURL = vi.fn();
 
 // Capture anchor clicks so we can assert on the download trigger.
 const anchorClickSpy = vi.fn();
+const downloadedNames: string[] = [];
 
 import { downloadPhotosAsZip } from "@/app/features/listings/photo-bulk-download";
 
@@ -56,6 +57,7 @@ describe("downloadPhotosAsZip", () => {
     showErrorMock.mockClear();
     fetchMock.mockClear();
     anchorClickSpy.mockClear();
+    downloadedNames.length = 0;
 
     // Default: fetch returns an ok response.
     fetchMock.mockResolvedValue({
@@ -68,7 +70,10 @@ describe("downloadPhotosAsZip", () => {
     vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "a") {
         const anchor = origCreate("a");
-        anchor.click = anchorClickSpy;
+        anchor.click = () => {
+          downloadedNames.push(anchor.download);
+          anchorClickSpy();
+        };
         return anchor;
       }
       return origCreate(tag);
@@ -86,14 +91,20 @@ describe("downloadPhotosAsZip", () => {
     expect(fileMock).toHaveBeenCalledTimes(2);
   });
 
-  it("zip filename matches <slug>-photos-<YYYY-MM-DD>.zip format", async () => {
-    const anchor = document.createElement("a");
-    const setSpy = vi.fn();
-    Object.defineProperty(anchor, "download", { set: setSpy, configurable: true });
+  it("names the zip <slug>-photos-<host's today>.zip, even on a US evening", async () => {
+    vi.stubEnv("TZ", "America/Chicago");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // 8pm on Nov 14 in Chicago is already Nov 15 in UTC.
+    vi.setSystemTime(new Date("2026-11-15T02:00:00Z"));
+    try {
+      await downloadPhotosAsZip([makePhoto()], "test-slug");
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllEnvs();
+    }
 
-    await downloadPhotosAsZip([makePhoto()], "test-slug");
-    // The filename should match the pattern
-    expect(anchorClickSpy).toHaveBeenCalled();
+    expect(anchorClickSpy).toHaveBeenCalledTimes(1);
+    expect(downloadedNames).toEqual(["test-slug-photos-2026-11-14.zip"]);
   });
 
   it("skips a photo whose presigned_url is null and shows an error toast", async () => {

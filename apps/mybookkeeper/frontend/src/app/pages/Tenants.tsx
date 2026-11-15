@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { APPLICANT_PAGE_SIZE } from "@mybookkeeper/api-client/constants/applicantLabels";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import { currentListData } from "@/shared/utils/current-list-data";
 import { usePageCountForFilter } from "@/shared/hooks/usePageCountForFilter";

@@ -1,4 +1,4 @@
-import { localToday } from "../utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { baseApi } from "@platform/core/store/baseApi";
 import type { InsuranceBenchmark } from "../types/insurance/insurance-benchmark";
 import type { InsuranceBenchmarkUpsertRequest } from "../types/insurance/insurance-benchmark-upsert-request";

@@ -712,6 +712,7 @@
         "CalendarEventDetail.test.tsx",
         "CalendarLeaseEvent.test.tsx",
         "CalendarMonthGrid.test.tsx",
+        "CalendarToday.test.tsx",
         "CalendarUnlinkedLease.test.tsx",
         "ReviewQueueItem.test.tsx",
         "ReviewQueueDrawer.test.tsx",
@@ -724,7 +725,8 @@
         "calendar-unlinked-lease.spec.ts",
         "calendar-booking-notes.spec.ts",
         "calendar-review-queue-resolve.spec.ts",
-        "mocked/sections-retry-mock.spec.ts"
+        "mocked/sections-retry-mock.spec.ts",
+        "mocked/calendar-today-local-date-mock.spec.ts"
       ]
     },
     "inquiries": {

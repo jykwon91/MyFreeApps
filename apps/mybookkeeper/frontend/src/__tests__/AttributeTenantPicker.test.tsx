@@ -17,7 +17,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 }));
 
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { useAttributeTransactionManuallyMutation } from "@mybookkeeper/api-client/store/attributionApi";
 import { showSuccess } from "@platform/ui";
 

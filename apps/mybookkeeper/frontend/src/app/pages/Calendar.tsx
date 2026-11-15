@@ -9,10 +9,7 @@ import {
   CALENDAR_DEFAULT_WINDOW_DAYS,
   parseCalendarView,
 } from "@/shared/lib/calendar-constants";
-import {
-  addDays,
-  formatIsoDate,
-} from "@/app/features/calendar/calendar-utils";
+import { addDays } from "@/app/features/calendar/calendar-utils";
 import {
   monthGridWindow,
   startOfMonth,
@@ -30,12 +27,9 @@ import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import { currentListData } from "@/shared/utils/current-list-data";
 import { useLiveSearchParams } from "@platform/ui";
+import { localToday } from "@platform/core/utils/localToday";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-function todayIso(): string {
-  return formatIsoDate(new Date());
-}
 
 function parseIsoOrNull(value: string | null): string | null {
   if (!value || !ISO_DATE_PATTERN.test(value)) return null;
@@ -59,7 +53,7 @@ export default function Calendar() {
   // the month to display for the month grid. The month view derives its own
   // fetch window (whole weeks around that month) and ignores `to`.
   const view = parseCalendarView(searchParams.get("view"));
-  const anchorIso = parseIsoOrNull(searchParams.get("from")) ?? todayIso();
+  const anchorIso = parseIsoOrNull(searchParams.get("from")) ?? localToday();
   const timelineToIso =
     parseIsoOrNull(searchParams.get("to")) ?? addDays(anchorIso, CALENDAR_DEFAULT_WINDOW_DAYS);
 
@@ -126,7 +120,7 @@ export default function Calendar() {
   }
 
   function handleToday() {
-    const today = todayIso();
+    const today = localToday();
     if (view === "month") {
       updateAnchorMonth(today);
       return;
@@ -272,7 +266,7 @@ export default function Calendar() {
         fromIso={fromIso}
         toIso={toIso}
         anchorIso={anchorIso}
-        todayIso={todayIso()}
+        todayIso={localToday()}
       />
     </div>
   );

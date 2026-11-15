@@ -17,7 +17,7 @@ import { useState } from "react";
 import { UserCheck } from "lucide-react";
 import { LoadingButton, showError, showSuccess } from "@platform/ui";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { useAttributeTransactionManuallyMutation } from "@mybookkeeper/api-client/store/attributionApi";
 import { attributionSourceLabel } from "@mybookkeeper/api-client/constants/attributionLabels";
 import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";

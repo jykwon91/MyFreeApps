@@ -1,6 +1,6 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import { APPLICANT_PAGE_SIZE } from "../constants/applicantLabels";
-import { localToday } from "../utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import type { ApplicantContactEmailRequest } from "../types/applicant/applicant-contact-email-request";
 import type { ApplicantDetailResponse } from "../types/applicant/applicant-detail-response";
 import type { ApplicantSensitive } from "../types/applicant/applicant-sensitive";

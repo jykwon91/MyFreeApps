@@ -1,4 +1,4 @@
-import { localToday } from "../utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { baseApi } from "@platform/core/store/baseApi";
 import type { MortgageRateWatch } from "../types/mortgage/mortgage-rate-watch";
 

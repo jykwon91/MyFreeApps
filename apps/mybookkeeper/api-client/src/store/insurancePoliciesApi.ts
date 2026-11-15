@@ -8,7 +8,7 @@ import type { InsurancePolicyListArgs } from "../types/insurance/insurance-polic
 import type { InsurancePolicyListResponse } from "../types/insurance/insurance-policy-list-response";
 import type { InsurancePolicyUpdateRequest } from "../types/insurance/insurance-policy-update-request";
 import type { InsurancePremiumComparison } from "../types/insurance/insurance-premium-comparison";
-import { localToday } from "../utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 
 export const insurancePoliciesApi = baseApi.enhanceEndpoints({
   addTagTypes: ["InsurancePolicy", "Document"],

@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react"; // useEffect: drop_id URL sync
 import { useSearchParams } from "react-router-dom";
 import { EmptyState, Select, Skeleton, extractErrorMessage } from "@platform/ui";
+import { localToday } from "@platform/core/utils/localToday";
 import { useListDropsQuery } from "@/store/dropsApi";
 import FinancialsBody from "@/features/financials/FinancialsBody";
 import FinancialsBodySkeleton from "@/features/financials/FinancialsBodySkeleton";
@@ -16,7 +17,7 @@ export default function Financials() {
     if (!drops.data || drops.data.length === 0) return null;
     // Default: today's active drop, fallback to most recent (already sorted
     // newest-first by the backend).
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localToday();
     const active = drops.data.find((d) => d.status === "active" && d.date === today);
     return (active ?? drops.data[0]).id;
   }, [dropIdParam, drops.data]);
