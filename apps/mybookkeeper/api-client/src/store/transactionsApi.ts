@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { RECEIPTS_PENDING_TAG } from "../constants/receiptsPendingTag";
 import { TRANSACTION_PAGE_SIZE } from "../constants/transactionPaging";
 import type { BankCsvImportRequest } from "../types/transaction/BankCsvImportRequest";
 import type { BulkApproveTransactionsResponse } from "../types/transaction/BulkApproveTransactionsResponse";
@@ -14,7 +15,7 @@ import type { TransactionReviewCount } from "../types/transaction/TransactionRev
 import type { TransactionUpdateResult } from "../types/transaction/TransactionUpdateResult";
 
 export const transactionsApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["Summary", "Transaction"],
+  addTagTypes: ["Summary", "Transaction", "SignedLease"],
 }).injectEndpoints({
   endpoints: (builder) => ({
     listTransactions: builder.query<Transaction[], TransactionListParams>({
@@ -58,7 +59,8 @@ export const transactionsApi = baseApi.enhanceEndpoints({
     }),
     deleteTransaction: builder.mutation<void, string>({
       query: (id) => ({ url: `/transactions/${id}`, method: "DELETE" }),
-      invalidatesTags: ["Transaction", "Summary"],
+      // Deleting a payment drops its pending rent receipt.
+      invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG],
     }),
     importBankCsv: builder.mutation<ImportResult, BankCsvImportRequest>({
       query: ({ form, propertyId }) => ({
@@ -76,7 +78,8 @@ export const transactionsApi = baseApi.enhanceEndpoints({
     }),
     bulkDeleteTransactions: builder.mutation<BulkDeleteTransactionsResponse, string[]>({
       query: (ids) => ({ url: "/transactions/bulk-delete", method: "POST", data: { ids } }),
-      invalidatesTags: ["Transaction", "Summary"],
+      // Deleting a payment drops its pending rent receipt.
+      invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG],
     }),
     getScheduleEReport: builder.query<ScheduleEReport, number>({
       query: (taxYear) => ({ url: "/transactions/schedule-e", params: { tax_year: taxYear } }),
@@ -88,7 +91,8 @@ export const transactionsApi = baseApi.enhanceEndpoints({
     }),
     keepDuplicate: builder.mutation<{ kept: number; deleted: number }, { keep_id: string; delete_ids: string[] }>({
       query: (data) => ({ url: "/transactions/duplicates/keep", method: "POST", data }),
-      invalidatesTags: ["Transaction", "Summary"],
+      // Deleting a payment drops its pending rent receipt.
+      invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG],
     }),
     dismissDuplicate: builder.mutation<{ reviewed: number }, { transaction_ids: string[] }>({
       query: (data) => ({ url: "/transactions/duplicates/dismiss", method: "POST", data }),
@@ -96,7 +100,8 @@ export const transactionsApi = baseApi.enhanceEndpoints({
     }),
     mergeDuplicates: builder.mutation<MergeDuplicatesResponse, MergeDuplicatesRequest>({
       query: (data) => ({ url: "/transactions/duplicates/merge", method: "POST", data }),
-      invalidatesTags: ["Transaction", "Summary"],
+      // Deleting a payment drops its pending rent receipt.
+      invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG],
     }),
   }),
 });

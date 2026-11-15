@@ -127,7 +127,7 @@ async def _load_context(
             raise _refusal_for(receipt)
 
         txn = await transaction_repo.get_by_id(db, transaction_id, organization_id)
-        if txn is None:
+        if txn is None or txn.deleted_at is not None:
             raise LookupError(f"Transaction {transaction_id} not found")
 
         applicant = None
