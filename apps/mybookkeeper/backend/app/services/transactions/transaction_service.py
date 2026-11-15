@@ -19,6 +19,7 @@ from app.schemas.transactions.duplicate import DuplicateMergeOverrides
 from app.schemas.transactions.transaction_filters import TransactionFilters
 from app.services.classification import rule_learning_service
 from app.services.transactions.merge_strategy import MERGEABLE_FIELDS, auto_pick_defaults
+from app.services.transactions.reference_ownership import assert_references_owned
 
 # Union of all possible value types in a Transaction field dict
 # (from TransactionCreate.model_dump() or TransactionUpdate.model_dump())
@@ -82,6 +83,7 @@ async def create_manual_transaction(
     if data.get("schedule_e_line") is None:
         data["schedule_e_line"] = CATEGORY_TO_SCHEDULE_E.get(data["category"])
     async with unit_of_work() as db:
+        await assert_references_owned(db, ctx, data)
         created = await transaction_repo.create_transaction(
             db,
             organization_id=ctx.organization_id,
@@ -122,9 +124,11 @@ async def update_transaction(
         old_category = txn.category
         old_schedule_e_line = txn.schedule_e_line
         old_property_id = txn.property_id
-        for field, value in updates.items():
+        for field in updates:
             if field not in UPDATABLE_FIELDS:
                 raise ValueError(f"Cannot update field: {field}")
+        await assert_references_owned(db, ctx, updates)
+        for field, value in updates.items():
             setattr(txn, field, value)
 
         retroactive_count = 0
