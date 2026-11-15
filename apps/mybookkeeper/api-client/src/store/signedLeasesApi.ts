@@ -7,6 +7,7 @@ import type { SignedLeaseAttachment } from "../types/lease/signed-lease-attachme
 import type { SignedLeaseCreateRequest } from "../types/lease/signed-lease-create-request";
 import type { SignedLeaseDeleteRequest } from "../types/lease/signed-lease-delete-request";
 import type { SignedLeaseDetail } from "../types/lease/signed-lease-detail";
+import { CALENDAR_LIST_TAG } from "../constants/calendarTags";
 import { LEASE_PAGE_SIZE } from "../constants/leaseLabels";
 import type { SignedLeasePageArgs } from "../types/lease/signed-lease-page-args";
 import type { SignedLeaseListArgs } from "../types/lease/signed-lease-list-args";
@@ -30,7 +31,7 @@ function tagsForTenantDates(applicantId: string) {
 
 /** A new lease also changes the one it follows, which now has a successor. */
 function tagsAfterNewLease(lease: SignedLeaseDetail | undefined) {
-  const tags = [{ type: "SignedLease" as const, id: "LIST" }];
+  const tags = [{ type: "SignedLease" as const, id: "LIST" }, CALENDAR_LIST_TAG];
   if (lease?.parent_lease_id) tags.push({ type: "SignedLease" as const, id: lease.parent_lease_id });
   return lease ? [...tags, ...tagsForTenantDates(lease.applicant_id)] : tags;
 }
@@ -44,6 +45,7 @@ function tagsAfterLeaseUpdate(
   return [
     { type: "SignedLease" as const, id: leaseId },
     { type: "SignedLease" as const, id: "LIST" },
+    CALENDAR_LIST_TAG,
     ...(lease ? tagsForTenantDates(lease.applicant_id) : []),
   ];
 }
@@ -57,6 +59,7 @@ function tagsAfterTermChange(
   return [
     { type: "SignedLease" as const, id: leaseId },
     { type: "SignedLease" as const, id: "LIST" },
+    CALENDAR_LIST_TAG,
     ...(lease ? tagsForTenantDates(lease.applicant_id) : []),
   ];
 }
@@ -69,7 +72,7 @@ function tagsAfterTermChange(
  * invalidate the parent lease tag.
  */
 export const signedLeasesApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["SignedLease", "Applicant"],
+  addTagTypes: ["SignedLease", "Applicant", "Calendar"],
 }).injectEndpoints({
   endpoints: (builder) => ({
     getSignedLeases: builder.query<
@@ -146,6 +149,7 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
       query: ({ leaseId }) => ({ url: `/signed-leases/${leaseId}`, method: "DELETE" }),
       invalidatesTags: (_r, _e, { applicantId }) => [
         { type: "SignedLease", id: "LIST" },
+        CALENDAR_LIST_TAG,
         ...tagsForTenantDates(applicantId),
       ],
       // A renewal chain links leases, so a cached lease that points at the deleted one would
@@ -173,9 +177,11 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
         patchCacheAfterSuccess(queryFulfilled, (data) => {
           dispatch(signedLeasesApi.util.updateQueryData("getSignedLeaseById", id, () => data));
         }),
+      // Generating moves a draft to signed, which is when it starts showing on the calendar.
       invalidatesTags: (_r, _e, id) => [
         { type: "SignedLease", id },
         { type: "SignedLease", id: "LIST" },
+        CALENDAR_LIST_TAG,
       ],
     }),
 

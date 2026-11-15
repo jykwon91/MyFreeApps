@@ -16,11 +16,12 @@ import type { ListingPhotoUpdateArgs } from "../types/listing/listing-photo-upda
 import type { ListingUpdateRequest } from "../types/listing/listing-update-request";
 import type { ListingListArgs } from "../types/listing/listing-list-args";
 import type { ListingListResponse } from "../types/listing/listing-list-response";
+import { CALENDAR_LIST_TAG } from "../constants/calendarTags";
 import type { ListingPageArgs } from "../types/listing/listing-page-args";
 import type { ListingResponse } from "../types/listing/listing-response";
 
 export const listingsApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["Listing", "Channel", "ChannelListing"],
+  addTagTypes: ["Listing", "Channel", "ChannelListing", "SignedLease", "Calendar"],
 }).injectEndpoints({
   endpoints: (builder) => ({
     getListings: builder.query<ListingListResponse, ListingListArgs | void>({
@@ -68,13 +69,18 @@ export const listingsApi = baseApi.enhanceEndpoints({
       invalidatesTags: (_result, _err, arg) => [
         { type: "Listing", id: arg.id },
         { type: "Listing", id: "LIST" },
+        CALENDAR_LIST_TAG,
       ],
     }),
     deleteListing: builder.mutation<void, string>({
       query: (id) => ({ url: `/listings/${id}`, method: "DELETE" }),
+      // Leases keep pointing at the deleted listing, and the calendar drops its name and blackouts.
       invalidatesTags: (_result, _err, id) => [
         { type: "Listing", id },
         { type: "Listing", id: "LIST" },
+        { type: "ChannelListing", id: `LISTING-${id}` },
+        { type: "SignedLease", id: "LIST" },
+        CALENDAR_LIST_TAG,
       ],
     }),
     /** The caller's form carries one or more `files` parts. The server refuses the whole batch if one file is bad. */
@@ -159,9 +165,11 @@ export const listingsApi = baseApi.enhanceEndpoints({
     }),
     deleteChannelListing: builder.mutation<void, { listingId: string; channelListingId: string }>({
       query: ({ channelListingId }) => ({ url: `/channel-listings/${channelListingId}`, method: "DELETE" }),
+      // The server also removes that channel's blackouts.
       invalidatesTags: (_result, _err, arg) => [
         { type: "ChannelListing", id: arg.channelListingId },
         { type: "ChannelListing", id: `LISTING-${arg.listingId}` },
+        CALENDAR_LIST_TAG,
       ],
     }),
   }),
