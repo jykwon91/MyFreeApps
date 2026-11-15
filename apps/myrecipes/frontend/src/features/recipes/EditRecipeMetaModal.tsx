@@ -1,15 +1,11 @@
-import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { LoadingButton, Button, FormField, showError, showSuccess } from "@platform/ui";
-import {
-  RECIPE_DESCRIPTION_MAX_LENGTH,
-  RECIPE_SOURCE_MAX_LENGTH,
-  RECIPE_TITLE_MAX_LENGTH,
-} from "@myrecipes/api-client/constants/recipeForm";
+import { showError, showSuccess } from "@platform/ui";
 import { RECIPE_MANAGE_MESSAGES as MESSAGES } from "@myrecipes/api-client/constants/recipeManage";
 import { useUpdateRecipeMutation } from "@myrecipes/api-client/store/recipesApi";
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
 import { buildRecipeUpdateRequest } from "@myrecipes/api-client/utils/buildRecipeUpdateRequest";
+import type { RecipeMetaValues } from "@myrecipes/api-client/types/recipe/recipe-meta-values";
+import EditRecipeMetaForm from "@/features/recipes/EditRecipeMetaForm";
 import { recipeMetaProblems } from "@myrecipes/api-client/utils/recipeMetaProblems";
 
 interface Props {
@@ -22,21 +18,17 @@ interface Props {
  * Edits recipe-level metadata (title / description / source). Ingredients and
  * steps are intentionally NOT editable here — changing those is a tweak (a new
  * version), per the backend contract where PATCH only accepts these three
- * fields.
+ * fields. The form lives in a child that mounts with the dialog content, so
+ * every open starts from the recipe as it is now (not a stale or abandoned edit).
  */
 export default function EditRecipeMetaModal({ open, onClose, recipe }: Props) {
-  const [title, setTitle] = useState(recipe.title);
-  const [description, setDescription] = useState(recipe.description ?? "");
-  const [source, setSource] = useState(recipe.source ?? "");
   const [updateRecipe, { isLoading }] = useUpdateRecipeMutation();
 
   function handleOpenChange(next: boolean) {
     if (!next && !isLoading) onClose();
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const values = { title, description, source };
+  async function handleSubmit(values: RecipeMetaValues) {
     const problems = recipeMetaProblems(values);
     const problem = problems.title ?? problems.description ?? problems.source;
     if (problem) {
@@ -64,72 +56,12 @@ export default function EditRecipeMetaModal({ open, onClose, recipe }: Props) {
             {MESSAGES.editIntro}
           </Dialog.Description>
 
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-            <FormField label="Title" required>
-              {(field) => (
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  disabled={isLoading}
-                  required
-                  maxLength={RECIPE_TITLE_MAX_LENGTH}
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 min-h-[44px]"
-                  {...field}
-                />
-              )}
-            </FormField>
-
-            <FormField label="Description">
-              {(field) => (
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  disabled={isLoading}
-                  rows={3}
-                  maxLength={RECIPE_DESCRIPTION_MAX_LENGTH}
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                  {...field}
-                />
-              )}
-            </FormField>
-
-            <FormField label="Source">
-              {(field) => (
-                <input
-                  type="text"
-                  value={source}
-                  onChange={(e) => setSource(e.target.value)}
-                  disabled={isLoading}
-                  maxLength={RECIPE_SOURCE_MAX_LENGTH}
-                  placeholder="e.g. grandma, a cookbook, a URL"
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 min-h-[44px]"
-                  {...field}
-                />
-              )}
-            </FormField>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => handleOpenChange(false)}
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
-              <LoadingButton
-                type="submit"
-                size="sm"
-                isLoading={isLoading}
-                loadingText="Saving..."
-                disabled={!title.trim()}
-              >
-                Save changes
-              </LoadingButton>
-            </div>
-          </form>
+          <EditRecipeMetaForm
+            recipe={recipe}
+            isLoading={isLoading}
+            onSubmit={handleSubmit}
+            onCancel={() => handleOpenChange(false)}
+          />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
