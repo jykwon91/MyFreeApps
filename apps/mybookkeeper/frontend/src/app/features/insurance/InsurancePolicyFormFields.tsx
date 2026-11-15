@@ -1,6 +1,6 @@
 import { FormField } from "@platform/ui";
 import InsuranceFieldProblem from "./InsuranceFieldProblem";
-import { insuranceFieldAria } from "./insurance-field-aria";
+import { fieldProblemAria } from "@/shared/utils/field-problem-aria";
 import { INSURANCE_POLICY_INPUT_CLASS } from "./insurance-policy-input-class";
 import { FREQUENCY_LABEL } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
 import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
@@ -43,7 +43,7 @@ export default function InsurancePolicyFormFields({
               maxLength={255}
               required
               data-testid="insurance-policy-name-input"
-              {...insuranceFieldAria(problems, "policyName")}
+              {...fieldProblemAria(problems, "policyName", "insurance")}
               {...field}
             />
             <InsuranceFieldProblem problems={problems} field="policyName" />
@@ -62,7 +62,7 @@ export default function InsurancePolicyFormFields({
               className={INSURANCE_POLICY_INPUT_CLASS}
               maxLength={255}
               data-testid="insurance-carrier-input"
-              {...insuranceFieldAria(problems, "carrier")}
+              {...fieldProblemAria(problems, "carrier", "insurance")}
               {...field}
             />
             <InsuranceFieldProblem problems={problems} field="carrier" />
@@ -81,7 +81,7 @@ export default function InsurancePolicyFormFields({
               className={INSURANCE_POLICY_INPUT_CLASS}
               maxLength={255}
               data-testid="insurance-policy-number-input"
-              {...insuranceFieldAria(problems, "policyNumber")}
+              {...fieldProblemAria(problems, "policyNumber", "insurance")}
               {...field}
             />
             <InsuranceFieldProblem problems={problems} field="policyNumber" />
@@ -112,7 +112,7 @@ export default function InsurancePolicyFormFields({
                 onChange={(e) => onChange("expirationDate", e.target.value)}
                 className={INSURANCE_POLICY_INPUT_CLASS}
                 data-testid="insurance-expiration-date-input"
-                {...insuranceFieldAria(problems, "expirationDate")}
+                {...fieldProblemAria(problems, "expirationDate", "insurance")}
                 {...field}
               />
               <InsuranceFieldProblem problems={problems} field="expirationDate" />
@@ -133,7 +133,7 @@ export default function InsurancePolicyFormFields({
               step="1"
               className={INSURANCE_POLICY_INPUT_CLASS}
               data-testid="insurance-coverage-input"
-              {...insuranceFieldAria(problems, "coverageDollars")}
+              {...fieldProblemAria(problems, "coverageDollars", "insurance")}
               {...field}
             />
             <InsuranceFieldProblem problems={problems} field="coverageDollars" />
@@ -160,7 +160,7 @@ export default function InsurancePolicyFormFields({
                   step="0.01"
                   className={INSURANCE_POLICY_INPUT_CLASS}
                   data-testid="insurance-premium-input"
-                  {...insuranceFieldAria(problems, "premiumDollars")}
+                  {...fieldProblemAria(problems, "premiumDollars", "insurance")}
                   {...field}
                 />
                 <InsuranceFieldProblem problems={problems} field="premiumDollars" />
@@ -176,7 +176,7 @@ export default function InsurancePolicyFormFields({
                   onChange={(e) => onChange("premiumFrequency", e.target.value)}
                   className={INSURANCE_POLICY_INPUT_CLASS}
                   data-testid="insurance-premium-frequency-select"
-                  {...insuranceFieldAria(problems, "premiumFrequency")}
+                  {...fieldProblemAria(problems, "premiumFrequency", "insurance")}
                   {...field}
                 >
                   {/* Blank rather than a default period: guessing "annually" over a
@@ -209,7 +209,7 @@ export default function InsurancePolicyFormFields({
                 step="0.01"
                 className={INSURANCE_POLICY_INPUT_CLASS}
                 data-testid="insurance-fees-and-taxes-input"
-                {...insuranceFieldAria(problems, "feesAndTaxesDollars")}
+                {...fieldProblemAria(problems, "feesAndTaxesDollars", "insurance")}
                 {...field}
               />
               <InsuranceFieldProblem problems={problems} field="feesAndTaxesDollars" />
@@ -235,7 +235,7 @@ export default function InsurancePolicyFormFields({
                   step="1"
                   className={INSURANCE_POLICY_INPUT_CLASS}
                   data-testid="insurance-deductible-input"
-                  {...insuranceFieldAria(problems, "deductibleDollars")}
+                  {...fieldProblemAria(problems, "deductibleDollars", "insurance")}
                   {...field}
                 />
                 <InsuranceFieldProblem problems={problems} field="deductibleDollars" />
@@ -256,7 +256,7 @@ export default function InsurancePolicyFormFields({
                   step="0.01"
                   className={INSURANCE_POLICY_INPUT_CLASS}
                   data-testid="insurance-wind-hail-input"
-                  {...insuranceFieldAria(problems, "windHailPct")}
+                  {...fieldProblemAria(problems, "windHailPct", "insurance")}
                   {...field}
                 />
                 <InsuranceFieldProblem problems={problems} field="windHailPct" />
@@ -277,7 +277,7 @@ export default function InsurancePolicyFormFields({
               rows={3}
               maxLength={5000}
               data-testid="insurance-notes-input"
-              {...insuranceFieldAria(problems, "notes")}
+              {...fieldProblemAria(problems, "notes", "insurance")}
               {...field}
             />
             <InsuranceFieldProblem problems={problems} field="notes" />

@@ -1,5 +1,6 @@
 import { Button, LoadingButton } from "@platform/ui";
 import FieldProblem from "@/shared/components/FieldProblem";
+import { problemAria } from "@/shared/utils/field-problem-aria";
 import {
   BENCHMARK_NOTES_MAX_LENGTH,
   BENCHMARK_SOURCE_MAX_LENGTH,
@@ -50,8 +51,7 @@ export default function InsuranceBenchmarkForm({
             onChange={(e) => form.setPremium(e.target.value)}
             className={INSURANCE_POLICY_INPUT_CLASS}
             data-testid="insurance-benchmark-premium"
-            aria-invalid={form.problems.premium ? true : undefined}
-            aria-describedby={form.problems.premium ? "insurance-benchmark-premium-problem" : undefined}
+            {...problemAria(form.problems.premium, "insurance-benchmark-premium-problem")}
             required
           />
           <FieldProblem id="insurance-benchmark-premium-problem" message={form.problems.premium} />
@@ -77,8 +77,7 @@ export default function InsuranceBenchmarkForm({
             onChange={(e) => form.setCoverage(e.target.value)}
             className={INSURANCE_POLICY_INPUT_CLASS}
             data-testid="insurance-benchmark-coverage"
-            aria-invalid={form.problems.coverage ? true : undefined}
-            aria-describedby={form.problems.coverage ? "insurance-benchmark-coverage-problem" : undefined}
+            {...problemAria(form.problems.coverage, "insurance-benchmark-coverage-problem")}
             required
           />
           <FieldProblem id="insurance-benchmark-coverage-problem" message={form.problems.coverage} />
@@ -104,8 +103,7 @@ export default function InsuranceBenchmarkForm({
           placeholder="Harris County, TX"
           className={INSURANCE_POLICY_INPUT_CLASS}
           data-testid="insurance-benchmark-region"
-          aria-invalid={form.problems.regionLabel ? true : undefined}
-          aria-describedby={form.problems.regionLabel ? "insurance-benchmark-region-problem" : undefined}
+          {...problemAria(form.problems.regionLabel, "insurance-benchmark-region-problem")}
         />
         <FieldProblem id="insurance-benchmark-region-problem" message={form.problems.regionLabel} />
         <p className="text-xs text-muted-foreground mt-1">
@@ -130,8 +128,7 @@ export default function InsuranceBenchmarkForm({
           placeholder="TDI HelpInsure quote, HO-3, $2,500 deductible"
           className={INSURANCE_POLICY_INPUT_CLASS}
           data-testid="insurance-benchmark-source"
-          aria-invalid={form.problems.source ? true : undefined}
-          aria-describedby={form.problems.source ? "insurance-benchmark-source-problem" : undefined}
+          {...problemAria(form.problems.source, "insurance-benchmark-source-problem")}
         />
         <FieldProblem id="insurance-benchmark-source-problem" message={form.problems.source} />
         <p className="text-xs text-muted-foreground mt-1">
@@ -155,8 +152,7 @@ export default function InsuranceBenchmarkForm({
           onChange={(e) => form.setObservedOn(e.target.value)}
           className={INSURANCE_POLICY_INPUT_CLASS}
           data-testid="insurance-benchmark-observed-on"
-          aria-invalid={form.problems.observedOn ? true : undefined}
-          aria-describedby={form.problems.observedOn ? "insurance-benchmark-observed-on-problem" : undefined}
+          {...problemAria(form.problems.observedOn, "insurance-benchmark-observed-on-problem")}
           required
         />
         <FieldProblem id="insurance-benchmark-observed-on-problem" message={form.problems.observedOn} />
@@ -177,8 +173,7 @@ export default function InsuranceBenchmarkForm({
           className={`${INSURANCE_POLICY_INPUT_CLASS} resize-none`}
           maxLength={BENCHMARK_NOTES_MAX_LENGTH}
           data-testid="insurance-benchmark-notes"
-          aria-invalid={form.problems.notes ? true : undefined}
-          aria-describedby={form.problems.notes ? "insurance-benchmark-notes-problem" : undefined}
+          {...problemAria(form.problems.notes, "insurance-benchmark-notes-problem")}
         />
         <FieldProblem id="insurance-benchmark-notes-problem" message={form.problems.notes} />
       </div>

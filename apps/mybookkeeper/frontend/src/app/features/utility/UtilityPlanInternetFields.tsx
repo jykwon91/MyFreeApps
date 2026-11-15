@@ -1,6 +1,6 @@
 import { FormField } from "@platform/ui";
 import type { UtilityPlanFormProblems } from "@mybookkeeper/api-client/types/utility/utility-plan-form-problems";
-import { utilityPlanFieldAria } from "./utility-plan-field-aria";
+import { fieldProblemAria } from "@/shared/utils/field-problem-aria";
 import UtilityPlanFieldProblem from "./UtilityPlanFieldProblem";
 import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 import type { UtilityPlanFormState } from "./useUtilityPlanForm";
@@ -41,7 +41,7 @@ export default function UtilityPlanInternetFields({
                 className={UTILITY_PLAN_INPUT_CLASS}
                 data-testid="utility-plan-post-promo-input"
                 {...field}
-                {...utilityPlanFieldAria(problems, "postPromoMonthly")}
+                {...fieldProblemAria(problems, "postPromoMonthly", "utility-plan")}
               />
               <UtilityPlanFieldProblem problems={problems} field="postPromoMonthly" />
             </>
@@ -61,7 +61,7 @@ export default function UtilityPlanInternetFields({
                 className={UTILITY_PLAN_INPUT_CLASS}
                 data-testid="utility-plan-equipment-fee-input"
                 {...field}
-                {...utilityPlanFieldAria(problems, "equipmentFeeMonthly")}
+                {...fieldProblemAria(problems, "equipmentFeeMonthly", "utility-plan")}
               />
               <UtilityPlanFieldProblem problems={problems} field="equipmentFeeMonthly" />
             </>
@@ -89,7 +89,7 @@ export default function UtilityPlanInternetFields({
                 className={UTILITY_PLAN_INPUT_CLASS}
                 data-testid="utility-plan-download-input"
                 {...field}
-                {...utilityPlanFieldAria(problems, "downloadMbps")}
+                {...fieldProblemAria(problems, "downloadMbps", "utility-plan")}
               />
               <UtilityPlanFieldProblem problems={problems} field="downloadMbps" />
             </>
@@ -109,7 +109,7 @@ export default function UtilityPlanInternetFields({
                 className={UTILITY_PLAN_INPUT_CLASS}
                 data-testid="utility-plan-upload-input"
                 {...field}
-                {...utilityPlanFieldAria(problems, "uploadMbps")}
+                {...fieldProblemAria(problems, "uploadMbps", "utility-plan")}
               />
               <UtilityPlanFieldProblem problems={problems} field="uploadMbps" />
             </>
@@ -133,7 +133,7 @@ export default function UtilityPlanInternetFields({
                 className={UTILITY_PLAN_INPUT_CLASS}
                 data-testid="utility-plan-data-cap-input"
                 {...field}
-                {...utilityPlanFieldAria(problems, "dataCapGb")}
+                {...fieldProblemAria(problems, "dataCapGb", "utility-plan")}
               />
               <UtilityPlanFieldProblem problems={problems} field="dataCapGb" />
             </>

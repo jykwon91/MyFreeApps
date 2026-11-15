@@ -1,6 +1,7 @@
 import type { InsurancePolicyDetail } from "../types/insurance/insurance-policy-detail";
 import type { InsurancePolicyFormValues } from "../types/insurance/insurance-policy-form-values";
 import type { InsurancePremiumFrequency } from "../types/insurance/insurance-premium-frequency";
+import { dollarsToCents } from "./dollarsToCents";
 
 /**
  * Conversion between the insurance-policy form's text state and the API shape.
@@ -23,21 +24,6 @@ export const EMPTY_POLICY_FORM: InsurancePolicyFormValues = {
   windHailPct: "",
   notes: "",
 };
-
-/**
- * Dollars typed by hand → integer cents, or null when the field is blank.
- *
- * ``Number("")`` is 0, not NaN, so a blank field would otherwise post a real
- * zero — which for a premium means "free" and for a deductible means
- * "first-dollar coverage". Both are claims the operator did not make.
- */
-export function dollarsToCents(value: string): number | null {
-  const trimmed = value.trim();
-  if (trimmed === "") return null;
-  const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed)) return null;
-  return Math.round(parsed * 100);
-}
 
 /** A blank optional text field posts null rather than an empty string. */
 function textOrNull(value: string): string | null {

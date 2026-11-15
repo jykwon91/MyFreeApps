@@ -9,7 +9,8 @@ import {
 import type { InsurancePolicyFormProblem } from "../types/insurance/insurance-policy-form-problem";
 import type { InsurancePolicyFormProblems } from "../types/insurance/insurance-policy-form-problems";
 import type { InsurancePolicyFormValues } from "../types/insurance/insurance-policy-form-values";
-import { dollarsToCents, isPremiumBilledMissing } from "./insurancePolicyForm";
+import { dollarsToCents } from "./dollarsToCents";
+import { isPremiumBilledMissing } from "./insurancePolicyForm";
 
 type MoneyField = "coverageDollars" | "feesAndTaxesDollars" | "deductibleDollars";
 

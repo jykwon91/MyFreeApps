@@ -1,4 +1,5 @@
 import FieldProblem from "@/shared/components/FieldProblem";
+import { problemAria } from "@/shared/utils/field-problem-aria";
 import { BENCHMARK_NOTES_MAX_LENGTH, BENCHMARK_SOURCE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/benchmarkForm";
 import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 import UtilityPlanFormActions from "./UtilityPlanFormActions";
@@ -52,8 +53,7 @@ export default function MarketRateBenchmarkForm({
           onChange={(e) => form.setFigure(e.target.value)}
           className={UTILITY_PLAN_INPUT_CLASS}
           data-testid="benchmark-figure"
-          aria-invalid={form.problems.figure ? true : undefined}
-          aria-describedby={form.problems.figure ? "benchmark-figure-problem" : undefined}
+          {...problemAria(form.problems.figure, "benchmark-figure-problem")}
           required
         />
         <FieldProblem id="benchmark-figure-problem" message={form.problems.figure} />
@@ -73,8 +73,7 @@ export default function MarketRateBenchmarkForm({
           placeholder="Power to Choose, 77021, 12-month fixed, 4★+"
           className={UTILITY_PLAN_INPUT_CLASS}
           data-testid="benchmark-source"
-          aria-invalid={form.problems.source ? true : undefined}
-          aria-describedby={form.problems.source ? "benchmark-source-problem" : undefined}
+          {...problemAria(form.problems.source, "benchmark-source-problem")}
         />
         <FieldProblem id="benchmark-source-problem" message={form.problems.source} />
         <p className="text-xs text-muted-foreground mt-1">
@@ -95,8 +94,7 @@ export default function MarketRateBenchmarkForm({
           onChange={(e) => form.setObservedOn(e.target.value)}
           className={UTILITY_PLAN_INPUT_CLASS}
           data-testid="benchmark-observed-on"
-          aria-invalid={form.problems.observedOn ? true : undefined}
-          aria-describedby={form.problems.observedOn ? "benchmark-observed-on-problem" : undefined}
+          {...problemAria(form.problems.observedOn, "benchmark-observed-on-problem")}
           required
         />
         <FieldProblem id="benchmark-observed-on-problem" message={form.problems.observedOn} />
@@ -114,8 +112,7 @@ export default function MarketRateBenchmarkForm({
           className={UTILITY_PLAN_INPUT_CLASS}
           maxLength={BENCHMARK_NOTES_MAX_LENGTH}
           data-testid="benchmark-notes"
-          aria-invalid={form.problems.notes ? true : undefined}
-          aria-describedby={form.problems.notes ? "benchmark-notes-problem" : undefined}
+          {...problemAria(form.problems.notes, "benchmark-notes-problem")}
         />
         <FieldProblem id="benchmark-notes-problem" message={form.problems.notes} />
       </div>

@@ -1,5 +1,7 @@
 import type { UtilityPlanFormProblems } from "@mybookkeeper/api-client/types/utility/utility-plan-form-problems";
 import type { UtilityPlanFormValues } from "@mybookkeeper/api-client/types/utility/utility-plan-form-values";
+import FieldProblem from "@/shared/components/FieldProblem";
+import { fieldProblemId } from "@/shared/utils/field-problem-aria";
 
 export interface UtilityPlanFieldProblemProps {
   problems: UtilityPlanFormProblems;
@@ -8,16 +10,5 @@ export interface UtilityPlanFieldProblemProps {
 
 /** Says what is wrong with one field, under it. Renders nothing while the field is fine. */
 export default function UtilityPlanFieldProblem({ problems, field }: UtilityPlanFieldProblemProps) {
-  const problem = problems[field];
-  if (!problem) return null;
-  return (
-    <p
-      id={`utility-plan-${field}-problem`}
-      role="alert"
-      className="mt-1 text-xs text-destructive"
-      data-testid={`utility-plan-${field}-problem`}
-    >
-      {problem}
-    </p>
-  );
+  return <FieldProblem id={fieldProblemId("utility-plan", field)} message={problems[field]} />;
 }
