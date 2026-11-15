@@ -48,6 +48,8 @@ export default function TransactionEditForm({ original }: { original: Transactio
   const amountProblem = showProblems ? amountError(values, original) : undefined;
   const taxYearProblem = showProblems ? taxYearError(values, original) : undefined;
 
+  const locked = isSaving || isLeaving;
+
   useConfirmLeave(isDirty && !isLeaving, (leave) => {
     if (isSaving) return;
     Alert.alert("Discard your changes?", "I haven't saved them yet.", [
@@ -203,7 +205,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
           <>
             {values.propertyId ? null : <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>Choose a property to approve.</Text>}
             <LoadingButton
-              disabled={!values.propertyId || isSaving}
+              disabled={!values.propertyId || locked}
               isLoading={savingAction === TRANSACTION_SAVE_ACTION.approve}
               loadingText="Saving…"
               onPress={() => save(true)}
@@ -211,7 +213,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
               Save and approve
             </LoadingButton>
             <LoadingButton
-              disabled={isSaving}
+              disabled={locked}
               isLoading={savingAction === TRANSACTION_SAVE_ACTION.save}
               loadingText="Saving…"
               onPress={() => save(false)}
@@ -221,7 +223,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
             </LoadingButton>
           </>
         ) : (
-          <LoadingButton disabled={isSaving} isLoading={savingAction === TRANSACTION_SAVE_ACTION.save} loadingText="Saving…" onPress={() => save(false)}>
+          <LoadingButton disabled={locked} isLoading={savingAction === TRANSACTION_SAVE_ACTION.save} loadingText="Saving…" onPress={() => save(false)}>
             Save
           </LoadingButton>
         )}

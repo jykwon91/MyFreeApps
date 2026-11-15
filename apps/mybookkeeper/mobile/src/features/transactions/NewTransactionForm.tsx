@@ -34,6 +34,7 @@ export default function NewTransactionForm() {
   const [isDateOpen, setIsDateOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
 
+  const locked = isSaving || isLeaving;
   const isDirty = JSON.stringify(values) !== JSON.stringify(initial);
   const amountProblem = showAmountError ? createAmountError(values) : undefined;
 
@@ -103,7 +104,7 @@ export default function NewTransactionForm() {
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
       >
-        <View pointerEvents={isSaving ? "none" : "auto"} style={{ gap: spacing.lg }}>
+        <View pointerEvents={locked ? "none" : "auto"} style={{ gap: spacing.lg }}>
           <PeriodDateRow
             isOpen={isDateOpen}
             label="Date"
@@ -134,7 +135,7 @@ export default function NewTransactionForm() {
           <PickerField label={LABELS.paymentMethod} onPress={() => setOpenSheet("paymentMethod")} value={choiceLabel(PAYMENT_METHOD_CHOICES, values.paymentMethod)} />
           <SwitchRow label={LABELS.taxRelevant} onValueChange={(taxRelevant) => update({ taxRelevant })} value={values.taxRelevant} />
         </View>
-        <LoadingButton isLoading={isSaving} loadingText="Adding…" onPress={save}>
+        <LoadingButton disabled={locked} isLoading={isSaving} loadingText="Adding…" onPress={save}>
           Add transaction
         </LoadingButton>
       </KeyboardAwareScroll>
