@@ -73,14 +73,18 @@ async function sendAll(workspaceId: string, dispatch: AppDispatch, getState: () 
 
     dispatch(uploadFileChanged({ uri: next.uri, status: "uploading" }));
     const result = await send(next, workspaceId, dispatch);
+    const switchedAway = getState().workspace.activeId !== workspaceId;
     if (!("error" in result)) {
       removeFromQueue(next);
       failedEarlier.delete(next.uri);
+      if (switchedAway) return "idle";
       dispatch(uploadFileChanged({ uri: next.uri, status: "done" }));
       sentAny = true;
       networkFailuresInARow = 0;
       continue;
     }
+    // The result is the old workspace's: it mustn't show up under the new one.
+    if (switchedAway) return "idle";
     const error = result.error as ApiError;
     const status = error.status;
     if (status === LIMIT_REACHED_STATUS) {
@@ -140,7 +144,10 @@ export function drainUploadQueue() {
     }
     const isSameWorkspace = getState().workspace.activeId === workspaceId;
     dispatch(uploadDrainEnded(isSameWorkspace));
+    if (!isSameWorkspace) {
+      void dispatch(drainUploadQueue());
+      return;
+    }
     dispatch(uploadPhaseChanged(phase));
-    if (!isSameWorkspace) void dispatch(drainUploadQueue());
   };
 }
