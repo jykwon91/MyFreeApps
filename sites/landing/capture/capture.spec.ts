@@ -107,10 +107,11 @@ test("MyRecipes — v1 → v4 diff of the hero recipe (local demo data)", async 
   const { access_token: token } = await login.json();
   const headers = { Authorization: `Bearer ${token}` };
 
-  const recipes = await (
+  const recipes: { items: { id: string; title: string }[] } = await (
     await request.get(`${api}/recipes?owner=me&search=${encodeURIComponent(HERO_TITLE)}`, { headers })
   ).json();
-  const hero = recipes.find((r: { title: string }) => r.title === HERO_TITLE);
+  const hero = recipes.items.find((r) => r.title === HERO_TITLE);
+  if (!hero) throw new Error(`Demo recipe "${HERO_TITLE}" is missing: run the MyRecipes seed first`);
   const versions: { id: string; version_number: number }[] = await (
     await request.get(`${api}/recipes/${hero.id}/versions`, { headers })
   ).json();

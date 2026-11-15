@@ -11,9 +11,10 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.recipe_list_constants import DEFAULT_RECIPE_PAGE_SIZE
 from app.models.recipe.recipe import Recipe
 
 # Columns a PATCH may touch. Tenant + server-managed columns are excluded
@@ -35,55 +36,85 @@ async def get_by_id(
     return result.scalar_one_or_none()
 
 
+def _library_conditions(search: str | None) -> list[ColumnElement[bool]]:
+    """Not deleted, and the optional title search: the filters every list page and its count share."""
+    conditions: list[ColumnElement[bool]] = [Recipe.deleted_at.is_(None)]
+    if search is not None and search.strip():
+        conditions.append(Recipe.title.ilike(f"%{search.strip()}%"))
+    return conditions
+
+
+def _owned_conditions(user_id: uuid.UUID, search: str | None) -> list[ColumnElement[bool]]:
+    return [Recipe.user_id == user_id, *_library_conditions(search)]
+
+
+async def _list_page(
+    db: AsyncSession, conditions: list[ColumnElement[bool]], *, limit: int, offset: int,
+) -> list[Recipe]:
+    # ``id`` breaks ``updated_at`` ties so OFFSET / LIMIT pages never repeat or skip a row.
+    stmt = (
+        select(Recipe)
+        .where(*conditions)
+        .order_by(Recipe.updated_at.desc(), Recipe.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def _count(db: AsyncSession, conditions: list[ColumnElement[bool]]) -> int:
+    result = await db.execute(select(func.count()).select_from(Recipe).where(*conditions))
+    return int(result.scalar_one())
+
+
 async def list_by_user(
     db: AsyncSession,
     user_id: uuid.UUID,
     *,
     search: str | None = None,
-    limit: int | None = None,
+    limit: int = DEFAULT_RECIPE_PAGE_SIZE,
     offset: int = 0,
 ) -> list[Recipe]:
-    """List a user's non-deleted recipes, most-recently-updated first.
+    """One page of a user's non-deleted recipes, most-recently-updated first.
 
     Tenant-scoped: always filters by ``user_id``. Backs the authenticated
-    ``owner=me`` view on the public list route.
-
-    Optional ``search``: case-insensitive substring on ``title``.
-    Optional ``limit``/``offset``: page the result set (offset ignored when
-    limit is None).
+    ``owner=me`` view on the public list route. Optional ``search``:
+    case-insensitive substring on ``title``. ``count_by_user`` with the same
+    filters gives the total across pages.
     """
-    stmt = select(Recipe).where(Recipe.user_id == user_id, Recipe.deleted_at.is_(None))
-    if search is not None and search.strip():
-        stmt = stmt.where(Recipe.title.ilike(f"%{search.strip()}%"))
-    stmt = stmt.order_by(Recipe.updated_at.desc())
-    if limit is not None:
-        stmt = stmt.limit(limit).offset(offset)
-    result = await db.execute(stmt)
-    return list(result.scalars().all())
+    return await _list_page(db, _owned_conditions(user_id, search), limit=limit, offset=offset)
+
+
+async def count_by_user(
+    db: AsyncSession, user_id: uuid.UUID, *, search: str | None = None,
+) -> int:
+    """How many rows ``list_by_user`` matches across all pages."""
+    return await _count(db, _owned_conditions(user_id, search))
 
 
 async def list_public(
     db: AsyncSession,
     *,
     search: str | None = None,
-    limit: int,
+    limit: int = DEFAULT_RECIPE_PAGE_SIZE,
     offset: int = 0,
 ) -> list[Recipe]:
-    """List every non-deleted recipe, most-recently-updated first.
+    """One page of every non-deleted recipe, most-recently-updated first.
 
     Public read: deliberately NOT tenant-scoped — anyone may browse the
     recipe library. Dedicated function (never a ``user_id=None`` overload of
     :func:`list_by_user`) so a tenant-scoped write path can never accidentally
-    fall through to an unscoped query. Always paginated.
+    fall through to an unscoped query.
 
     Optional ``search``: case-insensitive substring on ``title`` (bind param).
     """
-    stmt = select(Recipe).where(Recipe.deleted_at.is_(None))
-    if search is not None and search.strip():
-        stmt = stmt.where(Recipe.title.ilike(f"%{search.strip()}%"))
-    stmt = stmt.order_by(Recipe.updated_at.desc()).limit(limit).offset(offset)
-    result = await db.execute(stmt)
-    return list(result.scalars().all())
+    return await _list_page(db, _library_conditions(search), limit=limit, offset=offset)
+
+
+async def count_public(db: AsyncSession, *, search: str | None = None) -> int:
+    """How many rows ``list_public`` matches across all pages."""
+    return await _count(db, _library_conditions(search))
 
 
 async def get_public_by_id(db: AsyncSession, recipe_id: uuid.UUID) -> Recipe | None:

@@ -5,6 +5,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { AccessibilityInfo } from "react-native";
 import { Provider } from "react-redux";
+import { RECIPES_PAGE_SIZE } from "@myrecipes/api-client/constants/recipesPaging";
 import RecipesScreen from "../src/features/recipes/RecipesScreen";
 import { makeStore } from "../src/lib/store";
 
@@ -24,6 +25,14 @@ const SOUP = {
 };
 
 const MINE = { ...SOUP, id: "r2", title: "Pancakes", is_owner: true };
+
+/** One GET /recipes page holding `items`, out of `total` matching recipes (all of them by default). */
+function pageOf<T>(items: T[], total = items.length, offset = 0) {
+  return { items, total, has_more: offset + items.length < total };
+}
+
+/** Recipe n of a library numbered from 1. */
+const numbered = (n: number) => ({ ...SOUP, id: `n${n}`, title: `Recipe ${n}`, description: null });
 
 const SIGNED_IN: SessionState = { status: "signedIn", email: "sam@example.com", sessionId: "s1" };
 const SIGNED_OUT: SessionState = { status: "signedOut", endedByServer: false, lastEmail: null };
@@ -92,7 +101,7 @@ beforeEach(() => {
   requests.length = 0;
   mockPush.mockClear();
   gate = Promise.resolve();
-  respond = () => ({ status: 200, data: [SOUP] });
+  respond = () => ({ status: 200, data: pageOf([SOUP]) });
 });
 
 afterEach(() => {
@@ -131,7 +140,7 @@ describe("RecipesScreen", () => {
   });
 
   it("explains an empty library and offers to start one, as the website does", async () => {
-    respond = () => ({ status: 200, data: [] });
+    respond = () => ({ status: 200, data: pageOf([]) });
     await show();
 
     expect(await screen.findByText("No recipes yet")).toBeTruthy();
@@ -150,12 +159,12 @@ describe("RecipesScreen", () => {
     expect(requests).toHaveLength(0);
 
     await waitFor(() => expect(requests).toHaveLength(1));
-    expect(requests[0]?.params).toEqual({ search: "soup" });
+    expect(requests[0]?.params).toEqual({ search: "soup", limit: RECIPES_PAGE_SIZE, offset: 0 });
     await waitFor(() => expect(announce).toHaveBeenCalledWith("1 recipe"));
   });
 
   it("offers a way out of a search with no matches", async () => {
-    respond = (config) => ({ status: 200, data: config.params?.search ? [] : [SOUP] });
+    respond = (config) => ({ status: 200, data: pageOf(config.params?.search ? [] : [SOUP]) });
     await show();
     await screen.findByText("Tomato soup");
 
@@ -175,7 +184,7 @@ describe("RecipesScreen", () => {
   });
 
   it("sends owner=me when My recipes is on, and drops it when off", async () => {
-    respond = (config) => ({ status: 200, data: config.params?.owner ? [MINE] : [SOUP] });
+    respond = (config) => ({ status: 200, data: pageOf(config.params?.owner ? [MINE] : [SOUP]) });
     await show(SIGNED_IN);
     await screen.findByText("Tomato soup");
     const toggle = screen.getByRole("checkbox", { name: "My recipes" });
@@ -184,7 +193,7 @@ describe("RecipesScreen", () => {
 
     await fireEvent.press(toggle);
     await waitFor(() => expect(requests).toHaveLength(1));
-    expect(requests[0]?.params).toEqual({ owner: "me" });
+    expect(requests[0]?.params).toEqual({ owner: "me", limit: RECIPES_PAGE_SIZE, offset: 0 });
     expect(await screen.findByText("Pancakes")).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: "My recipes" }).props.accessibilityState).toMatchObject({
       checked: true,
@@ -199,15 +208,17 @@ describe("RecipesScreen", () => {
   it("keeps the filter on while the search changes", async () => {
     respond = (config) => ({
       status: 200,
-      data: config.params?.search ? [] : config.params?.owner ? [MINE] : [SOUP],
+      data: pageOf(config.params?.search ? [] : config.params?.owner ? [MINE] : [SOUP]),
     });
     await show(SIGNED_IN);
     await screen.findByText("Tomato soup");
     await fireEvent.press(screen.getByRole("checkbox", { name: "My recipes" }));
-    await waitFor(() => expect(requests.at(-1)?.params).toEqual({ owner: "me" }));
+    await waitFor(() => expect(requests.at(-1)?.params).toEqual({ owner: "me", limit: RECIPES_PAGE_SIZE, offset: 0 }));
 
     await typeSearch("soup");
-    await waitFor(() => expect(requests.at(-1)?.params).toEqual({ search: "soup", owner: "me" }));
+    await waitFor(() =>
+      expect(requests.at(-1)?.params).toEqual({ search: "soup", owner: "me", limit: RECIPES_PAGE_SIZE, offset: 0 }),
+    );
 
     await typeSearch("");
     expect(await screen.findByText("Pancakes")).toBeTruthy();
@@ -217,7 +228,7 @@ describe("RecipesScreen", () => {
   });
 
   it("starts unfiltered for the next account after signing out", async () => {
-    respond = (config) => ({ status: 200, data: config.params?.owner ? [MINE] : [SOUP] });
+    respond = (config) => ({ status: 200, data: pageOf(config.params?.owner ? [MINE] : [SOUP]) });
     const become = await show(SIGNED_IN);
     await screen.findByText("Tomato soup");
     await fireEvent.press(screen.getByRole("checkbox", { name: "My recipes" }));
@@ -238,7 +249,7 @@ describe("RecipesScreen", () => {
   });
 
   it("says so when the filter leaves nothing, and offers all recipes", async () => {
-    respond = (config) => ({ status: 200, data: config.params?.owner ? [] : [SOUP] });
+    respond = (config) => ({ status: 200, data: pageOf(config.params?.owner ? [] : [SOUP]) });
     await show(SIGNED_IN);
     await screen.findByText("Tomato soup");
 
@@ -260,7 +271,7 @@ describe("RecipesScreen", () => {
     expect(await screen.findByText("Can't load recipes")).toBeTruthy();
     expect(screen.queryByText(/502/)).toBeNull();
 
-    respond = () => ({ status: 200, data: [SOUP] });
+    respond = () => ({ status: 200, data: pageOf([SOUP]) });
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText("Tomato soup")).toBeTruthy();
   });
@@ -290,7 +301,7 @@ describe("RecipesScreen", () => {
   });
 
   it("shows one error, not two, when a search fails over an empty list", async () => {
-    respond = () => ({ status: 200, data: [] });
+    respond = () => ({ status: 200, data: pageOf([]) });
     await show();
     await screen.findByText("No recipes yet");
 
@@ -310,7 +321,7 @@ describe("RecipesScreen", () => {
     gate = new Promise((resolve) => {
       open = resolve;
     });
-    respond = () => ({ status: 200, data: [SOUP] });
+    respond = () => ({ status: 200, data: pageOf([SOUP]) });
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
 
     expect(await screen.findByLabelText("Loading recipes")).toBeTruthy();
@@ -320,7 +331,7 @@ describe("RecipesScreen", () => {
   });
 
   it("doesn't repeat no-matches for the old term while the next search runs", async () => {
-    respond = (config) => ({ status: 200, data: config.params?.search === "soup" ? [SOUP] : [] });
+    respond = (config) => ({ status: 200, data: pageOf(config.params?.search === "soup" ? [SOUP] : []) });
     await show();
     await screen.findByText("No recipes yet");
     await typeSearch("zzz");
@@ -341,7 +352,7 @@ describe("RecipesScreen", () => {
   });
 
   it("doesn't bring a cleared search back when typing again right away", async () => {
-    respond = (config) => ({ status: 200, data: config.params?.search ? [] : [SOUP] });
+    respond = (config) => ({ status: 200, data: pageOf(config.params?.search ? [] : [SOUP]) });
     await show();
     await screen.findByText("Tomato soup");
     await typeSearch("zzz");
@@ -354,7 +365,7 @@ describe("RecipesScreen", () => {
   });
 
   it("doesn't bring a search back after deleting its text and typing again", async () => {
-    respond = (config) => ({ status: 200, data: config.params?.search ? [] : [SOUP] });
+    respond = (config) => ({ status: 200, data: pageOf(config.params?.search ? [] : [SOUP]) });
     await show();
     await screen.findByText("Tomato soup");
     await typeSearch("zzz");
@@ -388,5 +399,64 @@ describe("RecipesScreen", () => {
     await show();
 
     await waitFor(() => expect(announce).toHaveBeenCalledWith("Can't load recipes"));
+  });
+  describe("paging", () => {
+    const TOTAL = RECIPES_PAGE_SIZE + 5;
+    const library = Array.from({ length: TOTAL }, (_, i) => numbered(i + 1));
+
+    beforeEach(() => {
+      respond = (config) => {
+        const offset = Number(config.params?.offset ?? 0);
+        const matching = config.params?.search ? library.filter((r) => r.title === "Recipe 3") : library;
+        return { status: 200, data: pageOf(matching.slice(offset, offset + RECIPES_PAGE_SIZE), matching.length, offset) };
+      };
+    });
+
+    // The list renders its rows a window at a time, so what it holds is read from its data.
+    const listedTitles = (): string[] =>
+      (screen.getByTestId("recipe-list").props.data as { title: string }[]).map(({ title }) => title);
+
+    it("shows the next page, recipe 51 on, under Show more", async () => {
+      await show();
+      await screen.findByText("Recipe 1");
+      expect(await screen.findByText(`Showing ${RECIPES_PAGE_SIZE} of ${TOTAL} recipes`)).toBeTruthy();
+      expect(listedTitles()).toHaveLength(RECIPES_PAGE_SIZE);
+
+      await fireEvent.press(screen.getByRole("button", { name: "Show more" }));
+
+      await waitFor(() => expect(requests.map((r) => r.params?.offset)).toEqual([0, RECIPES_PAGE_SIZE]));
+      await waitFor(() => expect(listedTitles()).toHaveLength(TOTAL));
+      expect(listedTitles().slice(RECIPES_PAGE_SIZE)).toEqual(library.slice(RECIPES_PAGE_SIZE).map(({ title }) => title));
+      expect(listedTitles()[RECIPES_PAGE_SIZE]).toBe(`Recipe ${RECIPES_PAGE_SIZE + 1}`);
+      expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+    });
+
+    it("starts a search from the first page", async () => {
+      await show();
+      await screen.findByText("Recipe 1");
+      await fireEvent.press(await screen.findByRole("button", { name: "Show more" }));
+      await waitFor(() => expect(requests).toHaveLength(2));
+      requests.length = 0;
+
+      await typeSearch("Recipe 3");
+
+      await waitFor(() => expect(requests).toHaveLength(1));
+      expect(requests[0]?.params).toEqual({ search: "Recipe 3", limit: RECIPES_PAGE_SIZE, offset: 0 });
+      await waitFor(() => expect(listedTitles()).toEqual(["Recipe 3"]));
+      expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+    });
+
+    it("keeps the loaded recipes and offers Try again when the next page fails", async () => {
+      await show();
+      await screen.findByText("Recipe 1");
+      respond = () => ({ status: 503, data: "down" });
+
+      await fireEvent.press(await screen.findByRole("button", { name: "Show more" }));
+
+      expect(await screen.findByText("Couldn't load more recipes.")).toBeTruthy();
+      expect(screen.getByText("Recipe 1")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+      expect(screen.queryByText(/Couldn't update the list/)).toBeNull();
+    });
   });
 });

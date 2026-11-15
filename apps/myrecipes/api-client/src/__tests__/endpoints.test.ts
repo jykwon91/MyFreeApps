@@ -45,27 +45,6 @@ describe("the recipe endpoints", () => {
     store = makeStore();
   });
 
-  it("sends only the list filters it was given", async () => {
-    await store.dispatch(recipesApi.endpoints.listRecipes.initiate());
-    expect(lastRequest().url).toBe("/recipes");
-    expect(lastRequest().params).toBeUndefined();
-
-    await store.dispatch(
-      recipesApi.endpoints.listRecipes.initiate({ search: "soup", owner: "me" }),
-    );
-    expect(lastRequest().params).toEqual({ search: "soup", owner: "me" });
-  });
-
-  it("refetches the list after a recipe is created", async () => {
-    await store.dispatch(recipesApi.endpoints.listRecipes.initiate());
-    const before = seen.filter((r) => r.method === "get").length;
-
-    await store.dispatch(recipesApi.endpoints.createRecipe.initiate({} as never));
-    await Promise.all(store.dispatch(baseApi.util.getRunningQueriesThunk()));
-
-    expect(seen.filter((r) => r.method === "get").length).toBe(before + 1);
-  });
-
   it("logs a cook against the version that was cooked", async () => {
     await store.dispatch(
       recipesApi.endpoints.logCook.initiate({

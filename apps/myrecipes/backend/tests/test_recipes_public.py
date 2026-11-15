@@ -10,7 +10,8 @@ contract from the design review:
   cook_count/best_rating) are owner-private — null for anyone else.
 - ``owner=me`` scopes the list to the authenticated caller (401 anonymously).
 - Soft-deleted / missing recipes 404 identically on every public route.
-- The public list is paginated (limit honored + capped).
+- The public list is paged (limit honored + capped) with a true total, and
+  rows tied on ``updated_at`` page in a stable order.
 
 Recipes are committed to the real Postgres (the service commits) and cleaned up
 via the user-delete cascade on teardown, so count-sensitive assertions always
@@ -19,10 +20,15 @@ scope by a unique title (``search=``) or by ``owner=me``.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.recipe.recipe import Recipe
 
 
 def _payload(title: str, **overrides: Any) -> dict:
@@ -81,8 +87,9 @@ class TestAnonymousRead:
         resp = await client.get("/recipes", params={"search": title})
         assert resp.status_code == 200
         body = resp.json()
-        assert len(body) == 1
-        row = body[0]
+        assert body["total"] == 1
+        assert body["has_more"] is False
+        row = body["items"][0]
         assert row["id"] == created["id"]
         assert row["is_owner"] is False
         assert row["best_rating"] is None
@@ -251,7 +258,7 @@ class TestOwnerRollups:
             await authed.post(f"/recipes/{rid}/versions/{vid}/cooks", json={"rating": 4})
             detail = (await authed.get(f"/recipes/{rid}")).json()
             versions = (await authed.get(f"/recipes/{rid}/versions")).json()
-            listed = (await authed.get("/recipes", params={"owner": "me"})).json()
+            listed = (await authed.get("/recipes", params={"owner": "me"})).json()["items"]
 
         assert detail["is_owner"] is True
         assert detail["best_rating"] == 4
@@ -283,7 +290,7 @@ class TestOwnerMeParam:
         await _create_recipe(as_user, other, f"Theirs {uuid.uuid4().hex[:8]}")
 
         async with await as_user(owner) as authed:
-            mine = (await authed.get("/recipes", params={"owner": "me"})).json()
+            mine = (await authed.get("/recipes", params={"owner": "me"})).json()["items"]
 
         assert len(mine) == 1
         assert mine[0]["title"] == mine_title
@@ -333,7 +340,7 @@ class TestSoftDeletePublic:
 
 class TestPagination:
     @pytest.mark.asyncio
-    async def test_limit_honored_offset_and_capped(self, user_factory, as_user) -> None:
+    async def test_pages_carry_total_and_has_more(self, user_factory, as_user) -> None:
         owner = await user_factory()
         tag = uuid.uuid4().hex[:8]
         async with await as_user(owner) as authed:
@@ -345,14 +352,61 @@ class TestPagination:
                 params={"owner": "me", "search": f"Page {tag}", "limit": 2},
             )
             assert page1.status_code == 200
-            assert len(page1.json()) == 2
+            body1 = page1.json()
+            assert len(body1["items"]) == 2
+            assert body1["total"] == 3
+            assert body1["has_more"] is True
 
-            page2 = await authed.get(
-                "/recipes",
-                params={"owner": "me", "search": f"Page {tag}", "limit": 2, "offset": 2},
-            )
-            assert len(page2.json()) == 1
+            body2 = (
+                await authed.get(
+                    "/recipes",
+                    params={"owner": "me", "search": f"Page {tag}", "limit": 2, "offset": 2},
+                )
+            ).json()
+            assert len(body2["items"]) == 1
+            assert body2["total"] == 3
+            assert body2["has_more"] is False
 
             # Over the cap (le=200) and under the floor (ge=1) → 422.
             assert (await authed.get("/recipes", params={"limit": 999})).status_code == 422
             assert (await authed.get("/recipes", params={"limit": 0})).status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_public_total_counts_the_search_across_owners(
+        self, user_factory, as_user, client: AsyncClient,
+    ) -> None:
+        tag = uuid.uuid4().hex[:8]
+        await _create_recipe(as_user, await user_factory(), f"Shared {tag} a")
+        await _create_recipe(as_user, await user_factory(), f"Shared {tag} b")
+
+        body = (await client.get("/recipes", params={"search": f"Shared {tag}", "limit": 1})).json()
+        assert len(body["items"]) == 1
+        assert body["total"] == 2
+        assert body["has_more"] is True
+
+    @pytest.mark.asyncio
+    async def test_pages_neither_repeat_nor_skip_rows_with_tied_updated_at(
+        self, user_factory, as_user, db: AsyncSession,
+    ) -> None:
+        owner = await user_factory()
+        tag = uuid.uuid4().hex[:8]
+        ids = [(await _create_recipe(as_user, owner, f"Tie {tag} {i}"))["id"] for i in range(5)]
+        await db.execute(
+            update(Recipe)
+            .where(Recipe.id.in_([uuid.UUID(i) for i in ids]))
+            .values(updated_at=datetime(2026, 1, 1, tzinfo=timezone.utc))
+        )
+        await db.flush()
+
+        seen: list[str] = []
+        async with await as_user(owner) as authed:
+            for offset in (0, 2, 4):
+                body = (
+                    await authed.get(
+                        "/recipes",
+                        params={"owner": "me", "search": f"Tie {tag}", "limit": 2, "offset": offset},
+                    )
+                ).json()
+                seen.extend(row["id"] for row in body["items"])
+
+        assert seen == sorted(ids, reverse=True)

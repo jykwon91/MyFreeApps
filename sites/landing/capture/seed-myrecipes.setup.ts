@@ -118,8 +118,8 @@ async function findOwnedRecipeByTitle(
     { headers: authHeaders(token) },
   );
   expect(response.status(), await response.text()).toBe(200);
-  const summaries = (await response.json()) as { id: string; title: string }[];
-  const match = summaries.find((r) => r.title === title);
+  const page = (await response.json()) as { items: { id: string; title: string }[] };
+  const match = page.items.find((r) => r.title === title);
   if (!match) return null;
   const detail = await request.get(`${API}/recipes/${match.id}`, { headers: authHeaders(token) });
   expect(detail.status()).toBe(200);

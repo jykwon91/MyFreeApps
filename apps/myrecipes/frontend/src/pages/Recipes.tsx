@@ -1,12 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Camera, ChefHat, Compass, Plus, Search } from "lucide-react";
-import { EmptyState, cn, useIsAuthenticated } from "@platform/ui";
-import { useListRecipesQuery } from "@myrecipes/api-client/store/recipesApi";
+import { EmptyState, LoadMoreFooter, cn, useIsAuthenticated } from "@platform/ui";
+import { useRecipesPages } from "@myrecipes/api-client/hooks/useRecipesPages";
 import { useDebouncedValue } from "@platform/ui";
 import RecipeCard from "@/features/recipes/RecipeCard";
 import RecipesListSkeleton from "@/features/recipes/RecipesListSkeleton";
 import { RECIPES_EMPTY_STATE, RECIPES_SEARCH_EMPTY } from "@/constants/empty-states";
+import { RECIPES_LIST_MESSAGES } from "@/constants/recipes-list-messages";
+import { RECIPE_SEARCH_DEBOUNCE_MS } from "@/constants/recipe-search";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 
 function errorBody(error: unknown): string {
@@ -30,7 +32,7 @@ export default function Recipes() {
   // written back to ?q= so each keystroke neither stacks a history entry nor
   // fires a request.
   const [input, setInput] = useState(query);
-  const debouncedInput = useDebouncedValue(input.trim(), 300);
+  const debouncedInput = useDebouncedValue(input.trim(), RECIPE_SEARCH_DEBOUNCE_MS);
 
   useEffect(() => {
     setSearchParams(
@@ -44,7 +46,7 @@ export default function Recipes() {
     );
   }, [debouncedInput, setSearchParams]);
 
-  const { data, isLoading, isError, error, isFetching } = useListRecipesQuery({
+  const list = useRecipesPages({
     search: query || undefined,
     owner: ownerMe ? "me" : undefined,
   });
@@ -73,18 +75,18 @@ export default function Recipes() {
     );
   }
 
-  const recipes = data ?? [];
+  const { recipes } = list;
   const hasSearch = query.length > 0;
 
   let content: ReactNode;
-  if (isLoading) {
+  if (list.isLoading) {
     content = <RecipesListSkeleton />;
-  } else if (isError) {
+  } else if (list.loadError !== undefined) {
     content = (
       <EmptyState
         icon={<ChefHat className="w-12 h-12 text-destructive" />}
         heading="Couldn't load recipes"
-        body={errorBody(error)}
+        body={errorBody(list.loadError)}
       />
     );
   } else if (recipes.length === 0 && hasSearch) {
@@ -106,13 +108,26 @@ export default function Recipes() {
     );
   } else {
     content = (
-      <div
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        aria-busy={isFetching}
-      >
-        {recipes.map((recipe: RecipeSummary) => (
-          <RecipeCard key={recipe.id} recipe={recipe} />
-        ))}
+      <div className="space-y-4">
+        <div
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          aria-busy={list.isFiltering}
+        >
+          {recipes.map((recipe: RecipeSummary) => (
+            <RecipeCard key={recipe.id} recipe={recipe} />
+          ))}
+        </div>
+        {list.isFiltering ? null : (
+          <LoadMoreFooter
+            shown={recipes.length}
+            total={list.total}
+            hasNextPage={list.hasNextPage}
+            isLoading={list.isFetchingNextPage}
+            isError={list.isLoadMoreError}
+            onLoadMore={list.loadMore}
+            messages={RECIPES_LIST_MESSAGES}
+          />
+        )}
       </div>
     );
   }

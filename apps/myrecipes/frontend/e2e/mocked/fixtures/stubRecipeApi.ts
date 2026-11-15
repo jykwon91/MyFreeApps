@@ -26,7 +26,7 @@ import type { RecipeApiStubOptions } from "../types/RecipeApiStubOptions";
 import { cookProblem, updateProblem, versionProblem } from "./requestProblems";
 import { diffVersions } from "./diffVersions";
 import { RECIPES_COLLECTION_ROUTE, VERSIONS_SUFFIX, recipeRoute } from "./recipeRoutes";
-import { NOW, loggedCookIdAt, bestRatingOf, detailOf, versionFromRequest, versionOf, versionSummaryOf } from "./recipeFixtures";
+import { NOW, loggedCookIdAt, bestRatingOf, detailOf, listPageOf, versionFromRequest, versionOf, versionSummaryOf } from "./recipeFixtures";
 
 // /versions/:id, with /cooks (that version's cook log) or /diff after it.
 const VERSION_PATH = /^\/versions\/([^/]+)(\/cooks|\/diff)?$/;
@@ -97,7 +97,7 @@ export async function stubRecipeRoutes(
     await page.route(RECIPES_COLLECTION_ROUTE, (route) => {
       if (route.request().method() !== "GET") return route.fallback();
       const { latest_version: _latest, ...summary } = current();
-      return route.fulfill(json(deleted ? [] : [summary]));
+      return route.fulfill(json(listPageOf(deleted ? [] : [summary])));
     });
   }
 

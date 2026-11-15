@@ -2,18 +2,20 @@
  * No-backend E2E for the recipes list (/): the signed-in user searches by title
  * and narrows to their own recipes (each sends the filter to the server and
  * keeps it in the URL), an empty library and an empty search each say so, a
- * failed load says so instead of showing an empty library, and the loading
- * skeleton has the same grid as the loaded list.
+ * failed load says so instead of showing an empty library, the loading
+ * skeleton has the same grid as the loaded list, and Load more brings in the
+ * next page (recipe 51 on) until every recipe is showing.
  */
 import type { Page } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { createGate } from "@platform/ui/test-support/gate";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
+import { RECIPES_PAGE_SIZE } from "@myrecipes/api-client/constants/recipesPaging";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import type { ListAnswer } from "./types/ListAnswer";
 import type { ListCall } from "./types/ListCall";
-import { detailOf, recipeIdAt, summaryOf, versionOf } from "./fixtures/recipeFixtures";
+import { detailOf, listPageOf, recipeIdAt, summaryOf, versionOf } from "./fixtures/recipeFixtures";
 import { RECIPES_COLLECTION_ROUTE } from "./fixtures/recipeRoutes";
 import { stubRecipeRoutes } from "./fixtures/stubRecipeApi";
 
@@ -27,7 +29,7 @@ async function stubList(page: Page, answer: (call: ListCall) => ListAnswer | Pro
   await page.route(RECIPES_COLLECTION_ROUTE, async (route) => {
     if (route.request().method() !== "GET") return route.fallback();
     const params = new URL(route.request().url()).searchParams;
-    const call = { search: params.get("search"), owner: params.get("owner") };
+    const call = { search: params.get("search"), owner: params.get("owner"), offset: Number(params.get("offset")) };
     calls.push(call);
     const { body, status } = await answer(call);
     return route.fulfill(json(body, status));
@@ -41,12 +43,12 @@ test("searching by title asks the server and keeps the search in the URL", async
   await stubSignedInShell(page);
   const everything: RecipeSummary[] = [TOMATO, PANCAKES, SOMEONE_ELSES];
   const calls = await stubList(page, ({ search }) => ({
-    body: everything.filter((r) => !search || r.title.toLowerCase().includes(search.toLowerCase())),
+    body: listPageOf(everything.filter((r) => !search || r.title.toLowerCase().includes(search.toLowerCase()))),
   }));
 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Pancakes" })).toBeVisible();
-  expect(calls[0]).toEqual({ search: null, owner: null });
+  expect(calls[0]).toEqual({ search: null, owner: null, offset: 0 });
 
   await page.getByLabel("Search recipes by title").pressSequentially("tomato");
 
@@ -54,9 +56,9 @@ test("searching by title asks the server and keeps the search in the URL", async
   await expect(page.getByRole("heading", { name: "Pancakes" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Tomato soup" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Tomato salad" })).toBeVisible();
-  expect(calls[calls.length - 1]).toEqual({ search: "tomato", owner: null });
+  expect(calls[calls.length - 1]).toEqual({ search: "tomato", owner: null, offset: 0 });
   // Six keystrokes, one request: the debounce sent only the finished word.
-  expect(calls.filter((c) => c.search !== null)).toEqual([{ search: "tomato", owner: null }]);
+  expect(calls.filter((c) => c.search !== null)).toEqual([{ search: "tomato", owner: null, offset: 0 }]);
 
   await page.getByLabel("Search recipes by title").fill("");
   await expect(page.getByRole("heading", { name: "Pancakes" })).toBeVisible();
@@ -65,7 +67,7 @@ test("searching by title asks the server and keeps the search in the URL", async
 
 test("a search that finds nothing says so, and clearing it brings the recipes back", async ({ page }) => {
   await stubSignedInShell(page);
-  await stubList(page, ({ search }) => ({ body: search ? [] : [TOMATO] }));
+  await stubList(page, ({ search }) => ({ body: listPageOf(search ? [] : [TOMATO]) }));
 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Tomato soup" })).toBeVisible();
@@ -81,7 +83,7 @@ test("a search that finds nothing says so, and clearing it brings the recipes ba
 test("My recipes narrows the list to the user's own and toggles back", async ({ page }) => {
   await stubSignedInShell(page);
   const calls = await stubList(page, ({ owner }) => ({
-    body: owner === "me" ? [TOMATO, PANCAKES] : [TOMATO, PANCAKES, SOMEONE_ELSES],
+    body: listPageOf(owner === "me" ? [TOMATO, PANCAKES] : [TOMATO, PANCAKES, SOMEONE_ELSES]),
   }));
 
   await page.goto("/");
@@ -94,7 +96,7 @@ test("My recipes narrows the list to the user's own and toggles back", async ({ 
   await expect(page).toHaveURL(/[?&]owner=me/);
   await expect(page.getByRole("heading", { name: "Tomato salad" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Pancakes" })).toBeVisible();
-  expect(calls[calls.length - 1]).toEqual({ search: null, owner: "me" });
+  expect(calls[calls.length - 1]).toEqual({ search: null, owner: "me", offset: 0 });
 
   await mine.click();
   await expect(mine).toHaveAttribute("aria-pressed", "false");
@@ -104,7 +106,7 @@ test("My recipes narrows the list to the user's own and toggles back", async ({ 
 
 test("a recipe card shows its rollups and opens the recipe", async ({ page }) => {
   await stubSignedInShell(page);
-  await stubList(page, () => ({ body: [{ ...TOMATO, version_count: 3, latest_version_number: 3 }, SOMEONE_ELSES] }));
+  await stubList(page, () => ({ body: listPageOf([{ ...TOMATO, version_count: 3, latest_version_number: 3 }, SOMEONE_ELSES]) }));
   const recipe = detailOf(TOMATO.id, { ...TOMATO, version_count: 3, latest_version_number: 3, latest_version: versionOf(TOMATO.id, 3) });
   await stubRecipeRoutes(page, TOMATO.id, { recipe });
 
@@ -124,7 +126,7 @@ test("a recipe card shows its rollups and opens the recipe", async ({ page }) =>
 
 test("an empty library offers New recipe, which opens the editor", async ({ page }) => {
   await stubSignedInShell(page);
-  await stubList(page, () => ({ body: [] }));
+  await stubList(page, () => ({ body: listPageOf([]) }));
 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "No recipes yet" })).toBeVisible();
@@ -136,7 +138,7 @@ test("an empty library offers New recipe, which opens the editor", async ({ page
 test("a failed load says so instead of showing an empty library, and a refresh recovers", async ({ page }) => {
   await stubSignedInShell(page);
   let failing = true;
-  await stubList(page, () => (failing ? { body: { detail: "boom" }, status: 500 } : { body: [TOMATO] }));
+  await stubList(page, () => (failing ? { body: { detail: "boom" }, status: 500 } : { body: listPageOf([TOMATO]) }));
 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Couldn't load recipes" })).toBeVisible();
@@ -154,7 +156,7 @@ test("while loading, the skeleton has the same grid as the loaded list", async (
   let skeletonCards = 0;
   await stubList(page, async () => {
     await gate.wait;
-    return { body: Array.from({ length: skeletonCards }, (_, i) => summaryOf(recipeIdAt(10 + i), `Recipe ${i + 1}`)) };
+    return { body: listPageOf(Array.from({ length: skeletonCards }, (_, i) => summaryOf(recipeIdAt(10 + i), `Recipe ${i + 1}`))) };
   });
 
   try {
@@ -182,4 +184,30 @@ test("while loading, the skeleton has the same grid as the loaded list", async (
   } finally {
     gate.release();
   }
+});
+
+test("Load more brings in the next page, recipe 51 on, and a search starts again from the first", async ({ page }) => {
+  await stubSignedInShell(page);
+  const total = RECIPES_PAGE_SIZE + 5;
+  const library = Array.from({ length: total }, (_, i) => summaryOf(recipeIdAt(100 + i), `Library recipe ${i + 1}`));
+  const calls = await stubList(page, ({ search, offset }) => {
+    const matching = library.filter((r) => !search || r.title.includes(search));
+    return { body: listPageOf(matching.slice(offset, offset + RECIPES_PAGE_SIZE), matching.length, offset) };
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: `Library recipe ${RECIPES_PAGE_SIZE}`, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Library recipe ${RECIPES_PAGE_SIZE + 1}`, exact: true })).toHaveCount(0);
+  await expect(page.getByText(`Showing ${RECIPES_PAGE_SIZE} of ${total} recipes`)).toBeVisible();
+
+  await page.getByRole("button", { name: "Load more" }).click();
+  await expect(page.getByRole("heading", { name: `Library recipe ${RECIPES_PAGE_SIZE + 1}`, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Library recipe ${total}`, exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Load more" })).toHaveCount(0);
+  expect(calls.map((c) => c.offset)).toEqual([0, RECIPES_PAGE_SIZE]);
+
+  await page.getByLabel("Search recipes by title").fill(`recipe ${total}`);
+  await expect(page.getByRole("heading", { name: `Library recipe ${RECIPES_PAGE_SIZE + 1}`, exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: `Library recipe ${total}`, exact: true })).toBeVisible();
+  expect(calls[calls.length - 1]).toEqual({ search: `recipe ${total}`, owner: null, offset: 0 });
 });

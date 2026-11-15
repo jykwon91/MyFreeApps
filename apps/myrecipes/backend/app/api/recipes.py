@@ -42,16 +42,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user, current_user_optional
 from app.core.config import settings
+from app.core.recipe_list_constants import DEFAULT_RECIPE_PAGE_SIZE, MAX_RECIPE_PAGE_SIZE
 from app.core.rate_limit import check_photo_import_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.recipe.cook_log_schemas import CookLogCreateRequest, CookLogResponse
 from app.schemas.recipe.diff_schemas import DiffResponse
 from app.schemas.recipe.extraction_schemas import RecipeDraftResponse
+from app.schemas.recipe.recipe_list_page import RecipeListPage
 from app.schemas.recipe.recipe_schemas import (
     RecipeCreateRequest,
     RecipeDetailResponse,
-    RecipeSummary,
     RecipeUpdateRequest,
 )
 from app.schemas.recipe.version_schemas import (
@@ -59,7 +60,7 @@ from app.schemas.recipe.version_schemas import (
     VersionResponse,
     VersionSummary,
 )
-from app.services.recipe import photo_extraction_service, recipe_service
+from app.services.recipe import photo_extraction_service, recipe_list_service, recipe_service
 from app.services.recipe.recipe_service import InvalidBaseVersionError
 
 # Public read-only routes — no auth required.
@@ -84,7 +85,7 @@ _COOK_NOT_FOUND = "Cook log not found"
 # ===========================================================================
 
 
-@public_router.get("", response_model=list[RecipeSummary])
+@public_router.get("", response_model=RecipeListPage)
 async def list_recipes(
     db: AsyncSession = Depends(get_db),
     viewer: User | None = Depends(current_user_optional),
@@ -93,10 +94,15 @@ async def list_recipes(
         default=None,
         description="Set to 'me' to list only your own recipes (requires auth).",
     ),
-    limit: int = Query(default=50, ge=1, le=200),
+    limit: int = Query(default=DEFAULT_RECIPE_PAGE_SIZE, ge=1, le=MAX_RECIPE_PAGE_SIZE),
     offset: int = Query(default=0, ge=0),
-) -> list[RecipeSummary]:
-    """List recipes. Public — no auth required.
+) -> RecipeListPage:
+    """One page of recipes. Public — no auth required.
+
+    Response shape: ``{"items": [RecipeSummary...], "total": int, "has_more": bool}``,
+    where ``total`` counts every matching row across pages. Most recently
+    updated first, ties broken by id so ``limit`` / ``offset`` pages never
+    repeat or skip a row.
 
     ``owner=me`` scopes the list to the authenticated viewer's own recipes and
     responds 401 if used anonymously. Rollups (best_rating/last_cooked_at) are
@@ -110,7 +116,7 @@ async def list_recipes(
             status_code=401, detail="Authentication required for owner=me"
         )
     viewer_id = viewer.id if viewer is not None else None
-    return await recipe_service.list_public_recipes(
+    return await recipe_list_service.list_public_recipes(
         db, viewer_id, search=search, limit=limit, offset=offset, owner_me=owner_me,
     )
 

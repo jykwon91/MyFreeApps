@@ -1,5 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
-import type { RecipeSummary, RecipeDetailResponse } from "../types/recipe/recipe";
+import type { RecipeDetailResponse } from "../types/recipe/recipe";
 import type { VersionResponse, VersionSummary } from "../types/recipe/version";
 import type { DiffResponse } from "../types/recipe/diff";
 import type { CookLogResponse } from "../types/recipe/cook-log";
@@ -11,6 +11,9 @@ import type {
 import type { CookLogCreateRequest } from "../types/recipe/cook-log";
 import type { RecipeExtractionDraft } from "../types/recipe/extraction";
 import type { ListRecipesArgs } from "../types/recipe/list-recipes-args";
+import type { RecipeListPage } from "../types/recipe/recipe-list-page";
+import { FIRST_RECIPES_OFFSET, RECIPES_PAGE_SIZE } from "../constants/recipesPaging";
+import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
 
 /**
  * Cache tags scoped to one recipe id so a tweak / cook / metadata edit
@@ -32,22 +35,33 @@ const apiWithTags = baseApi.enhanceEndpoints({
 export const recipesApi = apiWithTags.injectEndpoints({
   endpoints: (build) => ({
     // ---- Recipes -------------------------------------------------------
-    listRecipes: build.query<RecipeSummary[], ListRecipesArgs | void>({
-      query: (args) => {
-        const { search, owner } = args ?? {};
-        const params: Record<string, string> = {};
-        if (search) params.search = search;
-        if (owner) params.owner = owner;
-        return {
-          url: "/recipes",
-          method: "GET",
-          params: Object.keys(params).length > 0 ? params : undefined,
-        };
+    /**
+     * GET /recipes, one page per offset, ordered on the server so the order
+     * holds across pages. The filters key the cache, so a new search or owner
+     * filter starts again from the first page. Refetching (invalidation, pull
+     * to refresh) reloads every loaded page.
+     */
+    listRecipes: build.infiniteQuery<RecipeListPage, ListRecipesArgs, number>({
+      infiniteQueryOptions: {
+        initialPageParam: FIRST_RECIPES_OFFSET,
+        getNextPageParam: (lastPage, _allPages, lastOffset) => getNextPageOffset(lastPage, lastOffset),
       },
+      query: ({ queryArg, pageParam }) => ({
+        url: "/recipes",
+        method: "GET",
+        params: {
+          search: queryArg.search || undefined,
+          owner: queryArg.owner,
+          limit: RECIPES_PAGE_SIZE,
+          offset: pageParam,
+        },
+      }),
       providesTags: (result) =>
         result
           ? [
-              ...result.map((r) => ({ type: "Recipe" as const, id: r.id })),
+              ...result.pages.flatMap((page) =>
+                page.items.map((r) => ({ type: "Recipe" as const, id: r.id })),
+              ),
               { type: "Recipe" as const, id: "LIST" },
             ]
           : [{ type: "Recipe" as const, id: "LIST" }],
@@ -197,7 +211,7 @@ export const recipesApi = apiWithTags.injectEndpoints({
 });
 
 export const {
-  useListRecipesQuery,
+  useListRecipesInfiniteQuery,
   useGetRecipeQuery,
   useCreateRecipeMutation,
   useExtractRecipeFromPhotoMutation,
