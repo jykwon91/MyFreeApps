@@ -17,7 +17,8 @@ interface TransactionTenantLinkProps {
 /** Who paid an income transaction, with a way to change it for people who can write. */
 export default function TransactionTenantLink({ transaction, canWrite }: TransactionTenantLinkProps) {
   const linkedId = transaction.applicant_id;
-  const { data: tenant } = useGetApplicantByIdQuery(linkedId ?? "", { skip: !linkedId });
+  // currentData, never data: moving to the next transaction must not show the last one's tenant.
+  const { currentData: tenant } = useGetApplicantByIdQuery(linkedId ?? "", { skip: !linkedId });
   const { isLinking, askToLink } = useAttributeTenant(transaction.id);
   // A sheet loads its list when it first mounts, so a transaction nobody links loads nothing.
   const [hasOpenedSheet, setHasOpenedSheet] = useState(false);
