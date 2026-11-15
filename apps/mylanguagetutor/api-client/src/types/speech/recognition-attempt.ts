@@ -4,6 +4,6 @@ export interface RecognitionAttempt {
   anythingHeard: boolean;
   /** The recognizer settled on a final result in this attempt: the answer is finished. */
   settled: boolean;
-  /** The learner asked to send what they said: they tapped stop, or switched to typing. */
+  /** The learner asked to send what they said: they tapped stop. */
   stopRequested: boolean;
 }

@@ -91,6 +91,20 @@ describe("the phone starting late", () => {
     expect(sent).toHaveLength(0);
   });
 
+  it("drops the answer once recording has begun when the learner types instead before it has", async () => {
+    installRecognizer({ startsLate: true });
+    const { sent } = await openCafeConversation();
+    await tapWithLateStart();
+
+    await fireEvent.press(screen.getByRole("button", { name: VOICE_COPY.typeInstead }));
+    await act(async () => {});
+    await phone(() => beginRecording());
+    await waitFor(() => expect(isListening()).toBe(false));
+    expect(screen.getByLabelText(PRACTICE_COPY.typeYourAnswer)).toBeTruthy();
+    expect(screen.queryByText(VOICE_COPY.unavailable)).toBeNull();
+    expect(sent).toHaveLength(0);
+  });
+
   it("listens normally when the phone starts on time, the start arriving before the stop", async () => {
     installRecognizer({ startsLate: true });
     const { sent } = await openCafeConversation();

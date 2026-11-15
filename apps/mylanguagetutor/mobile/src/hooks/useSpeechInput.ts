@@ -1,5 +1,6 @@
 import { NOTHING_HEARD } from "@mylanguagetutor/api-client/constants/heardSpeech";
 import type { RecognitionFailure } from "@mylanguagetutor/api-client/types/speech/recognition-failure";
+import type { SpeechRecognitionControls } from "@mylanguagetutor/api-client/types/speech/speech-recognition-controls";
 import { endedNormally } from "@mylanguagetutor/api-client/utils/endedNormally";
 import { finalTranscript } from "@mylanguagetutor/api-client/utils/finalTranscript";
 import { keepsHeardSpeech } from "@mylanguagetutor/api-client/utils/keepsHeardSpeech";
@@ -11,7 +12,6 @@ import { RECHECK_PERMISSION_MS } from "../constants/voice";
 import { abortOrphanedAttempt, orphanedAttemptEnded } from "../lib/orphanedAttempt";
 import { releaseAudioSession } from "../lib/releaseAudioSession";
 import type { SpeechAttempt } from "../types/SpeechAttempt";
-import type { SpeechInputControls } from "../types/SpeechInputControls";
 import { heardFromResult } from "../utils/heardFromResult";
 import { recognitionOptions } from "../utils/recognitionOptions";
 import { useOnResume } from "./useOnResume";
@@ -24,20 +24,21 @@ function couldNotListen(error: unknown): void {
  * One utterance of the phone's speech recognition, as the website's browser recognition: the words
  * as they're heard, then `onFinal` with what was said once the learner goes quiet or taps stop.
  * The phone asks for the microphone (and, on iOS, speech recognition) on first use. A refused
- * permission is cleared when the learner comes back having allowed it in Settings. `abort` drops
- * what was heard, as does an error while the learner is still talking: the phone taking the
- * microphone for a call (iOS says interrupted; Android, which has no such signal, says audio-capture
- * or client) must not send half an answer. Running out of speech, or an error once the answer ended
- * normally (the learner asked to send, or a final result arrived), still sends, with no failure shown.
- * The screen closing aborts too. `onDevice` is null until it's known whether
- * the phone recognizes the language on the device; listening waits for that.
+ * permission is cleared when the learner comes back having allowed it in Settings. `abort` (the
+ * learner switching to typing, the app going to the background) drops what was heard, as does an
+ * error while the learner is still talking: the phone taking the microphone for a call (iOS says
+ * interrupted; Android, which has no such signal, says audio-capture or client) must not send half an
+ * answer. Running out of speech, or an error once the answer ended normally (the learner asked to
+ * send, or a final result arrived), still sends, with no failure shown. The screen closing aborts
+ * too. `onDevice` is null until it's known whether the phone recognizes the language on the device;
+ * listening waits for that.
  *
  * The phone's events carry no attempt, and iOS runs start, stop and abort in no fixed order: a stop
  * sent straight after start can end before recording begins, leaving the microphone on. So each tap
  * is one attempt, its events count only once its own `start` has arrived, and a stop or abort asked
  * for before that is sent from the `start` handler.
  */
-export function useSpeechInput(locale: string, onDevice: boolean | null, onFinal: (text: string) => void): SpeechInputControls {
+export function useSpeechInput(locale: string, onDevice: boolean | null, onFinal: (text: string) => void): SpeechRecognitionControls {
   const [supported] = useState(() => ExpoSpeechRecognitionModule.isRecognitionAvailable());
   const [listening, setListening] = useState(false);
   const [interim, setInterim] = useState("");

@@ -28,8 +28,9 @@ function readResults(event: RecognitionResultEvent): HeardSpeech {
  * ``onFinal`` receives the recognised text once the learner stops talking. An error while
  * the learner is still talking (the microphone lost, the network) drops what was heard, as the
  * phone does, rather than sending half an answer; once the answer ended normally (``stop``, or a
- * final result), what was heard is still sent and no failure is shown. Closing the screen aborts,
- * which always drops.
+ * final result), what was heard is still sent and no failure is shown. ``abort`` (the learner
+ * switching to typing) and closing the screen always drop what was heard, whatever the browser
+ * sends after.
  * Chrome sends the audio to Google, Safari to Apple -- see PrivacyNotice.
  */
 export function useSpeechRecognition(
@@ -43,6 +44,7 @@ export function useSpeechRecognition(
   const recognition = useRef<Recognition | null>(null);
   const attempt = useRef<RecognitionAttempt | null>(null);
   const heard = useRef<HeardSpeech>(NOTHING_HEARD);
+  const dropAttempt = useRef<(() => void) | null>(null);
   const onFinalRef = useRef(onFinal);
 
   useEffect(() => {
@@ -62,6 +64,7 @@ export function useSpeechRecognition(
     const state: RecognitionAttempt = { anythingHeard: false, settled: false, stopRequested: false };
     let dropped = false;
     rec.onresult = (event) => {
+      if (dropped) return;
       heard.current = readResults(event);
       state.anythingHeard = true;
       if (heard.current.finalText) state.settled = true;
@@ -75,6 +78,7 @@ export function useSpeechRecognition(
     rec.onend = () => {
       recognition.current = null;
       attempt.current = null;
+      dropAttempt.current = null;
       setListening(false);
       setInterim("");
       const text = finalTranscript(heard.current);
@@ -86,6 +90,10 @@ export function useSpeechRecognition(
     };
     recognition.current = rec;
     attempt.current = state;
+    dropAttempt.current = () => {
+      dropped = true;
+      rec.abort();
+    };
     setFailure(null);
     setInterim("");
     setListening(true);
@@ -94,6 +102,7 @@ export function useSpeechRecognition(
     } catch {
       recognition.current = null;
       attempt.current = null;
+      dropAttempt.current = null;
       setListening(false);
       setFailure("unavailable");
     }
@@ -104,7 +113,9 @@ export function useSpeechRecognition(
     recognition.current?.stop();
   }, []);
 
+  const abort = useCallback(() => dropAttempt.current?.(), []);
+
   const clearFailure = useCallback(() => setFailure(null), []);
 
-  return { supported: ctor !== null, listening, interim, failure, start, stop, clearFailure };
+  return { supported: ctor !== null, listening, interim, failure, start, stop, abort, clearFailure };
 }

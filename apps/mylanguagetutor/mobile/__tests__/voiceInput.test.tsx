@@ -310,18 +310,6 @@ describe("speaking an answer", () => {
     expect(screen.queryByText(VOICE_COPY.noSpeech)).toBeNull();
   });
 
-  it("sends what was heard when Android answers switching to typing with a client error", async () => {
-    androidPhone();
-    installRecognizer({ stopFailsWith: "client" });
-    storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
-    const { sent } = await openCafeConversation();
-    await tapToSpeak();
-    await phone(() => hear("Hola"));
-
-    await fireEvent.press(screen.getByRole("button", { name: VOICE_COPY.typeInstead }));
-    await waitFor(() => expect(sent.map((request) => request.text)).toEqual(["Hola"]));
-  });
-
   it("says recognition isn't working when the microphone fails after starting with nothing heard", async () => {
     installRecognizer();
     storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
@@ -516,15 +504,42 @@ describe("switching between speaking and typing", () => {
     expect(screen.getByRole("header", { name: VOICE_COPY.privacyHeading })).toBeTruthy();
   });
 
-  it("sends what was heard when the learner switches to typing mid-answer, as the website does", async () => {
+  it("drops what was heard when the learner switches to typing mid-answer, and speaks normally after switching back", async () => {
+    installRecognizer();
+    storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
+    const { sent } = await openCafeConversation();
+    await tapToSpeak();
+    await phone(() => hear("Quiero un"));
+
+    await fireEvent.press(screen.getByRole("button", { name: VOICE_COPY.typeInstead }));
+    await waitFor(() => expect(isListening()).toBe(false));
+    await act(async () => {});
+    expect(sent).toHaveLength(0);
+    expect(screen.getByLabelText(PRACTICE_COPY.typeYourAnswer)).toBeTruthy();
+    expect(screen.queryByText(VOICE_COPY.interrupted)).toBeNull();
+    expect(screen.queryByText(VOICE_COPY.unavailable)).toBeNull();
+    expect(audioSessionReleases).toEqual([false]);
+
+    await fireEvent.press(screen.getByRole("button", { name: VOICE_COPY.useMicrophone }));
+    await tapToSpeak();
+    await phone(() => hear("Quiero un café"));
+    await phone(() => goQuiet());
+    expect(sent.map((request) => request.text)).toEqual(["Quiero un café"]);
+  });
+
+  it("drops a settled answer when the learner switches to typing before the phone ends", async () => {
+    androidPhone();
     installRecognizer();
     storedItems.set(VOICE_PRIVACY_ACK_STORAGE_ITEM, "may_send");
     const { sent } = await openCafeConversation();
     await tapToSpeak();
     await phone(() => hear("Hola"));
+    await phone(() => settle());
 
     await fireEvent.press(screen.getByRole("button", { name: VOICE_COPY.typeInstead }));
-    await waitFor(() => expect(sent.map((request) => request.text)).toEqual(["Hola"]));
+    await waitFor(() => expect(isListening()).toBe(false));
+    await act(async () => {});
+    expect(sent).toHaveLength(0);
     expect(screen.getByLabelText(PRACTICE_COPY.typeYourAnswer)).toBeTruthy();
   });
 
