@@ -8,6 +8,7 @@ import RecipeCard from "@/features/recipes/RecipeCard";
 import RecipesListSkeleton from "@/features/recipes/RecipesListSkeleton";
 import { RECIPES_EMPTY_STATE, RECIPES_SEARCH_EMPTY } from "@/constants/empty-states";
 import { RECIPES_LIST_MESSAGES } from "@/constants/recipes-list-messages";
+import { RECIPE_SEARCH_DEBOUNCE_MS } from "@/constants/recipe-search";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 
 function errorBody(error: unknown): string {
@@ -31,7 +32,7 @@ export default function Recipes() {
   // written back to ?q= so each keystroke neither stacks a history entry nor
   // fires a request.
   const [input, setInput] = useState(query);
-  const debouncedInput = useDebouncedValue(input.trim(), 300);
+  const debouncedInput = useDebouncedValue(input.trim(), RECIPE_SEARCH_DEBOUNCE_MS);
 
   useEffect(() => {
     setSearchParams(

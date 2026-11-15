@@ -8,12 +8,13 @@ import userEvent from "@testing-library/user-event";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { baseApi } from "@platform/ui";
 import api from "@/lib/api";
 import { RECIPES_PAGE_SIZE } from "@myrecipes/api-client/constants/recipesPaging";
 import type { RecipeListPage } from "@myrecipes/api-client/types/recipe/recipe-list-page";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
+import { RECIPE_SEARCH_DEBOUNCE_MS } from "@/constants/recipe-search";
 import Recipes from "@/pages/Recipes";
 
 const TOTAL = 60;
@@ -89,6 +90,7 @@ afterEach(() => {
     store.dispatch(baseApi.util.resetApiState());
   });
   api.defaults.adapter = originalAdapter;
+  vi.useRealTimers();
 });
 
 describe("Recipes", () => {
@@ -109,7 +111,8 @@ describe("Recipes", () => {
   });
 
   it("starts a search from the first page", async () => {
-    const user = userEvent.setup();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderRecipes();
     await screen.findByRole("heading", { name: "Recipe 1" });
     await user.click(screen.getByRole("button", { name: "Load more" }));
@@ -117,6 +120,9 @@ describe("Recipes", () => {
     listCalls.length = 0;
 
     await user.type(screen.getByLabelText("Search recipes by title"), "soup");
+    await act(async () => {
+      vi.advanceTimersByTime(RECIPE_SEARCH_DEBOUNCE_MS);
+    });
 
     expect(await screen.findByRole("heading", { name: "Soup 1" })).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("heading", { name: "Recipe 51" })).not.toBeInTheDocument());
