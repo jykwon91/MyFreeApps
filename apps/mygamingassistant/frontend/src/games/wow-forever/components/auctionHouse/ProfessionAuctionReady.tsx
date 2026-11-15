@@ -10,7 +10,7 @@ import type { ProfessionAuctionProps } from "@/games/wow-forever/types/auctionHo
 import type { CraftingData } from "@/games/wow-forever/types/craftingData";
 
 /** A profession's loaded recipes: the recipe finder + materials list, or one recipe's prices. */
-export default function ProfessionAuctionReady({ data, professionLabel, house, recipe, onRecipe, filters, onFilters, onClearFilters }: ProfessionAuctionProps & { data: CraftingData }) {
+export default function ProfessionAuctionReady({ data, profession, professionLabel, house, recipe, onRecipe, filters, onFilters, onClearFilters }: ProfessionAuctionProps & { data: CraftingData }) {
   const materials = useMemo(() => professionMaterials(data.file.recipes), [data]);
   const options = useMemo(() => recipeOptions(data.file.recipes), [data]);
 
@@ -20,7 +20,7 @@ export default function ProfessionAuctionReady({ data, professionLabel, house, r
       <div className="space-y-4">
         <BackToMaterialsButton professionLabel={professionLabel} onClick={() => onRecipe(null)} />
         {picked ? (
-          <AuctionHouseBody faction={house}>{(prices) => <RecipePricePanel recipe={picked} prices={prices} />}</AuctionHouseBody>
+          <AuctionHouseBody faction={house}>{(prices) => <RecipePricePanel recipe={picked} profession={profession} prices={prices} />}</AuctionHouseBody>
         ) : (
           <EmptyStateNote message={`That ${professionLabel} recipe wasn't found. Pick another from the list.`} />
         )}

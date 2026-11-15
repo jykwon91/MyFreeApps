@@ -450,3 +450,19 @@ test("Cooking's Journeyman step lists its trainers and the Artisan quest giver, 
   await expect(quest.first()).toBeVisible();
   await expect(route.getByRole("link", { name: "Show Dirge Quikcleave on the map" })).toHaveAttribute("href", "/wow-forever/map?npc=8125");
 });
+
+test("a route recipe has a hover tooltip and opens in full on the Recipes page", async ({ page }) => {
+  await page.goto("/wow-forever/professions?p=tailoring");
+  const recipe = page.getByRole("main").getByRole("link", { name: "Bolt of Linen Cloth" }).first();
+  await expect(recipe).toHaveAttribute("href", "/wow-forever/recipes?q=Bolt+of+Linen+Cloth&p=tailoring");
+
+  await recipe.hover();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toContainText("Bolt of Linen Cloth");
+  await expect(tooltip).toContainText("Materials");
+  await expect(tooltip).toContainText("Linen Cloth");
+  await recipe.click();
+  await expect(page).toHaveURL(/\/wow-forever\/recipes\?q=Bolt\+of\+Linen\+Cloth&p=tailoring$/);
+  const row = page.getByTestId("recipe-row").filter({ hasText: "Bolt of Linen Cloth" }).first();
+  await expect(row.locator("details")).toHaveAttribute("open", "");
+});

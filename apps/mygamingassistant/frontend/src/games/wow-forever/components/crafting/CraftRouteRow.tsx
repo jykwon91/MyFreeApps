@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import RecipeRef from "@/games/wow-forever/components/recipes/RecipeRef";
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
 import CraftColorsLine from "@/games/wow-forever/components/crafting/CraftColorsLine";
 import CraftEffectLine from "@/games/wow-forever/components/crafting/CraftEffectLine";
@@ -11,7 +12,7 @@ import { recipeIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { CRAFT_ROW_GRID, rowStateClass, type RowState } from "@/games/wow-forever/components/crafting/craftRowStyles";
 import { sourceUnknown } from "@/games/wow-forever/crafting/craftRoute";
 import type { PriceBook } from "@/games/wow-forever/crafting/matPrices";
-import type { ResolvedCraftStep } from "@/games/wow-forever/types/crafting";
+import type { CraftingProfession, ResolvedCraftStep } from "@/games/wow-forever/types/crafting";
 import { PROVENANCE } from "@/games/wow-forever/types/provenance/provenance";
 
 interface CraftRouteRowProps {
@@ -22,13 +23,15 @@ interface CraftRouteRowProps {
   makesTool: boolean;
   /** Say what the item does under its name (Engineering). */
   showEffect: boolean;
+  /** Links each recipe name to its full recipe. */
+  profession: CraftingProfession;
   professionLabel: string;
   place: CraftPlace;
   priceBook: PriceBook | null;
 }
 
 /** One recipe on the route: a card on phones, a 4-column row from `sm` up, with tool and note underneath. */
-export default function CraftRouteRow({ entry, state, showChip, makesTool, showEffect, professionLabel, place, priceBook }: CraftRouteRowProps) {
+export default function CraftRouteRow({ entry, state, showChip, makesTool, showEffect, profession, professionLabel, place, priceBook }: CraftRouteRowProps) {
   const { step, recipe, crafts, learn } = entry;
   return (
     <li
@@ -42,10 +45,10 @@ export default function CraftRouteRow({ entry, state, showChip, makesTool, showE
             <span className="rounded-full bg-muted px-2 py-0.5 text-sm font-semibold tabular-nums">
               {step.from}–{step.to}
             </span>
-            <span className="inline-flex items-center gap-2 font-medium">
+            <RecipeRef profession={profession} spell={recipe.spell} name={recipe.name} className="inline-flex items-center gap-2 font-medium">
               <GameIcon icon={recipeIcon(recipe)} size={24} alt="" />
               {recipe.name}
-            </span>
+            </RecipeRef>
             {state === "current" ? (
               <span className="rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground">You are here</span>
             ) : null}
