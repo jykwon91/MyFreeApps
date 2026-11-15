@@ -5,7 +5,10 @@ rent reminders, and — when this deployment is the transparency primary — run
 the platform-wide daily cost sync.
 
 The loop wakes every ``REMINDER_TICK_MINUTES`` (hourly) to send rent reminders
-— a reminder promised for "Saturday about 6pm" cannot wait for a daily cycle.
+— a reminder promised for "Saturday about 6pm" cannot wait for a daily cycle —
+and to hand leases over to successors that have started (in the host's time
+zone; see ``lease_handover_service``), so a hand-over lands within an hour of
+the host's local midnight rather than whenever the daily cycle happens to run.
 The full sync cycle keeps its own cadence, ``gmail_poll_interval_minutes``
 (default 1440, i.e. once a day), and runs on whichever tick it falls due. The channel-iCal poll runs on every cycle — the
 operator's per-channel feeds are tiny and the upstream channels poll us
@@ -67,16 +70,20 @@ from app.core.config import settings
 from app.core.observability import init_sentry
 from app.core.rent_reminder_constants import REMINDER_TICK_MINUTES
 from app.core.scheduler_worker_constants import HEARTBEAT_INTERVAL_SECONDS, HEARTBEAT_PATH
-from app.db.session import AsyncSessionLocal, engine, unit_of_work
+from app.db.session import AsyncSessionLocal, engine
 from app.models.integrations.gmail_sync_target import GmailSyncTarget
 from app.repositories import integration_repo
-from app.repositories.leases import signed_lease_repo
+from app.services.leases import lease_handover_service
 from app.services.listings.channel_sync_service import poll_all as poll_all_channels
 from app.services.properties import utility_plan_service
 from app.services.rent import rent_reminder_dispatch_service
 from app.workers.email_sync_worker import sync_gmail_connection
 
 logger = logging.getLogger(__name__)
+
+
+def _now() -> _dt.datetime:
+    return _dt.datetime.now(_dt.timezone.utc)
 
 
 async def get_gmail_sync_targets() -> list[GmailSyncTarget]:
@@ -102,48 +109,15 @@ async def sync_all_channel_calendars() -> None:
 
 
 async def auto_end_replaced_leases() -> int:
-    """Transition signed/active parent leases to ``ended`` when their
-    successor's ``starts_on`` has arrived.
+    """End leases whose successor has started in the host's time zone.
 
-    Returns the number of leases that were transitioned. Tenancy-agnostic
-    — runs across every user. Errors on individual rows are logged but
-    do not stop the cycle (one bad row should never block the rest).
+    Returns how many were ended; a failure is logged, never raised.
     """
-    now = _dt.datetime.now(_dt.timezone.utc)
-    # The server stores no host time zone, so a lease hands over on the UTC date.
-    today = now.date()
-    transitioned = 0
     try:
-        async with unit_of_work() as db:
-            rows = await signed_lease_repo.list_replaced_by_successor_starting_on_or_before(
-                db, cutoff=today,
-            )
-            for parent in rows:
-                try:
-                    await signed_lease_repo.update_lease(
-                        db,
-                        lease_id=parent.id,
-                        user_id=parent.user_id,
-                        organization_id=parent.organization_id,
-                        fields={
-                            "status": "ended",
-                            "ended_at": now,
-                            "updated_at": now,
-                        },
-                    )
-                    transitioned += 1
-                    logger.info(
-                        "Auto-ended lease %s (successor's starts_on reached)",
-                        parent.id,
-                    )
-                except Exception:  # noqa: BLE001
-                    logger.exception(
-                        "Failed to auto-end lease %s — leaving for next cycle",
-                        parent.id,
-                    )
-    except Exception:
+        return await lease_handover_service.end_replaced_leases(now=_now())
+    except Exception:  # noqa: BLE001 — must not skip the rest of the tick
         logger.exception("auto_end_replaced_leases cycle failed")
-    return transitioned
+        return 0
 
 
 async def flag_expiring_utility_plans() -> int:
@@ -155,7 +129,7 @@ async def flag_expiring_utility_plans() -> int:
     failure mode a silently-lapsed rate plan exploits.
 
     Returns the number of plans flagged. Never raises: a failure here must not
-    stop the Gmail or lease steps in the same cycle.
+    stop the steps after it in the same tick.
     """
     try:
         flagged = await utility_plan_service.sweep_plans_needing_renewal(
@@ -197,13 +171,12 @@ async def sync_all_gmail() -> None:
 async def run_sync_cycle() -> None:
     """Run one full sync cycle for all integration types.
 
-    Never raises: each step logs and contains its own failure (the three
+    Never raises: each step logs and contains its own failure (the two
     after Gmail do so inside their own ``try``), so one failing step never
     skips the steps after it.
     """
     await sync_all_gmail()
     await sync_all_channel_calendars()
-    await auto_end_replaced_leases()
     await flag_expiring_utility_plans()
 
 
@@ -216,22 +189,20 @@ async def send_due_rent_reminders() -> None:
 
 
 async def run_tick(*, full_cycle: bool, transparency_sync: bool) -> bool:
-    """One wake-up: rent reminders always, the full sync and the transparency
-    cost sync when each is due. Returns whether the cost sync ran and succeeded.
+    """One wake-up: lease hand-overs and rent reminders always, the full sync
+    and the transparency cost sync when each is due. Returns whether the cost
+    sync ran and succeeded.
 
     The cost sync goes last so a slow Anthropic call never delays the
     reminders. Every part contains its own failure, so none skips another.
     """
     if full_cycle:
         await run_sync_cycle()
+    await auto_end_replaced_leases()
     await send_due_rent_reminders()
     if not transparency_sync:
         return False
     return await run_cost_sync_once(settings)
-
-
-def _now() -> _dt.datetime:
-    return _dt.datetime.now(_dt.timezone.utc)
 
 
 async def tick_until_stopped(

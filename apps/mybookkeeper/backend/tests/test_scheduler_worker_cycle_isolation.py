@@ -1,7 +1,7 @@
 """Every part of a scheduler tick contains its own failure.
 
-One org's Gmail, the channel-iCal poll, lease auto-end, the utility-plan
-check and the rent reminders each log what went wrong and never skip the
+One org's Gmail, the channel-iCal poll, the utility-plan check, lease
+hand-over and the rent reminders each log what went wrong and never skip the
 parts after them — a single bad mailbox or DB blip must not cost every other
 org its sync or a tenant their reminder.
 """
@@ -37,38 +37,21 @@ def _cycle(
         "targets": targets or AsyncMock(return_value=[]),
         "gmail": gmail or AsyncMock(),
         "channels": channels or AsyncMock(return_value=0),
-        "leases": leases or AsyncMock(return_value=[]),
+        "leases": leases or AsyncMock(return_value=0),
         "plans": plans or AsyncMock(return_value=[]),
     }
     with (
         patch(f"{_WORKER}.get_gmail_sync_targets", mocks["targets"]),
         patch(f"{_WORKER}.sync_gmail_connection", mocks["gmail"]),
         patch(f"{_WORKER}.poll_all_channels", mocks["channels"]),
-        patch(
-            f"{_WORKER}.signed_lease_repo.list_replaced_by_successor_starting_on_or_before",
-            mocks["leases"],
-        ),
-        patch(f"{_WORKER}.unit_of_work", _fake_uow),
+        patch(f"{_WORKER}.lease_handover_service.end_replaced_leases", mocks["leases"]),
         patch(f"{_WORKER}.utility_plan_service.sweep_plans_needing_renewal", mocks["plans"]),
     ):
         yield mocks
 
 
-class _FakeUow:
-    async def __aenter__(self) -> MagicMock:
-        return MagicMock()
-
-    async def __aexit__(self, *_exc: object) -> None:
-        return None
-
-
-def _fake_uow() -> _FakeUow:
-    return _FakeUow()
-
-
 def _assert_later_steps_ran(mocks: dict[str, AsyncMock]) -> None:
     mocks["channels"].assert_awaited_once()
-    mocks["leases"].assert_awaited_once()
     mocks["plans"].assert_awaited_once()
 
 
@@ -91,16 +74,22 @@ async def test_listing_gmail_targets_failing_still_runs_the_other_steps() -> Non
     _assert_later_steps_ran(mocks)
 
 
-async def test_channel_ical_failure_still_runs_leases_and_plans() -> None:
+async def test_channel_ical_failure_still_runs_the_plan_check() -> None:
     with _cycle(channels=AsyncMock(side_effect=RuntimeError("feed down"))) as mocks:
         await scheduler_worker.run_sync_cycle()
     _assert_later_steps_ran(mocks)
 
 
-async def test_lease_auto_end_failure_still_runs_the_plan_check() -> None:
-    with _cycle(leases=AsyncMock(side_effect=RuntimeError("db blip"))) as mocks:
-        await scheduler_worker.run_sync_cycle()
-    _assert_later_steps_ran(mocks)
+async def test_lease_hand_over_runs_every_tick_and_a_failure_still_sends_reminders() -> None:
+    reminders = AsyncMock()
+    with (
+        _cycle(leases=AsyncMock(side_effect=RuntimeError("db blip"))) as mocks,
+        patch(f"{_WORKER}.rent_reminder_dispatch_service.run_tick", reminders),
+    ):
+        await scheduler_worker.run_tick(full_cycle=False, transparency_sync=False)
+    mocks["leases"].assert_awaited_once()
+    mocks["targets"].assert_not_awaited()
+    reminders.assert_awaited_once()
 
 
 async def test_utility_plan_failure_is_contained() -> None:
