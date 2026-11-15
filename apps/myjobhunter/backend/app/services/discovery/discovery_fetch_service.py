@@ -29,7 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.discovery.discovery_source import DiscoverySource
-from app.repositories.discovery import discovery_repository
+from app.repositories.discovery import discovery_repository, discovery_source_repository
 from app.schemas.discovery.greenhouse_source_config import (
     GreenhouseSourceConfig,
     GreenhouseFetchConfig,
@@ -297,7 +297,7 @@ async def fetch_source(
         DiscoveryUnsupportedSourceError: no adapter for this source kind.
         DiscoveryFetchError: adapter raised an unexpected error.
     """
-    source = await discovery_repository.get_source(db, source_id, user_id)
+    source = await discovery_source_repository.get_source(db, source_id, user_id)
     if source is None:
         raise DiscoverySourceNotFoundError(
             f"discovery_source {source_id} not found",
@@ -361,7 +361,7 @@ async def fetch_source(
         await discovery_repository.complete_fetch(
             db, fetch, status="error", error_message=str(exc),
         )
-        await discovery_repository.mark_source_fetched(
+        await discovery_source_repository.mark_source_fetched(
             db, source, success=False, error_message=str(exc),
         )
         await db.commit()
@@ -447,7 +447,7 @@ async def fetch_source(
         new_count=new_count,
         updated_count=updated_count,
     )
-    await discovery_repository.mark_source_fetched(
+    await discovery_source_repository.mark_source_fetched(
         db,
         source,
         success=True,

@@ -410,6 +410,20 @@ describe("EditSavedSearchDialog", () => {
       });
     });
 
+    it("shows the server's 409 reason and stays open when the new name is already taken", async () => {
+      const detail = "An active 'greenhouse' source named 'Taken' already exists. Pick a different name for this source.";
+      mockUpdateSource.mockReturnValue({ unwrap: () => Promise.reject({ status: 409, data: { detail } }) });
+      render(<EditSavedSearchDialog source={makeGreenhouseSource({ name: "Mine" })} open={true} onClose={onClose} />);
+
+      fireEvent.change(screen.getByLabelText(/name/i), { target: { value: "Taken" } });
+      fireEvent.click(screen.getByTestId("confirm-btn"));
+
+      await waitFor(() => {
+        expect(mockShowError).toHaveBeenCalledWith(detail);
+      });
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
     it("keeps a name that is too long, says so, and won't save it", async () => {
       render(<EditSavedSearchDialog source={makeGreenhouseSource()} open={true} onClose={onClose} />);
 
