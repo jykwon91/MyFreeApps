@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-15",
+    "title": "Talent specs on the guild roster",
+    "summary": "The Roster tab now shows each member's main talent spec, the tree with the most points, with its icon next to their class. The table shows it on wider screens; on phones it's under the class line.",
+    "to": "/wow-forever/topdeadcenter?tab=roster"
+  },
+  {
+    "date": "2026-11-15",
     "title": "Find a crafter on the roster in one tap",
     "summary": "The Roster tab has a row of profession buttons, each with its icon and how many members have it. Tap one to see only those members, best skill first; tap it again for everyone. Tap Level in the table to sort them by character level instead.",
     "to": "/wow-forever/topdeadcenter?tab=roster"

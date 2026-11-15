@@ -50,7 +50,7 @@ function guildBody(state: GuildState) {
       {
         slug: "jason-kwon", name: "Jason", surname: "Kwon", class_name: "Warlock", level: 37, item_level: 28,
         honorable_kills: 40, killing_blows: null, deaths_from_players: null, total_kills: null, total_deaths: null,
-        dungeons_done: null, exalted_reputations: null, baseline: null, professions: [], rank: 0,
+        dungeons_done: null, exalted_reputations: null, baseline: null, professions: [], talents: null, rank: 0,
         refreshed_at: iso(-HOUR_MS),
       },
     ],

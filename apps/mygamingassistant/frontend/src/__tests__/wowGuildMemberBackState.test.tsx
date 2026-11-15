@@ -35,7 +35,7 @@ function member(slug: string, name: string, className: string, extra: Partial<Gu
   return {
     slug, name, surname: "X", class_name: className, level: 60, item_level: null, honorable_kills: null, killing_blows: null,
     deaths_from_players: null, total_kills: null, total_deaths: null, dungeons_done: null, exalted_reputations: null,
-    baseline: null, professions: [], rank: 3, refreshed_at: NOW, ...extra,
+    baseline: null, professions: [], talents: null, rank: 3, refreshed_at: NOW, ...extra,
   };
 }
 

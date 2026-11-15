@@ -17,7 +17,7 @@ from app.repositories.wow import guild_repo
 from app.services.wow.character import character_store_service
 from app.services.wow.character.character_mapper import to_character_response
 
-from wow_guild_fixtures import GUILD, NOW, OTHER_GUILD, make_fetch, professions_json
+from wow_guild_fixtures import GUILD, NOW, OTHER_GUILD, make_fetch, professions_json, specializations_json
 
 
 @pytest.fixture(autouse=True)
@@ -98,6 +98,23 @@ async def test_each_member_carries_its_newest_days_leaderboard_numbers(client: A
         "level": 40, "honorable_kills": 12, "killing_blows": 7, "deaths_from_players": 3, "total_kills": 900,
         "total_deaths": 0, "dungeons_done": 4, "exalted_reputations": 1,
     }
+
+
+async def test_talents_come_from_the_stored_character_row(client: AsyncClient, db: AsyncSession) -> None:
+    # Character with Affliction 23pts + Demonology 8pts stored.
+    await character_store_service.record(
+        make_fetch(specializations=specializations_json((355, "Affliction", 23), (354, "Demonology", 8))), now=NOW, viewed=True,
+    )
+    # Character with no talent data at all (call failed on creation → null).
+    await character_store_service.record(make_fetch("tiny-john", 2, specializations=None), now=NOW)
+
+    members = {m["slug"]: m for m in (await client.get("/wow/guilds/topdeadcenter")).json()["members"]}
+
+    assert members["jason-kwon"]["talents"] == [
+        {"tree_id": 355, "points": 23},
+        {"tree_id": 354, "points": 8},
+    ]
+    assert members["tiny-john"]["talents"] is None
 
 
 async def test_professions_come_from_the_newest_day_that_has_them(client: AsyncClient, db: AsyncSession) -> None:

@@ -32,6 +32,7 @@ import dataclasses
 import logging
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from app.core.wow_character import (
     CHARACTER_ERROR_MAX_LENGTH,
@@ -47,6 +48,7 @@ from app.services.wow.character.character_json import as_int
 from app.services.wow.character.character_metrics_mapper import to_character_metrics
 from app.services.wow.character.character_sheet_codec import read_sheet, to_sheet_json
 from app.services.wow.character.character_sheet_merge import merge_sheet
+from app.services.wow.character.character_talents_mapper import active_tree_points
 from app.services.wow.guild.guild_mapper import to_guild_identity
 
 logger = logging.getLogger(__name__)
@@ -75,7 +77,8 @@ async def record(fetch: CharacterFetch, *, now: datetime | None = None, viewed: 
         row = await character_repo.get_by_blizzard_id(db, blizzard_id)
         stored = None if row is None else read_sheet(row.sheet, row.sheet_version)
         same_guild = row is not None and guild_id is not None and row.guild_id == guild_id
-        row = await character_repo.save_fetched(db, row, {
+        new_talent_points = active_tree_points(fetch.profile.specializations)
+        save_values: dict[str, Any] = {
             "blizzard_character_id": blizzard_id,
             "slug": fresh.slug,
             "name": fresh.name,
@@ -90,7 +93,11 @@ async def record(fetch: CharacterFetch, *, now: datetime | None = None, viewed: 
             "gone_at": None,
             "guild_id": guild_id,
             "guild_rank": row.guild_rank if same_guild else None,
-        })
+        }
+        # None means Blizzard's /specializations call failed — keep any stored value.
+        if new_talent_points is not None:
+            save_values["talent_points"] = new_talent_points
+        row = await character_repo.save_fetched(db, row, save_values)
         metrics = to_character_metrics(fresh, fetch.profile.achievement_statistics)
         values = {
             f.name: getattr(metrics, f.name) for f in dataclasses.fields(metrics) if f.name not in _METRIC_SETS

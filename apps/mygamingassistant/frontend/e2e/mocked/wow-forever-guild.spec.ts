@@ -50,6 +50,7 @@ function member(slug: string, name: string, surname: string, className: string, 
     exalted_reputations: null,
     baseline: null,
     professions: [] as { id: number; skill: number; max_skill: number }[],
+    talents: null as null | { tree_id: number; points: number }[],
     rank,
     refreshed_at: new Date(Date.now() - 3_600_000).toISOString(),
   };
@@ -766,6 +767,59 @@ test("picking a tab keeps it in the URL and the skeleton sketches the open tab",
   await expect(page.getByTestId("guild-page-skeleton")).toHaveCount(0);
   await expect(memberNames(page)).toHaveCount(3);
   await expect(page.getByTestId("guild-profession-chips")).toBeVisible();
+});
+
+test("roster: spec column shows the dominant spec for members with talent data, and nothing for members without", async ({ page }) => {
+  const g = guild();
+  // Give Jason Kwon Affliction spec (355 = Affliction, 354 = Demonology)
+  const membersWithTalents = g.members.map((m) =>
+    m.slug === "jason-kwon"
+      ? { ...m, talents: [{ tree_id: 355, points: 23 }, { tree_id: 354, points: 8 }] }
+      : m,
+  );
+  await page.route(GUILD_PATTERN, (route) => json(route, { ...g, members: membersWithTalents }));
+  await page.route(SHEET_PATTERN, (route) => json(route, character(new URL(route.request().url()).pathname.split("/").pop() ?? "")));
+  await page.goto("/wow-forever/topdeadcenter?tab=roster");
+
+  // The Spec column header is visible at desktop width.
+  await expect(page.getByRole("columnheader", { name: "Spec" })).toBeVisible();
+
+  // Jason Kwon has Affliction as the dominant spec (23 points beats Demonology's 8).
+  const jasonRow = page.getByRole("table").getByRole("row").filter({ hasText: "Jason Kwon" });
+  const jasonSpec = jasonRow.getByTestId("guild-member-spec");
+  await expect(jasonSpec).toContainText("Affliction");
+  // The spec icon appears alongside the name.
+  await expect(jasonSpec.getByTestId(/^game-icon/)).toBeVisible();
+
+  // Members with null talents show an empty spec cell (the component renders nothing).
+  const bigSueRow = page.getByRole("table").getByRole("row").filter({ hasText: "Big Sue" });
+  await expect(bigSueRow.getByTestId("guild-member-spec")).toHaveCount(0);
+});
+
+test("375px phone: spec line appears in the card when talent data is present", async ({ page }) => {
+  const g = guild();
+  const membersWithTalents = g.members.map((m) =>
+    m.slug === "jason-kwon"
+      ? { ...m, talents: [{ tree_id: 355, points: 23 }] }
+      : m,
+  );
+  await page.route(GUILD_PATTERN, (route) => json(route, { ...g, members: membersWithTalents }));
+  await page.route(SHEET_PATTERN, (route) => json(route, character(new URL(route.request().url()).pathname.split("/").pop() ?? "")));
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/wow-forever/topdeadcenter?tab=roster");
+
+  // On phone, roster renders as cards (table is hidden).
+  await expect(page.getByRole("table")).toBeHidden();
+  const cards = page.getByRole("list", { name: "Guild members" }).locator("li");
+  const jasonCard = cards.filter({ hasText: "Jason Kwon" });
+  await expect(jasonCard.getByTestId("guild-member-spec")).toContainText("Affliction");
+
+  // Cards for members without talent data don't have a visible spec.
+  const bigSueCard = cards.filter({ hasText: "Big Sue" });
+  await expect(bigSueCard.getByTestId("guild-member-spec")).toHaveCount(0);
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
 });
 
 test("recipe search: the recipe has icons and a hover tooltip, and opens in full on the Recipes page", async ({ page }) => {

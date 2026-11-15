@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from app.schemas.wow.guild.guild_member_baseline_response import GuildMemberBaselineResponse
 from app.schemas.wow.guild.guild_member_skill_response import GuildMemberSkillResponse
+from app.schemas.wow.guild.guild_member_talent_tree_response import GuildMemberTalentTreeResponse
 
 
 class GuildMemberResponse(BaseModel):
@@ -30,6 +31,8 @@ class GuildMemberResponse(BaseModel):
     baseline: GuildMemberBaselineResponse | None
     # From the newest stored day that has professions; [] when none is stored.
     professions: list[GuildMemberSkillResponse]
+    # Active talent trees with spent points; None when never fetched / call failed.
+    talents: list[GuildMemberTalentTreeResponse] | None
     # 0 = guild master; None until the roster refresh has ranked the member.
     rank: int | None
     # When the member's character was last fetched from Blizzard.

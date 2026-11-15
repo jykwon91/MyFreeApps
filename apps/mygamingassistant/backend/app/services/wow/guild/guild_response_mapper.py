@@ -12,6 +12,7 @@ from app.repositories.wow.guild_member_skill_row import GuildMemberSkillRow
 from app.schemas.wow.guild.guild_member_baseline_response import GuildMemberBaselineResponse
 from app.schemas.wow.guild.guild_member_response import GuildMemberResponse
 from app.schemas.wow.guild.guild_member_skill_response import GuildMemberSkillResponse
+from app.schemas.wow.guild.guild_member_talent_tree_response import GuildMemberTalentTreeResponse
 from app.schemas.wow.guild.guild_response import GuildResponse
 
 
@@ -67,6 +68,10 @@ def to_guild_response(
                 exalted_reputations=row.exalted_reputations,
                 baseline=_baseline(row),
                 professions=skills_by_slug.get(row.slug, []),
+                talents=(
+                    None if row.talent_points is None
+                    else [GuildMemberTalentTreeResponse(tree_id=t["tree_id"], points=t["points"]) for t in row.talent_points]
+                ),
                 rank=row.rank,
                 refreshed_at=row.fetched_at,
             )

@@ -1,5 +1,6 @@
 import type { GuildMemberBaseline } from "@/games/wow-forever/types/guild/guildMemberBaseline";
 import type { GuildMemberSkill } from "@/games/wow-forever/types/guild/guildMemberSkill";
+import type { GuildMemberTalentTree } from "@/games/wow-forever/types/guild/guildMemberTalentTree";
 
 /**
  * One stored guild member (GET /api/wow/guilds/{slug}). The numbers are from
@@ -28,6 +29,8 @@ export interface GuildMember {
   baseline: GuildMemberBaseline | null;
   /** From the newest stored day that has professions; [] when none is stored. */
   professions: GuildMemberSkill[];
+  /** Active talent trees with spent points; null when never fetched or last call failed. */
+  talents: GuildMemberTalentTree[] | null;
   /** 0 = guild master; null until the roster refresh ranks the member. */
   rank: number | null;
   /** ISO time the member was last fetched from Blizzard. */

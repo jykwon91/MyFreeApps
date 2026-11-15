@@ -2,6 +2,7 @@ import GuildMemberLink from "@/games/wow-forever/components/guild/GuildMemberLin
 import GuildMemberTitles from "@/games/wow-forever/components/guild/GuildMemberTitles";
 import GuildMemberStaleNote from "@/games/wow-forever/components/guild/GuildMemberStaleNote";
 import GuildMemberProfessions from "@/games/wow-forever/components/guild/GuildMemberProfessions";
+import GuildMemberSpec from "@/games/wow-forever/components/guild/GuildMemberSpec";
 import type { GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
 import { rankLabel } from "@/games/wow-forever/lib/guild/guildMembers";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
@@ -26,6 +27,7 @@ export default function GuildMemberCard({ member, rosterUpdatedAt, titles, profe
       <GuildMemberLink member={member} />
       <GuildMemberTitles titles={titles} />
       <p className="text-sm text-muted-foreground">{details.join(" · ")}</p>
+      <GuildMemberSpec member={member} className="mt-0.5 inline-flex items-center gap-1 text-sm text-muted-foreground" />
       <GuildMemberProfessions member={member} first={profession} className="mt-1 text-sm" />
       <GuildMemberStaleNote member={member} rosterUpdatedAt={rosterUpdatedAt} />
     </li>

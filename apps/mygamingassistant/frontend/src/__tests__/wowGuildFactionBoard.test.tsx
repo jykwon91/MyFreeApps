@@ -28,7 +28,7 @@ function member(slug: string, name: string): GuildMember {
   return {
     slug, name, surname: "X", class_name: "Mage", level: 60, item_level: null, honorable_kills: null, killing_blows: null,
     deaths_from_players: null, total_kills: null, total_deaths: null, dungeons_done: null, exalted_reputations: null,
-    baseline: null, professions: [], rank: 1, refreshed_at: ROSTER_AT,
+    baseline: null, professions: [], talents: null, rank: 1, refreshed_at: ROSTER_AT,
   };
 }
 

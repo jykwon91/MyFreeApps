@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 
 class GuildMemberRow(NamedTuple):
@@ -30,3 +30,5 @@ class GuildMemberRow(NamedTuple):
     baseline_killing_blows: int | None
     baseline_total_kills: int | None
     baseline_dungeons_done: int | None
+    # From wow_character.talent_points; None when never fetched or last call failed.
+    talent_points: list[dict[str, Any]] | None
