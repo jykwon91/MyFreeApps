@@ -1,12 +1,11 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { WORK_HISTORY_TAG } from "../constants/profileTags";
 import { removalIsDone } from "../utils/removalIsDone";
 import { withoutListItem } from "../utils/withoutListItem";
 import type { WorkHistory } from "../types/work-history/work-history";
 import type { WorkHistoryListResponse } from "../types/work-history/work-history-list-response";
 import type { WorkHistoryCreateRequest } from "../types/work-history/work-history-create-request";
 import type { WorkHistoryUpdateRequest } from "../types/work-history/work-history-update-request";
-
-const WORK_HISTORY_TAG = "WorkHistory";
 
 const workHistoryApi = baseApi
   .enhanceEndpoints({ addTagTypes: [WORK_HISTORY_TAG] })

@@ -1,12 +1,11 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { EDUCATION_TAG } from "../constants/profileTags";
 import { removalIsDone } from "../utils/removalIsDone";
 import { withoutListItem } from "../utils/withoutListItem";
 import type { Education } from "../types/education/education";
 import type { EducationListResponse } from "../types/education/education-list-response";
 import type { EducationCreateRequest } from "../types/education/education-create-request";
 import type { EducationUpdateRequest } from "../types/education/education-update-request";
-
-const EDUCATION_TAG = "Education";
 
 const educationApi = baseApi.enhanceEndpoints({ addTagTypes: [EDUCATION_TAG] }).injectEndpoints({
   endpoints: (build) => ({
