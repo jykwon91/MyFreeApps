@@ -483,7 +483,7 @@ async def delete_cook(
     recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
     if recipe is None:
         return False
-    cook = await cook_log_repository.get_by_id(db, cook_id, user_id)
+    cook = await cook_log_repository.get_by_id(db, cook_id, recipe_id, user_id)
     if cook is None:
         return False
     await cook_log_repository.delete(db, cook)

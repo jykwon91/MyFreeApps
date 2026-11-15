@@ -16,10 +16,17 @@ from app.models.recipe.recipe_version import RecipeVersion
 
 
 async def get_by_id(
-    db: AsyncSession, cook_id: uuid.UUID, user_id: uuid.UUID,
+    db: AsyncSession, cook_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID,
 ) -> CookLog | None:
+    """The cook only if it belongs to ``recipe_id`` (via its version) and the user."""
     result = await db.execute(
-        select(CookLog).where(CookLog.id == cook_id, CookLog.user_id == user_id)
+        select(CookLog)
+        .join(RecipeVersion, CookLog.version_id == RecipeVersion.id)
+        .where(
+            CookLog.id == cook_id,
+            CookLog.user_id == user_id,
+            RecipeVersion.recipe_id == recipe_id,
+        )
     )
     return result.scalar_one_or_none()
 
