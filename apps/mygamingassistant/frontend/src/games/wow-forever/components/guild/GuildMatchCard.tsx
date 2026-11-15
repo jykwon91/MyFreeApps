@@ -1,7 +1,10 @@
 import clsx from "clsx";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Coins, ScrollText, Shirt, Sparkles } from "lucide-react";
 import GuildMemberLink from "@/games/wow-forever/components/guild/GuildMemberLink";
+import ItemNameLink from "@/games/wow-forever/components/itemPages/ItemNameLink";
 import RecipeRef from "@/games/wow-forever/components/recipes/RecipeRef";
+import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import { professionIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { formatCost } from "@/games/wow-forever/crafting/matPrices";
 import { guideProfession } from "@/games/wow-forever/lib/character/characterProfessions";
 import { recipeProfession } from "@/games/wow-forever/lib/recipes/recipeProfession";
@@ -33,7 +36,8 @@ function totalReagentCost(match: GuildMatch, prices: AuctionPrices | null | unde
 export default function GuildMatchCard({ match, prices }: GuildMatchCardProps) {
   const { crafter, beneficiary, slot, worn, proposed, type, upgrade_pct } = match;
 
-  const prof = recipeProfession(guideProfession(crafter.profession_id));
+  const guide = guideProfession(crafter.profession_id);
+  const prof = recipeProfession(guide);
   const cost = totalReagentCost(match, prices);
 
   const isGear = type === "gear";
@@ -44,7 +48,8 @@ export default function GuildMatchCard({ match, prices }: GuildMatchCardProps) {
       {/* Header: crafter → beneficiary with type badge */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-h-[44px]">
         <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-          <span className="text-xs font-medium text-muted-foreground shrink-0">
+          <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground shrink-0">
+            {guide && <GameIcon icon={professionIcon(guide)} size={16} alt="" />}
             {crafter.profession_name} {crafter.skill}/{crafter.max_skill}
           </span>
           <GuildMemberLink member={crafter} size="sm" />
@@ -63,21 +68,31 @@ export default function GuildMatchCard({ match, prices }: GuildMatchCardProps) {
 
       {/* Slot: worn → proposed */}
       <div className="text-sm text-muted-foreground leading-snug">
+        {isGear ? (
+          <Shirt className="mr-1.5 -mt-0.5 inline h-4 w-4 text-primary" aria-label="Gear upgrade" />
+        ) : (
+          <Sparkles className="mr-1.5 -mt-0.5 inline h-4 w-4 text-primary" aria-label="Enchant" />
+        )}
         <span className="font-medium text-foreground">{slot.slot_label}</span>
         {" — "}
-        <span className="line-through">{worn.name}</span>
+        <ItemNameLink itemId={worn.item_id} name={worn.name} withIcon className="line-through" />
         {worn.item_level > 0 && <span className="text-xs"> (ilvl {worn.item_level})</span>}
         {" → "}
-        <span className="font-medium text-foreground">{proposed.name}</span>
+        {proposed.item_id !== null ? (
+          <ItemNameLink itemId={proposed.item_id} name={proposed.name} withIcon className="font-medium text-foreground" />
+        ) : (
+          <span className="font-medium text-foreground">{proposed.name}</span>
+        )}
         {isGear && proposed.item_level != null && (
           <span className="text-xs"> (ilvl {proposed.item_level})</span>
         )}
       </div>
 
       {/* Recipe link */}
-      <div className="text-sm">
+      <div className="flex items-center gap-1 text-sm">
+        <ScrollText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
         <span className="text-muted-foreground">Recipe: </span>
-        <RecipeRef profession={prof} spell={proposed.spell} name={proposed.name} />
+        <RecipeRef profession={prof} spell={proposed.spell} name={proposed.name} iconSize={16} className="inline-flex items-center gap-1" />
       </div>
 
       {/* Reagents */}
@@ -86,9 +101,9 @@ export default function GuildMatchCard({ match, prices }: GuildMatchCardProps) {
           {proposed.reagents.map((r) => {
             const unitPrice = prices?.byId.get(r.id)?.marketValue;
             return (
-              <li key={r.id} className="flex items-baseline gap-1.5 text-muted-foreground">
+              <li key={r.id} className="flex items-center gap-1.5 text-muted-foreground">
                 <span className="tabular-nums font-medium text-foreground">{r.count}×</span>
-                <span>{r.name}</span>
+                <ItemNameLink itemId={r.id} name={r.name} withIcon />
                 {unitPrice !== undefined && (
                   <span className="text-xs">{formatCost(unitPrice)} ea</span>
                 )}
@@ -100,7 +115,8 @@ export default function GuildMatchCard({ match, prices }: GuildMatchCardProps) {
 
       {/* Total cost */}
       {cost !== null && (
-        <div className={clsx("text-sm font-medium", cost === 0 ? "text-muted-foreground" : "text-foreground")}>
+        <div className={clsx("flex items-center gap-1 text-sm font-medium", cost === 0 ? "text-muted-foreground" : "text-foreground")}>
+          <Coins className="h-4 w-4 shrink-0 text-amber-500" aria-hidden />
           Est. cost:{" "}
           <span className="tabular-nums">{cost === 0 ? "free (self-farmed)" : formatCost(cost)}</span>
         </div>
