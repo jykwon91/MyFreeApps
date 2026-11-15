@@ -16,3 +16,6 @@ export const TAX_ADVISOR_CTA_MESSAGES: Record<AdvisorCtaState, string> = {
   error: "I ran into a problem reviewing your tax data. Want me to try again?",
   idle: "I can review your tax return and suggest ways to save money or fix potential issues.",
 };
+
+/** Said when marking a suggestion resolved or dismissed doesn't save. */
+export const SUGGESTION_STATUS_UPDATE_FAILED = "I couldn't update that suggestion. Please try again.";

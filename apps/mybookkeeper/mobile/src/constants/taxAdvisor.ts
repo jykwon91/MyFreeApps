@@ -1,3 +1,5 @@
+import { SUGGESTION_STATUS_UPDATE_FAILED } from "@mybookkeeper/api-client/constants/taxAdvisor";
+
 export const TAX_ADVISOR_SKELETON_ROWS = [0, 1, 2] as const;
 
 export const TAX_ADVISOR_MESSAGES = {
@@ -29,7 +31,7 @@ export const TAX_ADVISOR_MESSAGES = {
   dismiss: "Dismiss",
   dismissing: "Dismissing...",
   resolvedLine: (title: string) => `${title} - marked as resolved`,
-  couldntUpdate: "I couldn't update that suggestion. Please try again.",
+  couldntUpdate: SUGGESTION_STATUS_UPDATE_FAILED,
   entryNone: "Get tax advice for this return",
   entryNoneViewer: "No tax advice yet",
   entryCount: (count: number) => `${count} ${count === 1 ? "suggestion" : "suggestions"} to look at`,

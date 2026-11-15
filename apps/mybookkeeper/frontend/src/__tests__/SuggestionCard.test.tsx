@@ -1,13 +1,34 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import SuggestionCard from "@/app/features/tax/SuggestionCard";
+import { SUGGESTION_STATUS_UPDATE_FAILED } from "@mybookkeeper/api-client/constants/taxAdvisor";
 import type { TaxAdvisorSuggestionRead } from "@mybookkeeper/api-client/types/tax/TaxAdvisorSuggestionRead";
 
-vi.mock("@mybookkeeper/api-client/store/taxReturnsApi", () => ({
-  useUpdateSuggestionStatusMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+const { updateStatus, showError } = vi.hoisted(() => ({
+  updateStatus: vi.fn(),
+  showError: vi.fn(),
 }));
+
+vi.mock("@mybookkeeper/api-client/store/taxReturnsApi", () => ({
+  useUpdateSuggestionStatusMutation: vi.fn(() => [updateStatus, { isLoading: false }]),
+}));
+
+vi.mock("@platform/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@platform/ui")>()),
+  showError,
+}));
+
+function settles(outcome: "ok" | "fails") {
+  updateStatus.mockReturnValue({
+    unwrap: () => (outcome === "ok" ? Promise.resolve(undefined) : Promise.reject(new Error("offline"))),
+  });
+}
+
+function hangs() {
+  updateStatus.mockReturnValue({ unwrap: () => new Promise<void>(() => {}) });
+}
 
 const mockSuggestion: TaxAdvisorSuggestionRead = {
   id: "sug-1",
@@ -36,6 +57,12 @@ function renderCard(suggestion: TaxAdvisorSuggestionRead = mockSuggestion) {
 }
 
 describe("SuggestionCard", () => {
+  beforeEach(() => {
+    updateStatus.mockReset();
+    showError.mockReset();
+    settles("ok");
+  });
+
   it("renders suggestion title", () => {
     renderCard();
     expect(screen.getByText("Review rental depreciation")).toBeInTheDocument();
@@ -85,19 +112,46 @@ describe("SuggestionCard", () => {
     expect(screen.getByText("high confidence")).toBeInTheDocument();
   });
 
-  it("collapses card when dismissed", () => {
+  it("collapses card once the dismiss is saved", async () => {
     renderCard();
-    const dismissButton = screen.getByTitle("Dismiss");
-    fireEvent.click(dismissButton);
-    expect(screen.queryByText("Review rental depreciation")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTitle("Dismiss"));
+    await waitFor(() => expect(screen.queryByText("Review rental depreciation")).not.toBeInTheDocument());
+    expect(updateStatus).toHaveBeenCalledWith({ returnId: "tr-1", suggestionId: "db-sug-1", status: "dismissed" });
   });
 
-  it("shows resolved state when marked resolved", () => {
+  it("shows resolved state once the resolve is saved", async () => {
     renderCard();
-    const resolveButton = screen.getByTitle("Mark as resolved");
-    fireEvent.click(resolveButton);
-    expect(screen.getByText(/marked as resolved/)).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle("Mark as resolved"));
+    expect(await screen.findByText(/marked as resolved/)).toBeInTheDocument();
     expect(screen.queryByText("Compare your depreciation schedule with IRS guidelines.")).not.toBeInTheDocument();
+  });
+
+  it("keeps the card and says so when the dismiss doesn't save", async () => {
+    settles("fails");
+    renderCard();
+    fireEvent.click(screen.getByTitle("Dismiss"));
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(SUGGESTION_STATUS_UPDATE_FAILED));
+    expect(screen.getByText("Review rental depreciation")).toBeInTheDocument();
+    expect(screen.getByTitle("Dismiss")).not.toBeDisabled();
+  });
+
+  it("keeps the card and says so when the resolve doesn't save", async () => {
+    settles("fails");
+    renderCard();
+    fireEvent.click(screen.getByTitle("Mark as resolved"));
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(SUGGESTION_STATUS_UPDATE_FAILED));
+    expect(screen.queryByText(/marked as resolved/)).not.toBeInTheDocument();
+  });
+
+  it("disables both buttons and shows busy while a change is saving", () => {
+    hangs();
+    renderCard();
+    fireEvent.click(screen.getByTitle("Dismiss"));
+    expect(screen.getByTitle("Dismiss")).toBeDisabled();
+    expect(screen.getByTitle("Dismiss")).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByTitle("Mark as resolved")).toBeDisabled();
+    fireEvent.click(screen.getByTitle("Mark as resolved"));
+    expect(updateStatus).toHaveBeenCalledTimes(1);
   });
 
   it("renders pre-dismissed card as null", () => {
