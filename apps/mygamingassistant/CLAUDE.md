@@ -96,7 +96,7 @@ appear where a map must be chosen.
 To add a companion game: a `kind: "companion"` row in `app/fixtures/games.json`,
 a registry entry, and a `src/games/<slug>/` folder (data, components, pages, routes).
 
-### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/recipes`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/library`, `/wow-forever/legacy`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/spellbook`, `/wow-forever/trainers`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
+### WoW Forever (`/wow-forever`, `/wow-forever/items`, `/wow-forever/items/:id`, `/wow-forever/map`, `/wow-forever/professions`, `/wow-forever/recipes`, `/wow-forever/goal-planner`, `/wow-forever/food`, `/wow-forever/gold`, `/wow-forever/auction-house`, `/wow-forever/compare`, `/wow-forever/gear`, `/wow-forever/macros`, `/wow-forever/dungeons`, `/wow-forever/rares`, `/wow-forever/library`, `/wow-forever/legacy`, `/wow-forever/races`, `/wow-forever/races/:race`, `/wow-forever/talents`, `/wow-forever/spellbook`, `/wow-forever/trainers`, `/wow-forever/downrank`, `/wow-forever/changes`, `/wow-forever/server-status`, `/wow-forever/ask`)
 
 - All public, static, frontend-only. Content is typed data under
   `src/games/wow-forever/data/` — don't state Forever facts that aren't published.
@@ -238,6 +238,18 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   which the Auction house folds into one "gear" place) and its Auction house place
   (`recipeCategory`), never from the name. Forever-only recipes reuse `sourceUnknown` + its chip;
   recipe-item sources are Classic data with the provenance badge.
+- **Goal planner** (`/wow-forever/goal-planner`, `?g=tailoring.40.300~cooking.0.300` `&r=tailoring:3914`, saved to
+  localStorage when there's no link): profession goals (skill now prefilled from that guide's saved skill,
+  goal = 75/150/225/300) + recipe goals (Recipes-page keys) become ONE plan (`lib/goalPlanner/buildGoalPlan.ts`,
+  generic over a `TravelModel` so tests use a fake grid). Each crafting profession reuses `pricedRoute` with
+  automatic AH prices (never typed) clipped to the goal; Cooking reuses `COOKING_ROUTE` and has no counts.
+  Rank trainers come from the rank data; trainer-taught recipes hang on the last training visit at or below
+  their skill (`assignTaught`), never on book/quest ranks. Stops are grouped into trips by rank threshold
+  (`relativePhase`) and each trip is ordered greedy nearest-next by World Map travel (`orderStops`,
+  `stopTravel`, faction-aware); the AH stop is one upfront trip. Shopping is merged across professions
+  (`combinedShopping`). Every stop links Route there (`routeThereHref`, from = previous stop). Not modelled:
+  disenchanting for Enchanting mats, known Cooking recipes. Tests: `wowGoalPlanner.test.ts`,
+  `e2e/mocked/wow-forever-goal-planner.spec.ts`.
 - **Gathering guides** (`?p=mining|herbalism|skinning`, `&skill=N`; the picker's Gathering group,
   `isGatheringProfession`): `components/gathering/GatheringGuideView.tsx`
   switches on the guide's `kind` (`GatheringGuide` = `NodeGatheringGuide` |

@@ -4,6 +4,7 @@ import WowSuggestFooterLink from "@/games/wow-forever/components/featureRequests
 import ProvenanceGuide from "@/games/wow-forever/components/shared/ProvenanceGuide";
 import WowLegalNotice from "@/games/wow-forever/components/shared/WowLegalNotice";
 import WowPageSkeleton from "@/games/wow-forever/components/shared/WowPageSkeleton";
+import { GOAL_PLANNER_PATH } from "@/games/wow-forever/data/goalPlanner/goalPlannerConfig";
 import { GUILD_LEGACY_PATH, GUILD_PAGE_PATH } from "@/games/wow-forever/data/guild/guildConfig";
 import type { FeatureArea } from "@/games/wow-forever/types/featureRequests/featureArea";
 
@@ -13,6 +14,7 @@ const WowComparePage = lazy(() => import("@/games/wow-forever/pages/WowComparePa
 const WowWorldMapPage = lazy(() => import("@/games/wow-forever/pages/WowWorldMapPage"));
 const WowProfessionsPage = lazy(() => import("@/games/wow-forever/pages/WowProfessionsPage"));
 const WowRecipesPage = lazy(() => import("@/games/wow-forever/pages/WowRecipesPage"));
+const WowGoalPlannerPage = lazy(() => import("@/games/wow-forever/pages/WowGoalPlannerPage"));
 const WowFoodPickerPage = lazy(() => import("@/games/wow-forever/pages/WowFoodPickerPage"));
 const WowFoodDetailPage = lazy(() => import("@/games/wow-forever/pages/WowFoodDetailPage"));
 const WowGoldPage = lazy(() => import("@/games/wow-forever/pages/WowGoldPage"));
@@ -91,6 +93,7 @@ export const wowForeverRoutes: RouteObject[] = [
   { path: "/wow-forever/map", element: withSuggestFooter(<WowWorldMapPage />, "map_travel") },
   { path: "/wow-forever/professions", element: withSuggestFooter(<WowProfessionsPage />, "professions") },
   { path: "/wow-forever/recipes", element: withSuggestFooter(<WowRecipesPage />, "professions") },
+  { path: GOAL_PLANNER_PATH, element: withSuggestFooter(<WowGoalPlannerPage />, "professions") },
   { path: "/wow-forever/food", element: withSuggestFooter(<WowFoodPickerPage />, "food_consumables") },
   { path: "/wow-forever/food/:foodId", element: withSuggestFooter(<WowFoodDetailPage />, "food_consumables") },
   { path: "/wow-forever/gold", element: withSuggestFooter(<WowGoldPage />, "gold_economy") },

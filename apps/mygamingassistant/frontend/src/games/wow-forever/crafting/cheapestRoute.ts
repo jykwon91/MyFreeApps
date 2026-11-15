@@ -93,6 +93,12 @@ function exactCrafts(recipe: Pick<CraftRecipe, "yellow" | "grey">, from: number,
   return total;
 }
 
+/** Expected copper to take `recipe` from skill `from` to `to`; undefined when a material has no price. */
+export function costBetween(recipe: CraftRecipe, book: PriceBook, from: number, to: number): number | undefined {
+  const unit = book.recipe(recipe).price;
+  return unit === undefined ? undefined : unit * exactCrafts(recipe, from, to);
+}
+
 /** You can use it: a start / trainer recipe, or a formula / quest / NPC recipe you've learned — and the slot is one you can enchant. */
 export function usable(recipe: CraftRecipe, choices: RouteChoices): boolean {
   if (mustAcquire(recipe) && !choices.knownFormulas.has(recipe.spell)) return false;
