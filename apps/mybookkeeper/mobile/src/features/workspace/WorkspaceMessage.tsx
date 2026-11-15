@@ -1,4 +1,4 @@
-import { LoadingButton, useSession, useTheme } from "@platform/mobile";
+import { LoadingButton, useSignOutThisPhone, useTheme, useToast } from "@platform/mobile";
 import { Text, View } from "react-native";
 
 interface WorkspaceMessageProps {
@@ -9,12 +9,10 @@ interface WorkspaceMessageProps {
 }
 
 export default function WorkspaceMessage({ heading, body, action, canSignOut = true }: WorkspaceMessageProps) {
-  const { session } = useSession();
+  const { showToast } = useToast();
   const { colors, fontSize, spacing } = useTheme();
 
-  async function signOut(): Promise<void> {
-    await session.signOut();
-  }
+  const signOut = useSignOutThisPhone(({ message, variant }) => showToast(message, variant));
 
   return (
     <View style={{ flex: 1, justifyContent: "center", gap: spacing.sm, padding: spacing.lg, backgroundColor: colors.background }}>

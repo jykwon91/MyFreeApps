@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Text, View } from "react-native";
 import { useDevices } from "../hooks/useDevices";
 import { useSession } from "../hooks/useSession";
+import { useSignOutThisPhone } from "../hooks/useSignOutThisPhone";
 import { useTheme } from "../theme/useTheme";
 import type { AccountMessage } from "../types/AccountMessage";
 import type { SignedInDevice } from "../types/SignedInDevice";
@@ -28,22 +29,10 @@ function inDisplayOrder(devices: SignedInDevice[], thisSessionId: string): Signe
 
 export default function AccountSection({ appName, devices, onMessage, onDeleteAccount }: AccountSectionProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const { session, state } = useSession();
+  const { state } = useSession();
+  const signOutThisPhone = useSignOutThisPhone(onMessage);
   const [signingOutId, setSigningOutId] = useState<string | null>(null);
   if (state.status !== "signedIn") return null;
-
-  async function signOutThisPhone(): Promise<void> {
-    const { serverReached } = await session.signOut();
-    onMessage(
-      serverReached
-        ? { message: "You're signed out.", variant: "success" }
-        : {
-            message:
-              "Signed out on this phone. We couldn't reach the server, so this phone may still appear in your device list. Sign out of it from another device.",
-            variant: "error",
-          },
-    );
-  }
 
   async function signOutOther(device: SignedInDevice): Promise<void> {
     const name = deviceDisplayName(device);
