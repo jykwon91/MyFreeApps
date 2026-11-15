@@ -1176,9 +1176,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Roster toolbar (`GuildMemberToolbar`): Name, Class, Level, Profession, Sort, all in the URL
   (`GUILD_PARAMS`; profession = `?prof=<GuideProfession id>`, e.g. `tailoring`). The Profession
   select lists only professions someone has, with counts, in the Professions picker's order
-  (`lib/guild/guildMemberProfessions.ts`); a link naming one nobody has shows everyone. While
-  it's set the table gains a skill column (`GuildMemberSkillCell`, "148 / 225") and cards add
-  "Tailoring 148 / 225". Best-by-skill ranking stays on the Arena's profession boards.
+  (`lib/guild/guildMemberProfessions.ts`); a link naming one nobody has shows everyone. Every
+  row (table column and phone card) lists the member's professions (`GuildMemberProfessions`):
+  icon, skill "148 / 225" and rank by cap (`PROFESSION_RANK_BY_CAP`: 75 Apprentice … 300 Artisan);
+  the filtered profession goes first. Chips are spans, not `<li>`, so a card stays one `li`. Best-by-skill ranking stays on the Arena's profession boards.
 - Guild link preview: Discord shows `GET /api/wow/guilds/topdeadcenter/preview.png` for the guild page
   (`frontend/src/constants/linkPreview.ts`; unfurlers run no JS, so the backend draws it from the stored
   guild, never Blizzard). 1200x630 PNG (`guild_preview_image.py`, Pillow, bundled Inter in

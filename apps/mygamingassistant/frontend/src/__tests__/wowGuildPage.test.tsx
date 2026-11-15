@@ -34,7 +34,7 @@ import WowLegacyGuildRedirect from "@/games/wow-forever/pages/WowLegacyGuildRedi
 import type { RecipeEntry } from "@/games/wow-forever/types/recipes/recipeEntry";
 import type { GuildCrafter } from "@/games/wow-forever/types/guild/guildCrafter";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
-import { memberSkill, memberSkillText, professionCounts } from "@/games/wow-forever/lib/guild/guildMemberProfessions";
+import { memberProfessions, professionCounts } from "@/games/wow-forever/lib/guild/guildMemberProfessions";
 import type { GuildMemberFilters } from "@/games/wow-forever/types/guild/guildMemberFilters";
 import type { GuildMemberBaseline } from "@/games/wow-forever/types/guild/guildMemberBaseline";
 import type { GuildRecipeSearch } from "@/games/wow-forever/types/guild/guildRecipeSearch";
@@ -231,10 +231,14 @@ describe("guild member list logic", () => {
     const base = filtersFromParams(new URLSearchParams());
     expect(filterMembers(crafters, { ...base, profession: "tailoring" }).map((m) => m.slug)).toEqual(["a-a", "c-c"]);
     expect(filterMembers(crafters, { ...base, profession: "mining" })).toEqual([]);
-    expect(memberSkill(crafters[0], "tailoring")).toBe("148 / 225");
-    expect(memberSkill(crafters[3], "tailoring")).toBeNull();
-    expect(memberSkillText(crafters[0], "cooking")).toBe("Cooking 75 / 75");
-    expect(memberSkillText(crafters[1], "cooking")).toBeNull();
+    expect(memberProfessions(crafters[0], "")).toEqual([
+      { profession: "tailoring", label: "Tailoring", skill: "148 / 225", rank: "Expert" },
+      { profession: "cooking", label: "Cooking", skill: "75 / 75", rank: "Apprentice" },
+    ]);
+    expect(memberProfessions(crafters[0], "cooking").map((p) => p.profession)).toEqual(["cooking", "tailoring"]);
+    expect(memberProfessions(crafters[1], "")[0]?.rank).toBe("Artisan");
+    expect(memberProfessions(member({ professions: [{ id: 197, skill: 310, max_skill: 350 }] }), "")[0]?.rank).toBeNull();
+    expect(memberProfessions(crafters[3], "")).toEqual([]);
     expect(professionCounts(crafters).map((p) => [p.label, p.count])).toEqual([
       ["Alchemy", 1],
       ["Tailoring", 2],
@@ -381,13 +385,16 @@ describe("guild page", () => {
       "Alchemy (1)",
       "Tailoring (1)",
     ]);
-    expect(screen.queryByRole("columnheader", { name: "Tailoring" })).toBeNull();
+    expect(screen.getByRole("columnheader", { name: "Professions" })).toBeInTheDocument();
+    const table = within(screen.getByRole("table"));
+    expect(table.getByText("Alchemy")).toBeInTheDocument();
+    expect(table.getByText("Artisan")).toBeInTheDocument();
     fireEvent.change(select, { target: { value: "tailoring" } });
     expect(screen.getByTestId("location")).toHaveTextContent(/prof=tailoring/);
     expect(tableNames()).toEqual(["Jason Kwon"]);
-    expect(screen.getByRole("columnheader", { name: "Tailoring" })).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("148 / 225")).toBeInTheDocument();
-    expect(within(screen.getByRole("list", { name: "Guild members" })).getByText(/Tailoring 148 \/ 225/)).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Expert")).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Guild members" })).getByText("148 / 225")).toBeInTheDocument();
   });
 
   it("shows everyone when a shared link names a profession nobody in the guild has, and drops it on the next change", () => {

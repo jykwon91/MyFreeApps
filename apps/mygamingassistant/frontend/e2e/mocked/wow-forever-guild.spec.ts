@@ -153,7 +153,7 @@ test("search, class filter and sort live in the URL and survive Back", async ({ 
   await expect(page).toHaveURL(/\/wow-forever\/topdeadcenter\?tab=roster$/);
 });
 
-test("profession filter: only members who have it, their skill shown, kept in the URL across Back, on a phone too", async ({ page }) => {
+test("profession filter: only members who have it, their professions with skill and rank shown, kept in the URL across Back, on a phone too", async ({ page }) => {
   await stubAll(page);
   await page.goto("/wow-forever/topdeadcenter?tab=roster");
 
@@ -161,8 +161,12 @@ test("profession filter: only members who have it, their skill shown, kept in th
   await page.getByLabel("Profession").selectOption("tailoring");
   await expect(page).toHaveURL(/prof=tailoring/);
   await expect(memberNames(page)).toHaveText(["Jason Kwon"]);
-  await expect(page.getByRole("columnheader", { name: "Tailoring" })).toBeVisible();
-  await expect(page.getByRole("table").getByRole("cell", { name: "148 / 225" })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Professions" })).toBeVisible();
+  const professions = page.getByRole("table").getByTestId("guild-member-professions").first();
+  await expect(professions).toContainText("Tailoring");
+  await expect(professions).toContainText("148 / 225");
+  await expect(professions).toContainText("Expert");
+  await expect(professions.getByTestId(/^game-icon/).first()).toBeVisible();
 
   await memberNames(page).first().click();
   await expect(page).toHaveURL(/\/wow-forever\/character\/jason-kwon$/);
@@ -173,7 +177,7 @@ test("profession filter: only members who have it, their skill shown, kept in th
   await page.setViewportSize({ width: 375, height: 812 });
   const cards = page.getByRole("list", { name: "Guild members" }).locator("li");
   await expect(cards).toHaveCount(1);
-  await expect(cards.first()).toContainText("Tailoring 148 / 225");
+  await expect(cards.first().getByTestId("guild-member-professions")).toContainText("Tailoring148 / 225Expert");
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 

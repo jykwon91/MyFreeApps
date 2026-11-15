@@ -3,9 +3,8 @@ import { GUILD_NUMBER_CELL } from "@/games/wow-forever/data/guild/guildStyles";
 import GuildMemberLink from "@/games/wow-forever/components/guild/GuildMemberLink";
 import GuildMemberTitles from "@/games/wow-forever/components/guild/GuildMemberTitles";
 import GuildMemberStaleNote from "@/games/wow-forever/components/guild/GuildMemberStaleNote";
-import GuildMemberSkillCell from "@/games/wow-forever/components/guild/GuildMemberSkillCell";
+import GuildMemberProfessions from "@/games/wow-forever/components/guild/GuildMemberProfessions";
 import GuildSortHeader from "@/games/wow-forever/components/guild/GuildSortHeader";
-import { professionLabel } from "@/games/wow-forever/lib/guild/guildMemberProfessions";
 import type { GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
 import { rankLabel } from "@/games/wow-forever/lib/guild/guildMembers";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
@@ -16,7 +15,7 @@ interface GuildMemberTableProps {
   rosterUpdatedAt: string | null;
   /** Each member's guild titles, by slug. */
   titles: ReadonlyMap<string, readonly GuildTitle[]>;
-  /** The Profession filter: adds a column with each member's skill in it. "" for none. */
+  /** The Profession filter: listed first in each member's professions. "" for none. */
   profession: GuideProfession | "";
   sort: GuildSortKey;
   descending: boolean;
@@ -37,11 +36,9 @@ export default function GuildMemberTable({ members, rosterUpdatedAt, titles, pro
             <GuildSortHeader column={GUILD_SORT_KEYS.className} {...header} className="px-3" />
             <GuildSortHeader column={GUILD_SORT_KEYS.itemLevel} {...header} className="px-3 text-right" />
             <GuildSortHeader column={GUILD_SORT_KEYS.rank} {...header} className="px-3" />
-            {profession && (
-              <th scope="col" className="px-3 text-right font-medium">
-                {professionLabel(profession)}
-              </th>
-            )}
+            <th scope="col" className="px-3 font-medium">
+              Professions
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -56,7 +53,9 @@ export default function GuildMemberTable({ members, rosterUpdatedAt, titles, pro
               <td className="px-3 py-1">{m.class_name ?? GUILD_MISSING_VALUE}</td>
               <td className={GUILD_NUMBER_CELL}>{m.item_level ?? GUILD_MISSING_VALUE}</td>
               <td className="px-3 py-1">{rankLabel(m.rank) ?? GUILD_MISSING_VALUE}</td>
-              {profession && <GuildMemberSkillCell member={m} profession={profession} />}
+              <td className="px-3 py-1">
+                <GuildMemberProfessions member={m} first={profession} emptyText={GUILD_MISSING_VALUE} />
+              </td>
             </tr>
           ))}
         </tbody>
