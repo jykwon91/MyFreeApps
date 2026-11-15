@@ -167,6 +167,12 @@ async def update(db: AsyncSession, recipe: Recipe, updates: dict[str, Any]) -> R
     return recipe
 
 
+async def touch(db: AsyncSession, recipe: Recipe) -> None:
+    """Bump ``updated_at`` explicitly — ``onupdate`` doesn't fire on an otherwise-clean row."""
+    recipe.updated_at = datetime.now(timezone.utc)
+    await db.flush()
+
+
 async def soft_delete(db: AsyncSession, recipe: Recipe) -> None:
     """Mark a recipe deleted (reversible). Versions/cooks are retained."""
     recipe.deleted_at = datetime.now(timezone.utc)

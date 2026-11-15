@@ -318,6 +318,8 @@ async def create_version(
     steps = _make_steps(version.id, req.steps)
     await recipe_version_repository.add_ingredients(db, ingredients)
     await recipe_version_repository.add_steps(db, steps)
+    # A tweak changes the recipe's content, so it moves to the top of the library list.
+    await recipe_repository.touch(db, recipe)
 
     dto = recipe_mappers.to_version_response(version, ingredients, steps)
     await db.commit()
@@ -372,6 +374,7 @@ async def restore_version(
     ]
     await recipe_version_repository.add_ingredients(db, new_ingredients)
     await recipe_version_repository.add_steps(db, new_steps)
+    await recipe_repository.touch(db, recipe)
 
     dto = recipe_mappers.to_version_response(new_version, new_ingredients, new_steps)
     await db.commit()

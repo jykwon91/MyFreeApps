@@ -295,6 +295,55 @@ class TestVersionWritesSerialize:
         assert calls == [True]
 
 
+class TestLibraryOrderAfterEdits:
+    """The library lists most-recently-updated first; content changes bump a recipe up."""
+
+    @staticmethod
+    async def _titles(authed: AsyncClient) -> list[str]:
+        items = (await authed.get("/recipes", params={"owner": "me"})).json()["items"]
+        return [item["title"] for item in items]
+
+    @staticmethod
+    async def _two_recipes(authed: AsyncClient) -> tuple[dict, dict]:
+        old = (await authed.post("/recipes", json=_recipe_payload(title="Older"))).json()
+        new = (await authed.post("/recipes", json=_recipe_payload(title="Newer"))).json()
+        return old, new
+
+    @pytest.mark.asyncio
+    async def test_tweak_moves_older_recipe_to_top(self, user_factory, as_user) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            old, _ = await self._two_recipes(authed)
+            assert await self._titles(authed) == ["Newer", "Older"]
+            await authed.post(
+                f"/recipes/{old['id']}/versions",
+                json={"change_note": "tweak", **_TWEAK_CONTENT},
+            )
+            assert await self._titles(authed) == ["Older", "Newer"]
+
+    @pytest.mark.asyncio
+    async def test_restore_moves_older_recipe_to_top(self, user_factory, as_user) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            old, _ = await self._two_recipes(authed)
+            v1_id = old["latest_version"]["id"]
+            resp = await authed.post(f"/recipes/{old['id']}/versions/{v1_id}/restore")
+            assert resp.status_code == 201, resp.text
+            assert await self._titles(authed) == ["Older", "Newer"]
+
+    @pytest.mark.asyncio
+    async def test_logging_a_cook_does_not_reorder(self, user_factory, as_user) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            old, _ = await self._two_recipes(authed)
+            v1_id = old["latest_version"]["id"]
+            cook = await authed.post(
+                f"/recipes/{old['id']}/versions/{v1_id}/cooks", json={"rating": 4},
+            )
+            assert cook.status_code == 201, cook.text
+            assert await self._titles(authed) == ["Newer", "Older"]
+
+
 # ---------------------------------------------------------------------------
 # Cook logs
 # ---------------------------------------------------------------------------
