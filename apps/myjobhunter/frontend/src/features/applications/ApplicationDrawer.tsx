@@ -33,7 +33,6 @@ import {
   useGetApplicationQuery,
   useDeleteApplicationMutation,
   useUpdateApplicationMutation,
-  useTransitionApplicationMutation,
 } from "@myjobhunter/api-client/store/applicationsApi";
 import { useGetCompanyQuery } from "@myjobhunter/api-client/store/companiesApi";
 import OverviewSection from "./sections/OverviewSection";
@@ -47,6 +46,7 @@ import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-c
 import { currentKanbanColumn } from "@myjobhunter/api-client/utils/currentKanbanColumn";
 import ApplicationDetailSkeleton from "./ApplicationDetailSkeleton";
 import { getStageColor } from "@/lib/stage-color";
+import { useStageMove } from "./useStageMove";
 
 interface ApplicationDrawerProps {
   /** Application id from ``?app=`` query param. ``null`` when closed. */
@@ -132,7 +132,6 @@ function DrawerContent({ application, onClose }: DrawerContentProps) {
   });
   const [deleteApplication, { isLoading: deleting }] = useDeleteApplicationMutation();
   const [updateApplication, { isLoading: updating }] = useUpdateApplicationMutation();
-  const [transitionApplication] = useTransitionApplicationMutation();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   // The drawer doesn't carry latest_event_type directly (the detail
@@ -140,23 +139,7 @@ function DrawerContent({ application, onClose }: DrawerContentProps) {
   // newest stage-defining event in the events list, falling back to
   // "applied" — same logic the kanban board uses.
   const currentColumn: KanbanColumn = currentKanbanColumn(application.events);
-
-  async function handleStageChange(target: KanbanColumn) {
-    if (target === currentColumn) return;
-    try {
-      await transitionApplication({
-        applicationId: application.id,
-        target_column: target,
-        idempotency_key:
-          typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      }).unwrap();
-      showSuccess(`Moved to ${KANBAN_COLUMN_LABELS[target]}`);
-    } catch (err) {
-      showError(`Couldn't move: ${extractErrorMessage(err)}`);
-    }
-  }
+  const { selectedColumn, isMoving, moveTo } = useStageMove(application.id, currentColumn);
 
   async function handleArchive() {
     try {
@@ -199,8 +182,9 @@ function DrawerContent({ application, onClose }: DrawerContentProps) {
         </label>
         <select
           id="drawer-stage-select"
-          value={currentColumn}
-          onChange={(e) => void handleStageChange(e.target.value as KanbanColumn)}
+          value={selectedColumn}
+          onChange={(e) => void moveTo(e.target.value as KanbanColumn)}
+          disabled={isMoving}
           className="text-xs border rounded-md px-2 py-1 bg-card"
         >
           {KANBAN_COLUMN_ORDER.map((col) => (
