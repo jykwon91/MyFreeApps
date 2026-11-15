@@ -31,6 +31,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.recipe.recipe import Recipe
 
 
+_TWEAK_BODY = {
+    "change_note": "tweak",
+    "ingredients": [{"name": "flour"}],
+    "steps": [{"instruction": "Mix."}],
+}
+
+
 def _payload(title: str, **overrides: Any) -> dict:
     payload = {
         "title": title,
@@ -163,7 +170,7 @@ class TestAnonymousWritesBlocked:
         assert (await client.delete(f"/recipes/{rid}")).status_code == 401
         assert (
             await client.post(
-                f"/recipes/{rid}/versions", json={"ingredients": [], "steps": []}
+                f"/recipes/{rid}/versions", json=_TWEAK_BODY
             )
         ).status_code == 401
         assert (
@@ -210,7 +217,7 @@ class TestNonOwner:
             assert (await authed.delete(f"/recipes/{rid}")).status_code == 404
             assert (
                 await authed.post(
-                    f"/recipes/{rid}/versions", json={"ingredients": [], "steps": []}
+                    f"/recipes/{rid}/versions", json=_TWEAK_BODY
                 )
             ).status_code == 404
             assert (

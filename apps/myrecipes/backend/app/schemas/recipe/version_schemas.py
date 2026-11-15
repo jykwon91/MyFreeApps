@@ -29,7 +29,7 @@ class IngredientInput(BaseModel):
     new ingredient and the backend assigns a fresh key.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     name: str = Field(min_length=1, max_length=255)
     quantity: float | None = Field(default=None, ge=0, le=INGREDIENT_QUANTITY_MAX)
@@ -44,7 +44,7 @@ class StepInput(BaseModel):
     Order is implied by position in the list.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     instruction: str = Field(min_length=1, max_length=5000)
 
@@ -52,18 +52,18 @@ class StepInput(BaseModel):
 class VersionCreateRequest(BaseModel):
     """Body for POST /recipes/{id}/versions — a tweak that creates a new version."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     base_version_id: uuid.UUID | None = Field(
         default=None,
         description="Version this tweak started from. Defaults to the latest version.",
     )
-    change_note: str | None = Field(default=None, max_length=2000)
+    change_note: str = Field(min_length=1, max_length=2000)
     servings: str | None = Field(default=None, max_length=50)
     prep_minutes: int | None = Field(default=None, ge=0, le=RECIPE_MINUTES_MAX)
     cook_minutes: int | None = Field(default=None, ge=0, le=RECIPE_MINUTES_MAX)
-    ingredients: list[IngredientInput] = Field(default_factory=list)
-    steps: list[StepInput] = Field(default_factory=list)
+    ingredients: list[IngredientInput] = Field(min_length=1)
+    steps: list[StepInput] = Field(min_length=1)
 
 
 class IngredientResponse(BaseModel):
