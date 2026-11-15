@@ -10,6 +10,7 @@
  * navigates there.
  */
 import { baseApi } from "@platform/core/store/baseApi";
+import { APPLICATIONS_KANBAN_LIST_ID } from "../constants/applicationsKanbanListId";
 import type { Application } from "../types/application";
 import type { JobAnalysis } from "../types/job-analysis/job-analysis";
 import type { JobAnalysisRequest } from "../types/job-analysis/job-analysis-request";
@@ -48,6 +49,7 @@ const jobAnalysisApi = baseApi
         invalidatesTags: (_r, _e, id) => [
           { type: JOB_ANALYSIS_TAG, id },
           { type: APPLICATIONS_TAG, id: "LIST" },
+          { type: APPLICATIONS_TAG, id: APPLICATIONS_KANBAN_LIST_ID },
         ],
       }),
     }),
