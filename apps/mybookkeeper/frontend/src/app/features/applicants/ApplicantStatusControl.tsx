@@ -35,7 +35,7 @@ export interface ApplicantStatusControlProps {
 export default function ApplicantStatusControl({ applicantId, currentStage }: ApplicantStatusControlProps) {
   const canWrite = useCanWrite();
   const { showSuccess, showError } = useToast();
-  const [transitionStage] = useTransitionApplicantStageMutation();
+  const [transitionStage, { isLoading: isSaving }] = useTransitionApplicantStageMutation();
 
   const [open, setOpen] = useState(false);
   const [selectedStage, setSelectedStage] = useState<ApplicantStage | "">("");
@@ -71,7 +71,7 @@ export default function ApplicantStatusControl({ applicantId, currentStage }: Ap
   }
 
   async function handleConfirm() {
-    if (!selectedStage) return;
+    if (!selectedStage || isSaving) return;
     try {
       await transitionStage({
         applicantId,
@@ -136,6 +136,7 @@ export default function ApplicantStatusControl({ applicantId, currentStage }: Ap
             <select
               value={selectedStage}
               onChange={(e) => setSelectedStage(e.target.value as ApplicantStage)}
+              disabled={isSaving}
               data-testid="applicant-status-stage-select"
               className="w-full rounded border bg-background px-2 py-2 text-sm min-h-[44px]"
               aria-label="Select new stage"
@@ -161,6 +162,7 @@ export default function ApplicantStatusControl({ applicantId, currentStage }: Ap
               data-testid="applicant-status-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
+              disabled={isSaving}
               maxLength={APPLICANT_STAGE_NOTE_MAX_LENGTH}
               rows={3}
               placeholder="e.g. References checked separately"
@@ -177,6 +179,7 @@ export default function ApplicantStatusControl({ applicantId, currentStage }: Ap
               variant="ghost"
               size="sm"
               data-testid="applicant-status-cancel"
+              disabled={isSaving}
               onClick={() => setOpen(false)}
             >
               Cancel
@@ -186,6 +189,8 @@ export default function ApplicantStatusControl({ applicantId, currentStage }: Ap
               variant="primary"
               size="sm"
               data-testid="applicant-status-confirm"
+              isLoading={isSaving}
+              loadingText="Saving..."
               disabled={!selectedStage}
               onClick={handleConfirm}
             >
