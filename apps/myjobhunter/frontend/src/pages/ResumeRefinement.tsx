@@ -16,9 +16,10 @@ export default function ResumeRefinement() {
   // edge case if the user returns to a completed session and
   // downloads. During status=preparing the same poll drives the
   // staged progress card and the unlock.
+  // currentData, not data: `data` keeps the last session while the id is skipped or changing,
+  // which put the previous session on screen after "Start new".
   const {
-    data: session,
-    isLoading,
+    currentData: session,
     error,
   } = useGetRefinementSessionQuery(sessionId ?? "", {
     skip: !sessionId,
@@ -43,7 +44,7 @@ export default function ResumeRefinement() {
     return <SessionLoadErrorView onStartNew={handleStartNew} />;
   }
 
-  if (isLoading || !session) {
+  if (!session) {
     return <SessionLoadingView />;
   }
 
