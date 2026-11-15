@@ -982,6 +982,10 @@ test("help tab: shows enchant matches, type chips filter, member picker filters,
   await expect(card).toContainText("Needy");
   // WRIST slot was matched, CHEST (already enchanted) was not
   await expect(card).toContainText("Bracer");
+  // Items and reagents carry their in-game icon and link to the item page
+  await expect(card.getByRole("link", { name: "Linen Bracers" }).locator("img, [data-testid=game-icon-placeholder]")).toBeVisible();
+  await expect(card.getByRole("list", { name: /^Reagents for/ }).getByRole("link").first().locator("img, [data-testid=game-icon-placeholder]")).toBeVisible();
+  await expect(card.getByRole("img", { name: "Enchant", exact: true })).toBeVisible();
 
   // Type chips are present
   const chips = page.getByTestId("help-type-chips");
