@@ -51,7 +51,7 @@ export default function LinkedLeaseDocuments({ lease, canWrite = false }: Linked
 
   async function handleConfirmDelete() {
     try {
-      await deleteLease(lease.id).unwrap();
+      await deleteLease({ leaseId: lease.id, applicantId: lease.applicant_id }).unwrap();
       showSuccess("Lease deleted.");
     } catch {
       showError("Couldn't delete that lease. Please try again.");
