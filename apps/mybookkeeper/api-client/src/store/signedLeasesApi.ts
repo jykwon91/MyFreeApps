@@ -148,6 +148,22 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
         { type: "SignedLease", id: "LIST" },
         ...tagsForTenantDates(applicantId),
       ],
+      // A renewal chain links leases, so a cached lease that points at the deleted one would
+      // keep showing the link. Refresh those too, even when the delete's outcome was unclear.
+      onQueryStarted: async ({ leaseId }, { dispatch, getState, queryFulfilled }) => {
+        await queryFulfilled.catch(() => undefined);
+        const state = getState();
+        const linked = signedLeasesApi.util
+          .selectCachedArgsForQuery(state, "getSignedLeaseById")
+          .filter((id) => {
+            const lease = signedLeasesApi.endpoints.getSignedLeaseById.select(id)(state).data;
+            return lease !== undefined && lease.id !== leaseId
+              && (lease.parent_lease_id === leaseId || lease.successor_lease_id === leaseId);
+          });
+        if (linked.length > 0) {
+          dispatch(signedLeasesApi.util.invalidateTags(linked.map((id) => ({ type: "SignedLease" as const, id }))));
+        }
+      },
     }),
 
     generateSignedLease: builder.mutation<SignedLeaseDetail, string>({

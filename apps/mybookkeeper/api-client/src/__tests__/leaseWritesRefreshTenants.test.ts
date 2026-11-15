@@ -85,3 +85,49 @@ describe("lease writes refetch the active-only tenant list", () => {
     expect(fetches).toBe(1);
   });
 });
+
+describe("deleting a lease refreshes the cached leases that link to it", () => {
+  async function detailFetchesAfterDelete(neighbour: object, deleteStatus = 200): Promise<number> {
+    let neighbourFetches = 0;
+    const previous = api.defaults.adapter;
+    api.defaults.adapter = (config) => {
+      const respond = (data: unknown, status = 200) =>
+        status < 400
+          ? Promise.resolve({ data, status, statusText: "", headers: {}, config })
+          : Promise.reject(Object.assign(new Error("failed"), { config, response: { data, status, statusText: "", headers: {}, config } }));
+      if (config.method === "delete") return respond(undefined, deleteStatus);
+      if (config.url === "/signed-leases/n1") {
+        neighbourFetches += 1;
+        return respond({ id: "n1", applicant_id: "a1", ...neighbour });
+      }
+      return respond({ items: [], total: 0, has_more: false });
+    };
+    try {
+      const store = makeStore();
+      const subscription = store.dispatch(endpoints.getSignedLeaseById.initiate("n1")) as unknown as Subscription;
+      await subscription;
+      await store.dispatch(signedLeasesApi.endpoints.deleteSignedLease.initiate({ leaseId: "l1", applicantId: "a1" }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      subscription.unsubscribe();
+    } finally {
+      api.defaults.adapter = previous;
+    }
+    return neighbourFetches;
+  }
+
+  it("refetches the lease that followed it", async () => {
+    expect(await detailFetchesAfterDelete({ successor_lease_id: "l1", parent_lease_id: null })).toBe(2);
+  });
+
+  it("refetches the lease that came after it", async () => {
+    expect(await detailFetchesAfterDelete({ parent_lease_id: "l1", successor_lease_id: null })).toBe(2);
+  });
+
+  it("refetches it even when the delete's outcome was unclear", async () => {
+    expect(await detailFetchesAfterDelete({ successor_lease_id: "l1", parent_lease_id: null }, 500)).toBe(2);
+  });
+
+  it("leaves unrelated leases alone", async () => {
+    expect(await detailFetchesAfterDelete({ parent_lease_id: "other", successor_lease_id: null })).toBe(1);
+  });
+});
