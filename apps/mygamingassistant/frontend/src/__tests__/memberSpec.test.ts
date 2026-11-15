@@ -5,6 +5,7 @@
  * names are production values.  The Warlock trees from the JSON are:
  *   355 Affliction, 354 Demonology, 593 Destruction
  */
+import talentTreesIndex from "@/games/wow-forever/data/guild/talentTrees.json";
 import { describe, expect, it } from "vitest";
 import { resolveSpec } from "@/games/wow-forever/lib/guild/memberSpec";
 import type { GuildMemberTalentTree } from "@/games/wow-forever/types/guild/guildMemberTalentTree";
@@ -96,7 +97,7 @@ describe("talentTrees.json", () => {
       "../games/wow-forever/data/talents/*.json",
       { eager: true, import: "default" },
     );
-    const index = files["../games/wow-forever/data/guild/talentTrees.json"] as unknown as Record<string, unknown>;
+    const index: Record<string, unknown> = talentTreesIndex;
     const classIds = Object.keys(index);
     expect(classIds.length).toBeGreaterThan(0);
     for (const classId of classIds) {
