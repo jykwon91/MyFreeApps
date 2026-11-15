@@ -15,10 +15,12 @@ interface RankTrainerListProps {
   trainers: readonly RankTrainer[];
   /** The player's World Map zone; a trainer there is listed first. */
   zoneId: number | null;
+  /** When provided, trainer names become buttons that open the recipe list. */
+  onSelectTrainer?: (npcId: number) => void;
 }
 
 /** Everyone who teaches a rank to your faction: name, area, coordinates and a map link. */
-export default function RankTrainerList({ label, trainers, zoneId }: RankTrainerListProps) {
+export default function RankTrainerList({ label, trainers, zoneId, onSelectTrainer }: RankTrainerListProps) {
   const [expanded, setExpanded] = useState(false);
   const ordered = orderRankTrainers(trainers, zoneId);
   const shown = expanded ? ordered : ordered.slice(0, VISIBLE);
@@ -28,7 +30,17 @@ export default function RankTrainerList({ label, trainers, zoneId }: RankTrainer
         {shown.map((npc) => (
           <li key={npc.npcId} className="flex flex-wrap items-center justify-between gap-x-3">
             <span className="text-sm">
-              <span className="font-medium">{npc.name}</span>{" "}
+              {onSelectTrainer ? (
+                <button
+                  type="button"
+                  className="font-medium underline-offset-2 hover:underline min-h-[44px] inline-flex items-center sm:min-h-[32px]"
+                  onClick={() => onSelectTrainer(npc.npcId)}
+                >
+                  {npc.name}
+                </button>
+              ) : (
+                <span className="font-medium">{npc.name}</span>
+              )}{" "}
               <span className="text-muted-foreground">
                 {npc.where} · {formatCoord(npc.x)}, {formatCoord(npc.y)}
               </span>
