@@ -1,6 +1,7 @@
 import { DollarSign } from "lucide-react";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import { formatCurrency } from "@/shared/utils/currency";
+import { formatLocaleDate } from "@/shared/utils/date";
 
 export interface PaymentDocumentCardProps {
   transaction: Transaction;
@@ -28,7 +29,6 @@ export function isPaymentTransaction(txn: Transaction): boolean {
 
 export default function PaymentDocumentCard({ transaction }: PaymentDocumentCardProps) {
   const amount = parseFloat(transaction.amount);
-  const date = new Date(transaction.transaction_date);
   // ``--card`` and ``--background`` resolve to the same near-black in dark
   // mode, so ``bg-card`` is invisible against the modal background. Using a
   // green-tinted accent gives the card a clear edge in both themes and
@@ -54,7 +54,7 @@ export default function PaymentDocumentCard({ transaction }: PaymentDocumentCard
           </>
         ) : null}
         <dt className="text-muted-foreground">Date</dt>
-        <dd>{date.toLocaleDateString()}</dd>
+        <dd>{formatLocaleDate(transaction.transaction_date)}</dd>
         {transaction.payment_method ? (
           <>
             <dt className="text-muted-foreground">Method</dt>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CheckCircle, XCircle, HelpCircle, UserCheck, Home } from "lucide-react";
 import { LoadingButton, showError, showSuccess } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
+import { formatLocaleDate } from "@/shared/utils/date";
 import type { AttributionReviewItem as ReviewItemType } from "@mybookkeeper/api-client/types/attribution/attribution-review-item";
 import {
   useAttributeTransactionManuallyMutation,
@@ -142,9 +143,7 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
   const proposedProperty = item.proposed_property;
   const displayName = txn?.payer_name ?? txn?.vendor ?? "Unknown sender";
   const amount = txn ? formatCurrency(parseFloat(txn.amount)) : "—";
-  const txnDate = txn?.transaction_date
-    ? new Date(txn.transaction_date).toLocaleDateString()
-    : "—";
+  const txnDate = formatLocaleDate(txn?.transaction_date);
 
   const anyLoading = (isConfirming || isRejecting || isAttributing) && isActing;
   const rejectLabel = rejectLabelFor(isPropertyRow, isUnmatched);
