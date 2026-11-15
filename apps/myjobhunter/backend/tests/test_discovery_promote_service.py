@@ -69,6 +69,8 @@ class TestPromoteHappyPath:
         assert application.source == "linkedin"
         assert application.posted_salary_currency == "USD"
         assert application.remote_type == "remote"
+        # Dated at promote time so the Applied column is never blank.
+        assert application.applied_at is not None
 
         # Job row should be marked as promoted.
         await db.refresh(job)

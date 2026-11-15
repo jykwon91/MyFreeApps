@@ -351,6 +351,65 @@ async def test_apply_is_idempotent(db: AsyncSession, user_factory) -> None:
 
 
 @pytest.mark.asyncio
+async def test_apply_dates_application_now_not_analysis_created_at(
+    db: AsyncSession, user_factory,
+) -> None:
+    """Applying days after analysing is dated now, and applied_at is set."""
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import select
+
+    from app.models.application.application_event import ApplicationEvent
+
+    user = await user_factory()
+    user_id = uuid.UUID(user["id"])
+    with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
+        analysis = await analyze(
+            db, user_id, url=None, jd_text="Senior Backend at Acme.",
+        )
+    analysis.created_at = datetime.now(timezone.utc) - timedelta(days=5)
+    await db.commit()
+
+    before = datetime.now(timezone.utc)
+    application = await apply_to_application(db, user_id, analysis.id)
+    assert application is not None
+    assert application.applied_at is not None
+    assert application.applied_at >= before
+
+    events = (
+        await db.execute(
+            select(ApplicationEvent).where(
+                ApplicationEvent.application_id == application.id,
+                ApplicationEvent.event_type == "applied",
+            )
+        )
+    ).scalars().all()
+    assert len(events) == 1
+    assert events[0].occurred_at >= before
+
+
+@pytest.mark.asyncio
+async def test_apply_locks_the_analysis_row(db: AsyncSession, user_factory) -> None:
+    """Apply loads the analysis FOR UPDATE so concurrent requests serialize."""
+    from app.repositories.job_analysis import job_analysis_repository
+
+    user = await user_factory()
+    user_id = uuid.UUID(user["id"])
+    with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
+        analysis = await analyze(
+            db, user_id, url=None, jd_text="Senior Backend at Acme.",
+        )
+
+    with patch.object(
+        job_analysis_repository,
+        "get_by_id",
+        wraps=job_analysis_repository.get_by_id,
+    ) as spy:
+        await apply_to_application(db, user_id, analysis.id)
+    assert spy.call_args.kwargs.get("for_update") is True
+
+
+@pytest.mark.asyncio
 async def test_apply_returns_none_for_cross_tenant(
     db: AsyncSession, user_factory,
 ) -> None:

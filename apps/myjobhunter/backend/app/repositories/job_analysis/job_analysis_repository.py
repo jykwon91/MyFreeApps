@@ -22,11 +22,15 @@ async def get_by_id(
     user_id: uuid.UUID,
     *,
     include_deleted: bool = False,
+    for_update: bool = False,
 ) -> JobAnalysis | None:
     """Return a single analysis scoped to ``user_id`` or ``None``.
 
     Soft-deleted rows are filtered by default; pass ``include_deleted=True``
     so a second DELETE on an already-deleted row remains idempotent.
+
+    ``for_update`` locks the row until commit, so two concurrent Apply
+    requests serialize and the second sees ``applied_application_id`` set.
     """
     stmt = select(JobAnalysis).where(
         JobAnalysis.id == analysis_id,
@@ -34,6 +38,8 @@ async def get_by_id(
     )
     if not include_deleted:
         stmt = stmt.where(JobAnalysis.deleted_at.is_(None))
+    if for_update:
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 

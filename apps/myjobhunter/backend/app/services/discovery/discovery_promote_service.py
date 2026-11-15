@@ -18,16 +18,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.enums import PUBLISHER_TO_SOURCE
 from app.db.violated_constraint import violated_constraint_name
 from app.models.application.application import Application
-from app.models.application.application_event import ApplicationEvent
 from app.models.discovery.discovered_job import DiscoveredJob
-from app.repositories.application import (
-    application_event_repository,
-    application_repository,
-)
+from app.repositories.application import application_repository
 from app.repositories.discovery import (
     discovery_duplicate_repository,
     discovery_repository,
 )
+from app.services.application.applied_application_creator import create_applied_application
 from app.services.company import company_service
 
 logger = logging.getLogger(__name__)
@@ -199,17 +196,6 @@ async def _create_application(
         source=application_source,
         notes=job.score_reason,
     )
-    application = await application_repository.create(db, application)
-
-    initial_event = ApplicationEvent(
-        user_id=user_id,
-        application_id=application.id,
-        event_type="applied",
-        occurred_at=datetime.now(timezone.utc),
-        # 'discovery' was added to the chk_appevent_source enum in
-        # migration disco260507. Records provenance for the kanban.
-        source="discovery",
-    )
-    await application_event_repository.create(db, initial_event)
-    return application
-
+    # 'discovery' was added to the chk_appevent_source enum in migration
+    # disco260507. Records provenance for the kanban.
+    return await create_applied_application(db, application, event_source="discovery")
