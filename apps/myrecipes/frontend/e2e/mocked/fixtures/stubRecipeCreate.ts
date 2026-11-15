@@ -8,7 +8,7 @@ import type { Page } from "@playwright/test";
 import { json } from "@platform/ui/test-support/mockResponse";
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
 import type { RecipeCreateRequest } from "@myrecipes/api-client/types/recipe/recipe-requests";
-import { detailFromCreateRequest } from "./recipeFixtures";
+import { detailFromCreateRequest, listPageOf } from "./recipeFixtures";
 import { RECIPES_COLLECTION_ROUTE } from "./recipeRoutes";
 import { stubRecipeRoutes } from "./stubRecipeApi";
 
@@ -18,9 +18,9 @@ export async function stubRecipeCreate(page: Page, recipeId: string, status = 20
   await page.route(RECIPES_COLLECTION_ROUTE, async (route) => {
     const request = route.request();
     if (request.method() === "GET") {
-      if (!created) return route.fulfill(json([]));
+      if (!created) return route.fulfill(json(listPageOf([])));
       const { latest_version: _latest, ...summary } = created;
-      return route.fulfill(json([summary]));
+      return route.fulfill(json(listPageOf([summary])));
     }
     if (request.method() !== "POST") return route.fallback();
     const body = request.postDataJSON() as RecipeCreateRequest;

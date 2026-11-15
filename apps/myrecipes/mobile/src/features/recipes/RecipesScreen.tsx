@@ -1,10 +1,11 @@
-import { useListRecipesQuery } from "@myrecipes/api-client/store/recipesApi";
+import { useRecipesPages } from "@myrecipes/api-client/hooks/useRecipesPages";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import { useDebouncedValue } from "@platform/core/hooks/useDebouncedValue";
 import {
   ChipButton,
   EmptyState,
   ListSeparator,
+  LoadMoreFooter,
   SearchField,
   Toast,
   useAnnouncement,
@@ -16,7 +17,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { FlatList, View } from "react-native";
 import { NEW_RECIPE_MESSAGES } from "../../constants/newRecipe";
-import { RECIPES_MESSAGES } from "../../constants/recipes";
+import { RECIPES_LOAD_MORE_MESSAGES, RECIPES_MESSAGES } from "../../constants/recipes";
 import { countLabel } from "../../utils/countLabel";
 import RecipeCard from "./RecipeCard";
 import RecipeListSkeleton from "./RecipeListSkeleton";
@@ -41,22 +42,23 @@ export default function RecipesScreen() {
   // Clearing the field shows the full list right away; only typing waits.
   const term = trimmed && debounced.clears === search.clears ? debounced.text.trim() : "";
 
-  const { currentData, data, error, isError, isFetching, refetch } = useListRecipesQuery(
-    term || ownerMe ? { search: term || undefined, owner: ownerMe ? "me" : undefined } : undefined,
-  );
+  // A new search or filter starts again from the first page.
+  const list = useRecipesPages({ search: term || undefined, owner: ownerMe ? "me" : undefined });
 
-  const { dismissError, isErrorDismissed, isRefreshing, refreshControl } = useRefresh(refetch, error);
+  const { dismissError, isErrorDismissed, isRefreshing, refresh, refreshControl } = useRefresh(list.refetch, list.error);
 
-  // While loading, `data` keeps the previous rows on screen, dimmed. After a failure it
-  // could be another search's rows, so only this search's own are shown.
-  const rows = isError ? currentData : data;
-  const hasFailedOverRows = isError && !!currentData?.length && !isErrorDismissed;
-  const isSearchSettled = term === trimmed && !isFetching && !isError;
+  // While a new search loads, the previous rows stay on screen, dimmed. If it fails they
+  // are another search's rows, so none are shown.
+  const rows = list.loadError === undefined ? list.recipes : [];
+  const isPending = list.isLoading || list.isFiltering;
+  const hasListError = list.error !== undefined && !list.isLoadMoreError;
+  const hasFailedOverRows = hasListError && rows.length > 0 && !isErrorDismissed;
+  const isSearchSettled = term === trimmed && !isPending && !hasListError;
   useAnnouncement(
-    isError && !rows?.length
+    hasListError && !rows.length
       ? "Can't load recipes"
-      : (term || ownerMe) && rows && isSearchSettled
-        ? countLabel(rows.length, "recipe")
+      : (term || ownerMe) && list.hasData && isSearchSettled
+        ? countLabel(list.total, "recipe")
         : undefined,
   );
 
@@ -69,11 +71,11 @@ export default function RecipesScreen() {
   }
 
   function renderEmpty() {
-    if (isFetching) return <RecipeListSkeleton />;
-    if (isError) {
+    if (isPending || isRefreshing) return <RecipeListSkeleton />;
+    if (hasListError) {
       return (
         <EmptyState
-          action={{ label: "Try again", onPress: () => void refetch() }}
+          action={{ label: "Try again", onPress: () => void refresh() }}
           body="Check your connection and try again."
           heading="Can't load recipes"
         />
@@ -145,14 +147,27 @@ export default function RecipesScreen() {
         ItemSeparatorComponent={ListSeparator}
         ListEmptyComponent={renderEmpty()}
         contentContainerStyle={{ flexGrow: 1, padding: spacing.lg, paddingTop: spacing.sm }}
-        data={rows ?? []}
+        ListFooterComponent={
+          !list.isFiltering && list.loadError === undefined && list.hasNextPage ? (
+            <LoadMoreFooter
+              isError={list.isLoadMoreError}
+              isLoading={list.isFetchingNextPage}
+              messages={RECIPES_LOAD_MORE_MESSAGES}
+              onLoadMore={list.loadMore}
+              shown={rows.length}
+              total={list.total}
+            />
+          ) : undefined
+        }
+        ListFooterComponentStyle={{ paddingTop: spacing.lg }}
+        data={rows}
         keyExtractor={(recipe) => recipe.id}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
         renderItem={({ item }) => <RecipeCard onPress={() => openRecipe(item)} recipe={item} />}
         testID="recipe-list"
-        style={{ opacity: isFetching && !isRefreshing && rows?.length ? 0.6 : 1 }}
+        style={{ opacity: list.isFiltering && !isRefreshing && rows.length ? 0.6 : 1 }}
       />
     </View>
   );

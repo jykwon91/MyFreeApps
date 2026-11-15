@@ -3,6 +3,7 @@ import type { RecipeDetailResponse, RecipeSummary } from "@myrecipes/api-client/
 import type { RecipeCreateRequest, VersionCreateRequest } from "@myrecipes/api-client/types/recipe/recipe-requests";
 import type { VersionResponse, VersionSummary } from "@myrecipes/api-client/types/recipe/version";
 import type { CookLogResponse } from "@myrecipes/api-client/types/recipe/cook-log";
+import type { RecipeListPage } from "@myrecipes/api-client/types/recipe/recipe-list-page";
 import { TEST_USER } from "@platform/ui/test-support/mockSession";
 
 export const NOW = "2026-11-11T00:00:00Z";
@@ -78,6 +79,11 @@ export function summaryOf(id: string, title: string, overrides: Partial<RecipeSu
     owner_display_name: TEST_USER.display_name,
     ...overrides,
   };
+}
+
+/** One GET /recipes page holding `items`, out of `total` matching recipes (all of them by default). */
+export function listPageOf(items: RecipeSummary[], total = items.length, offset = 0): RecipeListPage {
+  return { items, total, has_more: offset + items.length < total };
 }
 
 export function detailOf(id: string, overrides: Partial<RecipeDetailResponse> = {}): RecipeDetailResponse {

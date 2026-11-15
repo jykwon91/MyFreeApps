@@ -93,7 +93,7 @@ class TestReadRecipes:
             await authed.post("/recipes", json=_recipe_payload(title=title))
             resp = await authed.get("/recipes", params={"owner": "me"})
         assert resp.status_code == 200
-        body = resp.json()
+        body = resp.json()["items"]
         assert len(body) == 1
         assert body[0]["title"] == title
         assert body[0]["is_owner"] is True
@@ -107,7 +107,7 @@ class TestReadRecipes:
         async with await as_user(attacker) as authed:
             resp = await authed.get("/recipes", params={"owner": "me"})
         # owner=me is scoped to the caller — the attacker owns nothing.
-        assert resp.json() == []
+        assert resp.json() == {"items": [], "total": 0, "has_more": False}
 
     @pytest.mark.asyncio
     async def test_other_user_can_read_but_not_own(self, user_factory, as_user) -> None:
@@ -290,5 +290,5 @@ class TestDeleteRecipe:
             recipe_id = (await authed.post("/recipes", json=_recipe_payload())).json()["id"]
             assert (await authed.delete(f"/recipes/{recipe_id}")).status_code == 204
             assert (await authed.get(f"/recipes/{recipe_id}")).status_code == 404
-            listing = (await authed.get("/recipes")).json()
+            listing = (await authed.get("/recipes")).json()["items"]
         assert listing == []
