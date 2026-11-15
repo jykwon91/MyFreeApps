@@ -1,3 +1,4 @@
+import { MORTGAGE_PROBLEM_MESSAGES } from "@mybookkeeper/api-client/constants/mortgageProblemMessages";
 import type { MortgageFormProblems } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-problems";
 import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
 import { MORTGAGE_RATE_TYPES } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
@@ -6,7 +7,6 @@ import { Text, View } from "react-native";
 import {
   MORTGAGE_FORM_MESSAGES as MESSAGES,
   MORTGAGE_NOTES_MAX_LENGTH,
-  MORTGAGE_PROBLEM_MESSAGES,
   MORTGAGE_RATE_TYPE_LABELS,
   MORTGAGE_TEXT_MAX_LENGTH,
 } from "../../constants/mortgageForm";
