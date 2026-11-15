@@ -33,6 +33,8 @@ export interface CompanionGameEntry {
   tagline: string;
   /** The feature groups, in display order. Every feature names one of these. */
   categories: readonly FeatureCategory[];
+  /** The group the game's Overview link leads in the menu. */
+  overviewCategory: FeatureCategoryId;
   /** In display order within each category. */
   features: readonly GameFeature[];
 }
@@ -45,15 +47,37 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
     landingPath: "/wow-forever",
     tagline: "World map, profession leveling & item compare",
     categories: [
+      { id: "you", title: "You", iconName: "UserRound" },
       { id: "start", title: "Start here", iconName: "Compass" },
       { id: "world", title: "World", iconName: "Globe" },
       { id: "class", title: "Class", iconName: "Swords" },
       { id: "gear", title: "Gear", iconName: "Shield" },
       { id: "crafting", title: "Gold & crafting", iconName: "Coins" },
-      { id: "you", title: "You", iconName: "UserRound" },
       { id: "realm", title: "Realm", iconName: "Server" },
     ],
+    overviewCategory: "start",
     features: [
+      {
+        path: "/wow-forever/topdeadcenter",
+        category: "you",
+        title: "topdeadcenter",
+        iconName: "Users",
+        description: "<topdeadcenter>'s members, leaderboards and titles.",
+      },
+      {
+        path: "/wow-forever/character",
+        category: "you",
+        title: "Your character",
+        iconName: "UserRound",
+        description: "Look up your character by name: how they look in their gear, and the stats each item rolled, from your last log out.",
+      },
+      {
+        path: "/wow-forever/legacy",
+        category: "you",
+        title: "Legacy planner",
+        iconName: "Award",
+        description: "Plan where a character spends its 16 Legacy points, tick off the challenges that earn them and see the account rank rewards.",
+      },
       {
         path: "/wow-forever/map",
         category: "start",
@@ -207,27 +231,6 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         title: "What should I eat?",
         iconName: "Utensils",
         description: "The best food to cook for your level, class and what you're doing — leveling, dungeons, raids, PvP or fishing.",
-      },
-      {
-        path: "/wow-forever/character",
-        category: "you",
-        title: "Your character",
-        iconName: "UserRound",
-        description: "Look up your character by name: how they look in their gear, and the stats each item rolled, from your last log out.",
-      },
-      {
-        path: "/wow-forever/legacy",
-        category: "you",
-        title: "Legacy planner",
-        iconName: "Award",
-        description: "Plan where a character spends its 16 Legacy points, tick off the challenges that earn them and see the account rank rewards.",
-      },
-      {
-        path: "/wow-forever/topdeadcenter",
-        category: "you",
-        title: "topdeadcenter",
-        iconName: "Users",
-        description: "<topdeadcenter>'s members, leaderboards and titles.",
       },
       {
         path: "/wow-forever/server-status",

@@ -46,21 +46,22 @@ test.describe("WoW Forever sidebar nav", () => {
   test("WoW section renders on /wow-forever/macros with Macros active", async ({ page }) => {
     await page.goto("/wow-forever/macros");
     const sb = sidebar(page);
-    // The groups, headed, in order (the first carries Overview)
+    // The groups, headed, in order: You (the guild, your character) on top; Start here carries Overview
     await expect(sb.getByTestId("nav-section")).toHaveCount(7);
     expect(await sb.getByRole("heading").allTextContents()).toEqual([
+      "You",
       "Start here",
       "World",
       "Class",
       "Gear",
       "Gold & crafting",
-      "You",
       "Realm",
     ]);
     const section = (title: string) => sb.getByTestId("nav-section").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
     await expect(section("Start here").getByRole("link", { name: "Overview" })).toBeVisible();
     await expect(section("Class").getByRole("link", { name: "Macros" })).toBeVisible();
     await expect(section("Gold & crafting").getByRole("link", { name: "Recipes" })).toBeVisible();
+    await expect(section("You").getByRole("link", { name: "topdeadcenter" })).toBeVisible();
     // A heading, not a label: the "Class" section can't clash with a page's Class picker.
     await expect(sb.getByLabel("Class", { exact: true })).toHaveCount(0);
     // All section items present

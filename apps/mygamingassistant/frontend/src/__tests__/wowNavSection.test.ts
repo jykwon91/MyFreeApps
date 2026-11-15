@@ -72,6 +72,13 @@ describe("WoW Forever registry — nav section contract", () => {
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
+  it("the You group (the guild first) leads the menu, and Overview's group is a declared one", () => {
+    const { categories, overviewCategory } = COMPANION_GAMES[WOW_FOREVER_SLUG];
+    expect(categories[0].id).toBe("you");
+    expect(features[0].path).toBe("/wow-forever/topdeadcenter");
+    expect(categories.map((c) => c.id)).toContain(overviewCategory);
+  });
+
   it("all features start with /wow-forever/", () => {
     for (const f of features) {
       expect(f.path, `"${f.path}" does not start with /wow-forever/`).toMatch(/^\/wow-forever\//);

@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-14",
+    "title": "Your guild at the top of the menu",
+    "summary": "The You group, with topdeadcenter, your character and the Legacy planner, now sits at the top of the left menu and the Overview page, so the guild is one click away.",
+    "to": "/wow-forever/topdeadcenter"
+  },
+  {
+    "date": "2026-11-14",
     "title": "Full size World Map",
     "summary": "The World Map has a Full size button just above its top-right corner: the map fills the window and still zooms, pans and takes clicks. Esc or Exit full size puts it back. On a phone, turn it sideways for the biggest map.",
     "to": "/wow-forever/map"
