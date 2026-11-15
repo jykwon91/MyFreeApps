@@ -216,16 +216,16 @@ describe("Dashboard", () => {
     expect(screen.queryByText("By Category")).not.toBeInTheDocument();
   });
 
-  it("shows skeleton when loading", () => {
+  it("shows the full-page skeleton on the first load", () => {
     vi.mocked(useGetSummaryQuery).mockReturnValue({
       currentData: undefined,
       isLoading: true,
     } as unknown as ReturnType<typeof useGetSummaryQuery>);
 
-    const { container } = renderWithProviders(<Dashboard />);
+    renderWithProviders(<Dashboard />);
 
-    const skeletons = container.querySelectorAll(".animate-pulse");
-    expect(skeletons.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByTestId("dashboard-skeleton")).toBeInTheDocument();
+    expect(screen.queryByTestId("dashboard-summary-cards")).not.toBeInTheDocument();
   });
 
   it("links to documents page from empty state", () => {
@@ -335,12 +335,16 @@ describe("Dashboard", () => {
       expect(screen.queryByText("Monthly Average")).not.toBeInTheDocument();
     }
 
-    it("shows the skeleton, not the previous year's totals, while it loads", async () => {
+    it("shows a cards skeleton under the still-mounted filter bar, not the previous year's totals, while it loads", async () => {
       answerCurrentYearOnly({ isFetching: true });
       await pickLastYear();
 
       expectNoCurrentYearTotals();
-      expect(screen.getByTestId("dashboard-skeleton")).toBeInTheDocument();
+      expect(screen.getByTestId("dashboard-skeleton-summary-cards").children).toHaveLength(3);
+      // Only the cards reload: the page around them, filter bar included, stays put.
+      expect(screen.queryByTestId("dashboard-skeleton")).not.toBeInTheDocument();
+      expect(screen.getByText("Dashboard")).toBeInTheDocument();
+      expect((screen.getByTestId("year-filter") as HTMLSelectElement).value).toBe(String(cy - 1));
     });
 
     it("shows an error with Retry and keeps the year filter, not the previous year's totals, when it fails", async () => {
@@ -349,6 +353,7 @@ describe("Dashboard", () => {
 
       expectNoCurrentYearTotals();
       expect(screen.queryByTestId("dashboard-skeleton")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("dashboard-skeleton-summary-cards")).not.toBeInTheDocument();
       expect(screen.getByText(TOTALS_ERROR)).toBeInTheDocument();
       expect((screen.getByTestId("year-filter") as HTMLSelectElement).value).toBe(String(cy - 1));
       await userEvent.setup().click(totalsAlert().getByRole("button", { name: "Retry" }));

@@ -3,6 +3,7 @@ import Card from "@/shared/components/ui/Card";
 import { formatCurrency } from "@/shared/utils/currency";
 import { useGetPropertyPnlQuery } from "@mybookkeeper/api-client/store/attributionApi";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { PROPERTY_PNL_MESSAGES } from "@/shared/lib/totals-messages";
 import PropertyPnLCard from "./PropertyPnLCard";
 
 export interface PropertyPnLGridProps {
@@ -22,7 +23,7 @@ export default function PropertyPnLGrid({ since, until }: PropertyPnLGridProps) 
   if (!data && error !== undefined) {
     return (
       <LoadErrorAlert
-        message="I couldn't load your property P&L for this period. Want me to try again?"
+        message={PROPERTY_PNL_MESSAGES.couldntLoad}
         isRetrying={isFetching}
         onRetry={() => void refetch()}
       />

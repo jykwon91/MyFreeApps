@@ -14,6 +14,7 @@ import TaxReportSkeleton from "@/app/features/tax/TaxReportSkeleton";
 import Card from "@/shared/components/ui/Card";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { taxSummaryLoadError } from "@/shared/lib/totals-messages";
 import { useDismissable } from "@/shared/hooks/useDismissable";
 
 export default function TaxReport() {
@@ -214,7 +215,7 @@ export default function TaxReport() {
         </div>
       ) : error !== undefined ? (
         <LoadErrorAlert
-          message={`I couldn't load your ${year} tax summary. Want me to try again?`}
+          message={taxSummaryLoadError(year)}
           isRetrying={isFetching}
           onRetry={() => void refetch()}
         />

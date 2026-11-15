@@ -72,6 +72,18 @@ function holdPickedYear(isPicked: (route: Route) => boolean, shown: unknown) {
   return { handler, answerPicked };
 }
 
+/**
+ * How far the year filter sits below the page heading. Measured against the
+ * heading rather than the viewport, so scrolling the select into view doesn't
+ * count as the page shifting.
+ */
+async function offsetBelowHeading(page: Page): Promise<number> {
+  const heading = await page.getByRole("heading", { name: "Dashboard", level: 1 }).boundingBox();
+  const filter = await page.getByTestId("year-filter").boundingBox();
+  if (!heading || !filter) throw new Error("heading or year filter is not on the page");
+  return filter.y - heading.y;
+}
+
 function retryNextTo(page: Page, message: string, name: "Retry" | "Retrying...") {
   return page.getByText(message).locator("..").getByRole("button", { name, exact: true });
 }
@@ -98,6 +110,7 @@ test.describe("Tax Report", () => {
 
     await expect(page.getByTestId("tax-report-skeleton")).toBeVisible();
     await expect(page.getByText("$24,000.00")).toHaveCount(0);
+    await expect(page.getByRole("combobox")).toHaveValue(String(TAX_PICKED_YEAR));
 
     answerPicked((route) => route.fulfill(json(taxSummary(TAX_PICKED_YEAR, 11000))));
     await expect(page.getByText("$11,000.00")).toBeVisible();
@@ -136,13 +149,24 @@ test.describe("Dashboard", () => {
     return held;
   }
 
-  test("a newly picked year shows the skeleton, then its own totals, never the previous year's", async ({ page }) => {
+  test("a newly picked year shows a cards skeleton under the filter bar, then its own totals, never the previous year's", async ({ page }) => {
     const { answerPicked } = await openDashboard(page);
+    const yearFilter = page.getByTestId("year-filter");
+    // The cards above the filter bar load on their own; measure once they have.
+    await page.waitForLoadState("networkidle");
+    const filterTopBefore = await offsetBelowHeading(page);
 
-    await page.getByTestId("year-filter").selectOption(String(CURRENT_YEAR - 1));
+    await yearFilter.selectOption(String(CURRENT_YEAR - 1));
 
-    await expect(page.getByTestId("dashboard-skeleton")).toBeVisible();
+    await expect(page.getByTestId("dashboard-skeleton-summary-cards")).toBeVisible();
     await expect(page.getByTestId("dashboard-summary-cards")).toHaveCount(0);
+    await expect(page.getByText("$5,000.00")).toHaveCount(0);
+    // Only the cards reload: no full-page skeleton, and the filter bar the
+    // user just used stays mounted where it was.
+    await expect(page.getByTestId("dashboard-skeleton")).toHaveCount(0);
+    await expect(yearFilter).toBeVisible();
+    await expect(yearFilter).toHaveValue(String(CURRENT_YEAR - 1));
+    expect(await offsetBelowHeading(page)).toBe(filterTopBefore);
 
     answerPicked((route) => route.fulfill(json(summaryWithRevenue(CURRENT_YEAR - 1, 7000))));
     await expect(page.getByTestId("dashboard-summary-cards").getByText("$7,000.00")).toBeVisible();

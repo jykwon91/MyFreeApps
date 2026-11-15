@@ -1,5 +1,7 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
 import Card from "@/shared/components/ui/Card";
+import DashboardSummaryCardsSkeleton from "@/app/features/dashboard/DashboardSummaryCardsSkeleton";
+import MonthlyAverageCardSkeleton from "@/app/features/dashboard/MonthlyAverageCardSkeleton";
 import UtilityPlanComparisonCardSkeleton from "@/app/features/utility/UtilityPlanComparisonCardSkeleton";
 import InsurancePremiumComparisonCardSkeleton from "@/app/features/insurance/InsurancePremiumComparisonCardSkeleton";
 
@@ -13,14 +15,7 @@ export default function DashboardSkeleton() {
       </div>
 
       {/* Summary cards — 3 columns matching SummaryCard */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="dashboard-skeleton-summary-cards">
-        {[0, 1, 2].map((i) => (
-          <Card key={i}>
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-7 w-32 mt-1" />
-          </Card>
-        ))}
-      </section>
+      <DashboardSummaryCardsSkeleton />
 
       {/* Utility plan renewal card — matches UtilityPlanRenewalAlertCard:
           header row with a title + "View all" link, then two alert rows */}
@@ -50,21 +45,7 @@ export default function DashboardSkeleton() {
           copy of it. */}
       <InsurancePremiumComparisonCardSkeleton />
 
-      {/* Monthly Average card — matches MonthlyAverageCard */}
-      <Card>
-        <div className="flex items-baseline justify-between mb-4">
-          <Skeleton className="h-5 w-36" />
-          <Skeleton className="h-3 w-24" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[0, 1, 2].map((i) => (
-            <div key={i}>
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-6 w-28 mt-1" />
-            </div>
-          ))}
-        </div>
-      </Card>
+      <MonthlyAverageCardSkeleton />
 
       {/* Filter bar — matches DashboardFilterBar (year filter + property + category presets) */}
       <div className="bg-card border rounded-lg px-4 py-3 flex items-center gap-3" data-testid="dashboard-skeleton-filter-bar">

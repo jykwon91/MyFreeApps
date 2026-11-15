@@ -316,6 +316,8 @@ describe('TaxReport', () => {
 
       expectNoShownYearFigures();
       expect(screen.getByTestId('tax-report-skeleton')).toBeInTheDocument();
+      // The year selector stays put, showing the year being loaded.
+      expect(screen.getByRole('combobox')).toHaveValue(String(pickedYear));
     });
 
     it('shows an error with Retry, not the previous year\'s figures, when it fails', async () => {
