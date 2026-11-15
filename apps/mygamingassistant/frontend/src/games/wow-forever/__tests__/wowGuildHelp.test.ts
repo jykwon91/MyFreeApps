@@ -388,6 +388,64 @@ describe("computeGearMatches", () => {
 // resolveHelpSpecId
 // ---------------------------------------------------------------------------
 
+describe("enchant slot restrictions", () => {
+  const enchanter = () => makeMember("crafter", {
+    recipe_ability_ids: [4289],
+    professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
+  });
+  const weaponFile: Pick<CraftingFile, "recipes"> = { recipes: [enchantRecipe(7418, "Enchant Weapon - Minor Beastslayer")] };
+  const wearing = (slot: string, inventory_type: string) => makeMember("beneficiary", {
+    equipped: [{ slot, item_id: 2001, name: "Thing", item_level: 10, inventory_type, enchantments: [] }],
+  });
+
+  it("a one-hand weapon enchant matches a one-handed main hand", () => {
+    expect(computeEnchantMatches([enchanter(), wearing("MAIN_HAND", "WEAPON")], weaponFile)).toHaveLength(1);
+  });
+
+  it.each([["MAIN_HAND", "TWOHWEAPON"], ["OFF_HAND", "SHIELD"], ["OFF_HAND", "HOLDABLE"]])(
+    "a one-hand weapon enchant never matches %s %s",
+    (slot, type) => {
+      expect(computeEnchantMatches([enchanter(), wearing(slot, type)], weaponFile)).toHaveLength(0);
+    },
+  );
+
+  it("never matches rings or trinkets", () => {
+    expect(computeEnchantMatches([enchanter(), wearing("FINGER_1", "FINGER")], weaponFile)).toHaveLength(0);
+    expect(computeEnchantMatches([enchanter(), wearing("TRINKET_1", "TRINKET")], weaponFile)).toHaveLength(0);
+  });
+});
+
+describe("computeGearMatches restrictions", () => {
+  const crafter = () => makeMember("crafter", {
+    recipe_ability_ids: [55423],
+    professions: [{ profession_id: TAILORING_SKILL_ID, name: "Tailoring", skill: 100, max_skill: 300 }],
+  });
+  const files = new Map([[TAILORING_SKILL_ID, TAILORING_FILE_SASH]]);
+  const worn = [{ slot: "WAIST", item_id: 5002, name: "Flimsy Chain Belt", item_level: 1, inventory_type: "WAIST", enchantments: [] }];
+
+  it("skips an item the beneficiary can't wear (plate for a Mage)", () => {
+    const plate: ClientItem = { ...MOCK_SASH_MAGE, itemType: "Plate" };
+    const beneficiary = makeMember("beneficiary", { class_name: "Mage", equipped: worn });
+    expect(computeGearMatches([crafter(), beneficiary], files, makeItemList([plate, MOCK_WORN_WAIST]))).toHaveLength(0);
+  });
+
+  it("skips an item above the beneficiary's level", () => {
+    const beneficiary = makeMember("beneficiary", { class_name: "Mage", level: 5, equipped: worn });
+    expect(computeGearMatches([crafter(), beneficiary], files, makeItemList([MOCK_SASH_MAGE, MOCK_WORN_WAIST]))).toHaveLength(0);
+  });
+
+  it("skips a slot whose worn item can't be scored (not in the item list)", () => {
+    const beneficiary = makeMember("beneficiary", { class_name: "Mage", equipped: worn });
+    expect(computeGearMatches([crafter(), beneficiary], files, makeItemList([MOCK_SASH_MAGE]))).toHaveLength(0);
+  });
+
+  it("labels the slot with the paper-doll name, not the item name", () => {
+    const beneficiary = makeMember("beneficiary", { class_name: "Mage", equipped: worn });
+    const [m] = computeGearMatches([crafter(), beneficiary], files, makeItemList([MOCK_SASH_MAGE, MOCK_WORN_WAIST]));
+    expect(m.slot.slot_label).toBe("Waist");
+  });
+});
+
 describe("resolveHelpSpecId", () => {
   it("returns the spec id for a known dominant tree", () => {
     // Warlock Affliction (tree 355) → "affliction"

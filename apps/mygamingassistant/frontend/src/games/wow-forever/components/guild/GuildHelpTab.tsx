@@ -4,10 +4,12 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import GuildHelpFilterBar from "@/games/wow-forever/components/guild/GuildHelpFilterBar";
 import GuildHelpSkeleton from "@/games/wow-forever/components/guild/GuildHelpSkeleton";
 import GuildMatchCard from "@/games/wow-forever/components/guild/GuildMatchCard";
 import { loadCraftingData } from "@/games/wow-forever/crafting/loadCraftingData";
+import { GUILD_HELP_PROBLEM } from "@/games/wow-forever/data/guild/guildHelpConfig";
 import { PROFESSION_SKILL_LINES } from "@/games/wow-forever/data/professions/professionSkillLines";
 import { useGetGuildHelpQuery } from "@/games/wow-forever/api/wowGuildApi";
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
@@ -120,6 +122,10 @@ export default function GuildHelpTab({ slug }: GuildHelpTabProps) {
       return true;
     });
   }, [allMatches, type, forSlug]);
+
+  if (helpQuery.isError) {
+    return <LoadErrorRetry message={GUILD_HELP_PROBLEM} onRetry={helpQuery.refetch} retrying={helpQuery.isFetching} />;
+  }
 
   const isLoading =
     helpQuery.isLoading ||

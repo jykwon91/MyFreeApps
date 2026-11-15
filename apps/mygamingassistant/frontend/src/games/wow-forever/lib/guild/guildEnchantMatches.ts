@@ -20,7 +20,7 @@ function itemMatchesEnchantSlot(item: GuildHelpEquippedItem, enchantSlotName: st
   if (!target) return false;
   if (!target.blizzardSlots.includes(item.slot)) return false;
   if (target.inventoryTypeIs !== null && item.inventory_type !== target.inventoryTypeIs) return false;
-  if (target.inventoryTypeIsNot !== null && item.inventory_type === target.inventoryTypeIsNot) return false;
+  if (target.inventoryTypesNot.includes(item.inventory_type)) return false;
   return true;
 }
 

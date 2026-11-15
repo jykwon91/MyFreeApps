@@ -10,10 +10,12 @@
  * Deduplication: for each (beneficiary_slug, blizzard_slot), only the best
  * upgrade is returned (highest score improvement).
  */
+import { blizzardSlotLabel } from "@/games/wow-forever/lib/guild/blizzardSlotLabel";
 import { LEVELING_SPEC_ID } from "@/games/wow-forever/data/classes";
 import { UPGRADE_THRESHOLD_PCT } from "@/games/wow-forever/data/guild/guildHelpConfig";
 import { BLIZZARD_SLOT_FOR, PAIRED_BLIZZARD_SLOTS } from "@/games/wow-forever/data/itemCompare/blizzardSlots";
 import type { ItemSlot } from "@/games/wow-forever/data/itemSlots";
+import { canWear } from "@/games/wow-forever/gear/gearFilters";
 import { scorer } from "@/games/wow-forever/gear/rankGear";
 import { recipeSpell } from "@/games/wow-forever/lib/character/characterProfessions";
 import { characterClassId } from "@/games/wow-forever/lib/character/characterClassId";
@@ -131,7 +133,8 @@ export function computeGearMatches(
       if (beneficiary.slug === crafter.slug) continue;
 
       const scoreItem = scorerFor(beneficiary);
-      if (!scoreItem) continue; // unknown class — skip scoring
+      const beneficiaryClassId = beneficiary.class_name ? characterClassId(beneficiary.class_name) : null;
+      if (!scoreItem || !beneficiaryClassId) continue; // unknown class — skip scoring
 
       // Index the beneficiary's equipped items by Blizzard slot for fast lookup.
       const equippedBySlot = new Map<string, GuildHelpEquippedItem>();
@@ -145,11 +148,9 @@ export function computeGearMatches(
         if (!craftedClientItem) continue; // not in items.json — skip
         if (craftedClientItem.randomSuffix) continue; // random stats — skip
 
-        // Check class restriction.
-        if (craftedClientItem.classes !== null) {
-          const beneficiaryClassId = beneficiary.class_name ? characterClassId(beneficiary.class_name) : undefined;
-          if (!beneficiaryClassId || !craftedClientItem.classes.includes(beneficiaryClassId)) continue;
-        }
+        // Class restriction and armor/weapon proficiency at the beneficiary's level.
+        if (!canWear(craftedClientItem, beneficiaryClassId, beneficiary.level)) continue;
+        if (craftedClientItem.requiredLevel > beneficiary.level) continue;
 
         const candidateScore = scoreItem(craftedClientItem);
         if (candidateScore <= 0) continue; // useless for this class
@@ -160,7 +161,9 @@ export function computeGearMatches(
           if (!worn) continue; // not wearing anything in this slot — skip
 
           const wornClientItem = byId.get(worn.item_id);
-          const wornScore = wornClientItem && !wornClientItem.randomSuffix ? scoreItem(wornClientItem) : 0;
+          // A worn item we can't score (not in items.json, or random stats) would read as a bogus 100% upgrade.
+          if (!wornClientItem || wornClientItem.randomSuffix) continue;
+          const wornScore = scoreItem(wornClientItem);
 
           const pct = upgradePct(candidateScore, wornScore);
           if (pct < UPGRADE_THRESHOLD_PCT) continue; // not meaningfully better
@@ -176,7 +179,7 @@ export function computeGearMatches(
             type: "gear",
             crafter: matchCrafter,
             beneficiary: beneficiaryFor(beneficiary),
-            slot: { blizzard_slot: blizzardSlot, slot_label: recipe.creates!.name },
+            slot: { blizzard_slot: blizzardSlot, slot_label: blizzardSlotLabel(blizzardSlot) },
             worn: { item_id: worn.item_id, name: worn.name, item_level: worn.item_level },
             proposed: {
               spell: recipe.spell,
