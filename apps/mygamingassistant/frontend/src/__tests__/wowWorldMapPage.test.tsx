@@ -65,6 +65,34 @@ describe("WoW Forever World Map page", () => {
     expect(stored).toMatchObject({ faction: "A", classId: "warlock", zoneId: 1429 });
   });
 
+  it("fills the window with the map and Esc puts it back", async () => {
+    renderPage();
+    const viewer = await screen.findByTestId("zone-map", {}, { timeout: 4000 });
+    const section = viewer.closest("section")!;
+    expect(section).not.toHaveAttribute("data-full-size");
+
+    await userEvent.click(screen.getByRole("button", { name: "Full size map" }));
+    expect(section).toHaveAttribute("data-full-size");
+    expect(document.body.style.overflow).toBe("hidden");
+    // The page under the map can't be tabbed to or clicked.
+    expect(screen.getByLabelText("Class").closest("[inert]")).not.toBeNull();
+    expect(viewer.closest("[inert]")).toBeNull();
+
+    // Esc on the map itself leaves full size before it would zoom out.
+    fireEvent.keyDown(viewer, { key: "Escape" });
+    expect(section).not.toHaveAttribute("data-full-size");
+    expect(document.body.style.overflow).toBe("");
+    expect(screen.getByLabelText("Class").closest("[inert]")).toBeNull();
+
+    // Esc anywhere else does too, and so does the button.
+    await userEvent.click(screen.getByRole("button", { name: "Full size map" }));
+    fireEvent.keyDown(screen.getByRole("button", { name: "Exit full size" }), { key: "Escape" });
+    expect(section).not.toHaveAttribute("data-full-size");
+    await userEvent.click(screen.getByRole("button", { name: "Full size map" }));
+    await userEvent.click(screen.getByRole("button", { name: "Exit full size" }));
+    expect(section).not.toHaveAttribute("data-full-size");
+  });
+
   it("shows directions for a result and a typed position moves you", async () => {
     window.localStorage.setItem(
       PLAYER_SETTINGS_STORAGE_KEY,

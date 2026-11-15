@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { AlertBox } from "@platform/ui";
 import ChildMapSelect from "@/games/wow-forever/components/worldMap/ChildMapSelect";
 import MapBreadcrumb from "@/games/wow-forever/components/worldMap/MapBreadcrumb";
 import LevelFitLegend from "@/games/wow-forever/components/worldMap/LevelFitLegend";
 import MapCanvas from "@/games/wow-forever/components/worldMap/MapCanvas";
+import MapFullSizeButton from "@/games/wow-forever/components/worldMap/MapFullSizeButton";
 import MapContextMenu from "@/games/wow-forever/components/worldMap/MapContextMenu";
 import MapLayersControl from "@/games/wow-forever/components/worldMap/MapLayersControl";
 import RareMapCard from "@/games/wow-forever/components/rares/RareMapCard";
@@ -16,9 +17,11 @@ import PositionConfirm from "@/games/wow-forever/components/worldMap/PositionCon
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 import { RARES_STATUS } from "@/games/wow-forever/data/rares/raresConfig";
 import { MAP_LAYER } from "@/games/wow-forever/data/worldMap/mapLayerIds";
+import { FULL_SIZE_CLASS, FULL_SIZE_PADDING_INLINE } from "@/games/wow-forever/data/worldMap/mapFullSize";
 import { GATHERING_SPOTS_STATUS, useGatheringMapSpots } from "@/games/wow-forever/hooks/useGatheringMapSpots";
 import type { MapLayersState } from "@/games/wow-forever/hooks/useMapLayers";
 import { useRares } from "@/games/wow-forever/hooks/useRares";
+import { useMapFullSize } from "@/games/wow-forever/hooks/useMapFullSize";
 import { useMapMarkTools } from "@/games/wow-forever/hooks/useMapMarkTools";
 import type { MapMarksState } from "@/games/wow-forever/hooks/useMapMarks";
 import type { SharedMapViewState } from "@/games/wow-forever/hooks/useSharedMapView";
@@ -125,6 +128,9 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
     return failed;
   }, [gathering.status, raresState.status]);
   const tools = useMapMarkTools(map?.id ?? mapId, marks, mapLayers, sharedView);
+  const sectionRef = useRef<HTMLElement>(null);
+  // Esc while placing a mark, choosing a spot or with a result selected does that job first.
+  const fullSize = useMapFullSize(sectionRef, tools.placing || props.picking !== null || props.selectedPoiId !== null);
   if (!map || !byLayer || !counts) return null;
   const zoneView = isZoneView(map);
   const continentView = map.kind === MAP_KIND.continent;
@@ -161,13 +167,20 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
   const sharedMap = shared ? data.maps.get(shared.mapId) : undefined;
 
   return (
-    <section aria-labelledby="wm-map" className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <section
+      ref={sectionRef}
+      aria-labelledby="wm-map"
+      data-full-size={fullSize.fullSize || undefined}
+      className={fullSize.fullSize ? FULL_SIZE_CLASS : "space-y-3"}
+      style={fullSize.fullSize ? { paddingInline: FULL_SIZE_PADDING_INLINE } : undefined}
+    >
+      {/* Full size keeps only the heading, for screen readers; the breadcrumb row below is the way around. */}
+      <div className={fullSize.fullSize ? "sr-only" : "flex flex-wrap items-center justify-between gap-2"}>
         <h2 id="wm-map" className="text-lg font-semibold">
           Map: {map.name}
         </h2>
-        <ShareViewButton makeUrl={tools.shareUrl} />
-        {quickJumps.length > 0 && (
+        {!fullSize.fullSize && <ShareViewButton makeUrl={tools.shareUrl} />}
+        {!fullSize.fullSize && quickJumps.length > 0 && (
           <div role="group" aria-label="Which map" className="flex gap-2">
             {quickJumps.map(({ zone, label }) => (
               <button
@@ -188,7 +201,10 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <MapBreadcrumb path={mapPath(data, map.id)} onOpen={onOpen} />
-        <ChildMapSelect maps={childrenOf(data, map.id)} onOpen={onOpen} />
+        <div className="flex flex-wrap items-center gap-2">
+          <ChildMapSelect maps={childrenOf(data, map.id)} onOpen={onOpen} />
+          <MapFullSizeButton fullSize={fullSize.fullSize} onToggle={fullSize.toggle} />
+        </div>
       </div>
       {sharedView.invalid && (
         <AlertBox variant="warning">
@@ -266,6 +282,8 @@ export default function WorldMapPanel(props: WorldMapPanelProps) {
         placing={tools.placing}
         onPlace={tools.place}
         onCancelPlace={() => tools.setPlacing(false)}
+        fullSize={fullSize.fullSize}
+        onExitFullSize={fullSize.exit}
         overlay={
           <>
           <MapLayersControl
