@@ -1,6 +1,7 @@
 import { FormField, LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
-import { CALENDAR_NOTES_MAX_LENGTH, EVENT_MESSAGES } from "../../constants/calendarEventDetail";
+import { CALENDAR_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/calendarNotes";
+import { EVENT_MESSAGES } from "../../constants/calendarEventDetail";
 import type { CalendarEventNotes as Notes } from "./useCalendarEventNotes";
 
 interface CalendarEventNotesProps {
