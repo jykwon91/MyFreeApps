@@ -451,6 +451,9 @@ describe("InsurancePolicyDetail — edit flow", () => {
     await user.type(name, "   ");
     await user.click(screen.getByTestId("insurance-policy-update-button"));
     expect(updateMock).not.toHaveBeenCalled();
-    expect(showErrorMock).toHaveBeenCalledWith("Policy name is required.");
+    expect(screen.getByTestId("insurance-policyName-problem")).toHaveTextContent(
+      "Give the policy a name.",
+    );
+    expect(name).toHaveAttribute("aria-invalid", "true");
   });
 });

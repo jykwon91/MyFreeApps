@@ -60,7 +60,7 @@ describe("premium without a billing period", () => {
     await user.type(screen.getByLabelText(/Policy name/), "Landlord policy");
     await user.type(screen.getByTestId("insurance-premium-input"), "1200");
     await user.click(screen.getByTestId("insurance-policy-save-button"));
-    expect(await screen.findByTestId("insurance-premium-billed-error")).toHaveTextContent(PREMIUM_BILLED_REQUIRED_MESSAGE);
+    expect(await screen.findByTestId("insurance-premiumFrequency-problem")).toHaveTextContent(PREMIUM_BILLED_REQUIRED_MESSAGE);
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
@@ -72,7 +72,7 @@ describe("premium without a billing period", () => {
     await user.type(screen.getByTestId("insurance-premium-input"), "1200");
     await user.click(screen.getByTestId("insurance-policy-save-button"));
     await user.selectOptions(screen.getByTestId("insurance-premium-frequency-select"), "monthly");
-    expect(screen.queryByTestId("insurance-premium-billed-error")).toBeNull();
+    expect(screen.queryByTestId("insurance-premiumFrequency-problem")).toBeNull();
     await user.click(screen.getByTestId("insurance-policy-save-button"));
     await waitFor(() => expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ premium_cents: 120000, premium_frequency: "monthly" })));
   });
@@ -82,7 +82,7 @@ describe("premium without a billing period", () => {
     render(<EditInsurancePolicyDialog policy={POLICY} onClose={vi.fn()} />);
     await user.type(screen.getByTestId("insurance-premium-input"), "1200");
     await user.click(screen.getByTestId("insurance-policy-update-button"));
-    expect(await screen.findByTestId("insurance-premium-billed-error")).toHaveTextContent(PREMIUM_BILLED_REQUIRED_MESSAGE);
+    expect(await screen.findByTestId("insurance-premiumFrequency-problem")).toHaveTextContent(PREMIUM_BILLED_REQUIRED_MESSAGE);
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 

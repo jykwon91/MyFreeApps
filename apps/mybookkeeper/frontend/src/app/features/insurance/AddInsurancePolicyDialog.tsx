@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Button, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/insurancePolicyDraft";
-import { EMPTY_POLICY_FORM, isPremiumBilledMissing, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
-import { PREMIUM_BILLED_REQUIRED_MESSAGE } from "@mybookkeeper/api-client/constants/insurancePolicyForm";
+import { EMPTY_POLICY_FORM, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
 import { useCreateInsurancePolicyMutation } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { InsurancePolicyDraft } from "@mybookkeeper/api-client/types/insurance/insurance-policy-draft";
@@ -12,6 +11,7 @@ import InsurancePolicyDocumentReader from "./InsurancePolicyDocumentReader";
 import InsurancePolicyDraftNotices from "./InsurancePolicyDraftNotices";
 import InsurancePolicyFormFields from "./InsurancePolicyFormFields";
 import { INSURANCE_POLICY_INPUT_CLASS } from "./insurance-policy-input-class";
+import { useInsurancePolicyFormCheck } from "./useInsurancePolicyFormCheck";
 
 export interface AddInsurancePolicyDialogProps {
   onClose: () => void;
@@ -28,8 +28,7 @@ export default function AddInsurancePolicyDialog({
   const [values, setValues] = useState<InsurancePolicyFormValues>(EMPTY_POLICY_FORM);
   const [propertyId, setPropertyId] = useState("");
   const [draft, setDraft] = useState<InsurancePolicyDraft | null>(null);
-
-  const [showBilledError, setShowBilledError] = useState(false);
+  const { problems, passes } = useInsurancePolicyFormCheck(values);
 
   function handleChange<K extends keyof InsurancePolicyFormValues>(
     field: K,
@@ -45,18 +44,12 @@ export default function AddInsurancePolicyDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const isValid = passes();
     if (!propertyId) {
       showError("Pick a property.");
       return;
     }
-    if (!values.policyName.trim()) {
-      showError("Policy name is required.");
-      return;
-    }
-    if (isPremiumBilledMissing(values)) {
-      setShowBilledError(true);
-      return;
-    }
+    if (!isValid) return;
 
     try {
       await createPolicy({
@@ -80,7 +73,7 @@ export default function AddInsurancePolicyDialog({
       onClose={onClose}
       width="wide"
     >
-      <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
+      <form noValidate onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
         <InsurancePolicyDocumentReader onRead={handleRead} />
         {draft && <InsurancePolicyDraftNotices draft={draft} />}
 
@@ -107,7 +100,7 @@ export default function AddInsurancePolicyDialog({
         <InsurancePolicyFormFields
           values={values}
           onChange={handleChange}
-          billedError={showBilledError && isPremiumBilledMissing(values) ? PREMIUM_BILLED_REQUIRED_MESSAGE : null}
+          problems={problems}
         />
 
         <div className="flex gap-3 pt-2 justify-end">

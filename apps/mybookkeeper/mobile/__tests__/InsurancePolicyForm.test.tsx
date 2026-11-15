@@ -84,8 +84,18 @@ describe("adding a policy", () => {
     await fireEvent.changeText(screen.getByLabelText("Wind and hail deductible (% of coverage)"), "120");
     await fireEvent.changeText(screen.getByLabelText("Deductible (USD)"), "-5");
     await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
-    expect(await screen.findByText("Enter a percentage from 0 to 100.")).toBeTruthy();
+    expect(await screen.findByText("Enter a percentage above 0 and up to 100.")).toBeTruthy();
     expect(screen.getByText("Enter an amount of zero or more.")).toBeTruthy();
+  });
+
+  it("flags a premium of zero before sending anything", async () => {
+    const server = startInsuranceServer({ policies: [] });
+    await renderInsurance(<NewPolicyScreen />);
+    await fillAdd();
+    await fireEvent.changeText(screen.getByLabelText("Premium (USD)"), "0");
+    await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
+    expect(await screen.findByText("Enter an amount above 0, or leave it blank.")).toBeTruthy();
+    expect(lastInsuranceWrite(server)).toBeNull();
   });
 
   it("sends a host with no properties to the phone's own add property screen", async () => {

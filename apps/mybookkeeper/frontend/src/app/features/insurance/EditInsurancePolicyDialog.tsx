@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
-import { isPremiumBilledMissing, policyToFormValues, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
-import { PREMIUM_BILLED_REQUIRED_MESSAGE } from "@mybookkeeper/api-client/constants/insurancePolicyForm";
+import { policyToFormValues, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
 import { useUpdateInsurancePolicyMutation } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import type { InsurancePolicyDetail } from "@mybookkeeper/api-client/types/insurance/insurance-policy-detail";
 import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import InsurancePolicyFormFields from "./InsurancePolicyFormFields";
+import { useInsurancePolicyFormCheck } from "./useInsurancePolicyFormCheck";
 
 export interface EditInsurancePolicyDialogProps {
   policy: InsurancePolicyDetail;
@@ -28,8 +28,7 @@ export default function EditInsurancePolicyDialog({
   const [values, setValues] = useState<InsurancePolicyFormValues>(() =>
     policyToFormValues(policy),
   );
-
-  const [showBilledError, setShowBilledError] = useState(false);
+  const { problems, passes } = useInsurancePolicyFormCheck(values);
 
   function handleChange<K extends keyof InsurancePolicyFormValues>(
     field: K,
@@ -40,14 +39,7 @@ export default function EditInsurancePolicyDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!values.policyName.trim()) {
-      showError("Policy name is required.");
-      return;
-    }
-    if (isPremiumBilledMissing(values)) {
-      setShowBilledError(true);
-      return;
-    }
+    if (!passes()) return;
 
     try {
       await updatePolicy({
@@ -68,11 +60,11 @@ export default function EditInsurancePolicyDialog({
       onClose={onClose}
       width="wide"
     >
-      <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
+      <form noValidate onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
         <InsurancePolicyFormFields
           values={values}
           onChange={handleChange}
-          billedError={showBilledError && isPremiumBilledMissing(values) ? PREMIUM_BILLED_REQUIRED_MESSAGE : null}
+          problems={problems}
         />
 
         <div className="flex gap-3 pt-2 justify-end">

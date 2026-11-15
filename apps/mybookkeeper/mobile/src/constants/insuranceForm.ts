@@ -3,8 +3,6 @@ import type { InsuranceAttachmentKind } from "@mybookkeeper/api-client/types/ins
 import type { PropertyChoiceMessages } from "../types/PropertyChoiceMessages";
 import { documentReaderMessages } from "./documentReader";
 
-export const POLICY_NAME_MAX_LENGTH = 255;
-export const POLICY_NOTES_MAX_LENGTH = 5000;
 export const POLICY_PHOTO_NAME = "policy.jpg";
 
 /** Photos taken or picked together get their own number, so a failure can name the one that failed. */
@@ -30,7 +28,6 @@ export const POLICY_FORM_MESSAGES = {
   propertiesRetry: "Try again",
   policyName: "Policy name",
   policyNamePlaceholder: "e.g. Landlord insurance, 123 Main St",
-  policyNameRequired: "Give the policy a name.",
   carrier: "Carrier",
   carrierPlaceholder: "e.g. State Farm",
   policyNumber: "Policy number",
@@ -48,11 +45,8 @@ export const POLICY_FORM_MESSAGES = {
   feesAndTaxesHint: "Everything on the bill that isn't premium, for the whole policy term. Leave blank if there is none.",
   deductible: "Deductible (USD)",
   windHail: "Wind and hail deductible (% of coverage)",
-  windHailInvalid: "Enter a percentage from 0 to 100.",
-  amountInvalid: "Enter an amount of zero or more.",
   notes: "Notes",
   notesPlaceholder: "Anything else worth remembering about this policy",
-  datesOrder: "The end date is before the start date.",
   save: "Save policy",
   saveChanges: "Save changes",
   saving: "Saving…",
