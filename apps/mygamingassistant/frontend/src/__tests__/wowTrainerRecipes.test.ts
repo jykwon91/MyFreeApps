@@ -40,6 +40,7 @@ function makeEntry(spell: number, name: string): RecipeEntry {
     learn: { kind: "start" },
     recipeSources: null,
     sourceUnknown: false,
+    effect: null,
     spec: null,
     searchName: name.toLowerCase(),
     nameWords: [name.toLowerCase()],

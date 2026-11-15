@@ -29,6 +29,7 @@ export default function RecipeTooltipCard({ entry }: { entry: RecipeEntry }) {
           {entry.spec ? <CraftSpecChip name={entry.spec} /> : null}
         </div>
       </div>
+      {entry.effect ? <p className="text-emerald-700 dark:text-emerald-400">{entry.effect}</p> : null}
       <div className="space-y-1">
         <p className="text-xs font-medium text-muted-foreground">{RECIPE_TOOLTIP_TEXT.reagents}</p>
         {entry.reagents.length ? (

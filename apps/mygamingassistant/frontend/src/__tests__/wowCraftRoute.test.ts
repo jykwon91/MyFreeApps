@@ -177,7 +177,9 @@ describe("Engineering item lines", () => {
   it("is only switched on for Engineering", () => {
     const on = Object.entries(CRAFTING_FEATURES).filter(([, f]) => f.effects).map(([p]) => p);
     expect(on).toEqual(["engineering"]);
-    for (const p of PROFESSIONS) if (p !== "engineering") expect(FILES[p].recipes.some((r) => r.effect)).toBe(false);
+    // Enchanting carries effects too (Help cards and recipe hovers), but its route doesn't show them.
+    for (const p of PROFESSIONS) if (p !== "engineering" && p !== "enchanting") expect(FILES[p].recipes.some((r) => r.effect)).toBe(false);
+    expect(FILES.enchanting.recipes.some((r) => r.effect)).toBe(true);
   });
 });
 

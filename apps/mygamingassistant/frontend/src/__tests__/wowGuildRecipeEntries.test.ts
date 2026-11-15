@@ -16,7 +16,7 @@ const MINING = 186;
 function entry(key: string, profession: RecipeEntry["profession"], name: string, makes: RecipeEntry["makes"]): RecipeEntry {
   return {
     key, profession, name, icon: null, makes, category: "other", skill: 1, yellow: null, green: null, grey: null,
-    reagents: [], learn: { kind: "start" }, recipeSources: null, sourceUnknown: false, spec: null,
+    reagents: [], learn: { kind: "start" }, recipeSources: null, sourceUnknown: false, effect: null, spec: null,
     searchName: name.toLowerCase(), nameWords: [], recipeItemWords: [], reagentWords: [],
   } as RecipeEntry;
 }

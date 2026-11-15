@@ -28,6 +28,8 @@ export interface RecipeEntry {
   recipeSources: ItemSources | null;
   /** Forever added the recipe and no Classic source teaches it (`sourceUnknown`): where to learn it isn't known yet. */
   sourceUnknown: boolean;
+  /** What it does, in the Forever client's tooltip words (enchants, Engineering items); null when the data has none. */
+  effect: string | null;
   /** "Armorsmith" — only that specialization can learn it. */
   spec: string | null;
   /** The name, normalised for search (`normalizeItemName`). */

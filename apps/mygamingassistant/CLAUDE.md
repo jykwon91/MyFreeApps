@@ -209,6 +209,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   rolled amounts read "26 to 34" from SpellEffect `Variance`, as the game
   prints them); a part with no tooltip reads "A part for other ... recipes"
   (`crafting/craftEffect.ts`), anything else shows nothing.
+  Enchants carry `effect` too, from their own spell tooltip ("Permanently
+  enchant ... by 6."; `$ecN` filled from the SpellItemEnchantment the spell's
+  ENCHANT_ITEM effect points at); it shows in the recipe hover card
+  (`RecipeTooltipCard`, `RecipeEntry.effect`) and on guild Help each other cards.
   **Recipe data is GENERATED** — `python -m scripts.wow_professions.build`
   (from `backend/`) writes `data/professions/crafting/{tailoring,enchanting,alchemy,blacksmithing,leatherworking,engineering,firstaid,mining}.json`
   (`mining.json` = Mining's own smelts + camp items, with each smelt's `focus`)

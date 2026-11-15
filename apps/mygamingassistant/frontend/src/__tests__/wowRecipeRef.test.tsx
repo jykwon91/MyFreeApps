@@ -12,7 +12,7 @@ const LINEN_ENTRY = {
   key: "tailoring:2963", profession: "tailoring", name: "Bolt of Linen Cloth", icon: { fileDataId: 132889, quality: "common" },
   makes: { id: 2996, name: "Bolt of Linen Cloth", count: 1, quality: "common" }, category: "trade-goods", skill: 1,
   yellow: null, green: null, grey: null, reagents: [], learn: { kind: "start" }, recipeSources: null, sourceUnknown: false,
-  spec: null, searchName: "bolt of linen cloth", nameWords: [], recipeItemWords: [], reagentWords: [],
+  effect: null, spec: null, searchName: "bolt of linen cloth", nameWords: [], recipeItemWords: [], reagentWords: [],
 } as unknown as RecipeEntry;
 
 const LINEN_HREF = "/wow-forever/recipes?q=Bolt+of+Linen+Cloth&p=tailoring";
