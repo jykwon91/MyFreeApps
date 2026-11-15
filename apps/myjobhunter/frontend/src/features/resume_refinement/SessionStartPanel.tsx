@@ -8,9 +8,11 @@ import {
   Skeleton,
   showError,
 } from "@platform/ui";
-import { useListResumeJobsQuery } from "@myjobhunter/api-client/store/resumesApi";
+import { resumesApi, useListResumeJobsQuery } from "@myjobhunter/api-client/store/resumesApi";
+import { RESUME_JOBS_POLL_INTERVAL_MS } from "@myjobhunter/api-client/constants/resumeJobsPolling";
 import { useStartRefinementSessionMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
 import { completedResumeJobs } from "@myjobhunter/api-client/utils/completedResumeJobs";
+import { resumeJobsInFlight } from "@myjobhunter/api-client/utils/resumeJobsInFlight";
 import ResumeJobOption from "@/features/resume_refinement/ResumeJobOption";
 
 interface SessionStartPanelProps {
@@ -19,7 +21,12 @@ interface SessionStartPanelProps {
 
 export default function SessionStartPanel({ onSessionStarted }: SessionStartPanelProps) {
   const navigate = useNavigate();
-  const { data: jobs, isLoading } = useListResumeJobsQuery();
+  const cached = resumesApi.endpoints.listResumeJobs.useQueryState().data;
+  // Poll only while an upload is still being read, so it appears here once it finishes.
+  const isReading = resumeJobsInFlight(cached ?? []).length > 0;
+  const { data: jobs, isLoading } = useListResumeJobsQuery(undefined, {
+    pollingInterval: isReading ? RESUME_JOBS_POLL_INTERVAL_MS : 0,
+  });
   const [startSession, { isLoading: isStarting }] = useStartRefinementSessionMutation();
   const [picked, setPicked] = useState<string | null>(null);
 
@@ -32,6 +39,16 @@ export default function SessionStartPanel({ onSessionStarted }: SessionStartPane
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-12 w-full" />
       </div>
+    );
+  }
+
+  if (completedJobs.length === 0 && isReading) {
+    return (
+      <EmptyState
+        icon={<Sparkles className="size-8 text-muted-foreground" />}
+        heading="Reading your resume"
+        body="This usually takes under a minute. It shows up here to pick once it's read."
+      />
     );
   }
 

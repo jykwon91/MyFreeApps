@@ -16,6 +16,7 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 }));
 
 vi.mock("@myjobhunter/api-client/store/resumesApi", () => ({
+  resumesApi: { endpoints: { listResumeJobs: { useQueryState: () => ({ data: [{ id: "job-1", status: "complete" }] }) } } },
   useListResumeJobsQuery: () => ({ data: [{ id: "job-1", status: "complete" }], isLoading: false }),
 }));
 
