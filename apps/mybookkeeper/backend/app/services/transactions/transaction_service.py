@@ -274,12 +274,22 @@ async def merge_transactions(
     The non-surviving transaction is soft-deleted and its document links are
     transferred to the surviving one.
     """
+    if transaction_a_id == transaction_b_id:
+        raise ValueError("A transaction can't be merged with itself")
     if surviving_id not in (transaction_a_id, transaction_b_id):
         raise ValueError("surviving_id must be one of transaction_a_id or transaction_b_id")
 
     async with unit_of_work() as db:
-        txn_a = await transaction_repo.get_by_id(db, transaction_a_id, ctx.organization_id)
-        txn_b = await transaction_repo.get_by_id(db, transaction_b_id, ctx.organization_id)
+        # Lock both live rows, as keep does: a row deleted in another tab, or by a merge
+        # that got there first, must not survive or be merged into.
+        locked = {
+            t.id: t
+            for t in await transaction_repo.lock_live_transactions(
+                db, [transaction_a_id, transaction_b_id], ctx.organization_id,
+            )
+        }
+        txn_a = locked.get(transaction_a_id)
+        txn_b = locked.get(transaction_b_id)
 
         if txn_a is None:
             raise ValueError(f"Transaction {transaction_a_id} not found")

@@ -552,3 +552,87 @@ class TestMergeTransactions:
         assert result.id == txn_b.id
         await db.refresh(txn_a)
         assert txn_a.deleted_at is not None
+
+
+class TestMergeRefusesDeletedOrSameRow:
+    @staticmethod
+    def _session(db: AsyncSession):
+        @asynccontextmanager
+        async def _fake():
+            yield db
+
+        return (
+            patch("app.services.transactions.transaction_service.AsyncSessionLocal", _fake),
+            patch("app.services.transactions.transaction_service.unit_of_work", _fake),
+        )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("deleted_side", ["survivor", "loser"])
+    async def test_already_deleted_row_is_not_found_and_nothing_changes(
+        self, db: AsyncSession, test_org: Organization, test_user: User, deleted_side: str,
+    ) -> None:
+        """A row deleted since the duplicates list loaded can't take part in a merge.
+
+        Before, merging into a deleted survivor soft-deleted the live row too, so both were gone.
+        """
+        ctx = _ctx(test_org, test_user)
+        survivor = _make_txn(test_org, test_user, amount=Decimal("100.00"))
+        loser = _make_txn(test_org, test_user, amount=Decimal("100.00"))
+        deleted = survivor if deleted_side == "survivor" else loser
+        live = loser if deleted_side == "survivor" else survivor
+        deleted.deleted_at = datetime.now(timezone.utc)
+        deleted.status = "duplicate"
+        db.add_all([survivor, loser])
+        await db.commit()
+
+        first, second = self._session(db)
+        with first, second, pytest.raises(ValueError, match="not found"):
+            await transaction_service.merge_transactions(
+                ctx, survivor.id, loser.id, survivor.id, DuplicateMergeOverrides(),
+            )
+
+        await db.refresh(live)
+        assert live.deleted_at is None
+        assert live.status == "pending"
+
+    @pytest.mark.asyncio
+    async def test_row_in_another_org_is_not_found(
+        self, db: AsyncSession, test_org: Organization, test_user: User,
+    ) -> None:
+        ctx = _ctx(test_org, test_user)
+        mine = _make_txn(test_org, test_user)
+        other_org = Organization(id=uuid.uuid4(), name="Other", created_by=test_user.id)
+        db.add(other_org)
+        await db.flush()
+        theirs = _make_txn(other_org, test_user)
+        db.add_all([mine, theirs])
+        await db.commit()
+
+        first, second = self._session(db)
+        with first, second, pytest.raises(ValueError, match="not found"):
+            await transaction_service.merge_transactions(
+                ctx, mine.id, theirs.id, mine.id, DuplicateMergeOverrides(),
+            )
+
+        await db.refresh(mine)
+        assert mine.deleted_at is None
+
+    @pytest.mark.asyncio
+    async def test_same_row_on_both_sides_is_refused(
+        self, db: AsyncSession, test_org: Organization, test_user: User,
+    ) -> None:
+        """Merging a row with itself would soft-delete the row that is meant to survive."""
+        ctx = _ctx(test_org, test_user)
+        txn = _make_txn(test_org, test_user)
+        db.add(txn)
+        await db.commit()
+
+        first, second = self._session(db)
+        with first, second, pytest.raises(ValueError, match="itself"):
+            await transaction_service.merge_transactions(
+                ctx, txn.id, txn.id, txn.id, DuplicateMergeOverrides(),
+            )
+
+        await db.refresh(txn)
+        assert txn.deleted_at is None
+
