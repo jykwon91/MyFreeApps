@@ -23,10 +23,12 @@ const STATUS_FILTER_OPTIONS = [
 
 export default function DropsPage() {
   const [statusFilter, setStatusFilter] = useState<DropStatus | "">("");
-  const { data: drops, isLoading, isError, error, refetch } = useListDropsQuery(
+  // currentData is this filter's result; data would keep the previous filter's drops.
+  const { currentData: drops, isError, error, refetch } = useListDropsQuery(
     statusFilter ? { status: statusFilter } : undefined,
   );
   const [showCreate, setShowCreate] = useState(false);
+  const isLoading = drops === undefined && !isError;
 
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-5xl">

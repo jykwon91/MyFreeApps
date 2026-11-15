@@ -3,7 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import OrderBuilder from "../OrderBuilder";
 import type { PublicCustomerLookup, PublicDrop, PublicMenu } from "@/types/public/public";
 
-let lookupData: PublicCustomerLookup | undefined;
+// What the lookup answers per phone; a phone not listed is a 404.
+let customersByPhone: Record<string, PublicCustomerLookup>;
+// Like RTK Query: `data` keeps the last success from an earlier phone, `currentData` is this phone's only.
+let lastSuccess: PublicCustomerLookup | undefined;
 const lookupCalls: { phone: string; skip: boolean }[] = [];
 // Set to hold the debounced phone at a value, as during the 400ms window.
 let heldDebounce: string | undefined;
@@ -16,7 +19,9 @@ vi.mock("@platform/ui", async (importOriginal) => ({
 vi.mock("@/store/publicApi", () => ({
   useLookupPublicCustomerQuery: (phone: string, { skip }: { skip: boolean }) => {
     lookupCalls.push({ phone, skip });
-    return { data: skip ? undefined : lookupData };
+    const current = skip ? undefined : customersByPhone[phone];
+    if (current) lastSuccess = current;
+    return { data: current ?? lastSuccess, currentData: current };
   },
   usePlacePublicOrderMutation: () => [vi.fn(), { isLoading: false }],
 }));
@@ -56,7 +61,8 @@ function renderBuilder() {
 
 describe("OrderBuilder returning-customer lookup", () => {
   beforeEach(() => {
-    lookupData = jane;
+    customersByPhone = { "5125551234": jane, "5125559999": { ...jane, customer_name: "Ana" } };
+    lastSuccess = undefined;
     lookupCalls.length = 0;
     heldDebounce = undefined;
   });
@@ -76,29 +82,58 @@ describe("OrderBuilder returning-customer lookup", () => {
     fireEvent.change(phone, { target: { value: "5125551234" } });
     expect(name.value).toBe("J. Doe");
   });
-
-  it("clearing the phone after applying the usual unlocks the lookup again", () => {
+  it("keeps the applied state showing for the phone it was applied to", () => {
     const { phone } = renderBuilder();
     fireEvent.change(phone, { target: { value: "5125551234" } });
     fireEvent.click(screen.getByText("apply usual"));
-    expect(lookupCalls[lookupCalls.length - 1]?.skip).toBe(true);
-
-    fireEvent.change(phone, { target: { value: "" } });
-    fireEvent.change(phone, { target: { value: "5125559999" } });
-    expect(lookupCalls[lookupCalls.length - 1]).toEqual({ phone: "5125559999", skip: false });
-    expect(screen.getByText("apply usual")).toBeInTheDocument();
+    expect(screen.getByText("usual applied")).toBeInTheDocument();
+    expect(lookupCalls[lookupCalls.length - 1]?.skip).toBe(false);
   });
 
-  it("ignores apply when the phone was cut short, so the lookup isn't locked", () => {
-    const { phone } = renderBuilder();
+  it("a different known phone gets its own banner, not the applied state", () => {
+    const { name, phone } = renderBuilder();
     fireEvent.change(phone, { target: { value: "5125551234" } });
-    // The debounce hasn't caught up yet: the banner is still showing.
-    heldDebounce = "5125551234";
-    fireEvent.change(phone, { target: { value: "512" } });
     fireEvent.click(screen.getByText("apply usual"));
-    heldDebounce = undefined;
 
     fireEvent.change(phone, { target: { value: "5125559999" } });
-    expect(lookupCalls[lookupCalls.length - 1]).toEqual({ phone: "5125559999", skip: false });
+    expect(screen.getByText("apply usual")).toBeInTheDocument();
+    expect(name.value).toBe("Ana");
+  });
+
+  it("drops the banner and the pre-filled name when the phone changes to an unknown one", () => {
+    const { name, phone } = renderBuilder();
+    fireEvent.change(phone, { target: { value: "5125551234" } });
+    expect(screen.getByText("apply usual")).toBeInTheDocument();
+    expect(name.value).toBe("Jane");
+
+    fireEvent.change(phone, { target: { value: "5125550000" } });
+    expect(screen.queryByText("apply usual")).toBeNull();
+    expect(screen.queryByText("usual applied")).toBeNull();
+    expect(name.value).toBe("");
+  });
+
+  it("drops the banner when the phone is cleared", () => {
+    const { phone } = renderBuilder();
+    fireEvent.change(phone, { target: { value: "5125551234" } });
+    expect(screen.getByText("apply usual")).toBeInTheDocument();
+
+    fireEvent.change(phone, { target: { value: "" } });
+    expect(screen.queryByText("apply usual")).toBeNull();
+  });
+
+  it("hides the banner while the phone field is ahead of the debounce", () => {
+    const { phone } = renderBuilder();
+    fireEvent.change(phone, { target: { value: "5125551234" } });
+    heldDebounce = "5125551234";
+    fireEvent.change(phone, { target: { value: "512" } });
+    expect(screen.queryByText("apply usual")).toBeNull();
+  });
+
+  it("keeps a name the customer typed when the phone changes to another customer", () => {
+    const { name, phone } = renderBuilder();
+    fireEvent.change(phone, { target: { value: "5125551234" } });
+    fireEvent.change(name, { target: { value: "J. Doe" } });
+    fireEvent.change(phone, { target: { value: "5125559999" } });
+    expect(name.value).toBe("J. Doe");
   });
 });
