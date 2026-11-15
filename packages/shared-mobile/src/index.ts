@@ -80,6 +80,7 @@ export { useScreenFocused } from "./hooks/useScreenFocused";
 export { useStackScreenOptions } from "./hooks/useStackScreenOptions";
 export { useTabScreenOptions } from "./hooks/useTabScreenOptions";
 export { useSession } from "./hooks/useSession";
+export { useSignOutThisPhone } from "./hooks/useSignOutThisPhone";
 export { useToast } from "./hooks/useToast";
 export { useTwoStepStatus } from "./hooks/useTwoStepStatus";
 

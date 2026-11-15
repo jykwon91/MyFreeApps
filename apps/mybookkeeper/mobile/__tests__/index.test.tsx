@@ -1,6 +1,7 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { LINK_MESSAGES, ToastProvider } from "@platform/mobile";
+import { SessionContext } from "@platform/mobile/src/auth/SessionContext";
 import { act, fireEvent, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { AppState, Linking, Text } from "react-native";
@@ -17,10 +18,6 @@ import { store } from "../src/lib/store";
 import { resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
-jest.mock("@platform/mobile", () => ({
-  ...jest.requireActual("@platform/mobile"),
-  useSession: () => ({ session: { signOut: jest.fn() }, state: { status: "signedIn" } }),
-}));
 
 const WORKSPACE = { id: "w1", name: "Mine", org_role: "owner" };
 const SECOND = { ...WORKSPACE, id: "w2", name: "Second" };
@@ -42,12 +39,14 @@ function respondWith(status: number | "offline", data: unknown = []): AxiosAdapt
 async function renderGate() {
   await render(
     <Provider store={store}>
-      <ToastProvider bottomOffset={0}>
-        <WorkspaceGate>
-          <WorkspaceLostToast />
-          <Text>Inside</Text>
-        </WorkspaceGate>
-      </ToastProvider>
+      <SessionContext.Provider value={session}>
+        <ToastProvider bottomOffset={0}>
+          <WorkspaceGate>
+            <WorkspaceLostToast />
+            <Text>Inside</Text>
+          </WorkspaceGate>
+        </ToastProvider>
+      </SessionContext.Provider>
     </Provider>,
   );
 }
