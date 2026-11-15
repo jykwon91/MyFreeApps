@@ -37,11 +37,8 @@ export default function BuffsAddonCard() {
             Restart the game, or type <code>/reload</code>.
           </li>
           <li>
-            <code>/mgabuffs</code> lists what&apos;s missing. <code>/mgabuffs food</code> (or <code>armor</code>,{" "}
-            <code>soulstone</code>, <code>group</code>) turns one off or on, and <code>/mgabuffs minutes 5</code> warns earlier.
-          </li>
-          <li>
-            <code>/mgabuffs unlock</code> lets you drag the list, <code>/mgabuffs lock</code> fixes it in place.
+            Set it up in the game&apos;s <span className="font-medium">Options &gt; AddOns &gt; MGA Buffs</span> (or type{" "}
+            <code>/mgabuffs</code>): tick what to remind you about, pick how early to warn, and move the list.
           </li>
         </ol>
         <Button onClick={downloadBuffsAddon} data-testid="buffs-addon-download">

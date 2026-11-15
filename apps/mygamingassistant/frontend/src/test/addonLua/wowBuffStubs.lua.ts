@@ -9,7 +9,8 @@
  * unlearns a spell. `C_UnitAuras = nil` leaves only
  * the older UnitBuff. Lines go into `out`: "row: ..." for each list row it
  * draws, "hidden" when the list hides, "flash: ..." for a mid-screen message,
- * "sound", and "chat: ...". `clear()` empties `out`.
+ * "sound", "chat: ...", and "options: ..." for the options window. `clear()`
+ * empties `out`; `click(frame)` clicks an options checkbox or button.
  */
 export const WOW_BUFF_STUBS = `
 out = {}
@@ -90,7 +91,8 @@ function RaidNotice_AddMessage(_, text) table.insert(out, "flash: " .. text) end
 SOUNDKIT = { RAID_WARNING = 8959 }
 function PlaySound() table.insert(out, "sound") end
 
-local function region()
+-- Only the reminder list's text is recorded ("row: ..."); other text keeps its value in .text.
+local function region(owner)
   local r = { shown = true }
   function r:SetSize() end
   function r:SetPoint() end
@@ -99,13 +101,16 @@ local function region()
   function r:SetTextColor() end
   function r:Show() self.shown = true end
   function r:Hide() self.shown = false end
-  function r:SetText(t) if t ~= "" then table.insert(out, "row: " .. t) end end
+  function r:SetText(t)
+    self.text = t
+    if owner.name == "MGABuffsFrame" and t ~= "" then table.insert(out, "row: " .. t) end
+  end
   return r
 end
 UIParent = {}
 local handler
-function CreateFrame(_, name)
-  local f = { name = name, shown = true, scripts = {} }
+function CreateFrame(kind, name, _, template)
+  local f = { kind = kind, name = name, template = template, shown = true, scripts = {} }
   function f:SetSize() end
   function f:SetHeight() end
   function f:SetClampedToScreen() end
@@ -118,16 +123,39 @@ function CreateFrame(_, name)
   function f:GetPoint() return self.point[1], UIParent, self.point[2], self.point[3], self.point[4] end
   function f:StartMoving() end
   function f:StopMovingOrSizing() end
-  function f:CreateTexture() return region() end
-  function f:CreateFontString() return region() end
+  function f:CreateTexture() return region(self) end
+  function f:CreateFontString(fsName)
+    local r = region(self)
+    if fsName then _G[fsName] = r end
+    return r
+  end
   function f:SetScript(event, fn) self.scripts[event] = fn; if event == "OnEvent" then handler = fn end end
+  function f:SetText(t) self.text = t end
+  function f:SetChecked(on) self.checked = on and true or false end
+  function f:GetChecked() return self.checked end
   function f:Show() self.shown = true end
   function f:Hide()
-    if self.shown and self.name then table.insert(out, "hidden") end
+    if self.shown and self.name == "MGABuffsFrame" then table.insert(out, "hidden") end
     self.shown = false
   end
-  _G[name or "anonymous"] = f
+  if name then _G[name] = f end
   return f
 end
+-- A click the way the game does it: a checkbox flips first, then OnClick runs.
+function click(f)
+  if f.kind == "CheckButton" then f.checked = not f.checked end
+  f.scripts.OnClick(f)
+end
+
+-- The newer Settings window. \`Settings = nil\` leaves the older Interface Options list.
+Settings = {
+  RegisterCanvasLayoutCategory = function(panel, title)
+    return { panel = panel, title = title, GetID = function() return "id:" .. title end }
+  end,
+  RegisterAddOnCategory = function(category) table.insert(out, "options: added " .. category.title) end,
+  OpenToCategory = function(id) table.insert(out, "options: opened " .. id) end,
+}
+function InterfaceOptions_AddCategory(panel) table.insert(out, "options: added (old list) " .. panel.name) end
+function InterfaceOptionsFrame_OpenToCategory(panel) table.insert(out, "options: opened (old list) " .. panel.name) end
 function fire(event, ...) handler(nil, event, ...) end
 `;

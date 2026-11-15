@@ -4,13 +4,17 @@
 --   Soulstone: Warlocks from level 18 — your Soulstone on someone in the group running out, none
 --              on anyone while a stone in your bags is ready, or no stone in your bags at all.
 --   Food:      Well Fed (and the few foods whose buff has another name). Quiet while you eat.
---   Group:     Fortitude, Arcane Intellect (mana users only) and Mark of the Wild — only when a
+--   Group:     Fortitude, Arcane Intellect (not Warriors or Rogues) and Mark of the Wild — only when a
 --              Priest, Mage or Druid is in your group (or you are one), naming who to ask.
 --
 -- Warnings show in a small movable list with icons. A new one also flashes mid-screen with a
 -- sound. In combat, dead or a ghost, the list hides: buffs wait until you can do something.
 --
---   /mgabuffs                 what's on, and what's missing right now
+-- Everything is set in the game's options: Options > AddOns > MGA Buffs. The commands below
+-- are shortcuts for the same settings.
+--
+--   /mgabuffs                 open the options
+--   /mgabuffs status          what's on, and what's missing right now
 --   /mgabuffs armor           turn a check off or on (also: soulstone, food, group)
 --   /mgabuffs minutes 5       warn this many minutes before a buff runs out (1-30, default 3)
 --   /mgabuffs sound           turn the sound and mid-screen flash off or on
@@ -316,7 +320,7 @@ local function render(warnings)
   local unlocked = not settings().locked
   local list = warnings
   if unlocked and #list == 0 then
-    list = { { icon = SOULSTONE_ICON, text = "MGA Buffs: drag me, then /mgabuffs lock" } }
+    list = { { icon = SOULSTONE_ICON, text = "MGA Buffs: drag me, then lock it in Options > AddOns > MGA Buffs" } }
   end
   local parts = {}
   for _, w in ipairs(list) do table.insert(parts, w.text) end
@@ -387,7 +391,42 @@ local function check()
   pcall(render, {})
 end
 
--- Slash command -------------------------------------------------------------
+-- Settings ------------------------------------------------------------------
+-- The options panel and the slash command both change settings through these, so they agree.
+
+local optionsPanel = nil
+
+local function applied()
+  shownSignature = nil
+  check()
+  if optionsPanel then optionsPanel.refresh() end
+end
+
+local function setCheck(key, on)
+  settings()[key] = on
+  applied()
+end
+
+local function setMinutes(n)
+  settings().minutes = math.max(1, math.min(30, math.floor(n)))
+  applied()
+end
+
+local function setSound(on)
+  settings().sound = on
+  applied()
+end
+
+local function setLocked(on)
+  settings().locked = on
+  applied()
+end
+
+local function resetPosition()
+  settings().point = nil
+  place()
+  applied()
+end
 
 local function onOff(value)
   return value and "on" or "off"
@@ -410,42 +449,154 @@ local function status()
   end
 end
 
+-- Options panel (Options > AddOns > MGA Buffs) ---------------------------------
+-- Built from the plainest pieces every client has (checkboxes, buttons, text), so it doesn't
+-- depend on slider templates that differ between game versions.
+
+local OPTION_CHECKS = {
+  { key = "armor", label = "Your armor", hint = "Demon Skin or Demon Armor, Frost, Ice or Mage Armor, Inner Fire" },
+  { key = "soulstone", label = "Soulstone", hint = "Warlocks from level 18" },
+  { key = "food", label = "Well Fed", hint = "Quiet while you eat" },
+  { key = "group", label = "Group buffs", hint = "Fortitude, Arcane Intellect, Mark of the Wild, when that class is in your group" },
+}
+
+local openCategory = nil
+
+local function label(parent, text, font, anchor, y)
+  local fs = parent:CreateFontString(nil, "ARTWORK", font)
+  if anchor == parent then
+    fs:SetPoint("TOPLEFT", parent, "TOPLEFT", 16, y)
+  else
+    fs:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, y)
+  end
+  fs:SetJustifyH("LEFT")
+  fs:SetText(text)
+  return fs
+end
+
+local function checkbox(parent, name, text, hint, anchor, y, onClick)
+  local box = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
+  box:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, y)
+  local title = box:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+  title:SetPoint("LEFT", box, "RIGHT", 4, hint and 6 or 0)
+  title:SetText(text)
+  if hint then
+    local small = box:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    small:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -2)
+    small:SetText(hint)
+  end
+  box:SetScript("OnClick", function(self) onClick(self:GetChecked() and true or false) end)
+  return box
+end
+
+local function button(parent, name, text, width, onClick)
+  local b = CreateFrame("Button", name, parent, "UIPanelButtonTemplate")
+  b:SetSize(width, 24)
+  b:SetText(text)
+  b:SetScript("OnClick", onClick)
+  return b
+end
+
+local function buildOptions()
+  local panel = CreateFrame("Frame", "MGABuffsOptions")
+  panel.name = ADDON
+
+  local title = label(panel, ADDON, "GameFontNormalLarge", panel, -16)
+  local intro = label(panel, "Reminds you, out of combat, when a buff is missing or about to run out.", "GameFontHighlightSmall", title, -6)
+  local heading = label(panel, "Remind me about", "GameFontNormal", intro, -16)
+
+  local boxes = {}
+  local anchor = heading
+  for _, c in ipairs(OPTION_CHECKS) do
+    local key = c.key
+    boxes[key] = checkbox(panel, "MGABuffsOptions_" .. key, c.label, c.hint, anchor, -6, function(on) setCheck(key, on) end)
+    anchor = boxes[key]
+  end
+
+  local warnHeading = label(panel, "Warn before a buff runs out", "GameFontNormal", anchor, -18)
+  local minus = button(panel, "MGABuffsOptions_minus", "-", 28, function() setMinutes(settings().minutes - 1) end)
+  minus:SetPoint("TOPLEFT", warnHeading, "BOTTOMLEFT", 0, -8)
+  local minutesText = panel:CreateFontString("MGABuffsOptions_minutesText", "ARTWORK", "GameFontHighlight")
+  minutesText:SetPoint("LEFT", minus, "RIGHT", 10, 0)
+  local plus = button(panel, "MGABuffsOptions_plus", "+", 28, function() setMinutes(settings().minutes + 1) end)
+  plus:SetPoint("LEFT", minutesText, "RIGHT", 10, 0)
+
+  local sound = checkbox(panel, "MGABuffsOptions_sound", "Flash and sound for a new reminder", nil, minus, -14, setSound)
+  local unlock = checkbox(panel, "MGABuffsOptions_unlock", "Move the list (drag it, then untick to lock)", nil, sound, -6, function(on) setLocked(not on) end)
+
+  local reset = button(panel, "MGABuffsOptions_reset", "Reset list position", 160, resetPosition)
+  reset:SetPoint("TOPLEFT", unlock, "BOTTOMLEFT", 0, -14)
+  local show = button(panel, "MGABuffsOptions_status", "Show what's missing", 160, status)
+  show:SetPoint("LEFT", reset, "RIGHT", 10, 0)
+
+  function panel.refresh()
+    local s = settings()
+    for key, box in pairs(boxes) do box:SetChecked(s[key]) end
+    minutesText:SetText(s.minutes .. (s.minutes == 1 and " minute" or " minutes"))
+    sound:SetChecked(s.sound)
+    unlock:SetChecked(not s.locked)
+  end
+  panel:SetScript("OnShow", panel.refresh)
+  panel.refresh()
+
+  -- Newer clients have the Settings window; older ones the Interface Options list.
+  if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
+    local category = Settings.RegisterCanvasLayoutCategory(panel, ADDON)
+    Settings.RegisterAddOnCategory(category)
+    openCategory = function() Settings.OpenToCategory(category:GetID()) end
+  elseif InterfaceOptions_AddCategory then
+    InterfaceOptions_AddCategory(panel)
+    -- Called twice: the first call on the old Interface Options frame opens it without selecting the page.
+    openCategory = function()
+      InterfaceOptionsFrame_OpenToCategory(panel)
+      InterfaceOptionsFrame_OpenToCategory(panel)
+    end
+  end
+  optionsPanel = panel
+end
+
+local function openOptions()
+  if not (openCategory and pcall(openCategory)) then
+    say("this game version has no AddOns options page; /mgabuffs help lists the commands.")
+  end
+end
+
+-- Slash command: shortcuts for the options ---------------------------------------
+
 SLASH_MGABUFFS1 = "/mgabuffs"
 SlashCmdList.MGABUFFS = function(message)
   local s = settings()
   local command, arg = (message or ""):lower():match("^%s*(%S*)%s*(.-)%s*$")
   if command == "" then
+    openOptions()
+  elseif command == "status" then
     status()
   elseif CHECK_SET[command] then
-    s[command] = not s[command]
+    setCheck(command, not s[command])
     say(command .. " reminders " .. onOff(s[command]) .. ".")
   elseif command == "minutes" then
     local n = tonumber(arg)
     if not n or n < 1 or n > 30 then
       say("give a number of minutes from 1 to 30, like /mgabuffs minutes 5.")
     else
-      s.minutes = math.floor(n)
+      setMinutes(n)
       say("warning " .. s.minutes .. " min before a buff runs out.")
     end
   elseif command == "sound" then
-    s.sound = not s.sound
+    setSound(not s.sound)
     say("sound and mid-screen flash " .. onOff(s.sound) .. ".")
   elseif command == "unlock" then
-    s.locked = false
+    setLocked(false)
     say("drag the list where you want it, then /mgabuffs lock.")
   elseif command == "lock" then
-    s.locked = true
+    setLocked(true)
     say("list locked.")
   elseif command == "reset" then
-    s.point = nil
-    place()
+    resetPosition()
     say("list back in its starting place.")
   else
-    say("/mgabuffs [armor | soulstone | food | group | minutes N | sound | unlock | lock | reset]")
-    return
+    say("/mgabuffs opens the options. Shortcuts: status | armor | soulstone | food | group | minutes N | sound | unlock | lock | reset")
   end
-  shownSignature = nil
-  check()
 end
 
 -- Events ----------------------------------------------------------------------
@@ -458,6 +609,9 @@ events:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 events:SetScript("OnEvent", function(_, event, unit, _, spellId)
   if event == "PLAYER_LOGIN" then
     place()
+    -- A options-panel failure on some client must not take the reminders down with it.
+    local built, problem = pcall(buildOptions)
+    if not built then say("options page unavailable: " .. tostring(problem)) end
     check()
     if C_Timer and C_Timer.NewTicker then
       C_Timer.NewTicker(TICK_SECONDS, check)
