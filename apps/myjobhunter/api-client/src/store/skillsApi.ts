@@ -1,11 +1,10 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { SKILLS_TAG } from "../constants/profileTags";
 import { removalIsDone } from "../utils/removalIsDone";
 import { withoutListItem } from "../utils/withoutListItem";
 import type { Skill } from "../types/skill/skill";
 import type { SkillListResponse } from "../types/skill/skill-list-response";
 import type { SkillCreateRequest } from "../types/skill/skill-create-request";
-
-const SKILLS_TAG = "Skills";
 
 const skillsApi = baseApi.enhanceEndpoints({ addTagTypes: [SKILLS_TAG] }).injectEndpoints({
   endpoints: (build) => ({
