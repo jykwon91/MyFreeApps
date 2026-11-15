@@ -15,6 +15,8 @@ export const GUILD_SORT_KEYS = {
   level: "level",
   className: "class",
   itemLevel: "ilvl",
+  /** The filtered profession's skill: offered only while a profession is picked. */
+  skill: "skill",
 } as const;
 export type GuildSortKey = (typeof GUILD_SORT_KEYS)[keyof typeof GUILD_SORT_KEYS];
 
@@ -24,10 +26,15 @@ export const GUILD_SORT_LABELS: Readonly<Record<GuildSortKey, string>> = {
   level: "Level",
   class: "Class",
   ilvl: "Item level",
+  skill: "Profession skill",
 };
 
 /** Sorts that read best highest-first by default (rank reads lowest-first: 0 is the guild master). */
-export const GUILD_SORT_DESCENDING_FIRST: ReadonlySet<GuildSortKey> = new Set([GUILD_SORT_KEYS.level, GUILD_SORT_KEYS.itemLevel]);
+export const GUILD_SORT_DESCENDING_FIRST: ReadonlySet<GuildSortKey> = new Set([
+  GUILD_SORT_KEYS.level,
+  GUILD_SORT_KEYS.itemLevel,
+  GUILD_SORT_KEYS.skill,
+]);
 
 /** URL search params of the member list. */
 export const GUILD_PARAMS = { query: "q", className: "class", minLevel: "level", profession: "prof", sort: "sort", direction: "dir" } as const;
@@ -70,7 +77,8 @@ export const GUILD_STATE_MESSAGES: Readonly<Record<GuildPageState, string>> = {
 export const GUILD_NOT_FOUND_STATUS = 404;
 /** Shown in a member-table cell Blizzard gave no value for. */
 export const GUILD_MISSING_VALUE = "—";
-/** The loading skeleton's member rows and toolbar controls. */
+/** The loading skeleton's member rows, toolbar controls and profession chips. */
 export const GUILD_SKELETON_ROWS = 8;
-export const GUILD_SKELETON_CONTROLS = 5;
+export const GUILD_SKELETON_CONTROLS = 4;
+export const GUILD_SKELETON_CHIPS = 4;
 export const MS_PER_HOUR = 3_600_000;

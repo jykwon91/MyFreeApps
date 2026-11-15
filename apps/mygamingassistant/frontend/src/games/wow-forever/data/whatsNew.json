@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-15",
+    "title": "Find a crafter on the roster in one tap",
+    "summary": "The Roster tab has a row of profession buttons, each with its icon and how many members have it. Tap one to see only those members, best skill first; tap it again for everyone. Tap Level in the table to sort them by character level instead.",
+    "to": "/wow-forever/topdeadcenter?tab=roster"
+  },
+  {
+    "date": "2026-11-15",
     "title": "Recipe tooltips everywhere",
     "summary": "Recipe names across WoW Forever now work like the guild page: on the Professions guides, the Auction House recipe prices and a character's known recipes, hover a recipe to see what it makes, the skill and its materials, and click it to open the full recipe on the Recipes page. Known recipes on the character page now show their icons too.",
     "to": "/wow-forever/professions?p=tailoring"

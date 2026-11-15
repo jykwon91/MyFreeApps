@@ -11,6 +11,7 @@ import {
 } from "@/games/wow-forever/data/guild/guildConfig";
 import { isGuideProfession } from "@/games/wow-forever/lib/guideProfession";
 import { memberProfessionSkill } from "@/games/wow-forever/lib/guild/guildMemberProfessions";
+import type { GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
 import type { GuildMemberFilters } from "@/games/wow-forever/types/guild/guildMemberFilters";
 import type { GuildMemberName } from "@/games/wow-forever/types/guild/guildMemberName";
@@ -31,6 +32,26 @@ export function isSortKey(value: string): value is GuildSortKey {
   return SORT_KEYS.includes(value);
 }
 
+/** Sorting by profession skill needs a profession: without one, it sorts by level (highest first). */
+export function withoutOrphanSkillSort(filters: GuildMemberFilters): GuildMemberFilters {
+  if (filters.profession || filters.sort !== GUILD_SORT_KEYS.skill) return filters;
+  return { ...filters, sort: GUILD_SORT_KEYS.level, descending: GUILD_SORT_DESCENDING_FIRST.has(GUILD_SORT_KEYS.level) };
+}
+
+/**
+ * The state after picking a profession chip ("" = All). Picking one while the list is in its
+ * default order sorts by that skill, highest first; a sort the viewer chose stays. Going back
+ * to All from a skill sort returns to the default order.
+ */
+export function withProfession(filters: GuildMemberFilters, profession: GuideProfession | ""): GuildMemberFilters {
+  const next = { ...filters, profession };
+  if (profession && filters.sort === GUILD_SORT_KEYS.rank) return { ...next, sort: GUILD_SORT_KEYS.skill, descending: true };
+  if (!profession && filters.sort === GUILD_SORT_KEYS.skill) {
+    return { ...next, sort: GUILD_SORT_KEYS.rank, descending: GUILD_SORT_DESCENDING_FIRST.has(GUILD_SORT_KEYS.rank) };
+  }
+  return next;
+}
+
 /** The member list's state from the URL; anything unknown falls back to the default. */
 export function filtersFromParams(params: URLSearchParams): GuildMemberFilters {
   const rawSort = params.get(GUILD_PARAMS.sort) ?? "";
@@ -38,14 +59,14 @@ export function filtersFromParams(params: URLSearchParams): GuildMemberFilters {
   const rawLevel = Number(params.get(GUILD_PARAMS.minLevel) ?? "0");
   const direction = params.get(GUILD_PARAMS.direction);
   const rawProfession = params.get(GUILD_PARAMS.profession);
-  return {
+  return withoutOrphanSkillSort({
     query: params.get(GUILD_PARAMS.query) ?? "",
     className: params.get(GUILD_PARAMS.className) ?? "",
     minLevel: GUILD_LEVEL_BANDS.includes(rawLevel) ? rawLevel : 0,
     profession: isGuideProfession(rawProfession) ? rawProfession : "",
     sort,
     descending: direction === null ? GUILD_SORT_DESCENDING_FIRST.has(sort) : direction === GUILD_DIRECTION_DESC,
-  };
+  });
 }
 
 /** The URL params for a state, leaving defaults out so a plain link stays plain. */
@@ -73,7 +94,7 @@ export function filterMembers(members: readonly GuildMember[], filters: GuildMem
   );
 }
 
-function sortValue(member: GuildMember, key: GuildSortKey): number | string | null {
+function sortValue(member: GuildMember, key: GuildSortKey, profession: GuideProfession | ""): number | string | null {
   switch (key) {
     case GUILD_SORT_KEYS.rank:
       return member.rank;
@@ -85,6 +106,8 @@ function sortValue(member: GuildMember, key: GuildSortKey): number | string | nu
       return member.class_name;
     case GUILD_SORT_KEYS.name:
       return memberFullName(member).toLowerCase();
+    case GUILD_SORT_KEYS.skill:
+      return profession ? (memberProfessionSkill(member, profession)?.skill ?? null) : null;
   }
 }
 
@@ -93,18 +116,27 @@ function compareValues(a: number | string, b: number | string): number {
   return String(a).localeCompare(String(b));
 }
 
+function byRank(a: GuildMember, b: GuildMember): number {
+  return (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER);
+}
+
+function byLevel(a: GuildMember, b: GuildMember): number {
+  return (b.level ?? -1) - (a.level ?? -1);
+}
+
 /**
- * Sorted by one column, then rank, level (highest first) and name. A member
- * missing the column's value always sorts last, in either direction — never as 0.
+ * Sorted by one column (the filtered profession's skill for `skill`), then rank, level
+ * (highest first) and name — level before rank for a skill tie, the next best crafter.
+ * A member missing the column's value always sorts last, in either direction — never as 0.
  */
-export function sortMembers(members: readonly GuildMember[], sort: GuildSortKey, descending: boolean): GuildMember[] {
+export function sortMembers(members: readonly GuildMember[], filters: Pick<GuildMemberFilters, "sort" | "descending" | "profession">): GuildMember[] {
+  const { sort, descending, profession } = filters;
+  const first = sort === GUILD_SORT_KEYS.skill ? [byLevel, byRank] : [byRank, byLevel];
   const tieBreak = (a: GuildMember, b: GuildMember): number =>
-    (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER) ||
-    (b.level ?? -1) - (a.level ?? -1) ||
-    memberFullName(a).localeCompare(memberFullName(b));
+    first[0](a, b) || first[1](a, b) || memberFullName(a).localeCompare(memberFullName(b));
   return [...members].sort((a, b) => {
-    const va = sortValue(a, sort);
-    const vb = sortValue(b, sort);
+    const va = sortValue(a, sort, profession);
+    const vb = sortValue(b, sort, profession);
     if (va === null && vb === null) return tieBreak(a, b);
     if (va === null) return 1;
     if (vb === null) return -1;

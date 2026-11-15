@@ -197,11 +197,11 @@ describe("guild member list logic", () => {
   });
 
   it("sorts with missing values last in either direction, never as 0", () => {
-    const byIlvlDesc = sortMembers(MEMBERS, GUILD_SORT_KEYS.itemLevel, true).map((m) => m.slug);
-    const byIlvlAsc = sortMembers(MEMBERS, GUILD_SORT_KEYS.itemLevel, false).map((m) => m.slug);
+    const byIlvlDesc = sortMembers(MEMBERS, { sort: GUILD_SORT_KEYS.itemLevel, descending: true, profession: "" }).map((m) => m.slug);
+    const byIlvlAsc = sortMembers(MEMBERS, { sort: GUILD_SORT_KEYS.itemLevel, descending: false, profession: "" }).map((m) => m.slug);
     expect(byIlvlDesc).toEqual(["jason-kwon", "tiny-john", "big-sue", "new-guy"]);
     expect(byIlvlAsc).toEqual(["tiny-john", "jason-kwon", "big-sue", "new-guy"]);
-    expect(sortMembers(MEMBERS, GUILD_SORT_KEYS.rank, false).map((m) => m.slug)).toEqual([
+    expect(sortMembers(MEMBERS, { sort: GUILD_SORT_KEYS.rank, descending: false, profession: "" }).map((m) => m.slug)).toEqual([
       "jason-kwon",
       "big-sue",
       "tiny-john",
@@ -373,37 +373,83 @@ describe("guild page", () => {
     );
   });
 
-  it("filters the roster by profession and shows each member's skill in it", () => {
+  it("filters the roster by profession with one tap and shows each member's skill in it", () => {
     const members = [
       member({ professions: [{ id: 197, skill: 148, max_skill: 225 }] }),
       member({ slug: "big-sue", name: "Big", surname: "Sue", rank: 1, professions: [{ id: 171, skill: 300, max_skill: 300 }] }),
     ];
     mockQuery.mockReturnValue(query({ data: { ...GUILD, members } }));
     renderAt("/wow-forever/topdeadcenter?tab=roster");
-    const select = screen.getByLabelText("Profession");
-    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual([
-      "Any profession",
-      "Alchemy (1)",
-      "Tailoring (1)",
-    ]);
+    const chips = within(screen.getByRole("group", { name: "Profession" }));
+    expect(chips.getAllByRole("button").map((b) => b.textContent)).toEqual(["All 2", "Alchemy 1", "Tailoring 1"]);
+    expect(chips.getByRole("button", { name: "All 2" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("columnheader", { name: "Professions" })).toBeInTheDocument();
     const table = within(screen.getByRole("table"));
     expect(table.getByText("Alchemy")).toBeInTheDocument();
     expect(table.getByText("Artisan")).toBeInTheDocument();
-    fireEvent.change(select, { target: { value: "tailoring" } });
+    fireEvent.click(chips.getByRole("button", { name: "Tailoring 1" }));
     expect(screen.getByTestId("location")).toHaveTextContent(/prof=tailoring/);
+    expect(chips.getByRole("button", { name: "Tailoring 1" })).toHaveAttribute("aria-pressed", "true");
     expect(tableNames()).toEqual(["Jason Kwon"]);
     expect(within(screen.getByRole("table")).getByText("148 / 225")).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getByText("Expert")).toBeInTheDocument();
     expect(within(screen.getByRole("list", { name: "Guild members" })).getByText("148 / 225")).toBeInTheDocument();
+    // Tapping the picked chip again shows everyone.
+    fireEvent.click(chips.getByRole("button", { name: "Tailoring 1" }));
+    expect(screen.getByTestId("location")).not.toHaveTextContent(/prof=/);
+    expect(tableNames()).toHaveLength(2);
+  });
+
+  it("picking a profession sorts by its skill, highest first, ties by level; Level still sorts by character level", () => {
+    const members = [
+      member({ slug: "low", name: "Low", surname: "Tailor", rank: 0, level: 60, professions: [{ id: 197, skill: 75, max_skill: 150 }] }),
+      member({ slug: "high", name: "High", surname: "Tailor", rank: 3, level: 30, professions: [{ id: 197, skill: 225, max_skill: 300 }] }),
+      member({ slug: "tie-a", name: "Tie", surname: "Young", rank: 1, level: 20, professions: [{ id: 197, skill: 150, max_skill: 225 }] }),
+      member({ slug: "tie-b", name: "Tie", surname: "Old", rank: 2, level: 40, professions: [{ id: 197, skill: 150, max_skill: 225 }] }),
+    ];
+    mockQuery.mockReturnValue(query({ data: { ...GUILD, members } }));
+    renderAt("/wow-forever/topdeadcenter?tab=roster");
+    fireEvent.click(screen.getByRole("button", { name: "Tailoring 4" }));
+    expect(screen.getByTestId("location")).toHaveTextContent(/sort=skill/);
+    expect(screen.getByLabelText("Sort by")).toHaveValue("skill");
+    expect(screen.getByRole("columnheader", { name: "Professions" })).toHaveAttribute("aria-sort", "descending");
+    expect(tableNames()).toEqual(["High Tailor", "Tie Old", "Tie Young", "Low Tailor"]);
+    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Level" }));
+    expect(tableNames()).toEqual(["Low Tailor", "Tie Old", "High Tailor", "Tie Young"]);
+  });
+
+  it("keeps a sort the viewer chose when a profession is picked, and All goes back to rank order from a skill sort", () => {
+    const members = [
+      member({ slug: "a", name: "Ann", surname: "A", level: 30, professions: [{ id: 197, skill: 225, max_skill: 300 }] }),
+      member({ slug: "b", name: "Bob", surname: "B", level: 50, professions: [{ id: 197, skill: 75, max_skill: 150 }] }),
+    ];
+    mockQuery.mockReturnValue(query({ data: { ...GUILD, members } }));
+    renderAt("/wow-forever/topdeadcenter?tab=roster&sort=level");
+    fireEvent.click(screen.getByRole("button", { name: "Tailoring 2" }));
+    expect(screen.getByLabelText("Sort by")).toHaveValue("level");
+    expect(tableNames()).toEqual(["Bob B", "Ann A"]);
+    fireEvent.change(screen.getByLabelText("Sort by"), { target: { value: "skill" } });
+    expect(tableNames()).toEqual(["Ann A", "Bob B"]);
+    fireEvent.click(screen.getByRole("button", { name: "All 2" }));
+    expect(screen.getByLabelText("Sort by")).toHaveValue("rank");
+    expect(screen.getByTestId("location")).not.toHaveTextContent(/sort=/);
+    expect(within(screen.getByLabelText("Sort by")).queryByRole("option", { name: "Profession skill" })).toBeNull();
+  });
+
+  it("a link sorting by skill with no profession sorts by level", () => {
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    renderAt("/wow-forever/topdeadcenter?tab=roster&sort=skill");
+    expect(screen.getByLabelText("Sort by")).toHaveValue("level");
   });
 
   it("shows everyone when a shared link names a profession nobody in the guild has, and drops it on the next change", () => {
     const members = MEMBERS.map((m) => ({ ...m, professions: [] }));
     mockQuery.mockReturnValue(query({ data: { ...GUILD, members } }));
-    renderAt("/wow-forever/topdeadcenter?tab=roster&prof=tailoring");
+    renderAt("/wow-forever/topdeadcenter?tab=roster&prof=tailoring&sort=skill");
     expect(screen.getByText("Showing 4 of 4 members")).toBeInTheDocument();
-    expect(screen.getByLabelText("Profession")).toHaveValue("");
+    // Nobody has a profession: no chips.
+    expect(screen.queryByRole("group", { name: "Profession" })).toBeNull();
+    expect(screen.getByLabelText("Sort by")).toHaveValue("level");
     fireEvent.change(screen.getByLabelText("Class"), { target: { value: "Mage" } });
     expect(screen.getByTestId("location")).toHaveTextContent(/class=Mage/);
     expect(screen.getByTestId("location")).not.toHaveTextContent(/prof=/);
