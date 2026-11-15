@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext } from "./fixtures/auth";
 import { deleteApplicant } from "./fixtures/applicants";
 import { deleteSignedLease } from "./fixtures/signed-leases";
 import { deleteTemplate } from "./fixtures/lease-templates";
+import { localToday } from "./fixtures/local-today";
 
 /**
  * A sent or signed lease keeps the documents it was generated with: asking to
@@ -10,7 +11,7 @@ import { deleteTemplate } from "./fixtures/lease-templates";
  * and adding a brand-new template still works.
  */
 
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = localToday();
 
 interface LeaseView {
   status: string;

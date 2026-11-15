@@ -4,7 +4,7 @@ import type { SignedLeaseDetail } from "@mybookkeeper/api-client/types/lease/sig
 import type { SignedLeaseStatus } from "@mybookkeeper/api-client/types/lease/signed-lease-status";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
 import { leaseValueText } from "@mybookkeeper/api-client/utils/leasePlaceholderValue";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { LEASE_DETAIL_MESSAGES, madeOn, signedOn } from "../../constants/leaseDetails";
 import { LEASE_MESSAGES } from "../../constants/leases";
 

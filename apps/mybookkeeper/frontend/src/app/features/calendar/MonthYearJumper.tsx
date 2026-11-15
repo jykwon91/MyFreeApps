@@ -38,9 +38,9 @@ export default function MonthYearJumper({ fromIso, onJump }: MonthYearJumperProp
   const currentYear = fromDate.getUTCFullYear();
   const currentMonth = fromDate.getUTCMonth();
 
-  const today = new Date();
-  const minYear = today.getUTCFullYear() - YEAR_LOOKBACK;
-  const maxYear = today.getUTCFullYear() + YEAR_LOOKAHEAD;
+  const thisYear = new Date().getFullYear();
+  const minYear = thisYear - YEAR_LOOKBACK;
+  const maxYear = thisYear + YEAR_LOOKAHEAD;
   const years = Array.from(
     { length: maxYear - minYear + 1 },
     (_, i) => minYear + i,

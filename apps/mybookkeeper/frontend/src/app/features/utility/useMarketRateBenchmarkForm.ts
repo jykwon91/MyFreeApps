@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
 import { showError, showSuccess } from "@platform/ui";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import {
   useDeleteMarketRateBenchmarkMutation,
   useUpsertMarketRateBenchmarkMutation,

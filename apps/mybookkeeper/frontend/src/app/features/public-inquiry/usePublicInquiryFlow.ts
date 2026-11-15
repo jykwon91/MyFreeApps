@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import api from "@/shared/lib/api";
 import { extractErrorMessage } from "@platform/ui";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import type { EmploymentStatus } from "@mybookkeeper/api-client/types/inquiry/employment-status";
 import type { PublicListing } from "@/shared/types/inquiry/public-listing";
 import type { PublicInquiryRequest } from "@/shared/types/inquiry/public-inquiry-request";

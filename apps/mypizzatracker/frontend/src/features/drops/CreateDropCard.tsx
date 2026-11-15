@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, Button, LoadingButton, FormField, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { localToday } from "@platform/core/utils/localToday";
 import {
   useCreateDropMutation,
 } from "@/store/dropsApi";
@@ -9,7 +10,7 @@ import { ensureSeconds } from "./dropTime";
 
 export default function CreateDropCard({ onCreated }: CreateDropCardProps) {
   const [form, setForm] = useState<DropCreateBody>({
-    date: new Date().toISOString().slice(0, 10),
+    date: localToday(),
     name: "",
     slot_window_start: "11:00",
     slot_window_end: "15:00",

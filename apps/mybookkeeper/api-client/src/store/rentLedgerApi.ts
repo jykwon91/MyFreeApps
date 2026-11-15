@@ -6,7 +6,7 @@ import type { RentLedgerResponse } from "../types/rent/rent-ledger-response";
 import type { RentSchedule } from "../types/rent/rent-schedule";
 import type { RentScheduleCreateRequest } from "../types/rent/rent-schedule-create-request";
 import type { RentScheduleUpdateRequest } from "../types/rent/rent-schedule-update-request";
-import { localToday } from "../utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 
 /**
  * RTK Query slice for the tenant rent ledger.

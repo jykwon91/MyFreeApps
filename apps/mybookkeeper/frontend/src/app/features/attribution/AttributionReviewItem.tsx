@@ -10,7 +10,7 @@ import {
   useRejectAttributionReviewMutation,
 } from "@mybookkeeper/api-client/store/attributionApi";
 import { useGetTenantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { buildTenantOptions } from "@mybookkeeper/api-client/utils/tenantStatus";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import AttributionChannelBadge from "./AttributionChannelBadge";

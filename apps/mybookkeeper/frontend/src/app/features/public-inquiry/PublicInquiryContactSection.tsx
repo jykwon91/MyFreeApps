@@ -6,7 +6,7 @@ import {
   latestMoveInISO,
   rentEstimate,
 } from "./public-inquiry-helpers";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import PublicInquiryField from "./PublicInquiryField";
 import type { PublicListing } from "@/shared/types/inquiry/public-listing";
 

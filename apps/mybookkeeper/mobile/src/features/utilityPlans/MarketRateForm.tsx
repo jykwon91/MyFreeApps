@@ -4,7 +4,7 @@ import { UTILITY_SERVICE_TYPE_LABELS } from "@mybookkeeper/api-client/constants/
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import { BENCHMARK_NOTES_MAX_LENGTH, BENCHMARK_SOURCE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/benchmarkForm";
 import { isFlatService, marketRateFormProblems, marketRateToFormValues } from "@mybookkeeper/api-client/utils/marketRateForm";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
 

@@ -14,7 +14,7 @@ import type { SignedLeaseListArgs } from "../types/lease/signed-lease-list-args"
 import type { SignedLeaseListResponse } from "../types/lease/signed-lease-list-response";
 import type { SignedLeaseTemplatePrefillResponse } from "../types/lease/signed-lease-template-prefill";
 import type { SignedLeaseUpdateRequest } from "../types/lease/signed-lease-update-request";
-import { localToday } from "../utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 
 /**
  * A tenant's contract dates and ended status come from their latest lease, so any lease

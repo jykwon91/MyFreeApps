@@ -1,4 +1,4 @@
-import { localToday } from "../utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { baseApi } from "@platform/core/store/baseApi";
 import type { MarketRateBenchmark } from "../types/utility/market-rate-benchmark";
 import type { MarketRateBenchmarkUpsertRequest } from "../types/utility/market-rate-benchmark-upsert-request";

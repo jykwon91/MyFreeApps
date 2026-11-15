@@ -1,5 +1,5 @@
 import { useListTenantPagesInfiniteQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";

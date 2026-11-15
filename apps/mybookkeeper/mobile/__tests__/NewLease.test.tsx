@@ -2,7 +2,7 @@ import { leaseTemplatesApi } from "@mybookkeeper/api-client/store/leaseTemplates
 import type { MergedPlaceholder } from "@mybookkeeper/api-client/types/lease/merged-placeholder";
 import type { LeasePlaceholderInputType } from "@mybookkeeper/api-client/types/lease/lease-placeholder-input-type";
 import type { PlaceholderProvenance } from "@mybookkeeper/api-client/types/lease/placeholder-provenance";
-import { localToday } from "@mybookkeeper/api-client/utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 import api from "@platform/core/lib/api";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";

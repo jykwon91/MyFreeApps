@@ -8,7 +8,7 @@ import type { MultiGenerateDefaultsRequest } from "../types/lease/multi-generate
 import type { MultiGenerateDefaultsResponse } from "../types/lease/multi-generate-defaults-response";
 import type { SuggestPlaceholdersResponse } from "../types/lease/suggest-placeholders-response";
 import { LEASE_TEMPLATE_SUGGEST_TIMEOUT_MS, LEASE_TEMPLATE_UPLOAD_TIMEOUT_MS } from "../constants/leaseTemplateUpload";
-import { localToday } from "../utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 
 /**
  * Tag strategy: each template carries its own ``LeaseTemplate:{id}`` tag plus a shared

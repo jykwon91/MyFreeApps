@@ -4,7 +4,7 @@ import type { PendingReceiptListArgs } from "../types/lease/pending-receipt-list
 import type { PendingReceiptListResponse } from "../types/lease/pending-receipt-list-response";
 import type { SendReceiptRequest } from "../types/lease/send-receipt-request";
 import type { SendReceiptResponse } from "../types/lease/send-receipt-response";
-import { localToday } from "../utils/localToday";
+import { localToday } from "@platform/core/utils/localToday";
 
 
 /** RTK Query slice for rent receipts waiting to be sent. */
