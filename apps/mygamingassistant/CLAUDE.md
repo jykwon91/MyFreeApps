@@ -1992,6 +1992,17 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `remove()` leaves the zoom's end timer running, which throws). Double-click and box
   zoom are off (a click opens a zone). Unzoomed, `touch-action: pan-y` lets a
   finger scroll the page; zoomed it's `none` and the finger drags the map.
+  Full size (`MapFullSizeButton` in the breadcrumb row — never on the picture,
+  where it blocked clicks; `useMapFullSize`, owned by `WorldMapPanel` because
+  `MapCanvas` is keyed by map and remounts on every zone change) restyles the
+  map `<section>` in place as a fixed `h-dvh w-screen` cover (z-[1050], under
+  toasts) instead of portalling it, so the Leaflet viewer survives and its
+  ResizeObserver refits. The heading row goes `sr-only`; side padding centres
+  the content at the width where map + edge labels + hover line fit the window
+  height (`data/worldMap/mapFullSize.ts` — keep its px sums in step with the
+  classes). The rest of the page gets `inert` and body scroll is locked. Esc on
+  the viewer: placing → selection → leave full size → zoom out; Esc elsewhere
+  leaves it unless placing / picking / a selection takes it.
   Tests: `wowWorldMapViewport.test.ts`, `wowWorldMapZoomQueue.test.ts`,
   `e2e/mocked/wow-world-map-viewer.spec.ts`.
 - **Navigation like the in-game map.** `zones.json` carries every map's UiMap

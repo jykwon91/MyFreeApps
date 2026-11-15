@@ -98,6 +98,9 @@ interface MapCanvasProps {
   placing: boolean;
   onPlace: (x: number, y: number) => void;
   onCancelPlace: () => void;
+  /** The map fills the window (`useMapFullSize`, owned by the panel so it outlives a zone change): Esc leaves it. */
+  fullSize: boolean;
+  onExitFullSize: () => void;
   /** Controls drawn over the map's corner (the Layers button and panel), outside the viewer so its keys stay its own. */
   overlay?: ReactNode;
 }
@@ -131,6 +134,7 @@ export default function MapCanvas(props: MapCanvasProps) {
   const settled = ready || viewer.status === MAP_VIEWER_STATUS.failed;
   const [imageFailed, setImageFailed] = useState(false);
   const satellite = useSatelliteView(map.id);
+  const { fullSize, onExitFullSize } = props;
   const [hover, setHover] = useState<MapHit | null>(null);
   const down = useRef<{ x: number; y: number } | null>(null);
   // Fingers on the map: two or more is a pinch, never a click.
@@ -276,9 +280,10 @@ export default function MapCanvas(props: MapCanvasProps) {
     }
     if (e.key !== "Escape") return;
     e.preventDefault();
-    // Like the in-game map: Esc first stops placing a mark, then lets go of the selection, then zooms out.
+    // Like the in-game map: Esc first stops placing a mark, then lets go of the selection, then leaves full size, then zooms out.
     if (placing) onCancelPlace();
     else if (selectedId !== null) onClearSelection();
+    else if (fullSize) onExitFullSize();
     else onZoomOut();
   }
 

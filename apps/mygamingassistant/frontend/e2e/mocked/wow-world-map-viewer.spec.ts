@@ -244,6 +244,35 @@ test("a profession trainer's Show on map lands on that trainer's marker", async 
   expectInside(await boxOf(destination), await boxOf(page.getByTestId("zone-map")));
 });
 
+test("Full size map fills the window, keeps zooming, and Esc puts it back", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await openElwynn(page);
+  const before = await boxOf(page.getByTestId("zone-map"));
+
+  await page.getByRole("button", { name: "Full size map" }).click();
+  const full = await boxOf(page.getByTestId("zone-map"));
+  // Bigger, all on screen, and as tall as the window allows (less its edge labels and the hover line).
+  expect(full.width).toBeGreaterThan(before.width * 1.3);
+  expect(full.y).toBeGreaterThanOrEqual(0);
+  expect(full.y + full.height).toBeLessThanOrEqual(900);
+  expect(full.height).toBeGreaterThan(900 * 0.75);
+  await expectZoom(page, "Elwynn Forest", 1);
+  await expectNoHorizontalOverflow(page);
+
+  // The viewer still zooms at the new size.
+  await page.getByRole("button", { name: "Zoom the map in" }).click();
+  await page.getByRole("button", { name: "Zoom the map in" }).click();
+  await expectZoom(page, "Elwynn Forest", 2);
+  await expectPictureCoversViewer(page, "Elwynn Forest");
+
+  // A click into a zone keeps full size (the map is swapped, the section stays).
+  await page.getByRole("button", { name: "Reset zoom" }).click();
+  await page.getByTestId("zone-map").focus();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Full size map" })).toBeVisible();
+  expect((await boxOf(page.getByTestId("zone-map"))).width).toBeCloseTo(before.width, 0);
+});
+
 test.describe("on a phone", () => {
   test.use({ viewport: PHONE, hasTouch: true });
 
@@ -282,5 +311,22 @@ test.describe("on a phone", () => {
     // The pinch didn't open a map or set a position.
     await expect(page).toHaveURL(/[?&]m=1429/);
     await expectNoHorizontalOverflow(page);
+  });
+
+  test("Full size map fills the phone's width and the button is thumb-sized", async ({ page }) => {
+    await openElwynn(page);
+    const toggle = page.getByRole("button", { name: "Full size map" });
+    const button = await boxOf(toggle);
+    expect(button.width).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+    expect(button.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+
+    await toggle.click();
+    const full = await boxOf(page.getByTestId("zone-map"));
+    expect(full.x).toBeGreaterThanOrEqual(0);
+    expect(full.x + full.width).toBeLessThanOrEqual(PHONE.width);
+    expect(full.y).toBeLessThan(PHONE.height / 3);
+    await expectNoHorizontalOverflow(page);
+    await page.getByRole("button", { name: "Exit full size" }).click();
+    await expect(page.getByRole("button", { name: "Full size map" })).toBeVisible();
   });
 });

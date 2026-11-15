@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-14",
+    "title": "Full size World Map",
+    "summary": "The World Map has a Full size button just above its top-right corner: the map fills the window and still zooms, pans and takes clicks. Esc or Exit full size puts it back. On a phone, turn it sideways for the biggest map.",
+    "to": "/wow-forever/map"
+  },
+  {
+    "date": "2026-11-14",
     "title": "Bigger profession and class icons",
     "summary": "The icons on the profession, class and talent-tree buttons are bigger, so you can spot the one you want at a glance. On a phone each icon sits above its name, still three to a row.",
     "to": "/wow-forever/recipes"
