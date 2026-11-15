@@ -89,7 +89,7 @@ function wowNavItem(path: string, label: string, iconName: string, updates: Read
   };
 }
 
-/** "Overview" hub item shown at the top of the first WoW Forever sidebar group. */
+/** "Overview" hub item shown at the top of the entry's `overviewCategory` sidebar group (Start here). */
 function wowOverviewItem(updates: ReadonlySet<string>): NavItem {
   return wowNavItem(WOW_HUB_PATH, "Overview", "LayoutDashboard", updates);
 }
@@ -99,17 +99,17 @@ function wowFeatureItem(f: GameFeature, updates: ReadonlySet<string>): NavItem {
 }
 
 /**
- * The WoW nav, one headed group per registry category (Overview leads the first) —
+ * The WoW nav, one headed group per registry category (Overview leads the `overviewCategory` group) —
  * displayed in the desktop sidebar on `/wow-forever*` routes.
  */
 function buildWowNavSections(updates: ReadonlySet<string>): NavSection[] {
-  const { categories, features } = COMPANION_GAMES[WOW_FOREVER_SLUG];
-  return categories.map((category, i) => ({
+  const { categories, features, overviewCategory } = COMPANION_GAMES[WOW_FOREVER_SLUG];
+  return categories.map((category) => ({
     id: `wow-forever-${category.id}`,
     title: category.title,
     routePrefix: "/wow-forever",
     items: [
-      ...(i === 0 ? [wowOverviewItem(updates)] : []),
+      ...(category.id === overviewCategory ? [wowOverviewItem(updates)] : []),
       ...features.filter((f) => f.category === category.id).map((f) => wowFeatureItem(f, updates)),
     ],
   }));
