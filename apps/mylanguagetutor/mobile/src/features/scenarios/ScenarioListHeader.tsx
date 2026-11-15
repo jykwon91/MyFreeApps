@@ -1,5 +1,5 @@
 import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy";
-import { SESSION_BLOCK_COPY } from "@mylanguagetutor/api-client/constants/sessionBlockCopy";
+import { sessionBlockMessage } from "@mylanguagetutor/api-client/utils/sessionBlockMessage";
 import { levelLabel } from "@mylanguagetutor/api-client/utils/levelLabel";
 import { onboardingLevelPath } from "@mylanguagetutor/api-client/utils/onboardingLevelPath";
 import { Banner, MIN_TOUCH_TARGET, SHOWING_LAST_LOADED_MESSAGE, useTheme } from "@platform/mobile";
@@ -30,7 +30,7 @@ export default function ScenarioListHeader({ profile, languageName, isCapReached
       </View>
       <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm }}>{CATALOG_COPY.pickScenario}</Text>
       {/* Information, not an error to retry, as on the website. */}
-      {isCapReached ? <Banner message={SESSION_BLOCK_COPY.daily_limit} style={{ marginTop: spacing.sm }} tone="info" /> : null}
+      {isCapReached ? <Banner message={sessionBlockMessage("daily_limit")} style={{ marginTop: spacing.sm }} tone="info" /> : null}
     </View>
   );
 }

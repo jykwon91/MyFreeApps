@@ -5,7 +5,7 @@
  * Try again recovers; the loading skeleton lines up with the loaded list.
  */
 import { test, expect } from "@platform/ui/test-support/crashGuard";
-import { DAILY_LIMIT_COPY } from "./constants/blockCopy";
+import { DAILY_LIMIT_COPY, LEARNER_TIME_ZONE } from "./constants/blockCopy";
 import { LESSONS_LOAD_FAILED } from "./constants/onboardingCopy";
 import { GET_PROFILE, LIST_SCENARIOS } from "./constants/stubbedEndpoints";
 import { PHONE_VIEWPORT, TABLET_VIEWPORT } from "./constants/viewports";
@@ -13,6 +13,8 @@ import { SCENARIOS } from "./fixtures/catalogFixtures";
 import { expectSkeletonRowsLineUp } from "./fixtures/skeletonAlignment";
 import { signedInTutor } from "./fixtures/signedInTutor";
 import { CAP_REACHED } from "./fixtures/tutorFixtures";
+
+test.use({ timezoneId: LEARNER_TIME_ZONE });
 
 test("lists the scenarios in path order for the learner's language, and opens the one picked", async ({ page }) => {
   const api = await signedInTutor(page);

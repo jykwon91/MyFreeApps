@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy";
-import { SESSION_BLOCK_COPY } from "@mylanguagetutor/api-client/constants/sessionBlockCopy";
+import { sessionBlockMessage } from "@mylanguagetutor/api-client/utils/sessionBlockMessage";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 import type { Profile } from "@mylanguagetutor/api-client/types/tutor/profile";
@@ -90,14 +90,14 @@ describe("ScenarioPath", () => {
     expect(screen.getByText(/Level: I know some phrases/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: CATALOG_COPY.changeLevel })).toHaveAttribute("href", "/onboarding/level?language=es");
     expect(screen.getByRole("link", { name: /At the cafe/ })).toHaveAttribute("href", "/practice?scenario=cafe");
-    expect(screen.queryByText(SESSION_BLOCK_COPY.daily_limit)).not.toBeInTheDocument();
+    expect(screen.queryByText(sessionBlockMessage("daily_limit"))).not.toBeInTheDocument();
   });
 
   it("says when today's practice is used up, and still lists the scenarios", () => {
     usage = { remaining_fraction: 0, cap_reached: true, tutor_available: true };
     renderPath();
 
-    expect(screen.getByText(SESSION_BLOCK_COPY.daily_limit)).toBeInTheDocument();
+    expect(screen.getByText(sessionBlockMessage("daily_limit"))).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Greetings/ })).toBeInTheDocument();
   });
 
