@@ -1,5 +1,6 @@
 import { ORGANIZATION_HEADER } from "@platform/core/constants/organizationHeader";
 import { baseApi } from "@platform/core/store/baseApi";
+import { RECEIPTS_PENDING_TAG } from "../constants/receiptsPendingTag";
 import type { BatchStatusResponse } from "../types/document/BatchStatusResponse";
 import type { BulkDeleteDocumentsResponse } from "../types/document/BulkDeleteDocumentsResponse";
 import type { Document } from "../types/document/document";
@@ -8,7 +9,7 @@ import type { UploadDocumentArgs } from "../types/document/UploadDocumentArgs";
 import type { UploadResponse } from "../types/document/UploadResponse";
 
 export const documentsApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["Document", "Summary", "Transaction"],
+  addTagTypes: ["Document", "Summary", "Transaction", "SignedLease"],
 }).injectEndpoints({
   endpoints: (builder) => ({
     getDocuments: builder.query<Document[], { status?: string; propertyId?: string; excludeProcessing?: boolean }>({
@@ -43,11 +44,13 @@ export const documentsApi = baseApi.enhanceEndpoints({
     }),
     deleteDocument: builder.mutation<void, string>({
       query: (id) => ({ url: `/documents/${id}`, method: "DELETE" }),
-      invalidatesTags: ["Document", "Summary", "Transaction"],
+      // Deleting a document soft-deletes its payments and their pending receipts.
+      invalidatesTags: ["Document", "Summary", "Transaction", RECEIPTS_PENDING_TAG],
     }),
     bulkDeleteDocuments: builder.mutation<BulkDeleteDocumentsResponse, string[]>({
       query: (ids) => ({ url: "/documents/bulk-delete", method: "POST", data: { ids } }),
-      invalidatesTags: ["Document", "Summary", "Transaction"],
+      // Deleting a document soft-deletes its payments and their pending receipts.
+      invalidatesTags: ["Document", "Summary", "Transaction", RECEIPTS_PENDING_TAG],
     }),
     reExtractDocument: builder.mutation<{ status: string }, string>({
       query: (id) => ({ url: `/documents/${id}/re-extract`, method: "POST" }),

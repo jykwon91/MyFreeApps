@@ -8,6 +8,7 @@ from app.core.transaction_statuses import REVIEWABLE_STATUSES
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.models.extraction.extraction import Extraction
+from app.repositories.leases import pending_rent_receipt_repo
 
 
 def _live_org_transactions_for_update_stmt(
@@ -71,16 +72,26 @@ def apply_soft_delete(transaction: Transaction, now: datetime) -> None:
 
 
 async def mark_deleted(db: AsyncSession, transaction: Transaction) -> None:
-    apply_soft_delete(transaction, datetime.now(timezone.utc))
-    await db.flush()
+    await soft_delete_transactions(db, [transaction])
 
 
 async def soft_delete_transactions(db: AsyncSession, transactions: list[Transaction]) -> None:
-    """Soft-delete already-locked rows as ``mark_deleted`` does, with one shared timestamp and one flush."""
+    """Soft-delete already-locked rows with one shared timestamp and one flush.
+
+    Every delete path (single, bulk, keep/merge duplicates, document delete) ends here, so this is
+    where a deleted payment's pending rent receipt is dismissed — it must not stay listed or sendable.
+    """
     now = datetime.now(timezone.utc)
     for txn in transactions:
         apply_soft_delete(txn, now)
     await db.flush()
+    for organization_id in {txn.organization_id for txn in transactions}:
+        await pending_rent_receipt_repo.dismiss_pending_for_transactions(
+            db,
+            transaction_ids=[t.id for t in transactions if t.organization_id == organization_id],
+            organization_id=organization_id,
+            dismissed_at=now,
+        )
 
 
 async def bulk_approve(

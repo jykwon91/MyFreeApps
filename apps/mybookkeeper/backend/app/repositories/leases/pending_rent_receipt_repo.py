@@ -109,6 +109,7 @@ async def list_open(
             and_(
                 Transaction.id == PendingRentReceipt.transaction_id,
                 Transaction.organization_id == organization_id,
+                Transaction.deleted_at.is_(None),
             ),
         )
         .outerjoin(
@@ -145,7 +146,17 @@ async def count_open(
 ) -> int:
     """Rows ``list_open`` returns: still to send, or a send still to confirm."""
     result = await db.execute(
-        select(func.count()).select_from(PendingRentReceipt).where(
+        select(func.count())
+        .select_from(PendingRentReceipt)
+        .join(
+            Transaction,
+            and_(
+                Transaction.id == PendingRentReceipt.transaction_id,
+                Transaction.organization_id == organization_id,
+                Transaction.deleted_at.is_(None),
+            ),
+        )
+        .where(
             PendingRentReceipt.organization_id == organization_id,
             PendingRentReceipt.status.in_(OPEN_RECEIPT_STATUSES),
             PendingRentReceipt.deleted_at.is_(None),
@@ -319,6 +330,34 @@ async def mark_dismissed_if_pending(
         .execution_options(synchronize_session=False)
     )
     return result.rowcount == 1
+
+
+async def dismiss_pending_for_transactions(
+    db: AsyncSession,
+    *,
+    transaction_ids: list[uuid.UUID],
+    organization_id: uuid.UUID,
+    dismissed_at: _dt.datetime,
+) -> int:
+    """``pending`` → ``dismissed`` for every receipt of the given (just deleted) transactions.
+
+    A ``sending`` row is left alone — an attempt is in flight and settles itself.
+    Returns how many receipts were dismissed.
+    """
+    if not transaction_ids:
+        return 0
+    result = await db.execute(
+        update(PendingRentReceipt)
+        .where(
+            PendingRentReceipt.transaction_id.in_(transaction_ids),
+            PendingRentReceipt.organization_id == organization_id,
+            PendingRentReceipt.status == "pending",
+            PendingRentReceipt.deleted_at.is_(None),
+        )
+        .values(status="dismissed", updated_at=dismissed_at)
+        .execution_options(synchronize_session=False)
+    )
+    return result.rowcount
 
 
 async def mark_dismissed_if_claimed(
