@@ -26,6 +26,7 @@ from app.models.properties.property import Property, PropertyType
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.models.user.user import User
+from app.models.vendors.vendor import Vendor
 from app.repositories import transaction_repo
 from app.repositories.transactions.transaction_bulk_repo import live_transactions_for_update_stmt
 from app.repositories.classification import classification_rule_repo
@@ -763,3 +764,134 @@ class TestKeepDuplicate:
         assert resp.status_code == 422
         await db.refresh(txn)
         assert txn.deleted_at is None
+
+
+async def _foreign_property_and_vendor(db: AsyncSession) -> tuple[Property, Vendor]:
+    """A property and vendor that belong to an organization the caller is not in."""
+    from app.repositories import organization_repo
+
+    stranger = User(
+        id=uuid.uuid4(), email="foreign-owner@example.com", hashed_password="fakehash",
+        is_active=True, is_superuser=False, is_verified=True,
+    )
+    db.add(stranger)
+    await db.commit()
+    other_org = await organization_repo.create(db, "Foreign Org", stranger.id)
+    await db.commit()
+    foreign_prop = Property(
+        id=uuid.uuid4(), organization_id=other_org.id, user_id=stranger.id,
+        name="Foreign Property", type=PropertyType.SHORT_TERM,
+    )
+    foreign_vendor = Vendor(
+        id=uuid.uuid4(), organization_id=other_org.id, user_id=stranger.id,
+        name="Foreign Plumbing", category="plumber",
+    )
+    db.add_all([foreign_prop, foreign_vendor])
+    await db.commit()
+    return foreign_prop, foreign_vendor
+
+
+async def _own_vendor(db: AsyncSession, org: Organization, owner: User) -> Vendor:
+    vendor = Vendor(
+        id=uuid.uuid4(), organization_id=org.id, user_id=owner.id,
+        name="Own Plumbing", category="plumber",
+    )
+    db.add(vendor)
+    await db.commit()
+    return vendor
+
+
+_CREATE_BODY = {
+    "transaction_date": "2025-06-15",
+    "tax_year": 2025,
+    "amount": "150.00",
+    "transaction_type": "expense",
+    "category": "maintenance",
+}
+
+
+class TestForeignPropertyAndVendor:
+    @pytest.mark.asyncio
+    async def test_create_with_foreign_property_is_rejected_and_nothing_stored(
+        self, client: AsyncClient, db: AsyncSession, org: Organization,
+    ) -> None:
+        foreign_prop, _ = await _foreign_property_and_vendor(db)
+
+        resp = await client.post("/transactions", json={**_CREATE_BODY, "property_id": str(foreign_prop.id)})
+
+        assert resp.status_code == 422
+        stored = (await db.execute(
+            select(Transaction).where(Transaction.organization_id == org.id)
+        )).scalars().all()
+        assert stored == []
+
+    @pytest.mark.asyncio
+    async def test_create_with_own_property_succeeds(
+        self, client: AsyncClient, prop: Property,
+    ) -> None:
+        resp = await client.post("/transactions", json={**_CREATE_BODY, "property_id": str(prop.id)})
+
+        assert resp.status_code == 201
+        assert resp.json()["property_id"] == str(prop.id)
+
+    @pytest.mark.asyncio
+    async def test_update_with_foreign_property_is_rejected_and_learns_no_rule(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User, prop: Property,
+    ) -> None:
+        foreign_prop, _ = await _foreign_property_and_vendor(db)
+        txn = await _seed_transaction(db, org, owner, property_id=prop.id)
+
+        resp = await client.patch(f"/transactions/{txn.id}", json={"property_id": str(foreign_prop.id)})
+
+        assert resp.status_code == 422
+        await db.refresh(txn)
+        assert txn.property_id == prop.id
+        assert await classification_rule_repo.list_rules(db, org.id) == []
+
+    @pytest.mark.asyncio
+    async def test_update_with_foreign_vendor_is_rejected_and_unchanged(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User,
+    ) -> None:
+        _, foreign_vendor = await _foreign_property_and_vendor(db)
+        txn = await _seed_transaction(db, org, owner)
+
+        resp = await client.patch(f"/transactions/{txn.id}", json={"vendor_id": str(foreign_vendor.id)})
+
+        assert resp.status_code == 422
+        await db.refresh(txn)
+        assert txn.vendor_id is None
+
+    @pytest.mark.asyncio
+    async def test_update_with_own_property_and_vendor_succeeds(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User, prop: Property,
+    ) -> None:
+        vendor = await _own_vendor(db, org, owner)
+        txn = await _seed_transaction(db, org, owner)
+
+        resp = await client.patch(
+            f"/transactions/{txn.id}",
+            json={"property_id": str(prop.id), "vendor_id": str(vendor.id)},
+        )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["property_id"] == str(prop.id)
+        assert body["vendor_id"] == str(vendor.id)
+
+    @pytest.mark.asyncio
+    async def test_update_can_still_clear_property_and_vendor(
+        self, client: AsyncClient, db: AsyncSession, org: Organization, owner: User, prop: Property,
+    ) -> None:
+        vendor = await _own_vendor(db, org, owner)
+        txn = await _seed_transaction(db, org, owner, property_id=prop.id)
+        txn.vendor_id = vendor.id
+        await db.commit()
+
+        resp = await client.patch(
+            f"/transactions/{txn.id}", json={"property_id": None, "vendor_id": None},
+        )
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["property_id"] is None
+        assert body["vendor_id"] is None
