@@ -5,6 +5,7 @@ import type { LeaseAttachmentKind } from "../types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachmentUploadRequest } from "../types/lease/signed-lease-attachment-upload-request";
 import type { SignedLeaseAttachment } from "../types/lease/signed-lease-attachment";
 import type { SignedLeaseCreateRequest } from "../types/lease/signed-lease-create-request";
+import type { SignedLeaseDeleteRequest } from "../types/lease/signed-lease-delete-request";
 import type { SignedLeaseDetail } from "../types/lease/signed-lease-detail";
 import { LEASE_PAGE_SIZE } from "../constants/leaseLabels";
 import type { SignedLeasePageArgs } from "../types/lease/signed-lease-page-args";
@@ -14,11 +15,37 @@ import type { SignedLeaseTemplatePrefillResponse } from "../types/lease/signed-l
 import type { SignedLeaseUpdateRequest } from "../types/lease/signed-lease-update-request";
 import { localToday } from "../utils/localToday";
 
+/**
+ * A tenant's contract dates and ended status come from their latest lease, so any lease
+ * write that can change it must refresh the applicant, the applicant lists and the tenant
+ * lists (the default tenant list drops ended tenants, so it needs refetching to gain one back).
+ */
+function tagsForTenantDates(applicantId: string) {
+  return [
+    { type: "Applicant" as const, id: applicantId },
+    { type: "Applicant" as const, id: "LIST" },
+    { type: "Applicant" as const, id: "TENANT_LIST" },
+  ];
+}
+
 /** A new lease also changes the one it follows, which now has a successor. */
 function tagsAfterNewLease(lease: SignedLeaseDetail | undefined) {
-  const tags: { type: "SignedLease"; id: string }[] = [{ type: "SignedLease", id: "LIST" }];
-  if (lease?.parent_lease_id) tags.push({ type: "SignedLease", id: lease.parent_lease_id });
-  return tags;
+  const tags = [{ type: "SignedLease" as const, id: "LIST" }];
+  if (lease?.parent_lease_id) tags.push({ type: "SignedLease" as const, id: lease.parent_lease_id });
+  return lease ? [...tags, ...tagsForTenantDates(lease.applicant_id)] : tags;
+}
+
+/** Editing the dates moves the tenant's contract end. */
+function tagsAfterLeaseUpdate(
+  lease: SignedLeaseDetail | undefined,
+  _error: unknown,
+  { leaseId }: { leaseId: string },
+) {
+  return [
+    { type: "SignedLease" as const, id: leaseId },
+    { type: "SignedLease" as const, id: "LIST" },
+    ...(lease ? tagsForTenantDates(lease.applicant_id) : []),
+  ];
 }
 
 /** Extending or undoing can restart or re-end the tenancy, which lives on the applicant. */
@@ -30,9 +57,7 @@ function tagsAfterTermChange(
   return [
     { type: "SignedLease" as const, id: leaseId },
     { type: "SignedLease" as const, id: "LIST" },
-    ...(lease
-      ? [{ type: "Applicant" as const, id: lease.applicant_id }, { type: "Applicant" as const, id: "LIST" }]
-      : []),
+    ...(lease ? tagsForTenantDates(lease.applicant_id) : []),
   ];
 }
 
@@ -114,15 +139,15 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
         patchCacheAfterSuccess(queryFulfilled, (data) => {
           dispatch(signedLeasesApi.util.updateQueryData("getSignedLeaseById", leaseId, () => data));
         }),
-      invalidatesTags: (_r, _e, { leaseId }) => [
-        { type: "SignedLease", id: leaseId },
-        { type: "SignedLease", id: "LIST" },
-      ],
+      invalidatesTags: tagsAfterLeaseUpdate,
     }),
 
-    deleteSignedLease: builder.mutation<void, string>({
-      query: (id) => ({ url: `/signed-leases/${id}`, method: "DELETE" }),
-      invalidatesTags: [{ type: "SignedLease", id: "LIST" }],
+    deleteSignedLease: builder.mutation<void, SignedLeaseDeleteRequest>({
+      query: ({ leaseId }) => ({ url: `/signed-leases/${leaseId}`, method: "DELETE" }),
+      invalidatesTags: (_r, _e, { applicantId }) => [
+        { type: "SignedLease", id: "LIST" },
+        ...tagsForTenantDates(applicantId),
+      ],
     }),
 
     generateSignedLease: builder.mutation<SignedLeaseDetail, string>({

@@ -160,7 +160,7 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
         ) : null}
         {canWrite ? (
           <View style={{ marginTop: spacing.xl }}>
-            <DeleteLeaseButton leaseId={lease.id} parentLeaseId={lease.parent_lease_id} successorLeaseId={lease.successor_lease_id} tenantName={lease.applicant_legal_name} />
+            <DeleteLeaseButton applicantId={lease.applicant_id} leaseId={lease.id} parentLeaseId={lease.parent_lease_id} successorLeaseId={lease.successor_lease_id} tenantName={lease.applicant_legal_name} />
           </View>
         ) : null}
       </ScrollView>

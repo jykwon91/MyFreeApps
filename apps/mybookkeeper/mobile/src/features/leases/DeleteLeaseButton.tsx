@@ -11,12 +11,13 @@ import { askOnce } from "../../lib/askOnce";
 
 interface DeleteLeaseButtonProps {
   leaseId: string;
+  applicantId: string;
   tenantName: string | null;
   parentLeaseId: string | null;
   successorLeaseId: string | null;
 }
 
-export default function DeleteLeaseButton({ leaseId, tenantName, parentLeaseId, successorLeaseId }: DeleteLeaseButtonProps) {
+export default function DeleteLeaseButton({ leaseId, applicantId, tenantName, parentLeaseId, successorLeaseId }: DeleteLeaseButtonProps) {
   const dispatch = useDispatch<AppDispatch>();
   const { showToast } = useToast();
   const [deleteLease] = useDeleteSignedLeaseMutation();
@@ -44,7 +45,7 @@ export default function DeleteLeaseButton({ leaseId, tenantName, parentLeaseId, 
   async function confirmed(): Promise<void> {
     setIsBusy(true);
     try {
-      await deleteLease(leaseId).unwrap();
+      await deleteLease({ leaseId, applicantId }).unwrap();
       finish();
     } catch (error) {
       const status = httpStatus(error);
