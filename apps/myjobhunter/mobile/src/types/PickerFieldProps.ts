@@ -8,6 +8,8 @@ export interface PickerFieldProps {
   mode: "date" | "datetime";
   /** The earliest the iOS spinner offers; Android's dialog gets it from `openAndroid`. */
   minimumDate?: Date;
+  /** The latest the iOS spinner offers; Android's dialog gets it from `openAndroid`. */
+  maximumDate?: Date;
   onPick: (date: Date) => void;
   onClear: () => void;
   /** Opens Android's own dialog, or dialogs, for the value. */

@@ -45,7 +45,7 @@ export default function LogEventSheet({ applicationId, onClose }: LogEventSheetP
         required
         value={values.event_type}
       />
-      <DateTimeField disabled={isLoading} error={errors.occurred_at} label={MESSAGES.whenLabel} onChange={(next) => change("occurred_at", next)} required value={values.occurred_at} />
+      <DateTimeField disabled={isLoading} error={errors.occurred_at} label={MESSAGES.whenLabel} maximumDate={new Date()} onChange={(next) => change("occurred_at", next)} required value={values.occurred_at} />
       {form.hasInterviewFields ? <InterviewDetailsFields disabled={isLoading} errors={errors} onChange={change} values={values} /> : null}
       <FormField
         editable={!isLoading}
