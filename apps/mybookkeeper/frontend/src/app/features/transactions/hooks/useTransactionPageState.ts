@@ -217,7 +217,8 @@ export function useTransactionPageState(): TransactionPageState {
   );
   const { data: categories = [] } = useListTransactionCategoriesQuery(filterBarParams, { skip });
   const transactions = useMemo(() => page?.items ?? [], [page]);
-  const total = page?.total ?? 0;
+  // While another page loads, the total last seen keeps the pager and select-all as they were.
+  const total = page?.total ?? knownTotal ?? 0;
   // Kept in state because the page asked for depends on it; React re-renders straight away.
   if (page && page.total !== knownTotal) setKnownTotal(page.total);
   const pageCount = Math.ceil(total / pagination.pageSize);

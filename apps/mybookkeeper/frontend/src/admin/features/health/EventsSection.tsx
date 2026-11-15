@@ -7,6 +7,7 @@ import type { SystemEvent } from "@/shared/types/health/health-summary";
 import { SEVERITY_BADGE_COLOR } from "@/admin/features/health/severity";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import type { ListLoadMode } from "@/shared/types/list-load-mode";
+import { HEALTH_EVENTS_LOAD_FAILED } from "@/shared/lib/health-event-messages";
 
 type SeverityFilter = "all" | "info" | "warning" | "error" | "critical";
 type TypeFilter = string;
@@ -81,7 +82,7 @@ export default function EventsSection({
       </div>
 
       {loadFailed ? (
-        <LoadErrorAlert message="Couldn't load recent activity." isRetrying={isRetrying} onRetry={onRetry} />
+        <LoadErrorAlert message={HEALTH_EVENTS_LOAD_FAILED} isRetrying={isRetrying} onRetry={onRetry} />
       ) : null}
 
       {mode === "error" ? null : mode === "loading" ? (

@@ -294,6 +294,20 @@ describe("Calendar page", () => {
     renderCalendar();
     expect(screen.getByTestId("calendar-last-synced")).toHaveTextContent("—");
   });
+
+  it("keeps last-synced while another month loads, but not after it failed", () => {
+    const loading = { ...defaultEventsState, currentData: undefined, isFetching: true };
+    vi.mocked(useGetCalendarEventsQuery).mockReturnValue(loading as unknown as ReturnType<typeof useGetCalendarEventsQuery>);
+    const { unmount } = renderCalendar();
+    expect(screen.getByTestId("calendar-last-synced").textContent).toMatch(/(ago|now)/);
+    unmount();
+
+    vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
+      { ...loading, isFetching: false, error: { status: 500 } } as unknown as ReturnType<typeof useGetCalendarEventsQuery>,
+    );
+    renderCalendar();
+    expect(screen.getByTestId("calendar-last-synced")).toHaveTextContent("—");
+  });
 });
 
 describe("Calendar skeleton", () => {

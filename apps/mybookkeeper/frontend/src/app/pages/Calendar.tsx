@@ -190,6 +190,8 @@ export default function Calendar() {
     hasError: error !== undefined,
     itemCount: eventsList.length,
   });
+  // While another month or filter loads, keep the freshness shown so far instead of "—" (no events).
+  const syncedEvents = mode === "loading" ? eventsQuery.data ?? [] : eventsList;
 
   return (
     <div className="p-4 sm:p-8 space-y-6">
@@ -198,7 +200,7 @@ export default function Calendar() {
         subtitle="Every booking across every channel and listing, in one view."
         actions={
           <div className="flex items-center gap-3">
-            <CalendarLastSynced events={eventsList} />
+            <CalendarLastSynced events={syncedEvents} />
             <button
               type="button"
               onClick={() => setIsQueueOpen(true)}

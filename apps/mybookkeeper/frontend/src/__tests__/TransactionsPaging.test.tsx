@@ -22,6 +22,8 @@ import {
   stopServer,
   TOTAL,
 } from "@/test/transactions-page-harness";
+import { deferred } from "@/test/deferred";
+import type { TransactionListPage } from "@mybookkeeper/api-client/types/transaction/TransactionListPage";
 
 vi.mock("@/shared/utils/download", () => ({ downloadFile: vi.fn() }));
 vi.mock("@/shared/hooks/useOrgRole", () => ({ useCanWrite: vi.fn(() => true) }));
@@ -187,6 +189,27 @@ describe("Transactions paging", () => {
     await act(async () => release());
     await waitFor(() => expect(table).toHaveAttribute("aria-busy", "false"));
     expect(within(screen.getByRole("table")).getAllByText("Row 26").length).toBeGreaterThan(0);
+  });
+
+  it("keeps the page arrows and select all as they were while another page loads", async () => {
+    const user = userEvent.setup();
+    const secondPage = deferred<TransactionListPage>();
+    const answer = server.pageResponse;
+    server.pageResponse = (query) => (query.get("offset") === "25" ? secondPage.promise : answer(query));
+    renderPage();
+    await screen.findByText(`1–25 of ${TOTAL}`);
+    await user.click(screen.getByRole("checkbox", { name: "Select all transactions" }));
+    await screen.findByText(`${TOTAL} selected`);
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+
+    expect((await screen.findAllByTestId("transaction-skeleton-row")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Next page" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Last page" })).toBeEnabled();
+    expect(screen.getByRole("checkbox", { name: "Select all transactions" })).toBeChecked();
+
+    await act(async () => secondPage.resolve(await answer(lastPageQuery())));
+    expect(await screen.findByText(`26–50 of ${TOTAL}`)).toBeInTheDocument();
   });
 
   it("unticks rows a new filter hides before any bulk action can reach them", async () => {

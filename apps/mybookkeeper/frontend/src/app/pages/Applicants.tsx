@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { APPLICANT_PAGE_SIZE, APPLICANT_STAGES } from "@mybookkeeper/api-client/constants/applicantLabels";
@@ -7,6 +7,7 @@ import ApplicantStageFilter from "@/app/features/applicants/ApplicantStageFilter
 import ApplicantsListBody from "@/app/features/applicants/ApplicantsListBody";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import { currentListData } from "@/shared/utils/current-list-data";
+import { usePageCountForFilter } from "@/shared/hooks/usePageCountForFilter";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { useLiveSearchParams } from "@platform/ui";
 
@@ -22,7 +23,7 @@ function parseStageParam(value: string | null): ApplicantStage | null {
 export default function Applicants() {
   const [searchParams, setSearchParams] = useLiveSearchParams();
   const stage = parseStageParam(searchParams.get(STAGE_PARAM));
-  const [pageCount, setPageCount] = useState(1);
+  const { pageCount, loadMore } = usePageCountForFilter(JSON.stringify([stage]));
 
   const queryArgs = useMemo(
     () => ({
@@ -61,11 +62,6 @@ export default function Applicants() {
       },
       { replace: true },
     );
-    setPageCount(1);
-  }
-
-  function handleLoadMore() {
-    setPageCount((prev) => prev + 1);
   }
 
   return (
@@ -88,7 +84,7 @@ export default function Applicants() {
         isFiltered={isFiltered}
         hasMore={hasMore}
         isFetching={isFetching}
-        onLoadMore={handleLoadMore}
+        onLoadMore={loadMore}
       />
     </div>
   );

@@ -5,12 +5,13 @@ import { APPLICANT_PAGE_SIZE } from "@mybookkeeper/api-client/constants/applican
 import { localToday } from "@mybookkeeper/api-client/utils/localToday";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import { currentListData } from "@/shared/utils/current-list-data";
+import { usePageCountForFilter } from "@/shared/hooks/usePageCountForFilter";
 import TenantsListBody from "@/app/features/tenants/TenantsListBody";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
 export default function Tenants() {
   const [includeEnded, setIncludeEnded] = useState(false);
-  const [pageCount, setPageCount] = useState(1);
+  const { pageCount, loadMore } = usePageCountForFilter(JSON.stringify([includeEnded]));
 
   const queryArgs = useMemo(
     () => ({
@@ -37,11 +38,6 @@ export default function Tenants() {
 
   function handleToggleEnded() {
     setIncludeEnded((prev) => !prev);
-    setPageCount(1);
-  }
-
-  function handleLoadMore() {
-    setPageCount((prev) => prev + 1);
   }
 
   return (
@@ -74,7 +70,7 @@ export default function Tenants() {
         includeEnded={includeEnded}
         hasMore={hasMore}
         isFetching={isFetching}
-        onLoadMore={handleLoadMore}
+        onLoadMore={loadMore}
       />
     </div>
   );

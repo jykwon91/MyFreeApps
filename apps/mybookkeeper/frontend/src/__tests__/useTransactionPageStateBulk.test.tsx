@@ -12,10 +12,18 @@ const mockBulkApprove = vi.fn();
 
 vi.mock("@/shared/hooks/useToast", () => ({ useToast: () => ({ showError: mockShowError, showSuccess: mockShowSuccess }) }));
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({ useGetPropertiesQuery: () => ({ data: [] }) }));
-vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => {
+vi.mock("@mybookkeeper/api-client/store/transactionsApi", async () => {
+  const { queryData } = await import("@/test/rtk-query-data");
   const idle = () => [vi.fn(), { isLoading: false }];
+  const pageQuery = {
+    ...queryData({ items: [], total: 0, has_more: false }),
+    error: undefined,
+    refetch: vi.fn(),
+    isLoading: false,
+    isFetching: false,
+  };
   return {
-    useGetTransactionPageQuery: () => ({ data: { items: [], total: 0, has_more: false }, isLoading: false, isFetching: false }),
+    useGetTransactionPageQuery: () => pageQuery,
     useListTransactionCategoriesQuery: () => ({ data: [] }),
     useLazyListTransactionSelectionQuery: () => [vi.fn(), { data: undefined }],
     useGetDuplicatesQuery: () => ({ data: undefined, isLoading: false }),

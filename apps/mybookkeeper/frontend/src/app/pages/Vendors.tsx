@@ -13,6 +13,7 @@ import VendorPreferredToggle from "@/app/features/vendors/VendorPreferredToggle"
 import VendorForm from "@/app/features/vendors/VendorForm";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import { currentListData } from "@/shared/utils/current-list-data";
+import { usePageCountForFilter } from "@/shared/hooks/usePageCountForFilter";
 import VendorsListBody from "@/app/features/vendors/VendorsListBody";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 
@@ -34,7 +35,7 @@ export default function Vendors() {
   const [searchParams, setSearchParams] = useLiveSearchParams();
   const category = parseCategoryParam(searchParams.get(CATEGORY_PARAM));
   const preferredOnly = parsePreferredParam(searchParams.get(PREFERRED_PARAM));
-  const [pageCount, setPageCount] = useState(1);
+  const { pageCount, loadMore } = usePageCountForFilter(JSON.stringify([category, preferredOnly]));
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   const queryArgs = useMemo(
@@ -75,7 +76,6 @@ export default function Vendors() {
       },
       { replace: true },
     );
-    setPageCount(1);
   }
 
   function handlePreferredChange(next: boolean) {
@@ -91,11 +91,6 @@ export default function Vendors() {
       },
       { replace: true },
     );
-    setPageCount(1);
-  }
-
-  function handleLoadMore() {
-    setPageCount((prev) => prev + 1);
   }
 
   return (
@@ -135,7 +130,7 @@ export default function Vendors() {
         showCategoryBadge={showCategoryBadge}
         hasMore={hasMore}
         isFetching={isFetching}
-        onLoadMore={handleLoadMore}
+        onLoadMore={loadMore}
       />
 
       {showCreateForm ? (

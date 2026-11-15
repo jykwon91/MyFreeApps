@@ -7,6 +7,7 @@ import { store } from "@/shared/store";
 import SystemHealth from "@/admin/pages/SystemHealth";
 import type { HealthSummary, SystemEvent } from "@/shared/types/health/health-summary";
 import { queryData } from "@/test/rtk-query-data";
+import { HEALTH_EVENTS_LOAD_FAILED } from "@/shared/lib/health-event-messages";
 
 const mockStats = {
   documents_processing: 2,
@@ -216,6 +217,40 @@ describe("SystemHealth", () => {
     } as unknown as ReturnType<typeof useGetHealthEventsQuery>);
     renderWithProviders(<SystemHealth />);
     expect(screen.getByText("No events match your filters")).toBeInTheDocument();
+  });
+
+  it("says recent activity couldn't load, with none of the previous filter's events, and retries", async () => {
+    const refetch = vi.fn();
+    vi.mocked(useGetHealthEventsQuery).mockReturnValue({
+      data: mockEvents,
+      currentData: undefined,
+      error: { status: 500 },
+      isLoading: false,
+      isFetching: false,
+      refetch,
+    } as unknown as ReturnType<typeof useGetHealthEventsQuery>);
+    renderWithProviders(<SystemHealth />);
+
+    expect(screen.getByText(HEALTH_EVENTS_LOAD_FAILED)).toBeInTheDocument();
+    expect(screen.queryByText("Document extraction failed for invoice.pdf")).not.toBeInTheDocument();
+    expect(screen.queryByText("No events match your filters")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("health-events-skeleton")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("shows the activity skeleton, not the previous filter's events, while a filter loads", () => {
+    vi.mocked(useGetHealthEventsQuery).mockReturnValue({
+      data: mockEvents,
+      currentData: undefined,
+      isLoading: false,
+      isFetching: true,
+    } as unknown as ReturnType<typeof useGetHealthEventsQuery>);
+    renderWithProviders(<SystemHealth />);
+
+    expect(screen.getByTestId("health-events-skeleton")).toBeInTheDocument();
+    expect(screen.queryByText("Document extraction failed for invoice.pdf")).not.toBeInTheDocument();
   });
 
   it("renders Active Problems section when problems exist", () => {

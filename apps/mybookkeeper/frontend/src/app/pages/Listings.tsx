@@ -11,6 +11,7 @@ import ListingStatusFilter from "@/app/features/listings/ListingStatusFilter";
 import ListingForm from "@/app/features/listings/ListingForm";
 import { resolveListLoadMode } from "@/shared/lib/list-load-mode";
 import { currentListData } from "@/shared/utils/current-list-data";
+import { usePageCountForFilter } from "@/shared/hooks/usePageCountForFilter";
 import ListingsListBody from "@/app/features/listings/ListingsListBody";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
@@ -25,7 +26,7 @@ function parseStatusParam(value: string | null): ListingStatus | null {
 export default function Listings() {
   const [searchParams, setSearchParams] = useLiveSearchParams();
   const status = parseStatusParam(searchParams.get(STATUS_PARAM));
-  const [pageCount, setPageCount] = useState(1);
+  const { pageCount, loadMore } = usePageCountForFilter(JSON.stringify([status]));
   const [showForm, setShowForm] = useState(false);
   const canWrite = useCanWrite();
 
@@ -67,11 +68,6 @@ export default function Listings() {
       },
       { replace: true },
     );
-    setPageCount(1);
-  }
-
-  function handleLoadMore() {
-    setPageCount((prev) => prev + 1);
   }
 
   const propertyName = (l: ListingSummary) => propertyById.get(l.property_id) ?? "Unknown property";
@@ -113,7 +109,7 @@ export default function Listings() {
         propertyName={propertyName}
         hasMore={hasMore}
         isFetching={isFetching}
-        onLoadMore={handleLoadMore}
+        onLoadMore={loadMore}
         canWrite={canWrite}
       />
 
