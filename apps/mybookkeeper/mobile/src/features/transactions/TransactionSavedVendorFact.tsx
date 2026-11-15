@@ -8,7 +8,8 @@ const NOT_FOUND = 404;
 
 /** The saved vendor a transaction is linked to. A link must never read as none, even before the name loads. */
 export default function TransactionSavedVendorFact({ vendorId }: { vendorId: string }) {
-  const { data: vendor, error, refetch } = useGetVendorByIdQuery(vendorId);
+  // currentData, never data: moving to the next transaction must not show the last one's vendor.
+  const { currentData: vendor, error, refetch } = useGetVendorByIdQuery(vendorId);
   if (error && httpStatus(error) !== NOT_FOUND) {
     return <TransactionFactRetry label={LABELS.savedVendor} message={SAVED_VENDOR_MESSAGES.lookupFailed} onRetry={refetch} retryLabel={SAVED_VENDOR_MESSAGES.retryLabel} />;
   }

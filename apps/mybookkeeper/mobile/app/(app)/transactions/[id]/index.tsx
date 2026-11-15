@@ -15,7 +15,8 @@ export default function TransactionRoute() {
   return (
     <>
       <Stack.Screen options={{ headerShown: true, title: "Transaction", headerBackTitle: "Money" }} />
-      <TransactionDetailScreen id={id} reviewQueue={review === "1" ? reviewQueueParams(filters, new Date()) : null} />
+      {/* The review queue moves on with setParams, so the id keys the screen: every per-transaction state starts fresh. */}
+      <TransactionDetailScreen key={id} id={id} reviewQueue={review === "1" ? reviewQueueParams(filters, new Date()) : null} />
     </>
   );
 }
