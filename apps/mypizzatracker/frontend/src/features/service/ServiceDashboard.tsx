@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import {
   EmptyState,
   Select,
@@ -26,8 +26,6 @@ export function ServiceDashboard({
   dropId,
   onDropChange,
 }: ServiceDashboardProps) {
-  const tabHidden = useTabHidden();
-
   const {
     data: activeDrops,
     isLoading: isLoadingDrops,
@@ -52,16 +50,21 @@ export function ServiceDashboard({
   }, [activeDrops, dropId]);
 
   const {
-    data: dashboard,
-    isLoading: isLoadingDashboard,
+    currentData: dashboard,
     isFetching,
     isError: isDashboardError,
     error: dashboardError,
     refetch: refetchDashboard,
   } = useGetDashboardQuery(effectiveDropId ?? "", {
-    skip: !effectiveDropId || tabHidden,
-    pollingInterval: tabHidden ? 0 : POLL_INTERVAL_MS,
+    skip: !effectiveDropId,
+    pollingInterval: POLL_INTERVAL_MS,
+    skipPollingIfUnfocused: true,
+    refetchOnFocus: true,
   });
+
+  // currentData is the selected drop's own result: undefined while it loads,
+  // never the previous drop's.
+  const isDashboardPending = !dashboard && !isDashboardError;
 
   if (isLoadingDrops) return <ServiceLoadingSkeleton />;
 
@@ -112,7 +115,7 @@ export function ServiceDashboard({
               {dashboard.drop.in_progress_count} in progress -- updated{" "}
               {isFetching ? "..." : formatRelative(dashboard.server_time)}
             </p>
-          ) : isLoadingDashboard ? (
+          ) : isDashboardPending ? (
             <Skeleton className="h-5 w-40" />
           ) : null
         }
@@ -134,7 +137,7 @@ export function ServiceDashboard({
         }
       />
 
-      {isLoadingDashboard ? <SlotGridSkeleton /> : null}
+      {isDashboardPending ? <SlotGridSkeleton /> : null}
 
       {isDashboardError ? (
         <EmptyState
@@ -172,19 +175,6 @@ export function ServiceDashboard({
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function useTabHidden(): boolean {
-  const [hidden, setHidden] = useState(
-    () => typeof document !== "undefined" && document.visibilityState === "hidden",
-  );
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const onChange = () => setHidden(document.visibilityState === "hidden");
-    document.addEventListener("visibilitychange", onChange);
-    return () => document.removeEventListener("visibilitychange", onChange);
-  }, []);
-  return hidden;
-}
 
 function formatRelative(iso: string): string {
   const t = Date.parse(iso);

@@ -16,17 +16,26 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { measureBoxes } from "@platform/ui/test-support/layoutShift";
 import { failReads, holdReads, logReads } from "@platform/ui/test-support/routeControls";
+import { json } from "@platform/ui/test-support/mockResponse";
 import { toast } from "@platform/ui/test-support/toast";
 import type { LoggedRead } from "@platform/ui/test-support/types/LoggedRead";
 import { DASHBOARD_POLL_INTERVAL_MS } from "./constants/servicePolling";
-import { ACTIVE_DROP_ID } from "./fixtures/dropFixtures";
-import { FIRST_ORDER_ID } from "./fixtures/serviceFixtures";
+import { ACTIVE_DROP_ID, sampleDrops } from "./fixtures/dropFixtures";
+import {
+  FIRST_ORDER_ID,
+  SECOND_DROP_ID,
+  SECOND_DROP_NAME,
+  secondActiveDrop,
+  secondDashboard,
+} from "./fixtures/serviceFixtures";
 import { expectSameColumns, skeletonCards } from "./fixtures/skeletonLayout";
 import { stubDropsApi } from "./fixtures/stubDropsApi";
 import { stubServiceApi } from "./fixtures/stubServiceApi";
 
 const DROPS_LIST = apiPath(/^\/drops$/);
-const DASHBOARD_READ = apiPath(/^\/service\/drops\/[^/]+$/);
+const DASHBOARD_PATH = /^\/service\/drops\/([^/]+)$/;
+const DASHBOARD_READ = apiPath(DASHBOARD_PATH);
+const SECOND_DASHBOARD_READ = (url: URL): boolean => DASHBOARD_READ(url) && url.pathname.endsWith(`/${SECOND_DROP_ID}`);
 
 /** The action caused the one read after the first: it came before any poll could. */
 async function expectReadCausedByAction(reads: LoggedRead[]): Promise<void> {
@@ -138,4 +147,33 @@ test("a failed drops load says so and Retry reads the drops again and loads the 
   await expect.poll(() => dropsReads.length).toBe(2);
   await expect(slotColumns(page)).toHaveCount(4);
   await expect(page.getByRole("heading", { name: "Could not load drops" })).toHaveCount(0);
+});
+
+test("switching drops shows the skeleton, never the previous drop, until the new one loads", async ({ page }) => {
+  await stubDropsApi(page, [...sampleDrops().filter((d) => d.id === ACTIVE_DROP_ID), secondActiveDrop()]);
+  await stubServiceApi(page);
+  await page.route(DASHBOARD_READ, (route) =>
+    route.request().url().endsWith(`/${SECOND_DROP_ID}`) ? route.fulfill(json(secondDashboard())) : route.fallback(),
+  );
+  const second = await holdReads(page, SECOND_DASHBOARD_READ);
+
+  try {
+    await page.goto(`/service?drop_id=${ACTIVE_DROP_ID}`);
+    await expect(page.getByRole("heading", { name: "Friday Night Drop", level: 1 })).toBeVisible();
+    await expect(slotColumns(page)).toHaveCount(4);
+
+    await page.getByLabel("Choose drop").selectOption(SECOND_DROP_ID);
+
+    await expect(skeletonCards(page)).toHaveCount(4);
+    await expect(page.getByRole("heading", { name: "Service", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Friday Night Drop" })).toHaveCount(0);
+    await expect(slotColumns(page)).toHaveCount(0);
+
+    second.release();
+    await expect(page.getByRole("heading", { name: SECOND_DROP_NAME, level: 1 })).toBeVisible();
+    await expect(slotColumns(page)).toHaveCount(1);
+    await expect(slotColumns(page).nth(0)).toHaveAccessibleName("19:00 0/5");
+  } finally {
+    second.release();
+  }
 });

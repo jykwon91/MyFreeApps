@@ -1,8 +1,9 @@
 /** The service dashboard as GET /service/drops/{id} answers it (app/schemas/service/service_schemas.py). */
+import type { Drop } from "@/types/drop/drop";
 import type { DashboardOrder, DashboardSlot, ServiceDashboardPayload } from "@/types/service/service";
 import { DROP_DATE, FIXTURE_NOW } from "../constants/fixtureTimes";
-import { ACTIVE_DROP_ID, activeDrop } from "./dropFixtures";
-import { customerIdAt, orderIdAt, orderPizzaIdAt, pizzaIdAt, toppingIdAt } from "./fixtureIds";
+import { ACTIVE_DROP_ID, PLANNING_DROP_ID, activeDrop, dropOf } from "./dropFixtures";
+import { customerIdAt, orderIdAt, orderPizzaIdAt, pizzaIdAt, slotIdAt, toppingIdAt } from "./fixtureIds";
 
 export const FIRST_ORDER_ID = orderIdAt(1);
 
@@ -59,6 +60,38 @@ export function sampleDashboard(): ServiceDashboardPayload {
       in_progress_count: 1,
     },
     slots,
+    server_time: FIXTURE_NOW,
+  };
+}
+
+export const SECOND_DROP_ID = PLANNING_DROP_ID;
+export const SECOND_DROP_NAME = "Holiday Drop";
+export const SECOND_DROP_SLOT_ID = slotIdAt(20);
+
+/** A second active drop, as GET /drops lists it. */
+export function secondActiveDrop(): Drop {
+  return dropOf(SECOND_DROP_ID, { name: SECOND_DROP_NAME, status: "active" });
+}
+
+/** The second active drop's dashboard: one slot, no orders. */
+export function secondDashboard(): ServiceDashboardPayload {
+  return {
+    drop: {
+      ...sampleDashboard().drop,
+      id: SECOND_DROP_ID,
+      name: SECOND_DROP_NAME,
+      in_progress_count: 0,
+    },
+    slots: [
+      {
+        id: SECOND_DROP_SLOT_ID,
+        pickup_time: "19:00:00",
+        max_pizzas: 5,
+        pizza_count: 0,
+        remaining_capacity: 5,
+        orders: [],
+      },
+    ],
     server_time: FIXTURE_NOW,
   };
 }
