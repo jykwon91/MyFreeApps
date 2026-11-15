@@ -74,10 +74,16 @@ describe("InsuranceExpirationBadge — soon (≤30 days)", () => {
     expect(screen.getByText(/Expires in 15 days/)).toBeInTheDocument();
   });
 
-  it("shows singular 'day' when exactly 1 day away", () => {
+  it("says 'tomorrow' when exactly 1 day away, as the phone does", () => {
     render(<InsuranceExpirationBadge expirationDate={isoDateDaysFromNow(1)} />);
     expect(screen.getByTestId("expiration-badge-soon")).toBeInTheDocument();
-    expect(screen.getByText("Expires in 1 day")).toBeInTheDocument();
+    expect(screen.getByText("Expires tomorrow")).toBeInTheDocument();
+  });
+
+  it("says 'today' on the expiry date", () => {
+    render(<InsuranceExpirationBadge expirationDate={isoDateDaysFromNow(0)} />);
+    expect(screen.getByTestId("expiration-badge-soon")).toBeInTheDocument();
+    expect(screen.getByText("Expires today")).toBeInTheDocument();
   });
 
   it("'soon' badge has orange colour classes", () => {
@@ -122,5 +128,37 @@ describe("InsuranceExpirationBadge — far future (>90 days)", () => {
       <InsuranceExpirationBadge expirationDate={isoDateDaysFromNow(365)} />,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("InsuranceExpirationBadge — counts calendar days late in the day", () => {
+  beforeEach(() => {
+    vi.setSystemTime(new Date(2026, 10, 14, 20, 0)); // Nov 14, 8pm local
+  });
+
+  it("counts 2 days from 8pm Nov 14 to Nov 16", () => {
+    render(<InsuranceExpirationBadge expirationDate="2026-11-16" />);
+    expect(screen.getByText("Expires in 2 days")).toBeInTheDocument();
+  });
+
+  it("says tomorrow from 8pm Nov 14 to Nov 15", () => {
+    render(<InsuranceExpirationBadge expirationDate="2026-11-15" />);
+    expect(screen.getByText("Expires tomorrow")).toBeInTheDocument();
+  });
+
+  it("still shows the amber badge on the 30th calendar day", () => {
+    render(<InsuranceExpirationBadge expirationDate="2026-12-14" />);
+    expect(screen.getByTestId("expiration-badge-soon")).toBeInTheDocument();
+  });
+
+  it("still shows the yellow badge on the 90th calendar day", () => {
+    render(<InsuranceExpirationBadge expirationDate="2027-02-12" />);
+    expect(screen.getByTestId("expiration-badge-upcoming")).toBeInTheDocument();
+  });
+
+  it("is not expired on its expiry date", () => {
+    vi.setSystemTime(new Date(2026, 10, 16, 20, 0));
+    render(<InsuranceExpirationBadge expirationDate="2026-11-16" />);
+    expect(screen.getByText("Expires today")).toBeInTheDocument();
   });
 });

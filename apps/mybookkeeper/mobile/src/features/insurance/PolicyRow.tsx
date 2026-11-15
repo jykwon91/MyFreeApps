@@ -2,7 +2,8 @@ import type { InsurancePolicySummary } from "@mybookkeeper/api-client/types/insu
 import { formatAnnualPremium } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
 import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
-import { expiryLabel, policyPlace, policyRowLabel } from "./policyDisplay";
+import { expiryLabel } from "@mybookkeeper/api-client/utils/insuranceExpiry";
+import { policyPlace, policyRowLabel } from "./policyDisplay";
 
 interface PolicyRowProps {
   policy: InsurancePolicySummary;
