@@ -2,11 +2,13 @@ import { test, expect } from "./fixtures/auth";
 
 test.describe("Layout — sidebar and content scrolling", () => {
   test("sidebar fills full viewport height on every page", async ({ authedPage: page }) => {
-    const pages = ["/", "/transactions", "/documents", "/properties", "/tax-report", "/integrations", "/members"];
+    const pages = ["/", "/transactions", "/documents", "/properties", "/tax", "/integrations", "/members"];
 
     for (const path of pages) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
+      // An unknown path redirects to "/", which would silently test the dashboard instead.
+      expect(new URL(page.url()).pathname, `${path} redirected`).toBe(path);
 
       const sidebar = page.locator("aside").first();
       if (await sidebar.isVisible()) {
@@ -25,6 +27,8 @@ test.describe("Layout — sidebar and content scrolling", () => {
     for (const path of pages) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
+      // An unknown path redirects to "/", which would silently test the dashboard instead.
+      expect(new URL(page.url()).pathname, `${path} redirected`).toBe(path);
 
       const bodyScrollHeight = await page.evaluate(() => document.body.scrollHeight);
       const bodyClientHeight = await page.evaluate(() => document.body.clientHeight);
@@ -51,11 +55,13 @@ test.describe("Layout — sidebar and content scrolling", () => {
   });
 
   test("no horizontal scroll on any page", async ({ authedPage: page }) => {
-    const pages = ["/", "/transactions", "/documents", "/properties", "/tax-report", "/integrations"];
+    const pages = ["/", "/transactions", "/documents", "/properties", "/tax", "/integrations"];
 
     for (const path of pages) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
+      // An unknown path redirects to "/", which would silently test the dashboard instead.
+      expect(new URL(page.url()).pathname, `${path} redirected`).toBe(path);
 
       const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
       const viewportWidth = page.viewportSize()?.width ?? 0;
