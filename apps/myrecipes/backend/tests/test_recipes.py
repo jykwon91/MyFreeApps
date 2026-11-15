@@ -240,6 +240,58 @@ class TestTweakAndDiff:
         assert len(restored["ingredients"]) == 2
 
 
+class TestVersionWritesSerialize:
+    """Both version writers lock the recipe row before reading the max version number.
+
+    Real concurrency needs Postgres row locks and two live transactions; these
+    tests pin the contract (lock requested, numbers sequential) that makes it hold.
+    """
+
+    @staticmethod
+    def _spy_get_by_id(monkeypatch: pytest.MonkeyPatch) -> list[bool]:
+        from app.repositories.recipe import recipe_repository
+
+        original = recipe_repository.get_by_id
+        calls: list[bool] = []
+
+        async def spy(db, recipe_id, user_id, *, for_update: bool = False):
+            calls.append(for_update)
+            return await original(db, recipe_id, user_id, for_update=for_update)
+
+        monkeypatch.setattr(recipe_repository, "get_by_id", spy)
+        return calls
+
+    @pytest.mark.asyncio
+    async def test_create_version_locks_recipe_and_numbers_sequentially(
+        self, user_factory, as_user, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            recipe_id = (await authed.post("/recipes", json=_recipe_payload())).json()["id"]
+            calls = self._spy_get_by_id(monkeypatch)
+            tweak = {"change_note": "tweak", "ingredients": [], "steps": []}
+            v2 = (await authed.post(f"/recipes/{recipe_id}/versions", json=tweak)).json()
+            v3 = (await authed.post(f"/recipes/{recipe_id}/versions", json=tweak)).json()
+
+        assert [v2["version_number"], v3["version_number"]] == [2, 3]
+        assert calls == [True, True]
+
+    @pytest.mark.asyncio
+    async def test_restore_version_locks_recipe(
+        self, user_factory, as_user, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            created = (await authed.post("/recipes", json=_recipe_payload())).json()
+            recipe_id = created["id"]
+            v1_id = created["latest_version"]["id"]
+            calls = self._spy_get_by_id(monkeypatch)
+            restored = (await authed.post(f"/recipes/{recipe_id}/versions/{v1_id}/restore")).json()
+
+        assert restored["version_number"] == 2
+        assert calls == [True]
+
+
 # ---------------------------------------------------------------------------
 # Cook logs
 # ---------------------------------------------------------------------------
