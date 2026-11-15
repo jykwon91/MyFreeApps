@@ -30,7 +30,7 @@ const booking: CalendarEvent = {
 };
 
 vi.mock("@mybookkeeper/api-client/store/calendarApi", () => ({
-  useGetCalendarEventsQuery: vi.fn(() => ({ data: [booking], isFetching: false, error: undefined, refetch: vi.fn() })),
+  useGetCalendarEventsQuery: vi.fn(() => ({ data: [booking], currentData: [booking], isFetching: false, error: undefined, refetch: vi.fn() })),
   useGetReviewQueueCountQuery: vi.fn(() => ({ data: 0 })),
   useGetReviewQueueQuery: vi.fn(() => ({ data: [], isLoading: false, isError: false })),
   useResolveQueueItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
