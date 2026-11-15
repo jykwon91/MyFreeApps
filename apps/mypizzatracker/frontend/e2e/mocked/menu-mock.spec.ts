@@ -11,7 +11,7 @@ import { stubSignedInShell } from "@platform/ui/test-support/mockSession";
 import { toast } from "@platform/ui/test-support/toast";
 import { CARD } from "./constants/layoutSelectors";
 import { apiPath } from "@platform/ui/test-support/apiPath";
-import { pizzaIdAt } from "./fixtures/fixtureIds";
+import { pizzaIdAt, toppingIdAt } from "./fixtures/fixtureIds";
 import { failReads, holdReads } from "@platform/ui/test-support/routeControls";
 import { expectSameColumns, skeletonCards } from "./fixtures/skeletonLayout";
 import { stubMenuApi } from "./fixtures/stubMenuApi";
@@ -148,4 +148,27 @@ test("adds a topping with its price", async ({ page }) => {
   await expect(toppings.getByRole("listitem")).toHaveCount(3);
   await expect(toppings.getByRole("listitem")).toContainText(["Basilfree", "Jalapeño+$0.75", "Mushrooms+$1.50"]);
   expect(writes).toEqual([{ method: "POST", path: "/menu/toppings", body: { name: "Jalapeño", price_delta: "0.75" } }]);
+});
+
+test("cancelling a half-typed edit leaves the next edit starting from the saved values", async ({ page }) => {
+  const writes = await stubMenuApi(page);
+
+  await page.goto("/menu");
+  for (const [heading, price, label] of [["Pizzas", "15.00", "Price"], ["Toppings", "2.00", "Price delta"]]) {
+    const row = section(page, heading).getByRole("listitem").nth(1);
+    await row.getByRole("button", { name: "Edit" }).click();
+    await row.getByLabel("Name").fill("abandoned");
+    await row.getByRole("button", { name: "Cancel" }).click();
+
+    await row.getByRole("button", { name: "Edit" }).click();
+    await expect(row.getByLabel("Name")).not.toHaveValue("abandoned");
+    await row.getByLabel(label).fill(price);
+    await row.getByRole("button", { name: "Save" }).click();
+    await expect(toast(page, "Updated")).toBeVisible();
+  }
+
+  expect(writes).toEqual([
+    { method: "PATCH", path: `/menu/pizzas/${pizzaIdAt(2)}`, body: { name: "Pepperoni", price: "15.00", description: null } },
+    { method: "PATCH", path: `/menu/toppings/${toppingIdAt(2)}`, body: { name: "Mushrooms", price_delta: "2.00" } },
+  ]);
 });

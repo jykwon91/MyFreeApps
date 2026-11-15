@@ -1,23 +1,19 @@
 import { useState } from "react";
-import { Button, LoadingButton, FormField, ConfirmDialog, StatusBadge, showError, showSuccess, extractErrorMessage } from "@platform/ui";
-import { Trash2, Pencil, Check, X } from "lucide-react";
+import { Button, LoadingButton, ConfirmDialog, StatusBadge, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { Trash2, Pencil } from "lucide-react";
 import {
   useUpdateToppingMutation,
   useDeleteToppingMutation,
 } from "@/store/menuApi";
-import type { ToppingTypeUpdateBody } from "@/types/menu/menu";
 import type { ToppingRowProps } from "@/types/menu/ToppingRowProps";
 import { formatMoney } from "@/lib/formatMoney";
+import ToppingRowEditor from "./ToppingRowEditor";
 
 export default function ToppingRow({ topping }: ToppingRowProps) {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [updateTopping, { isLoading: isSaving }] = useUpdateToppingMutation();
   const [deleteTopping, { isLoading: isDeleting }] = useDeleteToppingMutation();
-  const [draft, setDraft] = useState<ToppingTypeUpdateBody>({
-    name: topping.name,
-    price_delta: topping.price_delta,
-  });
 
   const toggleActive = async () => {
     try {
@@ -31,19 +27,6 @@ export default function ToppingRow({ topping }: ToppingRowProps) {
     }
   };
 
-  const save = async () => {
-    try {
-      await updateTopping({
-        id: topping.id,
-        body: { name: draft.name, price_delta: draft.price_delta },
-      }).unwrap();
-      showSuccess("Updated");
-      setEditing(false);
-    } catch (err) {
-      showError(extractErrorMessage(err) || "Failed to update");
-    }
-  };
-
   const onDelete = async () => {
     try {
       await deleteTopping(topping.id).unwrap();
@@ -54,55 +37,7 @@ export default function ToppingRow({ topping }: ToppingRowProps) {
   };
 
   if (editing) {
-    return (
-      <li className="py-3 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-        <FormField label="Name">
-          {(field) => (
-            <input
-              type="text"
-              value={draft.name ?? ""}
-              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-              className="w-full px-3 py-2 rounded border bg-background"
-              {...field}
-            />
-          )}
-        </FormField>
-        <FormField label="Price delta">
-          {(field) => (
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={draft.price_delta ?? "0.00"}
-              onChange={(e) =>
-                setDraft({ ...draft, price_delta: e.target.value })
-              }
-              className="w-full px-3 py-2 rounded border bg-background"
-              {...field}
-            />
-          )}
-        </FormField>
-        <div className="flex gap-2">
-          <LoadingButton
-            size="sm"
-            isLoading={isSaving}
-            onClick={save}
-            disabled={!draft.name?.trim()}
-            aria-label="Save"
-          >
-            <Check className="h-4 w-4" />
-          </LoadingButton>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setEditing(false)}
-            aria-label="Cancel"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </li>
-    );
+    return <ToppingRowEditor topping={topping} onClose={() => setEditing(false)} />;
   }
 
   return (
