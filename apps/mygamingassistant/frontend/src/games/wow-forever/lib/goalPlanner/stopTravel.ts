@@ -44,7 +44,7 @@ function zoneNamed(where: string, data: WorldMapData): WorldZone | undefined {
 }
 
 /** Where an option is: its NPC on the map when the map has it, else its zone spot. */
-export function placeOption(option: StopOption, data: WorldMapData): MapPlace | null {
+function placeOption(option: StopOption, data: WorldMapData): MapPlace | null {
   const linked = option.npcId !== null ? String(option.npcId) : option.poiId;
   const poi = linked ? findLinkedPoi(linked, data) : undefined;
   const poiZone = poi ? data.zoneById.get(poi.zone) : undefined;

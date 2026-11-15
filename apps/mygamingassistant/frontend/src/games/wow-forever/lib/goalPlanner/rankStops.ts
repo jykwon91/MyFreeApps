@@ -91,7 +91,7 @@ function capOf(steps: readonly ProfessionRankStep[], index: number): number {
 }
 
 /** The goal needs this rank: it goes past the cap of the rank before, and you aren't past that cap yet. */
-export function rankNeeded(goal: Pick<ProfessionGoal, "current" | "target">, previousCap: number): boolean {
+function rankNeeded(goal: Pick<ProfessionGoal, "current" | "target">, previousCap: number): boolean {
   return goal.target > previousCap && goal.current <= previousCap;
 }
 
