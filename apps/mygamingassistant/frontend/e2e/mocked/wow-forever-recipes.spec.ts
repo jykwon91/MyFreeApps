@@ -90,6 +90,15 @@ test("opening a recipe shows what it makes, where to learn it and the leveling g
   await expect(page.locator('a[href*="wowhead"]')).toHaveCount(0);
 });
 
+test("a trainer recipe names the trainers who teach it, where they stand, with a map link", async ({ page }) => {
+  await page.goto(`${RECIPES}?q=bolt+of+runecloth`);
+  const row = page.getByTestId("recipe-row").filter({ hasText: "Bolt of Runecloth" }).first();
+  await row.locator("summary").click();
+  const trainers = row.getByRole("list", { name: "Artisan Tailoring trainers" }).getByRole("listitem");
+  await expect(trainers.first()).toBeVisible();
+  await expect(trainers.first().getByRole("link").first()).toHaveAttribute("href", /\/wow-forever\/map\?/);
+});
+
 test("on a phone the page fits, with touch-sized controls", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto(`${RECIPES}?q=silk`);

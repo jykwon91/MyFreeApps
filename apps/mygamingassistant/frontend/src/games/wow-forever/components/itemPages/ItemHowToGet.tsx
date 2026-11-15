@@ -58,7 +58,7 @@ export default function ItemHowToGet({ page, faction, zoneId, level }: ItemHowTo
       case ITEM_SOURCE_SECTION.dungeon:
         return <InstanceDropList drops={dungeon} more={raid.length ? 0 : moreInstanceDrops} note="" />;
       case ITEM_SOURCE_SECTION.crafted:
-        return <CraftedByList crafted={page.facts.crafted} itemId={page.item.id} />;
+        return <CraftedByList crafted={page.facts.crafted} itemId={page.item.id} faction={faction} zoneId={zoneId} level={level} />;
       case ITEM_SOURCE_SECTION.drop:
         return sources.drop ? <ItemDropSection drop={sources.drop} faction={faction} level={level} /> : null;
       case ITEM_SOURCE_SECTION.container:

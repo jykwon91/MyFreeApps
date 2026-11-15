@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-15",
+    "title": "Recipes say where to learn them",
+    "summary": "A trainer recipe now lists the trainers for your faction who teach it (Artisan Tailoring for Bolt of Runecloth), each with its area, coordinates and a map link, instead of just a skill number. Item pages do the same under Crafted: the trainers, or the pattern linked to its own page with where it comes from.",
+    "to": "/wow-forever/recipes"
+  },
+  {
+    "date": "2026-11-15",
     "title": "Healthstone and party buff reminders",
     "summary": "MGA Buffs now reminds you when you have no Healthstone: Warlocks are told to make one, everyone else to ask the Warlock in the group. It also asks the Paladin in your group for a Blessing, and when you can cast a buff yourself (Fortitude, Arcane Intellect, Mark of the Wild, a Blessing, Divine Spirit), it names who in your party is missing it. Download the new version from the Macros page.",
     "to": "/wow-forever/macros"

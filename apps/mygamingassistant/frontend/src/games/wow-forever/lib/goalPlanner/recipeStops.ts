@@ -3,6 +3,7 @@
  * always there — then quest givers, then the best mobs to farm its drop), or
  * from a trainer. A recipe the data has no place for becomes a note instead.
  */
+import { recipeSpell } from "@/games/wow-forever/lib/recipes/recipeSpell";
 import { canBuyFrom } from "@/games/wow-forever/food/recipeSources";
 import { apprenticeOptions } from "@/games/wow-forever/lib/goalPlanner/rankStops";
 import { mobOption, questGiverOption, vendorOption } from "@/games/wow-forever/lib/goalPlanner/stopOptions";
@@ -103,7 +104,7 @@ export function recipeGoal(entry: RecipeEntry, faction: PlayerFaction, label: st
     return { kind: "note", note: { kind: PLAN_NOTE_KIND.done, text: `${entry.name}: you know it as soon as you learn ${label}.` } };
   }
   if (learn.kind === "trainer") {
-    const recipe: TaughtRecipe = { spell: Number(entry.key.split(":")[1]), name: entry.name, skill: learn.skill };
+    const recipe: TaughtRecipe = { spell: recipeSpell(entry), name: entry.name, skill: learn.skill };
     if (leveling) return { kind: "taught", profession: entry.profession, recipe };
     return {
       kind: "stop",

@@ -176,6 +176,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `components/trainers/TrainerRecipesPanel.tsx` (panel + NumberField for skill
   input, `?skill=` param). Tests: `tests/test_wow_trainer_npc_recipes_generator.py`,
   `src/__tests__/wowTrainerRecipes.test.ts`.
+  **Where to learn a recipe** (`RecipeLearnDetail`, used by the Recipes page
+  rows and item pages' Crafted section via `CraftedByList`): a trainer recipe
+  lists your faction's trainers of the rank covering its skill
+  (`lib/recipes/recipeTrainers.ts` `recipeRank`; below 50 = Journeyman),
+  narrowed to the NPCs whose `trainerNpcSpells` list has the spell (whole rank
+  list when none do or it's loading), via `RankTrainerList`; non-list ranks
+  (book / quest / dungeon) render `CraftRankTrainer`. Forever-new trainer
+  recipes keep their "source not known yet" line. A pattern recipe links the
+  pattern (`ItemNameLink withIcon`) and its Classic sources.
   Herb / ore nodes carry their gathering skill (Forever `Lock` table) in the
   `objectSpots` rows. Each guide has trainers, rank-ups (Artisan Enchanting = Annora in Uldaman), a
   hand-picked route to 300 (`data/professions/crafting/*Route.ts`, joined to
