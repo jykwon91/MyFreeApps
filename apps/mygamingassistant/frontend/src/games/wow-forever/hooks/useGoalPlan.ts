@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useDeferredValue, useMemo } from "react";
 import { DEFAULT_START_ZONE } from "@/games/wow-forever/data/goalPlanner/goalPlannerConfig";
 import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
@@ -23,7 +23,9 @@ const NO_RECIPES: readonly RecipeEntry[] = [];
  * today's auction prices (nobody types a price) and your saved settings —
  * faction, spot, level, flights, formulas you've ticked — worked into one plan.
  */
-export function useGoalPlan(goals: GoalPlannerGoals, book: RecipeBookState): GoalPlanState {
+export function useGoalPlan(liveGoals: GoalPlannerGoals, book: RecipeBookState): GoalPlanState {
+  // Typing a skill re-plans; deferring keeps the inputs responsive while the route search runs.
+  const goals = useDeferredValue(liveGoals);
   const [player] = usePlayerSettings();
   const travel = useTravelSettings();
   const world = useWorldMapData();
