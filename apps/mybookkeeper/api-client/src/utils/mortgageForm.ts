@@ -1,6 +1,7 @@
 import type { Mortgage } from "../types/mortgage/mortgage";
 import type { MortgageFormValues } from "../types/mortgage/mortgage-form-values";
 import type { MortgageRateType } from "../types/mortgage/mortgage-rate-type";
+import { dollarsToCents } from "./dollarsToCents";
 
 /**
  * Conversion between the mortgage form's text state and the API shape.
@@ -25,21 +26,6 @@ export const EMPTY_MORTGAGE_FORM: MortgageFormValues = {
   monthlyEscrowDollars: "",
   notes: "",
 };
-
-/**
- * Dollars typed by hand → integer cents, or null when the field is blank.
- *
- * ``Number("")`` is 0, not NaN, so a blank field would otherwise post a real
- * zero — and a zero balance on a mortgage means "paid off", which is a claim
- * the operator did not make.
- */
-export function dollarsToCents(value: string): number | null {
-  const trimmed = value.trim();
-  if (trimmed === "") return null;
-  const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed)) return null;
-  return Math.round(parsed * 100);
-}
 
 function textOrNull(value: string): string | null {
   const trimmed = value.trim();

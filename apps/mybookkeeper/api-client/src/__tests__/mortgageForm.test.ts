@@ -9,7 +9,6 @@
 import { describe, it, expect } from "vitest";
 import {
   EMPTY_MORTGAGE_FORM,
-  dollarsToCents,
   mortgageToFormValues,
   toMortgagePayload,
 } from "../utils/mortgageForm";
@@ -39,31 +38,6 @@ const MORTGAGE: Mortgage = {
   created_at: "2026-08-17T00:00:00Z",
   updated_at: "2026-08-17T00:00:00Z",
 };
-
-describe("dollarsToCents", () => {
-  it("converts dollars to integer cents", () => {
-    expect(dollarsToCents("1995.82")).toBe(199582);
-  });
-
-  it("returns null for a blank field rather than a zero", () => {
-    // Number("") is 0. A zero balance on a mortgage means "paid off", which
-    // is a claim the operator never made by leaving the box empty.
-    expect(dollarsToCents("")).toBeNull();
-    expect(dollarsToCents("   ")).toBeNull();
-  });
-
-  it("returns null for an unparseable entry", () => {
-    expect(dollarsToCents("about three hundred")).toBeNull();
-  });
-
-  it("keeps a deliberate zero", () => {
-    expect(dollarsToCents("0")).toBe(0);
-  });
-
-  it("rounds rather than truncating a third decimal", () => {
-    expect(dollarsToCents("10.005")).toBe(1001);
-  });
-});
 
 describe("toMortgagePayload", () => {
   it("posts nulls for every field the operator left blank", () => {

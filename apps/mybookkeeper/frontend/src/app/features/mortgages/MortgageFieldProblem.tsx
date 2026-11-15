@@ -1,6 +1,8 @@
 import { MORTGAGE_PROBLEM_MESSAGES } from "@mybookkeeper/api-client/constants/mortgageProblemMessages";
 import type { MortgageFormProblems } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-problems";
 import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
+import FieldProblem from "@/shared/components/FieldProblem";
+import { fieldProblemId } from "@/shared/utils/field-problem-aria";
 
 export interface MortgageFieldProblemProps {
   problems: MortgageFormProblems;
@@ -10,15 +12,10 @@ export interface MortgageFieldProblemProps {
 /** Says what is wrong with one field, under it. Renders nothing while the field is fine. */
 export default function MortgageFieldProblem({ problems, field }: MortgageFieldProblemProps) {
   const problem = problems[field];
-  if (!problem) return null;
   return (
-    <p
-      id={`mortgage-${field}-problem`}
-      role="alert"
-      className="mt-1 text-xs text-destructive"
-      data-testid={`mortgage-${field}-problem`}
-    >
-      {MORTGAGE_PROBLEM_MESSAGES[problem]}
-    </p>
+    <FieldProblem
+      id={fieldProblemId("mortgage", field)}
+      message={problem && MORTGAGE_PROBLEM_MESSAGES[problem]}
+    />
   );
 }

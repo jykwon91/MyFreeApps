@@ -8,7 +8,6 @@
 import { describe, it, expect } from "vitest";
 import {
   EMPTY_POLICY_FORM,
-  dollarsToCents,
   policyToFormValues,
   toPolicyPayload,
 } from "../utils/insurancePolicyForm";
@@ -39,30 +38,6 @@ const POLICY: InsurancePolicyDetail = {
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z",
 };
-
-describe("dollarsToCents", () => {
-  it("converts whole dollars", () => {
-    expect(dollarsToCents("1240")).toBe(124000);
-  });
-
-  it("converts a decimal amount without float drift", () => {
-    expect(dollarsToCents("125.50")).toBe(12550);
-    expect(dollarsToCents("0.07")).toBe(7);
-  });
-
-  it("returns null for a blank field rather than zero", () => {
-    expect(dollarsToCents("")).toBeNull();
-    expect(dollarsToCents("   ")).toBeNull();
-  });
-
-  it("returns null for an unparseable value", () => {
-    expect(dollarsToCents("abc")).toBeNull();
-  });
-
-  it("keeps a typed zero, which is a real claim", () => {
-    expect(dollarsToCents("0")).toBe(0);
-  });
-});
 
 describe("toPolicyPayload", () => {
   it("posts nulls for every optional field left blank", () => {

@@ -10,6 +10,7 @@ import {
 } from "../constants/utilityPlanForm";
 import type { UtilityPlanFormProblems } from "../types/utility/utility-plan-form-problems";
 import type { UtilityPlanFormValues } from "../types/utility/utility-plan-form-values";
+import { dollarsToCents } from "./dollarsToCents";
 
 /**
  * Conversions between a utility plan and the form that edits it.
@@ -49,17 +50,6 @@ export const EMPTY_UTILITY_PLAN_FORM: UtilityPlanFormValues = {
 /** ``""`` → null so an untouched field is absent rather than zero. */
 function optionalText(value: string): string | null {
   return value.trim() === "" ? null : value.trim();
-}
-
-/**
- * Dollars → integer cents. Kept separate from the rate fields, which are sent
- * as strings: a rate carries four decimal places and must not round-trip
- * through a float.
- */
-function dollarsToCents(value: string): number | null {
-  if (value.trim() === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.round(parsed * 100) : null;
 }
 
 function toInt(value: string): number | null {
