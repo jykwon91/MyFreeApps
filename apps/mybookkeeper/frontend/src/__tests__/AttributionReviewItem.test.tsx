@@ -373,4 +373,16 @@ describe("AttributionReviewItem", () => {
       screen.queryByRole("combobox", { name: /pick a tenant/i }),
     ).not.toBeInTheDocument();
   });
+
+  it("shows the transaction's own day in a US timezone, not the day before", () => {
+    const originalTz = process.env.TZ;
+    process.env.TZ = "America/Los_Angeles";
+    try {
+      const item = rentFuzzy();
+      renderItem({ ...item, transaction: { ...item.transaction!, transaction_date: "2026-11-05" } });
+      expect(screen.getByText("11/5/2026")).toBeInTheDocument();
+    } finally {
+      process.env.TZ = originalTz;
+    }
+  });
 });
