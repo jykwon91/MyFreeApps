@@ -13,6 +13,7 @@ import { showError } from "@platform/ui";
 import { DOCUMENT_UPLOAD_MESSAGES } from "@/shared/lib/document-upload-messages";
 import type { DocumentStatus } from "@mybookkeeper/api-client/types/document/DocumentStatus";
 import type { UploadDocumentArgs } from "@mybookkeeper/api-client/types/document/UploadDocumentArgs";
+import { EMAIL_DERIVED_TAGS } from "@mybookkeeper/api-client/constants/emailDerivedTags";
 import { DOCUMENT_UPLOAD_MAX_BYTES } from "@mybookkeeper/api-client/constants/documentUpload";
 
 /** Reports a size without allocating it. */
@@ -273,6 +274,18 @@ describe("DocumentUploadZone", () => {
     it("says it got the data when extraction completed", async () => {
       renderEndingIn("completed");
       expect(await screen.findByText(/Got it! Check your Transactions page/)).toBeInTheDocument();
+    });
+
+    it("refreshes everything derived from extraction, tax checklist included, when a document finishes", async () => {
+      const testStore = processingStore();
+      const dispatchSpy = vi.spyOn(testStore, "dispatch");
+      vi.mocked(useGetSingleUploadStatusQuery).mockReturnValue({ currentData: { status: "completed" } } as unknown as ReturnType<typeof useGetSingleUploadStatusQuery>);
+      renderWithStore(<DocumentUploadZone />, testStore);
+      await screen.findByText(/Got it!/);
+      const invalidations = dispatchSpy.mock.calls
+        .map(([action]) => action as { type: string; payload?: unknown })
+        .filter((action) => action.type === "api/invalidateTags");
+      expect(invalidations.map((action) => action.payload)).toContainEqual(EMAIL_DERIVED_TAGS);
     });
 
     it("says it had trouble, not that it got it, when extraction failed", async () => {

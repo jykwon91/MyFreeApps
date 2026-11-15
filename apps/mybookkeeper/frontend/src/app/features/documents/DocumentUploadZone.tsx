@@ -4,6 +4,7 @@ import { Upload, Camera } from "lucide-react";
 import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
 import { useUploadDocumentMutation, useGetBatchStatusQuery, useGetSingleUploadStatusQuery, useGetDocumentsQuery, useCancelBatchMutation } from "@mybookkeeper/api-client/store/documentsApi";
 import { baseApi } from "@/shared/store/baseApi";
+import { EMAIL_DERIVED_TAGS } from "@mybookkeeper/api-client/constants/emailDerivedTags";
 import { DOCUMENT_UPLOAD_ACCEPT } from "@mybookkeeper/api-client/constants/documentUpload";
 import { documentUploadProblem, documentUploadProblemMessage, isSupportedDocumentUpload } from "@mybookkeeper/api-client/utils/documentUploadFile";
 import { uploadOutcome } from "@/shared/utils/upload-outcome";
@@ -146,13 +147,13 @@ export default function DocumentUploadZone() {
 
     if (upload.batchId && batchStatus?.status === BATCH_STATUSES.DONE) {
       dispatch(batchProcessed({ total: batchStatus.total, failed: batchStatus.failed }));
-      dispatch(baseApi.util.invalidateTags(["Document", "Summary", "Transaction"]));
+      dispatch(baseApi.util.invalidateTags(EMAIL_DERIVED_TAGS));
     }
 
     const outcome = !upload.batchId && singleStatus ? uploadOutcome(singleStatus.status) : null;
     if (outcome) {
       dispatch(processingComplete(outcome));
-      dispatch(baseApi.util.invalidateTags(["Document", "Summary", "Transaction"]));
+      dispatch(baseApi.util.invalidateTags(EMAIL_DERIVED_TAGS));
     }
   }, [batchStatus, singleStatus, upload, dispatch]);
 
