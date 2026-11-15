@@ -9,14 +9,20 @@ interface TrainerNpcSectionProps {
   zoneId: number | null;
   /** Shown when your faction has none in the data. */
   emptyMessage: string;
+  /** When provided, trainer names become buttons that open the recipe list. */
+  onSelectTrainer?: (npcId: number) => void;
 }
 
 /** A titled list of trainers for your faction, capitals first, each with coordinates and a map link. */
-export default function TrainerNpcSection({ name, trainers, zoneId, emptyMessage }: TrainerNpcSectionProps) {
+export default function TrainerNpcSection({ name, trainers, zoneId, emptyMessage, onSelectTrainer }: TrainerNpcSectionProps) {
   return (
     <section className="space-y-2 rounded-xl border bg-card p-3 sm:p-4">
       <h3 className="font-semibold">{name} trainers</h3>
-      {trainers.length ? <RankTrainerList label={name} trainers={trainers} zoneId={zoneId} /> : <EmptyStateNote message={emptyMessage} />}
+      {trainers.length ? (
+        <RankTrainerList label={name} trainers={trainers} zoneId={zoneId} onSelectTrainer={onSelectTrainer} />
+      ) : (
+        <EmptyStateNote message={emptyMessage} />
+      )}
     </section>
   );
 }

@@ -163,6 +163,19 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `data/worldMap/classic/classicRankTrainers.json`. A milestone's `npc` names the
   book seller / quest giver (`MilestoneWhere`). Tests:
   `tests/test_wow_rank_trainers_generator.py`, `src/__tests__/wowRankTrainers.test.ts`.
+  **Trainer recipe lists** (`?trainer=<npcId>` on a crafting profession's trainer
+  page): clicking a trainer name opens a panel listing every recipe they teach,
+  the forever-adjusted learn skill, the training cost and can-learn status. Only
+  crafting professions (`isCraftingProfession`) get clickable trainers; gathering
+  professions render names as plain text. Data in
+  `data/professions/crafting/classic/trainerNpcSpells.json` — **GENERATED** by
+  `python -m scripts.wow_professions.trainer_npc_recipes` from cmangos
+  `npc_trainer` / `npc_trainer_template` and `classic/trainerSkills.json`.
+  `useTrainerNpcSpells` (module-level `useSyncExternalStore`),
+  `lib/trainers/trainerRecipes.ts` (pure; skill status logic),
+  `components/trainers/TrainerRecipesPanel.tsx` (panel + NumberField for skill
+  input, `?skill=` param). Tests: `tests/test_wow_trainer_npc_recipes_generator.py`,
+  `src/__tests__/wowTrainerRecipes.test.ts`.
   Herb / ore nodes carry their gathering skill (Forever `Lock` table) in the
   `objectSpots` rows. Each guide has trainers, rank-ups (Artisan Enchanting = Annora in Uldaman), a
   hand-picked route to 300 (`data/professions/crafting/*Route.ts`, joined to

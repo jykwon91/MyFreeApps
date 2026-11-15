@@ -11,13 +11,15 @@ interface CraftRankTrainerProps {
   faction: PlayerFaction;
   professionLabel: string;
   zoneId: number | null;
+  /** When provided, trainer names become buttons that open the recipe list. */
+  onSelectTrainer?: (npcId: number) => void;
 }
 
 /** Who trains a rank: every trainer for your faction, one inside a dungeon, a book vendor or a quest giver. */
-export default function CraftRankTrainer({ rank, faction, professionLabel, zoneId }: CraftRankTrainerProps) {
+export default function CraftRankTrainer({ rank, faction, professionLabel, zoneId, onSelectTrainer }: CraftRankTrainerProps) {
   const t = rank.trainers;
   if (t.kind === "list") {
-    return <RankTrainerList label={`${rank.name} ${professionLabel}`} trainers={t.trainers[faction]} zoneId={zoneId} />;
+    return <RankTrainerList label={`${rank.name} ${professionLabel}`} trainers={t.trainers[faction]} zoneId={zoneId} onSelectTrainer={onSelectTrainer} />;
   }
   if (t.kind === "book") {
     return <CraftRankErrand action={

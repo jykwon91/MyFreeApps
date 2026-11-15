@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-15",
+    "title": "Trainer recipe lists",
+    "summary": "Click any trainer on a crafting profession's trainer page to see exactly what they teach, the skill you need to learn each recipe, and the training cost. Recipes you can learn now are highlighted; enter your skill to see which are in reach. Gathering professions (Mining, Herbalism, Skinning) are unchanged.",
+    "to": "/wow-forever/trainers"
+  },
+  {
+    "date": "2026-11-15",
     "title": "Talent specs on the guild roster",
     "summary": "The Roster tab now shows each member's main talent spec, the tree with the most points, with its icon next to their class. The table shows it on wider screens; on phones it's under the class line.",
     "to": "/wow-forever/topdeadcenter?tab=roster"

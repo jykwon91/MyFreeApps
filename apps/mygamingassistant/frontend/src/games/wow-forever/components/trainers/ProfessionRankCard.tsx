@@ -10,10 +10,12 @@ interface ProfessionRankCardProps {
   professionLabel: string;
   faction: PlayerFaction;
   zoneId: number | null;
+  /** When provided, trainer names become buttons that open the recipe list. */
+  onSelectTrainer?: (npcId: number) => void;
 }
 
 /** One rank: the skill and level it needs, the cap it gives, and who trains it when that isn't every trainer. */
-export default function ProfessionRankCard({ step, professionLabel, faction, zoneId }: ProfessionRankCardProps) {
+export default function ProfessionRankCard({ step, professionLabel, faction, zoneId, onSelectTrainer }: ProfessionRankCardProps) {
   return (
     <li className="space-y-2 rounded-xl border bg-card p-3" data-testid="trainers-rank">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3">
@@ -23,7 +25,7 @@ export default function ProfessionRankCard({ step, professionLabel, faction, zon
       {step.milestone ? <p className="text-sm">{forFaction(step.milestone.detail, faction)}</p> : null}
       {step.milestone ? <MilestoneWhere step={step.milestone} faction={faction} zoneId={zoneId} /> : null}
       {step.craftingRank ? (
-        <CraftRankTrainer rank={step.craftingRank} faction={faction} professionLabel={professionLabel} zoneId={zoneId} />
+        <CraftRankTrainer rank={step.craftingRank} faction={faction} professionLabel={professionLabel} zoneId={zoneId} onSelectTrainer={onSelectTrainer} />
       ) : null}
       {!step.milestone && !step.craftingRank ? <p className="text-sm text-muted-foreground">Any trainer below.</p> : null}
     </li>
