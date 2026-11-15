@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.recipe.version_schemas import (
     RECIPE_MINUTES_MAX,
@@ -17,7 +17,7 @@ from app.schemas.recipe.version_schemas import (
 class RecipeCreateRequest(BaseModel):
     """Create a recipe together with its first version (v1) in one call."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     title: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=5000)
@@ -25,8 +25,8 @@ class RecipeCreateRequest(BaseModel):
     servings: str | None = Field(default=None, max_length=50)
     prep_minutes: int | None = Field(default=None, ge=0, le=RECIPE_MINUTES_MAX)
     cook_minutes: int | None = Field(default=None, ge=0, le=RECIPE_MINUTES_MAX)
-    ingredients: list[IngredientInput] = Field(default_factory=list)
-    steps: list[StepInput] = Field(default_factory=list)
+    ingredients: list[IngredientInput] = Field(min_length=1)
+    steps: list[StepInput] = Field(min_length=1)
 
 
 class RecipeUpdateRequest(BaseModel):
@@ -37,11 +37,19 @@ class RecipeUpdateRequest(BaseModel):
     source.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
+    # Omitting the title leaves it unchanged; the column is NOT NULL, so an
+    # explicit null is rejected below rather than reaching the database.
     title: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=5000)
     source: str | None = Field(default=None, max_length=1000)
+
+    @model_validator(mode="after")
+    def _title_cannot_be_cleared(self) -> RecipeUpdateRequest:
+        if "title" in self.model_fields_set and self.title is None:
+            raise ValueError("title cannot be null; omit it to leave the title unchanged")
+        return self
 
 
 class RecipeSummary(BaseModel):

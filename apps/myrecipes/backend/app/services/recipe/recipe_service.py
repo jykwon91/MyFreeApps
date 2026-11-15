@@ -145,7 +145,7 @@ async def create_recipe(
     """Create a recipe and its first version (v1) atomically."""
     recipe = Recipe(
         user_id=user_id,
-        title=req.title.strip(),
+        title=req.title,
         description=req.description,
         source=req.source,
     )

@@ -13,6 +13,9 @@ import pytest
 from httpx import AsyncClient
 
 
+_TWEAK_CONTENT = {"ingredients": [{"name": "flour"}], "steps": [{"instruction": "Mix."}]}
+
+
 def _recipe_payload(**overrides) -> dict:
     payload = {
         "title": "Chocolate Chip Cookies",
@@ -186,8 +189,8 @@ class TestTweakAndDiff:
                     "servings": None,
                     "prep_minutes": None,
                     "cook_minutes": None,
-                    "ingredients": [],
-                    "steps": [],
+                    "ingredients": _TWEAK_CONTENT["ingredients"],
+                    "steps": _TWEAK_CONTENT["steps"],
                 },
             )
             latest = (await authed.get(f"/recipes/{created['id']}")).json()["latest_version"]
@@ -204,7 +207,7 @@ class TestTweakAndDiff:
             body = (
                 await authed.post(
                     f"/recipes/{created['id']}/versions",
-                    json={"change_note": "steps only", "cook_minutes": 13, "ingredients": [], "steps": []},
+                    json={"change_note": "steps only", "cook_minutes": 13, **_TWEAK_CONTENT},
                 )
             ).json()
         assert (body["servings"], body["prep_minutes"], body["cook_minutes"]) == ("24", 15, 13)
@@ -217,7 +220,7 @@ class TestTweakAndDiff:
             recipe_id = created["id"]
             await authed.post(
                 f"/recipes/{recipe_id}/versions",
-                json={"change_note": "v2", "ingredients": [], "steps": []},
+                json={"change_note": "v2", **_TWEAK_CONTENT},
             )
             timeline = (await authed.get(f"/recipes/{recipe_id}/versions")).json()
         assert [v["version_number"] for v in timeline] == [1, 2]
@@ -232,7 +235,7 @@ class TestTweakAndDiff:
             # v2 with no ingredients.
             await authed.post(
                 f"/recipes/{recipe_id}/versions",
-                json={"change_note": "stripped", "ingredients": [], "steps": []},
+                json={"change_note": "stripped", **_TWEAK_CONTENT},
             )
             # Restore v1 -> becomes v3 with v1's two ingredients.
             restored = (await authed.post(f"/recipes/{recipe_id}/versions/{v1_id}/restore")).json()
@@ -269,7 +272,7 @@ class TestVersionWritesSerialize:
         async with await as_user(user) as authed:
             recipe_id = (await authed.post("/recipes", json=_recipe_payload())).json()["id"]
             calls = self._spy_get_by_id(monkeypatch)
-            tweak = {"change_note": "tweak", "ingredients": [], "steps": []}
+            tweak = {"change_note": "tweak", **_TWEAK_CONTENT}
             v2 = (await authed.post(f"/recipes/{recipe_id}/versions", json=tweak)).json()
             v3 = (await authed.post(f"/recipes/{recipe_id}/versions", json=tweak)).json()
 

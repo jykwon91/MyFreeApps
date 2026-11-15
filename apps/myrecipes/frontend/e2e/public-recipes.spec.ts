@@ -118,7 +118,11 @@ test.describe("Seeded recipe — guest vs owner", () => {
       extraHTTPHeaders: { Authorization: `Bearer ${access_token}` },
     });
     const created = await api.post("/api/recipes", {
-      data: { title: SEEDED_TITLE, ingredients: [], steps: [] },
+      data: {
+        title: SEEDED_TITLE,
+        ingredients: [{ name: "salt" }],
+        steps: [{ instruction: "Season to taste." }],
+      },
     });
     expect(created.status(), "seeding the probe recipe failed").toBe(201);
     recipeId = (await created.json()).id;
