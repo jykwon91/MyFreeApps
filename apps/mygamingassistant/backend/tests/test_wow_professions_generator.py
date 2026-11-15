@@ -22,19 +22,20 @@ from scripts.wow_food.recipe_sources import (
     _stock,
     territory_of,
 )
-from scripts.wow_professions import build as professions_build
-from scripts.wow_professions import specs
+from scripts.wow_professions import classic_teaching, specs
 from scripts.wow_professions.build import (
     DISENCHANT_COLUMNS,
     _best_giver,
-    _by_recipe,
     _disenchant_kind,
-    _recipes_taught,
     _roll_chances,
+    with_child_skill_lines,
+)
+from scripts.wow_professions.classic_teaching import (
+    _by_recipe,
+    _recipes_taught,
     era_teaching_items,
     gossip_teachers,
     quest_teachers,
-    with_child_skill_lines,
 )
 from scripts.wow_professions.crafts import (
     ClassicTeaching,
@@ -322,7 +323,7 @@ class TestClassicLearn:
                 {"ParentItemID": "500", "SpellID": "77"},
             ],
         }
-        monkeypatch.setattr(professions_build, "wago_table", lambda name, **_: rows[name])
+        monkeypatch.setattr(classic_teaching, "wago_table", lambda name, **_: rows[name])
         found = era_teaching_items(frozenset({21369, 22685, 500}), {26095: [26086], 28210: [28208]}, {})
         assert found[26086] == (21369, "Pattern: Felcloth Bag", 285)
         # Season of Discovery's 236691 isn't a Classic item.
