@@ -5,6 +5,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react-nativ
 import type { ReactElement } from "react";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
+import { BENCHMARK_FORM_PROBLEMS } from "@mybookkeeper/api-client/constants/benchmarkForm";
 import { MARKET_RATE_MESSAGES } from "../src/constants/marketRates";
 import MarketRateFormScreen from "../src/features/utilityPlans/MarketRateFormScreen";
 import MarketRatesScreen from "../src/features/utilityPlans/MarketRatesScreen";
@@ -98,8 +99,27 @@ describe("MarketRateFormScreen", () => {
     const server = startUtilityServer();
     await show(<MarketRateFormScreen serviceType="electricity" />);
     await fireEvent.press(await screen.findByRole("button", { name: MARKET_RATE_MESSAGES.save }));
-    expect(await screen.findByText(MARKET_RATE_MESSAGES.figureRequired)).toBeTruthy();
+    expect(await screen.findByText(BENCHMARK_FORM_PROBLEMS.rateRequired)).toBeTruthy();
     expect(writesTo(server, "put")).toHaveLength(0);
+  });
+
+  it.each([
+    ["1000", BENCHMARK_FORM_PROBLEMS.rateTooHigh],
+    ["11.12345", BENCHMARK_FORM_PROBLEMS.rateTooPrecise],
+  ])("points at a rate of %s and sends nothing", async (figure, message) => {
+    const server = startUtilityServer();
+    await show(<MarketRateFormScreen serviceType="electricity" />);
+    await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MARKET_RATE_MESSAGES.figureMetered.replace(/[()/]/g, "\\$&")}`)), figure);
+    await fireEvent.press(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.save }));
+    expect(await screen.findByText(message)).toBeTruthy();
+    expect(writesTo(server, "put")).toHaveLength(0);
+  });
+
+  it("stops source and notes at the backend's limits", async () => {
+    startUtilityServer();
+    await show(<MarketRateFormScreen serviceType="electricity" />);
+    expect((await screen.findByLabelText(new RegExp(`^${MARKET_RATE_MESSAGES.source}`))).props.maxLength).toBe(255);
+    expect(screen.getByLabelText(new RegExp(`^${MARKET_RATE_MESSAGES.notes}`)).props.maxLength).toBe(5000);
   });
 
   it("saves a metered rate as typed, says so, and leaves", async () => {

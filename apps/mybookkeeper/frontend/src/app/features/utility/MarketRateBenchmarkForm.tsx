@@ -1,3 +1,5 @@
+import FieldProblem from "@/shared/components/FieldProblem";
+import { BENCHMARK_NOTES_MAX_LENGTH, BENCHMARK_SOURCE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/benchmarkForm";
 import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 import UtilityPlanFormActions from "./UtilityPlanFormActions";
 import { useMarketRateBenchmarkForm } from "./useMarketRateBenchmarkForm";
@@ -35,7 +37,7 @@ export default function MarketRateBenchmarkForm({
     : "The advertised all-in average, including delivery charges.";
 
   return (
-    <form onSubmit={(e) => void form.handleSubmit(e)} className="space-y-4">
+    <form onSubmit={(e) => void form.handleSubmit(e)} noValidate className="space-y-4">
       <div>
         <label htmlFor="benchmark-figure" className="block text-sm font-medium mb-1">
           {figureLabel}
@@ -50,8 +52,11 @@ export default function MarketRateBenchmarkForm({
           onChange={(e) => form.setFigure(e.target.value)}
           className={UTILITY_PLAN_INPUT_CLASS}
           data-testid="benchmark-figure"
+          aria-invalid={form.problems.figure ? true : undefined}
+          aria-describedby={form.problems.figure ? "benchmark-figure-problem" : undefined}
           required
         />
+        <FieldProblem id="benchmark-figure-problem" message={form.problems.figure} />
         <p className="text-xs text-muted-foreground mt-1">{figureHint}</p>
       </div>
 
@@ -62,13 +67,16 @@ export default function MarketRateBenchmarkForm({
         <input
           id="benchmark-source"
           type="text"
-          maxLength={255}
+          maxLength={BENCHMARK_SOURCE_MAX_LENGTH}
           value={form.source}
           onChange={(e) => form.setSource(e.target.value)}
           placeholder="Power to Choose, 77021, 12-month fixed, 4★+"
           className={UTILITY_PLAN_INPUT_CLASS}
           data-testid="benchmark-source"
+          aria-invalid={form.problems.source ? true : undefined}
+          aria-describedby={form.problems.source ? "benchmark-source-problem" : undefined}
         />
+        <FieldProblem id="benchmark-source-problem" message={form.problems.source} />
         <p className="text-xs text-muted-foreground mt-1">
           Include the filters you used — they are what makes the number checkable
           later.
@@ -87,8 +95,11 @@ export default function MarketRateBenchmarkForm({
           onChange={(e) => form.setObservedOn(e.target.value)}
           className={UTILITY_PLAN_INPUT_CLASS}
           data-testid="benchmark-observed-on"
+          aria-invalid={form.problems.observedOn ? true : undefined}
+          aria-describedby={form.problems.observedOn ? "benchmark-observed-on-problem" : undefined}
           required
         />
+        <FieldProblem id="benchmark-observed-on-problem" message={form.problems.observedOn} />
       </div>
 
       <div>
@@ -101,8 +112,12 @@ export default function MarketRateBenchmarkForm({
           value={form.notes}
           onChange={(e) => form.setNotes(e.target.value)}
           className={UTILITY_PLAN_INPUT_CLASS}
+          maxLength={BENCHMARK_NOTES_MAX_LENGTH}
           data-testid="benchmark-notes"
+          aria-invalid={form.problems.notes ? true : undefined}
+          aria-describedby={form.problems.notes ? "benchmark-notes-problem" : undefined}
         />
+        <FieldProblem id="benchmark-notes-problem" message={form.problems.notes} />
       </div>
 
       {/* Removal sits apart from save/cancel: without it a rate recorded from

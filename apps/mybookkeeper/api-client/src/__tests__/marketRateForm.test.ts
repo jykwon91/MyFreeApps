@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { BENCHMARK_FORM_PROBLEMS } from "../constants/benchmarkForm";
 import type { MarketRateBenchmark } from "../types/utility/market-rate-benchmark";
-import { describeBenchmarkFigure, isFlatService, isMarketRateFigureValid, marketRateToFormValues, toMarketRateUpsert } from "../utils/marketRateForm";
+import { describeBenchmarkFigure, isFlatService, marketRateFormProblems, marketRateToFormValues, toMarketRateUpsert } from "../utils/marketRateForm";
 
 function aBenchmark(overrides: Partial<MarketRateBenchmark> = {}): MarketRateBenchmark {
   return {
@@ -49,17 +50,56 @@ describe("marketRateToFormValues", () => {
   });
 });
 
-describe("isMarketRateFigureValid", () => {
-  it.each([
-    ["11.25", true],
-    ["0.5", true],
-    ["", false],
-    ["  ", false],
-    ["0", false],
-    ["-3", false],
-    ["abc", false],
-  ])("%j is %s", (figure, expected) => {
-    expect(isMarketRateFigureValid(figure)).toBe(expected);
+describe("marketRateFormProblems", () => {
+  const TODAY = "2026-03-01";
+  const ok = { figure: "11.25", source: "Power to Choose", observedOn: "2026-03-01", notes: "" };
+  const problems = (service: "electricity" | "internet", change: Partial<typeof ok>) => marketRateFormProblems(service, { ...ok, ...change }, TODAY);
+
+  it("has nothing to say about a form the backend accepts", () => {
+    expect(problems("electricity", {})).toEqual({});
+    expect(problems("electricity", { figure: "999.9999", source: "x".repeat(255), notes: "n".repeat(5000) })).toEqual({});
+    expect(problems("internet", { figure: "69.99" })).toEqual({});
+  });
+
+  it.each(["", "  ", "0", "-3", "abc", "1e3", "0.00"])("asks for a rate above zero, not %j", (figure) => {
+    expect(problems("electricity", { figure }).figure).toBe(BENCHMARK_FORM_PROBLEMS.rateRequired);
+  });
+
+  it("refuses a rate past 999.9999", () => {
+    expect(problems("electricity", { figure: "1000" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.rateTooHigh);
+    expect(problems("electricity", { figure: "999.99991" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.rateTooPrecise);
+  });
+
+  it("refuses more than four decimal places on a rate", () => {
+    expect(problems("electricity", { figure: "11.12345" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.rateTooPrecise);
+    expect(problems("electricity", { figure: "11.1234" }).figure).toBeUndefined();
+  });
+
+  it("asks internet for dollars and cents above zero", () => {
+    expect(problems("internet", { figure: "0" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.monthlyRequired);
+    expect(problems("internet", { figure: "69.999" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.moneyTooPrecise);
+    expect(problems("internet", { figure: "1e20" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.monthlyRequired);
+    expect(problems("internet", { figure: "99999999999999999999" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.monthlyTooLarge);
+  });
+
+  it("does not apply the per-kWh ceiling to a monthly price", () => {
+    expect(problems("internet", { figure: "1500.00" })).toEqual({});
+  });
+
+  it("limits source to 255 and notes to 5000, counted as they will be sent", () => {
+    expect(problems("electricity", { source: "x".repeat(256) }).source).toBe(BENCHMARK_FORM_PROBLEMS.sourceTooLong);
+    expect(problems("electricity", { source: ` ${"x".repeat(255)} ` }).source).toBeUndefined();
+    expect(problems("electricity", { notes: "n".repeat(5001) }).notes).toBe(BENCHMARK_FORM_PROBLEMS.notesTooLong);
+  });
+
+  it("needs a date that is not after today", () => {
+    expect(problems("electricity", { observedOn: "" }).observedOn).toBe(BENCHMARK_FORM_PROBLEMS.dateRequired);
+    expect(problems("electricity", { observedOn: "2026-03-02" }).observedOn).toBe(BENCHMARK_FORM_PROBLEMS.dateInFuture);
+    expect(problems("electricity", { observedOn: TODAY }).observedOn).toBeUndefined();
+  });
+
+  it("reports every field at once", () => {
+    expect(Object.keys(problems("electricity", { figure: "", source: "x".repeat(256), observedOn: "", notes: "n".repeat(5001) })).sort()).toEqual(["figure", "notes", "observedOn", "source"]);
   });
 });
 

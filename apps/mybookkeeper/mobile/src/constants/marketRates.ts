@@ -1,5 +1,3 @@
-export const MARKET_RATE_SOURCE_MAX_LENGTH = 255;
-
 export const MARKET_RATE_MESSAGES = {
   listIntro: "The going rate for each service. Your plans are checked against these to spot overpaying.",
   notRecorded: "Not recorded",
@@ -18,7 +16,6 @@ export const MARKET_RATE_MESSAGES = {
   figureFlatHint: "Include any equipment fee. That is how your own plans are measured.",
   figureMetered: "Going rate (¢/kWh, all-in at 1,000 kWh)",
   figureMeteredHint: "The advertised all-in average, including delivery charges.",
-  figureRequired: "Enter the going rate as a number above zero.",
   source: "Where you saw it",
   sourceHint: "Include the filters you used.",
   observedOn: "Seen on",

@@ -1,6 +1,7 @@
 import api from "@platform/core/lib/api";
 import { fireEvent, screen } from "@testing-library/react-native";
 import { Alert } from "react-native";
+import { BENCHMARK_FORM_PROBLEMS } from "@mybookkeeper/api-client/constants/benchmarkForm";
 import MarketPremiumScreen from "../src/features/insurance/MarketPremiumScreen";
 import { aBenchmark, lastInsuranceWrite, startInsuranceServer } from "../test-support/insuranceServer";
 import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsurance";
@@ -75,8 +76,31 @@ describe("market premium", () => {
     await fireEvent.press(await screen.findByRole("button", { name: "Record a market premium" }));
     await fireEvent.changeText(await screen.findByLabelText("Annual premium (USD), required"), "1200");
     await fireEvent.press(screen.getByRole("button", { name: "Save market premium" }));
-    expect(await screen.findByText("Enter both amounts, each more than zero.")).toBeTruthy();
+    expect(await screen.findByText(BENCHMARK_FORM_PROBLEMS.coverageRequired)).toBeTruthy();
     expect(lastInsuranceWrite(server)).toBeNull();
+  });
+
+  it.each([
+    ["10000001", "400000", BENCHMARK_FORM_PROBLEMS.premiumTooHigh],
+    ["1200", "1000000001", BENCHMARK_FORM_PROBLEMS.coverageTooHigh],
+    ["1200.555", "400000", BENCHMARK_FORM_PROBLEMS.moneyTooPrecise],
+  ])("points at premium %s / coverage %s and sends nothing", async (premium, coverage, message) => {
+    const server = startInsuranceServer();
+    await renderInsurance(<MarketPremiumScreen />);
+    await fireEvent.press(await screen.findByRole("button", { name: "Record a market premium" }));
+    await fillAmounts(premium, coverage);
+    await fireEvent.press(screen.getByRole("button", { name: "Save market premium" }));
+    expect(await screen.findByText(message)).toBeTruthy();
+    expect(lastInsuranceWrite(server)).toBeNull();
+  });
+
+  it("stops region, source and notes at the backend's limits", async () => {
+    startInsuranceServer();
+    await renderInsurance(<MarketPremiumScreen />);
+    await fireEvent.press(await screen.findByRole("button", { name: "Record a market premium" }));
+    expect((await screen.findByLabelText("Region")).props.maxLength).toBe(120);
+    expect(screen.getByLabelText("Where it came from").props.maxLength).toBe(255);
+    expect(screen.getByLabelText("Notes").props.maxLength).toBe(5000);
   });
 
   it("starts an update from the stored figure", async () => {
@@ -99,7 +123,7 @@ describe("market premium", () => {
 
   it.each([
     [403, "You have view-only access, so I can't change the market premium."],
-    [422, "I couldn't save that. Check the amounts and that the date isn't in the future."],
+    [422, "I couldn't save that. Check the details and try again."],
     [500, "I couldn't save that. Want to try again?"],
     ["offline" as const, "I can't reach the server, so I couldn't save that. Your details are still here."],
   ])("a %s on save says %s and keeps the form", async (failure, message) => {
