@@ -7,9 +7,10 @@ import ExpensesSection from "@/features/financials/ExpensesSection";
 import type { FinancialsBodyProps } from "@/types/financials/FinancialsBodyProps";
 
 export default function FinancialsBody({ dropId }: FinancialsBodyProps) {
-  const { data, isLoading, isError, refetch } = useGetFinancialsQuery(dropId);
+  // currentData is this drop's result; data would keep the previously selected drop's figures.
+  const { currentData: data, isError, refetch } = useGetFinancialsQuery(dropId);
 
-  if (isLoading) return <FinancialsBodySkeleton />;
+  if (data === undefined && !isError) return <FinancialsBodySkeleton />;
   if (isError || !data) {
     return (
       <div className="space-y-2">

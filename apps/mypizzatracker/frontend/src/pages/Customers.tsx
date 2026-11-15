@@ -59,7 +59,8 @@ export default function CustomersPage() {
         </label>
       </Card>
 
-      {query.isLoading ? <ListSkeleton /> : null}
+      {/* currentData is this search's result; data would keep the previous search's rows. */}
+      {query.currentData === undefined && !query.isError ? <ListSkeleton /> : null}
 
       {query.isError ? (
         <EmptyState
@@ -69,8 +70,8 @@ export default function CustomersPage() {
         />
       ) : null}
 
-      {query.data ? (
-        query.data.length === 0 ? (
+      {query.currentData ? (
+        query.currentData.length === 0 ? (
           <EmptyState
             heading={
               debouncedSearch
@@ -84,7 +85,7 @@ export default function CustomersPage() {
             }
           />
         ) : (
-          <CustomerList rows={query.data} />
+          <CustomerList rows={query.currentData} />
         )
       ) : null}
     </div>

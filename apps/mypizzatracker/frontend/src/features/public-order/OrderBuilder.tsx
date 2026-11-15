@@ -34,10 +34,10 @@ export default function OrderBuilder({ drop, menu, onPlaced }: OrderBuilderProps
   const [paymentMethod, setPaymentMethod] = useState<string>(
     PAYMENT_METHOD_OPTIONS[0]?.tag ?? "venmo",
   );
-  // Once the customer has applied "the usual", they shouldn't be re-prompted
-  // every time they tweak the phone. Locking the banner after one apply keeps
-  // the page calm; clearing the phone field resets it.
-  const [usualApplied, setUsualApplied] = useState(false);
+  // The phone the customer applied "the usual" for. Tying it to a phone (not a
+  // flag) means a different phone gets its own banner, and the banner stays up
+  // for the phone it was applied to. Clearing the phone resets it.
+  const [usualAppliedFor, setUsualAppliedFor] = useState<string | null>(null);
   const [placeOrder, { isLoading }] = usePlacePublicOrderMutation();
 
   // Debounce + gate the customer lookup. Only fire when the customer has
@@ -46,36 +46,43 @@ export default function OrderBuilder({ drop, menu, onPlaced }: OrderBuilderProps
   const debouncedPhone = useDebouncedValue(customerPhone, 400);
   const debouncedDigits = countPhoneDigits(debouncedPhone);
   const lookupQuery = useLookupPublicCustomerQuery(debouncedPhone, {
-    skip: debouncedDigits < 7 || usualApplied,
+    skip: debouncedDigits < 7,
   });
 
-  // Pre-fill an empty name once per lookup result, during render. Never
-  // overwrite something the customer typed, and don't refill a name they
-  // cleared on purpose.
-  const [prefilledFrom, setPrefilledFrom] = useState(lookupQuery.data);
-  if (lookupQuery.data && lookupQuery.data !== prefilledFrom) {
-    setPrefilledFrom(lookupQuery.data);
-    if (lookupQuery.data.customer_name && customerName.trim() === "") {
-      setCustomerName(lookupQuery.data.customer_name);
+  // `currentData` is the result for THIS phone only; `data` would keep the
+  // previous phone's customer while the new lookup loads, 404s or is skipped.
+  // While the field is ahead of the debounce the result belongs to an older
+  // phone, so it isn't shown either.
+  const lookup = customerPhone === debouncedPhone ? lookupQuery.currentData : undefined;
+  const usualApplied = lookup !== undefined && usualAppliedFor === debouncedPhone;
+
+  // Pre-fill the name once per lookup result, during render. Only an empty
+  // name, or one that is still the previous pre-fill, is replaced: a name the
+  // customer typed is never overwritten, and a name they cleared on purpose
+  // isn't refilled for the same result.
+  const [prefilledFrom, setPrefilledFrom] = useState(lookup);
+  const [prefilledName, setPrefilledName] = useState("");
+  if (lookup !== prefilledFrom) {
+    const nextName = lookup?.customer_name ?? "";
+    setPrefilledFrom(lookup);
+    setPrefilledName(nextName);
+    if (customerName.trim() === "" || customerName === prefilledName) {
+      setCustomerName(nextName);
     }
   }
 
-  // Clearing the phone resets the "applied" lock so a different customer
-  // on a shared device can get their own "welcome back".
   const handlePhoneChange = (phone: string) => {
     setCustomerPhone(phone);
-    if (countPhoneDigits(phone) < 7) setUsualApplied(false);
+    if (countPhoneDigits(phone) < 7) setUsualAppliedFor(null);
   };
 
   const orderableTheUsual = useMemo(() => {
-    if (!lookupQuery.data) return [];
-    return selectOrderableTheUsual(lookupQuery.data.the_usual, menu);
-  }, [lookupQuery.data, menu]);
+    if (!lookup) return [];
+    return selectOrderableTheUsual(lookup.the_usual, menu);
+  }, [lookup, menu]);
 
   const applyTheUsual = () => {
-    // The banner can outlive the phone for the debounce window; applying then
-    // would set a lock that no later phone change clears.
-    if (orderableTheUsual.length === 0 || countPhoneDigits(customerPhone) < 7) return;
+    if (orderableTheUsual.length === 0) return;
     setLines(
       orderableTheUsual.map((line) => ({
         localId: cryptoRandomId(),
@@ -84,7 +91,7 @@ export default function OrderBuilder({ drop, menu, onPlaced }: OrderBuilderProps
         modifications_text: line.modifications_text,
       })),
     );
-    setUsualApplied(true);
+    setUsualAppliedFor(debouncedPhone);
   };
 
   const selectedSlot = drop.slots.find((s) => s.id === selectedSlotId);
@@ -234,9 +241,9 @@ export default function OrderBuilder({ drop, menu, onPlaced }: OrderBuilderProps
             )}
           </FormField>
 
-          {lookupQuery.data ? (
+          {lookup ? (
             <WelcomeBack
-              name={lookupQuery.data.customer_name}
+              name={lookup.customer_name}
               theUsualCount={orderableTheUsual.length}
               applied={usualApplied}
               onApply={applyTheUsual}
