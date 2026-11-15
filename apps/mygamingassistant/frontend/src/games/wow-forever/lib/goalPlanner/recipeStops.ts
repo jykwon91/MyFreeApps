@@ -124,6 +124,13 @@ export function recipeGoal(entry: RecipeEntry, faction: PlayerFaction, label: st
       },
     };
   }
+  if (learn.kind === "quest") {
+    const quests = learn.quests.map((q) => q.title).join(" or ");
+    return { kind: "note", note: { kind: PLAN_NOTE_KIND.offRoute, text: `${entry.name}: learned from the quest ${quests}, so it's not on the route.` } };
+  }
+  if (learn.kind === "npc") {
+    return { kind: "note", note: { kind: PLAN_NOTE_KIND.offRoute, text: `${entry.name}: taught only by ${learn.npcs.join(" or ")}, so it's not on the route.` } };
+  }
   if (!entry.recipeSources) {
     return { kind: "note", note: { kind: PLAN_NOTE_KIND.noSource, text: `${entry.name}: the data has no known source for ${learn.item}.` } };
   }

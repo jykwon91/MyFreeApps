@@ -275,7 +275,7 @@ describe("recipeGoal — a wanted recipe becomes a stop, a trainer lesson or a n
   });
 
   it("buys a recipe item from a vendor your faction can use, at the vendor's price", () => {
-    const learn: LearnAt = { kind: "item", skill: 115, itemId: 5772, item: "Pattern: Red Woolen Bag" };
+    const learn: LearnAt = { kind: "item", skill: 115, itemId: 5772, item: "Pattern: Red Woolen Bag", estimated: false };
     const entry = recipeEntry("tailoring:6688", learn, { recipeSources: sources([vendor(1, FACTION.horde), vendor(2, FACTION.neutral)], 500) });
     const result = recipeGoal(entry, FACTION.alliance, "Tailoring", true);
     expect(result.kind).toBe("stop");
@@ -287,8 +287,24 @@ describe("recipeGoal — a wanted recipe becomes a stop, a trainer lesson or a n
     expect(result.stop.learnSkill).toBe(115);
   });
 
+  it("names a quest recipe in a note instead of routing to it", () => {
+    const learn: LearnAt = { kind: "quest", skill: 225, quests: [{ id: 5306, title: "Snakestone of the Shadow Huntress" }] };
+    const result = recipeGoal(recipeEntry("tailoring:1", learn), FACTION.alliance, "Tailoring", true);
+    expect(result.kind).toBe("note");
+    if (result.kind !== "note") return;
+    expect(result.note.kind).toBe(PLAN_NOTE_KIND.offRoute);
+    expect(result.note.text).toContain("Snakestone of the Shadow Huntress");
+  });
+
+  it("names the one NPC who teaches a recipe in a note", () => {
+    const learn: LearnAt = { kind: "npc", skill: 250, npcs: ["Lilliam Sparkspindle"] };
+    const result = recipeGoal(recipeEntry("tailoring:2", learn), FACTION.alliance, "Tailoring", true);
+    expect(result.kind).toBe("note");
+    if (result.kind === "note") expect(result.note.text).toContain("Lilliam Sparkspindle");
+  });
+
   it("notes a recipe only the other faction sells", () => {
-    const learn: LearnAt = { kind: "item", skill: 115, itemId: 5772, item: "Pattern: Red Woolen Bag" };
+    const learn: LearnAt = { kind: "item", skill: 115, itemId: 5772, item: "Pattern: Red Woolen Bag", estimated: false };
     const entry = recipeEntry("tailoring:6688", learn, { recipeSources: sources([vendor(1, FACTION.horde)], 500) });
     const result = recipeGoal(entry, FACTION.alliance, "Tailoring", true);
     expect(result.kind).toBe("note");

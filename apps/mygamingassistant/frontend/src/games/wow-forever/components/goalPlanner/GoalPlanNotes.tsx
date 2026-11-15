@@ -4,7 +4,7 @@ import { PLAN_NOTE_KIND, type PlanNoteKind } from "@/games/wow-forever/types/goa
 import type { PlanNote } from "@/games/wow-forever/types/goalPlanner/planNote";
 
 /** Notes that stop the plan working as written; the rest are just good to know. */
-const WARNING_KINDS: ReadonlySet<PlanNoteKind> = new Set([PLAN_NOTE_KIND.level, PLAN_NOTE_KIND.skill, PLAN_NOTE_KIND.tooMany, PLAN_NOTE_KIND.noSource]);
+const WARNING_KINDS: ReadonlySet<PlanNoteKind> = new Set([PLAN_NOTE_KIND.level, PLAN_NOTE_KIND.skill, PLAN_NOTE_KIND.tooMany, PLAN_NOTE_KIND.noSource, PLAN_NOTE_KIND.offRoute]);
 
 /** What the plan couldn't do or can't count on. */
 export default function GoalPlanNotes({ notes }: { notes: readonly PlanNote[] }) {
