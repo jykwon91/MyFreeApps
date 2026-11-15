@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.recipe.cook_log import CookLog
+from app.models.recipe.recipe import Recipe
 from app.models.recipe.recipe_version import RecipeVersion
 
 
@@ -91,3 +92,15 @@ async def counts_and_best_by_version(
         .group_by(CookLog.version_id)
     )
     return {row[0]: (int(row[1]), row[2]) for row in result.all()}
+
+
+async def list_all_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[CookLog]:
+    """Every cook log on the user's non-deleted recipes, oldest first (data export)."""
+    result = await db.execute(
+        select(CookLog)
+        .join(RecipeVersion, CookLog.version_id == RecipeVersion.id)
+        .join(Recipe, RecipeVersion.recipe_id == Recipe.id)
+        .where(CookLog.user_id == user_id, Recipe.deleted_at.is_(None))
+        .order_by(CookLog.cooked_at.asc(), CookLog.id.asc())
+    )
+    return list(result.scalars().all())
