@@ -478,3 +478,196 @@ describe("resolveHelpSpecId", () => {
     expect(Object.keys(TALENT_TREE_SPEC_ID)).toHaveLength(27);
   });
 });
+
+
+// ---------------------------------------------------------------------------
+// computeGearMatches -- weapon slot matching (Issue 1)
+//
+// ability 5338 -> spell 9983  "Copper Claymore"    blacksmithing (two_hand Sword, item_id 7955)
+// ability 1652 -> spell 2739  "Copper Shortsword"  blacksmithing (one_hand Sword, item_id 2847)
+// ---------------------------------------------------------------------------
+
+/** Mock ClientItem for a crafted two-hand Sword (Copper Claymore). */
+const MOCK_COPPER_CLAYMORE: ClientItem = {
+  id: 7955,
+  name: "Copper Claymore",
+  quality: "common",
+  slot: "two_hand",
+  itemType: "Sword",
+  itemLevel: 11,
+  requiredLevel: 6,
+  armor: null,
+  weapon: null,
+  stats: { strength: 5, stamina: 3 },
+  classes: null,
+  damageUnknown: false,
+  otherEffects: 0,
+  randomSuffix: false,
+};
+
+/** Mock ClientItem for a crafted one-hand Sword (Copper Shortsword). */
+const MOCK_COPPER_SHORTSWORD: ClientItem = {
+  id: 2847,
+  name: "Copper Shortsword",
+  quality: "common",
+  slot: "one_hand",
+  itemType: "Sword",
+  itemLevel: 10,
+  requiredLevel: 4,
+  armor: null,
+  weapon: null,
+  stats: { agility: 4, stamina: 2 },
+  classes: null,
+  damageUnknown: false,
+  otherEffects: 0,
+  randomSuffix: false,
+};
+
+/** Worn items -- very low stats so the crafted item is always a clear upgrade. */
+const MOCK_WORN_2H: ClientItem = {
+  id: 9900, name: "Rusty Claymore", quality: "poor", slot: "two_hand",
+  itemType: "Sword", itemLevel: 1, requiredLevel: 1, armor: null, weapon: null,
+  stats: {}, classes: null, damageUnknown: false, otherEffects: 0, randomSuffix: false,
+};
+const MOCK_WORN_1H: ClientItem = {
+  id: 9901, name: "Bent Sword", quality: "poor", slot: "one_hand",
+  itemType: "Sword", itemLevel: 1, requiredLevel: 1, armor: null, weapon: null,
+  stats: {}, classes: null, damageUnknown: false, otherEffects: 0, randomSuffix: false,
+};
+
+const BS_SKILL_ID = PROFESSION_SKILL_LINES.blacksmithing;
+
+/** Blacksmithing file with the Copper Claymore recipe (ability 5338 -> spell 9983). */
+const BS_FILE_CLAYMORE: Pick<CraftingFile, "recipes"> = {
+  recipes: [{ spell: 9983, name: "Copper Claymore", yellow: 1, grey: 50,
+    reagents: [{ id: 2840, name: "Copper Bar", count: 4 }],
+    creates: { id: 7955, name: "Copper Claymore", count: 1, quality: 1 },
+    learn: { source: "trainer" } }],
+};
+
+/** Blacksmithing file with the Copper Shortsword recipe (ability 1652 -> spell 2739). */
+const BS_FILE_SHORTSWORD: Pick<CraftingFile, "recipes"> = {
+  recipes: [{ spell: 2739, name: "Copper Shortsword", yellow: 1, grey: 40,
+    reagents: [{ id: 2840, name: "Copper Bar", count: 2 }],
+    creates: { id: 2847, name: "Copper Shortsword", count: 1, quality: 1 },
+    learn: { source: "trainer" } }],
+};
+
+describe("computeGearMatches weapon slot handling", () => {
+  it("two-hand crafted sword matches Warrior's MAIN_HAND slot", () => {
+    const crafter = makeMember("smith", {
+      class_name: "Paladin",
+      recipe_ability_ids: [5338],
+      professions: [{ profession_id: BS_SKILL_ID, name: "Blacksmithing", skill: 100, max_skill: 300 }],
+    });
+    const warrior = makeMember("warrior", {
+      class_name: "Warrior",
+      level: 60,
+      equipped: [
+        { slot: "MAIN_HAND", item_id: 9900, name: "Rusty Claymore", item_level: 1, inventory_type: "TWOHWEAPON", enchantments: [] },
+      ],
+    });
+    const files = new Map([[BS_SKILL_ID, BS_FILE_CLAYMORE]]);
+    const itemList = makeItemList([MOCK_COPPER_CLAYMORE, MOCK_WORN_2H]);
+    const matches = computeGearMatches([crafter, warrior], files, itemList);
+    expect(matches.some((m) => m.beneficiary.slug === "warrior" && m.slot.blizzard_slot === "MAIN_HAND")).toBe(true);
+  });
+
+  it("one-hand crafted sword matches Rogue's OFF_HAND slot (Rogues dual-wield at level 1)", () => {
+    const crafter = makeMember("smith", {
+      class_name: "Paladin",
+      recipe_ability_ids: [1652],
+      professions: [{ profession_id: BS_SKILL_ID, name: "Blacksmithing", skill: 100, max_skill: 300 }],
+    });
+    const rogue = makeMember("rogue", {
+      class_name: "Rogue",
+      level: 20,
+      equipped: [
+        { slot: "OFF_HAND", item_id: 9901, name: "Bent Sword", item_level: 1, inventory_type: "WEAPON", enchantments: [] },
+      ],
+    });
+    const files = new Map([[BS_SKILL_ID, BS_FILE_SHORTSWORD]]);
+    const itemList = makeItemList([MOCK_COPPER_SHORTSWORD, MOCK_WORN_1H]);
+    const matches = computeGearMatches([crafter, rogue], files, itemList);
+    expect(matches.some((m) => m.beneficiary.slug === "rogue" && m.slot.blizzard_slot === "OFF_HAND")).toBe(true);
+  });
+
+  it("one-hand crafted sword does NOT match Paladin's OFF_HAND (Paladins cannot dual-wield)", () => {
+    const crafter = makeMember("smith", {
+      class_name: "Warrior",
+      recipe_ability_ids: [1652],
+      professions: [{ profession_id: BS_SKILL_ID, name: "Blacksmithing", skill: 100, max_skill: 300 }],
+    });
+    const paladin = makeMember("paladin", {
+      class_name: "Paladin",
+      level: 20,
+      equipped: [
+        { slot: "OFF_HAND", item_id: 9901, name: "Bent Sword", item_level: 1, inventory_type: "WEAPON", enchantments: [] },
+      ],
+    });
+    const files = new Map([[BS_SKILL_ID, BS_FILE_SHORTSWORD]]);
+    const itemList = makeItemList([MOCK_COPPER_SHORTSWORD, MOCK_WORN_1H]);
+    const matches = computeGearMatches([crafter, paladin], files, itemList);
+    expect(matches.filter((m) => m.beneficiary.slug === "paladin" && m.slot.blizzard_slot === "OFF_HAND")).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeEnchantMatches -- best-pick dedup within one crafter (Issue 5)
+// ---------------------------------------------------------------------------
+
+describe("computeEnchantMatches best-pick dedup (single crafter, multiple enchants for same slot)", () => {
+  function twoEnchantFile(greyA: number, greyB: number): Pick<CraftingFile, "recipes"> {
+    return {
+      recipes: [
+        { spell: 7418, name: "Enchant Bracer - Inferior Stamina", yellow: 0, grey: greyA,
+          reagents: [{ id: 2840, name: "Strange Dust", count: 1 }], enchant: true,
+          learn: { source: "trainer" } },
+        { spell: 7428, name: "Enchant Bracer - Minor Deflect", yellow: 0, grey: greyB,
+          reagents: [{ id: 2840, name: "Strange Dust", count: 1 }], enchant: true,
+          learn: { source: "trainer" } },
+      ],
+    };
+  }
+
+  it("picks the enchant with the higher grey value when one crafter knows two bracer enchants", () => {
+    const crafter = makeMember("crafter", {
+      recipe_ability_ids: [4289, 4293],
+      professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
+    });
+    const beneficiary = makeMember("beneficiary", {
+      equipped: [wristItem({ enchantments: [] })],
+    });
+    // spell 7418 grey=100 vs spell 7428 grey=200 -- 7428 wins.
+    const matches = computeEnchantMatches([crafter, beneficiary], twoEnchantFile(100, 200));
+    expect(matches).toHaveLength(1);
+    expect(matches[0].proposed.spell).toBe(7428);
+  });
+
+  it("when grey values are equal, the higher spell id wins as a stable tiebreaker", () => {
+    const crafter = makeMember("crafter", {
+      recipe_ability_ids: [4289, 4293],
+      professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
+    });
+    const beneficiary = makeMember("beneficiary", {
+      equipped: [wristItem({ enchantments: [] })],
+    });
+    // Both grey=50 -- spell 7428 > 7418 wins.
+    const matches = computeEnchantMatches([crafter, beneficiary], twoEnchantFile(50, 50));
+    expect(matches).toHaveLength(1);
+    expect(matches[0].proposed.spell).toBe(7428);
+  });
+
+  it("still deduplicates to one match per (beneficiary, slot) with best-pick logic", () => {
+    const crafter = makeMember("crafter", {
+      recipe_ability_ids: [4289, 4293],
+      professions: [{ profession_id: PROFESSION_SKILL_LINES.enchanting, name: "Enchanting", skill: 100, max_skill: 300 }],
+    });
+    const beneficiary = makeMember("beneficiary", {
+      equipped: [wristItem({ enchantments: [] })],
+    });
+    // Two enchants for same slot -- always exactly one result.
+    const matches = computeEnchantMatches([crafter, beneficiary], twoEnchantFile(50, 150));
+    expect(matches).toHaveLength(1);
+  });
+});

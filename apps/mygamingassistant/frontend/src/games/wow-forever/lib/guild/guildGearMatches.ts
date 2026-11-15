@@ -11,11 +11,13 @@
  * upgrade is returned (highest score improvement).
  */
 import { blizzardSlotLabel } from "@/games/wow-forever/lib/guild/blizzardSlotLabel";
+import type { WowClassId } from "@/games/wow-forever/data/classes";
 import { LEVELING_SPEC_ID } from "@/games/wow-forever/data/classes";
 import { UPGRADE_THRESHOLD_PCT } from "@/games/wow-forever/data/guild/guildHelpConfig";
+import { GEAR_SLOT_GROUPS } from "@/games/wow-forever/data/gear/gearSlotGroups";
 import { BLIZZARD_SLOT_FOR, PAIRED_BLIZZARD_SLOTS } from "@/games/wow-forever/data/itemCompare/blizzardSlots";
 import type { ItemSlot } from "@/games/wow-forever/data/itemSlots";
-import { canWear } from "@/games/wow-forever/gear/gearFilters";
+import { canEquip, canWear } from "@/games/wow-forever/gear/gearFilters";
 import { scorer } from "@/games/wow-forever/gear/rankGear";
 import { recipeSpell } from "@/games/wow-forever/lib/character/characterProfessions";
 import { characterClassId } from "@/games/wow-forever/lib/character/characterClassId";
@@ -29,12 +31,53 @@ import type { GuildMatch, GuildMatchBeneficiary, GuildMatchCrafter } from "@/gam
 
 const PERCENT = 100;
 
-/** All Blizzard slots a ClientItem slot could occupy (singular or paired rings/trinkets). */
+// Gear slot group references used for slot-specific equip checks (dual-wield, 2H proficiency).
+const TWO_HAND_GROUP = GEAR_SLOT_GROUPS.find((g) => g.id === "two_hand")!;
+const MAIN_HAND_GROUP = GEAR_SLOT_GROUPS.find((g) => g.id === "main_hand")!;
+const OFF_HAND_GROUP = GEAR_SLOT_GROUPS.find((g) => g.id === "off_hand")!;
+
+/**
+ * All Blizzard equipped-item slots a crafted ClientItem's slot could target.
+ *
+ * Weapon slots that BLIZZARD_SLOT_FOR doesn't cover:
+ * - `two_hand` → MAIN_HAND only (can't go in an off hand)
+ * - `one_hand`  → MAIN_HAND or OFF_HAND (dual-wield classes); per-slot check below
+ */
 function blizzardSlotsFor(slot: ItemSlot): readonly string[] {
+  if (slot === "two_hand") return ["MAIN_HAND"];
+  if (slot === "one_hand") return ["MAIN_HAND", "OFF_HAND"];
   const single = BLIZZARD_SLOT_FOR[slot];
   if (single) return [single];
   const paired = PAIRED_BLIZZARD_SLOTS[slot];
   return paired ?? [];
+}
+
+/**
+ * Verifies a crafted item can actually go in this specific Blizzard slot for
+ * the beneficiary.  `canWear()` already guarantees the item is wearable
+ * *somewhere* — this adds the per-slot check for cases that require it:
+ *
+ * - `one_hand` in `OFF_HAND` requires dual-wield proficiency and level ≥ threshold.
+ * - `two_hand` in `MAIN_HAND` re-checks 2H proficiency (canWear covers it, but
+ *   we also want the right group for `canEquip` correctness).
+ */
+function canEquipInBlizzardSlot(
+  item: ClientItem,
+  blizzardSlot: string,
+  classId: WowClassId,
+  level: number,
+): boolean {
+  if (item.slot === "one_hand" && blizzardSlot === "OFF_HAND") {
+    return canEquip(item, OFF_HAND_GROUP, classId, level);
+  }
+  if (item.slot === "two_hand" && blizzardSlot === "MAIN_HAND") {
+    return canEquip(item, TWO_HAND_GROUP, classId, level);
+  }
+  if (item.slot === "main_hand" && blizzardSlot === "MAIN_HAND") {
+    return canEquip(item, MAIN_HAND_GROUP, classId, level);
+  }
+  // Armor slots, rings, trinkets, ranged: canWear() above is sufficient.
+  return true;
 }
 
 /** Build the crafter descriptor for a match. */
@@ -157,6 +200,9 @@ export function computeGearMatches(
 
         const blizzardSlots = blizzardSlotsFor(craftedClientItem.slot);
         for (const blizzardSlot of blizzardSlots) {
+          // Per-slot check: one_hand in OFF_HAND requires dual-wield; two_hand re-checks 2H proficiency.
+          if (!canEquipInBlizzardSlot(craftedClientItem, blizzardSlot, beneficiaryClassId, beneficiary.level)) continue;
+
           const worn = equippedBySlot.get(blizzardSlot);
           if (!worn) continue; // not wearing anything in this slot — skip
 

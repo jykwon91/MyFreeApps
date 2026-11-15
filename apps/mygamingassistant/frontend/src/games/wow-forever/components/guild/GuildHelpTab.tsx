@@ -2,18 +2,18 @@
  * "Help each other" tab: finds enchant and gear-upgrade opportunities between
  * guild members, computed entirely client-side from stored sheets.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import GuildHelpFilterBar from "@/games/wow-forever/components/guild/GuildHelpFilterBar";
 import GuildHelpSkeleton from "@/games/wow-forever/components/guild/GuildHelpSkeleton";
 import GuildMatchCard from "@/games/wow-forever/components/guild/GuildMatchCard";
-import { loadCraftingData } from "@/games/wow-forever/crafting/loadCraftingData";
 import { GUILD_HELP_PROBLEM } from "@/games/wow-forever/data/guild/guildHelpConfig";
 import { PROFESSION_SKILL_LINES } from "@/games/wow-forever/data/professions/professionSkillLines";
 import { useGetGuildHelpQuery } from "@/games/wow-forever/api/wowGuildApi";
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
 import { useClientItems } from "@/games/wow-forever/hooks/useClientItems";
+import { useHelpCraftingFiles } from "@/games/wow-forever/hooks/useHelpCraftingFiles";
 import { computeEnchantMatches } from "@/games/wow-forever/lib/guild/guildEnchantMatches";
 import { computeGearMatches } from "@/games/wow-forever/lib/guild/guildGearMatches";
 import {
@@ -21,52 +21,7 @@ import {
   helpForParam,
   helpTypeParam,
 } from "@/games/wow-forever/lib/guild/guildHelpParams";
-import type { CraftingFile, CraftingProfession } from "@/games/wow-forever/types/crafting";
 import type { GuildMatch, GuildMatchType } from "@/games/wow-forever/types/guild/guildMatch";
-
-/** All crafting profession names that could have gear-creating or enchant recipes. */
-const ALL_CRAFTING: readonly CraftingProfession[] = [
-  "tailoring",
-  "enchanting",
-  "blacksmithing",
-  "leatherworking",
-  "engineering",
-  "alchemy",
-  "firstaid",
-];
-
-/** Skill line id → loaded crafting file (recipes slice only, the minimum needed). */
-type CraftingFileMap = ReadonlyMap<number, Pick<CraftingFile, "recipes">>;
-
-function useHelpCraftingFiles(enabled: boolean): CraftingFileMap | null {
-  const [files, setFiles] = useState<CraftingFileMap | null>(null);
-
-  useEffect(() => {
-    if (!enabled || files !== null) return;
-    let live = true;
-    Promise.all(
-      ALL_CRAFTING.map(async (prof) => {
-        const data = await loadCraftingData(prof);
-        const id = PROFESSION_SKILL_LINES[prof as keyof typeof PROFESSION_SKILL_LINES];
-        return [id, data.file] as const;
-      }),
-    ).then(
-      (entries) => {
-        if (!live) return;
-        setFiles(new Map(entries));
-      },
-      () => {
-        // If loading fails, set an empty map so we don't retry endlessly.
-        if (live) setFiles(new Map());
-      },
-    );
-    return () => {
-      live = false;
-    };
-  }, [enabled, files]);
-
-  return files;
-}
 
 interface GuildHelpTabProps {
   slug: string;
@@ -90,7 +45,7 @@ export default function GuildHelpTab({ slug }: GuildHelpTabProps) {
   const helpQuery = useGetGuildHelpQuery(slug);
   const isReady = helpQuery.isSuccess && !!helpQuery.data;
 
-  const craftingFiles = useHelpCraftingFiles(isReady);
+  const craftingState = useHelpCraftingFiles(isReady);
   const itemsState = useClientItems(isReady);
   const { prices } = useAuctionPrices();
 
@@ -100,20 +55,20 @@ export default function GuildHelpTab({ slug }: GuildHelpTabProps) {
   );
 
   const allMatches = useMemo<GuildMatch[]>(() => {
-    if (!isReady || craftingFiles === null) return [];
+    if (!isReady || craftingState.files === null) return [];
 
-    const enchantingFile = craftingFiles.get(PROFESSION_SKILL_LINES.enchanting);
+    const enchantingFile = craftingState.files.get(PROFESSION_SKILL_LINES.enchanting);
     const enchantMatches = enchantingFile
       ? computeEnchantMatches(members, enchantingFile)
       : [];
 
     const gearMatches =
       itemsState.status === "ready"
-        ? computeGearMatches(members, craftingFiles, itemsState.list)
+        ? computeGearMatches(members, craftingState.files, itemsState.list)
         : [];
 
     return [...enchantMatches, ...gearMatches];
-  }, [isReady, craftingFiles, members, itemsState]);
+  }, [isReady, craftingState.files, members, itemsState]);
 
   const filtered = useMemo<GuildMatch[]>(() => {
     return allMatches.filter((m) => {
@@ -127,9 +82,13 @@ export default function GuildHelpTab({ slug }: GuildHelpTabProps) {
     return <LoadErrorRetry message={GUILD_HELP_PROBLEM} onRetry={helpQuery.refetch} retrying={helpQuery.isFetching} />;
   }
 
+  if (craftingState.error) {
+    return <LoadErrorRetry message={GUILD_HELP_PROBLEM} onRetry={craftingState.retry} retrying={false} />;
+  }
+
   const isLoading =
     helpQuery.isLoading ||
-    craftingFiles === null ||
+    craftingState.files === null ||
     (isReady && itemsState.status === "loading");
 
   if (isLoading) {

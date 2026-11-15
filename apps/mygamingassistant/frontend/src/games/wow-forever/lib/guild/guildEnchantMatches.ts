@@ -46,12 +46,36 @@ function beneficiaryFor(member: GuildHelpMember): GuildMatchBeneficiary {
 }
 
 /**
+ * Whether a new crafter+recipe combination beats the current best for a slot.
+ *
+ * Priority (highest first):
+ * 1. Higher crafter Enchanting skill (better enchanters generally know better enchants)
+ * 2. For equal skill, alphabetically-first crafter slug (deterministic tie-break between crafters)
+ * 3. Same crafter, higher recipe `grey` value (grey = max skill-up level ≈ recipe power)
+ * 4. Same crafter, same grey: higher spell id (stable tie-break between recipes)
+ */
+function isBetterEnchant(
+  recipe: CraftRecipe,
+  crafterSkill: number,
+  crafterSlug: string,
+  existing: GuildMatch,
+  existingGrey: number,
+): boolean {
+  if (crafterSkill !== existing.crafter.skill) return crafterSkill > existing.crafter.skill;
+  if (crafterSlug !== existing.crafter.slug) return crafterSlug < existing.crafter.slug;
+  // Same crafter — pick the more powerful enchant.
+  if (recipe.grey !== existingGrey) return recipe.grey > existingGrey;
+  return recipe.spell > (existing.proposed.spell ?? 0);
+}
+
+/**
  * Compute all enchant matches from the members' stored sheets and the
  * Enchanting crafting file.
  *
- * Returns one match per (beneficiary_slug, blizzard_slot) — the crafter with
- * the highest Enchanting skill. If two crafters tie on skill, the one that
- * sorts first alphabetically wins (deterministic).
+ * Returns one match per (beneficiary_slug, blizzard_slot):
+ * - Across crafters: the one with the highest Enchanting skill wins (ties broken by slug).
+ * - Within one crafter who knows multiple enchants for the same slot: the one with the
+ *   highest `grey` value wins (grey ≈ recipe power level; ties broken by spell id descending).
  */
 export function computeEnchantMatches(
   members: readonly GuildHelpMember[],
@@ -66,6 +90,8 @@ export function computeEnchantMatches(
 
   // Key: "beneficiary_slug|blizzard_slot" → best match so far.
   const best = new Map<string, GuildMatch>();
+  // Parallel map: same key → grey value of the winning recipe (for same-crafter comparisons).
+  const bestGrey = new Map<string, number>();
 
   for (const crafter of members) {
     const crafterEnch = crafter.professions.find((p) => p.profession_id === ENCHANTING_SKILL_LINE_ID);
@@ -95,13 +121,9 @@ export function computeEnchantMatches(
           const key = `${beneficiary.slug}|${item.slot}`;
           const existing = best.get(key);
 
-          // Keep the highest-skill crafter; break ties by slug (alphabetical, deterministic).
-          const isFirstOrBetter =
-            !existing ||
-            crafterEnch.skill > (existing.crafter.skill) ||
-            (crafterEnch.skill === existing.crafter.skill && crafter.slug < existing.crafter.slug);
-
-          if (!isFirstOrBetter) continue;
+          if (existing && !isBetterEnchant(recipe, crafterEnch.skill, crafter.slug, existing, bestGrey.get(key) ?? -1)) {
+            continue;
+          }
 
           const matchCrafter = crafterFor(crafter, ENCHANTING_SKILL_LINE_ID);
           if (!matchCrafter) continue;
@@ -121,6 +143,7 @@ export function computeEnchantMatches(
             },
             upgrade_pct: null,
           });
+          bestGrey.set(key, recipe.grey);
         }
       }
     }
