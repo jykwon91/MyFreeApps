@@ -71,6 +71,8 @@ describe("lease writes refetch the active-only tenant list", () => {
       store.dispatch(signedLeasesApi.endpoints.deleteSignedLease.initiate({ leaseId: "l1", applicantId: "a1" }))],
     ["extending a lease", (store: Store) =>
       store.dispatch(signedLeasesApi.endpoints.extendSignedLease.initiate({ leaseId: "l1", data: { new_ends_on: "2027-01-01" } }))],
+    ["adding templates, which can fill in the lease dates", (store: Store) =>
+      store.dispatch(signedLeasesApi.endpoints.addSignedLeaseTemplates.initiate({ leaseId: "l1", templateIds: ["t1"] }))],
     ["undoing an extension", (store: Store) =>
       store.dispatch(signedLeasesApi.endpoints.undoSignedLeaseExtension.initiate({ leaseId: "l1", versionId: "v1" }))],
   ])("%s", async (_name, mutate) => {
