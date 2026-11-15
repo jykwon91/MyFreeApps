@@ -35,6 +35,9 @@ export default function GuildBannerFooter({ guild, refetch }: GuildBannerFooterP
       {stale ? (
         <p className="text-xs text-muted-foreground">{GUILD_BANNER_COPY.stale}</p>
       ) : null}
+      {guild.can_refresh ? (
+        <p className="text-xs text-muted-foreground">{GUILD_BANNER_COPY.refreshExplainer}</p>
+      ) : null}
     </div>
   );
 }

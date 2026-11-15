@@ -53,6 +53,7 @@ function member(slug: string, name: string, surname: string, className: string, 
     talents: null as null | { tree_id: number; points: number }[],
     rank,
     refreshed_at: new Date(Date.now() - 3_600_000).toISOString(),
+    blizzard_updated_at: null as string | null,
   };
 }
 
@@ -820,6 +821,60 @@ test("375px phone: spec line appears in the card when talent data is present", a
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("data age note appears next to members with blizzard_updated_at and is absent for those without", async ({ page }) => {
+  const g = guild();
+  // 3 hours ago in milliseconds
+  const threeHoursAgo = new Date(Date.now() - 3 * 3_600_000).toISOString();
+  const membersWithDataAge = g.members.map((m) =>
+    m.slug === "jason-kwon" ? { ...m, blizzard_updated_at: threeHoursAgo } : m,
+  );
+  await page.route(GUILD_PATTERN, (route) => json(route, { ...g, members: membersWithDataAge }));
+  await page.route(SHEET_PATTERN, (route) => json(route, character(new URL(route.request().url()).pathname.split("/").pop() ?? "")));
+  await page.goto("/wow-forever/topdeadcenter?tab=roster");
+
+  // Jason Kwon has blizzard_updated_at set: data age note visible.
+  const jasonRow = page.getByRole("table").getByRole("row").filter({ hasText: "Jason Kwon" });
+  await expect(jasonRow.getByText(/Blizzard data from/)).toBeVisible();
+  await expect(jasonRow.getByText(/updates when they log out/)).toBeVisible();
+
+  // Big Sue has no blizzard_updated_at: no data age note.
+  const bigSueRow = page.getByRole("table").getByRole("row").filter({ hasText: "Big Sue" });
+  await expect(bigSueRow.getByText(/Blizzard data from/)).toHaveCount(0);
+});
+
+test("375px phone: data age note appears in the card for members with blizzard_updated_at", async ({ page }) => {
+  const g = guild();
+  const threeHoursAgo = new Date(Date.now() - 3 * 3_600_000).toISOString();
+  const membersWithDataAge = g.members.map((m) =>
+    m.slug === "jason-kwon" ? { ...m, blizzard_updated_at: threeHoursAgo } : m,
+  );
+  await page.route(GUILD_PATTERN, (route) => json(route, { ...g, members: membersWithDataAge }));
+  await page.route(SHEET_PATTERN, (route) => json(route, character(new URL(route.request().url()).pathname.split("/").pop() ?? "")));
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/wow-forever/topdeadcenter?tab=roster");
+
+  await expect(page.getByRole("table")).toBeHidden();
+  const cards = page.getByRole("list", { name: "Guild members" }).locator("li");
+  const jasonCard = cards.filter({ hasText: "Jason Kwon" });
+  await expect(jasonCard.getByText(/Blizzard data from/)).toBeVisible();
+  await expect(jasonCard.getByText(/updates when they log out/)).toBeVisible();
+
+  const bigSueCard = cards.filter({ hasText: "Big Sue" });
+  await expect(bigSueCard.getByText(/Blizzard data from/)).toHaveCount(0);
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test("refresh button explainer appears when can_refresh is true", async ({ page }) => {
+  const g = guild();
+  await page.route(GUILD_PATTERN, (route) => json(route, { ...g, can_refresh: true, refresh_available_at: null }));
+  await page.route(SHEET_PATTERN, (route) => json(route, character(new URL(route.request().url()).pathname.split("/").pop() ?? "")));
+  await page.goto("/wow-forever/topdeadcenter");
+
+  await expect(page.getByText(/Refresh pulls Blizzard's latest copy, which only updates when a character logs out/)).toBeVisible();
 });
 
 test("recipe search: the recipe has icons and a hover tooltip, and opens in full on the Recipes page", async ({ page }) => {

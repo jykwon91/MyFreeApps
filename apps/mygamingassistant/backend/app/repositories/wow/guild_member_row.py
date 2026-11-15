@@ -32,3 +32,6 @@ class GuildMemberRow(NamedTuple):
     baseline_dungeons_done: int | None
     # From wow_character.talent_points; None when never fetched or last call failed.
     talent_points: list[dict[str, Any]] | None
+    # When Blizzard's snapshot of this member was last taken (their last log-out).
+    # None for characters fetched before migration 0058 or when Blizzard omitted the field.
+    blizzard_updated_at: datetime | None

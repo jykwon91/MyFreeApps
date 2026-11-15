@@ -24,7 +24,7 @@ _LOCK_NAMESPACE = zlib.crc32(b"mga.wow_character") & 0x7FFFFFFF
 FETCHED_FIELDS = frozenset({
     "blizzard_character_id", "slug", "name", "surname", "class_id", "sheet", "sheet_version",
     "fetched_at", "checked_at", "last_error", "last_error_at", "gone_at", "guild_id", "guild_rank",
-    "talent_points",
+    "talent_points", "blizzard_updated_at",
 })
 
 

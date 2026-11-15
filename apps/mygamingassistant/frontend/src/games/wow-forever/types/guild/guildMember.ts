@@ -35,4 +35,9 @@ export interface GuildMember {
   rank: number | null;
   /** ISO time the member was last fetched from Blizzard. */
   refreshed_at: string;
+  /**
+   * When Blizzard's snapshot of this character was last taken (their last log-out).
+   * null for characters fetched before migration 0058, or when Blizzard omitted the field.
+   */
+  blizzard_updated_at: string | null;
 }

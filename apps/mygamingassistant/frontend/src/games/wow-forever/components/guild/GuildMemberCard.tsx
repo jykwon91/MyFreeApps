@@ -1,6 +1,7 @@
 import GuildMemberLink from "@/games/wow-forever/components/guild/GuildMemberLink";
 import GuildMemberTitles from "@/games/wow-forever/components/guild/GuildMemberTitles";
 import GuildMemberStaleNote from "@/games/wow-forever/components/guild/GuildMemberStaleNote";
+import GuildMemberDataAge from "@/games/wow-forever/components/guild/GuildMemberDataAge";
 import GuildMemberProfessions from "@/games/wow-forever/components/guild/GuildMemberProfessions";
 import GuildMemberSpec from "@/games/wow-forever/components/guild/GuildMemberSpec";
 import type { GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
@@ -30,6 +31,7 @@ export default function GuildMemberCard({ member, rosterUpdatedAt, titles, profe
       <GuildMemberSpec member={member} className="mt-0.5 inline-flex items-center gap-1 text-sm text-muted-foreground" />
       <GuildMemberProfessions member={member} first={profession} className="mt-1 text-sm" />
       <GuildMemberStaleNote member={member} rosterUpdatedAt={rosterUpdatedAt} />
+      <GuildMemberDataAge blizzard_updated_at={member.blizzard_updated_at} />
     </li>
   );
 }

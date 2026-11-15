@@ -216,6 +216,22 @@ async def test_talent_points_are_stored_and_kept_when_blizzard_fails_to_send_the
     assert character.talent_points == [{"tree_id": 355, "points": 15}, {"tree_id": 354, "points": 8}]
 
 
+async def test_blizzard_updated_at_is_stored_from_last_login_timestamp(
+    bound_unit_of_work: AsyncSession,
+) -> None:
+    db = bound_unit_of_work
+    # 2026-11-12 18:00 UTC in milliseconds.
+    login_ms = int(NOW.timestamp() * 1000)
+    await character_store_service.record(make_fetch(last_login_timestamp=login_ms), now=NOW)
+    character = await _character(db, "jason-kwon")
+    assert character.blizzard_updated_at == NOW
+
+    # A later fetch without last_login_timestamp keeps the stored one (like talent_points).
+    await character_store_service.record(make_fetch(last_login_timestamp=None), now=NOW)
+    await db.refresh(character)
+    assert character.blizzard_updated_at == NOW
+
+
 async def test_a_guild_is_due_while_watched_and_stale(bound_unit_of_work: AsyncSession) -> None:
     db = bound_unit_of_work
 

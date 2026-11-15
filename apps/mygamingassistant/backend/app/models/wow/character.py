@@ -64,6 +64,10 @@ class WowCharacter(Base):
     # None = never fetched / last Blizzard call failed (kept, like professions).
     # [] = character has no points yet.
     talent_points: Mapped[Optional[list[dict[str, Any]]]] = mapped_column(JSONB, nullable=True)
+    # When Blizzard's snapshot of this character was last taken (the character's last log-out).
+    # Populated from last_login_timestamp in the profile response; None for rows fetched before
+    # this column was added, or when Blizzard omitted the field.
+    blizzard_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     # Last time Blizzard sent the character.
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     # Last time we asked at all, whatever the answer.
