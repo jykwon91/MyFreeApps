@@ -1,11 +1,12 @@
 import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-policy-form-values";
 import { FREQUENCY_LABEL } from "@mybookkeeper/api-client/utils/insurancePolicyFormat";
+import { POLICY_CARRIER_MAX, POLICY_NAME_MAX, POLICY_NOTES_MAX, POLICY_NUMBER_MAX } from "@mybookkeeper/api-client/constants/insurancePolicyFieldLimits";
 import { INSURANCE_PREMIUM_FREQUENCIES } from "@mybookkeeper/api-client/constants/insurancePremiumFrequencies";
 import type { InsurancePremiumFrequency } from "@mybookkeeper/api-client/types/insurance/insurance-premium-frequency";
 import { Banner, FormField, OptionSheet, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { POLICY_FORM_MESSAGES, POLICY_NAME_MAX_LENGTH, POLICY_NOTES_MAX_LENGTH } from "../../constants/insuranceForm";
+import { POLICY_FORM_MESSAGES } from "../../constants/insuranceForm";
 import { dateFromIso } from "../../lib/localDate";
 import type { PolicyFormErrors } from "../../types/PolicyFormErrors";
 import OptionalDateField from "../shell/OptionalDateField";
@@ -31,14 +32,14 @@ export default function PolicyFormFields({ values, errors, onChange }: PolicyFor
       <FormField
         error={errors.policyName}
         label={POLICY_FORM_MESSAGES.policyName}
-        maxLength={POLICY_NAME_MAX_LENGTH}
+        maxLength={POLICY_NAME_MAX}
         onChangeText={(policyName) => onChange({ policyName })}
         placeholder={POLICY_FORM_MESSAGES.policyNamePlaceholder}
         required
         value={values.policyName}
       />
-      <FormField label={POLICY_FORM_MESSAGES.carrier} maxLength={POLICY_NAME_MAX_LENGTH} onChangeText={(carrier) => onChange({ carrier })} placeholder={POLICY_FORM_MESSAGES.carrierPlaceholder} value={values.carrier} />
-      <FormField label={POLICY_FORM_MESSAGES.policyNumber} maxLength={POLICY_NAME_MAX_LENGTH} onChangeText={(policyNumber) => onChange({ policyNumber })} value={values.policyNumber} />
+      <FormField label={POLICY_FORM_MESSAGES.carrier} maxLength={POLICY_CARRIER_MAX} onChangeText={(carrier) => onChange({ carrier })} placeholder={POLICY_FORM_MESSAGES.carrierPlaceholder} value={values.carrier} />
+      <FormField label={POLICY_FORM_MESSAGES.policyNumber} maxLength={POLICY_NUMBER_MAX} onChangeText={(policyNumber) => onChange({ policyNumber })} value={values.policyNumber} />
       <OptionalDateField label={POLICY_FORM_MESSAGES.effectiveDate} onChange={(iso) => onChange({ effectiveDate: iso ?? "" })} startsAt={new Date()} value={values.effectiveDate || null} />
       <OptionalDateField error={errors.expirationDate} label={POLICY_FORM_MESSAGES.expirationDate} onChange={(iso) => onChange({ expirationDate: iso ?? "" })} startsAt={dateStart} value={values.expirationDate || null} />
       <FormField error={errors.coverageDollars} keyboardType="decimal-pad" label={POLICY_FORM_MESSAGES.coverage} onChangeText={(coverageDollars) => onChange({ coverageDollars })} value={values.coverageDollars} />
@@ -65,7 +66,7 @@ export default function PolicyFormFields({ values, errors, onChange }: PolicyFor
 
       <FormField
         label={POLICY_FORM_MESSAGES.notes}
-        maxLength={POLICY_NOTES_MAX_LENGTH}
+        maxLength={POLICY_NOTES_MAX}
         multiline
         onChangeText={(notes) => onChange({ notes })}
         placeholder={POLICY_FORM_MESSAGES.notesPlaceholder}
