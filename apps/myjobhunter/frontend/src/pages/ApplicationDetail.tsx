@@ -23,11 +23,11 @@ import DocumentsSection from "@/features/applications/sections/DocumentsSection"
 import ContactsManager from "@/features/applications/contacts/ContactsManager";
 import NotesSection from "@/features/applications/sections/NotesSection";
 import { getStageColor } from "@/lib/stage-color";
+import { useStageMove } from "@/features/applications/useStageMove";
 import {
   useGetApplicationQuery,
   useDeleteApplicationMutation,
   useUpdateApplicationMutation,
-  useTransitionApplicationMutation,
 } from "@myjobhunter/api-client/store/applicationsApi";
 import { useGetCompanyQuery } from "@myjobhunter/api-client/store/companiesApi";
 import { currentKanbanColumn } from "@myjobhunter/api-client/utils/currentKanbanColumn";
@@ -46,8 +46,10 @@ export default function ApplicationDetail() {
   });
   const [deleteApplication, { isLoading: deleting }] = useDeleteApplicationMutation();
   const [updateApplication, { isLoading: updating }] = useUpdateApplicationMutation();
-  const [transitionApplication] = useTransitionApplicationMutation();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  // The detail endpoint eager-loads the events, newest first.
+  const currentColumn: KanbanColumn = currentKanbanColumn(app?.events ?? []);
+  const { selectedColumn, isMoving, moveTo } = useStageMove(id ?? "", currentColumn);
 
   if (isLoading) {
     return <ApplicationDetailSkeleton />;
@@ -75,26 +77,6 @@ export default function ApplicationDetail() {
         </Link>
       </div>
     );
-  }
-
-  // The detail endpoint eager-loads the events, newest first.
-  const currentColumn: KanbanColumn = currentKanbanColumn(app.events);
-
-  async function handleStageChange(target: KanbanColumn) {
-    if (!app || target === currentColumn) return;
-    try {
-      await transitionApplication({
-        applicationId: app.id,
-        target_column: target,
-        idempotency_key:
-          typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      }).unwrap();
-      showSuccess(`Moved to ${KANBAN_COLUMN_LABELS[target]}`);
-    } catch (err) {
-      showError(`Couldn't move: ${extractErrorMessage(err)}`);
-    }
   }
 
   async function handleArchive() {
@@ -149,8 +131,9 @@ export default function ApplicationDetail() {
         </div>
         <div className="flex items-center gap-2">
           <select
-            value={currentColumn}
-            onChange={(e) => void handleStageChange(e.target.value as KanbanColumn)}
+            value={selectedColumn}
+            onChange={(e) => void moveTo(e.target.value as KanbanColumn)}
+            disabled={isMoving}
             className="text-xs border rounded-md px-2 py-1 bg-card"
             aria-label="Change stage"
           >
