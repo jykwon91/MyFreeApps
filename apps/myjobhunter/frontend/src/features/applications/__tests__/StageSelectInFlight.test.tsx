@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { ReactElement } from "react";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -46,6 +47,15 @@ interface Deferred {
   reject: (err: unknown) => void;
 }
 
+function arrangeQuery(isFetching: boolean) {
+  vi.mocked(useGetApplicationQuery).mockReturnValue({
+    data: APP,
+    isLoading: false,
+    isError: false,
+    isFetching,
+  } as unknown as ReturnType<typeof useGetApplicationQuery>);
+}
+
 function arrangeTransition(): { transition: ReturnType<typeof vi.fn>; deferred: Deferred[] } {
   const deferred: Deferred[] = [];
   const transition = vi.fn(() => ({
@@ -58,47 +68,41 @@ function arrangeTransition(): { transition: ReturnType<typeof vi.fn>; deferred: 
     transition,
     { isLoading: false },
   ] as unknown as ReturnType<typeof useTransitionApplicationMutation>);
-  vi.mocked(useGetApplicationQuery).mockReturnValue({
-    data: APP,
-    isLoading: false,
-    isError: false,
-  } as unknown as ReturnType<typeof useGetApplicationQuery>);
+  arrangeQuery(false);
   return { transition, deferred };
 }
 
-const SURFACES: Array<[string, () => void, () => HTMLElement]> = [
+const SURFACES: Array<[string, () => ReactElement, () => HTMLElement]> = [
   [
     "full page",
-    () =>
-      render(
-        <MemoryRouter initialEntries={["/applications/a1"]}>
-          <Routes>
-            <Route path="/applications/:id" element={<ApplicationDetail />} />
-          </Routes>
-        </MemoryRouter>,
-      ),
+    () => (
+      <MemoryRouter initialEntries={["/applications/a1"]}>
+        <Routes>
+          <Route path="/applications/:id" element={<ApplicationDetail />} />
+        </Routes>
+      </MemoryRouter>
+    ),
     () => screen.getByLabelText("Change stage"),
   ],
   [
     "drawer",
-    () =>
-      render(
-        <MemoryRouter>
-          <ApplicationDrawer applicationId="a1" onClose={vi.fn()} />
-        </MemoryRouter>,
-      ),
+    () => (
+      <MemoryRouter>
+        <ApplicationDrawer applicationId="a1" onClose={vi.fn()} />
+      </MemoryRouter>
+    ),
     () => screen.getByLabelText("Stage:"),
   ],
 ];
 
-describe.each(SURFACES)("stage select on the %s", (_name, renderSurface, getSelect) => {
+describe.each(SURFACES)("stage select on the %s", (_name, surface, getSelect) => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("shows the picked stage, disables itself and sends once while the move is in flight", async () => {
     const { transition, deferred } = arrangeTransition();
-    renderSurface();
+    render(surface());
 
     await userEvent.selectOptions(getSelect(), "interviewing");
 
@@ -112,9 +116,25 @@ describe.each(SURFACES)("stage select on the %s", (_name, renderSurface, getSele
     await waitFor(() => expect(getSelect()).not.toBeDisabled());
   });
 
+  it("stays disabled and keeps the picked stage after the move is saved until the refetch lands", async () => {
+    const { deferred } = arrangeTransition();
+    const view = render(surface());
+
+    await userEvent.selectOptions(getSelect(), "interviewing");
+    arrangeQuery(true);
+    await act(async () => deferred[0].resolve());
+
+    expect(getSelect()).toBeDisabled();
+    expect(getSelect()).toHaveValue("interviewing");
+
+    arrangeQuery(false);
+    view.rerender(surface());
+    await waitFor(() => expect(getSelect()).not.toBeDisabled());
+  });
+
   it("goes back to the current stage and shows the error when the move fails", async () => {
     const { deferred } = arrangeTransition();
-    renderSurface();
+    render(surface());
 
     await userEvent.selectOptions(getSelect(), "interviewing");
     await act(async () => deferred[0].reject({ status: 500, data: { detail: "boom" } }));
