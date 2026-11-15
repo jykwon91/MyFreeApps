@@ -1,19 +1,13 @@
-import { useMemo, useState } from "react";
-import {
-  useTable,
-  type ColumnFiltersState,
-  type ColumnVisibilityState,
-  type RowSelectionState,
-  type SortingState,
-} from "@tanstack/react-table";
+import { useMemo } from "react";
+import { useTable, type ColumnVisibilityState } from "@tanstack/react-table";
 import { appTableFeatures } from "@/shared/lib/table-features";
 import { Plus, Upload, Sparkles } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 import { useTransactionColumns } from "@/shared/hooks/useTransactionColumns";
 import { APPROVABLE_STATUSES } from "@/shared/lib/transaction-config";
 import { useTransactionPageState } from "@/app/features/transactions/hooks/useTransactionPageState";
-import { formatTag } from "@/shared/utils/tag";
-import { TAX_RELEVANT_OPTIONS } from "@mybookkeeper/api-client/constants/taxRelevantOptions";
+import { transactionFilterOptions } from "@/shared/utils/transaction-filter-options";
+import type { TransactionSelectionRef } from "@mybookkeeper/api-client/types/transaction/TransactionSelectionRef";
 import TransactionTable from "@/app/features/transactions/TransactionTable";
 import TransactionPanel from "@/app/features/transactions/TransactionPanel";
 import ManualEntryForm from "@/app/features/transactions/ManualEntryForm";
@@ -39,8 +33,19 @@ export default function Transactions() {
     setActiveTab,
     filters,
     setFilters,
+    columnFilters,
+    setColumnFilters,
+    sorting,
+    setSorting,
+    pagination,
+    setPagination,
     transactions,
+    total,
+    pageCount,
+    categories,
     isLoading,
+    isFetching,
+    selection,
     bulkAction,
     confirmBulkDelete,
     setConfirmBulkDelete,
@@ -73,9 +78,6 @@ export default function Transactions() {
     handleMergeDuplicate,
   } = useTransactionPageState();
 
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [sorting, setSorting] = useState<SortingState>([{ id: "transaction_date", desc: true }]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const columnVisibility: ColumnVisibilityState = useMemo(() => ({}), []);
 
   // Build set of transaction IDs that belong to duplicate pairs for inline indicators
@@ -94,52 +96,36 @@ export default function Transactions() {
     busyId,
     duplicateIds: duplicateIdSet,
     canWrite,
+    selectAll: selection.selectAll,
   });
 
-  const filterOptions = useMemo(
-    () => ({
-      status: [
-        { value: "pending", label: "Pending" },
-        { value: "approved", label: "Approved" },
-        { value: "needs_review", label: "Needs Review" },
-        { value: "duplicate", label: "Duplicate" },
-      ],
-      transaction_type: [
-        { value: "income", label: "Income" },
-        { value: "expense", label: "Expense" },
-      ],
-      category: [...new Set(transactions.map((t) => t.category))].sort().map((c) => ({
-        value: c,
-        label: formatTag(c),
-      })),
-      property_id: [
-        { value: "__empty__", label: "(No property)" },
-        ...properties.map((p) => ({ value: p.id, label: p.name })),
-      ],
-      tax_relevant: [...TAX_RELEVANT_OPTIONS],
-    }),
-    [transactions, properties],
-  );
+  const filterOptions = useMemo(() => transactionFilterOptions(categories, properties), [categories, properties]);
 
+  // The server filters, orders and pages the rows; the table shows one page of them.
   const table = useTable({
     features: appTableFeatures,
     data: transactions,
     columns,
-    state: { rowSelection, sorting, columnVisibility, columnFilters },
-    onRowSelectionChange: setRowSelection,
+    state: { rowSelection: selection.rowSelection, sorting, columnVisibility, columnFilters, pagination },
+    onRowSelectionChange: selection.onRowSelectionChange,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onPaginationChange: setPagination,
+    manualPagination: true,
+    manualSorting: true,
+    manualFiltering: true,
+    rowCount: total,
+    pageCount,
     enableRowSelection: true,
     getRowId: (row) => row.id,
-    initialState: { pagination: { pageIndex: 0, pageSize: 25 } },
   });
 
   const colCount = table.getAllLeafColumns().length;
-  const selectedRows = table.getSelectedRowModel().rows;
-  const selectedCount = selectedRows.length;
-  const isRowApprovable = (r: (typeof selectedRows)[number]) =>
-    !!r.original.property_id && APPROVABLE_STATUSES.includes(r.original.status);
-  const hasApprovable = selectedRows.some(isRowApprovable);
+  const selectedRefs = selection.selectedRefs;
+  const selectedCount = selectedRefs.length;
+  const isRefApprovable = (ref: TransactionSelectionRef) =>
+    !!ref.property_id && APPROVABLE_STATUSES.includes(ref.status);
+  const hasApprovable = selectedRefs.some(isRefApprovable);
 
   const deleteTarget = confirmDeleteId ? transactions.find((t) => t.id === confirmDeleteId) : null;
 
@@ -225,13 +211,10 @@ export default function Transactions() {
               hasApprovable={hasApprovable}
               isApproving={bulkAction === "approve"}
               isDeleting={bulkAction === "delete"}
-              onApprove={() =>
-                handleBulkApprove(
-                  selectedRows.filter(isRowApprovable).map((r) => r.original.id),
-                )
-              }
+              isCheckingSelection={selection.isChecking}
+              onApprove={() => handleBulkApprove(selectedRefs.filter(isRefApprovable).map((ref) => ref.id))}
               onDelete={() => setConfirmBulkDelete(true)}
-              onClearSelection={() => setRowSelection({})}
+              onClearSelection={selection.clear}
             />
           )}
 
@@ -245,6 +228,7 @@ export default function Transactions() {
               editingId={editingTransaction?.id ?? null}
               filterOptions={filterOptions}
               propertyMap={propertyMap}
+              isRefreshing={isFetching}
             />
           )}
         </>
@@ -306,7 +290,8 @@ export default function Transactions() {
         description={`Are you sure you want to delete ${selectedCount} transaction(s)? This action cannot be undone.`}
         confirmLabel="Delete"
         variant="danger"
-        onConfirm={() => executeBulkDelete(selectedRows.map((r) => r.original.id))}
+        isLoading={selection.isChecking}
+        onConfirm={() => (selection.isChecking ? undefined : executeBulkDelete(selectedRefs.map((ref) => ref.id)))}
         onCancel={() => setConfirmBulkDelete(false)}
       />
 

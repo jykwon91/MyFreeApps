@@ -6,6 +6,7 @@ import { tenancyState } from "@mybookkeeper/api-client/utils/tenancyState";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { aRentLedger } from "./aRentLedger";
 import { aReminderOverview } from "./aRentReminder";
+import { withTransactionListQuery } from "./withTransactionListQuery";
 
 export function anApplicant(overrides: Partial<ApplicantDetailResponse> = {}): ApplicantDetailResponse {
   return {
@@ -83,7 +84,8 @@ export function formValue(form: unknown, field: string): string | undefined {
 
 export function startApplicantServer(applicants: ApplicantDetailResponse[]): FakeApplicantServer {
   const server: FakeApplicantServer = { tenantListFailure: null, applicants, offline: false, failListFromOffset: null, role: "owner", writeFailure: null, loseNextAnswer: false, requests: [], sensitive: noPrivateDetails(), revealFailure: null, eligibility: { eligible: true, missing_fields: [], has_pending: false }, eligibilityFailure: null, redirectFailure: null, uploadFailure: null };
-  const adapter: AxiosAdapter = (config) => {
+  const adapter: AxiosAdapter = (request) => {
+    const config = withTransactionListQuery(request);
     const respond = (data: unknown, status = 200) => {
       const response = { data: JSON.parse(JSON.stringify(data)), status, statusText: "", headers: {}, config };
       if (status < 400) return Promise.resolve(response);

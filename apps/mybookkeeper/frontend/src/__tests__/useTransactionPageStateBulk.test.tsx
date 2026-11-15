@@ -15,7 +15,9 @@ vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({ useGetPropertie
 vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => {
   const idle = () => [vi.fn(), { isLoading: false }];
   return {
-    useListTransactionsQuery: () => ({ data: [], isLoading: false }),
+    useGetTransactionPageQuery: () => ({ data: { items: [], total: 0, has_more: false }, isLoading: false, isFetching: false }),
+    useListTransactionCategoriesQuery: () => ({ data: [] }),
+    useLazyListTransactionSelectionQuery: () => [vi.fn(), { data: undefined }],
     useGetDuplicatesQuery: () => ({ data: undefined, isLoading: false }),
     useBulkApproveTransactionsMutation: () => [(batch: string[]) => ({ unwrap: () => mockBulkApprove(batch) })],
     useBulkDeleteTransactionsMutation: () => [(batch: string[]) => ({ unwrap: () => mockBulkDelete(batch) })],

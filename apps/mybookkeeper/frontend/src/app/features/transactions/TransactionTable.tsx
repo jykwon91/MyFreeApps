@@ -25,26 +25,30 @@ export interface TransactionTableProps {
   editingId: string | null;
   filterOptions?: FilterOptions;
   propertyMap?: ReadonlyMap<string, string>;
+  /** Another page, filter or order is loading; the rows shown are the previous ones. */
+  isRefreshing?: boolean;
 }
 
-export default function TransactionTable({ table, colCount, onRowClick, editingId, filterOptions, propertyMap }: TransactionTableProps) {
+export default function TransactionTable({ table, colCount, onRowClick, editingId, filterOptions, propertyMap, isRefreshing = false }: TransactionTableProps) {
   const { pageIndex, pageSize } = table.state.pagination;
-  const totalRows = table.getFilteredRowModel().rows.length;
+  // The server pages the rows, so the count is every matching row, not just this page's.
+  const totalRows = table.getRowCount();
+  const emptyMessage =
+    table.state.columnFilters.length === 0
+      ? "No transactions yet. Upload a document on the Documents page and I'll extract transactions automatically."
+      : "No transactions found";
   const start = pageIndex * pageSize + 1;
   const end = Math.min((pageIndex + 1) * pageSize, totalRows);
 
   return (
-    <div className="border rounded-lg overflow-hidden md:flex md:flex-col md:min-h-0 md:flex-1">
+    <div
+      className="border rounded-lg overflow-hidden md:flex md:flex-col md:min-h-0 md:flex-1"
+      aria-busy={isRefreshing}
+    >
       {/* Mobile card view */}
-      <div className="md:hidden divide-y" data-testid="transaction-cards">
+      <div className={cn("md:hidden divide-y", isRefreshing && "opacity-60")} data-testid="transaction-cards">
         {table.getRowModel().rows.length === 0 ? (
-          <EmptyState
-            message={
-              table.getPreFilteredRowModel().rows.length === 0
-                ? "No transactions yet. Upload a document on the Documents page and I'll extract transactions automatically."
-                : "No transactions found"
-            }
-          />
+          <EmptyState message={emptyMessage} />
         ) : (
           table.getRowModel().rows.map((row) => {
             const t = row.original;
@@ -123,7 +127,7 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
               </tr>
             ))}
           </thead>
-          <tbody className="divide-y">
+          <tbody className={cn("divide-y", isRefreshing && "opacity-60")}>
             {table.getRowModel().rows.map((row) => (
               <Fragment key={row.original.id}>
                 <tr
@@ -141,13 +145,7 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
             {table.getRowModel().rows.length === 0 && (
               <tr>
                 <td colSpan={colCount}>
-                  <EmptyState
-                    message={
-                      table.getPreFilteredRowModel().rows.length === 0
-                        ? "No transactions yet. Upload a document on the Documents page and I'll extract transactions automatically."
-                        : "No transactions found"
-                    }
-                  />
+                  <EmptyState message={emptyMessage} />
                 </td>
               </tr>
             )}
@@ -159,6 +157,7 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
         <div className="flex items-center gap-2">
           <span>Rows per page:</span>
           <select
+            aria-label="Rows per page"
             value={pageSize}
             onChange={(e) => table.setPageSize(Number(e.target.value))}
             className="border rounded px-1.5 py-0.5 text-xs bg-background"
@@ -172,16 +171,16 @@ export default function TransactionTable({ table, colCount, onRowClick, editingI
         <div className="flex items-center gap-3">
           <span>{totalRows > 0 ? `${start}\u2013${end} of ${totalRows}` : "0 results"}</span>
           <div className="flex items-center gap-1">
-            <button onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()} className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed">
+            <button aria-label="First page" onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()} className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed">
               <ChevronsLeft className="h-4 w-4" />
             </button>
-            <button onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()} className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed">
+            <button aria-label="Previous page" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()} className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed">
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <button onClick={() => table.nextPage()} disabled={!table.getCanNextPage()} className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed">
+            <button aria-label="Next page" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()} className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed">
               <ChevronRight className="h-4 w-4" />
             </button>
-            <button onClick={() => table.setPageIndex(table.getPageCount() - 1)} disabled={!table.getCanNextPage()} className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed">
+            <button aria-label="Last page" onClick={() => table.setPageIndex(table.getPageCount() - 1)} disabled={!table.getCanNextPage()} className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed">
               <ChevronsRight className="h-4 w-4" />
             </button>
           </div>

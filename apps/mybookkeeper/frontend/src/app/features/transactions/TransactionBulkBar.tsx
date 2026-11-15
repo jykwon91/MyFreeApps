@@ -1,27 +1,37 @@
-import { CheckCircle, Trash2 } from "lucide-react";
+import { CheckCircle, Loader2, Trash2 } from "lucide-react";
 import { LoadingButton } from "@platform/ui";
+import { CHECKING_SELECTION_LABEL } from "@/shared/lib/transaction-list-messages";
 
 export interface TransactionBulkBarProps {
   selectedCount: number;
   hasApprovable: boolean;
   isApproving: boolean;
   isDeleting: boolean;
+  /** The ticks are being checked against new filters: the count isn't final, so nothing can run yet. */
+  isCheckingSelection: boolean;
   onApprove: () => void;
   onDelete: () => void;
   onClearSelection: () => void;
 }
 
-export default function TransactionBulkBar({ selectedCount, hasApprovable, isApproving, isDeleting, onApprove, onDelete, onClearSelection }: TransactionBulkBarProps) {
+export default function TransactionBulkBar({ selectedCount, hasApprovable, isApproving, isDeleting, isCheckingSelection, onApprove, onDelete, onClearSelection }: TransactionBulkBarProps) {
   const busy = isApproving || isDeleting;
 
   return (
     <div className="flex items-center gap-3 px-3 py-2 bg-muted/50 rounded-lg border text-sm">
-      <span className="font-medium">{selectedCount} selected</span>
+      {isCheckingSelection ? (
+        <span className="flex items-center gap-1.5 font-medium text-muted-foreground" role="status">
+          <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+          {CHECKING_SELECTION_LABEL}
+        </span>
+      ) : (
+        <span className="font-medium">{selectedCount} selected</span>
+      )}
       {hasApprovable && (
         <LoadingButton
           size="sm"
           onClick={onApprove}
-          disabled={busy && !isApproving}
+          disabled={isCheckingSelection || (busy && !isApproving)}
           isLoading={isApproving}
           loadingText={`Approving ${selectedCount}...`}
         >
@@ -33,7 +43,7 @@ export default function TransactionBulkBar({ selectedCount, hasApprovable, isApp
         size="sm"
         variant="ghost"
         onClick={onDelete}
-        disabled={busy && !isDeleting}
+        disabled={isCheckingSelection || (busy && !isDeleting)}
         isLoading={isDeleting}
         loadingText={`Deleting ${selectedCount}...`}
         className="text-destructive hover:text-destructive"

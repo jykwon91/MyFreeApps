@@ -18,7 +18,10 @@ from app.models.transactions.transaction import Transaction
 from app.repositories import transaction_repo
 from app.repositories.tax import tax_return_repo
 from app.schemas.transactions.duplicate import DuplicateMergeOverrides
+from app.schemas.transactions.transaction import TransactionRead
 from app.schemas.transactions.transaction_filters import TransactionFilters
+from app.schemas.transactions.transaction_list_page import TransactionListPage
+from app.schemas.transactions.transaction_selection_ref import TransactionSelectionRef
 from app.services.classification import rule_learning_service
 from app.services.transactions.merge_strategy import MERGEABLE_FIELDS, auto_pick_defaults
 from app.services.transactions.reference_ownership import assert_references_owned
@@ -62,14 +65,52 @@ async def list_transactions(
     limit: int | None = None,
     offset: int | None = None,
 ) -> Sequence[Transaction]:
+    filters = filters or TransactionFilters()
     async with AsyncSessionLocal() as db:
         return await transaction_repo.list_filtered(
             db,
             ctx.organization_id,
-            **(filters or TransactionFilters()).model_dump(),
+            **filters.filter_args(),
+            sort=filters.sort_keys(),
             limit=limit,
             offset=offset,
         )
+
+
+async def list_transaction_page(
+    ctx: RequestContext,
+    filters: TransactionFilters,
+    *,
+    limit: int,
+    offset: int,
+) -> TransactionListPage:
+    """One page of the list, and how many rows the same filters match across every page."""
+    filter_args = filters.filter_args()
+    async with AsyncSessionLocal() as db:
+        rows = await transaction_repo.list_filtered(
+            db,
+            ctx.organization_id,
+            **filter_args,
+            sort=filters.sort_keys(),
+            limit=limit,
+            offset=offset,
+        )
+        total = await transaction_repo.count_filtered(db, ctx.organization_id, **filter_args)
+    items = [TransactionRead.model_validate(row) for row in rows]
+    return TransactionListPage(items=items, total=total, has_more=offset + len(items) < total)
+
+
+async def list_selection_refs(ctx: RequestContext, filters: TransactionFilters) -> list[TransactionSelectionRef]:
+    """Every row the filters match, as little as "select all" needs to tick it."""
+    async with AsyncSessionLocal() as db:
+        rows = await transaction_repo.list_selection_refs(db, ctx.organization_id, **filters.filter_args())
+    return [TransactionSelectionRef(id=row.id, property_id=row.property_id, status=row.status) for row in rows]
+
+
+async def list_categories(ctx: RequestContext, filters: TransactionFilters) -> list[str]:
+    """The categories the matching rows have, for the web table's Category filter."""
+    async with AsyncSessionLocal() as db:
+        return await transaction_repo.list_distinct_categories(db, ctx.organization_id, **filters.filter_args())
 
 
 async def count_to_review(ctx: RequestContext) -> int:

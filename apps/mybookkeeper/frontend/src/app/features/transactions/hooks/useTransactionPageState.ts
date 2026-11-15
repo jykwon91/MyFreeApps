@@ -1,7 +1,16 @@
 import { useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
-  useListTransactionsQuery,
+  functionalUpdate,
+  type ColumnFiltersState,
+  type OnChangeFn,
+  type PaginationState,
+  type SortingState,
+  type Updater,
+} from "@tanstack/react-table";
+import {
+  useGetTransactionPageQuery,
+  useListTransactionCategoriesQuery,
   useBulkApproveTransactionsMutation,
   useBulkDeleteTransactionsMutation,
   useUpdateTransactionMutation,
@@ -15,7 +24,13 @@ import type { TransactionListParams } from "@mybookkeeper/api-client/types/trans
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import { useToast } from "@/shared/hooks/useToast";
-import { EMPTY_FILTERS } from "@/shared/lib/transaction-config";
+import { EMPTY_FILTERS, INITIAL_TRANSACTION_PAGINATION } from "@/shared/lib/transaction-config";
+import { DEFAULT_TRANSACTION_SORTING } from "@/shared/lib/transaction-sort-columns";
+import { toFilterBarParams, toTransactionListParams } from "@/shared/utils/transaction-list-params";
+import { clampPage } from "@/shared/utils/clamp-page";
+import { useTransactionSelection } from "@/app/features/transactions/hooks/useTransactionSelection";
+import { useRefetchCount } from "@/app/features/transactions/hooks/useRefetchCount";
+import type { TransactionSelection } from "@/shared/types/transaction/transaction-selection";
 import { bulkApproveMessage, bulkDeleteMessage } from "@mybookkeeper/api-client/utils/bulkTransactionMessages";
 import { downloadFile } from "@/shared/utils/download";
 import { formatTag } from "@/shared/utils/tag";
@@ -25,6 +40,7 @@ import type { Filters } from "@/shared/types/transaction/transaction-filters";
 import type { DuplicatePair } from "@mybookkeeper/api-client/types/transaction/DuplicatePair";
 import { runBulkCounts } from "@mybookkeeper/api-client/utils/runBulkCounts";
 import { transactionExportPath } from "@mybookkeeper/api-client/utils/transactionExportPath";
+import { transactionListQuery } from "@mybookkeeper/api-client/utils/transactionListQuery";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 
 export interface TransactionPageState {
@@ -32,12 +48,25 @@ export interface TransactionPageState {
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
 
-  // Filters & transactions
+  // Filters, order and the page of transactions shown. Each is applied by the server.
   filters: Filters;
   setFilters: (filters: Filters) => void;
+  columnFilters: ColumnFiltersState;
+  setColumnFilters: OnChangeFn<ColumnFiltersState>;
+  sorting: SortingState;
+  setSorting: OnChangeFn<SortingState>;
+  pagination: PaginationState;
+  setPagination: OnChangeFn<PaginationState>;
   transactions: Transaction[];
+  /** How many rows the filters match across every page. */
+  total: number;
+  pageCount: number;
+  categories: string[];
   isLoading: boolean;
+  /** True while another page, filter or order is on its way (the shown rows are the previous ones). */
+  isFetching: boolean;
   queryParams: TransactionListParams;
+  selection: TransactionSelection;
 
   // Bulk selection UI state
   bulkAction: "approve" | "delete" | null;
@@ -99,7 +128,11 @@ export function useTransactionPageState(): TransactionPageState {
 
   const { showError, showSuccess } = useToast();
 
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [filters, setFilterBar] = useState<Filters>(EMPTY_FILTERS);
+  const [columnFilters, setColumnFilterState] = useState<ColumnFiltersState>([]);
+  const [sorting, setSortingState] = useState<SortingState>(DEFAULT_TRANSACTION_SORTING);
+  const [storedPagination, setStoredPagination] = useState<PaginationState>(INITIAL_TRANSACTION_PAGINATION);
+  const [knownTotal, setKnownTotal] = useState<number | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -120,21 +153,71 @@ export function useTransactionPageState(): TransactionPageState {
   const duplicatePairs = duplicateData?.pairs ?? [];
   const dupCount = isDuplicatesLoading ? null : duplicatePairs.length;
 
-  const queryParams = useMemo<TransactionListParams>(() => {
-    const params: TransactionListParams = {};
-    if (filters.property_id) params.property_id = filters.property_id;
-    if (filters.status) params.status = filters.status;
-    if (filters.transaction_type) params.transaction_type = filters.transaction_type;
-    if (filters.category) params.category = filters.category;
-    if (filters.vendor) params.vendor = filters.vendor;
-    if (filters.start_date) params.start_date = filters.start_date;
-    if (filters.end_date) params.end_date = filters.end_date;
-    return params;
-  }, [filters]);
+  // A new filter or order starts again from the first page, as the table did when it held every row.
+  const toFirstPage = useCallback(() => setStoredPagination((current) => ({ ...current, pageIndex: 0 })), []);
+  const setFilters = useCallback(
+    (next: Filters) => {
+      setFilterBar(next);
+      toFirstPage();
+    },
+    [toFirstPage],
+  );
+  const setColumnFilters = useCallback(
+    (updater: Updater<ColumnFiltersState>) => {
+      setColumnFilterState(updater);
+      toFirstPage();
+    },
+    [toFirstPage],
+  );
+  const setSorting = useCallback(
+    (updater: Updater<SortingState>) => {
+      setSortingState(updater);
+      toFirstPage();
+    },
+    [toFirstPage],
+  );
 
-  const { data: transactions = [], isLoading } = useListTransactionsQuery(queryParams, {
-    skip: activeTab !== "transactions",
-  });
+  const queryParams = useMemo(
+    () => toTransactionListParams(filters, columnFilters, sorting),
+    [filters, columnFilters, sorting],
+  );
+  const filterBarParams = useMemo(() => toFilterBarParams(filters), [filters]);
+  const skip = activeTab !== "transactions";
+
+  // Deleting the last rows of the last page would leave it past the end; show the new last page instead.
+  const pagination = useMemo(
+    () => clampPage(storedPagination, knownTotal),
+    [storedPagination, knownTotal],
+  );
+  const setPagination = useCallback(
+    (updater: Updater<PaginationState>) =>
+      setStoredPagination((current) => functionalUpdate(updater, clampPage(current, knownTotal))),
+    [knownTotal],
+  );
+  const pageArgs = useMemo(
+    () => ({ ...queryParams, limit: pagination.pageSize, offset: pagination.pageIndex * pagination.pageSize }),
+    [queryParams, pagination],
+  );
+  const { data: page, currentData, fulfilledTimeStamp, isLoading, isFetching } = useGetTransactionPageQuery(pageArgs, { skip });
+  // Bumped when an edit (or coming back to the tab) refetches the same page, so the ticks are
+  // checked again: the edit may have moved ticked rows out of the filters, or deleted them.
+  const rowsVersion = useRefetchCount(
+    `${transactionListQuery(pageArgs)}&offset=${pageArgs.offset}`,
+    currentData ? fulfilledTimeStamp : undefined,
+  );
+  const { data: categories = [] } = useListTransactionCategoriesQuery(filterBarParams, { skip });
+  const transactions = useMemo(() => page?.items ?? [], [page]);
+  const total = page?.total ?? 0;
+  // Kept in state because the page asked for depends on it; React re-renders straight away.
+  if (page && page.total !== knownTotal) setKnownTotal(page.total);
+  const pageCount = Math.ceil(total / pagination.pageSize);
+
+  const rowsStatus = useMemo(
+    () => ({ isCurrent: !isFetching, isRefetching: isFetching && currentData !== undefined, version: rowsVersion }),
+    [isFetching, currentData, rowsVersion],
+  );
+  const selection = useTransactionSelection(transactions, queryParams, total, rowsStatus);
+  const { remove: removeFromSelection } = selection;
 
   const [deleteTransaction] = useDeleteTransactionMutation();
   const [updateTransaction] = useUpdateTransactionMutation();
@@ -170,6 +253,7 @@ export function useTransactionPageState(): TransactionPageState {
     setBusyId(confirmDeleteId);
     try {
       await deleteTransaction(confirmDeleteId).unwrap();
+      removeFromSelection([confirmDeleteId]);
       showSuccess("Transaction deleted");
       if (editingTransaction?.id === confirmDeleteId) setEditingTransaction(null);
     } catch {
@@ -178,7 +262,7 @@ export function useTransactionPageState(): TransactionPageState {
       setBusyId(null);
       setConfirmDeleteId(null);
     }
-  }, [confirmDeleteId, deleteTransaction, editingTransaction, showSuccess, showError]);
+  }, [confirmDeleteId, deleteTransaction, removeFromSelection, editingTransaction, showSuccess, showError]);
 
   const handleBulkApprove = useCallback(
     async (ids: string[]) => {
@@ -186,13 +270,16 @@ export function useTransactionPageState(): TransactionPageState {
       setBulkAction("approve");
       try {
         const run = await runBulkCounts(ids, ["approved", "skipped"], (batch) => bulkApprove(batch).unwrap());
+        // Approved rows are unticked, as deleted ones are: under a status filter they have just left it.
+        const failed = new Set(run.failedIds);
+        removeFromSelection(ids.filter((id) => !failed.has(id)));
         const { text, isError } = bulkApproveMessage(run);
         (isError ? showError : showSuccess)(text);
       } finally {
         setBulkAction(null);
       }
     },
-    [bulkApprove, showSuccess, showError],
+    [bulkApprove, removeFromSelection, showSuccess, showError],
   );
 
   const executeBulkDelete = useCallback(
@@ -201,13 +288,15 @@ export function useTransactionPageState(): TransactionPageState {
       setBulkAction("delete");
       try {
         const run = await runBulkCounts(ids, ["deleted", "skipped"], (batch) => bulkDelete(batch).unwrap());
+        const failed = new Set(run.failedIds);
+        removeFromSelection(ids.filter((id) => !failed.has(id)));
         const { text, isError } = bulkDeleteMessage(run);
         (isError ? showError : showSuccess)(text);
       } finally {
         setBulkAction(null);
       }
     },
-    [bulkDelete, showSuccess, showError],
+    [bulkDelete, removeFromSelection, showSuccess, showError],
   );
 
   const handleExportCSV = useCallback(async () => {
@@ -291,9 +380,20 @@ export function useTransactionPageState(): TransactionPageState {
     setActiveTab,
     filters,
     setFilters,
+    columnFilters,
+    setColumnFilters,
+    sorting,
+    setSorting,
+    pagination,
+    setPagination,
     transactions,
+    total,
+    pageCount,
+    categories,
     isLoading,
+    isFetching,
     queryParams,
+    selection,
     bulkAction,
     confirmBulkDelete,
     setConfirmBulkDelete,

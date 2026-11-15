@@ -20,14 +20,17 @@ from app.repositories.tax import tax_return_repo
 
 # -- re-exports for back-compat ------------------------------------------
 from app.repositories.transactions.transaction_list_repo import (
+    count_filtered,
     count_to_review,
     find_by_vendor_for_retroactive,
     list_by_activity_ids,
     list_by_user,
+    list_distinct_categories,
     list_filtered,
     list_for_duplicate_scan,
     list_orphaned_tax_relevant,
     list_schedule_e_transaction_details,
+    list_selection_refs,
     list_unassigned_tax_relevant,
     sum_schedule_e_by_property_line,
 )
@@ -71,14 +74,17 @@ __all__ = [
     "mark_deleted",
     "flush",
     # list
+    "count_filtered",
     "count_to_review",
     "find_by_vendor_for_retroactive",
     "list_by_activity_ids",
     "list_by_user",
+    "list_distinct_categories",
     "list_filtered",
     "list_for_duplicate_scan",
     "list_orphaned_tax_relevant",
     "list_schedule_e_transaction_details",
+    "list_selection_refs",
     "list_unassigned_tax_relevant",
     "sum_schedule_e_by_property_line",
     # bulk

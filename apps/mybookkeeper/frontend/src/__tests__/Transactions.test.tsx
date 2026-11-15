@@ -119,10 +119,9 @@ const mockProperties: Property[] = [
 ];
 
 vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
-  useListTransactionsQuery: vi.fn(() => ({
-    data: mockTransactions,
-    isLoading: false,
-  })),
+  useGetTransactionPageQuery: vi.fn(),
+  useListTransactionCategoriesQuery: vi.fn(() => ({ data: ["maintenance", "rental_revenue"] })),
+  useLazyListTransactionSelectionQuery: vi.fn(() => [vi.fn(), { data: undefined }]),
   useGetDuplicatesQuery: vi.fn(() => ({ data: { pairs: [], total: 0 }, isLoading: false })),
   useCreateTransactionMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useBulkApproveTransactionsMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -168,12 +167,24 @@ vi.mock("@/shared/hooks/useOrgRole", () => ({
 }));
 
 import {
-  useListTransactionsQuery,
+  useGetTransactionPageQuery,
   useUpdateTransactionMutation,
   useBulkApproveTransactionsMutation,
 } from "@mybookkeeper/api-client/store/transactionsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { downloadFile } from "@/shared/utils/download";
+
+function mockPage(rows: Transaction[], isLoading = false) {
+  vi.mocked(useGetTransactionPageQuery).mockReturnValue({
+    data: isLoading ? undefined : { items: rows, total: rows.length, has_more: false },
+    isLoading,
+    isFetching: isLoading,
+  } as unknown as ReturnType<typeof useGetTransactionPageQuery>);
+}
+
+function lastPageRequest() {
+  return vi.mocked(useGetTransactionPageQuery).mock.lastCall?.[0];
+}
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(
@@ -186,10 +197,7 @@ function renderWithProviders(ui: React.ReactElement) {
 describe("Transactions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useListTransactionsQuery).mockReturnValue({
-      data: mockTransactions,
-      isLoading: false,
-    } as unknown as ReturnType<typeof useListTransactionsQuery>);
+    mockPage(mockTransactions, false);
     vi.mocked(useCanWrite).mockReturnValue(true);
   });
 
@@ -227,7 +235,7 @@ describe("Transactions", () => {
     expect(screen.getByText("Export PDF")).toBeInTheDocument();
   });
 
-  it("exports with the same filters the list is showing", async () => {
+  it("exports with the same filters and order the list is showing", async () => {
     const user = userEvent.setup();
     renderWithProviders(<Transactions />);
 
@@ -235,7 +243,10 @@ describe("Transactions", () => {
     await user.click(screen.getByText("Export"));
     await user.click(screen.getByText("Export CSV"));
 
-    expect(downloadFile).toHaveBeenCalledWith("/exports/transactions/csv?vendor=Depot", "transactions.csv");
+    expect(downloadFile).toHaveBeenCalledWith(
+      "/exports/transactions/csv?vendor=Depot&sort=transaction_date%3Adesc",
+      "transactions.csv",
+    );
   });
 
   it("renders transaction data in the table", () => {
@@ -254,8 +265,8 @@ describe("Transactions", () => {
     expect(screen.getByRole("checkbox", { name: "Yes" })).toBeInTheDocument();
     await user.click(screen.getByRole("checkbox", { name: "No" }));
 
-    expect(screen.queryAllByText("Home Depot")).toHaveLength(0);
-    expect(screen.queryAllByText("Tenant Rent")).toHaveLength(0);
+    // The server applies the filter, so the page is asked for again with it.
+    expect(lastPageRequest()).toMatchObject({ tax_relevant: false, offset: 0 });
   });
 
   it("renders filter bar with select elements", () => {
@@ -299,10 +310,7 @@ describe("Transactions", () => {
   });
 
   it("shows skeleton loader when loading", () => {
-    vi.mocked(useListTransactionsQuery).mockReturnValue({
-      data: [],
-      isLoading: true,
-    } as unknown as ReturnType<typeof useListTransactionsQuery>);
+    mockPage([], true);
 
     const { container } = renderWithProviders(<Transactions />);
 
@@ -314,10 +322,7 @@ describe("Transactions", () => {
 describe("Transactions — viewer role", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useListTransactionsQuery).mockReturnValue({
-      data: mockTransactions,
-      isLoading: false,
-    } as unknown as ReturnType<typeof useListTransactionsQuery>);
+    mockPage(mockTransactions, false);
     vi.mocked(useCanWrite).mockReturnValue(false);
   });
 
@@ -374,10 +379,7 @@ describe("Transactions — approve affordance for unverified rows", () => {
   });
 
   it("shows the inline Approve button for an unverified row that has a property", () => {
-    vi.mocked(useListTransactionsQuery).mockReturnValue({
-      data: [unverifiedWithProperty],
-      isLoading: false,
-    } as unknown as ReturnType<typeof useListTransactionsQuery>);
+    mockPage([unverifiedWithProperty], false);
 
     renderWithProviders(<Transactions />);
 
@@ -385,10 +387,7 @@ describe("Transactions — approve affordance for unverified rows", () => {
   });
 
   it("does not show the inline Approve button for an unverified row with no property", () => {
-    vi.mocked(useListTransactionsQuery).mockReturnValue({
-      data: [unverifiedNoProperty],
-      isLoading: false,
-    } as unknown as ReturnType<typeof useListTransactionsQuery>);
+    mockPage([unverifiedNoProperty], false);
 
     renderWithProviders(<Transactions />);
 
@@ -398,10 +397,7 @@ describe("Transactions — approve affordance for unverified rows", () => {
   it("approves an unverified row to status 'approved' when the inline button is clicked", async () => {
     const user = userEvent.setup();
     const updateTrigger = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
-    vi.mocked(useListTransactionsQuery).mockReturnValue({
-      data: [unverifiedWithProperty],
-      isLoading: false,
-    } as unknown as ReturnType<typeof useListTransactionsQuery>);
+    mockPage([unverifiedWithProperty], false);
     vi.mocked(useUpdateTransactionMutation).mockReturnValue([
       updateTrigger,
       { isLoading: false },
@@ -422,10 +418,7 @@ describe("Transactions — approve affordance for unverified rows", () => {
     const bulkTrigger = vi.fn(() => ({
       unwrap: () => Promise.resolve({ approved: 1, skipped: 0 }),
     }));
-    vi.mocked(useListTransactionsQuery).mockReturnValue({
-      data: [unverifiedWithProperty],
-      isLoading: false,
-    } as unknown as ReturnType<typeof useListTransactionsQuery>);
+    mockPage([unverifiedWithProperty], false);
     vi.mocked(useBulkApproveTransactionsMutation).mockReturnValue([
       bulkTrigger,
       { isLoading: false },

@@ -3,7 +3,9 @@ import type { TransactionListParams } from "@mybookkeeper/api-client/types/trans
 import type { TransactionSortField } from "@mybookkeeper/api-client/types/transaction/TransactionSortField";
 
 function sortValue(row: Transaction, field: TransactionSortField): string | number | null {
-  return field === "amount" ? Number(row.amount) : row[field];
+  if (field === "amount") return Number(row.amount);
+  if (field === "tax_relevant") return Number(row.tax_relevant);
+  return row[field];
 }
 
 /**

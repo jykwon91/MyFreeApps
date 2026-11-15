@@ -17,6 +17,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { stubTransactionPages } from "./fixtures/mockTransactions";
 import type { ClassificationRule } from "@mybookkeeper/api-client/types/classification-rule/classification-rule";
 
 const rule = (id: string, match_pattern: string, category: string, times_applied: number): ClassificationRule => ({
@@ -41,6 +42,7 @@ async function openPanel(page: Page, rules: ClassificationRule[]) {
   await stubUnmatchedApi(page, { answer: "empty" });
   await stubWorkspaceShell(page, "owner");
   await page.route("**/api/classification-rules", (route) => route.fulfill(json(rules)));
+  await stubTransactionPages(page, []);
 
   await page.goto("/transactions");
   await page.getByRole("button", { name: /vendor rules/i }).click();
