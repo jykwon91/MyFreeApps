@@ -37,6 +37,10 @@ test("opens an item page from Best gear, shows how to get it, and goes back", as
   await expect(sources.getByRole("heading", { level: 3, name: "Crafted" })).toBeVisible();
   await expect(sources.getByTestId("provenance-badge").first()).toHaveAttribute("data-provenance", "client");
   await expect(sources.getByRole("link", { name: "Crafting guide" })).toHaveAttribute("href", /\/wow-forever\/professions\?p=tailoring&skill=\d+/);
+  // Where to learn it: the pattern, linked to its own page with its icon, then where the pattern comes from.
+  const learn = sources.getByTestId("crafted-learn");
+  await expect(learn.getByRole("link", { name: "Pattern: Felcloth Gloves" })).toHaveAttribute("href", /\/wow-forever\/items\/\d+$/);
+  await expect(learn.getByRole("link", { name: "Pattern: Felcloth Gloves" }).locator("img, [data-testid=game-icon-placeholder]")).toBeVisible();
   await expect(page.locator('a[href*="wowhead"]')).toHaveCount(0);
 
   await page.getByRole("link", { name: "Back to Best gear" }).click();
