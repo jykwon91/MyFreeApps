@@ -16,6 +16,7 @@ import type { JdUrlExtractResponse } from "../types/application/jd-url-extract-r
 import type { KanbanColumn } from "../types/kanban/kanban-column";
 import type { KanbanListResponse } from "../types/kanban/kanban-list-response";
 import { APPLICATIONS_KANBAN_LIST_ID } from "../constants/applicationsKanbanListId";
+import { DISCOVERED_JOB_TAG } from "../constants/discoverTags";
 import { APPLICATIONS_PAGE_SIZE, FIRST_APPLICATIONS_OFFSET } from "../constants/applicationsPaging";
 import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
 import { removalIsDone } from "../utils/removalIsDone";
@@ -24,7 +25,7 @@ const APPLICATIONS_TAG = "Applications";
 const APPLICATION_EVENTS_TAG = "ApplicationEvents";
 
 const applicationsApi = baseApi.enhanceEndpoints({
-  addTagTypes: [APPLICATIONS_TAG, APPLICATION_EVENTS_TAG],
+  addTagTypes: [APPLICATIONS_TAG, APPLICATION_EVENTS_TAG, DISCOVERED_JOB_TAG],
 }).injectEndpoints({
   endpoints: (build) => ({
     /**
@@ -112,6 +113,8 @@ const applicationsApi = baseApi.enhanceEndpoints({
         { type: APPLICATIONS_TAG, id },
         { type: APPLICATIONS_TAG, id: "LIST" },
         { type: APPLICATIONS_TAG, id: APPLICATIONS_KANBAN_LIST_ID },
+        // The server returns a promoted posting to the Discover inbox on delete.
+        DISCOVERED_JOB_TAG,
       ],
     }),
 
