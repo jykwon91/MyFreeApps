@@ -271,10 +271,8 @@ export const signedLeasesApi = baseApi.enhanceEndpoints({
           ...(values ? { values } : {}),
         },
       }),
-      invalidatesTags: (_r, _e, { leaseId }) => [
-        { type: "SignedLease", id: leaseId },
-        { type: "SignedLease", id: "LIST" },
-      ],
+      // Addendum values can fill in a lease's empty start/end dates, which the tenant views show.
+      invalidatesTags: tagsAfterLeaseUpdate,
     }),
 
     prefillAddendumPlaceholders: builder.mutation<
