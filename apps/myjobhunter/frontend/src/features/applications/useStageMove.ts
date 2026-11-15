@@ -33,6 +33,14 @@ export function useStageMove(applicationId: string, currentColumn: KanbanColumn)
   const [saved, setSaved] = useState(false);
   const inFlight = useRef(false);
 
+  // Once the saved move's refetch has landed, drop the pending stage (state
+  // adjusted during render, not in an effect) so a later unrelated refetch
+  // can't bring it back and lock the select.
+  if (pendingColumn !== null && saved && !isFetching) {
+    setPendingColumn(null);
+    setSaved(false);
+  }
+
   const isMoving = pendingColumn !== null && !(saved && !isFetching);
 
   async function moveTo(target: KanbanColumn) {

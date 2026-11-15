@@ -132,6 +132,21 @@ describe.each(SURFACES)("stage select on the %s", (_name, surface, getSelect) =>
     await waitFor(() => expect(getSelect()).not.toBeDisabled());
   });
 
+  it("stays usable on a later background refetch once the move has finished", async () => {
+    const { deferred } = arrangeTransition();
+    const view = render(surface());
+
+    await userEvent.selectOptions(getSelect(), "interviewing");
+    await act(async () => deferred[0].resolve());
+    await waitFor(() => expect(getSelect()).not.toBeDisabled());
+
+    arrangeQuery(true);
+    view.rerender(surface());
+
+    expect(getSelect()).not.toBeDisabled();
+    expect(getSelect()).toHaveValue("applied");
+  });
+
   it("goes back to the current stage and shows the error when the move fails", async () => {
     const { deferred } = arrangeTransition();
     render(surface());
