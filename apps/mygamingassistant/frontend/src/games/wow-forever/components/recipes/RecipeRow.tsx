@@ -20,10 +20,12 @@ interface RecipeRowProps {
   place: VendorPlace;
   zoneId: number | null;
   level: number | null;
+  /** Starts open: a recipe link landed here and the search names this recipe exactly. */
+  defaultOpen?: boolean;
 }
 
 /** One recipe: closed, what it makes, how you learn it and what goes in; open, where exactly to get it. */
-export default function RecipeRow({ match, place, zoneId, level }: RecipeRowProps) {
+export default function RecipeRow({ match, place, zoneId, level, defaultOpen = false }: RecipeRowProps) {
   const { entry, viaReagent } = match;
   const label = RECIPE_PROFESSION_LABELS[entry.profession];
   const nameClass = entry.makes ? QUALITY_TEXT_CLASSES[entry.makes.quality] : "text-foreground";
@@ -31,7 +33,7 @@ export default function RecipeRow({ match, place, zoneId, level }: RecipeRowProp
   const summary = learnSummary(entry);
   return (
     <li className="rounded-lg border bg-card" data-testid="recipe-row">
-      <details className="group">
+      <details className="group" open={defaultOpen}>
         <summary className="flex min-h-[44px] cursor-pointer list-none items-start gap-2 rounded-lg p-3 hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
           <GameIcon icon={entry.icon} size={32} smSize={40} alt="" className="shrink-0" />
           <span className="min-w-0 flex-1 space-y-0.5">

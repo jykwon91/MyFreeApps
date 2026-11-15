@@ -2,19 +2,23 @@ import { useState } from "react";
 import RecipeRow from "@/games/wow-forever/components/recipes/RecipeRow";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import { RECIPE_PAGE_SIZE, RECIPES_TEXT } from "@/games/wow-forever/data/recipes/recipesConfig";
+import { exactRecipeMatch } from "@/games/wow-forever/lib/recipes/exactRecipeMatch";
 import type { RecipeMatch } from "@/games/wow-forever/types/recipes/recipeMatch";
 import type { VendorPlace } from "@/games/wow-forever/types/recipeVendors/vendorPlace";
 
 interface RecipeResultsProps {
   matches: readonly RecipeMatch[];
+  /** A recipe named exactly this opens (a recipe link landed here); empty opens none. */
+  openQuery: string;
   place: VendorPlace;
   zoneId: number | null;
   level: number | null;
 }
 
 /** The matching recipes, a page at a time. The page keys it by the search, so a new search starts at the first page. */
-export default function RecipeResults({ matches, place, zoneId, level }: RecipeResultsProps) {
+export default function RecipeResults({ matches, openQuery, place, zoneId, level }: RecipeResultsProps) {
   const [shown, setShown] = useState(RECIPE_PAGE_SIZE);
+  const openKey = exactRecipeMatch(matches, openQuery);
   if (matches.length === 0) return <EmptyStateNote message={RECIPES_TEXT.noMatch} />;
   const visible = Math.min(shown, matches.length);
   const more = matches.length - visible;
@@ -22,7 +26,7 @@ export default function RecipeResults({ matches, place, zoneId, level }: RecipeR
     <div className="space-y-3">
       <ul className="space-y-2" aria-label="Recipes">
         {matches.slice(0, visible).map((m) => (
-          <RecipeRow key={m.entry.key} match={m} place={place} zoneId={zoneId} level={level} />
+          <RecipeRow key={m.entry.key} match={m} place={place} zoneId={zoneId} level={level} defaultOpen={m.entry.key === openKey} />
         ))}
       </ul>
       {more > 0 ? (

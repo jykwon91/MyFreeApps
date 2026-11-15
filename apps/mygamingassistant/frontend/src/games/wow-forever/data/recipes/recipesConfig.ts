@@ -1,5 +1,9 @@
+import type { OpenRecipeState } from "@/games/wow-forever/types/recipes/openRecipeState";
 import { RECIPE_CATEGORY, type RecipeCategory } from "@/games/wow-forever/types/recipes/recipeCategory";
 import type { RecipeProfession } from "@/games/wow-forever/types/recipes/recipeProfession";
+
+/** The Recipes page. */
+export const RECIPES_PAGE_PATH = "/wow-forever/recipes";
 
 /** The page's URL keys. */
 export const RECIPE_PARAMS = { query: "q", profession: "p", category: "c" } as const;
@@ -100,6 +104,16 @@ export const RECIPES_TEXT = {
   noSourceListed: "No source listed",
   sourcesTag: "Vendors, drops and quests:",
   noSource: "Where this recipe comes from isn't known yet.",
+} as const;
+
+/** A recipe's hover tooltip (guild crafter search). */
+/** The link state a recipe-name link sends, so the Recipes page opens the recipe named in the search. */
+export const OPEN_RECIPE_STATE: OpenRecipeState = { openRecipe: true };
+
+export const RECIPE_TOOLTIP_TEXT = {
+  reagents: "Materials",
+  noReagents: "No materials listed.",
+  open: "Click for the full recipe: its skill colours and where to learn it.",
 } as const;
 
 /** The Profession toggle's "every profession" value (never in the URL). */

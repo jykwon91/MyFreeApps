@@ -1167,6 +1167,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (also the character sheet's stat tabs): reuse it for any new tabs.
   "Who can craft?" cards (`GuildRecipeCard`) show only the best crafter (list is sorted skill-first);
   a per-card "Show N more" / "Show fewer" toggle reveals the rest (`RECIPE_CRAFTERS_VISIBLE`).
+  Each card joins our recipe book (`lib/guild/guildRecipeEntries.ts`): Blizzard's recipe id ->
+  `recipeSpell` -> `${profession}:${spell}` key, with a same-profession name fallback (Cooking keys by
+  food). Matched cards show the recipe's icon and a `RecipeNameLink` (hover = `RecipeTooltip`). The
+  link goes to the Recipes page (`recipeHref`), NOT an item page: item pages only exist for gear, so
+  cloth/potions/food dead-end at "Item not found". Its `OPEN_RECIPE_STATE` makes the Recipes page
+  open the one exact-name match (`exactRecipeMatch`); a typed search never auto-opens.
   Roster toolbar (`GuildMemberToolbar`): Name, Class, Level, Profession, Sort, all in the URL
   (`GUILD_PARAMS`; profession = `?prof=<GuideProfession id>`, e.g. `tailoring`). The Profession
   select lists only professions someone has, with counts, in the Professions picker's order
