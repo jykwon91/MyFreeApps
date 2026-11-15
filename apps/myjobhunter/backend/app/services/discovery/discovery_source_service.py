@@ -18,12 +18,41 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.discovery.discovery_source import DiscoverySource
-from app.repositories.discovery import discovery_repository
+from app.repositories.discovery import discovery_source_repository
 
 
 
 class DiscoverySourceNameConflictError(Exception):
     """Raised when an active source with the same user+kind+name already exists."""
+
+
+async def _ensure_no_active_name_conflict(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    source: str,
+    name: str,
+    exclude_id: uuid.UUID | None = None,
+) -> None:
+    """Raise ``DiscoverySourceNameConflictError`` if another active source clashes.
+
+    Pre-flight check at the service layer so the caller gets a clean 409 with
+    a human-readable message instead of the partial unique index raising an
+    IntegrityError that would roll back the outer transaction.
+    """
+    existing = await discovery_source_repository.find_active_source_by_name(
+        db, user_id=user_id, source=source, name=name, exclude_id=exclude_id,
+    )
+    if existing is None:
+        return
+    raise DiscoverySourceNameConflictError(
+        f"An active '{source}' source named {name!r} already exists. "
+        "Pick a different name for this source."
+        if name
+        else
+        f"An active '{source}' source already exists. "
+        "Give this source a name to keep a second one of the same kind."
+    )
 
 
 async def create_source(
@@ -43,23 +72,11 @@ async def create_source(
 
     The scheduler process picks the new source up on its next reconcile.
     """
-    # Pre-flight uniqueness check at the service layer so we can surface a
-    # clean 409 with a human-readable message instead of letting the DB raise
-    # an IntegrityError that would roll back the outer transaction.
-    existing = await discovery_repository.find_active_source_by_name(
+    await _ensure_no_active_name_conflict(
         db, user_id=user_id, source=source, name=name,
     )
-    if existing is not None:
-        raise DiscoverySourceNameConflictError(
-            f"An active '{source}' source named {name!r} already exists. "
-            "Pick a different name to create a second source of this kind."
-            if name
-            else
-            f"An active '{source}' source already exists. "
-            "Give this source a name to add a second one of the same kind."
-        )
 
-    src = await discovery_repository.create_source(
+    src = await discovery_source_repository.create_source(
         db,
         user_id=user_id,
         source=source,
@@ -91,10 +108,28 @@ async def update_source(
     layer (``DiscoverySourcePatch._validate_config_per_source``) runs
     validation at the HTTP boundary before this service is invoked.
 
+    Raises ``DiscoverySourceNameConflictError`` when the row would end up
+    active with the same kind and name as another active source of the
+    same user (a rename, or reactivating a row whose name was since taken).
+
     A changed interval or ``is_active`` flag reaches the scheduler process
     on its next reconcile.
     """
-    src = await discovery_repository.update_source(
+    current = await discovery_source_repository.get_source(db, source_id, user_id)
+    if current is None:
+        return None
+    resulting_name = current.name if name is None else name
+    resulting_active = current.is_active if is_active is None else is_active
+    if resulting_active:
+        await _ensure_no_active_name_conflict(
+            db,
+            user_id=user_id,
+            source=current.source,
+            name=resulting_name,
+            exclude_id=current.id,
+        )
+
+    src = await discovery_source_repository.update_source(
         db,
         source_id,
         user_id,
@@ -122,7 +157,7 @@ async def deactivate_source(
     runner also re-checks ``is_active`` before fetching, so a fire inside
     that window is a no-op.
     """
-    ok = await discovery_repository.deactivate_source(db, source_id, user_id)
+    ok = await discovery_source_repository.deactivate_source(db, source_id, user_id)
     if not ok:
         return False
     await db.commit()
@@ -136,6 +171,6 @@ async def list_sources(
     include_inactive: bool,
 ) -> list[DiscoverySource]:
     """List a user's saved searches (active only unless ``include_inactive``)."""
-    return await discovery_repository.list_sources(
+    return await discovery_source_repository.list_sources(
         db, user_id, active_only=not include_inactive,
     )

@@ -164,17 +164,21 @@ async def patch_source(
     Status codes:
     - 200 — updated source returned
     - 404 — source not found or doesn't belong to caller
+    - 409 — the result would clash with another active source of the same kind + name
     - 422 — invalid payload (out-of-range interval, no fields provided, etc.)
     """
-    src = await discovery_source_service.update_source(
-        db,
-        source_id,
-        user.id,
-        fetch_interval_minutes=payload.fetch_interval_minutes,
-        name=payload.name,
-        is_active=payload.is_active,
-        config=payload.config,
-    )
+    try:
+        src = await discovery_source_service.update_source(
+            db,
+            source_id,
+            user.id,
+            fetch_interval_minutes=payload.fetch_interval_minutes,
+            name=payload.name,
+            is_active=payload.is_active,
+            config=payload.config,
+        )
+    except DiscoverySourceNameConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if src is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
     return DiscoverySourceResponse.model_validate(src)
