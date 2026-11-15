@@ -205,39 +205,128 @@ describe("MGA Buffs list", () => {
   });
 });
 
-describe("MGA Buffs slash command", () => {
-  const slash = (msg: string): string => `SlashCmdList.MGABUFFS(${JSON.stringify(msg)})`;
-  const base = `units.player.buffs = { buff("Demon Armor", now + 240) }; ${FED}; units.player.level = 15`;
+describe("MGA Buffs options window", () => {
+  const quiet = `${ARMORED}; ${FED}; units.player.level = 15`;
+  const box = (key: string): string => `MGABuffsOptions_${key}`;
 
-  it("warns earlier with minutes, and rejects a bad number", () => {
-    const lines = run(base, `clear(); ${slash("minutes 5")}`);
-    expect(lines).toEqual(["chat: MGA Buffs: warning 5 min before a buff runs out.", "row: Demon Armor: 4 min left", "flash: Demon Armor: 4 min left", "sound"]);
-    expect(run(base, `clear(); ${slash("minutes 99")}`)[0]).toBe("chat: MGA Buffs: give a number of minutes from 1 to 30, like /mgabuffs minutes 5.");
+  it("adds itself to Options > AddOns and shows the saved settings", () => {
+    const lines = runAddonLua(
+      [
+        ["MGABuffs.lua", addonLua],
+        ["then", `MGABuffsSettings = { food = false, minutes = 5, locked = false }; fire("PLAYER_LOGIN")
+          for _, k in ipairs({ "armor", "soulstone", "food", "group", "sound", "unlock" }) do
+            DEFAULT_CHAT_FRAME:AddMessage(k .. "=" .. tostring(_G["MGABuffsOptions_" .. k]:GetChecked()))
+          end
+          DEFAULT_CHAT_FRAME:AddMessage(MGABuffsOptions_minutesText.text)`],
+      ],
+      WOW_BUFF_STUBS,
+    );
+    expect(lines).toContain("options: added MGA Buffs");
+    expect(lines.filter((l) => l.startsWith("chat: "))).toEqual([
+      "chat: armor=true",
+      "chat: soulstone=true",
+      "chat: food=false",
+      "chat: group=true",
+      "chat: sound=true",
+      "chat: unlock=true",
+      "chat: 5 minutes",
+    ]);
   });
 
-  it("turns a check off and on", () => {
-    const lines = run(`${ARMORED}; units.player.level = 15`, `clear(); ${slash("food")}`);
-    expect(lines).toEqual(["chat: MGA Buffs: food reminders off.", "hidden"]);
+  it("turns a reminder off and on with its checkbox", () => {
+    expect(run(`units.player.buffs = { buff("Demon Armor", now + 1200) }; units.player.level = 15`, `clear(); click(${box("food")})`)).toEqual(["hidden"]);
+    const back = run(`units.player.buffs = { buff("Demon Armor", now + 1200) }; units.player.level = 15`, `click(${box("food")}); clear(); click(${box("food")})`);
+    expect(rows(back)).toEqual(["Not Well Fed: eat buff food"]);
   });
 
-  it("lists what's on and what's missing", () => {
-    const lines = run("units.player.level = 15", `clear(); ${slash("")}`);
+  it("warns earlier or later with the - and + buttons, between 1 and 30 minutes", () => {
+    const base = `units.player.buffs = { buff("Demon Armor", now + 240) }; ${FED}; units.player.level = 15`;
+    const lines = run(base, `clear(); click(MGABuffsOptions_plus); click(MGABuffsOptions_plus); DEFAULT_CHAT_FRAME:AddMessage(MGABuffsOptions_minutesText.text)`);
+    expect(lines.filter((l) => l.startsWith("flash: ") || l === "sound")).toEqual(["flash: Demon Armor: 4 min left", "sound"]);
+    expect(rows(lines)).toContain("Demon Armor: 4 min left");
+    expect(lines.slice(-1)[0]).toBe("chat: 5 minutes");
+    const floor = run(quiet, `for _ = 1, 5 do click(MGABuffsOptions_minus) end; DEFAULT_CHAT_FRAME:AddMessage(MGABuffsOptions_minutesText.text .. " " .. MGABuffsSettings.minutes)`);
+    expect(floor.slice(-1)[0]).toBe("chat: 1 minute 1");
+    const ceiling = run(quiet, `MGABuffsSettings.minutes = 29; click(MGABuffsOptions_plus); click(MGABuffsOptions_plus); DEFAULT_CHAT_FRAME:AddMessage(MGABuffsSettings.minutes)`);
+    expect(ceiling.slice(-1)[0]).toBe("chat: 30");
+  });
+
+  it("turns the flash and sound off", () => {
+    const lines = run(FED, `click(${box("sound")}); clear(); units.player.buffs = {}; tick()`);
+    expect(lines.filter((l) => l.startsWith("flash: ") || l === "sound")).toEqual([]);
+    expect(rows(lines)).toContain("No Demon Armor");
+  });
+
+  it("unlocks the list to drag it, locks it again, and puts it back with Reset", () => {
+    expect(rows(run(quiet, `clear(); click(${box("unlock")})`))).toEqual(["MGA Buffs: drag me, then lock it in Options > AddOns > MGA Buffs"]);
+    expect(run(quiet, `click(${box("unlock")}); clear(); click(${box("unlock")})`)).toEqual(["hidden"]);
+    const reset = run(quiet, `MGABuffsSettings.point = { "LEFT", "LEFT", 40, 12 }; click(MGABuffsOptions_reset); DEFAULT_CHAT_FRAME:AddMessage(tostring(MGABuffsSettings.point) .. " " .. table.concat(MGABuffsFrame.point, ","))`);
+    expect(reset.slice(-1)[0]).toBe("chat: nil TOP,TOP,0,-140");
+  });
+
+  it("shows what's missing in chat with its button", () => {
+    const lines = run("units.player.level = 15", `clear(); click(MGABuffsOptions_status)`);
     expect(lines.slice(0, 3)).toEqual([
       "chat: MGA Buffs: armor on, soulstone on, food on, group on; warns 3 min before a buff runs out; sound on.",
       "chat: MGA Buffs: No Demon Skin",
       "chat: MGA Buffs: Not Well Fed: eat buff food",
     ]);
-    expect(run(`${ARMORED}; ${FED}; units.player.level = 15`, `clear(); ${slash("")}`)[1]).toBe("chat: MGA Buffs: nothing missing right now.");
   });
 
-  it("shows a placeholder to drag while unlocked, and saves where it was dropped", () => {
-    const lines = run(`${ARMORED}; ${FED}; units.player.level = 15`, `clear(); ${slash("unlock")}`);
-    expect(lines).toEqual(["chat: MGA Buffs: drag the list where you want it, then /mgabuffs lock.", "row: MGA Buffs: drag me, then /mgabuffs lock"]);
+  it("keeps reminding when the options page can't be built", () => {
+    const lines = run(`Settings = { RegisterCanvasLayoutCategory = function() error("no canvas") end, RegisterAddOnCategory = function() end }; ${FED}`);
+    expect(lines.some((l) => l.startsWith("chat: MGA Buffs: options page unavailable:"))).toBe(true);
+    expect(rows(lines)).toContain("No Demon Armor");
+  });
+
+  it("explains in chat when the options page won't open", () => {
+    const lines = run(`Settings.OpenToCategory = function() error("no page") end; ${quiet}`, `clear(); SlashCmdList.MGABUFFS("")`);
+    expect(lines).toEqual(["chat: MGA Buffs: this game version has no AddOns options page; /mgabuffs help lists the commands."]);
+  });
+
+  it("uses the older Interface Options list on clients without the Settings window", () => {
+    const lines = run("Settings = nil", `SlashCmdList.MGABUFFS("")`);
+    expect(lines).toContain("options: added (old list) MGA Buffs");
+    expect(lines.slice(-1)[0]).toBe("options: opened (old list) MGA Buffs");
+  });
+});
+
+describe("MGA Buffs slash command", () => {
+  const slash = (msg: string): string => `SlashCmdList.MGABUFFS(${JSON.stringify(msg)})`;
+  const base = `units.player.buffs = { buff("Demon Armor", now + 240) }; ${FED}; units.player.level = 15`;
+  const quiet = `${ARMORED}; ${FED}; units.player.level = 15`;
+
+  it("opens the options window with no arguments", () => {
+    expect(run(quiet, `clear(); ${slash("")}`)).toEqual(["options: opened id:MGA Buffs"]);
+  });
+
+  it("keeps the options window in step with a shortcut", () => {
+    const lines = run(quiet, `clear(); ${slash("food")}; ${slash("minutes 7")}; DEFAULT_CHAT_FRAME:AddMessage(tostring(MGABuffsOptions_food:GetChecked()) .. " " .. MGABuffsOptions_minutesText.text)`);
+    expect(lines.slice(-1)[0]).toBe("chat: false 7 minutes");
+  });
+
+  it("warns earlier with minutes, and rejects a bad number", () => {
+    const lines = run(base, `clear(); ${slash("minutes 5")}`);
+    expect(lines).toEqual(["row: Demon Armor: 4 min left", "flash: Demon Armor: 4 min left", "sound", "chat: MGA Buffs: warning 5 min before a buff runs out."]);
+    expect(run(base, `clear(); ${slash("minutes 99")}`)[0]).toBe("chat: MGA Buffs: give a number of minutes from 1 to 30, like /mgabuffs minutes 5.");
+  });
+
+  it("turns a check off and on", () => {
+    expect(run(`${ARMORED}; units.player.level = 15`, `clear(); ${slash("food")}`)).toEqual(["hidden", "chat: MGA Buffs: food reminders off."]);
+  });
+
+  it("lists what's on and what's missing", () => {
+    expect(run(quiet, `clear(); ${slash("status")}`)[1]).toBe("chat: MGA Buffs: nothing missing right now.");
+  });
+
+  it("saves where the list was dropped", () => {
     const saved = run("", `MGABuffsFrame.point = { "LEFT", "LEFT", 40, 12 }; MGABuffsFrame.scripts.OnDragStop(MGABuffsFrame); DEFAULT_CHAT_FRAME:AddMessage(table.concat(MGABuffsSettings.point, ","))`);
     expect(saved.slice(-1)[0]).toBe("chat: LEFT,LEFT,40,12");
   });
 
   it("explains itself for anything else", () => {
-    expect(run("", `clear(); ${slash("help")}`)).toEqual(["chat: MGA Buffs: /mgabuffs [armor | soulstone | food | group | minutes N | sound | unlock | lock | reset]"]);
+    expect(run("", `clear(); ${slash("help")}`)).toEqual([
+      "chat: MGA Buffs: /mgabuffs opens the options. Shortcuts: status | armor | soulstone | food | group | minutes N | sound | unlock | lock | reset",
+    ]);
   });
 });

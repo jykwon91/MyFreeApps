@@ -2,7 +2,7 @@
 ## Title: MGA Buffs
 ## Notes: Reminds you, out of combat, when your armor, Soulstone, Well Fed or group buffs are missing or about to run out.
 ## Author: MyGamingAssistant
-## Version: 1.0.0
+## Version: 1.1.0
 ## SavedVariables: MGABuffsSettings
 ## IconTexture: Interface\Icons\Spell_Shadow_SoulGem
 MGABuffs.lua

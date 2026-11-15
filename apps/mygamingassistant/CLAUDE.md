@@ -1626,7 +1626,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   auctions), what the made item sells for, and the difference (`craftProfit`,
   only when everything is priced; enchants make no item). An unknown `?recipe`
   says "wasn't found"; an invalid `?prof` is ignored.
-- MGA Buffs addon (`frontend/addon/MGABuffs/`, Interface 16001, static: no
+- MGA Buffs addon (`frontend/addon/MGABuffs/`, Interface 16001, static: no Settings live in an options panel (Options > AddOns > MGA Buffs, `buildOptions()`; `Settings.RegisterCanvasLayoutCategory` with an `InterfaceOptions_AddCategory` fallback); `/mgabuffs` opens it and the subcommands are shortcuts that go through the same setters, so the panel and chat stay in step.
   generated data): out of combat and alive, a movable icon list (plus a
   mid-screen flash + sound the first time a reminder appears, never on the
   first check after login/`/reload`; a broken flash is reported once and only
