@@ -21,4 +21,5 @@ export const GUILD_BANNER_COPY = {
     `${count} ${count === 1 ? "member has" : "members have"} no profile from Blizzard, so they're not listed.`,
   stale:
     "The roster refreshes every hour while someone keeps looking up its members. Look one up on Your character to start it again.",
+  refreshExplainer: "Refresh pulls Blizzard's latest copy, which only updates when a character logs out.",
 } as const;

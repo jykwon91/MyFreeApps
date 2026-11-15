@@ -36,9 +36,7 @@ export default function GuildBannerFooter({ guild, refetch }: GuildBannerFooterP
         <p className="text-xs text-muted-foreground">{GUILD_BANNER_COPY.stale}</p>
       ) : null}
       {guild.can_refresh ? (
-        <p className="text-xs text-muted-foreground">
-          Refresh pulls Blizzard&apos;s latest copy, which only updates when a character logs out.
-        </p>
+        <p className="text-xs text-muted-foreground">{GUILD_BANNER_COPY.refreshExplainer}</p>
       ) : null}
     </div>
   );
