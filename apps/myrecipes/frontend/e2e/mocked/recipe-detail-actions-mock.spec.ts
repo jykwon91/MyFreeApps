@@ -40,6 +40,36 @@ test.describe("Edit", () => {
     ]);
   });
 
+  test("reopening starts from the recipe as it is, not an abandoned edit", async ({ page }) => {
+    await stubSignedInShell(page);
+    await stubRecipeApi(page, RECIPE_ID);
+
+    await page.goto(`/recipes/${RECIPE_ID}`);
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Edit recipe details" });
+    await dialog.getByLabel("Title").fill("Half typed");
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    await expect(dialog.getByLabel("Title")).toHaveValue("Tomato soup");
+  });
+
+  test("reopening after a save shows the saved values", async ({ page }) => {
+    await stubSignedInShell(page);
+    await stubRecipeApi(page, RECIPE_ID);
+
+    await page.goto(`/recipes/${RECIPE_ID}`);
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Edit recipe details" });
+    await dialog.getByLabel("Title").fill("Roasted tomato soup");
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await expect(dialog).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    await expect(dialog.getByLabel("Title")).toHaveValue("Roasted tomato soup");
+  });
+
   test("won't save without a title", async ({ page }) => {
     await stubSignedInShell(page);
     const { writes: sent } = await stubRecipeApi(page, RECIPE_ID);
