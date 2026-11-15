@@ -1,4 +1,3 @@
-import type { MortgageFormProblem } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-problem";
 import { documentReaderMessages } from "./documentReader";
 import type { MortgageRateType } from "@mybookkeeper/api-client/types/mortgage/mortgage-rate-type";
 
@@ -9,16 +8,6 @@ export const MORTGAGE_STATEMENT_PHOTO_NAME = "mortgage-statement.jpg";
 export const MORTGAGE_RATE_TYPE_LABELS: Record<MortgageRateType, string> = {
   fixed: "Fixed for the life of the loan",
   arm: "Adjustable (ARM)",
-};
-
-export const MORTGAGE_PROBLEM_MESSAGES: Record<MortgageFormProblem, string> = {
-  rate_type_required: "Pick whether the rate is fixed or adjustable.",
-  rate_out_of_range: "Use a rate above 0 and below 25, like 7.125.",
-  not_a_number: "Use a plain amount like 1995.82, or leave it blank.",
-  must_be_positive: "Use an amount above 0, or leave it blank.",
-  term_out_of_range: "Use a number of months from 1 to 600, or leave it blank.",
-  needs_statement_date: "A balance is only true as of a date. Pick the statement date too.",
-  needs_balance: "Add the balance that statement showed, or clear the date.",
 };
 
 export const MORTGAGE_FORM_MESSAGES = {

@@ -10,6 +10,7 @@ import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage
 import MortgageDocumentReader from "./MortgageDocumentReader";
 import MortgageDraftNotices from "./MortgageDraftNotices";
 import MortgageFormFields from "./MortgageFormFields";
+import { useMortgageFormCheck } from "./useMortgageFormCheck";
 import { MORTGAGE_INPUT_CLASS } from "./mortgage-input-class";
 
 export interface AddMortgageDialogProps {
@@ -23,6 +24,7 @@ export default function AddMortgageDialog({ onClose }: AddMortgageDialogProps) {
   const [values, setValues] = useState<MortgageFormValues>(EMPTY_MORTGAGE_FORM);
   const [propertyId, setPropertyId] = useState("");
   const [draft, setDraft] = useState<MortgageDraft | null>(null);
+  const { problems, passes } = useMortgageFormCheck(values);
 
   function handleChange<K extends keyof MortgageFormValues>(
     field: K,
@@ -38,14 +40,12 @@ export default function AddMortgageDialog({ onClose }: AddMortgageDialogProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const isValid = passes();
     if (!propertyId) {
       showError("Pick a property.");
       return;
     }
-    if (!values.rateType) {
-      showError("Pick whether the rate is fixed or adjustable.");
-      return;
-    }
+    if (!isValid) return;
 
     try {
       await createMortgage({
@@ -69,7 +69,7 @@ export default function AddMortgageDialog({ onClose }: AddMortgageDialogProps) {
       onClose={onClose}
       width="wide"
     >
-      <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
+      <form noValidate onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
         <MortgageDocumentReader onRead={handleRead} />
         {draft && <MortgageDraftNotices draft={draft} />}
 
@@ -93,7 +93,7 @@ export default function AddMortgageDialog({ onClose }: AddMortgageDialogProps) {
           )}
         </FormField>
 
-        <MortgageFormFields values={values} onChange={handleChange} />
+        <MortgageFormFields values={values} onChange={handleChange} problems={problems} />
 
         <div className="flex gap-3 pt-2 justify-end">
           <Button type="button" variant="secondary" size="md" onClick={onClose}>

@@ -12,6 +12,7 @@ import {
 import type { Mortgage } from "@mybookkeeper/api-client/types/mortgage/mortgage";
 import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage/mortgage-form-values";
 import MortgageFormFields from "./MortgageFormFields";
+import { useMortgageFormCheck } from "./useMortgageFormCheck";
 
 export interface EditMortgageDialogProps {
   mortgage: Mortgage;
@@ -35,6 +36,7 @@ export default function EditMortgageDialog({
   const [values, setValues] = useState<MortgageFormValues>(
     mortgageToFormValues(mortgage),
   );
+  const { problems, passes } = useMortgageFormCheck(values);
   const [confirmingRemoval, setConfirmingRemoval] = useState(false);
 
   function handleChange<K extends keyof MortgageFormValues>(
@@ -46,10 +48,7 @@ export default function EditMortgageDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!values.rateType) {
-      showError("Pick whether the rate is fixed or adjustable.");
-      return;
-    }
+    if (!passes()) return;
     try {
       await updateMortgage({
         mortgageId: mortgage.id,
@@ -79,8 +78,8 @@ export default function EditMortgageDialog({
       onClose={onClose}
       width="wide"
     >
-      <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
-        <MortgageFormFields values={values} onChange={handleChange} />
+      <form noValidate onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
+        <MortgageFormFields values={values} onChange={handleChange} problems={problems} />
 
         <div className="flex flex-wrap gap-3 pt-2 justify-between">
           <LoadingButton
