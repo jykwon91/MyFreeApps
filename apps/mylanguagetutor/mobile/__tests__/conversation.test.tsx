@@ -1,5 +1,6 @@
 import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 import { SESSION_BLOCK_COPY } from "@mylanguagetutor/api-client/constants/sessionBlockCopy";
+import { sessionBlockMessage } from "@mylanguagetutor/api-client/utils/sessionBlockMessage";
 import { CONNECTION_LOST, NETWORK_ERROR, SESSION_NOT_FOUND } from "@mylanguagetutor/api-client/constants/turnFailureCodes";
 import { practicePath } from "@mylanguagetutor/api-client/utils/practicePath";
 import { turnErrorCopy } from "@mylanguagetutor/api-client/utils/turnErrorCopy";
@@ -94,7 +95,7 @@ describe("a typed conversation", () => {
     serveTurns(() => ({ status: 429, data: { detail: "daily_limit_reached" } }));
     await openCafe();
 
-    expect(await screen.findByText(SESSION_BLOCK_COPY.daily_limit)).toBeTruthy();
+    expect(await screen.findByText(sessionBlockMessage("daily_limit"))).toBeTruthy();
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.send })).toBeNull();
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.pickScenario })).toBeNull();
   });
@@ -105,7 +106,7 @@ describe("a typed conversation", () => {
     await openCafe();
 
     await write("Hola");
-    expect(await screen.findByText(SESSION_BLOCK_COPY.daily_limit)).toBeTruthy();
+    expect(await screen.findByText(sessionBlockMessage("daily_limit"))).toBeTruthy();
     expect(screen.queryByRole("button", { name: PRACTICE_COPY.send })).toBeNull();
     expect(screen.queryByText("Hola")).toBeNull();
   });

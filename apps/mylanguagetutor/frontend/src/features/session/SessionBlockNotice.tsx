@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { AlertBox } from "@platform/ui";
-import { SESSION_BLOCK_CAN_START_NEW, SESSION_BLOCK_COPY } from "@mylanguagetutor/api-client/constants/sessionBlockCopy";
+import { SESSION_BLOCK_CAN_START_NEW } from "@mylanguagetutor/api-client/constants/sessionBlockCopy";
+import { sessionBlockMessage } from "@mylanguagetutor/api-client/utils/sessionBlockMessage";
 import type { SessionBlock } from "@mylanguagetutor/api-client/types/session/session-block";
 import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
 
@@ -13,7 +14,7 @@ export default function SessionBlockNotice({ block }: SessionBlockNoticeProps) {
   return (
     <AlertBox variant="info">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span>{SESSION_BLOCK_COPY[block]}</span>
+        <span>{sessionBlockMessage(block)}</span>
         {SESSION_BLOCK_CAN_START_NEW[block] && (
           <Link to="/scenarios" className="inline-flex min-h-[44px] items-center font-medium underline">
             {PRACTICE_COPY.pickScenario}

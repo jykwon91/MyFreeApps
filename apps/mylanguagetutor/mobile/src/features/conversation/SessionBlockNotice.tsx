@@ -1,5 +1,6 @@
 import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
-import { SESSION_BLOCK_CAN_START_NEW, SESSION_BLOCK_COPY } from "@mylanguagetutor/api-client/constants/sessionBlockCopy";
+import { SESSION_BLOCK_CAN_START_NEW } from "@mylanguagetutor/api-client/constants/sessionBlockCopy";
+import { sessionBlockMessage } from "@mylanguagetutor/api-client/utils/sessionBlockMessage";
 import { Banner } from "@platform/mobile";
 import { router } from "expo-router";
 import { PRACTICE_PATH } from "../../constants/routes";
@@ -10,7 +11,7 @@ export default function SessionBlockNotice({ block }: SessionBlockNoticeProps) {
   return (
     <Banner
       actions={SESSION_BLOCK_CAN_START_NEW[block] ? [{ label: PRACTICE_COPY.pickScenario, onPress: () => router.dismissTo(PRACTICE_PATH) }] : []}
-      message={SESSION_BLOCK_COPY[block]}
+      message={sessionBlockMessage(block)}
       tone="info"
     />
   );

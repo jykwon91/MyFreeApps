@@ -1,6 +1,6 @@
 import { CATALOG_COPY } from "@mylanguagetutor/api-client/constants/catalogCopy";
 import { ONBOARDING_COPY } from "@mylanguagetutor/api-client/constants/onboardingCopy";
-import { SESSION_BLOCK_COPY } from "@mylanguagetutor/api-client/constants/sessionBlockCopy";
+import { sessionBlockMessage } from "@mylanguagetutor/api-client/utils/sessionBlockMessage";
 import type { Profile } from "@mylanguagetutor/api-client/types/tutor/profile";
 import { baseApi } from "@platform/core/store/baseApi";
 import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
@@ -64,7 +64,7 @@ describe("the Practice tab", () => {
     expect(screen.getByRole("button", { name: "1. Greetings Say hello and introduce yourself." })).toBeTruthy();
     expect(screen.getByRole("button", { name: "4. At the cafe Order a drink and a snack." })).toBeTruthy();
     expect(sent.find((request) => request.route === "GET /scenarios")?.params).toEqual({ language: "es" });
-    expect(screen.queryByText(SESSION_BLOCK_COPY.daily_limit)).toBeNull();
+    expect(screen.queryByText(sessionBlockMessage("daily_limit"))).toBeNull();
   });
 
   it("opens a scenario's conversation in the app", async () => {
@@ -86,7 +86,7 @@ describe("the Practice tab", () => {
     serveCatalog({ "GET /usage/today": () => ({ status: 200, data: USAGE_USED_UP }) });
     await renderApp();
 
-    expect(await screen.findByText(SESSION_BLOCK_COPY.daily_limit)).toBeTruthy();
+    expect(await screen.findByText(sessionBlockMessage("daily_limit"))).toBeTruthy();
     expect(screen.getByRole("button", { name: /^1\. Greetings/ })).toBeTruthy();
   });
 
@@ -95,13 +95,13 @@ describe("the Practice tab", () => {
     const sent = serveCatalog({ "GET /usage/today": () => ({ status: 200, data: usage }) });
     await renderApp();
     expect(await screen.findByRole("header", { name: PRACTICE_HEADING })).toBeTruthy();
-    expect(screen.queryByText(SESSION_BLOCK_COPY.daily_limit)).toBeNull();
+    expect(screen.queryByText(sessionBlockMessage("daily_limit"))).toBeNull();
 
     usage = USAGE_USED_UP;
     await act(async () => changeAppState("background"));
     await act(async () => changeAppState("active"));
 
-    expect(await screen.findByText(SESSION_BLOCK_COPY.daily_limit)).toBeTruthy();
+    expect(await screen.findByText(sessionBlockMessage("daily_limit"))).toBeTruthy();
     expect(sent.filter((request) => request.route === "GET /usage/today")).toHaveLength(2);
   });
 

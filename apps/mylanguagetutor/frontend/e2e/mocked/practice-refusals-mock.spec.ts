@@ -18,7 +18,7 @@ import {
   TUTOR_UNAVAILABLE,
   UNAUTHORIZED,
 } from "./constants/refusalDetails";
-import { DAILY_LIMIT_COPY, SESSION_ENDED_COPY, SESSION_LIMIT_COPY, UNAVAILABLE_COPY } from "./constants/blockCopy";
+import { DAILY_LIMIT_COPY, LEARNER_TIME_ZONE, SESSION_ENDED_COPY, SESSION_LIMIT_COPY, UNAVAILABLE_COPY } from "./constants/blockCopy";
 import { LEARNER_GREETING, PARTIAL_REPLY, TUTOR_GREETING } from "./constants/practiceText";
 import { CORRECTIONS_MISSING, REPLY_CUT_OFF, TYPING_ONLY_LABEL } from "./constants/practiceLabels";
 import { CREATE_SESSION } from "./constants/stubbedEndpoints";
@@ -36,6 +36,8 @@ import { openPractice, sendTyped } from "./fixtures/practiceScreen";
 import { signedInTutor } from "./fixtures/signedInTutor";
 import { completeTurn, cutAfterReply, failedBeforeReply, failedMidReply, refusedTurn } from "./fixtures/turnEvents";
 import { TUTOR_OFF } from "./fixtures/tutorFixtures";
+
+test.use({ timezoneId: LEARNER_TIME_ZONE });
 
 test("a session that couldn't start says so, and Try again starts it and sends the same words", async ({ page }) => {
   const api = await signedInTutor(page, { failWith: [CREATE_SESSION], turns: [completeTurn({ reply: TUTOR_GREETING })] });
