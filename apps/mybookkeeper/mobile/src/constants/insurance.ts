@@ -1,16 +1,7 @@
 export const POLICY_LIST_LIMIT = 100;
-export const EXPIRES_SOON_DAYS = 90;
 /** How far ahead the "running out" filter looks — the same 30 days the website uses. */
 export const EXPIRING_FILTER_DAYS = 30;
 export const POLICY_SKELETON_ROWS = ["a", "b", "c", "d", "e"];
-
-export const EXPIRY_MESSAGES = {
-  expiredDaysAgo: (days: number) => `Expired ${days} days ago`,
-  expiredYesterday: "Expired yesterday",
-  expiresToday: "Expires today",
-  expiresTomorrow: "Expires tomorrow",
-  expiresInDays: (days: number) => `Expires in ${days} days`,
-} as const;
 
 export const INSURANCE_MESSAGES = {
   loadingList: "Loading your insurance policies",
