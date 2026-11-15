@@ -156,4 +156,27 @@ describe("ScreeningProviderGrid", () => {
       expect(showErrorMock).toHaveBeenCalled();
     });
   });
+
+  it("disables every provider while one dashboard is opening, then re-enables them", async () => {
+    getProvidersMock.mockReturnValue(providersState(MOCK_PROVIDERS));
+    let finish: (value: { redirect_url: string; provider: string }) => void = () => undefined;
+    triggerRedirectMock.mockReturnValue({
+      unwrap: () => new Promise((resolve) => { finish = resolve; }),
+    });
+    const openWindow = vi.fn();
+    renderGrid(openWindow);
+
+    await userEvent.click(screen.getByTestId("screening-provider-select-keycheck"));
+
+    expect(screen.getByTestId("screening-provider-select-keycheck")).toBeDisabled();
+    expect(screen.getByTestId("screening-provider-select-rentspree")).toBeDisabled();
+    await userEvent.click(screen.getByTestId("screening-provider-select-rentspree"));
+    expect(triggerRedirectMock).toHaveBeenCalledTimes(1);
+
+    finish({ redirect_url: "https://kc.example/host", provider: "keycheck" });
+    await waitFor(() => {
+      expect(screen.getByTestId("screening-provider-select-rentspree")).not.toBeDisabled();
+    });
+    expect(openWindow).toHaveBeenCalledTimes(1);
+  });
 });
