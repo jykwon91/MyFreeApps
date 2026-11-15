@@ -143,6 +143,7 @@ export default function ExternalIdSection({ listingId, externalIds, canWrite }: 
 
       {canWrite && formMode.kind === "edit" ? (
         <ExternalIdForm
+          key={formMode.externalId.id}
           listingId={listingId}
           existing={formMode.externalId}
           linkedSources={linkedSources}
