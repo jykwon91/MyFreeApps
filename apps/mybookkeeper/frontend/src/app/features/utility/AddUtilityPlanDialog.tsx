@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { FormField, showError, showSuccess } from "@platform/ui";
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/utilityPlanDraft";
-import {
-  toUtilityPlanFields,
-  validateUtilityPlanForm,
-} from "@mybookkeeper/api-client/utils/utilityPlanForm";
+import { toUtilityPlanFields } from "@mybookkeeper/api-client/utils/utilityPlanForm";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCreateUtilityPlanMutation } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import type { UtilityPlanDraft } from "@mybookkeeper/api-client/types/utility/utility-plan-draft";
@@ -15,6 +12,7 @@ import UtilityPlanFormActions from "./UtilityPlanFormActions";
 import UtilityPlanFormFields from "./UtilityPlanFormFields";
 import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 import { useUtilityPlanForm } from "./useUtilityPlanForm";
+import { useUtilityPlanFormCheck } from "./useUtilityPlanFormCheck";
 
 export interface AddUtilityPlanDialogProps {
   onClose: () => void;
@@ -27,6 +25,7 @@ export default function AddUtilityPlanDialog({ onClose }: AddUtilityPlanDialogPr
   const { values, setField, replaceValues } = useUtilityPlanForm();
   const [propertyId, setPropertyId] = useState("");
   const [draft, setDraft] = useState<UtilityPlanDraft | null>(null);
+  const { problems, passes } = useUtilityPlanFormCheck(values);
 
   function handleRead(read: UtilityPlanDraft) {
     setDraft(read);
@@ -35,15 +34,12 @@ export default function AddUtilityPlanDialog({ onClose }: AddUtilityPlanDialogPr
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const isValid = passes();
     if (!propertyId) {
       showError("Pick a property.");
       return;
     }
-    const problem = validateUtilityPlanForm(values);
-    if (problem) {
-      showError(problem);
-      return;
-    }
+    if (!isValid) return;
 
     try {
       await createPlan({
@@ -67,7 +63,7 @@ export default function AddUtilityPlanDialog({ onClose }: AddUtilityPlanDialogPr
       onClose={onClose}
       width="wide"
     >
-      <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
+      <form noValidate onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
         <UtilityPlanDocumentReader onRead={handleRead} />
         {draft && <UtilityPlanDraftNotices draft={draft} />}
 
@@ -91,7 +87,7 @@ export default function AddUtilityPlanDialog({ onClose }: AddUtilityPlanDialogPr
           )}
         </FormField>
 
-        <UtilityPlanFormFields values={values} setField={setField} />
+        <UtilityPlanFormFields values={values} setField={setField} problems={problems} />
 
         <UtilityPlanFormActions
           isSaving={isLoading}

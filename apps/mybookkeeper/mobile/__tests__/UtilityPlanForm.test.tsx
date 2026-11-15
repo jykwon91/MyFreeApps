@@ -217,6 +217,17 @@ describe("editing a utility plan", () => {
     expect(mockBack).not.toHaveBeenCalled();
   });
 
+  it("will not send a term that ends before the service starts or a rate the server caps", async () => {
+    const server = startUtilityServer({ detail: aUtilityPlanDetail({ service_start_date: "2026-03-01", term_end_date: "2026-01-01" }) });
+    await show(<UtilityPlanEditScreen id="u1" />);
+    const energy = await screen.findByLabelText(new RegExp(`^${MESSAGES.energyCharge.replace(/[()/¢]/g, "\\$&")}`));
+    await fireEvent.changeText(energy, "1500");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
+    expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.endBeforeStart)).toBeTruthy();
+    expect(screen.getByText(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh)).toBeTruthy();
+    expect(writesTo(server, "patch")).toHaveLength(0);
+  });
+
   it.each([
     [403, "You have view-only access, so I can't save this."],
     [404, "I can't find that utility plan anymore. It may have been deleted."],
