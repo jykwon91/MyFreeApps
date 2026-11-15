@@ -19,6 +19,7 @@ import { baseApi } from "@/shared/store/baseApi";
 import * as calendarApi from "@mybookkeeper/api-client/store/calendarApi";
 import * as toastStore from "@platform/ui";
 import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";
+import { CALENDAR_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/calendarNotes";
 import type { CalendarEvent } from "@mybookkeeper/api-client/types/calendar/calendar-event";
 import type { ListingBlackoutAttachment } from "@mybookkeeper/api-client/types/calendar/listing-blackout-attachment";
 
@@ -138,6 +139,12 @@ describe("CalendarEventDetail", () => {
     renderDetail(makeEvent({ host_notes: null }));
     const ta = screen.getByTestId("blackout-notes-textarea") as HTMLTextAreaElement;
     expect(ta.value).toBe("");
+  });
+
+  it("caps the notes at the length the server accepts", () => {
+    renderDetail(makeEvent());
+    const ta = screen.getByTestId("blackout-notes-textarea");
+    expect(ta).toHaveAttribute("maxLength", String(CALENDAR_NOTES_MAX_LENGTH));
   });
 
   it("triggers update mutation on textarea blur", async () => {

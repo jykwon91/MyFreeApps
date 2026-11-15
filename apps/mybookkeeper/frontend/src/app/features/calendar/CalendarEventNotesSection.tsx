@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { showError, showSuccess } from "@platform/ui";
 import { useUpdateBlackoutMutation } from "@mybookkeeper/api-client/store/calendarApi";
+import { CALENDAR_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/calendarNotes";
 
 // Debounce delay for saving notes on blur (ms).
 const NOTES_SAVE_DELAY_MS = 600;
@@ -72,6 +73,7 @@ export default function CalendarEventNotesSection({ blackoutId, initialNotes }: 
         className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
         placeholder="Guest name, confirmation code, contact info…"
         value={notes}
+        maxLength={CALENDAR_NOTES_MAX_LENGTH}
         onChange={handleChange}
         onBlur={handleBlur}
         disabled={isSaving}

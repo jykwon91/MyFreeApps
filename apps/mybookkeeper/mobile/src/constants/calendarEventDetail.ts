@@ -1,6 +1,5 @@
 import { BLACKOUT_ATTACHMENT_MIME_TYPES } from "@mybookkeeper/api-client/constants/blackoutAttachments";
 
-export const CALENDAR_NOTES_MAX_LENGTH = 10_000;
 export const CALENDAR_ATTACHMENT_SKELETON_ROWS = ["a", "b"];
 export const CALENDAR_ATTACHMENT_FILE_TYPES: readonly string[] = BLACKOUT_ATTACHMENT_MIME_TYPES;
 export const CALENDAR_ATTACHMENT_PHOTO_NAME = "booking-photo.jpg";
