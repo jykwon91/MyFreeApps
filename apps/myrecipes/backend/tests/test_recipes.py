@@ -331,6 +331,53 @@ class TestCookLogs:
             )
         assert resp.status_code == 422, resp.text
 
+    @staticmethod
+    async def _create_recipe_with_cook(authed) -> tuple[str, str]:
+        created = (await authed.post("/recipes", json=_recipe_payload())).json()
+        recipe_id = created["id"]
+        cook = await authed.post(
+            f"/recipes/{recipe_id}/versions/{created['latest_version']['id']}/cooks",
+            json={"rating": 4},
+        )
+        assert cook.status_code == 201, cook.text
+        return recipe_id, cook.json()["id"]
+
+    @pytest.mark.asyncio
+    async def test_delete_cook_via_correct_recipe(self, user_factory, as_user) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            recipe_id, cook_id = await self._create_recipe_with_cook(authed)
+            resp = await authed.delete(f"/recipes/{recipe_id}/cooks/{cook_id}")
+            remaining = (await authed.get(f"/recipes/{recipe_id}/cooks")).json()
+        assert resp.status_code == 204, resp.text
+        assert remaining == []
+
+    @pytest.mark.asyncio
+    async def test_delete_cook_via_wrong_recipe_is_404_and_keeps_cook(
+        self, user_factory, as_user,
+    ) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            recipe_a, cook_a = await self._create_recipe_with_cook(authed)
+            recipe_b, _ = await self._create_recipe_with_cook(authed)
+            resp = await authed.delete(f"/recipes/{recipe_b}/cooks/{cook_a}")
+            cooks_a = [c["id"] for c in (await authed.get(f"/recipes/{recipe_a}/cooks")).json()]
+        assert resp.status_code == 404, resp.text
+        assert cooks_a == [cook_a]
+
+    @pytest.mark.asyncio
+    async def test_delete_other_users_cook_is_404(self, user_factory, as_user) -> None:
+        owner = await user_factory()
+        intruder = await user_factory()
+        async with await as_user(owner) as authed:
+            recipe_id, cook_id = await self._create_recipe_with_cook(authed)
+        async with await as_user(intruder) as other:
+            resp = await other.delete(f"/recipes/{recipe_id}/cooks/{cook_id}")
+        assert resp.status_code == 404, resp.text
+        async with await as_user(owner) as authed:
+            cooks = [c["id"] for c in (await authed.get(f"/recipes/{recipe_id}/cooks")).json()]
+        assert cooks == [cook_id]
+
 
 # ---------------------------------------------------------------------------
 # Soft delete
