@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import DrillDownPanel from "@/app/features/dashboard/DrillDownPanel";
@@ -11,10 +11,11 @@ vi.mock("@mybookkeeper/api-client/store/transactionsApi", () => ({
 }));
 
 vi.mock("@mybookkeeper/api-client/store/propertiesApi", () => ({
-  useGetPropertiesQuery: vi.fn(() => ({ data: [], isLoading: false })),
+  useGetPropertiesQuery: vi.fn(() => ({ data: [], error: undefined, isFetching: false, refetch: vi.fn() })),
 }));
 
 import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transactionsApi";
+import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { UNASSIGNED_PROPERTY_ID } from "@/shared/lib/constants";
 
 function makeTxn(overrides: Partial<Transaction> = {}): Transaction {
@@ -80,8 +81,19 @@ function setupMocks(
   opts: { isLoading?: boolean } = {},
 ) {
   vi.mocked(useListTransactionsQuery).mockReturnValue({
-    data: transactions,
-    isLoading: opts.isLoading ?? false,
+    currentData: opts.isLoading ? undefined : transactions,
+    error: undefined,
+    isFetching: opts.isLoading ?? false,
+    refetch: vi.fn(),
+  } as unknown as ReturnType<typeof useListTransactionsQuery>);
+}
+
+function setupFailedLoad(refetch = vi.fn(), opts: { isFetching?: boolean } = {}) {
+  vi.mocked(useListTransactionsQuery).mockReturnValue({
+    currentData: undefined,
+    error: { status: 500 },
+    isFetching: opts.isFetching ?? false,
+    refetch,
   } as unknown as ReturnType<typeof useListTransactionsQuery>);
 }
 
@@ -302,5 +314,80 @@ describe("DrillDownPanel", () => {
     );
 
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+  it("shows an error with Retry, not a $0 empty result, when the load fails", () => {
+    setupFailedLoad();
+
+    render(
+      <Provider store={store}>
+        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
+      </Provider>,
+    );
+
+    expect(screen.getByText("Couldn't load these transactions.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByText(/transactions? —/)).not.toBeInTheDocument();
+    expect(screen.queryByText("No transactions found for this period.")).not.toBeInTheDocument();
+  });
+
+  it("Retry refetches the transactions", () => {
+    const refetch = vi.fn();
+    setupFailedLoad(refetch);
+
+    render(
+      <Provider store={store}>
+        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
+      </Provider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the error up with Retrying... while a retry is in flight", () => {
+    setupFailedLoad(vi.fn(), { isFetching: true });
+
+    render(
+      <Provider store={store}>
+        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
+      </Provider>,
+    );
+
+    expect(screen.getByText("Couldn't load these transactions.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Retrying/ })).toBeDisabled();
+  });
+
+  it("shows no count or total while loading", () => {
+    setupMocks([], { isLoading: true });
+
+    render(
+      <Provider store={store}>
+        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
+      </Provider>,
+    );
+
+    expect(screen.queryByText(/transactions? —/)).not.toBeInTheDocument();
+  });
+
+  it("warns that property names may be missing when the properties load fails", () => {
+    setupMocks([makeTxn()]);
+    const refetchProperties = vi.fn();
+    vi.mocked(useGetPropertiesQuery).mockReturnValueOnce({
+      data: undefined,
+      error: { status: 500 },
+      isFetching: false,
+      refetch: refetchProperties,
+    } as unknown as ReturnType<typeof useGetPropertiesQuery>);
+
+    render(
+      <Provider store={store}>
+        <DrillDownPanel filter={defaultFilter} onClose={vi.fn()} />
+      </Provider>,
+    );
+
+    expect(screen.getByText("Couldn't load your properties, so property names may be missing.")).toBeInTheDocument();
+    expect(screen.getByText("Test Plumber")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetchProperties).toHaveBeenCalledTimes(1);
   });
 });

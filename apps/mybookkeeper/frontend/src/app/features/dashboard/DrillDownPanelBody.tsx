@@ -5,6 +5,7 @@ import DrillDownEmptyState from "./DrillDownEmptyState";
 import DrillDownList from "./DrillDownList";
 import DrillDownShowMore from "./DrillDownShowMore";
 import DrillDownLoadingState from "./DrillDownLoadingState";
+import DrillDownErrorState from "./DrillDownErrorState";
 import type { TransactionPanelHandle } from "@/shared/types/transaction/transaction-panel-handle";
 import type { DrillDownBodyMode } from "@/shared/types/dashboard/drill-down-body-mode";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
@@ -17,6 +18,8 @@ export interface DrillDownPanelBodyProps {
   /** Filtered rows not drawn yet. */
   remaining: number;
   onShowMore: () => void;
+  isRetrying: boolean;
+  onRetry: () => void;
   selectedTxn: Transaction | null;
   properties: readonly Property[];
   onSelectTxn: (txn: Transaction) => void;
@@ -31,6 +34,8 @@ export default function DrillDownPanelBody({
   transactions,
   remaining,
   onShowMore,
+  isRetrying,
+  onRetry,
   selectedTxn,
   properties,
   onSelectTxn,
@@ -67,6 +72,8 @@ export default function DrillDownPanelBody({
       );
     case "loading":
       return <DrillDownLoadingState />;
+    case "error":
+      return <DrillDownErrorState isRetrying={isRetrying} onRetry={onRetry} />;
     case "empty":
       return <DrillDownEmptyState />;
     case "list":
