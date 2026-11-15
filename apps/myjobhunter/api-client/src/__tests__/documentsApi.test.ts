@@ -4,6 +4,7 @@ import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { configureStore } from "@reduxjs/toolkit";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import "../store/applicationsApi";
 import "../store/documentsApi";
 
 const sent: InternalAxiosRequestConfig[] = [];
@@ -133,7 +134,7 @@ describe("documentsApi", () => {
     await store.dispatch(endpoints.listDocuments.initiate({ application_id: "a1" }));
 
     respond = (config) => (config.method === "delete" ? { status: 204, data: null } : { status: 503, data: { detail: "down" } });
-    await store.dispatch(endpoints.deleteDocument.initiate("d1"));
+    await store.dispatch(endpoints.deleteDocument.initiate({ id: "d1", applicationId: null }));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(listIds(store).sort()).toEqual([[], ["d2"]]);
@@ -148,7 +149,7 @@ describe("documentsApi", () => {
     await store.dispatch(endpoints.listDocuments.initiate({}, { direction: "forward" }));
 
     respond = (config) => (config.method === "delete" ? { status: 204, data: null } : { status: 503, data: { detail: "down" } });
-    await store.dispatch(endpoints.deleteDocument.initiate("d4"));
+    await store.dispatch(endpoints.deleteDocument.initiate({ id: "d4", applicationId: null }));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(listIds(store)).toEqual([["d1", "d2", "d3"]]);
@@ -187,8 +188,67 @@ describe("documentsApi", () => {
     await store.dispatch(endpoints.listDocuments.initiate({}));
 
     respond = (config) => (config.method === "delete" ? { status: 500, data: null } : { status: 200, data: { items: [doc("d1"), doc("d2")], total: 2 } });
-    await store.dispatch(endpoints.deleteDocument.initiate("d1"));
+    await store.dispatch(endpoints.deleteDocument.initiate({ id: "d1", applicationId: null }));
 
     expect(listIds(store)).toEqual([["d1", "d2"]]);
+  });
+  describe("refreshes the application detail a document belongs to", () => {
+    const detail = { id: "a1", jd_text: null };
+
+    async function loadDetails(store: ReturnType<typeof makeStore>, ...ids: string[]) {
+      respond = (config) => ({ status: 200, data: { id: String(config.url).split("/").pop(), jd_text: null } });
+      for (const id of ids) await store.dispatch(endpoints.getApplication.initiate(id));
+      sent.length = 0;
+    }
+
+    const detailGets = () => sent.filter(({ method, url }) => method === "get" && url?.startsWith("/applications/")).map(({ url }) => url);
+
+    async function run(store: ReturnType<typeof makeStore>, mutation: unknown, reply: { status: number; data: unknown }) {
+      respond = (config) => (config.method === "get" ? { status: 200, data: detail } : reply);
+      await store.dispatch(mutation as Parameters<typeof store.dispatch>[0]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    it("when a document is created for it", async () => {
+      const store = makeStore();
+      await loadDetails(store, "a1", "a2");
+      await run(store, endpoints.createDocument.initiate({ title: "JD", kind: "job_description", application_id: "a1", body: "x" }), { status: 201, data: doc("n", "a1") });
+      expect(detailGets()).toEqual(["/applications/a1"]);
+    });
+
+    it("when a document is uploaded for it", async () => {
+      const store = makeStore();
+      await loadDetails(store, "a1", "a2");
+      await run(store, endpoints.uploadDocument.initiate(new FormData()), { status: 201, data: doc("n", "a1") });
+      expect(detailGets()).toEqual(["/applications/a1"]);
+    });
+
+    it("when its document is edited", async () => {
+      const store = makeStore();
+      await loadDetails(store, "a1", "a2");
+      await run(store, endpoints.updateDocument.initiate({ id: "d1", patch: { body: "new" }, applicationId: "a1" }), { status: 200, data: doc("d1", "a1") });
+      expect(detailGets()).toEqual(["/applications/a1"]);
+    });
+
+    it("on both ends when a document moves between applications", async () => {
+      const store = makeStore();
+      await loadDetails(store, "a1", "a2", "a3");
+      await run(store, endpoints.updateDocument.initiate({ id: "d1", patch: { application_id: "a2" }, applicationId: "a1" }), { status: 200, data: doc("d1", "a2") });
+      expect(detailGets().sort()).toEqual(["/applications/a1", "/applications/a2"]);
+    });
+
+    it("when its document is deleted", async () => {
+      const store = makeStore();
+      await loadDetails(store, "a1", "a2");
+      await run(store, endpoints.deleteDocument.initiate({ id: "d1", applicationId: "a1" }), { status: 204, data: null });
+      expect(detailGets()).toEqual(["/applications/a1"]);
+    });
+
+    it("but not for a document that belongs to no application", async () => {
+      const store = makeStore();
+      await loadDetails(store, "a1");
+      await run(store, endpoints.deleteDocument.initiate({ id: "d1", applicationId: null }), { status: 204, data: null });
+      expect(detailGets()).toEqual([]);
+    });
   });
 });

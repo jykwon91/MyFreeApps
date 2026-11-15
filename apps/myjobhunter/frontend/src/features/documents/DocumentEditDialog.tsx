@@ -40,7 +40,7 @@ export default function DocumentEditDialog({
     }
 
     try {
-      await updateDocument({ id: document.id, patch }).unwrap();
+      await updateDocument({ id: document.id, patch, applicationId: document.application_id }).unwrap();
       showSuccess("Document updated");
       onOpenChange(false);
     } catch (err) {
