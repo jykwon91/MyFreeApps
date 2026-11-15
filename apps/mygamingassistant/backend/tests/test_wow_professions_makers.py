@@ -74,5 +74,6 @@ class TestCommittedMakers:
         makers = enchanting["makers"]
         own = {str(r["creates"]["id"]) for r in enchanting["recipes"] if r.get("creates")}
         needed = {str(r["id"]) for m in makers.values() for r in m["reagents"]}
-        assert own & set(makers) == {"12655"}  # Enchanted Thorium Bar, for Engineering's 234003
+        # Enchanted Thorium Bar was the only one, for Season of Discovery's Obsidian recipes, which are no longer in the data.
+        assert own & set(makers) == set()
         assert own & set(makers) <= needed
