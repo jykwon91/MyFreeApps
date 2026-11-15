@@ -56,7 +56,7 @@ const mockTaxSummary: TaxSummaryResponse = {
 
 
 vi.mock('@mybookkeeper/api-client/store/summaryApi', () => ({
-  useGetTaxSummaryQuery: vi.fn(() => ({ data: mockTaxSummary, isLoading: false })),
+  useGetTaxSummaryQuery: vi.fn(() => ({ currentData: mockTaxSummary, isLoading: false })),
 }));
 
 vi.mock('@/shared/utils/download', () => ({
@@ -82,7 +82,7 @@ describe('TaxReport', () => {
     vi.clearAllMocks();
     localStorage.removeItem('tax-report-info-dismissed');
     vi.mocked(useGetTaxSummaryQuery).mockReturnValue({
-      data: mockTaxSummary,
+      currentData: mockTaxSummary,
       isLoading: false,
     } as unknown as ReturnType<typeof useGetTaxSummaryQuery>);
   });
@@ -93,7 +93,7 @@ describe('TaxReport', () => {
 
   it('marks mortgage principal as not deductible', () => {
     vi.mocked(useGetTaxSummaryQuery).mockReturnValue({
-      data: { ...mockTaxSummary, by_category: { mortgage_interest: 300, mortgage_principal: 200 } },
+      currentData: { ...mockTaxSummary, by_category: { mortgage_interest: 300, mortgage_principal: 200 } },
       isLoading: false,
     } as never);
     render(<Provider store={store}><BrowserRouter><TaxReport /></BrowserRouter></Provider>);
@@ -123,12 +123,25 @@ describe('TaxReport', () => {
 
   it('shows skeleton when loading', () => {
     vi.mocked(useGetTaxSummaryQuery).mockReturnValue({
-      data: undefined,
+      currentData: undefined,
       isLoading: true,
     } as unknown as ReturnType<typeof useGetTaxSummaryQuery>);
     const { container } = renderWithProviders(<TaxReport />);
     const skeletons = container.querySelectorAll('.animate-pulse');
     expect(skeletons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('lays the skeleton\'s summary cards out on the same grid as the loaded report', () => {
+    const loaded = renderWithProviders(<TaxReport />);
+    const loadedGrid = screen.getByText('Rental Revenue').closest('section')!.className;
+    loaded.unmount();
+
+    vi.mocked(useGetTaxSummaryQuery).mockReturnValue({
+      currentData: undefined,
+      isFetching: true,
+    } as unknown as ReturnType<typeof useGetTaxSummaryQuery>);
+    renderWithProviders(<TaxReport />);
+    expect(screen.getByTestId('tax-report-skeleton-summary-cards').className).toBe(loadedGrid);
   });
 
   it('renders Rental Revenue summary card', () => {
@@ -153,7 +166,7 @@ describe('TaxReport', () => {
 
   it('does not render W-2 Income card when w2_total is zero', () => {
     vi.mocked(useGetTaxSummaryQuery).mockReturnValue({
-      data: { ...mockTaxSummary, w2_total: 0, w2_income: [] },
+      currentData: { ...mockTaxSummary, w2_total: 0, w2_income: [] },
       isLoading: false,
     } as unknown as ReturnType<typeof useGetTaxSummaryQuery>);
     renderWithProviders(<TaxReport />);
@@ -162,7 +175,7 @@ describe('TaxReport', () => {
 
   it('shows Net Taxable Income label when no W-2 income', () => {
     vi.mocked(useGetTaxSummaryQuery).mockReturnValue({
-      data: { ...mockTaxSummary, w2_total: 0, w2_income: [] },
+      currentData: { ...mockTaxSummary, w2_total: 0, w2_income: [] },
       isLoading: false,
     } as unknown as ReturnType<typeof useGetTaxSummaryQuery>);
     renderWithProviders(<TaxReport />);
@@ -178,7 +191,7 @@ describe('TaxReport', () => {
 
   it('does not render W-2 table when w2_income is empty', () => {
     vi.mocked(useGetTaxSummaryQuery).mockReturnValue({
-      data: { ...mockTaxSummary, w2_total: 0, w2_income: [] },
+      currentData: { ...mockTaxSummary, w2_total: 0, w2_income: [] },
       isLoading: false,
     } as unknown as ReturnType<typeof useGetTaxSummaryQuery>);
     renderWithProviders(<TaxReport />);
@@ -212,7 +225,7 @@ describe('TaxReport', () => {
 
   it('shows empty state message when by_category is empty', () => {
     vi.mocked(useGetTaxSummaryQuery).mockReturnValue({
-      data: { ...mockTaxSummary, by_category: {}, by_property: [] },
+      currentData: { ...mockTaxSummary, by_category: {}, by_property: [] },
       isLoading: false,
     } as unknown as ReturnType<typeof useGetTaxSummaryQuery>);
     renderWithProviders(<TaxReport />);
@@ -260,15 +273,70 @@ describe('TaxReport', () => {
     );
   });
 
-  it('renders nothing when data is undefined and not loading', () => {
-    vi.mocked(useGetTaxSummaryQuery).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetTaxSummaryQuery>);
-    renderWithProviders(<TaxReport />);
-    // Title is always rendered
-    expect(screen.getByText('Tax Report')).toBeInTheDocument();
-    // No summary cards when data is absent
-    expect(screen.queryByText('Rental Revenue')).not.toBeInTheDocument();
+  describe('after a different year is picked', () => {
+    const shownYear = currentYear - 1;
+    const pickedYear = currentYear - 2;
+    const refetch = vi.fn();
+
+    /**
+     * What RTK's hook returns: the shown year's settled answer for its own year,
+     * and for any other year `data` still holding the shown year's figures
+     * (it keeps the last result) while `currentData` has nothing yet.
+     */
+    function answerShownYearOnly(pickedYearState: { isFetching: boolean; error?: unknown }) {
+      vi.mocked(useGetTaxSummaryQuery).mockImplementation(((year: number) =>
+        year === shownYear
+          ? { data: mockTaxSummary, currentData: mockTaxSummary, isLoading: false, isFetching: false, refetch }
+          : {
+              data: mockTaxSummary,
+              currentData: undefined,
+              isLoading: false,
+              isError: pickedYearState.error !== undefined,
+              refetch,
+              ...pickedYearState,
+            }) as unknown as typeof useGetTaxSummaryQuery);
+    }
+
+    async function pickYear() {
+      renderWithProviders(<TaxReport />);
+      expect(screen.getByText('$24,000.00')).toBeInTheDocument();
+      await userEvent.setup().selectOptions(screen.getByRole('combobox'), String(pickedYear));
+    }
+
+    function expectNoShownYearFigures() {
+      expect(screen.queryByText('Rental Revenue')).not.toBeInTheDocument();
+      expect(screen.queryByText('$24,000.00')).not.toBeInTheDocument();
+      expect(screen.queryByText('W-2 Income')).not.toBeInTheDocument();
+      expect(screen.queryByText('Acme Corp')).not.toBeInTheDocument();
+    }
+
+    it('shows the skeleton, not the previous year\'s figures, while it loads', async () => {
+      answerShownYearOnly({ isFetching: true });
+      await pickYear();
+
+      expectNoShownYearFigures();
+      expect(screen.getByTestId('tax-report-skeleton')).toBeInTheDocument();
+      // The year selector stays put, showing the year being loaded.
+      expect(screen.getByRole('combobox')).toHaveValue(String(pickedYear));
+    });
+
+    it('shows an error with Retry, not the previous year\'s figures, when it fails', async () => {
+      answerShownYearOnly({ isFetching: false, error: { status: 500 } });
+      await pickYear();
+
+      expectNoShownYearFigures();
+      expect(screen.queryByTestId('tax-report-skeleton')).not.toBeInTheDocument();
+      expect(screen.getByText(`I couldn't load your ${pickedYear} tax summary. Want me to try again?`)).toBeInTheDocument();
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Retry' }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the error up, retrying, while Retry refetches', async () => {
+      answerShownYearOnly({ isFetching: true, error: { status: 500 } });
+      await pickYear();
+
+      expect(screen.getByRole('button', { name: 'Retrying...' })).toBeDisabled();
+      expect(screen.queryByTestId('tax-report-skeleton')).not.toBeInTheDocument();
+    });
   });
 });

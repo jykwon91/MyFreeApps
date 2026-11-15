@@ -1,15 +1,17 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
+import Card from "@/shared/components/ui/Card";
 
 export default function TaxReportSkeleton() {
   return (
-    <div className="space-y-6">
-      {/* Summary cards — 3-col on sm+ */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="space-y-6" data-testid="tax-report-skeleton">
+      {/* Summary cards — the report's 4-col grid on sm+, with the three
+          cards every report has (W-2 Income only shows when there is some) */}
+      <section className="grid grid-cols-1 sm:grid-cols-4 gap-4" data-testid="tax-report-skeleton-summary-cards">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="border rounded-lg p-4 space-y-2">
-            <Skeleton className="h-3 w-32" />
-            <Skeleton className="h-8 w-28" />
-          </div>
+          <Card key={i}>
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-8 w-28 mt-1" />
+          </Card>
         ))}
       </section>
 

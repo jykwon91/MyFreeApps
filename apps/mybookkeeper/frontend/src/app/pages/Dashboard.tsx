@@ -22,9 +22,13 @@ import type { DateRange } from "@/shared/types/dashboard/date-range";
 import DrillDownPanel from "@/app/features/dashboard/DrillDownPanel";
 import CategoryChart from "@/app/features/dashboard/CategoryChart";
 import DashboardSkeleton from "@/app/features/dashboard/DashboardSkeleton";
+import DashboardSummaryCardsSkeleton from "@/app/features/dashboard/DashboardSummaryCardsSkeleton";
+import MonthlyAverageCardSkeleton from "@/app/features/dashboard/MonthlyAverageCardSkeleton";
 import HealthBanner from "@/shared/components/HealthBanner";
 import Card from "@/shared/components/ui/Card";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
+import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
+import { DASHBOARD_TOTALS_MESSAGES } from "@/shared/lib/totals-messages";
 import PropertyPnLGrid from "@/app/features/attribution/PropertyPnLGrid";
 import PnLDateRangeSelector from "@/app/features/attribution/PnLDateRangeSelector";
 import { calendarYearRange, propertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
@@ -62,7 +66,18 @@ export default function Dashboard() {
     return yearToDateRange(selectedYear);
   }, [manualDateRange, selectedYear]);
 
-  const { data: summary, isLoading } = useGetSummaryQuery(
+  // currentData is only the selected year/property filter's answer: `data`
+  // would keep the previous filter's totals on screen while a new one loads or
+  // fails. `error`, not `isError`, so Retry keeps the alert up while it refetches.
+  // isLoading is true only before any answer exists: the first load.
+  const {
+    currentData: summary,
+    data: lastSummary,
+    isLoading,
+    error: summaryError,
+    isFetching: isFetchingSummary,
+    refetch: refetchSummary,
+  } = useGetSummaryQuery(
     {
       startDate: dateRange?.startDate,
       endDate: dateRange?.endDate,
@@ -139,6 +154,9 @@ export default function Dashboard() {
       </div>
     );
 
+  // A later year/property change: nothing for it yet, and nothing failed.
+  const isReloadingSummary = summary === undefined && summaryError === undefined;
+
   const isEmpty =
     summary &&
     summary.revenue === 0 &&
@@ -158,27 +176,40 @@ export default function Dashboard() {
         actions={headerActions}
       />
 
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="dashboard-summary-cards">
-        <SummaryCard
-          label="Total Revenue"
-          amount={filteredSummary?.revenue ?? 0}
-          color="text-green-600"
+      {/* While a new selection loads or after it fails, the filter bar below
+          stays (nothing is known to be empty), so the page doesn't shift and a
+          different year or property can be picked. */}
+      {summary === undefined && summaryError !== undefined ? (
+        <LoadErrorAlert
+          message={DASHBOARD_TOTALS_MESSAGES.couldntLoad}
+          isRetrying={isFetchingSummary}
+          onRetry={() => void refetchSummary()}
         />
-        <SummaryCard
-          label="Total Expenses"
-          amount={filteredSummary?.expenses ?? 0}
-          color="text-red-500"
-        />
-        <SummaryCard
-          label="Net Profit"
-          amount={filteredSummary?.profit ?? 0}
-          color={
-            (filteredSummary?.profit ?? 0) >= 0
-              ? "text-green-600"
-              : "text-red-500"
-          }
-        />
-      </section>
+      ) : isReloadingSummary ? (
+        <DashboardSummaryCardsSkeleton />
+      ) : (
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="dashboard-summary-cards">
+          <SummaryCard
+            label="Total Revenue"
+            amount={filteredSummary?.revenue ?? 0}
+            color="text-green-600"
+          />
+          <SummaryCard
+            label="Total Expenses"
+            amount={filteredSummary?.expenses ?? 0}
+            color="text-red-500"
+          />
+          <SummaryCard
+            label="Net Profit"
+            amount={filteredSummary?.profit ?? 0}
+            color={
+              (filteredSummary?.profit ?? 0) >= 0
+                ? "text-green-600"
+                : "text-red-500"
+            }
+          />
+        </section>
+      )}
 
       {/* Sits high on the page and outside the isEmpty branch: a lapsed rate
           plan costs money whether or not any transactions have been imported
@@ -194,6 +225,11 @@ export default function Dashboard() {
           still cost half again what the same coverage sells for, and the
           expiration badge on the policy list cannot say so. */}
       <InsurancePremiumComparisonCard />
+
+      {/* Held in place while a new selection loads, so the filter bar below
+          doesn't jump up under the user's pointer. The last answer (`data`)
+          only decides whether the card was on screen; none of its figures show. */}
+      {isReloadingSummary && (lastSummary?.by_month.length ?? 0) > 0 && <MonthlyAverageCardSkeleton />}
 
       {!isEmpty && (filteredSummary?.by_month?.length ?? 0) > 0 && (
         <MonthlyAverageCard byMonth={filteredSummary?.by_month ?? []} />
