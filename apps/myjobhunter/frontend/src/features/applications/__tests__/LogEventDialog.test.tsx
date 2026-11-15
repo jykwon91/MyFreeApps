@@ -45,6 +45,8 @@ vi.mock("@platform/ui", async (importOriginal) => {
 
 import { INTERVIEWER_NAME_MAX_LENGTH, INTERVIEWERS_MAX } from "@myjobhunter/api-client/constants/interviewDetailLimits";
 import { interviewerNameTooLongMessage, tooManyInterviewersMessage } from "@myjobhunter/api-client/constants/interviewerProblems";
+import { OCCURRED_AT_IN_FUTURE_MESSAGE } from "@myjobhunter/api-client/constants/eventTimeMessages";
+import { dateToLocalDateTime } from "@myjobhunter/api-client/utils/interviewEventForm";
 import LogEventDialog from "../LogEventDialog";
 
 function renderDialog() {
@@ -199,5 +201,26 @@ describe("LogEventDialog — interview_details", () => {
     await userEvent.click(screen.getByRole("button", { name: /Log event/i }));
     expect(await screen.findByText(interviewerNameTooLongMessage(INTERVIEWER_NAME_MAX_LENGTH))).toBeInTheDocument();
     expect(logEventMock).not.toHaveBeenCalled();
+  });
+
+  it("blocks a future 'When', shows the error and doesn't log it", async () => {
+    renderDialog();
+    const when = screen.getByLabelText(/^When/i);
+    expect(when).toHaveAttribute("max");
+    const nextWeek = dateToLocalDateTime(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+    fireEvent.change(when, { target: { value: nextWeek } });
+    await userEvent.click(screen.getByRole("button", { name: /Log event/i }));
+    expect(await screen.findByText(OCCURRED_AT_IN_FUTURE_MESSAGE)).toBeInTheDocument();
+    expect(logEventMock).not.toHaveBeenCalled();
+  });
+
+  it("still logs an interview whose scheduled time is in the future", async () => {
+    renderDialog();
+    await userEvent.selectOptions(screen.getByLabelText(/^Event/i), "interview_scheduled");
+    await userEvent.selectOptions(screen.getByLabelText(/Type/i), "video");
+    const nextWeek = dateToLocalDateTime(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+    fireEvent.change(screen.getByLabelText(/Scheduled/i), { target: { value: nextWeek } });
+    await userEvent.click(screen.getByRole("button", { name: /Log event/i }));
+    expect(logEventMock).toHaveBeenCalledTimes(1);
   });
 });

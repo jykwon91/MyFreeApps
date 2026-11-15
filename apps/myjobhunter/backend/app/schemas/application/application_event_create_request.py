@@ -10,6 +10,12 @@ them.
 ``event_type`` and ``source`` are validated against the enum allowlists
 in ``app.core.enums`` to match the DB CHECK constraints.
 
+``occurred_at`` is when the event happened, so it may not be in the future
+(beyond a small clock-skew tolerance). A later kanban drag is stamped
+``now()`` and would otherwise be outranked by a future-dated event; an
+upcoming interview's time belongs in ``interview_details.scheduled_at``.
+PATCH does not accept ``occurred_at``, so create is the only entry point.
+
 ``interview_details`` is optional and accepted only when ``event_type``
 is ``interview_scheduled`` or ``interview_completed``.  When present, the
 ``type`` sub-field is required and must be one of the ``InterviewType``
@@ -20,9 +26,13 @@ from __future__ import annotations
 
 import datetime as _dt
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.enums import EventType, EventSource, InterviewType
+from app.core.event_time_constants import (
+    OCCURRED_AT_CLOCK_SKEW_TOLERANCE,
+    OCCURRED_AT_IN_FUTURE_MESSAGE,
+)
 
 _EVENT_TYPE_MAX_LEN = 30
 _SOURCE_MAX_LEN = 20
@@ -80,6 +90,15 @@ class ApplicationEventCreateRequest(BaseModel):
     interview_details: InterviewDetailsRequest | None = None
 
     model_config = ConfigDict(extra="forbid")
+
+    @field_validator("occurred_at")
+    @classmethod
+    def _occurred_at_not_in_future(cls, value: _dt.datetime) -> _dt.datetime:
+        # A naive timestamp is read as UTC, the same as the aware column does on write.
+        aware = value if value.tzinfo is not None else value.replace(tzinfo=_dt.timezone.utc)
+        if aware > _dt.datetime.now(_dt.timezone.utc) + OCCURRED_AT_CLOCK_SKEW_TOLERANCE:
+            raise ValueError(OCCURRED_AT_IN_FUTURE_MESSAGE)
+        return value
 
     @model_validator(mode="after")
     def _validate_enums(self) -> "ApplicationEventCreateRequest":

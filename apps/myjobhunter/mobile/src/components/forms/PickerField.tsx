@@ -16,6 +16,7 @@ export default function PickerField({
   pickerDate,
   mode,
   minimumDate,
+  maximumDate,
   onPick,
   onClear,
   openAndroid,
@@ -79,6 +80,7 @@ export default function PickerField({
           accentColor={colors.primary}
           accessibilityLabel={label}
           display="spinner"
+          maximumDate={maximumDate}
           minimumDate={minimumDate}
           mode={mode}
           onChange={(_event, date) => {

@@ -5,7 +5,7 @@ import type { DateTimeFieldProps } from "../../types/DateTimeFieldProps";
 import PickerField from "../../components/forms/PickerField";
 
 /** A day and a time. Android has no single dialog for both, so it asks for the day, then the time. */
-export default function DateTimeField({ label, value, onChange, required, error, disabled }: DateTimeFieldProps) {
+export default function DateTimeField({ label, value, onChange, maximumDate, required, error, disabled }: DateTimeFieldProps) {
   // A blank value is a local wall-clock string read back in local time.
   const pickerDate = value ? new Date(value) : new Date();
   const pick = (date: Date) => onChange(dateToLocalDateTime(date));
@@ -14,16 +14,19 @@ export default function DateTimeField({ label, value, onChange, required, error,
       disabled={disabled}
       error={error}
       label={label}
+      maximumDate={maximumDate}
       mode="datetime"
       onClear={() => onChange("")}
       onPick={pick}
       openAndroid={() =>
         DateTimePickerAndroid.open({
+          maximumDate,
           mode: "date",
           value: pickerDate,
           onChange: (dayEvent, day) => {
             if (dayEvent.type !== "set" || !day) return;
             DateTimePickerAndroid.open({
+              maximumDate,
               mode: "time",
               value: day,
               onChange: (timeEvent, moment) => {

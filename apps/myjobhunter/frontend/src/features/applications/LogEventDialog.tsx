@@ -6,8 +6,10 @@ import { X } from "lucide-react";
 import { useLogApplicationEventMutation } from "@myjobhunter/api-client/store/applicationsApi";
 import { INTERVIEW_EVENT_TYPES } from "@myjobhunter/api-client/constants/interviewEventTypes";
 import { LOGGABLE_EVENT_TYPES } from "@myjobhunter/api-client/constants/loggableEventTypes";
+import { OCCURRED_AT_IN_FUTURE_MESSAGE } from "@myjobhunter/api-client/constants/eventTimeMessages";
 import type { LogEventFormValues } from "@myjobhunter/api-client/types/log-event-form-values";
-import { emptyFormValues } from "@myjobhunter/api-client/utils/interviewEventForm";
+import { defaultOccurredAt, emptyFormValues } from "@myjobhunter/api-client/utils/interviewEventForm";
+import { isOccurredAtInFuture } from "@myjobhunter/api-client/utils/isOccurredAtInFuture";
 import { formatEventType } from "@myjobhunter/api-client/utils/formatEventType";
 import { logEventRequest } from "@myjobhunter/api-client/utils/logEventRequest";
 import EventNoteField from "@/features/applications/EventNoteField";
@@ -94,12 +96,20 @@ export default function LogEventDialog({
               <input
                 id="log-event-when"
                 type="datetime-local"
-                {...register("occurred_at", { required: "Date is required" })}
+                max={defaultOccurredAt()}
+                {...register("occurred_at", {
+                  required: "Date is required",
+                  validate: (value) => !isOccurredAtInFuture(value) || OCCURRED_AT_IN_FUTURE_MESSAGE,
+                })}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               />
               {errors.occurred_at ? (
                 <p className="text-xs text-destructive mt-1">{errors.occurred_at.message}</p>
-              ) : null}
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1">
+                  When it happened. Put an upcoming interview's time in the interview's date field.
+                </p>
+              )}
             </div>
 
             {showInterviewFields ? (
