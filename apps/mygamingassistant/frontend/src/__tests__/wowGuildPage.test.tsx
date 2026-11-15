@@ -31,6 +31,7 @@ import {
 } from "@/games/wow-forever/lib/guild/guildMembers";
 import WowGuildPage from "@/games/wow-forever/pages/WowGuildPage";
 import WowLegacyGuildRedirect from "@/games/wow-forever/pages/WowLegacyGuildRedirect";
+import type { RecipeEntry } from "@/games/wow-forever/types/recipes/recipeEntry";
 import type { GuildCrafter } from "@/games/wow-forever/types/guild/guildCrafter";
 import type { GuildMember } from "@/games/wow-forever/types/guild/guildMember";
 import { memberSkill, memberSkillText, professionCounts } from "@/games/wow-forever/lib/guild/guildMemberProfessions";
@@ -43,6 +44,9 @@ import { PODIUM_RENDER_CLASSES } from "@/games/wow-forever/data/guild/guildStyle
 
 const mockQuery = vi.fn();
 const mockRecipes = vi.fn();
+const mockRecipeBook = vi.fn();
+vi.mock("@/games/wow-forever/hooks/useRecipeBook", () => ({ useRecipeBook: () => mockRecipeBook() }));
+
 vi.mock("@/games/wow-forever/api/wowGuildApi", () => ({
   useGetGuildQuery: (slug: string) => mockQuery(slug),
   useSearchGuildRecipesQuery: (args: GuildRecipeSearchArgs) => mockRecipes(args),
@@ -135,12 +139,19 @@ function crafter(overrides: Partial<GuildCrafter>): GuildCrafter {
   return { slug: "jason-kwon", name: "Jason", surname: "Kwon", class_name: "Warlock", skill: 148, max_skill: 225, ...overrides };
 }
 
+const LINEN_ENTRY = {
+  key: "tailoring:2963", profession: "tailoring", name: "Bolt of Linen Cloth", icon: { fileDataId: 132889, quality: "common" },
+  makes: { id: 2996, name: "Bolt of Linen Cloth", count: 1, quality: "common" }, category: "trade-goods", skill: 1,
+  yellow: null, green: null, grey: null, reagents: [], learn: { kind: "start" }, recipeSources: null, sourceUnknown: false,
+  spec: null, searchName: "bolt of linen cloth", nameWords: [], recipeItemWords: [], reagentWords: [],
+} as unknown as RecipeEntry;
+
 const LINEN: GuildRecipeSearch = {
   query: "linen",
   truncated: false,
   recipes: [
     {
-      id: 2963,
+      id: 2359,
       name: "Bolt of Linen Cloth",
       profession_id: 197,
       crafters: [crafter({}), crafter({ slug: "tiny-john", name: "Tiny", surname: "John", class_name: "Mage", skill: null, max_skill: null })],
@@ -162,6 +173,7 @@ function typeRecipe(text: string) {
 beforeEach(() => {
   mockQuery.mockReturnValue(query({}));
   mockRecipes.mockReturnValue(recipes({}));
+  mockRecipeBook.mockReturnValue({ status: "ready", entries: [LINEN_ENTRY] });
 });
 
 afterEach(() => {
@@ -648,6 +660,26 @@ describe("guild recipe search", () => {
     expect(who.getByRole("link", { name: "Jason Kwon" })).toHaveAttribute("href", "/wow-forever/character/jason-kwon");
     expect(who.getByText("148 / 225")).toBeInTheDocument();
     expect(within(screen.getByRole("list", { name: "Matching recipes" })).getByText("Tailoring")).toBeInTheDocument();
+  });
+
+  it("links each recipe to the item it makes, with its icon, the profession's and each crafter's class icon", () => {
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    mockRecipes.mockReturnValue(recipes({ currentData: LINEN }));
+    renderAt("/wow-forever/topdeadcenter?tab=crafting&recipe=linen");
+    const results = within(screen.getByRole("list", { name: "Matching recipes" }));
+    expect(results.getByRole("link", { name: "Bolt of Linen Cloth" })).toHaveAttribute("href", "/wow-forever/recipes?q=Bolt+of+Linen+Cloth&p=tailoring");
+    // The recipe's icon, Tailoring's on its tag and the Warlock's beside the top crafter.
+    expect(results.getAllByTestId(/^game-icon/)).toHaveLength(3);
+  });
+
+  it("keeps the recipe name plain, with a placeholder icon, while our recipe data loads", () => {
+    mockRecipeBook.mockReturnValue({ status: "loading" });
+    mockQuery.mockReturnValue(query({ data: GUILD }));
+    mockRecipes.mockReturnValue(recipes({ currentData: LINEN }));
+    renderAt("/wow-forever/topdeadcenter?tab=crafting&recipe=linen");
+    const results = within(screen.getByRole("list", { name: "Matching recipes" }));
+    expect(results.queryByRole("link", { name: "Bolt of Linen Cloth" })).toBeNull();
+    expect(results.getByText("Bolt of Linen Cloth")).toBeInTheDocument();
   });
 
   it("shows only the top crafter, and a button reveals and hides the rest in order", () => {

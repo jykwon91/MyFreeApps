@@ -437,7 +437,7 @@ function recipeSearch(query: string) {
     truncated: false,
     recipes: known
       ? [{
-          id: 2963, name: "Bolt of Linen Cloth", profession_id: 197,
+          id: 2359, name: "Bolt of Linen Cloth", profession_id: 197,
           crafters: [
             { slug: "jason-kwon", name: "Jason", surname: "Kwon", class_name: "Warlock", skill: 148, max_skill: 225 },
             { slug: "tiny-john", name: "Tiny", surname: "John", class_name: "Mage", skill: null, max_skill: null },
@@ -755,4 +755,27 @@ test("picking a tab keeps it in the URL and the skeleton sketches the open tab",
   release();
   await expect(page.getByTestId("guild-page-skeleton")).toHaveCount(0);
   await expect(memberNames(page)).toHaveCount(3);
+});
+
+test("recipe search: the recipe has icons and a hover tooltip, and opens in full on the Recipes page", async ({ page }) => {
+  await stubAll(page);
+  await page.route(RECIPES_PATTERN, (route) => json(route, recipeSearch("linen")));
+  await page.goto("/wow-forever/topdeadcenter?tab=crafting&recipe=linen");
+  const results = page.getByRole("list", { name: "Matching recipes" });
+  const recipe = results.getByRole("link", { name: "Bolt of Linen Cloth" });
+  await expect(recipe).toHaveAttribute("href", "/wow-forever/recipes?q=Bolt+of+Linen+Cloth&p=tailoring");
+  // The recipe's icon, Tailoring's on its tag and the Warlock's beside the top crafter.
+  await expect(results.getByTestId(/^game-icon/)).toHaveCount(3);
+
+  await recipe.hover();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toContainText("Bolt of Linen Cloth");
+  await expect(tooltip).toContainText("Tailoring");
+  await expect(tooltip).toContainText("Materials");
+  await expect(tooltip).toContainText("Linen Cloth");
+  await recipe.click();
+  await expect(page).toHaveURL(/\/wow-forever\/recipes\?q=Bolt\+of\+Linen\+Cloth&p=tailoring$/);
+  const row = page.getByTestId("recipe-row").filter({ hasText: "Bolt of Linen Cloth" }).first();
+  await expect(row.locator("details")).toHaveAttribute("open", "");
+  await expect(row.getByRole("link", { name: /Tailoring leveling guide/i })).toBeVisible();
 });

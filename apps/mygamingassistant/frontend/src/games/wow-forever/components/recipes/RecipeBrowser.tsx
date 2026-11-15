@@ -1,5 +1,5 @@
 import { useId, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import RecipeProfessionToggle from "@/games/wow-forever/components/recipes/RecipeProfessionToggle";
 import RecipeResults from "@/games/wow-forever/components/recipes/RecipeResults";
 import ChoiceSelect from "@/games/wow-forever/components/shared/ChoiceSelect";
@@ -12,6 +12,7 @@ import {
   RECIPES_TEXT,
 } from "@/games/wow-forever/data/recipes/recipesConfig";
 import { useDebouncedSearchParam } from "@/games/wow-forever/hooks/useDebouncedSearchParam";
+import { wantsOpenRecipe } from "@/games/wow-forever/lib/recipes/openRecipeState";
 import { parseRecipeCategory, parseRecipeProfession, withRecipeParam } from "@/games/wow-forever/lib/recipes/recipeParams";
 import { hasRecipeSearch, searchRecipes } from "@/games/wow-forever/lib/recipes/searchRecipes";
 import type { RecipeEntry } from "@/games/wow-forever/types/recipes/recipeEntry";
@@ -28,6 +29,8 @@ interface RecipeBrowserProps {
 /** The search box and filters (kept in the URL), and the recipes they pick. */
 export default function RecipeBrowser({ entries, place, zoneId, level }: RecipeBrowserProps) {
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  const openRecipe = wantsOpenRecipe(location.state);
   const search = useDebouncedSearchParam(RECIPE_PARAMS.query, RECIPE_SEARCH_DELAY_MS);
   const searchId = useId();
   const profession = parseRecipeProfession(params);
@@ -70,7 +73,7 @@ export default function RecipeBrowser({ entries, place, zoneId, level }: RecipeB
       {matches === null ? (
         <EmptyStateNote message={RECIPES_TEXT.prompt} />
       ) : (
-        <RecipeResults key={`${filters.query}|${profession ?? ""}|${category ?? ""}`} matches={matches} place={place} zoneId={zoneId} level={level} />
+        <RecipeResults key={`${filters.query}|${profession ?? ""}|${category ?? ""}`} matches={matches} openQuery={openRecipe ? filters.query : ""} place={place} zoneId={zoneId} level={level} />
       )}
     </div>
   );
