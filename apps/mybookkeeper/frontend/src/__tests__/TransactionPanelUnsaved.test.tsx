@@ -251,7 +251,11 @@ describe("DrillDownPanel with an edited transaction", () => {
   function renderDrillDown(onClose = vi.fn()) {
     vi.mocked(useListTransactionsQuery).mockReturnValue({
       data: [TXN],
+      currentData: [TXN],
       isLoading: false,
+      isFetching: false,
+      error: undefined,
+      refetch: vi.fn(),
     } as unknown as ReturnType<typeof useListTransactionsQuery>);
     render(
       <Provider store={store}>
