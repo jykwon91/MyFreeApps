@@ -47,6 +47,8 @@ export interface GuildMatchProposed {
   /** Null for enchants or when the item level is unknown. */
   item_level: number | null;
   reagents: CraftReagent[];
+  /** What an enchant does, from the Forever client ("... 6 additional points of damage."); null for gear or when unknown. */
+  effect: string | null;
 }
 
 /**

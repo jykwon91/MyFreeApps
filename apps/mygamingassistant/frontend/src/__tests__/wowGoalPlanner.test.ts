@@ -94,6 +94,7 @@ function recipeEntry(key: string, learn: LearnAt, extra: Partial<RecipeEntry> = 
     learn,
     recipeSources: null,
     sourceUnknown: false,
+    effect: null,
     spec: null,
     searchName: key,
     nameWords: [],

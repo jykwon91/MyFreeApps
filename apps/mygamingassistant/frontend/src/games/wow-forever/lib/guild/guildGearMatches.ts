@@ -233,6 +233,7 @@ export function computeGearMatches(
               item_id: createsId,
               item_level: craftedClientItem.itemLevel,
               reagents: recipe.reagents,
+              effect: null,
             },
             upgrade_pct: pct,
           });

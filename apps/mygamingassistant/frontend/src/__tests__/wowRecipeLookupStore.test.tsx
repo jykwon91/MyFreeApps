@@ -8,7 +8,7 @@ vi.mock("@/games/wow-forever/lib/recipes/loadRecipeBook", () => ({ loadRecipeBoo
 const LINEN_ENTRY = {
   key: "tailoring:2963", profession: "tailoring", name: "Bolt of Linen Cloth", icon: null, makes: null,
   category: "trade-goods", skill: 1, yellow: null, green: null, grey: null, reagents: [], learn: { kind: "start" },
-  recipeSources: null, sourceUnknown: false, spec: null, searchName: "bolt of linen cloth", nameWords: [],
+  recipeSources: null, sourceUnknown: false, effect: null, spec: null, searchName: "bolt of linen cloth", nameWords: [],
   recipeItemWords: [], reagentWords: [],
 } as unknown as RecipeEntry;
 

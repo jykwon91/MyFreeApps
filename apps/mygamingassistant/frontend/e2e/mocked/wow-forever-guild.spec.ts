@@ -986,6 +986,8 @@ test("help tab: shows enchant matches, type chips filter, member picker filters,
   await expect(card.getByRole("link", { name: "Linen Bracers" }).locator("img, [data-testid=game-icon-placeholder]")).toBeVisible();
   await expect(card.getByRole("list", { name: /^Reagents for/ }).getByRole("link").first().locator("img, [data-testid=game-icon-placeholder]")).toBeVisible();
   await expect(card.getByRole("img", { name: "Enchant", exact: true })).toBeVisible();
+  // The enchant says what it does, on the card and in the hover tooltip
+  await expect(card.getByTestId("guild-match-effect")).toHaveText("Permanently enchant bracers to increase the Stamina of the wearer by 2.");
 
   // Type chips are present
   const chips = page.getByTestId("help-type-chips");

@@ -140,6 +140,7 @@ export function computeEnchantMatches(
               item_id: null,
               item_level: null,
               reagents: recipe.reagents,
+              effect: recipe.effect ?? null,
             },
             upgrade_pct: null,
           });

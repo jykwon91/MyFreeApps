@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 from scripts.wow_food.tooltip import Effect, SpellBook, evaluate, roll_range
-from scripts.wow_professions.effects import add_effects, item_effect
+from scripts.wow_professions.effects import add_effects, enchant_effect, item_effect
 
 CRAFTING_DATA = (
     Path(__file__).resolve().parents[2]
@@ -29,6 +29,9 @@ def _effect(bp: float, variance: float = 0.0) -> Effect:
     return Effect(index=0, effect=SCHOOL_DAMAGE, aura=0, base_points=bp, misc=0, period_ms=0, trigger=0, variance=variance)
 
 
+IMPACT_SPELL, CLOAK_SPELL = 13695, 7771
+
+
 @pytest.fixture
 def book() -> SpellBook:
     return SpellBook(
@@ -37,8 +40,10 @@ def book() -> SpellBook:
             1: "",
             2: "Lasts $d.",
             3: "Increases your damage by $s1.",
+            IMPACT_SPELL: "Permanently enchant a Two-handed Melee Weapon to do $s1 additional points of damage.",
+            CLOAK_SPELL: "Permanently enchant a cloak to increase armor by $ec1.",
         },
-        effects={ROUGH_DYNAMITE_SPELL: [_effect(30, 0.2667)], 3: [_effect(5)]},
+        effects={ROUGH_DYNAMITE_SPELL: [_effect(30, 0.2667)], 3: [_effect(5)], IMPACT_SPELL: [_effect(6)]},
     )
 
 
@@ -74,9 +79,28 @@ class TestItemEffect:
             {"spell": 3924, "creates": {"id": COPPER_TUBE_ITEM}},
             {"spell": 7421, "enchant": True},
         ]
-        add_effects(recipes, book, {ROUGH_DYNAMITE_ITEM: [ROUGH_DYNAMITE_SPELL]})
+        add_effects(recipes, book, {ROUGH_DYNAMITE_ITEM: [ROUGH_DYNAMITE_SPELL]}, {})
         assert recipes[0]["effect"].startswith("Inflicts 26 to 34")
         assert "effect" not in recipes[1] and "effect" not in recipes[2]
+
+
+class TestEnchantEffect:
+    def test_reads_the_enchant_spell(self, book: SpellBook) -> None:
+        assert enchant_effect(IMPACT_SPELL, book, {}) == (
+            "Permanently enchant a Two-handed Melee Weapon to do 6 additional points of damage."
+        )
+
+    def test_fills_ec_from_the_item_enchantment(self, book: SpellBook) -> None:
+        assert enchant_effect(CLOAK_SPELL, book, {CLOAK_SPELL: [10, 0, 0]}) == "Permanently enchant a cloak to increase armor by 10."
+
+    def test_none_when_ec_has_no_enchantment(self, book: SpellBook) -> None:
+        assert enchant_effect(CLOAK_SPELL, book, {}) is None
+
+    def test_add_effects_sets_it_on_enchants(self, book: SpellBook) -> None:
+        recipes = [{"spell": IMPACT_SPELL, "enchant": True}, {"spell": CLOAK_SPELL, "enchant": True}]
+        add_effects(recipes, book, {}, {CLOAK_SPELL: [10, 0, 0]})
+        assert recipes[0]["effect"].endswith("6 additional points of damage.")
+        assert recipes[1]["effect"] == "Permanently enchant a cloak to increase armor by 10."
 
 
 @pytest.fixture(scope="module")

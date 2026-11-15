@@ -71,7 +71,7 @@ from scripts.wow_professions.crafts import (
     sod_only_spells,
 )
 from scripts.wow_professions.classic_teaching import load_classic_teaching
-from scripts.wow_professions.effects import add_effects
+from scripts.wow_professions.effects import add_effects, load_enchant_points
 from scripts.wow_professions.specs import spec_quests, spec_records, trainer_specs
 from scripts.wow_world_map.build import write_json
 from scripts.wow_world_map.map_art import WorldMapArt
@@ -100,8 +100,8 @@ PROFESSIONS = {
 }
 # Professions a miner levels: their file lists the smelts that make the bars they use.
 SMELTS_FOR = {"blacksmithing", "engineering"}
-# Professions whose items are named for what they do, not what they are: each recipe carries its tooltip line.
-DESCRIBES_FOR = {"engineering"}
+# Professions whose items are named for what they do, not what they are, and enchants (no item at all): each recipe carries its tooltip line.
+DESCRIBES_FOR = {"engineering", "enchanting"}
 # Professions whose recipes make reagents another profession uses ("made by Blacksmithing").
 CRAFTING_SKILL_LINES = {
     129: "First Aid", 164: "Blacksmithing", 165: "Leatherworking", 171: "Alchemy", 185: "Cooking", 186: "Mining",
@@ -379,9 +379,9 @@ def main() -> None:
     mining, dropped = profession_recipes(MINING_SKILL_LINE, items, classic, trainer_skill[MINING_SKILL_LINE])
     sod_only |= dropped
     mining_trainer = trainer_skill[MINING_SKILL_LINE]
-    book, item_spells = load_book(), load_item_spells()
+    book, item_spells, enchant_points = load_book(), load_item_spells(), load_enchant_points()
     for key in DESCRIBES_FOR:
-        add_effects(recipes[key], book, item_spells)
+        add_effects(recipes[key], book, item_spells, enchant_points)
     smelting = {key: smelting_for(recipes[key], mining, mining_trainer) if key in SMELTS_FOR else [] for key in PROFESSIONS}
 
     write_json(DATA_DIR / "mining.json", {

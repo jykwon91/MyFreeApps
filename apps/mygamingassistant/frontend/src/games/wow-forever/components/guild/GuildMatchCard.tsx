@@ -81,12 +81,18 @@ export default function GuildMatchCard({ match, prices }: GuildMatchCardProps) {
         {proposed.item_id !== null ? (
           <ItemNameLink itemId={proposed.item_id} name={proposed.name} withIcon className="font-medium text-foreground" />
         ) : (
-          <span className="font-medium text-foreground">{proposed.name}</span>
+          <RecipeRef profession={prof} spell={proposed.spell} name={proposed.name} className="font-medium text-foreground" />
         )}
         {isGear && proposed.item_level != null && (
           <span className="text-xs"> (ilvl {proposed.item_level})</span>
         )}
       </div>
+
+      {proposed.effect && (
+        <p className="text-sm text-emerald-700 dark:text-emerald-400" data-testid="guild-match-effect">
+          {proposed.effect}
+        </p>
+      )}
 
       {/* Recipe link */}
       <div className="flex items-center gap-1 text-sm">
