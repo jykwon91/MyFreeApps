@@ -5,6 +5,7 @@ import { GripVertical, X } from "lucide-react";
 import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 import { SECTION_IMAGE_STORAGE_DOMAIN } from "@/shared/lib/welcome-manual-constants";
 import type { WelcomeManualSectionImageResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-image-response";
+import { WELCOME_MANUAL_IMAGE_CAPTION_MAX_LENGTH } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 
 export interface WelcomeManualSectionImageCardProps {
   image: WelcomeManualSectionImageResponse;
@@ -112,6 +113,7 @@ export default function WelcomeManualSectionImageCard({
       <input
         key={image.caption ?? ""}
         defaultValue={image.caption ?? ""}
+        maxLength={WELCOME_MANUAL_IMAGE_CAPTION_MAX_LENGTH}
         onBlur={handleCaptionBlur}
         placeholder="Add a caption…"
         className="w-full border-t px-2 py-1 text-xs bg-transparent focus:outline-none focus:bg-muted/40"

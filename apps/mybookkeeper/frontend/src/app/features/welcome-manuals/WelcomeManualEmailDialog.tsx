@@ -3,7 +3,7 @@ import { AlertCircle, CheckCircle, Info, X } from "lucide-react";
 import { FormField, LoadingButton, Panel, PanelTitle, showError } from "@platform/ui";
 import { DEMO_EMAIL_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
-import { EMAIL_REGEX, SHARED_ROOM_OPTION } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { EMAIL_REGEX, SHARED_ROOM_OPTION, WELCOME_MANUAL_RECIPIENT_NAME_MAX_LENGTH } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import { useEmailWelcomeManualMutation } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import { emailRequest } from "@mybookkeeper/api-client/utils/welcomeManualRequests";
 import type { WelcomeManualEmailDialogStep } from "@/shared/types/welcome-manual/welcome-manual-email-dialog-step";
@@ -95,6 +95,7 @@ export default function WelcomeManualEmailDialog({ manualId, rooms, onClose }: W
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    maxLength={WELCOME_MANUAL_RECIPIENT_NAME_MAX_LENGTH}
                     placeholder="Alex"
                     className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                     data-testid="welcome-manual-email-name"

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { DoorOpen, Plus, X } from "lucide-react";
 import { LoadingButton, ConfirmDialog, showError, showSuccess } from "@platform/ui";
-import { WELCOME_MANUAL_MAX_ROOMS } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { WELCOME_MANUAL_MAX_ROOMS, WELCOME_MANUAL_ROOM_NAME_MAX_LENGTH } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import { NEW_ROOM_DEFAULT_NAME } from "@/shared/lib/welcome-manual-constants";
 import {
   useCreateRoomMutation,
@@ -127,6 +127,7 @@ export default function WelcomeManualRoomManager({
                 <input
                   key={`room-${room.name}`}
                   defaultValue={room.name}
+                  maxLength={WELCOME_MANUAL_ROOM_NAME_MAX_LENGTH}
                   onBlur={(e) => {
                     const trimmed = e.target.value.trim();
                     if (trimmed === room.name) return;

@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { WELCOME_MANUAL_PRICE_TIERS } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
+import { WELCOME_MANUAL_PLACE_CUISINE_MAX_LENGTH, WELCOME_MANUAL_PLACE_MAP_URL_MAX_LENGTH, WELCOME_MANUAL_PLACE_NAME_MAX_LENGTH, WELCOME_MANUAL_PLACE_NOTE_MAX_LENGTH, WELCOME_MANUAL_PRICE_TIERS } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 import type { WelcomeManualPlaceResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-place-response";
 
 export interface WelcomeManualPlaceCardProps {
@@ -71,6 +71,7 @@ export default function WelcomeManualPlaceCard({
           <input
             key={`name-${place.name}`}
             defaultValue={place.name}
+            maxLength={WELCOME_MANUAL_PLACE_NAME_MAX_LENGTH}
             onBlur={handleNameBlur}
             placeholder="Restaurant name"
             className={`${inputClass} font-medium`}
@@ -82,6 +83,7 @@ export default function WelcomeManualPlaceCard({
             <input
               key={`cuisine-${place.cuisine}`}
               defaultValue={place.cuisine}
+              maxLength={WELCOME_MANUAL_PLACE_CUISINE_MAX_LENGTH}
               onBlur={handleCuisineBlur}
               placeholder="Cuisine"
               list={cuisineListId}
@@ -121,6 +123,7 @@ export default function WelcomeManualPlaceCard({
           <input
             key={`note-${place.note ?? ""}`}
             defaultValue={place.note ?? ""}
+            maxLength={WELCOME_MANUAL_PLACE_NOTE_MAX_LENGTH}
             onBlur={handleNoteBlur}
             placeholder="Note (what to order, tips, etc.)"
             className={inputClass}
@@ -131,6 +134,7 @@ export default function WelcomeManualPlaceCard({
           <input
             key={`map-url-${place.map_url ?? ""}`}
             defaultValue={place.map_url ?? ""}
+            maxLength={WELCOME_MANUAL_PLACE_MAP_URL_MAX_LENGTH}
             onBlur={handleMapUrlBlur}
             placeholder="Google Maps link"
             className={inputClass}

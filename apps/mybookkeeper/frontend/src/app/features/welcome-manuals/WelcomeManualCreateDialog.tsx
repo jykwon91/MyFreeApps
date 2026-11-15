@@ -6,6 +6,7 @@ import type { Property } from "@mybookkeeper/api-client/types/property/property"
 import type { WelcomeManualCreateFormValues } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-create-form-values";
 import { manualCreateRequest } from "@mybookkeeper/api-client/utils/welcomeManualRequests";
 import type { WelcomeManualResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-response";
+import { WELCOME_MANUAL_TITLE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
 
 export interface WelcomeManualCreateDialogProps {
   properties: readonly Property[];
@@ -74,6 +75,7 @@ export default function WelcomeManualCreateDialog({
               <>
                 <input
                   {...register("title", { required: "Title is required" })}
+                  maxLength={WELCOME_MANUAL_TITLE_MAX_LENGTH}
                   className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
                   placeholder="e.g. Welcome to the Lakeview Suite"
                   data-testid="welcome-manual-create-title"
