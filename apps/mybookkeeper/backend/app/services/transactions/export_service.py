@@ -30,10 +30,12 @@ async def export_transactions_csv(
     ctx: RequestContext,
     filters: TransactionFilters | None = None,
 ) -> bytes:
+    filters = filters or TransactionFilters()
     async with AsyncSessionLocal() as db:
         transactions = await transaction_repo.list_filtered(
             db, ctx.organization_id,
-            **(filters or TransactionFilters()).model_dump(),
+            **filters.filter_args(),
+            sort=filters.sort_keys(),
         )
         prop_names = await property_repo.get_name_map(db, ctx.organization_id)
 
@@ -68,10 +70,12 @@ async def export_transactions_pdf(
     ctx: RequestContext,
     filters: TransactionFilters | None = None,
 ) -> bytes:
+    filters = filters or TransactionFilters()
     async with AsyncSessionLocal() as db:
         transactions = await transaction_repo.list_filtered(
             db, ctx.organization_id,
-            **(filters or TransactionFilters()).model_dump(),
+            **filters.filter_args(),
+            sort=filters.sort_keys(),
         )
         prop_names = await property_repo.get_name_map(db, ctx.organization_id)
     styles = getSampleStyleSheet()

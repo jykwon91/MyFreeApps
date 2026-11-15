@@ -10,16 +10,21 @@ import type { MergeDuplicatesRequest } from "../types/transaction/MergeDuplicate
 import type { MergeDuplicatesResponse } from "../types/transaction/MergeDuplicatesResponse";
 import type { ScheduleEReport } from "../types/transaction/ScheduleEReport";
 import type { Transaction } from "../types/transaction/transaction";
+import type { TransactionListPage } from "../types/transaction/TransactionListPage";
 import type { TransactionListParams } from "../types/transaction/TransactionListParams";
+import type { TransactionPageParams } from "../types/transaction/TransactionPageParams";
+import type { TransactionSelectionRef } from "../types/transaction/TransactionSelectionRef";
 import type { TransactionReviewCount } from "../types/transaction/TransactionReviewCount";
 import type { TransactionUpdateResult } from "../types/transaction/TransactionUpdateResult";
+import { pathWithQuery } from "../utils/pathWithQuery";
+import { transactionListQuery } from "../utils/transactionListQuery";
 
 export const transactionsApi = baseApi.enhanceEndpoints({
   addTagTypes: ["Summary", "Transaction", "SignedLease", "TaxReturn"],
 }).injectEndpoints({
   endpoints: (builder) => ({
     listTransactions: builder.query<Transaction[], TransactionListParams>({
-      query: (params = {}) => ({ url: "/transactions", params: { ...params } }),
+      query: (params = {}) => ({ url: pathWithQuery("/transactions", transactionListQuery(params)) }),
       providesTags: (result) =>
         result
           ? [...result.map((t) => ({ type: "Transaction" as const, id: t.id })), { type: "Transaction", id: "LIST" }]
@@ -33,13 +38,36 @@ export const transactionsApi = baseApi.enhanceEndpoints({
           lastPage.length < TRANSACTION_PAGE_SIZE ? undefined : lastOffset + TRANSACTION_PAGE_SIZE,
       },
       query: ({ queryArg, pageParam }) => ({
-        url: "/transactions",
-        params: { ...queryArg, limit: TRANSACTION_PAGE_SIZE, offset: pageParam },
+        url: pathWithQuery(
+          "/transactions",
+          `${transactionListQuery({ ...queryArg, limit: TRANSACTION_PAGE_SIZE })}&offset=${pageParam}`,
+        ),
       }),
       providesTags: (result) => [
         ...(result?.pages.flat().map((t) => ({ type: "Transaction" as const, id: t.id })) ?? []),
         { type: "Transaction", id: "LIST" },
       ],
+    }),
+    // One page with the total the filters match, so the website can page through every row.
+    getTransactionPage: builder.query<TransactionListPage, TransactionPageParams>({
+      query: ({ offset, ...params }) => ({
+        url: pathWithQuery("/transactions/page", `${transactionListQuery(params)}&offset=${offset}`),
+      }),
+      providesTags: (result) => [
+        ...(result?.items.map((t) => ({ type: "Transaction" as const, id: t.id })) ?? []),
+        { type: "Transaction", id: "LIST" },
+      ],
+    }),
+    // Every row the filters match, as "select all" ticks rows on pages not loaded yet. Fetched only
+    // when triggered (select all, or checking ticks), so it provides no tag: an edit would otherwise
+    // refetch every matching id for as long as the lazy query stays subscribed.
+    listTransactionSelection: builder.query<TransactionSelectionRef[], TransactionListParams>({
+      query: (params) => ({ url: pathWithQuery("/transactions/selection", transactionListQuery(params)) }),
+    }),
+    // The categories the matching rows have: the choices of the table's Category filter.
+    listTransactionCategories: builder.query<string[], TransactionListParams>({
+      query: (params) => ({ url: pathWithQuery("/transactions/categories", transactionListQuery(params)) }),
+      providesTags: [{ type: "Transaction", id: "LIST" }],
     }),
     getTransactionReviewCount: builder.query<TransactionReviewCount, void>({
       query: () => ({ url: "/transactions/review-count" }),
@@ -111,6 +139,9 @@ export const transactionsApi = baseApi.enhanceEndpoints({
 export const {
   useListTransactionsQuery,
   useListTransactionPagesInfiniteQuery,
+  useGetTransactionPageQuery,
+  useLazyListTransactionSelectionQuery,
+  useListTransactionCategoriesQuery,
   useGetTransactionReviewCountQuery,
   useGetTransactionQuery,
   useCreateTransactionMutation,

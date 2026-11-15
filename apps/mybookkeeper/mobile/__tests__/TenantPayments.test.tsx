@@ -16,6 +16,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aRentLedger, aRentPayment, aRentSchedule } from "../test-support/aRentLedger";
 import { aTransaction } from "../test-support/transactionsServer";
+import { withTransactionListQuery } from "../test-support/withTransactionListQuery";
 
 jest.mock("expo-router", () => ({ router: { push: jest.fn() } }));
 jest.mock("expo-local-authentication", () => ({ SecurityLevel: { NONE: 0 }, authenticateAsync: jest.fn(), getEnrolledLevelAsync: jest.fn() }));
@@ -34,7 +35,7 @@ function startServer(payments: Transaction[] | "offline", ledger: RentLedgerResp
       if (server.ledger === "offline") return Promise.reject(Object.assign(new Error("Network Error"), { config }));
       return { data: server.ledger, status: 200, statusText: "", headers: {}, config } as never;
     }
-    server.requests.push(config);
+    server.requests.push(withTransactionListQuery(config));
     if (server.payments === "offline") return Promise.reject(Object.assign(new Error("Network Error"), { config }));
     return { data: server.payments, status: 200, statusText: "", headers: {}, config } as never;
   };

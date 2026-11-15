@@ -1,3 +1,4 @@
+import type { PaginationState } from "@tanstack/react-table";
 import { EXPENSE_CATEGORY_LIST } from "@/shared/lib/constants";
 import type { Filters } from "@/shared/types/transaction/transaction-filters";
 import type { TransactionStatus } from "@mybookkeeper/api-client/types/transaction/TransactionStatus";
@@ -11,6 +12,9 @@ export const EMPTY_FILTERS: Filters = {
   start_date: "",
   end_date: "",
 };
+
+/** The transactions table opens on its first page of 25 rows. */
+export const INITIAL_TRANSACTION_PAGINATION: PaginationState = { pageIndex: 0, pageSize: 25 };
 
 export const STATUS_OPTIONS = ["pending", "approved", "needs_review", "duplicate", "unverified"] as const;
 

@@ -19,6 +19,7 @@ from app.models.properties.property import Property
 from app.models.user.user import User
 from app.repositories import transaction_repo
 from app.repositories.transactions import transaction_list_repo
+from app.schemas.transactions.transaction_sort_key import TransactionSortKey
 from tests.test_transaction_repo import _make_transaction
 from tests.test_transaction_routes import (  # noqa: F401  (fixtures)
     _patch_service_session,
@@ -80,8 +81,8 @@ class TestListFilteredOrder:
             await transaction_repo.create(db, _make_transaction(test_org.id, test_user.id, vendor=amount, amount=Decimal(amount)))
         await db.commit()
 
-        ascending = await transaction_repo.list_filtered(db, test_org.id, sort_by="amount", sort_dir="asc")
-        descending = await transaction_repo.list_filtered(db, test_org.id, sort_by="amount", sort_dir="desc")
+        ascending = await transaction_repo.list_filtered(db, test_org.id, sort=[TransactionSortKey("amount", "asc")])
+        descending = await transaction_repo.list_filtered(db, test_org.id, sort=[TransactionSortKey("amount", "desc")])
 
         assert [t.vendor for t in ascending] == ["9.00", "25.50", "100.00"]
         assert [t.vendor for t in descending] == ["100.00", "25.50", "9.00"]
@@ -97,8 +98,8 @@ class TestListFilteredOrder:
         await transaction_repo.create(db, _make_transaction(test_org.id, test_user.id, vendor="Zeta"))
         await db.commit()
 
-        ascending = await transaction_repo.list_filtered(db, test_org.id, sort_by="vendor", sort_dir="asc")
-        descending = await transaction_repo.list_filtered(db, test_org.id, sort_by="vendor", sort_dir="desc")
+        ascending = await transaction_repo.list_filtered(db, test_org.id, sort=[TransactionSortKey("vendor", "asc")])
+        descending = await transaction_repo.list_filtered(db, test_org.id, sort=[TransactionSortKey("vendor", "desc")])
 
         assert [t.vendor for t in ascending] == ["Acme", "Zeta", None]
         assert [t.vendor for t in descending] == ["Zeta", "Acme", None]
@@ -111,8 +112,8 @@ class TestListFilteredOrder:
             await transaction_repo.create(db, _make_transaction(test_org.id, test_user.id, vendor=vendor))
         await db.commit()
 
-        ascending = await transaction_repo.list_filtered(db, test_org.id, sort_by="vendor", sort_dir="asc")
-        descending = await transaction_repo.list_filtered(db, test_org.id, sort_by="vendor", sort_dir="desc")
+        ascending = await transaction_repo.list_filtered(db, test_org.id, sort=[TransactionSortKey("vendor", "asc")])
+        descending = await transaction_repo.list_filtered(db, test_org.id, sort=[TransactionSortKey("vendor", "desc")])
 
         assert [t.vendor for t in ascending][:3] == ["acme", "Beta", "Zeta"]
         assert {t.vendor for t in ascending[3:]} == {"", "   "}
@@ -134,7 +135,7 @@ class TestListFilteredOrder:
 
         expected = [t.id for t in sorted(rows, key=lambda t: (t.transaction_date, t.id), reverse=True)]
         pages = [
-            await transaction_repo.list_filtered(db, test_org.id, sort_by="category", sort_dir="asc", limit=2, offset=offset)
+            await transaction_repo.list_filtered(db, test_org.id, sort=[TransactionSortKey("category", "asc")], limit=2, offset=offset)
             for offset in (0, 2, 4)
         ]
 
@@ -165,7 +166,7 @@ class TestListFilteredOrderSql:
 
     @pytest.mark.asyncio
     async def test_vendor_order_puts_missing_last_and_keeps_the_tie_breakers(self) -> None:
-        order_by = await _compiled_order_by(sort_by="vendor")
+        order_by = await _compiled_order_by(sort=[TransactionSortKey("vendor", "asc")])
 
         assert "NULLS LAST" in order_by
         assert "lower(nullif(trim(transactions.vendor), %(" in order_by

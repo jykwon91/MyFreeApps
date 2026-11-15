@@ -13,6 +13,7 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aTransaction, startTransactionServer, type FakeTransactionServer } from "../test-support/transactionsServer";
+import { withTransactionListQuery } from "../test-support/withTransactionListQuery";
 
 jest.mock("expo-router", () => ({
   router: { push: jest.fn() },
@@ -97,7 +98,7 @@ describe("Transactions sort and tax filter", () => {
     await screen.findByText("Mid");
     const answer = api.defaults.adapter as AxiosAdapter;
     api.defaults.adapter = (config) =>
-      (config.params as TransactionListParams | undefined)?.sort_by ? new Promise(() => undefined) : answer(config);
+      (withTransactionListQuery(config).params as TransactionListParams | undefined)?.sort_by ? new Promise(() => undefined) : answer(config);
 
     await sortBy("Vendor", "Descending");
 

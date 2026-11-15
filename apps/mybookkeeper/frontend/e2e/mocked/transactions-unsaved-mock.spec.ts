@@ -17,6 +17,7 @@
 import type { Page, Request } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { stubTransactionPages } from "./fixtures/mockTransactions";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 
@@ -65,7 +66,7 @@ async function stubApi(page: Page): Promise<FakeServer> {
   await page.route("**/api/vendors?**", (route) => route.fulfill(emptyPage));
   await page.route("**/api/transactions/attribution-review-queue?**", (route) => route.fulfill(emptyPage));
   await page.route("**/api/transactions/review-count", (route) => route.fulfill(json({ count: 0 })));
-  await page.route(/\/api\/transactions(\?.*)?$/, (route) => route.fulfill(json([TXN])));
+  await stubTransactionPages(page, [TXN]);
   await page.route(`**/api/transactions/${TXN_ID}`, async (route, request: Request) => {
     if (request.method() !== "PATCH") {
       await route.fulfill(json(TXN));

@@ -2,13 +2,14 @@ import { useMemo } from "react";
 import { createColumnHelper } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { type AppTableFeatures } from "@/shared/lib/table-features";
-import { Trash2, Check, Home, Copy } from "lucide-react";
-import { compareAsc, parseISO } from "date-fns/fp";
+import { Trash2, Check, Home, Copy, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatDate } from "@/shared/utils/date";
 import { formatTag } from "@/shared/utils/tag";
 import { TAG_COLORS } from "@/shared/lib/constants";
 import { APPROVABLE_STATUSES } from "@/shared/lib/transaction-config";
+import { SELECTING_ALL_LABEL } from "@/shared/lib/transaction-list-messages";
+import type { SelectAllControl } from "@/shared/types/transaction/select-all-control";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import { Button } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
@@ -22,27 +23,32 @@ interface ColumnActions {
   busyId: string | null;
   duplicateIds?: Set<string>;
   canWrite?: boolean;
+  /** The header checkbox ticks every row the filters match, on every page, which the server is asked for. */
+  selectAll: SelectAllControl;
 }
 
 const columnHelper = createColumnHelper<AppTableFeatures, Transaction>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, actions: ColumnActions): ColumnDef<AppTableFeatures, Transaction, any>[] {
-  const { onDelete, onApprove, busyId, duplicateIds, canWrite = true } = actions;
+  const { onDelete, onApprove, busyId, duplicateIds, canWrite = true, selectAll } = actions;
 
   return useMemo(() => [
     columnHelper.display({
       id: "select",
       enableSorting: false,
-      header: ({ table }) => (
-        <IndeterminateCheckbox
-          checked={table.getIsAllRowsSelected()}
-          indeterminate={table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()}
-          onChange={table.getToggleAllRowsSelectedHandler()}
-          onClick={(e) => e.stopPropagation()}
-          aria-label="Select all transactions"
-        />
-      ),
+      header: () =>
+        selectAll.isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin" role="status" aria-label={SELECTING_ALL_LABEL} />
+        ) : (
+          <IndeterminateCheckbox
+            checked={selectAll.checked}
+            indeterminate={selectAll.indeterminate}
+            onChange={selectAll.onToggle}
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Select all transactions"
+          />
+        ),
       cell: ({ row }) => (
         <IndeterminateCheckbox
           checked={row.getIsSelected()}
@@ -64,26 +70,9 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
           )}
         </div>
       ),
-      filterFn: (row, _columnId, filterValue: string[]) => {
-        return filterValue.includes(row.getValue<string>("status"));
-      },
     }),
     columnHelper.accessor("transaction_date", {
       header: "Date",
-      sortFn: (rowA, rowB) => {
-        const a = rowA.original.transaction_date ? parseISO(rowA.original.transaction_date) : new Date(0);
-        const b = rowB.original.transaction_date ? parseISO(rowB.original.transaction_date) : new Date(0);
-        return compareAsc(b)(a);
-      },
-      filterFn: (row, _columnId, filterValue: [string, string]) => {
-        const val = row.original.transaction_date;
-        if (!val) return false;
-        const dateOnly = val.slice(0, 10);
-        const [from, to] = filterValue;
-        if (from && dateOnly < from) return false;
-        if (to && dateOnly > to) return false;
-        return true;
-      },
       cell: ({ getValue }) => <span className="text-muted-foreground">{formatDate(getValue())}</span>,
     }),
     columnHelper.accessor("vendor", {
@@ -102,19 +91,9 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
           </div>
         );
       },
-      filterFn: (row, _columnId, filterValue: string[]) => {
-        const val = row.getValue<string | null>("vendor");
-        if (filterValue.includes("__empty__") && (!val || val.trim() === "")) return true;
-        return val != null && filterValue.includes(val);
-      },
     }),
     columnHelper.accessor("amount", {
       header: () => <span className="block text-right">Amount</span>,
-      sortFn: (rowA, rowB) => {
-        const a = parseFloat(rowA.original.amount) || 0;
-        const b = parseFloat(rowB.original.amount) || 0;
-        return a - b;
-      },
       cell: ({ getValue, row }) => {
         const isIncome = row.original.transaction_type === "income";
         return (
@@ -127,9 +106,6 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
     columnHelper.accessor("transaction_type", {
       header: "Type",
       cell: ({ getValue }) => <TransactionTypeBadge type={getValue()} />,
-      filterFn: (row, _columnId, filterValue: string[]) => {
-        return filterValue.includes(row.getValue<string>("transaction_type"));
-      },
     }),
     columnHelper.accessor("category", {
       header: "Category",
@@ -145,33 +121,16 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
           </span>
         );
       },
-      filterFn: (row, _columnId, filterValue: string[]) => {
-        return filterValue.includes(row.getValue<string>("category"));
-      },
     }),
     columnHelper.accessor("property_id", {
       header: "Property",
-      sortFn: (rowA, rowB) => {
-        const a = propertyMap.get(rowA.original.property_id ?? "") ?? "";
-        const b = propertyMap.get(rowB.original.property_id ?? "") ?? "";
-        return a.localeCompare(b);
-      },
       cell: ({ getValue }) => (
         <span className="text-muted-foreground">{getValue() ? (propertyMap.get(getValue()!) ?? "\u2014") : "\u2014"}</span>
       ),
-      filterFn: (row, _columnId, filterValue: string[]) => {
-        const val = row.getValue<string | null>("property_id");
-        if (filterValue.includes("__empty__") && !val) return true;
-        return val != null && filterValue.includes(val);
-      },
     }),
     columnHelper.accessor("tax_relevant", {
       header: () => <span title="Whether this transaction is included in your Tax Report. Set automatically based on category.">Tax</span>,
       cell: ({ getValue }) => (getValue() ? "Yes" : "No"),
-      filterFn: (row, _columnId, filterValue: string[]) => {
-        const val = String(row.original.tax_relevant);
-        return filterValue.includes(val);
-      },
     }),
     columnHelper.display({
       id: "actions",
@@ -208,5 +167,5 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
         );
       },
     }),
-  ], [propertyMap, busyId, onDelete, onApprove, duplicateIds, canWrite]);
+  ], [propertyMap, busyId, onDelete, onApprove, duplicateIds, canWrite, selectAll]);
 }

@@ -12,6 +12,7 @@ import type { UtilityPlanRenewalAlert } from "@mybookkeeper/api-client/types/uti
 import type { VendorSummary } from "@mybookkeeper/api-client/types/vendor/vendor-summary";
 import type { AxiosAdapter, AxiosRequestConfig } from "axios";
 import { inListOrder } from "./transactionListOrder";
+import { withTransactionListQuery } from "./withTransactionListQuery";
 
 export function aTransaction(overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -155,7 +156,8 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     bankImportFailure: null,
     requests: [],
   };
-  const adapter: AxiosAdapter = (config) => {
+  const adapter: AxiosAdapter = (request) => {
+    const config = withTransactionListQuery(request);
     const respond = (data: unknown, status = 200) => {
       const response = { data, status, statusText: "", headers: {}, config };
       if (status < 400) return Promise.resolve(response);

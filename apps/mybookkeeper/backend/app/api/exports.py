@@ -1,7 +1,7 @@
 """Export endpoints for transactions, Schedule E, and tax summary."""
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 
 from app.core.context import RequestContext
@@ -19,7 +19,7 @@ def _check_export_rate_limit(ctx: RequestContext) -> None:
 
 @router.get("/transactions/csv")
 async def export_transactions_csv(
-    filters: Annotated[TransactionFilters, Depends()],
+    filters: Annotated[TransactionFilters, Query()],
     ctx: RequestContext = Depends(current_org_member),
 ) -> Response:
     _check_export_rate_limit(ctx)
@@ -35,7 +35,7 @@ async def export_transactions_csv(
 
 @router.get("/transactions/pdf")
 async def export_transactions_pdf(
-    filters: Annotated[TransactionFilters, Depends()],
+    filters: Annotated[TransactionFilters, Query()],
     ctx: RequestContext = Depends(current_org_member),
 ) -> Response:
     _check_export_rate_limit(ctx)

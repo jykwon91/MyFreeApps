@@ -17,6 +17,10 @@ from app.schemas.transactions.operation_responses import (
 from app.schemas.transactions.review_count import TransactionReviewCount
 from app.schemas.transactions.transaction import ScheduleELineItem, TransactionCreate, TransactionRead, TransactionUpdate, TransactionUpdateResponse
 from app.schemas.transactions.transaction_filters import TransactionFilters
+from app.schemas.transactions.transaction_list_page import TransactionListPage
+from app.schemas.transactions.transaction_list_query import TransactionListQuery
+from app.schemas.transactions.transaction_page_query import TransactionPageQuery
+from app.schemas.transactions.transaction_selection_ref import TransactionSelectionRef
 from app.services.transactions import transaction_service
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
@@ -24,12 +28,37 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 
 @router.get("", response_model=list[TransactionRead])
 async def list_transactions(
-    filters: Annotated[TransactionFilters, Depends()],
-    limit: int = Query(default=1000, le=5000),
-    offset: int = 0,
+    query: Annotated[TransactionListQuery, Query()],
     ctx: RequestContext = Depends(current_org_member),
 ) -> list[TransactionRead]:
-    return await transaction_service.list_transactions(ctx, filters, limit=limit, offset=offset)
+    return await transaction_service.list_transactions(ctx, query, limit=query.limit, offset=query.offset)
+
+
+@router.get("/page", response_model=TransactionListPage)
+async def list_transaction_page(
+    query: Annotated[TransactionPageQuery, Query()],
+    ctx: RequestContext = Depends(current_org_member),
+) -> TransactionListPage:
+    """One page of the list with the total the filters match, so a client can page through every row."""
+    return await transaction_service.list_transaction_page(ctx, query, limit=query.limit, offset=query.offset)
+
+
+@router.get("/selection", response_model=list[TransactionSelectionRef])
+async def list_transaction_selection(
+    filters: Annotated[TransactionFilters, Query()],
+    ctx: RequestContext = Depends(current_org_member),
+) -> list[TransactionSelectionRef]:
+    """Every row the filters match, so "select all" can tick rows on pages not loaded yet."""
+    return await transaction_service.list_selection_refs(ctx, filters)
+
+
+@router.get("/categories", response_model=list[str])
+async def list_transaction_categories(
+    filters: Annotated[TransactionFilters, Query()],
+    ctx: RequestContext = Depends(current_org_member),
+) -> list[str]:
+    """The categories the matching rows have: the choices of the table's Category filter."""
+    return await transaction_service.list_categories(ctx, filters)
 
 
 @router.get("/review-count", response_model=TransactionReviewCount)
