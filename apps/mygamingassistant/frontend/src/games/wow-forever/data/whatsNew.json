@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-15",
+    "title": "Goal planner: one route for all your professions",
+    "summary": "Pick the professions you want to level (say Tailoring, Enchanting and Cooking to Artisan) and any recipes you're after. The Goal planner gives you one route: the cheapest crafting for each profession at today's auction prices, every trainer at the right skill, where each recipe comes from, one combined shopping list, and the stops in travel order for your faction, each with Route there.",
+    "to": "/wow-forever/goal-planner"
+  },
+  {
+    "date": "2026-11-15",
     "title": "Guild roster shows when Blizzard last saved each member",
     "summary": "Each member on the Roster tab now shows how long ago Blizzard captured their data, with a note that it only updates when they log out. A short explainer near the Refresh button explains why the data may look unchanged after a refresh.",
     "to": "/wow-forever/topdeadcenter?tab=roster"

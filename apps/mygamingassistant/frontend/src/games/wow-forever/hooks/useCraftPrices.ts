@@ -87,6 +87,16 @@ export function usePriceOverrides(): PriceOverrides {
   return { prices, setPrice, replaceAll };
 }
 
+/** The formulas you've ticked on each guide, read once (the Goal planner prices several professions at a time). */
+export function readKnownFormulas(): Readonly<Partial<Record<CraftingProfession, ReadonlySet<number>>>> {
+  const stored = readStored(KNOWN_RECIPES_STORAGE_KEY, parseStoredRecipes, {});
+  const out: Partial<Record<CraftingProfession, ReadonlySet<number>>> = {};
+  for (const [profession, list] of Object.entries(stored)) {
+    if (isCraftingProfession(profession)) out[profession] = new Set(list);
+  }
+  return out;
+}
+
 /** The formulas (item-learned recipes) you've bought for one profession. */
 export function useKnownRecipes(profession: CraftingProfession): [ReadonlySet<number>, (spell: number, known: boolean) => void] {
   const [stored, setStored] = useState<StoredRecipes>(() => readStored(KNOWN_RECIPES_STORAGE_KEY, parseStoredRecipes, {}));

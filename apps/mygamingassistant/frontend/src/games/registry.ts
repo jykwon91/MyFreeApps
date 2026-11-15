@@ -219,6 +219,13 @@ export const COMPANION_GAMES: Readonly<Record<string, CompanionGameEntry>> = {
         description: "Search every recipe from every profession: what it makes, the ingredients, and where to learn it.",
       },
       {
+        path: "/wow-forever/goal-planner",
+        category: "crafting",
+        title: "Goal planner",
+        iconName: "Route",
+        description: "Pick the professions and recipes you want: one route with every trainer, recipe stop and the full shopping list, cheapest at today's prices.",
+      },
+      {
         path: "/wow-forever/gold",
         category: "crafting",
         title: "Making gold",

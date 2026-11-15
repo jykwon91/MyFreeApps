@@ -35,6 +35,11 @@ export function clampSkill(value: number | null): number | null {
   return parseSkill(Math.min(Math.round(value), MAX_CRAFT_SKILL));
 }
 
+/** The skill you saved on a profession's guide; null when you haven't typed one. */
+export function readSavedSkill(profession: SkilledProfession): number | null {
+  return readStored(CRAFT_SKILL_STORAGE_KEY, parseStored, {})[profession] ?? null;
+}
+
 /**
  * Your skill in a crafting or gathering profession. A `?skill=` link wins for
  * that visit without overwriting what you saved; typing a skill saves it per profession.
@@ -42,7 +47,7 @@ export function clampSkill(value: number | null): number | null {
 export function useCraftingSkill(profession: SkilledProfession):[number | null, (skill: number | null) => void] {
   const [params, setParams] = useLiveSearchParams();
   const fromUrl = parseSkill(params.get(SKILL_PARAM));
-  const skill = fromUrl ?? readStored(CRAFT_SKILL_STORAGE_KEY, parseStored, {})[profession] ?? null;
+  const skill = fromUrl ?? readSavedSkill(profession);
 
   const update = useCallback(
     (next: number | null) => {
