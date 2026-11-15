@@ -9,6 +9,7 @@ import { TAX_ADVISOR_CTA_MESSAGES } from "@mybookkeeper/api-client/constants/tax
 import { LoadingButton, isNotFound } from "@platform/ui";
 import { SEVERITY_CONFIG } from "@/shared/lib/tax-advisor-config";
 import SuggestionCard from "@/app/features/tax/SuggestionCard";
+import TaxAdvisorGenerateAlert from "@/app/features/tax/TaxAdvisorGenerateAlert";
 import TaxAdvisorPanelSkeleton from "@/app/features/tax/TaxAdvisorPanelSkeleton";
 
 export interface TaxAdvisorPanelProps {
@@ -52,19 +53,22 @@ export default function TaxAdvisorPanel({ taxReturnId, formCount }: TaxAdvisorPa
     return null;
   }
 
+  const ctaState = advisorCtaState(generateError);
+  // Nothing to press once today's limit is hit or in the demo workspace.
+  const canRegenerate = ctaState !== "rate-limited" && ctaState !== "demo";
+
   // No cached suggestions yet (404 or empty) — show CTA
   const hasCached = cached && cached.suggestions.length > 0;
   const noCachedSuggestions = !cached || isNotFound(cacheError);
 
   if (noCachedSuggestions) {
-    const ctaState = advisorCtaState(generateError);
     return (
       <div className="border rounded-lg p-6 text-center">
         <Lightbulb className="h-8 w-8 mx-auto mb-3 text-yellow-500" />
         <p className="text-sm text-muted-foreground mb-4">
           {TAX_ADVISOR_CTA_MESSAGES[ctaState]}
         </p>
-        {ctaState !== "rate-limited" && ctaState !== "demo" && (
+        {canRegenerate && (
           <LoadingButton onClick={handleGenerate} isLoading={isGenerating} loadingText="Reviewing...">
             Get Tax Advice
           </LoadingButton>
@@ -80,17 +84,20 @@ export default function TaxAdvisorPanel({ taxReturnId, formCount }: TaxAdvisorPa
         <ShieldCheck className="h-8 w-8 mx-auto mb-3 text-green-500" />
         <p className="font-medium">Your tax data looks good! No issues found.</p>
         <p className="text-sm mt-1">Everything checks out from what I can see.</p>
-        <div className="mt-4">
-          <LoadingButton
-            onClick={handleGenerate}
-            isLoading={isGenerating}
-            loadingText="Reviewing..."
-            variant="secondary"
-            size="sm"
-          >
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-            Regenerate
-          </LoadingButton>
+        <div className="mt-4 space-y-3">
+          <TaxAdvisorGenerateAlert state={ctaState} />
+          {canRegenerate && (
+            <LoadingButton
+              onClick={handleGenerate}
+              isLoading={isGenerating}
+              loadingText="Reviewing..."
+              variant="secondary"
+              size="sm"
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              Regenerate
+            </LoadingButton>
+          )}
         </div>
       </div>
     );
@@ -108,17 +115,20 @@ export default function TaxAdvisorPanel({ taxReturnId, formCount }: TaxAdvisorPa
         {generatedAt && (
           <p className="text-xs text-muted-foreground">Generated on {generatedAt}</p>
         )}
-        <LoadingButton
-          onClick={handleGenerate}
-          isLoading={isGenerating}
-          loadingText="Reviewing..."
-          variant="ghost"
-          size="sm"
-        >
-          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-          Regenerate
-        </LoadingButton>
+        {canRegenerate && (
+          <LoadingButton
+            onClick={handleGenerate}
+            isLoading={isGenerating}
+            loadingText="Reviewing..."
+            variant="ghost"
+            size="sm"
+          >
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            Regenerate
+          </LoadingButton>
+        )}
       </div>
+      <TaxAdvisorGenerateAlert state={ctaState} />
 
       {grouped.length === 0 ? (
         <div className="border rounded-lg p-6 text-center text-muted-foreground">
