@@ -1,7 +1,6 @@
 import {
   toUtilityPlanFields,
   toUtilityPlanFormValues,
-  validateUtilityPlanForm,
 } from "@mybookkeeper/api-client/utils/utilityPlanForm";
 import { showError, showSuccess } from "@platform/ui";
 import { useUpdateUtilityPlanMutation } from "@mybookkeeper/api-client/store/utilityPlansApi";
@@ -9,6 +8,7 @@ import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/u
 import UtilityPlanFormActions from "./UtilityPlanFormActions";
 import UtilityPlanFormFields from "./UtilityPlanFormFields";
 import { useUtilityPlanForm } from "./useUtilityPlanForm";
+import { useUtilityPlanFormCheck } from "./useUtilityPlanFormCheck";
 
 export interface EditUtilityPlanFormProps {
   plan: UtilityPlanDetail;
@@ -30,14 +30,11 @@ export default function EditUtilityPlanForm({
 }: EditUtilityPlanFormProps) {
   const [updatePlan, { isLoading }] = useUpdateUtilityPlanMutation();
   const { values, setField } = useUtilityPlanForm(toUtilityPlanFormValues(plan));
+  const { problems, passes } = useUtilityPlanFormCheck(values);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const problem = validateUtilityPlanForm(values);
-    if (problem) {
-      showError(problem);
-      return;
-    }
+    if (!passes()) return;
 
     try {
       await updatePlan({ planId: plan.id, data: toUtilityPlanFields(values) }).unwrap();
@@ -49,14 +46,14 @@ export default function EditUtilityPlanForm({
   }
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
+    <form noValidate onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
       {/* The property is fixed for the life of the plan, so it reads as
           context rather than as a field the operator can change. */}
       <p className="text-sm text-muted-foreground" data-testid="edit-utility-plan-property">
         {plan.property_name ?? "Unknown property"}
       </p>
 
-      <UtilityPlanFormFields values={values} setField={setField} />
+      <UtilityPlanFormFields values={values} setField={setField} problems={problems} />
 
       <UtilityPlanFormActions
         isSaving={isLoading}

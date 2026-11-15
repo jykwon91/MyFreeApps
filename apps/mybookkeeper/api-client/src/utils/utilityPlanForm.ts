@@ -2,6 +2,8 @@ import type { UtilityPlanDetail } from "../types/utility/utility-plan-detail";
 import type { UtilityPlanFieldsPayload } from "../types/utility/utility-plan-fields-payload";
 import {
   UTILITY_PLAN_FORM_PROBLEMS,
+  UTILITY_PLAN_MBPS_MAX,
+  UTILITY_PLAN_RATE_MAX_CENTS,
   UTILITY_PLAN_RATE_MAX_DECIMALS,
   UTILITY_PLAN_TERM_MONTHS_MAX,
   UTILITY_PLAN_TERM_MONTHS_MIN,
@@ -165,6 +167,8 @@ const RATE_FIELDS = ["energyCharge", "tduCharge", "avgPrice"] as const;
 const WHOLE_NUMBER_FIELDS = ["minUsageThreshold", "downloadMbps", "uploadMbps", "dataCapGb"] as const;
 const POSITIVE_ONLY_FIELDS = ["downloadMbps", "uploadMbps", "dataCapGb"] as const;
 
+const SPEED_FIELDS = ["downloadMbps", "uploadMbps"] as const;
+
 const DECIMAL = /^\d+(\.\d+)?$/;
 const WHOLE = /^\d+$/;
 
@@ -195,6 +199,7 @@ export function utilityPlanFormProblems(values: UtilityPlanFormValues): UtilityP
   if (!values.providerName.trim()) problems.providerName = UTILITY_PLAN_FORM_PROBLEMS.providerRequired;
   for (const field of RATE_FIELDS) {
     if (isUnreadableDecimal(values[field]) || hasTooManyDecimals(values[field])) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.notRate;
+    else if (Number(values[field]) > UTILITY_PLAN_RATE_MAX_CENTS) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh;
   }
   for (const field of DOLLAR_FIELDS) {
     if (isUnreadableDecimal(values[field])) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.notDollars;
@@ -215,6 +220,10 @@ export function utilityPlanFormProblems(values: UtilityPlanFormValues): UtilityP
   for (const field of WHOLE_NUMBER_FIELDS) {
     if (isUnreadableWhole(values[field])) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.notWholeNumber;
   }
+  // Both dates are real calendar dates from a date input, so ISO strings compare in order.
+  if (values.serviceStartDate !== "" && values.termEndDate !== "" && values.termEndDate < values.serviceStartDate) {
+    problems.termEndDate = UTILITY_PLAN_FORM_PROBLEMS.endBeforeStart;
+  }
   // A price step with no date is one the renewal alert cannot announce, so the
   // table rejects it outright (``chk_utility_plan_post_promo_needs_term_end``).
   if (values.postPromoMonthly.trim() !== "" && values.termEndDate === "") {
@@ -225,12 +234,10 @@ export function utilityPlanFormProblems(values: UtilityPlanFormValues): UtilityP
   for (const field of POSITIVE_ONLY_FIELDS) {
     if (!problems[field] && isNotPositive(values[field])) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.notPositive;
   }
+  for (const field of SPEED_FIELDS) {
+    if (!problems[field] && Number(values[field]) > UTILITY_PLAN_MBPS_MAX) problems[field] = UTILITY_PLAN_FORM_PROBLEMS.speedTooHigh;
+  }
   return problems;
-}
-
-/** The first problem to show as one message, or null when the form is submittable. */
-export function validateUtilityPlanForm(values: UtilityPlanFormValues): string | null {
-  return Object.values(utilityPlanFormProblems(values))[0] ?? null;
 }
 
 /** True for a filled-in field that parses to zero or less. Blank is fine. */

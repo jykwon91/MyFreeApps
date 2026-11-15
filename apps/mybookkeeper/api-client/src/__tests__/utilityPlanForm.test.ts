@@ -13,7 +13,6 @@ import {
   toUtilityPlanFields,
   toUtilityPlanFormValues,
   utilityPlanFormProblems,
-  validateUtilityPlanForm,
 } from "../utils/utilityPlanForm";
 import type { UtilityPlanDetail } from "../types/utility/utility-plan-detail";
 
@@ -298,79 +297,6 @@ describe("toUtilityPlanFields", () => {
   });
 });
 
-describe("validateUtilityPlanForm", () => {
-  it("accepts a form with only a provider", () => {
-    expect(
-      validateUtilityPlanForm({ ...EMPTY_UTILITY_PLAN_FORM, providerName: "Reliant" }),
-    ).toBeNull();
-  });
-
-  it("rejects a blank provider", () => {
-    expect(
-      validateUtilityPlanForm({ ...EMPTY_UTILITY_PLAN_FORM, providerName: "   " }),
-    ).toBe("Provider is required.");
-  });
-
-  it("rejects a half-recorded bill credit", () => {
-    expect(
-      validateUtilityPlanForm({
-        ...EMPTY_UTILITY_PLAN_FORM,
-        providerName: "Reliant",
-        hasBillCredit: true,
-        billCreditAmount: "35",
-        billCreditThreshold: "",
-      }),
-    ).toBe("A bill credit needs both an amount and a usage threshold.");
-  });
-
-  it("rejects a post-promo price with no date it takes effect on", () => {
-    // The table rejects the same shape. Catching it here points at the field
-    // instead of costing a round trip that comes back as a raw 422.
-    expect(
-      validateUtilityPlanForm({
-        ...EMPTY_UTILITY_PLAN_FORM,
-        providerName: "Spectrum",
-        serviceType: "internet",
-        postPromoMonthly: "89.99",
-      }),
-    ).toBe("A post-promo price needs the date the promo ends.");
-  });
-
-  it("accepts a post-promo price once the term end date is set", () => {
-    expect(
-      validateUtilityPlanForm({
-        ...EMPTY_UTILITY_PLAN_FORM,
-        providerName: "Spectrum",
-        serviceType: "internet",
-        postPromoMonthly: "89.99",
-        termEndDate: "2027-02-17",
-      }),
-    ).toBeNull();
-  });
-
-  it("rejects a zero speed, which the table stores as null instead", () => {
-    expect(
-      validateUtilityPlanForm({
-        ...EMPTY_UTILITY_PLAN_FORM,
-        providerName: "Spectrum",
-        serviceType: "internet",
-        uploadMbps: "0",
-      }),
-    ).toBe("Speeds and data caps must be more than zero.");
-  });
-
-  it("accepts blank speeds, which mean not recorded", () => {
-    expect(
-      validateUtilityPlanForm({
-        ...EMPTY_UTILITY_PLAN_FORM,
-        providerName: "Spectrum",
-        serviceType: "internet",
-        downloadMbps: "1000",
-      }),
-    ).toBeNull();
-  });
-});
-
 describe("utilityPlanFormProblems", () => {
   const valid = { ...EMPTY_UTILITY_PLAN_FORM, providerName: "Reliant" };
 
@@ -440,12 +366,26 @@ describe("utilityPlanFormProblems", () => {
     expect(utilityPlanFormProblems({ ...valid, termMonths: "600" }).termMonths).toBeUndefined();
   });
 
-  it("accepts every value the edit form seeds from a saved plan", () => {
-    expect(utilityPlanFormProblems(toUtilityPlanFormValues(makeDetail()))).toEqual({});
+  it("rejects a term that ends before the service starts, and accepts the same day", () => {
+    const form = { ...valid, serviceStartDate: "2026-02-01" };
+    expect(utilityPlanFormProblems({ ...form, termEndDate: "2026-01-31" }).termEndDate).toBe(UTILITY_PLAN_FORM_PROBLEMS.endBeforeStart);
+    expect(utilityPlanFormProblems({ ...form, termEndDate: "2026-02-01" }).termEndDate).toBeUndefined();
+    expect(utilityPlanFormProblems({ ...valid, termEndDate: "2026-01-31" }).termEndDate).toBeUndefined();
   });
 
-  it("reports the first problem as the single message the web shows", () => {
-    expect(validateUtilityPlanForm({ ...valid, etf: "1.50." })).toBe(UTILITY_PLAN_FORM_PROBLEMS.notDollars);
-    expect(validateUtilityPlanForm(valid)).toBeNull();
+  it("rejects a rate above the server's ceiling, which is dollars entered where cents belong", () => {
+    expect(utilityPlanFormProblems({ ...valid, energyCharge: "1000" }).energyCharge).toBe(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh);
+    expect(utilityPlanFormProblems({ ...valid, tduCharge: "999.9999" }).tduCharge).toBeUndefined();
+    expect(utilityPlanFormProblems({ ...valid, avgPrice: "1500.5" }).avgPrice).toBe(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh);
+  });
+
+  it("rejects a speed above the server's ceiling but not a data cap", () => {
+    expect(utilityPlanFormProblems({ ...valid, downloadMbps: "100001" }).downloadMbps).toBe(UTILITY_PLAN_FORM_PROBLEMS.speedTooHigh);
+    expect(utilityPlanFormProblems({ ...valid, uploadMbps: "100000" }).uploadMbps).toBeUndefined();
+    expect(utilityPlanFormProblems({ ...valid, dataCapGb: "5000000" }).dataCapGb).toBeUndefined();
+  });
+
+  it("accepts every value the edit form seeds from a saved plan", () => {
+    expect(utilityPlanFormProblems(toUtilityPlanFormValues(makeDetail()))).toEqual({});
   });
 });

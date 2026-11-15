@@ -1,11 +1,14 @@
 import { FormField } from "@platform/ui";
+import type { UtilityPlanFormProblems } from "@mybookkeeper/api-client/types/utility/utility-plan-form-problems";
+import { utilityPlanFieldAria } from "./utility-plan-field-aria";
+import UtilityPlanFieldProblem from "./UtilityPlanFieldProblem";
 import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 import type { UtilityPlanFormState } from "./useUtilityPlanForm";
 
 export type UtilityPlanInternetFieldsProps = Pick<
   UtilityPlanFormState,
   "values" | "setField"
->;
+> & { problems: UtilityPlanFormProblems };
 
 /**
  * The terms that price an internet plan rather than a metered one.
@@ -20,39 +23,48 @@ export type UtilityPlanInternetFieldsProps = Pick<
 export default function UtilityPlanInternetFields({
   values,
   setField,
+  problems,
 }: UtilityPlanInternetFieldsProps) {
   return (
     <div className="space-y-4" data-testid="utility-plan-internet-fields">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FormField label="Price after the promo (USD/mo)">
           {(field) => (
-            <input
-              type="number"
-              value={values.postPromoMonthly}
-              onChange={(e) => setField("postPromoMonthly", e.target.value)}
-              placeholder="89.99"
-              min="0"
-              step="0.01"
-              className={UTILITY_PLAN_INPUT_CLASS}
-              data-testid="utility-plan-post-promo-input"
-              {...field}
-            />
+            <>
+              <input
+                type="number"
+                value={values.postPromoMonthly}
+                onChange={(e) => setField("postPromoMonthly", e.target.value)}
+                placeholder="89.99"
+                min="0"
+                step="0.01"
+                className={UTILITY_PLAN_INPUT_CLASS}
+                data-testid="utility-plan-post-promo-input"
+                {...field}
+                {...utilityPlanFieldAria(problems, "postPromoMonthly")}
+              />
+              <UtilityPlanFieldProblem problems={problems} field="postPromoMonthly" />
+            </>
           )}
         </FormField>
 
         <FormField label="Equipment fee (USD/mo)">
           {(field) => (
-            <input
-              type="number"
-              value={values.equipmentFeeMonthly}
-              onChange={(e) => setField("equipmentFeeMonthly", e.target.value)}
-              placeholder="15"
-              min="0"
-              step="0.01"
-              className={UTILITY_PLAN_INPUT_CLASS}
-              data-testid="utility-plan-equipment-fee-input"
-              {...field}
-            />
+            <>
+              <input
+                type="number"
+                value={values.equipmentFeeMonthly}
+                onChange={(e) => setField("equipmentFeeMonthly", e.target.value)}
+                placeholder="15"
+                min="0"
+                step="0.01"
+                className={UTILITY_PLAN_INPUT_CLASS}
+                data-testid="utility-plan-equipment-fee-input"
+                {...field}
+                {...utilityPlanFieldAria(problems, "equipmentFeeMonthly")}
+              />
+              <UtilityPlanFieldProblem problems={problems} field="equipmentFeeMonthly" />
+            </>
           )}
         </FormField>
       </div>
@@ -66,33 +78,41 @@ export default function UtilityPlanInternetFields({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <FormField label="Download (Mbps)">
           {(field) => (
-            <input
-              type="number"
-              value={values.downloadMbps}
-              onChange={(e) => setField("downloadMbps", e.target.value)}
-              placeholder="1000"
-              min="1"
-              step="1"
-              className={UTILITY_PLAN_INPUT_CLASS}
-              data-testid="utility-plan-download-input"
-              {...field}
-            />
+            <>
+              <input
+                type="number"
+                value={values.downloadMbps}
+                onChange={(e) => setField("downloadMbps", e.target.value)}
+                placeholder="1000"
+                min="1"
+                step="1"
+                className={UTILITY_PLAN_INPUT_CLASS}
+                data-testid="utility-plan-download-input"
+                {...field}
+                {...utilityPlanFieldAria(problems, "downloadMbps")}
+              />
+              <UtilityPlanFieldProblem problems={problems} field="downloadMbps" />
+            </>
           )}
         </FormField>
 
         <FormField label="Upload (Mbps)">
           {(field) => (
-            <input
-              type="number"
-              value={values.uploadMbps}
-              onChange={(e) => setField("uploadMbps", e.target.value)}
-              placeholder="1000"
-              min="1"
-              step="1"
-              className={UTILITY_PLAN_INPUT_CLASS}
-              data-testid="utility-plan-upload-input"
-              {...field}
-            />
+            <>
+              <input
+                type="number"
+                value={values.uploadMbps}
+                onChange={(e) => setField("uploadMbps", e.target.value)}
+                placeholder="1000"
+                min="1"
+                step="1"
+                className={UTILITY_PLAN_INPUT_CLASS}
+                data-testid="utility-plan-upload-input"
+                {...field}
+                {...utilityPlanFieldAria(problems, "uploadMbps")}
+              />
+              <UtilityPlanFieldProblem problems={problems} field="uploadMbps" />
+            </>
           )}
         </FormField>
 
@@ -102,17 +122,21 @@ export default function UtilityPlanInternetFields({
             too narrow to show in full. */}
         <FormField label="Data cap (GB)">
           {(field) => (
-            <input
-              type="number"
-              value={values.dataCapGb}
-              onChange={(e) => setField("dataCapGb", e.target.value)}
-              placeholder="1200"
-              min="1"
-              step="1"
-              className={UTILITY_PLAN_INPUT_CLASS}
-              data-testid="utility-plan-data-cap-input"
-              {...field}
-            />
+            <>
+              <input
+                type="number"
+                value={values.dataCapGb}
+                onChange={(e) => setField("dataCapGb", e.target.value)}
+                placeholder="1200"
+                min="1"
+                step="1"
+                className={UTILITY_PLAN_INPUT_CLASS}
+                data-testid="utility-plan-data-cap-input"
+                {...field}
+                {...utilityPlanFieldAria(problems, "dataCapGb")}
+              />
+              <UtilityPlanFieldProblem problems={problems} field="dataCapGb" />
+            </>
           )}
         </FormField>
       </div>

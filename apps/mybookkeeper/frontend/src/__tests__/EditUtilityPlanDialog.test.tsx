@@ -274,8 +274,8 @@ describe("EditUtilityPlanDialog — save", () => {
     await user.type(provider, "   ");
     await user.click(screen.getByTestId("utility-plan-save-button"));
 
-    await waitFor(() =>
-      expect(showError).toHaveBeenCalledWith("Provider is required."),
+    expect(await screen.findByTestId("utility-plan-providerName-problem")).toHaveTextContent(
+      "Provider is required.",
     );
     expect(mockUpdate).not.toHaveBeenCalled();
   });
@@ -288,10 +288,8 @@ describe("EditUtilityPlanDialog — save", () => {
     await user.type(screen.getByTestId("utility-plan-credit-amount-input"), "35");
     await user.click(screen.getByTestId("utility-plan-save-button"));
 
-    await waitFor(() =>
-      expect(showError).toHaveBeenCalledWith(
-        "A bill credit needs both an amount and a usage threshold.",
-      ),
+    expect(await screen.findByTestId("utility-plan-billCreditThreshold-problem")).toHaveTextContent(
+      "A bill credit needs both an amount and a usage threshold.",
     );
     expect(mockUpdate).not.toHaveBeenCalled();
   });

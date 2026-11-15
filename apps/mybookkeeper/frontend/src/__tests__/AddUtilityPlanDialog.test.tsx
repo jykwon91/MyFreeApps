@@ -263,10 +263,8 @@ describe("AddUtilityPlanDialog — reading from a document", () => {
     await user.type(screen.getByTestId("utility-plan-post-promo-input"), "89.99");
     await user.click(screen.getByTestId("utility-plan-save-button"));
 
-    await waitFor(() =>
-      expect(showError).toHaveBeenCalledWith(
-        "A post-promo price needs the date the promo ends.",
-      ),
+    expect(await screen.findByTestId("utility-plan-termEndDate-problem")).toHaveTextContent(
+      "A post-promo price needs the date the promo ends.",
     );
     expect(mockCreate).not.toHaveBeenCalled();
   });
