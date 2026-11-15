@@ -7,14 +7,14 @@ interface MapFullSizeButtonProps {
 
 /** In the breadcrumb row over the map (never on the picture, where it would block clicks): fill the window with the map, and back. */
 export default function MapFullSizeButton({ fullSize, onToggle }: MapFullSizeButtonProps) {
-  const label = fullSize ? "Exit full size" : "Full size map";
+  const label = fullSize ? "Exit theater mode" : "Theater mode";
   const Icon = fullSize ? Minimize2 : Maximize2;
   return (
     <button
       type="button"
       onClick={onToggle}
       aria-label={label}
-      title={fullSize ? "Exit full size (Esc)" : "Fill the window with the map"}
+      title={fullSize ? "Exit theater mode (Esc)" : "Theater mode — fill the window with the map"}
       className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted sm:min-h-[32px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
     >
       <Icon aria-hidden className="h-4 w-4" />

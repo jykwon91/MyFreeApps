@@ -244,12 +244,12 @@ test("a profession trainer's Show on map lands on that trainer's marker", async 
   expectInside(await boxOf(destination), await boxOf(page.getByTestId("zone-map")));
 });
 
-test("Full size map fills the window, keeps zooming, and Esc puts it back", async ({ page }) => {
+test("Theater mode fills the window, keeps zooming, and Esc puts it back", async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await openElwynn(page);
   const before = await boxOf(page.getByTestId("zone-map"));
 
-  await page.getByRole("button", { name: "Full size map" }).click();
+  await page.getByRole("button", { name: "Theater mode" }).click();
   const full = await boxOf(page.getByTestId("zone-map"));
   // Bigger, all on screen, and as tall as the window allows (less its edge labels and the hover line).
   expect(full.width).toBeGreaterThan(before.width * 1.3);
@@ -265,12 +265,70 @@ test("Full size map fills the window, keeps zooming, and Esc puts it back", asyn
   await expectZoom(page, "Elwynn Forest", 2);
   await expectPictureCoversViewer(page, "Elwynn Forest");
 
-  // A click into a zone keeps full size (the map is swapped, the section stays).
+  // A click into a zone keeps theater mode.
   await page.getByRole("button", { name: "Reset zoom" }).click();
   await page.getByTestId("zone-map").focus();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("button", { name: "Full size map" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Theater mode" })).toBeVisible();
   expect((await boxOf(page.getByTestId("zone-map"))).width).toBeCloseTo(before.width, 0);
+});
+
+/** Which part of the picture the viewer's middle is over, 0..1 each way. */
+async function viewCentre(page: Page, mapName: string) {
+  const picture = await boxOf(page.getByRole("img", { name: `${mapName} map` }));
+  const viewer = await boxOf(page.getByTestId("zone-map"));
+  return {
+    x: (viewer.x + viewer.width / 2 - picture.x) / picture.width,
+    y: (viewer.y + viewer.height / 2 - picture.y) / picture.height,
+  };
+}
+
+test("theater mode keeps the zoom and pan you had, both ways", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await openElwynn(page);
+  await page.getByRole("button", { name: "Zoom the map in" }).click();
+  await page.getByRole("button", { name: "Zoom the map in" }).click();
+  await expectZoom(page, "Elwynn Forest", 2);
+  await page.getByTestId("zone-map").focus();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowDown");
+  await expectZoom(page, "Elwynn Forest", 2);
+  // Wait out the pan's animation: the centre stops moving.
+  let last = { x: -1, y: -1 };
+  await expect
+    .poll(async () => {
+      const now = await viewCentre(page, "Elwynn Forest");
+      const still = Math.abs(now.x - last.x) < 0.001 && Math.abs(now.y - last.y) < 0.001;
+      last = now;
+      return still;
+    })
+    .toBe(true);
+  const before = last;
+  expect(before.x).toBeGreaterThan(0.5);
+
+  await page.getByRole("button", { name: "Theater mode" }).click();
+  await expectZoom(page, "Elwynn Forest", 2);
+  const inside = await viewCentre(page, "Elwynn Forest");
+  expect(inside.x).toBeCloseTo(before.x, 1);
+  expect(inside.y).toBeCloseTo(before.y, 1);
+
+  await page.getByRole("button", { name: "Exit theater mode" }).click();
+  await expectZoom(page, "Elwynn Forest", 2);
+  const after = await viewCentre(page, "Elwynn Forest");
+  expect(after.x).toBeCloseTo(before.x, 1);
+  expect(after.y).toBeCloseTo(before.y, 1);
+});
+
+test("theater mode covers the whole window and fits a short, wide one without scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 700 });
+  await openElwynn(page);
+  await page.getByRole("button", { name: "Theater mode" }).click();
+  const overlay = await boxOf(page.getByTestId("theater-overlay"));
+  expect(overlay.height).toBeCloseTo(700, 0);
+  expect(overlay.width).toBeCloseTo(1600, 0);
+  const map = await boxOf(page.getByTestId("zone-map"));
+  expect(map.y).toBeGreaterThanOrEqual(0);
+  expect(map.y + map.height).toBeLessThanOrEqual(700);
 });
 
 test.describe("on a phone", () => {
@@ -313,9 +371,9 @@ test.describe("on a phone", () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test("Full size map fills the phone's width and the button is thumb-sized", async ({ page }) => {
+  test("Theater mode fills the phone's width and the button is thumb-sized", async ({ page }) => {
     await openElwynn(page);
-    const toggle = page.getByRole("button", { name: "Full size map" });
+    const toggle = page.getByRole("button", { name: "Theater mode" });
     const button = await boxOf(toggle);
     expect(button.width).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
     expect(button.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
@@ -324,9 +382,11 @@ test.describe("on a phone", () => {
     const full = await boxOf(page.getByTestId("zone-map"));
     expect(full.x).toBeGreaterThanOrEqual(0);
     expect(full.x + full.width).toBeLessThanOrEqual(PHONE.width);
-    expect(full.y).toBeLessThan(PHONE.height / 3);
+    // The route strip sits above the map, which then fills the width.
+    expect(full.y).toBeLessThan(PHONE.height / 2);
+    expect(full.width).toBeGreaterThan(PHONE.width * 0.7);
     await expectNoHorizontalOverflow(page);
-    await page.getByRole("button", { name: "Exit full size" }).click();
-    await expect(page.getByRole("button", { name: "Full size map" })).toBeVisible();
+    await page.getByRole("button", { name: "Exit theater mode" }).click();
+    await expect(page.getByRole("button", { name: "Theater mode" })).toBeVisible();
   });
 });

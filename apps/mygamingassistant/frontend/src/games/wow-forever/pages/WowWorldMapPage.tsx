@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { AlertBox, useIsAuthenticated } from "@platform/ui";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import AddonHelp from "@/games/wow-forever/components/worldMap/AddonHelp";
@@ -13,7 +13,9 @@ import PlayerStrip from "@/games/wow-forever/components/worldMap/PlayerStrip";
 import RoutePlanner from "@/games/wow-forever/components/worldMap/RoutePlanner";
 import WorldMapPanel from "@/games/wow-forever/components/worldMap/WorldMapPanel";
 import WorldMapSkeleton from "@/games/wow-forever/components/worldMap/WorldMapSkeleton";
+import { useCarriedMapView } from "@/games/wow-forever/hooks/useCarriedMapView";
 import { useFactionOverride } from "@/games/wow-forever/hooks/useFactionOverride";
+import { useMapTheaterMode } from "@/games/wow-forever/hooks/useMapTheaterMode";
 import { useFindFilters } from "@/games/wow-forever/hooks/useFindFilters";
 import { useMapLayers } from "@/games/wow-forever/hooks/useMapLayers";
 import { useMapMarks } from "@/games/wow-forever/hooks/useMapMarks";
@@ -25,6 +27,7 @@ import { usePlayerSettings, type PlayerSettings } from "@/games/wow-forever/hook
 import { useTravelSettings } from "@/games/wow-forever/hooks/useTravelSettings";
 import { useTripPlanner } from "@/games/wow-forever/hooks/useTripPlanner";
 import { useWorldMap } from "@/games/wow-forever/hooks/useWorldMap";
+import { THEATER_OVERLAY_STRIP_CLASSES } from "@/games/wow-forever/data/worldMap/mapTheaterLayout";
 import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 import { isReadOnly } from "@/lib/readOnly";
 import type { MapFit } from "@/games/wow-forever/worldMap/mapLayers";
@@ -51,16 +54,20 @@ export default function WowWorldMapPage() {
   const { findFilterId, showAllClasses, includeOtherFaction } = find.filters;
   const view = useMapView(data, settings.zoneId);
   const selection = useMapSelection(data, view);
+  // The map is remounted on entering / leaving theater: its zoom + pan are carried over, not reset to fit-to-zone.
+  const carriedView = useCarriedMapView(view.mapId, selection.trackZoom);
   const marks = useMapMarks(view.mapId);
   // A "Share this view" link: its map, zoom and layers on screen, its marks shown read-only.
   const sharedView = useSharedMapView(data, mapLayers);
   const { restore: sharedRestore, clearRestore: clearSharedRestore } = sharedView;
   const { clearRestore: clearSelectionRestore } = selection;
-  // The shared view's zoom goes first; once applied, only that one is cleared.
+  const { carried: carriedRestore, clear: clearCarried } = carriedView;
+  // The shared view's zoom goes first, then the one carried across theater mode; once applied, only that one is cleared.
   const clearAppliedRestore = useCallback(() => {
     if (sharedRestore) clearSharedRestore();
+    else if (carriedRestore) clearCarried();
     else clearSelectionRestore();
-  }, [sharedRestore, clearSharedRestore, clearSelectionRestore]);
+  }, [sharedRestore, clearSharedRestore, carriedRestore, clearCarried, clearSelectionRestore]);
   const { selectedPoiId } = selection;
   const places = useMemo(() => (data ? buildPlaces(data) : []), [data]);
 
@@ -119,6 +126,10 @@ export default function WowWorldMapPage() {
     selection.clear();
   }
 
+  const theaterRef = useRef<HTMLDivElement>(null);
+  // escapeTaken: MapCanvas is using Esc for its own chain — don't exit theater on that keypress.
+  const theater = useMapTheaterMode(theaterRef, planner.picking !== null || !!selectedPoiId, carriedView.carry);
+
   const training = nextWarlockTraining(settings.classId, settings.level);
   const rowProps = {
     data,
@@ -129,8 +140,98 @@ export default function WowWorldMapPage() {
   };
   const showMap = () => document.getElementById(MAP_PANEL_ID)?.scrollIntoView({ block: "start" });
 
+  /** All props for WorldMapPanel, excluding theater-mode control props. */
+  const worldMapPanelProps = data && view.mapId !== null ? {
+    data,
+    model,
+    faction: settings.faction,
+    mapId: view.mapId,
+    playerZoneId: settings.zoneId,
+    selectedPoiId,
+    focus: selection.focus,
+    onFocusApplied: selection.clearFocus,
+    route: planner.route,
+    destinationZoneId: planner.to?.route.place.zoneId ?? null,
+    fit: markerFit ?? mapSearch.fit ?? planner.fit,
+    onZoomTo: zoomTo,
+    onFitApplied: clearFits,
+    picking: planner.picking,
+    onPickPoint: planner.pickPoint,
+    onCancelPick: planner.cancelPick,
+    directionsOpen: planner.directionsOpen,
+    restore: sharedView.restore ?? carriedView.carried ?? selection.restore,
+    onRestoreApplied: clearAppliedRestore,
+    onZoomChange: carriedView.track,
+    onManualZoom: selection.takeControl,
+    onOpen: view.goTo,
+    onSetPosition: (zoneId: number, x: number, y: number) => updateSettings({ zoneId, position: { x, y } }),
+    onSelectMarker: selection.selectMarker,
+    onClearSelection: selection.clear,
+    mapLayers,
+    classId: settings.classId,
+    level: settings.level,
+    onLevelChange: (level: number | null) => updateSettings({ level }),
+    searchMarkers: mapSearch.markers,
+    marks,
+    sharedView,
+  } : null;
+
+  const searchResultsNode = data && mapSearch.search && mapSearch.view ? (
+    <MapSearchResults
+      key={`${mapSearch.search.query}-${mapSearch.includeOtherFaction}`}
+      data={data}
+      faction={settings.faction}
+      search={mapSearch.search}
+      view={mapSearch.view}
+      measured={model !== null}
+      includeOtherFaction={mapSearch.includeOtherFaction}
+      onIncludeOtherFactionChange={mapSearch.setIncludeOtherFaction}
+      selectedPoiId={selectedPoiId}
+      onToggle={selection.toggle}
+      onDirections={planner.directionsTo}
+      onShowAll={mapSearch.fitAll}
+      onClear={mapSearch.clear}
+    />
+  ) : null;
+
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-7xl">
+      {/* Theater mode overlay — fixed inset-0, covers the full viewport.
+          The ref is passed to useMapTheaterMode which inerts everything outside it. */}
+      {data && theater.active && worldMapPanelProps && (
+        <div
+          ref={theaterRef}
+          className={`m-0 fixed inset-0 z-[1050] bg-background flex flex-col md:flex-row overflow-hidden ${THEATER_OVERLAY_STRIP_CLASSES}`}
+          data-testid="theater-overlay"
+        >
+          {/* Route panel: compact top strip on mobile, left sidebar on desktop */}
+          <div className="shrink-0 max-h-36 md:max-h-none md:w-72 overflow-y-auto border-b md:border-b-0 md:border-r p-3 space-y-3">
+            <RoutePlanner
+              planner={planner}
+              data={data}
+              places={places}
+              context={searchContext}
+              faction={settings.faction}
+              travel={travel}
+              currentZoneId={settings.zoneId}
+              onShowMap={() => {}}
+              onShowAll={mapSearch.show}
+            />
+            {searchResultsNode}
+          </div>
+          {/* Map fills the remaining space */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <WorldMapPanel
+              {...worldMapPanelProps}
+              theaterMode={true}
+              onTheaterToggle={theater.toggle}
+              onExitTheater={theater.exit}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Normal page content — always rendered; visually covered and made inert by the theater overlay when active. */}
       <WowPageHeader
         title="World Map"
         subtitle="Find the nearest trainer, flight master, inn, bank, quest or dungeon — and how to get there."
@@ -181,23 +282,7 @@ export default function WowWorldMapPage() {
           {model && training && <p className="text-sm">{training}</p>}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <div className="space-y-8">
-              {mapSearch.search && mapSearch.view && (
-                <MapSearchResults
-                  key={`${mapSearch.search.query}-${mapSearch.includeOtherFaction}`}
-                  data={data}
-                  faction={settings.faction}
-                  search={mapSearch.search}
-                  view={mapSearch.view}
-                  measured={model !== null}
-                  includeOtherFaction={mapSearch.includeOtherFaction}
-                  onIncludeOtherFactionChange={mapSearch.setIncludeOtherFaction}
-                  selectedPoiId={selectedPoiId}
-                  onToggle={selection.toggle}
-                  onDirections={planner.directionsTo}
-                  onShowAll={mapSearch.fitAll}
-                  onClear={mapSearch.clear}
-                />
-              )}
+              {searchResultsNode}
               {!model && (
                 <AlertBox variant="info">
                   Say where you are above — a town like "Goldshire" or your coordinates — or open your zone on the map and click where you are, to see what's nearest to you.
@@ -225,42 +310,16 @@ export default function WowWorldMapPage() {
                 </>
               )}
             </div>
-            {view.mapId !== null && (
+            {worldMapPanelProps && (
               <div id={MAP_PANEL_ID} className="lg:sticky lg:top-4 scroll-mt-4">
-                <WorldMapPanel
-                  data={data}
-                  model={model}
-                  faction={settings.faction}
-                  mapId={view.mapId}
-                  playerZoneId={settings.zoneId}
-                  selectedPoiId={selectedPoiId}
-                  focus={selection.focus}
-                  onFocusApplied={selection.clearFocus}
-                  route={planner.route}
-                  destinationZoneId={planner.to?.route.place.zoneId ?? null}
-                  fit={markerFit ?? mapSearch.fit ?? planner.fit}
-                  onZoomTo={zoomTo}
-                  onFitApplied={clearFits}
-                  picking={planner.picking}
-                  onPickPoint={planner.pickPoint}
-                  onCancelPick={planner.cancelPick}
-                  directionsOpen={planner.directionsOpen}
-                  restore={sharedView.restore ?? selection.restore}
-                  onRestoreApplied={clearAppliedRestore}
-                  onZoomChange={selection.trackZoom}
-                  onManualZoom={selection.takeControl}
-                  onOpen={view.goTo}
-                  onSetPosition={(zoneId, x, y) => updateSettings({ zoneId, position: { x, y } })}
-                  onSelectMarker={selection.selectMarker}
-                  onClearSelection={selection.clear}
-                  mapLayers={mapLayers}
-                  classId={settings.classId}
-                  level={settings.level}
-                  onLevelChange={(level) => updateSettings({ level })}
-                  searchMarkers={mapSearch.markers}
-                  marks={marks}
-                  sharedView={sharedView}
-                />
+                {!theater.active && (
+                  <WorldMapPanel
+                    {...worldMapPanelProps}
+                    theaterMode={false}
+                    onTheaterToggle={theater.toggle}
+                    onExitTheater={theater.exit}
+                  />
+                )}
               </div>
             )}
           </div>

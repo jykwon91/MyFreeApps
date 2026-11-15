@@ -98,7 +98,7 @@ interface MapCanvasProps {
   placing: boolean;
   onPlace: (x: number, y: number) => void;
   onCancelPlace: () => void;
-  /** The map fills the window (`useMapFullSize`, owned by the panel so it outlives a zone change): Esc leaves it. */
+  /** Theater mode is on (`useMapTheaterMode`, owned by the page so it outlives a zone change): Esc leaves it. */
   fullSize: boolean;
   onExitFullSize: () => void;
   /** Controls drawn over the map's corner (the Layers button and panel), outside the viewer so its keys stay its own. */
@@ -280,7 +280,7 @@ export default function MapCanvas(props: MapCanvasProps) {
     }
     if (e.key !== "Escape") return;
     e.preventDefault();
-    // Like the in-game map: Esc first stops placing a mark, then lets go of the selection, then leaves full size, then zooms out.
+    // Like the in-game map: Esc first stops placing a mark, then lets go of the selection, then leaves theater mode, then zooms out.
     if (placing) onCancelPlace();
     else if (selectedId !== null) onClearSelection();
     else if (fullSize) onExitFullSize();
