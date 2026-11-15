@@ -14,10 +14,12 @@ transactions around the model calls (the MGA item_extractor pattern):
    ``turn_count`` and settles the quota reservation.
 
 Client disconnect cancels the generator; the ``finally`` block settles the
-turn under a shielded cancel scope, quota reservation KEPT (the tokens were
-already generated). Its status is ``complete`` once ``reply.done`` was sent --
-the learner has the whole reply, only its corrections are missing -- and
-``partial`` or ``failed`` before that.
+turn under a shielded cancel scope. Before any reply token streamed the turn is
+``failed`` and settled like a pre-token upstream error (only usage known to have
+happened is charged, usually a full refund). Once tokens streamed the quota
+reservation is KEPT (they were generated but are uncounted); the status is
+``complete`` once ``reply.done`` was sent -- the learner has the whole reply,
+only its corrections are missing -- and ``partial`` before that.
 
 Never log transcript text -- ids, counts and Anthropic ``error.type`` only.
 """
@@ -140,6 +142,18 @@ class _Outcome:
     translation: str | None = None
     usage_units: int = 0
     usage: CallUsage = field(default_factory=CallUsage)
+
+
+def _nothing_streamed_outcome(reply_usage: CallUsage, corrections_usage: CallUsage) -> _Outcome:
+    """A turn that ends before any reply token streamed (upstream error, empty
+    reply, or the client leaving): charge only what we know was used -- the
+    corrections call, if it had already finished -- and release the rest."""
+    return _Outcome(
+        status=TurnStatus.FAILED,
+        settlement=_Settlement.RECONCILE,
+        usage=reply_usage + corrections_usage,
+        usage_units=turn_units(reply_usage, corrections_usage, CallUsage()),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -306,13 +320,13 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncIterator[TurnEvent]:
     settle_attempted = False
     reply_delivered = False
     reply_parts: list[str] = []
+    reply_usage = CallUsage()
     corrections_task: asyncio.Task[tuple[CorrectionsResult | None, CallUsage]] | None = None
     translation_task: asyncio.Task[tuple[str | None, CallUsage]] | None = None
     try:
         yield TurnEvent(EVENT_TURN_STARTED, TurnStartedEvent(turn_id=prepared.turn_id, seq=prepared.seq))
         corrections_task = asyncio.create_task(run_corrections(client, prepared))
 
-        reply_usage = CallUsage()
         failure: AnthropicFailure | None = None
         request = prepared.reply_request
         try:
@@ -348,15 +362,7 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncIterator[TurnEvent]:
                     reply_text=reply_text or None,
                 )
             else:
-                # Nothing streamed: charge only what we know was used (the
-                # corrections call, if it had already finished) -- for a
-                # pre-token upstream error that is usually a full refund.
-                outcome = _Outcome(
-                    status=TurnStatus.FAILED,
-                    settlement=_Settlement.RECONCILE,
-                    usage=reply_usage + corrections_usage,
-                    usage_units=turn_units(reply_usage, corrections_usage, CallUsage()),
-                )
+                outcome = _nothing_streamed_outcome(reply_usage, corrections_usage)
             yield TurnEvent(EVENT_ERROR, TurnErrorEvent(code=code, retryable=retryable))
         else:
             yield TurnEvent(EVENT_REPLY_DONE, _EmptyPayload())
@@ -406,18 +412,24 @@ async def stream_turn(prepared: PreparedTurn) -> AsyncIterator[TurnEvent]:
             await cancel_task(corrections_task)
             await cancel_task(translation_task)
             if not settle_attempted:
-                # Client went away (or an unexpected error) before settlement:
-                # record what we have and KEEP the reservation.
-                reply_text = "".join(reply_parts).strip()
-                if reply_delivered:
-                    status = TurnStatus.COMPLETE
+                # Client went away (or an unexpected error) before settlement.
+                if not reply_parts:
+                    # No reply reached the learner: a failed turn, not a charge.
+                    abandoned = _nothing_streamed_outcome(
+                        reply_usage, corrections_usage_if_done(corrections_task),
+                    )
                 else:
-                    status = TurnStatus.PARTIAL if reply_text else TurnStatus.FAILED
-                abandoned = _Outcome(
-                    status=status,
-                    settlement=_Settlement.KEEP,
-                    reply_text=reply_text or None,
-                )
+                    # Tokens were generated but are uncounted: KEEP the reservation.
+                    reply_text = "".join(reply_parts).strip()
+                    if reply_delivered:
+                        status = TurnStatus.COMPLETE
+                    else:
+                        status = TurnStatus.PARTIAL if reply_text else TurnStatus.FAILED
+                    abandoned = _Outcome(
+                        status=status,
+                        settlement=_Settlement.KEEP,
+                        reply_text=reply_text or None,
+                    )
                 logger.info(
                     "tutor turn abandoned before settlement: turn_id=%s", prepared.turn_id,
                 )

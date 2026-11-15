@@ -113,7 +113,9 @@ async def cancel_task(task: asyncio.Task[Any] | None) -> None:
         pass
 
 
-def corrections_usage_if_done(task: asyncio.Task[tuple[CorrectionsResult | None, CallUsage]]) -> CallUsage:
-    if task.done() and not task.cancelled() and task.exception() is None:
+def corrections_usage_if_done(
+    task: asyncio.Task[tuple[CorrectionsResult | None, CallUsage]] | None,
+) -> CallUsage:
+    if task is not None and task.done() and not task.cancelled() and task.exception() is None:
         return task.result()[1]
     return CallUsage()

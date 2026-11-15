@@ -16,9 +16,11 @@ Settlement:
 
 * success                                    -> release ``reserved - actual``
                                                 (or charge the overage)
-* upstream error before any token streamed    -> release everything
+* upstream error or client disconnect before  -> release everything (only a
+  any reply token streamed                      corrections call that already
+                                                finished is charged)
 * client disconnect / mid-stream failure      -> keep the reservation (tokens
-                                                were generated and billed; the
+  after reply tokens streamed                   were generated and billed; the
                                                 exact count is unknown)
 """
 from __future__ import annotations

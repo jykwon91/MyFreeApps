@@ -289,6 +289,66 @@ class TestFailurePaths:
 
 class TestClientDisconnect:
     @pytest.mark.asyncio
+    async def test_disconnect_before_the_reply_starts_refunds_everything(
+        self, user_factory, as_user, fake_claude,
+    ) -> None:
+        """The learner left right after ``turn.started`` (web unmount abort, phone
+        backgrounded): no reply was produced, so nothing is charged."""
+        user = await user_factory()
+        user_id = uuid.UUID(user["id"])
+        async with await as_user(user) as authed:
+            session_id = uuid.UUID(await _new_session(authed))
+
+        prepared = await turn_service.prepare_turn(user_id=user_id, session_id=session_id, text="hola")
+        assert await _bucket(quota_service.user_bucket(user_id)) == prepared.reservation.units
+        stream = turn_service.stream_turn(prepared)
+        assert (await stream.__anext__()).name == "turn.started"
+        await stream.aclose()
+
+        rows = await _fetch("SELECT status, cost_units FROM tutor_turn WHERE id = :id", id=prepared.turn_id)
+        assert rows[0][0] == "failed"
+        assert rows[0][1] == 0
+        assert await _bucket(quota_service.user_bucket(user_id)) == 0
+        assert await _bucket(quota_service.GLOBAL_BUCKET) == 0
+        sessions = await _fetch("SELECT turn_count FROM tutor_session WHERE id = :id", id=session_id)
+        assert sessions[0][0] == 0
+
+    @pytest.mark.asyncio
+    async def test_disconnect_while_waiting_for_the_first_token_charges_only_known_usage(
+        self, user_factory, as_user, fake_claude,
+    ) -> None:
+        """Cancelled (as Starlette does on disconnect) while the reply had not
+        streamed a token yet: the turn fails and only the corrections call that
+        already finished is charged -- the rest of the reservation is released."""
+        fake_claude.reply_gate = asyncio.Event()
+        user = await user_factory()
+        user_id = uuid.UUID(user["id"])
+        async with await as_user(user) as authed:
+            session_id = uuid.UUID(await _new_session(authed))
+
+        prepared = await turn_service.prepare_turn(user_id=user_id, session_id=session_id, text="hola")
+        stream = turn_service.stream_turn(prepared)
+        assert (await stream.__anext__()).name == "turn.started"
+        waiting = asyncio.create_task(stream.__anext__())
+        while not fake_claude.stream_calls or not fake_claude.create_calls:
+            await asyncio.sleep(0)
+        waiting.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await waiting
+
+        corrections_units = 900  # 2 x (200 + 5*50), see _expected_units
+        rows = await _fetch(
+            "SELECT status, reply_text, cost_units FROM tutor_turn WHERE id = :id", id=prepared.turn_id,
+        )
+        assert rows[0][0] == "failed"
+        assert rows[0][1] is None
+        assert rows[0][2] == corrections_units
+        assert await _bucket(quota_service.user_bucket(user_id)) == corrections_units
+        assert await _bucket(quota_service.GLOBAL_BUCKET) == corrections_units
+        sessions = await _fetch("SELECT turn_count FROM tutor_session WHERE id = :id", id=session_id)
+        assert sessions[0][0] == 0
+
+    @pytest.mark.asyncio
     async def test_abandoned_stream_settles_partial_without_refund(
         self, user_factory, as_user, fake_claude,
     ) -> None:
