@@ -15,7 +15,7 @@ import type { TransactionReviewCount } from "../types/transaction/TransactionRev
 import type { TransactionUpdateResult } from "../types/transaction/TransactionUpdateResult";
 
 export const transactionsApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["Summary", "Transaction", "SignedLease"],
+  addTagTypes: ["Summary", "Transaction", "SignedLease", "TaxReturn"],
 }).injectEndpoints({
   endpoints: (builder) => ({
     listTransactions: builder.query<Transaction[], TransactionListParams>({
@@ -53,14 +53,16 @@ export const transactionsApi = baseApi.enhanceEndpoints({
       query: (data) => ({ url: "/transactions", method: "POST", data }),
       invalidatesTags: ["Transaction", "Summary"],
     }),
+    // A write that moves a Schedule E total marks unfiled tax returns out of date on the server,
+    // so every such mutation refetches TaxReturn and the "Needs recompute" banner shows without a reload.
     updateTransaction: builder.mutation<TransactionUpdateResult, { id: string; data: Partial<Transaction> }>({
       query: ({ id, data }) => ({ url: `/transactions/${id}`, method: "PATCH", data }),
-      invalidatesTags: ["Transaction", "Summary"],
+      invalidatesTags: ["Transaction", "Summary", "TaxReturn"],
     }),
     deleteTransaction: builder.mutation<void, string>({
       query: (id) => ({ url: `/transactions/${id}`, method: "DELETE" }),
       // Deleting a payment drops its pending rent receipt.
-      invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG],
+      invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG, "TaxReturn"],
     }),
     importBankCsv: builder.mutation<ImportResult, BankCsvImportRequest>({
       query: ({ form, propertyId }) => ({
@@ -70,16 +72,16 @@ export const transactionsApi = baseApi.enhanceEndpoints({
         params: propertyId ? { property_id: propertyId } : undefined,
       }),
       // New rows change the list, the review count and every total built from them.
-      invalidatesTags: ["Transaction", "Summary"],
+      invalidatesTags: ["Transaction", "Summary", "TaxReturn"],
     }),
     bulkApproveTransactions: builder.mutation<BulkApproveTransactionsResponse, string[]>({
       query: (ids) => ({ url: "/transactions/bulk-approve", method: "POST", data: { ids } }),
-      invalidatesTags: ["Transaction", "Summary"],
+      invalidatesTags: ["Transaction", "Summary", "TaxReturn"],
     }),
     bulkDeleteTransactions: builder.mutation<BulkDeleteTransactionsResponse, string[]>({
       query: (ids) => ({ url: "/transactions/bulk-delete", method: "POST", data: { ids } }),
       // Deleting a payment drops its pending rent receipt.
-      invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG],
+      invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG, "TaxReturn"],
     }),
     getScheduleEReport: builder.query<ScheduleEReport, number>({
       query: (taxYear) => ({ url: "/transactions/schedule-e", params: { tax_year: taxYear } }),
@@ -92,7 +94,7 @@ export const transactionsApi = baseApi.enhanceEndpoints({
     keepDuplicate: builder.mutation<{ kept: number; deleted: number }, { keep_id: string; delete_ids: string[] }>({
       query: (data) => ({ url: "/transactions/duplicates/keep", method: "POST", data }),
       // Deleting a payment drops its pending rent receipt.
-      invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG],
+      invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG, "TaxReturn"],
     }),
     dismissDuplicate: builder.mutation<{ reviewed: number }, { transaction_ids: string[] }>({
       query: (data) => ({ url: "/transactions/duplicates/dismiss", method: "POST", data }),
@@ -101,7 +103,7 @@ export const transactionsApi = baseApi.enhanceEndpoints({
     mergeDuplicates: builder.mutation<MergeDuplicatesResponse, MergeDuplicatesRequest>({
       query: (data) => ({ url: "/transactions/duplicates/merge", method: "POST", data }),
       // Deleting a payment drops its pending rent receipt.
-      invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG],
+      invalidatesTags: ["Transaction", "Summary", RECEIPTS_PENDING_TAG, "TaxReturn"],
     }),
   }),
 });

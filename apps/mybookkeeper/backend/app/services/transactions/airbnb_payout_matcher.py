@@ -1,6 +1,6 @@
 """Pure decision logic for attributing an Airbnb payout to a property.
 
-No DB / ORM here — the orchestrator (`attribution_service._attribute_airbnb_payout`)
+No DB / ORM here — the orchestrator (`airbnb_payout_attribution.attribute_airbnb_payout`)
 loads the data and applies the decision. Kept pure so the cascade is exhaustively
 table-testable (mirrors the `attribution_service.find_best_match` precedent).
 

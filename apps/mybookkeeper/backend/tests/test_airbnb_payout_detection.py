@@ -3,7 +3,7 @@
 Before this fix the trigger keyed off ``gmail_labels``, which the email
 worker never populated, AND the extraction prompt deliberately nulls
 ``payer_name`` for platform payouts — so ``_is_airbnb_payout`` was always
-False and ``_attribute_airbnb_payout`` was unreachable. Airbnb payouts were
+False and ``attribute_airbnb_payout`` was unreachable. Airbnb payouts were
 never attributed to a property. These tests pin the structured-extraction
 detector that replaced the dead label signal.
 """

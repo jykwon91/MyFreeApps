@@ -1112,7 +1112,7 @@ class TestListingTenantIsolation:
 
 class TestListingRepoListByChannel:
     """Regression coverage for ``list_by_channel`` — the Airbnb-payout
-    attribution path (``attribution_service._attribute_airbnb_payout``).
+    attribution path (``airbnb_payout_attribution.attribute_airbnb_payout``).
 
     These tests exercise the REAL SQLAlchemy query (no mocking). The only
     pre-existing test of this path mocks ``list_by_channel`` at the repo

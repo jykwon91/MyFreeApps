@@ -1,5 +1,5 @@
 """Integration tests for the Airbnb-payout wiring in
-``attribution_service._attribute_airbnb_payout``.
+``airbnb_payout_attribution.attribute_airbnb_payout``.
 
 The exhaustive cascade matrix lives in ``test_airbnb_payout_matcher.py``
 (pure). These tests verify the orchestration: parse_res_code(txn.description)
@@ -79,7 +79,7 @@ def _fake_listing(title: str, property_id: uuid.UUID | None) -> MagicMock:
 
 def _patch_listings(listings: list) -> object:
     return patch(
-        "app.services.transactions.attribution_service.listing_repo.list_by_channel",
+        "app.services.transactions.airbnb_payout_attribution.listing_repo.list_by_channel",
         new_callable=AsyncMock,
         return_value=listings,
     )

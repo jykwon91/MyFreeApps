@@ -1,8 +1,11 @@
 """Repository for admin database operations."""
 import re
+import uuid
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.repositories.tax import tax_return_repo
 
 
 _FORBIDDEN_KEYWORDS = re.compile(
@@ -65,6 +68,7 @@ async def bulk_update_property(
             "org_id": organization_id,
         },
     )
+    await _flag_unfiled_if_any(db, organization_id, result.rowcount)
     return result.rowcount
 
 
@@ -145,7 +149,14 @@ async def bulk_soft_delete(
             """),
             params,
         )
+    await _flag_unfiled_if_any(db, organization_id, result.rowcount)
     return result.rowcount
+
+
+async def _flag_unfiled_if_any(db: AsyncSession, organization_id: str, rows_changed: int) -> None:
+    """These raw-SQL repairs can move a tax return's totals; flag on any changed row rather than re-deriving which counted."""
+    if rows_changed:
+        await tax_return_repo.flag_unfiled_for_recompute(db, uuid.UUID(organization_id))
 
 
 async def queue_documents_for_reextraction(

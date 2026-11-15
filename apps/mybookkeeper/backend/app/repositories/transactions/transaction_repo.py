@@ -16,6 +16,7 @@ from sqlalchemy.orm import selectinload
 from app.models.extraction.extraction import Extraction
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
+from app.repositories.tax import tax_return_repo
 
 # -- re-exports for back-compat ------------------------------------------
 from app.repositories.transactions.transaction_list_repo import (
@@ -130,6 +131,7 @@ async def find_by_external_id(
 async def create(db: AsyncSession, transaction: Transaction) -> Transaction:
     db.add(transaction)
     await db.flush()
+    await tax_return_repo.flag_unfiled_where_counted(db, [transaction])
     return transaction
 
 
@@ -149,6 +151,7 @@ async def create_transaction(
     )
     db.add(txn)
     await db.flush()
+    await tax_return_repo.flag_unfiled_where_counted(db, [txn])
     return txn
 
 

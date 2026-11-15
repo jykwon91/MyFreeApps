@@ -18,7 +18,7 @@ function withoutReview(reviewId: string) {
 }
 
 export const attributionApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["Summary", "Transaction", "SignedLease"],
+  addTagTypes: ["Summary", "Transaction", "SignedLease", "TaxReturn"],
 }).injectEndpoints({
   endpoints: (builder) => ({
     getAttributionReviewQueue: builder.query<
@@ -55,6 +55,8 @@ export const attributionApi = baseApi.enhanceEndpoints({
         RECEIPTS_PENDING_TAG,
         ...(result ? [{ type: "Transaction" as const, id: result.transaction_id }] : []),
         "Summary",
+        // Approving the payment can put it on Schedule E, which marks unfiled returns out of date.
+        "TaxReturn",
       ],
     }),
     rejectAttributionReview: builder.mutation<{ ok: boolean }, { review_id: string }>({
@@ -83,6 +85,7 @@ export const attributionApi = baseApi.enhanceEndpoints({
         RECEIPTS_PENDING_TAG,
         QUEUE_TAG,
         "Summary",
+        "TaxReturn",
       ],
     }),
     getPropertyPnl: builder.query<PropertyPnLResponse, PropertyPnLRange>({

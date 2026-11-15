@@ -1,15 +1,17 @@
 import uuid
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from decimal import Decimal
 
 from sqlalchemy import select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.tax_total_inputs import tax_total_inputs
 from app.models.tax.tax_form_field import TaxFormField
 from app.models.tax.tax_form_field_source import TaxFormFieldSource
 from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
+from app.models.transactions.transaction import Transaction
 
 
 async def get_or_create_for_year(
@@ -83,6 +85,28 @@ async def flag_unfiled_for_recompute(
         .where(TaxReturn.organization_id == organization_id, TaxReturn.status != "filed")
         .values(needs_recompute=True)
     )
+
+
+async def flag_unfiled_where_counted(
+    db: AsyncSession, transactions: Iterable[Transaction],
+) -> None:
+    """Flag the unfiled returns of every organization with a row among these that counts towards a total.
+
+    Call it on the rows as they stand when they count: after a create or an approve, before a delete.
+    """
+    for organization_id in {t.organization_id for t in transactions if tax_total_inputs(t) is not None}:
+        await flag_unfiled_for_recompute(db, organization_id)
+
+
+async def flag_unfiled_if_totals_moved(
+    db: AsyncSession, transaction: Transaction, old_tax_inputs: tuple[object, ...] | None,
+) -> None:
+    """Flag the organization's unfiled returns when an edit changed what the row adds to their totals.
+
+    ``old_tax_inputs`` is ``tax_total_inputs(transaction)`` taken before the edit.
+    """
+    if tax_total_inputs(transaction) != old_tax_inputs:
+        await flag_unfiled_for_recompute(db, transaction.organization_id)
 
 
 async def create_return(

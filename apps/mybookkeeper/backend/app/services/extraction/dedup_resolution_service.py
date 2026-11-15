@@ -11,7 +11,7 @@ from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.transactions.transaction import Transaction
-from app.repositories import extraction_repo, transaction_repo
+from app.repositories import extraction_repo, tax_return_repo, transaction_repo
 from app.services.extraction.dedup_service import DedupDecision
 
 logger = logging.getLogger(__name__)
@@ -66,6 +66,7 @@ async def resolve_and_link(
             _copy_user_edits(existing, new_transaction)
 
             # Soft-delete existing
+            await tax_return_repo.flag_unfiled_where_counted(db, [existing])
             existing.deleted_at = datetime.now(timezone.utc)
 
             # Create new transaction

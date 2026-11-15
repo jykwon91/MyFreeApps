@@ -117,7 +117,7 @@ async def test_airbnb_auto_attribution_promotes_unverified_to_approved(db: Async
     await db.flush()
 
     with patch(
-        "app.services.transactions.attribution_service.listing_repo.list_by_channel",
+        "app.services.transactions.airbnb_payout_attribution.listing_repo.list_by_channel",
         new_callable=AsyncMock, return_value=[],
     ):
         await maybe_attribute_payment(

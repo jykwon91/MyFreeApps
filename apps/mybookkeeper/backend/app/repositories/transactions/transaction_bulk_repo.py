@@ -4,11 +4,12 @@ from datetime import datetime, timezone
 from sqlalchemy import ColumnElement, Select, delete as sa_delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.transaction_statuses import REVIEWABLE_STATUSES
+from app.core.transaction_statuses import COUNTED_STATUS, REVIEWABLE_STATUSES
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.models.extraction.extraction import Extraction
 from app.repositories.leases import pending_rent_receipt_repo
+from app.repositories.tax import tax_return_repo
 
 
 def _live_org_transactions_for_update_stmt(
@@ -79,8 +80,10 @@ async def soft_delete_transactions(db: AsyncSession, transactions: list[Transact
     """Soft-delete already-locked rows with one shared timestamp and one flush.
 
     Every delete path (single, bulk, keep/merge duplicates, document delete) ends here, so this is
-    where a deleted payment's pending rent receipt is dismissed — it must not stay listed or sendable.
+    where a deleted payment's pending rent receipt is dismissed — it must not stay listed or sendable,
+    and where a return the deleted rows counted towards is marked out of date.
     """
+    await tax_return_repo.flag_unfiled_where_counted(db, transactions)
     now = datetime.now(timezone.utc)
     for txn in transactions:
         apply_soft_delete(txn, now)
@@ -109,8 +112,9 @@ async def bulk_approve(
         Transaction.status.in_(REVIEWABLE_STATUSES),
     ))).scalars().all()
     for txn in rows:
-        txn.status = "approved"
+        txn.status = COUNTED_STATUS
     await db.flush()
+    await tax_return_repo.flag_unfiled_where_counted(db, rows)
     return len(rows)
 
 
@@ -145,8 +149,9 @@ async def delete_by_extraction_ids(
     )
     if tax_year is not None:
         stmt = stmt.where(Transaction.tax_year == tax_year)
-    result = await db.execute(stmt)
-    return result.rowcount  # type: ignore[return-value]
+    deleted = list((await db.execute(stmt.returning(Transaction))).scalars().all())
+    await tax_return_repo.flag_unfiled_where_counted(db, deleted)
+    return len(deleted)
 
 
 async def soft_delete_by_document_id(

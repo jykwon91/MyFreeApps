@@ -126,7 +126,7 @@ async def test_expense_is_not_attributed_via_airbnb_payout_path(db: AsyncSession
     )
 
     with patch(
-        "app.services.transactions.attribution_service.listing_repo.list_by_channel",
+        "app.services.transactions.airbnb_payout_attribution.listing_repo.list_by_channel",
         new_callable=AsyncMock, return_value=[],
     ):
         await maybe_attribute_payment(

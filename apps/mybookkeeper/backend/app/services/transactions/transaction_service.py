@@ -11,6 +11,8 @@ from app.core.tags import (
     schedule_e_line_after_category_change,
     transaction_type_for_category,
 )
+from app.core.tax_total_inputs import tax_total_inputs
+from app.core.transaction_statuses import COUNTED_STATUS
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.transactions.transaction import Transaction
 from app.repositories import transaction_repo
@@ -91,8 +93,6 @@ async def create_manual_transaction(
             is_manual=True,
             **data,
         )
-        if created.schedule_e_line is not None:
-            await tax_return_repo.flag_unfiled_for_recompute(db, ctx.organization_id)
         # Re-fetch with selectinload so FastAPI can serialize source_file_name
         # (a hybrid_property that traverses extraction → document relationships)
         # without hitting a DetachedInstanceError after the session closes.
@@ -124,6 +124,7 @@ async def update_transaction(
         old_category = txn.category
         old_schedule_e_line = txn.schedule_e_line
         old_property_id = txn.property_id
+        old_tax_inputs = tax_total_inputs(txn)
         for field in updates:
             if field not in UPDATABLE_FIELDS:
                 raise ValueError(f"Cannot update field: {field}")
@@ -145,8 +146,7 @@ async def update_transaction(
                 old_category=old_category,
             )
 
-        if txn.category != old_category or txn.schedule_e_line != old_schedule_e_line:
-            await tax_return_repo.flag_unfiled_for_recompute(db, ctx.organization_id)
+        await tax_return_repo.flag_unfiled_if_totals_moved(db, txn, old_tax_inputs)
 
         # Clearing a property teaches nothing: a rule with no property would take
         # the property off every other row from this vendor at this address.
@@ -288,6 +288,7 @@ async def merge_transactions(
 
         survivor = txn_a if surviving_id == transaction_a_id else txn_b
         loser = txn_b if surviving_id == transaction_a_id else txn_a
+        old_survivor_tax_inputs = tax_total_inputs(survivor)
 
         overrides_dict = field_overrides.model_dump(exclude_none=True)
         auto_picks = auto_pick_defaults(txn_a, txn_b)
@@ -317,8 +318,9 @@ async def merge_transactions(
         await transaction_repo.mark_deleted(db, loser)
 
         # Mark the survivor as approved and reviewed
-        survivor.status = "approved"
+        survivor.status = COUNTED_STATUS
         survivor.duplicate_reviewed_at = datetime.now(timezone.utc)
+        await tax_return_repo.flag_unfiled_if_totals_moved(db, survivor, old_survivor_tax_inputs)
 
         # Flush survivor changes before re-fetching
         await transaction_repo.flush(db)
