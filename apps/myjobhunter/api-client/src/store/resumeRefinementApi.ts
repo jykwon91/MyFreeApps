@@ -14,6 +14,16 @@ export const resumeRefinementApi = baseApi
           method: "POST",
           data: body,
         }),
+        // The started session goes into the cache as soon as the server returns it, so the screen
+        // shows it at once instead of waiting on a first fetch.
+        async onQueryStarted(_body, { dispatch, queryFulfilled }) {
+          try {
+            const { data } = await queryFulfilled;
+            await dispatch(resumeRefinementApi.util.upsertQueryData("getRefinementSession", data.id, data));
+          } catch {
+            // A failed start leaves the cache as it was.
+          }
+        },
         invalidatesTags: [{ type: REFINEMENT_TAG, id: "LIST" }],
       }),
 
