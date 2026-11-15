@@ -9,6 +9,7 @@
  * on one return carries over into its later advice.
  */
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { SUGGESTION_STATUS_UPDATE_FAILED } from "@mybookkeeper/api-client/constants/taxAdvisor";
 import { seededOrg } from "./fixtures/seeded-org";
 
 const FAKE_ID = "00000000-0000-0000-0000-000000000000";
@@ -237,5 +238,31 @@ test.describe("Tax advisor panel", () => {
     await page.reload();
     await expect(card(page, LOW.title)).toContainText("marked as resolved", { timeout: 10000 });
     await expect(card(page, HIGH.title).locator('button[title="Dismiss"]')).toBeVisible();
+  });
+
+  test("a dismiss that doesn't save keeps the card and says so", async ({ page }) => {
+    const { returnId } = await returnWithAdvice(org().api, 2030);
+    await openReturn(page, returnId);
+    const high = card(page, HIGH.title);
+    await expect(high).toBeVisible();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(`**/api/tax-returns/${returnId}/advisor/**`, async (route) => {
+      if (route.request().method() !== "PATCH") return route.fallback();
+      await held;
+      return route.fulfill({ status: 500, contentType: "application/json", body: '{"detail":"Internal Server Error"}' });
+    });
+
+    await high.locator('button[title="Dismiss"]').click();
+    await expect(high.locator('button[title="Dismiss"]')).toBeDisabled();
+    await expect(high.locator('button[title="Mark as resolved"]')).toBeDisabled();
+    release();
+
+    await expect(page.getByText(SUGGESTION_STATUS_UPDATE_FAILED)).toBeVisible();
+    await expect(high).toContainText(HIGH.description);
+    await expect(high.locator('button[title="Dismiss"]')).toBeEnabled();
+    expect(suggestionNamed(await getAdvice(org().api, returnId), HIGH.title).status).toBe("active");
   });
 });
