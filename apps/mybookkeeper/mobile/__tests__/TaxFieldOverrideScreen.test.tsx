@@ -115,6 +115,28 @@ describe("TaxFieldOverrideScreen", () => {
     expect(await screen.findByText(MESSAGES.saved)).toBeTruthy();
   });
 
+  it.each([["-1,500.25", -1500.25], ["(500)", -500], ["1,500", 1500]])("sends %p as %p", async (text, expected) => {
+    const server = serve();
+    await show();
+    await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MESSAGES.valueLabel}`)), text);
+    await fireEvent.changeText(reason(), "Net loss");
+    await fireEvent.press(save());
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(writesOnly(server.calls)[0].data).toEqual({ value_numeric: expected, override_reason: "Net loss" });
+  });
+
+  it("uses a keyboard with a minus key for numbers", async () => {
+    serve();
+    await show();
+    expect((await screen.findByLabelText(new RegExp(`^${MESSAGES.valueLabel}`))).props.keyboardType).toBe("numbers-and-punctuation");
+  });
+
+  it("keeps the plain keyboard for a text field", async () => {
+    serve(aTaxField({ type: "text", value: "Acme", label: "Employer" }));
+    await show();
+    expect((await screen.findByLabelText(new RegExp(`^${MESSAGES.valueLabel}`))).props.keyboardType).toBe("default");
+  });
+
   it("sends text in the text column", async () => {
     const server = serve(aTaxField({ type: "text", value: "Acme", label: "Employer" }));
     await show();
@@ -135,7 +157,7 @@ describe("TaxFieldOverrideScreen", () => {
     expect(writesOnly(server.calls)[0].data).toEqual({ value_boolean: true, override_reason: "Confirmed" });
   });
 
-  it.each(["abc", "12abc", "1,2,3", "", "--5", "1.2.3"])("points at an unreadable number %p on its own field and sends nothing", async (text) => {
+  it.each(["abc", "12abc", "1,2,3", "1,5", "", "--5", "1.2.3"])("points at an unreadable number %p on its own field and sends nothing", async (text) => {
     const server = serve();
     await show();
     await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MESSAGES.valueLabel}`)), text);
