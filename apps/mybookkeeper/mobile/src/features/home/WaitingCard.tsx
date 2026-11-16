@@ -18,6 +18,7 @@ import HomeCard from "./HomeCard";
 import { documentsWaiting, paymentsWaiting, receiptsWaiting, transactionsWaiting, waitingFailedMessage } from "./homeDisplay";
 import HomeLinkRow from "./HomeLinkRow";
 import HomeSectionError from "./HomeSectionError";
+import { useRegisterHomeRefetch } from "./useRegisterHomeRefetch";
 
 export default function WaitingCard() {
   const { colors, spacing, fontSize } = useTheme();
@@ -57,6 +58,7 @@ export default function WaitingCard() {
       canWrite ? integrations.refetch() : undefined,
     ]);
   }
+  useRegisterHomeRefetch(retry);
 
   return (
     <HomeCard title="Waiting for you">

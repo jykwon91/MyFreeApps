@@ -7,6 +7,7 @@ import HomeCard from "./HomeCard";
 import { alertsFailedMessage, insurancePremiumsAlertLabel, renewalAlertLabel, utilityRatesAlertLabel } from "./homeDisplay";
 import HomeLinkRow from "./HomeLinkRow";
 import HomeSectionError from "./HomeSectionError";
+import { useRegisterHomeRefetch } from "./useRegisterHomeRefetch";
 
 /**
  * The website's renewal, rate check and premium check cards, as one row each.
@@ -17,6 +18,10 @@ export default function HomeAlerts() {
   const renewals = useGetUtilityPlanRenewalAlertsQuery();
   const utilityRates = useGetUtilityPlanRateComparisonQuery();
   const insurancePremiums = useGetInsurancePremiumComparisonQuery();
+  async function retry(): Promise<void> {
+    await Promise.all([renewals.refetch(), utilityRates.refetch(), insurancePremiums.refetch()]);
+  }
+  useRegisterHomeRefetch(retry);
 
   if (renewals.isLoading && utilityRates.isLoading && insurancePremiums.isLoading) {
     return (
@@ -36,10 +41,6 @@ export default function HomeAlerts() {
     insurancePremiums: insurancePremiums.isError && !insurancePremiums.data,
   });
   if (renewalCount === 0 && utilityRateCount === 0 && premiumCount === 0 && !failedMessage) return null;
-
-  async function retry(): Promise<void> {
-    await Promise.all([renewals.refetch(), utilityRates.refetch(), insurancePremiums.refetch()]);
-  }
 
   return (
     <HomeCard testID="home-alerts">
