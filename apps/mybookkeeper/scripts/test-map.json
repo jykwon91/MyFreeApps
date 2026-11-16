@@ -440,6 +440,7 @@
         "mobile/src/features/workspace/WriteAccessSkeleton.tsx",
         "mobile/src/features/workspace/useWriteAccess.ts",
         "mobile/src/features/workspace/useCanWrite.ts",
+        "mobile/src/features/workspace/useWorkspaceRole.ts",
         "mobile/src/constants/writeAccess.ts",
         "mobile/src/types/WriteAccess.ts",
         "mobile/src/types/ViewOnlyStateProps.ts",

@@ -6,9 +6,19 @@ export const SAVED_WORKSPACE_FILE = "active-workspace.json";
 /** Where someone lands after changing workspace: the old one's screens no longer apply. */
 export const WORKSPACE_HOME_ROUTE: Href = "/";
 
+/**
+ * How often the workspace list is asked for again while the app runs offline on the saved workspace.
+ * Nothing on the phone says when the connection is back, so it keeps asking; offline, a try fails at once.
+ */
+export const OFFLINE_RETRY_MS = 15_000;
+
 export const WORKSPACE_MESSAGES = {
   section: "Workspace",
   current: (name: string, role: string) => `${name}, ${role}`,
+  currentOffline: (name: string) => `${name}, offline`,
+  offlineCanCapture: (name: string) =>
+    `You're offline, so I've opened ${name} from last time. Photos you take are saved here and upload when you're back online.`,
+  offlineReadOnly: (name: string) => `You're offline, so I've opened ${name} from last time. It'll update when you're back online.`,
   switchWorkspace: "Switch workspace",
   switchHint: "Shows the workspaces you belong to.",
   switchTitle: "Your workspaces",

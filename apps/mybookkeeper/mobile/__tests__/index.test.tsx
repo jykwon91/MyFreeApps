@@ -81,7 +81,7 @@ describe("WorkspaceGate", () => {
 
   it("reopens the workspace picked last time", async () => {
     signedInAs("me@example.com");
-    saveWorkspace({ id: "w2", name: "Second" });
+    saveWorkspace({ id: "w2", name: "Second", org_role: "owner" });
     api.defaults.adapter = respondWith(200, [WORKSPACE, SECOND]);
     await renderGate();
     await waitFor(() => expect(screen.getByText("Inside")).toBeTruthy());
@@ -91,12 +91,12 @@ describe("WorkspaceGate", () => {
 
   it("opens the first when the one picked last time is gone, says so, and remembers that instead", async () => {
     signedInAs("me@example.com");
-    saveWorkspace({ id: "gone", name: "Lake House" });
+    saveWorkspace({ id: "gone", name: "Lake House", org_role: "owner" });
     api.defaults.adapter = respondWith(200, [WORKSPACE, SECOND]);
     await renderGate();
     await waitFor(() => expect(store.getState().workspace.activeId).toBe("w1"));
     expect(await screen.findByText(MEMBERS_MESSAGES.workspaceLost("Lake House", "Mine"))).toBeTruthy();
-    await waitFor(() => expect(readSavedWorkspace()).toEqual({ id: "w1", name: "Mine" }));
+    await waitFor(() => expect(readSavedWorkspace()).toEqual({ id: "w1", name: "Mine", role: "owner" }));
   });
 
   it("says nothing on a first launch, with no workspace saved", async () => {
@@ -109,7 +109,7 @@ describe("WorkspaceGate", () => {
 
   it("ignores what someone else picked on this phone", async () => {
     signedInAs("someone@example.com");
-    saveWorkspace({ id: "w2", name: "Second" });
+    saveWorkspace({ id: "w2", name: "Second", org_role: "owner" });
     signedInAs("me@example.com");
     api.defaults.adapter = respondWith(200, [WORKSPACE, SECOND]);
     await renderGate();

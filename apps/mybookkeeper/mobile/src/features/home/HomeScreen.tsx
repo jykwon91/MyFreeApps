@@ -21,6 +21,7 @@ import CategoryPickerField from "../moneyAnalysis/CategoryPickerField";
 import { isEmptySummary } from "../moneyAnalysis/moneyAnalysisDisplay";
 import { periodRange } from "../transactions/transactionFilters";
 import { useCanWrite } from "../workspace/useCanWrite";
+import WorkspaceOfflineNotice from "../workspace/WorkspaceOfflineNotice";
 import HomeAlerts from "./HomeAlerts";
 import HomeCard from "./HomeCard";
 import HomeLinkRow from "./HomeLinkRow";
@@ -112,6 +113,7 @@ export default function HomeScreen() {
       refreshControl={refreshControl}
       testID="home-screen"
     >
+      <WorkspaceOfflineNotice />
       {isShowingOldData ? <Banner message={SHOWING_LAST_LOADED_MESSAGE} /> : null}
       {hasNothingYet ? (
         <EmptyState
