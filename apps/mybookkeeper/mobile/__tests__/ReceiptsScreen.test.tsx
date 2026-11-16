@@ -25,6 +25,7 @@ import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { store } from "../src/lib/store";
 import { receiptSentFromOtherGmailMessage } from "@mybookkeeper/api-client/utils/receiptSentFromOtherGmailMessage";
 import { aReceipt, startReceiptServer } from "../test-support/receiptsServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true } }));
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: jest.fn() }));
@@ -326,7 +327,7 @@ describe("dismissing", () => {
     await pressAlert(MESSAGES.dismiss);
 
     expect(screen.getByText(MESSAGES.couldntDismiss)).toBeTruthy();
-    expect(screen.queryByText(/Traceback/)).toBeNull();
+    expect(screen.queryByText(/Traceback/, SHOWN)).toBeNull();
     expect(screen.getByText("Jane Smith")).toBeTruthy();
   });
 

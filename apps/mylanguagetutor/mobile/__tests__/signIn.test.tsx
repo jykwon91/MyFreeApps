@@ -6,6 +6,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { session } from "../src/lib/session";
 import { ONBOARDED_LEARNER_ROUTES, PRACTICE_HEADING } from "../test-support/onboardedLearner";
 import { renderApp } from "../test-support/renderApp";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -42,7 +43,7 @@ describe("signing in", () => {
     await renderApp();
     await submitCredentials("wrong");
 
-    expect(await screen.findByText("That email or password isn't right. Check them and try again.")).toBeTruthy();
+    expect(await screen.findByText("That email or password isn't right. Check them and try again.", SHOWN)).toBeTruthy();
     expect(screen).toHavePathname("/sign-in");
     expect(sent.map((request) => request.route)).toEqual(["POST /auth/mobile/login"]);
     expect(storedSession()).toBeNull();
@@ -98,7 +99,7 @@ describe("signing in", () => {
     await fireEvent.changeText(await screen.findByLabelText("Authentication code"), "000000");
     await fireEvent.press(screen.getByRole("button", { name: "Verify" }));
 
-    expect(await screen.findByText(/Each code works once/)).toBeTruthy();
+    expect(await screen.findByText(/Each code works once/, SHOWN)).toBeTruthy();
     expect(screen.getByLabelText("Authentication code")).toBeTruthy();
     expect(storedSession()).toBeNull();
   });

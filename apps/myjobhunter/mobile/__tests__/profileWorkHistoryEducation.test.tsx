@@ -16,6 +16,7 @@ import { renderProfile } from "../test-support/renderProfile";
 import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { SentRequest } from "@platform/mobile/test-support/types/SentRequest";
 import { workHistoryRecord } from "../test-support/workHistoryRecord";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -122,8 +123,8 @@ describe("work history", () => {
     await fireEvent.press(await screen.findByRole("button", { name: WORK.add }));
     await fireEvent.press(screen.getByRole("button", { name: WORK.create }));
 
-    expect(await screen.findByText(PROBLEMS.companyRequired)).toBeTruthy();
-    expect(screen.getByText(PROBLEMS.titleRequired)).toBeTruthy();
+    expect(await screen.findByText(PROBLEMS.companyRequired, SHOWN)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.titleRequired, SHOWN)).toBeTruthy();
     expect(screen.getByText(PROBLEMS.startDateRequired)).toBeTruthy();
 
     await pickDate(WORK.startLabel, new Date(2022, 0, 1));
@@ -283,13 +284,13 @@ describe("education", () => {
     await fireEvent.changeText(screen.getByLabelText(EDUCATION.gpaLabel), "four");
     await fireEvent.press(screen.getByRole("button", { name: EDUCATION.create }));
 
-    expect(await screen.findByText(PROBLEMS.schoolRequired)).toBeTruthy();
-    expect(screen.getByText(PROBLEMS.year)).toBeTruthy();
-    expect(screen.getByText(PROBLEMS.gpa)).toBeTruthy();
+    expect(await screen.findByText(PROBLEMS.schoolRequired, SHOWN)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.year, SHOWN)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.gpa, SHOWN)).toBeTruthy();
 
     await fireEvent.changeText(screen.getByLabelText(EDUCATION.startYearLabel), "2018");
     await fireEvent.changeText(screen.getByLabelText(EDUCATION.endYearLabel), "2014");
-    expect(await screen.findByText(PROBLEMS.endYearBeforeStart)).toBeTruthy();
+    expect(await screen.findByText(PROBLEMS.endYearBeforeStart, SHOWN)).toBeTruthy();
     expect(sentTo(sent, "POST /education")).toEqual([]);
   });
 

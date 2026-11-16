@@ -18,6 +18,7 @@ import { formParts, formValue } from "../test-support/applicantsServer";
 import { File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { holdWrites } from "../test-support/holdWrites";
 import { type FakeLeaseWritesServer, lastRequest, roleKnown, startLeaseWritesServer } from "../test-support/leaseWritesServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
@@ -224,7 +225,7 @@ describe("importing a signed lease", () => {
     await addFile("lease.pdf");
     await importLease();
     expect(await screen.findByText(message)).toBeTruthy();
-    expect(screen.queryByText("A developer's message")).toBeNull();
+    expect(screen.queryByText("A developer's message", SHOWN)).toBeNull();
     expect(screen.getByText("lease.pdf")).toBeTruthy();
 
     delete server.failures.import;

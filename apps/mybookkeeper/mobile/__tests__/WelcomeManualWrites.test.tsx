@@ -13,6 +13,7 @@ import { pressAlertButton } from "../test-support/pressAlertButton";
 import { renderScreen, resetSignedInStore } from "../test-support/renderScreen";
 import { startWelcomeManualsServer } from "../test-support/welcomeManualsServer";
 import { writesTo } from "../test-support/writesTo";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -59,7 +60,7 @@ describe("making a manual", () => {
     await renderScreen(<WelcomeManualCreateScreen />);
     await screen.findByLabelText("Title, required");
     await fireEvent.press(button(FORM.create));
-    expect(screen.getByText("Title is required.")).toBeTruthy();
+    expect(screen.getByText("Title is required.", SHOWN)).toBeTruthy();
     expect(writesTo(server)).toHaveLength(0);
   });
 

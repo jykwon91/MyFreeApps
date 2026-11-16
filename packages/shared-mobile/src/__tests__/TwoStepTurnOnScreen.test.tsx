@@ -8,6 +8,7 @@ import ToastProvider from "../components/ToastProvider";
 import TwoStepTurnOnScreen from "../components/TwoStepTurnOnScreen";
 import { TWO_STEP_MESSAGES as MESSAGES } from "../constants/twoStep";
 import type { TwoStepVerifyResult } from "../types/TwoStepVerifyResult";
+import { SHOWN } from "../../test-support/shown";
 
 jest.mock("../auth/mobileAuthApi");
 jest.mock("../auth/twoStepApi");
@@ -75,7 +76,7 @@ describe("password", () => {
     setup.mockResolvedValue({ outcome: "wrong_password" });
     await open();
     await sendPassword();
-    expect(await screen.findByText(MESSAGES.wrongPassword)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.wrongPassword, SHOWN)).toBeTruthy();
     expect(screen.getByLabelText(MESSAGES.password).props.value).toBe("");
   });
 
@@ -152,7 +153,7 @@ describe("adding to the authenticator", () => {
   it("a wrong code clears the field", async () => {
     await openAddStep();
     await sendCode({ outcome: "wrong_code" });
-    expect(await screen.findByText(MESSAGES.wrongSetupCode)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.wrongSetupCode, SHOWN)).toBeTruthy();
     expect(screen.getByLabelText(MESSAGES.codeLabel).props.value).toBe("");
   });
 

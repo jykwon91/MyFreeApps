@@ -14,6 +14,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aBenchmark } from "../test-support/aMarketRateBenchmark";
 import { startUtilityServer, writesTo } from "../test-support/utilityPlansServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -103,7 +104,7 @@ describe("MarketRateFormScreen", () => {
     const server = startUtilityServer();
     await show(<MarketRateFormScreen serviceType="electricity" />);
     await fireEvent.press(await screen.findByRole("button", { name: MARKET_RATE_MESSAGES.save }));
-    expect(await screen.findByText(BENCHMARK_FORM_PROBLEMS.rateRequired)).toBeTruthy();
+    expect(await screen.findByText(BENCHMARK_FORM_PROBLEMS.rateRequired, SHOWN)).toBeTruthy();
     expect(writesTo(server, "put")).toHaveLength(0);
   });
 
@@ -115,7 +116,7 @@ describe("MarketRateFormScreen", () => {
     await show(<MarketRateFormScreen serviceType="electricity" />);
     await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MARKET_RATE_MESSAGES.figureMetered.replace(/[()/]/g, "\\$&")}`)), figure);
     await fireEvent.press(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.save }));
-    expect(await screen.findByText(message)).toBeTruthy();
+    expect(await screen.findByText(message, SHOWN)).toBeTruthy();
     expect(writesTo(server, "put")).toHaveLength(0);
   });
 
@@ -147,7 +148,7 @@ describe("MarketRateFormScreen", () => {
     const figure = await screen.findByLabelText(new RegExp(`^${MARKET_RATE_MESSAGES.figureMetered.replace(/[()/]/g, "\\$&")}`));
     await fireEvent.changeText(figure, "1000,5");
     await fireEvent.press(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.save }));
-    expect(await screen.findByText(BENCHMARK_FORM_PROBLEMS.rateTooHigh(","))).toBeTruthy();
+    expect(await screen.findByText(BENCHMARK_FORM_PROBLEMS.rateTooHigh(","), SHOWN)).toBeTruthy();
     expect(writesTo(server, "put")).toHaveLength(0);
     await fireEvent.changeText(figure, "11,25");
     await fireEvent.press(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.save }));
@@ -238,7 +239,7 @@ describe("MarketRateFormScreen", () => {
     await fireEvent.changeText(await screen.findByLabelText(label), "12");
     await fireEvent.press(screen.getByRole("button", { name: MARKET_RATE_MESSAGES.save }));
     expect(await screen.findByText(copy)).toBeTruthy();
-    expect(screen.queryByText(/raw server text/)).toBeNull();
+    expect(screen.queryByText(/raw server text/, SHOWN)).toBeNull();
     expect(screen.getByLabelText(label).props.value).toBe("12");
     expect(mockBack).not.toHaveBeenCalled();
   });

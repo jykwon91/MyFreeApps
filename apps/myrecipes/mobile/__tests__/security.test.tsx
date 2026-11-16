@@ -15,6 +15,7 @@ import { DELETE_ACCOUNT_WARNING } from "../src/constants/deleteAccount";
 import { SECURITY_CONTENT, SECURITY_INTRO_DISMISSED_KEY } from "../src/constants/security";
 import { store } from "../src/lib/store";
 import { renderApp } from "../test-support/renderApp";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -136,7 +137,7 @@ describe("the display name", () => {
     securityRoutes();
     await openSecurity();
     await fireEvent.changeText(await screen.findByDisplayValue(USER.display_name), "x".repeat(101));
-    expect(screen.getByText("Keep this to 100 characters or fewer.")).toBeTruthy();
+    expect(screen.getByText("Keep this to 100 characters or fewer.", SHOWN)).toBeTruthy();
     expect(screen.getByRole("button", { name: MESSAGES.save }).props.accessibilityState?.disabled).toBe(true);
   });
 

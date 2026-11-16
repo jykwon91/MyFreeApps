@@ -1,6 +1,6 @@
 import { Text, TextInput, View } from "react-native";
 import CharacterCounter from "./CharacterCounter";
-import { useAnnouncement } from "../hooks/useAnnouncement";
+import { useFieldErrorAnnouncement } from "../hooks/useFieldErrorAnnouncement";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 import { useTheme } from "../theme/useTheme";
 import type { FormFieldProps } from "../types/FormFieldProps";
@@ -19,7 +19,7 @@ export default function FormField({
   ...inputProps
 }: FormFieldProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
-  useAnnouncement(error);
+  useFieldErrorAnnouncement(accessibilityLabel ?? label, error);
 
   return (
     <View style={[{ gap: spacing.xs }, style]}>
@@ -51,11 +51,12 @@ export default function FormField({
             inputStyle,
           ]}
         />
-      {trailing ? <View style={{ position: "absolute", right: 0 }}>{trailing}</View> : null}
+        {trailing ? <View style={{ position: "absolute", right: 0 }}>{trailing}</View> : null}
       </View>
       {error ? (
+        // Plain text, not an alert: the error is announced once by useFieldErrorAnnouncement, and is in the
+        // input's hint. This copy stays reachable by swiping for anyone who has hints turned off.
         <Text
-          accessibilityRole="alert"
           style={{ color: colors.destructiveText, fontSize: fontSize.xs }}
         >
           {error}

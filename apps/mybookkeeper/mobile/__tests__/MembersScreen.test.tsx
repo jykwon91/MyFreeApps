@@ -19,6 +19,7 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { type RootState, store } from "../src/lib/store";
 import { useToday } from "../src/lib/useToday";
 import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn() } }));
 jest.mock("../src/lib/useToday", () => ({ useToday: jest.fn() }));
@@ -495,7 +496,7 @@ describe("inviting someone", () => {
     await screen.findByText(MESSAGES.people(2));
     await fillIn("not an address");
     await press(MESSAGES.sendInvite);
-    expect(await screen.findByText(MESSAGES.invalidEmail)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.invalidEmail, SHOWN)).toBeTruthy();
     expect(calledWith(server, "POST")).toEqual([]);
   });
 

@@ -11,6 +11,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { anInquiry, lastInquiryWrite, startInquiryServer, type FakeInquiryServer } from "../test-support/inquiriesServer";
 import { pressAlertButton } from "../test-support/pressAlertButton";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({ router: { push: (path: string) => mockPush(path) } }));
@@ -82,7 +83,7 @@ describe("adding an inquiry by hand", () => {
     const server = startInquiryServer([]);
     await openSheet();
     await fireEvent.press(screen.getByRole("button", SAVE));
-    expect(await screen.findByText("Name is required")).toBeTruthy();
+    expect(await screen.findByText("Name is required", SHOWN)).toBeTruthy();
     expect(screen.getByText("A couple of things need a look before I can add this.")).toBeTruthy();
     expect(posts(server)).toBe(0);
   });
@@ -93,7 +94,7 @@ describe("adding an inquiry by hand", () => {
     await fireEvent.press(screen.getByRole("radio", { name: "Furnished Finder" }));
     await typeName();
     await fireEvent.press(screen.getByRole("button", SAVE));
-    expect(await screen.findByText("Required for non-direct inquiries")).toBeTruthy();
+    expect(await screen.findByText("Required for non-direct inquiries", SHOWN)).toBeTruthy();
     expect(posts(server)).toBe(0);
 
     await fireEvent.changeText(screen.getByLabelText("Furnished Finder inquiry ID, required"), " I-12345 ");

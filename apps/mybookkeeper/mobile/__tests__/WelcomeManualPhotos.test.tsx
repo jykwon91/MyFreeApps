@@ -17,6 +17,7 @@ import { pressAlertButton } from "../test-support/pressAlertButton";
 import { renderScreen, resetSignedInStore } from "../test-support/renderScreen";
 import { startWelcomeManualsServer } from "../test-support/welcomeManualsServer";
 import { writesTo } from "../test-support/writesTo";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({
   useFocusEffect: () => undefined,
@@ -295,7 +296,7 @@ describe("adding photos", () => {
     await screen.findByText("photo-1.jpg");
     await fireEvent.press(upload());
     await screen.findByText(copy);
-    expect(screen.queryByText(new RegExp(serverWords))).toBeNull();
+    expect(screen.queryByText(new RegExp(serverWords), SHOWN)).toBeNull();
     expect(screen.getByText("photo-1.jpg")).toBeTruthy();
   });
 

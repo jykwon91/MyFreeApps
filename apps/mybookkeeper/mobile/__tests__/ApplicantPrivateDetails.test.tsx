@@ -17,6 +17,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { anApplicant, noPrivateDetails, startApplicantServer } from "../test-support/applicantsServer";
 import type { FakeApplicantServer } from "../test-support/applicantsServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockFocus: { blur?: () => void } = {};
 const mockLeave: { active: boolean; blocked?: (event: { repeat: () => void }) => void } = { active: false };
@@ -444,9 +445,9 @@ describe("ApplicantPrivateDetails", () => {
       await showDetails();
       await fireEvent.press(screen.getByRole("button", { name: "Add email" }));
       await editEmail("not-an-email");
-      expect(await screen.findByText("That doesn't look like an email address.")).toBeTruthy();
+      expect(await screen.findByText("That doesn't look like an email address.", SHOWN)).toBeTruthy();
       expect(screen.getByLabelText("Email").props.value).toBe("not-an-email");
-      expect(screen.queryByText("A developer's message")).toBeNull();
+      expect(screen.queryByText("A developer's message", SHOWN)).toBeNull();
     });
 
     it("says why any other save failed, never the server's own words", async () => {
@@ -460,7 +461,7 @@ describe("ApplicantPrivateDetails", () => {
       server.writeFailure = 500;
       await fireEvent.press(await screen.findByRole("button", { name: "Save" }));
       expect(await screen.findByText("I couldn't save that email. Want to try again?")).toBeTruthy();
-      expect(screen.queryByText("A developer's message")).toBeNull();
+      expect(screen.queryByText("A developer's message", SHOWN)).toBeNull();
     });
 
     it("cancel leaves it as it was", async () => {

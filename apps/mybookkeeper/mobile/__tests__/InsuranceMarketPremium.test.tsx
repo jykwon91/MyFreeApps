@@ -6,6 +6,7 @@ import { MONEY_INPUT_MESSAGES } from "@mybookkeeper/api-client/constants/moneyIn
 import MarketPremiumScreen from "../src/features/insurance/MarketPremiumScreen";
 import { aBenchmark, lastInsuranceWrite, startInsuranceServer } from "../test-support/insuranceServer";
 import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsurance";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -92,7 +93,7 @@ describe("market premium", () => {
     await fireEvent.press(await screen.findByRole("button", { name: "Record a market premium" }));
     await fireEvent.changeText(await screen.findByLabelText("Annual premium (USD), required"), "1200");
     await fireEvent.press(screen.getByRole("button", { name: "Save market premium" }));
-    expect(await screen.findByText(BENCHMARK_FORM_PROBLEMS.coverageRequired)).toBeTruthy();
+    expect(await screen.findByText(BENCHMARK_FORM_PROBLEMS.coverageRequired, SHOWN)).toBeTruthy();
     expect(lastInsuranceWrite(server)).toBeNull();
   });
 
@@ -106,7 +107,7 @@ describe("market premium", () => {
     await fireEvent.press(await screen.findByRole("button", { name: "Record a market premium" }));
     await fillAmounts(premium, coverage);
     await fireEvent.press(screen.getByRole("button", { name: "Save market premium" }));
-    expect(await screen.findByText(message)).toBeTruthy();
+    expect(await screen.findByText(message, SHOWN)).toBeTruthy();
     expect(lastInsuranceWrite(server)).toBeNull();
   });
 

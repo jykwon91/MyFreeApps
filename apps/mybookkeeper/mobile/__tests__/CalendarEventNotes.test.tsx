@@ -8,6 +8,7 @@ import { store } from "../src/lib/store";
 import { startCalendarServer } from "../test-support/calendarServer";
 import { aBookingThisMonth, openBooking } from "../test-support/calendarSheet";
 import { holdWrites } from "../test-support/holdWrites";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn() } }));
 jest.mock("react-native/Libraries/Modal/Modal", () => ({
@@ -94,7 +95,7 @@ describe("a booking's notes", () => {
     await fireEvent.changeText(await screen.findByLabelText(NOTES), "Keep me");
     await fireEvent.press(screen.getByRole("button", { name: "Save notes" }));
     expect(await screen.findByText(message)).toBeTruthy();
-    expect(screen.queryByText("A developer's message")).toBeNull();
+    expect(screen.queryByText("A developer's message", SHOWN)).toBeNull();
     expect(screen.getByDisplayValue("Keep me")).toBeTruthy();
   });
 

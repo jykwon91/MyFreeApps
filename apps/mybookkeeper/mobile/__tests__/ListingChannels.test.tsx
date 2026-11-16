@@ -8,6 +8,7 @@ import ListingChannelsScreen from "../src/features/listings/ListingChannelsScree
 import { holdWrites } from "../test-support/holdWrites";
 import { aChannel, aChannelListing, aListing, startListingsServer, writesTo } from "../test-support/listingsServer";
 import { mockPreventRemove, mockRouter, pressAlertButton, restoreApi, show, signInToWorkspace } from "../test-support/listingsHarness";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => jest.requireActual("../test-support/listingsHarness").expoRouterMock());
 jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(async () => true) }));
@@ -129,12 +130,12 @@ describe("adding a channel", () => {
     await show(<ChannelListingFormGate id="l1" />);
     await screen.findByLabelText(`${MESSAGES.externalUrl}, required`);
     await fireEvent.press(button(MESSAGES.addSubmit));
-    expect(screen.getByText(/Channel URL is required/)).toBeTruthy();
+    expect(screen.getByText(/Channel URL is required/, SHOWN)).toBeTruthy();
     await fireEvent.changeText(url(), "nope");
     await fireEvent.changeText(screen.getByLabelText(MESSAGES.icalImportUrl), "also nope");
     await fireEvent.press(button(MESSAGES.addSubmit));
-    expect(screen.getByText("Enter a web address that starts with http:// or https://.")).toBeTruthy();
-    expect(screen.getByText(/Enter the calendar address as a web link/)).toBeTruthy();
+    expect(screen.getByText("Enter a web address that starts with http:// or https://.", SHOWN)).toBeTruthy();
+    expect(screen.getByText(/Enter the calendar address as a web link/, SHOWN)).toBeTruthy();
     expect(writesTo(server, "post")).toHaveLength(0);
   });
 

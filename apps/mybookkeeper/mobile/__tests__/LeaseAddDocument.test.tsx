@@ -26,6 +26,7 @@ import { makeStore } from "../src/lib/store";
 import { aLease } from "../test-support/aLease";
 import { holdWrites } from "../test-support/holdWrites";
 import { aPrefillItem, type FakeLeaseWritesServer, lastRequest, roleKnown, startLeaseWritesServer } from "../test-support/leaseWritesServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 jest.mock("@react-native-community/datetimepicker", () => {
@@ -278,8 +279,8 @@ describe("filling in what the documents need", () => {
     await fireEvent.changeText(await screen.findByDisplayValue("Dana Reed"), "   ");
     await fireEvent.changeText(screen.getByLabelText("Rent"), "about 1600");
     await make();
-    expect(screen.getByText(PLACEHOLDER_PROBLEM_MESSAGES.required)).toBeTruthy();
-    expect(screen.getByText(PLACEHOLDER_PROBLEM_MESSAGES.not_a_number)).toBeTruthy();
+    expect(screen.getByText(PLACEHOLDER_PROBLEM_MESSAGES.required, SHOWN)).toBeTruthy();
+    expect(screen.getByText(PLACEHOLDER_PROBLEM_MESSAGES.not_a_number, SHOWN)).toBeTruthy();
     expect(lastRequest(server, "post", "/templates")).toBeUndefined();
 
     await fireEvent.changeText(screen.getByLabelText("Tenant name, required"), "Dana");
@@ -332,7 +333,7 @@ describe("filling in what the documents need", () => {
     await fireEvent.changeText(await screen.findByLabelText("Pet name"), "Rex");
     await make();
     expect(await screen.findByText(message)).toBeTruthy();
-    expect(screen.queryByText("A developer's message")).toBeNull();
+    expect(screen.queryByText("A developer's message", SHOWN)).toBeNull();
     expect(screen.getByDisplayValue("Rex")).toBeTruthy();
 
     delete server.failures.addTemplates;

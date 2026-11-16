@@ -16,6 +16,7 @@ import { mockRouter } from "../test-support/mockRouter";
 import { renderApplicationDetail } from "../test-support/renderApplicationDetail";
 import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -179,18 +180,19 @@ it("says when notes are too long, keeps all of them and won't save", async () =>
   const tooLong = `${fits}😀`;
 
   await fireEvent.changeText(field, fits);
-  expect(screen.queryByText(/Keep this to/)).toBeNull();
+  expect(screen.queryByText(/Keep this to/, SHOWN)).toBeNull();
   expect(screen.getByRole("button", { name: NOTES.save })).toBeEnabled();
 
   await fireEvent.changeText(field, tooLong);
-  expect(await screen.findByText("Keep this to 5,000 characters or fewer.")).toBeTruthy();
+  expect(await screen.findByText("Keep this to 5,000 characters or fewer.", SHOWN)).toBeTruthy();
   expect(screen.getByDisplayValue(tooLong)).toBeTruthy();
   expect(screen.getByText("5,001 / 5,000", { includeHiddenElements: true })).toBeTruthy();
 
-  // Over by more: the alert reads the same (so it isn't announced again) and only the counter moves.
+  // Over by more: the error reads the same (so it isn't announced again) and only the counter moves.
   await fireEvent.changeText(field, `${tooLong}😀`);
   expect(await screen.findByText("5,002 / 5,000", { includeHiddenElements: true })).toBeTruthy();
-  expect(screen.getAllByRole("alert").map((alert) => alert.props.children)).toEqual(["Keep this to 5,000 characters or fewer."]);
+  expect(screen.getAllByText(/Keep this to/, SHOWN)).toHaveLength(1);
+  expect(screen.getByDisplayValue(`${tooLong}😀`).props.accessibilityHint).toBe("Keep this to 5,000 characters or fewer.");
   expect(screen.getByRole("button", { name: NOTES.save })).toBeDisabled();
   expect(sent.some(({ route }) => route === `PATCH /applications/${ID}`)).toBe(false);
 });

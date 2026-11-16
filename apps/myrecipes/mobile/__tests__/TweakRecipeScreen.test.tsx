@@ -17,6 +17,7 @@ import { TWEAK_RECIPE_MESSAGES as MESSAGES } from "../src/constants/tweakRecipe"
 import TweakRecipeScreen from "../src/features/tweakRecipe/TweakRecipeScreen";
 import { makeStore } from "../src/lib/store";
 import { type FakeStack, fakeStack } from "./support/fakeStack";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
@@ -312,12 +313,12 @@ describe("opening", () => {
 describe("checking before it saves", () => {
   it("needs a note saying what changed, and sends nothing without one", async () => {
     await showForm();
-    expect(screen.queryByText(PROBLEMS.changeNoteRequired)).toBeNull();
+    expect(screen.queryByText(PROBLEMS.changeNoteRequired, SHOWN)).toBeNull();
 
     await press(MESSAGES.save);
 
     // On the note field, and toasted.
-    expect(screen.getAllByText(PROBLEMS.changeNoteRequired)).toHaveLength(2);
+    expect(screen.getAllByText(PROBLEMS.changeNoteRequired, SHOWN)).toHaveLength(2);
     expect(posts()).toHaveLength(0);
   });
 
@@ -328,10 +329,10 @@ describe("checking before it saves", () => {
 
     await press(MESSAGES.save);
 
-    expect(screen.getByText(PROBLEMS.quantityInvalid("."))).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.quantityInvalid("."), SHOWN)).toBeTruthy();
     // On the field, and toasted as the first problem down the form.
-    expect(screen.getAllByText(PROBLEMS.minutesInvalid)).toHaveLength(2);
-    expect(screen.getAllByText(PROBLEMS.changeNoteRequired)).toHaveLength(1);
+    expect(screen.getAllByText(PROBLEMS.minutesInvalid, SHOWN)).toHaveLength(2);
+    expect(screen.getAllByText(PROBLEMS.changeNoteRequired, SHOWN)).toHaveLength(1);
     expect(posts()).toHaveLength(0);
   });
 
@@ -341,12 +342,12 @@ describe("checking before it saves", () => {
     await type("Servings", tooMany);
 
     const tooLong = tooLongProblem(tooMany, RECIPE_SERVINGS_MAX_LENGTH) as string;
-    expect(screen.getByText(tooLong)).toBeTruthy();
+    expect(screen.getByText(tooLong, SHOWN)).toBeTruthy();
 
     await type(NOTE, "More servings");
     await press(MESSAGES.save);
     // On the field, and toasted.
-    expect(screen.getAllByText(tooLong)).toHaveLength(2);
+    expect(screen.getAllByText(tooLong, SHOWN)).toHaveLength(2);
     expect(posts()).toHaveLength(0);
   });
 
@@ -356,7 +357,7 @@ describe("checking before it saves", () => {
 
     expect(screen.getByText("2,001 / 2,000", { includeHiddenElements: true })).toBeTruthy();
     const tooLong = tooLongProblem("n".repeat(CHANGE_NOTE_MAX_LENGTH + 1), CHANGE_NOTE_MAX_LENGTH) as string;
-    expect(screen.getByText(tooLong)).toBeTruthy();
+    expect(screen.getByText(tooLong, SHOWN)).toBeTruthy();
 
     await press(MESSAGES.save);
     expect(posts()).toHaveLength(0);
@@ -439,7 +440,7 @@ describe("saving", () => {
     await type(NOTE, "More salt");
     await type("Ingredient 2 amount", "0.75");
     await press(MESSAGES.save);
-    expect(screen.getAllByText(PROBLEMS.decimalSeparatorHint(","))).toHaveLength(2);
+    expect(screen.getAllByText(PROBLEMS.decimalSeparatorHint(","), SHOWN)).toHaveLength(2);
     expect(posts()).toHaveLength(0);
 
     await type("Ingredient 2 amount", "0,75");

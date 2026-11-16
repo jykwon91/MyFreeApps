@@ -11,6 +11,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aRentCharge, aRentLedger, aRentPeriod, aRentSchedule } from "../test-support/aRentLedger";
 import { startRentWritesServer, type RentWritesServer } from "../test-support/rentWritesServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -150,7 +151,7 @@ describe("setting rent up", () => {
     await pickDate(M.end, new Date(2026, 3, 30));
     expect(screen.queryByText(M.endBeforeStart)).toBeNull();
     await typeInto(M.grace, "400");
-    expect(screen.getByText(M.graceInvalid)).toBeTruthy();
+    expect(screen.getByText(M.graceInvalid, SHOWN)).toBeTruthy();
     expect(screen.getAllByRole("button", { name: M.saveNew }).pop()?.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
   });
 
@@ -171,7 +172,7 @@ describe("setting rent up", () => {
     await pressLast(M.saveNew);
 
     expect(await screen.findByText(message)).toBeTruthy();
-    expect(screen.queryByText("server wording that must not show")).toBeNull();
+    expect(screen.queryByText("server wording that must not show", SHOWN)).toBeNull();
     expect(field(M.amount).props.value).toBe("1200");
     expect(screen.getByRole("header", { name: M.scheduleTitleNew })).toBeTruthy();
   });
@@ -346,7 +347,7 @@ describe("adding a charge", () => {
 
     await typeInto(M.chargeAmount, "50abc");
     expect(isDisabled()).toBe(true);
-    expect(screen.getByText("Use dollars and cents, like 84.20.")).toBeTruthy();
+    expect(screen.getByText("Use dollars and cents, like 84.20.", SHOWN)).toBeTruthy();
 
     await typeInto(M.chargeAmount, "$1,200");
     await pressLast(M.addCharge);
@@ -363,7 +364,7 @@ describe("adding a charge", () => {
 
     await typeInto(M.chargeAmount, "1,200");
     expect(isDisabled()).toBe(true);
-    expect(screen.getByText("Use dollars and cents, like 84,20.")).toBeTruthy();
+    expect(screen.getByText("Use dollars and cents, like 84,20.", SHOWN)).toBeTruthy();
 
     await typeInto(M.chargeAmount, "12,50");
     expect(isDisabled()).toBe(false);

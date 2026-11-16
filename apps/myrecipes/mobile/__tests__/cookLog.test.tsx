@@ -15,6 +15,7 @@ import { COOK_LOG_PHONE_MESSAGES as MESSAGES } from "../src/constants/cookLog";
 import RecipeDetailScreen from "../src/features/recipes/RecipeDetailScreen";
 import { makeStore } from "../src/lib/store";
 import { formatVersionDate } from "../src/utils/formatVersionDate";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({
   router: { dismissTo: jest.fn() },
@@ -278,7 +279,7 @@ describe("logging a cook", () => {
     await fireEvent.changeText(notesField(), long);
 
     const problem = tooLongProblem(long, COOK_NOTES_MAX_LENGTH) ?? "";
-    expect(screen.getByText(problem)).toBeTruthy();
+    expect(screen.getByText(problem, SHOWN)).toBeTruthy();
     expect(notesField().props.accessibilityHint).toBe(problem);
     await fireEvent.press(saveButton());
     expect(posts()).toHaveLength(0);

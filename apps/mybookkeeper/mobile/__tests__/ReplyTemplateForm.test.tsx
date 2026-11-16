@@ -14,6 +14,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aReplyTemplate } from "../test-support/aReplyTemplate";
 import { anInquiry, lastInquiryWrite, startInquiryServer, type FakeInquiryServer } from "../test-support/inquiriesServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
@@ -107,11 +108,11 @@ describe("making a template", () => {
   it("shows all three problems after the first tap, and sends nothing", async () => {
     const server = serverWith([]);
     await showCreate();
-    expect(screen.queryByText(MESSAGES.nameRequired)).toBeNull();
+    expect(screen.queryByText(MESSAGES.nameRequired, SHOWN)).toBeNull();
     await fireEvent.press(saveButton());
-    expect(await screen.findByText(MESSAGES.nameRequired)).toBeTruthy();
-    expect(screen.getByText(MESSAGES.subjectRequired)).toBeTruthy();
-    expect(screen.getByText(MESSAGES.messageRequired)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.nameRequired, SHOWN)).toBeTruthy();
+    expect(screen.getByText(MESSAGES.subjectRequired, SHOWN)).toBeTruthy();
+    expect(screen.getByText(MESSAGES.messageRequired, SHOWN)).toBeTruthy();
     expect(writes(server, "post")).toHaveLength(0);
   });
 
@@ -120,7 +121,7 @@ describe("making a template", () => {
     await showCreate();
     await fill("   ", "  ", "\n\n");
     await fireEvent.press(saveButton());
-    expect(await screen.findByText(MESSAGES.nameRequired)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.nameRequired, SHOWN)).toBeTruthy();
     expect(writes(server, "post")).toHaveLength(0);
   });
 
@@ -129,7 +130,7 @@ describe("making a template", () => {
     await showCreate();
     await fill("Polite decline");
     await fireEvent.press(saveButton());
-    expect(await screen.findByText(MESSAGES.nameClash)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.nameClash, SHOWN)).toBeTruthy();
     expect(writes(server, "post")).toHaveLength(0);
   });
 
@@ -139,11 +140,11 @@ describe("making a template", () => {
     await showCreate();
     await fill("Old one");
     await fireEvent.press(saveButton());
-    expect(await screen.findByText(MESSAGES.nameTaken)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.nameTaken, SHOWN)).toBeTruthy();
     expect(screen.queryByText(/already exists/)).toBeNull();
     expect(screen.queryByText(MESSAGES.templateSaved)).toBeNull();
     await fireEvent.changeText(nameInput(), "Another");
-    expect(screen.queryByText(MESSAGES.nameTaken)).toBeNull();
+    expect(screen.queryByText(MESSAGES.nameTaken, SHOWN)).toBeNull();
   });
 
   it("shows Saving…, locks the fields, and sends once however often it's tapped", async () => {
@@ -440,7 +441,7 @@ describe("changing a template", () => {
     await showEdit();
     await fireEvent.changeText(nameInput(), "Welcome");
     await fireEvent.press(saveButton(MESSAGES.saveChanges));
-    expect(await screen.findByText(MESSAGES.nameClash)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.nameClash, SHOWN)).toBeTruthy();
     expect(lastInquiryWrite(server)).toBeNull();
     await fireEvent.changeText(nameInput(), "Polite decline");
     await fireEvent.changeText(messageInput(), "New words");
@@ -454,7 +455,7 @@ describe("changing a template", () => {
     await showEdit();
     await fireEvent.changeText(nameInput(), "Gone");
     await fireEvent.press(saveButton(MESSAGES.saveChanges));
-    expect(await screen.findByText(MESSAGES.nameTaken)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.nameTaken, SHOWN)).toBeTruthy();
   });
 
   it("says it's gone and leaves without asking when the server no longer has it", async () => {

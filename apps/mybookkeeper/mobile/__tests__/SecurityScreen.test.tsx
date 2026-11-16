@@ -17,6 +17,7 @@ import { SECURITY_CONTENT, SECURITY_INTRO_DISMISSED_KEY } from "../src/constants
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { makeStore } from "../src/lib/store";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
@@ -164,7 +165,7 @@ describe("the display name", () => {
     securityRoutes(false, { "GET /users/me": () => ({ status: 200, data: { ...USER, name: long } }) });
     await openSecurity();
     expect(await screen.findByDisplayValue(long)).toBeTruthy();
-    expect(screen.getByText("Keep this to 120 characters or fewer.")).toBeTruthy();
+    expect(screen.getByText("Keep this to 120 characters or fewer.", SHOWN)).toBeTruthy();
     expect(screen.getByRole("button", { name: MESSAGES.save }).props.accessibilityState?.disabled).toBe(true);
   });
 
@@ -186,7 +187,7 @@ describe("the display name", () => {
     expect(screen.getByRole("button", { name: MESSAGES.save }).props.accessibilityState?.disabled).toBe(false);
 
     await fireEvent.changeText(field, "x".repeat(121));
-    expect(screen.getByText("Keep this to 120 characters or fewer.")).toBeTruthy();
+    expect(screen.getByText("Keep this to 120 characters or fewer.", SHOWN)).toBeTruthy();
     expect(screen.getByRole("button", { name: MESSAGES.save }).props.accessibilityState?.disabled).toBe(true);
   });
 

@@ -6,14 +6,15 @@ import {
 } from "@myrecipes/api-client/constants/recipeForm";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import api from "@platform/core/lib/api";
-import { DISCARD_MESSAGES, type MobileSession, type SessionState, SessionProvider, ToastProvider } from "@platform/mobile";
+import { DISCARD_MESSAGES, fieldErrorsSummary, type MobileSession, type SessionState, SessionProvider, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
-import { Alert, type AlertButton } from "react-native";
+import { AccessibilityInfo, Alert, type AlertButton } from "react-native";
 import { Provider } from "react-redux";
 import { NEW_RECIPE_MESSAGES as MESSAGES } from "../src/constants/newRecipe";
 import NewRecipeScreen from "../src/features/newRecipe/NewRecipeScreen";
 import { makeStore } from "../src/lib/store";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
@@ -161,21 +162,32 @@ describe("signed out", () => {
 });
 
 describe("checking before it saves", () => {
+  it("reads one summary of what's missing, not one cut-off message per field", async () => {
+    await show();
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions").mockImplementation(() => undefined);
+
+    await press(MESSAGES.create);
+
+    const fieldMessages = announce.mock.calls.map(([message]) => message);
+    expect(fieldMessages).toEqual([fieldErrorsSummary(["Title", MESSAGES.ingredientsHeading, MESSAGES.stepsHeading])]);
+    announce.mockRestore();
+  });
+
   it("says what's missing on the fields only once Create is pressed, and sends nothing", async () => {
     await show();
-    expect(screen.queryByText(PROBLEMS.titleRequired)).toBeNull();
+    expect(screen.queryByText(PROBLEMS.titleRequired, SHOWN)).toBeNull();
 
     await press(MESSAGES.create);
 
     // On the title field, and toasted.
-    expect(screen.getAllByText(PROBLEMS.titleRequired)).toHaveLength(2);
+    expect(screen.getAllByText(PROBLEMS.titleRequired, SHOWN)).toHaveLength(2);
     expect(screen.getByText(PROBLEMS.ingredientsRequired)).toBeTruthy();
     expect(screen.getByText(PROBLEMS.stepsRequired)).toBeTruthy();
     expect(sent).toHaveLength(0);
 
     // Typing clears the field's error; the toast goes on its own.
     await type("Title, required", "Soup");
-    expect(screen.getAllByText(PROBLEMS.titleRequired)).toHaveLength(1);
+    expect(screen.getAllByText(PROBLEMS.titleRequired, SHOWN)).toHaveLength(1);
     expect(screen.getByLabelText("Title, required").props.accessibilityHint).toBeUndefined();
   });
 
@@ -189,10 +201,10 @@ describe("checking before it saves", () => {
 
     await press(MESSAGES.create);
 
-    expect(screen.getByText(PROBLEMS.quantityInvalid("."))).toBeTruthy();
-    expect(screen.getByText(PROBLEMS.ingredientNameRequired)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.quantityInvalid("."), SHOWN)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.ingredientNameRequired, SHOWN)).toBeTruthy();
     // On the field, and toasted as the first problem down the form.
-    expect(screen.getAllByText(PROBLEMS.minutesInvalid)).toHaveLength(2);
+    expect(screen.getAllByText(PROBLEMS.minutesInvalid, SHOWN)).toHaveLength(2);
     expect(sent).toHaveLength(0);
   });
 });
@@ -205,14 +217,14 @@ describe("length limits", () => {
     // An emoji counts once, as a code point, and spaces round it aren't sent.
     await type("Description", `  ${"\u{1F345}".repeat(RECIPE_DESCRIPTION_MAX_LENGTH)}  `);
     expect(screen.getByText("5,000 / 5,000", { includeHiddenElements: true })).toBeTruthy();
-    expect(screen.queryByText(/Keep this to/)).toBeNull();
+    expect(screen.queryByText(/Keep this to/, SHOWN)).toBeNull();
 
     await type("Source", "s".repeat(RECIPE_SOURCE_MAX_LENGTH + 1));
     expect(screen.getByText("1,001 / 1,000", { includeHiddenElements: true })).toBeTruthy();
     const sourceTooLong = tooLongProblem("x".repeat(RECIPE_SOURCE_MAX_LENGTH + 1), RECIPE_SOURCE_MAX_LENGTH) as string;
-    expect(screen.getByText(sourceTooLong)).toBeTruthy();
+    expect(screen.getByText(sourceTooLong, SHOWN)).toBeTruthy();
     // Nothing else is called missing until Create is pressed.
-    expect(screen.queryByText(PROBLEMS.titleRequired)).toBeNull();
+    expect(screen.queryByText(PROBLEMS.titleRequired, SHOWN)).toBeNull();
 
     await fillMinimalRecipe();
     await press(MESSAGES.create);
@@ -225,11 +237,11 @@ describe("length limits", () => {
     await type("Servings", tooMany);
 
     const tooLong = tooLongProblem(tooMany, RECIPE_SERVINGS_MAX_LENGTH) as string;
-    expect(screen.getByText(tooLong)).toBeTruthy();
+    expect(screen.getByText(tooLong, SHOWN)).toBeTruthy();
 
     await press(MESSAGES.create);
     // On the field, and toasted, once each.
-    expect(screen.getAllByText(tooLong)).toHaveLength(2);
+    expect(screen.getAllByText(tooLong, SHOWN)).toHaveLength(2);
     expect(sent).toHaveLength(0);
   });
 });
@@ -298,7 +310,7 @@ describe("creating", () => {
     await type("Ingredient 1 amount", "0.5");
 
     await press(MESSAGES.create);
-    expect(screen.getAllByText(PROBLEMS.decimalSeparatorHint(","))).toHaveLength(2);
+    expect(screen.getAllByText(PROBLEMS.decimalSeparatorHint(","), SHOWN)).toHaveLength(2);
     expect(sent).toHaveLength(0);
 
     await type("Ingredient 1 amount", "0,5");

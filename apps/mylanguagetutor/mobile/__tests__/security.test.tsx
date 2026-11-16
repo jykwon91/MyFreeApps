@@ -15,6 +15,7 @@ import { storedItems } from "@platform/mobile/test-support/memorySecureStore";
 import { renderApp } from "../test-support/renderApp";
 import { ACCOUNT_EMAIL, storeSession, tokens } from "@platform/mobile/test-support/storedSession";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -134,7 +135,7 @@ describe("the display name", () => {
     securityRoutes();
     await openSecurity();
     await fireEvent.changeText(await screen.findByDisplayValue(USER.display_name), "x".repeat(101));
-    expect(screen.getByText("Keep this to 100 characters or fewer.")).toBeTruthy();
+    expect(screen.getByText("Keep this to 100 characters or fewer.", SHOWN)).toBeTruthy();
     expect(screen.getByRole("button", { name: MESSAGES.save }).props.accessibilityState?.disabled).toBe(true);
   });
 });

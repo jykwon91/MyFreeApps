@@ -12,6 +12,7 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { holdWrites } from "../test-support/holdWrites";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -134,7 +135,7 @@ describe("editing a mortgage", () => {
     const rate = await screen.findByLabelText(MESSAGES.rate);
     await fireEvent.changeText(rate, "7,1255");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
-    expect(await screen.findByText("Use at most three decimal places, like 7,125.")).toBeTruthy();
+    expect(await screen.findByText("Use at most three decimal places, like 7,125.", SHOWN)).toBeTruthy();
     expect(writes(requests)).toHaveLength(0);
     await fireEvent.changeText(rate, "7,125");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
@@ -148,7 +149,7 @@ describe("editing a mortgage", () => {
     const escrow = await screen.findByLabelText(MESSAGES.monthlyEscrow);
     await fireEvent.changeText(escrow, "-5");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
-    expect(await screen.findByText(/can't be negative/)).toBeTruthy();
+    expect(await screen.findByText(/can't be negative/, SHOWN)).toBeTruthy();
     expect(writes(requests)).toHaveLength(0);
     await fireEvent.changeText(escrow, "$1,250.50");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
@@ -161,7 +162,7 @@ describe("editing a mortgage", () => {
     await show(<MortgageEditScreen id="m1" />);
     await fireEvent.changeText(await screen.findByLabelText(MESSAGES.rate), "30");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
-    expect(await screen.findByText(/above 0 and below 25/)).toBeTruthy();
+    expect(await screen.findByText(/above 0 and below 25/, SHOWN)).toBeTruthy();
     expect(writes(requests)).toHaveLength(0);
   });
 
@@ -201,7 +202,7 @@ describe("editing a mortgage", () => {
     await fireEvent.changeText(await screen.findByLabelText(MESSAGES.rate), "6.5");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
     expect(await screen.findByText(copy)).toBeTruthy();
-    expect(screen.queryByText(/raw server text/)).toBeNull();
+    expect(screen.queryByText(/raw server text/, SHOWN)).toBeNull();
     expect(screen.getByLabelText(MESSAGES.rate).props.value).toBe("6.5");
     expect(mockBack).not.toHaveBeenCalled();
   });

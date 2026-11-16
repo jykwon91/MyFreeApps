@@ -16,6 +16,7 @@ import { MANAGE_RECIPE_MESSAGES as MESSAGES } from "../src/constants/manageRecip
 import { RECIPES_LIST_PATH } from "../src/constants/routes";
 import RecipeDetailScreen from "../src/features/recipes/RecipeDetailScreen";
 import { makeStore } from "../src/lib/store";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockDismissTo = jest.fn();
 jest.mock("expo-router", () => ({
@@ -190,11 +191,11 @@ describe("editing a recipe's details", () => {
     await show(SOUP, { "PATCH /recipes/r1": () => reply(200, SOUP) });
     await openEdit();
     await fireEvent.changeText(titleField(), "   ");
-    expect(screen.queryByText(PROBLEMS.titleRequired)).toBeNull();
+    expect(screen.queryByText(PROBLEMS.titleRequired, SHOWN)).toBeNull();
 
     await fireEvent.press(saveButton());
 
-    expect(screen.getByText(PROBLEMS.titleRequired)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.titleRequired, SHOWN)).toBeTruthy();
     expect(titleField().props.accessibilityHint).toBe(PROBLEMS.titleRequired);
     expect(patches()).toHaveLength(0);
   });
@@ -206,7 +207,7 @@ describe("editing a recipe's details", () => {
     await fireEvent.changeText(titleField(), long);
 
     const problem = tooLongProblem(long, RECIPE_TITLE_MAX_LENGTH) ?? "";
-    expect(screen.getByText(problem)).toBeTruthy();
+    expect(screen.getByText(problem, SHOWN)).toBeTruthy();
     await fireEvent.press(saveButton());
     expect(patches()).toHaveLength(0);
   });

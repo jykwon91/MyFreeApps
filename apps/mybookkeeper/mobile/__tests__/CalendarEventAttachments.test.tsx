@@ -13,6 +13,7 @@ import { anAttachment, startCalendarServer } from "../test-support/calendarServe
 import { aBookingThisMonth, openBooking } from "../test-support/calendarSheet";
 import { fakeDownloads, File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { holdWrites } from "../test-support/holdWrites";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn() } }));
@@ -174,7 +175,7 @@ describe("a booking's attachments", () => {
     await chooseFile();
     await fireEvent.press(screen.getByRole("button", { name: "Upload file" }));
     expect(await screen.findByText(message)).toBeTruthy();
-    expect(screen.queryByText("A developer's message")).toBeNull();
+    expect(screen.queryByText("A developer's message", SHOWN)).toBeNull();
 
     server.writeFailure = null;
     await fireEvent.press(screen.getByRole("button", { name: "Upload file" }));

@@ -14,6 +14,7 @@ import { pressAlertButton } from "../test-support/pressAlertButton";
 import { renderScreen, resetSignedInStore } from "../test-support/renderScreen";
 import { startWelcomeManualsServer } from "../test-support/welcomeManualsServer";
 import { writesTo } from "../test-support/writesTo";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockBack = jest.fn();
 const mockReplace = jest.fn();
@@ -280,7 +281,7 @@ describe("emailing the guide", () => {
     await open();
     await fill("not-an-email");
     await fireEvent.press(button(EMAIL.send));
-    expect(screen.getByText("Enter a valid email address.")).toBeTruthy();
+    expect(screen.getByText("Enter a valid email address.", SHOWN)).toBeTruthy();
     expect(writesTo(server)).toHaveLength(0);
     expect(screen.queryByText(EMAIL.sentHeading)).toBeNull();
   });

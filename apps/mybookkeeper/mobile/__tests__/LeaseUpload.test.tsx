@@ -16,6 +16,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { formParts, formValue } from "../test-support/applicantsServer";
 import { fakeFiles, File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true } }));
@@ -282,7 +283,7 @@ describe("adding a file to a lease", () => {
     await chooseFile();
     await fireEvent.press(screen.getByRole("button", ADD));
     expect(await screen.findByText(message)).toBeTruthy();
-    expect(screen.queryByText("A developer's message")).toBeNull();
+    expect(screen.queryByText("A developer's message", SHOWN)).toBeNull();
     expect(heldFiles()).toHaveLength(1);
 
     server.uploadFailure = null;

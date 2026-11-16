@@ -18,6 +18,7 @@ import { type HeldRefinementSession, resumeRoutes } from "../test-support/resume
 import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -85,7 +86,7 @@ describe("starting", () => {
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.start }));
 
     expect(await screen.findByText(why)).toBeTruthy();
-    expect(screen.queryByText(/overloaded_error/)).toBeNull();
+    expect(screen.queryByText(/overloaded_error/, SHOWN)).toBeNull();
     expect(await screen.findByRole("button", { name: MESSAGES.start })).toBeEnabled();
     expect(storedItems.has(RESUME_SESSION_ID_KEY)).toBe(false);
   });
@@ -180,7 +181,7 @@ describe("acting on a suggestion", () => {
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.send }));
 
     expect(await screen.findByText(MESSAGES.actionFailed)).toBeTruthy();
-    expect(screen.queryByText(/overloaded_error/)).toBeNull();
+    expect(screen.queryByText(/overloaded_error/, SHOWN)).toBeNull();
     expect(screen.queryByText(MESSAGES.sending)).toBeNull();
     expect(screen.getByLabelText(MESSAGES.messageLabel).props.value).toBe("no em dashes");
   });

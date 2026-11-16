@@ -11,6 +11,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { holdWrites } from "../test-support/holdWrites";
 import { aProperty, startTransactionServer } from "../test-support/transactionsServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -150,7 +151,7 @@ describe("NewTransactionScreen", () => {
     await renderScreen();
     await fireEvent.changeText(await screen.findByLabelText("Amount (USD), required"), "1,200");
     await fireEvent.press(screen.getByRole("button", { name: "Add transaction" }));
-    expect(await screen.findByText("Use dollars and cents, like 84,20.")).toBeTruthy();
+    expect(await screen.findByText("Use dollars and cents, like 84,20.", SHOWN)).toBeTruthy();
     expect(server.requests.some((request) => request.method === "post")).toBe(false);
   });
 
@@ -159,7 +160,7 @@ describe("NewTransactionScreen", () => {
     await renderScreen();
     await fireEvent.changeText(await screen.findByLabelText("Amount (USD), required"), amount);
     await fireEvent.press(screen.getByRole("button", { name: "Add transaction" }));
-    expect(await screen.findByText(/Enter an amount above \$0\.|Use dollars and cents/)).toBeTruthy();
+    expect(await screen.findByText(/Enter an amount above \$0\.|Use dollars and cents/, SHOWN)).toBeTruthy();
     expect(server.requests.some((request) => request.method === "post")).toBe(false);
   });
 

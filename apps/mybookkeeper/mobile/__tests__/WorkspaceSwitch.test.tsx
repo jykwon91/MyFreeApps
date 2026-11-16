@@ -13,6 +13,7 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockNavigate = jest.fn();
 jest.mock("expo-router", () => ({ router: { navigate: (path: string) => mockNavigate(path) } }));
@@ -147,7 +148,7 @@ describe("creating a workspace", () => {
   it("asks for a name before sending anything", async () => {
     await show();
     await createNamed("   ");
-    expect(screen.getByText("Enter a name.")).toBeTruthy();
+    expect(screen.getByText("Enter a name.", SHOWN)).toBeTruthy();
     expect(server.created).toEqual([]);
   });
 

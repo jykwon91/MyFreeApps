@@ -16,6 +16,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aProperty, startPropertiesVendorsServer, writesOf } from "../test-support/propertiesVendorsServer";
 import { holdWrites } from "../test-support/holdWrites";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -268,7 +269,7 @@ describe("adding a property", () => {
     await screen.findByLabelText("Property name, required");
     await fireEvent.press(button(FORM.add));
     for (const text of ["Add a name.", "Add the street address.", "Add the city.", "Add the state.", "Add the ZIP code."]) {
-      expect(screen.getByText(text)).toBeTruthy();
+      expect(screen.getByText(text, SHOWN)).toBeTruthy();
     }
     expect(writesOf(server, "post")).toHaveLength(0);
   });

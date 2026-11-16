@@ -18,6 +18,7 @@ import { renderDiscover } from "../test-support/renderDiscover";
 import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 import type { SentRequest } from "@platform/mobile/test-support/types/SentRequest";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -212,7 +213,7 @@ describe("a new board saved search", () => {
     const token = screen.getByLabelText(`${SHEET.boardTokenLabel}, required`);
 
     await fireEvent.changeText(token, "bad token!");
-    expect(screen.getByText(HINTS.badBoardToken)).toBeTruthy();
+    expect(screen.getByText(HINTS.badBoardToken, SHOWN)).toBeTruthy();
     await fireEvent.changeText(token, "stripe");
     expect(screen.getByText(HINTS.boardToken)).toBeTruthy();
     await submit(SHEET.create);

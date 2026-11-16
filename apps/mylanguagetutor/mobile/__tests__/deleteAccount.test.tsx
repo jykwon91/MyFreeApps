@@ -3,6 +3,7 @@ import { ACCOUNT_EMAIL, storeSession, storedSession, tokens } from "@platform/mo
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { DELETE_ACCOUNT_WARNING } from "../src/constants/deleteAccount";
 import { renderApp } from "../test-support/renderApp";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -36,7 +37,7 @@ describe("deleting the account", () => {
     await fireEvent.changeText(screen.getByLabelText("Password"), "wrong");
     await fireEvent.press(screen.getByRole("button", { name: "Delete my account forever" }));
 
-    expect(await screen.findByText("That password isn't right.")).toBeTruthy();
+    expect(await screen.findByText("That password isn't right.", SHOWN)).toBeTruthy();
     expect(storedSession()).not.toBeNull();
   });
 
