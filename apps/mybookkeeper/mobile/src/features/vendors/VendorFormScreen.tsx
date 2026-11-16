@@ -4,7 +4,7 @@ import type { VendorCategory } from "@mybookkeeper/api-client/types/vendor/vendo
 import type { VendorFormValues } from "@mybookkeeper/api-client/types/vendor/vendor-form-values";
 import type { VendorResponse } from "@mybookkeeper/api-client/types/vendor/vendor-response";
 import { EMPTY_VENDOR_FORM, vendorDirtyFields, vendorFormProblems, vendorToFormValues } from "@mybookkeeper/api-client/utils/vendorForm";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, PickerField, SwitchRow, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 
 import { VENDOR_FORM_MESSAGES as MESSAGES } from "../../constants/vendorForm";
@@ -18,12 +18,13 @@ export default function VendorFormScreen({ original }: { original: VendorRespons
   const { spacing } = useTheme();
   const saved = original ? vendorToFormValues(original) : EMPTY_VENDOR_FORM;
   const [values, setValues] = useState<VendorFormValues>(saved);
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
   const [hasTried, setHasTried] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const { submit, isBusy, isLeaving, failure } = useSaveVendor(original);
+  const { submit, isBusy, isLeaving, failure } = useSaveVendor(original, decimalSeparator);
 
-  const problems = vendorFormProblems(values);
-  const isDirty = Object.keys(vendorDirtyFields(values, saved)).length > 0;
+  const problems = vendorFormProblems(values, decimalSeparator);
+  const isDirty = Object.keys(vendorDirtyFields(values, saved, decimalSeparator)).length > 0;
   const locked = isBusy || isLeaving;
   const errorFor = (field: keyof VendorFormValues) => (hasTried ? problems[field] : undefined);
 
