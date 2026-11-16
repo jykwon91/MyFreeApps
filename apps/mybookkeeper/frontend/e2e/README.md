@@ -2,7 +2,7 @@
 
 Playwright tests under this directory split into two configs:
 
-- **`playwright.layout.config.ts`** — runs `e2e/mocked/`, with no backend. Those specs answer every API call themselves via `page.route()` (helpers in `e2e/mocked/fixtures/`) or read files off disk. CI runs the whole folder in the `frontend-layout-e2e / mybookkeeper` job, so a new spec that needs no backend goes in `e2e/mocked/` and is picked up automatically.
+- **`playwright.layout.config.ts`** — runs `e2e/mocked/`, with no backend. Those specs answer every API call themselves via `page.route()` (helpers in `e2e/mocked/fixtures/`) or read files off disk. CI runs the whole folder, split across the two `frontend-layout-e2e / mybookkeeper` shard jobs, so a new spec that needs no backend goes in `e2e/mocked/` and is picked up automatically.
 - **`playwright.config.ts`** — everything else in `e2e/` (it skips `mocked/`). Full backend required: tests register a real user, drive the live UI, and assert real data effects. Run locally only.
 
 ## Running the full suite locally
