@@ -8,6 +8,7 @@ export { confirmSecurityChange } from "./auth/confirmSecurityChange";
 export { createMobileSession } from "./auth/createMobileSession";
 export { onAccountLeft } from "./auth/onAccountLeft";
 export { resetCacheOnAccountChange } from "./auth/resetCacheOnAccountChange";
+export { signedInEmail } from "./auth/signedInEmail";
 export { assertSecureApiUrl } from "./utils/assertSecureApiUrl";
 export { refetchOnForeground } from "./utils/refetchOnForeground";
 export { clearDownloadCopies } from "./utils/clearDownloadCopies";

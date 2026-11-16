@@ -3,9 +3,11 @@ import { baseApi } from "@platform/core/store/baseApi";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { ToastProvider } from "@platform/mobile";
+import { resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { AccessibilityInfo, AppState } from "react-native";
 import { Provider } from "react-redux";
 import RecipeDetailScreen from "../src/features/recipes/RecipeDetailScreen";
+import { saveCookCopy } from "../src/features/cook/cookCopies";
 import { pageChanged } from "../src/features/cook/cookSessionsSlice";
 import { COOK_SESSION_MAX_AGE_MS } from "../src/constants/cook";
 import { makeStore } from "../src/lib/store";
@@ -36,6 +38,19 @@ jest.mock("expo-router", () => ({
   },
   useLocalSearchParams: () => mockParams,
   useRouter: () => ({ back: mockBack, canGoBack: () => mockCanGoBack, push: mockPush, replace: mockReplace }),
+}));
+
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
+
+// Saved cook copies belong to whoever the app's session says is signed in.
+jest.mock("../src/lib/session", () => ({
+  session: {
+    tokenStore: { get: () => null, set: () => {}, clear: () => {} },
+    refreshSession: () => Promise.resolve("unavailable"),
+    currentAccount: () => null,
+    getState: () => ({ status: "signedIn", email: "a@example.com", sessionId: "s" }),
+    subscribe: () => () => {},
+  },
 }));
 
 const VERSION = {
@@ -117,6 +132,7 @@ async function pullToRefresh() {
 }
 
 beforeEach(() => {
+  resetFakeFiles();
   api.defaults.adapter = adapter;
   mockBack.mockClear();
   mockPush.mockClear();
@@ -373,6 +389,33 @@ describe("RecipeDetailScreen", () => {
     expect(await screen.findByLabelText("Loading recipe")).toBeTruthy();
     open();
     expect(await screen.findByText("Source: Grandma")).toBeTruthy();
+  });
+
+  it("offers the copy saved for cooking when offline", async () => {
+    saveCookCopy("r1", "Tomato soup", VERSION as never);
+    reply = "offline";
+    await show();
+
+    await fireEvent.press(await screen.findByRole("button", { name: "Cook the saved copy" }));
+    expect(mockPush).toHaveBeenCalledWith({ pathname: "/recipes/[id]/cook", params: { id: "r1" } });
+    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+  });
+
+  it("offers no saved copy when there isn't one, or when the server answered", async () => {
+    reply = "offline";
+    await show();
+    expect(await screen.findByText("Can't load this recipe")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Cook the saved copy" })).toBeNull();
+    await screen.unmount();
+    await act(async () => {
+      store.dispatch(baseApi.util.resetApiState());
+    });
+
+    saveCookCopy("r1", "Tomato soup", VERSION as never);
+    reply = { status: 500, data: "boom" };
+    await show();
+    expect(await screen.findByText("Can't load this recipe")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Cook the saved copy" })).toBeNull();
   });
 
   it("shows no title placeholder once a deep link has failed", async () => {

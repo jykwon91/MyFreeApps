@@ -1,11 +1,13 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
+import { fakeFiles, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import { AccessibilityInfo, AppState, Platform, StyleSheet } from "react-native";
 import { Provider } from "react-redux";
 import { recipesApi } from "@myrecipes/api-client/store/recipesApi";
 import { COOK_SESSION_MAX_AGE_MS } from "../src/constants/cook";
+import { loadCookCopy, saveCookCopy } from "../src/features/cook/cookCopies";
 import { pageChanged } from "../src/features/cook/cookSessionsSlice";
 import CookScreen from "../src/features/cook/CookScreen";
 import { timersRestored } from "../src/features/cook/cookTimersSlice";
@@ -108,6 +110,18 @@ jest.mock("react-native-pager-view", () => {
   };
 });
 
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
+
+jest.mock("../src/lib/session", () => ({
+  session: {
+    tokenStore: { get: () => null, set: () => {}, clear: () => {} },
+    refreshSession: () => Promise.resolve("unavailable"),
+    currentAccount: () => null,
+    getState: () => ({ status: "signedIn", email: "a@example.com", sessionId: "s" }),
+    subscribe: () => () => {},
+  },
+}));
+
 jest.mock("react-native-safe-area-context", () => {
   const { View } = jest.requireActual("react-native");
   return { SafeAreaView: View };
@@ -167,6 +181,7 @@ function tapZone(id: "cook-tap-back" | "cook-tap-next", stepIndex: number) {
 }
 
 beforeEach(() => {
+  resetFakeFiles();
   api.defaults.adapter = adapter;
   mockCanGoBack = true;
   mockScreenOptions = undefined;
@@ -496,6 +511,72 @@ describe("CookScreen", () => {
 
     await fireEvent(screen.getByTestId("cook-ingredients-sheet"), "requestClose");
     expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+  });
+
+  describe("without a connection", () => {
+    const COPY = "doc:/cook-copies/r1.json";
+    const OFFLINE_NOTICE = "You're offline, so this is the copy saved on this phone. It may be out of date.";
+
+    it("saves a copy of the recipe it opens", async () => {
+      await open();
+      expect(fakeFiles()).toEqual([COPY]);
+      expect(loadCookCopy("r1")).toMatchObject({ recipeId: "r1", title: "Tomato soup", version: { id: "v1" } });
+    });
+
+    it("opens the saved copy from a cold start, saying it may be out of date", async () => {
+      saveCookCopy("r1", "Tomato soup", VERSION as never);
+      reply = "offline";
+      store = makeStore();
+      await mount();
+
+      expect(await screen.findByRole("header", { name: "Ingredients" })).toBeTruthy();
+      expect(screen.getByText(OFFLINE_NOTICE)).toBeTruthy();
+      expect(screen.queryByText("Can't load this recipe")).toBeNull();
+      await press("Start cooking");
+      expect(screen.getByRole("header", { name: "Step 1 of 2" })).toBeTruthy();
+    });
+
+    it("opens the saved copy when the recipe screen has already failed offline", async () => {
+      saveCookCopy("r1", "Tomato soup", VERSION as never);
+      reply = "offline";
+      store = makeStore();
+      await act(async () => {
+        await store.dispatch(recipesApi.endpoints.getRecipe.initiate("r1", { subscribe: false }));
+      });
+
+      await mount();
+      expect(await screen.findByRole("header", { name: "Ingredients" })).toBeTruthy();
+      expect(screen.getByText(OFFLINE_NOTICE)).toBeTruthy();
+    });
+
+    it("says it can't load the recipe when nothing was saved", async () => {
+      reply = "offline";
+      store = makeStore();
+      await mount();
+
+      expect(await screen.findByText("Can't load this recipe")).toBeTruthy();
+      expect(screen.queryByText(OFFLINE_NOTICE)).toBeNull();
+    });
+
+    it("doesn't use the saved copy when the server answers with an error", async () => {
+      saveCookCopy("r1", "Tomato soup", VERSION as never);
+      reply = { status: 500, data: {} };
+      store = makeStore();
+      await mount();
+
+      expect(await screen.findByText("Can't load this recipe")).toBeTruthy();
+      expect(fakeFiles()).toEqual([COPY]);
+    });
+
+    it("deletes the saved copy of a recipe that's gone", async () => {
+      saveCookCopy("r1", "Tomato soup", VERSION as never);
+      reply = { status: 404, data: {} };
+      store = makeStore();
+      await mount();
+
+      expect(await screen.findByText("Recipe not found")).toBeTruthy();
+      expect(fakeFiles()).toEqual([]);
+    });
   });
 
   describe("timers", () => {
