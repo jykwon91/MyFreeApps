@@ -1,7 +1,6 @@
 import { RECONCILIATION_COMPARE_MESSAGES } from "@mybookkeeper/api-client/constants/reconciliationCompare";
 
 export const RECONCILIATION_SKELETON_ROWS = ["a", "b", "c"];
-export const MAX_REPORTED_AMOUNT = 10_000_000_000;
 export const ISSUER_MAX_LENGTH = 255;
 export const DOCUMENTS_LINK = "/money?segment=documents";
 
@@ -58,7 +57,6 @@ export const RECONCILIATION_MESSAGES = {
   issuer: "Issuer (optional)",
   issuerHint: "Use the name on your transactions, like Airbnb, so I can compare them.",
   amount: "Amount reported (USD)",
-  tooLarge: "That's more than I can save. Check the amount.",
   adding: "Adding…",
   added: "Added. Compare it with your records to see if it matches.",
   addRejected: "I couldn't save that. Check the amount and try again.",

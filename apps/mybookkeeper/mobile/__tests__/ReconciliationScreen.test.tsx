@@ -15,7 +15,6 @@ import ReconciliationAddScreen from "../src/features/reconciliation/Reconciliati
 import {
   differenceLine,
   formYear,
-  reportedAmountError,
   rowLabel,
   sourceTitle,
 } from "../src/features/reconciliation/reconciliationDisplay";
@@ -213,23 +212,6 @@ describe("refusals", () => {
     expect(compareFailureMessage({ data: undefined })).toBe(MESSAGES.compareUnreachable);
     expect(compareFailureMessage(status(403))).toBe(MESSAGES.viewerRefused);
     expect(compareFailureMessage(status(500))).toBe(MESSAGES.compareFailed);
-  });
-});
-
-describe("the amount", () => {
-  it.each([
-    ["", ".", "Enter an amount above $0."],
-    ["0", ".", "Enter an amount above $0."],
-    ["12.345", ".", "Use dollars and cents, like 84.20."],
-    ["1,000", ".", undefined],
-    ["10000000000", ".", MESSAGES.tooLarge],
-    ["10.000.000.000", ",", MESSAGES.tooLarge],
-    ["9999999999.99", ".", undefined],
-    [" 84.20 ", ".", undefined],
-    ["84,20", ",", undefined],
-    ["1,000", ",", "Use dollars and cents, like 84,20."],
-  ] as const)("%j on a %j keypad", (amount, separator, problem) => {
-    expect(reportedAmountError(amount, separator)).toBe(problem);
   });
 });
 
@@ -459,13 +441,33 @@ describe("adding", () => {
     expect(server.sent[0]?.body).toEqual({ source_type: "1099_k", tax_year: LAST_YEAR, reported_amount: "10" });
   });
 
+  it("adds a 1099 that reported $0, which the server accepts", async () => {
+    const server = serve({});
+    await showForm();
+    await typeInto(MESSAGES.amount, "0");
+    await fireEvent.press(screen.getByText(MESSAGES.add));
+    await settle();
+    expect(server.sent[0]?.body).toEqual({ source_type: "1099_k", tax_year: LAST_YEAR, reported_amount: "0" });
+    expect(mockBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a negative 1099 amount with the server's wording", async () => {
+    const server = serve({});
+    await showForm();
+    await typeInto(MESSAGES.amount, "-5");
+    await fireEvent.press(screen.getByText(MESSAGES.add));
+    await settle();
+    expect(screen.getByText("Enter an amount of $0 or more.")).toBeTruthy();
+    expect(server.sent).toEqual([]);
+  });
+
   it("holds a bad amount back and says why, only once they've tried", async () => {
     const server = serve({});
     await showForm();
-    expect(screen.queryByText("Enter an amount above $0.")).toBeNull();
+    expect(screen.queryByText("Enter the amount reported on the 1099.")).toBeNull();
     await fireEvent.press(screen.getByText(MESSAGES.add));
     await settle();
-    expect(screen.getByText("Enter an amount above $0.")).toBeTruthy();
+    expect(screen.getByText("Enter the amount reported on the 1099.")).toBeTruthy();
     expect(server.sent).toEqual([]);
     expect(mockBack).not.toHaveBeenCalled();
   });

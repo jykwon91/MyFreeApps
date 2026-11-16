@@ -10,7 +10,8 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, Text } from "react-native";
 import { DOCUMENTS_LINK, ISSUER_MAX_LENGTH, RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import PickerField from "../transactions/PickerField";
-import { reportedAmountError, sourceTypeLabel } from "./reconciliationDisplay";
+import { reportedAmountError } from "@mybookkeeper/api-client/utils/reportedAmountError";
+import { sourceTypeLabel } from "./reconciliationDisplay";
 import { addFailureMessage } from "./reconciliationFailure";
 
 export default function ReconciliationAddForm({ year }: { year: number }) {
