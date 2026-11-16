@@ -8,7 +8,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { WEB_BASE_URL } from "../../constants/api";
 import { OFFLINE_RETRY_MS } from "../../constants/workspace";
 import type { AppDispatch, RootState } from "../../lib/store";
-import { isNoResponse } from "../../utils/isNoResponse";
+import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import { uploadsReset } from "../capture/uploadsSlice";
 import { readSavedWorkspace, saveWorkspace } from "./savedWorkspace";
 import WorkspaceMessage from "./WorkspaceMessage";
