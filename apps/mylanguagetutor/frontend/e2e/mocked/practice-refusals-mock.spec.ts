@@ -18,7 +18,7 @@ import {
   TUTOR_UNAVAILABLE,
   UNAUTHORIZED,
 } from "./constants/refusalDetails";
-import { DAILY_LIMIT_COPY, LEARNER_TIME_ZONE, SESSION_ENDED_COPY, SESSION_LIMIT_COPY, UNAVAILABLE_COPY } from "./constants/blockCopy";
+import { AFTER_RESET, BEFORE_RESET, DAILY_LIMIT_AFTER_RESET_COPY, DAILY_LIMIT_COPY, LEARNER_TIME_ZONE, SESSION_ENDED_COPY, SESSION_LIMIT_COPY, UNAVAILABLE_COPY } from "./constants/blockCopy";
 import { LEARNER_GREETING, PARTIAL_REPLY, TUTOR_GREETING } from "./constants/practiceText";
 import { CORRECTIONS_MISSING, REPLY_CUT_OFF, TYPING_ONLY_LABEL } from "./constants/practiceLabels";
 import { CREATE_SESSION } from "./constants/stubbedEndpoints";
@@ -124,18 +124,24 @@ test("a stream cut after the whole reply keeps the reply, notes the missing sugg
   expect(api.turnRequests).toHaveLength(1);
 });
 
-test("the daily cap reached mid-conversation blocks further turns, with no way round it", async ({ page }) => {
-  await signedInTutor(page, { turns: [refusedTurn(429, DAILY_LIMIT_REACHED)] });
+for (const [label, now, copy] of [
+  ["before", BEFORE_RESET, DAILY_LIMIT_COPY],
+  ["after", AFTER_RESET, DAILY_LIMIT_AFTER_RESET_COPY],
+] as const) {
+  test(`the daily cap reached mid-conversation (${label} the day's reset hour) blocks further turns, with no way round it`, async ({ page }) => {
+    await page.clock.setFixedTime(now);
+    await signedInTutor(page, { turns: [refusedTurn(429, DAILY_LIMIT_REACHED)] });
 
-  await openPractice(page, GREETINGS.title);
-  await sendTyped(page, LEARNER_GREETING);
+    await openPractice(page, GREETINGS.title);
+    await sendTyped(page, LEARNER_GREETING);
 
-  await expect(page.getByText(DAILY_LIMIT_COPY)).toBeVisible();
-  await expect(page.getByRole("alert")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Pick a scenario" })).toHaveCount(0);
-  // A block replaces the composer: there is nothing left to answer with.
-  await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveCount(0);
-});
+    await expect(page.getByText(copy, { exact: true })).toBeVisible();
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Pick a scenario" })).toHaveCount(0);
+    // A block replaces the composer: there is nothing left to answer with.
+    await expect(page.getByLabel(TYPING_ONLY_LABEL)).toHaveCount(0);
+  });
+}
 
 for (const [detail, copy] of [
   [SESSION_ENDED, SESSION_ENDED_COPY],
