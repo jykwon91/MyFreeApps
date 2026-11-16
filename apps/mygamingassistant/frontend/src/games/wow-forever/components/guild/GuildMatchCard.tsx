@@ -4,6 +4,7 @@ import GuildMemberLink from "@/games/wow-forever/components/guild/GuildMemberLin
 import ItemNameLink from "@/games/wow-forever/components/itemPages/ItemNameLink";
 import RecipeRef from "@/games/wow-forever/components/recipes/RecipeRef";
 import GameIcon from "@/games/wow-forever/components/shared/GameIcon";
+import { GUILD_HELP_SELF_MADE } from "@/games/wow-forever/data/guild/guildHelpConfig";
 import { professionIcon } from "@/games/wow-forever/lib/icons/wowIcons";
 import { formatCost } from "@/games/wow-forever/crafting/matPrices";
 import { guideProfession } from "@/games/wow-forever/lib/character/characterProfessions";
@@ -41,6 +42,7 @@ export default function GuildMatchCard({ match, prices }: GuildMatchCardProps) {
   const cost = totalReagentCost(match, prices);
 
   const isGear = type === "gear";
+  const selfMade = crafter.slug === beneficiary.slug;
   const upgradeLabel = upgrade_pct !== null ? `+${upgrade_pct}% score` : null;
 
   return (
@@ -54,11 +56,20 @@ export default function GuildMatchCard({ match, prices }: GuildMatchCardProps) {
           </span>
           <GuildMemberLink member={crafter} size="sm" />
         </span>
-        <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-        <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-          <GuildMemberLink member={beneficiary} size="sm" />
-          <span className="text-xs text-muted-foreground shrink-0">lv {beneficiary.level}</span>
-        </span>
+        {selfMade ? (
+          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm" data-testid="guild-match-self">
+            <span className="text-xs text-muted-foreground shrink-0">lv {beneficiary.level} ·</span>
+            {GUILD_HELP_SELF_MADE}
+          </span>
+        ) : (
+          <>
+            <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+            <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <GuildMemberLink member={beneficiary} size="sm" />
+              <span className="text-xs text-muted-foreground shrink-0">lv {beneficiary.level}</span>
+            </span>
+          </>
+        )}
         {upgradeLabel && (
           <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">
             {upgradeLabel}

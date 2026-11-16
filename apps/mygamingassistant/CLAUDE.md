@@ -1516,7 +1516,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   **gear matches** (`lib/guild/guildGearMatches.ts`) — a crafter knows a recipe
   that creates an item scoring ≥ `UPGRADE_THRESHOLD_PCT` (2%) better than what
   the beneficiary wears, using `LEVELING_SPEC_ID` weights for all members, deduped
-  to the best upgrade per (beneficiary, slot). Both use `recipeSpell()` to map
+  to the best upgrade per (beneficiary, slot). A member's own recipes count
+  for their own gear ("can make this themselves" on the card); on an equal
+  upgrade, making it yourself beats asking a guild mate (operator, 2026-11-16).
+  Both use `recipeSpell()` to map
   the SkillLineAbility id from the sheet to the crafting JSON's spell id.
   Filter chips (All / Enchants / Gear upgrades) and a member picker use `?help_type=`
   / `?help_for=` URL params. AH prices show per-reagent and total estimated cost.

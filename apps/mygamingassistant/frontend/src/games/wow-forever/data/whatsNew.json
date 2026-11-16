@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-16",
+    "title": "Help each other: upgrades you can make yourself",
+    "summary": "The guild's Help each other tab now counts your own professions: an upgrade you can craft yourself shows as \"can make this themselves\", and you're never sent to a guild mate for something you can make.",
+    "to": "/wow-forever/topdeadcenter"
+  },
+  {
+    "date": "2026-11-16",
     "title": "Dungeon quests addon",
     "summary": "A new addon, MGA Dungeon Quests, puts each dungeon's Before you go list in game. Type /mgadq for the dungeons with quests for you and how many you still need to pick up, then open one for every quest in order, ticked from the quests the game says you've done. Each quest line says what to do next: who to get it from and where, what to kill or collect, or who to turn it in to, and a Pin button puts a map pin on the next quest giver. It also reminds you in chat when you enter a dungeon with quests you haven't picked up. Download it from the Dungeons page.",
     "to": "/wow-forever/dungeons?addon=open"
