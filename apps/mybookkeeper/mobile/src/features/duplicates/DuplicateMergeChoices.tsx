@@ -3,7 +3,7 @@ import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transa
 import type { MergeableField } from "@mybookkeeper/api-client/types/transaction/MergeableField";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 import { FIELD_LABELS } from "@mybookkeeper/api-client/constants/mergeableTransactionFields";
-import { useTheme } from "@platform/mobile";
+import { LabelValueRow, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { DUPLICATES_MESSAGES as MESSAGES } from "../../constants/duplicates";
 import type { MergeChoices } from "../../types/MergeChoices";
@@ -57,12 +57,15 @@ export default function DuplicateMergeChoices({
         <View accessible style={{ gap: spacing.xs, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.muted }}>
           <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.mutedForeground }}>{MESSAGES.previewTitle}</Text>
           {differing.map((field) => (
-            <View key={field} style={{ flexDirection: "row", justifyContent: "space-between", gap: spacing.md }}>
-              <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{FIELD_LABELS[field]}</Text>
-              <Text style={{ flex: 1, textAlign: "right", fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
-                {duplicateFieldValue(field, choices[field] === "a" ? txnA : txnB, properties) ?? "—"}
-              </Text>
-            </View>
+            <LabelValueRow
+              accessible={false}
+              key={field}
+              label={FIELD_LABELS[field]}
+              labelSize="sm"
+              value={duplicateFieldValue(field, choices[field] === "a" ? txnA : txnB, properties) ?? "—"}
+              valueWeight="600"
+              valueWraps
+            />
           ))}
         </View>
       ) : null}

@@ -1,7 +1,7 @@
 import { PROPERTY_PNL_CATEGORIES_SHOWN } from "@mybookkeeper/api-client/constants/propertyPnl";
 import type { PropertyPnLEntry } from "@mybookkeeper/api-client/types/attribution/property-pnl-entry";
 import type { PropertyPnLRange } from "@mybookkeeper/api-client/types/attribution/property-pnl-range";
-import { useTheme } from "@platform/mobile";
+import { LabelValueRow, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { PROPERTY_PNL_MESSAGES as MESSAGES } from "../../constants/propertyPnl";
@@ -51,10 +51,15 @@ export default function PropertyPnlCard({ entry, range }: PropertyPnlCardProps) 
         </Text>
       </View>
       {shown.map((item) => (
-        <View key={item.category} style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{categoryLabel(item.category)}</Text>
-          <Text style={{ fontSize: fontSize.sm, fontVariant: ["tabular-nums"], color: colors.mutedForeground }}>{formatCurrency(centsToDollars(item.amount_cents))}</Text>
-        </View>
+        <LabelValueRow
+          key={item.category}
+          label={categoryLabel(item.category)}
+          labelSize="sm"
+          valueSize="sm"
+          valueTone="muted"
+          tabularNums
+          value={formatCurrency(centsToDollars(item.amount_cents))}
+        />
       ))}
       {hidden > 0 ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{moreCategoriesLine(hidden)}</Text> : null}
     </Pressable>

@@ -1,6 +1,6 @@
 import type { SyncLog } from "@mybookkeeper/api-client/types/integration/sync-log";
 import { getStatusLabel } from "@mybookkeeper/api-client/utils/syncStatusLabel";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { LabelValueRow, LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { INTEGRATIONS_MESSAGES as MESSAGES } from "../../constants/integrations";
 import type { IntegrationCancelAction } from "../../types/IntegrationCancelAction";
@@ -27,10 +27,7 @@ export default function SyncSessionFacts({ log, cancel }: { log: SyncLog; cancel
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.sessionNumber(log.id)}</Text>
       <View style={{ gap: spacing.xs }}>
         {rows.map((row) => (
-          <View key={row.label} style={{ flexDirection: "row", justifyContent: "space-between", gap: spacing.md }}>
-            <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{row.label}</Text>
-            <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{row.value}</Text>
-          </View>
+          <LabelValueRow key={row.label} label={row.label} labelSize="sm" valueSize="sm" valueWraps value={row.value} />
         ))}
       </View>
       {log.status === "running" && log.emails_total > 0 ? <SyncProgressBar done={log.emails_done} total={log.emails_total} /> : null}

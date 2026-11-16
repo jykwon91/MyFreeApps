@@ -1,6 +1,6 @@
 import type { ImportResult } from "@mybookkeeper/api-client/types/transaction/ImportResult";
 import { formatTag } from "@platform/core/utils/tag";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { LabelValueRow, LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { BANK_IMPORT_MESSAGES as MESSAGES } from "../../constants/bankImport";
 import BankImportPreviewRow from "./BankImportPreviewRow";
@@ -26,10 +26,7 @@ export default function BankImportResultView({ result, onViewTransactions, onImp
       </Text>
       <View style={{ gap: spacing.xs }}>
         {figures.map(([label, value]) => (
-          <View accessible accessibilityLabel={`${label}, ${value}`} key={label} style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{label}</Text>
-            <Text style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>{value}</Text>
-          </View>
+          <LabelValueRow key={label} label={label} value={value} valueWeight="600" valueWraps />
         ))}
       </View>
       {result.imported === 0 ? <Text style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>{MESSAGES.nothingNew}</Text> : null}

@@ -1,6 +1,6 @@
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { LabelValueRow, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { UTILITY_COSTS_MESSAGES as MESSAGES } from "../../constants/analytics";
 import type { UtilityCostMonth } from "../../types/UtilityCostMonth";
 import HomeLinkRow from "../home/HomeLinkRow";
@@ -18,20 +18,21 @@ interface UtilityCostMonthRowProps {
 }
 
 export default function UtilityCostMonthRow({ month, largestCents, isPartial, isExpanded, onToggle, onSeeBills }: UtilityCostMonthRowProps) {
-  const { colors, spacing, fontSize } = useTheme();
+  const { spacing } = useTheme();
   const dollars = month.cents / 100;
   const hasBills = month.utilities.length > 0;
   const suffix = isPartial ? `, ${MESSAGES.soFar}` : "";
   const amount = hasBills ? formatCurrency(dollars) : MESSAGES.noBills;
   const body = (
     <>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: spacing.md }}>
-        <Text style={{ flexShrink: 1, fontSize: fontSize.md, color: colors.foreground }}>
-          {monthLabel(month.period)}
-          {suffix}
-        </Text>
-        <Text style={{ fontSize: fontSize.md, fontWeight: hasBills ? "600" : "400", color: hasBills ? colors.foreground : colors.mutedForeground }}>{amount}</Text>
-      </View>
+      <LabelValueRow
+        accessible={false}
+        label={`${monthLabel(month.period)}${suffix}`}
+        labelTone="foreground"
+        value={amount}
+        valueTone={hasBills ? "foreground" : "muted"}
+        valueWeight={hasBills ? "600" : "400"}
+      />
       <UtilityCostBar percent={barPercent(month.cents, largestCents)} />
     </>
   );
@@ -53,14 +54,15 @@ export default function UtilityCostMonthRow({ month, largestCents, isPartial, is
       {isExpanded ? <HomeLinkRow label={MESSAGES.periodBills(monthLabel(month.period))} onPress={onSeeBills} /> : null}
       {isExpanded
         ? month.utilities.map((utility) => (
-            <View
-              accessible
-              accessibilityLabel={`${utility.label}, ${spokenMoney(utility.cents / 100)}`}
-              key={utility.subCategory}
-              style={{ flexDirection: "row", justifyContent: "space-between", gap: spacing.md, paddingHorizontal: spacing.xl, paddingVertical: spacing.xs }}
-            >
-              <Text style={{ flexShrink: 1, fontSize: fontSize.sm, color: colors.mutedForeground }}>{utility.label}</Text>
-              <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{formatCurrency(utility.cents / 100)}</Text>
+            <View key={utility.subCategory} style={{ paddingHorizontal: spacing.xl, paddingVertical: spacing.xs }}>
+              <LabelValueRow
+                accessibilityLabel={`${utility.label}, ${spokenMoney(utility.cents / 100)}`}
+                label={utility.label}
+                labelSize="sm"
+                value={formatCurrency(utility.cents / 100)}
+                valueSize="sm"
+                valueTone="muted"
+              />
             </View>
           ))
         : null}
