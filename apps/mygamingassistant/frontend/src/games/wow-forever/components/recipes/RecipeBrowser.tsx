@@ -45,7 +45,7 @@ export default function RecipeBrowser({ entries, place, zoneId, level }: RecipeB
   return (
     <div className="space-y-4" data-testid="recipe-browser">
       <div className="space-y-1">
-        <label htmlFor={searchId} className="text-sm font-medium">
+        <label htmlFor={searchId} className="block text-sm font-medium">
           {RECIPES_TEXT.searchLabel}
         </label>
         <input

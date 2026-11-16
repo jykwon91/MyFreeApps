@@ -27,6 +27,7 @@ import type { Locator, Page, Route } from "@playwright/test";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { MIN_TOUCH_TARGET } from "@platform/ui/test-support/constants/minTouchTarget";
 import { PIXEL_PNG } from "@platform/ui/test-support/constants/pixelPng";
+import { expectLabelsAboveControls } from "../fixtures/labelsAboveControls";
 
 const GUILD_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+$/.test(url.pathname);
 const RECIPES_PATTERN = (url: URL) => /\/wow\/guilds\/[^/]+\/recipes$/.test(url.pathname);
@@ -133,6 +134,8 @@ test("the guild badge opens the guild page, and a member's name opens their char
 test("search, class filter and sort live in the URL and survive Back", async ({ page }) => {
   await stubAll(page);
   await page.goto("/wow-forever/topdeadcenter?tab=roster");
+  await expect(memberNames(page).first()).toBeVisible();
+  await expectLabelsAboveControls(page);
 
   await page.getByRole("table").getByRole("button", { name: "Level", exact: true }).click();
   await expect(memberNames(page)).toHaveText(["Big Sue", "Jason Kwon", "Tiny John"]);
@@ -466,6 +469,8 @@ test("recipe search: who knows it and their skill, kept in the URL across Back",
     return json(route, recipeSearch(q));
   });
   await page.goto("/wow-forever/topdeadcenter?tab=crafting");
+  await expect(page.getByLabel("Recipe", { exact: true })).toBeVisible();
+  await expectLabelsAboveControls(page);
 
   await page.getByLabel("Recipe", { exact: true }).fill("l");
   await page.waitForTimeout(600);
@@ -999,6 +1004,7 @@ test("help tab: shows enchant matches, type chips filter, member picker filters,
   // Wait for the match list (crafting files load lazily; give them 10 s)
   const matchList = page.getByTestId("help-match-list");
   await expect(matchList).toBeVisible({ timeout: 10_000 });
+  await expectLabelsAboveControls(page);
 
   // The one enchant match is visible
   const card = page.getByTestId("guild-match-card");

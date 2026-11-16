@@ -41,7 +41,7 @@ export default function GuildHelpFilterBar({ members, type, forSlug, onType, onF
       </div>
       {members.length > 0 && (
         <div className="space-y-1">
-          <label htmlFor="help-for-picker" className="text-sm font-medium text-foreground">
+          <label htmlFor="help-for-picker" className="block text-sm font-medium text-foreground">
             Help for
           </label>
           <select

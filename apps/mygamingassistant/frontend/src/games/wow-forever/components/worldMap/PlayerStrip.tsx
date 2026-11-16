@@ -49,13 +49,13 @@ export default function PlayerStrip({ data, settings, places, onChange }: Player
           </div>
         </div>
         <div className="space-y-1">
-          <label htmlFor="wm-class" className="text-sm font-medium">
+          <label htmlFor="wm-class" className="block text-sm font-medium">
             Class
           </label>
           <ClassSelect id="wm-class" value={settings.classId} onChange={(classId) => onChange({ classId })} />
         </div>
         <div className="space-y-1">
-          <label htmlFor="wm-zone" className="text-sm font-medium">
+          <label htmlFor="wm-zone" className="block text-sm font-medium">
             Zone
           </label>
           <ZoneSelect
@@ -67,7 +67,7 @@ export default function PlayerStrip({ data, settings, places, onChange }: Player
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="wm-level" className="text-sm font-medium">
+          <label htmlFor="wm-level" className="block text-sm font-medium">
             Level <span className="font-normal text-muted-foreground">(optional)</span>
           </label>
           <input

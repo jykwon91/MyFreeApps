@@ -19,7 +19,7 @@ export default function GoldClassSection({ classId, showAll, onClassChange, onSh
   return (
     <GuideSection id="class" title="Your class" intro="Every class has something it does better than the others.">
       <div className="space-y-1">
-        <label htmlFor="gold-class" className="text-sm font-medium">
+        <label htmlFor="gold-class" className="block text-sm font-medium">
           Class
         </label>
         <div className="max-w-xs">

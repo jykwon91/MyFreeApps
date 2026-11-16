@@ -24,7 +24,7 @@ export default function GuildRecipeSearch({ slug }: { slug: string }) {
         Who can craft this?
       </h2>
       <div className="space-y-1" role="search" aria-label="Search the guild's recipes">
-        <label htmlFor={inputId} className="text-sm font-medium">
+        <label htmlFor={inputId} className="block text-sm font-medium">
           Recipe
         </label>
         <input

@@ -2573,6 +2573,11 @@ missing. If either env var is absent in production, the app refuses to start.
 **UUIDs:**
 - `uuid.uuid4()` Python default — never `uuid-ossp` Postgres extension
 
+**Form labels:**
+- A `<label>` stacked over its field in a `space-y-*` wrapper needs `block` — inline, it sits beside a
+  width-capped input with no gap. `e2e/fixtures/labelsAboveControls.ts` (`expectLabelsAboveControls(page)`)
+  checks it; the guild Roster / Who can craft? / Help each other tests call it.
+
 ## Authentication Model
 
 MGA uses **public-read / auth-write** routing. The lineup library is publicly
