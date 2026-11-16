@@ -536,6 +536,19 @@ describe("CookScreen", () => {
       expect(screen.getByRole("header", { name: "Step 1 of 2" })).toBeTruthy();
     });
 
+    it("opens the saved copy when the recipe screen has already failed offline", async () => {
+      saveCookCopy("r1", "Tomato soup", VERSION as never);
+      reply = "offline";
+      store = makeStore();
+      await act(async () => {
+        await store.dispatch(recipesApi.endpoints.getRecipe.initiate("r1", { subscribe: false }));
+      });
+
+      await mount();
+      expect(await screen.findByRole("header", { name: "Ingredients" })).toBeTruthy();
+      expect(screen.getByText(OFFLINE_NOTICE)).toBeTruthy();
+    });
+
     it("says it can't load the recipe when nothing was saved", async () => {
       reply = "offline";
       store = makeStore();

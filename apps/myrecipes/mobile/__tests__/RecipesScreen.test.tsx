@@ -1,16 +1,32 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { SessionProvider, type MobileSession, type SessionState } from "@platform/mobile";
+import { resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { AccessibilityInfo } from "react-native";
 import { Provider } from "react-redux";
 import { RECIPES_PAGE_SIZE } from "@myrecipes/api-client/constants/recipesPaging";
+import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
+import { saveCookCopy } from "../src/features/cook/cookCopies";
 import RecipesScreen from "../src/features/recipes/RecipesScreen";
 import { makeStore } from "../src/lib/store";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({ useRouter: () => ({ push: mockPush }) }));
+
+jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
+
+// Saved cook copies belong to whoever the app's session says is signed in.
+jest.mock("../src/lib/session", () => ({
+  session: {
+    tokenStore: { get: () => null, set: () => {}, clear: () => {} },
+    refreshSession: () => Promise.resolve("unavailable"),
+    currentAccount: () => null,
+    getState: () => ({ status: "signedIn", email: "a@example.com", sessionId: "s" }),
+    subscribe: () => () => {},
+  },
+}));
 
 const SOUP = {
   id: "r1",
@@ -97,6 +113,7 @@ async function typeSearch(text: string) {
 }
 
 beforeEach(() => {
+  resetFakeFiles();
   api.defaults.adapter = adapter;
   requests.length = 0;
   mockPush.mockClear();
@@ -457,6 +474,47 @@ describe("RecipesScreen", () => {
       expect(screen.getByText("Recipe 1")).toBeTruthy();
       expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
       expect(screen.queryByText(/Couldn't update the list/)).toBeNull();
+    });
+  });
+
+  describe("offline", () => {
+    const VERSION = { id: "v1", ingredients: [], steps: [{ id: "s1", position: 0, instruction: "Stir." }] } as unknown as VersionResponse;
+    const OFFLINE: Respond = () => {
+      throw new Error("Network Error");
+    };
+
+    it("lists the recipes saved for cooking, newest first, and opens one in cook mode", async () => {
+      const now = jest.spyOn(Date, "now");
+      now.mockReturnValue(1_000);
+      saveCookCopy("r1", "Tomato soup", VERSION);
+      now.mockReturnValue(2_000);
+      saveCookCopy("r2", "Pancakes", VERSION);
+      now.mockRestore();
+      respond = OFFLINE;
+      await show(SIGNED_IN);
+
+      expect(await screen.findByText("Can't load recipes")).toBeTruthy();
+      expect(screen.getByRole("header", { name: "Saved for cooking offline" })).toBeTruthy();
+      const buttons = screen.getAllByRole("button", { name: /^Cook / });
+      expect(buttons.map((button) => button.props.accessibilityLabel)).toEqual(["Cook Pancakes", "Cook Tomato soup"]);
+
+      await fireEvent.press(screen.getByRole("button", { name: "Cook Tomato soup" }));
+      expect(mockPush).toHaveBeenCalledWith({ pathname: "/recipes/[id]/cook", params: { id: "r1" } });
+    });
+
+    it("lists nothing saved when nothing was saved", async () => {
+      respond = OFFLINE;
+      await show(SIGNED_IN);
+      expect(await screen.findByText("Can't load recipes")).toBeTruthy();
+      expect(screen.queryByText("Saved for cooking offline")).toBeNull();
+    });
+
+    it("doesn't list saved copies when the server answered with an error", async () => {
+      saveCookCopy("r1", "Tomato soup", VERSION);
+      respond = () => ({ status: 500, data: {} });
+      await show(SIGNED_IN);
+      expect(await screen.findByText("Can't load recipes")).toBeTruthy();
+      expect(screen.queryByText("Saved for cooking offline")).toBeNull();
     });
   });
 });

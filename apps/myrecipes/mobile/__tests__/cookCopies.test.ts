@@ -1,7 +1,7 @@
 import { fakeFiles, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 import { COOK_COPY_LIMIT } from "../src/constants/cook";
-import { clearCookCopies, deleteCookCopy, loadCookCopy, saveCookCopy } from "../src/features/cook/cookCopies";
+import { clearCookCopies, deleteCookCopy, listCookCopies, loadCookCopy, saveCookCopy } from "../src/features/cook/cookCopies";
 
 let mockState: object = { status: "signedIn", email: "a@example.com", sessionId: "s" };
 
@@ -77,4 +77,14 @@ it("deletes one copy, or all of them", () => {
 
   clearCookCopies();
   expect(fakeFiles()).toEqual([]);
+});
+
+it("lists this person's copies, most recently cooked first", () => {
+  saveCookCopy("r1", "Soup", VERSION);
+  saveCookCopy("r2", "Stew", VERSION);
+  saveCookCopy("r1", "Soup", VERSION);
+  expect(listCookCopies().map((copy) => copy.recipeId)).toEqual(["r1", "r2"]);
+
+  mockState = { status: "signedIn", email: "b@example.com", sessionId: "t" };
+  expect(listCookCopies()).toEqual([]);
 });

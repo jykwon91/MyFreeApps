@@ -1,6 +1,7 @@
 import { useRecipesPages } from "@myrecipes/api-client/hooks/useRecipesPages";
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
 import { useDebouncedValue } from "@platform/core/hooks/useDebouncedValue";
+import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import {
   ChipButton,
   EmptyState,
@@ -14,11 +15,14 @@ import {
   useTheme,
 } from "@platform/mobile";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
 import { NEW_RECIPE_MESSAGES } from "../../constants/newRecipe";
 import { RECIPES_LOAD_MORE_MESSAGES, RECIPES_MESSAGES } from "../../constants/recipes";
+import { cookHref } from "../../utils/cookHref";
 import { countLabel } from "../../utils/countLabel";
+import { listCookCopies } from "../cook/cookCopies";
+import SavedCookCopies from "../cook/SavedCookCopies";
 import RecipeCard from "./RecipeCard";
 import RecipeListSkeleton from "./RecipeListSkeleton";
 
@@ -53,6 +57,9 @@ export default function RecipesScreen() {
   const isPending = list.isLoading || list.isFiltering;
   const hasListError = list.error !== undefined && !list.isLoadMoreError;
   const hasFailedOverRows = hasListError && rows.length > 0 && !isErrorDismissed;
+  // Offline with nothing to show, the recipes saved from recent cooks can still be cooked.
+  const isOffline = hasListError && !rows.length && isNoResponse(list.error);
+  const savedCopies = useMemo(() => (isOffline ? listCookCopies() : []), [isOffline]);
   const isSearchSettled = term === trimmed && !isPending && !hasListError;
   useAnnouncement(
     hasListError && !rows.length
@@ -74,11 +81,16 @@ export default function RecipesScreen() {
     if (isPending || isRefreshing) return <RecipeListSkeleton />;
     if (hasListError) {
       return (
-        <EmptyState
-          action={{ label: "Try again", onPress: () => void refresh() }}
-          body="Check your connection and try again."
-          heading="Can't load recipes"
-        />
+        <View style={{ gap: spacing.lg }}>
+          <EmptyState
+            action={{ label: "Try again", onPress: () => void refresh() }}
+            body="Check your connection and try again."
+            heading="Can't load recipes"
+          />
+          {savedCopies.length ? (
+            <SavedCookCopies copies={savedCopies} onOpen={(recipeId) => router.push(cookHref(recipeId))} />
+          ) : null}
+        </View>
       );
     }
     if (term) {

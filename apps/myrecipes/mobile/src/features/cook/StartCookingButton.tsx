@@ -5,6 +5,7 @@ import { COOK_TARGET_HEIGHT } from "../../constants/cook";
 import { useNowOnResume } from "../../hooks/useNowOnResume";
 import { useOpenOnce } from "../../hooks/useOpenOnce";
 import type { RootState } from "../../lib/store";
+import { cookHref } from "../../utils/cookHref";
 import { resumableCookSession } from "../../utils/resumableCookSession";
 
 export default function StartCookingButton({
@@ -22,7 +23,7 @@ export default function StartCookingButton({
   const session = resumableCookSession(saved, versionId, lastPage, now);
   const hasProgress = !!session && (session.pageIndex > 0 || session.checked.length > 0);
 
-  const open = useOpenOnce(() => router.push({ pathname: "/recipes/[id]/cook", params: { id: recipeId } }));
+  const open = useOpenOnce(() => router.push(cookHref(recipeId)));
 
   return (
     <LoadingButton

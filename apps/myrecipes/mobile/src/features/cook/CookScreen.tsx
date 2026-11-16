@@ -5,10 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useErrorSinceOpening } from "@myrecipes/api-client/hooks/useErrorSinceOpening";
-import { COOK_COPY_OFFLINE_MESSAGE } from "../../constants/cook";
+import { COOK_COPY_MESSAGES } from "../../constants/cook";
 import type { OpenedCookRecipe } from "../../types/OpenedCookRecipe";
 import { hasCookSteps } from "../../utils/hasCookSteps";
-import { isNoResponse } from "../../utils/isNoResponse";
+import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import { isNotFoundError } from "../../utils/isNotFoundError";
 import CookBarButton from "./CookBarButton";
 import CookSessionView from "./CookSessionView";
@@ -82,7 +82,7 @@ export default function CookScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack.Screen options={{ headerShown: false, gestureEnabled: false }} />
       {opened?.isSavedCopy && !recipe ? (
-        <Banner message={COOK_COPY_OFFLINE_MESSAGE} style={{ margin: spacing.sm }} tone="info" />
+        <Banner message={COOK_COPY_MESSAGES.offlineNotice} style={{ margin: spacing.sm }} tone="info" />
       ) : null}
       {opened ? (
         <CookSessionView

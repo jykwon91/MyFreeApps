@@ -53,6 +53,24 @@ export function loadCookCopy(recipeId: string): CookCopy | null {
   }
 }
 
+/** This person's saved copies, most recently cooked first. */
+export function listCookCopies(): CookCopy[] {
+  const owner = signedInEmail(session);
+  if (!owner) return [];
+  try {
+    const root = copiesRoot();
+    if (!root.exists) return [];
+    return root
+      .list()
+      .filter((entry): entry is File => entry instanceof File)
+      .map(readCopy)
+      .filter((copy): copy is CookCopy => copy?.owner === owner)
+      .sort((a, b) => b.savedAt - a.savedAt);
+  } catch {
+    return [];
+  }
+}
+
 /** Best effort: failing to save mustn't get in the way of cooking, so it isn't reported. */
 export function saveCookCopy(recipeId: string, title: string, version: VersionResponse): void {
   const owner = signedInEmail(session);

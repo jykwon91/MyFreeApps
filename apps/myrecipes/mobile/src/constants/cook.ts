@@ -11,4 +11,9 @@ export const COOK_TIMER_CHANNEL_ID = "cook-timers";
 /** Recipes saved for cooking without a connection: the most recently opened, one copy each. */
 export const COOK_COPY_LIMIT = 10;
 export const COOK_COPY_DIRECTORY = "cook-copies";
-export const COOK_COPY_OFFLINE_MESSAGE = "You're offline, so this is the copy saved on this phone. It may be out of date.";
+export const COOK_COPY_MESSAGES = {
+  offlineNotice: "You're offline, so this is the copy saved on this phone. It may be out of date.",
+  cookSavedCopy: "Cook the saved copy",
+  savedHeading: "Saved for cooking offline",
+  cookTitle: (title: string) => `Cook ${title}`,
+} as const;
