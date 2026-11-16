@@ -3,18 +3,18 @@ import { View } from "react-native";
 import type { CookTimer } from "../../types/CookTimer";
 import { formatTimeLeft, formatTimerDuration, secondsLeft, spokenTimeLeft } from "../../utils/formatCookTimer";
 import CookBarButton from "./CookBarButton";
+import { useCookNow } from "./useCookNow";
 
 /** The next timer to finish, or a finished one if none are running, from every page. */
 export default function CookTimersBar({
-  now,
   onPress,
   timers,
 }: {
-  now: number;
   onPress: () => void;
   timers: CookTimer[];
 }) {
   const { colors } = useTheme();
+  const now = useCookNow();
   const next = timers.find((timer) => secondsLeft(timer, now) > 0) ?? timers[0];
   if (!next) return null;
 

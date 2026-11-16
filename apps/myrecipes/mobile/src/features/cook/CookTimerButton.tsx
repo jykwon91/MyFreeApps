@@ -5,16 +5,15 @@ import { COOK_TIMER_CONFIRM_MS, COOK_TIMER_CONFIRM_SCREEN_READER_MS } from "../.
 import type { CookTimer } from "../../types/CookTimer";
 import { formatTimeLeft, formatTimerDuration, secondsLeft, spokenTimeLeft } from "../../utils/formatCookTimer";
 import CookBarButton from "./CookBarButton";
+import { useCookNow } from "./useCookNow";
 
 /** One button in every state, so a screen reader's focus stays on it. Cancel takes a second tap. */
 export default function CookTimerButton({
-  now,
   onRemove,
   onStart,
   seconds,
   timer,
 }: {
-  now: number;
   onRemove: (timerId: string) => void;
   onStart?: () => void;
   seconds: number;
@@ -22,6 +21,7 @@ export default function CookTimerButton({
 }) {
   const [isConfirming, setIsConfirming] = useState(false);
   const isScreenReaderOn = useScreenReaderEnabled();
+  const now = useCookNow();
   const duration = formatTimerDuration(seconds);
   // Hearing the button read out takes longer than seeing it change.
   const confirmMs = isScreenReaderOn ? COOK_TIMER_CONFIRM_SCREEN_READER_MS : COOK_TIMER_CONFIRM_MS;
