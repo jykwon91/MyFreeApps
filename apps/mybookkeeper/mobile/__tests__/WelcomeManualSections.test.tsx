@@ -14,6 +14,7 @@ import { pressAlertButton } from "../test-support/pressAlertButton";
 import { renderScreen, resetSignedInStore } from "../test-support/renderScreen";
 import { startWelcomeManualsServer } from "../test-support/welcomeManualsServer";
 import { writesTo } from "../test-support/writesTo";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -179,7 +180,7 @@ describe("adding a section", () => {
     const server = startWelcomeManualsServer({ manuals: [aManual()] });
     await renderScreen(<WelcomeManualSectionCreateScreen manualId="m1" />);
     await fireEvent.press(await screen.findByRole("button", { name: SECTION.add }));
-    expect(screen.getByText("Title is required.")).toBeTruthy();
+    expect(screen.getByText("Title is required.", SHOWN)).toBeTruthy();
     expect(writesTo(server)).toHaveLength(0);
   });
 

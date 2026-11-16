@@ -14,6 +14,7 @@ import { store } from "../src/lib/store";
 import { aRentLedger, aRentSchedule } from "../test-support/aRentLedger";
 import { aReminderOverview, aReminderPlan } from "../test-support/aRentReminder";
 import { startRentWritesServer, type RentWritesServer } from "../test-support/rentWritesServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -139,7 +140,7 @@ describe("setting reminders up", () => {
     await openSheet(S.titleNew, S.setUp);
     await fireEvent.changeText(field(S.fixedAmount), "1e3");
 
-    expect(screen.getByText("Use dollars and cents, like 84,20.")).toBeTruthy();
+    expect(screen.getByText("Use dollars and cents, like 84,20.", SHOWN)).toBeTruthy();
     expect(screen.getAllByRole("button", { name: S.saveNew }).pop()?.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
   });
 
@@ -189,7 +190,7 @@ describe("setting reminders up", () => {
     const saveDisabled = () => screen.getAllByRole("button", { name: S.saveNew }).pop()?.props.accessibilityState.disabled;
 
     await fireEvent.changeText(field(S.daysBefore), "7");
-    expect(screen.getByText("Pick 0 to 6 days.")).toBeTruthy();
+    expect(screen.getByText("Pick 0 to 6 days.", SHOWN)).toBeTruthy();
     expect(saveDisabled()).toBe(true);
     await fireEvent.changeText(field(S.daysBefore), "");
     expect(saveDisabled()).toBe(true);
@@ -200,7 +201,7 @@ describe("setting reminders up", () => {
     await fireEvent.changeText(field(S.daysBefore), "14");
     expect(saveDisabled()).toBe(false);
     await fireEvent.changeText(field(S.daysBefore), "15");
-    expect(screen.getByText("Pick 0 to 14 days.")).toBeTruthy();
+    expect(screen.getByText("Pick 0 to 14 days.", SHOWN)).toBeTruthy();
   });
 
   it("needs at least one way to send", async () => {
@@ -219,7 +220,7 @@ describe("setting reminders up", () => {
 
     await fireEvent.changeText(field(S.fixedAmount), "0");
 
-    expect(screen.getByText("Enter an amount above $0.")).toBeTruthy();
+    expect(screen.getByText("Enter an amount above $0.", SHOWN)).toBeTruthy();
     expect(screen.getAllByRole("button", { name: S.saveNew }).pop()?.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
   });
 
@@ -249,7 +250,7 @@ describe("setting reminders up", () => {
     await save(S.saveNew);
 
     expect(await screen.findByText(message)).toBeTruthy();
-    expect(screen.queryByText("server wording that must not show")).toBeNull();
+    expect(screen.queryByText("server wording that must not show", SHOWN)).toBeNull();
     expect(field(S.daysBefore).props.value).toBe("2");
   });
 

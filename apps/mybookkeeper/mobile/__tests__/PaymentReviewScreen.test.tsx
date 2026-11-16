@@ -18,6 +18,7 @@ import PaymentReviewScreen from "../src/features/paymentReview/PaymentReviewScre
 import { usePaymentReviewActions } from "../src/features/paymentReview/usePaymentReviewActions";
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { store } from "../src/lib/store";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true } }));
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: jest.fn() }));
@@ -506,7 +507,7 @@ describe("when the server refuses", () => {
     await tapYes(server, refusal(500, "Traceback secret"));
 
     expect(screen.getByText(MESSAGES.couldntSave)).toBeTruthy();
-    expect(screen.queryByText(/Traceback/)).toBeNull();
+    expect(screen.queryByText(/Traceback/, SHOWN)).toBeNull();
     expect(screen.getByText("Yes, it's Jane Smith")).toBeTruthy();
   });
 

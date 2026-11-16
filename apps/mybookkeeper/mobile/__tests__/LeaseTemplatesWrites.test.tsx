@@ -17,6 +17,7 @@ import { formParts, formValue } from "../test-support/applicantsServer";
 import { fakeFiles, File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { aServerPlaceholder, aServerTemplate, BAD_TYPE_DETAIL, startLeaseTemplatesServer, TOO_BIG_DETAIL } from "../test-support/leaseTemplatesServer";
 import { mockPreventRemove, mockRouter, pressAlertButton, restoreApi, show, signInToWorkspace } from "../test-support/listingsHarness";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-router", () => jest.requireActual("../test-support/listingsHarness").expoRouterMock());
@@ -227,7 +228,7 @@ describe("uploading a template", () => {
     await show(<LeaseTemplateCreateScreen />);
     await fillAndUpload();
     expect(await screen.findByText(LEASE_TEMPLATE_CREATE_COPY.serverError)).toBeTruthy();
-    expect(screen.queryByText("Traceback: secret")).toBeNull();
+    expect(screen.queryByText("Traceback: secret", SHOWN)).toBeNull();
   });
 
   it("asks before throwing away what was entered, and not when nothing was", async () => {
@@ -304,7 +305,7 @@ describe("placeholders", () => {
     await fireEvent.changeText(await screen.findByLabelText(new RegExp(PLACEHOLDER_MESSAGES.label)), "  ");
     await fireEvent.press(screen.getByRole("button", { name: PLACEHOLDER_MESSAGES.save }));
     expect(server.writes).toHaveLength(0);
-    expect(await screen.findByText("Give it a label.")).toBeTruthy();
+    expect(await screen.findByText("Give it a label.", SHOWN)).toBeTruthy();
   });
 
   it("shows the server's sentence about a rejected expression and keeps the edits for another try", async () => {
@@ -320,7 +321,7 @@ describe("placeholders", () => {
     await fireEvent.press(screen.getByRole("button", { name: PLACEHOLDER_MESSAGES.save }));
     await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
     expect(JSON.parse(String(server.writes[1].data))).toEqual({ computed_expr: "(A * B).days" });
-    expect(screen.queryByText(PLACEHOLDER_SAVE_COPY.serverError)).toBeNull();
+    expect(screen.queryByText(PLACEHOLDER_SAVE_COPY.serverError, SHOWN)).toBeNull();
   });
 
   it("doesn't send an expression it has hidden once the type is no longer computed", async () => {

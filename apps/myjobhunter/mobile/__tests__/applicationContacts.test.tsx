@@ -22,6 +22,7 @@ import { renderApplicationDetail } from "../test-support/renderApplicationDetail
 import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -134,13 +135,13 @@ describe("adding a contact", () => {
     await openSheet();
 
     await fireEvent.press(screen.getByRole("button", { name: CONTACTS.create }));
-    expect(await screen.findByText(PROBLEMS.name.identity_required ?? "")).toBeTruthy();
+    expect(await screen.findByText(PROBLEMS.name.identity_required ?? "", SHOWN)).toBeTruthy();
 
     await fireEvent.changeText(screen.getByLabelText(CONTACTS.emailLabel), "sam at stripe");
     await fireEvent.changeText(screen.getByLabelText(CONTACTS.linkedInLabel), "intent://evil");
     await fireEvent.press(screen.getByRole("button", { name: CONTACTS.create }));
-    expect(await screen.findByText(PROBLEMS.email.invalid ?? "")).toBeTruthy();
-    expect(screen.getByText(PROBLEMS.linkedin_url.invalid ?? "")).toBeTruthy();
+    expect(await screen.findByText(PROBLEMS.email.invalid ?? "", SHOWN)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.linkedin_url.invalid ?? "", SHOWN)).toBeTruthy();
     expect(posts(sent)).toHaveLength(0);
   });
 
@@ -159,10 +160,10 @@ describe("adding a contact", () => {
     expect(screen.getByLabelText(CONTACTS.emailLabel).props.value).toBe(email);
     await fireEvent.press(screen.getByRole("button", { name: CONTACTS.create }));
 
-    expect(await screen.findByText(PROBLEMS.name.too_long ?? "")).toBeTruthy();
-    expect(screen.getByText(PROBLEMS.email.too_long ?? "")).toBeTruthy();
-    expect(screen.getByText(PROBLEMS.linkedin_url.too_long ?? "")).toBeTruthy();
-    expect(screen.getByText(PROBLEMS.notes.too_long ?? "")).toBeTruthy();
+    expect(await screen.findByText(PROBLEMS.name.too_long ?? "", SHOWN)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.email.too_long ?? "", SHOWN)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.linkedin_url.too_long ?? "", SHOWN)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.notes.too_long ?? "", SHOWN)).toBeTruthy();
     expect(posts(sent)).toHaveLength(0);
   });
 
@@ -188,10 +189,10 @@ describe("adding a contact", () => {
     await fireEvent.changeText(screen.getByLabelText(CONTACTS.emailLabel), "sam@stripe.com");
     await fireEvent.press(screen.getByRole("button", { name: CONTACTS.create }));
 
-    expect(await screen.findByText(reason)).toBeTruthy();
+    expect(await screen.findByText(reason, SHOWN)).toBeTruthy();
     expect(screen.getByText(CONTACTS.checkFields)).toBeTruthy();
     await fireEvent.changeText(screen.getByLabelText(CONTACTS.emailLabel), "sam@stripe.co");
-    expect(screen.queryByText(reason)).toBeNull();
+    expect(screen.queryByText(reason, SHOWN)).toBeNull();
   });
 
   it("shows the add in flight at once and holds Cancel until it lands", async () => {

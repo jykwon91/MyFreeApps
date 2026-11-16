@@ -14,6 +14,7 @@ import LeaseDetailScreen from "../src/features/leases/LeaseDetailScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true } }));
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
@@ -356,7 +357,7 @@ describe("extending a lease", () => {
       await fireEvent.press(submitButton());
       expect(await screen.findByText(message)).toBeTruthy();
       expect(screen.getByLabelText("Note (optional)").props.value).toBe("Six more months");
-      expect(screen.queryByText(/dev words/)).toBeNull();
+      expect(screen.queryByText(/dev words/, SHOWN)).toBeNull();
     });
 
     it("counts it as done when the server saved it but the answer was an error", async () => {
@@ -484,7 +485,7 @@ describe("extending a lease", () => {
       server.writeFailure = failure;
       await pressUndoAndConfirm();
       expect(await screen.findByText(message)).toBeTruthy();
-      expect(screen.queryByText(/dev words/)).toBeNull();
+      expect(screen.queryByText(/dev words/, SHOWN)).toBeNull();
     });
 
     it("counts it as done when the server saved it but the answer was an error", async () => {

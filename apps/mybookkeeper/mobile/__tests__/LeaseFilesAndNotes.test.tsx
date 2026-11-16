@@ -17,6 +17,7 @@ import { aLease } from "../test-support/aLease";
 import { holdReads } from "../test-support/holdReads";
 import { holdWrites } from "../test-support/holdWrites";
 import { lastRequest, roleKnown, startLeaseWritesServer } from "../test-support/leaseWritesServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true, replace: jest.fn(), dismissTo: jest.fn() } }));
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
@@ -207,7 +208,7 @@ describe("changing what a file is", () => {
     await fireEvent.press(await screen.findByRole("button", { name: "Change the type of notice.pdf" }));
     await fireEvent.press(screen.getByRole("radio", { name: "Other" }));
     expect(await screen.findByText(message)).toBeTruthy();
-    expect(screen.queryByText("A developer's message")).toBeNull();
+    expect(screen.queryByText("A developer's message", SHOWN)).toBeNull();
     expect(screen.getByText(/^Notice, /)).toBeTruthy();
   });
 
@@ -316,7 +317,7 @@ describe("removing a file", () => {
     await fireEvent.press(await screen.findByRole("button", { name: "Remove notice.pdf" }));
     await act(async () => pressInAlert("Remove"));
     expect(await screen.findByText(message)).toBeTruthy();
-    expect(screen.queryByText("A developer's message")).toBeNull();
+    expect(screen.queryByText("A developer's message", SHOWN)).toBeNull();
     expect(screen.getByRole("button", { name: "Open notice.pdf" })).toBeTruthy();
   });
 
@@ -396,7 +397,7 @@ describe("the lease's notes", () => {
     await fireEvent.changeText(screen.getByLabelText("Anything to remember about this lease"), "Keep me");
     await fireEvent.press(screen.getByRole("button", { name: "Save notes" }));
     expect(await screen.findByText(message)).toBeTruthy();
-    expect(screen.queryByText("A developer's message")).toBeNull();
+    expect(screen.queryByText("A developer's message", SHOWN)).toBeNull();
     expect(screen.getByDisplayValue("Keep me")).toBeTruthy();
 
     delete server.failures.patch;

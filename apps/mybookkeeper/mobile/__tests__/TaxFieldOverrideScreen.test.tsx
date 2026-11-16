@@ -10,6 +10,7 @@ import { useIsAdmin } from "../src/features/workspace/useIsAdmin";
 import { store } from "../src/lib/store";
 import { aTaxField, aTaxForm, aTaxInstance } from "../test-support/aTaxForm";
 import { startTaxServer, type TaxAnswer, type TaxCall, writesOnly } from "../test-support/taxReturnsServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -74,7 +75,7 @@ describe("TaxFieldOverrideScreen", () => {
     await fireEvent.changeText(value(), "***6789");
     await fireEvent.changeText(reason(), "Typo");
     await fireEvent.press(save());
-    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.masked)).toBeTruthy();
+    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.masked, SHOWN)).toBeTruthy();
     expect(writesOnly(server.calls)).toHaveLength(0);
   });
 
@@ -84,7 +85,7 @@ describe("TaxFieldOverrideScreen", () => {
     await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MESSAGES.valueLabel}`)), "  ");
     await fireEvent.changeText(reason(), "Typo");
     await fireEvent.press(save());
-    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.blank)).toBeTruthy();
+    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.blank, SHOWN)).toBeTruthy();
     expect(writesOnly(server.calls)).toHaveLength(0);
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.clear }));
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
@@ -147,7 +148,7 @@ describe("TaxFieldOverrideScreen", () => {
     await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MESSAGES.valueLabel}`)), "1,234");
     await fireEvent.changeText(reason(), "Because");
     await fireEvent.press(save());
-    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.number(","))).toBeTruthy();
+    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.number(","), SHOWN)).toBeTruthy();
     expect(writesOnly(server.calls)).toHaveLength(0);
   });
 
@@ -189,8 +190,8 @@ describe("TaxFieldOverrideScreen", () => {
     await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MESSAGES.valueLabel}`)), text);
     await fireEvent.changeText(reason(), "Because");
     await fireEvent.press(save());
-    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.number(mockDecimalSeparator))).toBeTruthy();
-    expect(screen.queryByText(TAX_FIELD_OVERRIDE_PROBLEMS.reason)).toBeNull();
+    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.number(mockDecimalSeparator), SHOWN)).toBeTruthy();
+    expect(screen.queryByText(TAX_FIELD_OVERRIDE_PROBLEMS.reason, SHOWN)).toBeNull();
     expect(writesOnly(server.calls)).toHaveLength(0);
   });
 
@@ -200,7 +201,7 @@ describe("TaxFieldOverrideScreen", () => {
     await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MESSAGES.valueLabel}`)), "5");
     await fireEvent.changeText(reason(), "   ");
     await fireEvent.press(save());
-    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.reason)).toBeTruthy();
+    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.reason, SHOWN)).toBeTruthy();
     expect(writesOnly(server.calls)).toHaveLength(0);
   });
 
@@ -208,7 +209,7 @@ describe("TaxFieldOverrideScreen", () => {
     const server = serve();
     await show();
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.clear }));
-    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.reason)).toBeTruthy();
+    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.reason, SHOWN)).toBeTruthy();
     expect(writesOnly(server.calls)).toHaveLength(0);
     await fireEvent.changeText(reason(), "Not applicable");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.clear }));
@@ -267,7 +268,7 @@ describe("TaxFieldOverrideScreen", () => {
     await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MESSAGES.valueLabel}`)), text);
     await fireEvent.changeText(reason(), "Because");
     await fireEvent.press(save());
-    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.number(mockDecimalSeparator))).toBeTruthy();
+    expect(await screen.findByText(TAX_FIELD_OVERRIDE_PROBLEMS.number(mockDecimalSeparator), SHOWN)).toBeTruthy();
     expect(writesOnly(server.calls)).toHaveLength(0);
   });
 

@@ -11,6 +11,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aQueueItem, startCalendarServer } from "../test-support/calendarServer";
 import { holdWrites } from "../test-support/holdWrites";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockPush = jest.fn();
 
@@ -185,7 +186,7 @@ describe("the review queue", () => {
     await fireEvent.press(await screen.findByRole("button", { name: "Add booking" }));
     await fireEvent.press(screen.getByRole("radio", { name: "Maple Room" }));
     expect(await screen.findByText(message)).toBeTruthy();
-    expect(screen.queryByText("A developer's message")).toBeNull();
+    expect(screen.queryByText("A developer's message", SHOWN)).toBeNull();
     expect(screen.getByText("Reservation confirmed - Sam Lee")).toBeTruthy();
     expect(server.queue).toHaveLength(1);
   });

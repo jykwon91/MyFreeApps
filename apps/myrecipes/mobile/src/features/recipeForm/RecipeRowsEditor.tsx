@@ -13,7 +13,7 @@ export default function RecipeRowsEditor({ values, problems, rows, disabled }: R
   return (
     <>
       <RecipeSectionHeading>{MESSAGES.ingredientsHeading}</RecipeSectionHeading>
-      <SectionProblem message={problems.ingredients} />
+      <SectionProblem message={problems.ingredients} section={MESSAGES.ingredientsHeading} />
       {ingredients.map((row, index) => (
         <IngredientRowEditor
           disabled={disabled}
@@ -33,7 +33,7 @@ export default function RecipeRowsEditor({ values, problems, rows, disabled }: R
       </LoadingButton>
 
       <RecipeSectionHeading>{MESSAGES.stepsHeading}</RecipeSectionHeading>
-      <SectionProblem message={problems.steps} />
+      <SectionProblem message={problems.steps} section={MESSAGES.stepsHeading} />
       {steps.map((row, index) => (
         <StepRowEditor
           disabled={disabled}

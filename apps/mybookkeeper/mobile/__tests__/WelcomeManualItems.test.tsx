@@ -15,6 +15,7 @@ import { pressAlertButton } from "../test-support/pressAlertButton";
 import { renderScreen, resetSignedInStore } from "../test-support/renderScreen";
 import { startWelcomeManualsServer } from "../test-support/welcomeManualsServer";
 import { writesTo } from "../test-support/writesTo";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({
   useFocusEffect: () => undefined,
@@ -75,7 +76,7 @@ describe("a section's label and value pairs", () => {
     await open();
     await fireEvent.press(await screen.findByRole("button", { name: FIELD.add }));
     await fireEvent.press(button(FIELD.addConfirm));
-    expect(screen.getByText("Label is required.")).toBeTruthy();
+    expect(screen.getByText("Label is required.", SHOWN)).toBeTruthy();
     expect(writesTo(server)).toHaveLength(0);
   });
 
@@ -241,7 +242,7 @@ describe("a manual's rooms", () => {
     await open();
     await fireEvent.press(await screen.findByRole("button", { name: ROOM.add }));
     await fireEvent.press(button(ROOM.addConfirm));
-    expect(screen.getByText("Room name is required.")).toBeTruthy();
+    expect(screen.getByText("Room name is required.", SHOWN)).toBeTruthy();
   });
 
   it("warns that its sections go too, and deletes after confirming", async () => {
@@ -314,7 +315,7 @@ describe("where to eat", () => {
     await fireEvent.changeText(screen.getByLabelText("Cuisine, required"), "Thai");
     await fireEvent.changeText(screen.getByLabelText(PLACE.mapLabel), "javascript:alert(1)");
     await fireEvent.press(button(PLACE.addConfirm));
-    expect(screen.getByText("Map link must start with http:// or https://.")).toBeTruthy();
+    expect(screen.getByText("Map link must start with http:// or https://.", SHOWN)).toBeTruthy();
     expect(writesTo(server)).toHaveLength(0);
   });
 

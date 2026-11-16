@@ -31,6 +31,7 @@ import { renderApp } from "../test-support/renderApp";
 import { storeSession, tokens } from "@platform/mobile/test-support/storedSession";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -417,14 +418,14 @@ describe("from pasted text", () => {
     const tooLong = "a".repeat(JD_TEXT_MAX_LENGTH + 1);
     await fireEvent.changeText(field(MESSAGES.textLabel), tooLong);
 
-    expect(screen.getByText(ADD_APPLICATION_FORM_PROBLEMS.jdTextTooLong)).toBeTruthy();
+    expect(screen.getByText(ADD_APPLICATION_FORM_PROBLEMS.jdTextTooLong, SHOWN)).toBeTruthy();
     expect(field(MESSAGES.textLabel).props.value).toBe(tooLong);
     expect(field(MESSAGES.textLabel).props.maxLength).toBeUndefined();
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.autoFillFromText }));
     expect(requestsTo(sent, "POST /applications/parse-jd")).toHaveLength(0);
 
     await fireEvent.changeText(field(MESSAGES.textLabel), "a".repeat(JD_TEXT_MAX_LENGTH));
-    expect(screen.queryByText(ADD_APPLICATION_FORM_PROBLEMS.jdTextTooLong)).toBeNull();
+    expect(screen.queryByText(ADD_APPLICATION_FORM_PROBLEMS.jdTextTooLong, SHOWN)).toBeNull();
   });
 });
 
@@ -538,7 +539,7 @@ describe("typed in", () => {
     expect(picker.queryByRole("button", { name: new RegExp(`^${MESSAGES.addCompany} “`) })).toBeNull();
 
     await fireEvent.changeText(screen.getByLabelText(MESSAGES.searchLabel), "😀".repeat(COMPANY_NAME_MAX_LENGTH));
-    expect(picker.queryByText(COMPANY_FORM_PROBLEMS.nameTooLong)).toBeNull();
+    expect(picker.queryByText(COMPANY_FORM_PROBLEMS.nameTooLong, SHOWN)).toBeNull();
     expect(await picker.findByRole("button", { name: new RegExp(`^${MESSAGES.addCompany} “`) })).toBeTruthy();
   });
 
@@ -584,11 +585,11 @@ describe("checking and saving", () => {
     await screen.findByText(MESSAGES.reviewHeading);
 
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
-    expect(await screen.findByText(ADD_APPLICATION_FORM_PROBLEMS.roleTitleRequired)).toBeTruthy();
+    expect(await screen.findByText(ADD_APPLICATION_FORM_PROBLEMS.roleTitleRequired, SHOWN)).toBeTruthy();
     expect(requestsTo(sent, "POST /applications")).toHaveLength(0);
 
     await fireEvent.changeText(field(ROLE_FIELD), "Engineer");
-    expect(screen.queryByText(ADD_APPLICATION_FORM_PROBLEMS.roleTitleRequired)).toBeNull();
+    expect(screen.queryByText(ADD_APPLICATION_FORM_PROBLEMS.roleTitleRequired, SHOWN)).toBeNull();
   });
 
   it("doesn't cut pasted text short: it says what is too long and won't save it", async () => {
@@ -608,14 +609,14 @@ describe("checking and saving", () => {
     await fireEvent.changeText(field(MESSAGES.notesLabel), "a".repeat(APPLICATION_NOTES_MAX_LENGTH + 1));
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.save }));
 
-    expect(await screen.findByText(ADD_APPLICATION_FORM_PROBLEMS.roleTitleTooLong)).toBeTruthy();
-    expect(screen.getByText(ADD_APPLICATION_FORM_PROBLEMS.locationTooLong)).toBeTruthy();
-    expect(screen.getByText(ADD_APPLICATION_FORM_PROBLEMS.notesTooLong)).toBeTruthy();
+    expect(await screen.findByText(ADD_APPLICATION_FORM_PROBLEMS.roleTitleTooLong, SHOWN)).toBeTruthy();
+    expect(screen.getByText(ADD_APPLICATION_FORM_PROBLEMS.locationTooLong, SHOWN)).toBeTruthy();
+    expect(screen.getByText(ADD_APPLICATION_FORM_PROBLEMS.notesTooLong, SHOWN)).toBeTruthy();
     expect(field(ROLE_FIELD).props.value).toBe(tooLongRole);
     expect(requestsTo(sent, "POST /applications")).toHaveLength(0);
 
     await fireEvent.changeText(field(ROLE_FIELD), "😀".repeat(ROLE_TITLE_MAX_LENGTH));
-    expect(screen.queryByText(ADD_APPLICATION_FORM_PROBLEMS.roleTitleTooLong)).toBeNull();
+    expect(screen.queryByText(ADD_APPLICATION_FORM_PROBLEMS.roleTitleTooLong, SHOWN)).toBeNull();
   });
 
   it("says when saving failed, keeping everything typed, and saves on a second try", async () => {

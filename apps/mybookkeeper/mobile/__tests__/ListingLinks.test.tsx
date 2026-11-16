@@ -8,6 +8,7 @@ import ListingLinksScreen from "../src/features/listings/ListingLinksScreen";
 import { holdWrites } from "../test-support/holdWrites";
 import { aLink, aListing, startListingsServer, writesTo } from "../test-support/listingsServer";
 import { mockPreventRemove, mockRouter, pressAlertButton, restoreApi, show, signInToWorkspace } from "../test-support/listingsHarness";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => jest.requireActual("../test-support/listingsHarness").expoRouterMock());
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
@@ -100,10 +101,10 @@ describe("adding a link", () => {
     const server = startListingsServer();
     await show(<ListingLinkCreateScreen id="l1" />);
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.addSubmit }));
-    expect(screen.getByText(/at least an external ID or a URL/)).toBeTruthy();
+    expect(screen.getByText(/at least an external ID or a URL/, SHOWN)).toBeTruthy();
     await fireEvent.changeText(screen.getByLabelText(MESSAGES.externalUrl), "ff.example/12");
     await fireEvent.press(button(MESSAGES.addSubmit));
-    expect(screen.getByText("Enter a web address that starts with http:// or https://.")).toBeTruthy();
+    expect(screen.getByText("Enter a web address that starts with http:// or https://.", SHOWN)).toBeTruthy();
     expect(writesTo(server, "post")).toHaveLength(0);
   });
 

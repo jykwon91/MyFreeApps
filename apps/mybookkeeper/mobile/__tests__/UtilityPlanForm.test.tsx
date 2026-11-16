@@ -17,6 +17,7 @@ import { store } from "../src/lib/store";
 import { aUtilityPlanDetail } from "../test-support/aUtilityPlanDetail";
 import { holdWrites } from "../test-support/holdWrites";
 import { startUtilityServer, writesTo } from "../test-support/utilityPlansServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -85,7 +86,7 @@ describe("adding a utility plan", () => {
     await show(<UtilityPlanFormScreen />);
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.saveNew }));
     expect(await screen.findByText(MESSAGES.propertyRequired)).toBeTruthy();
-    expect(screen.getByText("Provider is required.")).toBeTruthy();
+    expect(screen.getByText("Provider is required.", SHOWN)).toBeTruthy();
     expect(writesTo(server, "post")).toHaveLength(0);
   });
 
@@ -117,7 +118,7 @@ describe("adding a utility plan", () => {
     const base = screen.getByLabelText(new RegExp(`^${MESSAGES.monthlyBase.replace(/[()$]/g, "\\$&")}`));
     await fireEvent.changeText(base, "12,50x");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveNew }));
-    expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.notDollars(","))).toBeTruthy();
+    expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.notDollars(","), SHOWN)).toBeTruthy();
     expect(writesTo(server, "post")).toHaveLength(0);
     await fireEvent.changeText(base, "12,50");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveNew }));
@@ -134,7 +135,7 @@ describe("adding a utility plan", () => {
     const energy = screen.getByLabelText(new RegExp(`^${MESSAGES.energyCharge.replace(/[()/]/g, "\\$&")}`));
     await fireEvent.changeText(energy, "11,5,0");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveNew }));
-    expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.notRate(","))).toBeTruthy();
+    expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.notRate(","), SHOWN)).toBeTruthy();
     expect(writesTo(server, "post")).toHaveLength(0);
     await fireEvent.changeText(energy, "11,5");
     await fireEvent.changeText(screen.getByLabelText(new RegExp(`^${MESSAGES.tduCharge.replace(/[()/]/g, "\\$&")}`)), "5,3509");
@@ -175,7 +176,7 @@ describe("adding a utility plan", () => {
     await fireEvent.changeText(screen.getByLabelText(new RegExp(`^${MESSAGES.provider}`)), "Reliant");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveNew }));
     expect(await screen.findByText(/I'm not sure that saved/)).toBeTruthy();
-    expect(screen.queryByText(/raw server text/)).toBeNull();
+    expect(screen.queryByText(/raw server text/, SHOWN)).toBeNull();
     expect(screen.getByLabelText(new RegExp(`^${MESSAGES.provider}`)).props.value).toBe("Reliant");
     expect(mockBack).not.toHaveBeenCalled();
   });
@@ -254,7 +255,7 @@ describe("editing a utility plan", () => {
     expect(fee.props.value).toBe("150.00");
     await fireEvent.changeText(fee, "1.50.");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
-    expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.notDollars("."))).toBeTruthy();
+    expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.notDollars("."), SHOWN)).toBeTruthy();
     expect(writesTo(server, "patch")).toHaveLength(0);
     expect(mockBack).not.toHaveBeenCalled();
   });
@@ -266,7 +267,7 @@ describe("editing a utility plan", () => {
     await fireEvent.changeText(energy, "1500");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
     expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.endBeforeStart)).toBeTruthy();
-    expect(screen.getByText(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh("."))).toBeTruthy();
+    expect(screen.getByText(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh("."), SHOWN)).toBeTruthy();
     expect(writesTo(server, "patch")).toHaveLength(0);
   });
 
@@ -282,7 +283,7 @@ describe("editing a utility plan", () => {
     await fireEvent.changeText(await screen.findByLabelText(new RegExp(`^${MESSAGES.provider}`)), "Direct Energy");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
     expect(await screen.findByText(copy)).toBeTruthy();
-    expect(screen.queryByText(/raw server text/)).toBeNull();
+    expect(screen.queryByText(/raw server text/, SHOWN)).toBeNull();
     expect(screen.getByLabelText(new RegExp(`^${MESSAGES.provider}`)).props.value).toBe("Direct Energy");
     expect(mockBack).not.toHaveBeenCalled();
   });
@@ -334,7 +335,7 @@ describe("the plan screen's actions", () => {
     await fireEvent.press(await screen.findByRole("button", { name: UTILITY_PLAN_MESSAGES.remove }));
     await (alert.mock.calls[0][2] ?? []).find((button) => button.text === "Remove")?.onPress?.();
     expect(await screen.findByText("I couldn't delete that utility plan. Want to try again?")).toBeTruthy();
-    expect(screen.queryByText(/raw server text/)).toBeNull();
+    expect(screen.queryByText(/raw server text/, SHOWN)).toBeNull();
     expect(mockBack).not.toHaveBeenCalled();
   });
 });

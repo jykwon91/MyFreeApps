@@ -19,6 +19,7 @@ import { resetSpeech } from "../test-support/fakeSpeech";
 import { PRACTICE_HEADING } from "../test-support/onboardedLearner";
 import { renderApp } from "../test-support/renderApp";
 import { CORRECTION, TUTOR_SESSION, USAGE_LEFT, USAGE_USED_UP } from "../test-support/tutorRecords";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockKeepAwake = { active: 0 };
 
@@ -126,7 +127,7 @@ describe("a typed conversation", () => {
     await serverWrites(() => stream.emit("reply.delta", { text: "¡Hola!" }));
     await finish(stream);
     expect(screen.getByText("¡Hola!")).toBeTruthy();
-    expect(screen.queryByText(turnErrorCopy("turn_in_progress"))).toBeNull();
+    expect(screen.queryByText(turnErrorCopy("turn_in_progress"), SHOWN)).toBeNull();
     expect(turns.map((turn) => turn.text)).toEqual(["Hola", "Hola"]);
   });
 
@@ -147,7 +148,7 @@ describe("a typed conversation", () => {
     await finish(stream);
     expect(screen.getByText("Hola")).toBeTruthy();
     expect(screen.getByText("¡Hola!")).toBeTruthy();
-    expect(screen.queryByText(turnErrorCopy(NETWORK_ERROR))).toBeNull();
+    expect(screen.queryByText(turnErrorCopy(NETWORK_ERROR), SHOWN)).toBeNull();
     expect(turns.map((turn) => turn.text)).toEqual(["Hola", "Hola"]);
   });
 
@@ -176,7 +177,7 @@ describe("a typed conversation", () => {
     await serverWrites(() => streams[1].emit("reply.delta", { text: "¡Hola! Bienvenido al café." }));
     await finish(streams[1]);
     expect(screen.getByText("¡Hola! Bienvenido al café.")).toBeTruthy();
-    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST))).toBeNull();
+    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST), SHOWN)).toBeNull();
     expect(screen.getAllByText("Hola")).toHaveLength(1);
     expect(turns.map((sent) => sent.text)).toEqual(["Hola", "Hola"]);
   });
@@ -198,7 +199,7 @@ describe("a typed conversation", () => {
     await serverWrites(() => stream.emit("reply.delta", { text: "¡Hola!" }));
     await finish(stream);
     expect(screen.getByText("¡Hola!")).toBeTruthy();
-    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST))).toBeNull();
+    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST), SHOWN)).toBeNull();
     expect(screen.getAllByText("Hola")).toHaveLength(1);
     expect(turns.map((sent) => sent.text)).toEqual(["Hola", "Hola"]);
   });
@@ -226,7 +227,7 @@ describe("a typed conversation", () => {
     await finish(streams[1]);
     expect(screen.getByText("¡Hola! Bienvenido al café.")).toBeTruthy();
     expect(screen.queryByText(PRACTICE_COPY.replyCutOff)).toBeNull();
-    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST))).toBeNull();
+    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST), SHOWN)).toBeNull();
     expect(screen.getAllByText("Hola")).toHaveLength(1);
   });
 
@@ -382,7 +383,7 @@ describe("a typed conversation", () => {
     await serverWrites(() => streams[1].emit("reply.delta", { text: "¡Hola! Bienvenido." }));
     await finish(streams[1]);
     expect(screen.getByText("¡Hola! Bienvenido.")).toBeTruthy();
-    expect(screen.queryByText(turnErrorCopy("tutor_busy"))).toBeNull();
+    expect(screen.queryByText(turnErrorCopy("tutor_busy"), SHOWN)).toBeNull();
     expect(turns.map((sent) => sent.text)).toEqual(["Hola", "Hola"]);
   });
 

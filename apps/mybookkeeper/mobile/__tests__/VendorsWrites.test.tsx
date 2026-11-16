@@ -16,6 +16,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { holdWrites } from "../test-support/holdWrites";
 import { aVendor, startPropertiesVendorsServer, writesOf } from "../test-support/propertiesVendorsServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -221,7 +222,7 @@ describe("adding a vendor", () => {
     await show(<VendorCreateScreen />);
     await screen.findByLabelText("Name, required");
     await fireEvent.press(button(FORM.add));
-    expect(screen.getByText("Add a name.")).toBeTruthy();
+    expect(screen.getByText("Add a name.", SHOWN)).toBeTruthy();
     expect(writesOf(server, "post")).toHaveLength(0);
   });
 
@@ -232,8 +233,8 @@ describe("adding a vendor", () => {
     await fireEvent.changeText(screen.getByLabelText("Email"), "not-an-email");
     await fireEvent.changeText(screen.getByLabelText(FORM.hourlyRate), "ninety");
     await fireEvent.press(button(FORM.add));
-    expect(screen.getByText("That doesn't look like an email address.")).toBeTruthy();
-    expect(screen.getByText("Enter the rate as dollars, like 95 or 95.50.")).toBeTruthy();
+    expect(screen.getByText("That doesn't look like an email address.", SHOWN)).toBeTruthy();
+    expect(screen.getByText("Enter the rate as dollars, like 95 or 95.50.", SHOWN)).toBeTruthy();
     expect(writesOf(server, "post")).toHaveLength(0);
   });
 
@@ -268,7 +269,7 @@ describe("adding a vendor", () => {
     await fireEvent.changeText(await screen.findByLabelText("Name, required"), "Bright Electric");
     await fireEvent.changeText(screen.getByLabelText(FORM.hourlyRate), "ninety");
     await fireEvent.press(button(FORM.add));
-    expect(screen.getByText("Enter the rate as dollars, like 95 or 95,50.")).toBeTruthy();
+    expect(screen.getByText("Enter the rate as dollars, like 95 or 95,50.", SHOWN)).toBeTruthy();
     expect(writesOf(server, "post")).toHaveLength(0);
   });
 
@@ -278,7 +279,7 @@ describe("adding a vendor", () => {
     await fireEvent.changeText(await screen.findByLabelText("Name, required"), "Bright Electric");
     await fireEvent.changeText(screen.getByLabelText(FORM.hourlyRate), "-5");
     await fireEvent.press(button(FORM.add));
-    expect(screen.getByText("The rate can't be below $0.")).toBeTruthy();
+    expect(screen.getByText("The rate can't be below $0.", SHOWN)).toBeTruthy();
     expect(writesOf(server, "post")).toHaveLength(0);
   });
 

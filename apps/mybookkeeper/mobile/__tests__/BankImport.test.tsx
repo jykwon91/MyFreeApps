@@ -20,6 +20,7 @@ import { makeStore } from "../src/lib/store";
 import { formParts } from "../test-support/applicantsServer";
 import { File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { aProperty, startTransactionServer, type FakeTransactionServer } from "../test-support/transactionsServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
@@ -249,7 +250,7 @@ describe("importing a bank statement", () => {
     await chooseCsv();
     await fireEvent.press(await importButton());
     expect(await screen.findByText(message)).toBeTruthy();
-    expect(screen.queryByText("A developer's message")).toBeNull();
+    expect(screen.queryByText("A developer's message", SHOWN)).toBeNull();
     expect(screen.getByText("statement.csv")).toBeTruthy();
 
     server.bankImportFailure = null;

@@ -27,6 +27,7 @@ import { storeSession, tokens } from "@platform/mobile/test-support/storedSessio
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
 import type { SentRequest } from "@platform/mobile/test-support/types/SentRequest";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -315,11 +316,11 @@ describe("adding a company", () => {
     await openAddSheet();
 
     await fireEvent.press(saveButton());
-    expect(await screen.findByText(PROBLEMS.nameRequired)).toBeTruthy();
+    expect(await screen.findByText(PROBLEMS.nameRequired, SHOWN)).toBeTruthy();
 
     await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "   ");
     await fireEvent.press(saveButton());
-    expect(screen.getByText(PROBLEMS.nameRequired)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.nameRequired, SHOWN)).toBeTruthy();
     expect(posts(sent)).toEqual([]);
   });
 
@@ -335,10 +336,10 @@ describe("adding a company", () => {
     await fireEvent.changeText(screen.getByLabelText(MESSAGES.hqLabel), "h".repeat(COMPANY_HQ_LOCATION_MAX_LENGTH + 1));
     await fireEvent.press(saveButton());
 
-    expect(await screen.findByText(PROBLEMS.nameTooLong)).toBeTruthy();
-    expect(screen.getByText(PROBLEMS.domainTooLong)).toBeTruthy();
-    expect(screen.getByText(PROBLEMS.industryTooLong)).toBeTruthy();
-    expect(screen.getByText(PROBLEMS.hqLocationTooLong)).toBeTruthy();
+    expect(await screen.findByText(PROBLEMS.nameTooLong, SHOWN)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.domainTooLong, SHOWN)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.industryTooLong, SHOWN)).toBeTruthy();
+    expect(screen.getByText(PROBLEMS.hqLocationTooLong, SHOWN)).toBeTruthy();
     // No maxLength: nothing was cut off.
     expect(screen.getByLabelText(`${MESSAGES.nameLabel}, required`).props.value).toBe(longName);
     expect(screen.getByLabelText(`${MESSAGES.nameLabel}, required`).props.maxLength).toBeUndefined();
@@ -383,12 +384,12 @@ describe("adding a company", () => {
     await fireEvent.changeText(screen.getByLabelText(MESSAGES.domainLabel), "acme.com");
     await fireEvent.press(saveButton());
 
-    expect(await screen.findByText(PROBLEMS.duplicateDomain)).toBeTruthy();
+    expect(await screen.findByText(PROBLEMS.duplicateDomain, SHOWN)).toBeTruthy();
     expect(screen.queryByText(MESSAGES.domainHint)).toBeNull();
     expect(screen.queryByText(MESSAGES.couldntAdd)).toBeNull();
 
     await fireEvent.changeText(screen.getByLabelText(MESSAGES.domainLabel), "acme.io");
-    expect(screen.queryByText(PROBLEMS.duplicateDomain)).toBeNull();
+    expect(screen.queryByText(PROBLEMS.duplicateDomain, SHOWN)).toBeNull();
     expect(screen.getByText(MESSAGES.domainHint)).toBeTruthy();
   });
 

@@ -10,6 +10,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aProperty, aSavedVendor, aTransaction, lastPatch, startTransactionServer } from "../test-support/transactionsServer";
 import { holdWrites } from "../test-support/holdWrites";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockBack = jest.fn();
 const mockDispatch = jest.fn();
@@ -80,7 +81,7 @@ describe("TransactionEditScreen", () => {
     await renderScreen();
     await fireEvent.changeText(await screen.findByLabelText("Amount (USD)"), "1.234");
     await fireEvent.press(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Use dollars and cents, like 84.20.")).toBeTruthy();
+    expect(await screen.findByText("Use dollars and cents, like 84.20.", SHOWN)).toBeTruthy();
     expect(server.requests.some((request) => request.method === "patch")).toBe(false);
   });
 
@@ -222,7 +223,7 @@ describe("TransactionEditScreen", () => {
       await renderScreen();
       await fireEvent.changeText(await screen.findByLabelText("Tax year"), "2019");
       await fireEvent.press(screen.getByRole("button", { name: "Save" }));
-      expect(await screen.findByText("Use a year from 2020 to 2099.")).toBeTruthy();
+      expect(await screen.findByText("Use a year from 2020 to 2099.", SHOWN)).toBeTruthy();
       expect(server.requests.some((request) => request.method === "patch")).toBe(false);
     });
 

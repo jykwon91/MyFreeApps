@@ -12,6 +12,7 @@ import { store } from "../src/lib/store";
 import { holdWrites } from "../test-support/holdWrites";
 import { aListing, startListingsServer, writesTo } from "../test-support/listingsServer";
 import { mockPreventRemove, mockRouter, pressAlertButton, restoreApi, show, signInToWorkspace } from "../test-support/listingsHarness";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -175,9 +176,9 @@ describe("adding a listing", () => {
     await show(<ListingCreateScreen />);
     await screen.findByLabelText("Title, required");
     await fireEvent.press(button(FORM.add));
-    expect(screen.getByText("Add a title.")).toBeTruthy();
+    expect(screen.getByText("Add a title.", SHOWN)).toBeTruthy();
     expect(screen.getByText("Pick a property.")).toBeTruthy();
-    expect(screen.getByText("Add the monthly rate.")).toBeTruthy();
+    expect(screen.getByText("Add the monthly rate.", SHOWN)).toBeTruthy();
     expect(writesTo(server, "post")).toHaveLength(0);
   });
 
@@ -218,7 +219,7 @@ describe("adding a listing", () => {
     await fillRequired();
     await fireEvent.changeText(screen.getByLabelText("Monthly rate (USD), required"), typed);
     await fireEvent.press(button(FORM.add));
-    expect(screen.getByText("Enter the rate as dollars, like 1200 or 1200.50.")).toBeTruthy();
+    expect(screen.getByText("Enter the rate as dollars, like 1200 or 1200.50.", SHOWN)).toBeTruthy();
     expect(writesTo(server, "post")).toHaveLength(0);
   });
 
@@ -230,8 +231,8 @@ describe("adding a listing", () => {
     await fireEvent.changeText(screen.getByLabelText(FORM.minStay), "60");
     await fireEvent.changeText(screen.getByLabelText(FORM.maxStay), "30");
     await fireEvent.press(button(FORM.add));
-    expect(screen.getByText("Monthly rate must be greater than 0.")).toBeTruthy();
-    expect(screen.getByText("The minimum stay can't be longer than the maximum.")).toBeTruthy();
+    expect(screen.getByText("Monthly rate must be greater than 0.", SHOWN)).toBeTruthy();
+    expect(screen.getByText("The minimum stay can't be longer than the maximum.", SHOWN)).toBeTruthy();
     expect(writesTo(server, "post")).toHaveLength(0);
   });
 

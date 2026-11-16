@@ -6,6 +6,7 @@ import SignInScreen from "../components/SignInScreen";
 import type { MobileSession } from "../types/MobileSession";
 import type { SessionState } from "../types/SessionState";
 import type { SignInResult } from "../types/SignInResult";
+import { SHOWN } from "../../test-support/shown";
 
 jest.mock("../auth/mobileAuthApi", () => ({
   ...jest.requireActual("../auth/mobileAuthApi"),
@@ -72,8 +73,8 @@ describe("SignInScreen", () => {
     await renderScreen(signIn);
     await fireEvent.changeText(screen.getByLabelText("Email"), "");
     await fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
-    expect(screen.getByText("Enter your email.")).toBeTruthy();
-    expect(screen.getByText("Enter your password.")).toBeTruthy();
+    expect(screen.getByText("Enter your email.", SHOWN)).toBeTruthy();
+    expect(screen.getByText("Enter your password.", SHOWN)).toBeTruthy();
     expect(signIn).not.toHaveBeenCalled();
   });
 
@@ -110,7 +111,7 @@ describe("SignInScreen", () => {
   ])("explains %s", async (failure, message) => {
     await renderScreen(jest.fn().mockResolvedValue(failed(failure)));
     await fillAndSubmit();
-    expect(screen.getByText(message, { exact: false })).toBeTruthy();
+    expect(screen.getByText(message, { ...SHOWN, exact: false })).toBeTruthy();
     expect(screen.getByLabelText("Password").props.value).toBe("secret");
   });
 
@@ -150,7 +151,7 @@ describe("SignInScreen", () => {
 
       await fireEvent.press(screen.getByRole("button", RESEND));
       expect(await screen.findByText("Verification email sent. Check your inbox.")).toBeTruthy();
-      expect(screen.queryByText(message)).toBeNull();
+      expect(screen.queryByText(message, SHOWN)).toBeNull();
     });
   });
 
@@ -202,7 +203,7 @@ describe("SignInScreen", () => {
       signIn.mockResolvedValueOnce(failed("invalid_totp"));
       await fireEvent.changeText(screen.getByLabelText("Authentication code"), "123456");
       await fireEvent.press(screen.getByRole("button", { name: "Verify" }));
-      expect(screen.getByText(/Each code works once/)).toBeTruthy();
+      expect(screen.getByText(/Each code works once/, SHOWN)).toBeTruthy();
       expect(screen.getByLabelText("Authentication code").props.value).toBe("");
     });
 
@@ -232,7 +233,7 @@ describe("SignInScreen", () => {
       signIn.mockResolvedValueOnce(failed("bad_credentials"));
       await fireEvent.changeText(screen.getByLabelText("Authentication code"), "123456");
       await fireEvent.press(screen.getByRole("button", { name: "Verify" }));
-      expect(screen.getByText(/isn't right/)).toBeTruthy();
+      expect(screen.getByText(/isn't right/, SHOWN)).toBeTruthy();
       expect(screen.getByLabelText("Email").props.value.trim()).toBe("me@example.com");
     });
 

@@ -20,6 +20,7 @@ import { renderApp } from "../test-support/renderApp";
 import { storeSession } from "@platform/mobile/test-support/storedSession";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { FakeRoute } from "@platform/mobile/test-support/types/FakeRoute";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-secure-store", () => jest.requireActual("@platform/mobile/test-support/memorySecureStore"));
 jest.mock("expo-application", () => jest.requireActual("@platform/mobile/test-support/fakeApplication"));
@@ -266,7 +267,7 @@ describe("from pasted text", () => {
     const tooLong = "a".repeat(JD_TEXT_MAX_LENGTH + 1);
     await fireEvent.changeText(field(MESSAGES.textLabel), tooLong);
 
-    expect(screen.getByText(ADD_APPLICATION_FORM_PROBLEMS.jdTextTooLong)).toBeTruthy();
+    expect(screen.getByText(ADD_APPLICATION_FORM_PROBLEMS.jdTextTooLong, SHOWN)).toBeTruthy();
     expect(field(MESSAGES.textLabel).props.value).toBe(tooLong);
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.analyze }));
     expect(requestsTo(sent, ANALYZE)).toHaveLength(0);
@@ -282,7 +283,7 @@ describe("from pasted text", () => {
     await analyzeText("Staff Engineer at Stripe.");
 
     expect(await screen.findByText(`${MESSAGES.couldntAnalyze} ${why}`)).toBeTruthy();
-    expect(screen.queryByText(/overloaded_error/)).toBeNull();
+    expect(screen.queryByText(/overloaded_error/, SHOWN)).toBeNull();
     expect(field(MESSAGES.textLabel).props.value).toBe("Staff Engineer at Stripe.");
   });
 });

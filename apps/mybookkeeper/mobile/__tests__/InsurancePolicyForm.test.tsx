@@ -6,6 +6,7 @@ import NewPolicyScreen from "../src/features/insurance/NewPolicyScreen";
 import { aPolicyDetail, aProperty, lastInsuranceWrite, startInsuranceServer } from "../test-support/insuranceServer";
 import { POLICY_FORM_MESSAGES } from "../src/constants/insuranceForm";
 import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsurance";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
@@ -97,7 +98,7 @@ describe("adding a policy", () => {
     const windHail = screen.getByLabelText("Wind and hail deductible (% of coverage)");
     await fireEvent.changeText(windHail, "2,555");
     await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
-    expect(await screen.findByText("Use at most two decimal places, like 2,5.")).toBeTruthy();
+    expect(await screen.findByText("Use at most two decimal places, like 2,5.", SHOWN)).toBeTruthy();
     expect(mockBack).not.toHaveBeenCalled();
     await fireEvent.changeText(windHail, "2,5");
     await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
@@ -114,8 +115,8 @@ describe("adding a policy", () => {
     await fireEvent.changeText(screen.getByLabelText("Coverage amount (USD)"), "1,250");
     await fireEvent.changeText(screen.getByLabelText("Deductible (USD)"), "-5,50");
     await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
-    expect(await screen.findByText("Use a plain amount like 1240, or leave it blank.")).toBeTruthy();
-    expect(screen.getByText("Enter an amount of zero or more.")).toBeTruthy();
+    expect(await screen.findByText("Use a plain amount like 1240, or leave it blank.", SHOWN)).toBeTruthy();
+    expect(screen.getByText("Enter an amount of zero or more.", SHOWN)).toBeTruthy();
     expect(lastInsuranceWrite(server)).toBeNull();
   });
 
@@ -125,7 +126,7 @@ describe("adding a policy", () => {
     await screen.findByLabelText("Property *, Choose a property");
     await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
     expect(await screen.findByText("Choose which property this covers.")).toBeTruthy();
-    expect(screen.getByText("Give the policy a name.")).toBeTruthy();
+    expect(screen.getByText("Give the policy a name.", SHOWN)).toBeTruthy();
     expect(lastInsuranceWrite(server)).toBeNull();
   });
 
@@ -136,8 +137,8 @@ describe("adding a policy", () => {
     await fireEvent.changeText(screen.getByLabelText("Wind and hail deductible (% of coverage)"), "120");
     await fireEvent.changeText(screen.getByLabelText("Deductible (USD)"), "-5");
     await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
-    expect(await screen.findByText("Enter a percentage above 0 and up to 100.")).toBeTruthy();
-    expect(screen.getByText("Enter an amount of zero or more.")).toBeTruthy();
+    expect(await screen.findByText("Enter a percentage above 0 and up to 100.", SHOWN)).toBeTruthy();
+    expect(screen.getByText("Enter an amount of zero or more.", SHOWN)).toBeTruthy();
   });
 
   it("flags a premium of zero before sending anything", async () => {
@@ -146,7 +147,7 @@ describe("adding a policy", () => {
     await fillAdd();
     await fireEvent.changeText(screen.getByLabelText("Premium (USD)"), "0");
     await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
-    expect(await screen.findByText("Enter an amount above 0, or leave it blank.")).toBeTruthy();
+    expect(await screen.findByText("Enter an amount above 0, or leave it blank.", SHOWN)).toBeTruthy();
     expect(lastInsuranceWrite(server)).toBeNull();
   });
 
@@ -222,7 +223,7 @@ describe("adding a policy", () => {
     await fillAdd();
     await fireEvent.press(screen.getByRole("button", { name: "Save policy" }));
     expect(await screen.findByText(message)).toBeTruthy();
-    expect(screen.queryByText(/developer/)).toBeNull();
+    expect(screen.queryByText(/developer/, SHOWN)).toBeNull();
     expect(mockBack).not.toHaveBeenCalled();
   });
 

@@ -8,6 +8,7 @@ import { TWO_STEP_MESSAGES as MESSAGES } from "../constants/twoStep";
 import { useTwoStepStatus } from "../hooks/useTwoStepStatus";
 import type { ConfirmOwner } from "../types/ConfirmOwner";
 import type { TwoStepDisableResult } from "../types/TwoStepDisableResult";
+import { SHOWN } from "../../test-support/shown";
 
 jest.mock("../auth/mobileAuthApi");
 jest.mock("../auth/twoStepApi");
@@ -168,7 +169,7 @@ describe("turning off", () => {
     await open();
     await startTurningOff();
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.confirmTurnOff }));
-    expect(await screen.findByText(MESSAGES.wrongTurnOffCode)).toBeTruthy();
+    expect(await screen.findByText(MESSAGES.wrongTurnOffCode, SHOWN)).toBeTruthy();
     expect(screen.getByLabelText(MESSAGES.turnOffCodeLabel).props.value).toBe("");
   });
 

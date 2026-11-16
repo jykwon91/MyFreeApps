@@ -10,6 +10,7 @@ import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { anApplicant, startApplicantServer } from "../test-support/applicantsServer";
 import { pressAlertButton } from "../test-support/pressAlertButton";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -192,7 +193,7 @@ describe("ApplicantDetailScreen", () => {
       await fireEvent.changeText(screen.getByLabelText("Note (optional)"), "Keep me");
       await fireEvent.press(screen.getByRole("button", { name: "Move to Approved" }));
       expect(await screen.findByText("I couldn't move them. Want to try again?")).toBeTruthy();
-      expect(screen.queryByText(/developer/)).toBeNull();
+      expect(screen.queryByText(/developer/, SHOWN)).toBeNull();
       expect(screen.getByLabelText("Note (optional)").props.value).toBe("Keep me");
       server.writeFailure = null;
       await fireEvent.press(screen.getByRole("button", { name: "Move to Approved" }));

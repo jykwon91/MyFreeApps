@@ -68,6 +68,7 @@ export { default as UnreadableSession } from "./components/UnreadableSession";
 export { default as WebLink } from "./components/WebLink";
 
 export { useAnnouncement } from "./hooks/useAnnouncement";
+export { useFieldErrorAnnouncement } from "./hooks/useFieldErrorAnnouncement";
 export { useConfirmLeave } from "./hooks/useConfirmLeave";
 export { useConfirmedRemoval } from "./hooks/useConfirmedRemoval";
 export { useDiscardPrompt } from "./hooks/useDiscardPrompt";
@@ -169,6 +170,7 @@ export { TWO_STEP_MESSAGES } from "./constants/twoStep";
 export { SECURITY_MESSAGES } from "./constants/security";
 export { DISCARD_MESSAGES } from "./constants/discard";
 export { FORM_SHEET_TEST_ID } from "./constants/formSheet";
+export { fieldErrorsSummary } from "./constants/formField";
 export { LINK_MESSAGES } from "./constants/links";
 export { THEME_MESSAGES, THEME_OPTIONS } from "./constants/themePreference";
 export { SHOWING_LAST_LOADED_MESSAGE } from "./constants/offline";

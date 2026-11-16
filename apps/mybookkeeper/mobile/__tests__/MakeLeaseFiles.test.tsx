@@ -17,6 +17,7 @@ import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { aLease } from "../test-support/aLease";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn(), replace: jest.fn(), canGoBack: jest.fn(() => true) } }));
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
@@ -103,7 +104,7 @@ describe("making a draft's files", () => {
     await renderScreen();
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.makeFiles }));
     expect(await screen.findByText(LEASE_DOCUMENTS_LOCKED_MESSAGE)).toBeTruthy();
-    expect(screen.queryByText("server words")).toBeNull();
+    expect(screen.queryByText("server words", SHOWN)).toBeNull();
   });
 
   it("offers no way to make them once they've been emailed", async () => {

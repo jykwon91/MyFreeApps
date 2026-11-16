@@ -24,6 +24,7 @@ import { useCompareWithRecords } from "../src/features/reconciliation/useCompare
 import { useCanWrite } from "../src/features/workspace/useCanWrite";
 import { store } from "../src/lib/store";
 import { holdWrites } from "../test-support/holdWrites";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
@@ -457,17 +458,17 @@ describe("adding", () => {
     await typeInto(MESSAGES.amount, "-5");
     await fireEvent.press(screen.getByText(MESSAGES.add));
     await settle();
-    expect(screen.getByText("Enter an amount of $0 or more.")).toBeTruthy();
+    expect(screen.getByText("Enter an amount of $0 or more.", SHOWN)).toBeTruthy();
     expect(server.sent).toEqual([]);
   });
 
   it("holds a bad amount back and says why, only once they've tried", async () => {
     const server = serve({});
     await showForm();
-    expect(screen.queryByText("Enter the amount reported on the 1099.")).toBeNull();
+    expect(screen.queryByText("Enter the amount reported on the 1099.", SHOWN)).toBeNull();
     await fireEvent.press(screen.getByText(MESSAGES.add));
     await settle();
-    expect(screen.getByText("Enter the amount reported on the 1099.")).toBeTruthy();
+    expect(screen.getByText("Enter the amount reported on the 1099.", SHOWN)).toBeTruthy();
     expect(server.sent).toEqual([]);
     expect(mockBack).not.toHaveBeenCalled();
   });

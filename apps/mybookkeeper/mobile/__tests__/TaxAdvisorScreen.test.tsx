@@ -12,6 +12,7 @@ import TaxAdvisorScreen from "../src/features/taxReturns/TaxAdvisorScreen";
 import { useIsAdmin } from "../src/features/workspace/useIsAdmin";
 import { store } from "../src/lib/store";
 import { startTaxServer, type TaxCall, writesOnly } from "../test-support/taxReturnsServer";
+import { SHOWN } from "@platform/mobile/test-support/shown";
 
 jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn() } }));
 jest.mock("../src/features/workspace/useIsAdmin", () => ({ useIsAdmin: jest.fn() }));
@@ -127,7 +128,7 @@ describe("TaxAdvisorScreen", () => {
     await show();
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.getAdvice }));
     expect(await screen.findByText(TAX_ADVISOR_CTA_MESSAGES.demo)).toBeTruthy();
-    expect(screen.queryByText(TAX_ADVISOR_CTA_MESSAGES.error)).toBeNull();
+    expect(screen.queryByText(TAX_ADVISOR_CTA_MESSAGES.error, SHOWN)).toBeNull();
     expect(screen.queryByRole("button", { name: MESSAGES.getAdvice })).toBeNull();
   });
 
