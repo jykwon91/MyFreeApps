@@ -26,24 +26,61 @@ function contrastRatio(first: string, second: string): number {
 
 type Token = keyof ThemeColors;
 
-// Every foreground and the surface the components draw it on.
-const TEXT_PAIRS: [Token, Token][] = [
-  ["foreground", "background"],
-  ["foreground", "card"],
-  ["mutedForeground", "background"],
-  ["mutedForeground", "card"],
+// What each token is for. A Record, so a new token won't compile until it is given a role.
+// - text: drawn as text on any text surface.
+// - surface: a background that text tokens sit on (`muted` is also the pressed-row fill).
+// - fill / label: a solid fill and the one token drawn on it, paired in FILL_LABELS.
+// - outline: borders and dividers, never text.
+const TOKEN_ROLES: Record<Token, "text" | "surface" | "fill" | "label" | "outline"> = {
+  background: "surface",
+  card: "surface",
+  muted: "surface",
+  secondary: "surface",
+  foreground: "text",
+  mutedForeground: "text",
+  primary: "text",
+  secondaryForeground: "text",
+  destructiveText: "text",
+  positiveText: "text",
+  primaryForeground: "label",
+  destructive: "fill",
+  destructiveForeground: "label",
+  border: "outline",
+  input: "outline",
+  toastSuccessBackground: "fill",
+  toastSuccessBorder: "outline",
+  toastSuccessForeground: "label",
+  toastErrorBackground: "fill",
+  toastErrorBorder: "outline",
+  toastErrorForeground: "label",
+  toastInfoBackground: "fill",
+  toastInfoBorder: "outline",
+  toastInfoForeground: "label",
+};
+
+const tokensWithRole = (role: string) =>
+  (Object.keys(TOKEN_ROLES) as Token[]).filter((token) => TOKEN_ROLES[token] === role);
+
+// Every text token on every text surface.
+const TEXT_PAIRS: [Token, Token][] = tokensWithRole("text").flatMap((text) =>
+  tokensWithRole("surface").map((surface): [Token, Token] => [text, surface]),
+);
+
+// `primary` is a text token and also the primary button fill.
+const FILL_LABELS: [Token, Token][] = [
   ["primaryForeground", "primary"],
-  ["primary", "background"],
-  ["primary", "card"],
   ["destructiveForeground", "destructive"],
-  ["destructiveText", "background"],
-  ["destructiveText", "card"],
-  ["positiveText", "background"],
-  ["positiveText", "card"],
   ["toastSuccessForeground", "toastSuccessBackground"],
   ["toastErrorForeground", "toastErrorBackground"],
   ["toastInfoForeground", "toastInfoBackground"],
 ];
+
+describe("token roles", () => {
+  it("pairs every label with a fill", () => {
+    expect(FILL_LABELS.map(([label]) => label).sort()).toEqual(tokensWithRole("label").sort());
+    expect(tokensWithRole("fill").every((fill) => FILL_LABELS.some(([, f]) => f === fill))).toBe(true);
+  });
+});
 
 describe("contrastRatio", () => {
   it("matches known values", () => {
@@ -59,7 +96,7 @@ describe("contrastRatio", () => {
 describe.each(Object.entries({ light: lightColors, dark: darkColors }))(
   "%s theme contrast",
   (_scheme, colors) => {
-    it.each(TEXT_PAIRS)("%s on %s meets AA for text", (foreground, surface) => {
+    it.each([...TEXT_PAIRS, ...FILL_LABELS])("%s on %s meets AA for text", (foreground, surface) => {
       expect(contrastRatio(colors[foreground], colors[surface])).toBeGreaterThanOrEqual(AA_TEXT);
     });
 

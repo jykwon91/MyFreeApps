@@ -2,8 +2,10 @@ import type { ThemeColors } from "../types/ThemeColors";
 
 // Same values as the `:root` and `.dark` variables in apps/*/frontend/src/index.css,
 // the Tailwind green/red shades the web Toaster uses (and blue, in the same shades, for info), except where those miss the
-// WCAG AA contrast that __tests__/contrast.test.ts enforces: `destructiveText` is new, and
-// light `destructiveForeground` is dark because near-white on this red is only 3.59:1.
+// WCAG AA contrast that __tests__/contrast.test.ts enforces: `destructiveText` is new,
+// light `destructiveForeground` is dark because near-white on this red is only 3.59:1, light
+// `mutedForeground` is a touch darker (web's is 4.34:1 on `muted`) and dark `primary` a touch
+// lighter (web's is 3.98:1 on `muted`), since text sits on `muted` fills and pressed rows.
 export const lightColors: ThemeColors = {
   background: "hsl(0, 0%, 100%)",
   foreground: "hsl(222.2, 84%, 4.9%)",
@@ -13,7 +15,7 @@ export const lightColors: ThemeColors = {
   secondary: "hsl(210, 40%, 96.1%)",
   secondaryForeground: "hsl(222.2, 47.4%, 11.2%)",
   muted: "hsl(210, 40%, 96.1%)",
-  mutedForeground: "hsl(215.4, 16.3%, 46.9%)",
+  mutedForeground: "hsl(215.4, 16.3%, 45%)",
   border: "hsl(214.3, 31.8%, 91.4%)",
   input: "hsl(214.3, 31.8%, 91.4%)",
   destructive: "hsl(0, 84.2%, 60.2%)",
@@ -35,7 +37,7 @@ export const darkColors: ThemeColors = {
   background: "hsl(222.2, 84%, 4.9%)",
   foreground: "hsl(210, 40%, 98%)",
   card: "hsl(222.2, 84%, 4.9%)",
-  primary: "hsl(217.2, 91.2%, 59.8%)",
+  primary: "hsl(217.2, 91.2%, 64%)",
   primaryForeground: "hsl(222.2, 47.4%, 11.2%)",
   secondary: "hsl(217.2, 32.6%, 17.5%)",
   secondaryForeground: "hsl(210, 40%, 98%)",
