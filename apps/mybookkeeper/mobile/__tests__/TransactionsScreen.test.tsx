@@ -22,6 +22,19 @@ jest.mock("expo-router", () => ({
   },
 }));
 
+// Counts how often a row draws itself: it builds its accessibility label on every draw.
+const mockRowDraw = jest.fn();
+jest.mock("../src/features/transactions/transactionDisplay", () => {
+  const actual = jest.requireActual("../src/features/transactions/transactionDisplay");
+  return {
+    ...actual,
+    rowAccessibilityLabel: (...args: Parameters<typeof actual.rowAccessibilityLabel>) => {
+      mockRowDraw();
+      return actual.rowAccessibilityLabel(...args);
+    },
+  };
+});
+
 const originalAdapter = api.defaults.adapter;
 
 beforeEach(() => {
@@ -280,5 +293,17 @@ describe("TransactionsScreen", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Show results" }));
     await waitFor(() => expect(screen.queryByText(/March 2026/)).toBeNull());
     expect(screen.getByText(/Last year/)).toBeTruthy();
+  });
+
+  it("shows typed search text without redrawing the rows already on screen", async () => {
+    startTransactionServer(pageOf(5));
+    await renderScreen();
+    await screen.findByText("Vendor t0");
+    const field = () => screen.getByLabelText("Search transactions by vendor");
+    mockRowDraw.mockClear();
+    await fireEvent.changeText(field(), "v");
+    await fireEvent.changeText(field(), "ve");
+    expect(field().props.value).toBe("ve");
+    expect(mockRowDraw).not.toHaveBeenCalled();
   });
 });

@@ -4,12 +4,13 @@ import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/properties
 import { useListTransactionPagesInfiniteQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, SearchField, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
-import { FlatList, Text, View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { FlatList, type ListRenderItem, Text, View } from "react-native";
 import { BANK_IMPORT_MESSAGES as IMPORT_MESSAGES } from "../../constants/bankImport";
 import { TRANSACTION_EXPORT_FORMATS, TRANSACTION_EXPORT_MESSAGES as EXPORT_MESSAGES } from "../../constants/transactionExport";
 import { TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
 import { TRANSACTION_SELECTION_MESSAGES as SELECTION_MESSAGES } from "../../constants/transactionSelection";
+import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionFilters } from "../../types/TransactionFilters";
 import { monthName } from "../../lib/localDate";
 import { useRefetchCount } from "../../lib/useRefetchCount";
@@ -126,6 +127,29 @@ export default function TransactionsScreen({
     clearSearch();
     onFiltersChange(clearedFilters(filters));
   }
+
+  // Stable while typing in the search box, so a keystroke doesn't redraw every row already on screen.
+  const { isSelecting, isSelected, start, toggle } = selection;
+  const view = filters.view;
+  const openTransaction = useCallback(
+    (transaction: Transaction) => {
+      if (isSelecting) toggle(transaction);
+      else router.push(view === "review" ? reviewLink(transaction.id, filters) : `/transactions/${transaction.id}`);
+    },
+    [isSelecting, toggle, view, filters],
+  );
+  const renderTransaction = useCallback<ListRenderItem<Transaction>>(
+    ({ item }) => (
+      <TransactionRow
+        isSelected={isSelected(item.id)}
+        onLongPress={canWrite ? start : undefined}
+        onPress={openTransaction}
+        propertyName={item.property_id ? (propertyNames.get(item.property_id) ?? null) : null}
+        transaction={item}
+      />
+    ),
+    [isSelected, canWrite, start, openTransaction, propertyNames],
+  );
 
   if (isLoading) return <TransactionsSkeleton />;
   if (rows.length === 0 && !isFetching && !error && !isNarrowed && filters.view === "all") {
@@ -254,18 +278,7 @@ export default function TransactionsScreen({
         }}
         onEndReachedThreshold={0.5}
         refreshControl={refreshControl}
-        renderItem={({ item }) => (
-          <TransactionRow
-            isSelected={selection.isSelected(item.id)}
-            onLongPress={canWrite ? () => selection.start(item) : undefined}
-            onPress={() => {
-              if (selection.isSelecting) selection.toggle(item);
-              else router.push(filters.view === "review" ? reviewLink(item.id, filters) : `/transactions/${item.id}`);
-            }}
-            propertyName={item.property_id ? (propertyNames.get(item.property_id) ?? null) : null}
-            transaction={item}
-          />
-        )}
+        renderItem={renderTransaction}
         testID="transactions-list"
       />
       {selection.isSelecting ? (
