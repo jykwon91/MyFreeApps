@@ -19,7 +19,7 @@ export default function RentBalance({ ledger }: { ledger: RentLedgerResponse }) 
 
   return (
     <View accessible accessibilityLabel={`Balance: ${headline}.${totals ? ` ${totals}.` : ""}`} style={{ gap: spacing.xs }}>
-      <Text style={{ fontSize: fontSize.md, fontWeight: "600", color: isLate ? colors.destructive : colors.foreground }}>{headline}</Text>
+      <Text style={{ fontSize: fontSize.md, fontWeight: "600", color: isLate ? colors.destructiveText : colors.foreground }}>{headline}</Text>
       {totals ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{totals}</Text> : null}
     </View>
   );

@@ -30,7 +30,7 @@ export default function RentCurrentPeriod({ period }: { period: RentPeriodSummar
       </Text>
       <Chip label={RENT_CHARGE_STATUS_LABEL[period.status]} />
       {note ? <Text style={mutedText}>{note}</Text> : null}
-      <Text style={isLate ? { fontSize: fontSize.sm, color: colors.destructive } : mutedText}>{periodOutlook(period)}</Text>
+      <Text style={isLate ? { fontSize: fontSize.sm, color: colors.destructiveText } : mutedText}>{periodOutlook(period)}</Text>
     </View>
   );
 }

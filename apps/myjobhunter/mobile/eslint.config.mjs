@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
+import { destructiveTextRule } from "@platform/mobile/eslint/destructiveTextRule.mjs";
 
 export default tseslint.config(
   { ignores: [".expo", "dist", "*.config.js"] },
@@ -27,4 +28,5 @@ export default tseslint.config(
       ],
     },
   },
+  destructiveTextRule,
 );
