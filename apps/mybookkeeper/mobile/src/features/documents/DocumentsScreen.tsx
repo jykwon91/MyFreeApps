@@ -2,11 +2,14 @@ import { DOCUMENT_LIST_LIMIT } from "@mybookkeeper/api-client/constants/document
 import { DEFAULT_DOCUMENT_VIEW } from "@mybookkeeper/api-client/constants/documentListView";
 import type { DocumentListView } from "@mybookkeeper/api-client/types/document/DocumentListView";
 import { activeDocumentFilterCount, isDefaultDocumentView, viewDocuments } from "@mybookkeeper/api-client/utils/documentListView";
+import { useDebouncedValue } from "@platform/core/hooks/useDebouncedValue";
 import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, SearchField, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import { FlatList, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FlatList, type ListRenderItem, Text, View } from "react-native";
+import type { Document } from "@mybookkeeper/api-client/types/document/document";
 import { DOCUMENT_BULK_MESSAGES, hiddenSelectedNote } from "../../constants/documentBulk";
+import { SEARCH_DEBOUNCE_MS } from "../../constants/transactionFilters";
 import { DOCUMENT_FILTERS } from "../../constants/documentFilters";
 import type { DocumentFilter } from "../../types/DocumentFilter";
 import { cappedListLabel, DOCUMENT_LIST_MESSAGES, documentCountLabel, filtersAccessibilityLabel, filtersButtonLabel, STILL_READING_MESSAGE } from "../../constants/documents";
@@ -32,7 +35,14 @@ export default function DocumentsScreen({
 }) {
   const { colors, spacing, fontSize } = useTheme();
   const canWrite = useCanWrite();
-  const [view, setView] = useState<DocumentListView>(DEFAULT_DOCUMENT_VIEW);
+  // The search box shows what was typed; only the debounced term narrows the list, so a keystroke doesn't re-sort every document.
+  const [searchText, setSearchText] = useState(DEFAULT_DOCUMENT_VIEW.search);
+  const [options, setOptions] = useState<Omit<DocumentListView, "search">>(DEFAULT_DOCUMENT_VIEW);
+  // Clearing the box shows the full list right away; only typing waits.
+  const debouncedSearch = useDebouncedValue(searchText, searchText === "" ? 0 : SEARCH_DEBOUNCE_MS);
+  const appliedSearch = searchText === "" ? "" : debouncedSearch;
+  const view = useMemo<DocumentListView>(() => ({ ...options, search: searchText }), [options, searchText]);
+  const appliedView = useMemo<DocumentListView>(() => ({ ...options, search: appliedSearch }), [options, appliedSearch]);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [isFailedNoticeDismissed, setIsFailedNoticeDismissed] = useState(false);
   const selection = useRowSelection();
@@ -48,8 +58,8 @@ export default function DocumentsScreen({
   const { refresh, refreshControl } = useRefresh(refetch, error);
 
   const rows = useMemo(
-    () => viewDocuments((data ?? []).filter((document) => filter === "all" || needsALook(document)), view),
-    [data, filter, view],
+    () => viewDocuments((data ?? []).filter((document) => filter === "all" || needsALook(document)), appliedView),
+    [data, filter, appliedView],
   );
   const failed = useMemo(() => (data ?? []).filter((document) => document.status === "failed"), [data]);
   // Only finished, undeleted documents can be ticked: one being read or already deleted can't be acted on.
@@ -73,15 +83,38 @@ export default function DocumentsScreen({
   const isNarrowed = !isDefaultDocumentView(view) || filter !== "all";
   const selectedCount = visibleSelectedIds.length;
 
+  function applyView({ search, ...next }: DocumentListView): void {
+    setSearchText(search);
+    setOptions(next);
+  }
+
   function clearNarrowing(): void {
-    setView(DEFAULT_DOCUMENT_VIEW);
+    applyView(DEFAULT_DOCUMENT_VIEW);
     onFilterChange("all");
   }
 
   function showFailed(): void {
-    setView({ ...DEFAULT_DOCUMENT_VIEW, statuses: ["failed"] });
+    applyView({ ...DEFAULT_DOCUMENT_VIEW, statuses: ["failed"] });
     onFilterChange("all");
   }
+
+  const { isSelecting, selected, start, toggle } = selection;
+  const openDocument = useCallback(
+    (id: string) => (isSelecting ? toggle(id) : router.push(`/documents/${id}`)),
+    [isSelecting, toggle],
+  );
+  const renderDocument = useCallback<ListRenderItem<Document>>(
+    ({ item }) => (
+      <DocumentRow
+        document={item}
+        isSelected={selected ? selected.has(item.id) : undefined}
+        isUnselectable={isSelecting && !isActionable(item)}
+        onLongPress={canWrite && isActionable(item) ? start : undefined}
+        onPress={openDocument}
+      />
+    ),
+    [selected, isSelecting, canWrite, start, openDocument],
+  );
 
   const uploadStatus = (
     <View style={{ padding: spacing.lg }}>
@@ -149,8 +182,8 @@ export default function DocumentsScreen({
             )}
             <SearchField
               accessibilityLabel={DOCUMENT_LIST_MESSAGES.searchLabel}
-              onChangeText={(search) => setView({ ...view, search })}
-              onClear={() => setView({ ...view, search: "" })}
+              onChangeText={setSearchText}
+              onClear={() => setSearchText("")}
               placeholder={DOCUMENT_LIST_MESSAGES.searchPlaceholder}
               value={view.search}
             />
@@ -192,15 +225,7 @@ export default function DocumentsScreen({
         keyExtractor={(document) => document.id}
         keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
-        renderItem={({ item }) => (
-          <DocumentRow
-            document={item}
-            isSelected={selection.selected ? selection.selected.has(item.id) : undefined}
-            isUnselectable={selection.isSelecting && !isActionable(item)}
-            onLongPress={canWrite && isActionable(item) ? () => selection.start(item.id) : undefined}
-            onPress={() => (selection.isSelecting ? selection.toggle(item.id) : router.push(`/documents/${item.id}`))}
-          />
-        )}
+        renderItem={renderDocument}
         testID="documents-list"
       />
       {selection.isSelecting ? (
@@ -214,7 +239,7 @@ export default function DocumentsScreen({
         <DocumentFilterSheet
           onApply={(next) => {
             setIsFilterSheetOpen(false);
-            setView(next);
+            applyView(next);
           }}
           onClose={() => setIsFilterSheetOpen(false)}
           view={view}

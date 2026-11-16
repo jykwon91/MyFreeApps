@@ -1,5 +1,6 @@
 import type { Document } from "@mybookkeeper/api-client/types/document/document";
 import { LARGE_TEXT_FILE_NAME_LINES, ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { memo } from "react";
 import { Pressable, Text } from "react-native";
 import { DOCUMENT_BULK_MESSAGES } from "../../constants/documentBulk";
 import { DOCUMENT_LIST_MESSAGES } from "../../constants/documents";
@@ -8,7 +9,7 @@ import { documentName, documentSourceLabel, documentStatusLabel, documentStatusL
 import DocumentReferenceChip from "./DocumentReferenceChip";
 import DocumentStatusChip from "./DocumentStatusChip";
 
-export default function DocumentRow({
+function DocumentRow({
   document,
   onPress,
   onLongPress,
@@ -16,9 +17,10 @@ export default function DocumentRow({
   isUnselectable = false,
 }: {
   document: Document;
-  onPress: () => void;
+  /** Handed the document's id so one handler serves every row and the row can stay memoized. */
+  onPress: (id: string) => void;
   /** Starts picking several, from this one. Not offered to someone who can't change anything. */
-  onLongPress?: () => void;
+  onLongPress?: (id: string) => void;
   /** Set while picking several: the row then ticks on and off instead of opening. */
   isSelected?: boolean;
   /** While picking, a document that is being read (or deleted) can't be ticked. */
@@ -43,8 +45,8 @@ export default function DocumentRow({
       accessibilityRole={isPicking ? "checkbox" : "button"}
       accessibilityState={isPicking ? { checked: isSelected, disabled: isUnselectable } : undefined}
       disabled={isUnselectable}
-      onLongPress={isPicking ? undefined : onLongPress}
-      onPress={onPress}
+      onLongPress={isPicking || !onLongPress ? undefined : () => onLongPress(document.id)}
+      onPress={() => onPress(document.id)}
       style={({ pressed }) => ({
         minHeight: MIN_TOUCH_TARGET,
         gap: spacing.xs,
@@ -83,3 +85,5 @@ export default function DocumentRow({
     </Pressable>
   );
 }
+
+export default memo(DocumentRow);
