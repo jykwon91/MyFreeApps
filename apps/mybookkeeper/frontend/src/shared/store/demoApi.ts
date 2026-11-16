@@ -1,3 +1,4 @@
+import { EXPORT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "./baseApi";
 import type { DemoUserListResponse } from "@/shared/types/demo/demo-user-list";
 import type { DemoDeleteResponse } from "@/shared/types/demo/demo-delete";
@@ -15,6 +16,7 @@ export const demoApi = baseApi.injectEndpoints({
         url: "/admin/demo/create",
         method: "POST",
         data: body,
+        timeout: EXPORT_REQUEST_TIMEOUT_MS,
       }),
       invalidatesTags: ["Demo"],
     }),
@@ -29,6 +31,7 @@ export const demoApi = baseApi.injectEndpoints({
       query: (userId) => ({
         url: `/admin/demo/reset/${userId}`,
         method: "POST",
+        timeout: EXPORT_REQUEST_TIMEOUT_MS,
       }),
       invalidatesTags: ["Demo"],
     }),

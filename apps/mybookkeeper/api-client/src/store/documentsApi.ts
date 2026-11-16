@@ -1,3 +1,4 @@
+import { UPLOAD_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { ORGANIZATION_HEADER } from "@platform/core/constants/organizationHeader";
 import { baseApi } from "@platform/core/store/baseApi";
 import { RECEIPTS_PENDING_TAG } from "../constants/receiptsPendingTag";
@@ -28,6 +29,7 @@ export const documentsApi = baseApi.enhanceEndpoints({
         method: "POST",
         data: form,
         headers: workspaceId ? { [ORGANIZATION_HEADER]: workspaceId } : undefined,
+        timeout: UPLOAD_REQUEST_TIMEOUT_MS,
         onUploadProgress,
       }),
       invalidatesTags: ["Document", "Summary", "Transaction"],

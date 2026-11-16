@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Download } from "lucide-react";
 import { LoadingButton, showError, showSuccess } from "@platform/ui";
+import { EXPORT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import api from "@/lib/api";
 
 const EXPORT_ENDPOINT = "/users/me/export";
@@ -20,7 +21,7 @@ export default function DataExportButton() {
   async function handleExport() {
     setIsExporting(true);
     try {
-      const response = await api.get(EXPORT_ENDPOINT, { responseType: "blob" });
+      const response = await api.get(EXPORT_ENDPOINT, { responseType: "blob", timeout: EXPORT_REQUEST_TIMEOUT_MS });
       const blob = new Blob([response.data as BlobPart], {
         type: "application/json",
       });

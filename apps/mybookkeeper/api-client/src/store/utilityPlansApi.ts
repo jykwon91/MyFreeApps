@@ -1,3 +1,4 @@
+import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import { localToday } from "@platform/core/utils/localToday";
 import { UTILITY_PLAN_UPLOAD_TIMEOUT_MS } from "../constants/utilityPlanUpload";
@@ -95,7 +96,7 @@ export const utilityPlansApi = baseApi.enhanceEndpoints({
      * invalidates nothing since no row changed.
      */
     extractUtilityPlan: builder.mutation<UtilityPlanDraft, { document_id: string }>({
-      query: (data) => ({ url: "/utility-plans/extract", method: "POST", data }),
+      query: (data) => ({ url: "/utility-plans/extract", method: "POST", data, timeout: MODEL_REQUEST_TIMEOUT_MS }),
     }),
 
     /**

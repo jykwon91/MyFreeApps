@@ -1,3 +1,4 @@
+import { DISCOVERY_REFRESH_TIMEOUT_MS } from "../constants/discoveryRefresh";
 import { baseApi } from "@platform/core/store/baseApi";
 import { getNextPageOffset } from "@platform/core/utils/getNextPageOffset";
 import { DISCOVERED_JOBS_PAGE_SIZE, FIRST_DISCOVERED_JOBS_OFFSET } from "../constants/discoverPaging";
@@ -48,6 +49,7 @@ const discoverApi = apiWithTags.injectEndpoints({
       query: (sourceId) => ({
         url: `/discover/sources/${sourceId}/refresh`,
         method: "POST",
+        timeout: DISCOVERY_REFRESH_TIMEOUT_MS,
       }),
       invalidatesTags: ["DiscoverySource", DISCOVERED_JOB_TAG],
     }),

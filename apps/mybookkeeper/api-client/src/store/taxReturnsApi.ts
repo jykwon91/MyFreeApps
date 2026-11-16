@@ -1,3 +1,4 @@
+import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import type { CreateTaxReturnParams } from "../types/tax/CreateTaxReturnParams";
 import type { FormOverviewItem } from "../types/tax/FormOverviewItem";
@@ -63,7 +64,7 @@ export const taxReturnsApi = baseApi.enhanceEndpoints({
       providesTags: (_, __, id) => [{ type: "TaxAdvisor" as const, id }],
     }),
     generateAdvisorSuggestions: builder.mutation<TaxAdvisorCachedResponse, string>({
-      query: (taxReturnId) => ({ url: `/tax-returns/${taxReturnId}/advisor/generate`, method: "POST" }),
+      query: (taxReturnId) => ({ url: `/tax-returns/${taxReturnId}/advisor/generate`, method: "POST", timeout: MODEL_REQUEST_TIMEOUT_MS }),
       invalidatesTags: (_, __, id) => [{ type: "TaxAdvisor" as const, id }],
     }),
     updateSuggestionStatus: builder.mutation<void, UpdateSuggestionStatusParams>({

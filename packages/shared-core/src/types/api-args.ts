@@ -9,7 +9,7 @@ export type Args = {
    * shared axios instance defaults; auth headers are still added by its
    * request interceptor. */
   headers?: Record<string, string>;
-  /** Milliseconds. Unset means none, and a phone's connection can then hang forever. */
+  /** Milliseconds. Unset means the client's default, which is too short for an upload or a model call. */
   timeout?: number;
   /** Called as the request body goes out, for showing how much of an upload has been sent. */
   onUploadProgress?: AxiosRequestConfig["onUploadProgress"];

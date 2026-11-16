@@ -2,6 +2,7 @@ import axios from "axios";
 import type { AxiosResponse } from "axios";
 import { installStepUpInterceptor } from "../auth/stepUpInterceptor";
 import { getPlatform, onPlatformConfigured } from "../platform/configurePlatform";
+import { DEFAULT_REQUEST_TIMEOUT_MS } from "../constants/requestTimeouts";
 import { ORGANIZATION_HEADER } from "../constants/organizationHeader";
 import { NO_REFRESH_URL_PARTS } from "../constants/sessionRefresh";
 import { notifyAuthChange } from "./auth-store";
@@ -9,7 +10,8 @@ import { renewAfterUnauthorized } from "./renewAfterUnauthorized";
 import { isExemptFromSignOut } from "./signOutExemptions";
 import type { SessionRetryConfig } from "./types/SessionRetryConfig";
 
-const api = axios.create();
+// A request may name a longer timeout of its own: uploads and model calls do.
+const api = axios.create({ timeout: DEFAULT_REQUEST_TIMEOUT_MS });
 
 async function retryWithNewSession(config: SessionRetryConfig): Promise<AxiosResponse | null> {
   const renewal = await renewAfterUnauthorized({ token: config._sentToken ?? null, account: config._sentAccount });

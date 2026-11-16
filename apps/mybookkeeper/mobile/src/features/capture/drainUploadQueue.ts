@@ -7,7 +7,6 @@ import {
   LIMIT_REACHED_STATUS,
   NETWORK_FAILURES_BEFORE_STOP,
   SERVER_ERROR_STATUS,
-  UPLOAD_TIMEOUT_MS,
 } from "../../constants/capture";
 import type { AppDispatch, RootState } from "../../lib/store";
 import type { PendingUpload } from "../../types/PendingUpload";
@@ -38,22 +37,16 @@ function reportProgress(upload: PendingUpload, dispatch: AppDispatch): NonNullab
   };
 }
 
-/** Gives up on a dead connection, or nothing else could send until the app restarts. */
-async function send(upload: PendingUpload, workspaceId: string, dispatch: AppDispatch) {
+/** The upload endpoint's own timeout gives up on a dead connection, or nothing else could send until the app restarts. */
+function send(upload: PendingUpload, workspaceId: string, dispatch: AppDispatch) {
   // Named here, so a send retried after a switch still goes to the file's own workspace.
-  const request = dispatch(
+  return dispatch(
     documentsApi.endpoints.uploadDocument.initiate({
       form: uploadForm(upload),
       workspaceId,
       onUploadProgress: reportProgress(upload, dispatch),
     }),
   );
-  const timer = setTimeout(() => request.abort(), UPLOAD_TIMEOUT_MS);
-  try {
-    return await request;
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 async function sendAll(workspaceId: string, dispatch: AppDispatch, getState: () => RootState): Promise<UploadPhase> {

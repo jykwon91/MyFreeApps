@@ -1,3 +1,4 @@
+import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import type { DiscoveredDetail, DiscoveryResults } from "../types/recipe/discovery";
 
@@ -20,6 +21,7 @@ const discoveryApi = baseApi.injectEndpoints({
         url: "/discovery/search",
         method: "POST",
         data: { query: searchQuery },
+        timeout: MODEL_REQUEST_TIMEOUT_MS,
       }),
     }),
     readWebRecipe: build.mutation<DiscoveredDetail, { url: string; title?: string }>({
@@ -27,6 +29,7 @@ const discoveryApi = baseApi.injectEndpoints({
         url: "/discovery/detail",
         method: "POST",
         data: { url, title: title ?? "" },
+        timeout: MODEL_REQUEST_TIMEOUT_MS,
       }),
     }),
   }),

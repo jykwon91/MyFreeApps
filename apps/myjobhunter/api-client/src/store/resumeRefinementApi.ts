@@ -1,3 +1,4 @@
+import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import type { NavDirection } from "../types/resume-refinement/nav-direction";
 import type { RefinementSession } from "../types/resume-refinement/refinement-session";
@@ -36,6 +37,7 @@ export const resumeRefinementApi = baseApi
         query: (id) => ({
           url: `/resume-refinement/sessions/${id}/accept`,
           method: "POST",
+          timeout: MODEL_REQUEST_TIMEOUT_MS,
           data: {},
         }),
         invalidatesTags: (_result, _err, id) => [{ type: REFINEMENT_TAG, id }],
@@ -45,6 +47,7 @@ export const resumeRefinementApi = baseApi
         query: (id) => ({
           url: `/resume-refinement/sessions/${id}/accept-flagged`,
           method: "POST",
+          timeout: MODEL_REQUEST_TIMEOUT_MS,
           data: {},
         }),
         invalidatesTags: (_result, _err, id) => [{ type: REFINEMENT_TAG, id }],
@@ -54,6 +57,7 @@ export const resumeRefinementApi = baseApi
         query: ({ id, user_text }) => ({
           url: `/resume-refinement/sessions/${id}/custom`,
           method: "POST",
+          timeout: MODEL_REQUEST_TIMEOUT_MS,
           data: { user_text },
         }),
         invalidatesTags: (_result, _err, { id }) => [{ type: REFINEMENT_TAG, id }],
@@ -63,6 +67,7 @@ export const resumeRefinementApi = baseApi
         query: ({ id, hint }) => ({
           url: `/resume-refinement/sessions/${id}/alternative`,
           method: "POST",
+          timeout: MODEL_REQUEST_TIMEOUT_MS,
           data: { hint: hint ?? null },
         }),
         invalidatesTags: (_result, _err, { id }) => [{ type: REFINEMENT_TAG, id }],
@@ -72,6 +77,7 @@ export const resumeRefinementApi = baseApi
         query: (id) => ({
           url: `/resume-refinement/sessions/${id}/skip`,
           method: "POST",
+          timeout: MODEL_REQUEST_TIMEOUT_MS,
           data: {},
         }),
         invalidatesTags: (_result, _err, id) => [{ type: REFINEMENT_TAG, id }],
@@ -84,6 +90,7 @@ export const resumeRefinementApi = baseApi
         query: ({ id, direction }) => ({
           url: `/resume-refinement/sessions/${id}/navigate`,
           method: "POST",
+          timeout: MODEL_REQUEST_TIMEOUT_MS,
           data: { direction },
         }),
         invalidatesTags: (_result, _err, { id }) => [{ type: REFINEMENT_TAG, id }],
@@ -96,6 +103,7 @@ export const resumeRefinementApi = baseApi
         query: ({ id, current_text, section }) => ({
           url: `/resume-refinement/sessions/${id}/target-from-line`,
           method: "POST",
+          timeout: MODEL_REQUEST_TIMEOUT_MS,
           data: { current_text, section },
         }),
         invalidatesTags: (_result, _err, { id }) => [{ type: REFINEMENT_TAG, id }],

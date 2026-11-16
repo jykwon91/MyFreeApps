@@ -1,3 +1,4 @@
+import { MODEL_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { baseApi } from "@platform/core/store/baseApi";
 import { INSURANCE_UPLOAD_TIMEOUT_MS } from "../constants/insuranceUploads";
 import type { InsurancePolicyAttachment } from "../types/insurance/insurance-policy-attachment";
@@ -75,7 +76,7 @@ export const insurancePoliciesApi = baseApi.enhanceEndpoints({
      * replaced. It invalidates nothing — no row changed.
      */
     extractInsurancePolicy: builder.mutation<InsurancePolicyDraft, { document_id: string }>({
-      query: (data) => ({ url: "/insurance-policies/extract", method: "POST", data }),
+      query: (data) => ({ url: "/insurance-policies/extract", method: "POST", data, timeout: MODEL_REQUEST_TIMEOUT_MS }),
     }),
 
     /**

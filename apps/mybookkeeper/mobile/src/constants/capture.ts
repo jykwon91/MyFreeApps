@@ -6,7 +6,6 @@ export const PHOTO_LONGEST_SIDE = 2000;
 export const PHOTO_JPEG_QUALITY = 0.7;
 export const SHUTTER_SIZE = 72;
 export const UPLOAD_QUEUE_DIRECTORY = "upload-queue";
-export const UPLOAD_TIMEOUT_MS = 5 * 60 * 1000;
 /** Two in a row means the connection is down, so the rest aren't tried. One may just be a file too big for a slow link. */
 export const NETWORK_FAILURES_BEFORE_STOP = 2;
 export const SENT_MESSAGE_MS = 5000;

@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { DELETE_ACCOUNT_TIMEOUT_MS } from "../constants/requestTimeouts";
 import api from "../lib/api";
 import { configurePlatform } from "../platform/configurePlatform";
 import { baseApi } from "../store/baseApi";
@@ -96,11 +97,12 @@ describe("the injected endpoints", () => {
     expect(requests()).toEqual(["GET /users/me", "PATCH /users/me"]);
   });
 
-  it("deleteAccount sends its body to DELETE /users/me", async () => {
+  it("deleteAccount sends its body to DELETE /users/me, waiting longer than the default", async () => {
     const body = { password: "pw", confirm_email: "u@e.com", totp_code: null };
     await store.dispatch(endpoints.deleteAccount.initiate(body));
     expect(requests()).toEqual(["DELETE /users/me"]);
     expect(JSON.parse(seen[0].data as string)).toEqual(body);
+    expect(seen[0].timeout).toBe(DELETE_ACCOUNT_TIMEOUT_MS);
   });
 
   it("the reset that follows an identity change forgets the TOTP status", async () => {

@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/core/store/baseApi";
+import { RENT_REMINDER_SEND_TIMEOUT_MS } from "../constants/rentReminderSend";
 import type { RentReminderOverview } from "../types/rent/rent-reminder-overview";
 import type { RentReminderPlan } from "../types/rent/rent-reminder-plan";
 import type { RentReminderPlanArgs } from "../types/rent/rent-reminder-plan-args";
@@ -79,6 +80,7 @@ const rentRemindersApi = baseApi.enhanceEndpoints({
         url: `/rent-reminders/tenants/${applicantId}/send-now`,
         method: "POST",
         data,
+        timeout: RENT_REMINDER_SEND_TIMEOUT_MS,
       }),
       invalidatesTags: (_r, _e, { applicantId }) => [reminderTag(applicantId)],
     }),

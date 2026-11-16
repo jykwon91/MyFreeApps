@@ -6,6 +6,7 @@ import {
   showSuccess,
   extractErrorMessage,
 } from "@platform/ui";
+import { EXPORT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import api from "@/lib/api";
 import { useCompleteRefinementSessionMutation } from "@myjobhunter/api-client/store/resumeRefinementApi";
 import { ExportFormat } from "@myjobhunter/api-client/types/resume-refinement/export-format";
@@ -47,6 +48,7 @@ export default function CompletePanel({ session }: CompletePanelProps) {
     try {
       const response = await api.get(resumeExportPath(session.id, fmt), {
         responseType: "blob",
+        timeout: EXPORT_REQUEST_TIMEOUT_MS,
       });
       const blob = new Blob([response.data], { type: RESUME_EXPORT_MIME_TYPES[fmt] });
       const url = URL.createObjectURL(blob);
