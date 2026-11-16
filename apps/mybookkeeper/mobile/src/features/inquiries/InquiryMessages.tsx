@@ -17,7 +17,7 @@ export default function InquiryMessages({ messages, name }: { messages: InquiryM
     <View style={{ gap: spacing.sm }}>
       <InquiryMessageCard message={first} name={name} />
       {earlier.length > 0 ? (
-        <LoadingButton onPress={() => setShowEarlier(!showEarlier)} variant="ghost">
+        <LoadingButton accessibilityState={{ expanded: showEarlier }} onPress={() => setShowEarlier(!showEarlier)} variant="ghost">
           {showEarlier ? "Hide other messages" : earlier.length === 1 ? "Show 1 other message" : `Show ${earlier.length} other messages`}
         </LoadingButton>
       ) : null}

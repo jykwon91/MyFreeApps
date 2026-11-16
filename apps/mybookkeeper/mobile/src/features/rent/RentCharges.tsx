@@ -30,7 +30,7 @@ export default function RentCharges({ applicantId, canWrite, charges }: RentChar
         <RentChargeRow applicantId={applicantId} canWrite={canWrite} charge={charge} key={charge.id} />
       ))}
       {charges.length > RENT_CHARGES_SHOWN_AT_FIRST ? (
-        <LoadingButton onPress={() => setIsShowingAll(!isShowingAll)} variant="ghost">
+        <LoadingButton accessibilityState={{ expanded: isShowingAll }} onPress={() => setIsShowingAll(!isShowingAll)} variant="ghost">
           {isShowingAll ? RENT_MESSAGES.showFewer : showAllCharges(charges.length)}
         </LoadingButton>
       ) : null}

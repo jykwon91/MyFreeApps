@@ -229,9 +229,9 @@ describe("what the section shows", () => {
     const sends = ["1", "2", "3", "4"].map((id) => aReminderSend({ id, due_date: `2030-10-0${id}` }));
     await renderReminders(startServer({ sends }));
 
-    await fireEvent.press(await screen.findByText("Show all 4 reminders"));
+    await fireEvent.press(await screen.findByRole("button", { name: "Show all 4 reminders", expanded: false }));
     expect(await screen.findByText("Email · $300.00 due Fri, Oct 4")).toBeTruthy();
-    await fireEvent.press(screen.getByText(REMINDER_MESSAGES.showFewer));
+    await fireEvent.press(screen.getByRole("button", { name: REMINDER_MESSAGES.showFewer, expanded: true }));
     expect(screen.queryByText("Email · $300.00 due Fri, Oct 4")).toBeNull();
   });
 

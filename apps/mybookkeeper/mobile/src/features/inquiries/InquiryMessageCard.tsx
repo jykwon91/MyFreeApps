@@ -29,7 +29,7 @@ export default function InquiryMessageCard({ message, name }: { message: Inquiry
         </Text>
       </View>
       {isLong ? (
-        <LoadingButton onPress={() => setIsExpanded(!isExpanded)} variant="ghost">
+        <LoadingButton accessibilityState={{ expanded: isExpanded }} onPress={() => setIsExpanded(!isExpanded)} variant="ghost">
           {isExpanded ? "Show less" : "Show more"}
         </LoadingButton>
       ) : null}

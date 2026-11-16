@@ -47,7 +47,7 @@ export default function RateWatchOutlookCard({ outlook }: { outlook: InsurancePo
       ))}
       {showRest ? rest.map((filing) => <RateFilingDetail filing={filing} key={filing.serff_id} />) : null}
       {inForce.length > 0 && rest.length > 0 && isFolded ? (
-        <LoadingButton onPress={() => setIsFolded(false)} variant="ghost">
+        <LoadingButton accessibilityState={{ expanded: false }} onPress={() => setIsFolded(false)} variant="ghost">
           {formatFoldSummary(rest)}
         </LoadingButton>
       ) : null}

@@ -60,7 +60,7 @@ export default function TenantPayments({ applicantId, name }: { applicantId: str
         <TenantPaymentRow key={payment.id} payment={payment} rentNote={rentNotes?.get(payment.id) ?? null} />
       ))}
       {payments.length > PAYMENTS_SHOWN_AT_FIRST ? (
-        <LoadingButton onPress={() => setIsShowingAll(!isShowingAll)} variant="ghost">
+        <LoadingButton accessibilityState={{ expanded: isShowingAll }} onPress={() => setIsShowingAll(!isShowingAll)} variant="ghost">
           {isShowingAll ? TENANT_PAYMENT_MESSAGES.showFewer : showAllPayments(payments.length)}
         </LoadingButton>
       ) : null}

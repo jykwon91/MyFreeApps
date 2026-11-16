@@ -27,7 +27,7 @@ export default function RateWatchMarketGroup({ title, blurb, filings }: RateWatc
         <RateFilingRow filing={filing} key={filing.serff_id} />
       ))}
       {hidden > 0 && !isExpanded ? (
-        <LoadingButton onPress={() => setIsExpanded(true)} variant="ghost">
+        <LoadingButton accessibilityState={{ expanded: false }} onPress={() => setIsExpanded(true)} variant="ghost">
           {showMoreLabel(hidden)}
         </LoadingButton>
       ) : null}

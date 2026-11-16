@@ -259,9 +259,9 @@ describe("MortgageDetailScreen", () => {
     await show(<MortgageDetailScreen id="m1" />);
     await screen.findByText("•••• 4944");
     expect(screen.queryByText("1234564944")).toBeNull();
-    await fireEvent.press(screen.getByRole("button", { name: "Show the full loan number" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Show the full loan number", expanded: false }));
     expect(screen.getByText("1234564944")).toBeTruthy();
-    await fireEvent.press(screen.getByRole("button", { name: "Hide the full loan number" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Hide the full loan number", expanded: true }));
     expect(screen.queryByText("1234564944")).toBeNull();
   });
 

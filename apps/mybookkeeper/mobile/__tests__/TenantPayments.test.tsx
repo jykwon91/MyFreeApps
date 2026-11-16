@@ -122,9 +122,9 @@ describe("a tenant's payments", () => {
     await screen.findByText("Payer 5");
 
     expect(screen.queryByText("Payer 6")).toBeNull();
-    await fireEvent.press(screen.getByRole("button", { name: "Show all 8 payments" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Show all 8 payments", expanded: false }));
     expect(screen.getByText("Payer 7")).toBeTruthy();
-    await fireEvent.press(screen.getByRole("button", { name: "Show fewer" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Show fewer", expanded: true }));
     expect(screen.queryByText("Payer 6")).toBeNull();
   });
 

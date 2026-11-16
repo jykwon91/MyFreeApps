@@ -32,7 +32,7 @@ export default function PropertyTotals({ properties, period }: { properties: rea
         ))}
       </View>
       {!showAll && properties.length > PROPERTIES_SHOWN_AT_FIRST ? (
-        <LoadingButton onPress={() => setShowAll(true)} variant="ghost">
+        <LoadingButton accessibilityState={{ expanded: false }} onPress={() => setShowAll(true)} variant="ghost">
           {`Show all ${properties.length}`}
         </LoadingButton>
       ) : null}
