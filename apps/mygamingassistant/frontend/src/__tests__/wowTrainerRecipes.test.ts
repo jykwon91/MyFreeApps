@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { recipeOnlyFrom } from "@/games/wow-forever/lib/trainers/recipeOnlyFrom";
 import { rankRecipes } from "@/games/wow-forever/lib/trainers/rankRecipes";
 import { trainerNpcRecipes } from "@/games/wow-forever/lib/trainers/trainerRecipes";
+import type { RankTrainer } from "@/games/wow-forever/data/professions/rankTrainerTypes";
 import type { ProfessionRankStep } from "@/games/wow-forever/types/trainers/professionRankStep";
 import type { TrainerNpcSpells } from "@/games/wow-forever/types/trainers/trainerNpcSpells";
 import type { RecipeEntry } from "@/games/wow-forever/types/recipes/recipeEntry";
@@ -165,5 +167,21 @@ describe("rankRecipes", () => {
     expect(robe?.cost).toBe(900);
     expect(robe?.spec).toBe("Mooncloth");
     expect(byRank.get("Journeyman")?.[0].spec).toBeNull();
+  });
+});
+
+describe("recipeOnlyFrom", () => {
+  const npc = (npcId: number, name: string): RankTrainer => ({ npcId, name, where: "Stormwind City", x: 40, y: 84, zoneId: 1453, city: true });
+  const trainers = [npc(1, "Georgio"), npc(2, "Lucan"), npc(3, "Jalane")];
+  const spells = { "1": [[10, 1, 0]] as const, "2": [[10, 1, 0]] as const, "3": [[10, 1, 0], [20, 190, 0]] as const, "4": [[30, 1, 0]] as const };
+
+  it("names the trainers when at most `max` of yours teach it", () => {
+    expect(recipeOnlyFrom(20, spells, trainers, 2)?.map((t) => t.name)).toEqual(["Jalane"]);
+  });
+  it("is null when more than `max` of yours teach it", () => {
+    expect(recipeOnlyFrom(10, spells, trainers, 2)).toBeNull();
+  });
+  it("is empty when only the other faction's trainers teach it", () => {
+    expect(recipeOnlyFrom(30, spells, trainers, 2)).toEqual([]);
   });
 });

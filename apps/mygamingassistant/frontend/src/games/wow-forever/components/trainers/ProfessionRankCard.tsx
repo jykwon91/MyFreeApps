@@ -1,6 +1,8 @@
 import CraftRankTrainer from "@/games/wow-forever/components/crafting/CraftRankTrainer";
 import RankRecipesList from "@/games/wow-forever/components/trainers/RankRecipesList";
 import MilestoneWhere from "@/games/wow-forever/components/professions/MilestoneWhere";
+import { playerFactionLabel } from "@/games/wow-forever/data/playerFactionOptions";
+import type { RankTrainer } from "@/games/wow-forever/data/professions/rankTrainerTypes";
 import { forFaction } from "@/games/wow-forever/lib/forFaction";
 import { rankFacts } from "@/games/wow-forever/lib/trainers/rankFacts";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
@@ -15,7 +17,7 @@ interface ProfessionRankCardProps {
   /** When provided, trainer names become buttons that open the recipe list. */
   onSelectTrainer?: (npcId: number) => void;
   /** A crafting profession: what this rank teaches. Absent for gathering, Cooking and Fishing. */
-  recipes?: { profession: CraftingProfession; steps: readonly ProfessionRankStep[] };
+  recipes?: { profession: CraftingProfession; steps: readonly ProfessionRankStep[]; trainers: readonly RankTrainer[] };
 }
 
 /** One rank: the skill and level it needs, the cap it gives, and who trains it when that isn't every trainer. */
@@ -32,7 +34,13 @@ export default function ProfessionRankCard({ step, professionLabel, faction, zon
         <CraftRankTrainer rank={step.craftingRank} faction={faction} professionLabel={professionLabel} zoneId={zoneId} onSelectTrainer={onSelectTrainer} />
       ) : null}
       {!step.milestone && !step.craftingRank ? <p className="text-sm text-muted-foreground">Any trainer below.</p> : null}
-      {recipes ? <RankRecipesList rankName={step.name} profession={recipes.profession} steps={recipes.steps} /> : null}
+      {recipes ? <RankRecipesList
+          rankName={step.name}
+          profession={recipes.profession}
+          steps={recipes.steps}
+          trainers={recipes.trainers}
+          factionLabel={playerFactionLabel(faction)}
+        /> : null}
     </li>
   );
 }

@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-16",
+    "title": "Trainers: who teaches the rare recipes",
+    "summary": "In a rank's recipe list, a recipe only one or two trainers teach now names them, with where they stand and a map link — Shadoweave comes from Jalane Ayrole in Stormwind or Josephine Lister in the Undercity, not regular tailors.",
+    "to": "/wow-forever/trainers/tailoring"
+  },
+  {
+    "date": "2026-11-16",
     "title": "Trainers: what each rank teaches",
     "summary": "Each crafting profession's Trainers page now lists what Apprentice, Journeyman, Expert and Artisan trainers teach, with the skill and cost of every recipe. Click a trainer's name to see just what they teach.",
     "to": "/wow-forever/trainers"

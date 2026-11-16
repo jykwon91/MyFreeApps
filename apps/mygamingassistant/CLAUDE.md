@@ -187,6 +187,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   training skill the recipe's skill has reached (Apprentice 1–49, Journeyman
   50–124, Expert 125–199, Artisan 200+), the same rule as `recipeRank`
   (`lib/trainers/rankRecipes.ts`). Gathering, Cooking and Fishing get none.
+  **Only from:** a recipe at most `RANK_RECIPES_COPY.onlyFromMax` (2) of your
+  faction's trainers teach names them under the row with coords + map link
+  (`lib/trainers/recipeOnlyFrom.ts`, `RecipeOnlyFromLine`) — Shadoweave is only
+  Jalane Ayrole (A) / Josephine Lister (H), "Master Shadoweave Tailor"; the
+  operator couldn't find it at regular tailors. None of yours → "No <faction>
+  trainer teaches it".
   Tests: `wowTrainerRecipes.test.ts` (`rankRecipes`), `wow-forever-trainers.spec.ts`.
   **Where to learn a recipe** (`RecipeLearnDetail`, used by the Recipes page
   rows and item pages' Crafted section via `CraftedByList`): a trainer recipe
