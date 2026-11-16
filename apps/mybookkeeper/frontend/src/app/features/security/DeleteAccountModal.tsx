@@ -3,7 +3,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { AlertTriangle } from "lucide-react";
 import { Button, extractErrorMessage, showError } from "@platform/ui";
 import { useDeleteAccountMutation } from "@/shared/store/accountApi";
-import { useGetTotpStatusQuery } from "@/shared/store/totpApi";
+import { useGetTotpStatusQuery } from "@platform/ui/store/totpApi";
 import { logout } from "@/shared/lib/auth";
 
 export interface DeleteAccountModalProps {

@@ -11,7 +11,7 @@ vi.mock("@/shared/store/accountApi", () => ({
 
 // Controlled TOTP status — mutated per test that needs 2FA enabled
 const mockTotpStatus = { data: { enabled: false } };
-vi.mock("@/shared/store/totpApi", () => ({
+vi.mock("@platform/ui/store/totpApi", () => ({
   useGetTotpStatusQuery: () => mockTotpStatus,
 }));
 

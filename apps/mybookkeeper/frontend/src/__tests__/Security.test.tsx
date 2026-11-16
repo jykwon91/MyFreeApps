@@ -6,7 +6,7 @@ import Security from "@/app/pages/Security";
 const STORAGE_KEY = "security-info-dismissed";
 
 // TwoFactorSetup makes a network call on mount — mock it to prevent test noise.
-vi.mock("@/app/features/security/TwoFactorSetup", () => ({
+vi.mock("@platform/ui/components/auth/TwoFactorSetup", () => ({
   default: () => <div data-testid="two-factor-setup">TwoFactorSetup</div>,
 }));
 
