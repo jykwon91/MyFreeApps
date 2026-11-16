@@ -4,7 +4,7 @@ import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react-native";
 import { authenticateAsync, getEnrolledLevelAsync, SecurityLevel } from "expo-local-authentication";
 import { openBrowserAsync } from "expo-web-browser";
-import { AppState, Linking } from "react-native";
+import { Alert, AppState, Linking } from "react-native";
 import type { AppStateStatus } from "react-native";
 import type { ReactNode } from "react";
 import type { AxiosAdapter } from "axios";
@@ -19,7 +19,12 @@ import { anApplicant, noPrivateDetails, startApplicantServer } from "../test-sup
 import type { FakeApplicantServer } from "../test-support/applicantsServer";
 
 const mockFocus: { blur?: () => void } = {};
+const mockLeave: { active: boolean; blocked?: (event: { repeat: () => void }) => void } = { active: false };
 jest.mock("expo-router", () => ({
+  usePreventRemove: (active: boolean, blocked: (event: { repeat: () => void }) => void) => {
+    mockLeave.active = active;
+    mockLeave.blocked = blocked;
+  },
   useFocusEffect: (callback: () => () => void) => {
     const { useEffect } = jest.requireActual("react");
     useEffect(() => {
@@ -93,6 +98,8 @@ describe("ApplicantPrivateDetails", () => {
     store.dispatch(baseApi.util.resetApiState());
     store.dispatch(workspaceChosen("w1"));
     jest.clearAllMocks();
+    mockLeave.active = false;
+    jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
     jest.mocked(getEnrolledLevelAsync).mockResolvedValue(SecurityLevel.BIOMETRIC_STRONG);
     jest.mocked(authenticateAsync).mockResolvedValue({ success: true });
     Object.defineProperty(AppState, "currentState", { configurable: true, value: "active" });
@@ -467,6 +474,83 @@ describe("ApplicantPrivateDetails", () => {
       expect(emailWrites(server)).toEqual([]);
       await fireEvent.press(screen.getByRole("button", { name: "Change email" }));
       expect(screen.getByLabelText("Email").props.value).toBe("dana@example.com");
+    });
+
+    describe("leaving with an unsent change", () => {
+      const repeat = jest.fn();
+
+      async function goBack() {
+        await act(async () => { mockLeave.blocked?.({ repeat }); });
+      }
+
+      async function pressAlert(button: string) {
+        await act(async () => {
+          jest.mocked(Alert.alert).mock.lastCall?.[2]?.find((option) => option.text === button)?.onPress?.();
+        });
+      }
+
+      async function startEditing() {
+        const server = startApplicantServer([withReport]);
+        server.sensitive = everything();
+        await renderIt(withReport, true);
+        await showDetails();
+        await fireEvent.press(screen.getByRole("button", { name: "Change email" }));
+        return server;
+      }
+
+      beforeEach(() => repeat.mockClear());
+
+      it("asks before throwing away a typed address; keep stays, discard leaves", async () => {
+        await startEditing();
+        await fireEvent.changeText(screen.getByLabelText("Email"), "other@example.com");
+        expect(mockLeave.active).toBe(true);
+        await goBack();
+        expect(Alert.alert).toHaveBeenCalledWith("Discard your changes?", "I haven't saved them yet.", expect.any(Array));
+        await pressAlert("Keep editing");
+        expect(repeat).not.toHaveBeenCalled();
+        expect(screen.getByLabelText("Email").props.value).toBe("other@example.com");
+        await goBack();
+        await pressAlert("Discard");
+        expect(repeat).toHaveBeenCalledTimes(1);
+      });
+
+      it("doesn't ask when nothing was typed", async () => {
+        await startEditing();
+        expect(mockLeave.active).toBe(false);
+        await fireEvent.changeText(screen.getByLabelText("Email"), "other@example.com");
+        await fireEvent.changeText(screen.getByLabelText("Email"), "dana@example.com");
+        expect(mockLeave.active).toBe(false);
+      });
+
+      it("doesn't ask after the address is saved", async () => {
+        await startEditing();
+        await editEmail("other@example.com");
+        expect(await screen.findByText("Email saved")).toBeTruthy();
+        expect(mockLeave.active).toBe(false);
+      });
+
+      it("doesn't ask after cancel", async () => {
+        await startEditing();
+        await fireEvent.changeText(screen.getByLabelText("Email"), "other@example.com");
+        await fireEvent.press(screen.getByRole("button", { name: "Cancel" }));
+        expect(mockLeave.active).toBe(false);
+      });
+
+      it("stays quiet while the save is going through", async () => {
+        await startEditing();
+        const answer = api.defaults.adapter as AxiosAdapter;
+        let release: () => void = () => undefined;
+        const held = new Promise<void>((resolve) => { release = resolve; });
+        api.defaults.adapter = async (config) => {
+          if (config.url?.endsWith("/contact-email")) await held;
+          return answer(config);
+        };
+        await editEmail("other@example.com");
+        await goBack();
+        expect(Alert.alert).not.toHaveBeenCalled();
+        expect(mockLeave.active).toBe(true);
+        await act(async () => { release(); await new Promise((resolve) => setTimeout(resolve, 20)); });
+      });
     });
 
     it("can't be changed by a view-only member", async () => {
