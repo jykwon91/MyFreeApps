@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X, Download, Trash2 } from "lucide-react";
 import { AlertBox, showError, showSuccess } from "@platform/ui";
-import TwoFactorSetup from "@/app/features/security/TwoFactorSetup";
+import TwoFactorSetup from "@platform/ui/components/auth/TwoFactorSetup";
 import DeleteAccountModal from "@/app/features/security/DeleteAccountModal";
 import DisplayNameSetting from "@/app/features/security/DisplayNameSetting";
 import { useDismissable } from "@/shared/hooks/useDismissable";
