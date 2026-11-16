@@ -1,5 +1,5 @@
-import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
-import type { TransactionSelectionRef } from "@mybookkeeper/api-client/types/transaction/TransactionSelectionRef";
+import type { Transaction } from "../types/transaction/transaction";
+import type { TransactionSelectionRef } from "../types/transaction/TransactionSelectionRef";
 
 export function toSelectionRef({ id, property_id, status }: Transaction): TransactionSelectionRef {
   return { id, property_id, status };

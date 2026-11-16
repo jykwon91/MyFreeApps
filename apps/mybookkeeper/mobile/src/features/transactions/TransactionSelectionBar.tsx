@@ -1,5 +1,6 @@
 import { LoadingButton, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
+import { TRANSACTION_SELECTION_MESSAGES as SELECTION_MESSAGES } from "../../constants/transactionSelection";
 import type { TransactionSelectionBarProps } from "../../types/TransactionSelectionBarProps";
 import { BULK_TRANSACTION_MESSAGES } from "./transactionMessages";
 
@@ -9,6 +10,7 @@ export default function TransactionSelectionBar({
   approvableCount,
   isApproving,
   isDeleting,
+  isChecking,
   onApprove,
   onDelete,
   onCancel,
@@ -27,9 +29,9 @@ export default function TransactionSelectionBar({
       }}
     >
       <Text accessibilityLiveRegion="polite" style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
-        {selectedCount === 1 ? "1 selected" : `${selectedCount} selected`}
+        {isChecking ? SELECTION_MESSAGES.checking : selectedCount === 1 ? "1 selected" : `${selectedCount} selected`}
       </Text>
-      {cannotApprove > 0 ? (
+      {cannotApprove > 0 && !isChecking ? (
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {cannotApprove === 1 ? "1 of these" : `${cannotApprove} of these`} can&apos;t be approved here: it has no property, or it&apos;s already approved.
         </Text>
@@ -41,7 +43,7 @@ export default function TransactionSelectionBar({
       <View style={{ flexDirection: "row", gap: spacing.sm }} testID="bulk-action-row">
         <LoadingButton
           accessibilityLabel={`Delete ${selectedCount} selected`}
-          disabled={selectedCount === 0 || isApproving}
+          disabled={selectedCount === 0 || isApproving || isChecking}
           isLoading={isDeleting}
           loadingText={BULK_TRANSACTION_MESSAGES.deleting}
           onPress={onDelete}
@@ -52,7 +54,7 @@ export default function TransactionSelectionBar({
         </LoadingButton>
         <LoadingButton
           accessibilityLabel={`Approve ${approvableCount} selected`}
-          disabled={approvableCount === 0 || isDeleting}
+          disabled={approvableCount === 0 || isDeleting || isChecking}
           isLoading={isApproving}
           loadingText={BULK_TRANSACTION_MESSAGES.approving}
           onPress={onApprove}

@@ -62,6 +62,8 @@ export interface FakeTransactionServer {
   bulkApprovesBeforeFailing: number | null;
   /** Fails list requests at or past this offset, while set. */
   failListFromOffset: number | null;
+  /** The status every "select all" request (GET /transactions/selection) fails with, while set. */
+  failSelectionWith: number | null;
   retroactiveCount: number;
   summary: Partial<SummaryResponse>;
   summaryYears: number[];
@@ -132,6 +134,7 @@ export function startTransactionServer(transactions: Transaction[], properties: 
     bulkDeletesBeforeFailing: null,
     bulkApprovesBeforeFailing: null,
     failListFromOffset: null,
+    failSelectionWith: null,
     retroactiveCount: 0,
     summary: { revenue: 0, expenses: 0, profit: 0, by_property: [] },
     summaryYears: [2026],
@@ -245,20 +248,26 @@ export function startTransactionServer(transactions: Transaction[], properties: 
       const deleted = before - server.transactions.length;
       return respond({ deleted, skipped: new Set(ids).size - deleted });
     }
-    if (config.url === "/transactions") {
-      const params = (config.params ?? {}) as Record<string, string | number | boolean | undefined>;
-      const offset = Number(params.offset ?? 0);
-      if (server.failListFromOffset !== null && offset >= server.failListFromOffset) return respond({ detail: "nope" }, 500);
-      const matches = server.transactions.filter(
+    const listParams = (config.params ?? {}) as Record<string, string | number | boolean | undefined>;
+    const matching = () =>
+      server.transactions.filter(
         (row) =>
-          (!params.to_review || REVIEWABLE.includes(row.status)) &&
-          (!params.status || row.status === params.status) &&
-          (!params.start_date || row.transaction_date >= String(params.start_date)) &&
-          (!params.end_date || row.transaction_date <= String(params.end_date)) &&
-          (!params.vendor || (row.vendor ?? "").toLowerCase().includes(String(params.vendor).toLowerCase())) &&
-          (params.tax_relevant === undefined || Boolean(row.tax_relevant) === params.tax_relevant),
+          (!listParams.to_review || REVIEWABLE.includes(row.status)) &&
+          (!listParams.status || row.status === listParams.status) &&
+          (!listParams.start_date || row.transaction_date >= String(listParams.start_date)) &&
+          (!listParams.end_date || row.transaction_date <= String(listParams.end_date)) &&
+          (!listParams.vendor || (row.vendor ?? "").toLowerCase().includes(String(listParams.vendor).toLowerCase())) &&
+          (listParams.tax_relevant === undefined || Boolean(row.tax_relevant) === listParams.tax_relevant),
       );
-      return respond(inListOrder(matches, config.params as TransactionListParams | undefined).slice(offset, offset + Number(params.limit ?? 1000)));
+    if (config.url === "/transactions/selection") {
+      if (server.failSelectionWith !== null) return respond({ detail: "nope" }, server.failSelectionWith);
+      return respond(matching().map(({ id, property_id, status }) => ({ id, property_id, status })));
+    }
+    if (config.url === "/transactions") {
+      const offset = Number(listParams.offset ?? 0);
+      if (server.failListFromOffset !== null && offset >= server.failListFromOffset) return respond({ detail: "nope" }, 500);
+      const matches = matching();
+      return respond(inListOrder(matches, config.params as TransactionListParams | undefined).slice(offset, offset + Number(listParams.limit ?? 1000)));
     }
     const id = config.url?.split("/")[2];
     const index = server.transactions.findIndex((row) => row.id === id);

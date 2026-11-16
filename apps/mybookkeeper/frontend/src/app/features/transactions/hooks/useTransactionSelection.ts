@@ -7,12 +7,12 @@ import type { TransactionSelectionRef } from "@mybookkeeper/api-client/types/tra
 import { transactionListQuery } from "@mybookkeeper/api-client/utils/transactionListQuery";
 import { useToast } from "@/shared/hooks/useToast";
 import { SELECT_ALL_FAILED, SELECTION_CHECK_FAILED } from "@/shared/lib/transaction-list-messages";
-import { refsById, toSelectionRef } from "@/shared/utils/transaction-selection-ref";
-import { addTicks, intersectTicks, NO_TICKS, removeTicks, tickCount } from "@/shared/utils/transaction-ticks";
-import type { SelectAllRun } from "@/shared/types/transaction/select-all-run";
+import { refsById, toSelectionRef } from "@mybookkeeper/api-client/utils/transactionSelectionRef";
+import { addTicks, intersectTicks, NO_TICKS, removeTicks, tickCount } from "@mybookkeeper/api-client/utils/transactionTicks";
+import type { SelectAllRun } from "@mybookkeeper/api-client/types/transaction/SelectAllRun";
 import type { TransactionSelection } from "@/shared/types/transaction/transaction-selection";
 import type { PageRowsStatus } from "@/shared/types/transaction/page-rows-status";
-import type { TransactionTicks } from "@/shared/types/transaction/transaction-ticks";
+import type { TransactionTicks } from "@mybookkeeper/api-client/types/transaction/TransactionTicks";
 
 function toRowSelection(ticks: TransactionTicks): RowSelectionState {
   const state: RowSelectionState = {};

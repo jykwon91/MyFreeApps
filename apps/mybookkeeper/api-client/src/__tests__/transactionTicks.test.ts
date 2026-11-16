@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { TransactionSelectionRef } from "@mybookkeeper/api-client/types/transaction/TransactionSelectionRef";
-import { addTicks, intersectTicks, NO_TICKS, removeTicks, tickCount } from "@/shared/utils/transaction-ticks";
+import type { TransactionSelectionRef } from "../types/transaction/TransactionSelectionRef";
+import { addTicks, intersectTicks, NO_TICKS, removeTicks, tickCount } from "../utils/transactionTicks";
 
 function ref(id: string, status: TransactionSelectionRef["status"] = "pending"): TransactionSelectionRef {
   return { id, property_id: "p1", status };
