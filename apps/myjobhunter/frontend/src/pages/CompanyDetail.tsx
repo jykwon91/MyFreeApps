@@ -17,7 +17,7 @@ import { companyDomainUrl } from "@myjobhunter/api-client/utils/companyDomainUrl
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: company, isLoading, isError, error } = useGetCompanyQuery(id ?? "", { skip: !id });
+  const { data: company, isLoading, error } = useGetCompanyQuery(id ?? "", { skip: !id });
   const [deleteCompany, { isLoading: deleting }] = useDeleteCompanyMutation();
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_APPLICATIONS_TABLE_SORTING);
   const applications = useApplicationsList({ company_id: id }, sorting, !id);
@@ -47,7 +47,8 @@ export default function CompanyDetail() {
     return <CompanyDetailSkeleton />;
   }
 
-  if (isError || !company) {
+  // A failed refetch keeps the company on screen; the message is for when there is none to show.
+  if (!company) {
     const status = error && typeof error === "object" && "status" in error ? (error as { status: number }).status : null;
     return (
       <div className="p-4 sm:p-8 flex flex-col items-center text-center gap-4 py-20">

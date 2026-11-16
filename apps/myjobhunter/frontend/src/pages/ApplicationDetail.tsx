@@ -38,7 +38,7 @@ import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-c
 export default function ApplicationDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: app, isLoading, isError, error } = useGetApplicationQuery(id ?? "", {
+  const { data: app, isLoading, error } = useGetApplicationQuery(id ?? "", {
     skip: !id,
   });
   const { data: company } = useGetCompanyQuery(app?.company_id ?? "", {
@@ -55,7 +55,8 @@ export default function ApplicationDetail() {
     return <ApplicationDetailSkeleton />;
   }
 
-  if (isError || !app) {
+  // A failed refetch keeps the application on screen; the message is for when there is none to show.
+  if (!app) {
     const errorStatus =
       error && typeof error === "object" && "status" in error
         ? (error as { status: number }).status

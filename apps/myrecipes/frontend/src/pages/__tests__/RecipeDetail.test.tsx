@@ -152,3 +152,23 @@ describe("RecipeDetail version panel", () => {
     expect(logCook).toHaveBeenCalledWith(expect.objectContaining({ recipeId: "r1", versionId: "v1" }));
   });
 });
+
+describe("RecipeDetail when the recipe is refetched", () => {
+  const RECIPE = { id: "r1", title: "Tomato soup", description: null, source: null, is_owner: true, latest_version: VERSIONS[1] };
+
+  it("keeps the recipe on screen when a refetch fails", () => {
+    answerVersions({ v2: "loaded" });
+    useGetRecipeQuery.mockReturnValue({ data: RECIPE, isLoading: false, isError: true });
+    renderPage();
+
+    expect(screen.getByText("Viewing v2")).toBeInTheDocument();
+    expect(screen.queryByText("Recipe not found")).not.toBeInTheDocument();
+  });
+
+  it("says the recipe wasn't found when it never loaded", () => {
+    useGetRecipeQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+    renderPage();
+
+    expect(screen.getByText("Recipe not found")).toBeInTheDocument();
+  });
+});

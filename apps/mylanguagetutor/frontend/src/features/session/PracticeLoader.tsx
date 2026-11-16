@@ -18,8 +18,10 @@ export default function PracticeLoader({ profile, scenarioSlug }: PracticeLoader
   const navigate = useNavigate();
   const { target, isError, refetch } = usePracticeScenario(profile, scenarioSlug);
 
-  if (isError) return <CatalogError onRetry={() => void refetch()} />;
-  if (target === undefined) return <PageSkeleton />;
+  // A failed background refetch must not unmount a session already on screen, so errors only show with no target yet.
+  if (target === undefined) {
+    return isError ? <CatalogError onRetry={() => void refetch()} /> : <PageSkeleton />;
+  }
 
   if (!target) {
     return (

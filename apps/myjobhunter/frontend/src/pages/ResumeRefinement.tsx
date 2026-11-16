@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { isNotFound } from "@platform/ui";
 import NoSessionView from "@/features/resume_refinement/NoSessionView";
 import SessionLoadErrorView from "@/features/resume_refinement/SessionLoadErrorView";
 import SessionLoadingView from "@/features/resume_refinement/SessionLoadingView";
@@ -40,7 +41,8 @@ export default function ResumeRefinement() {
     return <NoSessionView onSessionStarted={handleSessionStarted} />;
   }
 
-  if (error) {
+  // A failed poll keeps the session on screen; only a session that is gone (404) or never loaded is replaced.
+  if (error && (!session || isNotFound(error))) {
     return <SessionLoadErrorView onStartNew={handleStartNew} />;
   }
 

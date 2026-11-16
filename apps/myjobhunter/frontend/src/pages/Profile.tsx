@@ -42,7 +42,7 @@ import type { Education } from "@myjobhunter/api-client/types/education/educatio
 import type { ScreeningAnswer } from "@myjobhunter/api-client/types/screening-answer/screening-answer";
 
 export default function Profile() {
-  const { data: profile, isLoading: profileLoading, isError: profileError } = useGetProfileQuery();
+  const { data: profile, isLoading: profileLoading } = useGetProfileQuery();
   const { data: workHistoryData, isLoading: whLoading } = useListWorkHistoryQuery();
   const { data: educationData, isLoading: eduLoading } = useListEducationQuery();
   const { data: skillsData, isLoading: skillsLoading } = useListSkillsQuery();
@@ -69,7 +69,7 @@ export default function Profile() {
     return <ProfileSkeleton />;
   }
 
-  if (profileError || !profile) {
+  if (!profile) {
     return (
       <div className="p-4 sm:p-8 space-y-6 max-w-3xl">
         <p className="text-destructive">Couldn't load profile. Try refreshing.</p>

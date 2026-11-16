@@ -11,4 +11,6 @@ export interface TutorApi {
   turnRequests: TurnRequest[];
   /** Lets an endpoint named in failWith answer normally again. */
   stopFailing: (key: string) => void;
+  /** Makes an endpoint answer with a server error from now on, as a flaky connection does. */
+  startFailing: (key: string) => void;
 }

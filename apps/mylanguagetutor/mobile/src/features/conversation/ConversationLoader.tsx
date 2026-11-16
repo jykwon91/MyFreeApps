@@ -13,8 +13,10 @@ export default function ConversationLoader({ profile, scenarioSlug }: Conversati
   const { target, isError, error, refetch } = usePracticeScenario(profile, scenarioSlug);
   const { refresh, isRefreshing } = useRefresh(refetch, error);
 
-  if (isError) return <CatalogLoadError isRetrying={isRefreshing} onRetry={refresh} />;
-  if (target === undefined) return <ConversationSkeleton />;
+  // A failed background refetch must not unmount a conversation already on screen, so errors only show with no target yet.
+  if (target === undefined) {
+    return isError ? <CatalogLoadError isRetrying={isRefreshing} onRetry={refresh} /> : <ConversationSkeleton />;
+  }
   if (!target) {
     return (
       <EmptyState

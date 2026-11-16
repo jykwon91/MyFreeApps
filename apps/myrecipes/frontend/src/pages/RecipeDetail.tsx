@@ -102,7 +102,8 @@ export default function RecipeDetail() {
     );
   }
 
-  if (recipeQuery.isError || !recipeQuery.data) {
+  // A failed refetch keeps the recipe on screen; the message is for when there is none to show.
+  if (!recipeQuery.data) {
     return (
       <div className="p-4 sm:p-8 space-y-6">
         <EmptyState

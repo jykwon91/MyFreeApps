@@ -23,7 +23,8 @@ export default function RequireRole({ roles, children }: RequireRoleProps) {
     );
   }
 
-  if (isError) {
+  // A failed refetch of a user already loaded keeps them on the page, unless it says they're signed out.
+  if (isError && (!user || error?.status === 401)) {
     if (error?.status === 401) {
       return <Navigate to="/login" replace />;
     }
