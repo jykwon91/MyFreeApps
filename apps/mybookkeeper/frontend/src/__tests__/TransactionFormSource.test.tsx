@@ -9,6 +9,7 @@ import TransactionForm from "@/app/features/transactions/TransactionForm";
 import api from "@/shared/lib/api";
 import { showError } from "@platform/ui";
 import { TRANSACTION_EDIT_MESSAGES } from "@/shared/lib/transaction-edit-messages";
+import { EXPORT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 
 vi.mock("@mybookkeeper/api-client/store/vendorsApi", () => ({
   useGetVendorsQuery: () => ({ data: { items: [] }, isLoading: false }),
@@ -87,7 +88,7 @@ describe("TransactionForm source document and review reason", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Open source document roof-receipt.png" }));
 
-    expect(api.get).toHaveBeenCalledWith(`/documents/${FLAGGED.source_document_id}/download`, { responseType: "blob" });
+    expect(api.get).toHaveBeenCalledWith(`/documents/${FLAGGED.source_document_id}/download`, { responseType: "blob", timeout: EXPORT_REQUEST_TIMEOUT_MS });
     expect(await screen.findByRole("img", { name: "Source document" })).toHaveAttribute("src", "blob:source");
   });
 
