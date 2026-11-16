@@ -3,6 +3,7 @@ import { useListTransactionsQuery } from "@mybookkeeper/api-client/store/transac
 import { useGetRentLedgerQuery } from "@mybookkeeper/api-client/store/rentLedgerApi";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import type { DocumentViewTarget } from "@/shared/types/document/document-view-target";
+import { tenantPaymentTotals } from "@mybookkeeper/api-client/utils/tenantPaymentTotals";
 import type { RentPayment } from "@mybookkeeper/api-client/types/rent/rent-payment";
 import TenantPaymentsSkeleton from "./TenantPaymentsSkeleton";
 import TenantPaymentsEmpty from "./TenantPaymentsEmpty";
@@ -21,7 +22,8 @@ export interface TenantPaymentsProps {
  * payment's effect depends on every other payment and charge on the account,
  * so the allocation only has one correct home. The list itself stays wider
  * than the ledger's own view, since a deposit is money from this tenant even
- * though it settles no rent.
+ * though it settles no rent. "Total received" counts approved payments only,
+ * so a row still awaiting review is listed but not yet added to the total.
  */
 export default function TenantPayments({ applicantId }: TenantPaymentsProps) {
   const { data: transactions = [], isLoading } = useListTransactionsQuery(
@@ -37,7 +39,7 @@ export default function TenantPayments({ applicantId }: TenantPaymentsProps) {
   if (isLoading) return <TenantPaymentsSkeleton />;
   if (!transactions.length) return <TenantPaymentsEmpty />;
 
-  const total = transactions.reduce((sum, txn) => sum + parseFloat(txn.amount), 0);
+  const { received } = tenantPaymentTotals(transactions);
   const rentByTransaction = new Map<string, RentPayment>(
     (ledger?.payments ?? []).map((payment) => [payment.transaction_id, payment]),
   );
@@ -47,7 +49,7 @@ export default function TenantPayments({ applicantId }: TenantPaymentsProps) {
 
   return (
     <div className="space-y-3">
-      <TenantPaymentsHeader total={total} />
+      <TenantPaymentsHeader total={received} />
       <ul className="divide-y text-sm" data-testid="tenant-payments-list">
         {transactions.map((txn) => (
           <PaymentRow

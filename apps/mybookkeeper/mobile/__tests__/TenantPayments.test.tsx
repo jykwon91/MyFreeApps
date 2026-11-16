@@ -10,7 +10,7 @@ import { router } from "expo-router";
 import { Provider } from "react-redux";
 import { RENT_MESSAGES } from "../src/constants/rent";
 import TenantPayments from "../src/features/applicants/TenantPayments";
-import { tenantPaymentTotals } from "../src/features/applicants/tenantPaymentTotals";
+import { tenantPaymentTotals } from "@mybookkeeper/api-client/utils/tenantPaymentTotals";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";

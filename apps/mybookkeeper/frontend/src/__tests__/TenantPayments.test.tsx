@@ -31,6 +31,7 @@ function txn(overrides: Partial<Transaction>): Transaction {
     payer_name: "Sonu",
     vendor: null,
     attribution_source: "matched",
+    status: "approved",
     source_document_id: null,
     ...overrides,
   } as Transaction;
@@ -125,6 +126,28 @@ describe("TenantPayments", () => {
     expect(
       screen.queryByTestId("payment-row-rent-applied"),
     ).not.toBeInTheDocument();
+  });
+
+  it("leaves a payment still awaiting review out of the total, but keeps it listed", () => {
+    mockListTransactions.mockReturnValue({
+      data: [
+        txn({ id: "txn-1", amount: "1200.00" }),
+        txn({ id: "txn-2", amount: "1200.00", status: "pending" }),
+      ],
+      isLoading: false,
+    });
+    renderPanel();
+    expect(screen.getByText("Total received: $1,200.00")).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("adds the total in whole cents", () => {
+    mockListTransactions.mockReturnValue({
+      data: [txn({ id: "txn-1", amount: "0.10" }), txn({ id: "txn-2", amount: "0.20" })],
+      isLoading: false,
+    });
+    renderPanel();
+    expect(screen.getByText("Total received: $0.30")).toBeInTheDocument();
   });
 
   it("shows the skeleton while transactions load", () => {
