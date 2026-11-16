@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { loadDungeons } from "@/games/wow-forever/lib/dungeons/loadDungeons";
 import type { DungeonsData } from "@/games/wow-forever/types/dungeons/dungeonsData";
 import type { DungeonsState } from "@/games/wow-forever/types/dungeons/dungeonsState";
+import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 
 interface Loaded {
   attempt: number;
@@ -25,7 +26,7 @@ export function useDungeons(): DungeonsState {
     };
   }, [attempt]);
 
-  if (!loaded) return { status: "loading" };
-  if (loaded.data) return { status: "ready", data: loaded.data };
-  return { status: "error", retry, retrying: loaded.attempt !== attempt };
+  if (!loaded) return { status: LOAD_STATUS.loading };
+  if (loaded.data) return { status: LOAD_STATUS.ready, data: loaded.data };
+  return { status: LOAD_STATUS.error, retry, retrying: loaded.attempt !== attempt };
 }
