@@ -1,10 +1,11 @@
+import { AxiosError, isAxiosError } from "axios";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StepUpReauthRequiredError } from "../auth/errors/StepUpReauthRequiredError";
 import { _resetForTests as _resetStepUpForTests, getState as getStepUpState, submitCode } from "../auth/stepUpController";
 import { ORGANIZATION_HEADER } from "../constants/organizationHeader";
-import { REFRESH_COOLDOWN_MS } from "../constants/sessionRefresh";
+import { REFRESH_COOLDOWN_MS, SESSION_RENEWAL_UNREACHABLE_MESSAGE } from "../constants/sessionRefresh";
 import api from "../lib/api";
 import { notifyAuthChange } from "../lib/auth-store";
 import { _resetSessionRefreshForTests, refreshSessionOnce } from "../lib/session-refresh";
@@ -12,6 +13,7 @@ import { exemptFromSignOut, isExemptFromSignOut } from "../lib/signOutExemptions
 import { _resetPlatformForTests, configurePlatform } from "../platform/configurePlatform";
 import type { PlatformConfig } from "../platform/types/PlatformConfig";
 import type { SessionRefreshResult } from "../platform/types/SessionRefreshResult";
+import { axiosBaseQuery } from "../store/baseQuery";
 
 vi.mock("../lib/auth-store", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../lib/auth-store")>()),
@@ -24,6 +26,18 @@ function respond(config: InternalAxiosRequestConfig, status: number, headers = {
   const response = { data: {}, status, statusText: "", headers, config };
   if (status < 400) return Promise.resolve(response);
   return Promise.reject(Object.assign(new Error(String(status)), { config, response, isAxiosError: true }));
+}
+
+/** What `request` was rejected with, after checking it reads as a request that got no response. */
+async function noResponseTo(request: Promise<unknown>): Promise<AxiosError> {
+  const error: unknown = await request.then(
+    () => undefined,
+    (caught: unknown) => caught,
+  );
+  if (!isAxiosError(error)) throw new Error("expected the request to fail with an AxiosError");
+  expect(error.code).toBe(AxiosError.ERR_NETWORK);
+  expect(error.response).toBeUndefined();
+  return error;
 }
 
 /** The server accepts only `validToken`, and records every Authorization it sees. */
@@ -61,6 +75,9 @@ function setUp(refresh: () => Promise<SessionRefreshResult>, overrides: Partial<
     clear,
     setToken: (next: string) => {
       token = next;
+    },
+    clearToken: () => {
+      token = null;
     },
   };
 }
@@ -139,11 +156,29 @@ describe("a rejected access token", () => {
   it.each([
     ["no answer", async (): Promise<SessionRefreshResult> => "unavailable"],
     ["a refresh that throws", async (): Promise<SessionRefreshResult> => { throw new Error("offline"); }],
-  ])("keeps the user signed in after %s", async (_name, refresh) => {
+  ])("keeps the user signed in after %s, and reads as no response", async (_name, refresh) => {
     const harness = setUp(refresh);
-    await expect(api.get("/recipes")).rejects.toMatchObject({ response: { status: 401 } });
+    const error = await noResponseTo(api.get("/recipes"));
+    expect(error.message).toBe(SESSION_RENEWAL_UNREACHABLE_MESSAGE);
+    expect(error.config?.url).toBe("/recipes");
     expect(harness.clear).not.toHaveBeenCalled();
     expect(notifyAuthChange).not.toHaveBeenCalled();
+  });
+
+  it("reads as no response to a screen, when no answer came for the refresh", async () => {
+    setUp(async () => "unavailable");
+    const result = await axiosBaseQuery({ url: "/recipes" }, { signal: new AbortController().signal } as never, {});
+    expect(result.error).toEqual({ status: undefined, data: SESSION_RENEWAL_UNREACHABLE_MESSAGE });
+  });
+
+  it("reads as no response at a launch with no connection, before any token", async () => {
+    const refresh = vi.fn(async (): Promise<SessionRefreshResult> => "unavailable");
+    const harness = setUp(refresh);
+    harness.clearToken();
+    await noResponseTo(api.get("/recipes"));
+    expect(harness.server.seen).toEqual([undefined]);
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(harness.clear).not.toHaveBeenCalled();
   });
 
   it("retries once, however the retry turns out", async () => {
@@ -254,7 +289,8 @@ describe("sharing a refresh", () => {
     setUp(refresh);
 
     await expect(api.get("/first")).rejects.toBeDefined();
-    await expect(api.get("/soon")).rejects.toBeDefined();
+    // The last refresh got no answer, so this one reads as no response too, not as refused.
+    await noResponseTo(api.get("/soon"));
     expect(refresh).toHaveBeenCalledOnce();
 
     vi.advanceTimersByTime(REFRESH_COOLDOWN_MS);
