@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { QUEST_SHARING_COPY } from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
 import { questSharingText } from "@/games/wow-forever/lib/dungeons/describeQuest";
-import { idsDoneWith, idsUndoneWith, questLineStatus } from "@/games/wow-forever/lib/dungeons/questLineProgress";
+import { idsDoneWith, idsUndoneWith, questLineStatus, withImpliedSteps } from "@/games/wow-forever/lib/dungeons/questLineProgress";
 import { questLines } from "@/games/wow-forever/lib/dungeons/questLines";
 import { continentPickupLinks } from "@/games/wow-forever/lib/dungeons/questPickupsMapLinks";
 import type { DungeonQuest } from "@/games/wow-forever/types/dungeons/dungeonQuest";
@@ -86,6 +86,14 @@ describe("questLine progress", () => {
   it("unticking a step unticks those after it; a dungeon quest at the end only itself", () => {
     expect(idsUndoneWith(line, 1)).toEqual([2, 3, 10, 11]);
     expect(idsUndoneWith(line, 3)).toEqual([10]);
+  });
+
+  it("a later step done (Battle.net can skip earlier ones) counts the steps before it for where you are", () => {
+    const implied = withImpliedSteps(line, new Set([3]));
+    expect([...implied].sort((a, b) => a - b)).toEqual([1, 2, 3]);
+    expect(questLineStatus(line, implied)).toEqual({ doneCount: 3, nextIndex: 3 });
+    // A dungeon quest at the end implies the steps before it, not its neighbour.
+    expect([...withImpliedSteps(line, new Set([11]))].sort((a, b) => a - b)).toEqual([1, 2, 3, 11]);
   });
 });
 

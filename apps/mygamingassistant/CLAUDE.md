@@ -682,6 +682,15 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     are side by side (`lib/dungeons/questLineProgress.ts`). Each card says
     "Not started — step 1 of N …", "Next: step K of N · <quest> from <giver>
     in <zone>" (that row highlighted, `aria-current="step"`) or "All done".
+    **Battle.net:** with a saved character (`characterSlug`), the quests it
+    completed (`GET /wow/characters/{slug}/quests/completed`,
+    `hooks/useBattleNetQuests.ts`) are ticked too — `aria-disabled`, a
+    "Battle.net" chip, can't be unticked; manual ticks stay separate and
+    "Clear my manual ticks" clears only those. Where you are uses
+    `withImpliedSteps` (a done step implies the ones before it: Battle.net can
+    list a later step without an earlier one). One helper line
+    (`BattleNetQuestsLine`) by state: no character → ticks hint + pick link;
+    loading skeleton; 404 → "can't find"; error → retry (operator, 2026-11-16).
     **World Map:** `continentPickupLinks` (`lib/dungeons/questPickupsMapLinks.ts`)
     builds the World Map's own `#view=` share link on the continent map with
     each giver out in the world marked once (zone % → world → continent %),
@@ -1188,7 +1197,10 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `professions` by `character_professions_mapper.py`, `reputations` by `character_reputations_mapper.py`,
   `pvp` by `character_pvp_mapper.py`, `collections` by `character_collections_mapper.py`,
   `dungeons` by `character_dungeons_mapper.py`)
-  and `/{slug}/render.png` (Blizzard's `main-raw` render, fetched only from
+  `/{slug}/quests/completed` (`{quest_ids}` from Blizzard's `/quests/completed`,
+  works with the client token; the profile is asked first so an unknown name is 404 —
+  Blizzard also 404s a character with none yet, read as empty; not stored — only the dungeon
+  checklists read it), and `/{slug}/render.png` (Blizzard's `main-raw` render, fetched only from
   `render.worldofwarcraft.com`, refused over 3200x2400 px before decoding,
   cropped to the figure with Pillow). Per-IP limit 30/min on each route
   (separate budgets), in-process 5-min caches (500 profiles, 100 renders),
@@ -2617,7 +2629,7 @@ once on the router. This is the no-bandaid approach (see
 | `/api/wow/map-captures` | GET, both modes (World Map locations captured in Forever) | POST import (full-auth only; prod gets captures via the committed pack) |
 | `/api/wow/prices` | GET, both modes (one US auction house's prices from Blizzard, `?server=pvp&faction=alliance\|horde\|neutral`, default PvP · Alliance; only mapped servers; refreshed by the scheduler; per-house ETag + 10-min cache) | — |
 | `/api/wow/prices/refresh` | GET (refresh state, no-store) and POST ("Refresh now" for one house; 10-min cooldown, 5/10 min per IP; 202 / 200 cooldown or refreshing / 503 / 429), both modes | — |
-| `/api/wow/characters/{slug}`, `/api/wow/characters/{slug}/render.png` | GET, both modes (a Forever character's profile + gear, and their cropped render, from Blizzard by name; per-IP limit, 5-min cache) | — |
+| `/api/wow/characters/{slug}`, `/api/wow/characters/{slug}/render.png`, `/api/wow/characters/{slug}/quests/completed` | GET, both modes (a Forever character's profile + gear, their cropped render, and the quest ids they completed, from Blizzard by name; per-IP limit, 5-min cache) | — |
 | `/api/wow/server-status`, `/api/wow/server-status/history` | GET, both modes (live status from Blizzard, 60-s cache; 7 days of recorded status per ruleset) | — |
 | `/api/wow/icons/{build}/{fdid}.webp` | GET, both modes (in-game icons streamed from object storage; year-long immutable cache, 404 + no-store when unpublished) | — |
 | `/api/wow/satellite/{build}/{uiMapId}.webp` | GET, both modes (World Map satellite pictures, same service and cache rules as icons) | — |

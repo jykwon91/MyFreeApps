@@ -12,6 +12,7 @@ import logging
 from collections.abc import Awaitable
 from http import HTTPStatus
 
+from app.schemas.wow.character.character_completed_quests import CharacterCompletedQuests
 from app.schemas.wow.character.character_response import CharacterResponse
 from app.services.wow.character import character_service, character_store_service
 from app.services.wow.character.character_lookup_error import CharacterLookupError
@@ -52,3 +53,8 @@ async def get_character_render(slug: str) -> bytes | None:
     render that is the first request for a character still stores it."""
     await get_character(slug)
     return await character_service.get_character_render(slug)
+
+
+async def get_completed_quests(slug: str) -> CharacterCompletedQuests:
+    """The quests the character has turned in — not stored; only the dungeon pages' checklists read it."""
+    return await character_service.fetch_completed_quests(slug)

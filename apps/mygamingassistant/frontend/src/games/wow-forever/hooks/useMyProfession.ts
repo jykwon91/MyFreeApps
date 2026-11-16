@@ -2,16 +2,13 @@ import { useMemo } from "react";
 import { skipToken } from "@reduxjs/toolkit/query/react";
 import { useGetCharacterQuery } from "@/games/wow-forever/api/wowCharacterApi";
 import { usePlayerSettings } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { isNotFoundError } from "@/games/wow-forever/lib/isNotFoundError";
 import { playerSettingsFromCharacter } from "@/games/wow-forever/lib/character/characterPlayerSettings";
 import { myProfession } from "@/games/wow-forever/lib/trainers/myProfession";
 import { playerFactionLabel } from "@/games/wow-forever/data/playerFactionOptions";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import type { MyProfessionState } from "@/games/wow-forever/types/trainers/myProfessionState";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
-
-function isNotFound(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "status" in error && error.status === 404;
-}
 
 /**
  * The character "Use for MGA's pages" saved, read for `profession` (null = not a crafting profession,
@@ -30,7 +27,7 @@ export function useMyProfession(profession: CraftingProfession | null, pageFacti
       const otherFaction = theirFaction && theirFaction !== pageFaction ? playerFactionLabel(theirFaction) : null;
       return { kind: "ready", mine, lastLogin: data.last_login, otherFaction };
     }
-    if (error) return isNotFound(error) ? { kind: "none" } : { kind: "error", retry: () => void refetch(), retrying: isFetching };
+    if (error) return isNotFoundError(error) ? { kind: "none" } : { kind: "error", retry: () => void refetch(), retrying: isFetching };
     return { kind: "loading" };
   }, [slug, profession, data, error, isFetching, refetch, pageFaction]);
 }

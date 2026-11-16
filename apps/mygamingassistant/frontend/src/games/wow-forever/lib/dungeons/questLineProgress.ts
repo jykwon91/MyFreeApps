@@ -18,6 +18,18 @@ export function questLineStatus(line: QuestLine, done: ReadonlySet<number>): Que
 }
 
 /**
+ * `done` plus what each done step implies: the steps before it (`idsDoneWith`). Battle.net can list a
+ * later step without an earlier one, so where you are is worked out from this, not the raw ticks.
+ */
+export function withImpliedSteps(line: QuestLine, done: ReadonlySet<number>): ReadonlySet<number> {
+  const out = new Set(done);
+  line.steps.forEach((step, i) => {
+    if (done.has(step.id)) for (const id of idsDoneWith(line, i)) out.add(id);
+  });
+  return out;
+}
+
+/**
  * The quests ticking step `index` marks done: it and every step before it in
  * the line (you can't do step 3 without 1 and 2). The line's dungeon quests are
  * side by side, so ticking one doesn't tick the others.

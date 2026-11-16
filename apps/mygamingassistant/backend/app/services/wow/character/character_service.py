@@ -24,12 +24,14 @@ from app.core.wow_character import (
     CHARACTER_CACHE_SECONDS,
     CHARACTER_RENDER_CACHE_MAX_ENTRIES,
 )
+from app.schemas.wow.character.character_completed_quests import CharacterCompletedQuests
 from app.services.wow.blizzard.blizzard_token_cache import BlizzardTokenCache
 from app.services.wow.character.blizzard_character_client import BlizzardCharacterClient
 from app.services.wow.character.character_fetch import CharacterFetch
 from app.services.wow.character.character_lookup_error import CharacterLookupError
 from app.services.wow.character.character_mapper import render_url, to_character_response
 from app.services.wow.character.character_profile import CharacterProfile
+from app.services.wow.character.character_quests_mapper import to_completed_quests
 from app.services.wow.character.character_render_crop import crop_render
 
 T = TypeVar("T")
@@ -56,6 +58,7 @@ _EMPTY_WHEN_MISSING: Final = frozenset(_OPTIONAL_PARTS) - {"statistics"}
 _tokens = BlizzardTokenCache()
 _profiles: dict[str, tuple[CharacterProfile, float]] = {}
 _renders: dict[str, tuple[bytes, float]] = {}
+_completed_quests: dict[str, tuple[CharacterCompletedQuests, float]] = {}
 
 
 def new_client() -> BlizzardCharacterClient:
@@ -139,8 +142,25 @@ async def get_character_render(slug: str) -> bytes | None:
     return cropped
 
 
+async def fetch_completed_quests(slug: str) -> CharacterCompletedQuests:
+    """The quests the character has completed (Blizzard updates them at logout).
+
+    Raises ``CharacterLookupError``; status 404 = no character by that name (the profile is asked first:
+    Blizzard 404s ``/quests/completed`` for a character with none yet too).
+    """
+    cached = _fresh(_completed_quests, slug)
+    if cached is not None:
+        return cached
+    async with new_client() as client:
+        await client.profile(slug)
+        quests = to_completed_quests(await client.completed_quests(slug))
+    _store(_completed_quests, slug, quests, CHARACTER_CACHE_MAX_ENTRIES)
+    return quests
+
+
 def clear_caches() -> None:
     """Tests start from nothing."""
     _profiles.clear()
     _renders.clear()
+    _completed_quests.clear()
     _tokens.clear()

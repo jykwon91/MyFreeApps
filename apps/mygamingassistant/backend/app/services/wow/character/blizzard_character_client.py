@@ -158,6 +158,9 @@ class BlizzardCharacterClient:
     async def pets(self, slug: str) -> dict[str, Any] | None:
         return await self._optional_json(f"{slug}/collections/pets")
 
+    async def completed_quests(self, slug: str) -> dict[str, Any] | None:
+        return await self._optional_json(f"{slug}/quests/completed")
+
     async def guild(self, guild_slug: str) -> dict[str, Any]:
         return await self._json(f"{GUILD_PATH}/{guild_slug}")
 

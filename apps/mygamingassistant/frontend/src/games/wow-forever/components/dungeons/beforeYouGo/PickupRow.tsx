@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { Navigation, Swords } from "lucide-react";
+import { BadgeCheck, Navigation, Swords } from "lucide-react";
 import { Link } from "react-router-dom";
 import InsideDungeonChip from "@/games/wow-forever/components/dungeons/quests/InsideDungeonChip";
 import { DETAIL_CHIP, DETAIL_LINK } from "@/games/wow-forever/components/food/detail/detailStyles";
@@ -17,27 +17,40 @@ interface PickupRowProps {
   /** Its number in the line (1 = first). */
   step: number;
   done: boolean;
+  /** Done on Battle.net: shown ticked, can't be unticked here. */
+  fromBattleNet: boolean;
   /** True for the next step to do — it's highlighted. */
   next: boolean;
   onToggle: () => void;
 }
 
 /** One step of a quest line: a done checkbox, the quest (to its page) and level, then who gives it and where. */
-export default function PickupRow({ pickup, step, done, next, onToggle }: PickupRowProps) {
+export default function PickupRow({ pickup, step, done, fromBattleNet, next, onToggle }: PickupRowProps) {
   const { giver } = pickup;
   const place = giver?.place ?? null;
   const isItem = giver?.kind === QUEST_TARGET_KIND.item;
+  const chipId = `pickup-battlenet-${pickup.id}`;
   return (
     <li
       className={clsx("flex gap-2 rounded-md py-1.5 pr-1", next && "bg-primary/10")}
       data-testid="pickup-row"
       data-quest-id={pickup.id}
       data-done={done}
+      data-source={fromBattleNet ? "battlenet" : undefined}
       aria-current={next ? "step" : undefined}
     >
-      <label className="flex min-h-11 min-w-11 cursor-pointer items-start justify-center pt-1">
-        <input type="checkbox" className="h-5 w-5 accent-primary" checked={done} onChange={onToggle} />
-        <span className="sr-only">{BEFORE_YOU_GO_COPY.doneLabel(step, pickup.title)}</span>
+      <label className={clsx("flex min-h-11 min-w-11 items-start justify-center pt-1", fromBattleNet ? "cursor-default" : "cursor-pointer")}>
+        <input
+          type="checkbox"
+          className="h-5 w-5 accent-primary"
+          checked={done}
+          onChange={fromBattleNet ? () => undefined : onToggle}
+          aria-disabled={fromBattleNet || undefined}
+          aria-describedby={fromBattleNet ? chipId : undefined}
+        />
+        <span className="sr-only">
+          {fromBattleNet ? BEFORE_YOU_GO_COPY.battleNetDoneLabel(step, pickup.title) : BEFORE_YOU_GO_COPY.doneLabel(step, pickup.title)}
+        </span>
       </label>
       <div className="min-w-0 space-y-0.5">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
@@ -46,6 +59,12 @@ export default function PickupRow({ pickup, step, done, next, onToggle }: Pickup
             {pickup.title}
           </Link>
           <span className="text-muted-foreground">{questLevelText(pickup)}</span>
+          {fromBattleNet ? (
+            <span className={DETAIL_CHIP} id={chipId}>
+              <BadgeCheck className="mr-1 inline h-3 w-3" aria-hidden />
+              {BEFORE_YOU_GO_COPY.battleNetChip}
+            </span>
+          ) : null}
           {pickup.dungeonQuest ? (
             <span className={DETAIL_CHIP}>
               <Swords className="mr-1 inline h-3 w-3" aria-hidden />

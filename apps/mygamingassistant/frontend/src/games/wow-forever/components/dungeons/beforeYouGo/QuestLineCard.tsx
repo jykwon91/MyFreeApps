@@ -5,7 +5,7 @@ import QuestLineStatusLine from "@/games/wow-forever/components/dungeons/beforeY
 import { DETAIL_CHIP, DETAIL_LINK } from "@/games/wow-forever/components/food/detail/detailStyles";
 import { BEFORE_YOU_GO_COPY } from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
 import { questClassesText } from "@/games/wow-forever/lib/dungeons/describeQuest";
-import { idsDoneWith, idsUndoneWith, questLineStatus } from "@/games/wow-forever/lib/dungeons/questLineProgress";
+import { idsDoneWith, idsUndoneWith, questLineStatus, withImpliedSteps } from "@/games/wow-forever/lib/dungeons/questLineProgress";
 import { continentPickupLinks } from "@/games/wow-forever/lib/dungeons/questPickupsMapLinks";
 import type { QuestLine } from "@/games/wow-forever/types/dungeons/questLine";
 import type { WorldZone } from "@/games/wow-forever/types/worldMap";
@@ -13,20 +13,26 @@ import type { WorldZone } from "@/games/wow-forever/types/worldMap";
 interface QuestLineCardProps {
   line: QuestLine;
   zones: readonly WorldZone[];
+  /** Ticked here (this browser). */
   done: ReadonlySet<number>;
+  /** Completed on Battle.net (empty without a character). */
+  battleNet: ReadonlySet<number>;
   setDone: (ids: readonly number[], value: boolean) => void;
 }
 
 /**
  * One line: its dungeon quest(s) (and class), where you are in it, a World Map
- * link marking its givers, then each step with a done checkbox.
+ * link marking its givers, then each step with a done checkbox. A step done on
+ * Battle.net is ticked and stays ticked; where you are counts the steps before
+ * any done step as done.
  */
-export default function QuestLineCard({ line, zones, done, setDone }: QuestLineCardProps) {
+export default function QuestLineCard({ line, zones, done, battleNet, setDone }: QuestLineCardProps) {
   const links = continentPickupLinks(line.steps, zones);
-  const status = questLineStatus(line, done);
+  const isDone = (id: number) => done.has(id) || battleNet.has(id);
+  const status = questLineStatus(line, withImpliedSteps(line, new Set(line.steps.map((s) => s.id).filter(isDone))));
   const toggle = (index: number) => {
-    const isDone = done.has(line.steps[index].id);
-    setDone(isDone ? idsUndoneWith(line, index) : idsDoneWith(line, index), !isDone);
+    const ticked = done.has(line.steps[index].id);
+    setDone(ticked ? idsUndoneWith(line, index) : idsDoneWith(line, index), !ticked);
   };
   return (
     <div className="space-y-1.5 rounded-lg border p-3" data-testid="quest-line" data-quest-id={line.id}>
@@ -51,7 +57,8 @@ export default function QuestLineCard({ line, zones, done, setDone }: QuestLineC
             key={step.id}
             pickup={step}
             step={i + 1}
-            done={done.has(step.id)}
+            done={isDone(step.id)}
+            fromBattleNet={battleNet.has(step.id)}
             next={status.nextIndex === i}
             onToggle={() => toggle(i)}
           />
