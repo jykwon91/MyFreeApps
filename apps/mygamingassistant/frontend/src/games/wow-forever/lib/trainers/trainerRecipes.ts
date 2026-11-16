@@ -21,7 +21,7 @@ export function trainerNpcRecipes(
   for (const [spell, skill, cost] of tuples) {
     const entry = lookup?.get(`${profession}:${spell}`) ?? null;
     if (lookup && !entry) continue;
-    rows.push({ spell, name: entry?.name ?? null, skill, cost, status: classifySkill(skill, playerSkill) });
+    rows.push({ spell, name: entry?.name ?? null, skill, cost, spec: entry?.spec ?? null, status: classifySkill(skill, playerSkill) });
   }
   return rows;
 }

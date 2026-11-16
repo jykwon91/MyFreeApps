@@ -70,6 +70,31 @@ test("a profession lists its ranks, its trainers and links to its guide", async 
   await expect(page).toHaveURL(/\/wow-forever\/professions\?p=tailoring/);
 });
 
+test("each crafting rank opens what its trainers teach, in its skill range", async ({ page }) => {
+  await page.goto(`${TRAINERS}/tailoring`);
+  await expect(page.getByRole("heading", { name: "Ranks: what each one needs and teaches" })).toBeVisible();
+  const journeyman = page.getByTestId("trainers-rank").nth(1);
+  const toggle = journeyman.getByRole("button", { name: /^What Journeyman teaches · \d+ recipes$/ });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  const list = journeyman.getByRole("list", { name: "Recipes Journeyman trainers teach" });
+  const rows = list.getByTestId("trainer-recipe-row");
+  const count = Number((await toggle.textContent())?.match(/· (\d+)/)?.[1]);
+  await expect(rows).toHaveCount(count);
+  // Every row's skill sits in Journeyman's range (from 50, below Expert's 125), lowest first.
+  const skills = (await rows.allInnerTexts()).map((t) => Number(t.match(/Skill (\d+)\b/)?.[1]));
+  expect(skills.every((n) => n >= 50 && n < 125)).toBe(true);
+  expect([...skills].sort((x, y) => x - y)).toEqual(skills);
+  await toggle.click();
+  await expect(list).toHaveCount(0);
+  // Gathering ranks don't get a list; the trainer names say they open one.
+  await expect(page.getByText("Click a trainer's name to see everything they teach.")).toBeVisible();
+  await page.goto(`${TRAINERS}/mining`);
+  await expect(page.getByTestId("trainers-rank").first()).toBeVisible();
+  await expect(page.getByTestId("rank-recipes")).toHaveCount(0);
+});
+
 test("phones: no sideways scroll and full-size targets", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(`${TRAINERS}/hunter`);
