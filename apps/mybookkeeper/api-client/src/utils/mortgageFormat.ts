@@ -7,10 +7,15 @@ import { format } from "date-fns";
  * round the same number two different ways.
  */
 
-/** Cents → ``"$3,168"``. Whole dollars: a payment's cents are noise here. */
+/**
+ * Cents → ``"$3,168"``, or ``"-$1,235"`` for a loss. Whole dollars: a payment's cents are noise here.
+ * The sign goes before the dollar sign, and an amount that rounds to $0 never reads ``"-$0"``.
+ */
 export function formatMoneyCents(cents: number | null): string {
   if (cents === null) return "—";
-  return `$${Math.round(cents / 100).toLocaleString("en-US")}`;
+  const dollars = Math.round(Math.abs(cents) / 100);
+  const sign = cents < 0 && dollars > 0 ? "-" : "";
+  return `${sign}$${dollars.toLocaleString("en-US")}`;
 }
 
 /**
