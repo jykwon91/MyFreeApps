@@ -28,7 +28,6 @@ Never hand-edit the JSON; re-run this.
 """
 from __future__ import annotations
 
-import json
 import shutil
 from collections import defaultdict
 from dataclasses import replace
@@ -49,7 +48,7 @@ from scripts.wow_food.recipe_sources import (
 )
 from scripts.wow_food.skinning_sources import SKIN_MOB_COLUMNS
 from scripts.wow_item_pages.drops import INSTANCE_COLUMNS
-from scripts.wow_item_pages.finder import INSTANCE_INFO_COLUMNS, instance_rows, load_finder
+from scripts.wow_item_pages.finder import INSTANCE_INFO_COLUMNS
 from scripts.wow_items.forever_items import BIND_ON_PICKUP
 from scripts.wow_professions.crafts import (
     ACQUIRE_ON_SKILL_LEARN,
@@ -76,6 +75,7 @@ from scripts.wow_professions.crafts import (
 )
 from scripts.wow_professions.classic_teaching import load_classic_teaching
 from scripts.wow_professions.effects import add_effects, load_enchant_points
+from scripts.wow_professions.instance_sources import add_instance_drops
 from scripts.wow_professions.specs import spec_quests, spec_records, trainer_specs
 from scripts.wow_world_map.build import write_json
 from scripts.wow_world_map.map_art import WorldMapArt
@@ -438,20 +438,7 @@ def main() -> None:
     teaching = sorted({rec["learn"]["itemId"] for rows in recipes.values() for rec in rows if rec["learn"].get("itemId")})
     zone_names = {z.ui_map_id: z.name for z in zone_bounds}
     recipe_sources = {str(i): classic_sources.recipe_sources(i) for i in teaching}
-    # Dungeon and raid drops, which the open-world sources above leave out (the item pages' finder).
-    instance_finder = load_finder(zone_bounds, set(teaching))
-    for i in teaching:
-        if found := instance_finder.finder.instance_drop(i):
-            recipe_sources[str(i)]["instance"] = found
-    instances = instance_rows(
-        json.loads((WOW_DATA_DIR / "worldMap" / "classic" / "classicDungeons.json").read_text(encoding="utf-8")),
-        instance_finder.map_names,
-        instance_finder.instance_types,
-        instance_finder.finder.instances,
-    )
-    for row in instances.values():
-        if row[5] is not None:
-            classic_sources.zone_names[int(row[5])] = zone_names[int(row[5])]
+    instances = add_instance_drops(recipe_sources, zone_bounds, zone_names, classic_sources.zone_names)
     reagent_sources = {str(i): classic_sources.reagent_sources(i) for i in sorted(reagent_ids)}
     everything = [*recipe_sources.values(), *reagent_sources.values()]
     spec_quest_ids = {q.quest for qs in quests_of.values() for q in qs}
