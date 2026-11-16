@@ -1,6 +1,7 @@
 import { baseApi } from "@platform/core/store/baseApi";
 import { APPLICANT_PAGE_SIZE } from "../constants/applicantLabels";
 import { localToday } from "@platform/core/utils/localToday";
+import { tagsForTenantDates } from "../utils/tagsForTenantDates";
 import type { ApplicantContactEmailRequest } from "../types/applicant/applicant-contact-email-request";
 import type { ApplicantDetailResponse } from "../types/applicant/applicant-detail-response";
 import type { ApplicantSensitive } from "../types/applicant/applicant-sensitive";
@@ -100,11 +101,7 @@ const applicantsApi = baseApi.enhanceEndpoints({
         method: "PATCH",
         data,
       }),
-      invalidatesTags: (_result, _err, arg) => [
-        { type: "Applicant", id: arg.applicantId },
-        { type: "Applicant", id: "LIST" },
-        { type: "Applicant", id: "TENANT_LIST" },
-      ],
+      invalidatesTags: (_result, _err, arg) => tagsForTenantDates(arg.applicantId),
     }),
 
     getTenants: builder.query<TenantListResponse, TenantListArgs>({
@@ -156,10 +153,7 @@ const applicantsApi = baseApi.enhanceEndpoints({
         method: "PATCH",
         data,
       }),
-      invalidatesTags: (_result, _err, arg) => [
-        { type: "Applicant", id: arg.applicantId },
-        { type: "Applicant", id: "TENANT_LIST" },
-      ],
+      invalidatesTags: (_result, _err, arg) => tagsForTenantDates(arg.applicantId),
     }),
 
     restartTenancy: builder.mutation<ApplicantDetailResponse, string>({
@@ -167,10 +161,7 @@ const applicantsApi = baseApi.enhanceEndpoints({
         url: `/applicants/${applicantId}/tenancy/restart`,
         method: "PATCH",
       }),
-      invalidatesTags: (_result, _err, applicantId) => [
-        { type: "Applicant", id: applicantId },
-        { type: "Applicant", id: "TENANT_LIST" },
-      ],
+      invalidatesTags: (_result, _err, applicantId) => tagsForTenantDates(applicantId),
     }),
     updateApplicantContractDates: builder.mutation<
       ApplicantDetailResponse,
@@ -181,10 +172,7 @@ const applicantsApi = baseApi.enhanceEndpoints({
         method: "PATCH",
         data,
       }),
-      invalidatesTags: (_result, _err, arg) => [
-        { type: "Applicant", id: arg.applicantId },
-        { type: "Applicant", id: "LIST" },
-      ],
+      invalidatesTags: (_result, _err, arg) => tagsForTenantDates(arg.applicantId),
     }),
     // The tenant's reminder overview and the pending-receipts list both say
     // whether there's an address to send to, so they refetch too.
