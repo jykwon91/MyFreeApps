@@ -205,10 +205,13 @@ test("the map zooms out to the continent, opens zones, crosses borders and goes 
   await page.goBack();
   await expect(page.getByRole("img", { name: "Eastern Kingdoms map" })).toBeVisible();
 
-  // Right-click opens the map menu, which zooms out too (Esc and the Zoom out button still do it straight away).
+  // Right-click zooms out straight away, as on the in-game map — no menu.
   await map.click({ button: "right", position: await mapPoint(page, 50, 50) });
-  await page.getByRole("menu").getByRole("menuitem", { name: "Zoom out to Azeroth" }).click();
   await expect(page.getByRole("img", { name: "Azeroth map" })).toBeVisible();
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  // Shift+right-click opens the map menu instead.
+  await map.click({ button: "right", modifiers: ["Shift"], position: await mapPoint(page, 50, 50) });
+  await expect(page.getByRole("menu").getByRole("menuitem", { name: "Add a mark here" })).toBeVisible();
 });
 
 test("clicking a result in the list shows it on its map, highlighted", async ({ page }) => {
