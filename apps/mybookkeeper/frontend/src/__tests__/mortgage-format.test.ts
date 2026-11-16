@@ -34,6 +34,16 @@ describe("formatMoneyCents", () => {
     // A paid-ahead loan genuinely bills $0 this month — 6732 Peerless does.
     expect(formatMoneyCents(0)).toBe("$0");
   });
+
+  it("puts a loss's minus sign before the dollar sign", () => {
+    // A refinance that raises the payment has a negative monthly saving.
+    expect(formatMoneyCents(-123456)).toBe("-$1,235");
+  });
+
+  it("never shows a loss that rounds to nothing as -$0", () => {
+    expect(formatMoneyCents(-40)).toBe("$0");
+    expect(formatMoneyCents(-50)).toBe("-$1");
+  });
 });
 
 describe("formatRatePct", () => {
@@ -82,6 +92,10 @@ describe("formatMoneyBand", () => {
 
   it("collapses to one figure when both ends match", () => {
     expect(formatMoneyBand(5238, 5238)).toBe("$52");
+  });
+
+  it("renders a saving band that dips below zero with signs before the dollar sign", () => {
+    expect(formatMoneyBand(-12000, 4500)).toBe("-$120 – $45");
   });
 
   it("renders an em dash when either end is missing", () => {
