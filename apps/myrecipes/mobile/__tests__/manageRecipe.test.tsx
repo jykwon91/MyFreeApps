@@ -1,5 +1,7 @@
 import { RECIPE_FORM_PROBLEMS as PROBLEMS, RECIPE_TITLE_MAX_LENGTH } from "@myrecipes/api-client/constants/recipeForm";
+import { CONNECTION_MESSAGES } from "@myrecipes/api-client/constants/connectionCopy";
 import { RECIPE_MANAGE_MESSAGES as SHARED } from "@myrecipes/api-client/constants/recipeManage";
+import { RECIPE_WRITE_MESSAGES } from "@myrecipes/api-client/constants/recipeWriteErrors";
 import { recipesApi } from "@myrecipes/api-client/store/recipesApi";
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
 import { baseApi } from "@platform/core/store/baseApi";
@@ -212,6 +214,29 @@ describe("editing a recipe's details", () => {
     expect(patches()).toHaveLength(0);
   });
 
+  it("shows the server's reason when it refuses the save", async () => {
+    await show(SOUP, { "PATCH /recipes/r1": () => reply(422, { detail: [{ msg: "Value error, That title is too long." }] }) });
+    await openEdit();
+    await fireEvent.changeText(titleField(), "Better soup");
+    await fireEvent.press(saveButton());
+
+    expect(await screen.findByRole("alert", { name: "That title is too long." })).toBeTruthy();
+    expect(titleField().props.value).toBe("Better soup");
+  });
+
+  it("says it's the connection when the save can't reach the server", async () => {
+    await show(SOUP, {
+      "PATCH /recipes/r1": () => {
+        throw new Error("Network Error");
+      },
+    });
+    await openEdit();
+    await fireEvent.changeText(titleField(), "Better soup");
+    await fireEvent.press(saveButton());
+
+    expect(await screen.findByRole("alert", { name: CONNECTION_MESSAGES.write })).toBeTruthy();
+  });
+
   it("keeps what was typed when the save fails, says so in the sheet, and can try again", async () => {
     let fail = true;
     await show(SOUP, { "PATCH /recipes/r1": () => (fail ? reply(500) : reply(200, { ...SOUP, title: "Better soup" })) });
@@ -219,7 +244,7 @@ describe("editing a recipe's details", () => {
     await fireEvent.changeText(titleField(), "Better soup");
     await fireEvent.press(saveButton());
 
-    expect(await screen.findByRole("alert", { name: SHARED.couldntUpdate })).toBeTruthy();
+    expect(await screen.findByRole("alert", { name: RECIPE_WRITE_MESSAGES.serverTrouble })).toBeTruthy();
     expect(titleField().props.value).toBe("Better soup");
     expect(saveButton().props.accessibilityState).toMatchObject({ disabled: false });
 

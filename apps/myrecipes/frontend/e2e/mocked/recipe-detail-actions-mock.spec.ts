@@ -93,7 +93,7 @@ test.describe("Edit", () => {
     await dialog.getByLabel("Title").fill("Roasted tomato soup");
     await dialog.getByRole("button", { name: "Save changes" }).click();
 
-    await expect(toastAboveModal(page, "Couldn't save those changes — please try again.")).toBeVisible();
+    await expect(toastAboveModal(page, "Something went wrong on our end. Try again in a moment.")).toBeVisible();
     await expect(dialog.getByLabel("Title")).toHaveValue("Roasted tomato soup");
     await expect(dialog.getByRole("button", { name: "Save changes" })).toBeEnabled();
     await expect(page.getByRole("heading", { name: "Tomato soup", exact: true, includeHidden: true })).toBeVisible();
@@ -188,7 +188,7 @@ test.describe("I made it", () => {
     await dialog.getByLabel("Notes").fill("Doubled the garlic");
     await dialog.getByRole("button", { name: "Save cook" }).click();
 
-    await expect(toastAboveModal(page, "Couldn't log that cook — please try again.")).toBeVisible();
+    await expect(toastAboveModal(page, "Something went wrong on our end. Try again in a moment.")).toBeVisible();
     await expect(dialog.getByLabel("Notes")).toHaveValue("Doubled the garlic");
     await expect(dialog.getByRole("button", { name: "Save cook" })).toBeEnabled();
     await expect(page.getByText("No cooks logged yet.")).toBeVisible();

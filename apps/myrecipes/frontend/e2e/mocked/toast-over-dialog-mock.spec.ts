@@ -12,7 +12,7 @@ import { stubRecipeApi } from "./fixtures/stubRecipeApi";
 import { toast, toastAboveModal } from "@platform/ui/test-support/toast";
 
 const RECIPE_ID = recipeIdAt(4);
-const REFUSED = "Couldn't save those changes — please try again.";
+const REFUSED = "Something went wrong on our end. Try again in a moment.";
 const UPDATED = "Recipe updated.";
 
 /** The recipe reads normally; the edit dialog's save (PATCH) answers 200, or 500 when `refuseSave`. */

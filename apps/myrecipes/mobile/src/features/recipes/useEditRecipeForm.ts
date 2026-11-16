@@ -3,6 +3,7 @@ import { recipesApi, useUpdateRecipeMutation } from "@myrecipes/api-client/store
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
 import type { RecipeMetaValues } from "@myrecipes/api-client/types/recipe/recipe-meta-values";
 import { buildRecipeUpdateRequest } from "@myrecipes/api-client/utils/buildRecipeUpdateRequest";
+import { recipeWriteErrorMessage } from "@myrecipes/api-client/utils/recipeWriteErrorMessage";
 import { recipeMetaProblems } from "@myrecipes/api-client/utils/recipeMetaProblems";
 import { recipeMetaValues } from "@myrecipes/api-client/utils/recipeMetaValues";
 import { sameFormValues } from "@platform/core/utils/sameFormValues";
@@ -42,8 +43,8 @@ export function useEditRecipeForm(recipe: RecipeDetailResponse, onSaved: () => v
       dispatch(recipesApi.util.upsertQueryData("getRecipe", updated.id, updated));
       onSaved();
       showToast(RECIPE_MANAGE_MESSAGES.updated);
-    } catch {
-      setFailure(RECIPE_MANAGE_MESSAGES.couldntUpdate);
+    } catch (error) {
+      setFailure(recipeWriteErrorMessage(error, "update"));
     }
   }
 

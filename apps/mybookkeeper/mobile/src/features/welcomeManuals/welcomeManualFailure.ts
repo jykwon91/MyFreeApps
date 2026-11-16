@@ -1,5 +1,5 @@
 import { WELCOME_MANUAL_MAX_SECTION_IMAGES } from "@mybookkeeper/api-client/constants/welcomeManualLimits";
-import { getApiValidationDetail } from "@mybookkeeper/api-client/utils/apiValidationDetail";
+import { getApiValidationDetail } from "@platform/core/utils/apiValidationDetail";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { isDemoRefusal } from "@mybookkeeper/api-client/utils/isDemoRefusal";
 import { WELCOME_MANUAL_FAILURE_MESSAGES as FAILURE, couldntMessage, goneMessage, limitFallback, notSureItSavedMessage, offlineMessage, photoLimitFallback } from "../../constants/welcomeManualFailures";

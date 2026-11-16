@@ -12,7 +12,7 @@ import { detailFromCreateRequest, listPageOf } from "./recipeFixtures";
 import { RECIPES_COLLECTION_ROUTE } from "./recipeRoutes";
 import { stubRecipeRoutes } from "./stubRecipeApi";
 
-export async function stubRecipeCreate(page: Page, recipeId: string, status = 201): Promise<RecipeCreateRequest[]> {
+export async function stubRecipeCreate(page: Page, recipeId: string, status = 201, detail = "boom"): Promise<RecipeCreateRequest[]> {
   const posted: RecipeCreateRequest[] = [];
   let created: RecipeDetailResponse | null = null;
   await page.route(RECIPES_COLLECTION_ROUTE, async (route) => {
@@ -25,7 +25,7 @@ export async function stubRecipeCreate(page: Page, recipeId: string, status = 20
     if (request.method() !== "POST") return route.fallback();
     const body = request.postDataJSON() as RecipeCreateRequest;
     posted.push(body);
-    if (status !== 201) return route.fulfill(json({ detail: "boom" }, status));
+    if (status !== 201) return route.fulfill(json({ detail }, status));
     created = detailFromCreateRequest(recipeId, body);
     await stubRecipeRoutes(page, recipeId, { recipe: created });
     return route.fulfill(json(created, 201));

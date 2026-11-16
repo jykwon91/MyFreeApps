@@ -4,6 +4,8 @@ import {
   RECIPE_SERVINGS_MAX_LENGTH,
   RECIPE_SOURCE_MAX_LENGTH,
 } from "@myrecipes/api-client/constants/recipeForm";
+import { RECIPE_WRITE_MESSAGES } from "@myrecipes/api-client/constants/recipeWriteErrors";
+import { CONNECTION_MESSAGES } from "@myrecipes/api-client/constants/connectionCopy";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import api from "@platform/core/lib/api";
 import { DISCARD_MESSAGES, fieldErrorsSummary, type MobileSession, type SessionState, SessionProvider, ToastProvider } from "@platform/mobile";
@@ -63,6 +65,7 @@ const adapter: AxiosAdapter = async (config) => {
   sent.push(config);
   await gate;
   const { status, data } = reply;
+  if (status === 0) throw Object.assign(new Error("Network Error"), { config });
   if (status >= 400) throw Object.assign(new Error("failed"), { response: { status, data }, config });
   return { status, data, statusText: "", headers: {}, config };
 };
@@ -356,7 +359,7 @@ describe("creating", () => {
 
     await press(MESSAGES.create);
 
-    expect(await screen.findByText(MESSAGES.couldntCreate)).toBeTruthy();
+    expect(await screen.findByText(RECIPE_WRITE_MESSAGES.serverTrouble)).toBeTruthy();
     expect(mockReplace).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Title, required").props.value).toBe("Tomato soup");
     expect(mockGuard.prevent).toBe(true);
@@ -365,6 +368,28 @@ describe("creating", () => {
     await press(MESSAGES.create);
     await waitFor(() => expect(mockReplace).toHaveBeenCalledTimes(1));
     expect(sent.filter((config) => config.method === "post")).toHaveLength(2);
+  });
+
+  it("shows the server's own reason when it refuses the recipe", async () => {
+    await show();
+    await fillMinimalRecipe();
+    reply = { status: 422, data: { detail: "A recipe with that title already exists." } };
+
+    await press(MESSAGES.create);
+
+    expect(await screen.findByText("A recipe with that title already exists.")).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it("says it's the connection when the server can't be reached", async () => {
+    await show();
+    await fillMinimalRecipe();
+    reply = { status: 0, data: null };
+
+    await press(MESSAGES.create);
+
+    expect(await screen.findByText(CONNECTION_MESSAGES.write)).toBeTruthy();
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });
 

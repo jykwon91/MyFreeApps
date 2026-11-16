@@ -1,5 +1,5 @@
 import { useOverrideFieldMutation } from "@mybookkeeper/api-client/store/taxReturnsApi";
-import { getApiValidationDetail } from "@mybookkeeper/api-client/utils/apiValidationDetail";
+import { getApiValidationDetail } from "@platform/core/utils/apiValidationDetail";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import { useState } from "react";

@@ -3,6 +3,7 @@ import type { RecipeFormValues } from "@myrecipes/api-client/types/recipe/recipe
 import { buildRecipeCreateRequest } from "@myrecipes/api-client/utils/buildRecipeCreateRequest";
 import { emptyIngredientRow, emptyStepRow } from "@myrecipes/api-client/utils/emptyRecipeRows";
 import { firstRecipeFormProblem } from "@myrecipes/api-client/utils/firstRecipeFormProblem";
+import { recipeWriteErrorMessage } from "@myrecipes/api-client/utils/recipeWriteErrorMessage";
 import { recipeFormProblems } from "@myrecipes/api-client/utils/recipeFormProblems";
 import { recipeFormValuesFromDraft } from "@myrecipes/api-client/utils/recipeFormValuesFromDraft";
 import { deviceDecimalSeparator, useToast } from "@platform/mobile";
@@ -101,8 +102,8 @@ export function useNewRecipeForm(seed?: NewRecipeSeed) {
       seed?.onCreated?.(recipe.id);
       showToast(MESSAGES.created);
       if (isMounted.current) setCreated({ id: recipe.id, title: recipe.title, owner: recipe.owner_display_name });
-    } catch {
-      if (isMounted.current) showToast(MESSAGES.couldntCreate, "error");
+    } catch (error) {
+      if (isMounted.current) showToast(recipeWriteErrorMessage(error, "create"), "error");
     }
   }
 

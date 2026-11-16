@@ -1778,7 +1778,6 @@
         "api-client/src/constants/taxReturnYears.ts",
         "api-client/src/constants/taxCompleteness.ts",
         "api-client/src/constants/taxReport.ts",
-        "api-client/src/utils/apiValidationDetail.ts",
         "api-client/src/utils/buildFormSummaries.ts",
         "api-client/src/utils/formatTaxFieldValue.ts",
         "api-client/src/utils/formatAdvisorGeneratedAt.ts",
