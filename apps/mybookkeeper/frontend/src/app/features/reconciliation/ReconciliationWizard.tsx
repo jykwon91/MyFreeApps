@@ -16,6 +16,10 @@ import {
 import { reconciliationDiscrepanciesMode, reconciliationSourcesMode } from "@mybookkeeper/api-client/utils/reconciliationModes";
 import { reconciliationTaxYears } from "@mybookkeeper/api-client/utils/reconciliationTaxYears";
 import { useCompareWithRecords } from "./useCompareWithRecords";
+import FieldProblem from "@/shared/components/FieldProblem";
+import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
+import { reportedAmountError } from "@/shared/utils/reported-amount-error";
+import { fieldProblemId, problemAria } from "@/shared/utils/field-problem-aria";
 import ReconciliationSourcesBody from "./ReconciliationSourcesBody";
 import ReconciliationDiscrepanciesBody from "./ReconciliationDiscrepanciesBody";
 
@@ -46,26 +50,32 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
   const [sourceType, setSourceType] = useState(RECONCILIATION_DEFAULT_SOURCE_TYPE);
   const [issuer, setIssuer] = useState("");
   const [reportedAmount, setReportedAmount] = useState("");
+  const [amountProblem, setAmountProblem] = useState<string | undefined>();
 
   const sourcesMode = reconciliationSourcesMode(sourcesLoading, sources.length);
   const discrepanciesMode = reconciliationDiscrepanciesMode(discrepanciesLoading || sourcesLoading, discrepancies.length);
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
-    if (!reportedAmount) return;
+    const problem = reportedAmountError(reportedAmount);
+    setAmountProblem(problem);
+    if (problem) {
+      document.getElementById(`${fieldId}-amount`)?.focus();
+      return;
+    }
     try {
       await upload1099({
         source_type: sourceType,
         tax_year: taxYear,
         issuer: issuer || undefined,
-        reported_amount: reportedAmount,
+        reported_amount: reportedAmount.trim(),
       }).unwrap();
       onToast("1099 source added", "success");
       setIssuer("");
       setReportedAmount("");
       setStep(1);
-    } catch {
-      onToast("Failed to add 1099 source", "error");
+    } catch (err) {
+      onToast(getApiErrorDetail(err, "Failed to add 1099 source"), "error");
     }
   }
 
@@ -118,7 +128,7 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
         {step === 0 && (
           <Card>
             {canWrite ? (
-              <form onSubmit={handleUpload} className="space-y-4">
+              <form onSubmit={handleUpload} noValidate className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   Enter the reported amounts from your 1099 form. I'll compare them against your reservation records.
                 </p>
@@ -147,13 +157,18 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
                     <input
                       id={`${fieldId}-amount`}
                       type="number"
+                      min="0"
                       step="0.01"
                       value={reportedAmount}
-                      onChange={(e) => setReportedAmount(e.target.value)}
+                      onChange={(e) => {
+                        setReportedAmount(e.target.value);
+                        setAmountProblem(undefined);
+                      }}
                       placeholder="0.00"
-                      required
+                      {...problemAria(amountProblem, fieldProblemId(fieldId, "amount"))}
                       className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
+                    <FieldProblem id={fieldProblemId(fieldId, "amount")} message={amountProblem} />
                   </div>
                 </div>
                 <LoadingButton type="submit" size="sm" isLoading={isUploading} loadingText="Adding...">

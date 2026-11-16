@@ -2,7 +2,9 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+from app.schemas.transactions.reported_amount import validate_reported_amount
 
 
 class Upload1099Request(BaseModel):
@@ -10,6 +12,11 @@ class Upload1099Request(BaseModel):
     tax_year: int
     issuer: str | None = None
     reported_amount: Decimal
+
+    @field_validator("reported_amount")
+    @classmethod
+    def _check_reported_amount(cls, v: Decimal) -> Decimal:
+        return validate_reported_amount(v)
 
 
 class CreateMatchRequest(BaseModel):
