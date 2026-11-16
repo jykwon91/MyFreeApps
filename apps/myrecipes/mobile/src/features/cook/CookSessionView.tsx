@@ -102,7 +102,7 @@ export default function CookSessionView({
         <Text
           accessibilityRole="header"
           maxFontSizeMultiplier={COOK_LABEL_MAX_SCALE}
-          style={{ color: colors.foreground, fontSize: fontSize.md, fontWeight: "600" }}
+          style={{ flex: 1, flexShrink: 1, textAlign: "center", color: colors.foreground, fontSize: fontSize.md, fontWeight: "600" }}
         >
           {cookPageTitle(page)}
         </Text>
