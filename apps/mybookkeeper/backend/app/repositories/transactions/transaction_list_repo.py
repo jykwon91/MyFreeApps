@@ -94,7 +94,7 @@ def _filtered(
     if (category := filters.get("category")) is not None:
         stmt = stmt.where(Transaction.category == category)
     if (vendor := filters.get("vendor")) is not None:
-        stmt = stmt.where(Transaction.vendor.ilike(f"%{vendor}%"))
+        stmt = stmt.where(Transaction.vendor.icontains(vendor, autoescape=True))
     if (start_date := filters.get("start_date")) is not None:
         stmt = stmt.where(Transaction.transaction_date >= start_date)
     if (end_date := filters.get("end_date")) is not None:

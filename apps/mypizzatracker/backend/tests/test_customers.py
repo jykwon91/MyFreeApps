@@ -269,6 +269,34 @@ async def test_list_customers_search_by_name_and_phone(
     assert "9998887777" not in phones
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("search", "expected_names"),
+    [
+        ("_", ["Under_Score"]),
+        ("%", ["50% Off Pizza"]),
+        ("50%", ["50% Off Pizza"]),
+    ],
+)
+async def test_list_customers_search_treats_wildcards_literally(
+    auth_client: AsyncClient, db: AsyncSession, search: str, expected_names: list[str],
+):
+    """``%`` and ``_`` in the operator's search match literally, not as LIKE wildcards."""
+    for name, phone in [
+        ("Under_Score", "7771112222"),
+        ("50% Off Pizza", "7773334444"),
+        ("Fifty Pizza", "7775556666"),
+        ("Plain Name", "7778889999"),
+    ]:
+        db.add(Customer(name=name, phone=phone))
+    await db.flush()
+
+    resp = await auth_client.get("/customers", params={"search": search})
+
+    assert resp.status_code == 200, resp.text
+    assert sorted(r["name"] for r in resp.json()) == expected_names
+
+
 # ---------------------------------------------------------------------------
 # Operator PATCH /customers/{id}/notes
 # ---------------------------------------------------------------------------

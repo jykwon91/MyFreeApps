@@ -166,3 +166,39 @@ class TestCompanyNameSearch:
         body = resp.json()
         assert body["total"] == 0
         assert body["items"] == []
+
+
+class TestCompanyNameSearchWildcards:
+    """``%`` and ``_`` in the search are literal characters, not LIKE wildcards."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("search", "expected"),
+        [
+            ("_", {"Under_Score Co"}),
+            ("%", {"50% Labs"}),
+            ("50%", {"50% Labs"}),
+        ],
+    )
+    async def test_wildcards_match_literally(
+        self, user_factory, as_user, search: str, expected: set[str],
+    ) -> None:
+        user = await user_factory()
+
+        async with await as_user(user) as authed:
+            for name, domain in [
+                ("Under_Score Co", "under-score.example.com"),
+                ("50% Labs", "fifty-labs.example.com"),
+                ("500 Industries", "five-hundred.example.com"),
+                ("Plain Corp", "plain.example.com"),
+            ]:
+                await authed.post(
+                    "/companies", json={"name": name, "primary_domain": domain},
+                )
+
+            resp = await authed.get("/companies", params={"name_search": search})
+
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert {item["name"] for item in body["items"]} == expected
+        assert body["total"] == len(expected)
