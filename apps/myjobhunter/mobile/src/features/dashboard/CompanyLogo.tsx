@@ -1,6 +1,6 @@
 import { companyLogoUrl } from "@myjobhunter/api-client/utils/companyLogoUrl";
-import { useTheme } from "@platform/mobile";
-import { Image, View } from "react-native";
+import { Thumbnail, useTheme } from "@platform/mobile";
+import { View } from "react-native";
 import { COMPANY_LOGO_SIZE } from "../../constants/dashboard";
 import type { CompanyLogoProps } from "../../types/CompanyLogoProps";
 
@@ -10,7 +10,7 @@ export default function CompanyLogo({ url }: CompanyLogoProps) {
   const safeUrl = companyLogoUrl(url);
   const style = { width: COMPANY_LOGO_SIZE, height: COMPANY_LOGO_SIZE, borderRadius: radius.full, backgroundColor: colors.muted };
   return safeUrl ? (
-    <Image accessibilityIgnoresInvertColors accessible={false} source={{ uri: safeUrl }} style={style} testID="company-logo" />
+    <Thumbnail accessibilityIgnoresInvertColors accessible={false} source={{ uri: safeUrl }} style={style} testID="company-logo" />
   ) : (
     <View accessible={false} style={style} testID="company-logo-placeholder" />
   );

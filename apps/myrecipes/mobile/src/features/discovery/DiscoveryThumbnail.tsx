@@ -1,6 +1,6 @@
-import { useTheme } from "@platform/mobile";
+import { Thumbnail, useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { Image, View } from "react-native";
+import { View } from "react-native";
 import { API_BASE_URL } from "../../constants/api";
 
 /**
@@ -24,7 +24,7 @@ export default function DiscoveryThumbnail({
 
   if (!path || hasFailed) return <View style={style} testID="discovery-thumbnail-placeholder" />;
   return (
-    <Image
+    <Thumbnail
       accessibilityIgnoresInvertColors
       onError={() => setHasFailed(true)}
       resizeMode="cover"

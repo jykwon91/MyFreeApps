@@ -1,6 +1,6 @@
 import type { WelcomeManualSectionImageResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-section-image-response";
-import { useTheme } from "@platform/mobile";
-import { Image, Text, View } from "react-native";
+import { Thumbnail, useTheme } from "@platform/mobile";
+import { Text, View } from "react-native";
 import { WELCOME_MANUAL_PHOTO_FULL_HEIGHT as FULL_HEIGHT, WELCOME_MANUAL_PHOTO_MESSAGES as MESSAGES } from "../../constants/welcomeManualForms";
 
 interface WelcomeManualPhotoProps {
@@ -20,7 +20,7 @@ export default function WelcomeManualPhoto({ image, size }: WelcomeManualPhotoPr
     );
   }
   return (
-    <Image
+    <Thumbnail
       accessibilityLabel={image.caption ?? MESSAGES.view}
       resizeMode={size === "full" ? "contain" : "cover"}
       source={{ uri: image.presigned_url }}

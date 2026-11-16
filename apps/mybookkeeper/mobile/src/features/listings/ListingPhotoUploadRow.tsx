@@ -1,5 +1,5 @@
-import { Banner, LoadingButton, useTheme } from "@platform/mobile";
-import { Image, Text, View } from "react-native";
+import { Banner, LoadingButton, Thumbnail, useTheme } from "@platform/mobile";
+import { Text, View } from "react-native";
 import { LISTING_PHOTO_MESSAGES as MESSAGES, removeUploadLabel, retryUploadLabel, uploadStateLabel } from "../../constants/listingPhotos";
 import type { ListingPhotoUpload } from "../../types/ListingPhotoUpload";
 
@@ -18,7 +18,7 @@ export default function ListingPhotoUploadRow({ upload, position, onRetry, onDis
   return (
     <View style={{ gap: spacing.sm, padding: spacing.sm, borderWidth: 1, borderRadius: radius.md, borderColor: colors.input }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
-        <Image accessibilityIgnoresInvertColors accessibilityLabel={uploadStateLabel(position, status ?? MESSAGES.failed)} source={{ uri: upload.file.uri }} style={{ width: 56, height: 56, borderRadius: radius.sm }} />
+        <Thumbnail accessibilityIgnoresInvertColors accessibilityLabel={uploadStateLabel(position, status ?? MESSAGES.failed)} source={{ uri: upload.file.uri }} style={{ width: 56, height: 56, borderRadius: radius.sm }} />
         {status ? (
           <Text accessibilityLiveRegion="polite" style={{ fontSize: fontSize.md, color: colors.mutedForeground }}>
             {status}

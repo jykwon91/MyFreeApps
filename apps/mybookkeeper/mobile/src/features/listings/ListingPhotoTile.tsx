@@ -1,6 +1,6 @@
 import type { ListingPhoto } from "@mybookkeeper/api-client/types/listing/listing-photo";
-import { useTheme } from "@platform/mobile";
-import { Image, Pressable, Text, View } from "react-native";
+import { Thumbnail, useTheme } from "@platform/mobile";
+import { Pressable, Text, View } from "react-native";
 import { LISTING_PHOTO_CAPTION_LINES, LISTING_PHOTO_MESSAGES as MESSAGES, photoLabel } from "../../constants/listingPhotos";
 import { photoUrl } from "./listingPhotoDisplay";
 
@@ -28,7 +28,7 @@ export default function ListingPhotoTile({ photo, index, total, size, isSelectin
       style={{ width: size, height: size, borderRadius: radius.md, overflow: "hidden", backgroundColor: colors.muted, borderWidth: isSelected ? 3 : 0, borderColor: colors.foreground }}
     >
       {url ? (
-        <Image accessibilityIgnoresInvertColors resizeMethod="resize" resizeMode="cover" source={{ uri: url }} style={{ width: "100%", height: "100%" }} />
+        <Thumbnail accessibilityIgnoresInvertColors resizeMode="cover" source={{ uri: url }} style={{ width: "100%", height: "100%" }} />
       ) : (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xs }}>
           <Text style={{ fontSize: fontSize.xs, color: colors.mutedForeground, textAlign: "center" }}>{MESSAGES.unavailable}</Text>
