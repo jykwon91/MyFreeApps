@@ -15,6 +15,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { json } from "@platform/ui/test-support/mockResponse";
 import { stubCurrentUser } from "@platform/ui/test-support/mockSession";
 import { plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
+import { toast, toastRegion } from "@platform/ui/test-support/toast";
 
 const THRESHOLDS = {
   daily_budget: 10,
@@ -81,12 +82,12 @@ test.describe("Admin alert thresholds", () => {
 
     await expect(page.getByRole("alert").filter({ hasText: "Enter a number from 0 to 500." })).toBeVisible();
     await expect(daily).toHaveAttribute("aria-invalid", "true");
-    await expect(page.getByText("Thresholds updated")).toHaveCount(0);
+    await expect(toastRegion(page).getByText("Thresholds updated", { exact: true })).toHaveCount(0);
     expect(server.thresholdPatches).toEqual([]);
 
     await daily.fill("25");
     await page.getByRole("button", { name: "Save Changes" }).click();
-    await expect(page.getByText("Thresholds updated")).toBeVisible();
+    await expect(toast(page, "Thresholds updated")).toBeVisible();
     expect(server.thresholdPatches).toEqual([{ ...THRESHOLDS, daily_budget: 25 }]);
   });
 });
