@@ -145,4 +145,10 @@ describe("FormField", () => {
     expect(announce).toHaveBeenCalledTimes(1);
     expect(announce).toHaveBeenLastCalledWith(error, { queue: true });
   });
+
+  it("outlines the input in a colour that can be seen against the background", async () => {
+    await render(<FormField label="Email" />);
+
+    expect(StyleSheet.flatten(screen.getByLabelText("Email").props.style).borderColor).toBe(lightColors.inputBorder);
+  });
 });

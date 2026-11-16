@@ -22,7 +22,7 @@ export default function SearchField({
         alignItems: "center",
         borderWidth: 1,
         borderRadius: radius.md,
-        borderColor: colors.input,
+        borderColor: colors.inputBorder,
         backgroundColor: colors.card,
       }}
     >

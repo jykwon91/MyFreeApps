@@ -36,7 +36,7 @@ export default function ReplyTemplateVariableBar({ field, onInsert, disabled }: 
               paddingHorizontal: spacing.md,
               borderWidth: 1,
               borderRadius: radius.md,
-              borderColor: colors.border,
+              borderColor: colors.inputBorder,
               backgroundColor: pressed ? colors.muted : colors.background,
               opacity: disabled ? 0.5 : 1,
             })}

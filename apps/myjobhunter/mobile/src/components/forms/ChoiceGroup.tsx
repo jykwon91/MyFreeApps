@@ -15,7 +15,7 @@ export default function ChoiceGroup<Value extends string>({ label, options, valu
       <View
         accessibilityLabel={label}
         accessibilityRole="radiogroup"
-        style={{ borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, overflow: "hidden", opacity: disabled ? 0.5 : 1 }}
+        style={{ borderWidth: 1, borderColor: colors.inputBorder, borderRadius: radius.md, overflow: "hidden", opacity: disabled ? 0.5 : 1 }}
       >
         {options.map((option) => (
           <OptionRow

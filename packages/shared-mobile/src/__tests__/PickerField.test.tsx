@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import PickerField from "../components/PickerField";
+import { lightColors } from "../theme/colors";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
 
 async function setup(props: { disabled?: boolean; hint?: string } = {}) {
@@ -36,5 +37,14 @@ describe("PickerField", () => {
     await setup();
     const style = StyleSheet.flatten(screen.getByRole("button", { name: "Category, Plumber" }).props.style);
     expect(style.minHeight).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET);
+  });
+
+  it("outlines the field in a colour that can be seen against the background", async () => {
+    await setup();
+
+    const { style } = screen.getByRole("button", { name: "Category, Plumber" }).props;
+    expect(StyleSheet.flatten(typeof style === "function" ? style({ pressed: false }) : style).borderColor).toBe(
+      lightColors.inputBorder,
+    );
   });
 });

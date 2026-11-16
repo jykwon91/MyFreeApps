@@ -2,7 +2,7 @@ import type { ThemeColors } from "../types/ThemeColors";
 
 // Same values as the `:root` and `.dark` variables in apps/*/frontend/src/index.css,
 // the Tailwind green/red shades the web Toaster uses (and blue, in the same shades, for info), except where those miss the
-// WCAG AA contrast that __tests__/contrast.test.ts enforces: `destructiveText` is new, and
+// WCAG AA contrast that __tests__/contrast.test.ts enforces: `destructiveText` and `inputBorder` (control outlines, 3:1) are new, and
 // light `destructiveForeground` is dark because near-white on this red is only 3.59:1.
 export const lightColors: ThemeColors = {
   background: "hsl(0, 0%, 100%)",
@@ -16,6 +16,7 @@ export const lightColors: ThemeColors = {
   mutedForeground: "hsl(215.4, 16.3%, 45%)",
   border: "hsl(214.3, 31.8%, 91.4%)",
   input: "hsl(214.3, 31.8%, 91.4%)",
+  inputBorder: "#64748b",
   destructive: "hsl(0, 84.2%, 60.2%)",
   destructiveForeground: "hsl(222.2, 84%, 4.9%)",
   destructiveText: "#b91c1c",
@@ -43,6 +44,7 @@ export const darkColors: ThemeColors = {
   mutedForeground: "hsl(215, 20.2%, 65.1%)",
   border: "hsl(217.2, 32.6%, 17.5%)",
   input: "hsl(217.2, 32.6%, 17.5%)",
+  inputBorder: "#64748b",
   destructive: "hsl(0, 62.8%, 30.6%)",
   destructiveForeground: "hsl(210, 40%, 98%)",
   destructiveText: "#f87171",

@@ -20,7 +20,7 @@ export default function ChipButton({ label, accessibilityLabel, onPress, isCheck
         paddingHorizontal: spacing.md,
         borderRadius: radius.md,
         borderWidth: 1,
-        borderColor: isChecked ? colors.primary : colors.border,
+        borderColor: isChecked ? colors.primary : colors.inputBorder,
         backgroundColor: isChecked ? colors.primary : colors.card,
         opacity: disabled ? 0.5 : pressed ? 0.6 : 1,
       })}

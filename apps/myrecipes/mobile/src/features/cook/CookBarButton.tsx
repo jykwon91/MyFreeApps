@@ -38,7 +38,7 @@ export default function CookBarButton({
         borderRadius: radius.md,
         backgroundColor: isPrimary ? colors.primary : "transparent",
         borderWidth: isOutlined ? 1 : 0,
-        borderColor: colors.border,
+        borderColor: colors.inputBorder,
         opacity: disabled ? 0.4 : pressed ? 0.7 : 1,
       })}
     >

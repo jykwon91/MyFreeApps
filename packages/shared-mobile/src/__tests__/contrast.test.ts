@@ -47,6 +47,7 @@ const TOKEN_ROLES: Record<Token, "text" | "surface" | "fill" | "label" | "outlin
   destructiveForeground: "label",
   border: "outline",
   input: "outline",
+  inputBorder: "outline",
   toastSuccessBackground: "fill",
   toastSuccessBorder: "outline",
   toastSuccessForeground: "label",
@@ -98,6 +99,18 @@ describe.each(Object.entries({ light: lightColors, dark: darkColors }))(
   (_scheme, colors) => {
     it.each([...TEXT_PAIRS, ...FILL_LABELS])("%s on %s meets AA for text", (foreground, surface) => {
       expect(contrastRatio(colors[foreground], colors[surface])).toBeGreaterThanOrEqual(AA_TEXT);
+    });
+
+    it.each(["background", "card", "muted"] as const)(
+      "the control outline (inputBorder) meets 3:1 non-text contrast on %s",
+      (surface) => {
+        expect(contrastRatio(colors.inputBorder, colors[surface])).toBeGreaterThanOrEqual(AA_NON_TEXT);
+      },
+    );
+
+    it("the selected segment's outline stands out from the muted track it sits on", () => {
+      // SegmentedControl: a `card` segment outlined in `inputBorder` on a `muted` track.
+      expect(contrastRatio(colors.inputBorder, colors.muted)).toBeGreaterThanOrEqual(AA_NON_TEXT);
     });
 
     it("the error border stands out from the background", () => {
