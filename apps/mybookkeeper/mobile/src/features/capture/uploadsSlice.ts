@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { PendingUpload } from "../../types/PendingUpload";
+import type { UploadBatchStart } from "../../types/UploadBatchStart";
 import type { UploadFilePercent } from "../../types/UploadFilePercent";
 import type { UploadFileStatus } from "../../types/UploadFileStatus";
 import type { UploadFileStatusChange } from "../../types/UploadFileStatusChange";
@@ -9,7 +10,12 @@ import type { UploadsState } from "../../types/UploadsState";
 const initialState: UploadsState = { phase: "idle", rejections: [], files: [] };
 
 function isFinished(status: UploadFileStatus): boolean {
-  return status === "done" || status === "failed";
+  return status === "done" || status === "failed" || status === "cancelled";
+}
+
+/** Sent, but still being read: it stays listed, since it can still be stopped. */
+function isReading(status: UploadFileStatus): boolean {
+  return status === "reading";
 }
 
 const uploadsSlice = createSlice({
@@ -26,13 +32,27 @@ const uploadsSlice = createSlice({
     uploadFilesQueued(state, { payload }: PayloadAction<PendingUpload[]>) {
       for (const { uri, name } of payload) {
         const listed = state.files.find((file) => file.uri === uri);
-        if (!listed) state.files.push({ uri, name, status: "queued", percent: null });
+        if (!listed) state.files.push({ uri, name, status: "queued", percent: null, batchId: null });
         else if (listed.status === "failed") Object.assign(listed, { status: "queued", percent: null });
       }
     },
     uploadFileChanged(state, { payload }: PayloadAction<UploadFileStatusChange>) {
       const listed = state.files.find((file) => file.uri === payload.uri);
       if (listed) Object.assign(listed, { status: payload.status, percent: null });
+    },
+    uploadBatchStarted(state, { payload }: PayloadAction<UploadBatchStart>) {
+      const listed = state.files.find((file) => file.uri === payload.uri);
+      if (listed) Object.assign(listed, { status: "reading", percent: null, batchId: payload.batchId });
+    },
+    /** Every document in the zip has been read, or failed to be. */
+    uploadBatchRead(state, { payload: uri }: PayloadAction<string>) {
+      const listed = state.files.find((file) => file.uri === uri);
+      if (listed) Object.assign(listed, { status: "done", batchId: null });
+    },
+    /** The rest of the zip won't be read. */
+    uploadBatchCancelled(state, { payload: uri }: PayloadAction<string>) {
+      const listed = state.files.find((file) => file.uri === uri);
+      if (listed) Object.assign(listed, { status: "cancelled", batchId: null });
     },
     uploadFileProgressed(state, { payload }: PayloadAction<UploadFilePercent>) {
       const listed = state.files.find((file) => file.uri === payload.uri);
@@ -43,19 +63,19 @@ const uploadsSlice = createSlice({
      * workspace (or nobody) is chosen, none of these files are its to show.
      */
     uploadDrainEnded(state, { payload: isSameWorkspace }: PayloadAction<boolean>) {
-      state.files = isSameWorkspace ? state.files.filter((file) => isFinished(file.status)) : [];
+      state.files = isSameWorkspace ? state.files.filter((file) => isFinished(file.status) || isReading(file.status)) : [];
     },
-    /** The "got it" message has been up long enough: it goes, and so do the files it was about. */
+    /** The "got it" message has been up long enough: it goes, and so do the files it was about. A zip still being read stays. */
     uploadSentSettled(state) {
       if (state.phase === "sent") state.phase = "idle";
-      state.files = state.files.filter((file) => file.status !== "done");
+      state.files = state.files.filter((file) => file.status !== "done" && file.status !== "cancelled");
     },
     uploadStatusDismissed(state) {
       state.rejections = [];
       if (state.phase === "sending") {
         state.files = state.files.filter((file) => !isFinished(file.status));
       } else {
-        state.files = [];
+        state.files = state.files.filter((file) => isReading(file.status));
         state.phase = "idle";
       }
     },
@@ -67,6 +87,9 @@ const uploadsSlice = createSlice({
 });
 
 export const {
+  uploadBatchCancelled,
+  uploadBatchRead,
+  uploadBatchStarted,
   uploadDrainEnded,
   uploadFileChanged,
   uploadFileProgressed,

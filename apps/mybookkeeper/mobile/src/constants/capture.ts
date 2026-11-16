@@ -20,6 +20,23 @@ export const UPLOAD_COMPLETE_PERCENT = 100;
 /** Every byte is out, and the server has yet to answer. */
 export const UPLOAD_PROCESSING_LABEL = "Processing…";
 export const UPLOAD_REFUSED_REASON = "The server wouldn't take it.";
+/** How often a zip being read is checked on, the same as on the web. */
+export const BATCH_STATUS_POLL_MS = 3000;
+export const CANCEL_BATCH_LABEL = "Cancel";
+export const CANCELLING_BATCH_LABEL = "Cancelling…";
+export const CANCEL_BATCH_FAILED = "I couldn't stop that upload. Want to try again?";
+
+export function batchReadProgressLabel(completed: number, total: number): string {
+  return `${completed} of ${total} read`;
+}
+
+export function batchCancelledMessage(name: string): string {
+  return `Stopped. I won't read the rest of ${name}.`;
+}
+
+export function cancelBatchAccessibilityLabel(name: string): string {
+  return `Cancel reading ${name}`;
+}
 
 /** The other names some Android pickers give a CSV or a zip, with the extension each stands for. */
 export const DOCUMENT_MIME_TYPE_ALIASES: Readonly<Record<string, string>> = {
@@ -50,10 +67,14 @@ export function uploadFileStatusLabel(file: UploadFileProgress): string {
       if (file.percent === null) return "Sending…";
       if (file.percent >= UPLOAD_COMPLETE_PERCENT) return UPLOAD_PROCESSING_LABEL;
       return `Sending… ${file.percent}%`;
+    case "reading":
+      return "Reading…";
     case "done":
       return "Sent";
     case "failed":
       return "Couldn't send";
+    case "cancelled":
+      return "Cancelled";
   }
 }
 
