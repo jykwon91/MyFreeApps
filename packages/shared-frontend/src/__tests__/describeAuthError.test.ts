@@ -21,6 +21,28 @@ describe("describeAuthError", () => {
     );
   });
 
+  it("maps the shared Turnstile gate's refusals", () => {
+    expect(describeAuthError(axiosError("Captcha token required"))).toBe(
+      "Please complete the captcha check and try again.",
+    );
+    expect(describeAuthError(axiosError("captcha_expired_please_retry"))).toBe(
+      "The captcha check expired. Please complete it again and retry.",
+    );
+    expect(describeAuthError(axiosError("captcha_verification_failed"))).toBe(
+      "We couldn't verify the captcha check. Please complete it again and retry.",
+    );
+    expect(describeAuthError(axiosError("captcha_service_misconfigured"))).toBe(
+      "The captcha check is unavailable right now. Please try again later.",
+    );
+  });
+
+  it("reads Starlette's plain-text 500 body as the fallback", () => {
+    const err = Object.assign(new Error("Request failed with status code 500"), {
+      response: { status: 500, data: "Internal Server Error" },
+    });
+    expect(describeAuthError(err)).toBe("Something went wrong. Please try again.");
+  });
+
   it("maps a used or expired reset link", () => {
     expect(describeAuthError(axiosError("RESET_PASSWORD_BAD_TOKEN"))).toBe(
       "This reset link has expired or already been used. Request a new one.",
