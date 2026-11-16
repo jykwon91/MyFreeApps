@@ -2,15 +2,15 @@ import type { MonthSummary } from "@mybookkeeper/api-client/types/summary/MonthS
 import { GroupedBarChart, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { HOME_CHART_HEIGHT } from "../../constants/home";
-import { NO_FILTERS } from "../../constants/transactionFilters";
 import { monthName } from "../../lib/localDate";
-import { transactionsLink } from "../transactions/transactionFilters";
+import type { AnalysisScope } from "../../types/AnalysisScope";
 import HomeCard from "./HomeCard";
 import { chartMonths } from "./homeCharts";
 import { axisMoney, monthlyChartSummary, spokenMonth } from "./homeDisplay";
+import { monthLink } from "./homeLinks";
 
 /** Revenue against expenses for the last months of the period. A month opens the rows behind it. */
-export default function MonthlyChart({ byMonth }: { byMonth: readonly MonthSummary[] }) {
+export default function MonthlyChart({ byMonth, scope }: { byMonth: readonly MonthSummary[]; scope: AnalysisScope }) {
   const { colors } = useTheme();
   const months = chartMonths(byMonth);
   if (months.length < 2) return null;
@@ -25,7 +25,7 @@ export default function MonthlyChart({ byMonth }: { byMonth: readonly MonthSumma
           label: monthName(month.month, "short"),
           values: [month.revenue, month.expenses],
           accessibilityLabel: spokenMonth(month),
-          onPress: () => router.navigate(transactionsLink({ ...NO_FILTERS, month: month.month, approvedOnly: true })),
+          onPress: () => router.navigate(monthLink(month.month, scope)),
         }))}
         height={HOME_CHART_HEIGHT}
         series={[

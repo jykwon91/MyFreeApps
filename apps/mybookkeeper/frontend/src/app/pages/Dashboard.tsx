@@ -31,6 +31,7 @@ import LoadErrorAlert from "@/shared/components/ui/LoadErrorAlert";
 import { DASHBOARD_TOTALS_MESSAGES } from "@/shared/lib/totals-messages";
 import PropertyPnLGrid from "@/app/features/attribution/PropertyPnLGrid";
 import PnLDateRangeSelector from "@/app/features/attribution/PnLDateRangeSelector";
+import { activePropertyIds as activePropertyIdsFor } from "@mybookkeeper/api-client/utils/activePropertyIds";
 import { calendarYearRange, propertyPnlRange } from "@mybookkeeper/api-client/utils/propertyPnlRange";
 import UtilityPlanRenewalAlertCard from "@/app/features/utility/UtilityPlanRenewalAlertCard";
 import UtilityPlanComparisonCard from "@/app/features/utility/UtilityPlanComparisonCard";
@@ -100,8 +101,10 @@ export default function Dashboard() {
     isFiltered,
   } = useDashboardFilter(summary);
 
-  const allPropertiesSelected = selectedPropertyIds.length === 0 || selectedPropertyIds.length === properties.length;
-  const activePropertyIds = allPropertiesSelected ? undefined : selectedPropertyIds;
+  const activePropertyIds = useMemo(
+    () => activePropertyIdsFor(selectedPropertyIds, properties.length),
+    [selectedPropertyIds, properties.length],
+  );
 
   const headerMode = useDashboardHeaderMode({
     dateRange: manualDateRange,
