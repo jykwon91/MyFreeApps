@@ -9,7 +9,7 @@ import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, Loading
 import { useRef, useState } from "react";
 
 import { MARKET_RATE_MESSAGES as MESSAGES } from "../../constants/marketRates";
-import { sameFormValues } from "../../lib/sameFormValues";
+import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import { askOnce } from "../../lib/askOnce";
 import OptionalDateField from "../shell/OptionalDateField";
 import { useSaveMarketRate } from "./useSaveMarketRate";

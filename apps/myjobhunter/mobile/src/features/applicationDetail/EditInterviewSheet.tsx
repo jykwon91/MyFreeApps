@@ -33,7 +33,7 @@ export default function EditInterviewSheet({ applicationId, event, onClose }: Ed
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={() => (isLoading ? undefined : onClose())} title={MESSAGES.editTitle}>
+    <FormSheet failure={failure} hasUnsavedChanges={form.isDirty} isBusy={isLoading} isOpen onRequestClose={onClose} title={MESSAGES.editTitle}>
       <InterviewDetailsFields disabled={isLoading} errors={errors} onChange={change} values={values} />
       <FormField
         editable={!isLoading}
@@ -48,7 +48,6 @@ export default function EditInterviewSheet({ applicationId, event, onClose }: Ed
       <SheetButtons
         cancelLabel={MESSAGES.cancel}
         isSubmitting={isLoading}
-        onCancel={onClose}
         onSubmit={submit}
         submitLabel={MESSAGES.saveChanges}
         submittingLabel={MESSAGES.saving}

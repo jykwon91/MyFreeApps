@@ -1,8 +1,7 @@
 import { useUpdateGmailLabelMutation } from "@mybookkeeper/api-client/store/integrationsApi";
-import { FormField, FormSheet, LoadingButton, useToast } from "@platform/mobile";
+import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { INTEGRATIONS_MESSAGES as MESSAGES } from "../../constants/integrations";
-import { confirmDiscard } from "../../lib/confirmDiscard";
 import { useWrite } from "../../lib/useWrite";
 import { actionFailureCopy } from "../../lib/writeFailureCopy";
 
@@ -23,12 +22,6 @@ export default function GmailLabelSheet({ saved, onClose }: GmailLabelSheetProps
   const label = text.trim();
   const isDirty = label !== saved;
 
-  function close(): void {
-    if (write.isBusy) return;
-    if (isDirty) confirmDiscard(onClose);
-    else onClose();
-  }
-
   async function save(): Promise<void> {
     const result = await write.run(() => updateLabel({ label }).unwrap());
     if (result !== "done") return;
@@ -37,7 +30,7 @@ export default function GmailLabelSheet({ saved, onClose }: GmailLabelSheetProps
   }
 
   return (
-    <FormSheet failure={write.failure ? COPY[write.failure] : null} isOpen onRequestClose={close} title={MESSAGES.labelSheetTitle}>
+    <FormSheet failure={write.failure ? COPY[write.failure] : null} hasUnsavedChanges={isDirty} isBusy={write.isBusy} isOpen onRequestClose={onClose} title={MESSAGES.labelSheetTitle}>
       <FormField
         autoCapitalize="none"
         editable={!write.isBusy}
@@ -50,9 +43,9 @@ export default function GmailLabelSheet({ saved, onClose }: GmailLabelSheetProps
       <LoadingButton disabled={!isDirty} isLoading={write.isBusy} loadingText={MESSAGES.labelSaving} onPress={() => void save()}>
         {MESSAGES.labelSave}
       </LoadingButton>
-      <LoadingButton disabled={write.isBusy} onPress={close} variant="ghost">
+      <FormSheetCancelButton>
         {MESSAGES.labelCancel}
-      </LoadingButton>
+      </FormSheetCancelButton>
     </FormSheet>
   );
 }

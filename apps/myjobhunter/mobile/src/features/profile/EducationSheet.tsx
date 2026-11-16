@@ -6,6 +6,7 @@ import {
 import { useCreateEducationMutation, useUpdateEducationMutation } from "@myjobhunter/api-client/store/educationApi";
 import type { EducationFormValues } from "@myjobhunter/api-client/types/education/education-form-values";
 import { characterCounter } from "@platform/core/utils/characterCounter";
+import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import { educationFormProblems } from "@myjobhunter/api-client/utils/educationFormProblems";
 import { educationFormValues } from "@myjobhunter/api-client/utils/educationFormValues";
 import { educationRequest } from "@myjobhunter/api-client/utils/educationRequest";
@@ -23,7 +24,8 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
   const [createEducation, created] = useCreateEducationMutation();
   const [updateEducation, updated] = useUpdateEducationMutation();
   const isSaving = created.isLoading || updated.isLoading;
-  const [values, setValues] = useState<EducationFormValues>(() => educationFormValues(existing));
+  const [initial] = useState(() => educationFormValues(existing));
+  const [values, setValues] = useState<EducationFormValues>(initial);
   const [hasTried, setHasTried] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const problems = hasTried ? educationFormProblems(values) : {};
@@ -48,7 +50,7 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={() => (isSaving ? undefined : onClose())} title={existing ? MESSAGES.editTitle : MESSAGES.addTitle}>
+    <FormSheet failure={failure} hasUnsavedChanges={!sameFormValues(values, initial)} isBusy={isSaving} isOpen onRequestClose={onClose} title={existing ? MESSAGES.editTitle : MESSAGES.addTitle}>
       <FormField
         autoCapitalize="words"
         counter={characterCounter(values.school.trim(), EDUCATION_SCHOOL_MAX_LENGTH)}
@@ -109,7 +111,6 @@ export default function EducationSheet({ existing, onClose }: EducationSheetProp
       <SheetButtons
         cancelLabel={PROFILE_MESSAGES.cancel}
         isSubmitting={isSaving}
-        onCancel={onClose}
         onSubmit={save}
         submitLabel={existing ? PROFILE_MESSAGES.saveChanges : MESSAGES.create}
         submittingLabel={existing ? PROFILE_MESSAGES.saving : MESSAGES.creating}

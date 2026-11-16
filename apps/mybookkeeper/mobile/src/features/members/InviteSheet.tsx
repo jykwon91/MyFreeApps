@@ -1,8 +1,8 @@
 import { INVITE_ROLE_OPTIONS } from "@mybookkeeper/api-client/constants/orgRoles";
 import type { AssignableRole } from "@mybookkeeper/api-client/types/organization/AssignableRole";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, SegmentedControl, useTheme } from "@platform/mobile";
+import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, SegmentedControl, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
-import { Modal, Text, View } from "react-native";
+import { Text } from "react-native";
 import { MEMBERS_MESSAGES as MESSAGES } from "../../constants/members";
 import { isLikelyEmail } from "../../utils/isLikelyEmail";
 
@@ -16,7 +16,7 @@ interface InviteSheetProps {
 }
 
 export default function InviteSheet({ orgName, initialEmail, initialRole, onClose, onSend }: InviteSheetProps) {
-  const { colors, spacing, fontSize } = useTheme();
+  const { colors, fontSize } = useTheme();
   const [email, setEmail] = useState(initialEmail);
   const [role, setRole] = useState(initialRole);
   const [emailError, setEmailError] = useState<string | undefined>();
@@ -24,9 +24,7 @@ export default function InviteSheet({ orgName, initialEmail, initialRole, onClos
   const [isSending, setIsSending] = useState(false);
   const isSubmitting = useRef(false);
 
-  function close(): void {
-    if (!isSending) onClose();
-  }
+  const isDirty = email.trim() !== initialEmail.trim() || role !== initialRole;
 
   async function submit(): Promise<void> {
     if (isSubmitting.current) return;
@@ -50,35 +48,25 @@ export default function InviteSheet({ orgName, initialEmail, initialRole, onClos
   }
 
   return (
-    <Modal animationType="slide" onRequestClose={close} presentationStyle="pageSheet" visible>
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.md, padding: spacing.lg }} keyboardShouldPersistTaps="handled">
-          <Text accessibilityRole="header" style={{ fontSize: fontSize.lg, fontWeight: "600", color: colors.foreground }}>
-            {MESSAGES.inviteTitle}
-          </Text>
-          {failure ? <Banner message={failure} /> : null}
-          <FormField
-            autoCapitalize="none"
-            autoComplete="email"
-            autoCorrect={false}
-            editable={!isSending}
-            error={emailError}
-            hint={MESSAGES.emailHint(orgName)}
-            keyboardType="email-address"
-            label={MESSAGES.email}
-            onChangeText={setEmail}
-            value={email}
-          />
-          <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>{MESSAGES.theirRole}</Text>
-          <SegmentedControl accessibilityLabel={MESSAGES.theirRole} onChange={setRole} segments={INVITE_ROLE_OPTIONS} value={role} />
-          <LoadingButton isLoading={isSending} loadingText={MESSAGES.sending} onPress={() => void submit()}>
-            {MESSAGES.sendInvite}
-          </LoadingButton>
-          <LoadingButton disabled={isSending} onPress={close} variant="ghost">
-            {MESSAGES.cancel}
-          </LoadingButton>
-        </KeyboardAwareScroll>
-      </View>
-    </Modal>
+    <FormSheet failure={failure} hasUnsavedChanges={isDirty} isBusy={isSending} isOpen onRequestClose={onClose} title={MESSAGES.inviteTitle}>
+      <FormField
+        autoCapitalize="none"
+        autoComplete="email"
+        autoCorrect={false}
+        editable={!isSending}
+        error={emailError}
+        hint={MESSAGES.emailHint(orgName)}
+        keyboardType="email-address"
+        label={MESSAGES.email}
+        onChangeText={setEmail}
+        value={email}
+      />
+      <Text style={{ fontSize: fontSize.sm, fontWeight: "600", color: colors.foreground }}>{MESSAGES.theirRole}</Text>
+      <SegmentedControl accessibilityLabel={MESSAGES.theirRole} onChange={setRole} segments={INVITE_ROLE_OPTIONS} value={role} />
+      <LoadingButton isLoading={isSending} loadingText={MESSAGES.sending} onPress={() => void submit()}>
+        {MESSAGES.sendInvite}
+      </LoadingButton>
+      <FormSheetCancelButton>{MESSAGES.cancel}</FormSheetCancelButton>
+    </FormSheet>
   );
 }

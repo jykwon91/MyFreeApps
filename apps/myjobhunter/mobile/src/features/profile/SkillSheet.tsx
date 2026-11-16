@@ -41,7 +41,7 @@ export default function SkillSheet({ existingNames, onClose }: SkillSheetProps) 
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={() => (isLoading ? undefined : onClose())} title={MESSAGES.addTitle}>
+    <FormSheet failure={failure} hasUnsavedChanges={name.trim() !== "" || years !== ""} isBusy={isLoading} isOpen onRequestClose={onClose} title={MESSAGES.addTitle}>
       <FormField
         autoCorrect={false}
         counter={characterCounter(name.trim(), SKILL_NAME_MAX_LENGTH)}
@@ -57,7 +57,6 @@ export default function SkillSheet({ existingNames, onClose }: SkillSheetProps) 
       <SheetButtons
         cancelLabel={PROFILE_MESSAGES.cancel}
         isSubmitting={isLoading}
-        onCancel={onClose}
         onSubmit={save}
         submitLabel={MESSAGES.create}
         submittingLabel={MESSAGES.creating}

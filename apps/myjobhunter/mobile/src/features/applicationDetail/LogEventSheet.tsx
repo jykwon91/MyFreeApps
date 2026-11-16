@@ -36,7 +36,7 @@ export default function LogEventSheet({ applicationId, onClose }: LogEventSheetP
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={() => (isLoading ? undefined : onClose())} title={MESSAGES.logTitle}>
+    <FormSheet failure={failure} hasUnsavedChanges={form.isDirty} isBusy={isLoading} isOpen onRequestClose={onClose} title={MESSAGES.logTitle}>
       <ChoiceGroup
         disabled={isLoading}
         label={MESSAGES.eventLabel}
@@ -60,7 +60,6 @@ export default function LogEventSheet({ applicationId, onClose }: LogEventSheetP
       <SheetButtons
         cancelLabel={MESSAGES.cancel}
         isSubmitting={isLoading}
-        onCancel={onClose}
         onSubmit={submit}
         submitLabel={MESSAGES.logEvent}
         submittingLabel={MESSAGES.logging}

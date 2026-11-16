@@ -1,6 +1,6 @@
 import { ORGANIZATION_NAME_MAX_LENGTH, ORGANIZATION_NAME_PROBLEM_MESSAGES } from "@mybookkeeper/api-client/constants/organizationName";
 import { organizationNameProblem } from "@mybookkeeper/api-client/utils/organizationNameProblem";
-import { FormField, FormSheet, LoadingButton } from "@platform/mobile";
+import { FormField, FormSheet, FormSheetCancelButton, LoadingButton } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { WORKSPACE_MESSAGES as MESSAGES } from "../../constants/workspace";
 import type { CreateWorkspaceSheetProps } from "../../types/CreateWorkspaceSheetProps";
@@ -12,10 +12,6 @@ export default function CreateWorkspaceSheet({ onClose, onCreate }: CreateWorksp
   const [failure, setFailure] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const isSubmitting = useRef(false);
-
-  function close(): void {
-    if (!isCreating) onClose();
-  }
 
   async function submit(): Promise<void> {
     if (isSubmitting.current) return;
@@ -39,7 +35,7 @@ export default function CreateWorkspaceSheet({ onClose, onCreate }: CreateWorksp
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={close} title={MESSAGES.createTitle}>
+    <FormSheet failure={failure} hasUnsavedChanges={name.trim() !== ""} isBusy={isCreating} isOpen onRequestClose={onClose} title={MESSAGES.createTitle}>
       <FormField
         autoCapitalize="words"
         autoFocus
@@ -58,9 +54,9 @@ export default function CreateWorkspaceSheet({ onClose, onCreate }: CreateWorksp
       <LoadingButton isLoading={isCreating} loadingText={MESSAGES.creating} onPress={() => void submit()}>
         {MESSAGES.create}
       </LoadingButton>
-      <LoadingButton disabled={isCreating} onPress={close} variant="ghost">
+      <FormSheetCancelButton>
         {MESSAGES.cancel}
-      </LoadingButton>
+      </FormSheetCancelButton>
     </FormSheet>
   );
 }

@@ -2,6 +2,7 @@ import { useCreateWorkHistoryMutation, useUpdateWorkHistoryMutation } from "@myj
 import { WORK_HISTORY_COMPANY_MAX_LENGTH, WORK_HISTORY_TITLE_MAX_LENGTH } from "@myjobhunter/api-client/constants/profileFieldLimits";
 import type { WorkHistoryFormValues } from "@myjobhunter/api-client/types/work-history/work-history-form-values";
 import { characterCounter } from "@platform/core/utils/characterCounter";
+import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import { workHistoryFormProblems } from "@myjobhunter/api-client/utils/workHistoryFormProblems";
 import { workHistoryFormValues } from "@myjobhunter/api-client/utils/workHistoryFormValues";
 import { workHistoryRequest } from "@myjobhunter/api-client/utils/workHistoryRequest";
@@ -20,7 +21,8 @@ export default function WorkHistorySheet({ existing, onClose }: WorkHistorySheet
   const [createWorkHistory, created] = useCreateWorkHistoryMutation();
   const [updateWorkHistory, updated] = useUpdateWorkHistoryMutation();
   const isSaving = created.isLoading || updated.isLoading;
-  const [values, setValues] = useState<WorkHistoryFormValues>(() => workHistoryFormValues(existing));
+  const [initial] = useState(() => workHistoryFormValues(existing));
+  const [values, setValues] = useState<WorkHistoryFormValues>(initial);
   const [hasTried, setHasTried] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const problems = hasTried ? workHistoryFormProblems(values) : {};
@@ -45,7 +47,7 @@ export default function WorkHistorySheet({ existing, onClose }: WorkHistorySheet
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={() => (isSaving ? undefined : onClose())} title={existing ? MESSAGES.editTitle : MESSAGES.addTitle}>
+    <FormSheet failure={failure} hasUnsavedChanges={!sameFormValues(values, initial)} isBusy={isSaving} isOpen onRequestClose={onClose} title={existing ? MESSAGES.editTitle : MESSAGES.addTitle}>
       <FormField
         autoCapitalize="words"
         counter={characterCounter(values.company_name.trim(), WORK_HISTORY_COMPANY_MAX_LENGTH)}
@@ -99,7 +101,6 @@ export default function WorkHistorySheet({ existing, onClose }: WorkHistorySheet
       <SheetButtons
         cancelLabel={PROFILE_MESSAGES.cancel}
         isSubmitting={isSaving}
-        onCancel={onClose}
         onSubmit={save}
         submitLabel={existing ? PROFILE_MESSAGES.saveChanges : MESSAGES.create}
         submittingLabel={existing ? PROFILE_MESSAGES.saving : MESSAGES.creating}

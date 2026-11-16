@@ -1,13 +1,12 @@
 import type { WelcomeManualItemWords } from "../../types/WelcomeManualItemWords";
 import type { WelcomeManualReorderItem } from "../../types/WelcomeManualReorderItem";
 import { moveItem, sameOrder } from "@mybookkeeper/api-client/utils/welcomeManualReorder";
-import { FormSheet, LoadingButton, MIN_TOUCH_TARGET, useTheme, useToast } from "@platform/mobile";
+import { FormSheet, FormSheetCancelButton, LoadingButton, MIN_TOUCH_TARGET, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Image, Text, View } from "react-native";
 import { HELD_THUMBNAIL_SIZE } from "../../constants/uploads";
 import { WELCOME_MANUAL_REORDER_MESSAGES as MESSAGES, moveDownLabel, moveUpLabel } from "../../constants/welcomeManualForms";
 import { useWrite } from "../../lib/useWrite";
-import { confirmDiscard } from "../uploads/confirmDiscard";
 import { reorderFailure } from "./welcomeManualFailure";
 
 interface WelcomeManualReorderSheetProps {
@@ -33,12 +32,6 @@ export default function WelcomeManualReorderSheet({ title, words, items, reorder
   const isDirty = !sameOrder(order, original);
   const isStale = write.failure === "conflict";
 
-  function close(): void {
-    if (write.isBusy) return;
-    if (isDirty && !isStale) confirmDiscard(onClose);
-    else onClose();
-  }
-
   async function save(): Promise<void> {
     const result = await write.run(() => reorder(order));
     if (result === "done") {
@@ -52,7 +45,7 @@ export default function WelcomeManualReorderSheet({ title, words, items, reorder
   }
 
   return (
-    <FormSheet failure={write.error && !isStale ? reorderFailure(write.error, words) : null} isOpen onRequestClose={close} title={title}>
+    <FormSheet failure={write.error && !isStale ? reorderFailure(write.error, words) : null} hasUnsavedChanges={isDirty && !isStale} isBusy={write.isBusy} isOpen onRequestClose={onClose} title={title}>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.hint}</Text>
       {order.map((id, index) => {
         const row = rows.get(id);
@@ -82,9 +75,9 @@ export default function WelcomeManualReorderSheet({ title, words, items, reorder
       <LoadingButton disabled={!isDirty} isLoading={write.isBusy} loadingText={MESSAGES.saving} onPress={() => void save()}>
         {MESSAGES.save}
       </LoadingButton>
-      <LoadingButton disabled={write.isBusy} onPress={close} variant="ghost">
+      <FormSheetCancelButton>
         {MESSAGES.cancel}
-      </LoadingButton>
+      </FormSheetCancelButton>
     </FormSheet>
   );
 }

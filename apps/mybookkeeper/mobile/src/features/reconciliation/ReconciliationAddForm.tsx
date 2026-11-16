@@ -4,10 +4,10 @@ import {
 } from "@mybookkeeper/api-client/constants/reconciliationSourceTypes";
 import { useUpload1099Mutation } from "@mybookkeeper/api-client/store/reconciliationApi";
 import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
-import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, useConfirmLeave, useTheme, useToast, goBackOr } from "@platform/mobile";
+import { Banner, confirmDiscard, deviceDecimalSeparator, FormField, goBackOr, KeyboardAwareScroll, LoadingButton, OptionSheet, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Text } from "react-native";
+import { Text } from "react-native";
 import { DOCUMENTS_LINK, ISSUER_MAX_LENGTH, RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import PickerField from "../transactions/PickerField";
 import { reportedAmountError } from "@mybookkeeper/api-client/utils/reportedAmountError";
@@ -33,10 +33,7 @@ export default function ReconciliationAddForm({ year }: { year: number }) {
 
   useConfirmLeave(isDirty && !isLeaving, (leave) => {
     if (isSending.current) return;
-    Alert.alert(MESSAGES.discardTitle, MESSAGES.discardBody, [
-      { text: MESSAGES.keepEditing, style: "cancel" },
-      { text: MESSAGES.discard, style: "destructive", onPress: leave },
-    ]);
+    confirmDiscard(leave, MESSAGES);
   });
 
   useEffect(() => {

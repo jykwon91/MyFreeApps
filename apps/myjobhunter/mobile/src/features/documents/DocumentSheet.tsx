@@ -26,6 +26,7 @@ export default function DocumentSheet({ applicationId, document, onClose }: Docu
   const [hasTried, setHasTried] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const isBusy = isCreating || isUpdating;
+  const hasUnsavedChanges = title !== (document?.title ?? "") || kind !== (document?.kind ?? "cover_letter") || body !== (document?.body ?? "");
   const hasFile = document?.has_file ?? false;
   const titleTooLong = tooLongProblem(title, DOCUMENT_TITLE_MAX_LENGTH);
   const titleError = hasTried && title.trim() === "" ? MESSAGES.titleRequired : titleTooLong;
@@ -53,7 +54,7 @@ export default function DocumentSheet({ applicationId, document, onClose }: Docu
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={() => (isBusy ? undefined : onClose())} title={document ? MESSAGES.editTitle : MESSAGES.addTitle}>
+    <FormSheet failure={failure} hasUnsavedChanges={hasUnsavedChanges} isBusy={isBusy} isOpen onRequestClose={onClose} title={document ? MESSAGES.editTitle : MESSAGES.addTitle}>
       <FormField counter={characterCounter(title, DOCUMENT_TITLE_MAX_LENGTH)} editable={!isBusy} error={titleError} label={MESSAGES.titleLabel} onChangeText={setTitle} placeholder={MESSAGES.titlePlaceholder} required value={title} />
       <ChoiceGroup disabled={isBusy} label={MESSAGES.kindLabel} onChange={setKind} options={DOCUMENT_KIND_OPTIONS} required value={kind} />
       {hasFile ? (
@@ -73,7 +74,6 @@ export default function DocumentSheet({ applicationId, document, onClose }: Docu
       <SheetButtons
         cancelLabel={MESSAGES.cancel}
         isSubmitting={isBusy}
-        onCancel={onClose}
         onSubmit={save}
         submitLabel={document ? MESSAGES.saveChanges : MESSAGES.create}
         submittingLabel={document ? MESSAGES.saving : MESSAGES.creating}

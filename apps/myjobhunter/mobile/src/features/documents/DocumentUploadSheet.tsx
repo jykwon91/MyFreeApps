@@ -72,7 +72,7 @@ export default function DocumentUploadSheet({ applicationId, onClose }: Document
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={() => (isBusy ? undefined : onClose())} title={MESSAGES.uploadTitle}>
+    <FormSheet failure={failure} hasUnsavedChanges={file !== null || title.trim() !== "" || kind !== "cover_letter"} isBusy={isBusy} isOpen onRequestClose={onClose} title={MESSAGES.uploadTitle}>
       <View style={{ gap: spacing.xs }}>
         <Text style={{ fontSize: fontSize.xs, fontWeight: "500", color: colors.foreground }}>
           {MESSAGES.fileLabel}
@@ -96,7 +96,6 @@ export default function DocumentUploadSheet({ applicationId, onClose }: Document
         cancelLabel={MESSAGES.cancel}
         disabled={isPicking}
         isSubmitting={isUploading}
-        onCancel={onClose}
         onSubmit={upload}
         submitLabel={MESSAGES.uploadSubmit}
         submittingLabel={MESSAGES.uploading}

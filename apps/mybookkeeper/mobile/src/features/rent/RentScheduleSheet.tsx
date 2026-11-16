@@ -10,7 +10,7 @@ import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat
 import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
 import { graceDaysFromText, graceDaysToText, isValidGraceDays } from "@mybookkeeper/api-client/utils/rentScheduleForm";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { deviceDecimalSeparator, FormField, FormSheet, LoadingButton, SegmentedControl, useTheme, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FormField, FormSheet, FormSheetCancelButton, LoadingButton, SegmentedControl, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text } from "react-native";
 import { RENT_MANAGE_MESSAGES, scheduleFixedTerms } from "../../constants/rentManage";
@@ -18,7 +18,6 @@ import { dateFromIso } from "../../lib/localDate";
 import { askOnce } from "../../lib/askOnce";
 import OptionalDateField from "../shell/OptionalDateField";
 import { useFormSubmit } from "../shell/useFormSubmit";
-import { confirmDiscard } from "../uploads/confirmDiscard";
 import { rentAmountProblem } from "./rentAmountProblem";
 import { rentWriteFailure } from "./rentWriteFailure";
 
@@ -64,12 +63,6 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
     : amount !== "" || startDate !== null || endDate !== null || graceDays !== "" || notes !== "" || cadence !== "monthly";
   const busy = isBusy || isRemoving;
 
-  function close(): void {
-    if (busy) return;
-    if (hasChanges) confirmDiscard(onClose);
-    else onClose();
-  }
-
   async function save(): Promise<void> {
     if (!canSave || busy) return;
     const landed = await submit(
@@ -99,7 +92,7 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={close} title={existing ? RENT_MANAGE_MESSAGES.scheduleTitleEdit : RENT_MANAGE_MESSAGES.scheduleTitleNew}>
+    <FormSheet failure={failure} hasUnsavedChanges={hasChanges} isBusy={busy} isOpen onRequestClose={onClose} title={existing ? RENT_MANAGE_MESSAGES.scheduleTitleEdit : RENT_MANAGE_MESSAGES.scheduleTitleNew}>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{RENT_MANAGE_MESSAGES.scheduleIntro}</Text>
 
       {existing ? (
@@ -173,9 +166,9 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
           {RENT_MANAGE_MESSAGES.removeSchedule}
         </LoadingButton>
       ) : null}
-      <LoadingButton disabled={busy} onPress={close} variant="ghost">
+      <FormSheetCancelButton>
         {RENT_MANAGE_MESSAGES.cancel}
-      </LoadingButton>
+      </FormSheetCancelButton>
     </FormSheet>
   );
 }

@@ -18,13 +18,11 @@ jest.mock("expo-router", () => ({
 
 const FEATURES = join(__dirname, "..", "src", "features");
 
-// Each has a scroll view and nothing pinned below it: 7 are page-sheet modals, the rest sit under a stack header.
-// MoreScreen's search scrolls the same way.
+// Each has a scroll view and nothing pinned below it: 3 are page-sheet modals, the rest sit under a stack header.
+// MoreScreen's search scrolls the same way. Sheets built on the shared FormSheet get its keyboard-aware scroll view.
 const SCROLL_ONLY = [
-  "applicants/ApplicantStageSheet",
   "applicants/ScreeningUploadSheet",
   "calendar/CalendarEventSheet",
-  "insurance/MarketPremiumSheet",
   "insurance/PolicyForm",
   "leaseImport/LeaseImportBody",
   "leaseTemplates/LeaseTemplateFormScreen",
@@ -33,13 +31,11 @@ const SCROLL_ONLY = [
   "listings/ChannelListingFormScreen",
   "listings/ListingFormScreen",
   "listings/ListingLinkFormScreen",
-  "members/InviteSheet",
   "more/MoreScreen",
   "mortgages/MortgageForm",
   "properties/PropertyFormScreen",
   "reconciliation/ReconciliationAddForm",
   "taxReturns/TaxFieldOverrideForm",
-  "tenants/EndTenancySheet",
   "transactions/NewTransactionForm",
   "transactions/TransactionEditForm",
   "utilityPlans/MarketRateForm",

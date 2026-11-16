@@ -7,6 +7,7 @@ import { contactCreateRequest } from "@myjobhunter/api-client/utils/contactCreat
 import { contactFormErrors } from "@myjobhunter/api-client/utils/contactFormErrors";
 import { contactServerErrors } from "@myjobhunter/api-client/utils/contactServerErrors";
 import { hasContactFormErrors } from "@myjobhunter/api-client/utils/hasContactFormErrors";
+import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import { FormField, FormSheet, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
@@ -58,7 +59,7 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={() => (isLoading ? undefined : onClose())} title={MESSAGES.addTitle}>
+    <FormSheet failure={failure} hasUnsavedChanges={!sameFormValues(values, EMPTY_CONTACT_FORM_VALUES)} isBusy={isLoading} isOpen onRequestClose={onClose} title={MESSAGES.addTitle}>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.addIntro}</Text>
       <FormField
         autoCapitalize="words"
@@ -109,7 +110,6 @@ export default function ContactSheet({ applicationId, onClose }: ContactSheetPro
       <SheetButtons
         cancelLabel={MESSAGES.cancel}
         isSubmitting={isLoading}
-        onCancel={onClose}
         onSubmit={save}
         submitLabel={MESSAGES.create}
         submittingLabel={MESSAGES.creating}

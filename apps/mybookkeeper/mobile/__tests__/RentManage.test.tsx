@@ -1,6 +1,6 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { DISCARD_MESSAGES, FORM_SHEET_TEST_ID, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import { Provider } from "react-redux";
@@ -412,6 +412,19 @@ describe("adding a charge", () => {
 
     await answerAlert(alert, "Discard");
     expect(screen.queryByRole("header", { name: M.chargeTitle })).toBeNull();
+  });
+
+  it("asks the same on Android Back, as a change rather than an upload, and stays on Keep editing", async () => {
+    await openCharge();
+    const alert = jest.spyOn(Alert, "alert");
+    await typeInto(M.chargeAmount, "50");
+
+    await fireEvent(screen.getByTestId(FORM_SHEET_TEST_ID), "requestClose");
+    expect(alert).toHaveBeenCalledWith(DISCARD_MESSAGES.discardTitle, DISCARD_MESSAGES.discardBody, expect.any(Array));
+
+    await answerAlert(alert, DISCARD_MESSAGES.keepEditing);
+    expect(screen.getByRole("header", { name: M.chargeTitle })).toBeTruthy();
+    expect(field(M.chargeAmount).props.value).toBe("50");
   });
 });
 

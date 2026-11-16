@@ -1,7 +1,8 @@
 import { baseApi } from "@platform/core/store/baseApi";
-import { OPTION_SHEET_ROW_HEIGHT, SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
+import { DISCARD_MESSAGES, FORM_SHEET_TEST_ID, OPTION_SHEET_ROW_HEIGHT, SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
+import { alertButton } from "@platform/mobile/test-support/alertButton";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react-native";
-import { StyleSheet } from "react-native";
+import { Alert, StyleSheet } from "react-native";
 import { PROFILE_MESSAGES as MESSAGES } from "../src/constants/profile";
 import { EDUCATION_MESSAGES } from "../src/constants/profileEducation";
 import { SCREENING_MESSAGES } from "../src/constants/profileScreening";
@@ -37,6 +38,7 @@ const FILLED = profileRecord({
   remote_preference: "hybrid",
 });
 
+const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
 const patches = (sent: SentRequest[]) => sent.filter(({ route }) => route === "PATCH /profile").map(({ body }) => body);
 
 // The shared store's queries hold RTK Query's timer for dropping unused data (60s), which would
@@ -220,12 +222,38 @@ describe("editing About you", () => {
     expect(screen.queryByText(MESSAGES.aboutSaved)).toBeNull();
   });
 
-  it("closes without saving on Cancel", async () => {
+  it("closes on Cancel straight away when nothing was changed", async () => {
+    serve(profileRoutes({ profile: FILLED }));
+    await renderProfile();
+    await openSheet();
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.cancel }));
+
+    expect(alert).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText(MESSAGES.summaryLabel)).toBeNull();
+  });
+
+  it("asks before Back throws away what was typed, and stays open on Keep editing", async () => {
+    serve(profileRoutes({ profile: FILLED }));
+    await renderProfile();
+    await openSheet();
+    await fireEvent.changeText(screen.getByLabelText(MESSAGES.summaryLabel), "Not this");
+    await fireEvent(screen.getByTestId(FORM_SHEET_TEST_ID), "requestClose");
+
+    expect(alert).toHaveBeenCalledWith(DISCARD_MESSAGES.discardTitle, DISCARD_MESSAGES.discardBody, expect.any(Array));
+    expect(alertButton(DISCARD_MESSAGES.keepEditing).onPress).toBeUndefined();
+    expect(screen.getByLabelText(MESSAGES.summaryLabel).props.value).toBe("Not this");
+  });
+
+  it("asks before Cancel throws away what was typed, and closes without saving on Discard", async () => {
     const sent = serve(profileRoutes({ profile: FILLED }));
     await renderProfile();
     await openSheet();
     await fireEvent.changeText(screen.getByLabelText(MESSAGES.summaryLabel), "Not this");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.cancel }));
+
+    expect(alert).toHaveBeenCalledWith(DISCARD_MESSAGES.discardTitle, DISCARD_MESSAGES.discardBody, expect.any(Array));
+    expect(screen.getByLabelText(MESSAGES.summaryLabel).props.value).toBe("Not this");
+    await act(async () => alertButton(DISCARD_MESSAGES.discard).onPress?.());
 
     expect(screen.queryByLabelText(MESSAGES.summaryLabel)).toBeNull();
     expect(patches(sent)).toEqual([]);

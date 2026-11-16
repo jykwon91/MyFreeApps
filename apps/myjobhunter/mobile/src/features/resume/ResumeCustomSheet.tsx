@@ -1,4 +1,4 @@
-import { FormField, FormSheet, LoadingButton, useTheme } from "@platform/mobile";
+import { FormField, FormSheet, FormSheetCancelButton, LoadingButton, useTheme } from "@platform/mobile";
 import { View } from "react-native";
 import { RESUME_MESSAGES as MESSAGES } from "../../constants/resume";
 import type { ResumeCustomSheetProps } from "../../types/ResumeCustomSheetProps";
@@ -7,15 +7,13 @@ import type { ResumeCustomSheetProps } from "../../types/ResumeCustomSheetProps"
 export default function ResumeCustomSheet({ isOpen, value, onChange, onClose, onSubmit, isSubmitting, failure }: ResumeCustomSheetProps) {
   const { spacing } = useTheme();
   return (
-    <FormSheet failure={failure} isOpen={isOpen} onRequestClose={() => (isSubmitting ? undefined : onClose())} title={MESSAGES.customTitle}>
+    <FormSheet failure={failure} isBusy={isSubmitting} isOpen={isOpen} onRequestClose={onClose} title={MESSAGES.customTitle}>
       <FormField autoFocus editable={!isSubmitting} label={MESSAGES.customLabel} multiline onChangeText={onChange} placeholder={MESSAGES.customPlaceholder} value={value} />
       <View style={{ gap: spacing.sm, paddingTop: spacing.sm }}>
         <LoadingButton disabled={!value.trim()} isLoading={isSubmitting} loadingText={MESSAGES.accepting} onPress={onSubmit}>
           {MESSAGES.useMine}
         </LoadingButton>
-        <LoadingButton disabled={isSubmitting} onPress={onClose} variant="ghost">
-          {MESSAGES.cancel}
-        </LoadingButton>
+        <FormSheetCancelButton>{MESSAGES.cancel}</FormSheetCancelButton>
       </View>
     </FormSheet>
   );

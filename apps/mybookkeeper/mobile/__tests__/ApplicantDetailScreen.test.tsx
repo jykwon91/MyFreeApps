@@ -1,13 +1,15 @@
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { DISCARD_MESSAGES, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+import { Alert } from "react-native";
 import { Provider } from "react-redux";
 import ApplicantDetailScreen from "../src/features/applicants/ApplicantDetailScreen";
 import { workspaceChosen } from "../src/features/workspace/workspaceSlice";
 import { session } from "../src/lib/session";
 import { store } from "../src/lib/store";
 import { anApplicant, startApplicantServer } from "../test-support/applicantsServer";
+import { pressAlertButton } from "../test-support/pressAlertButton";
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -167,12 +169,16 @@ describe("ApplicantDetailScreen", () => {
       expect(JSON.parse(String(server.requests.find((request) => request.method === "patch")?.data)).note).toBeNull();
     });
 
-    it("sends nothing when cancelled, and forgets the note", async () => {
+    it("asks before Cancel throws the note away, then sends nothing and forgets it", async () => {
+      const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
       const server = startApplicantServer([anApplicant()]);
       await renderScreen();
       await chooseStage("Approved");
       await fireEvent.changeText(screen.getByLabelText("Note (optional)"), "Not sure");
       await fireEvent.press(screen.getByRole("button", { name: "Cancel" }));
+      expect(alert).toHaveBeenCalledWith(DISCARD_MESSAGES.discardTitle, DISCARD_MESSAGES.discardBody, expect.any(Array));
+      expect(screen.getByLabelText("Note (optional)").props.value).toBe("Not sure");
+      await pressAlertButton(alert, DISCARD_MESSAGES.discard);
       expect(server.requests.some((request) => request.method === "patch")).toBe(false);
       await chooseStage("Approved");
       expect(screen.getByLabelText("Note (optional)").props.value).toBe("");

@@ -21,6 +21,7 @@ export function useLogCookForm(recipeId: string, versionId: string, onSaved: () 
   const [failure, setFailure] = useState<string | null>(null);
 
   const notesProblem = cookNotesProblem(values.notes);
+  const isDirty = values.rating !== EMPTY_COOK.rating || values.notes.trim() !== EMPTY_COOK.notes;
 
   function setRating(rating: number): void {
     setValues((current) => ({ ...current, rating }));
@@ -42,5 +43,5 @@ export function useLogCookForm(recipeId: string, versionId: string, onSaved: () 
     }
   }
 
-  return { values, notesProblem, failure, isSaving, setRating, setNotes, save };
+  return { values, notesProblem, failure, isSaving, isDirty, setRating, setNotes, save };
 }

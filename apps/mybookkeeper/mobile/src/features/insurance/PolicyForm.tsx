@@ -9,7 +9,7 @@ import { Banner, deviceDecimalSeparator, KeyboardAwareScroll, LoadingButton, use
 import { useEffect, useState } from "react";
 
 import { POLICY_FORM_MESSAGES, POLICY_PHOTO_NAME, POLICY_PROPERTY_MESSAGES, POLICY_READER_MESSAGES } from "../../constants/insuranceForm";
-import { sameFormValues } from "../../lib/sameFormValues";
+import { sameFormValues } from "@platform/core/utils/sameFormValues";
 import type { PolicyFormErrors } from "../../types/PolicyFormErrors";
 import { useFormSubmit } from "../shell/useFormSubmit";
 import DocumentDraftNotices from "../documentReader/DocumentDraftNotices";

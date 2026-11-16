@@ -1,12 +1,12 @@
 import { useUploadScreeningResultMutation } from "@mybookkeeper/api-client/store/screeningApi";
 import { ADVERSE_OUTCOMES, SCREENING_UPLOAD_OUTCOMES } from "@mybookkeeper/api-client/constants/screeningStatus";
 import type { ScreeningStatus } from "@mybookkeeper/api-client/types/applicant/screening-status";
-import { Banner, filePart, FormField, KeyboardAwareScroll, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, filePart, FormField, KeyboardAwareScroll, LoadingButton, OptionRow, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Modal, Text, View } from "react-native";
 import { SCREENING_MESSAGES, SCREENING_PHOTO_NAME, SCREENING_REASON_MAX_LENGTH, SCREENING_REPORT_FILE_TYPES } from "../../constants/applicantScreening";
+import { UPLOAD_MESSAGES } from "../../constants/uploads";
 import { screeningOutcomeLabel } from "./applicantDisplay";
-import { confirmDiscard } from "../uploads/confirmDiscard";
 import HeldFileButtons from "../uploads/HeldFileButtons";
 import { useHeldFile } from "../uploads/useHeldFile";
 import { screeningUploadFailure } from "./screeningUploadFailure";
@@ -41,7 +41,7 @@ export default function ScreeningUploadSheet({ applicantId, isOpen, onClose }: {
     confirmDiscard(() => {
       forget();
       onClose();
-    });
+    }, UPLOAD_MESSAGES);
   }
 
   async function submit(): Promise<void> {

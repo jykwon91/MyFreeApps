@@ -13,13 +13,12 @@ import {
   reminderPlanRequest,
   withFrequency,
 } from "@mybookkeeper/api-client/utils/rentReminderForm";
-import { deviceDecimalSeparator, FormField, FormSheet, LoadingButton, OptionRow, SegmentedControl, SwitchRow, useTheme, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FormField, FormSheet, FormSheetCancelButton, LoadingButton, OptionRow, SegmentedControl, SwitchRow, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { daysHintBad, REMINDER_SETUP_MESSAGES, smsFrom } from "../../constants/rentReminderSetup";
 import { useFormSubmit } from "../shell/useFormSubmit";
 import TimeField from "../shell/TimeField";
-import { confirmDiscard } from "../uploads/confirmDiscard";
 import { reminderSetupFailure } from "./rentWriteFailure";
 
 const FREQUENCY_SEGMENTS = [
@@ -51,12 +50,6 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
   const mutedText = { fontSize: fontSize.sm, color: colors.mutedForeground };
   const hasChanges = (Object.keys(initial) as (keyof RentReminderFormValues)[]).some((key) => initial[key] !== values[key]);
 
-  function close(): void {
-    if (isBusy) return;
-    if (hasChanges) confirmDiscard(onClose);
-    else onClose();
-  }
-
   async function save(): Promise<void> {
     if (!canSaveReminder(values, decimalSeparator)) return;
     const body = { applicantId, ...reminderPlanRequest(values, plan, decimalSeparator) };
@@ -67,7 +60,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
   }
 
   return (
-    <FormSheet failure={failure} isOpen onRequestClose={close} title={plan ? REMINDER_SETUP_MESSAGES.titleEdit : REMINDER_SETUP_MESSAGES.titleNew}>
+    <FormSheet failure={failure} hasUnsavedChanges={hasChanges} isBusy={isBusy} isOpen onRequestClose={onClose} title={plan ? REMINDER_SETUP_MESSAGES.titleEdit : REMINDER_SETUP_MESSAGES.titleNew}>
       <Text style={mutedText}>{REMINDER_SETUP_MESSAGES.setUpIntro}</Text>
 
       <Text style={{ fontSize: fontSize.xs, fontWeight: "500", color: colors.foreground }}>{REMINDER_SETUP_MESSAGES.tenantPays}</Text>
@@ -163,9 +156,9 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
       <LoadingButton disabled={!canSaveReminder(values, decimalSeparator)} isLoading={isBusy} loadingText={REMINDER_SETUP_MESSAGES.saving} onPress={() => void save()}>
         {plan ? REMINDER_SETUP_MESSAGES.saveEdit : REMINDER_SETUP_MESSAGES.saveNew}
       </LoadingButton>
-      <LoadingButton disabled={isBusy} onPress={close} variant="ghost">
+      <FormSheetCancelButton>
         {REMINDER_SETUP_MESSAGES.cancel}
-      </LoadingButton>
+      </FormSheetCancelButton>
     </FormSheet>
   );
 }

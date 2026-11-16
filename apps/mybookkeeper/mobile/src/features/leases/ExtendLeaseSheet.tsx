@@ -1,7 +1,7 @@
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useExtendSignedLeaseMutation, useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, FormField, KeyboardAwareScroll, type KeyboardAwareScrollRef, LoadingButton, MIN_TOUCH_TARGET, useTheme, useToast } from "@platform/mobile";
+import { Banner, confirmDiscard, FormField, KeyboardAwareScroll, type KeyboardAwareScrollRef, LoadingButton, MIN_TOUCH_TARGET, useTheme, useToast } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Modal, Switch, Text, View } from "react-native";
 import {
@@ -18,7 +18,6 @@ import {
   pickDateAfter,
 } from "../../constants/leases";
 import DatePicker from "../shell/DatePicker";
-import { confirmDiscard } from "../uploads/confirmDiscard";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
 import { extendLeaseFailure, isMissingTenantEmail } from "./extendLeaseFailure";
 

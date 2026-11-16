@@ -4,7 +4,7 @@ import { recipesApi } from "@myrecipes/api-client/store/recipesApi";
 import type { RecipeDetailResponse } from "@myrecipes/api-client/types/recipe/recipe";
 import { baseApi } from "@platform/core/store/baseApi";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
-import { ToastProvider } from "@platform/mobile";
+import { DISCARD_MESSAGES, FORM_SHEET_TEST_ID, ToastProvider } from "@platform/mobile";
 import { alertButton } from "@platform/mobile/test-support/alertButton";
 import { serve } from "@platform/mobile/test-support/fakeServer";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
@@ -228,15 +228,40 @@ describe("editing a recipe's details", () => {
     expect(patches()).toHaveLength(2);
   });
 
-  it("closes on Cancel without saving", async () => {
+  it("closes on Cancel straight away when nothing was changed", async () => {
+    await show();
+    await openEdit();
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.cancel }));
+
+    expect(alert).not.toHaveBeenCalled();
+    expect(screen.queryByRole("header", { name: SHARED.editTitle })).toBeNull();
+  });
+
+  it("asks before Cancel throws away a change, and closes without saving on Discard", async () => {
     await show();
     await openEdit();
     await fireEvent.changeText(titleField(), "Something else");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.cancel }));
 
+    expect(alert).toHaveBeenCalledWith(DISCARD_MESSAGES.discardTitle, DISCARD_MESSAGES.discardBody, expect.any(Array));
+    expect(titleField().props.value).toBe("Something else");
+    await act(async () => alertButton(DISCARD_MESSAGES.discard).onPress?.());
+
     expect(screen.queryByRole("header", { name: SHARED.editTitle })).toBeNull();
     expect(patches()).toHaveLength(0);
     expect(screen.getByRole("header", { name: "Tomato soup" })).toBeTruthy();
+  });
+
+  it("asks before Back throws away a change, and stays on Keep editing", async () => {
+    await show();
+    await openEdit();
+    await fireEvent.changeText(titleField(), "Something else");
+    await fireEvent(screen.getByTestId(FORM_SHEET_TEST_ID), "requestClose");
+
+    expect(alert).toHaveBeenCalledWith(DISCARD_MESSAGES.discardTitle, DISCARD_MESSAGES.discardBody, expect.any(Array));
+    expect(alertButton(DISCARD_MESSAGES.keepEditing).onPress).toBeUndefined();
+    expect(screen.getByRole("header", { name: SHARED.editTitle })).toBeTruthy();
+    expect(titleField().props.value).toBe("Something else");
   });
 });
 

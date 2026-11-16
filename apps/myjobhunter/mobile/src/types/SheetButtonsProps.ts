@@ -1,6 +1,5 @@
 export interface SheetButtonsProps {
   cancelLabel: string;
-  onCancel: () => void;
   submitLabel: string;
   submittingLabel: string;
   onSubmit: () => void | Promise<void>;
