@@ -2,11 +2,14 @@
  * WoW Forever dungeon pages — "Before you go": each dungeon quest's line (the
  * quests before it, in order, with giver, zone, coordinates and directions),
  * tick boxes that say where you are in each line and survive a reload, and
- * World Map links marking every quest giver.
+ * World Map links marking every quest giver, and the link to the MGA Dungeon
+ * Quests addon (the same lines in game) on the Dungeons page.
  *
  * Run: npx playwright test --config=playwright.layout.config.ts wow-forever-dungeon-before-you-go
  */
+import { readFileSync } from "node:fs";
 import type { Locator, Page } from "@playwright/test";
+import { strFromU8, unzipSync } from "fflate";
 import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { createGate } from "@platform/ui/test-support/gate";
 import { stubUnmatchedApi } from "@platform/ui/test-support/mockSession";
@@ -212,4 +215,33 @@ test("the Battle.net line shows a placeholder while it loads", async ({ page }) 
   await expect(line).toHaveAttribute("data-state", "loading");
   gate.release();
   await expect(line).toHaveAttribute("data-state", "ready");
+});
+
+test("the addon link opens the Dungeons page with the MGA Dungeon Quests card open, and it downloads", async ({ page }) => {
+  await page.goto(DEADMINES);
+  await section(page).getByTestId("dungeon-quests-addon-link").click();
+  await expect(page).toHaveURL(/\/wow-forever\/dungeons\?addon=open#dungeon-quests-addon$/);
+  const card = page.getByTestId("dungeon-quests-addon");
+  await expect(card).toHaveAttribute("open", "");
+  await expect(card).toContainText(String.raw`World of Warcraft\_forever_\Interface\AddOns`);
+  await expect(card.getByTestId("dungeon-quests-addon-download")).toBeInViewport();
+  const [download] = await Promise.all([page.waitForEvent("download"), card.getByTestId("dungeon-quests-addon-download").click()]);
+  expect(download.suggestedFilename()).toBe("MGADungeonQuests.zip");
+  const files = unzipSync(readFileSync(await download.path()));
+  expect(Object.keys(files).sort()).toEqual([
+    "MGADungeonQuests/",
+    "MGADungeonQuests/Data.lua",
+    "MGADungeonQuests/MGADungeonQuests.lua",
+    "MGADungeonQuests/MGADungeonQuests.toc",
+  ]);
+  expect(strFromU8(files["MGADungeonQuests/Data.lua"])).toContain('{id = 166, title = "The Defias Brotherhood"');
+  await expect(page.getByText("MGA Dungeon Quests is downloading. Unzip it into your AddOns folder.").first()).toBeVisible();
+});
+
+test("on the Dungeons page the addon card stays folded until opened", async ({ page }) => {
+  await page.goto("/wow-forever/dungeons");
+  const card = page.getByTestId("dungeon-quests-addon");
+  await expect(card).not.toHaveAttribute("open", "");
+  await card.getByText("See your dungeon quests in game").click();
+  await expect(card.getByTestId("dungeon-quests-addon-download")).toBeVisible();
 });

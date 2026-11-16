@@ -2,9 +2,11 @@ import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import DungeonFootnote from "@/games/wow-forever/components/dungeons/DungeonFootnote";
 import DungeonList from "@/games/wow-forever/components/dungeons/DungeonList";
 import DungeonListSkeleton from "@/games/wow-forever/components/dungeons/DungeonListSkeleton";
+import DungeonQuestsAddonCard from "@/games/wow-forever/components/dungeons/DungeonQuestsAddonCard";
 import WowPageHeader from "@/games/wow-forever/components/shared/WowPageHeader";
 import { useDocumentTitle } from "@/games/wow-forever/hooks/useDocumentTitle";
 import { useDungeons } from "@/games/wow-forever/hooks/useDungeons";
+import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 
 /** /wow-forever/dungeons — every dungeon, lowest level first. */
 export default function WowDungeonsPage() {
@@ -18,11 +20,12 @@ export default function WowDungeonsPage() {
         backTo="/wow-forever"
         backLabel="Back to WoW Forever"
       />
-      {state.status === "loading" ? <DungeonListSkeleton /> : null}
-      {state.status === "error" ? (
+      <DungeonQuestsAddonCard />
+      {state.status === LOAD_STATUS.loading ? <DungeonListSkeleton /> : null}
+      {state.status === LOAD_STATUS.error ? (
         <LoadErrorRetry message="Couldn't load the dungeons." onRetry={state.retry} retrying={state.retrying} />
       ) : null}
-      {state.status === "ready" ? (
+      {state.status === LOAD_STATUS.ready ? (
         <>
           <DungeonList dungeons={state.data.dungeons} />
           <DungeonFootnote clientBuild={state.data.clientBuild} />

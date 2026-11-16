@@ -18,6 +18,7 @@ import { useDocumentTitle } from "@/games/wow-forever/hooks/useDocumentTitle";
 import { useDungeons } from "@/games/wow-forever/hooks/useDungeons";
 import { useScrollToHash } from "@/games/wow-forever/hooks/useScrollToHash";
 import { findDungeon } from "@/games/wow-forever/lib/dungeons/decodeDungeons";
+import { LOAD_STATUS } from "@/games/wow-forever/data/loadStatus";
 
 const BACK_LABEL = "Back to Dungeons";
 
@@ -25,23 +26,23 @@ const BACK_LABEL = "Back to Dungeons";
 export default function WowDungeonPage() {
   const { slug } = useParams();
   const state = useDungeons();
-  const dungeon = state.status === "ready" ? findDungeon(state.data, slug) : null;
+  const dungeon = state.status === LOAD_STATUS.ready ? findDungeon(state.data, slug) : null;
   useDocumentTitle(dungeon ? `${dungeon.name} · WoW Forever` : "Dungeons · WoW Forever");
   useScrollToHash(dungeon !== null);
 
   return (
     <div className="p-4 sm:p-8 space-y-4 max-w-4xl">
-      {state.status === "loading" ? <DungeonPageSkeleton /> : null}
-      {state.status === "error" ? (
+      {state.status === LOAD_STATUS.loading ? <DungeonPageSkeleton /> : null}
+      {state.status === LOAD_STATUS.error ? (
         <LoadErrorRetry message="Couldn't load this dungeon." onRetry={state.retry} retrying={state.retrying} />
       ) : null}
-      {state.status === "ready" && !dungeon ? (
+      {state.status === LOAD_STATUS.ready && !dungeon ? (
         <>
           <WowPageHeader title="Dungeon not found" subtitle="" backTo={DUNGEONS_PAGE_PATH} backLabel={BACK_LABEL} />
           <DungeonNotFound />
         </>
       ) : null}
-      {state.status === "ready" && dungeon ? (
+      {state.status === LOAD_STATUS.ready && dungeon ? (
         <>
           <WowPageHeader
             title={dungeon.name}
