@@ -40,3 +40,8 @@ export function monthDrillDown(month: string, what: Kind | { category: string },
 export function propertyMonthDrillDown(propertyId: string, propertyName: string, month: string, kind: Kind, scope: AnalysisScope): DrillDownFilter {
   return { propertyId, type: kind, label: MESSAGES.propertyMonthDrillLabel(propertyName, KIND_LABEL[kind], monthName(month, "long")), ...monthDates(month, scope) };
 }
+
+/** Everything in one month, within the properties and categories left on, cut to the dates being looked at. */
+export function wholeMonthDrillDown(month: string, scope: AnalysisScope): DrillDownFilter {
+  return { label: monthName(month, "long"), ...monthDates(month, scope), propertyIds: scope.propertyIds, categories: scope.categories };
+}

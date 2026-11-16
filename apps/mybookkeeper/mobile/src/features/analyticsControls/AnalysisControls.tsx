@@ -7,18 +7,12 @@ import type { AnalysisControlsProps } from "../../types/AnalysisControlsProps";
 import PickerField from "../transactions/PickerField";
 import AnalysisPeriodSheet from "./AnalysisPeriodSheet";
 import { selectionDates, selectionName } from "./analysisPeriod";
-import PropertyMultiSheet from "./PropertyMultiSheet";
-
-function propertiesValue(properties: readonly { id: string; name: string }[], ids: readonly string[]): string {
-  if (ids.length === 0) return MESSAGES.allProperties;
-  if (ids.length === 1) return properties.find((property) => property.id === ids[0])?.name ?? MESSAGES.nProperties(1);
-  return MESSAGES.nProperties(ids.length);
-}
+import PropertyPickerField from "./PropertyPickerField";
 
 /** Period, compare and property pickers; each opens its own sheet so the numbers keep the screen. */
 export default function AnalysisControls({ choices, selection, onSelection, compare, onCompare, properties, propertyIds, onPropertyIds, maxProperties, yearsFailed, onRetryYears, today, children }: AnalysisControlsProps) {
   const { spacing, colors, fontSize } = useTheme();
-  const [openSheet, setOpenSheet] = useState<"period" | "compare" | "properties" | null>(null);
+  const [openSheet, setOpenSheet] = useState<"period" | "compare" | null>(null);
   const canCompare = selection.range !== null;
   const compareLabel = COMPARE_MODES.find((mode) => mode.key === compare)?.label ?? "";
 
@@ -34,9 +28,7 @@ export default function AnalysisControls({ choices, selection, onSelection, comp
       ) : null}
       <PickerField hint={MESSAGES.periodHint} label={MESSAGES.period} onPress={() => setOpenSheet("period")} value={`${selectionName(selection, choices)}, ${selectionDates(selection)}`} />
       <PickerField disabled={!canCompare} hint={MESSAGES.compareHint} label={MESSAGES.compare} onPress={() => setOpenSheet("compare")} value={canCompare ? compareLabel : MESSAGES.compareNeedsDates} />
-      {properties.length > 1 ? (
-        <PickerField hint={MESSAGES.propertiesHint} label={MESSAGES.properties} onPress={() => setOpenSheet("properties")} value={propertiesValue(properties, propertyIds)} />
-      ) : null}
+      <PropertyPickerField maxSelected={maxProperties} onChange={onPropertyIds} properties={properties} selectedIds={propertyIds} />
       {children}
       {openSheet === "period" ? (
         <AnalysisPeriodSheet
@@ -61,7 +53,6 @@ export default function AnalysisControls({ choices, selection, onSelection, comp
         title={MESSAGES.compareSheetTitle}
         value={compare}
       />
-      <PropertyMultiSheet isOpen={openSheet === "properties"} maxSelected={maxProperties} onChange={onPropertyIds} onClose={() => setOpenSheet(null)} properties={properties} selectedIds={propertyIds} />
     </View>
   );
 }
