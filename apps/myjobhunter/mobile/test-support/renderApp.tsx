@@ -17,11 +17,13 @@ import DocumentsRoute from "../app/(app)/documents";
 import ResumeRoute from "../app/(app)/resume";
 import SecurityRoute from "../app/(app)/security/index";
 import SecurityTurnOnRoute from "../app/(app)/security/turn-on";
+import NotFoundRoute from "../app/+not-found";
 import SignInRoute from "../app/sign-in";
 
 /** The app's own layouts and screens, as expo-router would find them under app/. */
 export const APP_ROUTES = {
   _layout: RootLayout,
+  "+not-found": NotFoundRoute,
   "sign-in": SignInRoute,
   "(app)/_layout": AppLayout,
   "(app)/analyze": AnalyzeRoute,
