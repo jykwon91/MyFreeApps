@@ -121,7 +121,7 @@ export default function ProfessionTrainersView({ profession, label, faction, zon
               faction={faction}
               zoneId={zoneId}
               onSelectTrainer={onSelectTrainer}
-              recipes={isCrafting ? { profession, steps } : undefined}
+              recipes={isCrafting ? { profession, steps, trainers } : undefined}
             />
           ))}
         </ul>

@@ -31,6 +31,11 @@ export const RANK_RECIPES_COPY = {
   loading: (rank: string) => `What ${rank} teaches · loading…`,
   listLabel: (rank: string) => `Recipes ${rank} trainers teach`,
   error: "Couldn't load what the trainers teach.",
+  /** At most this many of your faction's trainers teach a recipe → name them under it. */
+  onlyFromMax: 2,
+  onlyFrom: "Only from",
+  onlyFromLabel: "Trainers who teach it",
+  noTeacher: (faction: string) => `No ${faction} trainer teaches it in our data (Classic).`,
   /** Under a crafting profession's trainer list: the names open that trainer's own list. */
   trainerHint: "Click a trainer's name to see everything they teach.",
 } as const;

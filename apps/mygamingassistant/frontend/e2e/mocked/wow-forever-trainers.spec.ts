@@ -95,6 +95,18 @@ test("each crafting rank opens what its trainers teach, in its skill range", asy
   await expect(page.getByTestId("rank-recipes")).toHaveCount(0);
 });
 
+test("a recipe only a specialist teaches names that trainer for your faction", async ({ page }) => {
+  await page.goto(`${TRAINERS}/tailoring`);
+  await page.getByRole("radio", { name: "Alliance" }).click();
+  const artisan = page.getByTestId("trainers-rank").nth(3);
+  await artisan.getByRole("button", { name: /^What Artisan teaches/ }).click();
+  const boots = artisan.getByTestId("trainer-recipe-row").filter({ hasText: "Shadoweave Boots" });
+  await expect(boots.getByRole("list", { name: "Trainers who teach it" })).toContainText("Only from Jalane Ayrole");
+  await expect(boots.getByRole("link", { name: "Show Jalane Ayrole on the map" })).toBeVisible();
+  await page.getByRole("radio", { name: "Horde" }).click();
+  await expect(boots.getByRole("list", { name: "Trainers who teach it" })).toContainText("Only from Josephine Lister");
+});
+
 test("phones: no sideways scroll and full-size targets", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(`${TRAINERS}/hunter`);
