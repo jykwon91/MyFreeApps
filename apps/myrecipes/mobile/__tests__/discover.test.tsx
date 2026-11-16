@@ -1,3 +1,4 @@
+import { CONNECTION_MESSAGES } from "@myrecipes/api-client/constants/connectionCopy";
 import { DISCOVERY_EMPTY_COPY, DISCOVERY_READ_STAGES, DISCOVERY_SEARCH_STAGES } from "@myrecipes/api-client/constants/discovery";
 import { RECIPE_FORM_PROBLEMS } from "@myrecipes/api-client/constants/recipeForm";
 import type { DiscoveredDetail, DiscoveredRecipe } from "@myrecipes/api-client/types/recipe/discovery";
@@ -336,6 +337,25 @@ describe("a result", () => {
     expect(await screen.findByText(/couldn't read a recipe off that page/)).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "View original" }));
     expect(openURL).toHaveBeenCalledWith(FLAN.url);
+
+    await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("Dense and silky.")).toBeTruthy();
+  });
+
+  it("blames the connection, not the recipe, when a read gets no answer, and tries again on request", async () => {
+    let calls = 0;
+    discoveryRoutes({
+      "POST /discovery/detail": () => {
+        calls += 1;
+        if (calls === 1) throw new Error("Network Error");
+        return reply(200, DETAIL);
+      },
+    });
+    await openDiscover();
+    await openFlan();
+
+    expect(await screen.findByText(CONNECTION_MESSAGES.discoveryRead)).toBeTruthy();
+    expect(screen.queryByText(/try another result/)).toBeNull();
 
     await fireEvent.press(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText("Dense and silky.")).toBeTruthy();

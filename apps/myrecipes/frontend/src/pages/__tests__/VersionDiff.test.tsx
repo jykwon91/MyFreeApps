@@ -7,6 +7,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CONNECTION_MESSAGES } from "@myrecipes/api-client/constants/connectionCopy";
 import { VERSION_COPY } from "@myrecipes/api-client/constants/versions";
 import type { DiffResponse } from "@myrecipes/api-client/types/recipe/diff";
 import VersionDiff from "@/pages/VersionDiff";
@@ -94,10 +95,10 @@ describe("VersionDiff", () => {
     expect(screen.getByText(message)).toBeInTheDocument();
   });
 
-  it("keeps the general message for other failures, and goes back to the recipe", async () => {
+  it("says the server can't be reached when no answer came back, and goes back to the recipe", async () => {
     answer({ isError: true, error: { status: "FETCH_ERROR" } });
     renderDiff();
-    expect(screen.getByText(VERSION_COPY.loadFailedBody)).toBeInTheDocument();
+    expect(screen.getByText(CONNECTION_MESSAGES.diff)).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole("button", { name: "Back to recipe" }));
     expect(screen.getByText("Recipe page")).toBeInTheDocument();
   });

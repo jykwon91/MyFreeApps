@@ -11,6 +11,7 @@ import { refinementFailure } from "../../lib/refinementFailure";
 import type { ResumeStartPanelProps } from "../../types/ResumeStartPanelProps";
 import ResumeJobRow from "./ResumeJobRow";
 import ResumeStartSkeleton from "./ResumeStartSkeleton";
+import ResumeUnsentCard from "./ResumeUnsentCard";
 import ResumeUploadStatusRow from "./ResumeUploadStatusRow";
 import { useResumeUpload } from "./useResumeUpload";
 
@@ -45,6 +46,9 @@ export default function ResumeStartPanel({ onStarted }: ResumeStartPanelProps) {
   const unpickable = jobs.data.filter((job) => job.status !== "complete");
   // A file uploaded here is chosen for the person once it's read, unless they chose another.
   const selected = picked ?? (completed.some((job) => job.id === uploads.uploadedId) ? uploads.uploadedId : null);
+  const unsentCard = uploads.unsentName ? (
+    <ResumeUnsentCard isRetrying={uploads.isUploading} name={uploads.unsentName} onDiscard={uploads.discardUnsent} onRetry={uploads.retry} />
+  ) : null;
   const statusRows = unpickable.length > 0 ? (
     <View accessibilityLabel={MESSAGES.uploadsLabel} style={{ gap: spacing.sm }}>
       {unpickable.map((job) => (
@@ -62,6 +66,7 @@ export default function ResumeStartPanel({ onStarted }: ResumeStartPanelProps) {
           body={isReadingOne ? MESSAGES.readingBody : MESSAGES.noResumeBody}
           heading={isReadingOne ? MESSAGES.readingHeading : MESSAGES.noResumeHeading}
         />
+        {unsentCard}
         {statusRows}
       </View>
     );
@@ -88,6 +93,7 @@ export default function ResumeStartPanel({ onStarted }: ResumeStartPanelProps) {
       <LoadingButton disabled={!selected} isLoading={isStarting} loadingText={MESSAGES.starting} onPress={start}>
         {MESSAGES.start}
       </LoadingButton>
+      {unsentCard}
       {statusRows}
       <View style={{ gap: spacing.xs }}>
         <LoadingButton isLoading={uploads.isUploading} loadingText={MESSAGES.uploading} onPress={uploads.upload} variant="secondary">

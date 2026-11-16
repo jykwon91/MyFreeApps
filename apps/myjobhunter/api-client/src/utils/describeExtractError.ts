@@ -1,11 +1,14 @@
+import { isNoResponse } from "@platform/core/utils/isNoResponse";
+import { JOB_ANALYSIS_NO_CONNECTION } from "../constants/jobAnalysis";
 import { RATE_LIMITED_MESSAGES } from "../constants/rateLimitedMessages";
 
 /**
  * What to say when reading a job-posting link failed for a reason other than a sign-in wall.
  * POST /applications/extract-from-url answers 504 (timed out), 502 (upstream or AI failure),
- * 429 (rate limited) or 400 (malformed URL).
+ * 429 (rate limited) or 400 (malformed URL). No answer at all (offline, dropped, timed out) says so.
  */
 export function describeExtractError(err: unknown): string {
+  if (isNoResponse(err)) return JOB_ANALYSIS_NO_CONNECTION;
   if (typeof err === "object" && err !== null) {
     const { status } = err as { status?: unknown };
     if (status === 504) return "The page took too long to load. Try again or paste the description text.";

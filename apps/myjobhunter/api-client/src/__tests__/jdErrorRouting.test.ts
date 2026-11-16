@@ -8,6 +8,7 @@
  *   2. `describeExtractError` — picks a user-friendly sentence based on
  *      the status code, with a sensible fallback.
  */
+import { JOB_ANALYSIS_NO_CONNECTION } from "../constants/jobAnalysis";
 import { RATE_LIMITED_MESSAGES } from "../constants/rateLimitedMessages";
 import { describe, it, expect } from "vitest";
 import { describeExtractError } from "../utils/describeExtractError";
@@ -55,6 +56,11 @@ describe("isAuthRequiredError", () => {
 });
 
 describe("describeExtractError", () => {
+  it("says the server can't be reached, not that the URL is bad, when no answer came back", () => {
+    expect(describeExtractError({ status: undefined, data: "Network Error" })).toBe(JOB_ANALYSIS_NO_CONNECTION);
+    expect(describeExtractError({ status: "TIMEOUT_ERROR" })).toBe(JOB_ANALYSIS_NO_CONNECTION);
+  });
+
   it("explains 504 as a slow-page timeout", () => {
     expect(describeExtractError({ status: 504, data: "" })).toMatch(/took too long/i);
   });

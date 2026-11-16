@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { JOB_ANALYSIS_ERRORS } from "../constants/jobAnalysis";
+import { JOB_ANALYSIS_ERRORS, JOB_ANALYSIS_NO_CONNECTION } from "../constants/jobAnalysis";
 import { baseApi } from "@platform/core/store/baseApi";
 import reducer, {
   analysisCancelled,
@@ -54,6 +54,13 @@ describe("describeAnalyzeError", () => {
     expect(describeAnalyzeError(failed(504), "url")).toBe("The page took too long to load. Try again or paste the description text.");
     expect(describeAnalyzeError(failed(400), "url")).toBe("That URL doesn't look right. Make sure it starts with http:// or https://.");
     expect(describeAnalyzeError(new Error("Network Error"), "url")).toBe("Couldn't fetch that URL. Paste the description text instead.");
+  });
+
+  it("says the server can't be reached, for a link or pasted text, when no answer came back", () => {
+    for (const source of ["url", "text"] as const) {
+      expect(describeAnalyzeError({ status: undefined, data: "Network Error" }, source)).toBe(JOB_ANALYSIS_NO_CONNECTION);
+      expect(describeAnalyzeError({ status: "FETCH_ERROR" }, source)).toBe(JOB_ANALYSIS_NO_CONNECTION);
+    }
   });
 
   it("says the same about the rate limit whichever way the job came in", () => {

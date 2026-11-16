@@ -1,7 +1,10 @@
+import { isNoResponse } from "@platform/core/utils/isNoResponse";
+import { CONNECTION_MESSAGES } from "../constants/connectionCopy";
 import { requestErrorStatus } from "./requestErrorStatus";
 
 /** What to tell the user when a discovery search fails. */
 export function discoverySearchErrorMessage(error: unknown): string {
+  if (isNoResponse(error)) return CONNECTION_MESSAGES.discoverySearch;
   switch (requestErrorStatus(error)) {
     case 422:
       return "We couldn't find recipes for that. Try a dish name, like “mexican flan”.";

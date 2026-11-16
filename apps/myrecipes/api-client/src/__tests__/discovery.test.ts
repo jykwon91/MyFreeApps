@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CONNECTION_MESSAGES } from "../constants/connectionCopy";
 import type { DiscoveredDetail } from "../types/recipe/discovery";
 import { discoveredRecipeDraft } from "../utils/discoveredRecipeDraft";
 import { discoveryReadErrorMessage } from "../utils/discoveryReadErrorMessage";
@@ -67,7 +68,7 @@ describe("discovery error messages", () => {
     expect(discoverySearchErrorMessage({ status: 422 })).toMatch(/couldn't find recipes/);
     expect(discoverySearchErrorMessage({ status: 429 })).toMatch(/a lot of searches/);
     expect(discoverySearchErrorMessage({ status: 503 })).toMatch(/isn't available/);
-    expect(discoverySearchErrorMessage({ status: undefined, data: "Network Error" })).toMatch(/Something went wrong/);
+    expect(discoverySearchErrorMessage({ status: 500 })).toMatch(/Something went wrong/);
     expect(discoverySearchErrorMessage(null)).toMatch(/Something went wrong/);
   });
 
@@ -76,5 +77,13 @@ describe("discovery error messages", () => {
     expect(discoveryReadErrorMessage({ status: 400 })).toMatch(/can't be opened/);
     expect(discoveryReadErrorMessage({ status: 429 })).toMatch(/a lot of recipes/);
     expect(discoveryReadErrorMessage({ status: 500 })).toMatch(/try another result/);
+  });
+
+  it("blames the connection, not the page or the search, when no answer came back", () => {
+    for (const error of [{ status: undefined, data: "Network Error" }, { status: "FETCH_ERROR" }, { status: "TIMEOUT_ERROR" }]) {
+      expect(discoverySearchErrorMessage(error)).toBe(CONNECTION_MESSAGES.discoverySearch);
+      expect(discoveryReadErrorMessage(error)).toBe(CONNECTION_MESSAGES.discoveryRead);
+    }
+    expect(discoveryReadErrorMessage(undefined)).toMatch(/try another result/);
   });
 });

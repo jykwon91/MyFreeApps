@@ -49,6 +49,7 @@ export const DOCUMENT_MESSAGES = {
   uploading: "Uploading…",
   uploaded: "Document uploaded.",
   couldntUpload: "I couldn't upload that file. Want to try again?",
+  couldntReachServer: "I couldn't reach the server. Check your connection and try again.",
   cancel: "Cancel",
   create: "Save document",
   creating: "Saving…",
