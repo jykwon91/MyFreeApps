@@ -4,8 +4,7 @@ import { useUpdateTransactionMutation } from "@mybookkeeper/api-client/store/tra
 import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
-import { router } from "expo-router";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { useEffect, useState } from "react";
 import { Alert, Text } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
@@ -61,7 +60,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
 
   // Leaving has to wait a render, or the discard prompt still sees the unsaved changes.
   useEffect(() => {
-    if (isLeaving) router.back();
+    if (isLeaving) goBackOr("/money");
   }, [isLeaving]);
 
   function update(change: Partial<TransactionEditValues>): void {

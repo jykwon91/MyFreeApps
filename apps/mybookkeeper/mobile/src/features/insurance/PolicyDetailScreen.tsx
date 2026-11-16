@@ -1,5 +1,5 @@
 import { useDeleteInsurancePolicyMutation, useGetInsurancePolicyByIdQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
-import { Banner, Chip, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, useToast } from "@platform/mobile";
+import { Banner, Chip, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
@@ -32,7 +32,7 @@ export default function PolicyDetailScreen({ id }: { id: string }) {
     try {
       await deletePolicy(policyId).unwrap();
       showToast(INSURANCE_MESSAGES.deleted);
-      router.back();
+      goBackOr("/insurance");
     } catch (failure) {
       showToast(policyDeleteFailure(failure), "error");
       setIsDeleting(false);
@@ -44,7 +44,7 @@ export default function PolicyDetailScreen({ id }: { id: string }) {
     const isGone = httpStatus(error) === 404;
     return (
       <EmptyState
-        action={isGone ? { label: INSURANCE_MESSAGES.back, onPress: () => router.back() } : { label: INSURANCE_MESSAGES.tryAgain, onPress: refresh }}
+        action={isGone ? { label: INSURANCE_MESSAGES.back, onPress: () => goBackOr("/insurance") } : { label: INSURANCE_MESSAGES.tryAgain, onPress: refresh }}
         body={isGone ? INSURANCE_MESSAGES.maybeDeleted : INSURANCE_MESSAGES.tryAgainOffer}
         heading={isGone ? INSURANCE_MESSAGES.cantFind : INSURANCE_MESSAGES.couldntLoadOne}
       />

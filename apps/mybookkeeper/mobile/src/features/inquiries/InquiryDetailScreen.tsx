@@ -1,7 +1,7 @@
 import { useGetInquiryByIdQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { INQUIRY_SOURCE_LABELS } from "@mybookkeeper/api-client/constants/inquiryLabels";
 import type { InquiryStage } from "@mybookkeeper/api-client/types/inquiry/inquiry-stage";
-import { Banner, Chip, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, Chip, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
@@ -40,7 +40,7 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
   useEffect(() => {
     if (actions.hasArchived) {
       deleteReplyDraft(id);
-      router.back();
+      goBackOr("/people");
     }
   }, [actions.hasArchived, id]);
 
@@ -58,7 +58,7 @@ export default function InquiryDetailScreen({ id }: { id: string }) {
   if (isGone || !inquiry) {
     return (
       <EmptyState
-        action={isGone ? { label: "Back", onPress: () => router.back() } : { label: "Try again", onPress: refresh }}
+        action={isGone ? { label: "Back", onPress: () => goBackOr("/people") } : { label: "Try again", onPress: refresh }}
         body={isGone ? "It may have been archived." : "Want me to try again?"}
         heading={isGone ? "I can't find that inquiry." : "I couldn't load that inquiry."}
       />

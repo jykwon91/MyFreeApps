@@ -17,9 +17,11 @@ import { store } from "../src/lib/store";
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
+let mockCanGoBack = true;
 jest.mock("expo-router", () => ({
   useFocusEffect: () => undefined,
-  router: { back: () => mockBack(), push: (path: string) => mockPush(path) },
+  router: { back: () => mockBack(), canGoBack: () => mockCanGoBack, replace: (path: string) => mockReplace(path), push: (path: string) => mockPush(path) },
   usePreventRemove: () => undefined,
 }));
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: jest.fn() }));
@@ -104,6 +106,8 @@ beforeEach(() => {
   jest.mocked(useCanWrite).mockReturnValue(true);
   jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
   mockBack.mockClear();
+  mockReplace.mockClear();
+  mockCanGoBack = true;
   mockPush.mockClear();
 });
 
@@ -155,6 +159,15 @@ describe("a 1099 in full", () => {
     expect(screen.getByText(MESSAGES.detailGone)).toBeTruthy();
     await fireEvent.press(screen.getByText(MESSAGES.back));
     expect(mockBack).toHaveBeenCalled();
+  });
+
+  it("opens the list instead when the link was opened cold, with nothing to go back to", async () => {
+    mockCanGoBack = false;
+    serve([aSource({ id: "other" })]);
+    await showDetail();
+    await fireEvent.press(screen.getByText(MESSAGES.back));
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith("/reconciliation");
   });
 
   it("says it couldn't load, rather than that the form is gone", async () => {

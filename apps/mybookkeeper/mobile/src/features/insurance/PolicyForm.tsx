@@ -5,8 +5,7 @@ import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/i
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/insurancePolicyDraft";
 import { EMPTY_POLICY_FORM, policyToFormValues, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
 import { INSURANCE_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/insuranceUploads";
-import { Banner, deviceDecimalSeparator, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
-import { router } from "expo-router";
+import { Banner, deviceDecimalSeparator, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { useEffect, useState } from "react";
 
 import { POLICY_FORM_MESSAGES, POLICY_PHOTO_NAME, POLICY_PROPERTY_MESSAGES, POLICY_READER_MESSAGES } from "../../constants/insuranceForm";
@@ -45,7 +44,7 @@ export default function PolicyForm({ policy }: { policy?: InsurancePolicyDetail 
 
   // Leaving waits a render, or the discard prompt still sees the unsaved changes.
   useEffect(() => {
-    if (isLeaving) router.back();
+    if (isLeaving) goBackOr("/insurance");
   }, [isLeaving]);
 
   function change(next: Partial<InsurancePolicyFormValues>): void {

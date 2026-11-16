@@ -1,6 +1,5 @@
 import { useListSourcesQuery } from "@mybookkeeper/api-client/store/reconciliationApi";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme } from "@platform/mobile";
-import { router } from "expo-router";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { ScrollView, View } from "react-native";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
 import { useCanWrite } from "../workspace/useCanWrite";
@@ -29,7 +28,7 @@ export default function ReconciliationDetailScreen({ id, year }: { id: string; y
 
   const source = currentData.find((candidate) => candidate.id === id);
   if (!source) {
-    return <EmptyState action={{ label: MESSAGES.back, onPress: () => router.back() }} body={MESSAGES.detailGoneBody} heading={MESSAGES.detailGone} />;
+    return <EmptyState action={{ label: MESSAGES.back, onPress: () => goBackOr("/reconciliation") }} body={MESSAGES.detailGoneBody} heading={MESSAGES.detailGone} />;
   }
 
   return (

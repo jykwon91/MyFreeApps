@@ -1,9 +1,8 @@
 import { useGetWelcomeManualByIdQuery } from "@mybookkeeper/api-client/store/welcomeManualsApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh } from "@platform/mobile";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, goBackOr } from "@platform/mobile";
 import { View } from "react-native";
 import { WELCOME_MANUAL_MESSAGES } from "../../constants/welcomeManuals";
-import { goBackOr } from "../../lib/goBackOr";
 import type { WelcomeManualLoaderProps } from "../../types/WelcomeManualLoaderProps";
 import WelcomeManualDetailSkeleton from "./WelcomeManualDetailSkeleton";
 

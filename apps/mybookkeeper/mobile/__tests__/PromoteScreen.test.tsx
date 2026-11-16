@@ -16,7 +16,7 @@ const mockBack = jest.fn();
 const mockDispatch = jest.fn();
 const mockPreventRemove: { active: boolean; callback: ((event: { repeat: () => void }) => void) | null } = { active: false, callback: null };
 jest.mock("expo-router", () => ({
-  router: { replace: (path: string) => mockReplace(path), back: () => mockBack() },
+  router: { replace: (path: string) => mockReplace(path), back: () => mockBack(), canGoBack: () => true },
   usePreventRemove: (active: boolean, callback: (event: { repeat: () => void }) => void) => {
     mockPreventRemove.active = active;
     mockPreventRemove.callback = callback;

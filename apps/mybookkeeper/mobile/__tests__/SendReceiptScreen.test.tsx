@@ -27,7 +27,7 @@ import { aReceipt, type FakeReceiptServer, startReceiptServer } from "../test-su
 const mockPreventRemove = { active: false };
 jest.mock("expo-router", () => ({
   useFocusEffect: () => undefined,
-  router: { push: jest.fn(), back: jest.fn() },
+  router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true },
   usePreventRemove: (active: boolean) => {
     mockPreventRemove.active = active;
   },

@@ -4,7 +4,7 @@ import {
 } from "@mybookkeeper/api-client/constants/reconciliationSourceTypes";
 import { useUpload1099Mutation } from "@mybookkeeper/api-client/store/reconciliationApi";
 import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
-import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, useConfirmLeave, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Text } from "react-native";
@@ -40,7 +40,7 @@ export default function ReconciliationAddForm({ year }: { year: number }) {
   });
 
   useEffect(() => {
-    if (isLeaving) router.back();
+    if (isLeaving) goBackOr("/reconciliation");
   }, [isLeaving]);
 
   /** Stays locked after a save: the screen is still tappable while it slides away, and each send adds a form. */

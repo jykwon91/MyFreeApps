@@ -6,7 +6,7 @@ import {
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionListParams } from "@mybookkeeper/api-client/types/transaction/TransactionListParams";
 import { skipToken } from "@reduxjs/toolkit/query";
-import { useToast } from "@platform/mobile";
+import { useToast, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { nextToReview } from "./nextToReview";
@@ -32,7 +32,7 @@ export function useApproveTransaction(id: string, queueParams: TransactionListPa
     const next = nextToReview(queueRows, remaining, id);
     if (next === null) {
       showToast(`${lead}That's the last one.${others}`);
-      router.back();
+      goBackOr("/money");
       return;
     }
     router.setParams({ id: next });

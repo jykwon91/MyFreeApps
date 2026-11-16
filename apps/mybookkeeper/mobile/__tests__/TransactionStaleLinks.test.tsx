@@ -12,7 +12,7 @@ import TransactionTenantLink from "../src/features/transactions/TransactionTenan
 import { store } from "../src/lib/store";
 import { aTransaction } from "../test-support/transactionsServer";
 
-jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn() } }));
+jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true } }));
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: () => false }));
 
 const originalAdapter = api.defaults.adapter;

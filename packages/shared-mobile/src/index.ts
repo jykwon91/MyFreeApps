@@ -70,6 +70,7 @@ export { useDiscardPrompt } from "./hooks/useDiscardPrompt";
 export { useDismissal } from "./hooks/useDismissal";
 export { useLeaveWhenSaved } from "./hooks/useLeaveWhenSaved";
 export { useRefresh } from "./hooks/useRefresh";
+export { goBackOr } from "./utils/goBackOr";
 export { filePart } from "./utils/filePart";
 export { reencodePhoto } from "./utils/reencodePhoto";
 export { newDownloadFolder } from "./utils/newDownloadFolder";

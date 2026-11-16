@@ -26,7 +26,7 @@ const mockBack = jest.fn();
 
 jest.mock("expo-router", () => ({
   useFocusEffect: () => undefined,
-  router: { push: (path: string) => mockPush(path), back: () => mockBack() },
+  router: { push: (path: string) => mockPush(path), back: () => mockBack(), canGoBack: () => true },
 }));
 jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));

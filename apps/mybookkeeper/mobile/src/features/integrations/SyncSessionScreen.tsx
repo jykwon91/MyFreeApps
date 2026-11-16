@@ -1,7 +1,6 @@
 import { integrationsApi, useGetEmailQueueQuery, useGetSyncLogsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
 import { syncPollInterval } from "@mybookkeeper/api-client/utils/syncPollInterval";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useScreenFocused, useTheme } from "@platform/mobile";
-import { router } from "expo-router";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useScreenFocused, useTheme, goBackOr } from "@platform/mobile";
 import { FlatList, Text, View } from "react-native";
 import { INTEGRATIONS_MESSAGES as MESSAGES } from "../../constants/integrations";
 import QueueItemRow from "./QueueItemRow";
@@ -39,7 +38,7 @@ export default function SyncSessionScreen({ id }: { id: number }) {
     );
   }
   if (!log) {
-    return <EmptyState action={{ label: MESSAGES.back, onPress: () => router.back() }} body={MESSAGES.sessionMaybeGone} heading={MESSAGES.sessionCantFind} />;
+    return <EmptyState action={{ label: MESSAGES.back, onPress: () => goBackOr("/integrations") }} body={MESSAGES.sessionMaybeGone} heading={MESSAGES.sessionCantFind} />;
   }
 
   const items = queue.currentData?.filter((item) => item.sync_log_id === id);

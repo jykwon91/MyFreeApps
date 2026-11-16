@@ -1,8 +1,7 @@
 import { useGetMarketRateBenchmarksQuery } from "@mybookkeeper/api-client/store/marketRateBenchmarksApi";
 import { UTILITY_SERVICE_TYPES } from "@mybookkeeper/api-client/constants/utilityServiceTypes";
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
-import { EmptyState } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, goBackOr } from "@platform/mobile";
 import { MARKET_RATE_MESSAGES as MESSAGES } from "../../constants/marketRates";
 import MarketRateForm from "./MarketRateForm";
 import UtilityPlanDetailSkeleton from "./UtilityPlanDetailSkeleton";
@@ -16,7 +15,7 @@ export default function MarketRateFormLoader({ serviceType }: { serviceType: str
   const { currentData, error, isFetching, refetch } = useGetMarketRateBenchmarksQuery();
 
   if (!isServiceType(serviceType)) {
-    return <EmptyState action={{ label: MESSAGES.back, onPress: () => router.back() }} body={MESSAGES.unknownServiceBody} heading={MESSAGES.unknownService} />;
+    return <EmptyState action={{ label: MESSAGES.back, onPress: () => goBackOr("/utility-plans/market-rates") }} body={MESSAGES.unknownServiceBody} heading={MESSAGES.unknownService} />;
   }
   if (currentData) {
     // Keyed so a reload can't replace what's being typed.

@@ -26,7 +26,7 @@ import { store } from "../src/lib/store";
 import { receiptSentFromOtherGmailMessage } from "@mybookkeeper/api-client/utils/receiptSentFromOtherGmailMessage";
 import { aReceipt, startReceiptServer } from "../test-support/receiptsServer";
 
-jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn() } }));
+jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true } }));
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: jest.fn() }));
 
 const originalAdapter = api.defaults.adapter;

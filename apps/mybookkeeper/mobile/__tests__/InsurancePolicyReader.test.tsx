@@ -10,7 +10,7 @@ import { aDocument, aDraft, lastInsuranceWrite, startInsuranceServer } from "../
 import { POLICY_READER_MESSAGES as MESSAGES } from "../src/constants/insuranceForm";
 import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsurance";
 
-jest.mock("expo-router", () => ({ router: { back: jest.fn(), push: jest.fn() }, usePreventRemove: jest.fn() }));
+jest.mock("expo-router", () => ({ router: { back: jest.fn(), canGoBack: () => true, push: jest.fn() }, usePreventRemove: jest.fn() }));
 jest.mock("@react-native-community/datetimepicker", () => {
   const { View } = jest.requireActual("react-native");
   return { __esModule: true, default: View, DateTimePickerAndroid: { open: jest.fn() } };

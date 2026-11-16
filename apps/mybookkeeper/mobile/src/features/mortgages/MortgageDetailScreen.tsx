@@ -1,5 +1,5 @@
 import { useGetMortgageByIdQuery } from "@mybookkeeper/api-client/store/mortgagesApi";
-import { Banner, Chip, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, Chip, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
@@ -27,7 +27,7 @@ export default function MortgageDetailScreen({ id }: { id: string }) {
     const isGone = httpStatus(error) === 404;
     return (
       <EmptyState
-        action={isGone ? { label: MORTGAGE_MESSAGES.back, onPress: () => router.back() } : { label: MORTGAGE_MESSAGES.tryAgain, onPress: refresh }}
+        action={isGone ? { label: MORTGAGE_MESSAGES.back, onPress: () => goBackOr("/mortgages") } : { label: MORTGAGE_MESSAGES.tryAgain, onPress: refresh }}
         body={isGone ? MORTGAGE_MESSAGES.maybeDeleted : MORTGAGE_MESSAGES.tryAgainOffer}
         heading={isGone ? MORTGAGE_MESSAGES.cantFind : MORTGAGE_MESSAGES.couldntLoadOne}
       />

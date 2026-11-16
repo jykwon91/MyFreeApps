@@ -1,5 +1,4 @@
-import { EmptyState } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, goBackOr } from "@platform/mobile";
 import { PLACEHOLDER_MESSAGES as MESSAGES } from "../../constants/leasePlaceholderEdit";
 import { LEASE_TEMPLATE_MESSAGES } from "../../constants/leaseTemplates";
 import type { PlaceholderEditScreenProps } from "../../types/PlaceholderEditScreenProps";
@@ -13,7 +12,7 @@ export default function PlaceholderEditScreen({ templateId, placeholderId }: Pla
       {(template) => {
         const placeholder = template.placeholders.find((candidate) => candidate.id === placeholderId);
         if (!placeholder) {
-          return <EmptyState action={{ label: LEASE_TEMPLATE_MESSAGES.back, onPress: () => router.back() }} body={MESSAGES.maybeChanged} heading={MESSAGES.cantFind} />;
+          return <EmptyState action={{ label: LEASE_TEMPLATE_MESSAGES.back, onPress: () => goBackOr(`/lease-templates/${templateId}`) }} body={MESSAGES.maybeChanged} heading={MESSAGES.cantFind} />;
         }
         return <PlaceholderFormScreen placeholder={placeholder} templateId={templateId} />;
       }}

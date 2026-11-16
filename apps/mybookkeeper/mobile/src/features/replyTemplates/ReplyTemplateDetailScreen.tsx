@@ -1,5 +1,5 @@
 import { useGetReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -35,7 +35,7 @@ export default function ReplyTemplateDetailScreen({ id }: { id: string }) {
   if (state === "missing" || !template) {
     return (
       <EmptyState
-        action={{ label: REPLY_TEMPLATE_MESSAGES.back, onPress: () => router.back() }}
+        action={{ label: REPLY_TEMPLATE_MESSAGES.back, onPress: () => goBackOr("/reply-templates") }}
         body={REPLY_TEMPLATE_MESSAGES.maybeArchived}
         heading={REPLY_TEMPLATE_MESSAGES.cantFind}
       />

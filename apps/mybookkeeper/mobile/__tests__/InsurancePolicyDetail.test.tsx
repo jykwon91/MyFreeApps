@@ -11,7 +11,7 @@ import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsu
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
-jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { back: () => mockBack(), push: (path: string) => mockPush(path) } }));
+jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { back: () => mockBack(), canGoBack: () => true, push: (path: string) => mockPush(path) } }));
 jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
 jest.mock("expo-image-picker", () => ({ launchImageLibraryAsync: jest.fn(), launchCameraAsync: jest.fn(), requestCameraPermissionsAsync: jest.fn() }));

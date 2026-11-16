@@ -1,7 +1,6 @@
-import { EmptyState } from "@platform/mobile";
+import { EmptyState, goBackOr } from "@platform/mobile";
 import { WELCOME_MANUAL_SECTION_MESSAGES } from "../../constants/welcomeManualForms";
 import { WELCOME_MANUAL_MESSAGES } from "../../constants/welcomeManuals";
-import { goBackOr } from "../../lib/goBackOr";
 import type { WelcomeManualSectionGateProps } from "../../types/WelcomeManualSectionGateProps";
 import WelcomeManualLoader from "./WelcomeManualLoader";
 

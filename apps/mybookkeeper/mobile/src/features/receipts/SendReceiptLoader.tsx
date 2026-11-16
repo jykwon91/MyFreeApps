@@ -1,6 +1,6 @@
 import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
-import { EmptyState } from "@platform/mobile";
-import { router, usePreventRemove } from "expo-router";
+import { EmptyState, goBackOr } from "@platform/mobile";
+import { usePreventRemove } from "expo-router";
 import { useEffect } from "react";
 import { RECEIPTS_LIMIT, RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
 import SendReceiptForm from "./SendReceiptForm";
@@ -27,10 +27,10 @@ export default function SendReceiptLoader({ transactionId }: { transactionId: st
 
   // Leaving has to wait a render, or the guard above still refuses it.
   useEffect(() => {
-    if (finished) router.back();
+    if (finished) goBackOr("/receipts");
   }, [finished]);
 
-  const goBack = { label: MESSAGES.goBack, onPress: () => router.back() };
+  const goBack = { label: MESSAGES.goBack, onPress: () => goBackOr("/receipts") };
   if (!currentData) {
     if (isFetching) return <SendReceiptSkeleton />;
     return <EmptyState action={{ label: MESSAGES.tryAgain, onPress: () => void refetch() }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoad} />;

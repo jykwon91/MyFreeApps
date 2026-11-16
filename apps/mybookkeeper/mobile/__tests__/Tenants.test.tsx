@@ -20,7 +20,7 @@ const mockSetParams = jest.fn();
 jest.mock("expo-router", () => ({
   useFocusEffect: () => undefined,
   useLocalSearchParams: () => mockParams,
-  router: { push: (path: string) => mockPush(path), back: jest.fn(), setParams: (next: object) => mockSetParams(next) },
+  router: { push: (path: string) => mockPush(path), back: jest.fn(), canGoBack: () => true, setParams: (next: object) => mockSetParams(next) },
 }));
 jest.mock("expo-local-authentication", () => ({ SecurityLevel: { NONE: 0 }, authenticateAsync: jest.fn(), getEnrolledLevelAsync: jest.fn() }));
 jest.mock("expo-web-browser", () => ({ openBrowserAsync: jest.fn() }));

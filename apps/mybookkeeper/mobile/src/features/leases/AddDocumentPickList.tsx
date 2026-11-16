@@ -2,7 +2,7 @@ import { useGetLeaseTemplatesQuery } from "@mybookkeeper/api-client/store/leaseT
 import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { LEASE_DOCUMENTS_LOCKED_NOTE } from "@mybookkeeper/api-client/constants/leaseDocumentsLocked";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useOpenWebsite, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, SHOWING_LAST_LOADED_MESSAGE, useOpenWebsite, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
@@ -32,7 +32,7 @@ export default function AddDocumentPickList({ leaseId }: { leaseId: string }) {
   const picked = pickedIds.filter((id) => !(isLocked && onLease.has(id)));
 
   if (httpStatus(lease.error) === 404) {
-    return <EmptyState action={{ label: MESSAGES.goBack, onPress: () => router.back() }} body={MESSAGES.goneBody} heading={MESSAGES.goneHeading} />;
+    return <EmptyState action={{ label: MESSAGES.goBack, onPress: () => goBackOr("/leases") }} body={MESSAGES.goneBody} heading={MESSAGES.goneHeading} />;
   }
 
   function toggle(id: string): void {

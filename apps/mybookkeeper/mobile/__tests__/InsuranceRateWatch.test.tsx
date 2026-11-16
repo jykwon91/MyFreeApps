@@ -7,7 +7,7 @@ import RateWatchScreen from "../src/features/insurance/RateWatchScreen";
 import { EMPTY_RATE_WATCH, startInsuranceServer } from "../test-support/insuranceServer";
 import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsurance";
 
-jest.mock("expo-router", () => ({ router: { back: jest.fn(), push: jest.fn() } }));
+jest.mock("expo-router", () => ({ router: { back: jest.fn(), canGoBack: () => true, push: jest.fn() } }));
 
 const originalAdapter = api.defaults.adapter;
 

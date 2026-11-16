@@ -40,7 +40,7 @@ jest.mock("expo-router", () => {
   const { useEffect } = jest.requireActual<typeof import("react")>("react");
   const { mockRouter: router } = jest.requireActual<typeof import("../test-support/mockRouter")>("../test-support/mockRouter");
   return {
-    router: { back: () => router.back(), push: (path: string) => router.push(path) },
+    router: { back: () => router.back(), canGoBack: () => true, push: (path: string) => router.push(path) },
     usePreventRemove: (active: boolean, callback: (event: { repeat: () => void }) => void) => {
       router.preventRemove.active = active;
       router.preventRemove.callback = callback;

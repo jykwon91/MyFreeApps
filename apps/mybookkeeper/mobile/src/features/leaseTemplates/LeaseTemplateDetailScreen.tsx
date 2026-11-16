@@ -1,7 +1,6 @@
 import { useGetLeaseTemplateByIdQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { EmptyState, useLeaveWhenSaved, useRefresh } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, useLeaveWhenSaved, useRefresh, goBackOr } from "@platform/mobile";
 import { LEASE_TEMPLATE_MESSAGES as MESSAGES } from "../../constants/leaseTemplates";
 import { useCanWrite } from "../workspace/useCanWrite";
 import LeaseTemplateDetailBody from "./LeaseTemplateDetailBody";
@@ -21,7 +20,7 @@ export default function LeaseTemplateDetailScreen({ id }: { id: string }) {
   if (!template || isGone) {
     return (
       <EmptyState
-        action={isGone ? { label: MESSAGES.back, onPress: () => router.back() } : { label: MESSAGES.tryAgain, onPress: refresh }}
+        action={isGone ? { label: MESSAGES.back, onPress: () => goBackOr("/lease-templates") } : { label: MESSAGES.tryAgain, onPress: refresh }}
         body={isGone ? MESSAGES.maybeDeleted : MESSAGES.tryAgainOffer}
         heading={isGone ? MESSAGES.cantFind : MESSAGES.couldntLoadOne}
       />

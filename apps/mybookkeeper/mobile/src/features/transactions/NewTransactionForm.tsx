@@ -1,8 +1,7 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
-import { router } from "expo-router";
+import { deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { useEffect, useState } from "react";
 import { Alert, View } from "react-native";
 import { CHANNEL_OPTIONS, PAYMENT_METHOD_CHOICES } from "../../constants/transactionCreateOptions";
@@ -49,7 +48,7 @@ export default function NewTransactionForm() {
 
   // Leaving has to wait a render, or the discard prompt still sees the unsaved details.
   useEffect(() => {
-    if (isLeaving) router.back();
+    if (isLeaving) goBackOr("/money");
   }, [isLeaving]);
 
   function update(change: Partial<TransactionCreateValues>): void {

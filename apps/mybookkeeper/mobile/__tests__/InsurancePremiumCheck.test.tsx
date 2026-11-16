@@ -7,7 +7,7 @@ import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsu
 import { aInsurancePolicySummary } from "../test-support/aInsurancePolicySummary";
 
 const mockPush = jest.fn();
-jest.mock("expo-router", () => ({ router: { push: (path: string) => mockPush(path), back: jest.fn() } }));
+jest.mock("expo-router", () => ({ router: { push: (path: string) => mockPush(path), back: jest.fn(), canGoBack: () => true } }));
 
 const originalAdapter = api.defaults.adapter;
 

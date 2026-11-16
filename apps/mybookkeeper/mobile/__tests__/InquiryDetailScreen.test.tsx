@@ -18,7 +18,7 @@ const mockPush = jest.fn();
 const mockDispatch = jest.fn();
 const mockPreventRemove: { active: boolean; callback: ((event: { repeat: () => void }) => void) | null } = { active: false, callback: null };
 jest.mock("expo-router", () => ({
-  router: { back: () => mockBack(), push: (path: string) => mockPush(path) },
+  router: { back: () => mockBack(), canGoBack: () => true, push: (path: string) => mockPush(path) },
   useFocusEffect: (effect: () => void) => jest.requireActual<typeof import("react")>("react").useEffect(effect, [effect]),
   usePreventRemove: (active: boolean, callback: (event: { repeat: () => void }) => void) => {
     mockPreventRemove.active = active;

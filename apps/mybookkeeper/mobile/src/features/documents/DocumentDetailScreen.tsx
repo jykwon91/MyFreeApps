@@ -4,7 +4,7 @@ import {
   useGetDocumentQuery,
   useReExtractDocumentMutation,
 } from "@mybookkeeper/api-client/store/documentsApi";
-import { EmptyState, LoadingButton, Skeleton, Toast, useAnnouncement, useRefresh, useTheme } from "@platform/mobile";
+import { EmptyState, LoadingButton, Skeleton, Toast, useAnnouncement, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
@@ -43,7 +43,7 @@ export default function DocumentDetailScreen({ id }: { id: string }) {
     const isGone = "status" in error && error.status === 404;
     return (
       <EmptyState
-        action={isGone ? { label: "Back", onPress: () => router.back() } : { label: "Try again", onPress: async () => { await refetch(); } }}
+        action={isGone ? { label: "Back", onPress: () => goBackOr("/") } : { label: "Try again", onPress: async () => { await refetch(); } }}
         body={isGone ? "It may have been deleted." : "Want me to try again?"}
         heading={isGone ? "I can't find that document." : "I couldn't load that document."}
       />
@@ -76,11 +76,11 @@ export default function DocumentDetailScreen({ id }: { id: string }) {
   async function remove(): Promise<void> {
     try {
       await deleteDocument(id).unwrap();
-      router.back();
+      goBackOr("/");
     } catch (error) {
       setMessage(documentActionFailureMessage(error, DOCUMENT_ACTION_MESSAGES.deleteFailed));
       // Already gone is the outcome the user wanted: the screen has nothing left to show.
-      if (httpStatus(error) === 404) router.back();
+      if (httpStatus(error) === 404) goBackOr("/");
     }
   }
 

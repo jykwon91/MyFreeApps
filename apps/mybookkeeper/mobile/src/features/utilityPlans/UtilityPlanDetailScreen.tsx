@@ -1,6 +1,5 @@
 import { useGetUtilityPlanByIdQuery } from "@mybookkeeper/api-client/store/utilityPlansApi";
-import { Banner, Chip, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useLeaveWhenSaved, useRefresh, useTheme } from "@platform/mobile";
-import { router } from "expo-router";
+import { Banner, Chip, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useLeaveWhenSaved, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { ScrollView, Text, View } from "react-native";
 import { UTILITY_PLAN_MESSAGES } from "../../constants/utilityPlans";
 import { useTodayIso } from "../../lib/useTodayIso";
@@ -27,7 +26,7 @@ export default function UtilityPlanDetailScreen({ id }: { id: string }) {
     const isGone = httpStatus(error) === 404;
     return (
       <EmptyState
-        action={isGone ? { label: UTILITY_PLAN_MESSAGES.back, onPress: () => router.back() } : { label: UTILITY_PLAN_MESSAGES.tryAgain, onPress: refresh }}
+        action={isGone ? { label: UTILITY_PLAN_MESSAGES.back, onPress: () => goBackOr("/utility-plans") } : { label: UTILITY_PLAN_MESSAGES.tryAgain, onPress: refresh }}
         body={isGone ? UTILITY_PLAN_MESSAGES.maybeDeleted : UTILITY_PLAN_MESSAGES.tryAgainOffer}
         heading={isGone ? UTILITY_PLAN_MESSAGES.cantFind : UTILITY_PLAN_MESSAGES.couldntLoadOne}
       />

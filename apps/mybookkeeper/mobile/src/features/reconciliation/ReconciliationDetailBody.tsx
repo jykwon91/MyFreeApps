@@ -3,7 +3,7 @@ import {
   reconciliationDeleteLabel,
 } from "@mybookkeeper/api-client/constants/reconciliationDelete";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { Chip, LoadingButton, useTheme } from "@platform/mobile";
+import { Chip, LoadingButton, useTheme, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
 import { RECONCILIATION_MESSAGES as MESSAGES } from "../../constants/reconciliation";
@@ -14,7 +14,7 @@ import { useDeleteReconciliationSource } from "./useDeleteReconciliationSource";
 
 export default function ReconciliationDetailBody({ source, canWrite }: ReconciliationDetailBodyProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const { isDeleting, askToDelete } = useDeleteReconciliationSource(source, () => router.back());
+  const { isDeleting, askToDelete } = useDeleteReconciliationSource(source, () => goBackOr("/reconciliation"));
   return (
     <>
       <View accessible accessibilityLabel={detailLabel(source)} style={{ gap: spacing.xs }}>

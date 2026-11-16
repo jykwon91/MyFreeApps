@@ -2,7 +2,7 @@ import { darkColors, lightColors } from "@platform/mobile";
 import { render } from "@testing-library/react-native";
 import { Stack } from "expo-router";
 import { useColorScheme } from "react-native";
-import AppLayout from "../app/(app)/_layout";
+import AppLayout, { unstable_settings } from "../app/(app)/_layout";
 
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 jest.mock("react-native/Libraries/Utilities/useColorScheme", () => ({ __esModule: true, default: jest.fn() }));
@@ -39,5 +39,9 @@ describe("the signed-in layout", () => {
       headerTitleStyle: { color: colors.foreground },
       contentStyle: { backgroundColor: colors.background },
     });
+  });
+
+  it("keeps the tabs under a screen opened cold, so Back doesn't leave the app", () => {
+    expect(unstable_settings).toEqual({ anchor: "(tabs)" });
   });
 });

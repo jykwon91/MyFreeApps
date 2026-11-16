@@ -2,7 +2,7 @@ import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signe
 import type { LeaseAttachmentKind } from "@mybookkeeper/api-client/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@mybookkeeper/api-client/types/lease/signed-lease-attachment";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { Banner, Chip, EmptyState, LoadingButton, MIN_TOUCH_TARGET, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
+import { Banner, Chip, EmptyState, LoadingButton, MIN_TOUCH_TARGET, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
@@ -40,7 +40,7 @@ export default function LeaseDetailScreen({ id }: { id: string }) {
   if (isLoading) return <LeaseDetailSkeleton />;
   if (!lease) {
     return httpStatus(error) === 404 ? (
-      <EmptyState action={{ label: LEASE_MESSAGES.goBack, onPress: () => router.back() }} body={LEASE_MESSAGES.goneBody} heading={LEASE_MESSAGES.goneHeading} />
+      <EmptyState action={{ label: LEASE_MESSAGES.goBack, onPress: () => goBackOr("/leases") }} body={LEASE_MESSAGES.goneBody} heading={LEASE_MESSAGES.goneHeading} />
     ) : (
       <EmptyState action={{ label: LEASE_MESSAGES.tryAgain, onPress: refresh }} body={LEASE_MESSAGES.checkConnection} heading={LEASE_MESSAGES.couldntLoadOne} />
     );

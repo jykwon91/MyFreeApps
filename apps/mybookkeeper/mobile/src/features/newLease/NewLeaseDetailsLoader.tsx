@@ -1,8 +1,7 @@
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import { useGetLeaseTemplatesQuery, useGetMultiGenerateDefaultsQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { askedFields, computedFields } from "@mybookkeeper/api-client/utils/leasePlaceholders";
-import { EmptyState, useRefresh } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, useRefresh, goBackOr } from "@platform/mobile";
 import { useMemo } from "react";
 import { LEASE_TEMPLATE_LIST_LIMIT } from "../../constants/leaseTemplates";
 import { NEW_LEASE_MESSAGES as MESSAGES } from "../../constants/newLease";
@@ -38,7 +37,7 @@ export default function NewLeaseDetailsLoader({ flow }: { flow: NewLeaseFlow }) 
   }
   if (!error) return <NewLeaseDetailsSkeleton />;
   if (httpStatus(defaults.error) === 404 || httpStatus(applicant.error) === 404) {
-    return <EmptyState action={{ label: MESSAGES.goBack, onPress: () => router.back() }} body={MESSAGES.cantFindBody} heading={MESSAGES.cantFindHeading} />;
+    return <EmptyState action={{ label: MESSAGES.goBack, onPress: () => goBackOr("/leases") }} body={MESSAGES.cantFindBody} heading={MESSAGES.cantFindHeading} />;
   }
   return <EmptyState action={{ label: MESSAGES.tryAgain, onPress: refresh }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoadDetails} />;
 }

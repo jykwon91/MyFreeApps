@@ -3,8 +3,7 @@ import { useGetCompanyQuery } from "@myjobhunter/api-client/store/companiesApi";
 import { useDocumentsPages } from "@myjobhunter/api-client/hooks/useDocumentsPages";
 import { currentKanbanColumn } from "@myjobhunter/api-client/utils/currentKanbanColumn";
 import { isNotFound } from "@platform/core/utils/isNotFound";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
-import { router } from "expo-router";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { useEffect, useState } from "react";
 import { ScrollView } from "react-native";
 import { APPLICATION_MESSAGES } from "../../constants/applications";
@@ -36,7 +35,7 @@ export default function ApplicationDetailScreen({ id }: ApplicationDetailScreenP
   );
 
   useEffect(() => {
-    if (isLeaving) router.back();
+    if (isLeaving) goBackOr("/applications");
   }, [isLeaving]);
 
   if (!application && (isFetching || !error)) return <ApplicationDetailSkeleton />;
@@ -46,7 +45,7 @@ export default function ApplicationDetailScreen({ id }: ApplicationDetailScreenP
       <EmptyState
         action={
           isGone
-            ? { label: MESSAGES.back, onPress: () => router.back() }
+            ? { label: MESSAGES.back, onPress: () => goBackOr("/applications") }
             : { label: MESSAGES.tryAgain, onPress: refresh, isLoading: isRefreshing }
         }
         body={isGone ? MESSAGES.maybeDeleted : MESSAGES.tryAgainOffer}
