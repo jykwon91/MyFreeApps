@@ -26,6 +26,7 @@ export type ValidatedField =
   | "moveInDate"
   | "moveOutDate"
   | "occupantCount"
+  | "vehicleCount"
   | "hasPets"
   | "currentCity"
   | "currentCountry"
