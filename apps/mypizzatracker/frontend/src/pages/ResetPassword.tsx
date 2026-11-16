@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { LoadingButton, PasswordPair, describeAuthError } from "@platform/ui";
+import { CenteredCard, LoadingButton, PasswordPair, describeAuthError } from "@platform/ui";
 import { Gamepad2 } from "lucide-react";
 import { resetPassword } from "@/lib/auth";
 
@@ -108,24 +108,6 @@ export default function ResetPassword() {
               Back to sign in
             </Link>
           </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface CenteredCardProps {
-  title: string;
-  children: React.ReactNode;
-}
-
-function CenteredCard({ title, children }: CenteredCardProps) {
-  return (
-    <div className="min-h-screen flex flex-col bg-muted">
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="bg-card border rounded-lg p-8 w-full max-w-sm shadow-sm text-center">
-          <h1 className="text-2xl font-semibold mb-4">{title}</h1>
-          {children}
         </div>
       </div>
     </div>

@@ -144,6 +144,7 @@
         "auth.spec.ts",
         "email-verification.spec.ts",
         "password-reset.spec.ts",
+        "mocked/forgot-password-failure-mock.spec.ts",
         "security.spec.ts",
         "account-deletion.spec.ts",
         "data-export.spec.ts"

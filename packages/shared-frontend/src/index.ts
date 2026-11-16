@@ -100,6 +100,8 @@ export { default as AuthPageFooter } from "./components/layout/AuthPageFooter";
 export { default as StandaloneLayout } from "./components/layout/StandaloneLayout";
 export { default as StandaloneMain } from "./components/layout/StandaloneMain";
 export type { StandaloneMainProps } from "./types/standalone-main-props";
+export { default as CenteredCard } from "./components/layout/CenteredCard";
+export type { CenteredCardProps } from "./types/centered-card-props";
 
 // Auth components
 export { default as RequireAuth } from "./components/auth/RequireAuth";
@@ -109,6 +111,10 @@ export { default as LoginForm } from "./components/auth/LoginForm";
 export type { LoginFormProps } from "./components/auth/LoginForm";
 export { default as PasswordPair } from "./components/auth/PasswordPair";
 export type { PasswordPairProps } from "./components/auth/PasswordPair";
+
+// Forgot-password page (shared across all apps)
+export { default as ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+export type { ForgotPasswordPageProps } from "./types/forgot-password-page-props";
 
 // Step-up auth (PR F1)
 export { default as StepUpModal } from "./auth/StepUpModal";

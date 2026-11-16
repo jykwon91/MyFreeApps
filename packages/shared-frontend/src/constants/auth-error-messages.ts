@@ -1,7 +1,11 @@
+import { AUTH_ERROR_FALLBACK } from "./auth-error-fallback";
+
 /**
  * Readable copy for the error details the auth pages can get back as a bare
  * `detail` string: fastapi-users codes, the TOTP login code, and the shared
- * rate limiter's message (`RATE_LIMIT_GENERIC_DETAIL` in platform_shared).
+ * rate limiter's message (`RATE_LIMIT_GENERIC_DETAIL` in platform_shared), plus the
+ * shared Turnstile gate's refusals (`make_require_turnstile` in platform_shared).
+ * Starlette's plain-text body for an unhandled 500 reads as the fallback.
  * Anything not listed here is shown as the server sent it (see
  * `describeAuthError`).
  */
@@ -13,4 +17,9 @@ export const AUTH_ERROR_MESSAGES: ReadonlyMap<string, string> = new Map([
   ["REGISTER_USER_ALREADY_EXISTS", "An account with this email already exists. Sign in instead."],
   ["VERIFY_USER_BAD_TOKEN", "This verification link is invalid or has expired."],
   ["RESET_PASSWORD_BAD_TOKEN", "This reset link has expired or already been used. Request a new one."],
+  ["Captcha token required", "Please complete the captcha check and try again."],
+  ["captcha_expired_please_retry", "The captcha check expired. Please complete it again and retry."],
+  ["captcha_verification_failed", "We couldn't verify the captcha check. Please complete it again and retry."],
+  ["captcha_service_misconfigured", "The captcha check is unavailable right now. Please try again later."],
+  ["Internal Server Error", AUTH_ERROR_FALLBACK],
 ]);

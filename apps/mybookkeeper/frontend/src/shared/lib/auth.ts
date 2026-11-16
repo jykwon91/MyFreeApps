@@ -91,6 +91,17 @@ export async function login(
   return data;
 }
 
+/**
+ * Request a password-reset email. The backend answers 202 for every address, so a
+ * rejection here is a real failure (rate limit, captcha refusal, 5xx, network) and
+ * propagates for the page to show. The Turnstile token goes in `X-Turnstile-Token`.
+ */
+export async function forgotPassword(email: string, turnstileToken: string): Promise<void> {
+  await api.post("/auth/forgot-password", { email }, {
+    headers: turnstileToken ? { "X-Turnstile-Token": turnstileToken } : {},
+  });
+}
+
 /** Sign out on purpose: clear the token and tell subscribers; PostHog is reset and the account's organization forgotten. */
 export function signOut(): void {
   localStorage.removeItem(TOKEN_STORAGE_KEY);

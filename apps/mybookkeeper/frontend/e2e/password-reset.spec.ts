@@ -29,9 +29,9 @@ test.describe("Forgot Password — page layout", () => {
   test("submitting email shows confirmation message", async ({ page }) => {
     await page.getByLabel("Email").fill("test@example.com");
     await page.getByRole("button", { name: "Send reset link" }).click();
-    await expect(page.getByText("Check your email")).toBeVisible({
-      timeout: 5000,
-    });
+    await expect(
+      page.getByRole("heading", { name: "Check your inbox" })
+    ).toBeVisible({ timeout: 5000 });
     await expect(page.getByText("test@example.com")).toBeVisible();
   });
 });

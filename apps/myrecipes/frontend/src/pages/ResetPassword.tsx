@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { LoadingButton, PasswordPair, describeAuthError } from "@platform/ui";
+import { CenteredCard, LoadingButton, PasswordPair, describeAuthError } from "@platform/ui";
 import { ChefHat } from "lucide-react";
-import { CenteredCard } from "@/components/CenteredCard";
 import { resetPassword } from "@/lib/auth";
 
 export default function ResetPassword() {

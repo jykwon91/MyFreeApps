@@ -1,24 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
+import { AxiosError, AxiosHeaders, type InternalAxiosRequestConfig } from 'axios';
 import ForgotPassword from '@/app/pages/ForgotPassword';
 
 vi.mock('@/shared/lib/api', () => ({
   default: {
     post: vi.fn(),
   },
-}));
-
-// TurnstileWidget renders null when VITE_TURNSTILE_SITE_KEY is not set,
-// which is the case in the test environment.
-vi.mock("@platform/ui", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@platform/ui")>()),
-  TurnstileWidget: ({ onVerify }: { onVerify: (t: string) => void }) => (
-    <button type="button" data-testid="turnstile" onClick={() => onVerify('test-token')}>
-      Verify
-    </button>
-  ),
 }));
 
 import api from '@/shared/lib/api';
@@ -67,7 +57,7 @@ describe('ForgotPassword — rendering', () => {
   it('does not show the success screen initially', () => {
     renderForgotPassword();
 
-    expect(screen.queryByText('Check your email')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Check your inbox' })).not.toBeInTheDocument();
   });
 
   it('does not show an error before any submission attempt', () => {
@@ -145,7 +135,7 @@ describe('ForgotPassword — submit success', () => {
     await user.type(emailInput(container), 'user@example.com');
     await user.click(screen.getByRole('button', { name: 'Send reset link' }));
 
-    await screen.findByText('Check your email');
+    await screen.findByRole('heading', { name: 'Check your inbox' });
   });
 
   it('includes the submitted email in the success message', async () => {
@@ -156,7 +146,7 @@ describe('ForgotPassword — submit success', () => {
     await user.type(emailInput(container), 'janet@example.com');
     await user.click(screen.getByRole('button', { name: 'Send reset link' }));
 
-    await screen.findByText('Check your email');
+    await screen.findByRole('heading', { name: 'Check your inbox' });
     expect(screen.getByText('janet@example.com')).toBeInTheDocument();
   });
 
@@ -168,7 +158,7 @@ describe('ForgotPassword — submit success', () => {
     await user.type(emailInput(container), 'user@example.com');
     await user.click(screen.getByRole('button', { name: 'Send reset link' }));
 
-    await screen.findByText('Check your email');
+    await screen.findByRole('heading', { name: 'Check your inbox' });
     expect(emailInput(container)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Send reset link' })).not.toBeInTheDocument();
   });
@@ -181,42 +171,45 @@ describe('ForgotPassword — submit success', () => {
     await user.type(emailInput(container), 'user@example.com');
     await user.click(screen.getByRole('button', { name: 'Send reset link' }));
 
-    await screen.findByText('Check your email');
+    await screen.findByRole('heading', { name: 'Check your inbox' });
     const link = screen.getByRole('link', { name: 'Back to sign in' });
     expect(link).toHaveAttribute('href', '/login');
   });
 });
 
 // ---------------------------------------------------------------------------
-// API error suppression (email enumeration prevention)
+// Failures — never claim an email was sent
 // ---------------------------------------------------------------------------
 
-describe('ForgotPassword — API error suppression', () => {
+function axiosFailure(status: number | null, data: unknown = ''): AxiosError {
+  const config = { headers: new AxiosHeaders() } as InternalAxiosRequestConfig;
+  if (status === null) return new AxiosError('Network Error', AxiosError.ERR_NETWORK, config);
+  return new AxiosError(`Request failed with status code ${status}`, AxiosError.ERR_BAD_RESPONSE, config, undefined, {
+    status, statusText: '', headers: {}, config, data,
+  });
+}
+
+describe('ForgotPassword — API failures', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('shows the success screen even when the API call throws', async () => {
-    vi.mocked(api.post).mockRejectedValue(new Error('Not found'));
+  it.each([
+    ['a 500', axiosFailure(500), 'Something went wrong. Please try again.'],
+    ['a network error', axiosFailure(null), 'Something went wrong. Please try again.'],
+    ['a 429 rate limit', axiosFailure(429, { detail: 'Too many attempts' }), 'Too many attempts. Wait a few minutes and try again.'],
+  ])('shows an error, not the success screen, on %s', async (_label, failure, message) => {
+    vi.mocked(api.post).mockRejectedValue(failure);
     const user = userEvent.setup();
     const { container } = renderForgotPassword();
 
-    await user.type(emailInput(container), 'nobody@example.com');
+    await user.type(emailInput(container), 'user@example.com');
     await user.click(screen.getByRole('button', { name: 'Send reset link' }));
 
-    await screen.findByText('Check your email');
-  });
-
-  it('does not display the API error message to prevent email enumeration', async () => {
-    vi.mocked(api.post).mockRejectedValue(new Error('User not found'));
-    const user = userEvent.setup();
-    const { container } = renderForgotPassword();
-
-    await user.type(emailInput(container), 'ghost@example.com');
-    await user.click(screen.getByRole('button', { name: 'Send reset link' }));
-
-    await screen.findByText('Check your email');
-    expect(screen.queryByText('User not found')).not.toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(message);
+    expect(screen.queryByRole('heading', { name: 'Check your inbox' })).not.toBeInTheDocument();
+    expect(emailInput(container)).toHaveValue('user@example.com');
+    expect(screen.getByRole('button', { name: 'Send reset link' })).toBeEnabled();
   });
 });
 
@@ -225,13 +218,37 @@ describe('ForgotPassword — API error suppression', () => {
 // ---------------------------------------------------------------------------
 
 describe('ForgotPassword — Turnstile', () => {
+  const renderMock = vi.fn((_el: HTMLElement, _options: Record<string, unknown>) => 'widget-1');
+  const resetMock = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', 'test-site-key');
+    window.turnstile = { render: renderMock, reset: resetMock, remove: vi.fn() };
   });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    delete window.turnstile;
+  });
+
+  function solveCaptcha(token: string) {
+    const options = renderMock.mock.calls[renderMock.mock.calls.length - 1][1];
+    act(() => (options.callback as (t: string) => void)(token));
+  }
 
   it('renders the Turnstile widget', () => {
     renderForgotPassword();
-    expect(screen.getByTestId('turnstile')).toBeInTheDocument();
+    expect(renderMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Send reset link disabled until the captcha is solved', async () => {
+    const user = userEvent.setup();
+    const { container } = renderForgotPassword();
+
+    await user.type(emailInput(container), 'user@example.com');
+
+    expect(screen.getByRole('button', { name: 'Send reset link' })).toBeDisabled();
   });
 
   it('sends X-Turnstile-Token header after widget verifies', async () => {
@@ -240,7 +257,7 @@ describe('ForgotPassword — Turnstile', () => {
     const { container } = renderForgotPassword();
 
     await user.type(emailInput(container), 'user@example.com');
-    await user.click(screen.getByTestId('turnstile'));
+    solveCaptcha('test-token');
     await user.click(screen.getByRole('button', { name: 'Send reset link' }));
 
     await waitFor(() => {
@@ -252,13 +269,34 @@ describe('ForgotPassword — Turnstile', () => {
     });
   });
 
-  it('sends empty headers object before widget verifies', async () => {
+  it('re-challenges the captcha after a captcha refusal', async () => {
+    vi.mocked(api.post).mockRejectedValue(axiosFailure(400, { detail: 'captcha_expired_please_retry' }));
+    const user = userEvent.setup();
+    const { container } = renderForgotPassword();
+
+    await user.type(emailInput(container), 'user@example.com');
+    solveCaptcha('test-token');
+    await user.click(screen.getByRole('button', { name: 'Send reset link' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The captcha check expired. Please complete it again and retry.',
+    );
+    expect(resetMock).toHaveBeenCalledWith('widget-1');
+    expect(screen.queryByRole('heading', { name: 'Check your inbox' })).not.toBeInTheDocument();
+  });
+});
+
+describe('ForgotPassword — Turnstile off (no site key)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('sends empty headers object when there is no token', async () => {
     vi.mocked(api.post).mockResolvedValue({});
     const user = userEvent.setup();
     const { container } = renderForgotPassword();
 
     await user.type(emailInput(container), 'user@example.com');
-    // Do NOT click the Turnstile widget — token stays empty
     await user.click(screen.getByRole('button', { name: 'Send reset link' }));
 
     await waitFor(() => {
