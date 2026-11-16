@@ -1,16 +1,16 @@
 import { useListOrganizationsQuery } from "@mybookkeeper/api-client/store/organizationsApi";
 import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 import { baseApi } from "@platform/core/store/baseApi";
-import { Skeleton, useOpenWebsite, useTheme } from "@platform/mobile";
+import { Skeleton, useTheme } from "@platform/mobile";
 import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
 import { AppState, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import { WEB_BASE_URL } from "../../constants/api";
 import { OFFLINE_RETRY_MS } from "../../constants/workspace";
 import type { AppDispatch, RootState } from "../../lib/store";
 import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import { uploadsReset } from "../capture/uploadsSlice";
 import { readSavedWorkspace, saveWorkspace } from "./savedWorkspace";
+import NoWorkspaceMessage from "./NoWorkspaceMessage";
 import WorkspaceMessage from "./WorkspaceMessage";
 import { workspaceChosen, workspaceLost, workspaceRemembered } from "./workspaceSlice";
 
@@ -26,7 +26,6 @@ export default function WorkspaceGate({ children }: { children: ReactNode }) {
   const activeId = useSelector((state: RootState) => state.workspace.activeId);
   const dispatch = useDispatch<AppDispatch>();
   const { colors, spacing } = useTheme();
-  const openWebsite = useOpenWebsite();
   const active = data?.find((workspace) => workspace.id === activeId);
   const isActiveKnown = active !== undefined;
   const lastActive = useRef<OrgWithRole | null>(null);
@@ -110,13 +109,7 @@ export default function WorkspaceGate({ children }: { children: ReactNode }) {
     );
   }
   if (data?.length === 0) {
-    return (
-      <WorkspaceMessage
-        action={{ label: "Open the website", onPress: () => openWebsite(WEB_BASE_URL, "/") }}
-        body="You're signed in, but you're not part of a workspace. Ask the owner to invite you, or set one up on the website."
-        heading="No workspace yet"
-      />
-    );
+    return <NoWorkspaceMessage />;
   }
   if (!isActiveKnown) {
     return (
