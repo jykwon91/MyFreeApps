@@ -1,3 +1,4 @@
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import { useState } from "react";
 import { Button, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { policyToFormValues, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
@@ -44,7 +45,7 @@ export default function EditInsurancePolicyDialog({
     try {
       await updatePolicy({
         policyId: policy.id,
-        data: toPolicyPayload(values),
+        data: toPolicyPayload(values, NUMBER_INPUT_DECIMAL_SEPARATOR),
       }).unwrap();
       showSuccess("Insurance policy updated.");
       onClose();

@@ -1,3 +1,4 @@
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import { useState } from "react";
 import { Button, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/insurancePolicyDraft";
@@ -54,7 +55,7 @@ export default function AddInsurancePolicyDialog({
     try {
       await createPolicy({
         property_id: propertyId,
-        ...toPolicyPayload(values),
+        ...toPolicyPayload(values, NUMBER_INPUT_DECIMAL_SEPARATOR),
         // Recorded only when the form was actually seeded from a document, so
         // the saved policy points back at what it was read from.
         ...(draft ? { source_document_id: draft.source_document_id } : {}),

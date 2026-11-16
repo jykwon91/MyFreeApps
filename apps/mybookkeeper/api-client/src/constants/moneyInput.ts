@@ -9,6 +9,9 @@ export const MONEY_CURRENCY_PREFIX = /^\$\s*/;
 /** Everything an amount can be written with once the dollar sign is gone: digits, both marks and spaces. */
 export const MONEY_CHARACTERS = /^[\d., ]+$/;
 
+/** Text that was meant as an amount (digits and marks, maybe a leading "$") whatever else is wrong with it. */
+export const MONEY_AMOUNT_LOOKS_TYPED = /^\s*\$?[\d.,\s]*\d[\d.,\s]*$/;
+
 /** Cents: one or two digits after the decimal mark. */
 export const MONEY_CENTS = /^\d{1,2}$/;
 

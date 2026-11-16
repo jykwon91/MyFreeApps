@@ -5,7 +5,7 @@ import type { InsurancePolicyFormValues } from "@mybookkeeper/api-client/types/i
 import { applyDraftToForm } from "@mybookkeeper/api-client/utils/insurancePolicyDraft";
 import { EMPTY_POLICY_FORM, policyToFormValues, toPolicyPayload } from "@mybookkeeper/api-client/utils/insurancePolicyForm";
 import { INSURANCE_UPLOAD_MIME_TYPES } from "@mybookkeeper/api-client/constants/insuranceUploads";
-import { Banner, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 
@@ -30,6 +30,7 @@ export default function PolicyForm({ policy }: { policy?: InsurancePolicyDetail 
   const [updatePolicy] = useUpdateInsurancePolicyMutation();
   const readers = useInsurancePolicyReaders();
   const { isBusy, failure, clearFailure, submit } = useFormSubmit();
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
   const [initial] = useState(() => (policy ? policyToFormValues(policy) : EMPTY_POLICY_FORM));
   const [values, setValues] = useState<InsurancePolicyFormValues>(initial);
   const [propertyId, setPropertyId] = useState(policy?.property_id ?? "");
@@ -57,16 +58,16 @@ export default function PolicyForm({ policy }: { policy?: InsurancePolicyDetail 
   }
 
   async function save(): Promise<void> {
-    const found = policyFormErrors(values, policy ? null : propertyId);
+    const found = policyFormErrors(values, policy ? null : propertyId, decimalSeparator);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
     const saved = await submit(
       () =>
         policy
-          ? updatePolicy({ policyId: policy.id, data: toPolicyPayload(values) }).unwrap()
+          ? updatePolicy({ policyId: policy.id, data: toPolicyPayload(values, decimalSeparator) }).unwrap()
           : createPolicy({
               property_id: propertyId,
-              ...toPolicyPayload(values),
+              ...toPolicyPayload(values, decimalSeparator),
               // Only when the form was seeded from a document, so the policy cites what it was read from.
               ...(draft ? { source_document_id: draft.source_document_id } : {}),
             }).unwrap(),

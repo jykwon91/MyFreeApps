@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import { INSURANCE_POLICY_PROBLEM_MESSAGES } from "../constants/insurancePolicyProblemMessages";
 import { EMPTY_POLICY_FORM } from "../utils/insurancePolicyForm";
 import { insurancePolicyFormProblems } from "../utils/insurancePolicyFormProblems";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import type { InsurancePolicyFormValues } from "../types/insurance/insurance-policy-form-values";
 
 const VALID: InsurancePolicyFormValues = { ...EMPTY_POLICY_FORM, policyName: "Landlord policy" };
 
-function problems(change: Partial<InsurancePolicyFormValues>) {
-  return insurancePolicyFormProblems({ ...VALID, ...change });
+function problems(change: Partial<InsurancePolicyFormValues>, decimalSeparator: DecimalSeparator = ".") {
+  return insurancePolicyFormProblems({ ...VALID, ...change }, decimalSeparator);
 }
 
 describe("insurancePolicyFormProblems", () => {
@@ -54,15 +55,15 @@ describe("insurancePolicyFormProblems", () => {
   });
 
   describe("premium (above zero)", () => {
-    it.each(["0", "0.00", "0.001", "0.004"])("rejects %s, which is zero cents", (premiumDollars) => {
+    it.each(["0", "0.00"])("rejects %s, which is zero cents", (premiumDollars) => {
       expect(problems({ premiumDollars, premiumFrequency: "annual" }).premiumDollars).toBe("must_be_positive");
     });
     it("rejects a negative premium", () => {
       expect(problems({ premiumDollars: "-5", premiumFrequency: "annual" }).premiumDollars).toBe("must_be_positive");
     });
-    it("accepts one cent, and 0.005 which rounds up to it", () => {
+    it("accepts one cent, and refuses a fraction of a cent", () => {
       expect(problems({ premiumDollars: "0.01", premiumFrequency: "monthly" })).toEqual({});
-      expect(problems({ premiumDollars: "0.005", premiumFrequency: "monthly" })).toEqual({});
+      expect(problems({ premiumDollars: "0.005", premiumFrequency: "monthly" }).premiumDollars).toBe("not_a_number");
     });
     it("rejects text", () => {
       expect(problems({ premiumDollars: "abc", premiumFrequency: "annual" }).premiumDollars).toBe("not_a_number");
@@ -82,6 +83,29 @@ describe("insurancePolicyFormProblems", () => {
     it("rejects a negative amount and text", () => {
       expect(problems({ [field]: "-1" })[field]).toBe("negative");
       expect(problems({ [field]: "abc" })[field]).toBe("not_a_number");
+    });
+  });
+
+  describe("decimal separators", () => {
+    it.each([["1250,50"], ["1.250,50"], ["$1.250,50"], ["1 250,5"]])("reads %s on a comma keypad", (amount) => {
+      expect(problems({ premiumDollars: amount, premiumFrequency: "annual", coverageDollars: amount }, ",")).toEqual({});
+    });
+    it.each([["1250.50"], ["1,250.50"], ["$1,250"], ["$ 1,250.5"]])("reads %s on a dot keypad", (amount) => {
+      expect(problems({ premiumDollars: amount, premiumFrequency: "annual", deductibleDollars: amount }, ".")).toEqual({});
+    });
+    it("won't guess whether 1,234 is cents or thousands on a comma keypad", () => {
+      expect(problems({ coverageDollars: "1,234" }, ",").coverageDollars).toBe("not_a_number");
+      expect(problems({ premiumDollars: "1,234", premiumFrequency: "annual" }, ",").premiumDollars).toBe("not_a_number");
+    });
+    it.each([["-5"], ["-5,50"], ["-$5"], ["- 1.250,50"]])("keeps saying %s is negative on a comma keypad", (amount) => {
+      expect(problems({ deductibleDollars: amount }, ",").deductibleDollars).toBe("negative");
+      expect(problems({ premiumDollars: amount, premiumFrequency: "annual" }, ",").premiumDollars).toBe("must_be_positive");
+    });
+    it("takes a blank optional amount", () => {
+      expect(problems({ coverageDollars: "  ", deductibleDollars: "" }, ",")).toEqual({});
+    });
+    it("calls a minus sign with nothing readable after it text", () => {
+      expect(problems({ deductibleDollars: "-" }, ",").deductibleDollars).toBe("not_a_number");
     });
   });
 

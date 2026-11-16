@@ -2,10 +2,14 @@ import api from "@platform/core/lib/api";
 import { fireEvent, screen } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import { BENCHMARK_FORM_PROBLEMS } from "@mybookkeeper/api-client/constants/benchmarkForm";
+import { MONEY_INPUT_MESSAGES } from "@mybookkeeper/api-client/constants/moneyInput";
 import MarketPremiumScreen from "../src/features/insurance/MarketPremiumScreen";
 import { aBenchmark, lastInsuranceWrite, startInsuranceServer } from "../test-support/insuranceServer";
 import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsurance";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 jest.mock("expo-router", () => ({ router: { back: jest.fn(), push: jest.fn() } }));
 jest.mock("@react-native-community/datetimepicker", () => {
   const { View } = jest.requireActual("react-native");
@@ -22,6 +26,7 @@ const originalAdapter = api.defaults.adapter;
 beforeEach(() => {
   resetInsuranceStore();
   jest.clearAllMocks();
+  mockDecimalSeparator = ".";
 });
 
 afterEach(() => {
@@ -70,6 +75,17 @@ describe("market premium", () => {
     expect(await screen.findByText("Comparing against")).toBeTruthy();
   });
 
+  it("reads a premium typed with a comma on a comma keypad and sends dollars and cents", async () => {
+    mockDecimalSeparator = ",";
+    const server = startInsuranceServer();
+    await renderInsurance(<MarketPremiumScreen />);
+    await fireEvent.press(await screen.findByRole("button", { name: "Record a market premium" }));
+    await fillAmounts("1200,50", "$400.000");
+    await fireEvent.press(screen.getByRole("button", { name: "Save market premium" }));
+    expect(await screen.findByText("Market premium saved.")).toBeTruthy();
+    expect(lastInsuranceWrite(server)).toMatchObject({ body: { annual_premium_cents: 120050, coverage_amount_cents: 40000000 } });
+  });
+
   it("asks for both amounts instead of sending", async () => {
     const server = startInsuranceServer();
     await renderInsurance(<MarketPremiumScreen />);
@@ -83,7 +99,7 @@ describe("market premium", () => {
   it.each([
     ["10000001", "400000", BENCHMARK_FORM_PROBLEMS.premiumTooHigh],
     ["1200", "1000000001", BENCHMARK_FORM_PROBLEMS.coverageTooHigh],
-    ["1200.555", "400000", BENCHMARK_FORM_PROBLEMS.moneyTooPrecise],
+    ["1200.555", "400000", MONEY_INPUT_MESSAGES.notDollarsAndCents(".")],
   ])("points at premium %s / coverage %s and sends nothing", async (premium, coverage, message) => {
     const server = startInsuranceServer();
     await renderInsurance(<MarketPremiumScreen />);

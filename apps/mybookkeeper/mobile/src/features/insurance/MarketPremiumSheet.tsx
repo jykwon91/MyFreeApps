@@ -3,7 +3,7 @@ import type { InsuranceBenchmark } from "@mybookkeeper/api-client/types/insuranc
 import type { InsuranceBenchmarkFormValues } from "@mybookkeeper/api-client/types/insurance/insurance-benchmark-form-values";
 import { BENCHMARK_NOTES_MAX_LENGTH, BENCHMARK_SOURCE_MAX_LENGTH, INSURANCE_BENCHMARK_REGION_MAX_LENGTH } from "@mybookkeeper/api-client/constants/benchmarkForm";
 import { benchmarkFormPayload, benchmarkFormProblems, benchmarkToFormValues } from "@mybookkeeper/api-client/utils/insuranceBenchmarkForm";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Alert, Modal, Text, View } from "react-native";
 import { MARKET_MESSAGES } from "../../constants/insuranceMarket";
@@ -24,11 +24,12 @@ export default function MarketPremiumSheet({ existing, onClose }: MarketPremiumS
   const todayIso = useTodayIso();
   const [upsert] = useUpsertInsuranceBenchmarkMutation();
   const { isBusy, failure, clearFailure, submit } = useFormSubmit();
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
   const [initial] = useState(() => benchmarkToFormValues(existing, todayIso));
   const [values, setValues] = useState<InsuranceBenchmarkFormValues>(initial);
   const [showError, setShowError] = useState(false);
-  const payload = benchmarkFormPayload(values, todayIso);
-  const problems = showError ? benchmarkFormProblems(values, todayIso) : {};
+  const payload = benchmarkFormPayload(values, todayIso, decimalSeparator);
+  const problems = showError ? benchmarkFormProblems(values, todayIso, decimalSeparator) : {};
   const isDirty = JSON.stringify(values) !== JSON.stringify(initial);
 
   function change(next: Partial<InsuranceBenchmarkFormValues>): void {

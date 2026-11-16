@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
+import { MONEY_INPUT_MESSAGES } from "../constants/moneyInput";
 import type { InsuranceBenchmark } from "../types/insurance/insurance-benchmark";
 import type { InsuranceBenchmarkFormValues } from "../types/insurance/insurance-benchmark-form-values";
 import { BENCHMARK_FORM_PROBLEMS } from "../constants/benchmarkForm";
@@ -27,11 +29,11 @@ describe("positiveDollarsToCents", () => {
     [" 12.34 ", 1234],
     ["0.1", 10],
   ])("turns %s into %s cents", (text, cents) => {
-    expect(positiveDollarsToCents(text)).toBe(cents);
+    expect(positiveDollarsToCents(text, ".")).toBe(cents);
   });
 
   it.each(["", "  ", "abc", "0", "-5", "Infinity"])("rejects %j", (text) => {
-    expect(positiveDollarsToCents(text)).toBeNull();
+    expect(positiveDollarsToCents(text, ".")).toBeNull();
   });
 });
 
@@ -47,7 +49,7 @@ describe("benchmarkToFormValues", () => {
 
 describe("benchmarkFormPayload", () => {
   it("turns a filled form into the request, trimming text and nulling blanks", () => {
-    expect(benchmarkFormPayload(FILLED, TODAY)).toEqual({
+    expect(benchmarkFormPayload(FILLED, TODAY, ".")).toEqual({
       annual_premium_cents: 120_050,
       coverage_amount_cents: 40_000_000,
       region_label: "Houston",
@@ -58,12 +60,12 @@ describe("benchmarkFormPayload", () => {
   });
 
   it.each([{ premium: "" }, { coverage: "0" }, { observedOn: "" }])("is not ready to send with %j", (change) => {
-    expect(benchmarkFormPayload({ ...FILLED, ...change }, TODAY)).toBeNull();
+    expect(benchmarkFormPayload({ ...FILLED, ...change }, TODAY, ".")).toBeNull();
   });
 });
 
 describe("benchmarkFormProblems", () => {
-  const problems = (change: Partial<InsuranceBenchmarkFormValues>) => benchmarkFormProblems({ ...FILLED, ...change }, TODAY);
+  const problems = (change: Partial<InsuranceBenchmarkFormValues>, decimalSeparator: DecimalSeparator = ".") => benchmarkFormProblems({ ...FILLED, ...change }, TODAY, decimalSeparator);
 
   it("has nothing to say about a form the backend accepts", () => {
     expect(problems({})).toEqual({});
@@ -84,8 +86,8 @@ describe("benchmarkFormProblems", () => {
   });
 
   it("refuses fractions of a cent", () => {
-    expect(problems({ premium: "1200.505" }).premium).toBe(BENCHMARK_FORM_PROBLEMS.moneyTooPrecise);
-    expect(problems({ coverage: "400000.001" }).coverage).toBe(BENCHMARK_FORM_PROBLEMS.moneyTooPrecise);
+    expect(problems({ premium: "1200.505" }).premium).toBe(MONEY_INPUT_MESSAGES.notDollarsAndCents("."));
+    expect(problems({ coverage: "400000.001" }).coverage).toBe(MONEY_INPUT_MESSAGES.notDollarsAndCents("."));
   });
 
   it("limits region to 120, source to 255 and notes to 5000, counted as they will be sent", () => {
@@ -102,8 +104,30 @@ describe("benchmarkFormProblems", () => {
   });
 
   it("is not ready to send when any rule is broken", () => {
-    expect(benchmarkFormPayload({ ...FILLED, premium: "10000001" }, TODAY)).toBeNull();
-    expect(benchmarkFormPayload({ ...FILLED, notes: "n".repeat(5001) }, TODAY)).toBeNull();
-    expect(benchmarkFormPayload({ ...FILLED, observedOn: "2026-05-06" }, TODAY)).toBeNull();
+    expect(benchmarkFormPayload({ ...FILLED, premium: "10000001" }, TODAY, ".")).toBeNull();
+    expect(benchmarkFormPayload({ ...FILLED, notes: "n".repeat(5001) }, TODAY, ".")).toBeNull();
+    expect(benchmarkFormPayload({ ...FILLED, observedOn: "2026-05-06" }, TODAY, ".")).toBeNull();
+  });
+});
+
+describe("benchmark amounts on a comma keypad", () => {
+  const COMMA = { ...FILLED, premium: "1.200,50", coverage: "$400.000" };
+
+  it("checks and sends the same cents it would for the dot spelling", () => {
+    expect(benchmarkFormProblems(COMMA, TODAY, ",")).toEqual({});
+    expect(benchmarkFormPayload(COMMA, TODAY, ",")).toMatchObject({ annual_premium_cents: 120_050, coverage_amount_cents: 40_000_000 });
+    expect(benchmarkFormPayload({ ...FILLED, premium: "$1,200.50", coverage: "400,000" }, TODAY, ".")).toMatchObject({ annual_premium_cents: 120_050, coverage_amount_cents: 40_000_000 });
+  });
+
+  it("won't guess at 1,234 there, and shows the example with a comma", () => {
+    expect(benchmarkFormProblems({ ...FILLED, premium: "1,234" }, TODAY, ",").premium).toBe(MONEY_INPUT_MESSAGES.notDollarsAndCents(","));
+    expect(MONEY_INPUT_MESSAGES.notDollarsAndCents(",")).toContain("84,20");
+    expect(benchmarkFormPayload({ ...FILLED, premium: "1,234" }, TODAY, ",")).toBeNull();
+  });
+
+  it("still asks for an amount above zero when it is blank, zero or negative", () => {
+    expect(benchmarkFormProblems({ ...FILLED, premium: "" }, TODAY, ",").premium).toBe(BENCHMARK_FORM_PROBLEMS.premiumRequired);
+    expect(benchmarkFormProblems({ ...FILLED, premium: "0,00" }, TODAY, ",").premium).toBe(BENCHMARK_FORM_PROBLEMS.premiumRequired);
+    expect(benchmarkFormProblems({ ...FILLED, coverage: "-5" }, TODAY, ",").coverage).toBe(BENCHMARK_FORM_PROBLEMS.coverageRequired);
   });
 });
