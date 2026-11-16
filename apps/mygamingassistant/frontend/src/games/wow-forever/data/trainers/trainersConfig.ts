@@ -25,6 +25,16 @@ export const PROFESSION_SERVICE_TAG: Readonly<Record<GuideProfession, string>> =
   fishing: "fishing",
 };
 
+/** Copy for a profession rank's "what it teaches" list. */
+export const RANK_RECIPES_COPY = {
+  toggle: (rank: string, count: number) => `What ${rank} teaches · ${count} ${count === 1 ? "recipe" : "recipes"}`,
+  loading: (rank: string) => `What ${rank} teaches · loading…`,
+  listLabel: (rank: string) => `Recipes ${rank} trainers teach`,
+  error: "Couldn't load what the trainers teach.",
+  /** Under a crafting profession's trainer list: the names open that trainer's own list. */
+  trainerHint: "Click a trainer's name to see everything they teach.",
+} as const;
+
 /** Trainers a class visits besides its own class trainer. */
 export const CLASS_EXTRA_TRAINERS: Readonly<Partial<Record<WowClassId, ClassExtraTrainer>>> = {
   hunter: { kind: SERVICE_KIND.petTrainer, name: "Pet" },

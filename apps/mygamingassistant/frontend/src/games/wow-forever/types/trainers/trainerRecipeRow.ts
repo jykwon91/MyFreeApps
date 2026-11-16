@@ -7,6 +7,8 @@ export interface TrainerRecipeRow {
   skill: number;
   /** Training cost in copper. 0 = no cost data. */
   cost: number;
+  /** "Armorsmith" when only that specialization can learn it (recipe book); null otherwise or before it loads. */
+  spec: string | null;
   /** "can-learn": player skill >= recipe skill; "needs-skill": needs more skill; "needs-data": no player skill provided. */
   status: "can-learn" | "needs-skill" | "needs-data";
 }

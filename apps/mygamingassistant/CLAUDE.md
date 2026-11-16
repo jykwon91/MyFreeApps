@@ -175,7 +175,19 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `lib/trainers/trainerRecipes.ts` (pure; skill status logic),
   `components/trainers/TrainerRecipesPanel.tsx` (panel + NumberField for skill
   input, `?skill=` param). Tests: `tests/test_wow_trainer_npc_recipes_generator.py`,
-  `src/__tests__/wowTrainerRecipes.test.ts`.
+  `src/__tests__/wowTrainerRecipes.test.ts`. Trainer names are dotted-underlined
+  and the list says "Click a trainer's name…" — they looked like plain text
+  before (operator couldn't find the lists, 2026-11-16).
+  **What each rank teaches** (the operator's "what do Journeyman, Expert and
+  Artisan tailors train?"): each crafting rank card has a "What <rank> teaches
+  · N recipes" toggle (`RankRecipesList`, closed by default) listing every
+  trainer recipe of that rank once — union of every NPC in `trainerNpcSpells`,
+  enriched from the recipe book (spells it lacks skipped), with skill, cost and
+  a "<Spec> only" chip (`TrainerRecipeRow.spec`). Rank = the highest rank whose
+  training skill the recipe's skill has reached (Apprentice 1–49, Journeyman
+  50–124, Expert 125–199, Artisan 200+), the same rule as `recipeRank`
+  (`lib/trainers/rankRecipes.ts`). Gathering, Cooking and Fishing get none.
+  Tests: `wowTrainerRecipes.test.ts` (`rankRecipes`), `wow-forever-trainers.spec.ts`.
   **Where to learn a recipe** (`RecipeLearnDetail`, used by the Recipes page
   rows and item pages' Crafted section via `CraftedByList`): a trainer recipe
   lists your faction's trainers of the rank covering its skill

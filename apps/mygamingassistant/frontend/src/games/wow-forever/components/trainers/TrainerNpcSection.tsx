@@ -1,4 +1,5 @@
 import RankTrainerList from "@/games/wow-forever/components/professions/RankTrainerList";
+import { RANK_RECIPES_COPY } from "@/games/wow-forever/data/trainers/trainersConfig";
 import EmptyStateNote from "@/games/wow-forever/components/shared/EmptyStateNote";
 import type { RankTrainer } from "@/games/wow-forever/data/professions/rankTrainerTypes";
 
@@ -18,6 +19,7 @@ export default function TrainerNpcSection({ name, trainers, zoneId, emptyMessage
   return (
     <section className="space-y-2 rounded-xl border bg-card p-3 sm:p-4">
       <h3 className="font-semibold">{name} trainers</h3>
+      {onSelectTrainer && trainers.length ? <p className="text-sm text-muted-foreground">{RANK_RECIPES_COPY.trainerHint}</p> : null}
       {trainers.length ? (
         <RankTrainerList label={name} trainers={trainers} zoneId={zoneId} onSelectTrainer={onSelectTrainer} />
       ) : (

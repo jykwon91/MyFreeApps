@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { rankRecipes } from "@/games/wow-forever/lib/trainers/rankRecipes";
 import { trainerNpcRecipes } from "@/games/wow-forever/lib/trainers/trainerRecipes";
+import type { ProfessionRankStep } from "@/games/wow-forever/types/trainers/professionRankStep";
 import type { TrainerNpcSpells } from "@/games/wow-forever/types/trainers/trainerNpcSpells";
 import type { RecipeEntry } from "@/games/wow-forever/types/recipes/recipeEntry";
 import type { RecipeEntryLookup } from "@/games/wow-forever/types/recipes/recipeEntryLookup";
@@ -112,5 +114,56 @@ describe("trainerNpcRecipes", () => {
     const rows = trainerNpcRecipes(1317, "enchanting", STUB_SPELLS, null, null);
     expect(rows[0].skill).toBe(15);
     expect(rows[1].skill).toBe(60);
+  });
+});
+
+function step(name: string, skill: string): ProfessionRankStep {
+  return { name, skill, level: null, cap: null, craftingRank: null, milestone: null };
+}
+
+const STEPS = [step("Apprentice", "1"), step("Journeyman", "50"), step("Expert", "125"), step("Artisan", "200")];
+
+describe("rankRecipes", () => {
+  const npcs = {
+    "1": [
+      [101, 210, 900],
+      [102, 50, 100],
+      [103, 1, 10],
+    ] as const,
+    "2": [
+      [102, 50, 100],
+      [104, 124, 300],
+      [105, 49, 90],
+      [999, 60, 1],
+    ] as const,
+  };
+  const lookup = makeLookup([
+    { ...makeEntry(101, "Mooncloth Robe"), key: "tailoring:101", spec: "Mooncloth" },
+    { ...makeEntry(102, "B Shirt"), key: "tailoring:102" },
+    { ...makeEntry(103, "Linen Bolt"), key: "tailoring:103" },
+    { ...makeEntry(104, "Gloves"), key: "tailoring:104" },
+    { ...makeEntry(105, "A Vest"), key: "tailoring:105" },
+  ]);
+  const byRank = rankRecipes("tailoring", STEPS, npcs, lookup);
+  const names = (rank: string) => (byRank.get(rank) ?? []).map((r) => r.name);
+
+  it("puts each recipe in the highest rank whose skill it has reached; edges stay below", () => {
+    expect(names("Apprentice")).toEqual(["Linen Bolt", "A Vest"]); // 1, 49
+    expect(names("Journeyman")).toEqual(["B Shirt", "Gloves"]); // 50, 124
+    expect(names("Expert")).toEqual([]);
+    expect(names("Artisan")).toEqual(["Mooncloth Robe"]); // 210
+  });
+
+  it("lists a spell two trainers teach once, and skips spells the recipe book lacks", () => {
+    const all = [...byRank.values()].flat().map((r) => r.spell);
+    expect(all.filter((s) => s === 102)).toHaveLength(1);
+    expect(all).not.toContain(999);
+  });
+
+  it("carries cost and the specialization", () => {
+    const robe = byRank.get("Artisan")?.[0];
+    expect(robe?.cost).toBe(900);
+    expect(robe?.spec).toBe("Mooncloth");
+    expect(byRank.get("Journeyman")?.[0].spec).toBeNull();
   });
 });

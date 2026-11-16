@@ -102,7 +102,7 @@ export default function ProfessionTrainersView({ profession, label, faction, zon
       <section className="space-y-3" aria-labelledby="trainers-ranks">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3">
           <h2 id="trainers-ranks" className="text-lg font-semibold">
-            Ranks: what each one needs
+            Ranks: what each one needs and teaches
           </h2>
           <Link
             to={`/wow-forever/professions?${PROFESSION_PARAM}=${profession}`}
@@ -114,7 +114,15 @@ export default function ProfessionTrainersView({ profession, label, faction, zon
         <p className="text-sm text-muted-foreground">Skill numbers and levels are Classic's unless Forever has confirmed them.</p>
         <ul className="space-y-2">
           {steps.map((step) => (
-            <ProfessionRankCard key={step.name} step={step} professionLabel={label} faction={faction} zoneId={zoneId} onSelectTrainer={onSelectTrainer} />
+            <ProfessionRankCard
+              key={step.name}
+              step={step}
+              professionLabel={label}
+              faction={faction}
+              zoneId={zoneId}
+              onSelectTrainer={onSelectTrainer}
+              recipes={isCrafting ? { profession, steps } : undefined}
+            />
           ))}
         </ul>
       </section>

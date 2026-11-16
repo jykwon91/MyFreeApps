@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-11-16",
+    "title": "Trainers: what each rank teaches",
+    "summary": "Each crafting profession's Trainers page now lists what Apprentice, Journeyman, Expert and Artisan trainers teach, with the skill and cost of every recipe. Click a trainer's name to see just what they teach.",
+    "to": "/wow-forever/trainers"
+  },
+  {
     "date": "2026-11-15",
     "title": "Dungeon quests: before you go",
     "summary": "Each dungeon page now lists every dungeon quest with the quests you need to do first, in order, with who gives them, where and directions. Tick them off to see where you are, and open every quest giver on the World Map in one click. Shareable quests now say when your party needs the earlier quests first.",

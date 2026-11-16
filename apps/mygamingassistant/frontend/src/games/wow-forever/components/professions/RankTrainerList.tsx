@@ -33,7 +33,7 @@ export default function RankTrainerList({ label, trainers, zoneId, onSelectTrain
               {onSelectTrainer ? (
                 <button
                   type="button"
-                  className="font-medium underline-offset-2 hover:underline min-h-[44px] inline-flex items-center sm:min-h-[32px]"
+                  className="font-medium underline decoration-dotted underline-offset-4 hover:decoration-solid min-h-[44px] inline-flex items-center sm:min-h-[32px]"
                   onClick={() => onSelectTrainer(npc.npcId)}
                 >
                   {npc.name}
