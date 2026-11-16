@@ -1,18 +1,22 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import WowTrainersPage from "@/games/wow-forever/pages/WowTrainersPage";
 import { PLAYER_SETTINGS_STORAGE_KEY } from "@/games/wow-forever/hooks/usePlayerSettings";
+import { store } from "@/lib/store";
 
 function renderPage(url: string) {
   return render(
-    <MemoryRouter initialEntries={[url]}>
-      <Routes>
-        <Route path="/wow-forever/trainers" element={<WowTrainersPage />} />
-        <Route path="/wow-forever/trainers/:subject" element={<WowTrainersPage />} />
-      </Routes>
-    </MemoryRouter>,
+    <Provider store={store}>
+      <MemoryRouter initialEntries={[url]}>
+        <Routes>
+          <Route path="/wow-forever/trainers" element={<WowTrainersPage />} />
+          <Route path="/wow-forever/trainers/:subject" element={<WowTrainersPage />} />
+        </Routes>
+      </MemoryRouter>
+    </Provider>,
   );
 }
 

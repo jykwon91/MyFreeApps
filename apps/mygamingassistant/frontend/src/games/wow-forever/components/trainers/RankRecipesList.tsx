@@ -7,10 +7,13 @@ import { RANK_RECIPES_COPY } from "@/games/wow-forever/data/trainers/trainersCon
 import { useRecipeLookup } from "@/games/wow-forever/hooks/useRecipeLookup";
 import { useTrainerNpcSpells } from "@/games/wow-forever/hooks/useTrainerNpcSpells";
 import { recipeOnlyFrom } from "@/games/wow-forever/lib/trainers/recipeOnlyFrom";
+import { rankMarkedSuffix } from "@/games/wow-forever/lib/trainers/markedSummary";
+import { markTrainerRecipes } from "@/games/wow-forever/lib/trainers/markTrainerRecipes";
 import { rankRecipes } from "@/games/wow-forever/lib/trainers/rankRecipes";
 import type { RankTrainer } from "@/games/wow-forever/data/professions/rankTrainerTypes";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import type { ProfessionRankStep } from "@/games/wow-forever/types/trainers/professionRankStep";
+import type { RecipeMarks } from "@/games/wow-forever/types/trainers/recipeMarks";
 
 interface RankRecipesListProps {
   rankName: string;
@@ -20,21 +23,25 @@ interface RankRecipesListProps {
   /** Your faction's trainers of this profession, to say who teaches a recipe only one or two of them do. */
   trainers: readonly RankTrainer[];
   factionLabel: string;
+  /** Your character, to mark each recipe Known / Can learn / Needs; null leaves them unmarked. */
+  marks: RecipeMarks | null;
 }
 
 /**
  * "What Journeyman teaches · 18 recipes": opens every recipe its trainers teach, with skill and cost.
  * Mounted only for crafting professions, so only they load the trainer lists and the recipe book.
  */
-export default function RankRecipesList({ rankName, profession, steps, trainers, factionLabel }: RankRecipesListProps) {
+export default function RankRecipesList({ rankName, profession, steps, trainers, factionLabel, marks }: RankRecipesListProps) {
   const [open, setOpen] = useState(false);
   const listId = useId();
   const npcSpells = useTrainerNpcSpells();
   const lookup = useRecipeLookup();
   const npcSpellsData = npcSpells.status === "ready" ? npcSpells.data : null;
   const rows = useMemo(
-    () => (npcSpellsData && lookup ? (rankRecipes(profession, steps, npcSpellsData[profession], lookup).get(rankName) ?? []) : null),
-    [npcSpellsData, lookup, profession, steps, rankName],
+    () => (npcSpellsData && lookup
+      ? markTrainerRecipes(rankRecipes(profession, steps, npcSpellsData[profession], lookup).get(rankName) ?? [], marks)
+      : null),
+    [npcSpellsData, lookup, profession, steps, rankName, marks],
   );
   if (npcSpells.status === "error") {
     return <LoadErrorRetry message={RANK_RECIPES_COPY.error} onRetry={npcSpells.retry} retrying={false} />;
@@ -56,7 +63,7 @@ export default function RankRecipesList({ rankName, profession, steps, trainers,
         className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-2 hover:underline disabled:opacity-60 min-h-[44px] sm:min-h-[32px]"
       >
         <ScrollText className="h-4 w-4 shrink-0" aria-hidden />
-        {rows ? RANK_RECIPES_COPY.toggle(rankName, rows.length) : RANK_RECIPES_COPY.loading(rankName)}
+        {rows ? RANK_RECIPES_COPY.toggle(rankName, rows.length) + rankMarkedSuffix(rows, marks !== null) : RANK_RECIPES_COPY.loading(rankName)}
         <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
       </button>
       {open && rows ? (

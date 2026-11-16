@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { Check } from "lucide-react";
 import CraftSpecChip from "@/games/wow-forever/components/crafting/CraftSpecChip";
 import RecipeRef from "@/games/wow-forever/components/recipes/RecipeRef";
+import TrainerRecipeStatusChip from "@/games/wow-forever/components/trainers/TrainerRecipeStatusChip";
 import { formatPrice } from "@/games/wow-forever/crafting/matPrices";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import type { TrainerRecipeRow as TrainerRecipeRowData } from "@/games/wow-forever/types/trainers/trainerRecipeRow";
@@ -14,12 +14,13 @@ interface TrainerRecipeRowProps {
 }
 
 const STATUS_CLASS: Record<TrainerRecipeRowData["status"], string> = {
+  known: "",
   "can-learn": "bg-primary/5",
-  "needs-skill": "opacity-60",
+  "needs-skill": "",
   "needs-data": "",
 };
 
-/** One recipe a trainer teaches: icon, name link, learn skill, training cost. */
+/** One recipe a trainer teaches: icon, name link, your status with it, learn skill, training cost. */
 export default function TrainerRecipeRow({ row, profession, footer }: TrainerRecipeRowProps) {
   const { spell, name, skill, cost, spec, status } = row;
 
@@ -37,12 +38,8 @@ export default function TrainerRecipeRow({ row, profession, footer }: TrainerRec
           {spec ? <CraftSpecChip name={spec} /> : null}
         </span>
         <div className="shrink-0 text-right text-xs text-muted-foreground">
-          <div className="inline-flex items-center gap-1">
-            {status === "can-learn" && <Check className="h-3.5 w-3.5 text-primary" aria-hidden />}
-            <span>Skill {skill}</span>
-            {status === "can-learn" && <span className="sr-only">(you can learn this now)</span>}
-            {status === "needs-skill" && <span className="sr-only">(your skill is too low)</span>}
-          </div>
+          <TrainerRecipeStatusChip status={status} skill={skill} />
+          {status !== "needs-skill" && <div>Skill {skill}</div>}
           {cost > 0 && <div>{formatPrice(cost)}</div>}
         </div>
       </div>

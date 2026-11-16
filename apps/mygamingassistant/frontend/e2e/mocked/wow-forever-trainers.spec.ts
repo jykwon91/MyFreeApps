@@ -107,6 +107,81 @@ test("a recipe only a specialist teaches names that trainer for your faction", a
   await expect(boots.getByRole("list", { name: "Trainers who teach it" })).toContainText("Only from Josephine Lister");
 });
 
+const PLAYER_KEY = "mga.wowForever.worldMap.player.v1";
+
+// Real Journeyman Tailoring recipes (Blizzard recipe id → recipe spell, skill): Woolen Bag (4002 → 3757, 50),
+// Simple Kilt (12046, 50), Azure Silk Pants (8758, 115), Azure Silk Hood (4850 → 8760, 120).
+function tailor(faction: string) {
+  return {
+    slug: "jason-kwon",
+    name: "Jason",
+    surname: "Kwon",
+    level: 45,
+    class_name: "Warlock",
+    faction,
+    last_login: "2026-11-16T05:00:00Z",
+    items: [],
+    professions: {
+      primaries: [{ id: 197, name: "Tailoring", skill: 100, max_skill: 150, recipes: [{ id: 4002, name: "Woolen Bag" }, { id: 4850, name: "Azure Silk Hood" }] }],
+      secondaries: [],
+    },
+  };
+}
+
+async function saveCharacter(page: Page, character: object | null) {
+  await page.addInitScript(
+    ([key, value]) => window.localStorage.setItem(key, value),
+    [PLAYER_KEY, JSON.stringify({ faction: "A", classId: "warlock", zoneId: null, level: 45, position: null, characterSlug: "jason-kwon" })],
+  );
+  await page.route("**/wow/characters/jason-kwon", (route) =>
+    character
+      ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(character) })
+      : route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ detail: "not found" }) }),
+  );
+}
+
+test("your character marks each recipe Known, Can learn or Needs, and counts what you can learn", async ({ page }) => {
+  await saveCharacter(page, tailor("alliance"));
+  await page.goto(`${TRAINERS}/tailoring`);
+  await expect(page.getByTestId("my-profession")).toContainText("Marked for Jason Kwon: Tailoring 100/150");
+  await expect(page.getByTestId("my-profession").getByRole("link", { name: "Change character" })).toHaveAttribute("href", "/wow-forever/character");
+
+  const journeyman = page.getByTestId("trainers-rank").nth(1);
+  const toggle = journeyman.getByRole("button", { name: /^What Journeyman teaches · \d+ recipes · \d+ you can learn$/ });
+  await toggle.click();
+  const row = (name: string) => journeyman.getByTestId("trainer-recipe-row").filter({ hasText: name }).first().getByTestId("recipe-status");
+  await expect(row("Woolen Bag")).toHaveText("Known");
+  // Known even above your skill: you already have it.
+  await expect(row("Azure Silk Hood")).toHaveText("Known");
+  await expect(row("Simple Kilt")).toHaveText("Can learn");
+  await expect(row("Azure Silk Pants")).toHaveText("Needs skill 115");
+  const canLearn = await journeyman.getByTestId("recipe-status").filter({ hasText: /^Can learn$/ }).count();
+  await expect(toggle).toHaveText(new RegExp(`· ${canLearn} you can learn$`));
+});
+
+test("the other faction's character marks only what it knows", async ({ page }) => {
+  await saveCharacter(page, tailor("horde"));
+  await page.goto(`${TRAINERS}/tailoring`);
+  await expect(page.getByTestId("my-profession")).toContainText("Jason Kwon is Horde, so only recipes they know are marked");
+  const journeyman = page.getByTestId("trainers-rank").nth(1);
+  await journeyman.getByRole("button", { name: /^What Journeyman teaches · \d+ recipes$/ }).click();
+  const statuses = journeyman.getByTestId("recipe-status");
+  await expect(statuses.first()).toBeVisible();
+  expect(new Set(await statuses.allInnerTexts())).toEqual(new Set(["Known"]));
+});
+
+test("no character, or one Blizzard no longer has: how to pick one, rows unmarked", async ({ page }) => {
+  await saveCharacter(page, null);
+  await page.goto(`${TRAINERS}/tailoring`);
+  const line = page.getByTestId("my-profession");
+  await expect(line).toContainText("Pick your character to mark which recipes you know and can learn.");
+  await expect(line.getByRole("link", { name: "Pick character" })).toHaveAttribute("href", "/wow-forever/character");
+  const journeyman = page.getByTestId("trainers-rank").nth(1);
+  await journeyman.getByRole("button", { name: /^What Journeyman teaches · \d+ recipes$/ }).click();
+  await expect(journeyman.getByTestId("trainer-recipe-row").first()).toBeVisible();
+  await expect(journeyman.getByTestId("recipe-status")).toHaveCount(0);
+});
+
 test("phones: no sideways scroll and full-size targets", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(`${TRAINERS}/hunter`);

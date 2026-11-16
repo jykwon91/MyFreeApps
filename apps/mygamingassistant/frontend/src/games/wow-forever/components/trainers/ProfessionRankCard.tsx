@@ -7,6 +7,7 @@ import { forFaction } from "@/games/wow-forever/lib/forFaction";
 import { rankFacts } from "@/games/wow-forever/lib/trainers/rankFacts";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
 import type { ProfessionRankStep } from "@/games/wow-forever/types/trainers/professionRankStep";
+import type { RecipeMarks } from "@/games/wow-forever/types/trainers/recipeMarks";
 import type { PlayerFaction } from "@/games/wow-forever/types/worldMap";
 
 interface ProfessionRankCardProps {
@@ -17,7 +18,12 @@ interface ProfessionRankCardProps {
   /** When provided, trainer names become buttons that open the recipe list. */
   onSelectTrainer?: (npcId: number) => void;
   /** A crafting profession: what this rank teaches. Absent for gathering, Cooking and Fishing. */
-  recipes?: { profession: CraftingProfession; steps: readonly ProfessionRankStep[]; trainers: readonly RankTrainer[] };
+  recipes?: {
+    profession: CraftingProfession;
+    steps: readonly ProfessionRankStep[];
+    trainers: readonly RankTrainer[];
+    marks: RecipeMarks | null;
+  };
 }
 
 /** One rank: the skill and level it needs, the cap it gives, and who trains it when that isn't every trainer. */
@@ -40,6 +46,7 @@ export default function ProfessionRankCard({ step, professionLabel, faction, zon
           steps={recipes.steps}
           trainers={recipes.trainers}
           factionLabel={playerFactionLabel(faction)}
+          marks={recipes.marks}
         /> : null}
     </li>
   );
