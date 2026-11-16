@@ -1,3 +1,4 @@
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import { useState } from "react";
 import { Button, FormField, LoadingButton, showError, showSuccess } from "@platform/ui";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
@@ -50,7 +51,7 @@ export default function AddMortgageDialog({ onClose }: AddMortgageDialogProps) {
     try {
       await createMortgage({
         property_id: propertyId,
-        ...toMortgagePayload(values),
+        ...toMortgagePayload(values, NUMBER_INPUT_DECIMAL_SEPARATOR),
         // Recorded only when the form was actually seeded from a statement, so
         // the saved loan points back at what it was read from.
         ...(draft ? { source_document_id: draft.source_document_id } : {}),

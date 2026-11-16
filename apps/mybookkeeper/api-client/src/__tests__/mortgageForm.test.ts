@@ -44,7 +44,7 @@ describe("toMortgagePayload", () => {
     const payload = toMortgagePayload({
       ...EMPTY_MORTGAGE_FORM,
       rateType: "fixed",
-    });
+    }, ".");
     expect(payload.rate_type).toBe("fixed");
     expect(payload.lender).toBeNull();
     expect(payload.account_number).toBeNull();
@@ -62,7 +62,7 @@ describe("toMortgagePayload", () => {
       ...EMPTY_MORTGAGE_FORM,
       rateType: "fixed",
       fixedUntil: "2035-02-01",
-    });
+    }, ".");
     expect(payload.fixed_until).toBeNull();
   });
 
@@ -71,7 +71,7 @@ describe("toMortgagePayload", () => {
       ...EMPTY_MORTGAGE_FORM,
       rateType: "arm",
       fixedUntil: "2035-02-01",
-    });
+    }, ".");
     expect(payload.fixed_until).toBe("2035-02-01");
   });
 
@@ -80,7 +80,7 @@ describe("toMortgagePayload", () => {
       ...EMPTY_MORTGAGE_FORM,
       rateType: "fixed",
       interestRate: "2.990",
-    });
+    }, ".");
     expect(payload.interest_rate).toBe("2.990");
   });
 
@@ -91,10 +91,19 @@ describe("toMortgagePayload", () => {
       monthlyPrincipalDollars: "301.56",
       monthlyInterestDollars: "1995.82",
       monthlyEscrowDollars: "870.81",
-    });
+    }, ".");
     expect(payload.monthly_principal_cents).toBe(30156);
     expect(payload.monthly_interest_cents).toBe(199582);
     expect(payload.monthly_escrow_cents).toBe(87081);
+  });
+
+  it("converts a decimal-comma or pasted amount to the same cents", () => {
+    const money = { balanceDollars: "1.250,50", monthlyEscrowDollars: "870,81" };
+    const comma = toMortgagePayload({ ...EMPTY_MORTGAGE_FORM, rateType: "fixed", ...money }, ",");
+    expect(comma.current_balance_cents).toBe(125050);
+    expect(comma.monthly_escrow_cents).toBe(87081);
+    const pasted = toMortgagePayload({ ...EMPTY_MORTGAGE_FORM, rateType: "fixed", balanceDollars: "$1,250.50" }, ".");
+    expect(pasted.current_balance_cents).toBe(125050);
   });
 
   it("trims whitespace off text rather than storing it", () => {
@@ -102,14 +111,14 @@ describe("toMortgagePayload", () => {
       ...EMPTY_MORTGAGE_FORM,
       rateType: "fixed",
       lender: "  TDECU  ",
-    });
+    }, ".");
     expect(payload.lender).toBe("TDECU");
   });
 });
 
 describe("mortgageToFormValues", () => {
   it("round-trips a stored loan back through the payload unchanged", () => {
-    const payload = toMortgagePayload(mortgageToFormValues(MORTGAGE));
+    const payload = toMortgagePayload(mortgageToFormValues(MORTGAGE), ".");
     expect(payload.lender).toBe("Chase");
     expect(payload.account_number).toBe("1395862051");
     expect(payload.interest_rate).toBe("2.990");

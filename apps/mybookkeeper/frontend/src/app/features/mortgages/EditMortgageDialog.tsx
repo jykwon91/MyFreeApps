@@ -1,3 +1,4 @@
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import { useState } from "react";
 import { Button, ConfirmDialog, LoadingButton, showError, showSuccess } from "@platform/ui";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
@@ -52,7 +53,7 @@ export default function EditMortgageDialog({
     try {
       await updateMortgage({
         mortgageId: mortgage.id,
-        data: toMortgagePayload(values),
+        data: toMortgagePayload(values, NUMBER_INPUT_DECIMAL_SEPARATOR),
       }).unwrap();
       showSuccess("Mortgage updated.");
       onClose();

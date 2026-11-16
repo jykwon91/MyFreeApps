@@ -4,7 +4,7 @@ import type { MortgageFormValues } from "@mybookkeeper/api-client/types/mortgage
 import { applyMortgageDraftToForm } from "@mybookkeeper/api-client/utils/mortgageDraft";
 import { EMPTY_MORTGAGE_FORM, mortgageToFormValues } from "@mybookkeeper/api-client/utils/mortgageForm";
 import { mortgageFormProblems } from "@mybookkeeper/api-client/utils/mortgageFormProblems";
-import { Banner, KeyboardAwareScroll, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, KeyboardAwareScroll, LoadingButton, useConfirmLeave, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Alert } from "react-native";
 import { MORTGAGE_FORM_MESSAGES as MESSAGES, MORTGAGE_STATEMENT_MESSAGES, MORTGAGE_STATEMENT_PHOTO_NAME } from "../../constants/mortgageForm";
@@ -21,13 +21,14 @@ import { useSaveMortgage } from "./useSaveMortgage";
 export default function MortgageForm({ original }: { original: Mortgage | null }) {
   const { spacing } = useTheme();
   const [values, setValues] = useState<MortgageFormValues>(() => (original ? mortgageToFormValues(original) : EMPTY_MORTGAGE_FORM));
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
   const [propertyId, setPropertyId] = useState("");
   const [draft, setDraft] = useState<MortgageDraft | null>(null);
   const [hasTried, setHasTried] = useState(false);
   const readers = useMortgageReaders();
   const { save, isBusy, isLeaving, failure } = useSaveMortgage(original);
 
-  const problems = mortgageFormProblems(values);
+  const problems = mortgageFormProblems(values, decimalSeparator);
   const needsProperty = !original && propertyId === "";
   const isDirty = original
     ? !sameFormValues(values, mortgageToFormValues(original))
@@ -44,7 +45,7 @@ export default function MortgageForm({ original }: { original: Mortgage | null }
   function submit(): void {
     setHasTried(true);
     if (needsProperty || Object.keys(problems).length > 0) return;
-    void save({ values, propertyId, sourceDocumentId: draft?.source_document_id ?? null });
+    void save({ values, propertyId, decimalSeparator, sourceDocumentId: draft?.source_document_id ?? null });
   }
 
   return (

@@ -1,7 +1,8 @@
 import type { Mortgage } from "../types/mortgage/mortgage";
 import type { MortgageFormValues } from "../types/mortgage/mortgage-form-values";
 import type { MortgageRateType } from "../types/mortgage/mortgage-rate-type";
-import { dollarsToCents } from "./dollarsToCents";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
+import { moneyTextToCents } from "./moneyTextToCents";
 
 /**
  * Conversion between the mortgage form's text state and the API shape.
@@ -32,6 +33,11 @@ function textOrNull(value: string): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
+/** Blank, or text the form check already refused, is no amount rather than a guessed one. */
+function centsOrNull(text: string, decimalSeparator: DecimalSeparator): number | null {
+  return moneyTextToCents(text, decimalSeparator) ?? null;
+}
+
 function intOrNull(value: string): number | null {
   const trimmed = value.trim();
   if (trimmed === "") return null;
@@ -47,7 +53,7 @@ function intOrNull(value: string): number | null {
  * the row rejects the pair. Clearing the stale half here means the correction
  * they made is the one that survives.
  */
-export function toMortgagePayload(values: MortgageFormValues) {
+export function toMortgagePayload(values: MortgageFormValues, decimalSeparator: DecimalSeparator) {
   const rateType = values.rateType as MortgageRateType;
   return {
     rate_type: rateType,
@@ -55,14 +61,14 @@ export function toMortgagePayload(values: MortgageFormValues) {
     account_number: textOrNull(values.accountNumber),
     interest_rate: textOrNull(values.interestRate),
     fixed_until: rateType === "arm" ? values.fixedUntil || null : null,
-    current_balance_cents: dollarsToCents(values.balanceDollars),
+    current_balance_cents: centsOrNull(values.balanceDollars, decimalSeparator),
     statement_date: values.statementDate || null,
-    original_principal_cents: dollarsToCents(values.originalPrincipalDollars),
+    original_principal_cents: centsOrNull(values.originalPrincipalDollars, decimalSeparator),
     maturity_date: values.maturityDate || null,
     term_months: intOrNull(values.termMonths),
-    monthly_principal_cents: dollarsToCents(values.monthlyPrincipalDollars),
-    monthly_interest_cents: dollarsToCents(values.monthlyInterestDollars),
-    monthly_escrow_cents: dollarsToCents(values.monthlyEscrowDollars),
+    monthly_principal_cents: centsOrNull(values.monthlyPrincipalDollars, decimalSeparator),
+    monthly_interest_cents: centsOrNull(values.monthlyInterestDollars, decimalSeparator),
+    monthly_escrow_cents: centsOrNull(values.monthlyEscrowDollars, decimalSeparator),
     notes: textOrNull(values.notes),
   };
 }
