@@ -1,3 +1,4 @@
+import { DEMO_WORKSPACE_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
 import api from "@platform/core/lib/api";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { Alert, type AlertButton } from "react-native";
@@ -190,7 +191,7 @@ describe("disconnecting", () => {
     await renderScreen(<IntegrationsScreen />);
     await fireEvent.press(await screen.findByRole("button", { name: MESSAGES.disconnect }));
     await confirm();
-    await screen.findByText(MESSAGES.demoRefused);
+    await screen.findByText(DEMO_WORKSPACE_REFUSED);
     expect(screen.queryByText(/view-only/)).toBeNull();
   });
 

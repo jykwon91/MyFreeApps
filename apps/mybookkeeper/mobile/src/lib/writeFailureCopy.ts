@@ -1,3 +1,4 @@
+import { DEMO_WORKSPACE_REFUSED } from "@mybookkeeper/api-client/constants/demoRefusal";
 import type { WriteFailureCopy } from "../types/WriteFailureCopy";
 
 /** `noun` and `plural` read in a sentence, like "vendor" and "vendors". Fixed wording only: the server's own text is never shown. */
@@ -8,6 +9,7 @@ export function saveFailureCopy(noun: string, plural: string, isNew: boolean): W
   return {
     noResponse: isNew ? unsure : `I can't reach the server, so I couldn't save that. Your changes are still here.`,
     viewOnly: "You have view-only access, so I can't save this.",
+    demo: DEMO_WORKSPACE_REFUSED,
     gone: `I can't find that ${noun} anymore. It may have been deleted.`,
     conflict: `That clashes with a ${noun} you already have. Check the name and try again.`,
     invalid: "Something in there isn't right. Check the fields and try again.",
@@ -21,6 +23,7 @@ export function deleteFailureCopy(noun: string): WriteFailureCopy {
   return {
     noResponse: `I can't reach the server, so I couldn't delete that ${noun}.`,
     viewOnly: "You have view-only access, so I can't delete this.",
+    demo: DEMO_WORKSPACE_REFUSED,
     gone: `That ${noun} was already deleted.`,
     conflict: `Something still depends on that ${noun}, so I couldn't delete it.`,
     invalid: tryAgain,
@@ -35,6 +38,7 @@ export function actionFailureCopy(doing: string, overrides: Partial<WriteFailure
   return {
     noResponse: `I can't reach the server, so I couldn't ${doing}.`,
     viewOnly: "You have view-only access, so I can't do that.",
+    demo: DEMO_WORKSPACE_REFUSED,
     gone: `I couldn't ${doing} because it's no longer there. Pull down to refresh.`,
     conflict: `I couldn't ${doing} because it's already in progress. Pull down to refresh.`,
     invalid: tryAgain,
