@@ -6,6 +6,7 @@
  * levels, objectives, rewards and sharing).
  */
 import { columnIndexes } from "@/games/wow-forever/lib/dungeons/columnIndexes";
+import { questSkill, strictestSkill } from "@/games/wow-forever/lib/dungeons/questSkill";
 import { questSharing } from "@/games/wow-forever/lib/dungeons/questSharing";
 import { chainSteps, seenStep } from "@/games/wow-forever/lib/quests/chainSteps";
 import { classIds, numberOrNull, rows, side, targetKind } from "@/games/wow-forever/lib/quests/questRowDecode";
@@ -23,7 +24,7 @@ import type { WorldZone } from "@/games/wow-forever/types/worldMap";
 const QUESTS_FILE = "dungeonQuests.json";
 const SEEN_FILE = "dungeonQuestsSeen.json";
 const QUEST_COLUMNS = [
-  "id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders", "shareable", "after",
+  "id", "title", "level", "minLevel", "side", "classes", "skill", "givers", "chain", "objectives", "rewards", "choices", "enders", "shareable", "after",
 ] as const;
 const SEEN_COLUMNS = ["title", "level", "minLevel", "objectives", "rewards", "choices", "shareable", "seenOn"] as const;
 const GIVER_COLUMNS = ["kind", "id", "name", "zone", "subzone", "x", "y", "instance"] as const;
@@ -104,6 +105,13 @@ export function decodeDungeonQuests(
     };
   };
 
+  // The hardest profession need of the quest and the quests before it: you can't get past a step you can't take.
+  const skill = (row: QuestDataRow): DungeonQuest["skill"] => {
+    const before = Array.isArray(row[col.chain]) ? (row[col.chain] as unknown[]) : [];
+    const rowsBefore = before.map((stepId) => doc.quests[String(stepId)]).filter((r) => r !== undefined);
+    return strictestSkill([row, ...rowsBefore].map((r) => questSkill(r[col.skill])));
+  };
+
   const quest = (id: number, instanceId: number): DungeonQuest[] => {
     const row = doc.quests[String(id)];
     if (!row) return [];
@@ -116,6 +124,7 @@ export function decodeDungeonQuests(
         minLevel: Number(s ? s[seenCol.minLevel] : row[col.minLevel]),
         side: side(row[col.side]),
         classes: classIds(row[col.classes]),
+        skill: skill(row),
         givers: givers(row[col.givers], instanceId),
         chain: chainSteps(row[col.chain], chainStep),
         pickupSteps: chainSteps(row[col.chain], (stepId) => pickupStep(stepId, instanceId)),

@@ -161,7 +161,7 @@ def test_item_dungeons_follow_creature_and_chest_drops() -> None:
 def _quest(entry: int, title: str = "Q", **fields: Any) -> dict[str, Any]:
     row: dict[str, Any] = {
         "entry": entry, "Title": title, "QuestLevel": 20, "MinLevel": 17, "ZoneOrSort": 0, "RequiredRaces": 0,
-        "RequiredClasses": 0, "PrevQuestId": 0, "NextQuestId": 0, "NextQuestInChain": 0, "QuestFlags": 0,
+        "RequiredClasses": 0, "RequiredSkill": 0, "RequiredSkillValue": 0, "PrevQuestId": 0, "NextQuestId": 0, "NextQuestInChain": 0, "QuestFlags": 0,
     }
     for i in range(1, 5):
         row |= {f"ReqCreatureOrGOId{i}": 0, f"ReqCreatureOrGOCount{i}": 0, f"ReqItemId{i}": 0, f"ReqItemCount{i}": 0,
@@ -269,6 +269,23 @@ def test_quest_row_places_givers_and_keeps_forever_rewards_only() -> None:
     assert by["objectives"] == [["item", 100, 1]]
     assert by["choices"] == [[2000, 1]]
     assert by["enders"] == ["npc:1"]
+
+
+def test_quest_row_keeps_the_profession_a_quest_needs() -> None:
+    src = _sources({2847: _quest(2847, "Wild Leather Armor", RequiredSkill=165, RequiredSkillValue=225), 2821: _quest(2821)})
+    skill = QUEST_COLUMNS.index("skill")
+    assert quest_row(2847, "A", [], [], src).as_json()[skill] == [165, 225]
+    assert quest_row(2821, "A", [], [], src).as_json()[skill] is None
+
+
+def test_committed_quest_chains_need_at_most_one_profession() -> None:
+    """The pages and addon keep one profession per line (the hardest need): a chain mixing two would lose one."""
+    doc = json.loads(QUESTS_PATH.read_text(encoding="utf-8"))
+    col = {c: i for i, c in enumerate(doc["questColumns"])}
+    for row in doc["quests"].values():
+        chain = [doc["quests"][str(q)] for q in row[col["chain"]] if str(q) in doc["quests"]]
+        professions = {r[col["skill"]][0] for r in [row, *chain] if r[col["skill"]]}
+        assert len(professions) <= 1, row[col["id"]]
 
 
 def test_distinct_quests_drop_a_repeat_offered_by_another_object_of_the_same_name() -> None:

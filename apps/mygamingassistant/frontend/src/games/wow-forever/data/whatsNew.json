@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-16",
+    "title": "Dungeon quests: profession quests",
+    "summary": "Quests that need a profession now say so. Pratt McGrubben's Wild Leather quests in Feralas need Leatherworking 225, so Before you go marks that line \"Needs Leatherworking 225\". In the MGA Dungeon Quests addon those lines only show if you have the profession, and say when your skill is still too low. Download the addon again to get it.",
+    "to": "/wow-forever/dungeons?addon=open"
+  },
+  {
+    "date": "2026-11-16",
     "title": "Drop-only recipes",
     "summary": "A new page lists every profession recipe only monsters drop, Enchanting formulas first: which mobs, dungeons and raids drop each one, the chance per kill, Directions there, and whether you can buy it on the Auction House instead.",
     "to": "/wow-forever/recipe-drops"

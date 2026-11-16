@@ -31,7 +31,7 @@ function pickup(id: number, g: QuestGiver | null): QuestPickup {
 type LineQuest = Parameters<typeof questLines>[0][number];
 
 function quest(id: number, before: QuestPickupStep[], extra: Partial<LineQuest> = {}): LineQuest {
-  return { id, title: `Dungeon ${id}`, level: 20, minLevel: 15, side: FACTION.neutral, classes: [], givers: [giver(`Giver ${id}`, 50, 50)], pickupSteps: before, ...extra };
+  return { id, title: `Dungeon ${id}`, level: 20, minLevel: 15, side: FACTION.neutral, classes: [], skill: null, givers: [giver(`Giver ${id}`, 50, 50)], pickupSteps: before, ...extra };
 }
 
 describe("questLines", () => {
@@ -57,6 +57,12 @@ describe("questLines", () => {
   it("never merges a class quest into an open quest's line, even with the same quests before them", () => {
     const lines = questLines([quest(10, [step(1)]), quest(11, [step(1)], { classes: ["warlock"] })], FACTION.alliance);
     expect(lines.map((l) => [l.titles, l.classes])).toEqual([[["Dungeon 10"], []], [["Dungeon 11"], ["warlock"]]]);
+  });
+
+  it("keeps a profession quest on its own line, carrying what it needs", () => {
+    const leather = { skillLine: 165, level: 225 };
+    const lines = questLines([quest(10, [step(1)]), quest(11, [step(1)], { skill: leather })], FACTION.alliance);
+    expect(lines.map((l) => [l.titles, l.skill])).toEqual([[["Dungeon 10"], null], [["Dungeon 11"], leather]]);
   });
 
   it("keeps quests that start on their own apart, and leaves out the other faction's quests and steps", () => {

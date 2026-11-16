@@ -1,3 +1,5 @@
+import { guideProfession } from "@/games/wow-forever/lib/character/characterProfessions";
+import { professionName } from "@/games/wow-forever/lib/guild/guildRecipes";
 import { luaString } from "@/games/wow-forever/lib/auctionHouse/luaString";
 import { objectiveText } from "@/games/wow-forever/lib/dungeonQuestsAddon/objectiveText";
 import { questLines } from "@/games/wow-forever/lib/dungeons/questLines";
@@ -49,10 +51,18 @@ function stepLua(s: QuestPickup, details: ReadonlyMap<number, QuestTurnIn>): str
   );
 }
 
+// A name the game won't give would hide the line from everyone with the profession: refuse it.
+function skillName(skillLine: number): string {
+  if (guideProfession(skillLine) === null) throw new Error(`Data.lua: no profession name for SkillLine ${skillLine}`);
+  return professionName(skillLine);
+}
+
 function lineLua(line: QuestLine, details: ReadonlyMap<number, QuestTurnIn>): string[] {
   const classes = line.classes.length > 0 ? `, classes = {${line.classes.map(luaString).join(", ")}}` : "";
+  // The profession by its enUS name: what GetSkillLineInfo gives in game.
+  const skill = line.skill ? `, skill = {name = ${luaString(skillName(line.skill.skillLine))}, level = ${line.skill.level}}` : "";
   return [
-    `      {titles = {${line.titles.map(luaString).join(", ")}}${classes}, steps = {`,
+    `      {titles = {${line.titles.map(luaString).join(", ")}}${classes}${skill}, steps = {`,
     ...line.steps.map((s) => stepLua(s, details)),
     "      }},",
   ];
