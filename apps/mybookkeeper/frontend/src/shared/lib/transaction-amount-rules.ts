@@ -1,5 +1,6 @@
 import type { RegisterOptions } from "react-hook-form";
 import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
 
 /**
@@ -8,5 +9,5 @@ import type { TransactionFormValues } from "@/shared/types/transaction/transacti
  * Save & Approve and Save & close buttons don't submit natively.
  */
 export const TRANSACTION_AMOUNT_RULES = {
-  validate: (value: string) => moneyInputError(value) ?? true,
+  validate: (value: string) => moneyInputError(value, NUMBER_INPUT_DECIMAL_SEPARATOR) ?? true,
 } satisfies RegisterOptions<TransactionFormValues, "amount">;

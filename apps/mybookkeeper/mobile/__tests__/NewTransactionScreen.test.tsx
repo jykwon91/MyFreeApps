@@ -12,6 +12,9 @@ import { store } from "../src/lib/store";
 import { holdWrites } from "../test-support/holdWrites";
 import { aProperty, startTransactionServer } from "../test-support/transactionsServer";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 const mockBack = jest.fn();
 const mockDispatch = jest.fn();
 const mockPreventRemove = { active: false, callback: null as null | ((event: { repeat: () => void }) => void) };
@@ -34,6 +37,7 @@ beforeEach(() => {
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen("w1"));
   jest.clearAllMocks();
+  mockDecimalSeparator = ".";
 });
 
 afterEach(() => {
@@ -128,6 +132,26 @@ describe("NewTransactionScreen", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Add transaction" }));
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
     expect(lastPost(server.requests)).toMatchObject({ transaction_date: "2024-12-31", tax_year: 2024 });
+  });
+
+  it("takes cents typed with a comma on a comma keypad, and sends them with a point", async () => {
+    mockDecimalSeparator = ",";
+    const server = startTransactionServer([]);
+    await renderScreen();
+    await fireEvent.changeText(await screen.findByLabelText("Amount (USD), required"), "84,20");
+    await fireEvent.press(screen.getByRole("button", { name: "Add transaction" }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(lastPost(server.requests)).toMatchObject({ amount: "84.20" });
+  });
+
+  it("won't guess whether 1,200 on a comma keypad is cents or thousands", async () => {
+    mockDecimalSeparator = ",";
+    const server = startTransactionServer([]);
+    await renderScreen();
+    await fireEvent.changeText(await screen.findByLabelText("Amount (USD), required"), "1,200");
+    await fireEvent.press(screen.getByRole("button", { name: "Add transaction" }));
+    expect(await screen.findByText("Use dollars and cents, like 84,20.")).toBeTruthy();
+    expect(server.requests.some((request) => request.method === "post")).toBe(false);
   });
 
   it.each(["", "0", "1.234", "abc"])("won't add with the amount %p, and sends nothing", async (amount) => {

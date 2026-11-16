@@ -5,6 +5,8 @@ import type { Transaction } from "@mybookkeeper/api-client/types/transaction/tra
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
 import { isAllowedTaxYear } from "@mybookkeeper/api-client/utils/transactionTaxYear";
 import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
+import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import type { TransactionEditValues } from "../../types/TransactionEditValues";
 
 const YEAR_PATTERN = /^\d{4}$/;
@@ -37,14 +39,16 @@ export function categoryFitsType(type: TransactionType, category: string): boole
   return list.includes(category);
 }
 
-function isSameAmount(first: string, second: string): boolean {
-  return Number(first) === Number(second);
+/** The stored amount left as it was, or retyped as the same number ("84.2" for "84.20"). A stored refund is negative, which can't be typed, so it's matched as text. */
+function isSameAmount(text: string, original: Transaction, decimalSeparator: DecimalSeparator): boolean {
+  if (text.trim() === original.amount) return true;
+  const amount = normalizeMoneyText(text, decimalSeparator);
+  return amount !== undefined && amount !== "" && Number(amount) === Number(original.amount);
 }
 
-export function amountError(values: TransactionEditValues, original: Transaction): string | undefined {
-  const amount = values.amount.trim();
-  if (isSameAmount(amount, original.amount) && amount !== "") return undefined;
-  return moneyInputError(amount);
+export function amountError(values: TransactionEditValues, original: Transaction, decimalSeparator: DecimalSeparator): string | undefined {
+  if (isSameAmount(values.amount, original, decimalSeparator)) return undefined;
+  return moneyInputError(values.amount, decimalSeparator);
 }
 
 /** Only a changed year is checked. A stored year is always valid, because the database enforces its range (chk_txn_tax_year), so only a year typed in here can be out of range. */
@@ -55,8 +59,8 @@ export function taxYearError(values: TransactionEditValues, original: Transactio
   return `Use a year from ${MIN_TAX_RETURN_YEAR} to ${MAX_TAX_RETURN_YEAR}.`;
 }
 
-/** Only what changed: editing one field must not rewrite the others, or teach a rule by accident. */
-export function changedFields(values: TransactionEditValues, original: Transaction): Partial<Transaction> {
+/** Only what changed: editing one field must not rewrite the others, or teach a rule by accident. A changed amount goes as "1234.56" however it was typed. */
+export function changedFields(values: TransactionEditValues, original: Transaction, decimalSeparator: DecimalSeparator): Partial<Transaction> {
   const changes: Partial<Transaction> = {};
   const vendor = values.vendor.trim();
   const description = values.description.trim();
@@ -66,7 +70,7 @@ export function changedFields(values: TransactionEditValues, original: Transacti
   if (values.vendorId !== original.vendor_id) changes.vendor_id = values.vendorId;
   if (vendor !== (original.vendor ?? "")) changes.vendor = vendor || null;
   if (description !== (original.description ?? "")) changes.description = description || null;
-  if (!isSameAmount(values.amount, original.amount)) changes.amount = values.amount.trim();
+  if (!isSameAmount(values.amount, original, decimalSeparator)) changes.amount = normalizeMoneyText(values.amount, decimalSeparator) ?? "";
   if (values.type !== original.transaction_type) changes.transaction_type = values.type;
   if (values.category !== original.category) changes.category = values.category;
   if (values.propertyId !== original.property_id) changes.property_id = values.propertyId;

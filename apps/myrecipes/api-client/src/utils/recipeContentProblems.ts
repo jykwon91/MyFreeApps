@@ -5,7 +5,7 @@ import {
   RECIPE_SERVINGS_MAX_LENGTH,
   STEP_INSTRUCTION_MAX_LENGTH,
 } from "../constants/recipeForm";
-import type { DecimalSeparator } from "../types/recipe/decimal-separator";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import type { RecipeFormProblems } from "../types/recipe/recipe-form-problems";
 import type { RecipeFormValues } from "../types/recipe/recipe-form-values";
 import type { RecipeProblemScope } from "../types/recipe/recipe-problem-scope";

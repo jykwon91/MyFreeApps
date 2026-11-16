@@ -12,6 +12,7 @@ import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/tra
 import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
 import { rejectedWriteDetail } from "@mybookkeeper/api-client/utils/rejectedWriteDetail";
 import { TRANSACTION_AMOUNT_RULES } from "@/shared/lib/transaction-amount-rules";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import TransactionFieldError from "@/app/features/transactions/TransactionFieldError";
 
 export interface ManualEntryFormProps {
@@ -56,7 +57,7 @@ export default function ManualEntryForm({ properties, onClose, onSuccess, onErro
   const category = watch("category");
 
   const categories = transactionType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORY_LIST;
-  const isValid = moneyInputError(amount) === undefined && transactionDate && category;
+  const isValid = moneyInputError(amount, NUMBER_INPUT_DECIMAL_SEPARATOR) === undefined && transactionDate && category;
 
   async function onSubmit(data: TransactionFormValues) {
     try {

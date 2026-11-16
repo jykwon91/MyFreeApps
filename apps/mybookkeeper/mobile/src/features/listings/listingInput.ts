@@ -1,13 +1,18 @@
+import type { ListingFormValues } from "@mybookkeeper/api-client/types/listing/listing-form-values";
+import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
+
+const RATE_FIELDS = ["monthly_rate", "weekly_rate", "nightly_rate"] as const;
+
 /**
- * Keeps what a rate field can hold: digits and one decimal separator, at most two decimals.
- * A comma counts as the separator ("1200,50" is 1200.50). Anything else is dropped as it's typed,
- * and a second separator isn't taken: the field keeps what it had.
+ * The form as it's checked and sent: each rate in "1234.56" form however it was typed or pasted
+ * ("$1,200" on a "." phone is 1200, "1200,50" on a "," phone is 1200.50). A rate that can't be
+ * read for sure stays as typed, so listingFormProblems names it rather than a guess being saved.
  */
-export function rateInput(text: string, previous: string): string {
-  const cleaned = text.replace(/,/g, ".").replace(/[^0-9.]/g, "");
-  const [whole, fraction, ...extra] = cleaned.split(".");
-  if (extra.length > 0) return previous;
-  return fraction === undefined ? whole : `${whole}.${fraction.slice(0, 2)}`;
+export function listingValuesToSend(values: ListingFormValues, decimalSeparator: DecimalSeparator): ListingFormValues {
+  const sent = { ...values };
+  for (const field of RATE_FIELDS) sent[field] = normalizeMoneyText(values[field], decimalSeparator) ?? values[field];
+  return sent;
 }
 
 /** Whole days only. */

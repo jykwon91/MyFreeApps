@@ -1,4 +1,4 @@
-import type { DecimalSeparator } from "../types/recipe/decimal-separator";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 
 /** A stored quantity or minutes as the form shows it, in the user's decimal separator; blank for none. */
 export function formatRecipeNumber(value: number | null | undefined, decimalSeparator: DecimalSeparator): string {

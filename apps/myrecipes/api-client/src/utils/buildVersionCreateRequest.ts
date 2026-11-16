@@ -1,4 +1,4 @@
-import type { DecimalSeparator } from "../types/recipe/decimal-separator";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import type { RecipeVersionFormValues } from "../types/recipe/recipe-version-form-values";
 import type { VersionCreateRequest } from "../types/recipe/recipe-requests";
 import { ingredientInputs } from "./ingredientInputs";

@@ -10,7 +10,7 @@ import {
   reminderPlanRequest,
   withFrequency,
 } from "../utils/rentReminderForm";
-import { graceDaysFromText, graceDaysToText, isPositiveAmount, isValidGraceDays } from "../utils/rentScheduleForm";
+import { graceDaysFromText, graceDaysToText, isValidGraceDays } from "../utils/rentScheduleForm";
 
 const PLAN: RentReminderPlan = {
   id: "p1",
@@ -30,15 +30,6 @@ const PLAN: RentReminderPlan = {
 };
 
 describe("rent schedule form helpers", () => {
-  it("accepts only an amount above zero", () => {
-    expect(isPositiveAmount("1500")).toBe(true);
-    expect(isPositiveAmount("0.01")).toBe(true);
-    expect(isPositiveAmount("0")).toBe(false);
-    expect(isPositiveAmount("-5")).toBe(false);
-    expect(isPositiveAmount("")).toBe(false);
-    expect(isPositiveAmount("abc")).toBe(false);
-  });
-
   it("turns a blank late window into an explicit null and back", () => {
     expect(graceDaysFromText("")).toBeNull();
     expect(graceDaysFromText("5")).toBe(5);

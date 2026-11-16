@@ -1,7 +1,7 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCreateTransactionMutation } from "@mybookkeeper/api-client/store/transactionsApi";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, View } from "react-native";
@@ -27,6 +27,7 @@ export default function NewTransactionForm() {
   const { showToast } = useToast();
   const { data: properties = [] } = useGetPropertiesQuery();
   const [createTransaction, { isLoading: isSaving }] = useCreateTransactionMutation();
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
   const [initial] = useState(() => blankCreateValues(new Date()));
   const [values, setValues] = useState<TransactionCreateValues>(initial);
   const [showAmountError, setShowAmountError] = useState(false);
@@ -36,7 +37,7 @@ export default function NewTransactionForm() {
 
   const locked = isSaving || isLeaving;
   const isDirty = JSON.stringify(values) !== JSON.stringify(initial);
-  const amountProblem = showAmountError ? createAmountError(values) : undefined;
+  const amountProblem = showAmountError ? createAmountError(values, decimalSeparator) : undefined;
 
   useConfirmLeave(isDirty && !isLeaving, (leave) => {
     if (isSaving) return;
@@ -56,12 +57,12 @@ export default function NewTransactionForm() {
   }
 
   async function save(): Promise<void> {
-    if (createAmountError(values)) {
+    if (createAmountError(values, decimalSeparator)) {
       setShowAmountError(true);
       return;
     }
     try {
-      await createTransaction(createPayload(values)).unwrap();
+      await createTransaction(createPayload(values, decimalSeparator)).unwrap();
       showToast("Added.");
       setIsLeaving(true);
     } catch (error) {

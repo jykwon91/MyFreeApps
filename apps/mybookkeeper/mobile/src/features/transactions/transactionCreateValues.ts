@@ -5,6 +5,8 @@ import { isoFromDate } from "../../lib/localDate";
 import type { TransactionChoice } from "../../types/TransactionChoice";
 import type { TransactionCreateValues } from "../../types/TransactionCreateValues";
 import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
+import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import { taxYearOf } from "@mybookkeeper/api-client/utils/transactionTaxYear";
 
 /** What the website opens its form with: today, an expense, maintenance. */
@@ -23,18 +25,21 @@ export function blankCreateValues(today: Date): TransactionCreateValues {
   };
 }
 
-export function createAmountError(values: TransactionCreateValues): string | undefined {
-  return moneyInputError(values.amount.trim());
+export function createAmountError(values: TransactionCreateValues, decimalSeparator: DecimalSeparator): string | undefined {
+  return moneyInputError(values.amount, decimalSeparator);
 }
 
-/** The same body the website sends: the tax year follows the date, and empty fields go as null. */
-export function createPayload(values: TransactionCreateValues): Partial<Transaction> {
+/**
+ * The same body the website sends: the tax year follows the date, and empty fields go as null.
+ * The amount goes as "1234.56" however it was typed; one createAmountError refuses never gets here.
+ */
+export function createPayload(values: TransactionCreateValues, decimalSeparator: DecimalSeparator): Partial<Transaction> {
   return {
     transaction_date: values.date,
     tax_year: taxYearOf(values.date),
     vendor: values.vendor.trim() || null,
     description: values.description.trim() || null,
-    amount: values.amount.trim(),
+    amount: normalizeMoneyText(values.amount, decimalSeparator) ?? "",
     transaction_type: values.type,
     category: values.category,
     property_id: values.propertyId,

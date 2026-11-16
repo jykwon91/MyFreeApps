@@ -12,6 +12,9 @@ import { store } from "../src/lib/store";
 import { aRentCharge, aRentLedger, aRentPeriod, aRentSchedule } from "../test-support/aRentLedger";
 import { startRentWritesServer, type RentWritesServer } from "../test-support/rentWritesServer";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 jest.mock("expo-router", () => ({ router: { push: jest.fn() } }));
 jest.mock("expo-local-authentication", () => ({ SecurityLevel: { NONE: 0 }, authenticateAsync: jest.fn(), getEnrolledLevelAsync: jest.fn() }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
@@ -77,6 +80,7 @@ beforeEach(async () => {
   store.dispatch(workspaceChosen("w1"));
   jest.clearAllMocks();
   jest.restoreAllMocks();
+  mockDecimalSeparator = ".";
 });
 
 afterEach(() => {
@@ -121,6 +125,18 @@ describe("setting rent up", () => {
       body: expect.objectContaining({ applicant_id: "a1", amount: "1200", cadence: "biweekly", start_date: "2026-04-01", end_date: null, grace_days: 5, notes: "Pays on the 3rd" }),
     });
     expect(screen.queryByRole("header", { name: M.scheduleTitleNew })).toBeNull();
+  });
+
+  it("reads rent typed with a comma on a comma keypad, and sends it as dollars and cents", async () => {
+    mockDecimalSeparator = ",";
+    const server = await openNewSchedule();
+    await pickDate(M.start, new Date(2026, 3, 1));
+    await typeInto(M.amount, "1.200,50");
+
+    await pressLast(M.saveNew);
+
+    expect(await screen.findByText(M.scheduleSaved)).toBeTruthy();
+    expect(server.writes[0].body).toEqual(expect.objectContaining({ amount: "1200.50" }));
   });
 
   it("refuses a last day before the first day, and a grace period that isn't a number of days", async () => {
@@ -321,6 +337,40 @@ describe("adding a charge", () => {
     expect(server.writes).toEqual([
       { method: "POST", url: "/rent-ledger/charges", body: { applicant_id: "a1", amount: "50", due_date: "2026-04-05", charge_type: "late_fee", description: "April late fee" } },
     ]);
+  });
+
+  it("names an amount it can't read, and sends a pasted one as plain dollars and cents", async () => {
+    const server = await openCharge();
+    const isDisabled = () => screen.getAllByRole("button", { name: M.addCharge }).pop()?.props.accessibilityState.disabled;
+    await pickDate(M.chargeDue, new Date(2026, 3, 5));
+
+    await typeInto(M.chargeAmount, "50abc");
+    expect(isDisabled()).toBe(true);
+    expect(screen.getByText("Use dollars and cents, like 84.20.")).toBeTruthy();
+
+    await typeInto(M.chargeAmount, "$1,200");
+    await pressLast(M.addCharge);
+
+    expect(await screen.findByText(M.chargeAdded)).toBeTruthy();
+    expect(server.writes[0].body).toEqual(expect.objectContaining({ amount: "1200" }));
+  });
+
+  it("takes cents typed with a comma on a comma keypad, and won't guess at 1,200 there", async () => {
+    mockDecimalSeparator = ",";
+    const server = await openCharge();
+    const isDisabled = () => screen.getAllByRole("button", { name: M.addCharge }).pop()?.props.accessibilityState.disabled;
+    await pickDate(M.chargeDue, new Date(2026, 3, 5));
+
+    await typeInto(M.chargeAmount, "1,200");
+    expect(isDisabled()).toBe(true);
+    expect(screen.getByText("Use dollars and cents, like 84,20.")).toBeTruthy();
+
+    await typeInto(M.chargeAmount, "12,50");
+    expect(isDisabled()).toBe(false);
+    await pressLast(M.addCharge);
+
+    expect(await screen.findByText(M.chargeAdded)).toBeTruthy();
+    expect(server.writes[0].body).toEqual(expect.objectContaining({ amount: "12.50" }));
   });
 
   it("sends the kind that was chosen, and no description when blank", async () => {

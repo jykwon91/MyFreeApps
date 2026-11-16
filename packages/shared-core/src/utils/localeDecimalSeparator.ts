@@ -1,4 +1,4 @@
-import type { DecimalSeparator } from "../types/recipe/decimal-separator";
+import type { DecimalSeparator } from "../types/text/decimal-separator";
 
 /**
  * The decimal separator for `locale` (the runtime's default when omitted). Uses

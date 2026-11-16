@@ -1,4 +1,4 @@
-import type { DecimalSeparator } from "../types/recipe/decimal-separator";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import type { RecipeExtractionDraft } from "../types/recipe/extraction";
 import type { RecipeFormValues } from "../types/recipe/recipe-form-values";
 import { draftIngredientRows, draftStepRows } from "./draftFormRows";

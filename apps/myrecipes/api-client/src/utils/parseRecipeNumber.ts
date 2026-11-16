@@ -1,4 +1,4 @@
-import type { DecimalSeparator } from "../types/recipe/decimal-separator";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 
 /**
  * A typed quantity or minutes as a number: null when blank, NaN when it can't be read for sure.

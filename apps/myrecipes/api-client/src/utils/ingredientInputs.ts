@@ -1,4 +1,4 @@
-import type { DecimalSeparator } from "../types/recipe/decimal-separator";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import type { EditableIngredientRow } from "../types/recipe/editable-ingredient-row";
 import type { IngredientInput } from "../types/recipe/ingredient";
 import { parseRecipeNumber } from "./parseRecipeNumber";
