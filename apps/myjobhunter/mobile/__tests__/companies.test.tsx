@@ -281,6 +281,30 @@ describe("adding a company", () => {
     expect(names()).toEqual(["Acme Corp", "Hooli"]);
   });
 
+  it("sends one add for a quick double tap", async () => {
+    let answer: () => void = () => undefined;
+    const sent = serve({
+      "GET /companies": listOf(ACME),
+      "POST /companies": () => new Promise<FakeReply>((resolve) => (answer = () => resolve({ status: 201, data: companyRecord({ id: "c-new", name: "Hooli" }) }))),
+    });
+    await showScreen();
+    await openAddSheet();
+    await fireEvent.changeText(screen.getByLabelText(`${MESSAGES.nameLabel}, required`), "Hooli");
+    const save = saveButton();
+    // Two touches are two events: work queued by the first runs before the second lands, but the
+    // sheet hasn't re-rendered, so it still looks idle. Only a guard held until the add answers stops it.
+    await act(async () => {
+      save.props.onClick();
+      await Promise.resolve();
+      save.props.onClick();
+    });
+
+    expect(posts(sent)).toHaveLength(1);
+    await act(async () => answer());
+    expect(await screen.findByText(MESSAGES.added("Hooli"))).toBeTruthy();
+    expect(posts(sent)).toHaveLength(1);
+  });
+
   it("asks for a name before sending, and doesn't count spaces as one", async () => {
     const sent = serveCompanies([ACME]);
     await showScreen();

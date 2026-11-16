@@ -312,6 +312,25 @@ describe("creating", () => {
     });
   });
 
+  it("creates one recipe for a quick double tap", async () => {
+    await show();
+    await fillMinimalRecipe();
+    const open = holdResponses();
+    const create = screen.getByRole("button", { name: MESSAGES.create });
+    // Two touches are two events: work queued by the first runs before the second lands, but the
+    // form hasn't re-rendered, so it still looks idle. Only a guard held until the save answers stops it.
+    await act(async () => {
+      create.props.onClick();
+      await Promise.resolve();
+      create.props.onClick();
+    });
+
+    expect(sent.filter((config) => config.method === "post")).toHaveLength(1);
+    await act(async () => open());
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledTimes(1));
+    expect(sent.filter((config) => config.method === "post")).toHaveLength(1);
+  });
+
   it("keeps everything typed when the server says no, and can try again", async () => {
     await show();
     await fillMinimalRecipe();
