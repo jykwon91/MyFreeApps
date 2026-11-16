@@ -287,12 +287,12 @@ describe("the charge list", () => {
     startServer(aRentLedger({ charges }));
     await renderRent();
 
-    await screen.findByText("Show all 8 charges");
+    expect(await screen.findByRole("button", { name: "Show all 8 charges", expanded: false })).toBeTruthy();
     expect(screen.queryByText(/^Jan 1 –/)).toBeNull();
 
     await fireEvent.press(screen.getByText("Show all 8 charges"));
     expect(screen.getByText(/^Jan 1 –/)).toBeTruthy();
-    expect(screen.getByText(RENT_MESSAGES.showFewer)).toBeTruthy();
+    expect(screen.getByRole("button", { name: RENT_MESSAGES.showFewer, expanded: true })).toBeTruthy();
   });
 });
 

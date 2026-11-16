@@ -149,16 +149,17 @@ describe("InquiryDetailScreen", () => {
     await renderScreen();
     expect(await screen.findByText("Second question")).toBeTruthy();
     expect(screen.queryByText("My answer")).toBeNull();
-    await fireEvent.press(screen.getByRole("button", { name: "Show 2 other messages" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Show 2 other messages", expanded: false }));
     expect(screen.getByText("My answer")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Hide other messages", expanded: true })).toBeTruthy();
     expect(screen.getByText("First question")).toBeTruthy();
   });
 
   it("shortens a long message until asked", async () => {
     startInquiryServer([anInquiry({ messages: [aMessage({ parsed_body: "word ".repeat(200) })] })]);
     await renderScreen();
-    await fireEvent.press(await screen.findByRole("button", { name: "Show more" }));
-    expect(screen.getByRole("button", { name: "Show less" })).toBeTruthy();
+    await fireEvent.press(await screen.findByRole("button", { name: "Show more", expanded: false }));
+    expect(screen.getByRole("button", { name: "Show less", expanded: true })).toBeTruthy();
   });
 
   it("calls, texts and emails them, and says so if the phone can't", async () => {

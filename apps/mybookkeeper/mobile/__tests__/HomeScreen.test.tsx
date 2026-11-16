@@ -190,6 +190,7 @@ describe("HomeScreen", () => {
     await renderScreen();
     await screen.findByText("Property 5");
     expect(screen.queryByText("Property 6")).toBeNull();
+    expect(screen.getByRole("button", { name: "Show all 7", expanded: false })).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Show all 7" }));
     expect(screen.getByText("Property 7")).toBeTruthy();
   });

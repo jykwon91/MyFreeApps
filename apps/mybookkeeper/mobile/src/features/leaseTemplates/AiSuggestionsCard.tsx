@@ -23,7 +23,7 @@ export default function AiSuggestionsCard({ suggestions, savedKeys, onDismiss }:
       {!isCollapsed ? items.map((item) => <AiSuggestionRow isNew={newKeys.has(item.key)} item={item} key={item.key} typeLabel={LEASE_PLACEHOLDER_INPUT_TYPE_LABELS[item.input_type] ?? item.input_type} />) : null}
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.review}</Text>
       {items.length > 0 ? (
-        <LoadingButton onPress={() => setIsCollapsed((current) => !current)} variant="secondary">
+        <LoadingButton accessibilityState={{ expanded: !isCollapsed }} onPress={() => setIsCollapsed((current) => !current)} variant="secondary">
           {isCollapsed ? MESSAGES.show : MESSAGES.hide}
         </LoadingButton>
       ) : null}

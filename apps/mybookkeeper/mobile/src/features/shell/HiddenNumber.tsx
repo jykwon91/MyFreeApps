@@ -32,6 +32,7 @@ export default function HiddenNumber({ label, value }: HiddenNumberProps) {
       </View>
       <LoadingButton
         accessibilityLabel={`${action} the full ${label.toLowerCase()}`}
+        accessibilityState={{ expanded: isShown }}
         onPress={() => setIsShown((shown) => !shown)}
         variant="ghost"
       >

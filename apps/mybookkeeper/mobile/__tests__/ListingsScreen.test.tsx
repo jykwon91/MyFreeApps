@@ -278,10 +278,10 @@ describe("ListingDetailScreen", () => {
     startServer();
     await show(<ListingDetailScreen id="l1" />);
     expect(screen.queryByLabelText("QR code for the apply link to Garden room")).toBeNull();
-    await fireEvent.press(await screen.findByRole("button", { name: "Show QR code" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Show QR code", expanded: false }));
     expect(screen.getByLabelText("QR code for the apply link to Garden room")).toBeTruthy();
     expect(mockQrValue).toHaveBeenCalledWith(`${WEB_BASE_URL}/apply/garden-room`);
-    await fireEvent.press(screen.getByRole("button", { name: "Hide QR code" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Hide QR code", expanded: true }));
     expect(screen.queryByLabelText("QR code for the apply link to Garden room")).toBeNull();
   });
 

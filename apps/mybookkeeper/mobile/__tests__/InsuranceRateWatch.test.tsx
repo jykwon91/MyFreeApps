@@ -107,9 +107,19 @@ describe("rate watch", () => {
     await fireEvent.press(await screen.findByRole("button", { name: "Check filings" }));
     await screen.findByText("Carrier 1");
     expect(screen.queryByText("Carrier 6")).toBeNull();
-    await fireEvent.press(screen.getByRole("button", { name: "Show 2 more" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Show 2 more", expanded: false }));
     expect(screen.getByText("Carrier 7")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Show \d+ more/ })).toBeNull();
+  });
+
+  it("tells a screen reader the older filings from the same carrier are folded away", async () => {
+    const older = aFiling(8, { is_in_force: false, product_name: "Older Program" });
+    startInsuranceServer({ rateWatch: results({ outlooks: [anOutlook({ filings: [aFiling(9, { percent_change: 10 }), older] })] }) });
+    await renderInsurance(<RateWatchScreen />);
+    await fireEvent.press(await screen.findByRole("button", { name: "Check filings" }));
+    expect(screen.queryByText(/Older Program/)).toBeNull();
+    await fireEvent.press(await screen.findByRole("button", { name: "See 1 more filing from this carrier", expanded: false }));
+    expect(screen.getByText(/Older Program/)).toBeTruthy();
   });
 
   it("shows the reason when the state feed was unreachable", async () => {

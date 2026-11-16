@@ -42,7 +42,7 @@ export default function RentReminderHistory({ applicantId }: { applicantId: stri
         </View>
       ))}
       {sends && sends.length > RENT_REMINDERS_SHOWN_AT_FIRST ? (
-        <LoadingButton onPress={() => setIsShowingAll(!isShowingAll)} variant="ghost">
+        <LoadingButton accessibilityState={{ expanded: isShowingAll }} onPress={() => setIsShowingAll(!isShowingAll)} variant="ghost">
           {isShowingAll ? REMINDER_MESSAGES.showFewer : showAllReminders(sends.length)}
         </LoadingButton>
       ) : null}

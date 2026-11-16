@@ -18,7 +18,7 @@ export default function ListingApplyQr({ slug, title }: ListingApplyQrProps) {
 
   return (
     <View style={{ gap: spacing.sm }}>
-      <LoadingButton onPress={() => setIsShown((shown) => !shown)} variant="secondary">
+      <LoadingButton accessibilityState={{ expanded: isShown }} onPress={() => setIsShown((shown) => !shown)} variant="secondary">
         {isShown ? LISTING_MESSAGES.hideQr : LISTING_MESSAGES.showQr}
       </LoadingButton>
       {isShown ? (
