@@ -215,8 +215,12 @@ const applicationsApi = baseApi.enhanceEndpoints({
         method: "PATCH",
         data: body,
       }),
+      // The application detail embeds its events, so it refetches too. The list and
+      // the kanban board show only the latest event's type and time, which an edit of
+      // the note or interview details can't change, so they stay put.
       invalidatesTags: (_result, _err, { applicationId }) => [
         { type: APPLICATION_EVENTS_TAG, id: applicationId },
+        { type: APPLICATIONS_TAG, id: applicationId },
       ],
     }),
 
