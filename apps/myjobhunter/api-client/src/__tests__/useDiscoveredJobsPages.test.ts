@@ -45,15 +45,19 @@ beforeEach(() => {
 
 describe("useDiscoveredJobsPages polling", () => {
   let store: ReturnType<typeof makeStore>;
+  let unmount: () => void;
 
   function mount() {
     store = makeStore();
     const wrapper = ({ children }: { children: ReactNode }) => createElement(Provider, { store, children });
-    return renderHook(() => useDiscoveredJobsPages({ state: "inbox" }, POLL_MS), { wrapper });
+    ({ unmount } = renderHook(() => useDiscoveredJobsPages({ state: "inbox" }, POLL_MS), { wrapper }));
   }
 
+  // Vitest globals are off, so Testing Library doesn't clean up on its own. Without this the hook keeps
+  // polling after the test, and React renders once jsdom is gone ("window is not defined").
   afterEach(() => {
-    store.dispatch(baseApi.internalActions.onFocus());
+    unmount();
+    store.dispatch(baseApi.util.resetApiState());
   });
 
   it("stops polling while the app is in the background and reloads the list as soon as it returns", async () => {
