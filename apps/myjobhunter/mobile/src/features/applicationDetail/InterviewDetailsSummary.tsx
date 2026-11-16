@@ -2,7 +2,7 @@ import { INTERVIEW_TYPE_LABELS } from "@myjobhunter/api-client/constants/intervi
 import { useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { APPLICATION_EVENT_MESSAGES as MESSAGES } from "../../constants/applicationEvents";
-import { formatDateTime } from "../../lib/formatDateTime";
+import { formatDateTime } from "@myjobhunter/api-client/utils/formatDateTime";
 import type { InterviewDetailsSummaryProps } from "../../types/InterviewDetailsSummaryProps";
 import InterviewLocation from "./InterviewLocation";
 import SummaryRow from "./SummaryRow";

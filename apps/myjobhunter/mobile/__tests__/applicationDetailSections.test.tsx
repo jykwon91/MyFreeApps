@@ -13,7 +13,7 @@ import { APPLICATION_CONTACT_MESSAGES as CONTACTS } from "../src/constants/appli
 import { DOCUMENT_MESSAGES as DOCUMENTS } from "../src/constants/documents";
 import { interviewerNameTooLongMessage, tooManyInterviewersMessage } from "@myjobhunter/api-client/constants/interviewerProblems";
 import { APPLICATION_EVENT_MESSAGES as EVENTS } from "../src/constants/applicationEvents";
-import { formatDateTime } from "../src/lib/formatDateTime";
+import { formatDateTime } from "@myjobhunter/api-client/utils/formatDateTime";
 import { store } from "../src/lib/store";
 import { alertButton } from "@platform/mobile/test-support/alertButton";
 import { applicationDetailRecord } from "../test-support/applicationDetailRecord";
