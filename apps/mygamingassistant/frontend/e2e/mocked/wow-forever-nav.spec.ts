@@ -60,7 +60,7 @@ test.describe("WoW Forever sidebar nav", () => {
     const section = (title: string) => sb.getByTestId("nav-section").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
     await expect(section("Start here").getByRole("link", { name: "Overview" })).toBeVisible();
     await expect(section("Class").getByRole("link", { name: "Macros" })).toBeVisible();
-    await expect(section("Gold & crafting").getByRole("link", { name: "Recipes" })).toBeVisible();
+    await expect(section("Gold & crafting").getByRole("link", { name: "Recipes", exact: true })).toBeVisible();
     await expect(section("You").getByRole("link", { name: "topdeadcenter" })).toBeVisible();
     // A heading, not a label: the "Class" section can't clash with a page's Class picker.
     await expect(sb.getByLabel("Class", { exact: true })).toHaveCount(0);
