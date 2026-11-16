@@ -2157,8 +2157,9 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   the page follows the player's zone. Browsing never changes the saved
   position — only a click on your own zone's map (or a confirmed "Set position
   here") does. Zoom out = Esc, the breadcrumb's Zoom out button, browser
-  Back, the −/Reset buttons, or "Zoom out to …" in the map menu. **Right-click
-  no longer zooms out** (since P3) — it opens the map menu (see My marks).
+  Back, the −/Reset buttons, "Zoom out to …" in the map menu, or **right-click**
+  (as on the in-game map; P3 had moved it into the menu and the operator asked
+  for it back, 2026-11-15). **Shift+right-click** opens the map menu.
 - **Hit-testing** (`worldMap/mapHitTest.ts`, mirrors `C_Map.GetMapInfoAtPosition`):
   on a continent/world view the candidates are the children; on a zone view,
   its siblings. A candidate must cover the point with its mask
@@ -2280,7 +2281,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   that click a zone's ground switch layers off first
   (`e2e/mocked/fixtures/mapLayers.ts`).
 - **My marks, my route, Share this view** (P3; browser-only, no server):
-  - **Map menu** (`useMapPressMenu`, `MapContextMenu`): right-click, a ~500 ms
+  - **Map menu** (`useMapPressMenu`, `MapContextMenu`): Shift+right-click (a
+    plain right-click zooms out), a ~500 ms
     press with a finger (`LONG_PRESS_MS`; a ring fills from 150 ms; any drag
     > 6 px, a second finger or a page scroll cancels it; the browser's own
     long-press `contextmenu` is swallowed) or Shift+F10 / the menu key on the
@@ -2288,7 +2290,7 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
     "Copy coordinates" (`x, y`, 0–100, one decimal) and "Zoom out to
     <parent>" (hidden at the root). Bottom sheet below `sm`. Also "Place a
     mark" (crosshair; Esc cancels) and "Add a mark at the map's centre" in
-    the My marks panel for players who can't right-click or long-press.
+    the My marks panel for players who can't Shift+right-click or long-press.
   - **Marks** (`hooks/useMapMarks.ts`, pure CRUD in `worldMap/mapMarks.ts`):
     per map, localStorage `mga.wowForever.worldMap.marks.v1`, re-validated on
     read (`parseMapMarksStore`). Label (≤ 40 chars; any whitespace becomes

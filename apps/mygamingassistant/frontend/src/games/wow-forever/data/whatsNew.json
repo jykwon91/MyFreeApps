@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-15",
+    "title": "Right-click zooms out on the World Map again",
+    "summary": "Right-clicking the World Map zooms out straight away, like the in-game map. To add a mark or copy coordinates, Shift+right-click (or press and hold on a phone).",
+    "to": "/wow-forever/map"
+  },
+  {
+    "date": "2026-11-15",
     "title": "Theater mode keeps the page",
     "summary": "Theater mode on the World Map no longer covers the screen with a separate view. It's the same page with the map about three times bigger beside the list, sized so the whole map fits your screen.",
     "to": "/wow-forever/map"

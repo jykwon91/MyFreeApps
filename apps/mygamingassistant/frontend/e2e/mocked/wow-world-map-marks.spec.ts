@@ -1,6 +1,6 @@
 /**
  * WoW Forever World Map — your own marks, route and "Share this view":
- * right-click → add → kept after a reload → rename → delete (with Undo);
+ * Shift+right-click → add → kept after a reload → rename → delete (with Undo);
  * a long press on a touch screen adds one; a 3-mark route draws its line and
  * yards; a shared link opens read-only in a fresh browser and "Save to my
  * marks" makes them yours; a garbage link shows a notice, never a crash; and
@@ -52,9 +52,9 @@ async function storedLabels(page: Page): Promise<string[]> {
   return (store.maps?.[ELWYNN]?.marks ?? []).map((m) => m.label);
 }
 
-/** Right-click at (x, y) → "Add a mark here" → type its name. */
+/** Shift+right-click at (x, y) → "Add a mark here" → type its name. */
 async function addMark(page: Page, x: number, y: number, name: string) {
-  await page.getByTestId("zone-map").click({ button: "right", position: await mapPoint(page, x, y) });
+  await page.getByTestId("zone-map").click({ button: "right", modifiers: ["Shift"], position: await mapPoint(page, x, y) });
   await page.getByRole("menu").getByRole("menuitem", { name: "Add a mark here" }).click();
   // The new mark's name box has focus, its default name selected.
   const box = page.getByRole("textbox", { name: "Mark name" }).last();
@@ -64,16 +64,16 @@ async function addMark(page: Page, x: number, y: number, name: string) {
   await expect(page.getByRole("img", { name: `Your mark ${name}` })).toBeAttached();
 }
 
-test("right-click adds a mark that survives a reload, then renames and deletes it", async ({ page }) => {
+test("Shift+right-click adds a mark that survives a reload, then renames and deletes it", async ({ page }) => {
   await prepare(page);
   await openElwynn(page);
   const map = page.getByTestId("zone-map");
 
-  await map.click({ button: "right", position: await mapPoint(page, 30, 40) });
+  await map.click({ button: "right", modifiers: ["Shift"], position: await mapPoint(page, 30, 40) });
   const menu = page.getByRole("menu");
   await expect(menu).toContainText(/At \d+\.\d, \d+\.\d/);
   await expect(menu.getByRole("menuitem", { name: "Add a mark here" })).toBeFocused();
-  // Right-click no longer zooms out by itself: the menu offers it.
+  // The menu offers zooming out too; Shift+right-click itself stays on the map.
   await expect(menu.getByRole("menuitem", { name: "Zoom out to Eastern Kingdoms" })).toBeVisible();
   await expect(page.getByRole("img", { name: "Elwynn Forest map" })).toBeVisible();
   await menu.getByRole("menuitem", { name: "Add a mark here" }).click();

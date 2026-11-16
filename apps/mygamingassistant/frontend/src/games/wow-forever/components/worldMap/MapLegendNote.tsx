@@ -7,8 +7,8 @@ export default function MapLegendNote() {
       steps (walk solid, fly dashed, boat dotted) · <span className="font-medium text-fuchsia-500">numbered</span> your own route ·
       other coloured dots are your results and the layers you've switched on (the Layers button on the map lists each colour). With a
       result selected, a click on the map or Esc clears it and the map goes back to where it was — unless you've moved it yourself
-      since. Otherwise click a zone to open it; Esc, the Zoom out button or Back zooms out. Right-click the map (or press and hold
-      on a touch screen) to add a mark or copy coordinates. On your zone's map, click to set where you are. Scroll, pinch or use + /
+      since. Otherwise click a zone to open it; right-click, Esc, the Zoom out button or Back zooms out.
+      Shift+right-click the map (or press and hold on a touch screen) to add a mark or copy coordinates. On your zone's map, click to set where you are. Scroll, pinch or use + /
       − to zoom; drag or use the arrow keys to move.
     </p>
   );

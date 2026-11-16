@@ -92,7 +92,7 @@ interface MapCanvasProps {
   /** Your marks + route on this map, and a shared set shown read-only (null = none). */
   marks: MapMarks;
   sharedMarks: MapMarks | null;
-  /** Right-click, a long press or the menu key: the map menu at that point. */
+  /** Shift+right-click, a long press or the menu key: the map menu at that point. */
   onMenu: (target: MapMenuTarget) => void;
   /** "Place a mark": the next click or tap on the map puts a mark there (Esc cancels). */
   placing: boolean;
@@ -118,7 +118,7 @@ function sameHit(a: MapHit | null, b: MapHit): boolean {
  * Like the in-game map: hover a zone to light it up, click to open it,
  * Esc to zoom out (Esc, or a click, first clears a selected result — and the view goes back to where it
  * was before the selection, unless the player moved it since); on a zone map the neighbours are named at
- * the edges and a click past a border opens that zone. Right-click, a long press or the menu key opens
+ * the edges and a click past a border opens that zone. Right-click zooms out; Shift+right-click, a long press or the menu key opens
  * the map menu (add a mark, copy coordinates, zoom out) — `useMapPressMenu`.
  */
 export default function MapCanvas(props: MapCanvasProps) {
@@ -128,7 +128,7 @@ export default function MapCanvas(props: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const viewer = useMapViewer(containerRef, { onChange: props.onZoomChange, onWheelZoom: onManualZoom });
-  const press = useMapPressMenu(containerRef, svgRef, props.onMenu);
+  const press = useMapPressMenu(containerRef, svgRef, props.onMenu, onZoomOut);
   const { focusOn, reset, setView } = viewer;
   const ready = viewer.status === MAP_VIEWER_STATUS.ready;
   const settled = ready || viewer.status === MAP_VIEWER_STATUS.failed;
@@ -356,7 +356,7 @@ export default function MapCanvas(props: MapCanvasProps) {
             data-map-viewer
             data-map-style={satellite.shown ? MAP_STYLE.satellite : MAP_STYLE.drawn}
             tabIndex={0}
-            aria-label={`${map.name} — scroll, pinch or +/- to zoom, drag or arrow keys to move; Escape to zoom out; right-click, long-press or Shift+F10 for the map menu`}
+            aria-label={`${map.name} — scroll, pinch or +/- to zoom, drag or arrow keys to move; Escape or right-click to zoom out; Shift+right-click, long-press or Shift+F10 for the map menu`}
             className={VIEWER_CLASS}
             style={viewerStyle}
             onPointerDown={pointerDown}

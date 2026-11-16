@@ -24,13 +24,15 @@ export interface MapPressMenu {
   move: (e: PointerEvent<HTMLElement>) => void;
   /** A pointer lifted or cancelled; true = it ended a long-press, so it must not count as a click. */
   end: (e: PointerEvent<HTMLElement>) => boolean;
+  /** Right-click zooms out (as in the game); Shift+right-click opens the menu. */
   contextMenu: (e: MouseEvent<HTMLElement>) => void;
   /** Shift+F10 / the menu key on the focused map: the menu at the middle of the view. */
   keyMenu: () => void;
 }
 
 /**
- * The map's menu gesture: right-click with a mouse, a ~half-second press
+ * The map's menu gesture: Shift+right-click with a mouse (a plain right-click
+ * zooms out, as on the in-game map), a ~half-second press
  * with a finger, the menu key on a keyboard. A press is called off by any
  * drag (the finger moved), a second finger (a pinch) or the page taking the
  * gesture (a scroll), so it never fights panning or zooming. The browser's
@@ -40,6 +42,7 @@ export function useMapPressMenu(
   boxRef: RefObject<HTMLElement | null>,
   pictureRef: RefObject<Element | null>,
   onMenu: (target: MapMenuTarget) => void,
+  onZoomOut: () => void,
 ): MapPressMenu {
   const [ring, setRing] = useState<PressRing | null>(null);
   const start = useRef<PressStart | null>(null);
@@ -127,7 +130,8 @@ export function useMapPressMenu(
     e.preventDefault();
     const now = Date.now();
     if (now < touchUntil.current || now - keyMenuAt.current < KEY_MENU_WINDOW_MS) return;
-    open(e.clientX, e.clientY);
+    if (e.shiftKey) open(e.clientX, e.clientY);
+    else onZoomOut();
   }
 
   function keyMenu() {

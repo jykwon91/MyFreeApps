@@ -26,7 +26,7 @@ const BUTTON = "inline-flex items-center gap-1.5 rounded-md border px-3 text-sm 
 
 /**
  * "My marks" under the map: your marks on the viewed map (rename, restyle,
- * delete with Undo), a way to add one without right-click or a long press,
+ * delete with Undo), a way to add one without Shift+right-click or a long press,
  * and your route through them with straight-line yards.
  */
 export default function MyMarksPanel(props: MyMarksPanelProps) {
@@ -64,7 +64,7 @@ export default function MyMarksPanel(props: MyMarksPanelProps) {
       {open && (
         <div id="wm-my-marks-body" className="space-y-3 border-t p-3">
           <p className="text-xs text-muted-foreground">
-            Right-click the map (or press and hold on a touch screen) to add a mark. Marks are saved in this browser only, per map.
+            Shift+right-click the map (or press and hold on a touch screen) to add a mark. Marks are saved in this browser only, per map.
           </p>
           <div className="flex flex-wrap gap-2">
             <button type="button" aria-pressed={placing} disabled={full && !placing} onClick={() => onPlacingChange(!placing)} className={clsx(BUTTON, placing && "border-blue-500 bg-blue-500/10")}>
