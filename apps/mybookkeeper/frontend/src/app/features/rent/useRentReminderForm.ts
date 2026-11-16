@@ -13,6 +13,7 @@ import {
   withFrequency,
 } from "@mybookkeeper/api-client/utils/rentReminderForm";
 import type { RentReminderFormValues } from "@mybookkeeper/api-client/types/rent/rent-reminder-form-values";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import type { RentReminderFrequency } from "@mybookkeeper/api-client/types/rent/rent-reminder-frequency";
 import type { RentReminderPlan } from "@mybookkeeper/api-client/types/rent/rent-reminder-plan";
 
@@ -49,12 +50,12 @@ export function useRentReminderForm({
   const daysValid = isDaysBeforeValid(values.frequency, values.sendDaysBefore);
   const timeValid = isSendTimeValid(values.sendTime);
   const hasChannel = values.emailEnabled || values.smsEnabled;
-  const canSubmit = canSaveReminder(values);
+  const canSubmit = canSaveReminder(values, NUMBER_INPUT_DECIMAL_SEPARATOR);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!canSubmit) return;
-    const body = { applicantId, ...reminderPlanRequest(values, existing) };
+    const body = { applicantId, ...reminderPlanRequest(values, existing, NUMBER_INPUT_DECIMAL_SEPARATOR) };
     try {
       if (existing) {
         await update(body).unwrap();

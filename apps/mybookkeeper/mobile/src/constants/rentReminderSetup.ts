@@ -27,7 +27,6 @@ export const REMINDER_SETUP_MESSAGES = {
   howToPayPlaceholder: "Zelle to you@example.com",
   fixedAmount: "Fixed amount ($, optional)",
   fixedAmountHint: "Leave empty to quote the amount from the rent schedule.",
-  fixedAmountInvalid: "Use an amount above zero, or leave it empty.",
   remindersOn: "Reminders on",
   remindersOnNote: "Turn off to pause. Nothing is sent on its own while paused.",
   saveNew: "Turn on reminders",

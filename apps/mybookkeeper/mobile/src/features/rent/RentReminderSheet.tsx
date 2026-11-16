@@ -5,15 +5,15 @@ import type { RentReminderFormValues } from "@mybookkeeper/api-client/types/rent
 import type { RentReminderFrequency } from "@mybookkeeper/api-client/types/rent/rent-reminder-frequency";
 import type { RentReminderOverview } from "@mybookkeeper/api-client/types/rent/rent-reminder-overview";
 import {
+  amountOverrideProblem,
   canSaveReminder,
-  isAmountOverrideValid,
   isDaysBeforeValid,
   isSendTimeValid,
   reminderFormValues,
   reminderPlanRequest,
   withFrequency,
 } from "@mybookkeeper/api-client/utils/rentReminderForm";
-import { FormField, FormSheet, LoadingButton, OptionRow, SegmentedControl, SwitchRow, useTheme, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FormField, FormSheet, LoadingButton, OptionRow, SegmentedControl, SwitchRow, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { daysHintBad, REMINDER_SETUP_MESSAGES, smsFrom } from "../../constants/rentReminderSetup";
@@ -41,6 +41,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
   const [createPlan] = useCreateRentReminderPlanMutation();
   const [updatePlan] = useUpdateRentReminderPlanMutation();
   const { isBusy, failure, submit } = useFormSubmit();
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
   const initial = reminderFormValues(plan, sms.available);
   const [values, setValues] = useState<RentReminderFormValues>(initial);
 
@@ -57,8 +58,8 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
   }
 
   async function save(): Promise<void> {
-    if (!canSaveReminder(values)) return;
-    const body = { applicantId, ...reminderPlanRequest(values, plan) };
+    if (!canSaveReminder(values, decimalSeparator)) return;
+    const body = { applicantId, ...reminderPlanRequest(values, plan, decimalSeparator) };
     const landed = await submit(() => (plan ? updatePlan(body).unwrap() : createPlan(body).unwrap()), reminderSetupFailure);
     if (!landed) return;
     onClose();
@@ -149,7 +150,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
 
       <FormField
         editable={!isBusy}
-        error={isAmountOverrideValid(values.amountOverride) ? undefined : REMINDER_SETUP_MESSAGES.fixedAmountInvalid}
+        error={amountOverrideProblem(values.amountOverride, decimalSeparator)}
         hint={REMINDER_SETUP_MESSAGES.fixedAmountHint}
         keyboardType="decimal-pad"
         label={REMINDER_SETUP_MESSAGES.fixedAmount}
@@ -159,7 +160,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
 
       {plan ? <SwitchRow disabled={isBusy} label={REMINDER_SETUP_MESSAGES.remindersOn} note={REMINDER_SETUP_MESSAGES.remindersOnNote} onValueChange={(on) => change("isActive", on)} value={values.isActive} /> : null}
 
-      <LoadingButton disabled={!canSaveReminder(values)} isLoading={isBusy} loadingText={REMINDER_SETUP_MESSAGES.saving} onPress={() => void save()}>
+      <LoadingButton disabled={!canSaveReminder(values, decimalSeparator)} isLoading={isBusy} loadingText={REMINDER_SETUP_MESSAGES.saving} onPress={() => void save()}>
         {plan ? REMINDER_SETUP_MESSAGES.saveEdit : REMINDER_SETUP_MESSAGES.saveNew}
       </LoadingButton>
       <LoadingButton disabled={isBusy} onPress={close} variant="ghost">
