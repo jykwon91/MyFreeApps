@@ -4,13 +4,14 @@ import { SessionProvider, type MobileSession, type SessionState } from "@platfor
 import { resetFakeFiles } from "@platform/mobile/test-support/fakeFileSystem";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, AppState } from "react-native";
+import type { AppStateStatus } from "react-native";
 import { Provider } from "react-redux";
 import { RECIPES_PAGE_SIZE } from "@myrecipes/api-client/constants/recipesPaging";
 import type { VersionResponse } from "@myrecipes/api-client/types/recipe/version";
 import { saveCookCopy } from "../src/features/cook/cookCopies";
 import RecipesScreen from "../src/features/recipes/RecipesScreen";
-import { makeStore } from "../src/lib/store";
+import { makeStore, store as appStore } from "../src/lib/store";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({ useRouter: () => ({ push: mockPush }) }));
@@ -78,6 +79,8 @@ let respond: Respond;
 let gate: Promise<void> = Promise.resolve();
 let store: ReturnType<typeof makeStore>;
 const requests: InternalAxiosRequestConfig[] = [];
+// The app's store tells the API layer when the app comes back to the foreground, through the listener it adds as it loads.
+const changeAppState = jest.mocked(AppState.addEventListener).mock.calls.find(([type]) => type === "change")?.[1] as (state: AppStateStatus) => void;
 
 const adapter: AxiosAdapter = async (config) => {
   requests.push(config);
@@ -129,6 +132,25 @@ afterEach(() => {
 });
 
 describe("RecipesScreen", () => {
+  it("reloads the list when the app comes back to the foreground, as the website does on focus", async () => {
+    const { session } = fakeSession(SIGNED_OUT);
+    store = appStore;
+    await render(
+      <Provider store={appStore}>
+        <SessionProvider session={session}>
+          <RecipesScreen />
+        </SessionProvider>
+      </Provider>,
+    );
+    const loads = () => requests.filter((config) => config.url === "/recipes").length;
+    await waitFor(() => expect(loads()).toBe(1));
+
+    await act(async () => changeAppState("background"));
+    await act(async () => changeAppState("active"));
+
+    await waitFor(() => expect(loads()).toBe(2));
+  });
+
   it("shows a skeleton first, then the recipes", async () => {
     let open = () => {};
     gate = new Promise((resolve) => {
