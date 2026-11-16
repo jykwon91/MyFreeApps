@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { AccessibilityInfo, StyleSheet } from "react-native";
+import { TOAST_SCREEN_READER_DURATION_MS } from "../constants/toast";
 import Toast from "../components/Toast";
 import { darkColors, lightColors } from "../theme/colors";
 import { MIN_TOUCH_TARGET } from "../theme/touchTarget";
@@ -166,5 +167,47 @@ describe("Toast", () => {
 
     await act(async () => jest.advanceTimersByTime(10000));
     expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+  describe("timing", () => {
+    const UNDO = { label: "Undo", onPress: jest.fn() };
+    const withScreenReader = (on: boolean) => {
+      jest.spyOn(AccessibilityInfo, "isScreenReaderEnabled").mockResolvedValue(on);
+      jest.spyOn(AccessibilityInfo, "addEventListener").mockReturnValue({ remove: jest.fn() } as never);
+    };
+    afterEach(() => jest.restoreAllMocks());
+
+    it("auto-dismisses at 6 s with the screen reader off, action or not", async () => {
+      withScreenReader(false);
+      const onDismiss = jest.fn();
+      await render(<Toast action={UNDO} message="Dismissed." onDismiss={onDismiss} variant="success" />);
+      await act(async () => jest.advanceTimersByTime(5999));
+      expect(onDismiss).not.toHaveBeenCalled();
+      await act(async () => jest.advanceTimersByTime(1));
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps a toast with an action until its close button is pressed, with the screen reader on", async () => {
+      withScreenReader(true);
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      announce.mockClear();
+      const onDismiss = jest.fn();
+      await render(<Toast action={UNDO} message="Dismissed." onDismiss={onDismiss} variant="success" />);
+      await act(async () => jest.advanceTimersByTime(10 * 60 * 1000));
+      expect(onDismiss).not.toHaveBeenCalled();
+      expect(announce).toHaveBeenCalledTimes(1);
+
+      await fireEvent.press(screen.getByRole("button", DISMISS));
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it("gives a toast without an action the longer timeout with the screen reader on", async () => {
+      withScreenReader(true);
+      const onDismiss = jest.fn();
+      await render(<Toast message="Saved" onDismiss={onDismiss} variant="success" />);
+      await act(async () => jest.advanceTimersByTime(TOAST_SCREEN_READER_DURATION_MS - 1));
+      expect(onDismiss).not.toHaveBeenCalled();
+      await act(async () => jest.advanceTimersByTime(1));
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+    });
   });
 });
