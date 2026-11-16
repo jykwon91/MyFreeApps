@@ -9,9 +9,10 @@ import api from "../lib/api";
 import { _resetPlatformForTests, configurePlatform } from "../platform/configurePlatform";
 import { axiosBaseQuery } from "../store/baseQuery";
 
-function configure(adapter: AxiosRequestConfig["adapter"]): void {
+function configure(adapter: AxiosRequestConfig["adapter"], requestTimeoutMs?: number): void {
   configurePlatform({
     baseURL: "https://api.test",
+    requestTimeoutMs,
     tokenStore: { get: () => null, set: () => {}, clear: () => {} },
     orgStore: { get: () => null },
     isOnLogin: () => false,
@@ -73,24 +74,39 @@ describe("axiosBaseQuery", () => {
     expect(seen[0].onUploadProgress).toBe(onUploadProgress);
   });
 
-  it("gives a request that names no timeout the client's default", async () => {
+  it("gives a request that names no timeout the platform's default", async () => {
     const seen: InternalAxiosRequestConfig[] = [];
     configure(async (config) => {
       seen.push(config);
       return { data: {}, status: 200, statusText: "OK", headers: {}, config };
-    });
+    }, DEFAULT_REQUEST_TIMEOUT_MS);
 
     await axiosBaseQuery({ url: "/things" }, { signal: new AbortController().signal } as never, {});
 
     expect(seen[0].timeout).toBe(DEFAULT_REQUEST_TIMEOUT_MS);
   });
 
-  it("lets a request's own timeout replace the default", async () => {
+  it("sets no timeout when the platform names no default", async () => {
+    const seen: InternalAxiosRequestConfig[] = [];
+    const adapter = async (config: InternalAxiosRequestConfig) => {
+      seen.push(config);
+      return { data: {}, status: 200, statusText: "OK", headers: {}, config };
+    };
+    configure(adapter, DEFAULT_REQUEST_TIMEOUT_MS);
+    // Configured again without one, as a web app is: the earlier default must not linger.
+    configure(adapter);
+
+    await axiosBaseQuery({ url: "/things" }, { signal: new AbortController().signal } as never, {});
+
+    expect(seen[0].timeout).toBe(0);
+  });
+
+  it("lets a request's own timeout replace the platform's default", async () => {
     const seen: InternalAxiosRequestConfig[] = [];
     configure(async (config) => {
       seen.push(config);
       return { data: {}, status: 200, statusText: "OK", headers: {}, config };
-    });
+    }, DEFAULT_REQUEST_TIMEOUT_MS);
 
     await axiosBaseQuery({ url: "/upload", method: "POST", timeout: 300_000 }, { signal: new AbortController().signal } as never, {});
 

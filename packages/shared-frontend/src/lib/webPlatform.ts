@@ -14,6 +14,8 @@ const LOGIN_PATH = "/login";
 // Storage goes through safeStorage: in a third-party iframe (a Discord Activity)
 // a browser that blocks storage throws on access, and blocked storage has to read
 // as signed out rather than fail every request.
+// No requestTimeoutMs: the web default stays off until MyGamingAssistant's long requests
+// (source reclassify, widen-source, classify, item extract) have their own timeouts.
 configurePlatform({
   baseURL: "/api",
   tokenStore: {
