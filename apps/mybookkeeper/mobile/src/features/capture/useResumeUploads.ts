@@ -4,10 +4,14 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../lib/store";
 import { drainUploadQueue } from "./drainUploadQueue";
 
-/** Picks up what's left from last time, and retries when the app comes back: often back online. */
+/**
+ * Picks up what's left from last time, and retries when the app comes back: often back online. Also
+ * when a workspace opened offline is confirmed by the loaded list, which means the connection is back.
+ */
 export function useResumeUploads(): void {
   const dispatch = useDispatch<AppDispatch>();
   const workspaceId = useSelector((state: RootState) => state.workspace.activeId);
+  const isOffline = useSelector((state: RootState) => state.workspace.remembered !== null);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -16,5 +20,5 @@ export function useResumeUploads(): void {
       if (state === "active") void dispatch(drainUploadQueue());
     });
     return () => subscription.remove();
-  }, [dispatch, workspaceId]);
+  }, [dispatch, workspaceId, isOffline]);
 }

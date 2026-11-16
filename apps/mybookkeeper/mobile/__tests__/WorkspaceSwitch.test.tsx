@@ -128,7 +128,7 @@ describe("switching workspace", () => {
     expect(cached("listOrganizations")).toEqual([[MINE, OTHER]]);
     expect(mockNavigate).toHaveBeenCalledWith(WORKSPACE_HOME_ROUTE);
     expect(await screen.findByText(MESSAGES.switched("Other"))).toBeTruthy();
-    await waitFor(() => expect(readSavedWorkspace()).toEqual({ id: "w2", name: "Other" }));
+    await waitFor(() => expect(readSavedWorkspace()).toEqual({ id: "w2", name: "Other", role: "user" }));
 
     await api.get("/transactions");
     expect(server.sentFor["/transactions"]).toBe("w2");

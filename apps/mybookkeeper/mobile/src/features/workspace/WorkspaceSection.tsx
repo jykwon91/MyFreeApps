@@ -3,7 +3,9 @@ import { useListOrganizationsQuery } from "@mybookkeeper/api-client/store/organi
 import { OptionSheet, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
+import { useSelector } from "react-redux";
 import { WORKSPACE_MESSAGES as MESSAGES } from "../../constants/workspace";
+import type { RootState } from "../../lib/store";
 import CreateWorkspaceSheet from "./CreateWorkspaceSheet";
 import { useActiveWorkspace } from "./useActiveWorkspace";
 import { useCreateWorkspace } from "./useCreateWorkspace";
@@ -15,12 +17,18 @@ export default function WorkspaceSection() {
   const { colors, fontSize, spacing } = useTheme();
   const { data: workspaces = [] } = useListOrganizationsQuery();
   const active = useActiveWorkspace();
+  const remembered = useSelector((state: RootState) => state.workspace.remembered);
   const switchTo = useSwitchWorkspace();
   const createWorkspace = useCreateWorkspace();
   const { showToast } = useToast();
   const [isSwitching, setIsSwitching] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const current = active ? MESSAGES.current(active.name, ROLE_LABELS[active.org_role]) : undefined;
+  // Offline there's no list to switch from, so the saved one is named and nothing else is offered.
+  const current = active
+    ? MESSAGES.current(active.name, ROLE_LABELS[active.org_role])
+    : remembered
+      ? MESSAGES.currentOffline(remembered.name)
+      : undefined;
   const canSwitch = workspaces.length > 1;
 
   function choose(workspaceId: string): void {

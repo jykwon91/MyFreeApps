@@ -1,8 +1,10 @@
+import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 import { File, Paths } from "expo-file-system";
 import { SAVED_WORKSPACE_FILE } from "../../constants/workspace";
 import { signedInEmail } from "../../lib/signedInEmail";
 import type { SavedWorkspace } from "../../types/SavedWorkspace";
 import type { SavedWorkspaceFile } from "../../types/SavedWorkspaceFile";
+import { isOrgRole } from "../../utils/isOrgRole";
 
 function savedFile(): File {
   return new File(Paths.document, SAVED_WORKSPACE_FILE);
@@ -16,20 +18,20 @@ export function readSavedWorkspace(): SavedWorkspace | null {
     if (!owner || !file.exists) return null;
     const saved = JSON.parse(file.textSync()) as SavedWorkspaceFile;
     if (saved.owner !== owner || typeof saved.workspaceId !== "string" || typeof saved.workspaceName !== "string") return null;
-    return { id: saved.workspaceId, name: saved.workspaceName };
+    return { id: saved.workspaceId, name: saved.workspaceName, role: isOrgRole(saved.workspaceRole) ? saved.workspaceRole : null };
   } catch {
     return null;
   }
 }
 
 /** Best effort: a choice that can't be saved still holds until the app is closed. */
-export function saveWorkspace(workspace: SavedWorkspace): void {
+export function saveWorkspace(workspace: Pick<OrgWithRole, "id" | "name" | "org_role">): void {
   const owner = signedInEmail();
   if (!owner) return;
   try {
     const file = savedFile();
     if (!file.exists) file.create();
-    const saved: SavedWorkspaceFile = { owner, workspaceId: workspace.id, workspaceName: workspace.name };
+    const saved: SavedWorkspaceFile = { owner, workspaceId: workspace.id, workspaceName: workspace.name, workspaceRole: workspace.org_role };
     file.write(JSON.stringify(saved));
   } catch (error) {
     console.warn("Couldn't save the chosen workspace", error);

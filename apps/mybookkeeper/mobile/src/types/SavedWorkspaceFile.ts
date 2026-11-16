@@ -3,4 +3,5 @@ export interface SavedWorkspaceFile {
   owner?: unknown;
   workspaceId?: unknown;
   workspaceName?: unknown;
+  workspaceRole?: unknown;
 }

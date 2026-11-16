@@ -2,19 +2,27 @@ import { useListOrganizationsQuery } from "@mybookkeeper/api-client/store/organi
 import type { OrgWithRole } from "@mybookkeeper/api-client/types/organization/OrgWithRole";
 import { baseApi } from "@platform/core/store/baseApi";
 import { Skeleton, useOpenWebsite, useTheme } from "@platform/mobile";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
 import { AppState, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { WEB_BASE_URL } from "../../constants/api";
+import { OFFLINE_RETRY_MS } from "../../constants/workspace";
 import type { AppDispatch, RootState } from "../../lib/store";
+import { isNoResponse } from "@platform/core/utils/isNoResponse";
 import { uploadsReset } from "../capture/uploadsSlice";
 import { readSavedWorkspace, saveWorkspace } from "./savedWorkspace";
 import WorkspaceMessage from "./WorkspaceMessage";
-import { workspaceChosen, workspaceLost } from "./workspaceSlice";
+import { workspaceChosen, workspaceLost, workspaceRemembered } from "./workspaceSlice";
 
-/** Almost every request needs a workspace, so nothing renders until there is one. */
+/**
+ * Almost every request needs a workspace, so nothing renders until there is one. When the list of
+ * workspaces gets no answer, the one saved on this phone opens instead, so photos can still be taken
+ * and queued, until the list loads and takes over.
+ */
 export default function WorkspaceGate({ children }: { children: ReactNode }) {
-  const { data, error, refetch } = useListOrganizationsQuery();
+  const remembered = useSelector((state: RootState) => state.workspace.remembered);
+  // Nothing tells the phone when it's back online, so the list is asked for again while it's missing.
+  const { data, error, refetch } = useListOrganizationsQuery(undefined, { pollingInterval: remembered ? OFFLINE_RETRY_MS : 0 });
   const activeId = useSelector((state: RootState) => state.workspace.activeId);
   const dispatch = useDispatch<AppDispatch>();
   const { colors, spacing } = useTheme();
@@ -30,16 +38,34 @@ export default function WorkspaceGate({ children }: { children: ReactNode }) {
   // Whatever is open now is what opens next time, however it got picked.
   const activeKnownId = active?.id;
   const activeKnownName = active?.name;
+  const activeKnownRole = active?.org_role;
   useEffect(() => {
-    if (activeKnownId && activeKnownName !== undefined) saveWorkspace({ id: activeKnownId, name: activeKnownName });
-  }, [activeKnownId, activeKnownName]);
+    if (activeKnownId && activeKnownName !== undefined && activeKnownRole) {
+      saveWorkspace({ id: activeKnownId, name: activeKnownName, org_role: activeKnownRole });
+    }
+  }, [activeKnownId, activeKnownName, activeKnownRole]);
+
+  // No answer at all, as against an HTTP error, which still shows below.
+  const isUnanswered = !data && isNoResponse(error);
+  // Before paint, so the offline message doesn't flash up first.
+  useLayoutEffect(() => {
+    if (!isUnanswered || remembered) return;
+    const saved = readSavedWorkspace();
+    if (saved && (activeId === null || activeId === saved.id)) dispatch(workspaceRemembered(saved));
+  }, [isUnanswered, remembered, activeId, dispatch]);
+
+  // Back online and the saved one is still theirs: carry on in it, now from the list.
+  useEffect(() => {
+    if (remembered && activeKnownId) dispatch(workspaceChosen(activeKnownId));
+  }, [remembered, activeKnownId, dispatch]);
 
   useEffect(() => {
     if (!data || isActiveKnown) return;
     const saved = readSavedWorkspace();
     const savedStillThere = data.find((workspace) => workspace.id === saved?.id);
     const next = savedStillThere ?? data[0] ?? null;
-    const lost = lastActive.current?.id === activeId ? lastActive.current : null;
+    // Opened offline counts as open: it may have been used, and the list now says it's gone.
+    const lost = lastActive.current?.id === activeId ? lastActive.current : remembered?.id === activeId ? remembered : null;
     lastActive.current = null;
     // The upload list is about the workspace being left.
     if (activeId !== null) dispatch(uploadsReset());
@@ -50,7 +76,7 @@ export default function WorkspaceGate({ children }: { children: ReactNode }) {
     if (gone) dispatch(workspaceLost(next ? { from: gone.name, to: next.name } : null));
     // The cache isn't keyed by workspace, so what's in it belongs to the one they just lost.
     if (lost) dispatch(baseApi.util.resetApiState());
-  }, [data, isActiveKnown, activeId, dispatch]);
+  }, [data, isActiveKnown, activeId, remembered, dispatch]);
 
   // Someone removed from their workspace would otherwise get refused on every request.
   useEffect(() => {
@@ -64,8 +90,11 @@ export default function WorkspaceGate({ children }: { children: ReactNode }) {
     await refetch();
   }
 
+  const isRememberedOpen = !data && remembered !== null && remembered.id === activeId;
+  // Includes a retry in flight. An HTTP error is the server answering, so it shows as ever.
+  if (isRememberedOpen && (!error || isNoResponse(error))) return children;
   if (!data && error) {
-    return "status" in error && error.status === undefined ? (
+    return isNoResponse(error) ? (
       <WorkspaceMessage
         action={{ label: "Try again", onPress: tryAgain }}
         body="You're still signed in. Your workspaces will load when you're back online."
