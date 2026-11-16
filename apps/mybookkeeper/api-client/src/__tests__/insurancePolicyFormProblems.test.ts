@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INSURANCE_POLICY_PROBLEM_MESSAGES } from "../constants/insurancePolicyProblemMessages";
+import { insurancePolicyProblemMessages } from "../constants/insurancePolicyProblemMessages";
 import { EMPTY_POLICY_FORM } from "../utils/insurancePolicyForm";
 import { insurancePolicyFormProblems } from "../utils/insurancePolicyFormProblems";
 import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
@@ -122,6 +122,18 @@ describe("insurancePolicyFormProblems", () => {
     it("rejects text", () => {
       expect(problems({ windHailPct: "abc" }).windHailPct).toBe("not_a_number");
     });
+    it.each(["2,5", "2,50", "2.5", "100,00", " 0,01 "])("accepts %s on a decimal-comma phone", (windHailPct) => {
+      expect(problems({ windHailPct }, ",")).toEqual({});
+    });
+    it("checks a decimal-comma percentage by the same rules", () => {
+      expect(problems({ windHailPct: "2,555" }, ",").windHailPct).toBe("wind_hail_decimals");
+      expect(problems({ windHailPct: "100,5" }, ",").windHailPct).toBe("wind_hail_out_of_range");
+      expect(problems({ windHailPct: "-2,5" }, ",").windHailPct).toBe("wind_hail_out_of_range");
+      expect(problems({ windHailPct: "2,5,0" }, ",").windHailPct).toBe("not_a_number");
+    });
+    it("never reads a comma as the decimal mark on a \".\" phone, where it groups thousands", () => {
+      expect(problems({ windHailPct: "2,5" }, ".").windHailPct).toBe("not_a_number");
+    });
   });
 
   describe("dates", () => {
@@ -131,8 +143,13 @@ describe("insurancePolicyFormProblems", () => {
     });
   });
 
+  it("shows the decimal example in the person's decimal mark", () => {
+    expect(insurancePolicyProblemMessages(",").wind_hail_decimals).toContain("2,5");
+    expect(insurancePolicyProblemMessages(".").wind_hail_decimals).toContain("2.5");
+  });
+
   it("has plain wording for every problem", () => {
-    expect(Object.keys(INSURANCE_POLICY_PROBLEM_MESSAGES).sort()).toEqual([
+    expect(Object.keys(insurancePolicyProblemMessages(".")).sort()).toEqual([
       "billed_required",
       "dates_order",
       "must_be_positive",

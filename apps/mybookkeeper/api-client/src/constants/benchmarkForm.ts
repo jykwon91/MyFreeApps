@@ -1,3 +1,5 @@
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
+
 /**
  * The limits the backend enforces on the market-rate and insurance benchmark requests
  * (market_rate_benchmark_upsert_request.py, insurance_benchmark_upsert_request.py).
@@ -18,7 +20,8 @@ export const INSURANCE_BENCHMARK_MAX_COVERAGE_DOLLARS = 1_000_000_000;
 
 export const BENCHMARK_FORM_PROBLEMS = {
   rateRequired: "Enter the going rate as a number above zero.",
-  rateTooHigh: `Enter a rate of ${MARKET_RATE_MAX_CENTS_PER_KWH}¢ or less.`,
+  rateTooHigh: (decimalSeparator: DecimalSeparator) =>
+    `Enter a rate of ${String(MARKET_RATE_MAX_CENTS_PER_KWH).replace(".", decimalSeparator)}¢ or less.`,
   rateTooPrecise: `Use at most ${MARKET_RATE_MAX_DECIMALS} decimal places.`,
   monthlyRequired: "Enter the monthly price as a number above zero.",
   monthlyTooLarge: "That amount is too large.",

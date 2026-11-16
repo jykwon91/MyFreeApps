@@ -182,6 +182,15 @@ describe("toUtilityPlanFields", () => {
     expect(typeof payload.tdu_charge_cents_per_kwh).toBe("string");
   });
 
+  it("sends decimal-comma rates as the \".\" rates the form checked", () => {
+    const values = { ...toUtilityPlanFormValues(makeDetail()), energyCharge: "11,5", tduCharge: " 5,3509 ", avgPrice: "13.9" };
+    const payload = toUtilityPlanFields(values, ",");
+
+    expect(payload.energy_charge_cents_per_kwh).toBe("11.5");
+    expect(payload.tdu_charge_cents_per_kwh).toBe("5.3509");
+    expect(payload.avg_price_cents_per_kwh_at_1000).toBe("13.9");
+  });
+
   /**
    * The API applies exactly the keys it receives (``exclude_unset``). Emitting
    * ``notes`` as null would erase the provenance line the seeded plans carry,
@@ -339,9 +348,25 @@ describe("utilityPlanFormProblems", () => {
   });
 
   it.each(["energyCharge", "tduCharge", "avgPrice"] as const)("flags a %s that is not a rate, or has more than four decimals", (field) => {
-    expect(utilityPlanFormProblems({ ...valid, [field]: "11.5." }, ".")[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.notRate);
-    expect(utilityPlanFormProblems({ ...valid, [field]: "5.35091" }, ".")[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.notRate);
+    expect(utilityPlanFormProblems({ ...valid, [field]: "11.5." }, ".")[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.notRate("."));
+    expect(utilityPlanFormProblems({ ...valid, [field]: "5.35091" }, ".")[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.notRate("."));
     expect(utilityPlanFormProblems({ ...valid, [field]: "5.3509" }, ".")[field]).toBeUndefined();
+  });
+
+  it.each(["energyCharge", "tduCharge", "avgPrice"] as const)("reads a %s typed with a decimal comma on a comma phone", (field) => {
+    for (const good of ["11,5", "5,3509", "999,9999", "11.6"]) {
+      expect(utilityPlanFormProblems({ ...valid, [field]: good }, ",")[field]).toBeUndefined();
+    }
+    expect(utilityPlanFormProblems({ ...valid, [field]: "5,35091" }, ",")[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.notRate(","));
+    expect(utilityPlanFormProblems({ ...valid, [field]: "11,5,0" }, ",")[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.notRate(","));
+    expect(utilityPlanFormProblems({ ...valid, [field]: "1000,5" }, ",")[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh(","));
+    expect(utilityPlanFormProblems({ ...valid, [field]: "11,5" }, ".")[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.notRate("."));
+  });
+
+  it("shows the rate examples in the person's decimal mark", () => {
+    expect(UTILITY_PLAN_FORM_PROBLEMS.notRate(",")).toContain("11,5");
+    expect(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh(",")).toContain("999,9999");
+    expect(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh(".")).toContain("999.9999");
   });
 
   it("flags a bill credit pair that cannot be read, only while the credit is claimed", () => {
@@ -374,9 +399,9 @@ describe("utilityPlanFormProblems", () => {
   });
 
   it("rejects a rate above the server's ceiling, which is dollars entered where cents belong", () => {
-    expect(utilityPlanFormProblems({ ...valid, energyCharge: "1000" }, ".").energyCharge).toBe(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh);
+    expect(utilityPlanFormProblems({ ...valid, energyCharge: "1000" }, ".").energyCharge).toBe(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh("."));
     expect(utilityPlanFormProblems({ ...valid, tduCharge: "999.9999" }, ".").tduCharge).toBeUndefined();
-    expect(utilityPlanFormProblems({ ...valid, avgPrice: "1500.5" }, ".").avgPrice).toBe(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh);
+    expect(utilityPlanFormProblems({ ...valid, avgPrice: "1500.5" }, ".").avgPrice).toBe(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh("."));
   });
 
   it("rejects a speed above the server's ceiling but not a data cap", () => {

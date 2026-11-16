@@ -12,12 +12,11 @@ import type { InsurancePolicyFormProblems } from "../types/insurance/insurance-p
 import type { InsurancePolicyFormValues } from "../types/insurance/insurance-policy-form-values";
 import { isPremiumBilledMissing } from "./insurancePolicyForm";
 import { isNegativeMoneyText, moneyTextToCents } from "./moneyTextToCents";
+import { normalizeDecimalText } from "./normalizeDecimalText";
 
 type MoneyField = "coverageDollars" | "feesAndTaxesDollars" | "deductibleDollars";
 
 const NON_NEGATIVE_MONEY_FIELDS: readonly MoneyField[] = ["coverageDollars", "feesAndTaxesDollars", "deductibleDollars"];
-
-const PLAIN_DECIMAL = /^-?(\d+\.?\d*|\.\d+)$/;
 
 /** Checked on the cents that would be sent, since that is what the server sees. */
 function moneyProblem(
@@ -32,14 +31,20 @@ function moneyProblem(
   return isOk(cents) ? null : failure;
 }
 
-function windHailProblem(text: string): InsurancePolicyFormProblem | null {
+/** "-2,5": a number, just not one above zero, so it's out of range rather than unreadable. */
+function isNegativeNumber(text: string, decimalSeparator: DecimalSeparator): boolean {
   const trimmed = text.trim();
-  if (trimmed === "") return null;
-  if (!PLAIN_DECIMAL.test(trimmed)) return "not_a_number";
-  const value = Number(trimmed);
+  return trimmed.startsWith("-") && Boolean(normalizeDecimalText(trimmed.slice(1), decimalSeparator));
+}
+
+/** Read as `toPolicyPayload` reads it, so the percentage checked is the one sent. */
+function windHailProblem(text: string, decimalSeparator: DecimalSeparator): InsurancePolicyFormProblem | null {
+  const typed = normalizeDecimalText(text, decimalSeparator);
+  if (typed === "") return null;
+  if (typed === undefined) return isNegativeNumber(text, decimalSeparator) ? "wind_hail_out_of_range" : "not_a_number";
+  const value = Number(typed);
   if (!(value > 0 && value <= WIND_HAIL_MAX_PCT)) return "wind_hail_out_of_range";
-  const decimals = (trimmed.split(".")[1] ?? "").replace(/0+$/, "");
-  return decimals.length > WIND_HAIL_MAX_DECIMALS ? "wind_hail_decimals" : null;
+  return normalizeDecimalText(text, decimalSeparator, WIND_HAIL_MAX_DECIMALS) === undefined ? "wind_hail_decimals" : null;
 }
 
 /**
@@ -69,7 +74,7 @@ export function insurancePolicyFormProblems(values: InsurancePolicyFormValues, d
   if (premium) problems.premiumDollars = premium;
   else if (isPremiumBilledMissing(values, decimalSeparator)) problems.premiumFrequency = "billed_required";
 
-  const windHail = windHailProblem(values.windHailPct);
+  const windHail = windHailProblem(values.windHailPct, decimalSeparator);
   if (windHail) problems.windHailPct = windHail;
 
   if (values.effectiveDate && values.expirationDate && values.expirationDate < values.effectiveDate) {

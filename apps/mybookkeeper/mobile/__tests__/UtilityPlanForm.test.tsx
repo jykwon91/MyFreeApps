@@ -125,6 +125,27 @@ describe("adding a utility plan", () => {
     expect(JSON.parse(String(writesTo(server, "post")[0].data))).toMatchObject({ monthly_base_charge_cents: 1250 });
   });
 
+  it("saves rates typed with a decimal comma as the rates that were typed", async () => {
+    mockDecimalSeparator = ",";
+    const server = startUtilityServer();
+    await show(<UtilityPlanFormScreen />);
+    await pickOakStreet();
+    await fireEvent.changeText(screen.getByLabelText(new RegExp(`^${MESSAGES.provider}`)), "Reliant");
+    const energy = screen.getByLabelText(new RegExp(`^${MESSAGES.energyCharge.replace(/[()/]/g, "\\$&")}`));
+    await fireEvent.changeText(energy, "11,5,0");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveNew }));
+    expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.notRate(","))).toBeTruthy();
+    expect(writesTo(server, "post")).toHaveLength(0);
+    await fireEvent.changeText(energy, "11,5");
+    await fireEvent.changeText(screen.getByLabelText(new RegExp(`^${MESSAGES.tduCharge.replace(/[()/]/g, "\\$&")}`)), "5,3509");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveNew }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(JSON.parse(String(writesTo(server, "post")[0].data))).toMatchObject({
+      energy_charge_cents_per_kwh: "11.5",
+      tdu_charge_cents_per_kwh: "5.3509",
+    });
+  });
+
   it("guards leaving once something changed", async () => {
     startUtilityServer();
     await show(<UtilityPlanFormScreen />);
@@ -245,7 +266,7 @@ describe("editing a utility plan", () => {
     await fireEvent.changeText(energy, "1500");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
     expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.endBeforeStart)).toBeTruthy();
-    expect(screen.getByText(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh)).toBeTruthy();
+    expect(screen.getByText(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh("."))).toBeTruthy();
     expect(writesTo(server, "patch")).toHaveLength(0);
   });
 

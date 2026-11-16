@@ -2,6 +2,7 @@ import { useDeleteMarketRateBenchmarkMutation, useUpsertMarketRateBenchmarkMutat
 import type { MarketRateFormValues } from "@mybookkeeper/api-client/types/utility/market-rate-form-values";
 import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/utility-service-type";
 import { toMarketRateUpsert } from "@mybookkeeper/api-client/utils/marketRateForm";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import { useLeaveWhenSaved, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { MARKET_RATE_MESSAGES as MESSAGES } from "../../constants/marketRates";
@@ -21,9 +22,9 @@ export function useSaveMarketRate(serviceType: UtilityServiceType, isNew: boolea
   const { isLeaving, leave } = useLeaveWhenSaved("/utility-plans/market-rates");
   const saveCopy = saveFailureCopy("market rate", "market rates", isNew);
 
-  async function save(values: MarketRateFormValues): Promise<void> {
+  async function save(values: MarketRateFormValues, decimalSeparator: DecimalSeparator): Promise<void> {
     setAction("save");
-    const result = await write.run(() => upsert({ serviceType, data: toMarketRateUpsert(serviceType, values) }).unwrap(), { staysLocked: true });
+    const result = await write.run(() => upsert({ serviceType, data: toMarketRateUpsert(serviceType, values, decimalSeparator) }).unwrap(), { staysLocked: true });
     if (result !== "done") return;
     showToast(MESSAGES.saved);
     leave();

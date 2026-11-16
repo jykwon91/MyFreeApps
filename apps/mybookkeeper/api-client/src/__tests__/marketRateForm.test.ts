@@ -1,3 +1,4 @@
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import { describe, expect, it } from "vitest";
 import { BENCHMARK_FORM_PROBLEMS } from "../constants/benchmarkForm";
 import type { MarketRateBenchmark } from "../types/utility/market-rate-benchmark";
@@ -53,7 +54,8 @@ describe("marketRateToFormValues", () => {
 describe("marketRateFormProblems", () => {
   const TODAY = "2026-03-01";
   const ok = { figure: "11.25", source: "Power to Choose", observedOn: "2026-03-01", notes: "" };
-  const problems = (service: "electricity" | "internet", change: Partial<typeof ok>) => marketRateFormProblems(service, { ...ok, ...change }, TODAY);
+  const problems = (service: "electricity" | "internet", change: Partial<typeof ok>, decimalSeparator: DecimalSeparator = ".") =>
+    marketRateFormProblems(service, { ...ok, ...change }, TODAY, decimalSeparator);
 
   it("has nothing to say about a form the backend accepts", () => {
     expect(problems("electricity", {})).toEqual({});
@@ -66,13 +68,23 @@ describe("marketRateFormProblems", () => {
   });
 
   it("refuses a rate past 999.9999", () => {
-    expect(problems("electricity", { figure: "1000" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.rateTooHigh);
+    expect(problems("electricity", { figure: "1000" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.rateTooHigh("."));
     expect(problems("electricity", { figure: "999.99991" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.rateTooPrecise);
   });
 
   it("refuses more than four decimal places on a rate", () => {
     expect(problems("electricity", { figure: "11.12345" }).figure).toBe(BENCHMARK_FORM_PROBLEMS.rateTooPrecise);
     expect(problems("electricity", { figure: "11.1234" }).figure).toBeUndefined();
+  });
+
+  it("reads a rate typed with a decimal comma on a comma phone, by the same rules", () => {
+    expect(problems("electricity", { figure: "11,25" }, ",")).toEqual({});
+    expect(problems("electricity", { figure: "11.25" }, ",")).toEqual({});
+    expect(problems("electricity", { figure: "11,12345" }, ",").figure).toBe(BENCHMARK_FORM_PROBLEMS.rateTooPrecise);
+    expect(problems("electricity", { figure: "1000,5" }, ",").figure).toBe(BENCHMARK_FORM_PROBLEMS.rateTooHigh(","));
+    expect(problems("electricity", { figure: "11,2,5" }, ",").figure).toBe(BENCHMARK_FORM_PROBLEMS.rateRequired);
+    expect(problems("electricity", { figure: "11,25" }, ".").figure).toBe(BENCHMARK_FORM_PROBLEMS.rateRequired);
+    expect(BENCHMARK_FORM_PROBLEMS.rateTooHigh(",")).toContain("999,9999");
   });
 
   it("asks internet for dollars and cents above zero", () => {
@@ -107,14 +119,18 @@ describe("toMarketRateUpsert", () => {
   const values = { figure: " 11.25 ", source: "  Power to Choose ", observedOn: "2026-01-05", notes: "   " };
 
   it("sends a metered rate as typed text, and no monthly amount", () => {
-    expect(toMarketRateUpsert("electricity", values)).toEqual({ rate_cents_per_kwh: "11.25", source: "Power to Choose", observed_on: "2026-01-05", notes: null });
+    expect(toMarketRateUpsert("electricity", values, ".")).toEqual({ rate_cents_per_kwh: "11.25", source: "Power to Choose", observed_on: "2026-01-05", notes: null });
+  });
+
+  it("sends a decimal-comma rate as the \".\" rate the form checked", () => {
+    expect(toMarketRateUpsert("electricity", { ...values, figure: " 11,25 " }, ",")).toMatchObject({ rate_cents_per_kwh: "11.25" });
   });
 
   it("sends internet as whole cents, and no per-kWh rate", () => {
-    expect(toMarketRateUpsert("internet", { ...values, figure: "69.99" })).toEqual({ monthly_cents: 6999, source: "Power to Choose", observed_on: "2026-01-05", notes: null });
+    expect(toMarketRateUpsert("internet", { ...values, figure: "69.99" }, ".")).toEqual({ monthly_cents: 6999, source: "Power to Choose", observed_on: "2026-01-05", notes: null });
   });
 
   it("turns blank text into null so an untouched field is absent", () => {
-    expect(toMarketRateUpsert("water", { ...values, source: "" })).toMatchObject({ source: null, notes: null });
+    expect(toMarketRateUpsert("water", { ...values, source: "" }, ".")).toMatchObject({ source: null, notes: null });
   });
 });

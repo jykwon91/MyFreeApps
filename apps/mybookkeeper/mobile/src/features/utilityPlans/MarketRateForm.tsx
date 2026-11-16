@@ -5,7 +5,7 @@ import type { UtilityServiceType } from "@mybookkeeper/api-client/types/utility/
 import { BENCHMARK_NOTES_MAX_LENGTH, BENCHMARK_SOURCE_MAX_LENGTH } from "@mybookkeeper/api-client/constants/benchmarkForm";
 import { isFlatService, marketRateFormProblems, marketRateToFormValues } from "@mybookkeeper/api-client/utils/marketRateForm";
 import { localToday } from "@platform/core/utils/localToday";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
 
 import { MARKET_RATE_MESSAGES as MESSAGES } from "../../constants/marketRates";
@@ -25,12 +25,13 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
   const [saved] = useState(() => marketRateToFormValues(serviceType, existing));
   const [values, setValues] = useState<MarketRateFormValues>(saved);
   const [hasTried, setHasTried] = useState(false);
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
   const asking = useRef(false);
   const { save, remove, isSaving, isRemoving, isLeaving, failure } = useSaveMarketRate(serviceType, existing === undefined);
   const isBusy = isSaving || isRemoving;
   const locked = isBusy || isLeaving;
   const flat = isFlatService(serviceType);
-  const allProblems = marketRateFormProblems(serviceType, values, localToday());
+  const allProblems = marketRateFormProblems(serviceType, values, localToday(), decimalSeparator);
   const problems = hasTried ? allProblems : {};
   const set = (field: keyof MarketRateFormValues, value: string) => setValues((current) => ({ ...current, [field]: value }));
 
@@ -39,7 +40,7 @@ export default function MarketRateForm({ serviceType, existing }: MarketRateForm
   function submit(): void {
     setHasTried(true);
     if (Object.keys(allProblems).length > 0) return;
-    void save(values);
+    void save(values, decimalSeparator);
   }
 
   return (

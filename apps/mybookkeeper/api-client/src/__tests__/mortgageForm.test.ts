@@ -84,6 +84,17 @@ describe("toMortgagePayload", () => {
     expect(payload.interest_rate).toBe("2.990");
   });
 
+  it("sends a decimal-comma rate as the \".\" rate the form checked", () => {
+    const send = (interestRate: string) =>
+      toMortgagePayload({ ...EMPTY_MORTGAGE_FORM, rateType: "fixed", interestRate }, ",").interest_rate;
+    expect(send("7,125")).toBe("7.125");
+    expect(send(" 2,990 ")).toBe("2.990");
+    expect(send("2.990")).toBe("2.990");
+    expect(send("7,1250")).toBe("7.125");
+    expect(send("")).toBeNull();
+    expect(send("7,1,25")).toBeNull();
+  });
+
   it("converts the payment split into cents", () => {
     const payload = toMortgagePayload({
       ...EMPTY_MORTGAGE_FORM,

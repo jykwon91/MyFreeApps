@@ -15,6 +15,8 @@ import type { UtilityServiceType } from "../types/utility/utility-service-type";
 import { decimalPlaces, isPlainNumber, isTooLong, observedOnProblem } from "./benchmarkFieldChecks";
 import { localToday } from "@platform/core/utils/localToday";
 import { formatCents, formatCentsPerKwh } from "./utilityPlanFormat";
+import { normalizeDecimalText } from "./normalizeDecimalText";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 
 /** Internet is quoted per month; every other service per kWh. The service decides, never the operator. */
 export function isFlatService(serviceType: UtilityServiceType): boolean {
@@ -45,28 +47,40 @@ export function marketRateToFormValues(serviceType: UtilityServiceType, existing
   return { figure, source: existing?.source ?? "", observedOn: existing?.observed_on ?? localToday(), notes: existing?.notes ?? "" };
 }
 
-function figureProblem(serviceType: UtilityServiceType, figure: string): string | undefined {
+/** A ¢/kWh rate as the request sends it and the form checks it: "" when blank, undefined when unreadable. */
+function rateText(figure: string, decimalSeparator: DecimalSeparator): string | undefined {
+  return normalizeDecimalText(figure, decimalSeparator, MARKET_RATE_MAX_DECIMALS);
+}
+
+function rateProblem(figure: string, decimalSeparator: DecimalSeparator): string | undefined {
+  const rate = normalizeDecimalText(figure, decimalSeparator);
+  if (!rate || Number(rate) <= 0) return BENCHMARK_FORM_PROBLEMS.rateRequired;
+  if (rateText(figure, decimalSeparator) === undefined) return BENCHMARK_FORM_PROBLEMS.rateTooPrecise;
+  return Number(rate) > MARKET_RATE_MAX_CENTS_PER_KWH ? BENCHMARK_FORM_PROBLEMS.rateTooHigh(decimalSeparator) : undefined;
+}
+
+function monthlyProblem(figure: string): string | undefined {
   const text = figure.trim();
-  const flat = isFlatService(serviceType);
-  const required = flat ? BENCHMARK_FORM_PROBLEMS.monthlyRequired : BENCHMARK_FORM_PROBLEMS.rateRequired;
+  const required = BENCHMARK_FORM_PROBLEMS.monthlyRequired;
   if (!isPlainNumber(text) || Number(text) <= 0) return required;
-  if (flat) {
-    if (decimalPlaces(text) > BENCHMARK_MONEY_MAX_DECIMALS) return BENCHMARK_FORM_PROBLEMS.moneyTooPrecise;
-    const cents = Math.round(Number(text) * 100);
-    if (cents <= 0) return required;
-    return Number.isSafeInteger(cents) ? undefined : BENCHMARK_FORM_PROBLEMS.monthlyTooLarge;
-  }
-  if (decimalPlaces(text) > MARKET_RATE_MAX_DECIMALS) return BENCHMARK_FORM_PROBLEMS.rateTooPrecise;
-  return Number(text) > MARKET_RATE_MAX_CENTS_PER_KWH ? BENCHMARK_FORM_PROBLEMS.rateTooHigh : undefined;
+  if (decimalPlaces(text) > BENCHMARK_MONEY_MAX_DECIMALS) return BENCHMARK_FORM_PROBLEMS.moneyTooPrecise;
+  const cents = Math.round(Number(text) * 100);
+  if (cents <= 0) return required;
+  return Number.isSafeInteger(cents) ? undefined : BENCHMARK_FORM_PROBLEMS.monthlyTooLarge;
 }
 
 /**
  * Every rule the backend applies to a market-rate request, keyed by the field to point at.
  * Empty means the server has nothing to refuse, so a 422 after this is unexpected.
  */
-export function marketRateFormProblems(serviceType: UtilityServiceType, values: MarketRateFormValues, today: string): MarketRateFormProblems {
+export function marketRateFormProblems(
+  serviceType: UtilityServiceType,
+  values: MarketRateFormValues,
+  today: string,
+  decimalSeparator: DecimalSeparator,
+): MarketRateFormProblems {
   const problems: MarketRateFormProblems = {};
-  const figure = figureProblem(serviceType, values.figure);
+  const figure = isFlatService(serviceType) ? monthlyProblem(values.figure) : rateProblem(values.figure, decimalSeparator);
   if (figure) problems.figure = figure;
   if (isTooLong(values.source, BENCHMARK_SOURCE_MAX_LENGTH)) problems.source = BENCHMARK_FORM_PROBLEMS.sourceTooLong;
   const observedOn = observedOnProblem(values.observedOn, today);
@@ -76,11 +90,17 @@ export function marketRateFormProblems(serviceType: UtilityServiceType, values: 
 }
 
 /** Exactly one figure is sent, so the backend's "provide exactly one" rule holds. */
-export function toMarketRateUpsert(serviceType: UtilityServiceType, values: MarketRateFormValues): Omit<MarketRateBenchmarkUpsertRequest, "today"> {
+export function toMarketRateUpsert(
+  serviceType: UtilityServiceType,
+  values: MarketRateFormValues,
+  decimalSeparator: DecimalSeparator,
+): Omit<MarketRateBenchmarkUpsertRequest, "today"> {
   const source = values.source.trim();
   const notes = values.notes.trim();
   return {
-    ...(isFlatService(serviceType) ? { monthly_cents: Math.round(Number(values.figure) * 100) } : { rate_cents_per_kwh: values.figure.trim() }),
+    ...(isFlatService(serviceType)
+      ? { monthly_cents: Math.round(Number(values.figure) * 100) }
+      : { rate_cents_per_kwh: rateText(values.figure, decimalSeparator) || null }),
     source: source === "" ? null : source,
     observed_on: values.observedOn,
     notes: notes === "" ? null : notes,

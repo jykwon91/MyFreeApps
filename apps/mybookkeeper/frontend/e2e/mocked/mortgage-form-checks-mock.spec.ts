@@ -109,6 +109,18 @@ test.describe("Edit mortgage — checks before saving", () => {
     expect(writes).toHaveLength(1);
   });
 
+  test("a rate finer than the three decimals the server keeps is named on the field, not rounded", async ({ page }) => {
+    const writes = await stubMortgageApi(page);
+    await page.goto("/mortgages");
+    await page.getByTestId(`mortgage-item-${MORTGAGE_ID}`).click({ timeout: 15000 });
+
+    await page.getByTestId("mortgage-interest-rate-input").fill("7.1255");
+    await page.getByTestId("mortgage-update-button").click();
+
+    await expect(page.getByTestId("mortgage-interestRate-problem")).toContainText("at most three decimal places, like 7.125");
+    expect(writes, "a rate the server would round must not reach it").toEqual([]);
+  });
+
   test("a balance with no statement date is named on the date field", async ({ page }) => {
     const writes = await stubMortgageApi(page);
     await page.goto("/mortgages");

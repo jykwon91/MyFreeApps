@@ -127,6 +127,21 @@ describe("editing a mortgage", () => {
     expect(JSON.parse(String(writes(requests)[0].data))).toMatchObject({ monthly_escrow_cents: 125050 });
   });
 
+  it("saves a decimal-comma rate as the rate that was typed, and gives comma examples when refusing one", async () => {
+    mockDecimalSeparator = ",";
+    const requests = startServer();
+    await show(<MortgageEditScreen id="m1" />);
+    const rate = await screen.findByLabelText(MESSAGES.rate);
+    await fireEvent.changeText(rate, "7,1255");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
+    expect(await screen.findByText("Use at most three decimal places, like 7,125.")).toBeTruthy();
+    expect(writes(requests)).toHaveLength(0);
+    await fireEvent.changeText(rate, "7,125");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(JSON.parse(String(writes(requests)[0].data))).toMatchObject({ interest_rate: "7.125" });
+  });
+
   it("reads a pasted $1,250.50 on a dot phone and refuses a negative with its own wording", async () => {
     const requests = startServer();
     await show(<MortgageEditScreen id="m1" />);
