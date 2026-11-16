@@ -8,12 +8,16 @@ import { notifyAuthChange } from "./auth-store";
 import { renewAfterUnauthorized } from "./renewAfterUnauthorized";
 import { isExemptFromSignOut } from "./signOutExemptions";
 import type { SessionRetryConfig } from "./types/SessionRetryConfig";
+import { sessionRenewalUnreachableError } from "../utils/sessionRenewalUnreachableError";
 
 const api = axios.create();
 
-async function retryWithNewSession(config: SessionRetryConfig): Promise<AxiosResponse | null> {
+// A 401 the sign-in couldn't be renewed for, with no answer from the server, isn't a refusal: it
+// reads as no response, so screens say they're offline. One whose sign-in is over keeps its 401.
+async function retryWithNewSession(config: SessionRetryConfig, err: unknown): Promise<AxiosResponse> {
   const renewal = await renewAfterUnauthorized({ token: config._sentToken ?? null, account: config._sentAccount });
-  if (renewal !== "renewed") return null;
+  if (renewal === "unreachable") return Promise.reject(sessionRenewalUnreachableError(config));
+  if (renewal === "ended") return Promise.reject(err);
   config._sessionRetried = true;
   return api.request(config);
 }
@@ -84,8 +88,7 @@ api.interceptors.response.use(
         ) {
           return Promise.reject(err);
         }
-        const retried = await retryWithNewSession(config);
-        return retried ?? Promise.reject(err);
+        return retryWithNewSession(config, err);
       }
       const isLoginRequest = err.config?.url?.includes("/auth/");
       // Only a rejection of the token signed in now signs out. One sent with a token

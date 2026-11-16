@@ -9,3 +9,6 @@ export const NO_REFRESH_URL_PARTS = [
   "/auth/mobile/refresh",
   "/auth/mobile/logout",
 ];
+
+/** A request refused with a 401 whose sign-in couldn't be renewed because the server didn't answer. */
+export const SESSION_RENEWAL_UNREACHABLE_MESSAGE = "Couldn't reach the server to renew the sign-in.";
