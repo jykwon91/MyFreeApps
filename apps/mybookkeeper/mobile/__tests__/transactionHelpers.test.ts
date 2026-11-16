@@ -145,15 +145,23 @@ describe("the edit form", () => {
   const values = toEditValues(original);
 
   it("sends nothing when nothing changed, even if the amount was retyped", () => {
-    expect(changedFields({ ...values, amount: "84.2" }, original)).toEqual({});
+    expect(changedFields({ ...values, amount: "84.2" }, original, ".")).toEqual({});
+  });
+
+  it("sends a changed amount as dollars and cents however it was typed, and a retyped one not at all", () => {
+    expect(changedFields({ ...values, amount: "1.200,50" }, original, ",")).toEqual({ amount: "1200.50" });
+    expect(changedFields({ ...values, amount: "$1,200" }, original, ".")).toEqual({ amount: "1200" });
+    expect(changedFields({ ...values, amount: "84,2" }, original, ",")).toEqual({});
+    expect(amountError({ ...values, amount: "84,25" }, original, ",")).toBeUndefined();
+    expect(amountError({ ...values, amount: "1,200" }, original, ",")).toBe("Use dollars and cents, like 84,20.");
   });
 
   it("sends only what changed", () => {
-    expect(changedFields({ ...values, category: "utilities" }, original)).toEqual({ category: "utilities" });
+    expect(changedFields({ ...values, category: "utilities" }, original, ".")).toEqual({ category: "utilities" });
   });
 
   it("clears a blank vendor, description or property", () => {
-    expect(changedFields({ ...values, vendor: " ", description: "", propertyId: null }, original)).toEqual({
+    expect(changedFields({ ...values, vendor: " ", description: "", propertyId: null }, original, ".")).toEqual({
       vendor: null,
       description: null,
       property_id: null,
@@ -162,13 +170,13 @@ describe("the edit form", () => {
 
   it("sends the tax year, saved vendor, channel, payment method and tax relevance the way the website does", () => {
     expect(
-      changedFields({ ...values, taxYear: "2025", vendorId: "v1", channel: "airbnb", paymentMethod: "check", taxRelevant: true }, original),
+      changedFields({ ...values, taxYear: "2025", vendorId: "v1", channel: "airbnb", paymentMethod: "check", taxRelevant: true }, original, "."),
     ).toEqual({ tax_year: 2025, vendor_id: "v1", channel: "airbnb", payment_method: "check", tax_relevant: true });
   });
 
   it("sends null for a cleared saved vendor, channel or payment method", () => {
     const linked = aTransaction({ vendor_id: "v1", channel: "vrbo", payment_method: "cash" });
-    expect(changedFields({ ...toEditValues(linked), vendorId: null, channel: "", paymentMethod: "" }, linked)).toEqual({
+    expect(changedFields({ ...toEditValues(linked), vendorId: null, channel: "", paymentMethod: "" }, linked, ".")).toEqual({
       vendor_id: null,
       channel: null,
       payment_method: null,
@@ -206,8 +214,8 @@ describe("the edit form", () => {
   it("leaves an untouched refund alone but checks a changed amount", () => {
     const refund = aTransaction({ amount: "-20.00" });
     const refundValues = toEditValues(refund);
-    expect(amountError(refundValues, refund)).toBeUndefined();
-    expect(amountError({ ...refundValues, amount: "-21" }, refund)).toBe("Use dollars and cents, like 84.20.");
+    expect(amountError(refundValues, refund, ".")).toBeUndefined();
+    expect(amountError({ ...refundValues, amount: "-21" }, refund, ".")).toBe("Use dollars and cents, like 84.20.");
   });
 
   it.each([
@@ -217,7 +225,7 @@ describe("the edit form", () => {
     ["abc", "Use dollars and cents, like 84.20."],
     ["12.5", undefined],
   ])("checks an amount of %p", (amount, expected) => {
-    expect(amountError({ ...values, amount }, original)).toBe(expected);
+    expect(amountError({ ...values, amount }, original, ".")).toBe(expected);
   });
 
   it("keeps a category the list doesn't offer, so saving doesn't lose it", () => {
@@ -302,7 +310,7 @@ describe("adding by hand", () => {
 
   it("sends what the website sends", () => {
     const values = { ...blankCreateValues(new Date(2026, 6, 4)), amount: " 12.50 ", vendor: " Acme ", channel: "airbnb" };
-    expect(createPayload(values)).toEqual({
+    expect(createPayload(values, ".")).toEqual({
       transaction_date: "2026-07-04",
       tax_year: 2026,
       vendor: "Acme",
@@ -320,9 +328,9 @@ describe("adding by hand", () => {
 
   it("wants an amount above zero in dollars and cents", () => {
     const blank = blankCreateValues(new Date());
-    expect(createAmountError(blank)).toBe("Enter an amount above $0.");
-    expect(createAmountError({ ...blank, amount: "1.234" })).toBe("Use dollars and cents, like 84.20.");
-    expect(createAmountError({ ...blank, amount: "84.20" })).toBeUndefined();
+    expect(createAmountError(blank, ".")).toBe("Enter an amount above $0.");
+    expect(createAmountError({ ...blank, amount: "1.234" }, ".")).toBe("Use dollars and cents, like 84.20.");
+    expect(createAmountError({ ...blank, amount: "84.20" }, ".")).toBeUndefined();
   });
 
   it("names the choice, and None for nothing", () => {

@@ -30,7 +30,8 @@ jest.mock("expo-notifications", () => jest.requireActual("../test-support/mockNo
 jest.mock("expo-constants", () => ({ __esModule: true, default: { expoConfig: { version: "1.0.0" } } }));
 // The device locale's decimal separator; "." unless a test is in a comma-decimal locale.
 let mockDecimalSeparator: "." | "," = ".";
-jest.mock("../src/utils/deviceDecimalSeparator", () => ({ deviceDecimalSeparator: () => mockDecimalSeparator }));
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 jest.mock("react-native-safe-area-context", () => jest.requireActual("react-native-safe-area-context/jest/mock").default);
 
 const USER = { id: "u1", email: ACCOUNT_EMAIL, display_name: "Jane", totp_enabled: false, is_verified: true, is_superuser: false };

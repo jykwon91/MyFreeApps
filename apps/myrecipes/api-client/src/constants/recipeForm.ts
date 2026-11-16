@@ -1,4 +1,4 @@
-import type { DecimalSeparator } from "../types/recipe/decimal-separator";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 
 // The backend's limits (app/schemas/recipe), in code points as Pydantic counts them. Web stops
 // typing at them; the phone counts towards them and says when a field is over.

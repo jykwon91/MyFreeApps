@@ -3,7 +3,8 @@ import {
   RECONCILIATION_SOURCE_TYPES,
 } from "@mybookkeeper/api-client/constants/reconciliationSourceTypes";
 import { useUpload1099Mutation } from "@mybookkeeper/api-client/store/reconciliationApi";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Text } from "react-native";
@@ -19,6 +20,7 @@ export default function ReconciliationAddForm({ year }: { year: number }) {
   const isSending = useRef(false);
   const [sourceType, setSourceType] = useState(RECONCILIATION_DEFAULT_SOURCE_TYPE);
   const [issuer, setIssuer] = useState("");
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
   const [amount, setAmount] = useState("");
   const [hasTried, setHasTried] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export default function ReconciliationAddForm({ year }: { year: number }) {
   const [isLeaving, setIsLeaving] = useState(false);
 
   const isDirty = sourceType !== RECONCILIATION_DEFAULT_SOURCE_TYPE || issuer !== "" || amount !== "";
-  const amountProblem = reportedAmountError(amount);
+  const amountProblem = reportedAmountError(amount, decimalSeparator);
 
   useConfirmLeave(isDirty && !isLeaving, (leave) => {
     if (isSending.current) return;
@@ -51,7 +53,8 @@ export default function ReconciliationAddForm({ year }: { year: number }) {
         source_type: sourceType,
         tax_year: year,
         issuer: issuer.trim() || undefined,
-        reported_amount: amount.trim(),
+        // Checked by reportedAmountError above, so it reads.
+        reported_amount: normalizeMoneyText(amount, decimalSeparator) ?? "",
       }).unwrap();
       showToast(MESSAGES.added);
       setIsLeaving(true);

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { EditableIngredientRow } from "@myrecipes/api-client/types/recipe/editable-ingredient-row";
 import type { EditableStepRow } from "@myrecipes/api-client/types/recipe/editable-step-row";
-import type { DecimalSeparator } from "@myrecipes/api-client/types/recipe/decimal-separator";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import { draftIngredientRows, draftStepRows } from "@myrecipes/api-client/utils/draftFormRows";
 import { emptyIngredientRow, emptyStepRow } from "@myrecipes/api-client/utils/emptyRecipeRows";
 import { moveRow } from "@myrecipes/api-client/utils/moveRow";

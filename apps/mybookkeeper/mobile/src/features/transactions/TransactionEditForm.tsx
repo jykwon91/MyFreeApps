@@ -4,7 +4,7 @@ import { useUpdateTransactionMutation } from "@mybookkeeper/api-client/store/tra
 import { useGetVendorsQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import type { Transaction } from "@mybookkeeper/api-client/types/transaction/transaction";
 import type { TransactionType } from "@mybookkeeper/api-client/types/transaction/TransactionType";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
+import { Banner, deviceDecimalSeparator, FormField, KeyboardAwareScroll, LoadingButton, OptionSheet, SegmentedControl, SwitchRow, useConfirmLeave, useTheme, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Text } from "react-native";
@@ -33,6 +33,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
   const { data: vendorList, isError: vendorsFailed, isLoading: vendorsLoading, refetch: refetchVendors } = useGetVendorsQuery(ASSIGN_VENDOR_LIST_ARGS);
   const vendors = vendorList?.items ?? [];
   const [updateTransaction, { isLoading: isSaving }] = useUpdateTransactionMutation();
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
   const [values, setValues] = useState<TransactionEditValues>(() => toEditValues(original));
   const [showProblems, setShowProblems] = useState(false);
   const [openSheet, setOpenSheet] = useState<TransactionEditSheet | null>(null);
@@ -41,11 +42,11 @@ export default function TransactionEditForm({ original }: { original: Transactio
   const [isLeaving, setIsLeaving] = useState(false);
   const [isDateOpen, setIsDateOpen] = useState(false);
 
-  const changes = changedFields(values, original);
+  const changes = changedFields(values, original, decimalSeparator);
   const isDirty = Object.keys(changes).length > 0;
   const reviewable = isReviewable(original.status);
   const vendor = values.vendor.trim();
-  const amountProblem = showProblems ? amountError(values, original) : undefined;
+  const amountProblem = showProblems ? amountError(values, original, decimalSeparator) : undefined;
   const taxYearProblem = showProblems ? taxYearError(values, original) : undefined;
 
   const locked = isSaving || isLeaving;
@@ -83,7 +84,7 @@ export default function TransactionEditForm({ original }: { original: Transactio
   }
 
   async function save(approve: boolean): Promise<void> {
-    if (amountError(values, original) || taxYearError(values, original)) {
+    if (amountError(values, original, decimalSeparator) || taxYearError(values, original)) {
       setShowProblems(true);
       return;
     }

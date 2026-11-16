@@ -5,7 +5,9 @@ import {
   useDeleteRentScheduleMutation,
   useUpdateRentScheduleMutation,
 } from "@mybookkeeper/api-client/store/rentLedgerApi";
-import { graceDaysFromText, graceDaysToText, isPositiveAmount } from "@mybookkeeper/api-client/utils/rentScheduleForm";
+import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
+import { graceDaysFromText, graceDaysToText } from "@mybookkeeper/api-client/utils/rentScheduleForm";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import type { RentCadence } from "@mybookkeeper/api-client/types/rent/rent-cadence";
 import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 
@@ -38,7 +40,7 @@ export function useRentScheduleForm({
   const [update, { isLoading: isUpdating }] = useUpdateRentScheduleMutation();
   const [remove, { isLoading: isRemoving }] = useDeleteRentScheduleMutation();
 
-  const canSubmit = existing ? true : Boolean(startDate) && isPositiveAmount(amount);
+  const canSubmit = existing ? true : Boolean(startDate) && moneyInputError(amount, NUMBER_INPUT_DECIMAL_SEPARATOR) === undefined;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();

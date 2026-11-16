@@ -8,6 +8,8 @@ import { MAX_REPORTED_AMOUNT, RECONCILIATION_MESSAGES as MESSAGES } from "../../
 import type { ReconciliationFilter } from "../../types/ReconciliationFilter";
 import { spokenMoney } from "../transactions/transactionDisplay";
 import { moneyInputError } from "@mybookkeeper/api-client/utils/moneyInputError";
+import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 
 const STATUS_WORDS: Record<ReconciliationSourceStatus, string> = {
   unmatched: MESSAGES.notMatched,
@@ -98,7 +100,7 @@ export function allMatchHeading(year: number): string {
   return `Everything matches for ${year}.`;
 }
 
-export function reportedAmountError(amount: string): string | undefined {
-  const trimmed = amount.trim();
-  return moneyInputError(trimmed) ?? (Number(trimmed) >= MAX_REPORTED_AMOUNT ? MESSAGES.tooLarge : undefined);
+/** Why a typed 1099 amount can't be added, checked in "1234.56" form however it was typed (see normalizeMoneyText). */
+export function reportedAmountError(amount: string, decimalSeparator: DecimalSeparator): string | undefined {
+  return moneyInputError(amount, decimalSeparator) ?? (Number(normalizeMoneyText(amount, decimalSeparator)) >= MAX_REPORTED_AMOUNT ? MESSAGES.tooLarge : undefined);
 }

@@ -5,14 +5,13 @@ import { emptyIngredientRow, emptyStepRow } from "@myrecipes/api-client/utils/em
 import { firstRecipeFormProblem } from "@myrecipes/api-client/utils/firstRecipeFormProblem";
 import { recipeFormProblems } from "@myrecipes/api-client/utils/recipeFormProblems";
 import { recipeFormValuesFromDraft } from "@myrecipes/api-client/utils/recipeFormValuesFromDraft";
-import { useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, useToast } from "@platform/mobile";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { NEW_RECIPE_MESSAGES as MESSAGES } from "../../constants/newRecipe";
 import type { AppStore } from "../../lib/store";
 import type { NewRecipeSeed } from "../../types/NewRecipeSeed";
-import { deviceDecimalSeparator } from "../../utils/deviceDecimalSeparator";
 import { nextRowKey } from "../../utils/nextRowKey";
 import { useRecipeRows } from "../recipeForm/useRecipeRows";
 

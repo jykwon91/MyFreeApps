@@ -1,5 +1,5 @@
 import { RECIPE_FORM_PROBLEMS as PROBLEMS } from "../constants/recipeForm";
-import type { DecimalSeparator } from "../types/recipe/decimal-separator";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import { parseRecipeNumber } from "./parseRecipeNumber";
 
 /**

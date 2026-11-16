@@ -31,7 +31,8 @@ jest.mock("expo-router", () => ({
 }));
 // The device locale's decimal separator; "." unless a test is in a comma-decimal locale.
 let mockDecimalSeparator: "." | "," = ".";
-jest.mock("../src/utils/deviceDecimalSeparator", () => ({ deviceDecimalSeparator: () => mockDecimalSeparator }));
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 
 const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
 

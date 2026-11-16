@@ -7,9 +7,10 @@ import {
 import type { RentCadence } from "@mybookkeeper/api-client/types/rent/rent-cadence";
 import type { RentSchedule } from "@mybookkeeper/api-client/types/rent/rent-schedule";
 import { formatLongDate } from "@mybookkeeper/api-client/utils/inquiryDateFormat";
-import { graceDaysFromText, graceDaysToText, isPositiveAmount, isValidGraceDays } from "@mybookkeeper/api-client/utils/rentScheduleForm";
+import { normalizeMoneyText } from "@mybookkeeper/api-client/utils/normalizeMoneyText";
+import { graceDaysFromText, graceDaysToText, isValidGraceDays } from "@mybookkeeper/api-client/utils/rentScheduleForm";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { FormField, FormSheet, LoadingButton, SegmentedControl, useTheme, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FormField, FormSheet, LoadingButton, SegmentedControl, useTheme, useToast } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text } from "react-native";
 import { RENT_MANAGE_MESSAGES, scheduleFixedTerms } from "../../constants/rentManage";
@@ -18,6 +19,7 @@ import { askOnce } from "../../lib/askOnce";
 import OptionalDateField from "../shell/OptionalDateField";
 import { useFormSubmit } from "../shell/useFormSubmit";
 import { confirmDiscard } from "../uploads/confirmDiscard";
+import { rentAmountProblem } from "./rentAmountProblem";
 import { rentWriteFailure } from "./rentWriteFailure";
 
 const CADENCE_SEGMENTS = [
@@ -44,6 +46,7 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
   const [isRemoving, setIsRemoving] = useState(false);
   const asking = useRef(false);
 
+  const [decimalSeparator] = useState(deviceDecimalSeparator);
   const [amount, setAmount] = useState(existing?.amount ?? "");
   const [cadence, setCadence] = useState<RentCadence>(existing?.cadence ?? "monthly");
   const [startDate, setStartDate] = useState<string | null>(existing?.start_date ?? null);
@@ -53,7 +56,9 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
 
   const isEnding = startDate !== null && endDate !== null && endDate < startDate;
   const isGraceValid = isValidGraceDays(graceDays);
-  const canSave = isGraceValid && !isEnding && (existing !== null || (startDate !== null && isPositiveAmount(amount)));
+  const amountProblem = rentAmountProblem(amount, decimalSeparator);
+  const sentAmount = normalizeMoneyText(amount, decimalSeparator);
+  const canSave = isGraceValid && !isEnding && (existing !== null || (startDate !== null && amount !== "" && amountProblem === undefined));
   const hasChanges = existing
     ? endDate !== existing.end_date || graceDays !== graceDaysToText(existing.grace_days) || notes !== (existing.notes ?? "")
     : amount !== "" || startDate !== null || endDate !== null || graceDays !== "" || notes !== "" || cadence !== "monthly";
@@ -72,8 +77,8 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
         if (existing) {
           // Always sent, so clearing a value reaches the server as an explicit null rather than "left alone".
           await updateSchedule({ scheduleId: existing.id, applicantId, end_date: endDate, grace_days: graceDaysFromText(graceDays), notes: notes.trim() || null }).unwrap();
-        } else if (startDate) {
-          await createSchedule({ applicant_id: applicantId, amount, cadence, start_date: startDate, end_date: endDate, grace_days: graceDaysFromText(graceDays), notes: notes.trim() || null }).unwrap();
+        } else if (startDate && sentAmount) {
+          await createSchedule({ applicant_id: applicantId, amount: sentAmount, cadence, start_date: startDate, end_date: endDate, grace_days: graceDaysFromText(graceDays), notes: notes.trim() || null }).unwrap();
         }
       },
       (error) => rentWriteFailure(error, "schedule"),
@@ -105,6 +110,7 @@ export default function RentScheduleSheet({ applicantId, existing, onClose }: Re
         <>
           <FormField
             editable={!busy}
+            error={amountProblem}
             hint={RENT_MANAGE_MESSAGES.amountHint}
             keyboardType="decimal-pad"
             label={RENT_MANAGE_MESSAGES.amount}

@@ -1,4 +1,4 @@
-import type { DecimalSeparator } from "../types/recipe/decimal-separator";
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
 import { parseRecipeNumber } from "./parseRecipeNumber";
 
 /** Typed minutes as the API takes them: rounded, or null when blank (or not a number). */

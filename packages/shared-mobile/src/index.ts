@@ -12,6 +12,7 @@ export { assertSecureApiUrl } from "./utils/assertSecureApiUrl";
 export { refetchOnForeground } from "./utils/refetchOnForeground";
 export { clearDownloadCopies } from "./utils/clearDownloadCopies";
 export { clearDataExportFiles } from "./utils/dataExportFiles";
+export { deviceDecimalSeparator } from "./utils/deviceDecimalSeparator";
 export { discardFile } from "./utils/discardFile";
 export { shareDownloadedFile } from "./utils/shareDownloadedFile";
 

@@ -1,9 +1,3 @@
-/** A money amount typed into a form: a number above zero. */
-export function isPositiveAmount(text: string): boolean {
-  const parsed = parseFloat(text);
-  return Number.isFinite(parsed) && parsed > 0;
-}
-
 /** Blank means "no late window", and is sent as an explicit null so clearing a value reaches the server. */
 export function graceDaysFromText(text: string): number | null {
   return text === "" ? null : Number(text);

@@ -33,7 +33,8 @@ jest.mock("expo-router", () => ({
     mockGuard.ask = ask;
   },
 }));
-jest.mock("../src/utils/deviceDecimalSeparator", () => ({ deviceDecimalSeparator: () => "." }));
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => "." }));
 jest.mock("expo-file-system", () => jest.requireActual("@platform/mobile/test-support/fakeFileSystem"));
 jest.mock("expo-keep-awake", () => ({ useKeepAwake: () => mockKeepAwake() }));
 const mockKeepAwake = jest.fn();

@@ -13,6 +13,9 @@ import { holdWrites } from "../test-support/holdWrites";
 import { aListing, startListingsServer, writesTo } from "../test-support/listingsServer";
 import { mockPreventRemove, mockRouter, pressAlertButton, restoreApi, show, signInToWorkspace } from "../test-support/listingsHarness";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 jest.mock("expo-router", () => jest.requireActual("../test-support/listingsHarness").expoRouterMock());
 jest.mock("expo-clipboard", () => ({ setStringAsync: jest.fn(async () => true) }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
@@ -20,6 +23,7 @@ jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({
 let alertSpy: jest.SpyInstance;
 beforeEach(() => {
   alertSpy = signInToWorkspace();
+  mockDecimalSeparator = ".";
 });
 afterEach(restoreApi);
 
@@ -177,25 +181,45 @@ describe("adding a listing", () => {
     expect(writesTo(server, "post")).toHaveLength(0);
   });
 
-  it("drops what can't be part of a rate or a day count as it's typed", async () => {
+  it("drops what can't be part of a day count as it's typed", async () => {
     startListingsServer();
     await show(<ListingCreateScreen />);
-    await fireEvent.changeText(await screen.findByLabelText("Monthly rate (USD), required"), "12a00.555");
-    expect(screen.getByLabelText("Monthly rate (USD), required").props.value).toBe("1200.55");
-    await fireEvent.changeText(screen.getByLabelText(FORM.minStay), "3x0");
+    await fireEvent.changeText(await screen.findByLabelText(FORM.minStay), "3x0");
     expect(screen.getByLabelText(FORM.minStay).props.value).toBe("30");
   });
 
   it.each([
-    ["1200,50", "1200.50"],
-    ["1.2.3", ""],
-    ["12.345", "12.34"],
-  ])("reads %s as a rate of %s", async (typed, shown) => {
-    startListingsServer();
+    [".", "$1,200", "1200"],
+    [".", "1,200.00", "1200.00"],
+    [".", "1200.5", "1200.5"],
+    [",", "1200,50", "1200.50"],
+    [",", "1.200", "1200"],
+  ])("on a %j keypad, sends a rate typed or pasted as %j as %j", async (separator, typed, sent) => {
+    mockDecimalSeparator = separator as "." | ",";
+    const server = startListingsServer({ listings: [] });
     await show(<ListingCreateScreen />);
-    const field = await screen.findByLabelText("Monthly rate (USD), required");
-    await fireEvent.changeText(field, typed);
-    expect(screen.getByLabelText("Monthly rate (USD), required").props.value).toBe(shown);
+    await fillRequired();
+    await fireEvent.changeText(screen.getByLabelText("Monthly rate (USD), required"), typed);
+    expect(screen.getByLabelText("Monthly rate (USD), required").props.value).toBe(typed);
+    await fireEvent.press(button(FORM.add));
+    await screen.findByText(FORM.added);
+    expect(writesTo(server, "post")[0].body).toEqual(expect.objectContaining({ monthly_rate: sent }));
+  });
+
+  it.each([
+    [".", "12.345"],
+    [".", "1.2.3"],
+    [",", "1,200"],
+    [".", "50abc"],
+  ])("on a %j keypad, names a rate of %j it can't read for sure, and sends nothing", async (separator, typed) => {
+    mockDecimalSeparator = separator as "." | ",";
+    const server = startListingsServer({ listings: [] });
+    await show(<ListingCreateScreen />);
+    await fillRequired();
+    await fireEvent.changeText(screen.getByLabelText("Monthly rate (USD), required"), typed);
+    await fireEvent.press(button(FORM.add));
+    expect(screen.getByText("Enter the rate as dollars, like 1200 or 1200.50.")).toBeTruthy();
+    expect(writesTo(server, "post")).toHaveLength(0);
   });
 
   it("rejects a zero rate and a minimum stay longer than the maximum", async () => {

@@ -218,15 +218,18 @@ describe("refusals", () => {
 
 describe("the amount", () => {
   it.each([
-    ["", "Enter an amount above $0."],
-    ["0", "Enter an amount above $0."],
-    ["12.345", "Use dollars and cents, like 84.20."],
-    ["1,000", "Use dollars and cents, like 84.20."],
-    ["10000000000", MESSAGES.tooLarge],
-    ["9999999999.99", undefined],
-    [" 84.20 ", undefined],
-  ])("%j", (amount, problem) => {
-    expect(reportedAmountError(amount)).toBe(problem);
+    ["", ".", "Enter an amount above $0."],
+    ["0", ".", "Enter an amount above $0."],
+    ["12.345", ".", "Use dollars and cents, like 84.20."],
+    ["1,000", ".", undefined],
+    ["10000000000", ".", MESSAGES.tooLarge],
+    ["10.000.000.000", ",", MESSAGES.tooLarge],
+    ["9999999999.99", ".", undefined],
+    [" 84.20 ", ".", undefined],
+    ["84,20", ",", undefined],
+    ["1,000", ",", "Use dollars and cents, like 84,20."],
+  ] as const)("%j on a %j keypad", (amount, separator, problem) => {
+    expect(reportedAmountError(amount, separator)).toBe(problem);
   });
 });
 

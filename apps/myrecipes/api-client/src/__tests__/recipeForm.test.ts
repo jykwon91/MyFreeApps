@@ -13,7 +13,6 @@ import { emptyIngredientRow, emptyStepRow } from "../utils/emptyRecipeRows";
 import { firstRecipeFormProblem } from "../utils/firstRecipeFormProblem";
 import { moveRow } from "../utils/moveRow";
 import { formatRecipeNumber } from "../utils/formatRecipeNumber";
-import { localeDecimalSeparator } from "../utils/localeDecimalSeparator";
 import { parseRecipeNumber } from "../utils/parseRecipeNumber";
 import { recipeFormProblems } from "../utils/recipeFormProblems";
 
@@ -197,12 +196,6 @@ describe("a comma-decimal locale", () => {
     expect(formatRecipeNumber(1234.25, EN)).toBe("1234.25");
     expect(formatRecipeNumber(null, DE)).toBe("");
     expect(parseRecipeNumber(formatRecipeNumber(2.125, DE), DE)).toBe(2.125);
-  });
-
-  it("finds a locale's separator with Intl.NumberFormat.format", () => {
-    expect(localeDecimalSeparator("en-US")).toBe(".");
-    expect(localeDecimalSeparator("de-DE")).toBe(",");
-    expect(localeDecimalSeparator("fr-FR")).toBe(",");
   });
 });
 

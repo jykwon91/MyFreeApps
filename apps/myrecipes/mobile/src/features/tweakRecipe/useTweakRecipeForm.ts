@@ -7,13 +7,12 @@ import { recipeContentProblems } from "@myrecipes/api-client/utils/recipeContent
 import { recipeFormValuesFromVersion } from "@myrecipes/api-client/utils/recipeFormValuesFromVersion";
 import { tweakErrorMessage } from "@myrecipes/api-client/utils/tweakErrorMessage";
 import { tweakFormProblem } from "@myrecipes/api-client/utils/tweakFormProblem";
-import { useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, useToast } from "@platform/mobile";
 import { useNavigation } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { AppStore } from "../../lib/store";
 import type { RecipeTimingField } from "../../types/RecipeTimingField";
-import { deviceDecimalSeparator } from "../../utils/deviceDecimalSeparator";
 import { leaveToRecipe } from "../../utils/leaveToRecipe";
 import { nextRowKey } from "../../utils/nextRowKey";
 import { useRecipeRows } from "../recipeForm/useRecipeRows";
