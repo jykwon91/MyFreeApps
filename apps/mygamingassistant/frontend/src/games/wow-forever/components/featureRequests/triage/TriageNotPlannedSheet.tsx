@@ -50,7 +50,7 @@ export default function TriageNotPlannedSheet({ story, onClose, onSubmit }: Tria
         <bdi>{story.title}</bdi>
       </p>
       <div className="space-y-1">
-        <label htmlFor={inputId} className="text-sm font-medium">
+        <label htmlFor={inputId} className="block text-sm font-medium">
           {TRIAGE_COPY.notPlannedLabel}
         </label>
         <p id={`${inputId}-hint`} className="text-xs text-muted-foreground">

@@ -90,7 +90,7 @@ export default function TriageMergeSheet({ source, onClose, onMerge }: TriageMer
         </p>
       ) : null}
       <div className="space-y-1">
-        <label htmlFor={searchId} className="text-sm font-medium">
+        <label htmlFor={searchId} className="block text-sm font-medium">
           {TRIAGE_COPY.mergeSearch}
         </label>
         <input

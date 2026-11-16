@@ -32,7 +32,7 @@ export default function CharacterLookupForm({ recent, currentSlug, busy, onLooku
     <section className="space-y-3 rounded-xl border bg-card p-4" aria-label="Look up a character">
       <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="flex-1 space-y-1">
-          <label htmlFor={inputId} className="text-sm font-medium">
+          <label htmlFor={inputId} className="block text-sm font-medium">
             Character name (first name and surname)
           </label>
           <input

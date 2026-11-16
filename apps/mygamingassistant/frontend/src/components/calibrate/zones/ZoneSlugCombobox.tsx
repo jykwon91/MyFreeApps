@@ -43,7 +43,7 @@ export default function ZoneSlugCombobox({
 
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="text-xs text-muted-foreground">
+      <label htmlFor={id} className="block text-xs text-muted-foreground">
         Slug
       </label>
       <input

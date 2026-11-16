@@ -76,7 +76,7 @@ export default function ZonePropertiesPanel({
       <div className="space-y-1">
         <label
           htmlFor={`zone-properties-name-${zone.slug}`}
-          className="text-xs text-muted-foreground"
+          className="block text-xs text-muted-foreground"
         >
           Display name
         </label>

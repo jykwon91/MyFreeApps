@@ -15,7 +15,7 @@ export default function TextReader({ itemLabel, onRead }: TextReaderProps) {
   const textareaId = `tooltip-text-${itemLabel.replace(/\W+/g, "-")}`;
   return (
     <div className="space-y-2">
-      <label htmlFor={textareaId} className="text-xs font-medium text-muted-foreground">
+      <label htmlFor={textareaId} className="block text-xs font-medium text-muted-foreground">
         Paste an item's tooltip text (name on the first line)
       </label>
       <textarea

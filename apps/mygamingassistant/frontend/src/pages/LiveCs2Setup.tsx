@@ -181,7 +181,7 @@ export default function LiveCs2Setup() {
             app at <code>http://127.0.0.1:{status?.port ?? 8765}</code>.
           </p>
           <div className="space-y-1">
-            <label htmlFor="custom-path" className="text-xs text-muted-foreground">
+            <label htmlFor="custom-path" className="block text-xs text-muted-foreground">
               Custom CS2 cfg path (optional — leave blank to auto-detect)
             </label>
             <input

@@ -86,7 +86,7 @@ export default function SearchCombobox(props: SearchComboboxProps) {
 
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="text-sm font-medium">
+      <label htmlFor={id} className="block text-sm font-medium">
         {label}
       </label>
       <div className="flex gap-2">

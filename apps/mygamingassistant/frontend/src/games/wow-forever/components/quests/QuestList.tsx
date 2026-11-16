@@ -30,7 +30,7 @@ export default function QuestList({ index, seenIds }: QuestListProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <label className="text-sm font-medium" htmlFor="quest-search">
+        <label className="block text-sm font-medium" htmlFor="quest-search">
           Search quests
         </label>
         <input

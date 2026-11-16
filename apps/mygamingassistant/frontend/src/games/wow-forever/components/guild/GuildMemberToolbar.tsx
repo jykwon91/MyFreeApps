@@ -42,7 +42,7 @@ export default function GuildMemberToolbar({ filters, classes, onChange }: Guild
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" role="search" aria-label="Find a member">
       <div className="space-y-1">
-        <label htmlFor={ids.search} className="text-sm font-medium">
+        <label htmlFor={ids.search} className="block text-sm font-medium">
           Name
         </label>
         <input
@@ -56,7 +56,7 @@ export default function GuildMemberToolbar({ filters, classes, onChange }: Guild
         />
       </div>
       <div className="space-y-1">
-        <label htmlFor={ids.className} className="text-sm font-medium">
+        <label htmlFor={ids.className} className="block text-sm font-medium">
           Class
         </label>
         <select
@@ -74,7 +74,7 @@ export default function GuildMemberToolbar({ filters, classes, onChange }: Guild
         </select>
       </div>
       <div className="space-y-1">
-        <label htmlFor={ids.level} className="text-sm font-medium">
+        <label htmlFor={ids.level} className="block text-sm font-medium">
           Level
         </label>
         <select
@@ -91,7 +91,7 @@ export default function GuildMemberToolbar({ filters, classes, onChange }: Guild
         </select>
       </div>
       <div className="space-y-1">
-        <label htmlFor={ids.sort} className="text-sm font-medium">
+        <label htmlFor={ids.sort} className="block text-sm font-medium">
           Sort by
         </label>
         <div className="flex gap-2">

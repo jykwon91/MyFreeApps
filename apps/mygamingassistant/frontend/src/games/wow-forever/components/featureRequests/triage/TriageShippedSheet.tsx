@@ -52,7 +52,7 @@ export default function TriageShippedSheet({ story, onClose, onSave }: TriageShi
         <bdi>{story.title}</bdi>
       </p>
       <div className="space-y-1">
-        <label htmlFor={inputId} className="text-sm font-medium">
+        <label htmlFor={inputId} className="block text-sm font-medium">
           {TRIAGE_COPY.shippedPathLabel}
         </label>
         <input
