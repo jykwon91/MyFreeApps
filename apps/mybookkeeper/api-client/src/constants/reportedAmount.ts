@@ -1,6 +1,6 @@
-import { MONEY_INPUT_MESSAGES } from "@mybookkeeper/api-client/constants/moneyInput";
+import { MONEY_INPUT_MESSAGES } from "./moneyInput";
 
-/** Same wording as the server's 1099 reported amount check (app/core/transaction_amount_constants.py). */
+/** Same wording as the server's 1099 reported amount check (backend app/core/transaction_amount_constants.py). */
 export const REPORTED_AMOUNT_MESSAGES = {
   blank: "Enter the amount reported on the 1099.",
   negative: "Enter an amount of $0 or more.",

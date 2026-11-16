@@ -18,7 +18,8 @@ import { reconciliationTaxYears } from "@mybookkeeper/api-client/utils/reconcili
 import { useCompareWithRecords } from "./useCompareWithRecords";
 import FieldProblem from "@/shared/components/FieldProblem";
 import { getApiErrorDetail } from "@/shared/lib/api-error-detail";
-import { reportedAmountError } from "@/shared/utils/reported-amount-error";
+import { reportedAmountError } from "@mybookkeeper/api-client/utils/reportedAmountError";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import { fieldProblemId, problemAria } from "@/shared/utils/field-problem-aria";
 import ReconciliationSourcesBody from "./ReconciliationSourcesBody";
 import ReconciliationDiscrepanciesBody from "./ReconciliationDiscrepanciesBody";
@@ -57,7 +58,7 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
-    const problem = reportedAmountError(reportedAmount);
+    const problem = reportedAmountError(reportedAmount, NUMBER_INPUT_DECIMAL_SEPARATOR);
     setAmountProblem(problem);
     if (problem) {
       document.getElementById(`${fieldId}-amount`)?.focus();
