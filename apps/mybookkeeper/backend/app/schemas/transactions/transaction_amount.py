@@ -8,6 +8,8 @@ from app.core.transaction_amount_constants import (
     MAX_TRANSACTION_AMOUNT,
 )
 
+_CENT = Decimal("0.01")
+
 
 def validate_transaction_amount(value: Decimal) -> Decimal:
     """Reject what the amount column would refuse or silently change.
@@ -18,8 +20,9 @@ def validate_transaction_amount(value: Decimal) -> Decimal:
     """
     if not value.is_finite() or value <= 0:
         raise ValueError(AMOUNT_NOT_POSITIVE)
-    if value.as_tuple().exponent < -2:
-        raise ValueError(AMOUNT_TOO_PRECISE)
     if value > MAX_TRANSACTION_AMOUNT:
         raise ValueError(AMOUNT_TOO_LARGE)
+    # Judged on the value, not the digits sent: "100.000" is whole cents.
+    if value != value.quantize(_CENT):
+        raise ValueError(AMOUNT_TOO_PRECISE)
     return value

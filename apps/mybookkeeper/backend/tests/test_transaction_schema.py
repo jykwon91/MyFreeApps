@@ -238,7 +238,7 @@ class TestTransactionAmountValidation:
         "category": "maintenance",
     }
 
-    @pytest.mark.parametrize("amount", ["0.01", "84.2", "84.20", "9999999999.99", 12])
+    @pytest.mark.parametrize("amount", ["0.01", "84.2", "84.20", "9999999999.99", 12, "100.000", ".5"])
     def test_create_accepts_dollars_and_cents(self, amount: object) -> None:
         txn = TransactionCreate(**self._CREATE, amount=amount)
         assert txn.amount == Decimal(str(amount))
