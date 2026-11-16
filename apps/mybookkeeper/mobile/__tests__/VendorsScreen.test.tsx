@@ -151,7 +151,7 @@ describe("VendorsScreen", () => {
     await show(<VendorsScreen />);
     await screen.findByText("Reliable Plumbing");
     await fireEvent.press(screen.getByRole("button", { name: "Filters" }));
-    await fireEvent(screen.getByLabelText(VENDOR_FILTER_MESSAGES.preferredOnly), "valueChange", true);
+    await fireEvent.press(screen.getByLabelText(VENDOR_FILTER_MESSAGES.preferredOnly));
     await fireEvent.press(screen.getByRole("button", { name: VENDOR_FILTER_MESSAGES.done }));
     await waitFor(() => expect(server.listRequests.at(-1)?.params).toMatchObject({ preferred: true }));
     expect(screen.getByRole("button", { name: "Filters: Preferred" })).toBeTruthy();
@@ -163,7 +163,7 @@ describe("VendorsScreen", () => {
     await screen.findByText("Reliable Plumbing");
     await fireEvent.press(screen.getByRole("button", { name: "Filters" }));
     await fireEvent.press(await screen.findByRole("radio", { name: "Plumber" }));
-    await fireEvent(screen.getByLabelText(VENDOR_FILTER_MESSAGES.preferredOnly), "valueChange", true);
+    await fireEvent.press(screen.getByLabelText(VENDOR_FILTER_MESSAGES.preferredOnly));
     await fireEvent.press(screen.getByRole("button", { name: VENDOR_FILTER_MESSAGES.done }));
     await waitFor(() => expect(server.listRequests.at(-1)?.params).toMatchObject({ category: "plumber", preferred: true }));
     expect(screen.getByRole("button", { name: "Filters: Plumber, Preferred" })).toBeTruthy();

@@ -73,7 +73,7 @@ describe("NewTransactionScreen", () => {
     await fireEvent.press(await screen.findByRole("radio", { name: "Airbnb" }));
     await fireEvent.press(screen.getByLabelText("Payment method, None"));
     await fireEvent.press(await screen.findByRole("radio", { name: "Credit Card" }));
-    await fireEvent(screen.getByLabelText("Include in tax reports"), "valueChange", true);
+    await fireEvent.press(screen.getByLabelText("Include in tax reports"));
     await fireEvent.press(screen.getByRole("button", { name: "Add transaction" }));
 
     await waitFor(() => expect(mockBack).toHaveBeenCalled());

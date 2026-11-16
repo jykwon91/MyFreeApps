@@ -80,7 +80,7 @@ describe("making a manual", () => {
     const server = startWelcomeManualsServer();
     await renderScreen(<WelcomeManualCreateScreen />);
     await fireEvent.changeText(await screen.findByLabelText("Title, required"), "Lake cabin");
-    await fireEvent(screen.getByLabelText(FORM.seedLabel), "valueChange", false);
+    await fireEvent.press(screen.getByLabelText(FORM.seedLabel));
     await fireEvent.press(button(FORM.create));
     await screen.findByText(FORM.created);
     expect(writesTo(server)[0].body.seed_default_sections).toBe(false);

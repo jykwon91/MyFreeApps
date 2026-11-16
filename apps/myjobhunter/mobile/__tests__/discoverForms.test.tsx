@@ -184,7 +184,7 @@ describe("a new JSearch saved search", () => {
     const sent = serveForm();
     await openNew();
     await screen.findByText(SHEET.prefilled);
-    await fireEvent(screen.getByLabelText(SHEET.saveAsDefaults), "valueChange", true);
+    await fireEvent.press(screen.getByLabelText(SHEET.saveAsDefaults));
 
     await submit(SHEET.create);
 
@@ -196,7 +196,7 @@ describe("a new JSearch saved search", () => {
     serveForm({ "PATCH /profile": () => ({ status: 500, data: { detail: "Profile unavailable" } }) });
     await openNew();
     await screen.findByText(SHEET.prefilled);
-    await fireEvent(screen.getByLabelText(SHEET.saveAsDefaults), "valueChange", true);
+    await fireEvent.press(screen.getByLabelText(SHEET.saveAsDefaults));
 
     await submit(SHEET.create);
 

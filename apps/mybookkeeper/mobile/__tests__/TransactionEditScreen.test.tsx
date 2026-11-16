@@ -203,7 +203,7 @@ describe("TransactionEditScreen", () => {
       expect(screen.getByLabelText("Tax year").props.value).toBe("2026");
       expect(screen.getByLabelText("Channel, Airbnb")).toBeTruthy();
       expect(screen.getByLabelText("Payment method, Check")).toBeTruthy();
-      expect(screen.getByLabelText("Include in tax reports").props.value).toBe(true);
+      expect(screen.getByLabelText("Include in tax reports").props.accessibilityState.checked).toBe(true);
     });
 
     it("sends a new tax year, without asking about the date", async () => {
@@ -293,7 +293,7 @@ describe("TransactionEditScreen", () => {
     it("turns tax reports on and off", async () => {
       const server = startTransactionServer([aTransaction()]);
       await renderScreen();
-      await fireEvent(await screen.findByLabelText("Include in tax reports"), "valueChange", true);
+      await fireEvent.press(await screen.findByLabelText("Include in tax reports"));
       expect(mockPreventRemove.active).toBe(true);
       await save();
       expect(lastPatch(server)).toEqual({ tax_relevant: true });
@@ -302,7 +302,7 @@ describe("TransactionEditScreen", () => {
     it("turns tax reports off for one that was in them", async () => {
       const server = startTransactionServer([aTransaction({ tax_relevant: true })]);
       await renderScreen();
-      await fireEvent(await screen.findByLabelText("Include in tax reports"), "valueChange", false);
+      await fireEvent.press(await screen.findByLabelText("Include in tax reports"));
       await save();
       expect(lastPatch(server)).toEqual({ tax_relevant: false });
     });

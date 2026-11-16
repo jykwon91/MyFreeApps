@@ -83,8 +83,8 @@ describe("setting reminders up", () => {
     expect(screen.getByRole("radio", { name: "Sunday" }).props.accessibilityState).toEqual(expect.objectContaining({ checked: true }));
     expect(field(S.daysBefore).props.value).toBe("1");
     expect(screen.getByText("6:00 PM")).toBeTruthy();
-    expect(screen.getByRole("switch", { name: new RegExp(`^${S.email}`) }).props.value).toBe(true);
-    expect(screen.getByRole("switch", { name: new RegExp(`^${S.sms}`) }).props.value).toBe(false);
+    expect(screen.getByRole("switch", { name: new RegExp(`^${S.email}`) }).props.accessibilityState.checked).toBe(true);
+    expect(screen.getByRole("switch", { name: new RegExp(`^${S.sms}`) }).props.accessibilityState.checked).toBe(false);
     expect(screen.queryByText(S.remindersOn)).toBeNull();
   });
 
@@ -207,7 +207,7 @@ describe("setting reminders up", () => {
     await start(NO_PLAN);
     await openSheet(S.titleNew, S.setUp);
 
-    await fireEvent(screen.getByRole("switch", { name: new RegExp(`^${S.email}`) }), "valueChange", false);
+    await fireEvent.press(screen.getByRole("switch", { name: new RegExp(`^${S.email}`) }));
 
     expect(screen.getByText(S.needChannel)).toBeTruthy();
     expect(screen.getAllByRole("button", { name: S.saveNew }).pop()?.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
@@ -228,7 +228,7 @@ describe("setting reminders up", () => {
     await openSheet(S.titleNew, S.setUp);
 
     const sms = screen.getByRole("switch", { name: new RegExp(`^${S.sms}`) });
-    expect(sms.props.disabled).toBe(true);
+    expect(sms.props.accessibilityState.disabled).toBe(true);
     expect(screen.getByText(S.smsUnavailable)).toBeTruthy();
   });
 
@@ -285,7 +285,7 @@ describe("editing reminders", () => {
     expect(screen.getByText("9:30 AM")).toBeTruthy();
     expect(field(S.howToPay).props.value).toBe("Venmo");
     expect(field(S.fixedAmount).props.value).toBe("400.00");
-    expect(screen.getByRole("switch", { name: new RegExp(`^${S.remindersOn}`) }).props.value).toBe(true);
+    expect(screen.getByRole("switch", { name: new RegExp(`^${S.remindersOn}`) }).props.accessibilityState.checked).toBe(true);
   });
 
   it("saves the whole plan with a PUT, keeping its time zone, and clearing blanks to null", async () => {
@@ -293,7 +293,7 @@ describe("editing reminders", () => {
     await openSheet(S.titleEdit, S.edit);
     await fireEvent.changeText(field(S.howToPay), "");
     await fireEvent.changeText(field(S.fixedAmount), "");
-    await fireEvent(screen.getByRole("switch", { name: new RegExp(`^${S.remindersOn}`) }), "valueChange", false);
+    await fireEvent.press(screen.getByRole("switch", { name: new RegExp(`^${S.remindersOn}`) }));
 
     await save(S.saveEdit);
 
