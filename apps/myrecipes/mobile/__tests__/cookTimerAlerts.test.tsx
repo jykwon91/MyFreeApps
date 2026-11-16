@@ -3,13 +3,21 @@ import { useCookTimerAlertTaps } from "../src/features/cook/useCookTimerAlertTap
 import { showCookTimerAlertsInForeground } from "../src/services/cookTimerNotifications";
 
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
+let mockPathname = "/";
 const mockRemove = jest.fn();
 const mockClear = jest.fn();
 let mockLast: object | null = null;
 let mockListener: (response: object) => void = () => {};
 const mockSetHandler = jest.fn();
 
-jest.mock("expo-router", () => ({ router: { push: (...args: unknown[]) => mockPush(...args) } }));
+jest.mock("expo-router", () => ({
+  router: {
+    push: (...args: unknown[]) => mockPush(...args),
+    replace: (...args: unknown[]) => mockReplace(...args),
+  },
+  usePathname: () => mockPathname,
+}));
 jest.mock("expo-notifications", () => ({
   __esModule: true,
   addNotificationResponseReceivedListener: (listener: (response: object) => void) => {
@@ -28,6 +36,7 @@ const COOK = { pathname: "/recipes/[id]/cook", params: { id: "r9" } };
 describe("tapping a timer alert", () => {
   beforeEach(() => {
     mockLast = null;
+    mockPathname = "/";
     jest.clearAllMocks();
   });
 
@@ -49,6 +58,32 @@ describe("tapping a timer alert", () => {
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith(COOK);
     expect(mockClear).toHaveBeenCalled();
+  });
+
+  it("does nothing when that recipe's cook mode is already open", async () => {
+    mockPathname = "/recipes/r9/cook";
+    await renderHook(() => useCookTimerAlertTaps());
+    mockListener(tap({ timer: TIMER }));
+
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it("opens cook mode from the recipe page", async () => {
+    mockPathname = "/recipes/r9";
+    await renderHook(() => useCookTimerAlertTaps());
+    mockListener(tap({ timer: TIMER }));
+
+    expect(mockPush).toHaveBeenCalledWith(COOK);
+  });
+
+  it("swaps to the other recipe when a different recipe's cook mode is open", async () => {
+    mockPathname = "/recipes/other/cook";
+    await renderHook(() => useCookTimerAlertTaps());
+    mockListener(tap({ timer: TIMER }));
+
+    expect(mockReplace).toHaveBeenCalledWith(COOK);
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it("ignores any other notification", async () => {
