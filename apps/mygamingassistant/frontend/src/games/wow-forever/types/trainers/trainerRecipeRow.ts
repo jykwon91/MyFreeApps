@@ -9,6 +9,9 @@ export interface TrainerRecipeRow {
   cost: number;
   /** "Armorsmith" when only that specialization can learn it (recipe book); null otherwise or before it loads. */
   spec: string | null;
-  /** "can-learn": player skill >= recipe skill; "needs-skill": needs more skill; "needs-data": no player skill provided. */
-  status: "can-learn" | "needs-skill" | "needs-data";
+  /**
+   * "known": your character already has it; "can-learn": skill >= recipe skill; "needs-skill": needs more
+   * skill; "needs-data": no skill to compare with.
+   */
+  status: "known" | "can-learn" | "needs-skill" | "needs-data";
 }

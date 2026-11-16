@@ -193,7 +193,18 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   Jalane Ayrole (A) / Josephine Lister (H), "Master Shadoweave Tailor"; the
   operator couldn't find it at regular tailors. None of yours → "No <faction>
   trainer teaches it".
-  Tests: `wowTrainerRecipes.test.ts` (`rankRecipes`), `wow-forever-trainers.spec.ts`.
+  **Your character marks the rows** (operator: "why are you not considering my
+  own profession level and recipes?", 2026-11-16): `useMyProfession` reads the
+  saved `characterSlug` (`GET /wow/characters/{slug}`; 404 = no character) →
+  `myProfession` (skill, cap, known recipe spells via `recipeSpell`), shown by
+  `MyProfessionLine` ("Marked for … Tailoring 204/225", or "Pick character").
+  `markTrainerRecipes`: Known wins (even above your skill), else Can learn /
+  Needs N; an unknown specialization recipe stays unmarked (Blizzard doesn't
+  say which spec), and a character of the other faction marks Known only.
+  Status is a word chip (`TrainerRecipeStatusChip`), never colour alone; the
+  toggle adds " · N you can learn" / " · all known". The single-trainer panel
+  uses the character's skill instead of its typed box.
+  Tests: `wowTrainerRecipes.test.ts` (`rankRecipes`), `wowMyProfession.test.ts`, `wow-forever-trainers.spec.ts`.
   **Where to learn a recipe** (`RecipeLearnDetail`, used by the Recipes page
   rows and item pages' Crafted section via `CraftedByList`): a trainer recipe
   lists your faction's trainers of the rank covering its skill

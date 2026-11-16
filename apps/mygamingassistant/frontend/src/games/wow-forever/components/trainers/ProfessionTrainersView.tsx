@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import LoadErrorRetry from "@/components/game/LoadErrorRetry";
+import MyProfessionLine from "@/games/wow-forever/components/trainers/MyProfessionLine";
 import ProfessionRankCard from "@/games/wow-forever/components/trainers/ProfessionRankCard";
 import TrainerNpcSection from "@/games/wow-forever/components/trainers/TrainerNpcSection";
 import TrainerRecipesPanel from "@/games/wow-forever/components/trainers/TrainerRecipesPanel";
@@ -9,8 +10,10 @@ import { playerFactionLabel } from "@/games/wow-forever/data/playerFactionOption
 import { PROFESSION_PARAM, type GuideProfession } from "@/games/wow-forever/data/professions/professionPicker";
 import { PROFESSION_SERVICE_TAG } from "@/games/wow-forever/data/trainers/trainersConfig";
 import { SERVICE_KIND } from "@/games/wow-forever/data/worldMap/serviceKinds";
+import { useMyProfession } from "@/games/wow-forever/hooks/useMyProfession";
 import { useTrainerServices } from "@/games/wow-forever/hooks/useTrainerServices";
 import { isCraftingProfession } from "@/games/wow-forever/lib/guideProfession";
+import { recipeMarks } from "@/games/wow-forever/lib/trainers/markTrainerRecipes";
 import { professionRankSteps } from "@/games/wow-forever/lib/trainers/professionRankSteps";
 import { serviceTrainers } from "@/games/wow-forever/lib/trainers/serviceTrainers";
 import type { CraftingProfession } from "@/games/wow-forever/types/crafting";
@@ -36,6 +39,11 @@ export default function ProfessionTrainersView({ profession, label, faction, zon
     () => (servicesData ? serviceTrainers(servicesData, SERVICE_KIND.professionTrainer, PROFESSION_SERVICE_TAG[profession], faction) : []),
     [servicesData, profession, faction],
   );
+
+  const craftingProfession: CraftingProfession | null = isCraftingProfession(profession) ? profession : null;
+  const isCrafting = craftingProfession !== null;
+  const myState = useMyProfession(craftingProfession, faction);
+  const marks = useMemo(() => recipeMarks(myState), [myState]);
 
   const [params, setParams] = useLiveSearchParams();
   const selectedNpcId = parseTrainerParam(params.get(TRAINER_PARAM));
@@ -78,7 +86,6 @@ export default function ProfessionTrainersView({ profession, label, faction, zon
     );
   }, [setParams]);
 
-  const isCrafting = isCraftingProfession(profession);
   const onSelectTrainer = isCrafting ? handleSelectTrainer : undefined;
 
   if (services.status === "loading") return <TrainersSkeleton />;
@@ -89,13 +96,14 @@ export default function ProfessionTrainersView({ profession, label, faction, zon
   return (
     <div className="space-y-6">
       {/* Trainer recipes panel (shown when a trainer is selected) */}
-      {selectedNpcId !== null && isCrafting ? (
+      {selectedNpcId !== null && craftingProfession ? (
         <TrainerRecipesPanel
           key={selectedNpcId}
           npcId={selectedNpcId}
           trainerName={selectedTrainerName ?? label}
-          profession={profession as CraftingProfession}
+          profession={craftingProfession}
           onClose={handleClose}
+          marks={marks}
         />
       ) : null}
 
@@ -112,6 +120,7 @@ export default function ProfessionTrainersView({ profession, label, faction, zon
           </Link>
         </div>
         <p className="text-sm text-muted-foreground">Skill numbers and levels are Classic's unless Forever has confirmed them.</p>
+        {isCrafting ? <MyProfessionLine state={myState} professionLabel={label} pageFactionLabel={playerFactionLabel(faction)} /> : null}
         <ul className="space-y-2">
           {steps.map((step) => (
             <ProfessionRankCard
@@ -121,7 +130,7 @@ export default function ProfessionTrainersView({ profession, label, faction, zon
               faction={faction}
               zoneId={zoneId}
               onSelectTrainer={onSelectTrainer}
-              recipes={isCrafting ? { profession, steps, trainers } : undefined}
+              recipes={craftingProfession ? { profession: craftingProfession, steps, trainers, marks } : undefined}
             />
           ))}
         </ul>

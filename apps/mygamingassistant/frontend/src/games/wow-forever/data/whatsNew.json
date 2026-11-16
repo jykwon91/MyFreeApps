@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-16",
+    "title": "Trainers: what you know and can learn",
+    "summary": "With your character picked, each rank's recipe list on the Trainers page now marks every recipe Known, Can learn or Needs <skill>, from your character's own profession skill and recipes, and says how many you can learn.",
+    "to": "/wow-forever/trainers"
+  },
+  {
+    "date": "2026-11-16",
     "title": "Help each other: enchants that suit your class",
     "summary": "The guild's Help each other tab now only suggests enchants your class uses, and picks the best one for you: Intellect or spell power for a Warlock, Strength for a Warrior, never +7 Strength gloves for a caster.",
     "to": "/wow-forever/topdeadcenter"
