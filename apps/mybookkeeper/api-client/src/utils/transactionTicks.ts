@@ -1,5 +1,5 @@
-import type { TransactionSelectionRef } from "@mybookkeeper/api-client/types/transaction/TransactionSelectionRef";
-import type { TransactionTicks } from "@/shared/types/transaction/transaction-ticks";
+import type { TransactionSelectionRef } from "../types/transaction/TransactionSelectionRef";
+import type { TransactionTicks } from "../types/transaction/TransactionTicks";
 
 export const NO_TICKS: TransactionTicks = { refs: {}, checkKey: null };
 

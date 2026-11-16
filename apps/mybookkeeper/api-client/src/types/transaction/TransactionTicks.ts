@@ -1,4 +1,4 @@
-import type { TransactionSelectionRef } from "@mybookkeeper/api-client/types/transaction/TransactionSelectionRef";
+import type { TransactionSelectionRef } from "./TransactionSelectionRef";
 
 /** The ticked rows of the transactions table, and what every one of them is known to match. */
 export interface TransactionTicks {

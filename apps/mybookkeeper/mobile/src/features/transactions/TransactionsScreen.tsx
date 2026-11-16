@@ -4,14 +4,15 @@ import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/properties
 import { useListTransactionPagesInfiniteQuery } from "@mybookkeeper/api-client/store/transactionsApi";
 import { Banner, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, SearchField, SegmentedControl, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { BANK_IMPORT_MESSAGES as IMPORT_MESSAGES } from "../../constants/bankImport";
 import { TRANSACTION_EXPORT_FORMATS, TRANSACTION_EXPORT_MESSAGES as EXPORT_MESSAGES } from "../../constants/transactionExport";
 import { TRANSACTION_PERIODS, TRANSACTION_VIEWS, UNASSIGNED_PROPERTY } from "../../constants/transactionFilters";
+import { TRANSACTION_SELECTION_MESSAGES as SELECTION_MESSAGES } from "../../constants/transactionSelection";
 import type { TransactionFilters } from "../../types/TransactionFilters";
 import { monthName } from "../../lib/localDate";
-import { useRowSelection } from "../../lib/useRowSelection";
+import { useRefetchCount } from "../../lib/useRefetchCount";
 import { useToday } from "../../lib/useToday";
 import { useCanWrite } from "../workspace/useCanWrite";
 import { categoryLabel, customRangeLabel, propertyLabel, sortLabel, taxFilterLabel } from "./transactionDisplay";
@@ -23,6 +24,7 @@ import TransactionRow from "./TransactionRow";
 import { useBulkApprove } from "./useBulkApprove";
 import { useBulkDeleteTransactions } from "./useBulkDeleteTransactions";
 import { useShareTransactionExport } from "./useShareTransactionExport";
+import { useTransactionSelection } from "./useTransactionSelection";
 import { useVendorSearch } from "./useVendorSearch";
 import TransactionsSkeleton, { TransactionSkeletonRow } from "./TransactionsSkeleton";
 
@@ -43,9 +45,7 @@ export default function TransactionsScreen({
   const [isExportSheetOpen, setIsExportSheetOpen] = useState(false);
   const [listThatFailedToLoadMore, setListThatFailedToLoadMore] = useState<string | null>(null);
 
-  const selection = useRowSelection();
   const bulk = useBulkApprove();
-  const { cancel: cancelSelection, keepOnly: keepSelected, drop: dropSelected } = selection;
   const bulkDelete = useBulkDeleteTransactions(settleSelection);
 
   const params = useMemo(() => toListParams(filters, today), [filters, today]);
@@ -53,6 +53,7 @@ export default function TransactionsScreen({
     currentData,
     error,
     fetchNextPage,
+    fulfilledTimeStamp,
     hasNextPage,
     isFetching,
     isFetchingNextPage,
@@ -68,11 +69,14 @@ export default function TransactionsScreen({
     await refetch();
   }, error);
 
-  // Ticks belong to the list they were made in.
-  useEffect(() => cancelSelection(), [listKey, cancelSelection]);
-
   const propertyNames = useMemo(() => new Map(properties.map((property) => [property.id, property.name])), [properties]);
   const rows = useMemo(() => currentData?.pages.flat() ?? [], [currentData]);
+  const rowsVersion = useRefetchCount(listKey, currentData ? fulfilledTimeStamp : undefined, currentData?.pages.length ?? 0);
+  // Loading the next page leaves the rows already shown as they are; any other fetch may change them.
+  const isRefetching = isFetching && !isFetchingNextPage;
+  const rowsStatus = useMemo(() => ({ isCurrent: !isRefetching, version: rowsVersion }), [isRefetching, rowsVersion]);
+  const selection = useTransactionSelection(rows, params, rowsStatus);
+  const { cancel: cancelSelection, drop: dropSelected } = selection;
 
   const filterCount = activeFilterCount(filters);
   const isNarrowed = filterCount > 0 || filters.vendor.trim() !== "";
@@ -96,11 +100,8 @@ export default function TransactionsScreen({
     .filter(Boolean)
     .join(" · ");
 
-  const selectedRows = useMemo(() => rows.filter((row) => selection.selected?.has(row.id)), [rows, selection.selected]);
-  // A tick never outlives its row: one that is gone after a refresh must not come back ticked.
-  const rowIds = useMemo(() => rows.map((row) => row.id), [rows]);
-  useEffect(() => keepSelected(rowIds), [rowIds, keepSelected]);
-  const approvableIds = selectedRows.filter(isBulkApprovable).map((row) => row.id);
+  const selectedIds = selection.selectedRefs.map((ref) => ref.id);
+  const approvableIds = selection.selectedRefs.filter(isBulkApprovable).map((ref) => ref.id);
 
   /** Done when nothing failed; otherwise only what went through is unticked, so everything else stays to try again. */
   function settleSelection(sentIds: readonly string[], failedIds: readonly string[]): void {
@@ -215,13 +216,15 @@ export default function TransactionsScreen({
               {canWrite && rows.length > 0 ? (
                 selection.isSelecting ? (
                   <LoadingButton
-                    accessibilityLabel="Select all the transactions shown"
-                    disabled={selectedRows.length === rows.length}
-                    onPress={() => selection.selectAll(rows.map((row) => row.id))}
+                    accessibilityLabel={SELECTION_MESSAGES.selectAllLabel}
+                    disabled={selection.isAllSelected}
+                    isLoading={selection.isSelectingAll}
+                    loadingText={SELECTION_MESSAGES.selectingAll}
+                    onPress={() => void selection.selectAll()}
                     style={{ flex: 1 }}
                     variant="secondary"
                   >
-                    Select all
+                    {SELECTION_MESSAGES.selectAll}
                   </LoadingButton>
                 ) : (
                   <LoadingButton accessibilityLabel="Select several transactions" onPress={() => selection.start()} style={{ flex: 1 }} variant="secondary">
@@ -243,7 +246,7 @@ export default function TransactionsScreen({
           </View>
         }
         data={rows}
-        extraData={selection.selected}
+        extraData={selection.ticks}
         keyExtractor={(transaction) => transaction.id}
         keyboardShouldPersistTaps="handled"
         onEndReached={() => {
@@ -253,10 +256,10 @@ export default function TransactionsScreen({
         refreshControl={refreshControl}
         renderItem={({ item }) => (
           <TransactionRow
-            isSelected={selection.selected ? selection.selected.has(item.id) : undefined}
-            onLongPress={canWrite ? () => selection.start(item.id) : undefined}
+            isSelected={selection.isSelected(item.id)}
+            onLongPress={canWrite ? () => selection.start(item) : undefined}
             onPress={() => {
-              if (selection.isSelecting) selection.toggle(item.id);
+              if (selection.isSelecting) selection.toggle(item);
               else router.push(filters.view === "review" ? reviewLink(item.id, filters) : `/transactions/${item.id}`);
             }}
             propertyName={item.property_id ? (propertyNames.get(item.property_id) ?? null) : null}
@@ -269,11 +272,12 @@ export default function TransactionsScreen({
         <TransactionSelectionBar
           approvableCount={approvableIds.length}
           isApproving={bulk.isApproving}
+          isChecking={selection.isChecking}
           isDeleting={bulkDelete.isDeleting}
           onApprove={approveSelected}
-          onDelete={() => bulkDelete.askToDelete(selectedRows.map((row) => row.id))}
+          onDelete={() => bulkDelete.askToDelete(selectedIds)}
           onCancel={selection.cancel}
-          selectedCount={selectedRows.length}
+          selectedCount={selectedIds.length}
         />
       ) : null}
       <OptionSheet

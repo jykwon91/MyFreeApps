@@ -106,21 +106,22 @@ describe("picking several transactions", () => {
     await renderScreen();
     await screen.findByText("Acme");
     await fireEvent.press(screen.getByRole("button", { name: "Select several transactions" }));
-    await fireEvent.press(screen.getByRole("button", { name: "Select all the transactions shown" }));
-    expect(screen.getByText("4 selected")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Select every transaction that matches" }));
+    expect(await screen.findByText("4 selected")).toBeTruthy();
     expect(screen.getByText(/2 of these can't be approved here/)).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Approve 2 selected" }));
     await screen.findByText("2 approved");
     expect(JSON.parse(String(bulkRequests(server.requests)[0]?.data))).toEqual({ ids: ["a", "b"] });
   });
 
-  it("disables Select all once everything shown is already selected", async () => {
+  it("disables Select all once everything that matches is already selected", async () => {
     startTransactionServer(waiting);
     await renderScreen();
     await screen.findByText("Acme");
     await fireEvent.press(screen.getByRole("button", { name: "Select several transactions" }));
-    await fireEvent.press(screen.getByRole("button", { name: "Select all the transactions shown" }));
-    expect(screen.getByRole("button", { name: "Select all the transactions shown" }).props.accessibilityState).toMatchObject({ disabled: true });
+    await fireEvent.press(screen.getByRole("button", { name: "Select every transaction that matches" }));
+    await screen.findByText("4 selected");
+    expect(screen.getByRole("button", { name: "Select every transaction that matches" }).props.accessibilityState).toMatchObject({ disabled: true });
   });
 
   it("can't approve when none of the selected can be", async () => {

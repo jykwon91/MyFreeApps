@@ -75,7 +75,8 @@ const deleteRequests = (requests: { url?: string; data?: unknown }[]) =>
 async function selectAll() {
   await screen.findByText("Acme");
   await fireEvent.press(screen.getByRole("button", { name: "Select several transactions" }));
-  await fireEvent.press(screen.getByRole("button", { name: "Select all the transactions shown" }));
+  await fireEvent.press(screen.getByRole("button", { name: "Select every transaction that matches" }));
+  await waitFor(() => expect(screen.queryByText("Selecting…")).toBeNull());
 }
 
 describe("deleting several transactions", () => {
