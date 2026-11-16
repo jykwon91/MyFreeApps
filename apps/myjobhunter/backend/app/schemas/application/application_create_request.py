@@ -22,7 +22,7 @@ from decimal import Decimal
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_serializer, model_validator
 
-from app.core.currency_code import CurrencyCode
+from app.core.currency_code import CURRENCY_CODE_LENGTH, CurrencyCode
 from app.core.enums import ApplicationSource, RemoteType, SalaryPeriod
 from app.core.job_description_limits import JD_TEXT_MAX_LEN
 
@@ -56,7 +56,7 @@ class ApplicationCreateRequest(BaseModel):
 
     posted_salary_min: Decimal | None = Field(default=None, ge=0)
     posted_salary_max: Decimal | None = Field(default=None, ge=0)
-    posted_salary_currency: CurrencyCode = "USD"
+    posted_salary_currency: CurrencyCode = Field(default="USD", max_length=CURRENCY_CODE_LENGTH)
     posted_salary_period: str | None = None
 
     location: str | None = Field(default=None, max_length=_LOCATION_MAX_LEN)

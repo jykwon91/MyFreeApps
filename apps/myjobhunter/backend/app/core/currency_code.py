@@ -13,6 +13,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator
 
+CURRENCY_CODE_LENGTH = 3
 _CURRENCY_CODE_RE = re.compile(r"^[A-Z]{3}$")
 
 

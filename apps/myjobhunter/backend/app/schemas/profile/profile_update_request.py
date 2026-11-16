@@ -9,7 +9,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.core.currency_code import CurrencyCode
+from app.core.currency_code import CURRENCY_CODE_LENGTH, CurrencyCode
 
 _WORK_AUTH_VALUES = frozenset({
     "citizen", "permanent_resident", "h1b", "tn", "opt", "other", "unknown",
@@ -28,7 +28,7 @@ class ProfileUpdateRequest(BaseModel):
     work_auth_status: str | None = Field(default=None)
     desired_salary_min: Decimal | None = None
     desired_salary_max: Decimal | None = None
-    salary_currency: CurrencyCode | None = None
+    salary_currency: CurrencyCode | None = Field(default=None, max_length=CURRENCY_CODE_LENGTH)
     salary_period: str | None = Field(default=None)
     locations: list[str] | None = Field(default=None, max_length=10)
     remote_preference: str | None = Field(default=None)

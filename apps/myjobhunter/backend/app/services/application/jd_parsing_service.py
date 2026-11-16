@@ -176,9 +176,7 @@ def _normalise(raw: dict) -> JdParseResult:
     raw_currency = _str_or_none(raw.get("salary_currency"))
     salary_currency = normalize_currency_code(raw_currency)
     if raw_currency and salary_currency is None:
-        logger.warning(
-            "jd_parse: dropping invalid salary_currency=%r (not ISO 4217)", raw_currency,
-        )
+        logger.warning("jd_parse: dropping salary_currency that is not an ISO 4217 code")
 
     raw_period = _str_or_none(raw.get("salary_period"))
     salary_period = _SALARY_PERIOD_MAP.get(raw_period or "", None)

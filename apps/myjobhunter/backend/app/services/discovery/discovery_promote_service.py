@@ -172,8 +172,8 @@ async def _create_application(
     if posted_salary_currency is None:
         if job.salary_currency:
             logger.warning(
-                "promote: invalid salary_currency, defaulting to USD user=%s job=%s value=%r",
-                user_id, job.id, job.salary_currency,
+                "promote: salary_currency is not an ISO 4217 code, defaulting to USD user=%s job=%s",
+                user_id, job.id,
             )
         posted_salary_currency = "USD"
 
