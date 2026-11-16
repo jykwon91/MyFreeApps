@@ -79,6 +79,29 @@ class TestPromoteHappyPath:
         assert job.saved_at is None
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("raw", "expected"), [("cad", "CAD"), ("CA$", "USD"), (None, "USD")],
+    )
+    async def test_salary_currency_is_normalized_and_numbers_kept(
+        self, user_factory, db: AsyncSession, raw: str | None, expected: str,
+    ) -> None:
+        """Invalid currency codes fall back to USD without dropping the salary."""
+        user = await user_factory()
+        user_id = uuid.UUID(user["id"])
+
+        job = _make_discovered_job(
+            user_id, salary_currency=raw, salary_min=17.5, salary_max=22.5,
+        )
+        db.add(job)
+        await db.flush()
+
+        application = await promote_discovered_job(db, user_id, job.id)
+
+        assert application.posted_salary_currency == expected
+        assert float(application.posted_salary_min) == 17.5
+        assert float(application.posted_salary_max) == 22.5
+
+    @pytest.mark.asyncio
     async def test_creates_company_when_missing(
         self, user_factory, db: AsyncSession,
     ) -> None:

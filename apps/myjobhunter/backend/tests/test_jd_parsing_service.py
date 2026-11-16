@@ -131,9 +131,18 @@ class TestNormalise:
         assert result.title is None
         assert result.company is None
 
-    def test_currency_trimmed_to_3_chars_and_uppercased(self) -> None:
-        result = _normalise({"salary_currency": "usd_extra"})
+    def test_currency_is_uppercased(self) -> None:
+        result = _normalise({"salary_currency": " usd "})
         assert result.salary_currency == "USD"
+
+    @pytest.mark.parametrize("bad", ["CA$", "usd_extra", "U$", "12A", "€"])
+    def test_invalid_currency_is_dropped_but_salary_kept(self, bad: str) -> None:
+        result = _normalise(
+            {"salary_currency": bad, "salary_min": 17.5, "salary_max": 22.5},
+        )
+        assert result.salary_currency is None
+        assert result.salary_min == 17.5
+        assert result.salary_max == 22.5
 
     def test_to_dict_roundtrip(self) -> None:
         raw = {

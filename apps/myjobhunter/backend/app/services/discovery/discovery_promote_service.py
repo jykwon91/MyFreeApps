@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.currency_code import normalize_currency_code
 from app.core.enums import PUBLISHER_TO_SOURCE
 from app.db.violated_constraint import violated_constraint_name
 from app.models.application.application import Application
@@ -167,13 +168,14 @@ async def _create_application(
         )
     role_title = (raw_title or "Untitled role")[:200]
 
-    raw_currency = job.salary_currency or ""
-    if len(raw_currency) > 3:
-        logger.warning(
-            "promote: salary_currency truncated user=%s job=%s value=%r",
-            user_id, job.id, raw_currency,
-        )
-    posted_salary_currency = (raw_currency or "USD")[:3].upper()
+    posted_salary_currency = normalize_currency_code(job.salary_currency)
+    if posted_salary_currency is None:
+        if job.salary_currency:
+            logger.warning(
+                "promote: invalid salary_currency, defaulting to USD user=%s job=%s value=%r",
+                user_id, job.id, job.salary_currency,
+            )
+        posted_salary_currency = "USD"
 
     company_name_raw = job.company_name or ""
     if not company_name_raw.strip():
