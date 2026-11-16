@@ -6,7 +6,7 @@ import { TAX_FIELD_LIMITS } from "@mybookkeeper/api-client/constants/taxFieldLim
 import { Banner, FormField, KeyboardAwareScroll, LoadingButton, SegmentedControl, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
-import { TAX_FIELD_OVERRIDE_ACTION, TAX_FIELD_OVERRIDE_MESSAGES as MESSAGES, TAX_FIELD_OVERRIDE_YES_NO } from "../../constants/taxFieldOverride";
+import { TAX_FIELD_NUMERIC_KEYBOARD, TAX_FIELD_OVERRIDE_ACTION, TAX_FIELD_OVERRIDE_MESSAGES as MESSAGES, TAX_FIELD_OVERRIDE_YES_NO } from "../../constants/taxFieldOverride";
 import type { TaxFieldOverrideAction } from "../../types/TaxFieldOverrideAction";
 import { useOverrideTaxField } from "./useOverrideTaxField";
 
@@ -49,7 +49,7 @@ export default function TaxFieldOverrideForm({ returnId, field }: { returnId: st
         <FormField
           editable={!locked}
           error={problems.number}
-          keyboardType={field.type === "numeric" ? "decimal-pad" : "default"}
+          keyboardType={field.type === "numeric" ? TAX_FIELD_NUMERIC_KEYBOARD : "default"}
           label={MESSAGES.valueLabel}
           maxLength={field.type === "text" ? TAX_FIELD_LIMITS.textMaxLength : undefined}
           onChangeText={(value) => {

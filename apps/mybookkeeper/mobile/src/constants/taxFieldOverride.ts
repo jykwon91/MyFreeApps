@@ -32,4 +32,7 @@ export const TAX_FIELD_OVERRIDE_YES_NO = [
   { value: "false", label: TAX_FIELD_OVERRIDE_MESSAGES.no },
 ];
 
+/** Tax fields can be negative (a loss), and iOS's decimal pad has no minus key, so numbers get the keyboard that does. */
+export const TAX_FIELD_NUMERIC_KEYBOARD = "numbers-and-punctuation" as const;
+
 export const TAX_FIELD_OVERRIDE_ACTION = { save: "save", clear: "clear" } as const;
