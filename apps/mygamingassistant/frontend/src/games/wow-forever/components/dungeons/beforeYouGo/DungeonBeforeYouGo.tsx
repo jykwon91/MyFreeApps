@@ -1,11 +1,10 @@
-import { Download, ListChecks, Map as MapIcon, RotateCcw } from "lucide-react";
+import { ListChecks, Map as MapIcon, RotateCcw } from "lucide-react";
 import { useRef } from "react";
 import { Link } from "react-router-dom";
 import BattleNetQuestsLine from "@/games/wow-forever/components/dungeons/beforeYouGo/BattleNetQuestsLine";
 import QuestLineCard from "@/games/wow-forever/components/dungeons/beforeYouGo/QuestLineCard";
 import { DETAIL_LINK, DETAIL_SECTION } from "@/games/wow-forever/components/food/detail/detailStyles";
 import ProvenanceBadge from "@/games/wow-forever/components/shared/ProvenanceBadge";
-import { DUNGEON_QUESTS_ADDON_PATH } from "@/games/wow-forever/data/dungeonQuestsAddon/dungeonQuestsAddonLink";
 import { BEFORE_YOU_GO_COPY } from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
 import { NO_QUESTS } from "@/games/wow-forever/data/dungeons/questProgressConfig";
 import { useBattleNetQuests } from "@/games/wow-forever/hooks/useBattleNetQuests";
@@ -83,12 +82,6 @@ export default function DungeonBeforeYouGo({ dungeon, zones }: DungeonBeforeYouG
           {BEFORE_YOU_GO_COPY.clear}
         </button>
       ) : null}
-      <p className="text-sm">
-        <Link to={DUNGEON_QUESTS_ADDON_PATH} className={DETAIL_LINK} data-testid="dungeon-quests-addon-link">
-          <Download className="h-4 w-4" aria-hidden />
-          {BEFORE_YOU_GO_COPY.addon}
-        </Link>
-      </p>
     </section>
   );
 }
