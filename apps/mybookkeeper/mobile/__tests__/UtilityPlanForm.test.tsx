@@ -208,7 +208,7 @@ describe("adding a utility plan", () => {
     await show(<UtilityPlanFormScreen />);
     await pickOakStreet();
     await fireEvent.changeText(screen.getByLabelText(new RegExp(`^${MESSAGES.provider}`)), "Reliant");
-    await fireEvent(screen.getByLabelText(MESSAGES.hasBillCredit), "valueChange", true);
+    await fireEvent.press(screen.getByLabelText(MESSAGES.hasBillCredit));
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveNew }));
     expect(await screen.findAllByText(/credit/i)).not.toHaveLength(0);
     expect(writesTo(server, "post")).toHaveLength(0);

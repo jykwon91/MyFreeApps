@@ -287,7 +287,7 @@ describe("UtilityPlansScreen", () => {
     await show(<UtilityPlansScreen />);
     await screen.findByText("Oak Street · Water");
     await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.filterButton }));
-    await fireEvent(await screen.findByLabelText(UTILITY_PLAN_MESSAGES.needsRenewing), "valueChange", true);
+    await fireEvent.press(await screen.findByLabelText(UTILITY_PLAN_MESSAGES.needsRenewing));
     await fireEvent.press(screen.getByRole("button", { name: UTILITY_PLAN_MESSAGES.filterDone }));
     expect(screen.queryByText("Oak Street · Electricity")).toBeNull();
     expect(screen.getByText("Oak Street · Water")).toBeTruthy();

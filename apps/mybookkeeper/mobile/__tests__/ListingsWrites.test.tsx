@@ -240,7 +240,7 @@ describe("adding a listing", () => {
     await show(<ListingCreateScreen />);
     await fillRequired();
     await fireEvent.changeText(screen.getByLabelText(FORM.amenities), "wifi, , smart lock");
-    await fireEvent(screen.getByLabelText(FORM.pets), "valueChange", true);
+    await fireEvent.press(screen.getByLabelText(FORM.pets));
     await fireEvent.changeText(screen.getByLabelText(FORM.petDisclosure), "A friendly dog");
     await fireEvent.press(button(FORM.add));
     await screen.findByText(FORM.added);

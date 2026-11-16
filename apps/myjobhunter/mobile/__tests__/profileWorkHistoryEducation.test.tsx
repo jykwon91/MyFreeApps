@@ -108,7 +108,7 @@ describe("work history", () => {
     await pickDate(WORK.startLabel, new Date(2019, 5, 10));
     await pickDate(WORK.endLabel, new Date(2022, 0, 31));
 
-    await fireEvent(screen.getByLabelText(WORK.currentLabel), "valueChange", true);
+    await fireEvent.press(screen.getByLabelText(WORK.currentLabel));
     expect(screen.queryByText(WORK.endLabel)).toBeNull();
     await fireEvent.press(screen.getByRole("button", { name: WORK.create }));
 

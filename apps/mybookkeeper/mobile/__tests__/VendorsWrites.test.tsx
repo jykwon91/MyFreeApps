@@ -124,11 +124,11 @@ describe("a vendor's own screen", () => {
   it("stars and unstars a vendor, saying so each time", async () => {
     const server = serverWith();
     await show(<VendorDetailScreen id="v1" />);
-    await fireEvent(await screen.findByLabelText(VENDOR_MESSAGES.preferred), "valueChange", true);
+    await fireEvent.press(await screen.findByLabelText(VENDOR_MESSAGES.preferred));
     await screen.findByText(VENDOR_MESSAGES.markedPreferred);
     expect(writesOf(server, "patch")).toEqual([{ url: "/vendors/v1", body: { preferred: true } }]);
-    await waitFor(() => expect(screen.getByLabelText(VENDOR_MESSAGES.preferred).props.value).toBe(true));
-    await fireEvent(screen.getByLabelText(VENDOR_MESSAGES.preferred), "valueChange", false);
+    await waitFor(() => expect(screen.getByLabelText(VENDOR_MESSAGES.preferred).props.accessibilityState.checked).toBe(true));
+    await fireEvent.press(screen.getByLabelText(VENDOR_MESSAGES.preferred));
     await screen.findByText(VENDOR_MESSAGES.unmarkedPreferred);
     expect(writesOf(server, "patch")[1].body).toEqual({ preferred: false });
   });
@@ -138,8 +138,8 @@ describe("a vendor's own screen", () => {
     await show(<VendorDetailScreen id="v1" />);
     const row = await screen.findByLabelText(VENDOR_MESSAGES.preferred);
     holdWrites();
-    await fireEvent(row, "valueChange", true);
-    await fireEvent(row, "valueChange", true);
+    await fireEvent.press(row);
+    await fireEvent.press(row);
     expect(screen.getByRole("button", { name: VENDOR_MESSAGES.edit }).props.accessibilityState.disabled).toBe(true);
     expect(writesOf(server, "patch")).toHaveLength(0);
   });
@@ -149,9 +149,9 @@ describe("a vendor's own screen", () => {
     await show(<VendorDetailScreen id="v1" />);
     const row = await screen.findByLabelText(VENDOR_MESSAGES.preferred);
     server.failWritesWith = 500;
-    await fireEvent(row, "valueChange", true);
+    await fireEvent.press(row);
     await screen.findByText("I couldn't save that. Want to try again?");
-    expect(screen.getByLabelText(VENDOR_MESSAGES.preferred).props.value).toBe(false);
+    expect(screen.getByLabelText(VENDOR_MESSAGES.preferred).props.accessibilityState.checked).toBe(false);
   });
 
   it("asks before deleting, and does nothing if cancelled", async () => {
@@ -293,7 +293,7 @@ describe("adding a vendor", () => {
     await fireEvent.changeText(screen.getByLabelText("Address"), "9 Wire Way");
     await fireEvent.changeText(screen.getByLabelText(FORM.hourlyRate), "85.50");
     await fireEvent.changeText(screen.getByLabelText(FORM.flatRates), "Flat $100 for an outlet");
-    await fireEvent(screen.getByLabelText(FORM.preferred), "valueChange", true);
+    await fireEvent.press(screen.getByLabelText(FORM.preferred));
     await fireEvent.changeText(screen.getByLabelText("Notes"), "Ask for Priya");
     await fireEvent.press(button(FORM.add));
     await screen.findByText(FORM.added);
