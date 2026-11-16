@@ -18,6 +18,9 @@ import { aUtilityPlanDetail } from "../test-support/aUtilityPlanDetail";
 import { holdWrites } from "../test-support/holdWrites";
 import { startUtilityServer, writesTo } from "../test-support/utilityPlansServer";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 const mockBack = jest.fn();
 const mockPush = jest.fn();
 const mockPreventRemove = { active: false };
@@ -35,6 +38,7 @@ jest.mock("@react-native-community/datetimepicker", () => {
 const originalAdapter = api.defaults.adapter;
 
 beforeEach(() => {
+  mockDecimalSeparator = ".";
   session.tokenStore.set("token");
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen("w1"));
@@ -102,6 +106,23 @@ describe("adding a utility plan", () => {
       monthly_base_charge_cents: 495,
     });
     expect(await screen.findByText(MESSAGES.added)).toBeTruthy();
+  });
+
+  it("saves a base charge typed with a decimal comma as 1250 cents, and shows the comma in the refusal example", async () => {
+    mockDecimalSeparator = ",";
+    const server = startUtilityServer();
+    await show(<UtilityPlanFormScreen />);
+    await pickOakStreet();
+    await fireEvent.changeText(screen.getByLabelText(new RegExp(`^${MESSAGES.provider}`)), "Reliant");
+    const base = screen.getByLabelText(new RegExp(`^${MESSAGES.monthlyBase.replace(/[()$]/g, "\\$&")}`));
+    await fireEvent.changeText(base, "12,50x");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveNew }));
+    expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.notDollars(","))).toBeTruthy();
+    expect(writesTo(server, "post")).toHaveLength(0);
+    await fireEvent.changeText(base, "12,50");
+    await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveNew }));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(JSON.parse(String(writesTo(server, "post")[0].data))).toMatchObject({ monthly_base_charge_cents: 1250 });
   });
 
   it("guards leaving once something changed", async () => {
@@ -212,7 +233,7 @@ describe("editing a utility plan", () => {
     expect(fee.props.value).toBe("150.00");
     await fireEvent.changeText(fee, "1.50.");
     await fireEvent.press(screen.getByRole("button", { name: MESSAGES.saveEdit }));
-    expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.notDollars)).toBeTruthy();
+    expect(await screen.findByText(UTILITY_PLAN_FORM_PROBLEMS.notDollars("."))).toBeTruthy();
     expect(writesTo(server, "patch")).toHaveLength(0);
     expect(mockBack).not.toHaveBeenCalled();
   });

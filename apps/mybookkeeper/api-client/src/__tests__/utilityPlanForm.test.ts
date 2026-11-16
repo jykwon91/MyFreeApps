@@ -163,7 +163,7 @@ describe("toUtilityPlanFormValues", () => {
 describe("toUtilityPlanFields", () => {
   it("round-trips a saved plan back to the same values", () => {
     const plan = makeDetail();
-    const payload = toUtilityPlanFields(toUtilityPlanFormValues(plan));
+    const payload = toUtilityPlanFields(toUtilityPlanFormValues(plan), ".");
 
     expect(payload.provider_name).toBe(plan.provider_name);
     expect(payload.plan_name).toBe(plan.plan_name);
@@ -176,7 +176,7 @@ describe("toUtilityPlanFields", () => {
   });
 
   it("sends rates as strings so precision survives the JSON boundary", () => {
-    const payload = toUtilityPlanFields(toUtilityPlanFormValues(makeDetail()));
+    const payload = toUtilityPlanFields(toUtilityPlanFormValues(makeDetail()), ".");
 
     expect(payload.tdu_charge_cents_per_kwh).toBe("5.3509");
     expect(typeof payload.tdu_charge_cents_per_kwh).toBe("string");
@@ -188,7 +188,7 @@ describe("toUtilityPlanFields", () => {
    * and this form still has no input for it.
    */
   it("omits the fields the form does not edit rather than nulling them", () => {
-    const payload = toUtilityPlanFields(toUtilityPlanFormValues(makeDetail()));
+    const payload = toUtilityPlanFields(toUtilityPlanFormValues(makeDetail()), ".");
 
     expect(payload).not.toHaveProperty("notes");
     expect(payload).not.toHaveProperty("property_id");
@@ -197,7 +197,7 @@ describe("toUtilityPlanFields", () => {
   it("round-trips the minimum-usage terms it now edits", () => {
     // Previously omitted so a PATCH couldn't erase them. Now that the form
     // holds them, a save must carry them back unchanged.
-    const payload = toUtilityPlanFields(toUtilityPlanFormValues(makeDetail()));
+    const payload = toUtilityPlanFields(toUtilityPlanFormValues(makeDetail()), ".");
 
     expect(payload.min_usage_fee_cents).toBe(0);
     expect(payload.min_usage_threshold_kwh).toBe(999);
@@ -214,7 +214,7 @@ describe("toUtilityPlanFields", () => {
           upload_mbps: 35,
           data_cap_gb: 1200,
         }),
-      ),
+      ), ".",
     );
 
     expect(payload.post_promo_monthly_cents).toBe(8999);
@@ -239,14 +239,14 @@ describe("toUtilityPlanFields", () => {
       downloadMbps: "1000",
       termEndDate: "2027-02-17",
       postPromoMonthly: "89.99",
-    });
+    }, ".");
 
     expect(payload.download_mbps).toBe(1000);
     expect(payload.post_promo_monthly_cents).toBe(8999);
   });
 
   it("turns an untouched optional field into null, not an empty string", () => {
-    const payload = toUtilityPlanFields(EMPTY_UTILITY_PLAN_FORM);
+    const payload = toUtilityPlanFields(EMPTY_UTILITY_PLAN_FORM, ".");
 
     expect(payload.plan_name).toBeNull();
     expect(payload.account_number).toBeNull();
@@ -263,7 +263,7 @@ describe("toUtilityPlanFields", () => {
       providerName: "Reliant",
       monthlyBase: "4.39",
       etf: "150",
-    });
+    }, ".");
 
     expect(payload.monthly_base_charge_cents).toBe(439);
     expect(payload.early_termination_fee_cents).toBe(15000);
@@ -278,7 +278,7 @@ describe("toUtilityPlanFields", () => {
       hasBillCredit: false,
       billCreditAmount: "35",
       billCreditThreshold: "1000",
-    });
+    }, ".");
 
     expect(payload.has_bill_credit).toBe(false);
     expect(payload.bill_credit_amount_cents).toBeNull();
@@ -290,7 +290,7 @@ describe("toUtilityPlanFields", () => {
       ...EMPTY_UTILITY_PLAN_FORM,
       providerName: "  Constellation  ",
       planName: "  12 Month Fixed  ",
-    });
+    }, ".");
 
     expect(payload.provider_name).toBe("Constellation");
     expect(payload.plan_name).toBe("12 Month Fixed");
@@ -301,91 +301,133 @@ describe("utilityPlanFormProblems", () => {
   const valid = { ...EMPTY_UTILITY_PLAN_FORM, providerName: "Reliant" };
 
   it("finds nothing wrong with a named provider and nothing else", () => {
-    expect(utilityPlanFormProblems(valid)).toEqual({});
+    expect(utilityPlanFormProblems(valid, ".")).toEqual({});
   });
 
   it("points at the provider field when it is blank", () => {
-    expect(Object.keys(utilityPlanFormProblems({ ...valid, providerName: "   " }))).toEqual(["providerName"]);
+    expect(Object.keys(utilityPlanFormProblems({ ...valid, providerName: "   " }, "."))).toEqual(["providerName"]);
   });
 
   it("wants both halves of a bill credit", () => {
-    const problems = utilityPlanFormProblems({ ...valid, hasBillCredit: true, billCreditAmount: "50", billCreditThreshold: "" });
+    const problems = utilityPlanFormProblems({ ...valid, hasBillCredit: true, billCreditAmount: "50", billCreditThreshold: "" }, ".");
     expect(Object.keys(problems)).toEqual(["billCreditThreshold"]);
   });
 
   it("ignores a blank credit when no credit is claimed", () => {
-    expect(utilityPlanFormProblems({ ...valid, hasBillCredit: false, billCreditAmount: "" })).toEqual({});
+    expect(utilityPlanFormProblems({ ...valid, hasBillCredit: false, billCreditAmount: "" }, ".")).toEqual({});
   });
 
   it("rejects a price step that has no end date to announce it", () => {
-    expect(Object.keys(utilityPlanFormProblems({ ...valid, postPromoMonthly: "99", termEndDate: "" }))).toEqual(["termEndDate"]);
-    expect(utilityPlanFormProblems({ ...valid, postPromoMonthly: "99", termEndDate: "2027-01-01" })).toEqual({});
+    expect(Object.keys(utilityPlanFormProblems({ ...valid, postPromoMonthly: "99", termEndDate: "" }, "."))).toEqual(["termEndDate"]);
+    expect(utilityPlanFormProblems({ ...valid, postPromoMonthly: "99", termEndDate: "2027-01-01" }, ".")).toEqual({});
   });
 
   it("rejects zero for a speed or cap but accepts blank", () => {
-    expect(Object.keys(utilityPlanFormProblems({ ...valid, downloadMbps: "0", dataCapGb: "-1" })).sort()).toEqual(["dataCapGb", "downloadMbps"]);
-    expect(utilityPlanFormProblems({ ...valid, downloadMbps: "" })).toEqual({});
+    expect(Object.keys(utilityPlanFormProblems({ ...valid, downloadMbps: "0", dataCapGb: "-1" }, ".")).sort()).toEqual(["dataCapGb", "downloadMbps"]);
+    expect(utilityPlanFormProblems({ ...valid, downloadMbps: "" }, ".")).toEqual({});
   });
 
   it("flags an unreadable dollar amount on its own field, instead of letting it become null and wipe the stored figure", () => {
-    const problems = utilityPlanFormProblems({ ...valid, etf: "1.50." });
-    expect(problems).toEqual({ etf: UTILITY_PLAN_FORM_PROBLEMS.notDollars });
-    expect(toUtilityPlanFields({ ...valid, etf: "1.50." }).early_termination_fee_cents).toBeNull();
+    const problems = utilityPlanFormProblems({ ...valid, etf: "1.50." }, ".");
+    expect(problems).toEqual({ etf: UTILITY_PLAN_FORM_PROBLEMS.notDollars(".") });
+    expect(toUtilityPlanFields({ ...valid, etf: "1.50." }, ".").early_termination_fee_cents).toBeNull();
   });
 
   it.each(["monthlyBase", "etf", "minUsageFee", "postPromoMonthly", "equipmentFeeMonthly"] as const)("flags a %s that is not a dollar amount", (field) => {
-    const problems = utilityPlanFormProblems({ ...valid, termEndDate: "2027-01-01", [field]: "abc" });
-    expect(problems[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.notDollars);
+    const problems = utilityPlanFormProblems({ ...valid, termEndDate: "2027-01-01", [field]: "abc" }, ".");
+    expect(problems[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.notDollars("."));
   });
 
   it.each(["energyCharge", "tduCharge", "avgPrice"] as const)("flags a %s that is not a rate, or has more than four decimals", (field) => {
-    expect(utilityPlanFormProblems({ ...valid, [field]: "11.5." })[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.notRate);
-    expect(utilityPlanFormProblems({ ...valid, [field]: "5.35091" })[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.notRate);
-    expect(utilityPlanFormProblems({ ...valid, [field]: "5.3509" })[field]).toBeUndefined();
+    expect(utilityPlanFormProblems({ ...valid, [field]: "11.5." }, ".")[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.notRate);
+    expect(utilityPlanFormProblems({ ...valid, [field]: "5.35091" }, ".")[field]).toBe(UTILITY_PLAN_FORM_PROBLEMS.notRate);
+    expect(utilityPlanFormProblems({ ...valid, [field]: "5.3509" }, ".")[field]).toBeUndefined();
   });
 
   it("flags a bill credit pair that cannot be read, only while the credit is claimed", () => {
     const unreadable = { ...valid, billCreditAmount: "5o", billCreditThreshold: "1,000" };
-    expect(utilityPlanFormProblems({ ...unreadable, hasBillCredit: true })).toEqual({
-      billCreditAmount: UTILITY_PLAN_FORM_PROBLEMS.notDollars,
+    expect(utilityPlanFormProblems({ ...unreadable, hasBillCredit: true }, ".")).toEqual({
+      billCreditAmount: UTILITY_PLAN_FORM_PROBLEMS.notDollars("."),
       billCreditThreshold: UTILITY_PLAN_FORM_PROBLEMS.notWholeNumber,
     });
-    expect(utilityPlanFormProblems({ ...unreadable, hasBillCredit: false })).toEqual({});
+    expect(utilityPlanFormProblems({ ...unreadable, hasBillCredit: false }, ".")).toEqual({});
   });
 
   it("flags a whole-number field that holds a decimal or letters", () => {
-    expect(utilityPlanFormProblems({ ...valid, minUsageThreshold: "1.5" }).minUsageThreshold).toBe(UTILITY_PLAN_FORM_PROBLEMS.notWholeNumber);
-    expect(utilityPlanFormProblems({ ...valid, downloadMbps: "fast" }).downloadMbps).toBe(UTILITY_PLAN_FORM_PROBLEMS.notWholeNumber);
+    expect(utilityPlanFormProblems({ ...valid, minUsageThreshold: "1.5" }, ".").minUsageThreshold).toBe(UTILITY_PLAN_FORM_PROBLEMS.notWholeNumber);
+    expect(utilityPlanFormProblems({ ...valid, downloadMbps: "fast" }, ".").downloadMbps).toBe(UTILITY_PLAN_FORM_PROBLEMS.notWholeNumber);
   });
 
   it("keeps the term between 1 and 600 months", () => {
-    expect(utilityPlanFormProblems({ ...valid, termMonths: "0" }).termMonths).toBe(UTILITY_PLAN_FORM_PROBLEMS.termOutOfRange);
-    expect(utilityPlanFormProblems({ ...valid, termMonths: "601" }).termMonths).toBe(UTILITY_PLAN_FORM_PROBLEMS.termOutOfRange);
-    expect(utilityPlanFormProblems({ ...valid, termMonths: "12.5" }).termMonths).toBe(UTILITY_PLAN_FORM_PROBLEMS.notWholeNumber);
-    expect(utilityPlanFormProblems({ ...valid, termMonths: "1" }).termMonths).toBeUndefined();
-    expect(utilityPlanFormProblems({ ...valid, termMonths: "600" }).termMonths).toBeUndefined();
+    expect(utilityPlanFormProblems({ ...valid, termMonths: "0" }, ".").termMonths).toBe(UTILITY_PLAN_FORM_PROBLEMS.termOutOfRange);
+    expect(utilityPlanFormProblems({ ...valid, termMonths: "601" }, ".").termMonths).toBe(UTILITY_PLAN_FORM_PROBLEMS.termOutOfRange);
+    expect(utilityPlanFormProblems({ ...valid, termMonths: "12.5" }, ".").termMonths).toBe(UTILITY_PLAN_FORM_PROBLEMS.notWholeNumber);
+    expect(utilityPlanFormProblems({ ...valid, termMonths: "1" }, ".").termMonths).toBeUndefined();
+    expect(utilityPlanFormProblems({ ...valid, termMonths: "600" }, ".").termMonths).toBeUndefined();
   });
 
   it("rejects a term that ends before the service starts, and accepts the same day", () => {
     const form = { ...valid, serviceStartDate: "2026-02-01" };
-    expect(utilityPlanFormProblems({ ...form, termEndDate: "2026-01-31" }).termEndDate).toBe(UTILITY_PLAN_FORM_PROBLEMS.endBeforeStart);
-    expect(utilityPlanFormProblems({ ...form, termEndDate: "2026-02-01" }).termEndDate).toBeUndefined();
-    expect(utilityPlanFormProblems({ ...valid, termEndDate: "2026-01-31" }).termEndDate).toBeUndefined();
+    expect(utilityPlanFormProblems({ ...form, termEndDate: "2026-01-31" }, ".").termEndDate).toBe(UTILITY_PLAN_FORM_PROBLEMS.endBeforeStart);
+    expect(utilityPlanFormProblems({ ...form, termEndDate: "2026-02-01" }, ".").termEndDate).toBeUndefined();
+    expect(utilityPlanFormProblems({ ...valid, termEndDate: "2026-01-31" }, ".").termEndDate).toBeUndefined();
   });
 
   it("rejects a rate above the server's ceiling, which is dollars entered where cents belong", () => {
-    expect(utilityPlanFormProblems({ ...valid, energyCharge: "1000" }).energyCharge).toBe(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh);
-    expect(utilityPlanFormProblems({ ...valid, tduCharge: "999.9999" }).tduCharge).toBeUndefined();
-    expect(utilityPlanFormProblems({ ...valid, avgPrice: "1500.5" }).avgPrice).toBe(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh);
+    expect(utilityPlanFormProblems({ ...valid, energyCharge: "1000" }, ".").energyCharge).toBe(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh);
+    expect(utilityPlanFormProblems({ ...valid, tduCharge: "999.9999" }, ".").tduCharge).toBeUndefined();
+    expect(utilityPlanFormProblems({ ...valid, avgPrice: "1500.5" }, ".").avgPrice).toBe(UTILITY_PLAN_FORM_PROBLEMS.rateTooHigh);
   });
 
   it("rejects a speed above the server's ceiling but not a data cap", () => {
-    expect(utilityPlanFormProblems({ ...valid, downloadMbps: "100001" }).downloadMbps).toBe(UTILITY_PLAN_FORM_PROBLEMS.speedTooHigh);
-    expect(utilityPlanFormProblems({ ...valid, uploadMbps: "100000" }).uploadMbps).toBeUndefined();
-    expect(utilityPlanFormProblems({ ...valid, dataCapGb: "5000000" }).dataCapGb).toBeUndefined();
+    expect(utilityPlanFormProblems({ ...valid, downloadMbps: "100001" }, ".").downloadMbps).toBe(UTILITY_PLAN_FORM_PROBLEMS.speedTooHigh);
+    expect(utilityPlanFormProblems({ ...valid, uploadMbps: "100000" }, ".").uploadMbps).toBeUndefined();
+    expect(utilityPlanFormProblems({ ...valid, dataCapGb: "5000000" }, ".").dataCapGb).toBeUndefined();
   });
 
   it("accepts every value the edit form seeds from a saved plan", () => {
-    expect(utilityPlanFormProblems(toUtilityPlanFormValues(makeDetail()))).toEqual({});
+    expect(utilityPlanFormProblems(toUtilityPlanFormValues(makeDetail()), ".")).toEqual({});
+  });
+
+  describe("money typed the way each phone types it", () => {
+    const DOLLAR_FIELD_CENTS = {
+      monthlyBase: "monthly_base_charge_cents",
+      etf: "early_termination_fee_cents",
+      minUsageFee: "min_usage_fee_cents",
+      postPromoMonthly: "post_promo_monthly_cents",
+      equipmentFeeMonthly: "equipment_fee_monthly_cents",
+    } as const;
+
+    it.each(Object.keys(DOLLAR_FIELD_CENTS) as (keyof typeof DOLLAR_FIELD_CENTS)[])("reads %s on a decimal-comma phone", (field) => {
+      const form = { ...valid, termEndDate: "2027-01-01", [field]: "12,50" };
+      expect(utilityPlanFormProblems(form, ",")).toEqual({});
+      expect(toUtilityPlanFields(form, ",")[DOLLAR_FIELD_CENTS[field]]).toBe(1250);
+    });
+
+    it("reads a pasted $1,250.00 on a decimal-point phone and 1.250,50 on a decimal-comma phone", () => {
+      expect(utilityPlanFormProblems({ ...valid, etf: "$1,250.00" }, ".")).toEqual({});
+      expect(toUtilityPlanFields({ ...valid, etf: "$1,250.00" }, ".").early_termination_fee_cents).toBe(125000);
+      expect(toUtilityPlanFields({ ...valid, etf: "1.250,50" }, ",").early_termination_fee_cents).toBe(125050);
+    });
+
+    it("refuses a comma amount it could misread on a decimal-point phone, naming the device separator", () => {
+      expect(utilityPlanFormProblems({ ...valid, etf: "1.250" }, ".").etf).toBe(UTILITY_PLAN_FORM_PROBLEMS.notDollars("."));
+      expect(utilityPlanFormProblems({ ...valid, etf: "abc" }, ",").etf).toBe("Enter a dollar amount, like 150,00.");
+    });
+
+    it("says a negative dollar amount is negative, and still refuses it", () => {
+      expect(utilityPlanFormProblems({ ...valid, etf: "-5" }, ".").etf).toBe(UTILITY_PLAN_FORM_PROBLEMS.negativeDollars);
+    });
+
+    it("checks the bill credit amount the same way, only while the credit is claimed", () => {
+      const credit = { ...valid, hasBillCredit: true, billCreditAmount: "50,25", billCreditThreshold: "1000" };
+      expect(utilityPlanFormProblems(credit, ",")).toEqual({});
+      expect(toUtilityPlanFields(credit, ",").bill_credit_amount_cents).toBe(5025);
+    });
+
+    it("round-trips a saved plan on a decimal-comma phone", () => {
+      const plan = makeDetail();
+      expect(toUtilityPlanFields(toUtilityPlanFormValues(plan), ",")).toEqual(toUtilityPlanFields(toUtilityPlanFormValues(plan), "."));
+    });
   });
 });

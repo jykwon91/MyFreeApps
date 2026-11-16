@@ -5,6 +5,7 @@ import { toUtilityPlanFields } from "@mybookkeeper/api-client/utils/utilityPlanF
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useCreateUtilityPlanMutation } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import type { UtilityPlanDraft } from "@mybookkeeper/api-client/types/utility/utility-plan-draft";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import UtilityPlanDocumentReader from "./UtilityPlanDocumentReader";
 import UtilityPlanDraftNotices from "./UtilityPlanDraftNotices";
@@ -44,7 +45,7 @@ export default function AddUtilityPlanDialog({ onClose }: AddUtilityPlanDialogPr
     try {
       await createPlan({
         property_id: propertyId,
-        ...toUtilityPlanFields(values),
+        ...toUtilityPlanFields(values, NUMBER_INPUT_DECIMAL_SEPARATOR),
         // Recorded only when the form was actually seeded from a document, so
         // the saved plan points back at what it was read from.
         ...(draft ? { source_document_id: draft.source_document_id } : {}),

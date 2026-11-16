@@ -2,6 +2,7 @@ import {
   toUtilityPlanFields,
   toUtilityPlanFormValues,
 } from "@mybookkeeper/api-client/utils/utilityPlanForm";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 import { showError, showSuccess } from "@platform/ui";
 import { useUpdateUtilityPlanMutation } from "@mybookkeeper/api-client/store/utilityPlansApi";
 import type { UtilityPlanDetail } from "@mybookkeeper/api-client/types/utility/utility-plan-detail";
@@ -37,7 +38,7 @@ export default function EditUtilityPlanForm({
     if (!passes()) return;
 
     try {
-      await updatePlan({ planId: plan.id, data: toUtilityPlanFields(values) }).unwrap();
+      await updatePlan({ planId: plan.id, data: toUtilityPlanFields(values, NUMBER_INPUT_DECIMAL_SEPARATOR) }).unwrap();
       showSuccess("Utility plan updated.");
       onSaved();
     } catch {

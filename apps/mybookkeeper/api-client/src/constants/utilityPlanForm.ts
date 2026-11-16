@@ -1,3 +1,5 @@
+import type { DecimalSeparator } from "@platform/core/types/text/decimal-separator";
+
 export const UTILITY_PLAN_TERM_MONTHS_MIN = 1;
 export const UTILITY_PLAN_TERM_MONTHS_MAX = 600;
 /** The backend keeps a rate to four decimal places; more would be rejected or rounded. */
@@ -12,7 +14,8 @@ export const UTILITY_PLAN_FORM_PROBLEMS = {
   billCreditIncomplete: "A bill credit needs both an amount and a usage threshold.",
   postPromoNeedsEnd: "A post-promo price needs the date the promo ends.",
   notPositive: "Speeds and data caps must be more than zero.",
-  notDollars: "Enter a dollar amount, like 150.00.",
+  notDollars: (decimalSeparator: DecimalSeparator) => `Enter a dollar amount, like 150${decimalSeparator}00.`,
+  negativeDollars: "A dollar amount can't be negative.",
   notRate: `Enter a rate in cents, like 11.5, with at most ${UTILITY_PLAN_RATE_MAX_DECIMALS} decimal places.`,
   rateTooHigh: `A rate is in cents and can't be more than ${UTILITY_PLAN_RATE_MAX_CENTS}. Did you enter dollars?`,
   speedTooHigh: `A speed can't be more than ${UTILITY_PLAN_MBPS_MAX.toLocaleString("en-US")} Mbps.`,
