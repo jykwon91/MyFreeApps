@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Briefcase } from "lucide-react";
 import {
@@ -6,6 +6,7 @@ import {
   LoginForm,
   LoadingButton,
   TurnstileWidget,
+  useTurnstileToken,
   describeAuthError,
   isUnverifiedLoginError,
   useIsAuthenticated,
@@ -56,13 +57,7 @@ export default function Login() {
   // renders nothing when VITE_TURNSTILE_SITE_KEY is unset (dev/CI),
   // and registration proceeds without the header — backend's
   // require_turnstile dependency short-circuits in that case.
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const handleTurnstileVerify = useCallback((token: string) => {
-    setTurnstileToken(token);
-  }, []);
-  const handleTurnstileExpire = useCallback(() => {
-    setTurnstileToken("");
-  }, []);
+  const turnstile = useTurnstileToken();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -98,7 +93,12 @@ export default function Login() {
   }
 
   async function onRegister(email: string, password: string): Promise<void> {
-    await register(email, password, turnstileToken);
+    try {
+      await register(email, password, turnstile.token);
+    } catch (err) {
+      turnstile.reset();
+      throw err;
+    }
     setRegisteredEmail(email);
     setNeedsVerification(false);
   }
@@ -224,11 +224,9 @@ export default function Login() {
               trustCopy="Your job search data stays private. No recruiter access, no data resale, ever."
               passwordMinLength={12}
               registerCaptchaSlot={
-                <TurnstileWidget
-                  onVerify={handleTurnstileVerify}
-                  onExpire={handleTurnstileExpire}
-                />
+                <TurnstileWidget {...turnstile.widgetProps} />
               }
+              registerCaptchaReady={turnstile.isReady}
             />
 
             <p className="mt-4 text-sm text-center text-muted-foreground">

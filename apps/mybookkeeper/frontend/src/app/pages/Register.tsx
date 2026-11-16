@@ -1,7 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import api from "@/shared/lib/api";
-import { AuthPageFooter, describeAuthError, LoadingButton, TurnstileWidget } from "@platform/ui";
+import { AuthPageFooter, describeAuthError, LoadingButton, TurnstileWidget, useTurnstileToken } from "@platform/ui";
 import LegalFooter from "@/app/components/LegalFooter";
 import { USER_NAME_INPUT_MAX_LENGTH } from "@/shared/lib/constants";
 
@@ -15,16 +15,8 @@ export default function Register() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstile = useTurnstileToken();
   const [termsAccepted, setTermsAccepted] = useState(false);
-
-  const handleTurnstileVerify = useCallback((token: string) => {
-    setTurnstileToken(token);
-  }, []);
-
-  const handleTurnstileExpire = useCallback(() => {
-    setTurnstileToken("");
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,10 +35,11 @@ export default function Register() {
         password,
         name: name.trim() || null,
       }, {
-        headers: turnstileToken ? { "X-Turnstile-Token": turnstileToken } : {},
+        headers: turnstile.token ? { "X-Turnstile-Token": turnstile.token } : {},
       });
       setRegistered(true);
     } catch (err) {
+      turnstile.reset();
       setError(describeAuthError(err));
     } finally {
       setIsLoading(false);
@@ -116,7 +109,7 @@ export default function Register() {
                 minLength={12}
               />
             </div>
-            <TurnstileWidget onVerify={handleTurnstileVerify} onExpire={handleTurnstileExpire} />
+            <TurnstileWidget {...turnstile.widgetProps} />
             <label className="flex items-start gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -143,7 +136,7 @@ export default function Register() {
               isLoading={isLoading}
               loadingText="Creating account..."
               className="w-full"
-              disabled={isLoading || !termsAccepted}
+              disabled={isLoading || !termsAccepted || !turnstile.isReady}
             >
               Sign up
             </LoadingButton>

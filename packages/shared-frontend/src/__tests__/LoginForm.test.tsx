@@ -133,6 +133,19 @@ describe("LoginForm", () => {
     expect(screen.getByText("Continue with Google")).toBeInTheDocument();
   });
 
+  it("keeps Create Account disabled while registerCaptchaReady is false", async () => {
+    const { rerender } = render(
+      <LoginForm onSignIn={noop} onRegister={noop} defaultTab="register" passwordMinLength={8} registerCaptchaReady={false} />
+    );
+    await userEvent.type(screen.getByLabelText("Password"), "longpassword");
+    expect(screen.getByRole("button", { name: "Create Account" })).toBeDisabled();
+
+    rerender(
+      <LoginForm onSignIn={noop} onRegister={noop} defaultTab="register" passwordMinLength={8} registerCaptchaReady />
+    );
+    expect(screen.getByRole("button", { name: "Create Account" })).toBeEnabled();
+  });
+
   it("does not render Google sign-in button when onGoogleSignIn is omitted", () => {
     render(<LoginForm onSignIn={noop} onRegister={noop} />);
     expect(screen.queryByText("Continue with Google")).toBeNull();

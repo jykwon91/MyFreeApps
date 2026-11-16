@@ -1,5 +1,6 @@
 import type { PublicListing } from "@/shared/types/inquiry/public-listing";
 import { LoadingButton, TurnstileWidget } from "@platform/ui";
+import type { TurnstileWidgetBindings } from "@platform/ui";
 import type { FieldErrors, FormState, ValidatedField } from "./public-inquiry-types";
 import PublicInquiryContactSection from "./PublicInquiryContactSection";
 import PublicInquiryBackgroundSection from "./PublicInquiryBackgroundSection";
@@ -16,8 +17,7 @@ interface PublicInquiryFormStepProps {
   turnstileError: string;
   update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
   markTouched: (key: ValidatedField) => void;
-  onTurnstileVerify: (token: string) => void;
-  onTurnstileExpire: () => void;
+  turnstileWidgetProps: TurnstileWidgetBindings;
   onSubmit: (e: React.FormEvent) => void;
 }
 
@@ -33,8 +33,7 @@ export default function PublicInquiryFormStep({
   turnstileError,
   update,
   markTouched,
-  onTurnstileVerify,
-  onTurnstileExpire,
+  turnstileWidgetProps,
   onSubmit,
 }: PublicInquiryFormStepProps) {
   const showSummary = attemptedSubmit && errorCount > 0;
@@ -101,10 +100,7 @@ export default function PublicInquiryFormStep({
 
       {turnstileRequired ? (
         <div>
-          <TurnstileWidget
-            onVerify={onTurnstileVerify}
-            onExpire={onTurnstileExpire}
-          />
+          <TurnstileWidget {...turnstileWidgetProps} />
           {turnstileError ? (
             <p
               className="mt-1 text-xs text-red-600"

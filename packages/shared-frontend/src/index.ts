@@ -73,6 +73,11 @@ export type { FormFieldControlProps } from "./components/ui/FormFieldControlProp
 export { default as Toaster } from "./components/ui/Toaster";
 export { default as TurnstileWidget } from "./components/ui/TurnstileWidget";
 export type { TurnstileAppearance } from "./types/turnstile-appearance";
+export type { TurnstileWidgetHandle } from "./types/turnstile-widget-handle";
+export type { TurnstileWidgetBindings } from "./types/turnstile-widget-bindings";
+export type { TurnstileTokenState } from "./types/turnstile-token-state";
+export { useTurnstileToken } from "./hooks/useTurnstileToken";
+export { turnstileSiteKey } from "./lib/turnstile-site-key";
 export { default as ConfirmDialog } from "./components/ui/ConfirmDialog";
 export type { ConfirmDialogProps } from "./components/ui/ConfirmDialog";
 export { default as Panel } from "./components/ui/Panel";
