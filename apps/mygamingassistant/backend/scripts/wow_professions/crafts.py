@@ -73,6 +73,8 @@ class Items:
     item_class: dict[int, int]
     # recipe spell -> (teaching item id, its name, skill it asks, specialization it asks or 0)
     taught_by: dict[int, tuple[int, str, int, int]] = field(default_factory=dict)
+    # Items that bind when picked up (ItemSparse.Bonding 1): a formula you must get yourself, never buy.
+    bind_on_pickup: frozenset[int] = frozenset()
 
 
 @dataclass(frozen=True)

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 
 from scripts.wow_food.recipe_sources import SHOWN_ZONES, ClassicSources
@@ -19,10 +20,16 @@ from scripts.wow_item_pages.loot_chances import as_int, drop_index, loot_index, 
 from scripts.wow_world_map.coords import ZoneBounds
 from scripts.wow_world_map.map_art import WorldMapArt
 from scripts.wow_world_map.placement import Placement, place
+from scripts.wow_world_map.sources import cmangos_dump, wago_table
+from scripts.wow_world_map.sql_dump import read_dump
 from scripts.wow_world_map.zones import FOREVER_ONLY_ZONES
 
 Row = Mapping[str, Any]
 Spot = tuple[float, float, Placement]
+
+# The cmangos tables the finder reads; callers may ask for more (``load_finder``'s ``extra_tables``).
+FINDER_TABLES = frozenset({"creature", "creature_loot_template", "reference_loot_template"})
+INSTANCE_INFO_COLUMNS = ["name", "type", "minLevel", "maxLevel", "requiredLevel", "zone", "x", "y"]
 
 
 class ItemSourceFinder(ClassicSources):
@@ -174,3 +181,26 @@ def quest_rows(quest_doc: Mapping[str, Any], quest_ids: set[int]) -> dict[int, l
         if row["id"] in quest_ids and givers.get(row["id"]):
             out[row["id"]] = [row["id"], row["title"], row["level"], row["side"], givers[row["id"]], row["minLevel"], row["classes"]]
     return out
+
+
+@dataclass(frozen=True)
+class LoadedFinder:
+    """An ``ItemSourceFinder`` plus what was read to build it: the cmangos tables and the client's instance maps."""
+
+    finder: ItemSourceFinder
+    tables: Mapping[str, list[Row]]
+    map_names: Mapping[int, str]
+    instance_types: Mapping[int, int]
+
+
+def load_finder(zones: list[ZoneBounds], wanted: set[int], extra_tables: frozenset[str] = frozenset()) -> LoadedFinder:
+    """Reads cmangos classic-db and the client's Map / DungeonEncounter tables into a finder for ``wanted`` items."""
+    tables = read_dump(cmangos_dump(), set(FINDER_TABLES | extra_tables))
+    maps = wago_table("Map")
+    instance_types = {as_int(r["ID"]): as_int(r["InstanceType"]) for r in maps}
+    map_names = {as_int(r["ID"]): str(r["MapName_lang"]) for r in maps}
+    encounters: dict[int, set[str]] = defaultdict(set)
+    for row in wago_table("DungeonEncounter"):
+        encounters[as_int(row["MapID"])].add(row["Name_lang"])
+    finder = ItemSourceFinder(zones, WorldMapArt(), tables, instance_types, encounters, wanted)
+    return LoadedFinder(finder, tables, map_names, instance_types)

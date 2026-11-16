@@ -47,7 +47,7 @@ from scripts.wow_gear.loot import (
     table_items,
 )
 from scripts.wow_gear.raid_gate import quest_reward_ids, raid_gated_quests, raid_given_quests
-from scripts.wow_items.forever_items import ForeverItemTables, hotfix_cache_path, load_forever_item_tables
+from scripts.wow_items.forever_items import BIND_ON_PICKUP, ForeverItemTables, hotfix_cache_path, load_forever_item_tables
 from scripts.wow_world_map.quests import quest_classes, quest_side
 from scripts.wow_world_map.sources import (
     CMANGOS_COMMIT,
@@ -81,7 +81,6 @@ PROFESSIONS = {
 }
 
 FIRST_FOREVER_ITEM_ID = 100000
-BIND_ON_PICKUP = 1
 # ItemSparse Flags_0 bit the client sets on items taken out of the game
 # (Talisman of Binding Shard, Coral Band, Quicksilver Ring).
 ITEM_FLAG_DEPRECATED = 0x10

@@ -14,7 +14,7 @@ Writes, under ``frontend/src/games/wow-forever/data/professions/crafting/``:
   Classic Era client. Game data © Blizzard Entertainment.
 * ``classic/trainerSkills.json`` — the skill a trainer asks before teaching a
   recipe, and ``classic/sources.json`` — where pattern / formula / manual items and
-  reagents come from (vendors, drops, quests, disenchanting). Both are
+  reagents come from (vendors, drops, dungeon / raid drops, quests, disenchanting). Both are
   server-side, so they come from cmangos classic-db (GPL-3.0, pinned commit)
   and are kept apart with its LICENSE.
 * ``classic/skinning.json`` — for the Skinning guide: every mob a solo player
@@ -28,6 +28,7 @@ Never hand-edit the JSON; re-run this.
 """
 from __future__ import annotations
 
+import json
 import shutil
 from collections import defaultdict
 from dataclasses import replace
@@ -47,6 +48,9 @@ from scripts.wow_food.recipe_sources import (
     territory_of,
 )
 from scripts.wow_food.skinning_sources import SKIN_MOB_COLUMNS
+from scripts.wow_item_pages.drops import INSTANCE_COLUMNS
+from scripts.wow_item_pages.finder import INSTANCE_INFO_COLUMNS, instance_rows, load_finder
+from scripts.wow_items.forever_items import BIND_ON_PICKUP
 from scripts.wow_professions.crafts import (
     ACQUIRE_ON_SKILL_LEARN,
     ALCHEMY_SKILL_LINE,
@@ -207,7 +211,15 @@ def load_items(skill_lines: set[int]) -> Items:
         quality={i: _int(r["OverallQualityID"]) for i, r in sparse.items()},
         item_class={_int(r["ID"]): _int(r["ClassID"]) for r in wago_table("Item")},
         taught_by=taught_by,
+        bind_on_pickup=frozenset(i for i, r in sparse.items() if _int(r["Bonding"]) == BIND_ON_PICKUP),
     )
+
+
+def mark_bind_on_pickup(recipes: list[dict], bind_on_pickup: frozenset[int]) -> None:
+    """Flags a recipe learned from an item that binds when picked up (``learn.bop``), so no page offers it on the Auction House."""
+    for rec in recipes:
+        if rec["learn"].get("itemId") in bind_on_pickup:
+            rec["learn"]["bop"] = True
 
 
 def made_by(items: set[int], sod_only: set[int]) -> dict[str, str]:
@@ -375,6 +387,7 @@ def main() -> None:
     for key, line in PROFESSIONS.items():
         quests_of[key] = spec_quests(line)
         recipes[key], dropped = profession_recipes(line, items, classic, trainer_skill[line], trainer_specs(line, quests_of[key]))
+        mark_bind_on_pickup(recipes[key], items.bind_on_pickup)
         sod_only |= dropped
     mining, dropped = profession_recipes(MINING_SKILL_LINE, items, classic, trainer_skill[MINING_SKILL_LINE])
     sod_only |= dropped
@@ -423,7 +436,22 @@ def main() -> None:
             if rec["learn"]["source"] == "trainer" and rec["spell"] in classic_skill
         }
     teaching = sorted({rec["learn"]["itemId"] for rows in recipes.values() for rec in rows if rec["learn"].get("itemId")})
+    zone_names = {z.ui_map_id: z.name for z in zone_bounds}
     recipe_sources = {str(i): classic_sources.recipe_sources(i) for i in teaching}
+    # Dungeon and raid drops, which the open-world sources above leave out (the item pages' finder).
+    instance_finder = load_finder(zone_bounds, set(teaching))
+    for i in teaching:
+        if found := instance_finder.finder.instance_drop(i):
+            recipe_sources[str(i)]["instance"] = found
+    instances = instance_rows(
+        json.loads((WOW_DATA_DIR / "worldMap" / "classic" / "classicDungeons.json").read_text(encoding="utf-8")),
+        instance_finder.map_names,
+        instance_finder.instance_types,
+        instance_finder.finder.instances,
+    )
+    for row in instances.values():
+        if row[5] is not None:
+            classic_sources.zone_names[int(row[5])] = zone_names[int(row[5])]
     reagent_sources = {str(i): classic_sources.reagent_sources(i) for i in sorted(reagent_ids)}
     everything = [*recipe_sources.values(), *reagent_sources.values()]
     spec_quest_ids = {q.quest for qs in quests_of.values() for q in qs}
@@ -433,7 +461,6 @@ def main() -> None:
             s["quests"] = [q for q in s["quests"] if str(q) in quests]
             if not s["quests"]:
                 del s["quests"]
-    zone_names = {z.ui_map_id: z.name for z in zone_bounds}
     for q in quests.values():
         for giver in q[4]:
             classic_sources.zone_names[giver[3]] = zone_names[giver[3]]
@@ -445,6 +472,9 @@ def main() -> None:
         "questColumns": ["id", "title", "level", "side", "givers"],
         "questGiverColumns": ["type", "entry", "name", "zone", "subzone", "x", "y", "faction"],
         "quests": quests,
+        "instanceMobColumns": INSTANCE_COLUMNS,
+        "instanceColumns": INSTANCE_INFO_COLUMNS,
+        "instances": {str(k): v for k, v in sorted(instances.items())},
         "zones": {str(k): v for k, v in sorted(classic_sources.zone_names.items())},
         "territory": territory_of(classic_sources.zone_names, zone_entries),
         "recipes": {k: v for k, v in recipe_sources.items() if v},

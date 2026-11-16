@@ -1,4 +1,7 @@
+import { createInstanceDropDecoder } from "@/games/wow-forever/data/instanceDropDecode";
 import { createSpotDecoder, type SourceCell } from "@/games/wow-forever/data/spotDecode";
+import type { InstanceDrop } from "@/games/wow-forever/types/itemPages/instanceDrop";
+import type { RawInstanceDrop } from "@/games/wow-forever/types/itemPages/rawInstanceDrop";
 import type { Faction } from "@/games/wow-forever/types/worldMap";
 import { GATHER_SKILL, MOB_KIND, type GatherSkill } from "@/games/wow-forever/types/recipeSources";
 import type {
@@ -38,6 +41,8 @@ export interface RawSources {
   /** `[name, count, zone, subzone, x, y, gather, skill]` — gather "herbalism" / "mining" / "". */
   objectSpots?: Row[];
   containerDrops?: [string, NonNullable<RawSources["drop"]>][];
+  /** Dungeon / raid mobs that drop it (the item pages and the crafting file). */
+  instance?: RawInstanceDrop;
 }
 
 /** A rank's book as the food file stores it: its sources plus item id and name. */
@@ -55,6 +60,8 @@ export interface RawSourcesFile {
   disenchant?: Record<string, Row>;
   /** A rank's book (Expert Cookbook) by guide — the food file only. */
   books?: Record<string, RawRankBook>;
+  /** Instance map id -> `[name, type, minLevel, maxLevel, requiredLevel, zone, x, y]` (the crafting file only). */
+  instances?: Record<string, Row>;
 }
 
 export interface SourceLookup {
@@ -62,6 +69,8 @@ export interface SourceLookup {
   source: string;
   /** Where to get the recipe keyed by `id` (a food id, or a Pattern / Formula item id). */
   recipe(id: number): ItemSources;
+  /** Dungeon / raid mobs that drop the recipe item keyed by `id`, in the file's order (best chance first). */
+  recipeInstanceDrops(id: number): InstanceDrop[];
   /** Where to get a reagent. */
   reagent(itemId: number): ItemSources;
   /** A quest the file lists (a specialization quest), with its givers. */
@@ -88,6 +97,7 @@ function gatherOf(skill: unknown, level: unknown): ObjectSpot["gather"] {
 
 export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
   const { zoneName, spotAt } = createSpotDecoder(raw.zones, raw.territory);
+  const instanceDrops = createInstanceDropDecoder(raw.instances ?? {}, spotAt);
 
   function vendor(r: Row): VendorSpot {
     const [npcId, name, title, zoneId, subzone, x, y, faction, stock, restockMinutes] = r;
@@ -201,6 +211,7 @@ export function createSourceLookup(raw: RawSourcesFile): SourceLookup {
   return {
     source: raw.source,
     recipe: (id) => decode(raw.recipes[String(id)], null),
+    recipeInstanceDrops: (id) => instanceDrops(raw.recipes[String(id)]?.instance),
     reagent: (itemId) => decode(raw.reagents[String(itemId)], itemId),
     quest,
     book: (guide) => {

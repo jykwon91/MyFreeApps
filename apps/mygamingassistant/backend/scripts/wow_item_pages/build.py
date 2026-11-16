@@ -27,7 +27,6 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -36,13 +35,11 @@ from scripts.wow_food.recipe_sources import MOB_COLUMNS, VENDOR_COLUMNS, territo
 from scripts.wow_gear.build import write_json
 from scripts.wow_item_pages.drops import INSTANCE_COLUMNS
 from scripts.wow_item_pages.facts import CRAFTED_COLUMNS, crafted_by, item_facts
-from scripts.wow_item_pages.finder import ItemSourceFinder, instance_rows, quest_rows
+from scripts.wow_item_pages.finder import INSTANCE_INFO_COLUMNS, instance_rows, load_finder, quest_rows
 from scripts.wow_item_pages.loot_chances import as_int
 from scripts.wow_item_pages.shards import SHARD_COUNT, classic_shard, forever_shard, split
 from scripts.wow_items.forever_items import hotfix_cache_path, load_forever_item_tables
-from scripts.wow_world_map.map_art import WorldMapArt
-from scripts.wow_world_map.sources import CMANGOS_COMMIT, WAGO_BUILD, cmangos_dump, wago_table
-from scripts.wow_world_map.sql_dump import read_dump
+from scripts.wow_world_map.sources import CMANGOS_COMMIT, WAGO_BUILD
 from scripts.wow_world_map.zones import load_zones
 
 ITEMS_PATH = WOW_DATA_DIR / "items" / "items.json"
@@ -61,7 +58,6 @@ GEAR_CLASSES = frozenset({2, 4})
 
 QUEST_COLUMNS = ["id", "title", "level", "side", "givers", "minLevel", "classes"]
 QUEST_GIVER_COLUMNS = ["type", "entry", "name", "zone", "subzone", "x", "y", "faction"]
-INSTANCE_INFO_COLUMNS = ["name", "type", "minLevel", "maxLevel", "requiredLevel", "zone", "x", "y"]
 
 CLASSIC_README = """# Item pages — Classic sources
 
@@ -137,15 +133,10 @@ def _forever(items_doc: dict[str, Any], cache_path: Path, ids: list[list[int]]) 
 
 def _classic(ids: list[list[int]], forever_ids: set[int]) -> dict[int, dict[str, object]]:
     """Write the Classic shards and unseen.json; return each item's sources."""
-    tables = read_dump(cmangos_dump(), {"creature", "creature_loot_template", "reference_loot_template", "item_template"})
-    instance_types = {as_int(r["ID"]): as_int(r["InstanceType"]) for r in wago_table("Map")}
-    map_names = {as_int(r["ID"]): str(r["MapName_lang"]) for r in wago_table("Map")}
-    encounters: dict[int, set[str]] = defaultdict(set)
-    for row in wago_table("DungeonEncounter"):
-        encounters[as_int(row["MapID"])].add(row["Name_lang"])
     wanted = {i for shard in ids for i in shard if i < FIRST_FOREVER_ITEM_ID}
     zone_entries, zone_bounds = load_zones()
-    finder = ItemSourceFinder(zone_bounds, WorldMapArt(), tables, instance_types, encounters, wanted)
+    loaded = load_finder(zone_bounds, wanted, frozenset({"item_template"}))
+    finder, tables, map_names, instance_types = loaded.finder, loaded.tables, loaded.map_names, loaded.instance_types
     sources = {i: finder.item_sources(i) for i in sorted(wanted)}
     quests = quest_rows(_load_json(WORLD_MAP_CLASSIC / "classicQuests.json"), {q for s in sources.values() for q in s.get("quests", [])})  # type: ignore[union-attr]
     for record in sources.values():
