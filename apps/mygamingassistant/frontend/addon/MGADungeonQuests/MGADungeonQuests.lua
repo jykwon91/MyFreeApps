@@ -86,11 +86,43 @@ local function forYourClass(line, class)
   return false
 end
 
--- Your faction's quest lines for a dungeon that your class gets.
+-- Your skill in each profession you have, by its enUS name (the Skills tab), or nil when that can't
+-- be read in full -- no GetSkillLineInfo, a non-English client, a collapsed header (its rows aren't
+-- listed) or a list not filled in yet -- which then hides no profession quest.
+local function playerSkills()
+  if not GetNumSkillLines or not GetSkillLineInfo then return nil end
+  local locale = GetLocale and GetLocale() or "enUS"
+  if locale ~= "enUS" and locale ~= "enGB" then return nil end
+  local out, rows = {}, 0
+  for i = 1, GetNumSkillLines() do
+    local name, isHeader, isExpanded, rank = GetSkillLineInfo(i)
+    if isHeader and not isExpanded then return nil end
+    if name and not isHeader then
+      out[name] = rank or 0
+      rows = rows + 1
+    end
+  end
+  return rows > 0 and out or nil
+end
+
+-- A line that needs a profession you don't have never comes: its giver won't offer it.
+local function forYourProfessions(line, skills)
+  return not line.skill or not skills or skills[line.skill.name] ~= nil
+end
+
+-- "Needs Leatherworking 225 (you have 200)" when your skill is still too low, else nil.
+function M.SkillNote(line, skills)
+  if not line.skill or not skills then return nil end
+  local rank = skills[line.skill.name]
+  if not rank or rank >= line.skill.level then return nil end
+  return "Needs " .. line.skill.name .. " " .. line.skill.level .. " (you have " .. rank .. ")"
+end
+
+-- Your faction's quest lines for a dungeon that your class and professions get.
 function M.LinesFor(dungeon)
-  local out, class = {}, playerClass()
+  local out, class, skills = {}, playerClass(), playerSkills()
   for _, line in ipairs(dungeon[playerFaction() or ""] or {}) do
-    if forYourClass(line, class) then out[#out + 1] = line end
+    if forYourClass(line, class) and forYourProfessions(line, skills) then out[#out + 1] = line end
   end
   return out
 end
@@ -194,6 +226,8 @@ local function lineBlock(n, line, inLog, level)
   end
   local status = nextIndex and (doneCount .. " of " .. #line.steps .. " done") or (GREEN .. "all done|r")
   local top = WHITE .. n .. ". " .. table.concat(line.titles, " / ") .. "|r  " .. GREY .. status .. "|r"
+  local skillNote = M.SkillNote(line, playerSkills())
+  if skillNote then top = top .. "\n" .. RED .. skillNote .. "|r" end
   local pin = nil
   if nextIndex then
     local step = line.steps[nextIndex]

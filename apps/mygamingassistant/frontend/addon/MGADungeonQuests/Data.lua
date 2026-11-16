@@ -447,7 +447,7 @@ MGADungeonQuestsData = {
         {id = 762, title = "An Ambassador of Evil", level = 44, minLevel = 35, giver = "Historian Karnik", where = "Ironforge 77.5, 11.8", map = 1455, x = 77.5, y = 11.8, objectives = {"Collect Ambassador Infernus' Bracer"}, turnIn = "Advisor Belgrum"},
         {id = 1139, title = "The Lost Tablets of Will", level = 45, minLevel = 35, dungeon = true, giver = "Advisor Belgrum", where = "Ironforge 77.3, 9.7", map = 1455, x = 77.3, y = 9.7, objectives = {"Collect Tablet of Will"}, turnIn = "Advisor Belgrum"},
       }},
-      {titles = {"Wild Leather Shoulders"}, steps = {
+      {titles = {"Wild Leather Shoulders"}, skill = {name = "Leatherworking", level = 225}, steps = {
         {id = 2847, title = "Wild Leather Armor", level = 45, minLevel = 30, giver = "Pratt McGrubben", where = "Feralas 30.6, 42.7 (Sardor Isle)", map = 1444, x = 30.6, y = 42.7, objectives = {"Collect 10 Thick Leather"}, turnIn = "Pratt McGrubben"},
         {id = 2848, title = "Wild Leather Shoulders", level = 45, minLevel = 30, dungeon = true, giver = "Pratt McGrubben", where = "Feralas 30.6, 42.7 (Sardor Isle)", map = 1444, x = 30.6, y = 42.7, objectives = {"Collect 6 Thick Armor Kit", "Collect Wildvine"}, turnIn = "Pratt McGrubben"},
       }},
@@ -485,7 +485,7 @@ MGADungeonQuestsData = {
         {id = 2340, title = "Deliver the Gems", level = 44, minLevel = 37, giver = "Jarkal Mossmeld", where = "Searing Gorge 81.4, 37.2 (Dustfire Valley)", map = 1427, x = 81.4, y = 37.2, objectives = {"Collect Necklace and Gem Salvage"}, turnIn = "Dran Droffers"},
         {id = 2341, title = "Necklace Recovery, Take 3", level = 44, minLevel = 40, dungeon = true, giver = "Dran Droffers", where = "Orgrimmar 59.6, 36.5", map = 1454, x = 59.6, y = 36.5, turnIn = "Jarkal Mossmeld"},
       }},
-      {titles = {"Wild Leather Shoulders"}, steps = {
+      {titles = {"Wild Leather Shoulders"}, skill = {name = "Leatherworking", level = 225}, steps = {
         {id = 2854, title = "Wild Leather Armor", level = 45, minLevel = 30, giver = "Jangdor Swiftstrider", where = "Feralas 74.4, 42.9 (Camp Mojache)", map = 1444, x = 74.4, y = 42.9, objectives = {"Collect 10 Thick Leather"}, turnIn = "Jangdor Swiftstrider"},
         {id = 2855, title = "Wild Leather Shoulders", level = 45, minLevel = 30, dungeon = true, giver = "Jangdor Swiftstrider", where = "Feralas 74.4, 42.9 (Camp Mojache)", map = 1444, x = 74.4, y = 42.9, objectives = {"Collect 6 Thick Armor Kit", "Collect Wildvine"}, turnIn = "Jangdor Swiftstrider"},
       }},
@@ -1004,7 +1004,7 @@ MGADungeonQuestsData = {
         {id = 6804, title = "Poisoned Water", level = 56, minLevel = 55, giver = "Duke Hydraxis", where = "Azshara 79.3, 73.7", map = 1447, x = 79.3, y = 73.7, objectives = {"Collect 12 Discordant Bracers", "Collect Aspect of Neptulon"}, turnIn = "Duke Hydraxis"},
         {id = 6821, title = "Eye of the Emberseer", level = 60, minLevel = 56, dungeon = true, giver = "Duke Hydraxis", where = "Azshara 79.3, 73.7", map = 1447, x = 79.3, y = 73.7, objectives = {"Collect Eye of the Emberseer"}, turnIn = "Duke Hydraxis"},
       }},
-      {titles = {"Fiery Plate Gauntlets"}, steps = {
+      {titles = {"Fiery Plate Gauntlets"}, skill = {name = "Blacksmithing", level = 275}, steps = {
         {id = 5103, title = "Hot Fiery Death", level = 60, minLevel = 60, giver = "Human Remains", where = "inside the dungeon", turnIn = "Malyfous Darkhammer"},
         {id = 5124, title = "Fiery Plate Gauntlets", level = 60, minLevel = 55, dungeon = true, giver = "Malyfous Darkhammer", where = "Winterspring 61.0, 38.8 (Everlook)", map = 1452, x = 61.0, y = 38.8, objectives = {"Collect Unfired Plate Gauntlets", "Collect 6 Enchanted Thorium Bar", "Collect 2 Essence of Fire", "Collect 4 Star Ruby"}, turnIn = "Malyfous Darkhammer"},
       }},
@@ -1305,10 +1305,10 @@ MGADungeonQuestsData = {
         {id = 4742, title = "Seal of Ascension", level = 60, minLevel = 57, objectives = {"Collect Gemstone of Spirestone", "Collect Gemstone of Smolderthorn", "Collect Gemstone of Bloodaxe", "Collect Unadorned Seal of Ascension"}, turnIn = "Vaelan"},
         {id = 4743, title = "Seal of Ascension", level = 60, minLevel = 57, dungeon = true, objectives = {"Collect Forged Seal of Ascension"}, turnIn = "Vaelan"},
       }},
-      {titles = {"Snakestone of the Shadow Huntress"}, steps = {
+      {titles = {"Snakestone of the Shadow Huntress"}, skill = {name = "Blacksmithing", level = 250}, steps = {
         {id = 5306, title = "Snakestone of the Shadow Huntress", level = 60, minLevel = 50, dungeon = true, giver = "Kilram", where = "Winterspring 61.3, 37.1 (Everlook)", map = 1452, x = 61.3, y = 37.1, objectives = {"Collect Vosh'gajin's Snakestone"}, turnIn = "Kilram"},
       }},
-      {titles = {"The Demon Forge"}, steps = {
+      {titles = {"The Demon Forge"}, skill = {name = "Blacksmithing", level = 285}, steps = {
         {id = 5126, title = "Lorax's Tale", level = 60, minLevel = 55, giver = "Lorax", where = "Winterspring 63.8, 73.8 (Frostwhisper Gorge)", map = 1452, x = 63.8, y = 73.8, turnIn = "Lorax"},
         {id = 5127, title = "The Demon Forge", level = 60, minLevel = 55, dungeon = true, giver = "Lorax", where = "Winterspring 63.8, 73.8 (Frostwhisper Gorge)", map = 1452, x = 63.8, y = 73.8, objectives = {"Collect Soul Stained Pike", "Collect Unforged Rune Covered Breastplate"}, turnIn = "Lorax"},
       }},
@@ -1416,7 +1416,7 @@ MGADungeonQuestsData = {
         {id = 6804, title = "Poisoned Water", level = 56, minLevel = 55, giver = "Duke Hydraxis", where = "Azshara 79.3, 73.7", map = 1447, x = 79.3, y = 73.7, objectives = {"Collect 12 Discordant Bracers", "Collect Aspect of Neptulon"}, turnIn = "Duke Hydraxis"},
         {id = 6821, title = "Eye of the Emberseer", level = 60, minLevel = 56, dungeon = true, giver = "Duke Hydraxis", where = "Azshara 79.3, 73.7", map = 1447, x = 79.3, y = 73.7, objectives = {"Collect Eye of the Emberseer"}, turnIn = "Duke Hydraxis"},
       }},
-      {titles = {"Fiery Plate Gauntlets"}, steps = {
+      {titles = {"Fiery Plate Gauntlets"}, skill = {name = "Blacksmithing", level = 275}, steps = {
         {id = 5103, title = "Hot Fiery Death", level = 60, minLevel = 60, giver = "Human Remains", where = "inside the dungeon", turnIn = "Malyfous Darkhammer"},
         {id = 5124, title = "Fiery Plate Gauntlets", level = 60, minLevel = 55, dungeon = true, giver = "Malyfous Darkhammer", where = "Winterspring 61.0, 38.8 (Everlook)", map = 1452, x = 61.0, y = 38.8, objectives = {"Collect Unfired Plate Gauntlets", "Collect 6 Enchanted Thorium Bar", "Collect 2 Essence of Fire", "Collect 4 Star Ruby"}, turnIn = "Malyfous Darkhammer"},
       }},
@@ -1718,14 +1718,14 @@ MGADungeonQuestsData = {
         {id = 4742, title = "Seal of Ascension", level = 60, minLevel = 57, objectives = {"Collect Gemstone of Spirestone", "Collect Gemstone of Smolderthorn", "Collect Gemstone of Bloodaxe", "Collect Unadorned Seal of Ascension"}, turnIn = "Vaelan"},
         {id = 4743, title = "Seal of Ascension", level = 60, minLevel = 57, dungeon = true, objectives = {"Collect Forged Seal of Ascension"}, turnIn = "Vaelan"},
       }},
-      {titles = {"Snakestone of the Shadow Huntress"}, steps = {
+      {titles = {"Snakestone of the Shadow Huntress"}, skill = {name = "Blacksmithing", level = 250}, steps = {
         {id = 5306, title = "Snakestone of the Shadow Huntress", level = 60, minLevel = 50, dungeon = true, giver = "Kilram", where = "Winterspring 61.3, 37.1 (Everlook)", map = 1452, x = 61.3, y = 37.1, objectives = {"Collect Vosh'gajin's Snakestone"}, turnIn = "Kilram"},
       }},
       {titles = {"The Darkstone Tablet"}, steps = {
         {id = 4769, title = "Vivian Lagrave and the Darkstone Tablet", level = 60, minLevel = 57, giver = "Apothecary Zinge", where = "Undercity 50.1, 68.0", map = 1458, x = 50.1, y = 68.0, turnIn = "Shadowmage Vivian Lagrave"},
         {id = 4768, title = "The Darkstone Tablet", level = 60, minLevel = 57, dungeon = true, giver = "Shadowmage Vivian Lagrave", where = "Searing Gorge 81.9, 39.1 (Dustfire Valley)", map = 1427, x = 81.9, y = 39.1, objectives = {"Collect Darkstone Tablet"}, turnIn = "Shadowmage Vivian Lagrave"},
       }},
-      {titles = {"The Demon Forge"}, steps = {
+      {titles = {"The Demon Forge"}, skill = {name = "Blacksmithing", level = 285}, steps = {
         {id = 5126, title = "Lorax's Tale", level = 60, minLevel = 55, giver = "Lorax", where = "Winterspring 63.8, 73.8 (Frostwhisper Gorge)", map = 1452, x = 63.8, y = 73.8, turnIn = "Lorax"},
         {id = 5127, title = "The Demon Forge", level = 60, minLevel = 55, dungeon = true, giver = "Lorax", where = "Winterspring 63.8, 73.8 (Frostwhisper Gorge)", map = 1452, x = 63.8, y = 73.8, objectives = {"Collect Soul Stained Pike", "Collect Unforged Rune Covered Breastplate"}, turnIn = "Lorax"},
       }},

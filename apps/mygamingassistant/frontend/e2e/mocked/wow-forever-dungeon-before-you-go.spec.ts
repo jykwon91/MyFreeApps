@@ -245,3 +245,11 @@ test("on the Dungeons page the addon card stays folded until opened", async ({ p
   await card.getByText("See your dungeon quests in game").click();
   await expect(card.getByTestId("dungeon-quests-addon-download")).toBeVisible();
 });
+
+test("a line that needs a profession says so; the others don't", async ({ page }) => {
+  await page.goto("/wow-forever/dungeons/uldaman");
+  const wildLeather = section(page).getByTestId("quest-line").filter({ hasText: "Wild Leather Shoulders" });
+  await expect(wildLeather.getByTestId("quest-line-skill")).toHaveText("Needs Leatherworking 225");
+  await page.goto(DEADMINES);
+  await expect(defiasLine(page).getByTestId("quest-line-skill")).toHaveCount(0);
+});

@@ -9,6 +9,7 @@ import { idsDoneWith, idsUndoneWith, questLineStatus, withImpliedSteps } from "@
 import { continentPickupLinks } from "@/games/wow-forever/lib/dungeons/questPickupsMapLinks";
 import type { QuestLine } from "@/games/wow-forever/types/dungeons/questLine";
 import type { WorldZone } from "@/games/wow-forever/types/worldMap";
+import { questSkillText } from "@/games/wow-forever/lib/dungeons/questSkill";
 
 interface QuestLineCardProps {
   line: QuestLine;
@@ -40,6 +41,7 @@ export default function QuestLineCard({ line, zones, done, battleNet, setDone }:
         <ScrollText className="h-4 w-4 text-primary" aria-hidden />
         {line.titles.join(" · ")}
         {line.classes.length > 0 ? <span className={DETAIL_CHIP}>{BEFORE_YOU_GO_COPY.classOnly(questClassesText(line))}</span> : null}
+        {line.skill ? <span className={DETAIL_CHIP} data-testid="quest-line-skill">{BEFORE_YOU_GO_COPY.skillOnly(questSkillText(line.skill))}</span> : null}
         {line.steps.length > 1 ? (
           <span className="font-normal text-muted-foreground">· {BEFORE_YOU_GO_COPY.steps(line.steps.length)}</span>
         ) : null}

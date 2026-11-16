@@ -67,7 +67,7 @@ function fixture(): DungeonDataFiles {
     entry: { columns: ["trigger", "item", "quest"], instances: { "12": [[4, 7001, 0]] } },
     // Quests are decoded by decodeDungeonQuests — wowDungeonQuests.test.ts.
     quests: {
-      questColumns: ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders", "shareable", "after"],
+      questColumns: ["id", "title", "level", "minLevel", "side", "classes", "skill", "givers", "chain", "objectives", "rewards", "choices", "enders", "shareable", "after"],
       giverColumns: ["kind", "id", "name", "zone", "subzone", "x", "y", "instance"],
       objectiveColumns: ["kind", "id", "count"],
       targetColumns: ["name", "instance"],

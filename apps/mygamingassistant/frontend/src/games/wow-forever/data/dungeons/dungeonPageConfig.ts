@@ -97,6 +97,7 @@ export const BEFORE_YOU_GO_COPY = {
     `Show ${count === 1 ? "its quest giver" : `its ${count} quest givers`} in ${mapName} on the World Map`,
   steps: (count: number) => `${count} quests`,
   classOnly: (classes: string) => `${classes} only`,
+  skillOnly: (skill: string) => `Needs ${skill}`,
   noGiver: "Who gives it isn't in our data",
   dungeonQuest: "Dungeon quest",
   itemStarts: "an item starts it",

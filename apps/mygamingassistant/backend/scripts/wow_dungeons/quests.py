@@ -31,7 +31,7 @@ from scripts.wow_dungeons.quest_cache import (
 from scripts.wow_item_pages.loot_chances import Row, as_int
 from scripts.wow_world_map.quests import quest_classes, quest_side
 
-QUEST_COLUMNS = ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices",
+QUEST_COLUMNS = ["id", "title", "level", "minLevel", "side", "classes", "skill", "givers", "chain", "objectives", "rewards", "choices",
                  "enders", "shareable", "after"]
 GIVER_COLUMNS = ["kind", "id", "name", "zone", "subzone", "x", "y", "instance"]
 OBJECTIVE_COLUMNS = ["kind", "id", "count"]
@@ -229,6 +229,7 @@ class QuestRow:
     min_level: int
     side: str
     classes: str
+    skill: list[int] | None
     givers: list[Giver]
     chain: list[int]
     objectives: list[Objective]
@@ -241,7 +242,7 @@ class QuestRow:
     def as_json(self) -> list[object]:
         """``QUEST_COLUMNS`` order."""
         return [
-            self.quest_id, self.title, self.level, self.min_level, self.side, self.classes, self.givers, self.chain,
+            self.quest_id, self.title, self.level, self.min_level, self.side, self.classes, self.skill, self.givers, self.chain,
             [list(o) for o in self.objectives], [list(r) for r in self.rewards], [list(c) for c in self.choices], self.enders,
             self.shareable, self.after,
         ]
@@ -249,7 +250,7 @@ class QuestRow:
     def repeat_key(self) -> tuple[object, ...]:
         """Everything a player sees but the levels, quest line and sharing: two quests alike in these are one
         quest offered again (givers by name — Gnomeregan has three Sparklematic 5200 objects)."""
-        return (self.title, self.side, self.classes, tuple(str(g[2]) for g in self.givers), tuple(self.objectives),
+        return (self.title, self.side, self.classes, tuple(self.skill) if self.skill else None, tuple(str(g[2]) for g in self.givers), tuple(self.objectives),
                 tuple(self.rewards), tuple(self.choices))
 
 
@@ -290,6 +291,13 @@ def _givers(qid: int, src: QuestSources) -> list[Giver]:
     return list(by_name.values())[:MAX_GIVERS]
 
 
+def required_skill(q: Row) -> list[int] | None:
+    """[profession SkillLine id, skill] a quest needs before its giver offers it (Pratt's Wild Leather
+    quests need Leatherworking 225), or None."""
+    skill, value = as_int(q["RequiredSkill"]), as_int(q["RequiredSkillValue"])
+    return [skill, value] if skill and value else None
+
+
 def quest_row(qid: int, side: str, chain: list[int], after: list[int], src: QuestSources) -> QuestRow:
     q = src.quests[qid]
     enders = [target_key(kind, entry) for kind, entry in src.ended_by.get(qid, []) if target_key(kind, entry) in src.names]
@@ -300,6 +308,7 @@ def quest_row(qid: int, side: str, chain: list[int], after: list[int], src: Ques
         min_level=as_int(q["MinLevel"]),
         side=side,
         classes=quest_classes(as_int(q["RequiredClasses"])),
+        skill=required_skill(q),
         givers=_givers(qid, src),
         chain=chain,
         objectives=[o for o in classic_objectives(q) if target_key(o[0], o[1]) in src.names],

@@ -4,6 +4,7 @@ import type { QuestGiver } from "@/games/wow-forever/types/dungeons/questGiver";
 import type { QuestPickupStep } from "@/games/wow-forever/types/dungeons/questPickupStep";
 import type { QuestObjective } from "@/games/wow-forever/types/dungeons/questObjective";
 import type { QuestReward } from "@/games/wow-forever/types/dungeons/questReward";
+import type { QuestSkill } from "@/games/wow-forever/types/dungeons/questSkill";
 import type { Faction } from "@/games/wow-forever/types/worldMap";
 
 /**
@@ -23,6 +24,8 @@ export interface DungeonQuest {
   side: Faction;
   /** Empty = every class. */
   classes: readonly WowClassId[];
+  /** The profession it, or a quest before it, needs (the hardest); null when none. */
+  skill: QuestSkill | null;
   givers: readonly QuestGiver[];
   /** The quests before it, earliest first; empty when it starts on its own. */
   chain: readonly QuestChainStep[];

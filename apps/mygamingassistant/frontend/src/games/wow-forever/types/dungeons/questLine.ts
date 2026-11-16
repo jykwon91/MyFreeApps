@@ -1,4 +1,5 @@
 import type { WowClassId } from "@/games/wow-forever/data/classes";
+import type { QuestSkill } from "@/games/wow-forever/types/dungeons/questSkill";
 import type { QuestPickup } from "@/games/wow-forever/types/dungeons/questPickup";
 
 /**
@@ -13,5 +14,7 @@ export interface QuestLine {
   titles: readonly string[];
   /** Empty = every class (from the first dungeon quest). */
   classes: readonly WowClassId[];
+  /** The profession the line needs (from the first dungeon quest); null when none. */
+  skill: QuestSkill | null;
   steps: readonly QuestPickup[];
 }

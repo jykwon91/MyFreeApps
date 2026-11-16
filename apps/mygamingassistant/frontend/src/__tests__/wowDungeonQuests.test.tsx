@@ -35,7 +35,7 @@ import QuestObjectiveText from "@/games/wow-forever/components/dungeons/quests/Q
 import { iconSources, itemIconFile } from "./wowIconFiles";
 
 const KEEP = 10;
-const QUEST_COLUMNS = ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders", "shareable", "after"];
+const QUEST_COLUMNS = ["id", "title", "level", "minLevel", "side", "classes", "givers", "chain", "objectives", "rewards", "choices", "enders", "shareable", "after", "skill"];
 
 function files(): Pick<DungeonDataFiles, "quests" | "seenQuests"> {
   return {
@@ -46,8 +46,8 @@ function files(): Pick<DungeonDataFiles, "quests" | "seenQuests"> {
       targetColumns: ["name", "instance"],
       instances: { [KEEP]: [3, 5, 404] },
       quests: {
-        "1": [1, "Lead In", 18, 15, "A", "", [["npc", 8, "Old Scout", 100, "", 10, 10, null]], [], [], [], [], [], true, [2, 3, 6]],
-        "2": [2, "Second Step", 19, 15, "A", "", [], [1], [], [], [], [], true, [3, 6]],
+        "1": [1, "Lead In", 18, 15, "A", "", [["npc", 8, "Old Scout", 100, "", 10, 10, null]], [], [], [], [], [], true, [2, 3, 6], [165, 200]],
+        "2": [2, "Second Step", 19, 15, "A", "", [], [1], [], [], [], [], true, [3, 6], [165, 225]],
         "3": [3, "Into the Keep", 22, 18, "A", "warrior,nobody", [["npc", 7, "Captain Hale", 100, "Old Hill", 56.3, 47.5, null]], [1, 2],
           [["npc", 50, 2], ["item", 60, 10], ["item", 61, 1]], [[9001, 1]], [[9002, 1], [9999, 1]], ["npc:7"], true, [6]],
         "5": [5, "Lost Letter", 20, 16, "N", "", [["item", 61, "Torn Letter", null, "", null, null, KEEP]], [], [], [], [], [], false, []],
@@ -98,6 +98,12 @@ describe("decodeDungeonQuests", () => {
     expect(quest.rewards).toEqual([{ id: 9002, name: "Keep Shield", count: 3 }]);
     expect(quest.choices).toEqual([]);
     expect(quest.seenOn).toBe("2026-11-07");
+  });
+
+  it("gives a quest the hardest profession need of it and the quests before it", () => {
+    const [intoTheKeep, lostLetter] = decodeDungeonQuests(files(), ITEMS, ZONES)(KEEP);
+    expect(intoTheKeep.skill).toEqual({ skillLine: 165, level: 225 });
+    expect(lostLetter.skill).toBeNull();
   });
 
   it("keeps Classic facts for a quest the client hasn't seen, dropping rewards with no Forever name", () => {

@@ -11,7 +11,7 @@ import { runAddonLua } from "@/test/addonLua/runAddonLua";
 import { WOW_DUNGEON_QUEST_STUBS } from "@/test/addonLua/wowDungeonQuestStubs.lua";
 
 // Two Alliance lines for a warlock at Deadmines (a three-step line and a lone dungeon quest), a
-// warrior-only one, a Horde one; Shadowfang Keep is Horde-only; Wailing Caverns needs level 25.
+// warrior-only one, a Leatherworking 225 one, a Horde one; Shadowfang Keep is Horde-only; Wailing Caverns needs level 25.
 const FIXTURE = `
 MGADungeonQuestsData = {
   {
@@ -27,6 +27,9 @@ MGADungeonQuestsData = {
       }},
       {titles = {"Warrior Only"}, classes = {"warrior"}, steps = {
         {id = 20, title = "Warrior Only", level = 20, minLevel = 15, dungeon = true},
+      }},
+      {titles = {"Wild Leather Armor"}, skill = {name = "Leatherworking", level = 225}, steps = {
+        {id = 60, title = "Wild Leather Armor", level = 45, minLevel = 30, dungeon = true},
       }},
     },
     horde = {
@@ -182,6 +185,19 @@ describe("MGA Dungeon Quests checklist", () => {
     const horde = window(run('slash("deadmines")', 'player.faction = "Horde"'));
     expect(horde).toContain("1. Horde Quest  0 of 1 done");
     expect(horde.join("\n")).not.toMatch(/Defias/);
+  });
+
+  it("a profession line shows only to those with the profession, saying when their skill is too low", () => {
+    const lw = (rank: number) => window(run('slash("deadmines")', `player.skills = { {name = "Leatherworking", rank = ${rank}} }`));
+    expect(window(run('slash("deadmines")')).join(" ")).not.toMatch(/Wild Leather/);
+    expect(lw(200)).toContain("3. Wild Leather Armor  0 of 1 done");
+    expect(lw(200)).toContain("Needs Leatherworking 225 (you have 200)");
+    expect(lw(230)).toContain("3. Wild Leather Armor  0 of 1 done");
+    expect(lw(230).join(" ")).not.toMatch(/Needs Leatherworking/);
+    expect(window(run('slash("deadmines")', "GetSkillLineInfo = nil"))).toContain("3. Wild Leather Armor  0 of 1 done");
+    // Can't read the professions in full: hide nothing.
+    expect(window(run('slash("deadmines")', "player.skillsCollapsed = true"))).toContain("3. Wild Leather Armor  0 of 1 done");
+    expect(window(run('slash("deadmines")', 'player.locale = "deDE"'))).toContain("3. Wild Leather Armor  0 of 1 done");
   });
 
   it("says when a quest needs a higher level, and names an item that starts one", () => {

@@ -41,7 +41,7 @@ from scripts.wow_world_map.quests import GIVER_COLUMNS as WORLD_GIVER_COLUMNS
 def _quest(entry: int, title: str = "Q", **fields: Any) -> dict[str, Any]:
     row: dict[str, Any] = {
         "entry": entry, "Title": title, "QuestLevel": 20, "MinLevel": 17,
-        "ZoneOrSort": 0, "RequiredRaces": 0, "RequiredClasses": 0,
+        "ZoneOrSort": 0, "RequiredRaces": 0, "RequiredClasses": 0, "RequiredSkill": 0, "RequiredSkillValue": 0,
         "PrevQuestId": 0, "NextQuestId": 0, "NextQuestInChain": 0, "QuestFlags": 0,
     }
     for i in range(1, 5):

@@ -1939,6 +1939,12 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   (`-u` rewrites it, so re-run it after any dungeon-quest data change). `/mgadq` opens
   the dungeon you're in (`GetInstanceInfo` 8th return = `instanceId`), else the list of
   dungeons with lines for your faction + class and how many quests are left to pick up;
+  a line whose quests need a profession (`dungeonQuests.json` `skill` = [SkillLine id, skill]
+  from cmangos `RequiredSkill`/`RequiredSkillValue`; the line takes the hardest need of its
+  quests, `strictestSkill` in `lib/dungeons/questSkill.ts`) is hidden in game when the Skills
+  tab (`GetSkillLineInfo`, enUS names) lacks that profession, and says "Needs Leatherworking
+  225 (you have 200)" when it's too low; on the page it's a "Needs …" chip, never hidden
+  (Pratt McGrubben's Wild Leather quests need Leatherworking 225 — operator report 2026-11-16);
   `/mgadq <name>` opens one. Steps tick from `C_QuestLog.IsQuestFlaggedCompleted`
   (falls back to the global `IsQuestFlaggedCompleted`), with the site's implied-steps rule
   (a done step ticks the steps before it, never another dungeon quest) plus one the site

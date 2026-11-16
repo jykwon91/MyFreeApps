@@ -1,6 +1,6 @@
 /**
  * Just enough of the WoW client API for the MGA Dungeon Quests addon to run under fengari. Tests set
- * `player` (faction, class, level), `completed[questId] = true` (turned in), `questLog = { {id, complete} }`,
+ * `player` (faction, class, level, skills = { {name, rank} }), `completed[questId] = true` (turned in), `questLog = { {id, complete} }`,
  * `instance = { type, id }` (nil = out in the world), then call `slash(msg)` or `fire(event)`.
  * Lines go into `out`: "chat: ..." for chat, "window: ..." for each line of text the window shows
  * (colour codes and icons stripped, icons as [done] / [log] / [todo]), "row: ..." for each dungeon
@@ -13,7 +13,7 @@
 export const WOW_DUNGEON_QUEST_STUBS = `
 out = {}
 function clear() for k in pairs(out) do out[k] = nil end end
-player = { faction = "Alliance", class = "WARLOCK", level = 20 }
+player = { faction = "Alliance", class = "WARLOCK", level = 20, skills = {} }
 completed = {}
 questLog = {}
 instance = nil
@@ -21,6 +21,18 @@ instance = nil
 function UnitFactionGroup() return player.faction end
 function UnitClass() return player.class:sub(1, 1) .. player.class:sub(2):lower(), player.class end
 function UnitLevel() return player.level end
+-- The Skills tab: a Languages row, a Professions header (player.skillsCollapsed folds it), then
+-- player.skills ({ {name, rank} }).
+function GetLocale() return player.locale or "enUS" end
+function GetNumSkillLines() return #player.skills + 2 end
+function GetSkillLineInfo(i)
+  if i == 1 then return "Language: Common", nil, nil, 300 end
+  i = i - 1
+  if i == 1 then return "Professions", 1, not player.skillsCollapsed and 1 or nil, 0 end
+  local s = player.skills[i - 1]
+  if not s then return nil end
+  return s.name, nil, nil, s.rank
+end
 function GetInstanceInfo()
   if not instance then return "Elwynn Forest", "none", 0, "", 5, 0, false, 0 end
   return "Dungeon", instance.type, 1, "Normal", 5, 0, false, instance.id
