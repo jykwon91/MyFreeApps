@@ -1,9 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
+import { StatusBar } from "expo-status-bar";
 import { Dimensions } from "react-native";
 import { WELCOME_MANUAL_PHOTO_VIEWER_MESSAGES as MESSAGES, pageAtOffset, photoViewerCounter } from "../src/constants/welcomeManualPhotoViewer";
 import WelcomeManualPhotoViewer from "../src/features/welcomeManuals/WelcomeManualPhotoViewer";
 import { anImage } from "../test-support/aWelcomeManual";
 
+jest.mock("expo-status-bar", () => ({ StatusBar: jest.fn(() => null) }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 
 const images = [
@@ -19,6 +21,11 @@ const open = async (startIndex: number, onClose = jest.fn()) => {
 const button = (name: string) => screen.getByRole("button", { name });
 
 describe("the photo viewer", () => {
+  it("keeps the status bar icons light over its black backdrop", async () => {
+    await open(0);
+    expect(jest.mocked(StatusBar).mock.calls.some(([props]) => props.style === "light")).toBe(true);
+  });
+
   it("opens at the photo that was tapped, with its position", async () => {
     await open(1);
     expect(screen.getByText(photoViewerCounter(1, 3))).toBeTruthy();

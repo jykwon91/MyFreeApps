@@ -1,3 +1,4 @@
+import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
 import { FlatList, Modal, Text, useWindowDimensions, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -33,6 +34,7 @@ export default function WelcomeManualPhotoViewer({ images, startIndex, onClose, 
 
   return (
     <Modal animationType="fade" onRequestClose={onClose} statusBarTranslucent testID="welcome-manual-photo-viewer" visible>
+      <StatusBar style="light" />
       <View style={{ flex: 1, backgroundColor: STYLE.backdrop }}>
         <FlatList
           ref={list}
