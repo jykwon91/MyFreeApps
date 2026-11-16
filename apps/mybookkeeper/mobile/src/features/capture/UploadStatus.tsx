@@ -18,11 +18,13 @@ export default function UploadStatus() {
   const { phase, rejections, files } = useSelector((state: RootState) => state.uploads);
   const workspaceId = useSelector((state: RootState) => state.workspace.activeId);
 
+  // A zip read or cancelled after the "got it" message has gone is cleared the same way, a moment later.
+  const hasSettledFiles = files.some((file) => file.status === "done" || file.status === "cancelled");
   useEffect(() => {
-    if (phase !== "sent") return;
+    if (phase !== "sent" && !(phase === "idle" && hasSettledFiles)) return;
     const timer = setTimeout(() => dispatch(uploadSentSettled()), SENT_MESSAGE_MS);
     return () => clearTimeout(timer);
-  }, [dispatch, phase]);
+  }, [dispatch, phase, hasSettledFiles]);
 
   const dismiss = { label: "OK", onPress: () => dispatch(uploadStatusDismissed()) };
 

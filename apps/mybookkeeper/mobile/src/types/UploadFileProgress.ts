@@ -8,4 +8,6 @@ export interface UploadFileProgress {
   status: UploadFileStatus;
   /** How much has gone out, 0 to 100, once the phone can tell. */
   percent: number | null;
+  /** The batch the server is reading a sent zip as, while it can still be stopped. */
+  batchId: string | null;
 }
