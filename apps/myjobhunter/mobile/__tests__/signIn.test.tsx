@@ -39,6 +39,15 @@ describe("signing in", () => {
     expect(screen).toHavePathname("/sign-in");
   });
 
+  it("says registration is invite-only and offers no sign-up link", async () => {
+    serve({});
+    await renderApp();
+    expect(
+      await screen.findByText("MyJobHunter is invite-only. Use the link in your invite email to create an account."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Create an account/ })).toBeNull();
+  });
+
   it("refuses a wrong password and stays on the sign-in screen", async () => {
     const sent = serve({ "POST /auth/mobile/login": () => ({ status: 400, data: { detail: "LOGIN_BAD_CREDENTIALS" } }) });
     await renderApp();

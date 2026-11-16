@@ -17,7 +17,7 @@ import SecondFactorForm from "./SecondFactorForm";
 import ToastProvider from "./ToastProvider";
 import WebLink from "./WebLink";
 
-export default function SignInScreen({ appName, webBaseUrl, onSignedIn }: SignInScreenProps) {
+export default function SignInScreen({ appName, webBaseUrl, registration = "open", onSignedIn }: SignInScreenProps) {
   const { colors, spacing, fontSize } = useTheme();
   const { session, state } = useSession();
   const [email, setEmail] = useState(state.status === "signedOut" ? (state.lastEmail ?? "") : "");
@@ -165,7 +165,13 @@ export default function SignInScreen({ appName, webBaseUrl, onSignedIn }: SignIn
               </Text>
               <View>
                 <WebLink label="Forgot your password? Reset it on the website" webPath="/forgot-password" webBaseUrl={webBaseUrl} />
-                <WebLink label="New here? Create an account on the website" webPath="/register" webBaseUrl={webBaseUrl} />
+                {registration === "invite_only" ? (
+                  <Text style={{ color: colors.mutedForeground, fontSize: fontSize.sm, paddingVertical: spacing.sm }}>
+                    {appName} is invite-only. Use the link in your invite email to create an account.
+                  </Text>
+                ) : (
+                  <WebLink label="New here? Create an account on the website" webPath="/register" webBaseUrl={webBaseUrl} />
+                )}
               </View>
             </>
           )}
