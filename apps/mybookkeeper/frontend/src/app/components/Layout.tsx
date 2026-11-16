@@ -30,7 +30,7 @@ export default function Layout() {
   // Poll attribution queue count every 2 min to keep the badge fresh.
   const { data: attributionQueueData } = useGetAttributionReviewQueueQuery(
     { limit: 1, offset: 0 },
-    { pollingInterval: 120_000 },
+    { pollingInterval: 120_000, skipPollingIfUnfocused: true },
   );
   const attributionPendingCount = attributionQueueData?.pending_count ?? 0;
 

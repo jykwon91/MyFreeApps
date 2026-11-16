@@ -27,7 +27,7 @@ export default function UploadBatchControls({ uri, name, batchId }: UploadBatchC
   const { colors, spacing, fontSize } = useTheme();
   const dispatch = useDispatch<AppDispatch>();
   const { showToast } = useToast();
-  const { currentData: batch } = useGetBatchStatusQuery(batchId, { pollingInterval: BATCH_STATUS_POLL_MS });
+  const { currentData: batch } = useGetBatchStatusQuery(batchId, { pollingInterval: BATCH_STATUS_POLL_MS, skipPollingIfUnfocused: true });
   const [cancelBatch, { isLoading: isCancelling }] = useCancelBatchMutation();
 
   useEffect(() => {

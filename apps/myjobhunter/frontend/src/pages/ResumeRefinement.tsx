@@ -25,6 +25,7 @@ export default function ResumeRefinement() {
   } = useGetRefinementSessionQuery(sessionId ?? "", {
     skip: !sessionId,
     pollingInterval: sessionId ? REFINEMENT_POLL_INTERVAL_MS : 0,
+    skipPollingIfUnfocused: true,
   });
 
   function handleSessionStarted(id: string) {

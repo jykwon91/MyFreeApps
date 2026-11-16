@@ -22,7 +22,7 @@ import { workspaceChosen, workspaceLost, workspaceRemembered } from "./workspace
 export default function WorkspaceGate({ children }: { children: ReactNode }) {
   const remembered = useSelector((state: RootState) => state.workspace.remembered);
   // Nothing tells the phone when it's back online, so the list is asked for again while it's missing.
-  const { data, error, refetch } = useListOrganizationsQuery(undefined, { pollingInterval: remembered ? OFFLINE_RETRY_MS : 0 });
+  const { data, error, refetch } = useListOrganizationsQuery(undefined, { pollingInterval: remembered ? OFFLINE_RETRY_MS : 0, skipPollingIfUnfocused: true });
   const activeId = useSelector((state: RootState) => state.workspace.activeId);
   const dispatch = useDispatch<AppDispatch>();
   const { colors, spacing } = useTheme();
