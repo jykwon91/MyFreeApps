@@ -11,7 +11,7 @@ export default function FinancialsBody({ dropId }: FinancialsBodyProps) {
   const { currentData: data, isError, refetch } = useGetFinancialsQuery(dropId);
 
   if (data === undefined && !isError) return <FinancialsBodySkeleton />;
-  if (isError || !data) {
+  if (!data) {
     return (
       <div className="space-y-2">
         <p className="text-sm text-destructive">Failed to load financials.</p>

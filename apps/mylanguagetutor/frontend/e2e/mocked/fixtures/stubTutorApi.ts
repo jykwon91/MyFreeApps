@@ -48,7 +48,7 @@ export async function stubTutorApi(
   let turnsSent = 0;
   /** Turn rows saved per session, failed ones included: what next_seq counts. */
   const savedTurns = new Map<string, number>();
-  const api: TutorApi = { writes: [], reads: [], turnRequests: [], stopFailing: (key) => failing.delete(key) };
+  const api: TutorApi = { writes: [], reads: [], turnRequests: [], stopFailing: (key) => failing.delete(key), startFailing: (key) => failing.add(key) };
 
   const unknownLanguage = (code: string) => json({ detail: `Unsupported language: ${code}` }, 422);
   const supported = (code: string) => languages.some((language) => language.code === code);

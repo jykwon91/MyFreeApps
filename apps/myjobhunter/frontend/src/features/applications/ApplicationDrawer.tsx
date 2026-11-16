@@ -91,7 +91,6 @@ function DrawerBody({ applicationId, onClose }: DrawerBodyProps) {
   const {
     data: app,
     isLoading,
-    isError,
     error,
   } = useGetApplicationQuery(applicationId, {
     refetchOnFocus: true,
@@ -101,7 +100,8 @@ function DrawerBody({ applicationId, onClose }: DrawerBodyProps) {
     return <ApplicationDetailSkeleton />;
   }
 
-  if (isError || !app) {
+  // A failed refetch keeps the application on screen; the message is for when there is none to show.
+  if (!app) {
     const errorStatus =
       error && typeof error === "object" && "status" in error
         ? (error as { status: number }).status

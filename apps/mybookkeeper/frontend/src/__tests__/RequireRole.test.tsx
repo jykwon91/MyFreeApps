@@ -142,4 +142,43 @@ describe("RequireRole", () => {
     expect(screen.getByTestId("forbidden-page")).toBeInTheDocument();
     expect(screen.queryByTestId("login-page")).not.toBeInTheDocument();
   });
+  // ── A failed background refetch of a user already loaded must not eject them ──
+
+  function renderAdminRoute() {
+    return render(
+      <MemoryRouter initialEntries={["/admin"]}>
+        <Routes>
+          <Route
+            path="/admin"
+            element={
+              <RequireRole roles={["admin"]}>
+                <div data-testid="protected">Admin Content</div>
+              </RequireRole>
+            }
+          />
+          <Route path="/login" element={<div data-testid="login-page">Login</div>} />
+          <Route path="/forbidden" element={<div data-testid="forbidden-page">Forbidden</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  const ADMIN = { id: "1", email: "a@b.com", role: "admin" } as ReturnType<typeof useCurrentUser>["user"];
+
+  it("keeps the page when a refetch of a loaded user fails with a server error", () => {
+    vi.mocked(useCurrentUser).mockReturnValue({ user: ADMIN, isLoading: false, isError: true, error: { status: 500, data: "boom" } });
+
+    renderAdminRoute();
+
+    expect(screen.getByTestId("protected")).toBeInTheDocument();
+    expect(screen.queryByTestId("forbidden-page")).not.toBeInTheDocument();
+  });
+
+  it("still sends a loaded user to /login when the refetch says they are signed out", () => {
+    vi.mocked(useCurrentUser).mockReturnValue({ user: ADMIN, isLoading: false, isError: true, error: { status: 401, data: "Unauthorized" } });
+
+    renderAdminRoute();
+
+    expect(screen.getByTestId("login-page")).toBeInTheDocument();
+  });
 });

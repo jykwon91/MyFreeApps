@@ -34,7 +34,8 @@ export default function PublicOrderPage() {
     return <PageShell><NoActiveDrop /></PageShell>;
   }
 
-  if (dropQuery.isError) {
+  // A failed refetch keeps the order being built on screen; the error is for when there is no drop to show.
+  if (dropQuery.isError && !dropQuery.data) {
     return (
       <PageShell>
         <EmptyState
@@ -46,7 +47,7 @@ export default function PublicOrderPage() {
     );
   }
 
-  if (menuQuery.isError) {
+  if (menuQuery.isError && !menuQuery.data) {
     return (
       <PageShell>
         <EmptyState

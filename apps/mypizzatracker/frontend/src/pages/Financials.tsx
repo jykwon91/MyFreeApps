@@ -30,7 +30,7 @@ export default function Financials() {
 
   // The error and empty states stand alone, without the header: they replace
   // the page rather than fill it, so there is no layout to hold steady.
-  if (drops.isError) {
+  if (drops.isError && !drops.data) {
     return (
       <div className="p-4">
         <EmptyState

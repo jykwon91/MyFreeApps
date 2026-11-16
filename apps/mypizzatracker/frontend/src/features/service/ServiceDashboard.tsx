@@ -68,7 +68,8 @@ export function ServiceDashboard({
 
   if (isLoadingDrops) return <ServiceLoadingSkeleton />;
 
-  if (isDropsError) {
+  // A failed refetch or poll keeps the service view on screen; the error is for when there are no drops to show.
+  if (isDropsError && !activeDrops) {
     return (
       <div className="p-4 sm:p-8">
         <EmptyState
