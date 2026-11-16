@@ -15,7 +15,7 @@ jest.mock("expo-router", () => ({
       mockBlur = callback();
     }, [callback]);
   },
-  router: { push: jest.fn(), back: jest.fn() },
+  router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true },
 }));
 
 const originalAdapter = api.defaults.adapter;

@@ -1,6 +1,5 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { EmptyState, useLeaveWhenSaved, useRefresh } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, useLeaveWhenSaved, useRefresh, goBackOr } from "@platform/mobile";
 import { PROPERTY_MESSAGES } from "../../constants/properties";
 import { useCanWrite } from "../workspace/useCanWrite";
 import PropertyDetailBody from "./PropertyDetailBody";
@@ -22,7 +21,7 @@ export default function PropertyDetailScreen({ id }: { id: string }) {
   }
   return currentData ? (
     <EmptyState
-      action={{ label: PROPERTY_MESSAGES.back, onPress: () => router.back() }}
+      action={{ label: PROPERTY_MESSAGES.back, onPress: () => goBackOr("/properties") }}
       body={PROPERTY_MESSAGES.maybeDeleted}
       heading={PROPERTY_MESSAGES.cantFind}
     />

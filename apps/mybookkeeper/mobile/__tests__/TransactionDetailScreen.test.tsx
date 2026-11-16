@@ -17,7 +17,7 @@ const mockSetParams = jest.fn();
 jest.mock("expo-router", () => ({
   router: {
     push: (path: string) => mockPush(path),
-    back: () => mockBack(),
+    back: () => mockBack(), canGoBack: () => true,
     setParams: (params: unknown) => mockSetParams(params),
   },
 }));

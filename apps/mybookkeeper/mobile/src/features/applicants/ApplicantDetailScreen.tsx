@@ -4,7 +4,7 @@ import { transactionsApi } from "@mybookkeeper/api-client/store/transactionsApi"
 import { useGetApplicantByIdQuery } from "@mybookkeeper/api-client/store/applicantsApi";
 import type { ApplicantStage } from "@mybookkeeper/api-client/types/applicant/applicant-stage";
 import { getAllowedTransitions } from "@mybookkeeper/api-client/utils/applicantStageTransitions";
-import { Banner, Chip, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme, useToast } from "@platform/mobile";
+import { Banner, Chip, EmptyState, LoadingButton, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, Skeleton, useRefresh, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
@@ -67,7 +67,7 @@ export default function ApplicantDetailScreen({ id }: { id: string }) {
   if (isGone || !applicant) {
     return (
       <EmptyState
-        action={isGone ? { label: "Back", onPress: () => router.back() } : { label: "Try again", onPress: refresh }}
+        action={isGone ? { label: "Back", onPress: () => goBackOr("/people") } : { label: "Try again", onPress: refresh }}
         body={isGone ? "They may have been removed." : "Want me to try again?"}
         heading={isGone ? "I can't find that applicant." : "I couldn't load that applicant."}
       />

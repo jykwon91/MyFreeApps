@@ -1,6 +1,5 @@
 import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
-import { EmptyState } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, goBackOr } from "@platform/mobile";
 import { LEASE_DOCUMENT_MESSAGES as MESSAGES } from "../../constants/leaseDocuments";
 import NewLeaseDetailsSkeleton from "../newLease/NewLeaseDetailsSkeleton";
 import AddDocumentForm from "./AddDocumentForm";
@@ -21,7 +20,7 @@ export default function AddDocumentPrefilled({ leaseId, templateIds }: AddDocume
   if (state.status === "loading") return <NewLeaseDetailsSkeleton label={MESSAGES.loadingFields} />;
   if (state.status === "failed") {
     return state.isGone ? (
-      <EmptyState action={{ label: MESSAGES.goBack, onPress: () => router.back() }} body={MESSAGES.goneBody} heading={MESSAGES.goneHeading} />
+      <EmptyState action={{ label: MESSAGES.goBack, onPress: () => goBackOr("/leases") }} body={MESSAGES.goneBody} heading={MESSAGES.goneHeading} />
     ) : (
       <EmptyState action={{ label: MESSAGES.tryAgain, onPress: retry }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoadFields} />
     );

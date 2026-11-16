@@ -10,7 +10,7 @@ import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsu
 let mockDecimalSeparator: "." | "," = ".";
 // deviceDecimalSeparator reads the device locale through this.
 jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
-jest.mock("expo-router", () => ({ router: { back: jest.fn(), push: jest.fn() } }));
+jest.mock("expo-router", () => ({ router: { back: jest.fn(), canGoBack: () => true, push: jest.fn() } }));
 jest.mock("@react-native-community/datetimepicker", () => {
   const { View } = jest.requireActual("react-native");
   return { __esModule: true, default: View, DateTimePickerAndroid: { open: jest.fn() } };

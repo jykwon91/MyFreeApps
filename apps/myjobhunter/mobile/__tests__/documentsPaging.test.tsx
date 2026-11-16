@@ -31,7 +31,7 @@ jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
 // A short page keeps every row inside the list's first render window, which only draws about ten.
 jest.mock("@myjobhunter/api-client/constants/documentsPaging", () => ({ DOCUMENTS_PAGE_SIZE: 4, FIRST_DOCUMENTS_OFFSET: 0 }));
 jest.mock("expo-router", () => ({
-  router: { back: jest.fn(), push: jest.fn() },
+  router: { back: jest.fn(), canGoBack: () => true, push: jest.fn() },
   usePreventRemove: jest.fn(),
 }));
 

@@ -7,6 +7,9 @@ import PrivacyCover from "../../src/features/shell/PrivacyCover";
 import WorkspaceGate from "../../src/features/workspace/WorkspaceGate";
 import WorkspaceLostToast from "../../src/features/workspace/WorkspaceLostToast";
 
+// A cold deep link to a screen above the tabs, like a vendor from a notification, still has the tabs underneath.
+export const unstable_settings = { anchor: "(tabs)" };
+
 export default function AppLayout() {
   const stackOptions = useStackScreenOptions();
   const insets = useSafeAreaInsets();

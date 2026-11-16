@@ -1,7 +1,6 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useGetDuplicatesQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { EmptyState, useRefresh } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, useRefresh, goBackOr } from "@platform/mobile";
 import { DUPLICATES_MESSAGES as MESSAGES } from "../../constants/duplicates";
 import { useCanWrite } from "../workspace/useCanWrite";
 import DuplicateCompare from "./DuplicateCompare";
@@ -19,7 +18,7 @@ export default function DuplicateCompareScreen({ id }: { id: string }) {
   if (isLoading) return <DuplicateCompareSkeleton />;
   if (!pair) {
     return data ? (
-      <EmptyState action={{ label: MESSAGES.back, onPress: () => router.back() }} body={MESSAGES.pairGoneBody} heading={MESSAGES.pairGoneHeading} />
+      <EmptyState action={{ label: MESSAGES.back, onPress: () => goBackOr("/duplicates") }} body={MESSAGES.pairGoneBody} heading={MESSAGES.pairGoneHeading} />
     ) : (
       <EmptyState action={{ label: MESSAGES.tryAgain, onPress: () => void refetch() }} body={MESSAGES.checkConnection} heading={MESSAGES.couldntLoad} />
     );

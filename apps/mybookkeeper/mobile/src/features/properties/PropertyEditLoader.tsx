@@ -1,7 +1,6 @@
 import type { Property } from "@mybookkeeper/api-client/types/property/property";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { EmptyState } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, goBackOr } from "@platform/mobile";
 import { useState } from "react";
 import { PROPERTY_MESSAGES } from "../../constants/properties";
 import PropertyDetailSkeleton from "./PropertyDetailSkeleton";
@@ -29,7 +28,7 @@ export default function PropertyEditLoader({ id }: { id: string }) {
   }
   return (
     <EmptyState
-      action={{ label: PROPERTY_MESSAGES.back, onPress: () => router.back() }}
+      action={{ label: PROPERTY_MESSAGES.back, onPress: () => goBackOr("/properties") }}
       body={PROPERTY_MESSAGES.maybeDeleted}
       heading={PROPERTY_MESSAGES.cantFind}
     />

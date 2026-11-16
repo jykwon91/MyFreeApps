@@ -22,7 +22,7 @@ const mockBack = jest.fn();
 
 jest.mock("expo-router", () => ({
   useFocusEffect: () => undefined,
-  router: { push: (path: string) => mockPush(path), back: () => mockBack() },
+  router: { push: (path: string) => mockPush(path), back: () => mockBack(), canGoBack: () => true },
 }));
 
 const mockQrValue = jest.fn();

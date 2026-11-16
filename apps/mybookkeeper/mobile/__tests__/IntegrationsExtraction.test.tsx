@@ -9,7 +9,7 @@ import { renderScreen, resetSignedInStore } from "../test-support/renderScreen";
 
 jest.mock("expo-router", () => ({
   useFocusEffect: () => undefined,
-  router: { push: jest.fn(), back: jest.fn() },
+  router: { push: jest.fn(), back: jest.fn(), canGoBack: () => true },
 }));
 
 const originalAdapter = api.defaults.adapter;

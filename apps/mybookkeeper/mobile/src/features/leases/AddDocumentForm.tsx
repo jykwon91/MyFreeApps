@@ -4,8 +4,7 @@ import { LEASE_DOCUMENTS_LOCKED_MESSAGE, LEASE_VALUE_LOCKED_MESSAGE, LEASE_VALUE
 import { isLeaseDocumentsLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseDocumentsLockedFailure";
 import { isLeaseValueLockedFailure } from "@mybookkeeper/api-client/utils/isLeaseValueLockedFailure";
 import { prefillItemsToAsk, prefillProblems, prefillProvenanceLabel } from "@mybookkeeper/api-client/utils/leasePrefill";
-import { Banner, HeaderKeyboardAvoidingView, LoadingButton, PinnedBar, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
-import { router } from "expo-router";
+import { Banner, HeaderKeyboardAvoidingView, LoadingButton, PinnedBar, useDiscardPrompt, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { documentsMade, LEASE_DOCUMENT_MESSAGES as MESSAGES, prefillCaption } from "../../constants/leaseDocuments";
@@ -77,7 +76,7 @@ export default function AddDocumentForm({ leaseId, templateIds, isRemake, items,
         {write.failure ? (
           isLeaseDocumentsLockedFailure(write.error) ? (
             // The picker behind this screen has caught up with the lock, so going back shows what can still be picked.
-            <Banner actions={[{ label: MESSAGES.backToPicking, onPress: () => router.back() }]} message={LEASE_DOCUMENTS_LOCKED_MESSAGE} />
+            <Banner actions={[{ label: MESSAGES.backToPicking, onPress: () => goBackOr(`/leases/${leaseId}/add-document`) }]} message={LEASE_DOCUMENTS_LOCKED_MESSAGE} />
           ) : isLeaseValueLockedFailure(write.error) ? (
             <Banner message={LEASE_VALUE_LOCKED_MESSAGE} />
           ) : (

@@ -1,8 +1,7 @@
 import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { EmptyState, useLeaveWhenSaved, useRefresh } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, useLeaveWhenSaved, useRefresh, goBackOr } from "@platform/mobile";
 import { LISTING_MESSAGES } from "../../constants/listings";
 import { useCanWrite } from "../workspace/useCanWrite";
 import ListingDetailBody from "./ListingDetailBody";
@@ -26,7 +25,7 @@ export default function ListingDetailScreen({ id }: ListingDetailScreenProps) {
     const isGone = httpStatus(error) === 404;
     return (
       <EmptyState
-        action={isGone ? { label: LISTING_MESSAGES.back, onPress: () => router.back() } : { label: LISTING_MESSAGES.tryAgain, onPress: refresh }}
+        action={isGone ? { label: LISTING_MESSAGES.back, onPress: () => goBackOr("/listings") } : { label: LISTING_MESSAGES.tryAgain, onPress: refresh }}
         body={isGone ? LISTING_MESSAGES.maybeDeleted : LISTING_MESSAGES.tryAgainOffer}
         heading={isGone ? LISTING_MESSAGES.cantFind : LISTING_MESSAGES.couldntLoadOne}
       />

@@ -12,7 +12,7 @@ import { File, resetFakeFiles } from "@platform/mobile/test-support/fakeFileSyst
 import { startInsuranceServer } from "../test-support/insuranceServer";
 import { renderInsurance, resetInsuranceStore } from "../test-support/renderInsurance";
 
-jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { back: jest.fn(), push: jest.fn() } }));
+jest.mock("expo-router", () => ({ useFocusEffect: () => undefined, router: { back: jest.fn(), canGoBack: () => true, push: jest.fn() } }));
 jest.mock("expo-sharing", () => ({ shareAsync: jest.fn() }));
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
 jest.mock("expo-image-picker", () => ({ launchImageLibraryAsync: jest.fn(), launchCameraAsync: jest.fn(), requestCameraPermissionsAsync: jest.fn() }));

@@ -1,7 +1,7 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import type { TransactionListParams } from "@mybookkeeper/api-client/types/transaction/TransactionListParams";
 import { useDeleteTransactionMutation, useGetTransactionQuery } from "@mybookkeeper/api-client/store/transactionsApi";
-import { Banner, EmptyState, LoadingButton, OptionSheet, Skeleton, useRefresh, useTheme, useToast } from "@platform/mobile";
+import { Banner, EmptyState, LoadingButton, OptionSheet, Skeleton, useRefresh, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
@@ -44,7 +44,7 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
     const isGone = httpStatus(error) === 404;
     return (
       <EmptyState
-        action={isGone ? { label: "Back", onPress: () => router.back() } : { label: "Try again", onPress: async () => { await refetch(); } }}
+        action={isGone ? { label: "Back", onPress: () => goBackOr("/money") } : { label: "Try again", onPress: async () => { await refetch(); } }}
         body={isGone ? "It may have been deleted." : "Want me to try again?"}
         heading={isGone ? "I can't find that transaction." : "I couldn't load that transaction."}
       />
@@ -67,11 +67,11 @@ export default function TransactionDetailScreen({ id, reviewQueue }: { id: strin
           try {
             await deleteTransaction(id).unwrap();
             showToast("Deleted.");
-            router.back();
+            goBackOr("/money");
           } catch (deleteError) {
             if (httpStatus(deleteError) === 404) {
               showToast("That one's already gone.");
-              router.back();
+              goBackOr("/money");
             } else {
               showToast("I couldn't delete that. Want to try again?", "error");
             }

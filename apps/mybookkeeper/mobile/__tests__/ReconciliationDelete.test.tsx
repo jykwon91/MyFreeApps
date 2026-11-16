@@ -13,7 +13,7 @@ import { store } from "../src/lib/store";
 
 jest.mock("expo-router", () => ({
   useFocusEffect: () => undefined,
-  router: { back: jest.fn(), push: jest.fn() },
+  router: { back: jest.fn(), canGoBack: () => true, push: jest.fn() },
   usePreventRemove: () => undefined,
 }));
 jest.mock("../src/features/workspace/useCanWrite", () => ({ useCanWrite: jest.fn() }));

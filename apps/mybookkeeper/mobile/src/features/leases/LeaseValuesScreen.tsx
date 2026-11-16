@@ -1,7 +1,6 @@
 import { useGetSignedLeaseByIdQuery } from "@mybookkeeper/api-client/store/signedLeasesApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
-import { router } from "expo-router";
+import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme, goBackOr } from "@platform/mobile";
 import { ScrollView, Text, View } from "react-native";
 import { LEASE_DETAIL_MESSAGES as MESSAGES } from "../../constants/leaseDetails";
 import { LEASE_MESSAGES } from "../../constants/leases";
@@ -17,7 +16,7 @@ export default function LeaseValuesScreen({ id }: { id: string }) {
   if (isLoading) return <LeaseValuesSkeleton />;
   if (!lease) {
     return httpStatus(error) === 404 ? (
-      <EmptyState action={{ label: LEASE_MESSAGES.goBack, onPress: () => router.back() }} body={LEASE_MESSAGES.goneBody} heading={LEASE_MESSAGES.goneHeading} />
+      <EmptyState action={{ label: LEASE_MESSAGES.goBack, onPress: () => goBackOr("/leases") }} body={LEASE_MESSAGES.goneBody} heading={LEASE_MESSAGES.goneHeading} />
     ) : (
       <EmptyState action={{ label: LEASE_MESSAGES.tryAgain, onPress: refresh }} body={LEASE_MESSAGES.checkConnection} heading={LEASE_MESSAGES.couldntLoadOne} />
     );

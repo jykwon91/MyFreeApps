@@ -32,7 +32,7 @@ jest.mock("@react-native-community/datetimepicker", () => {
   return { __esModule: true, default: View, DateTimePickerAndroid: { open: jest.fn() } };
 });
 jest.mock("expo-document-picker", () => ({ getDocumentAsync: jest.fn() }));
-jest.mock("expo-router", () => ({ router: { back: jest.fn(), push: jest.fn() }, usePreventRemove: jest.fn() }));
+jest.mock("expo-router", () => ({ router: { back: jest.fn(), canGoBack: () => true, push: jest.fn() }, usePreventRemove: jest.fn() }));
 
 const ID = "app-stripe";
 const SAM = contactRecord({ id: "k-1", application_id: ID, name: "Sam Lee", role: "recruiter", email: "sam@stripe.com" });

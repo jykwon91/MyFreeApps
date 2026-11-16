@@ -1,7 +1,6 @@
 import { useGetListingByIdQuery } from "@mybookkeeper/api-client/store/listingsApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { EmptyState } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, goBackOr } from "@platform/mobile";
 import { LISTING_MESSAGES } from "../../constants/listings";
 import type { ListingGateProps } from "../../types/ListingGateProps";
 import ListingDetailSkeleton from "./ListingDetailSkeleton";
@@ -15,7 +14,7 @@ export default function ListingLoader({ id, children }: Omit<ListingGateProps, "
   const isGone = httpStatus(error) === 404;
   return (
     <EmptyState
-      action={isGone ? { label: LISTING_MESSAGES.back, onPress: () => router.back() } : { label: LISTING_MESSAGES.tryAgain, onPress: () => void refetch() }}
+      action={isGone ? { label: LISTING_MESSAGES.back, onPress: () => goBackOr("/listings") } : { label: LISTING_MESSAGES.tryAgain, onPress: () => void refetch() }}
       body={isGone ? LISTING_MESSAGES.maybeDeleted : LISTING_MESSAGES.tryAgainOffer}
       heading={isGone ? LISTING_MESSAGES.cantFind : LISTING_MESSAGES.couldntLoadOne}
     />

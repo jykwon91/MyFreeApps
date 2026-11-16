@@ -4,7 +4,7 @@ import {
   useLazyRenderReplyTemplateQuery,
 } from "@mybookkeeper/api-client/store/inquiriesApi";
 import { useGetIntegrationsQuery } from "@mybookkeeper/api-client/store/integrationsApi";
-import { Banner, EmptyState, FormField, HeaderKeyboardAvoidingView, LoadingButton, OptionSheet, PinnedBar, useAnnouncement, useOpenWebsite, useTheme, useToast } from "@platform/mobile";
+import { Banner, EmptyState, FormField, HeaderKeyboardAvoidingView, LoadingButton, OptionSheet, PinnedBar, useAnnouncement, useOpenWebsite, useTheme, useToast, goBackOr } from "@platform/mobile";
 import { router, usePreventRemove } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useReplySend } from "@mybookkeeper/api-client/hooks/useReplySend";
@@ -52,15 +52,15 @@ export default function InquiryReplyBody({ id }: { id: string }) {
 
   // After the guard above has let go, or going back would be refused.
   useEffect(() => {
-    if (hasSent) router.back();
-  }, [hasSent]);
+    if (hasSent) goBackOr(`/inquiries/${id}`);
+  }, [hasSent, id]);
 
   if (!inquiry && (isFetching || !loadError)) return <InquiryReplySkeleton />;
   if (!inquiry) {
     const isGone = httpStatus(loadError) === 404;
     return (
       <EmptyState
-        action={isGone ? { label: "Back", onPress: () => router.back() } : { label: "Try again", onPress: () => void refetchInquiry() }}
+        action={isGone ? { label: "Back", onPress: () => goBackOr(`/inquiries/${id}`) } : { label: "Try again", onPress: () => void refetchInquiry() }}
         body={isGone ? "It may have been archived." : "Want me to try again?"}
         heading={isGone ? "I can't find that inquiry." : "I couldn't load that inquiry."}
       />

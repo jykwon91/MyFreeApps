@@ -1,5 +1,6 @@
-import { type Href, router } from "expo-router";
+import type { Href } from "expo-router";
 import { useEffect, useState } from "react";
+import { goBackOr } from "../utils/goBackOr";
 
 /**
  * Goes back once `leave` is called. It waits a render, or the discard question still sees the
@@ -10,8 +11,7 @@ export function useLeaveWhenSaved(fallback: Href) {
 
   useEffect(() => {
     if (!isLeaving) return;
-    if (router.canGoBack()) router.back();
-    else router.replace(fallback);
+    goBackOr(fallback);
   }, [isLeaving, fallback]);
 
   return { isLeaving, leave: () => setIsLeaving(true) };

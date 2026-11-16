@@ -1,8 +1,7 @@
 import type { WelcomeManualSendResponse } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-send-response";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { LoadingButton, useTheme, goBackOr } from "@platform/mobile";
 import { Text, View } from "react-native";
 import { WELCOME_MANUAL_EMAIL_MESSAGES as MESSAGES, emailOutcomeCopy } from "../../constants/welcomeManualForms";
-import { goBackOr } from "../../lib/goBackOr";
 
 interface WelcomeManualEmailOutcomeProps {
   manualId: string;

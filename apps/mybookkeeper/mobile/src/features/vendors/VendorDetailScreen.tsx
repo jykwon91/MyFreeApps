@@ -1,7 +1,6 @@
 import { useGetVendorByIdQuery } from "@mybookkeeper/api-client/store/vendorsApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { EmptyState, useLeaveWhenSaved, useRefresh } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, useLeaveWhenSaved, useRefresh, goBackOr } from "@platform/mobile";
 import { VENDOR_MESSAGES } from "../../constants/vendors";
 import { useCanWrite } from "../workspace/useCanWrite";
 import VendorDetailBody from "./VendorDetailBody";
@@ -20,7 +19,7 @@ export default function VendorDetailScreen({ id }: { id: string }) {
     const isGone = httpStatus(error) === 404;
     return (
       <EmptyState
-        action={isGone ? { label: VENDOR_MESSAGES.back, onPress: () => router.back() } : { label: VENDOR_MESSAGES.tryAgain, onPress: refresh }}
+        action={isGone ? { label: VENDOR_MESSAGES.back, onPress: () => goBackOr("/vendors") } : { label: VENDOR_MESSAGES.tryAgain, onPress: refresh }}
         body={isGone ? VENDOR_MESSAGES.maybeDeleted : VENDOR_MESSAGES.tryAgainOffer}
         heading={isGone ? VENDOR_MESSAGES.cantFind : VENDOR_MESSAGES.couldntLoadOne}
       />

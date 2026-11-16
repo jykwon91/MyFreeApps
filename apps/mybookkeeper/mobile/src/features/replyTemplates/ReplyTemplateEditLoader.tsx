@@ -1,6 +1,5 @@
 import { useGetReplyTemplatesQuery } from "@mybookkeeper/api-client/store/inquiriesApi";
-import { EmptyState } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, goBackOr } from "@platform/mobile";
 import { REPLY_TEMPLATE_MESSAGES } from "../../constants/replyTemplates";
 import ReplyTemplateForm from "./ReplyTemplateForm";
 import ReplyTemplateFormSkeleton from "./ReplyTemplateFormSkeleton";
@@ -23,7 +22,7 @@ export default function ReplyTemplateEditLoader({ id }: { id: string }) {
   }
   return (
     <EmptyState
-      action={{ label: REPLY_TEMPLATE_MESSAGES.back, onPress: () => router.back() }}
+      action={{ label: REPLY_TEMPLATE_MESSAGES.back, onPress: () => goBackOr("/reply-templates") }}
       body={REPLY_TEMPLATE_MESSAGES.maybeArchived}
       heading={REPLY_TEMPLATE_MESSAGES.cantFind}
     />

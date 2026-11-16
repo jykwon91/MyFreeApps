@@ -14,7 +14,7 @@ import { aProperty, startTransactionServer, type FakeTransactionServer } from ".
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
-jest.mock("expo-router", () => ({ router: { push: (path: string) => mockPush(path), back: () => mockBack() } }));
+jest.mock("expo-router", () => ({ router: { push: (path: string) => mockPush(path), back: () => mockBack(), canGoBack: () => true } }));
 jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 
 const originalAdapter = api.defaults.adapter;

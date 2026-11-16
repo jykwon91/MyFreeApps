@@ -1,7 +1,6 @@
 import { useGetLeaseTemplateByIdQuery } from "@mybookkeeper/api-client/store/leaseTemplatesApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { EmptyState } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, goBackOr } from "@platform/mobile";
 import { LEASE_TEMPLATE_MESSAGES as MESSAGES } from "../../constants/leaseTemplates";
 import LeaseTemplateDetailSkeleton from "./LeaseTemplateDetailSkeleton";
 import type { LeaseTemplateGateProps } from "../../types/LeaseTemplateGateProps";
@@ -15,7 +14,7 @@ export default function LeaseTemplateLoader({ id, children }: Omit<LeaseTemplate
   const isGone = httpStatus(error) === 404;
   return (
     <EmptyState
-      action={isGone ? { label: MESSAGES.back, onPress: () => router.back() } : { label: MESSAGES.tryAgain, onPress: () => void refetch() }}
+      action={isGone ? { label: MESSAGES.back, onPress: () => goBackOr("/lease-templates") } : { label: MESSAGES.tryAgain, onPress: () => void refetch() }}
       body={isGone ? MESSAGES.maybeDeleted : MESSAGES.tryAgainOffer}
       heading={isGone ? MESSAGES.cantFind : MESSAGES.couldntLoadOne}
     />

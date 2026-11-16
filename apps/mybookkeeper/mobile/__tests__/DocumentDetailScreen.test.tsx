@@ -23,7 +23,7 @@ const mockDelete = jest.fn();
 const mockShare = jest.fn();
 const mockDirectoryDelete = jest.fn();
 jest.mock("expo-router", () => ({
-  router: { back: () => mockBack(), push: (path: string) => mockPush(path) },
+  router: { back: () => mockBack(), canGoBack: () => true, push: (path: string) => mockPush(path) },
   useFocusEffect: (callback: () => void) => {
     const { useEffect } = jest.requireActual("react");
     useEffect(callback, [callback]);

@@ -1,7 +1,6 @@
 import { useGetMortgageByIdQuery } from "@mybookkeeper/api-client/store/mortgagesApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { EmptyState } from "@platform/mobile";
-import { router } from "expo-router";
+import { EmptyState, goBackOr } from "@platform/mobile";
 import { MORTGAGE_MESSAGES } from "../../constants/mortgages";
 import MortgageDetailSkeleton from "./MortgageDetailSkeleton";
 import MortgageForm from "./MortgageForm";
@@ -15,7 +14,7 @@ export default function MortgageEditLoader({ id }: { id: string }) {
   const isGone = httpStatus(error) === 404;
   return (
     <EmptyState
-      action={isGone ? { label: MORTGAGE_MESSAGES.back, onPress: () => router.back() } : { label: MORTGAGE_MESSAGES.tryAgain, onPress: () => void refetch() }}
+      action={isGone ? { label: MORTGAGE_MESSAGES.back, onPress: () => goBackOr("/mortgages") } : { label: MORTGAGE_MESSAGES.tryAgain, onPress: () => void refetch() }}
       body={isGone ? MORTGAGE_MESSAGES.maybeDeleted : MORTGAGE_MESSAGES.tryAgainOffer}
       heading={isGone ? MORTGAGE_MESSAGES.cantFind : MORTGAGE_MESSAGES.couldntLoadOne}
     />
