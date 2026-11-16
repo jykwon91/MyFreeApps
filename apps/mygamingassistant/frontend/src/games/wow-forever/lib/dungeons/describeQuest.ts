@@ -1,4 +1,5 @@
 import { findClass } from "@/games/wow-forever/data/classes";
+import { QUEST_SHARING_COPY } from "@/games/wow-forever/data/dungeons/dungeonPageConfig";
 import type { DungeonQuest } from "@/games/wow-forever/types/dungeons/dungeonQuest";
 import type { QuestObjective } from "@/games/wow-forever/types/dungeons/questObjective";
 import { QUEST_TARGET_KIND, type QuestTargetKind } from "@/games/wow-forever/types/dungeons/questTargetKind";
@@ -25,6 +26,19 @@ export function questLevelText(quest: Pick<DungeonQuest, "level" | "minLevel">):
 /** "Warrior, Paladin"; "" when every class may take it. */
 export function questClassesText(quest: Pick<DungeonQuest, "classes">): string {
   return quest.classes.map((id) => findClass(id)?.name ?? id).join(", ");
+}
+
+/**
+ * The sharing badge and sentence. A shareable quest with quests before it says
+ * party members need those first — sharing alone doesn't get them the quest.
+ */
+export function questSharingText(quest: Pick<DungeonQuest, "shareable" | "chain">): { badge: string; detail: string } {
+  if (!quest.shareable) return QUEST_SHARING_COPY.notShareable;
+  if (quest.chain.length === 0) return QUEST_SHARING_COPY.shareable;
+  return {
+    badge: QUEST_SHARING_COPY.afterChain.badge(quest.chain.length),
+    detail: QUEST_SHARING_COPY.afterChain.detail(quest.chain.map((s) => s.title).join(", ")),
+  };
 }
 
 /** "Step 3 of 5" in the quest's line; null when it stands alone. */

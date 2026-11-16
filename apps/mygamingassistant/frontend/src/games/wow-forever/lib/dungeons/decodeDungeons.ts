@@ -236,7 +236,7 @@ export function decodeDungeons(files: DungeonDataFiles, world: DungeonWorld): Du
   });
   // A stable sort keeps each file's own order within a level.
   const all = [...dungeons, ...decodeForeverDungeons(files, world, zoneById)].sort((a, b) => a.levelMin - b.levelMin);
-  return { dungeons: all, clientBuild: files.lootItems.clientBuild };
+  return { dungeons: all, clientBuild: files.lootItems.clientBuild, zones: world.zones };
 }
 
 /** The dungeon a page's slug names, or null. */

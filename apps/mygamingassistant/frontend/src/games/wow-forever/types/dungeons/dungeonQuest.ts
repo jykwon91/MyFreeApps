@@ -1,6 +1,7 @@
 import type { WowClassId } from "@/games/wow-forever/data/classes";
 import type { QuestChainStep } from "@/games/wow-forever/types/dungeons/questChainStep";
 import type { QuestGiver } from "@/games/wow-forever/types/dungeons/questGiver";
+import type { QuestPickupStep } from "@/games/wow-forever/types/dungeons/questPickupStep";
 import type { QuestObjective } from "@/games/wow-forever/types/dungeons/questObjective";
 import type { QuestReward } from "@/games/wow-forever/types/dungeons/questReward";
 import type { Faction } from "@/games/wow-forever/types/worldMap";
@@ -25,6 +26,8 @@ export interface DungeonQuest {
   givers: readonly QuestGiver[];
   /** The quests before it, earliest first; empty when it starts on its own. */
   chain: readonly QuestChainStep[];
+  /** The same quests as `chain`, each with its giver and where they stand (for "Before you go"). */
+  pickupSteps: readonly QuestPickupStep[];
   /** The quests it leads on to, next first; empty when the line ends here. */
   after: readonly QuestChainStep[];
   /** Whether the quest log's Share button works for it; null when neither the client nor Classic says. */

@@ -116,13 +116,14 @@ test("quest facts carry their badges", async ({ page }) => {
   await expect(page.locator('a[href*="wowhead"]')).toHaveCount(0);
 });
 
-test("each quest says whether it can be shared and where it sits in its line", async ({ page }) => {
+test("each quest says whether it can be shared (and that a party needs the quests before it) and where it sits in its line", async ({ page }) => {
   await page.goto(DEADMINES);
   const last = questRow(page, DEFIAS_BROTHERHOOD);
-  await expect(last.getByTestId("quest-sharing")).toHaveText("Shareable");
+  // Sharing it doesn't help a party member who hasn't done the 6 quests before it.
+  await expect(last.getByTestId("quest-sharing")).toHaveText("Shareable only if they've done the 6 quests before it");
   await expect(last.getByTestId("quest-step")).toHaveText("Step 7 of 7");
   await last.getByTestId("dungeon-quest-toggle").click();
-  await expect(last.getByTestId("quest-sharing-detail")).toContainText("Share it from your quest log");
+  await expect(last.getByTestId("quest-sharing-detail")).toContainText("only accept it once they've done the quests before it");
   await expect(last.getByRole("heading", { name: /^Quest chain/ })).toBeVisible();
 
   const first = questRow(page, UNSENT_LETTER);
