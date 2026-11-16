@@ -3,10 +3,11 @@ import type { DuplicateTransaction } from "@mybookkeeper/api-client/types/transa
 import type { MergeableField } from "@mybookkeeper/api-client/types/transaction/MergeableField";
 import type { MergeFieldSide } from "@mybookkeeper/api-client/types/transaction/MergeFieldSide";
 import { MERGEABLE_FIELDS, FIELD_LABELS } from "@mybookkeeper/api-client/constants/mergeableTransactionFields";
-import { LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { LabelValueRow, LoadingButton, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { DUPLICATES_MESSAGES as MESSAGES } from "../../constants/duplicates";
+import { LABEL_COLUMN_WIDTH } from "../../constants/labelColumn";
 import { duplicateFieldValue, duplicateSideLabel, duplicateSourceCount, duplicateStatusLabel } from "./duplicateDisplay";
 import DuplicateChip from "./DuplicateChip";
 
@@ -60,9 +61,17 @@ export default function DuplicateCandidate({
               borderLeftColor: differs ? colors.primary : "transparent",
             }}
           >
-            <Text style={{ width: 96, fontSize: fontSize.sm, color: colors.mutedForeground }}>{FIELD_LABELS[field]}</Text>
-            <Text style={{ flex: 1, fontSize: fontSize.md, fontWeight: differs ? "600" : "400", color: colors.foreground }}>{value ?? "—"}</Text>
-            {differs ? <Text style={{ fontSize: fontSize.xs, color: colors.primary }}>{MESSAGES.differs}</Text> : null}
+            <LabelValueRow
+              accessible={false}
+              label={FIELD_LABELS[field]}
+              labelMinWidth={LABEL_COLUMN_WIDTH}
+              labelSize="sm"
+              trailing={differs ? <Text style={{ fontSize: fontSize.xs, color: colors.primary }}>{MESSAGES.differs}</Text> : null}
+              value={value ?? "—"}
+              valueAlign="start"
+              valueWeight={differs ? "600" : "400"}
+              valueWraps
+            />
           </View>
         );
       })}

@@ -1,7 +1,8 @@
 import type { OfferStat } from "@mybookkeeper/api-client/types/utility/offer-stat";
 import type { StatDirection } from "@mybookkeeper/api-client/types/utility/stat-direction";
-import { useTheme } from "@platform/mobile";
+import { LabelValueRow, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
+import { LABEL_COLUMN_WIDTH } from "../../constants/labelColumn";
 
 const MARK: Record<StatDirection, string> = { better: "▼", worse: "▲", same: "—", neutral: "—" };
 
@@ -12,15 +13,24 @@ export default function OfferStatList({ stats }: { stats: OfferStat[] }) {
   return (
     <View style={{ gap: spacing.xs }}>
       {stats.map((stat) => (
-        <View accessible accessibilityLabel={stat.hint} key={stat.key} style={{ flexDirection: "row", alignItems: "baseline", gap: spacing.sm }}>
-          <Text style={{ width: 96, fontSize: fontSize.sm, color: colors.mutedForeground }}>{stat.label}</Text>
-          <Text style={{ fontSize: fontSize.md, fontWeight: "500", color: colors.foreground }}>{stat.value}</Text>
-          {stat.delta ? (
-            <Text style={{ fontSize: fontSize.sm, fontWeight: "500", color: tone(stat.direction) }}>
-              {MARK[stat.direction]} {stat.delta}
-            </Text>
-          ) : null}
-        </View>
+        <LabelValueRow
+          accessibilityLabel={stat.hint}
+          key={stat.key}
+          label={stat.label}
+          labelMinWidth={LABEL_COLUMN_WIDTH}
+          labelSize="sm"
+          trailing={
+            stat.delta ? (
+              <Text style={{ fontSize: fontSize.sm, fontWeight: "500", color: tone(stat.direction) }}>
+                {MARK[stat.direction]} {stat.delta}
+              </Text>
+            ) : null
+          }
+          value={stat.value}
+          valueAlign="start"
+          valueWeight="500"
+          valueWraps
+        />
       ))}
     </View>
   );

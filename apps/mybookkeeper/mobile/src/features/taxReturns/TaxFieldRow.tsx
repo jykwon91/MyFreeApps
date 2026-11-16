@@ -1,7 +1,7 @@
 import type { TaxFormField } from "@mybookkeeper/api-client/types/tax/TaxFormField";
 import type { TaxFormInstance } from "@mybookkeeper/api-client/types/tax/TaxFormInstance";
 import { formatTaxFieldValue } from "@mybookkeeper/api-client/utils/formatTaxFieldValue";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { LabelValueRow, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { Pressable, Text, View } from "react-native";
 import { TAX_FIELD_STATUS_LABELS, TAX_FORM_MESSAGES as MESSAGES } from "../../constants/taxForm";
 import { taxFieldSource, taxFieldSummary } from "./taxFormDisplay";
@@ -19,10 +19,7 @@ export default function TaxFieldRow({ field, instance, onOverride }: TaxFieldRow
   const status = TAX_FIELD_STATUS_LABELS[field.validation_status];
   const body = (
     <View style={{ gap: spacing.xs }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: spacing.md }}>
-        <Text style={{ flex: 1, fontSize: fontSize.md, color: colors.foreground }}>{field.label}</Text>
-        <Text style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>{formatTaxFieldValue(field)}</Text>
-      </View>
+      <LabelValueRow accessible={false} label={field.label} labelTone="foreground" value={formatTaxFieldValue(field)} valueWeight="600" />
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{`${taxFieldSource(field, instance)} · ${status}`}</Text>
       {field.validation_message ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{field.validation_message}</Text> : null}
     </View>

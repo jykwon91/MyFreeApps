@@ -35,6 +35,7 @@ export { default as FormSheetCancelButton } from "./components/FormSheetCancelBu
 export { default as GroupedBarChart } from "./components/GroupedBarChart";
 export { default as HeaderKeyboardAvoidingView } from "./components/HeaderKeyboardAvoidingView";
 export { default as KeyboardAwareScroll } from "./components/KeyboardAwareScroll";
+export { default as LabelValueRow } from "./components/LabelValueRow";
 export { default as LoadingButton } from "./components/LoadingButton";
 export { default as ListSeparator } from "./components/ListSeparator";
 export { default as NotFoundScreen } from "./components/NotFoundScreen";
@@ -125,6 +126,7 @@ export type { GroupedBarChartSeries } from "./types/GroupedBarChartSeries";
 export type { HeaderKeyboardAvoidingViewProps } from "./types/HeaderKeyboardAvoidingViewProps";
 export type { KeyboardAwareScrollProps } from "./types/KeyboardAwareScrollProps";
 export type { KeyboardAwareScrollRef } from "./types/KeyboardAwareScrollRef";
+export type { LabelValueRowProps } from "./types/LabelValueRowProps";
 export type { LoadingButtonProps } from "./types/LoadingButtonProps";
 export type { LoadMoreFooterProps } from "./types/LoadMoreFooterProps";
 export type { MoreMenuGroup } from "./types/MoreMenuGroup";
