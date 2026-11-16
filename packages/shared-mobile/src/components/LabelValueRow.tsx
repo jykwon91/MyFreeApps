@@ -1,5 +1,5 @@
-import { Text, useWindowDimensions, View } from "react-native";
-import { LARGE_TEXT_FONT_SCALE } from "../constants/largeText";
+import { Text, View } from "react-native";
+import { useLargeText } from "../hooks/useLargeText";
 import { useTheme } from "../theme/useTheme";
 import type { LabelValueRowProps } from "../types/LabelValueRowProps";
 
@@ -26,8 +26,7 @@ export default function LabelValueRow({
   accessible = true,
 }: LabelValueRowProps) {
   const { colors, spacing, fontSize } = useTheme();
-  const { fontScale } = useWindowDimensions();
-  const stacked = fontScale >= LARGE_TEXT_FONT_SCALE;
+  const stacked = useLargeText();
   const tone = { foreground: colors.foreground, muted: colors.mutedForeground };
   const labelText = (
     <Text

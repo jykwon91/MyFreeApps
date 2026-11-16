@@ -2,7 +2,7 @@ import { changeFigures } from "@mybookkeeper/api-client/utils/comparePeriods";
 import type { PropertyMonthlySummary } from "@mybookkeeper/api-client/types/summary/PropertyMonthlySummary";
 import type { PropertySummary } from "@mybookkeeper/api-client/types/summary/PropertySummary";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -45,8 +45,17 @@ export default function PropertyRow({ property, previous, isComparing, monthly, 
         onPress={() => setIsOpen((value) => !value)}
         style={{ minHeight: MIN_TOUCH_TARGET, flexDirection: "row", alignItems: "center", gap: spacing.sm }}
       >
-        <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.md, color: colors.foreground }}>{name}</Text>
-        <Text style={{ fontSize: fontSize.md, fontVariant: ["tabular-nums"], color: moneySign(property.profit) > 0 ? colors.positiveText : colors.foreground }}>{signedMoney(property.profit)}</Text>
+        <View style={{ flex: 1 }}>
+          <ListRowTitle
+            aside={
+              <Text style={{ fontSize: fontSize.md, fontVariant: ["tabular-nums"], color: moneySign(property.profit) > 0 ? colors.positiveText : colors.foreground }}>
+                {signedMoney(property.profit)}
+              </Text>
+            }
+            title={name}
+            weight="regular"
+          />
+        </View>
         <Text accessibilityElementsHidden importantForAccessibility="no" style={{ fontSize: fontSize.lg, color: colors.mutedForeground }}>
           {isOpen ? "⌃" : "⌄"}
         </Text>

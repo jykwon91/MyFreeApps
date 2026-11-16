@@ -1,5 +1,7 @@
 import type { RecipeSummary } from "@myrecipes/api-client/types/recipe/recipe";
+import { setFontScale } from "@platform/mobile/test-support/fontScale";
 import { fireEvent, render, screen } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 import RecipeCard from "../src/features/recipes/RecipeCard";
 
 const RECIPE: RecipeSummary = {
@@ -65,5 +67,25 @@ describe("RecipeCard", () => {
 
     await fireEvent.press(screen.getByRole("button"));
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+  describe("text size", () => {
+    const LONG_TITLE = "Grandma's slow-roasted tomato and red pepper soup with basil oil";
+
+    it("keeps the title to two lines beside the version chip at the default text size", async () => {
+      await show({ title: LONG_TITLE });
+
+      expect(screen.getByText(LONG_TITLE).props.numberOfLines).toBe(2);
+      expect(StyleSheet.flatten(screen.getByTestId("list-row-title").props.style).flexDirection).toBe("row");
+    });
+
+    it("shows the whole title with the version chip wrapping below it at a large text size", async () => {
+      setFontScale(2);
+      await show({ title: LONG_TITLE });
+
+      expect(screen.getByText(LONG_TITLE).props.numberOfLines).toBeUndefined();
+      expect(StyleSheet.flatten(screen.getByTestId("list-row-title").props.style).flexDirection).toBeUndefined();
+      expect(StyleSheet.flatten(screen.getByTestId("list-row-title-aside").props.style).flexWrap).toBe("wrap");
+      expect(screen.getByText("v3")).toBeTruthy();
+    });
   });
 });

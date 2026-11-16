@@ -1,7 +1,7 @@
 import { attributionPayoutLabel } from "@mybookkeeper/api-client/constants/attributionLabels";
 import type { AttributionReviewItem } from "@mybookkeeper/api-client/types/attribution/attribution-review-item";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { ListRowTitle, LoadingButton, useTheme } from "@platform/mobile";
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { PAYMENT_REVIEW_MESSAGES as MESSAGES } from "../../constants/paymentReview";
@@ -74,12 +74,10 @@ export default function PaymentReviewRow({ item, canWrite }: PaymentReviewRowPro
   return (
     <View style={{ gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>
       <View accessible accessibilityLabel={rowLabel(item)} style={{ gap: spacing.xs }}>
-        <View style={{ flexDirection: "row", gap: spacing.sm, justifyContent: "space-between" }}>
-          <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
-            {payerName(item)}
-          </Text>
-          {amount ? <Text style={{ fontSize: fontSize.md, fontWeight: "600", fontVariant: ["tabular-nums"], color: colors.positiveText }}>{amount}</Text> : null}
-        </View>
+        <ListRowTitle
+          aside={amount ? <Text style={{ fontSize: fontSize.md, fontWeight: "600", fontVariant: ["tabular-nums"], color: colors.positiveText }}>{amount}</Text> : null}
+          title={payerName(item)}
+        />
         {dateLine ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{dateLine}</Text> : null}
         {transaction?.description ? (
           <Text numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>

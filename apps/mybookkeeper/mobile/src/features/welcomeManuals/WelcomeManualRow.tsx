@@ -1,5 +1,5 @@
 import type { WelcomeManualSummary } from "@mybookkeeper/api-client/types/welcome-manual/welcome-manual-summary";
-import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Chip, MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
 import { WELCOME_MANUAL_MESSAGES } from "../../constants/welcomeManuals";
 import { manualRowLabel, manualSummaryLine } from "./welcomeManualDisplay";
@@ -12,6 +12,7 @@ interface WelcomeManualRowProps {
 
 export default function WelcomeManualRow({ manual, propertyName, onPress }: WelcomeManualRowProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const isLargeText = useLargeText();
   return (
     <Pressable
       accessibilityLabel={manualRowLabel(manual, propertyName)}
@@ -27,15 +28,15 @@ export default function WelcomeManualRow({ manual, propertyName, onPress }: Welc
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <Text numberOfLines={isLargeText ? undefined : 2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {manual.title}
       </Text>
       {propertyName ? (
-        <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {propertyName}
         </Text>
       ) : null}
-      <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
+      <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
         {manualSummaryLine(manual)}
       </Text>
       {manual.section_count === 0 ? <Chip label={WELCOME_MANUAL_MESSAGES.noSectionsChip} /> : null}

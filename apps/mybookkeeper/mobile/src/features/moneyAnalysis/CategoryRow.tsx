@@ -1,6 +1,6 @@
 import { changeFigures } from "@mybookkeeper/api-client/utils/comparePeriods";
 import { formatCurrency } from "@platform/core/utils/currency";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { HOME_CATEGORY_BAR_HEIGHT } from "../../constants/home";
@@ -36,10 +36,11 @@ export default function CategoryRow({ row, kind, largest, previous, againstLabel
         onPress={() => router.navigate(drillDownLink(categoryDrillDown(row.category, scope)))}
         style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: "center", gap: spacing.xs }}
       >
-        <View style={{ flexDirection: "row", gap: spacing.sm }}>
-          <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.md, color: colors.foreground }}>{label}</Text>
-          <Text style={{ fontSize: fontSize.md, fontVariant: ["tabular-nums"], color: colors.foreground }}>{formatCurrency(row.amount)}</Text>
-        </View>
+        <ListRowTitle
+          aside={<Text style={{ fontSize: fontSize.md, fontVariant: ["tabular-nums"], color: colors.foreground }}>{formatCurrency(row.amount)}</Text>}
+          title={label}
+          weight="regular"
+        />
         <View style={{ height: HOME_CATEGORY_BAR_HEIGHT, borderRadius: radius.sm, backgroundColor: colors.muted }}>
           <View testID={`category-bar-${row.category}`} style={{ width: `${Math.min(100, (Math.abs(row.amount) / largest) * 100)}%`, height: "100%", borderRadius: radius.sm, backgroundColor: barColor }} />
         </View>

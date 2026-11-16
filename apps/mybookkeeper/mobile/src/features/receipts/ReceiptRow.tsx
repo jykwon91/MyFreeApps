@@ -1,5 +1,5 @@
 import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { ListRowTitle, LoadingButton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
 import { receiptSentFromOtherGmailMessage } from "@mybookkeeper/api-client/utils/receiptSentFromOtherGmailMessage";
@@ -26,12 +26,10 @@ export default function ReceiptRow({ receipt, canWrite, canSend }: ReceiptRowPro
   return (
     <View style={{ gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border }}>
       <View accessible accessibilityLabel={rowLabel(receipt)} style={{ gap: spacing.xs }}>
-        <View style={{ flexDirection: "row", gap: spacing.sm, justifyContent: "space-between" }}>
-          <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
-            {rowName(receipt)}
-          </Text>
-          <Text style={{ fontSize: fontSize.md, fontWeight: "600", fontVariant: ["tabular-nums"], color: colors.foreground }}>{receiptAmount(receipt)}</Text>
-        </View>
+        <ListRowTitle
+          aside={<Text style={{ fontSize: fontSize.md, fontWeight: "600", fontVariant: ["tabular-nums"], color: colors.foreground }}>{receiptAmount(receipt)}</Text>}
+          title={rowName(receipt)}
+        />
         <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{periodLabel(receipt.period_start_date, receipt.period_end_date)}</Text>
         <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{receivedLine(receipt)}</Text>
       </View>

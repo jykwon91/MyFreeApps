@@ -1,6 +1,6 @@
 import type { Document } from "@mybookkeeper/api-client/types/document/document";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
-import { Pressable, Text, View } from "react-native";
+import { LARGE_TEXT_FILE_NAME_LINES, ListRowTitle, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { Pressable, Text } from "react-native";
 import { DOCUMENT_BULK_MESSAGES } from "../../constants/documentBulk";
 import { DOCUMENT_LIST_MESSAGES } from "../../constants/documents";
 import { timeSince } from "@platform/core/utils/timeSince";
@@ -56,22 +56,25 @@ export default function DocumentRow({
         opacity: isUnselectable ? 0.5 : 1,
       })}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
-        {isPicking ? (
-          <Text accessibilityElementsHidden importantForAccessibility="no" style={{ fontSize: fontSize.md, color: isSelected ? colors.primary : colors.mutedForeground }}>
-            {isSelected ? "☑" : "☐"}
-          </Text>
-        ) : null}
-        <Text
-          ellipsizeMode="middle"
-          numberOfLines={1}
-          style={{ flex: 1, fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}
-        >
-          {name}
-        </Text>
-        {document.is_escrow_paid ? <DocumentReferenceChip /> : null}
-        <DocumentStatusChip document={document} />
-      </View>
+      <ListRowTitle
+        align="center"
+        aside={
+          <>
+            {document.is_escrow_paid ? <DocumentReferenceChip /> : null}
+            <DocumentStatusChip document={document} />
+          </>
+        }
+        ellipsizeMode="middle"
+        largeTextNumberOfLines={LARGE_TEXT_FILE_NAME_LINES}
+        leading={
+          isPicking ? (
+            <Text accessibilityElementsHidden importantForAccessibility="no" style={{ fontSize: fontSize.md, color: isSelected ? colors.primary : colors.mutedForeground }}>
+              {isSelected ? "☑" : "☐"}
+            </Text>
+          ) : null
+        }
+        title={name}
+      />
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{details}</Text>
       {statusLine ? <Text style={{ fontSize: fontSize.sm, color: colors.foreground }}>{statusLine}</Text> : null}
       {document.status === "failed" && document.error_message ? (

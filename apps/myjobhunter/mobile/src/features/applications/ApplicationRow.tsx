@@ -1,11 +1,12 @@
-import { Chip, MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
-import { Pressable, Text, View } from "react-native";
+import { Chip, ListRowTitle, MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
+import { Pressable, Text } from "react-native";
 import { APPLICATION_MESSAGES } from "../../constants/applications";
 import type { ApplicationRowProps } from "../../types/ApplicationRowProps";
 import { applicationDetails, applicationRowLabel, companyName, fitText, statusLabel, statusTone } from "./applicationDisplay";
 
 export default function ApplicationRow({ application, onPress }: ApplicationRowProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const isLargeText = useLargeText();
   const fit = fitText(application);
   const details = applicationDetails(application);
   const status = statusLabel(application);
@@ -26,17 +27,12 @@ export default function ApplicationRow({ application, onPress }: ApplicationRowP
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <View style={{ flexDirection: "row", gap: spacing.sm }}>
-        <Text numberOfLines={1} style={{ flex: 1, fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
-          {companyName(application)}
-        </Text>
-        {fit ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{fit}</Text> : null}
-      </View>
-      <Text numberOfLines={2} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
+      <ListRowTitle aside={fit ? <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{fit}</Text> : null} title={companyName(application)} />
+      <Text numberOfLines={isLargeText ? undefined : 2} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
         {application.role_title}
       </Text>
       {details ? (
-        <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {details}
         </Text>
       ) : null}

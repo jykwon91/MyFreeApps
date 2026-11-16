@@ -1,5 +1,5 @@
 import { companyFieldText } from "@myjobhunter/api-client/utils/companyFieldText";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
 import { COMPANY_MESSAGES } from "../../constants/companies";
 import type { CompanyRowProps } from "../../types/CompanyRowProps";
@@ -8,6 +8,7 @@ import { companyDetails, companyRowLabel } from "./companyDisplay";
 /** The website's Name, Domain, Industry and HQ columns as one row, leaving out what a company doesn't have. */
 export default function CompanyRow({ company, onPress }: CompanyRowProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const isLargeText = useLargeText();
   const domain = companyFieldText(company, "primary_domain");
   const details = companyDetails(company);
 
@@ -28,16 +29,16 @@ export default function CompanyRow({ company, onPress }: CompanyRowProps) {
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text numberOfLines={1} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {company.name}
       </Text>
       {domain ? (
-        <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {domain}
         </Text>
       ) : null}
       {details ? (
-        <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
+        <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>
           {details}
         </Text>
       ) : null}

@@ -1,5 +1,5 @@
 import type { LeaseTemplateSummary } from "@mybookkeeper/api-client/types/lease/lease-template-summary";
-import { MIN_TOUCH_TARGET, useTheme } from "@platform/mobile";
+import { MIN_TOUCH_TARGET, useLargeText, useTheme } from "@platform/mobile";
 import { Pressable, Text } from "react-native";
 import { templateCountsLine, templateRowLabel } from "./leaseTemplateDisplay";
 
@@ -10,6 +10,7 @@ interface LeaseTemplateRowProps {
 
 export default function LeaseTemplateRow({ template, onPress }: LeaseTemplateRowProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const isLargeText = useLargeText();
   return (
     <Pressable
       accessibilityLabel={templateRowLabel(template)}
@@ -25,7 +26,7 @@ export default function LeaseTemplateRow({ template, onPress }: LeaseTemplateRow
         backgroundColor: pressed ? colors.muted : colors.background,
       })}
     >
-      <Text numberOfLines={2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
+      <Text numberOfLines={isLargeText ? undefined : 2} style={{ fontSize: fontSize.md, fontWeight: "600", color: colors.foreground }}>
         {template.name}
       </Text>
       {template.description ? (
@@ -33,7 +34,7 @@ export default function LeaseTemplateRow({ template, onPress }: LeaseTemplateRow
           {template.description}
         </Text>
       ) : null}
-      <Text numberOfLines={1} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
+      <Text numberOfLines={isLargeText ? undefined : 1} style={{ fontSize: fontSize.sm, color: colors.foreground }}>
         {templateCountsLine(template)}
       </Text>
     </Pressable>

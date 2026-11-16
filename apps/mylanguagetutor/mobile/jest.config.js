@@ -17,6 +17,7 @@ module.exports = {
     "<rootDir>/../../../packages/shared-mobile/test-support/flushTimersAfterEach.ts",
     "<rootDir>/../../../packages/shared-mobile/test-support/resetStoresAfterAll.ts",
     "<rootDir>/../../../packages/shared-mobile/test-support/resetMockKeyboardBeforeEach.ts",
+    "<rootDir>/../../../packages/shared-mobile/test-support/resetFontScaleBeforeEach.ts",
   ],
   // The preset turns this on, which would pass a project whose tests all went missing.
   passWithNoTests: false,

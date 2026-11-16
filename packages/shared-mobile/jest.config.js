@@ -8,7 +8,11 @@ module.exports = {
   preset: "jest-expo",
   resolver: "<rootDir>/jest/resolver.js",
   setupFiles: ["<rootDir>/jest/animationFrame.js", "<rootDir>/jest/reanimated.js", "<rootDir>/jest/keyboardController.js"],
-  setupFilesAfterEnv: ["<rootDir>/test-support/resetStoresAfterAll.ts", "<rootDir>/test-support/resetMockKeyboardBeforeEach.ts"],
+  setupFilesAfterEnv: [
+    "<rootDir>/test-support/resetStoresAfterAll.ts",
+    "<rootDir>/test-support/resetMockKeyboardBeforeEach.ts",
+    "<rootDir>/test-support/resetFontScaleBeforeEach.ts",
+  ],
   // The preset turns this on, which would pass a project whose tests all went missing.
   passWithNoTests: false,
   // The first test in each file also pays for loading React Native, which is slow on CI.
