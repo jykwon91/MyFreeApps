@@ -143,11 +143,16 @@ async def get_character_render(slug: str) -> bytes | None:
 
 
 async def fetch_completed_quests(slug: str) -> CharacterCompletedQuests:
-    """The quests the character has turned in (Blizzard updates them at logout). Raises ``CharacterLookupError``."""
+    """The quests the character has completed (Blizzard updates them at logout).
+
+    Raises ``CharacterLookupError``; status 404 = no character by that name (the profile is asked first:
+    Blizzard 404s ``/quests/completed`` for a character with none yet too).
+    """
     cached = _fresh(_completed_quests, slug)
     if cached is not None:
         return cached
     async with new_client() as client:
+        await client.profile(slug)
         quests = to_completed_quests(await client.completed_quests(slug))
     _store(_completed_quests, slug, quests, CHARACTER_CACHE_MAX_ENTRIES)
     return quests

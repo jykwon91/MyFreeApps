@@ -21,6 +21,7 @@ import pytest
 from httpx import AsyncClient
 from PIL import Image
 
+from app.schemas.wow.character.character_completed_quests import CharacterCompletedQuests
 from app.schemas.wow.character.character_dungeon import CharacterDungeon
 from app.api import wow_characters
 from app.core.rate_limit import RateLimiter
@@ -30,6 +31,7 @@ from app.services.wow.character.blizzard_character_client import BlizzardCharact
 from app.services.wow.character.character_lookup_error import CharacterLookupError
 from app.services.wow.character.character_mapper import to_character_response
 from app.services.wow.character.character_profile import CharacterProfile
+from app.services.wow.character.character_quests_mapper import to_completed_quests
 from app.services.wow.character.character_render_crop import crop_render
 from app.services.wow.character.character_slug import normalize_character_slug
 from app.services.wow.character.character_stats_mapper import to_character_stats
@@ -39,8 +41,6 @@ from app.services.wow.character.character_dungeons_mapper import to_character_du
 from app.services.wow.character.character_pvp_mapper import to_character_pvp
 from app.services.wow.character.character_reputations_mapper import to_character_reputations
 from app.services.wow.character.character_talents_mapper import to_character_talents
-from app.services.wow.character.character_quests_mapper import to_completed_quests
-from app.schemas.wow.character.character_completed_quests import CharacterCompletedQuests
 
 RENDER_URL = "https://render.worldofwarcraft.com/forever-us/character/101/6299749-main-raw.png"
 PROFILE: dict[str, Any] = {
@@ -582,8 +582,16 @@ async def test_completed_quests_ask_blizzard_once_while_cached(monkeypatch: pyte
     second = await character_service.fetch_completed_quests("jason-kwon")
     assert first.quest_ids == second.quest_ids == [233, 1795]
     assert [r.url.path for r in seen if r.url.host == "us.api.blizzard.com"] == [
+        "/profile/wow/character/jason-kwon",
         "/profile/wow/character/jason-kwon/quests/completed",
     ]
+
+
+async def test_completed_quests_of_no_such_character_is_a_404_not_an_empty_list(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(character_service, "new_client", lambda: _client(_blizzard()))
+    with pytest.raises(CharacterLookupError) as raised:
+        await character_service.fetch_completed_quests("nobody-here")
+    assert raised.value.status_code == 404
 
 
 async def test_completed_quests_failure_is_an_error_and_not_cached(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -607,6 +615,11 @@ async def test_completed_quests_route(client: AsyncClient, monkeypatch: pytest.M
     with patch.object(character_lookup_service, "get_completed_quests", AsyncMock(side_effect=error)):
         resp = await client.get("/wow/characters/jason-kwon/quests/completed")
     assert (resp.status_code, resp.json()["detail"]) == (502, "character_upstream_failed")
+    missing = CharacterLookupError("Not Found", status_code=404)
+    with patch.object(character_lookup_service, "get_completed_quests", AsyncMock(side_effect=missing)):
+        resp = await client.get("/wow/characters/jason-kwon/quests/completed")
+    assert (resp.status_code, resp.json()["detail"]) == (404, "character_not_found")
+    assert (await client.get("/wow/characters/jason/quests/completed")).status_code == 400
     monkeypatch.setattr(wow_characters, "character_quests_limiter", RateLimiter(max_attempts=1, window_seconds=60))
     with patch.object(character_lookup_service, "get_completed_quests", AsyncMock(return_value=quests)):
         codes = [(await client.get("/wow/characters/jason-kwon/quests/completed")).status_code for _ in range(2)]

@@ -15,7 +15,7 @@ interface BattleNetQuestsLineProps {
 /** The one helper line under the intro: where the ticks come from, by the saved character's state. */
 export default function BattleNetQuestsLine({ state }: BattleNetQuestsLineProps) {
   return (
-    <div role="status" className="space-y-1 text-sm text-muted-foreground" data-testid="battlenet-quests" data-state={state.kind}>
+    <div className="space-y-1 text-sm text-muted-foreground" data-testid="battlenet-quests" data-state={state.kind}>
       {body(state)}
     </div>
   );
@@ -33,7 +33,7 @@ function body(state: BattleNetQuestsState) {
     case "loading":
       return (
         <>
-          <span className="sr-only">{BEFORE_YOU_GO_COPY.battleNetLoading}</span>
+          <span role="status" className="sr-only">{BEFORE_YOU_GO_COPY.battleNetLoading}</span>
           <Skeleton className="h-5 w-full max-w-md" />
           <Skeleton className="h-11 w-32" />
         </>
@@ -43,14 +43,14 @@ function body(state: BattleNetQuestsState) {
     case "not-found":
       return (
         <>
-          <p>{BEFORE_YOU_GO_COPY.battleNetNotFound(state.characterName)}</p>
+          <p role="status">{BEFORE_YOU_GO_COPY.battleNetNotFound(state.characterName)}</p>
           <Link to={CHARACTER_PAGE_PATH} className={LINK}>{BEFORE_YOU_GO_COPY.changeCharacter}</Link>
         </>
       );
     case "ready":
       return (
         <>
-          <p>{BEFORE_YOU_GO_COPY.battleNetReady(state.characterName)}</p>
+          <p role="status">{BEFORE_YOU_GO_COPY.battleNetReady(state.characterName)}</p>
           <Link to={CHARACTER_PAGE_PATH} className={LINK}>{BEFORE_YOU_GO_COPY.changeCharacter}</Link>
         </>
       );

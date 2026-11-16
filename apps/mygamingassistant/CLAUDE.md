@@ -1198,7 +1198,8 @@ a registry entry, and a `src/games/<slug>/` folder (data, components, pages, rou
   `pvp` by `character_pvp_mapper.py`, `collections` by `character_collections_mapper.py`,
   `dungeons` by `character_dungeons_mapper.py`)
   `/{slug}/quests/completed` (`{quest_ids}` from Blizzard's `/quests/completed`,
-  works with the client token; 404 = none yet; not stored — only the dungeon
+  works with the client token; the profile is asked first so an unknown name is 404 —
+  Blizzard also 404s a character with none yet, read as empty; not stored — only the dungeon
   checklists read it), and `/{slug}/render.png` (Blizzard's `main-raw` render, fetched only from
   `render.worldofwarcraft.com`, refused over 3200x2400 px before decoding,
   cropped to the figure with Pillow). Per-IP limit 30/min on each route
