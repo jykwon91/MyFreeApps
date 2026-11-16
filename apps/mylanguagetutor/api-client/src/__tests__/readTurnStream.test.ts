@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { TURN_STREAM_IDLE_TIMEOUT_MS } from "../constants/turnRequest";
 import { TurnAbortedError } from "../errors/TurnAbortedError";
 import { readTurnStream } from "../utils/readTurnStream";
 import type { TurnByteStream } from "../types/stream/turn-byte-stream";
@@ -15,6 +16,24 @@ function failingBody(error: Error): TurnByteStream & { released: () => boolean }
       },
     }),
     released: () => released,
+  };
+}
+
+const encoder = new TextEncoder();
+
+/** A body whose reads hand out ``chunks`` when the test pushes them, and otherwise wait: a connection gone quiet. */
+function quietBody() {
+  const waiting: Array<(chunk: { done: boolean; value?: Uint8Array }) => void> = [];
+  const body: TurnByteStream = {
+    getReader: () => ({
+      read: () => new Promise((resolve) => waiting.push(resolve)),
+      releaseLock: () => {},
+    }),
+  };
+  return {
+    body,
+    push: (text: string) => waiting.shift()?.({ done: false, value: encoder.encode(text) }),
+    close: () => waiting.shift()?.({ done: true }),
   };
 }
 
@@ -93,5 +112,48 @@ describe("readTurnStream", () => {
 
     await expect(read).rejects.toBeInstanceOf(TurnAbortedError);
     expect(delivered).toEqual([{ type: "reply.delta", text: "Uno." }]);
+  });
+});
+
+describe("readTurnStream on a connection that goes quiet", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("fails as connection_lost once nothing arrives for the idle limit, after the words so far", async () => {
+    vi.useFakeTimers();
+    const { body, push } = quietBody();
+    const events: TurnStreamEvent[] = [];
+    const onStall = vi.fn();
+
+    const read = readTurnStream(body, (e) => events.push(e), undefined, onStall);
+    const failure = read.catch((err: unknown) => err);
+    push('event: reply.delta\ndata: {"text":"¡Hola!"}\n\n');
+    await vi.advanceTimersByTimeAsync(TURN_STREAM_IDLE_TIMEOUT_MS - 1);
+    expect(onStall).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(await failure).toMatchObject({ status: 0, detail: "connection_lost" });
+    expect(onStall).toHaveBeenCalledTimes(1);
+    expect(events).toEqual([{ type: "reply.delta", text: "¡Hola!" }]);
+  });
+
+  it("never cuts off a long reply that keeps arriving, keep-alives included", async () => {
+    vi.useFakeTimers();
+    const { body, push, close } = quietBody();
+    const events: TurnStreamEvent[] = [];
+    const onStall = vi.fn();
+
+    const read = readTurnStream(body, (e) => events.push(e), undefined, onStall);
+    for (let i = 0; i < 10; i += 1) {
+      await vi.advanceTimersByTimeAsync(TURN_STREAM_IDLE_TIMEOUT_MS - 1);
+      push(i % 2 === 0 ? ": ping\n\n" : `event: reply.delta\ndata: {"text":"${i}"}\n\n`);
+    }
+    await vi.advanceTimersByTimeAsync(TURN_STREAM_IDLE_TIMEOUT_MS - 1);
+    close();
+
+    await expect(read).resolves.toBeUndefined();
+    expect(onStall).not.toHaveBeenCalled();
+    expect(events.map((e) => (e.type === "reply.delta" ? e.text : e.type))).toEqual(["1", "3", "5", "7", "9"]);
   });
 });

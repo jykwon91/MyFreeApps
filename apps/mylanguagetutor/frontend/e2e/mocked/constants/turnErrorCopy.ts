@@ -9,3 +9,4 @@ export const TUTOR_INPUT_REJECTED_COPY = "The tutor couldn't respond to that. Tr
 export const RATE_LIMITED_COPY = "That was a lot of messages in a short time. Wait a few seconds and try again.";
 export const TURN_IN_PROGRESS_COPY = "Your last message is still being answered. Try again in a moment.";
 export const SESSION_NOT_FOUND_COPY = "This conversation is no longer available. Try again to start a new one.";
+export const CONNECTION_LOST_COPY = "The connection dropped before the tutor finished. Try again.";

@@ -2,6 +2,7 @@ import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCop
 import { SESSION_BLOCK_COPY } from "@mylanguagetutor/api-client/constants/sessionBlockCopy";
 import { sessionBlockMessage } from "@mylanguagetutor/api-client/utils/sessionBlockMessage";
 import { CONNECTION_LOST, NETWORK_ERROR, SESSION_NOT_FOUND } from "@mylanguagetutor/api-client/constants/turnFailureCodes";
+import { TURN_RESPONSE_TIMEOUT_MS, TURN_STREAM_IDLE_TIMEOUT_MS } from "@mylanguagetutor/api-client/constants/turnRequest";
 import { practicePath } from "@mylanguagetutor/api-client/utils/practicePath";
 import { turnErrorCopy } from "@mylanguagetutor/api-client/utils/turnErrorCopy";
 import { baseApi } from "@platform/core/store/baseApi";
@@ -148,6 +149,58 @@ describe("a typed conversation", () => {
     expect(screen.getByText("¡Hola!")).toBeTruthy();
     expect(screen.queryByText(turnErrorCopy(NETWORK_ERROR))).toBeNull();
     expect(turns.map((turn) => turn.text)).toEqual(["Hola", "Hola"]);
+  });
+
+  it("says the connection dropped when a reply goes quiet, keeps what arrived, and sends the same words again", async () => {
+    serveConversation();
+    const streams = [turnStream(), turnStream()];
+    let turn = 0;
+    const turns = serveTurns(() => ({ stream: streams[turn++] }));
+    await openCafe();
+
+    await write("Hola");
+    await serverWrites(() => streams[0].emit("reply.delta", { text: "¡Hola! Bienvenido" }));
+    // The phone moved between networks: the connection stays open, but nothing more arrives.
+    await act(async () => jest.advanceTimersByTime(TURN_STREAM_IDLE_TIMEOUT_MS - 1));
+    expect(screen.getByRole("button", { name: PRACTICE_COPY.sending })).toBeDisabled();
+    expect(streams[0].isAborted()).toBe(false);
+
+    await act(async () => jest.advanceTimersByTime(1));
+    expect(await screen.findByText(turnErrorCopy(CONNECTION_LOST))).toBeTruthy();
+    expect(streams[0].isAborted()).toBe(true);
+    expect(screen.getByText("¡Hola! Bienvenido …")).toBeTruthy();
+    expect(screen.getByText(PRACTICE_COPY.replyCutOff)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: PRACTICE_COPY.sending })).toBeNull();
+
+    await fireEvent.press(screen.getByRole("button", { name: PRACTICE_COPY.tryAgain }));
+    await serverWrites(() => streams[1].emit("reply.delta", { text: "¡Hola! Bienvenido al café." }));
+    await finish(streams[1]);
+    expect(screen.getByText("¡Hola! Bienvenido al café.")).toBeTruthy();
+    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST))).toBeNull();
+    expect(screen.getAllByText("Hola")).toHaveLength(1);
+    expect(turns.map((sent) => sent.text)).toEqual(["Hola", "Hola"]);
+  });
+
+  it("says the connection dropped when a turn gets no answer at all, and sends the same words again", async () => {
+    serveConversation();
+    const stream = turnStream();
+    let answered = false;
+    const turns = serveTurns(() => (answered ? { stream } : new Promise<never>(() => {})));
+    await openCafe();
+
+    await write("Hola");
+    await act(async () => jest.advanceTimersByTime(TURN_RESPONSE_TIMEOUT_MS));
+    expect(await screen.findByText(turnErrorCopy(CONNECTION_LOST))).toBeTruthy();
+    expect(screen.queryByRole("button", { name: PRACTICE_COPY.sending })).toBeNull();
+
+    answered = true;
+    await fireEvent.press(screen.getByRole("button", { name: PRACTICE_COPY.tryAgain }));
+    await serverWrites(() => stream.emit("reply.delta", { text: "¡Hola!" }));
+    await finish(stream);
+    expect(screen.getByText("¡Hola!")).toBeTruthy();
+    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST))).toBeNull();
+    expect(screen.getAllByText("Hola")).toHaveLength(1);
+    expect(turns.map((sent) => sent.text)).toEqual(["Hola", "Hola"]);
   });
 
   it("stops the reply when the app goes to the background, keeps what arrived, and tries again on return", async () => {

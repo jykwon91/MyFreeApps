@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { TURN_RESPONSE_TIMEOUT_MS, TURN_STREAM_IDLE_TIMEOUT_MS } from "../constants/turnRequest";
 import { createStreamTurn } from "../utils/createStreamTurn";
 import { TurnRequestError } from "../errors/TurnRequestError";
 import type { SentSession, SessionRenewal } from "@platform/core";
@@ -156,6 +157,78 @@ describe("createStreamTurn", () => {
       status: 200,
       detail: "no_stream",
     });
+  });
+});
+
+describe("createStreamTurn on a connection that goes quiet", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** A fetch that never answers, only failing once aborted as a real one does; records the signal it was given. */
+  function neverAnswering() {
+    const signals: AbortSignal[] = [];
+    const fetch = vi.fn<TurnFetch>((_url, init) => {
+      if (init.signal) signals.push(init.signal);
+      return new Promise((_resolve, reject) => {
+        init.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+      });
+    });
+    return { fetch, signals };
+  }
+
+  it("fails as connection_lost and aborts the request when no response arrives in time", async () => {
+    vi.useFakeTimers();
+    const { fetch, signals } = neverAnswering();
+    const { streamTurn } = setup(fetch);
+
+    const failure = streamTurn({ sessionId: "s1", text: "hola", onEvent: () => {} }).catch((err: unknown) => err);
+    await vi.advanceTimersByTimeAsync(TURN_RESPONSE_TIMEOUT_MS - 1);
+    expect(signals[0].aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+
+    const error = await failure;
+    expect(error).toBeInstanceOf(TurnRequestError);
+    expect(error).toMatchObject({ status: 0, detail: "connection_lost" });
+    expect(signals[0].aborted).toBe(true);
+  });
+
+  it("fails as connection_lost and aborts the request when the stream goes quiet mid-reply", async () => {
+    vi.useFakeTimers();
+    const signals: AbortSignal[] = [];
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('event: reply.delta\ndata: {"text":"¡Hola!"}\n\n'));
+      },
+    });
+    const fetch = vi.fn<TurnFetch>(async (_url, init) => {
+      if (init.signal) signals.push(init.signal);
+      return new Response(body, { status: 200 });
+    });
+    const { streamTurn } = setup(fetch);
+    const events: TurnStreamEvent[] = [];
+
+    const failure = streamTurn({ sessionId: "s1", text: "hola", onEvent: (e) => events.push(e) }).catch(
+      (err: unknown) => err,
+    );
+    await vi.advanceTimersByTimeAsync(TURN_STREAM_IDLE_TIMEOUT_MS);
+
+    expect(await failure).toMatchObject({ status: 0, detail: "connection_lost" });
+    expect(signals[0].aborted).toBe(true);
+    expect(events).toEqual([{ type: "reply.delta", text: "¡Hola!" }]);
+  });
+
+  it("passes the caller's abort on to the request", async () => {
+    const { fetch, signals } = neverAnswering();
+    const { streamTurn } = setup(fetch);
+    const controller = new AbortController();
+
+    const turn = streamTurn({ sessionId: "s1", text: "hola", onEvent: () => {}, signal: controller.signal });
+    await vi.waitFor(() => expect(signals).toHaveLength(1));
+    controller.abort();
+
+    expect(signals[0].aborted).toBe(true);
+    await expect(turn).rejects.toThrow("aborted");
   });
 });
 

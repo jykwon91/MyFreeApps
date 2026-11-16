@@ -1,10 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { baseApi } from "@platform/core/store/baseApi";
 import { PRACTICE_COPY } from "@mylanguagetutor/api-client/constants/practiceCopy";
+import { CONNECTION_LOST } from "@mylanguagetutor/api-client/constants/turnFailureCodes";
+import { TURN_STREAM_IDLE_TIMEOUT_MS } from "@mylanguagetutor/api-client/constants/turnRequest";
+import { turnErrorCopy } from "@mylanguagetutor/api-client/utils/turnErrorCopy";
 import type { Language } from "@mylanguagetutor/api-client/types/catalog/language";
 import type { Scenario } from "@mylanguagetutor/api-client/types/catalog/scenario";
 import PracticeSession from "@/features/session/PracticeSession";
@@ -49,6 +52,27 @@ function replyThenDrop(): Response {
     },
   });
   return new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+}
+
+/** A turn stream that sends the first words, then goes quiet without closing, as a phone changing networks does. */
+function wordsThenSilence(): Response {
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode('event: reply.delta\ndata: {"text":"¡Hola! Bien"}\n\n'));
+    },
+  });
+  return new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+}
+
+/** A whole turn: reply, corrections, done. */
+function wholeTurn(): Response {
+  const events = [
+    'event: reply.delta\ndata: {"text":"¡Hola! Bienvenido."}\n\n',
+    "event: reply.done\ndata: {}\n\n",
+    'event: corrections\ndata: {"items":[],"retry_prompt":null,"translation":null,"scenario_state":{"goals_met":[],"complete":false}}\n\n',
+    'event: done\ndata: {"status":"complete","usage":{"remaining_fraction":0.5}}\n\n',
+  ];
+  return new Response(events.join(""), { status: 200, headers: { "Content-Type": "text/event-stream" } });
 }
 
 /** Renders the practice screen on a fresh store and sends one typed turn. */
@@ -119,5 +143,46 @@ describe("PracticeSession with the real conversation hook", () => {
       ["¡Hola!", 1],
       ["¿Qué quieres?", 1],
     ]);
+  });
+});
+
+describe("PracticeSession when the turn's connection goes quiet", () => {
+  beforeEach(() => {
+    localStorage.setItem("token", "test-token");
+    // Real time keeps passing, so the screen's own waits still settle; the test jumps the stall limit.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  it("says the connection dropped, keeps the words so far, and Try again sends the same words", async () => {
+    const turns: string[] = [];
+    const answers = [wordsThenSilence, wholeTurn];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        turns.push((JSON.parse(String(init.body)) as { text: string }).text);
+        return answers[turns.length - 1]();
+      }),
+    );
+
+    sendTypedTurn();
+    expect(await screen.findByText("¡Hola! Bien", { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST))).not.toBeInTheDocument();
+
+    await act(() => vi.advanceTimersByTimeAsync(TURN_STREAM_IDLE_TIMEOUT_MS));
+    expect(await screen.findByText(turnErrorCopy(CONNECTION_LOST))).toBeInTheDocument();
+    expect(screen.getByText(PRACTICE_COPY.replyCutOff)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: PRACTICE_COPY.tryAgain }));
+    expect(await screen.findByText("¡Hola! Bienvenido.")).toBeInTheDocument();
+    expect(screen.queryByText(turnErrorCopy(CONNECTION_LOST))).not.toBeInTheDocument();
+    expect(screen.queryByText(PRACTICE_COPY.replyCutOff)).not.toBeInTheDocument();
+    expect(turns).toEqual(["hola", "hola"]);
   });
 });
