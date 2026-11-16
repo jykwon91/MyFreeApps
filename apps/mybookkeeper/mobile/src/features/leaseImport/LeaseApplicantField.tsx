@@ -1,5 +1,5 @@
 import { useGetApplicantsQuery } from "@mybookkeeper/api-client/store/applicantsApi";
-import { LoadingButton, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
+import { FieldError, LoadingButton, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";
 import { LEASE_IMPORT_CHOICE_LIMIT, LEASE_IMPORT_MESSAGES as MESSAGES } from "../../constants/leaseImport";
@@ -45,6 +45,7 @@ export default function LeaseApplicantField({ value, onChange, error, disabled }
   return (
     <>
       <PickerField
+        error={error}
         hint={currentData.has_more ? MESSAGES.moreTenants : undefined}
         label={`${MESSAGES.tenant} *`}
         onPress={() => {
@@ -52,11 +53,7 @@ export default function LeaseApplicantField({ value, onChange, error, disabled }
         }}
         value={options.find((option) => option.value === value)?.label ?? MESSAGES.tenantNone}
       />
-      {error ? (
-        <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>
-          {error}
-        </Text>
-      ) : null}
+      <FieldError message={error} name={MESSAGES.tenant} />
       <OptionSheet
         isOpen={isPicking}
         onClose={() => setIsPicking(false)}

@@ -1,6 +1,6 @@
 import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
-import { Platform } from "react-native";
+import { AccessibilityInfo, Platform } from "react-native";
 import TimeField from "../src/features/shell/TimeField";
 
 jest.mock("@react-native-community/datetimepicker", () => {
@@ -21,7 +21,19 @@ describe("TimeField", () => {
     await renderField(jest.fn(), "Pick a time.");
 
     expect(screen.getByText("6:00 PM")).toBeTruthy();
-    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(screen.getByText("Pick a time.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Change at" }).props.accessibilityHint).toBe("Pick a time.");
+  });
+
+  it("says its error once, politely, as a field error rather than as an alert", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions").mockClear().mockImplementation(() => undefined);
+    const assertive = jest.spyOn(AccessibilityInfo, "announceForAccessibility").mockClear().mockImplementation(() => undefined);
+
+    await renderField(jest.fn(), "Pick a time.");
+
+    expect(screen.queryAllByRole("alert", { includeHiddenElements: true })).toHaveLength(0);
+    expect(announce.mock.calls.map(([message]) => message)).toEqual(["Pick a time."]);
+    expect(assertive).not.toHaveBeenCalled();
   });
 
   it("spins in place on iOS under a Done button", async () => {

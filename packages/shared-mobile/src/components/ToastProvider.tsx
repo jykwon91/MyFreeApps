@@ -13,11 +13,13 @@ export default function ToastProvider({ children, bottomOffset }: ToastProviderP
   const { spacing } = useTheme();
   // From the bottom of the screen, nav bar included: Android draws edge to edge, so the toast is measured from there.
   const keyboardHeight = useKeyboardState((keyboard) => (keyboard.isVisible ? keyboard.height : 0));
-  const [toast, setToast] = useState<{ id: number; message: string; variant: ToastVariant; action?: ToastAction } | null>(null);
+  const [toast, setToast] = useState<{ id: number; message: string; variant: ToastVariant; action?: ToastAction; isVisualOnly?: boolean } | null>(null);
   const value = useMemo(
     () => ({
       showToast: (message: string, variant: ToastVariant = "success", action?: ToastAction) =>
         setToast((current) => ({ id: (current?.id ?? 0) + 1, message, variant, action })),
+      showVisualToast: (message: string, variant: ToastVariant = "success") =>
+        setToast((current) => ({ id: (current?.id ?? 0) + 1, message, variant, isVisualOnly: true })),
     }),
     [],
   );
@@ -32,6 +34,7 @@ export default function ToastProvider({ children, bottomOffset }: ToastProviderP
             key={toast.id}
             message={toast.message}
             action={toast.action}
+            isVisualOnly={toast.isVisualOnly}
             onDismiss={() => setToast(null)}
             // The keyboard covers the tab bar, so above it is clear.
             style={{ position: "absolute", left: spacing.lg, right: spacing.lg, bottom: keyboardHeight ? keyboardHeight + spacing.md : bottomOffset }}

@@ -1,6 +1,6 @@
 import type { PendingReceipt } from "@mybookkeeper/api-client/types/lease/pending-receipt";
 import type { ReceiptGmailState } from "@mybookkeeper/api-client/types/lease/receipt-gmail-state";
-import { Banner, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, FieldError, LoadingButton, useTheme } from "@platform/mobile";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, type ScrollViewInstance, Text, View } from "react-native";
 import { RECEIPTS_MESSAGES as MESSAGES } from "../../constants/receipts";
@@ -67,17 +67,14 @@ export default function SendReceiptForm({ receipt, gmailState, isSending, isPrev
         />
         <PeriodDateRow
           isOpen={openDate === "end"}
+          error={isReversed ? endBeforeStartMessage(values.periodStart) : undefined}
           label={MESSAGES.to}
           minimum={values.periodStart}
           onChange={(periodEnd) => update({ periodEnd })}
           onToggle={() => toggle("end")}
           value={values.periodEnd}
         />
-        {isReversed ? (
-          <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>
-            {endBeforeStartMessage(values.periodStart)}
-          </Text>
-        ) : null}
+        <FieldError message={isReversed ? endBeforeStartMessage(values.periodStart) : undefined} name={MESSAGES.to} />
         <PaymentMethodRow guess={guess} onChange={(paymentMethod) => update({ paymentMethod })} value={values.paymentMethod} />
       </View>
 

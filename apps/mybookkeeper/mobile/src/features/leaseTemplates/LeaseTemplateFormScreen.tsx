@@ -1,6 +1,6 @@
 import { LEASE_TEMPLATE_NAME_MAX_LENGTH, LEASE_TEMPLATE_UPLOAD_PROBLEMS } from "@mybookkeeper/api-client/constants/leaseTemplateUpload";
 import { leaseTemplateUploadProblems } from "@mybookkeeper/api-client/utils/leaseTemplateUploadForm";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useTheme } from "@platform/mobile";
+import { Banner, FieldError, FormField, KeyboardAwareScroll, LoadingButton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { LEASE_TEMPLATE_DESCRIPTION_MIN_HEIGHT, LEASE_TEMPLATE_FORM_MESSAGES as MESSAGES, LEASE_TEMPLATE_PICKER_TYPES } from "../../constants/leaseTemplateForm";
@@ -66,12 +66,8 @@ export default function LeaseTemplateFormScreen() {
       </Text>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.filesHint}</Text>
       <HeldFilesList emptyText={MESSAGES.noFilesYet} files={files} isDisabled={locked} onRemove={drop} />
-      {filesProblem ? (
-        <Text accessibilityRole="alert" style={{ fontSize: fontSize.xs, color: colors.destructiveText }}>
-          {filesProblem}
-        </Text>
-      ) : null}
-      <LoadingButton disabled={locked} isLoading={isPicking} onPress={() => void pick(() => chooseHeldFile(LEASE_TEMPLATE_PICKER_TYPES))} variant="secondary">
+      <FieldError message={filesProblem} name={MESSAGES.files} size="xs" />
+      <LoadingButton accessibilityHint={filesProblem} disabled={locked} isLoading={isPicking} onPress={() => void pick(() => chooseHeldFile(LEASE_TEMPLATE_PICKER_TYPES))} variant="secondary">
         {files.length > 0 ? MESSAGES.addAnotherFile : MESSAGES.addFile}
       </LoadingButton>
       <LoadingButton disabled={locked || isPicking} isLoading={isBusy} loadingText={MESSAGES.uploading} onPress={send}>

@@ -3,7 +3,7 @@ import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
 import { ToastProvider } from "@platform/mobile";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
-import { Alert } from "react-native";
+import { AccessibilityInfo, Alert } from "react-native";
 import { Provider } from "react-redux";
 import { REMINDER_SETUP_MESSAGES as S } from "../src/constants/rentReminderSetup";
 import { RENT_MANAGE_MESSAGES } from "../src/constants/rentManage";
@@ -207,10 +207,15 @@ describe("setting reminders up", () => {
   it("needs at least one way to send", async () => {
     await start(NO_PLAN);
     await openSheet(S.titleNew, S.setUp);
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions").mockClear().mockImplementation(() => undefined);
 
     await fireEvent.press(screen.getByRole("switch", { name: new RegExp(`^${S.email}`) }));
 
     expect(screen.getByText(S.needChannel)).toBeTruthy();
+    // Read once and politely, as a field error: an alert role would say nothing on iOS.
+    expect(announce.mock.calls.map(([message]) => message)).toEqual([S.needChannel]);
+    expect(screen.queryAllByRole("alert", SHOWN)).toHaveLength(0);
+    announce.mockRestore();
     expect(screen.getAllByRole("button", { name: S.saveNew }).pop()?.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
   });
 

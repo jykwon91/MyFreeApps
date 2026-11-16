@@ -1,7 +1,7 @@
 import { LEASE_NOTES_MAX_LENGTH } from "@mybookkeeper/api-client/constants/leaseLabels";
 import type { LeaseImportFormValues } from "@mybookkeeper/api-client/types/lease/lease-import-form-values";
 import { EMPTY_LEASE_IMPORT_FORM, leaseImportProblems } from "@mybookkeeper/api-client/utils/leaseImportForm";
-import { Banner, FormField, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, FieldError, FormField, KeyboardAwareScroll, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Text } from "react-native";
 import { LEASE_IMPORT_MESSAGES as MESSAGES, LEASE_IMPORT_PROBLEM_MESSAGES, notesLeft } from "../../constants/leaseImport";
@@ -70,16 +70,13 @@ export default function LeaseImportBody() {
       </Text>
       <Text style={{ fontSize: fontSize.sm, color: colors.mutedForeground }}>{MESSAGES.filesHint}</Text>
       <HeldFilesList emptyText={MESSAGES.noFiles} files={held.files} firstFileNote={MESSAGES.signedLeaseTag} isDisabled={locked} onRemove={held.drop} />
-      {problemFor("files") ? (
-        <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>
-          {problemFor("files")}
-        </Text>
-      ) : null}
+      <FieldError message={problemFor("files")} name={MESSAGES.files} />
       <HeldFileButtons
         file={null}
         fileTypes={LEASE_FILE_TYPES}
         isDisabled={locked}
         isPicking={held.isPicking}
+        problem={problemFor("files")}
         onPick={(from) => void held.pick(from)}
         photoName={MESSAGES.photoName}
         takePhotoLabel={MESSAGES.takePhoto}

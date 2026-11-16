@@ -43,14 +43,14 @@ function hasText(values: RecipeFormValues): boolean {
 /**
  * Creating a recipe, as the website's /recipes/new does: the same fields, checks and request.
  * A field past its limit says so as it's typed; the other problems show on their fields once
- * Create has been pressed, and the first is toasted. Once it's
+ * Create has been pressed, and the first is toasted, for sighted users only. Once it's
  * saved, the new recipe replaces this screen, so Back goes to where the form was opened from.
  *
  * With a `seed`, the form starts filled in from its draft, as the website's editor does with a
  * discovered or photographed recipe. Leaving it untouched loses nothing, so only an edit asks first.
  */
 export function useNewRecipeForm(seed?: NewRecipeSeed) {
-  const { showToast } = useToast();
+  const { showToast, showVisualToast } = useToast();
   const dispatch = useDispatch<AppStore["dispatch"]>();
   const [createRecipe, { isLoading: isSaving }] = useCreateRecipeMutation();
   // Amounts and minutes are read in the device locale's decimal separator, and a draft's shown in it.
@@ -90,7 +90,8 @@ export function useNewRecipeForm(seed?: NewRecipeSeed) {
     if (isSaving || created) return;
     const problem = firstRecipeFormProblem(recipeFormProblems(values, decimalSeparator));
     if (problem) {
-      showToast(problem, "error");
+      // The field errors say it to a screen reader, as one summary; this is for sighted users who can't see the first.
+      showVisualToast(problem, "error");
       return;
     }
     try {

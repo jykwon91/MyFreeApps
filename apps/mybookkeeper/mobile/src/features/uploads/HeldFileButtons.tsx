@@ -13,6 +13,8 @@ interface HeldFileButtonsProps {
   isPicking: boolean;
   isDisabled: boolean;
   fileTypes: readonly string[];
+  /** What's wrong with the file, read as the hint on the button that fixes it. */
+  problem?: string;
   photoName: string;
   takePhotoLabel: string;
   onPick: (from: HeldFilePick) => void;
@@ -20,7 +22,7 @@ interface HeldFileButtonsProps {
   onPickPhoto?: (source: HeldPhotoSource) => void;
 }
 
-export default function HeldFileButtons({ file, isPicking, isDisabled, fileTypes, photoName, takePhotoLabel, onPick, onPickPhoto }: HeldFileButtonsProps) {
+export default function HeldFileButtons({ file, isPicking, isDisabled, fileTypes, problem, photoName, takePhotoLabel, onPick, onPickPhoto }: HeldFileButtonsProps) {
   const { colors, fontSize } = useTheme();
   const [source, setSource] = useState<PickSource | null>(null);
 
@@ -39,7 +41,7 @@ export default function HeldFileButtons({ file, isPicking, isDisabled, fileTypes
   return (
     <>
       {file ? <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{file.name}</Text> : null}
-      <LoadingButton {...buttonProps("file", () => onPick(() => chooseHeldFile(fileTypes)))}>
+      <LoadingButton accessibilityHint={problem} {...buttonProps("file", () => onPick(() => chooseHeldFile(fileTypes)))}>
         {file ? UPLOAD_MESSAGES.chooseDifferentFile : UPLOAD_MESSAGES.chooseFile}
       </LoadingButton>
       <LoadingButton {...buttonProps("camera", () => (onPickPhoto ? onPickPhoto("camera") : onPick(() => takeHeldPhoto(photoName))))}>{takePhotoLabel}</LoadingButton>

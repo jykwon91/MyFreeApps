@@ -8,6 +8,7 @@ export default function SearchField({
   onChangeText,
   onClear,
   placeholder,
+  accessibilityHint,
   accessibilityLabel,
   onSubmit,
   maxLength,
@@ -27,6 +28,7 @@ export default function SearchField({
       }}
     >
       <TextInput
+        accessibilityHint={accessibilityHint}
         accessibilityLabel={accessibilityLabel}
         autoCapitalize="none"
         autoCorrect={false}

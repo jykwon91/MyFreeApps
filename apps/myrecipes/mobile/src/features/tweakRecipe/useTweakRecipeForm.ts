@@ -28,7 +28,7 @@ import { useRecipeRows } from "../recipeForm/useRecipeRows";
  * re-render can't both send one.
  */
 export function useTweakRecipeForm(recipeId: string, version: VersionResponse) {
-  const { showToast } = useToast();
+  const { showToast, showVisualToast } = useToast();
   const navigation = useNavigation();
   const dispatch = useDispatch<AppStore["dispatch"]>();
   const [createVersion, { isLoading: isSaving }] = useCreateVersionMutation();
@@ -69,7 +69,8 @@ export function useTweakRecipeForm(recipeId: string, version: VersionResponse) {
     if (isSending.current || isSaved) return;
     const problem = tweakFormProblem(values, changeNote, decimalSeparator);
     if (problem) {
-      showToast(problem, "error");
+      // The field errors say it to a screen reader, as one summary; this is for sighted users who can't see the first.
+      showVisualToast(problem, "error");
       return;
     }
     isSending.current = true;

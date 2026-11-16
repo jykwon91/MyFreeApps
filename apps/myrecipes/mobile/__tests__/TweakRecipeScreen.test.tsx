@@ -10,7 +10,7 @@ import { serve } from "@platform/mobile/test-support/fakeServer";
 import type { FakeReply } from "@platform/mobile/test-support/types/FakeReply";
 import type { SentRequest } from "@platform/mobile/test-support/types/SentRequest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
-import { Alert } from "react-native";
+import { AccessibilityInfo, Alert } from "react-native";
 import { Provider } from "react-redux";
 import { NEW_RECIPE_MESSAGES } from "../src/constants/newRecipe";
 import { TWEAK_RECIPE_MESSAGES as MESSAGES } from "../src/constants/tweakRecipe";
@@ -320,6 +320,20 @@ describe("checking before it saves", () => {
     // On the note field, and toasted.
     expect(screen.getAllByText(PROBLEMS.changeNoteRequired, SHOWN)).toHaveLength(2);
     expect(posts()).toHaveLength(0);
+  });
+
+  it("reads the problems once as the field errors, with the toast for sighted users only", async () => {
+    await showForm();
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions").mockClear().mockImplementation(() => undefined);
+    const assertive = jest.spyOn(AccessibilityInfo, "announceForAccessibility").mockClear().mockImplementation(() => undefined);
+
+    await press(MESSAGES.save);
+
+    expect(announce.mock.calls.map(([message]) => message)).toEqual([PROBLEMS.changeNoteRequired]);
+    expect(assertive).not.toHaveBeenCalled();
+    expect(screen.getByTestId("toast", SHOWN)).toBeTruthy();
+    announce.mockRestore();
+    assertive.mockRestore();
   });
 
   it("checks the version's content as the new-recipe form does, before the note", async () => {

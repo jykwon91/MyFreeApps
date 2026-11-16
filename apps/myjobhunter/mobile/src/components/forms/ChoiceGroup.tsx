@@ -1,7 +1,6 @@
-import { OptionRow, useTheme } from "@platform/mobile";
+import { FieldError, OptionRow, useTheme } from "@platform/mobile";
 import { Text, View } from "react-native";
 import type { ChoiceGroupProps } from "../../types/ChoiceGroupProps";
-import FieldError from "./FieldError";
 
 /** One choice from a short list, every option on screen: the phone's form of a select. */
 export default function ChoiceGroup<Value extends string>({ label, options, value, onChange, required = false, error, disabled = false }: ChoiceGroupProps<Value>) {
@@ -13,6 +12,7 @@ export default function ChoiceGroup<Value extends string>({ label, options, valu
         {required ? <Text style={{ color: colors.destructiveText }}> *</Text> : null}
       </Text>
       <View
+        accessibilityHint={error}
         accessibilityLabel={label}
         accessibilityRole="radiogroup"
         style={{ borderWidth: 1, borderColor: colors.inputBorder, borderRadius: radius.md, overflow: "hidden", opacity: disabled ? 0.5 : 1 }}
@@ -28,7 +28,7 @@ export default function ChoiceGroup<Value extends string>({ label, options, valu
           />
         ))}
       </View>
-      <FieldError message={error} />
+      <FieldError message={error} name={label} />
     </View>
   );
 }

@@ -1,13 +1,13 @@
 import "@platform/mobile/test-support/reactNativeFormData";
 import api from "@platform/core/lib/api";
 import { baseApi } from "@platform/core/store/baseApi";
-import { ToastProvider } from "@platform/mobile";
+import { fieldErrorsSummary, ToastProvider } from "@platform/mobile";
 import { act, fireEvent, screen } from "@testing-library/react-native";
 import type { AxiosAdapter } from "axios";
 import * as DocumentPicker from "expo-document-picker";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { renderRouter } from "expo-router/testing-library";
-import { Alert, type AlertButton, Text } from "react-native";
+import { AccessibilityInfo, Alert, type AlertButton, Text } from "react-native";
 import { Provider } from "react-redux";
 import { LEASE_IMPORT_MESSAGES as MESSAGES } from "../src/constants/leaseImport";
 import LeaseImportScreen from "../src/features/leaseImport/LeaseImportScreen";
@@ -157,6 +157,24 @@ describe("importing a signed lease", () => {
     expect(await screen.findByText(MESSAGES.needTenant)).toBeTruthy();
     expect(screen.getByText(MESSAGES.needFiles)).toBeTruthy();
     expect(imports(server)).toHaveLength(0);
+  });
+
+  it("reads what's missing once as a summary, on the controls, with no alert", async () => {
+    startLeaseWritesServer();
+    await openImport();
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions").mockClear().mockImplementation(() => undefined);
+    const assertive = jest.spyOn(AccessibilityInfo, "announceForAccessibility").mockClear().mockImplementation(() => undefined);
+
+    await importLease();
+
+    await screen.findByText(MESSAGES.needTenant);
+    expect(announce.mock.calls.map(([message]) => message)).toEqual([fieldErrorsSummary([MESSAGES.tenant, MESSAGES.files])]);
+    expect(assertive).not.toHaveBeenCalled();
+    expect(screen.queryAllByRole("alert", SHOWN)).toHaveLength(0);
+    expect(screen.getByRole("button", { name: new RegExp(`^${MESSAGES.tenant}`) }).props.accessibilityHint).toBe(MESSAGES.needTenant);
+    expect(screen.getByRole("button", { name: "Choose a file" }).props.accessibilityHint).toBe(MESSAGES.needFiles);
+    announce.mockRestore();
+    assertive.mockRestore();
   });
 
   it("stops notes at 2000 characters", async () => {
