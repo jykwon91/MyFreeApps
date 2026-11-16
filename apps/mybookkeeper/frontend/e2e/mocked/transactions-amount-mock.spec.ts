@@ -17,6 +17,7 @@ import { test, expect } from "@platform/ui/test-support/crashGuard";
 import { ORG_ID, plantAuth, stubWorkspaceShell } from "./fixtures/mockSession";
 import { stubTransactionPages } from "./fixtures/mockTransactions";
 import { json } from "@platform/ui/test-support/mockResponse";
+import { toastAboveModal } from "@platform/ui/test-support/toast";
 
 const TXN_ID = "00000000-0000-0000-0000-0000000000b1";
 
@@ -150,7 +151,7 @@ test.describe("Transaction editor: amount check", () => {
 
     await panel.getByRole("button", { name: "Save & Approve" }).click();
 
-    await expect(page.getByText("That amount is too large.")).toBeVisible();
+    await expect(toastAboveModal(page, "That amount is too large.")).toBeVisible();
     await expect(panel).toBeVisible();
   });
 });
