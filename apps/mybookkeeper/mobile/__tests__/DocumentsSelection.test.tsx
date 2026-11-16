@@ -125,6 +125,7 @@ describe("picking several documents", () => {
     await renderScreen();
     await screen.findByText("alpha.pdf");
     await fireEvent.changeText(screen.getByLabelText("Search documents"), "r");
+    await waitFor(() => expect(screen.queryByText("alpha.pdf")).toBeNull());
     await fireEvent.press(screen.getByRole("button", { name: "Select several documents" }));
     await fireEvent.press(screen.getByRole("button", { name: "Select all the documents shown" }));
     expect(screen.getByText("2 selected")).toBeTruthy();
