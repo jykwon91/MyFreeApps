@@ -6,9 +6,11 @@ from urllib.parse import quote
 from app.core.context import RequestContext
 from app.core.storage import get_storage
 from app.db.session import AsyncSessionLocal
+from app.mappers.document_summary_mapper import to_document_summary
 from app.models.documents.document import Document
 from app.models.responses.download_result import DownloadResult
 from app.repositories import document_repo, integration_repo
+from app.schemas.documents.document_summary import DocumentSummary
 from app.services.email.gmail_credentials import persist_refreshed_token
 from app.services.email.gmail_service import fetch_email_by_id, get_gmail_service
 from app.services.storage.stored_file import read_stored_file
@@ -52,6 +54,13 @@ async def list_documents(
             offset=offset,
         )
         return list(result)
+
+
+async def get_summary(ctx: RequestContext) -> DocumentSummary:
+    """Counts for the Home screen, so it needn't download the whole list."""
+    async with AsyncSessionLocal() as db:
+        counts = await document_repo.get_status_counts(db, ctx.organization_id)
+    return to_document_summary(counts)
 
 
 async def get_batch_status(ctx: RequestContext, batch_id: str) -> dict[str, str | int]:

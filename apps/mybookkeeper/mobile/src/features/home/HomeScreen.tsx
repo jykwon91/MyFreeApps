@@ -1,4 +1,4 @@
-import { useGetDocumentsQuery } from "@mybookkeeper/api-client/store/documentsApi";
+import { useGetDocumentSummaryQuery } from "@mybookkeeper/api-client/store/documentsApi";
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
 import { useGetInsurancePremiumComparisonQuery } from "@mybookkeeper/api-client/store/insurancePoliciesApi";
 import { useGetPendingReceiptsQuery } from "@mybookkeeper/api-client/store/rentReceiptsApi";
@@ -11,7 +11,6 @@ import { Banner, EmptyState, SHOWING_LAST_LOADED_MESSAGE, SegmentedControl, Skel
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
-import { ALL_DOCUMENTS } from "../../constants/documents";
 import { HOME_PERIODS, HOME_RECEIPTS_ARGS, MONEY_ANALYSIS_LINK, type HomePeriod } from "../../constants/home";
 import { MONEY_ANALYSIS_MESSAGES } from "../../constants/moneyAnalysis";
 import { useToday } from "../../lib/useToday";
@@ -77,7 +76,7 @@ export default function HomeScreen() {
   );
   const years = useGetSummaryYearsQuery();
   const reviewCount = useGetTransactionReviewCountQuery();
-  const documents = useGetDocumentsQuery(ALL_DOCUMENTS);
+  const documents = useGetDocumentSummaryQuery();
   const receipts = useGetPendingReceiptsQuery(HOME_RECEIPTS_ARGS, { skip: !canWrite });
   const renewals = useGetUtilityPlanRenewalAlertsQuery();
   const utilityRates = useGetUtilityPlanRateComparisonQuery();
@@ -91,7 +90,7 @@ export default function HomeScreen() {
     summary.error ?? years.error ?? reviewCount.error ?? documents.error ?? (canWrite ? receipts.error : undefined) ?? alerts.find((alert) => alert.error)?.error,
   );
 
-  const hasNothingYet = years.data?.length === 0 && reviewCount.data?.count === 0 && documents.data?.length === 0;
+  const hasNothingYet = years.data?.length === 0 && reviewCount.data?.count === 0 && documents.data?.total === 0;
   const isShowingOldData =
     (summary.isError && summary.currentData) ||
     (reviewCount.isError && reviewCount.data) ||
