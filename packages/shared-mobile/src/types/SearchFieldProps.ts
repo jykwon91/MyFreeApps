@@ -6,6 +6,8 @@ export interface SearchFieldProps {
   placeholder: string;
   /** Says what's being searched, for example "Search recipes by title". */
   accessibilityLabel: string;
+  /** What is wrong with what is typed, read after the label. */
+  accessibilityHint?: string;
   /** Called from the keyboard's Search key, for a search that runs on demand. Leave out to only dismiss the keyboard. */
   onSubmit?: () => void;
   maxLength?: number;

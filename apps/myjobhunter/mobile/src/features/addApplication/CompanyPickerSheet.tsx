@@ -4,12 +4,11 @@ import { characterCounter } from "@platform/core/utils/characterCounter";
 import { companyNameProblem } from "@myjobhunter/api-client/utils/companyNameProblem";
 import { filterCompanies } from "@myjobhunter/api-client/utils/filterCompanies";
 import { findCompanyByName } from "@myjobhunter/api-client/utils/findCompanyByName";
-import { Banner, CharacterCounter, KeyboardAwareScroll, LoadingButton, MIN_TOUCH_TARGET, SearchField, useTheme } from "@platform/mobile";
+import { Banner, CharacterCounter, FieldError, KeyboardAwareScroll, LoadingButton, MIN_TOUCH_TARGET, SearchField, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { FlatList, Modal, Pressable, Text, View } from "react-native";
 import { ADD_APPLICATION_MESSAGES as MESSAGES } from "../../constants/addApplication";
 import type { CompanyPickerSheetProps } from "../../types/CompanyPickerSheetProps";
-import FieldError from "../../components/forms/FieldError";
 import CompanyPickerRow from "./CompanyPickerRow";
 import CompanyPickerSkeleton from "./CompanyPickerSkeleton";
 
@@ -88,13 +87,14 @@ export default function CompanyPickerSheet({ isOpen, initialQuery, onSelect, onA
         <View style={{ gap: spacing.md, padding: spacing.lg }}>
           {failure ? <Banner message={failure} /> : null}
           <SearchField
+            accessibilityHint={nameTooLong ? nameProblem : undefined}
             accessibilityLabel={MESSAGES.searchLabel}
             onChangeText={setQuery}
             onClear={() => setQuery("")}
             placeholder={MESSAGES.searchPlaceholder}
             value={query}
           />
-          <FieldError message={nameTooLong ? nameProblem : undefined} />
+          <FieldError message={nameTooLong ? nameProblem : undefined} name={MESSAGES.searchLabel} />
           {counter ? <CharacterCounter counter={counter} isOver={nameTooLong} /> : null}
           {canAdd ? (
             <LoadingButton isLoading={isAdding} loadingText={MESSAGES.addingCompany} onPress={add} variant="secondary">

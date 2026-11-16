@@ -164,13 +164,19 @@ describe("signed out", () => {
 describe("checking before it saves", () => {
   it("reads one summary of what's missing, not one cut-off message per field", async () => {
     await show();
-    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions").mockImplementation(() => undefined);
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions").mockClear().mockImplementation(() => undefined);
+    const assertive = jest.spyOn(AccessibilityInfo, "announceForAccessibility").mockClear().mockImplementation(() => undefined);
 
     await press(MESSAGES.create);
 
     const fieldMessages = announce.mock.calls.map(([message]) => message);
     expect(fieldMessages).toEqual([fieldErrorsSummary(["Title", MESSAGES.ingredientsHeading, MESSAGES.stepsHeading])]);
+    // The toast naming the first problem is for sighted users: it isn't read on top of the summary.
+    expect(assertive).not.toHaveBeenCalled();
+    expect(screen.getByTestId("toast", SHOWN)).toBeTruthy();
+    expect(screen.queryAllByRole("alert", SHOWN)).toHaveLength(0);
     announce.mockRestore();
+    assertive.mockRestore();
   });
 
   it("says what's missing on the fields only once Create is pressed, and sends nothing", async () => {

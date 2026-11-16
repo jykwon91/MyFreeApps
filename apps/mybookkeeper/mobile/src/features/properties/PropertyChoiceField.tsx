@@ -1,5 +1,5 @@
 import { useGetPropertiesQuery } from "@mybookkeeper/api-client/store/propertiesApi";
-import { LoadingButton, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
+import { FieldError, LoadingButton, OptionSheet, Skeleton, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";
@@ -54,17 +54,14 @@ export default function PropertyChoiceField({ messages: MESSAGES, value, onChang
   return (
     <>
       <PickerField
+        error={error}
         label={`${MESSAGES.property} *`}
         onPress={() => {
           if (!disabled) setIsPicking(true);
         }}
         value={chosen?.label ?? MESSAGES.propertyNone}
       />
-      {error ? (
-        <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>
-          {error}
-        </Text>
-      ) : null}
+      <FieldError message={error} name={MESSAGES.property} />
       <OptionSheet
         isOpen={isPicking}
         onClose={() => setIsPicking(false)}

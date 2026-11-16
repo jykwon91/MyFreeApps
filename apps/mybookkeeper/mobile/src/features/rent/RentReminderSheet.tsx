@@ -13,7 +13,7 @@ import {
   reminderPlanRequest,
   withFrequency,
 } from "@mybookkeeper/api-client/utils/rentReminderForm";
-import { deviceDecimalSeparator, FormField, FormSheet, FormSheetCancelButton, LoadingButton, OptionRow, SegmentedControl, SwitchRow, useTheme, useToast } from "@platform/mobile";
+import { deviceDecimalSeparator, FieldError, FormField, FormSheet, FormSheetCancelButton, LoadingButton, OptionRow, SegmentedControl, SwitchRow, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { daysHintBad, REMINDER_SETUP_MESSAGES, smsFrom } from "../../constants/rentReminderSetup";
@@ -123,11 +123,7 @@ export default function RentReminderSheet({ applicantId, overview, onClose }: Re
         onValueChange={(on) => change("smsEnabled", on)}
         value={values.smsEnabled}
       />
-      {hasChannel ? null : (
-        <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>
-          {REMINDER_SETUP_MESSAGES.needChannel}
-        </Text>
-      )}
+      <FieldError message={hasChannel ? undefined : REMINDER_SETUP_MESSAGES.needChannel} name={REMINDER_SETUP_MESSAGES.sendBy} />
 
       <FormField
         editable={!isBusy}

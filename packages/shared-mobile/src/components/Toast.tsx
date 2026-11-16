@@ -13,6 +13,7 @@ export default function Toast({
   onDismiss,
   action,
   durationMs = TOAST_DEFAULT_DURATION_MS,
+  isVisualOnly = false,
   style,
 }: ToastProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
@@ -49,10 +50,12 @@ export default function Toast({
     return () => clearTimeout(timer.current);
   }, [dismiss, effectiveDurationMs, staysUntilDismissed, message]);
 
-  useAnnouncement(message);
+  useAnnouncement(isVisualOnly ? undefined : message);
 
   return (
     <View
+      importantForAccessibility={isVisualOnly ? "no-hide-descendants" : "auto"}
+      accessibilityElementsHidden={isVisualOnly}
       testID="toast"
       style={[
         {
@@ -68,7 +71,7 @@ export default function Toast({
       ]}
     >
       <Text
-        accessibilityRole="alert"
+        accessibilityRole={isVisualOnly ? undefined : "alert"}
         style={{ flex: 1, color: foreground, fontSize: fontSize.sm, paddingVertical: spacing.md }}
       >
         {message}

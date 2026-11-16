@@ -1,6 +1,6 @@
 import { formatSendTime } from "@mybookkeeper/api-client/utils/rentReminderFormat";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { FieldError, LoadingButton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Keyboard, Platform, Text, View } from "react-native";
 
@@ -38,7 +38,7 @@ export default function TimeField({ error, label, onChange, value }: { error?: s
     <View style={{ gap: spacing.xs }}>
       <Text style={{ fontSize: fontSize.sm, fontWeight: "500", color: colors.foreground }}>{label}</Text>
       <Text style={{ fontSize: fontSize.md, color: colors.foreground }}>{formatSendTime(value)}</Text>
-      <LoadingButton accessibilityLabel={`${isPicking ? "Done choosing" : "Change"} ${label.toLowerCase()}`} onPress={pick} variant="secondary">
+      <LoadingButton accessibilityHint={error} accessibilityLabel={`${isPicking ? "Done choosing" : "Change"} ${label.toLowerCase()}`} onPress={pick} variant="secondary">
         {isPicking ? "Done" : "Change"}
       </LoadingButton>
       {isPicking ? (
@@ -53,11 +53,7 @@ export default function TimeField({ error, label, onChange, value }: { error?: s
           value={dateFromTime(value)}
         />
       ) : null}
-      {error ? (
-        <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>
-          {error}
-        </Text>
-      ) : null}
+      <FieldError message={error} name={label} />
     </View>
   );
 }

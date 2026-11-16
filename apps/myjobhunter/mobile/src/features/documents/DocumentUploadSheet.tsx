@@ -8,7 +8,7 @@ import { documentUploadProblem } from "@myjobhunter/api-client/utils/documentUpl
 import { fillDocumentUploadForm } from "@myjobhunter/api-client/utils/fillDocumentUploadForm";
 import { tooLongProblem } from "@platform/core/utils/tooLongProblem";
 import { formatFileSize } from "@platform/core/utils/fileSize";
-import { filePart, FormField, FormSheet, LoadingButton, useTheme, useToast, type FileForUpload } from "@platform/mobile";
+import { FieldError, filePart, FormField, FormSheet, LoadingButton, useTheme, useToast, type FileForUpload } from "@platform/mobile";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
@@ -16,7 +16,6 @@ import { documentUploadFailure } from "../../lib/documentUploadFailure";
 import { pickDocumentFile } from "../../lib/pickDocumentFile";
 import type { DocumentUploadSheetProps } from "../../types/DocumentUploadSheetProps";
 import ChoiceGroup from "../../components/forms/ChoiceGroup";
-import FieldError from "../../components/forms/FieldError";
 import SheetButtons from "../../components/forms/SheetButtons";
 
 /** The website's file upload: a PDF, DOCX or TXT up to 25 MB, with a title and type, linked to the application when given. */
@@ -84,10 +83,10 @@ export default function DocumentUploadSheet({ applicationId, onClose }: Document
             {file.size == null ? file.name : `${file.name} (${formatFileSize(file.size)})`}
           </Text>
         ) : null}
-        <LoadingButton disabled={isUploading} isLoading={isPicking} loadingText={MESSAGES.choosing} onPress={choose} variant="secondary">
+        <LoadingButton accessibilityHint={fileError} disabled={isUploading} isLoading={isPicking} loadingText={MESSAGES.choosing} onPress={choose} variant="secondary">
           {file ? MESSAGES.chooseAnother : MESSAGES.chooseFile}
         </LoadingButton>
-        <FieldError message={fileError} />
+        <FieldError message={fileError} name={MESSAGES.fileLabel} />
       </View>
       <FormField counter={characterCounter(title.trim(), DOCUMENT_TITLE_MAX_LENGTH)} editable={!isBusy} error={titleError} label={MESSAGES.titleLabel} onChangeText={setTitle} placeholder={MESSAGES.titlePlaceholder} required value={title} />
       <ChoiceGroup disabled={isBusy} label={MESSAGES.kindLabel} onChange={setKind} options={DOCUMENT_KIND_OPTIONS} required value={kind} />

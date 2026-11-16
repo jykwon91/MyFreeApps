@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { AccessibilityInfo, Pressable, StyleSheet, Text } from "react-native";
 import { type IKeyboardState, useKeyboardState } from "react-native-keyboard-controller";
 import ToastProvider from "../components/ToastProvider";
 import { useToast } from "../hooks/useToast";
@@ -15,6 +15,15 @@ function Sender() {
   );
 }
 
+function VisualSender() {
+  const { showVisualToast } = useToast();
+  return (
+    <Pressable onPress={() => showVisualToast("Add a title.", "error")}>
+      <Text>Send visual</Text>
+    </Pressable>
+  );
+}
+
 function ScreenThatLeaves() {
   const [isOpen, setIsOpen] = useState(true);
   return isOpen ? <Sender /> : <Pressable onPress={() => setIsOpen(true)} />;
@@ -23,6 +32,22 @@ function ScreenThatLeaves() {
 describe("ToastProvider", () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
+
+  it("shows a visual toast without announcing it or offering it to a screen reader", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+    announce.mockClear();
+    await render(
+      <ToastProvider bottomOffset={80}>
+        <VisualSender />
+      </ToastProvider>,
+    );
+    await fireEvent.press(screen.getByText("Send visual"));
+
+    expect(screen.getByText("Add a title.", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.queryByText("Add a title.")).toBeNull();
+    expect(screen.queryAllByRole("alert", { includeHiddenElements: true })).toHaveLength(0);
+    expect(announce).not.toHaveBeenCalled();
+  });
 
   it("keeps showing a message after the screen that sent it is gone", async () => {
     const { rerender } = await render(

@@ -1,5 +1,5 @@
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { FieldError, LoadingButton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Keyboard, Platform, Text, View } from "react-native";
 import { dateFromIso, fullDateLabel, isoFromDate } from "../../lib/localDate";
@@ -55,7 +55,7 @@ export default function OptionalDateField({
       </Text>
       <Text style={{ fontSize: fontSize.md, color: value ? colors.foreground : colors.mutedForeground }}>{value ? fullDateLabel(value) : "Not set"}</Text>
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
-        <LoadingButton accessibilityLabel={`${isPicking ? "Done choosing" : value ? "Change" : "Choose"} ${label.toLowerCase()}`} disabled={disabled} onPress={pick} style={{ flex: 1 }} variant="secondary">
+        <LoadingButton accessibilityHint={error} accessibilityLabel={`${isPicking ? "Done choosing" : value ? "Change" : "Choose"} ${label.toLowerCase()}`} disabled={disabled} onPress={pick} style={{ flex: 1 }} variant="secondary">
           {isPicking ? "Done" : value ? "Change" : "Choose"}
         </LoadingButton>
         {value ? (
@@ -86,11 +86,7 @@ export default function OptionalDateField({
           value={pickerDate}
         />
       ) : null}
-      {error ? (
-        <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>
-          {error}
-        </Text>
-      ) : null}
+      <FieldError message={error} name={label} />
     </View>
   );
 }

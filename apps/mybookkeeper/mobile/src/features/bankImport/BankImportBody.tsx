@@ -1,4 +1,4 @@
-import { Banner, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
+import { Banner, FieldError, LoadingButton, useDiscardPrompt, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ScrollView, Text } from "react-native";
@@ -67,12 +67,8 @@ export default function BankImportBody() {
             {MESSAGES.file}
           </Text>
           <HeldFilesList emptyText={MESSAGES.noFile} files={held.files} isDisabled={isBusy} onRemove={held.drop} />
-          {hasTried && !file ? (
-            <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>
-              {MESSAGES.needFile}
-            </Text>
-          ) : null}
-          <LoadingButton disabled={isBusy} isLoading={held.isPicking} onPress={() => void choose()} variant="secondary">
+          <FieldError message={hasTried && !file ? MESSAGES.needFile : undefined} name={MESSAGES.file} />
+          <LoadingButton accessibilityHint={hasTried && !file ? MESSAGES.needFile : undefined} disabled={isBusy} isLoading={held.isPicking} onPress={() => void choose()} variant="secondary">
             {file ? MESSAGES.chooseDifferentFile : MESSAGES.chooseFile}
           </LoadingButton>
           <BankImportPropertyField disabled={isBusy} onChange={setPropertyId} value={propertyId} />

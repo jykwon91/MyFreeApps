@@ -1,6 +1,6 @@
 import { useTheme } from "@platform/mobile";
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { INQUIRY_CREATE_MESSAGES as MESSAGES } from "../../constants/inquiryCreate";
 import type { InquiryReceivedAtFieldProps } from "../../types/InquiryReceivedAtFieldProps";
 import PeriodDateRow from "../shell/PeriodDateRow";
@@ -9,7 +9,7 @@ import { joinReceivedAt, splitReceivedAt } from "./inquiryReceivedAt";
 
 /** When they reached out, as a date and a time of day. It starts at now; a backdated one is picked here. */
 export default function InquiryReceivedAtField({ value, onChange, error }: InquiryReceivedAtFieldProps) {
-  const { colors, spacing, fontSize } = useTheme();
+  const { spacing } = useTheme();
   const [isDateOpen, setIsDateOpen] = useState(false);
   const { date, time } = splitReceivedAt(value);
 
@@ -22,12 +22,7 @@ export default function InquiryReceivedAtField({ value, onChange, error }: Inqui
         onToggle={() => setIsDateOpen((open) => !open)}
         value={date}
       />
-      <TimeField label={MESSAGES.receivedTime} onChange={(next) => onChange(joinReceivedAt(date, next))} value={time} />
-      {error ? (
-        <Text accessibilityRole="alert" style={{ fontSize: fontSize.sm, color: colors.destructiveText }}>
-          {error}
-        </Text>
-      ) : null}
+      <TimeField error={error} label={MESSAGES.receivedTime} onChange={(next) => onChange(joinReceivedAt(date, next))} value={time} />
     </View>
   );
 }

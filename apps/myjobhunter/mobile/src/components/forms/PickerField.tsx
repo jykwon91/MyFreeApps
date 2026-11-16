@@ -1,10 +1,9 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { LoadingButton, useTheme } from "@platform/mobile";
+import { FieldError, LoadingButton, useTheme } from "@platform/mobile";
 import { useState } from "react";
 import { Keyboard, Platform, Text, View } from "react-native";
 import { DATE_TIME_FIELD_MESSAGES as MESSAGES } from "../../constants/dateTimeField";
 import type { PickerFieldProps } from "../../types/PickerFieldProps";
-import FieldError from "./FieldError";
 
 /**
  * A date or date-and-time field. iOS spins it in place under a Done button; Android opens its own
@@ -52,6 +51,7 @@ export default function PickerField({
       <Text style={{ fontSize: fontSize.md, color: hasValue ? colors.foreground : colors.mutedForeground }}>{valueText ?? MESSAGES.notSet}</Text>
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         <LoadingButton
+          accessibilityHint={error}
           accessibilityLabel={`${isPicking ? MESSAGES.doneChoosing : action} ${label.toLowerCase()}`}
           disabled={disabled}
           onPress={press}
@@ -90,7 +90,7 @@ export default function PickerField({
           value={pickerDate}
         />
       ) : null}
-      <FieldError message={error} />
+      <FieldError message={error} name={label} size="sm" />
     </View>
   );
 }

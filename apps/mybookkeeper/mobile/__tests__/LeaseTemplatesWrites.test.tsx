@@ -96,9 +96,9 @@ describe("uploading a template", () => {
   it("holds the upload button and says what's missing, only after a try", async () => {
     const server = startLeaseTemplatesServer([]);
     await show(<LeaseTemplateCreateScreen />);
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText(LEASE_TEMPLATE_UPLOAD_PROBLEMS.files_required)).toBeNull();
     await fireEvent.press(await screen.findByRole("button", { name: FORM.upload }));
-    expect(await screen.findAllByRole("alert")).not.toHaveLength(0);
+    expect(await screen.findAllByText(LEASE_TEMPLATE_UPLOAD_PROBLEMS.files_required)).not.toHaveLength(0);
     expect(server.writes).toHaveLength(0);
   });
 
