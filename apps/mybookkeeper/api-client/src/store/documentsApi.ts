@@ -5,6 +5,7 @@ import { RECEIPTS_PENDING_TAG } from "../constants/receiptsPendingTag";
 import type { BatchStatusResponse } from "../types/document/BatchStatusResponse";
 import type { BulkDeleteDocumentsResponse } from "../types/document/BulkDeleteDocumentsResponse";
 import type { Document } from "../types/document/document";
+import type { DocumentSummary } from "../types/document/DocumentSummary";
 import type { SingleStatusResponse } from "../types/document/SingleStatusResponse";
 import type { UploadDocumentArgs } from "../types/document/UploadDocumentArgs";
 import type { UploadResponse } from "../types/document/UploadResponse";
@@ -22,6 +23,11 @@ export const documentsApi = baseApi.enhanceEndpoints({
         result
           ? [...result.map((d) => ({ type: "Document" as const, id: d.id })), { type: "Document", id: "LIST" }]
           : [{ type: "Document", id: "LIST" }],
+    }),
+    // Counts for Home. Tagged as a Document so whatever refreshes the list refreshes this too.
+    getDocumentSummary: builder.query<DocumentSummary, void>({
+      query: () => ({ url: "/documents/summary" }),
+      providesTags: [{ type: "Document", id: "SUMMARY" }],
     }),
     uploadDocument: builder.mutation<UploadResponse, UploadDocumentArgs>({
       query: ({ form, workspaceId, onUploadProgress }) => ({
@@ -78,6 +84,7 @@ export const documentsApi = baseApi.enhanceEndpoints({
 
 export const {
   useGetDocumentsQuery,
+  useGetDocumentSummaryQuery,
   useUploadDocumentMutation,
   useGetBatchStatusQuery,
   useGetSingleUploadStatusQuery,

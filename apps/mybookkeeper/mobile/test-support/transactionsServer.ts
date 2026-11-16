@@ -177,6 +177,10 @@ export function startTransactionServer(transactions: Transaction[], properties: 
       return vendor ? respond(vendor) : respond({ detail: "Vendor not found" }, 404);
     }
     if (config.url === "/documents") return respond(server.documents);
+    if (config.url === "/documents/summary") {
+      const counting = (statuses: string[]) => server.documents.filter((row) => statuses.includes(row.status)).length;
+      return respond({ total: server.documents.length, in_progress: counting(["processing", "extracting"]), needs_review: counting(["failed", "duplicate"]) });
+    }
     if (config.url === "/summary/years") return respond(server.summaryYears);
     if (config.url === "/transactions/attribution-review-queue") {
       return respond({ items: [], pending_count: server.pendingPayments });

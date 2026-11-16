@@ -22,6 +22,7 @@ from app.mappers.document_delete_mapper import to_bulk_delete_response
 from app.schemas.documents.bulk_delete_documents_request import BulkDeleteDocumentsRequest
 from app.schemas.documents.bulk_delete_documents_response import BulkDeleteDocumentsResponse
 from app.schemas.documents.document import DocumentRead
+from app.schemas.documents.document_summary import DocumentSummary
 from app.schemas.documents.operation_responses import (
     CancelBatchResponse,
     EscrowPaidRequest,
@@ -57,6 +58,11 @@ async def list_documents(
         limit=limit,
         offset=offset,
     )
+
+
+@router.get("/summary", response_model=DocumentSummary)
+async def get_document_summary(ctx: RequestContext = Depends(current_org_member)) -> DocumentSummary:
+    return await document_query_service.get_summary(ctx)
 
 
 @router.post("/upload", response_model=AcceptUploadResponse, status_code=202)

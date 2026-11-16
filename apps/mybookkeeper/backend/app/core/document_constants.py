@@ -13,3 +13,7 @@ EXTRACTION_TIMEOUT_SECONDS = settings.claude_timeout_seconds + 30
 STALE_EXTRACTION_MARGIN_SECONDS = 300
 
 DOCUMENT_BEING_READ_DETAIL = "This document is still being read. Try again once extraction finishes."
+
+# Statuses the Home summary reports as still being read, and as needing a look.
+DOCUMENT_IN_PROGRESS_STATUSES = ("processing", "extracting")
+DOCUMENT_NEEDS_REVIEW_STATUSES = ("failed", "duplicate")

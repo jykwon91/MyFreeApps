@@ -4,7 +4,9 @@ import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { configureStore } from "@reduxjs/toolkit";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { EMAIL_DERIVED_TAGS } from "../constants/emailDerivedTags";
 import "../store/documentsApi";
+import { integrationsApi } from "../store/integrationsApi";
 
 const sent: InternalAxiosRequestConfig[] = [];
 
@@ -82,6 +84,37 @@ describe("documentsApi", () => {
     await makeStore().dispatch(endpoints.toggleEscrowPaid.initiate({ id: "d1", is_escrow_paid: true }));
     expect(`${sent[0].method} ${sent[0].url}`).toBe("patch /documents/d1/escrow-paid");
     expect(JSON.parse(String(sent[0].data))).toEqual({ is_escrow_paid: true });
+  });
+
+  it("asks for the counts alone, not the list", async () => {
+    await makeStore().dispatch(endpoints.getDocumentSummary.initiate());
+    expect(sent.map((config) => `${config.method} ${config.url}`)).toEqual(["get /documents/summary"]);
+  });
+
+  it("refetches the counts after an upload or a delete, as it does the list", async () => {
+    const store = makeStore();
+    store.dispatch(endpoints.getDocumentSummary.initiate());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await store.dispatch(endpoints.uploadDocument.initiate({ form: new FormData() }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await store.dispatch(endpoints.deleteDocument.initiate("d1"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sent.map((config) => `${config.method} ${config.url}`)).toEqual([
+      "get /documents/summary",
+      "post /documents/upload",
+      "get /documents/summary",
+      "delete /documents/d1",
+      "get /documents/summary",
+    ]);
+  });
+
+  it("refetches the counts when an extraction finishes", async () => {
+    const store = makeStore();
+    store.dispatch(endpoints.getDocumentSummary.initiate());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    store.dispatch(integrationsApi.util.invalidateTags(EMAIL_DERIVED_TAGS));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sent.map((config) => config.url)).toEqual(["/documents/summary", "/documents/summary"]);
   });
 
   it("uploads the form and reports how much has gone out", async () => {

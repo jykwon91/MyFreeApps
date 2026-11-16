@@ -9,9 +9,8 @@ import { DUPLICATES_LINK } from "../../constants/duplicates";
 import { DOCUMENTS_NEEDING_A_LOOK_LINK, GMAIL_REAUTH_WAITING, HOME_PAYMENT_REVIEW_ARGS, HOME_RECEIPTS_ARGS, INTEGRATIONS_LINK, PAYMENT_REVIEW_LINK, RECEIPTS_LINK } from "../../constants/home";
 import { NO_FILTERS } from "../../constants/transactionFilters";
 import { duplicateCountLine } from "../duplicates/duplicateDisplay";
-import { needsALook } from "../documents/documentDisplay";
 import { gmailConnection, gmailIntegration } from "../integrations/gmailConnection";
-import { useDocumentsWithPolling } from "../documents/useDocumentsWithPolling";
+import { useDocumentSummaryWithPolling } from "../documents/useDocumentSummaryWithPolling";
 import { transactionsLink } from "../transactions/transactionFilters";
 import { useCanWrite } from "../workspace/useCanWrite";
 import HomeCard from "./HomeCard";
@@ -23,7 +22,7 @@ import { useRegisterHomeRefetch } from "./useRegisterHomeRefetch";
 export default function WaitingCard() {
   const { colors, spacing, fontSize } = useTheme();
   const reviewCount = useGetTransactionReviewCountQuery();
-  const documents = useDocumentsWithPolling();
+  const documents = useDocumentSummaryWithPolling();
   // Only worth a row when there are some: failing to find out is no reason to hold up the rest.
   const duplicates = useGetDuplicatesQuery();
   // A viewer can't send receipts, so they aren't waiting on them.
@@ -38,7 +37,7 @@ export default function WaitingCard() {
   const needsReauth = canWrite && gmailConnection(gmailIntegration(integrations.data)) === "reauth";
 
   const transactionCount = reviewCount.data?.count;
-  const documentCount = documents.data?.filter(needsALook).length;
+  const documentCount = documents.data?.needs_review;
   const receiptCount = canWrite ? receipts.data?.pending_count : 0;
   const duplicateCount = duplicates.data?.pairs.length ?? 0;
   const failedMessage = waitingFailedMessage({

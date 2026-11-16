@@ -296,6 +296,16 @@ async def get_batch_status_counts(
     return {row[0]: row[1] for row in result.all()}
 
 
+async def get_status_counts(db: AsyncSession, organization_id: uuid.UUID) -> dict[str, int]:
+    """Return {status: count} for every document in the organization the user hasn't deleted."""
+    result = await db.execute(
+        select(Document.status, func.count())
+        .where(Document.organization_id == organization_id, Document.deleted_at.is_(None))
+        .group_by(Document.status)
+    )
+    return {row[0]: row[1] for row in result.all()}
+
+
 async def get_by_ids(
     db: AsyncSession, document_ids: list[uuid.UUID],
 ) -> dict[uuid.UUID, Document]:

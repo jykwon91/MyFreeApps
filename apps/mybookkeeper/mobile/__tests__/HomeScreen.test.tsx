@@ -1,7 +1,6 @@
 import { documentsApi } from "@mybookkeeper/api-client/store/documentsApi";
 import api from "@platform/core/lib/api";
 import { act, fireEvent, screen } from "@testing-library/react-native";
-import { ALL_DOCUMENTS } from "../src/constants/documents";
 import { SHOWING_LAST_LOADED_MESSAGE } from "@platform/mobile";
 import { store } from "../src/lib/store";
 import { failRequests, holdRequests, holdSummary, pull, renderHome as renderScreen, resetHome } from "../test-support/homeScreen";
@@ -152,7 +151,7 @@ describe("HomeScreen", () => {
 
   it("says what failed when more than one can't be checked", async () => {
     startTransactionServer([]);
-    failRequests("/rent-receipts/pending", "/documents");
+    failRequests("/rent-receipts/pending", "/documents/summary");
     await renderScreen();
     expect(await screen.findByText("I couldn't check what's waiting for you.")).toBeTruthy();
   });
@@ -242,7 +241,7 @@ describe("HomeScreen", () => {
 
   it("still shows the waiting transactions when documents can't be checked", async () => {
     startTransactionServer([aTransaction({ status: "pending" })]);
-    failRequests("/documents");
+    failRequests("/documents/summary");
     await renderScreen();
     expect(await screen.findByText("I couldn't check your documents.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "1 transaction to review" })).toBeTruthy();
@@ -251,7 +250,7 @@ describe("HomeScreen", () => {
 
   it("says what failed when neither can be checked", async () => {
     startTransactionServer([]);
-    failRequests("/documents", "/transactions/review-count");
+    failRequests("/documents/summary", "/transactions/review-count");
     await renderScreen();
     expect(await screen.findByText("I couldn't check what's waiting for you.")).toBeTruthy();
   });
@@ -307,10 +306,20 @@ describe("HomeScreen", () => {
     server.summary = { revenue: 2, expenses: 0, profit: 2, by_property: [] };
     server.transactions.push(aTransaction({ status: "pending" }));
     await act(async () => {
-      await store.dispatch(documentsApi.endpoints.getDocuments.initiate(ALL_DOCUMENTS, { forceRefetch: true, subscribe: false }));
+      await store.dispatch(documentsApi.endpoints.getDocumentSummary.initiate(undefined, { forceRefetch: true, subscribe: false }));
     });
     expect(await screen.findByText("+$2.00")).toBeTruthy();
     expect(await screen.findByRole("button", { name: "1 transaction to review" })).toBeTruthy();
+  });
+
+  it("asks for the document counts, never the whole list, even on a pull", async () => {
+    const server = startTransactionServer([]);
+    server.documents = [{ id: "d1", status: "failed" }, { id: "d2", status: "duplicate" }, { id: "d3", status: "completed" }];
+    await renderScreen();
+    expect(await screen.findByRole("button", { name: "2 documents need a look" })).toBeTruthy();
+    await pull();
+    expect(server.requests.some((request) => request.url === "/documents/summary")).toBe(true);
+    expect(server.requests.some((request) => request.url === "/documents")).toBe(false);
   });
 
   it("can be pulled to refresh while it's empty", async () => {
