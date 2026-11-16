@@ -2,6 +2,7 @@ import { useDeleteDocumentMutation, useLazyGetDocumentDownloadUrlQuery } from "@
 import { documentDownloadUrl } from "@myjobhunter/api-client/utils/documentDownloadUrl";
 import { documentKindLabel, documentKindTone } from "@myjobhunter/api-client/utils/documentKind";
 import { Chip, LoadingButton, useConfirmedRemoval, useOpenLink, useTheme, useToast } from "@platform/mobile";
+import { memo } from "react";
 import { Text, View } from "react-native";
 import { DOCUMENT_MESSAGES as MESSAGES } from "../../constants/documents";
 import { documentMeta } from "../../lib/documentMeta";
@@ -10,7 +11,7 @@ import type { DocumentCardProps } from "../../types/DocumentCardProps";
 import DocumentApplicationLink from "./DocumentApplicationLink";
 
 /** A document's kind, title and date, the application it's for when asked, with Open for a file, Edit and Delete. */
-export default function DocumentCard({ document, onEdit, onOpenApplication }: DocumentCardProps) {
+function DocumentCard({ document, onEdit, onOpenApplication }: DocumentCardProps) {
   const { colors, spacing, radius, fontSize } = useTheme();
   const { showToast } = useToast();
   const openLink = useOpenLink();
@@ -76,3 +77,5 @@ export default function DocumentCard({ document, onEdit, onOpenApplication }: Do
     </View>
   );
 }
+
+export default memo(DocumentCard);

@@ -3,13 +3,15 @@ import type { KanbanColumn } from "@myjobhunter/api-client/types/kanban/kanban-c
 import { groupKanbanItems } from "@myjobhunter/api-client/utils/groupKanbanItems";
 import { Banner, EmptyState, OptionSheet, SHOWING_LAST_LOADED_MESSAGE, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FlatList, View } from "react-native";
 import { APPLICATION_DETAIL_MESSAGES } from "../../constants/applicationDetail";
 import { DASHBOARD_MESSAGES as MESSAGES } from "../../constants/dashboard";
 import { STAGE_OPTIONS } from "../../constants/stageOptions";
 import { dashboardRows } from "../../lib/dashboardRows";
+import type { KanbanItem } from "@myjobhunter/api-client/types/kanban/kanban-item";
 import type { BoardMoveTarget } from "../../types/BoardMoveTarget";
+import type { DashboardRow } from "../../types/DashboardRow";
 import DashboardListRow from "./DashboardListRow";
 import DashboardSkeleton from "./DashboardSkeleton";
 import DashboardSummary from "./DashboardSummary";
@@ -27,6 +29,10 @@ export default function DashboardScreen() {
   const { layout, toggleLane, setClosedOpen } = useDashboardFolds();
   const [moveTarget, setMoveTarget] = useState<BoardMoveTarget | null>(null);
 
+  // One handler each for every row, so a screen state change (pull to refresh, the move sheet) leaves the rows alone.
+  const onMove = useCallback((item: KanbanItem, column: KanbanColumn) => setMoveTarget({ item, column }), []);
+  const onOpen = useCallback((item: KanbanItem) => router.push(`/applications/${item.id}`), []);
+  const onToggleClosed = useCallback((isOpen: boolean) => setClosedOpen(!isOpen), [setClosedOpen]);
   const items = board.data?.items;
   const itemsByColumn = useMemo(() => groupKanbanItems(items ?? []), [items]);
   const rows = useMemo(() => (layout === null ? [] : dashboardRows(itemsByColumn, layout)), [itemsByColumn, layout]);
@@ -42,6 +48,12 @@ export default function DashboardScreen() {
   );
   // Stage ages count from when the board last loaded, so they stay put between refreshes.
   const loadedAt = board.fulfilledTimeStamp ?? 0;
+  const renderRow = useCallback(
+    ({ item: row }: { item: DashboardRow }) => (
+      <DashboardListRow movingIds={movingIds} now={loadedAt} onMove={onMove} onOpen={onOpen} onToggleClosed={onToggleClosed} onToggleLane={toggleLane} row={row} />
+    ),
+    [movingIds, loadedAt, onMove, onOpen, onToggleClosed, toggleLane],
+  );
   const hasCards = layout !== null && items !== undefined && items.length > 0;
   const isStale = items !== undefined && board.isError;
 
@@ -81,17 +93,7 @@ export default function DashboardScreen() {
         onScrollToIndexFailed={onScrollToIndexFailed}
         ref={list}
         refreshControl={refreshControl}
-        renderItem={({ item: row }) => (
-          <DashboardListRow
-            movingIds={movingIds}
-            now={loadedAt}
-            onMove={(item, column) => setMoveTarget({ item, column })}
-            onOpen={(item) => router.push(`/applications/${item.id}`)}
-            onToggleClosed={() => setClosedOpen(layout?.isClosedOpen !== true)}
-            onToggleLane={toggleLane}
-            row={row}
-          />
-        )}
+        renderItem={renderRow}
         testID="dashboard-list"
       />
       <OptionSheet

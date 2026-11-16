@@ -5,7 +5,7 @@ import type { DocumentKindFilter } from "@myjobhunter/api-client/types/document/
 import { documentsFilter } from "@myjobhunter/api-client/utils/documentsFilter";
 import { EmptyState, LoadMoreFooter, OptionSheet, useRefresh, useTheme } from "@platform/mobile";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { FlatList, View } from "react-native";
 import { PAGED_LIST_MESSAGES } from "../../constants/pagedListMessages";
 import { DOCUMENTS_SCREEN_MESSAGES as MESSAGES } from "../../constants/documentsScreen";
@@ -29,6 +29,12 @@ export default function DocumentsScreen() {
   const { isRefreshing, refresh, refreshControl } = useRefresh(list.refetch, list.error);
   const isCurrent = !list.isLoading && !list.isFiltering && list.loadError === undefined;
   const kindLabel = DOCUMENT_KIND_FILTER_OPTIONS.find((option) => option.value === kind)?.label ?? kind;
+
+  const openApplication = useCallback((id: string) => router.push(`/applications/${id}`), []);
+  const renderDocument = useCallback(
+    ({ item }: { item: Document }) => <DocumentCard document={item} onEdit={setEditing} onOpenApplication={openApplication} />,
+    [openApplication],
+  );
 
   function emptyList() {
     if (list.isLoading || list.isFiltering) return <DocumentsSkeleton withHeader={!list.hasData} />;
@@ -74,7 +80,7 @@ export default function DocumentsScreen() {
         data={isCurrent ? list.documents : []}
         keyExtractor={(document) => document.id}
         refreshControl={refreshControl}
-        renderItem={({ item }) => <DocumentCard document={item} onEdit={setEditing} onOpenApplication={(id) => router.push(`/applications/${id}`)} />}
+        renderItem={renderDocument}
         testID="documents-list"
       />
       <OptionSheet
