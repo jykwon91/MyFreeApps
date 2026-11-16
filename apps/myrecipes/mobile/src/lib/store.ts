@@ -1,7 +1,7 @@
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "@platform/core/constants/requestTimeouts";
 import { configurePlatform } from "@platform/core/platform/configurePlatform";
 import { baseApi } from "@platform/core/store/baseApi";
-import { assertSecureApiUrl, clearDataExportFiles, onAccountLeft, resetCacheOnAccountChange } from "@platform/mobile";
+import { assertSecureApiUrl, clearDataExportFiles, onAccountLeft, refetchOnForeground, resetCacheOnAccountChange } from "@platform/mobile";
 import { configureStore } from "@reduxjs/toolkit";
 import { API_BASE_URL } from "../constants/api";
 import { clearCookCopies } from "../features/cook/cookCopies";
@@ -32,6 +32,8 @@ export function makeStore() {
 }
 
 export const store = makeStore();
+
+refetchOnForeground(store.dispatch);
 
 resetCacheOnAccountChange(session, () => store.dispatch(baseApi.util.resetApiState()));
 
