@@ -1,7 +1,7 @@
 import { APPLICANT_CONTACT_EMAIL_MESSAGES as MESSAGES } from "@mybookkeeper/api-client/constants/applicantContactEmail";
 import { useUpdateApplicantContactEmailMutation } from "@mybookkeeper/api-client/store/applicantsApi";
 import { httpStatus } from "@mybookkeeper/api-client/utils/httpStatus";
-import { FormField, LoadingButton, useTheme, useToast } from "@platform/mobile";
+import { FormField, LoadingButton, useDiscardPrompt, useTheme, useToast } from "@platform/mobile";
 import { useState } from "react";
 import { View } from "react-native";
 import InquiryContact from "../inquiries/InquiryContact";
@@ -28,6 +28,9 @@ export default function ApplicantContact({ applicantId, name, email, phone, canW
   const [saved, setSaved] = useState(email);
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>(undefined);
+
+  // Only a changed address is worth asking about; opening the editor and backing out is free.
+  useDiscardPrompt(draft !== null && draft.trim() !== (saved ?? ""), isLoading);
 
   async function save(): Promise<void> {
     const next = (draft ?? "").trim() || null;
