@@ -1,5 +1,6 @@
 import { PROFESSION_SKILL_LINES } from "@/games/wow-forever/data/professions/professionSkillLines";
 import type { EnchantSlot } from "@/games/wow-forever/crafting/cheapestRoute";
+import type { ClientItem } from "@/games/wow-forever/types/clientItem";
 import type { EnchantSlotTarget } from "@/games/wow-forever/types/guild/enchantSlotTarget";
 
 /**
@@ -9,6 +10,9 @@ import type { EnchantSlotTarget } from "@/games/wow-forever/types/guild/enchantS
 export const GUILD_HELP_PROBLEM = "Couldn't load the guild's gear and recipes.";
 
 export const UPGRADE_THRESHOLD_PCT = 2;
+
+/** No item list (it failed to load): weapon speeds are unknown, so flat weapon damage isn't weighed. */
+export const NO_HELP_ITEMS: ReadonlyMap<number, ClientItem> = new Map();
 
 /** Blizzard's SkillLine id for Enchanting (the crafter must have this profession). */
 export const ENCHANTING_SKILL_LINE_ID: number = PROFESSION_SKILL_LINES.enchanting;

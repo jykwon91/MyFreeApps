@@ -1,6 +1,12 @@
 [
   {
     "date": "2026-11-16",
+    "title": "Help each other: enchants that suit your class",
+    "summary": "The guild's Help each other tab now only suggests enchants your class uses, and picks the best one for you: Intellect or spell power for a Warlock, Strength for a Warrior, never +7 Strength gloves for a caster.",
+    "to": "/wow-forever/topdeadcenter"
+  },
+  {
+    "date": "2026-11-16",
     "title": "Trainers: who teaches the rare recipes",
     "summary": "In a rank's recipe list, a recipe only one or two trainers teach now names them, with where they stand and a map link — Shadoweave comes from Jalane Ayrole in Stormwind or Josephine Lister in the Undercity, not regular tailors.",
     "to": "/wow-forever/trainers"

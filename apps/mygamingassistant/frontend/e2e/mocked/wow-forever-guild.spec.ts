@@ -963,6 +963,32 @@ async function stubHelp(page: Page) {
   await page.route(HELP_PATTERN, (route) => json(route, helpResponse()));
 }
 
+test("help tab: never offers a Warlock a Strength enchant, but does a Warrior", async ({ page }) => {
+  const gloves = { slot: "HANDS", item_id: 2001, name: "Prisoner Handwraps", item_level: 44, inventory_type: "HAND", enchantments: [] };
+  const member = (slug: string, class_name: string, extra: object = {}) => ({
+    slug, name: slug, surname: "", class_name, level: 45, equipped: [gloves], recipe_ability_ids: [], professions: [], ...extra,
+  });
+  await stubAll(page);
+  await page.route(HELP_PATTERN, (route) => json(route, {
+    members: [
+      member("Feranova", "Mage", {
+        equipped: [],
+        recipe_ability_ids: [7668], // → spell 13887 "Enchant Gloves - Strength" (+7 Strength)
+        professions: [{ profession_id: 333, name: "Enchanting", skill: 225, max_skill: 225 }],
+      }),
+      member("Jason", "Warlock"),
+      member("Tank", "Warrior"),
+    ],
+  }));
+  await page.goto("/wow-forever/topdeadcenter?tab=help");
+
+  const card = page.getByTestId("guild-match-card");
+  await expect(card).toHaveCount(1, { timeout: 10_000 });
+  await expect(card).toContainText("Tank");
+  await expect(card).toContainText("Enchant Gloves - Strength");
+  await expect(card).not.toContainText("Jason");
+});
+
 test("help tab: shows enchant matches, type chips filter, member picker filters, URL params preserved", async ({ page }) => {
   await stubHelp(page);
   await page.goto("/wow-forever/topdeadcenter?tab=help");

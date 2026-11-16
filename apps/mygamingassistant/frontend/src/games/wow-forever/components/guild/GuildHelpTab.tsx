@@ -8,7 +8,7 @@ import LoadErrorRetry from "@/components/game/LoadErrorRetry";
 import GuildHelpFilterBar from "@/games/wow-forever/components/guild/GuildHelpFilterBar";
 import GuildHelpSkeleton from "@/games/wow-forever/components/guild/GuildHelpSkeleton";
 import GuildMatchCard from "@/games/wow-forever/components/guild/GuildMatchCard";
-import { GUILD_HELP_PROBLEM } from "@/games/wow-forever/data/guild/guildHelpConfig";
+import { GUILD_HELP_PROBLEM, NO_HELP_ITEMS } from "@/games/wow-forever/data/guild/guildHelpConfig";
 import { PROFESSION_SKILL_LINES } from "@/games/wow-forever/data/professions/professionSkillLines";
 import { useGetGuildHelpQuery } from "@/games/wow-forever/api/wowGuildApi";
 import { useAuctionPrices } from "@/games/wow-forever/hooks/useAuctionPrices";
@@ -57,15 +57,15 @@ export default function GuildHelpTab({ slug }: GuildHelpTabProps) {
   const allMatches = useMemo<GuildMatch[]>(() => {
     if (!isReady || craftingState.files === null) return [];
 
-    const enchantingFile = craftingState.files.get(PROFESSION_SKILL_LINES.enchanting);
-    const enchantMatches = enchantingFile
-      ? computeEnchantMatches(members, enchantingFile)
-      : [];
+    if (itemsState.status === "loading") return [];
+    const itemList = itemsState.status === "ready" ? itemsState.list : null;
 
-    const gearMatches =
-      itemsState.status === "ready"
-        ? computeGearMatches(members, craftingState.files, itemsState.list)
-        : [];
+    const enchantingFile = craftingState.files.get(PROFESSION_SKILL_LINES.enchanting);
+    // Without the item list, weapon speeds are unknown, so flat weapon damage isn't weighed.
+    const enchantMatches = enchantingFile
+      ? computeEnchantMatches(members, enchantingFile, itemList?.byId ?? NO_HELP_ITEMS)
+      : [];
+    const gearMatches = itemList ? computeGearMatches(members, craftingState.files, itemList) : [];
 
     return [...enchantMatches, ...gearMatches];
   }, [isReady, craftingState.files, members, itemsState]);
