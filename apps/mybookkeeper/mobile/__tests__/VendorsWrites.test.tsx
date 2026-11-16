@@ -17,6 +17,9 @@ import { store } from "../src/lib/store";
 import { holdWrites } from "../test-support/holdWrites";
 import { aVendor, startPropertiesVendorsServer, writesOf } from "../test-support/propertiesVendorsServer";
 
+let mockDecimalSeparator: "." | "," = ".";
+// deviceDecimalSeparator reads the device locale through this.
+jest.mock("@platform/core/utils/localeDecimalSeparator", () => ({ localeDecimalSeparator: () => mockDecimalSeparator }));
 const mockPush = jest.fn();
 const mockBack = jest.fn();
 const mockPreventRemove = { active: false, callback: null as null | ((event: { repeat: () => void }) => void) };
@@ -38,6 +41,7 @@ beforeEach(() => {
   store.dispatch(baseApi.util.resetApiState());
   store.dispatch(workspaceChosen("w1"));
   jest.clearAllMocks();
+  mockDecimalSeparator = ".";
   alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
 });
 
@@ -233,6 +237,51 @@ describe("adding a vendor", () => {
     expect(writesOf(server, "post")).toHaveLength(0);
   });
 
+  it.each([["85,50", "85.50"], ["$85.50", "85.50"], ["1.250,50", "1250.50"], [" 90 ", "90"]])(
+    "sends the rate %p as %p on a decimal-comma phone",
+    async (typed, sent) => {
+      mockDecimalSeparator = ",";
+      const server = serverWith([]);
+      await show(<VendorCreateScreen />);
+      await fireEvent.changeText(await screen.findByLabelText("Name, required"), "Bright Electric");
+      await fireEvent.changeText(screen.getByLabelText(FORM.hourlyRate), typed);
+      await fireEvent.press(button(FORM.add));
+      await screen.findByText(FORM.added);
+      expect(writesOf(server, "post")[0].body.hourly_rate).toBe(sent);
+    },
+  );
+
+  it("accepts a pasted $85.50 on a point phone and sends 85.50", async () => {
+    const server = serverWith([]);
+    await show(<VendorCreateScreen />);
+    await fireEvent.changeText(await screen.findByLabelText("Name, required"), "Bright Electric");
+    await fireEvent.changeText(screen.getByLabelText(FORM.hourlyRate), "$85.50");
+    await fireEvent.press(button(FORM.add));
+    await screen.findByText(FORM.added);
+    expect(writesOf(server, "post")[0].body.hourly_rate).toBe("85.50");
+  });
+
+  it("shows the comma example, not the point one, when the rate can't be read on a decimal-comma phone", async () => {
+    mockDecimalSeparator = ",";
+    const server = serverWith([]);
+    await show(<VendorCreateScreen />);
+    await fireEvent.changeText(await screen.findByLabelText("Name, required"), "Bright Electric");
+    await fireEvent.changeText(screen.getByLabelText(FORM.hourlyRate), "ninety");
+    await fireEvent.press(button(FORM.add));
+    expect(screen.getByText("Enter the rate as dollars, like 95 or 95,50.")).toBeTruthy();
+    expect(writesOf(server, "post")).toHaveLength(0);
+  });
+
+  it("says a negative rate can't be below $0, and sends nothing", async () => {
+    const server = serverWith([]);
+    await show(<VendorCreateScreen />);
+    await fireEvent.changeText(await screen.findByLabelText("Name, required"), "Bright Electric");
+    await fireEvent.changeText(screen.getByLabelText(FORM.hourlyRate), "-5");
+    await fireEvent.press(button(FORM.add));
+    expect(screen.getByText("The rate can't be below $0.")).toBeTruthy();
+    expect(writesOf(server, "post")).toHaveLength(0);
+  });
+
   it("adds a vendor with everything filled in, tells the person, and goes back", async () => {
     const server = serverWith([]);
     await show(<VendorCreateScreen />);
@@ -358,6 +407,16 @@ describe("changing a vendor", () => {
     await fireEvent.press(button(FORM.save));
     await screen.findByText(FORM.saved);
     expect(writesOf(server, "patch")).toEqual([{ url: "/vendors/v1", body: { name: "Reliable Pipes", notes: null } }]);
+  });
+
+  it("saves an edited rate typed with a comma as the canonical amount", async () => {
+    mockDecimalSeparator = ",";
+    const server = serverWith();
+    await show(<VendorEditScreen id="v1" />);
+    await fireEvent.changeText(await screen.findByLabelText(FORM.hourlyRate), "110,25");
+    await fireEvent.press(button(FORM.save));
+    await screen.findByText(FORM.saved);
+    expect(writesOf(server, "patch")).toEqual([{ url: "/vendors/v1", body: { hourly_rate: "110.25" } }]);
   });
 
   it("goes back without sending anything when nothing changed", async () => {

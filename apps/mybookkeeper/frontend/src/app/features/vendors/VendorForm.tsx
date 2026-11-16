@@ -18,6 +18,7 @@ import {
   formValuesToUpdateRequest,
   vendorToFormValues,
 } from "@mybookkeeper/api-client/utils/vendorForm";
+import { NUMBER_INPUT_DECIMAL_SEPARATOR } from "@/shared/lib/number-input-decimal-separator";
 
 export interface VendorFormProps {
   /** When provided the form is in edit mode; absent = create. */
@@ -68,7 +69,7 @@ export default function VendorForm({
 
   async function onSubmit(values: VendorFormValues) {
     if (isEdit && vendor) {
-      const payload = formValuesToUpdateRequest(values, dirtyFields);
+      const payload = formValuesToUpdateRequest(values, dirtyFields, NUMBER_INPUT_DECIMAL_SEPARATOR);
       if (Object.keys(payload).length === 0) {
         onClose();
         return;
@@ -87,7 +88,7 @@ export default function VendorForm({
     } else {
       try {
         const created = await createVendor(
-          formValuesToCreateRequest(values),
+          formValuesToCreateRequest(values, NUMBER_INPUT_DECIMAL_SEPARATOR),
         ).unwrap();
         showSuccess("Vendor added.");
         onCreated?.(created);

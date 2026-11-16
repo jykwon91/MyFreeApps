@@ -7,6 +7,7 @@ import {
   vendorFormProblems,
   vendorToFormValues,
 } from "../utils/vendorForm";
+import { VENDOR_FORM_PROBLEMS } from "../constants/vendorForm";
 import type { VendorResponse } from "../types/vendor/vendor-response";
 
 const vendor: VendorResponse = {
@@ -31,12 +32,12 @@ describe("vendor form values", () => {
   it("turns missing optional fields into empty text and back to null", () => {
     const values = vendorToFormValues(vendor);
     expect(values.phone).toBe("");
-    expect(formValuesToCreateRequest(values).phone).toBeNull();
-    expect(formValuesToCreateRequest(values).hourly_rate).toBe("95.00");
+    expect(formValuesToCreateRequest(values, ".").phone).toBeNull();
+    expect(formValuesToCreateRequest(values, ".").hourly_rate).toBe("95.00");
   });
 
   it("trims text before sending", () => {
-    const body = formValuesToCreateRequest({ ...EMPTY_VENDOR_FORM, name: "  Bob ", notes: "  hi " });
+    const body = formValuesToCreateRequest({ ...EMPTY_VENDOR_FORM, name: "  Bob ", notes: "  hi " }, ".");
     expect(body.name).toBe("Bob");
     expect(body.notes).toBe("hi");
   });
@@ -45,25 +46,71 @@ describe("vendor form values", () => {
 describe("vendorDirtyFields and update request", () => {
   it("reports nothing when only whitespace differs", () => {
     const saved = vendorToFormValues(vendor);
-    expect(vendorDirtyFields({ ...saved, name: " Reliable Plumbing " }, saved)).toEqual({});
+    expect(vendorDirtyFields({ ...saved, name: " Reliable Plumbing " }, saved, ".")).toEqual({});
   });
 
   it("sends only touched fields and null for an emptied one", () => {
     const saved = vendorToFormValues(vendor);
     const values = { ...saved, name: "New", email: "" };
-    const dirty = vendorDirtyFields(values, saved);
+    const dirty = vendorDirtyFields(values, saved, ".");
     expect(dirty).toEqual({ name: true, email: true });
-    expect(formValuesToUpdateRequest(values, dirty)).toEqual({ name: "New", email: null });
+    expect(formValuesToUpdateRequest(values, dirty, ".")).toEqual({ name: "New", email: null });
   });
 });
 
 describe("vendorFormProblems", () => {
   it("accepts a valid form", () => {
-    expect(vendorFormProblems({ ...EMPTY_VENDOR_FORM, name: "Bob", email: "a@b.co", hourly_rate: "95.50" })).toEqual({});
+    expect(vendorFormProblems({ ...EMPTY_VENDOR_FORM, name: "Bob", email: "a@b.co", hourly_rate: "95.50" }, ".")).toEqual({});
   });
 
   it("flags a missing name, bad email and bad rate", () => {
-    const problems = vendorFormProblems({ ...EMPTY_VENDOR_FORM, email: "nope", hourly_rate: "9.999" });
+    const problems = vendorFormProblems({ ...EMPTY_VENDOR_FORM, email: "nope", hourly_rate: "9.999" }, ".");
     expect(Object.keys(problems).sort()).toEqual(["email", "hourly_rate", "name"]);
+  });
+});
+
+const withRate = (hourly_rate: string) => ({ ...EMPTY_VENDOR_FORM, name: "Bob", hourly_rate });
+
+describe("hourly rate on a decimal-comma phone", () => {
+  it.each([["85,50", "85.50"], ["$85,50", "85.50"], ["1.250,50", "1250.50"], ["95", "95"], ["0", "0"]])(
+    "reads %p and sends %p",
+    (typed, sent) => {
+      expect(vendorFormProblems(withRate(typed), ",")).toEqual({});
+      expect(formValuesToCreateRequest(withRate(typed), ",").hourly_rate).toBe(sent);
+    },
+  );
+
+  it("sends the canonical amount in an update, only when the rate changed", () => {
+    const saved = vendorToFormValues(vendor);
+    const values = { ...saved, hourly_rate: "110,25" };
+    const dirty = vendorDirtyFields(values, saved, ",");
+    expect(dirty).toEqual({ hourly_rate: true });
+    expect(formValuesToUpdateRequest(values, dirty, ",")).toEqual({ hourly_rate: "110.25" });
+  });
+
+  it("shows the comma example when it can't be read", () => {
+    expect(vendorFormProblems(withRate("ninety"), ",").hourly_rate).toBe(VENDOR_FORM_PROBLEMS.rateInvalid(","));
+    expect(VENDOR_FORM_PROBLEMS.rateInvalid(",")).toContain("95,50");
+  });
+
+  it("refuses an ambiguous 1,234 rather than guessing", () => {
+    expect(vendorFormProblems(withRate("1,234"), ",").hourly_rate).toBe(VENDOR_FORM_PROBLEMS.rateInvalid(","));
+  });
+});
+
+describe("hourly rate on a decimal-point phone", () => {
+  it.each([["$85.50", "85.50"], ["1,250.50", "1250.50"], ["", null]])("reads %p and sends %p", (typed, sent) => {
+    expect(vendorFormProblems(withRate(typed), ".")).toEqual({});
+    expect(formValuesToCreateRequest(withRate(typed), ".").hourly_rate).toBe(sent);
+  });
+
+  it("refuses a negative with its own message", () => {
+    expect(vendorFormProblems(withRate("-5"), ".").hourly_rate).toBe(VENDOR_FORM_PROBLEMS.rateNegative);
+  });
+
+  it("refuses a sub-cent rate and one wider than the server column", () => {
+    expect(vendorFormProblems(withRate("9.999"), ".").hourly_rate).toBe(VENDOR_FORM_PROBLEMS.rateInvalid("."));
+    expect(vendorFormProblems(withRate("12345678901"), ".").hourly_rate).toBe(VENDOR_FORM_PROBLEMS.rateInvalid("."));
+    expect(vendorFormProblems(withRate("1234567890.99"), ".")).toEqual({});
   });
 });
